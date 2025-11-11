@@ -145,10 +145,18 @@ function h($str) {
     <nav class="gs-nav">
         <div class="gs-container">
             <ul class="gs-nav-list">
-                <li><a href="/demo.php" class="gs-nav-link">Hem</a></li>
-                <li><a href="/demo-events.php" class="gs-nav-link active">Tävlingar</a></li>
-                <li><a href="#" class="gs-nav-link">Resultat</a></li>
-                <li style="margin-left: auto;"><a href="/admin/login.php" class="gs-btn gs-btn-sm gs-btn-primary">Admin</a></li>
+                <li><a href="/demo.php" class="gs-nav-link">
+                    <i data-lucide="home"></i> Hem
+                </a></li>
+                <li><a href="/demo-events.php" class="gs-nav-link active">
+                    <i data-lucide="calendar"></i> Tävlingar
+                </a></li>
+                <li><a href="#" class="gs-nav-link">
+                    <i data-lucide="trophy"></i> Resultat
+                </a></li>
+                <li style="margin-left: auto;"><a href="/admin/login.php" class="gs-btn gs-btn-sm gs-btn-primary">
+                    <i data-lucide="log-in"></i> Admin
+                </a></li>
             </ul>
         </div>
     </nav>
@@ -160,6 +168,7 @@ function h($str) {
         <div class="gs-card gs-mb-lg">
             <div class="gs-card-content">
                 <div class="gs-flex gs-items-center gs-gap-md">
+                    <i data-lucide="filter"></i>
                     <label for="year" class="gs-label" style="margin-bottom: 0;">År:</label>
                     <select id="year" class="gs-input" style="max-width: 200px;">
                         <?php foreach ($years as $y): ?>
@@ -168,7 +177,10 @@ function h($str) {
                             </option>
                         <?php endforeach; ?>
                     </select>
-                    <span class="gs-text-secondary gs-text-sm">Totalt: <?= count($events) ?> tävlingar</span>
+                    <span class="gs-text-secondary gs-text-sm">
+                        <i data-lucide="list"></i>
+                        Totalt: <?= count($events) ?> tävlingar
+                    </span>
                 </div>
             </div>
         </div>
@@ -183,6 +195,7 @@ function h($str) {
                             <div class="gs-event-date-month"><?= formatDate($event['event_date'], 'M Y') ?></div>
                         </div>
                         <span class="gs-badge gs-badge-<?= $event['status'] === 'completed' ? 'success' : 'warning' ?>">
+                            <i data-lucide="<?= $event['status'] === 'completed' ? 'check-circle' : 'clock' ?>"></i>
                             <?= h($event['status']) ?>
                         </span>
                     </div>
@@ -190,14 +203,22 @@ function h($str) {
                         <h3 class="gs-event-title">
                             <a href="#"><?= h($event['name']) ?></a>
                         </h3>
-                        <p class="gs-event-meta"><?= h($event['location']) ?></p>
-                        <p class="gs-event-meta gs-text-xs"><?= h(str_replace('_', ' ', $event['event_type'])) ?></p>
+                        <p class="gs-event-icon">
+                            <i data-lucide="map-pin"></i>
+                            <?= h($event['location']) ?>
+                        </p>
+                        <p class="gs-event-icon">
+                            <i data-lucide="flag"></i>
+                            <?= h(str_replace('_', ' ', $event['event_type'])) ?>
+                        </p>
                         <?php if ($event['participant_count'] > 0): ?>
-                            <p class="gs-event-meta gs-text-xs gs-text-primary" style="margin-top: var(--gs-space-sm);">
+                            <p class="gs-event-icon gs-text-primary" style="margin-top: var(--gs-space-sm);">
+                                <i data-lucide="users"></i>
                                 <?= $event['participant_count'] ?> deltagare
                             </p>
                         <?php endif; ?>
-                        <a href="#" class="gs-btn gs-btn-sm gs-btn-primary gs-mt-lg">
+                        <a href="#" class="gs-btn gs-btn-sm gs-btn-primary gs-w-full gs-mt-lg">
+                            <i data-lucide="eye"></i>
                             Visa resultat
                         </a>
                     </div>
@@ -207,9 +228,15 @@ function h($str) {
 
         <!-- Pagination Demo -->
         <div class="gs-flex gs-items-center gs-justify-between gs-gap-md">
-            <a href="#" class="gs-btn gs-btn-outline">« Föregående</a>
+            <a href="#" class="gs-btn gs-btn-outline">
+                <i data-lucide="chevron-left"></i>
+                Föregående
+            </a>
             <span class="gs-text-secondary">Sida 1 av 3</span>
-            <a href="#" class="gs-btn gs-btn-outline">Nästa »</a>
+            <a href="#" class="gs-btn gs-btn-outline">
+                Nästa
+                <i data-lucide="chevron-right"></i>
+            </a>
         </div>
     </main>
 
@@ -218,9 +245,18 @@ function h($str) {
         <div class="gs-container">
             <p>&copy; <?= date('Y') ?> TheHUB - Sveriges plattform för cykeltävlingar</p>
             <p class="gs-text-sm gs-text-secondary" style="margin-top: var(--gs-space-sm);">
-                🎨 Design system från GravitySeries
+                <i data-lucide="palette"></i>
+                GravitySeries Design System + Lucide Icons
             </p>
         </div>
     </footer>
+
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            lucide.createIcons();
+        });
+    </script>
 </body>
 </html>

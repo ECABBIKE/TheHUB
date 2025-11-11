@@ -53,12 +53,24 @@ $currentAdmin = getCurrentAdmin();
             </div>
             <nav>
                 <ul class="gs-admin-sidebar-nav">
-                    <li><a href="/admin/index.php" class="gs-admin-sidebar-link active">Dashboard</a></li>
-                    <li><a href="/admin/cyclists.php" class="gs-admin-sidebar-link">Cyklister</a></li>
-                    <li><a href="/admin/events.php" class="gs-admin-sidebar-link">Tävlingar</a></li>
-                    <li><a href="/admin/results.php" class="gs-admin-sidebar-link">Resultat</a></li>
-                    <li><a href="/admin/import.php" class="gs-admin-sidebar-link">Import</a></li>
-                    <li><a href="/admin/logout.php" class="gs-admin-sidebar-link">Logga ut</a></li>
+                    <li><a href="/admin/index.php" class="gs-admin-sidebar-link active">
+                        <i data-lucide="layout-dashboard"></i> Dashboard
+                    </a></li>
+                    <li><a href="/admin/cyclists.php" class="gs-admin-sidebar-link">
+                        <i data-lucide="users"></i> Cyklister
+                    </a></li>
+                    <li><a href="/admin/events.php" class="gs-admin-sidebar-link">
+                        <i data-lucide="calendar"></i> Tävlingar
+                    </a></li>
+                    <li><a href="/admin/results.php" class="gs-admin-sidebar-link">
+                        <i data-lucide="trophy"></i> Resultat
+                    </a></li>
+                    <li><a href="/admin/import.php" class="gs-admin-sidebar-link">
+                        <i data-lucide="upload"></i> Import
+                    </a></li>
+                    <li><a href="/admin/logout.php" class="gs-admin-sidebar-link">
+                        <i data-lucide="log-out"></i> Logga ut
+                    </a></li>
                 </ul>
             </nav>
             <div style="padding: var(--gs-space-lg); margin-top: auto; border-top: 1px solid var(--gs-gray);">
@@ -81,18 +93,22 @@ $currentAdmin = getCurrentAdmin();
             <!-- Stats Grid -->
             <div class="gs-grid gs-grid-cols-1 gs-md-grid-cols-2 gs-lg-grid-cols-4 gs-gap-lg gs-mb-xl">
                 <div class="gs-stat-card">
+                    <i data-lucide="users" class="gs-icon-lg gs-text-primary gs-mb-md"></i>
                     <div class="gs-stat-number"><?= number_format($stats['cyclists']) ?></div>
                     <div class="gs-stat-label">Cyklister</div>
                 </div>
                 <div class="gs-stat-card">
+                    <i data-lucide="building" class="gs-icon-lg gs-text-accent gs-mb-md"></i>
                     <div class="gs-stat-number"><?= number_format($stats['clubs']) ?></div>
                     <div class="gs-stat-label">Klubbar</div>
                 </div>
                 <div class="gs-stat-card">
+                    <i data-lucide="calendar" class="gs-icon-lg gs-text-success gs-mb-md"></i>
                     <div class="gs-stat-number"><?= number_format($stats['events']) ?></div>
                     <div class="gs-stat-label">Tävlingar</div>
                 </div>
                 <div class="gs-stat-card">
+                    <i data-lucide="trophy" class="gs-icon-lg gs-text-primary gs-mb-md"></i>
                     <div class="gs-stat-number"><?= number_format($stats['results']) ?></div>
                     <div class="gs-stat-label">Resultat</div>
                 </div>
@@ -103,7 +119,10 @@ $currentAdmin = getCurrentAdmin();
                 <!-- Recent Events -->
                 <div class="gs-card">
                     <div class="gs-card-header">
-                        <h2 class="gs-h4 gs-text-primary">Senaste tävlingarna</h2>
+                        <h2 class="gs-h4 gs-text-primary">
+                            <i data-lucide="calendar-clock"></i>
+                            Senaste tävlingarna
+                        </h2>
                     </div>
                     <div class="gs-card-content">
                         <?php if (empty($recentEvents)): ?>
@@ -144,7 +163,10 @@ $currentAdmin = getCurrentAdmin();
                 <!-- Recent Imports -->
                 <div class="gs-card">
                     <div class="gs-card-header">
-                        <h2 class="gs-h4 gs-text-primary">Senaste importer</h2>
+                        <h2 class="gs-h4 gs-text-primary">
+                            <i data-lucide="upload"></i>
+                            Senaste importer
+                        </h2>
                     </div>
                     <div class="gs-card-content">
                         <?php if (empty($recentImports)): ?>
@@ -180,5 +202,13 @@ $currentAdmin = getCurrentAdmin();
             </div>
         </main>
     </div>
+
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            lucide.createIcons();
+        });
+    </script>
 </body>
 </html>

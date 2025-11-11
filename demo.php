@@ -1,13 +1,14 @@
 <?php
 /**
- * DEMO PAGE - Shows GravitySeries design without database
+ * DEMO PAGE - Shows GravitySeries design with Lucide Icons
  */
 
 // Mock data for demo
 $stats = [
     'total_cyclists' => 3247,
     'total_events' => 67,
-    'total_clubs' => 142
+    'total_clubs' => 142,
+    'total_photos' => 5432
 ];
 
 // Mock upcoming events
@@ -122,7 +123,7 @@ function h($str) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TheHUB - Demo med GravitySeries Design</title>
+    <title>TheHUB - Demo med GravitySeries Design + Lucide Icons</title>
     <link rel="stylesheet" href="/assets/gravityseries-theme.css">
 </head>
 <body>
@@ -130,10 +131,21 @@ function h($str) {
     <nav class="gs-nav">
         <div class="gs-container">
             <ul class="gs-nav-list">
-                <li><a href="/demo.php" class="gs-nav-link active">Hem</a></li>
-                <li><a href="/demo-events.php" class="gs-nav-link">Tävlingar</a></li>
-                <li><a href="#" class="gs-nav-link">Resultat</a></li>
-                <li style="margin-left: auto;"><a href="/admin/login.php" class="gs-btn gs-btn-sm gs-btn-primary">Admin</a></li>
+                <li><a href="/demo.php" class="gs-nav-link active">
+                    <i data-lucide="home"></i> Hem
+                </a></li>
+                <li><a href="/demo-events.php" class="gs-nav-link">
+                    <i data-lucide="calendar"></i> Tävlingar
+                </a></li>
+                <li><a href="#" class="gs-nav-link">
+                    <i data-lucide="trophy"></i> Serier
+                </a></li>
+                <li><a href="#" class="gs-nav-link">
+                    <i data-lucide="users"></i> Deltagare
+                </a></li>
+                <li style="margin-left: auto;"><a href="/admin/login.php" class="gs-btn gs-btn-sm gs-btn-primary">
+                    <i data-lucide="log-in"></i> Admin
+                </a></li>
             </ul>
         </div>
     </nav>
@@ -145,19 +157,27 @@ function h($str) {
                 <h1 class="gs-h1 gs-text-white gs-mb-md">TheHUB</h1>
                 <p class="gs-text-lg gs-text-white gs-mb-xl">Sveriges centrala plattform för cykeltävlingar</p>
 
-                <!-- Stats -->
-                <div class="gs-grid gs-grid-cols-1 gs-md-grid-cols-3 gs-gap-lg">
+                <!-- Stats with Icons -->
+                <div class="gs-grid gs-grid-cols-1 gs-md-grid-cols-2 gs-lg-grid-cols-4 gs-gap-lg">
                     <div class="gs-stat-card">
+                        <i data-lucide="users" class="gs-icon-lg gs-text-primary gs-mb-md"></i>
                         <div class="gs-stat-number"><?= number_format($stats['total_cyclists']) ?></div>
                         <div class="gs-stat-label">Cyklister</div>
                     </div>
                     <div class="gs-stat-card">
+                        <i data-lucide="calendar" class="gs-icon-lg gs-text-accent gs-mb-md"></i>
                         <div class="gs-stat-number"><?= number_format($stats['total_events']) ?></div>
                         <div class="gs-stat-label">Tävlingar</div>
                     </div>
                     <div class="gs-stat-card">
+                        <i data-lucide="building" class="gs-icon-lg gs-text-success gs-mb-md"></i>
                         <div class="gs-stat-number"><?= number_format($stats['total_clubs']) ?></div>
                         <div class="gs-stat-label">Klubbar</div>
+                    </div>
+                    <div class="gs-stat-card">
+                        <i data-lucide="image" class="gs-icon-lg gs-text-primary gs-mb-md"></i>
+                        <div class="gs-stat-number"><?= number_format($stats['total_photos']) ?></div>
+                        <div class="gs-stat-label">Foton</div>
                     </div>
                 </div>
             </div>
@@ -169,7 +189,16 @@ function h($str) {
 
         <!-- Upcoming Events -->
         <section class="gs-mb-xl">
-            <h2 class="gs-h2 gs-text-primary gs-mb-lg">Kommande tävlingar</h2>
+            <div class="gs-flex gs-justify-between gs-items-center gs-mb-lg">
+                <h2 class="gs-h2 gs-text-primary">
+                    <i data-lucide="calendar-clock"></i>
+                    Kommande tävlingar
+                </h2>
+                <button class="gs-btn gs-btn-primary">
+                    <i data-lucide="plus"></i>
+                    Ny tävling
+                </button>
+            </div>
 
             <div class="gs-grid gs-grid-cols-1 gs-md-grid-cols-2 gs-lg-grid-cols-3 gs-gap-lg gs-mb-lg">
                 <?php foreach ($upcomingEvents as $event): ?>
@@ -179,27 +208,52 @@ function h($str) {
                                 <div class="gs-event-date-day"><?= formatDate($event['event_date'], 'd') ?></div>
                                 <div class="gs-event-date-month"><?= formatDate($event['event_date'], 'M') ?></div>
                             </div>
-                            <span class="gs-badge gs-badge-warning"><?= h($event['status']) ?></span>
+                            <span class="gs-badge gs-badge-warning">
+                                <i data-lucide="clock"></i>
+                                <?= h($event['status']) ?>
+                            </span>
                         </div>
                         <div class="gs-event-content">
                             <h3 class="gs-event-title">
                                 <a href="#"><?= h($event['name']) ?></a>
                             </h3>
-                            <p class="gs-event-meta"><?= h($event['location']) ?></p>
-                            <p class="gs-event-meta gs-text-xs"><?= h(str_replace('_', ' ', $event['event_type'])) ?></p>
+                            <p class="gs-event-icon">
+                                <i data-lucide="map-pin"></i>
+                                <?= h($event['location']) ?>
+                            </p>
+                            <p class="gs-event-icon">
+                                <i data-lucide="flag"></i>
+                                <?= h(str_replace('_', ' ', $event['event_type'])) ?>
+                            </p>
+                            <a href="#" class="gs-btn gs-btn-sm gs-btn-primary gs-w-full gs-mt-lg">
+                                <i data-lucide="arrow-right"></i>
+                                Se detaljer
+                            </a>
                         </div>
                     </div>
                 <?php endforeach; ?>
             </div>
 
             <div class="gs-text-center">
-                <a href="/demo-events.php" class="gs-btn gs-btn-primary gs-btn-lg">Visa alla tävlingar</a>
+                <a href="/demo-events.php" class="gs-btn gs-btn-primary gs-btn-lg">
+                    <i data-lucide="list"></i>
+                    Visa alla tävlingar
+                </a>
             </div>
         </section>
 
         <!-- Recent Results -->
         <section class="gs-mb-xl">
-            <h2 class="gs-h2 gs-text-primary gs-mb-lg">Senaste resultaten</h2>
+            <div class="gs-flex gs-justify-between gs-items-center gs-mb-lg">
+                <h2 class="gs-h2 gs-text-primary">
+                    <i data-lucide="check-circle"></i>
+                    Senaste resultaten
+                </h2>
+                <button class="gs-btn gs-btn-accent">
+                    <i data-lucide="download"></i>
+                    Exportera
+                </button>
+            </div>
 
             <div class="gs-grid gs-grid-cols-1 gs-md-grid-cols-2 gs-lg-grid-cols-3 gs-gap-lg">
                 <?php foreach ($recentEvents as $event): ?>
@@ -209,14 +263,29 @@ function h($str) {
                                 <div class="gs-event-date-day"><?= formatDate($event['event_date'], 'd') ?></div>
                                 <div class="gs-event-date-month"><?= formatDate($event['event_date'], 'M') ?></div>
                             </div>
-                            <span class="gs-badge gs-badge-success">Completed</span>
+                            <span class="gs-badge gs-badge-success">
+                                <i data-lucide="check-circle"></i>
+                                Completed
+                            </span>
                         </div>
                         <div class="gs-event-content">
                             <h3 class="gs-event-title">
                                 <a href="#"><?= h($event['name']) ?></a>
                             </h3>
-                            <p class="gs-event-meta"><?= h($event['location']) ?></p>
-                            <p class="gs-event-meta gs-text-xs"><?= $event['participant_count'] ?> deltagare</p>
+                            <p class="gs-event-icon">
+                                <i data-lucide="map-pin"></i>
+                                <?= h($event['location']) ?>
+                            </p>
+                            <div class="gs-stats-row gs-mt-md">
+                                <div class="gs-stat-item">
+                                    <i data-lucide="users"></i>
+                                    <span><?= $event['participant_count'] ?> deltagare</span>
+                                </div>
+                            </div>
+                            <a href="#" class="gs-btn gs-btn-sm gs-btn-outline gs-w-full gs-mt-lg">
+                                <i data-lucide="eye"></i>
+                                Se resultat
+                            </a>
                         </div>
                     </div>
                 <?php endforeach; ?>
@@ -230,9 +299,18 @@ function h($str) {
         <div class="gs-container">
             <p>&copy; <?= date('Y') ?> TheHUB - Sveriges plattform för cykeltävlingar</p>
             <p class="gs-text-sm gs-text-secondary" style="margin-top: var(--gs-space-sm);">
-                🎨 Design system från GravitySeries
+                <i data-lucide="palette"></i>
+                GravitySeries Design System + Lucide Icons
             </p>
         </div>
     </footer>
+
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            lucide.createIcons();
+        });
+    </script>
 </body>
 </html>

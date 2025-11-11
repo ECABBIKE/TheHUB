@@ -107,12 +107,24 @@ $currentAdmin = getCurrentAdmin();
             </div>
             <nav>
                 <ul class="gs-admin-sidebar-nav">
-                    <li><a href="/admin/index.php" class="gs-admin-sidebar-link">Dashboard</a></li>
-                    <li><a href="/admin/cyclists.php" class="gs-admin-sidebar-link">Cyklister</a></li>
-                    <li><a href="/admin/events.php" class="gs-admin-sidebar-link">Tävlingar</a></li>
-                    <li><a href="/admin/results.php" class="gs-admin-sidebar-link">Resultat</a></li>
-                    <li><a href="/admin/import.php" class="gs-admin-sidebar-link active">Import</a></li>
-                    <li><a href="/admin/logout.php" class="gs-admin-sidebar-link">Logga ut</a></li>
+                    <li><a href="/admin/index.php" class="gs-admin-sidebar-link">
+                        <i data-lucide="layout-dashboard"></i> Dashboard
+                    </a></li>
+                    <li><a href="/admin/cyclists.php" class="gs-admin-sidebar-link">
+                        <i data-lucide="users"></i> Cyklister
+                    </a></li>
+                    <li><a href="/admin/events.php" class="gs-admin-sidebar-link">
+                        <i data-lucide="calendar"></i> Tävlingar
+                    </a></li>
+                    <li><a href="/admin/results.php" class="gs-admin-sidebar-link">
+                        <i data-lucide="trophy"></i> Resultat
+                    </a></li>
+                    <li><a href="/admin/import.php" class="gs-admin-sidebar-link active">
+                        <i data-lucide="upload"></i> Import
+                    </a></li>
+                    <li><a href="/admin/logout.php" class="gs-admin-sidebar-link">
+                        <i data-lucide="log-out"></i> Logga ut
+                    </a></li>
                 </ul>
             </nav>
             <div style="padding: var(--gs-space-lg); margin-top: auto; border-top: 1px solid var(--gs-gray);">
@@ -135,7 +147,10 @@ $currentAdmin = getCurrentAdmin();
             <!-- Upload Form -->
             <div class="gs-card gs-mb-xl">
                 <div class="gs-card-header">
-                    <h2 class="gs-h4 gs-text-primary">Ladda upp Excel-fil</h2>
+                    <h2 class="gs-h4 gs-text-primary">
+                        <i data-lucide="file-up"></i>
+                        Ladda upp Excel-fil
+                    </h2>
                 </div>
                 <div class="gs-card-content">
                     <form method="POST" enctype="multipart/form-data" style="max-width: 600px;">
@@ -154,12 +169,18 @@ $currentAdmin = getCurrentAdmin();
                             <small class="gs-text-secondary gs-text-sm">Max storlek: <?= round(MAX_UPLOAD_SIZE / 1024 / 1024) ?>MB</small>
                         </div>
 
-                        <button type="submit" class="gs-btn gs-btn-primary gs-btn-lg">Importera</button>
+                        <button type="submit" class="gs-btn gs-btn-primary gs-btn-lg">
+                            <i data-lucide="upload"></i>
+                            Importera
+                        </button>
                     </form>
 
                     <!-- Import Info -->
                     <div class="gs-mt-xl" style="padding-top: var(--gs-space-xl); border-top: 1px solid var(--gs-border);">
-                        <h3 class="gs-h4 gs-text-primary gs-mb-md">Filformat</h3>
+                        <h3 class="gs-h4 gs-text-primary gs-mb-md">
+                            <i data-lucide="file-text"></i>
+                            Filformat
+                        </h3>
 
                         <div class="gs-mb-lg">
                             <h4 class="gs-text-base gs-text-primary gs-mb-sm" style="font-weight: 600;">Cyklister (cyclists):</h4>
@@ -199,7 +220,10 @@ $currentAdmin = getCurrentAdmin();
             <!-- Import History -->
             <div class="gs-card">
                 <div class="gs-card-header">
-                    <h2 class="gs-h4 gs-text-primary">Importhistorik</h2>
+                    <h2 class="gs-h4 gs-text-primary">
+                        <i data-lucide="clock"></i>
+                        Importhistorik
+                    </h2>
                 </div>
                 <div class="gs-card-content">
                     <?php if (empty($recentImports)): ?>
@@ -238,5 +262,13 @@ $currentAdmin = getCurrentAdmin();
             </div>
         </main>
     </div>
+
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            lucide.createIcons();
+        });
+    </script>
 </body>
 </html>

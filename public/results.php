@@ -56,10 +56,18 @@ $pageTitle = $event['name'] . ' - Resultat';
     <nav class="gs-nav">
         <div class="gs-container">
             <ul class="gs-nav-list">
-                <li><a href="/public/index.php" class="gs-nav-link">Hem</a></li>
-                <li><a href="/public/events.php" class="gs-nav-link">Tävlingar</a></li>
-                <li><a href="/public/results.php" class="gs-nav-link active">Resultat</a></li>
-                <li style="margin-left: auto;"><a href="/admin/login.php" class="gs-btn gs-btn-sm gs-btn-primary">Admin</a></li>
+                <li><a href="/public/index.php" class="gs-nav-link">
+                    <i data-lucide="home"></i> Hem
+                </a></li>
+                <li><a href="/public/events.php" class="gs-nav-link">
+                    <i data-lucide="calendar"></i> Tävlingar
+                </a></li>
+                <li><a href="/public/results.php" class="gs-nav-link active">
+                    <i data-lucide="trophy"></i> Resultat
+                </a></li>
+                <li style="margin-left: auto;"><a href="/admin/login.php" class="gs-btn gs-btn-sm gs-btn-primary">
+                    <i data-lucide="log-in"></i> Admin
+                </a></li>
             </ul>
         </div>
     </nav>
@@ -68,23 +76,30 @@ $pageTitle = $event['name'] . ' - Resultat';
         <!-- Event Header -->
         <div class="gs-card gs-mb-lg">
             <div class="gs-card-content">
-                <h1 class="gs-h2 gs-text-primary gs-mb-md"><?= h($event['name']) ?></h1>
+                <h1 class="gs-h2 gs-text-primary gs-mb-md">
+                    <i data-lucide="trophy"></i>
+                    <?= h($event['name']) ?>
+                </h1>
                 <div class="gs-flex gs-flex-col gs-gap-sm gs-text-secondary gs-text-sm">
                     <div>
+                        <i data-lucide="calendar"></i>
                         <span class="gs-text-primary" style="font-weight: 600;">Datum:</span>
                         <?= formatDate($event['event_date'], 'd M Y') ?>
                     </div>
                     <div>
+                        <i data-lucide="map-pin"></i>
                         <span class="gs-text-primary" style="font-weight: 600;">Plats:</span>
                         <?= h($event['location']) ?>
                     </div>
                     <?php if ($event['distance']): ?>
                         <div>
+                            <i data-lucide="route"></i>
                             <span class="gs-text-primary" style="font-weight: 600;">Distans:</span>
                             <?= $event['distance'] ?> km
                         </div>
                     <?php endif; ?>
                     <div>
+                        <i data-lucide="flag"></i>
                         <span class="gs-text-primary" style="font-weight: 600;">Typ:</span>
                         <?= h(str_replace('_', ' ', $event['event_type'])) ?>
                     </div>
@@ -92,7 +107,10 @@ $pageTitle = $event['name'] . ' - Resultat';
             </div>
         </div>
 
-        <h2 class="gs-h3 gs-text-primary gs-mb-lg">Resultat (<?= count($results) ?> deltagare)</h2>
+        <h2 class="gs-h3 gs-text-primary gs-mb-lg">
+            <i data-lucide="list"></i>
+            Resultat (<?= count($results) ?> deltagare)
+        </h2>
 
         <?php if (empty($results)): ?>
             <div class="gs-card">
@@ -155,15 +173,30 @@ $pageTitle = $event['name'] . ' - Resultat';
 
         <!-- Back Button -->
         <div class="gs-mt-lg">
-            <a href="/public/events.php" class="gs-btn gs-btn-outline">« Tillbaka till tävlingar</a>
+            <a href="/public/events.php" class="gs-btn gs-btn-outline">
+                <i data-lucide="arrow-left"></i>
+                Tillbaka till tävlingar
+            </a>
         </div>
     </main>
 
     <!-- Footer -->
     <footer class="gs-bg-dark gs-text-white gs-py-xl gs-text-center">
         <div class="gs-container">
-            <p>&copy; <?= date('Y') ?> TheHUB</p>
+            <p>&copy; <?= date('Y') ?> TheHUB - Sveriges plattform för cykeltävlingar</p>
+            <p class="gs-text-sm gs-text-secondary" style="margin-top: var(--gs-space-sm);">
+                <i data-lucide="palette"></i>
+                GravitySeries Design System + Lucide Icons
+            </p>
         </div>
     </footer>
+
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            lucide.createIcons();
+        });
+    </script>
 </body>
 </html>

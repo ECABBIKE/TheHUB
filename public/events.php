@@ -51,10 +51,18 @@ $pageTitle = 'Tävlingar';
     <nav class="gs-nav">
         <div class="gs-container">
             <ul class="gs-nav-list">
-                <li><a href="/public/index.php" class="gs-nav-link">Hem</a></li>
-                <li><a href="/public/events.php" class="gs-nav-link active">Tävlingar</a></li>
-                <li><a href="/public/results.php" class="gs-nav-link">Resultat</a></li>
-                <li style="margin-left: auto;"><a href="/admin/login.php" class="gs-btn gs-btn-sm gs-btn-primary">Admin</a></li>
+                <li><a href="/public/index.php" class="gs-nav-link">
+                    <i data-lucide="home"></i> Hem
+                </a></li>
+                <li><a href="/public/events.php" class="gs-nav-link active">
+                    <i data-lucide="calendar"></i> Tävlingar
+                </a></li>
+                <li><a href="/public/results.php" class="gs-nav-link">
+                    <i data-lucide="trophy"></i> Resultat
+                </a></li>
+                <li style="margin-left: auto;"><a href="/admin/login.php" class="gs-btn gs-btn-sm gs-btn-primary">
+                    <i data-lucide="log-in"></i> Admin
+                </a></li>
             </ul>
         </div>
     </nav>
@@ -66,6 +74,7 @@ $pageTitle = 'Tävlingar';
         <div class="gs-card gs-mb-lg">
             <div class="gs-card-content">
                 <div class="gs-flex gs-items-center gs-gap-md">
+                    <i data-lucide="filter"></i>
                     <label for="year" class="gs-label" style="margin-bottom: 0;">År:</label>
                     <select id="year" class="gs-input" style="max-width: 200px;" onchange="window.location.href='?year=' + this.value">
                         <?php foreach ($years as $y): ?>
@@ -74,7 +83,10 @@ $pageTitle = 'Tävlingar';
                             </option>
                         <?php endforeach; ?>
                     </select>
-                    <span class="gs-text-secondary gs-text-sm">Totalt: <?= $totalCount ?> tävlingar</span>
+                    <span class="gs-text-secondary gs-text-sm">
+                        <i data-lucide="list"></i>
+                        Totalt: <?= $totalCount ?> tävlingar
+                    </span>
                 </div>
             </div>
         </div>
@@ -96,6 +108,7 @@ $pageTitle = 'Tävlingar';
                                 <div class="gs-event-date-month"><?= formatDate($event['event_date'], 'M Y') ?></div>
                             </div>
                             <span class="gs-badge gs-badge-<?= $event['status'] === 'completed' ? 'success' : ($event['status'] === 'upcoming' ? 'warning' : 'primary') ?>">
+                                <i data-lucide="<?= $event['status'] === 'completed' ? 'check-circle' : 'clock' ?>"></i>
                                 <?= h($event['status']) ?>
                             </span>
                         </div>
@@ -103,14 +116,22 @@ $pageTitle = 'Tävlingar';
                             <h3 class="gs-event-title">
                                 <a href="/public/event.php?id=<?= $event['id'] ?>"><?= h($event['name']) ?></a>
                             </h3>
-                            <p class="gs-event-meta"><?= h($event['location']) ?></p>
-                            <p class="gs-event-meta gs-text-xs"><?= h(str_replace('_', ' ', $event['event_type'])) ?></p>
+                            <p class="gs-event-icon">
+                                <i data-lucide="map-pin"></i>
+                                <?= h($event['location']) ?>
+                            </p>
+                            <p class="gs-event-icon">
+                                <i data-lucide="flag"></i>
+                                <?= h(str_replace('_', ' ', $event['event_type'])) ?>
+                            </p>
                             <?php if ($event['participant_count'] > 0): ?>
-                                <p class="gs-event-meta gs-text-xs gs-text-primary" style="margin-top: var(--gs-space-sm);">
+                                <p class="gs-event-icon gs-text-primary" style="margin-top: var(--gs-space-sm);">
+                                    <i data-lucide="users"></i>
                                     <?= $event['participant_count'] ?> deltagare
                                 </p>
                             <?php endif; ?>
-                            <a href="/public/results.php?event_id=<?= $event['id'] ?>" class="gs-btn gs-btn-sm gs-btn-primary gs-mt-lg">
+                            <a href="/public/results.php?event_id=<?= $event['id'] ?>" class="gs-btn gs-btn-sm gs-btn-primary gs-w-full gs-mt-lg">
+                                <i data-lucide="eye"></i>
                                 Visa resultat
                             </a>
                         </div>
@@ -122,7 +143,10 @@ $pageTitle = 'Tävlingar';
             <?php if ($pagination['total_pages'] > 1): ?>
                 <div class="gs-flex gs-items-center gs-justify-between gs-gap-md">
                     <?php if ($pagination['has_prev']): ?>
-                        <a href="?year=<?= $year ?>&page=<?= $page - 1 ?>" class="gs-btn gs-btn-outline">« Föregående</a>
+                        <a href="?year=<?= $year ?>&page=<?= $page - 1 ?>" class="gs-btn gs-btn-outline">
+                            <i data-lucide="chevron-left"></i>
+                            Föregående
+                        </a>
                     <?php else: ?>
                         <span></span>
                     <?php endif; ?>
@@ -130,7 +154,10 @@ $pageTitle = 'Tävlingar';
                     <span class="gs-text-secondary">Sida <?= $page ?> av <?= $pagination['total_pages'] ?></span>
 
                     <?php if ($pagination['has_next']): ?>
-                        <a href="?year=<?= $year ?>&page=<?= $page + 1 ?>" class="gs-btn gs-btn-outline">Nästa »</a>
+                        <a href="?year=<?= $year ?>&page=<?= $page + 1 ?>" class="gs-btn gs-btn-outline">
+                            Nästa
+                            <i data-lucide="chevron-right"></i>
+                        </a>
                     <?php else: ?>
                         <span></span>
                     <?php endif; ?>
@@ -142,8 +169,20 @@ $pageTitle = 'Tävlingar';
     <!-- Footer -->
     <footer class="gs-bg-dark gs-text-white gs-py-xl gs-text-center">
         <div class="gs-container">
-            <p>&copy; <?= date('Y') ?> TheHUB</p>
+            <p>&copy; <?= date('Y') ?> TheHUB - Sveriges plattform för cykeltävlingar</p>
+            <p class="gs-text-sm gs-text-secondary" style="margin-top: var(--gs-space-sm);">
+                <i data-lucide="palette"></i>
+                GravitySeries Design System + Lucide Icons
+            </p>
         </div>
     </footer>
+
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            lucide.createIcons();
+        });
+    </script>
 </body>
 </html>

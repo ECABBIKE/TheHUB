@@ -480,3 +480,224 @@ body {
 .gs-form-group {
   margin-bottom: var(--gs-space-lg);
 }
+
+/* ============================================
+   ICON STYLES - Lucide Icons
+   ============================================ */
+
+/* Icon Wrappers */
+.gs-icon-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: var(--gs-radius-md);
+  flex-shrink: 0;
+}
+
+.gs-icon-wrapper-sm {
+  width: 32px;
+  height: 32px;
+}
+
+.gs-icon-wrapper-lg {
+  width: 64px;
+  height: 64px;
+}
+
+/* Avatar with Icon */
+.gs-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  background: var(--gs-primary-light);
+  border-radius: var(--gs-radius-full);
+  color: var(--gs-primary);
+  flex-shrink: 0;
+}
+
+.gs-avatar svg {
+  width: 32px;
+  height: 32px;
+}
+
+/* Stat Boxes with Icons */
+.gs-stat-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--gs-space-sm);
+  padding: var(--gs-space-md);
+  background: var(--gs-light);
+  border-radius: var(--gs-radius-md);
+  text-align: center;
+}
+
+.gs-stat-box svg {
+  width: 24px;
+  height: 24px;
+  color: var(--gs-primary);
+  flex-shrink: 0;
+}
+
+.gs-stat-box .gs-stat-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--gs-text-primary);
+}
+
+.gs-stat-box .gs-stat-label {
+  font-size: 0.75rem;
+  color: var(--gs-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* Stat Items (inline with icon) */
+.gs-stat-item {
+  display: flex;
+  align-items: center;
+  gap: var(--gs-space-sm);
+  color: var(--gs-text-secondary);
+  font-size: 0.875rem;
+}
+
+.gs-stat-item svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+/* Stats Layout */
+.gs-stats-row {
+  display: flex;
+  gap: var(--gs-space-lg);
+  flex-wrap: wrap;
+}
+
+.gs-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+  gap: var(--gs-space-md);
+}
+
+/* Navigation Icons */
+.gs-nav-link {
+  display: flex;
+  align-items: center;
+  gap: var(--gs-space-sm);
+}
+
+.gs-nav-link svg {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+/* Admin Sidebar Icons */
+.gs-admin-sidebar-link {
+  display: flex;
+  align-items: center;
+  gap: var(--gs-space-sm);
+}
+
+.gs-admin-sidebar-link svg {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+/* Button Icons */
+.gs-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--gs-space-sm);
+}
+
+.gs-btn svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+.gs-btn-lg svg {
+  width: 20px;
+  height: 20px;
+}
+
+.gs-btn-sm svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* Badge Icons */
+.gs-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.gs-badge svg {
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+}
+
+/* Card Header Icons */
+.gs-card-icon {
+  display: flex;
+  align-items: center;
+  gap: var(--gs-space-md);
+}
+
+.gs-card-icon svg {
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+}
+
+/* Large Icon for Stats Cards */
+.gs-icon-lg {
+  width: 48px;
+  height: 48px;
+}
+
+.gs-icon-xl {
+  width: 64px;
+  height: 64px;
+}
+
+/* Icon Colors */
+.gs-icon-primary {
+  color: var(--gs-primary);
+}
+
+.gs-icon-accent {
+  color: var(--gs-accent);
+}
+
+.gs-icon-success {
+  color: var(--gs-success);
+}
+
+.gs-icon-warning {
+  color: var(--gs-warning);
+}
+
+/* Icon in Event Cards */
+.gs-event-icon {
+  display: flex;
+  align-items: center;
+  gap: var(--gs-space-xs);
+  font-size: 0.875rem;
+  color: var(--gs-text-secondary);
+}
+
+.gs-event-icon svg {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
