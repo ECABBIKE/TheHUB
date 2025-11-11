@@ -5,36 +5,47 @@ require_admin();
 $db = getDB();
 $current_admin = get_current_admin();
 
-// Demo series data
-$series = [
-    [
-        'id' => 1,
-        'name' => 'GravitySeries 2025',
-        'type' => 'XC',
-        'events_count' => 6,
-        'status' => 'active',
-        'start_date' => '2025-05-01',
-        'end_date' => '2025-09-30'
-    ],
-    [
-        'id' => 2,
-        'name' => 'Svenska Cupen MTB',
-        'type' => 'XC',
-        'events_count' => 8,
-        'status' => 'active',
-        'start_date' => '2025-04-15',
-        'end_date' => '2025-10-15'
-    ],
-    [
-        'id' => 3,
-        'name' => 'Vasaloppet Cycling',
-        'type' => 'Landsväg',
-        'events_count' => 4,
-        'status' => 'active',
-        'start_date' => '2025-06-01',
-        'end_date' => '2025-08-31'
-    ],
-];
+// Demo mode check
+$is_demo = ($db->getConnection() === null);
+
+if ($is_demo) {
+    // Demo series data
+    $series = [
+        [
+            'id' => 1,
+            'name' => 'GravitySeries 2025',
+            'type' => 'XC',
+            'events_count' => 6,
+            'status' => 'active',
+            'start_date' => '2025-05-01',
+            'end_date' => '2025-09-30'
+        ],
+        [
+            'id' => 2,
+            'name' => 'Svenska Cupen MTB',
+            'type' => 'XC',
+            'events_count' => 8,
+            'status' => 'active',
+            'start_date' => '2025-04-15',
+            'end_date' => '2025-10-15'
+        ],
+        [
+            'id' => 3,
+            'name' => 'Vasaloppet Cycling',
+            'type' => 'Landsväg',
+            'events_count' => 4,
+            'status' => 'active',
+            'start_date' => '2025-06-01',
+            'end_date' => '2025-08-31'
+        ],
+    ];
+} else {
+    // Get series from database
+    $series = $db->getAll("SELECT id, name, type, status, start_date, end_date,
+                          (SELECT COUNT(*) FROM events WHERE series_id = series.id) as events_count
+                          FROM series
+                          ORDER BY start_date DESC");
+}
 
 $pageTitle = 'Serier';
 ?>

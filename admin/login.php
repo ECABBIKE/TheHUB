@@ -72,7 +72,7 @@ $pageTitle = 'Admin Login';
         <div class="gs-text-center gs-mt-lg">
             <p class="gs-text-secondary gs-text-sm">
                 <i data-lucide="info"></i>
-                Standard login: admin / gravityseries2025
+                Standard login: admin / admin
             </p>
             <a href="/public/index.php" class="gs-text-primary gs-text-sm" style="text-decoration: none;">
                 <i data-lucide="arrow-left"></i>

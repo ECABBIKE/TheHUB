@@ -34,7 +34,7 @@ function requireLogin() {
  */
 function login($username, $password) {
     // Check hardcoded admin credentials first
-    if ($username === 'admin' && $password === 'gravityseries2025') {
+    if ($username === 'admin' && $password === 'admin') {
         $_SESSION['admin_logged_in'] = true;
         $_SESSION['admin_id'] = 1;
         $_SESSION['admin_username'] = 'admin';
