@@ -866,3 +866,223 @@ body {
   border-left: 4px solid var(--gs-primary);
   color: var(--gs-text-primary);
 }
+
+/* ========================================
+   MOBILE HAMBURGER MENU
+   ======================================== */
+
+.gs-mobile-menu-toggle {
+  display: none;
+  position: fixed;
+  top: var(--gs-space-md);
+  left: var(--gs-space-md);
+  z-index: 110;
+  background-color: var(--gs-primary);
+  color: var(--gs-white);
+  border: none;
+  border-radius: var(--gs-radius-md);
+  padding: var(--gs-space-sm) var(--gs-space-md);
+  cursor: pointer;
+  box-shadow: var(--gs-shadow-lg);
+}
+
+.gs-mobile-menu-toggle svg {
+  width: 24px;
+  height: 24px;
+}
+
+@media (max-width: 768px) {
+  .gs-mobile-menu-toggle {
+    display: flex;
+    align-items: center;
+    gap: var(--gs-space-xs);
+  }
+
+  .gs-sidebar {
+    transform: translateX(-100%);
+    transition: transform var(--gs-transition-normal);
+    box-shadow: var(--gs-shadow-lg);
+  }
+
+  .gs-sidebar.open {
+    transform: translateX(0);
+  }
+
+  .gs-content-with-sidebar {
+    margin-left: 0;
+  }
+
+  .gs-mobile-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 99;
+  }
+
+  .gs-mobile-overlay.open {
+    display: block;
+  }
+}
+
+/* ========================================
+   LOADING STATES
+   ======================================== */
+
+.gs-spinner {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: var(--gs-white);
+  animation: spin 0.6s linear infinite;
+}
+
+.gs-spinner-lg {
+  width: 48px;
+  height: 48px;
+  border-width: 4px;
+}
+
+.gs-spinner-primary {
+  border-color: rgba(0, 74, 152, 0.3);
+  border-top-color: var(--gs-primary);
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.gs-loading {
+  position: relative;
+  pointer-events: none;
+  opacity: 0.6;
+}
+
+.gs-loading::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 20px;
+  height: 20px;
+  border: 2px solid rgba(0, 74, 152, 0.3);
+  border-radius: 50%;
+  border-top-color: var(--gs-primary);
+  animation: spin 0.6s linear infinite;
+}
+
+/* ========================================
+   LIST STYLES
+   ======================================== */
+
+.gs-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.gs-list-item {
+  padding: var(--gs-space-md);
+  border-bottom: 1px solid var(--gs-border);
+  transition: background-color var(--gs-transition-fast);
+}
+
+.gs-list-item:last-child {
+  border-bottom: none;
+}
+
+.gs-list-item:hover {
+  background-color: var(--gs-light);
+}
+
+/* Icon Wrapper for Lists */
+.gs-icon-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--gs-radius-md);
+  flex-shrink: 0;
+}
+
+.gs-icon-wrapper svg {
+  width: 20px;
+  height: 20px;
+}
+
+/* ========================================
+   STAT VALUES
+   ======================================== */
+
+.gs-stat-value {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: var(--gs-primary);
+  line-height: 1.2;
+  margin-bottom: var(--gs-space-sm);
+}
+
+.gs-stat-label {
+  font-size: 0.875rem;
+  color: var(--gs-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 600;
+}
+
+/* ========================================
+   ALERT ENHANCEMENTS
+   ======================================== */
+
+.gs-alert-success {
+  background-color: var(--gs-success-light);
+  border-left: 4px solid var(--gs-success);
+  color: var(--gs-text-primary);
+}
+
+.gs-alert-warning {
+  background-color: var(--gs-warning-light);
+  border-left: 4px solid var(--gs-warning);
+  color: var(--gs-text-primary);
+}
+
+.gs-alert-error {
+  background-color: rgba(220, 38, 38, 0.1);
+  border-left: 4px solid rgb(220, 38, 38);
+  color: var(--gs-text-primary);
+}
+
+/* ========================================
+   UTILITY CLASSES
+   ======================================== */
+
+.gs-mt-xs { margin-top: var(--gs-space-xs); }
+.gs-mt-sm { margin-top: var(--gs-space-sm); }
+.gs-mt-md { margin-top: var(--gs-space-md); }
+.gs-mt-lg { margin-top: var(--gs-space-lg); }
+.gs-mt-xl { margin-top: var(--gs-space-xl); }
+
+.gs-mb-xs { margin-bottom: var(--gs-space-xs); }
+.gs-mb-sm { margin-bottom: var(--gs-space-sm); }
+.gs-mb-md { margin-bottom: var(--gs-space-md); }
+.gs-mb-lg { margin-bottom: var(--gs-space-lg); }
+.gs-mb-xl { margin-bottom: var(--gs-space-xl); }
+
+.gs-py-xs { padding-top: var(--gs-space-xs); padding-bottom: var(--gs-space-xs); }
+.gs-py-sm { padding-top: var(--gs-space-sm); padding-bottom: var(--gs-space-sm); }
+.gs-py-md { padding-top: var(--gs-space-md); padding-bottom: var(--gs-space-md); }
+.gs-py-lg { padding-top: var(--gs-space-lg); padding-bottom: var(--gs-space-lg); }
+.gs-py-xl { padding-top: var(--gs-space-xl); padding-bottom: var(--gs-space-xl); }
+
+.gs-text-center { text-align: center; }
+.gs-text-right { text-align: right; }
+.gs-text-left { text-align: left; }
+
+.gs-w-full { width: 100%; }

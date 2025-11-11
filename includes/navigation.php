@@ -30,17 +30,11 @@ $is_admin = isLoggedIn();
     <div class="gs-menu-section">
         <h3 class="gs-menu-title">Admin</h3>
         <ul class="gs-menu">
+            <li><a href="/admin/dashboard.php" class="<?= $current_page == 'dashboard.php' ? 'active' : '' ?>">
+                <i data-lucide="layout-dashboard"></i> Dashboard
+            </a></li>
             <li><a href="/admin/events.php" class="<?= $current_page == 'events.php' && strpos($_SERVER['PHP_SELF'], '/admin/') !== false ? 'active' : '' ?>">
                 <i data-lucide="calendar-check"></i> Events
-            </a></li>
-            <li><a href="/admin/series.php" class="<?= $current_page == 'series.php' && strpos($_SERVER['PHP_SELF'], '/admin/') !== false ? 'active' : '' ?>">
-                <i data-lucide="award"></i> Serier
-            </a></li>
-            <li><a href="/admin/points.php" class="<?= $current_page == 'points.php' ? 'active' : '' ?>">
-                <i data-lucide="star"></i> Kvalpoäng
-            </a></li>
-            <li><a href="/admin/import.php" class="<?= $current_page == 'import.php' ? 'active' : '' ?>">
-                <i data-lucide="upload"></i> Import
             </a></li>
             <li><a href="/admin/riders.php" class="<?= $current_page == 'riders.php' && strpos($_SERVER['PHP_SELF'], '/admin/') !== false ? 'active' : '' ?>">
                 <i data-lucide="user-circle"></i> Deltagare
@@ -50,6 +44,12 @@ $is_admin = isLoggedIn();
             </a></li>
             <li><a href="/admin/venues.php" class="<?= $current_page == 'venues.php' ? 'active' : '' ?>">
                 <i data-lucide="mountain"></i> Venues
+            </a></li>
+            <li><a href="/admin/results.php" class="<?= $current_page == 'results.php' && strpos($_SERVER['PHP_SELF'], '/admin/') !== false ? 'active' : '' ?>">
+                <i data-lucide="trophy"></i> Resultat
+            </a></li>
+            <li><a href="/admin/import.php" class="<?= $current_page == 'import.php' ? 'active' : '' ?>">
+                <i data-lucide="upload"></i> Import
             </a></li>
         </ul>
         <div class="gs-menu-footer">

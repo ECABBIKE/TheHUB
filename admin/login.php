@@ -5,7 +5,7 @@ require_once __DIR__ . '/../includes/auth.php';
 
 // If already logged in, redirect to dashboard
 if (isLoggedIn()) {
-    redirect('/admin/index.php');
+    redirect('/admin/dashboard.php');
 }
 
 $error = '';
@@ -15,7 +15,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $password = $_POST['password'] ?? '';
 
     if (login($username, $password)) {
-        redirect('/admin/index.php');
+        redirect('/admin/dashboard.php');
     } else {
         $error = 'Felaktigt användarnamn eller lösenord';
     }

@@ -5,6 +5,9 @@ require_once __DIR__ . '/../includes/auth.php';
 
 requireLogin();
 
+// Redirect to dashboard
+redirect('/admin/dashboard.php');
+
 $db = getDB();
 
 // Get statistics
