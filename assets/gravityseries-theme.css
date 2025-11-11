@@ -701,3 +701,132 @@ body {
   height: 14px;
   flex-shrink: 0;
 }
+
+/* ========================================
+   SIDEBAR NAVIGATION
+   ======================================== */
+
+.gs-sidebar {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 250px;
+  height: 100vh;
+  background-color: var(--gs-dark);
+  padding: var(--gs-space-lg);
+  overflow-y: auto;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+}
+
+.gs-menu-section {
+  margin-bottom: var(--gs-space-xl);
+}
+
+.gs-menu-section:last-child {
+  margin-top: auto;
+}
+
+.gs-menu-title {
+  color: var(--gs-text-accent);
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: var(--gs-space-lg);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.gs-menu {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.gs-menu li {
+  margin-bottom: var(--gs-space-xs);
+}
+
+.gs-menu a {
+  display: flex;
+  align-items: center;
+  gap: var(--gs-space-sm);
+  padding: var(--gs-space-sm) var(--gs-space-md);
+  color: var(--gs-text-light);
+  text-decoration: none;
+  border-radius: var(--gs-radius-md);
+  transition: all var(--gs-transition-fast);
+  font-weight: 500;
+}
+
+.gs-menu a svg {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+.gs-menu a:hover {
+  background-color: var(--gs-gray);
+  color: var(--gs-accent);
+}
+
+.gs-menu a.active {
+  background-color: var(--gs-primary);
+  color: var(--gs-white);
+}
+
+.gs-menu-footer {
+  margin-top: var(--gs-space-lg);
+  padding-top: var(--gs-space-lg);
+  border-top: 1px solid var(--gs-gray);
+}
+
+/* Content with Sidebar */
+.gs-content-with-sidebar {
+  margin-left: 250px;
+  padding: var(--gs-space-lg);
+  min-height: 100vh;
+  background-color: var(--gs-light);
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+  .gs-sidebar {
+    transform: translateX(-100%);
+    transition: transform var(--gs-transition-normal);
+  }
+
+  .gs-sidebar.open {
+    transform: translateX(0);
+  }
+
+  .gs-content-with-sidebar {
+    margin-left: 0;
+  }
+}
+
+/* Alert Icons */
+.gs-alert {
+  display: flex;
+  align-items: center;
+  gap: var(--gs-space-sm);
+}
+
+.gs-alert svg {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+/* Label Icons */
+.gs-label {
+  display: flex;
+  align-items: center;
+  gap: var(--gs-space-xs);
+}
+
+.gs-label svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
