@@ -830,3 +830,39 @@ body {
   height: 16px;
   flex-shrink: 0;
 }
+
+/* Input Group with Icon */
+.gs-input-group {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.gs-input-group svg {
+  position: absolute;
+  left: var(--gs-space-md);
+  width: 18px;
+  height: 18px;
+  color: var(--gs-text-secondary);
+  pointer-events: none;
+}
+
+.gs-input-group .gs-input {
+  padding-left: calc(var(--gs-space-md) + 18px + var(--gs-space-sm));
+}
+
+/* Flex utilities */
+.gs-flex-1 {
+  flex: 1;
+}
+
+.gs-justify-end {
+  justify-content: flex-end;
+}
+
+/* Alert Info */
+.gs-alert-info {
+  background-color: var(--gs-primary-light);
+  border-left: 4px solid var(--gs-primary);
+  color: var(--gs-text-primary);
+}
