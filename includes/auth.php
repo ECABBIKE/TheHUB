@@ -5,7 +5,11 @@
 
 // Start session if not already started
 if (session_status() === PHP_SESSION_NONE) {
-    session_name(SESSION_NAME);
+    if (defined('SESSION_NAME')) {
+        session_name(SESSION_NAME);
+    } else {
+        session_name('thehub_session');
+    }
     session_start();
 }
 
