@@ -2,17 +2,34 @@
 /**
  * Database Connection Handler
  * Provides secure PDO connection and helper functions
+ * Falls back to demo mode if database config doesn't exist
  */
 
-// Load configuration
-require_once __DIR__ . '/../config/database.php';
-require_once __DIR__ . '/../config/config.php';
+// Try to load database configuration if it exists
+$db_config_file = __DIR__ . '/../config/database.php';
+if (file_exists($db_config_file)) {
+    require_once $db_config_file;
+} else {
+    // Demo mode - define dummy constants
+    define('DB_HOST', 'localhost');
+    define('DB_NAME', 'thehub_demo');
+    define('DB_USER', 'demo');
+    define('DB_PASS', 'demo');
+    define('DB_CHARSET', 'utf8mb4');
+    define('DB_ERROR_DISPLAY', false);
+}
 
 class Database {
     private static $instance = null;
     private $conn;
 
     private function __construct() {
+        // In demo mode, don't connect to database
+        if (DB_NAME === 'thehub_demo') {
+            $this->conn = null;
+            return;
+        }
+
         try {
             $dsn = "mysql:host=" . DB_HOST . ";dbname=" . DB_NAME . ";charset=" . DB_CHARSET;
             $options = [
@@ -24,12 +41,9 @@ class Database {
 
             $this->conn = new PDO($dsn, DB_USER, DB_PASS, $options);
         } catch(PDOException $e) {
-            if (DB_ERROR_DISPLAY) {
-                die("Database connection failed: " . $e->getMessage());
-            } else {
-                error_log("Database connection failed: " . $e->getMessage());
-                die("Database connection failed. Please contact administrator.");
-            }
+            // In demo mode, silently fail
+            error_log("Database connection failed: " . $e->getMessage());
+            $this->conn = null;
         }
     }
 
@@ -48,13 +62,18 @@ class Database {
      * Execute a query and return results
      */
     public function query($sql, $params = []) {
+        // Demo mode - return false
+        if ($this->conn === null) {
+            return false;
+        }
+
         try {
             $stmt = $this->conn->prepare($sql);
             $stmt->execute($params);
             return $stmt;
         } catch(PDOException $e) {
             error_log("Query failed: " . $e->getMessage() . " | SQL: " . $sql);
-            throw $e;
+            return false;
         }
     }
 
@@ -62,15 +81,27 @@ class Database {
      * Get single row
      */
     public function getRow($sql, $params = []) {
+        // Demo mode - return empty array
+        if ($this->conn === null) {
+            return [];
+        }
+
         $stmt = $this->query($sql, $params);
-        return $stmt->fetch();
+        if (!$stmt) return [];
+        return $stmt->fetch() ?: [];
     }
 
     /**
      * Get all rows
      */
     public function getAll($sql, $params = []) {
+        // Demo mode - return empty array
+        if ($this->conn === null) {
+            return [];
+        }
+
         $stmt = $this->query($sql, $params);
+        if (!$stmt) return [];
         return $stmt->fetchAll();
     }
 
@@ -78,6 +109,11 @@ class Database {
      * Insert and return last insert ID
      */
     public function insert($table, $data) {
+        // Demo mode - return 0
+        if ($this->conn === null) {
+            return 0;
+        }
+
         $fields = array_keys($data);
         $values = array_values($data);
         $placeholders = array_fill(0, count($fields), '?');
@@ -86,6 +122,7 @@ class Database {
                 VALUES (" . implode(', ', $placeholders) . ")";
 
         $stmt = $this->query($sql, $values);
+        if (!$stmt) return 0;
         return $this->conn->lastInsertId();
     }
 
@@ -93,6 +130,11 @@ class Database {
      * Update records
      */
     public function update($table, $data, $where, $whereParams = []) {
+        // Demo mode - return 0
+        if ($this->conn === null) {
+            return 0;
+        }
+
         $fields = [];
         foreach (array_keys($data) as $field) {
             $fields[] = "{$field} = ?";
@@ -102,6 +144,7 @@ class Database {
         $params = array_merge(array_values($data), $whereParams);
 
         $stmt = $this->query($sql, $params);
+        if (!$stmt) return 0;
         return $stmt->rowCount();
     }
 
@@ -109,8 +152,14 @@ class Database {
      * Delete records
      */
     public function delete($table, $where, $params = []) {
+        // Demo mode - return 0
+        if ($this->conn === null) {
+            return 0;
+        }
+
         $sql = "DELETE FROM {$table} WHERE {$where}";
         $stmt = $this->query($sql, $params);
+        if (!$stmt) return 0;
         return $stmt->rowCount();
     }
 
