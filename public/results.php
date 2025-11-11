@@ -49,96 +49,119 @@ $pageTitle = $event['name'] . ' - Resultat';
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= h($pageTitle) ?> - TheHUB</title>
-    <link rel="stylesheet" href="/public/css/style.css">
+    <link rel="stylesheet" href="/assets/gravityseries-theme.css">
 </head>
 <body>
-    <header class="site-header">
-        <div class="container">
-            <div class="header-content">
-                <h1 class="site-title">TheHUB</h1>
-            </div>
-            <nav class="main-nav">
-                <a href="/public/index.php">Hem</a>
-                <a href="/public/events.php">Tävlingar</a>
-                <a href="/public/results.php" class="active">Resultat</a>
-                <a href="/admin/login.php">Admin</a>
-            </nav>
+    <!-- Navigation -->
+    <nav class="gs-nav">
+        <div class="gs-container">
+            <ul class="gs-nav-list">
+                <li><a href="/public/index.php" class="gs-nav-link">Hem</a></li>
+                <li><a href="/public/events.php" class="gs-nav-link">Tävlingar</a></li>
+                <li><a href="/public/results.php" class="gs-nav-link active">Resultat</a></li>
+                <li style="margin-left: auto;"><a href="/admin/login.php" class="gs-btn gs-btn-sm gs-btn-primary">Admin</a></li>
+            </ul>
         </div>
-    </header>
+    </nav>
 
-    <main class="container">
-        <div class="event-header-detail">
-            <h1><?= h($event['name']) ?></h1>
-            <div class="event-meta-detail">
-                <span class="meta-item">
-                    <strong>Datum:</strong> <?= formatDate($event['event_date'], 'd M Y') ?>
-                </span>
-                <span class="meta-item">
-                    <strong>Plats:</strong> <?= h($event['location']) ?>
-                </span>
-                <?php if ($event['distance']): ?>
-                    <span class="meta-item">
-                        <strong>Distans:</strong> <?= $event['distance'] ?> km
-                    </span>
-                <?php endif; ?>
-                <span class="meta-item">
-                    <strong>Typ:</strong> <?= h(str_replace('_', ' ', $event['event_type'])) ?>
-                </span>
+    <main class="gs-container gs-py-xl">
+        <!-- Event Header -->
+        <div class="gs-card gs-mb-lg">
+            <div class="gs-card-content">
+                <h1 class="gs-h2 gs-text-primary gs-mb-md"><?= h($event['name']) ?></h1>
+                <div class="gs-flex gs-flex-col gs-gap-sm gs-text-secondary gs-text-sm">
+                    <div>
+                        <span class="gs-text-primary" style="font-weight: 600;">Datum:</span>
+                        <?= formatDate($event['event_date'], 'd M Y') ?>
+                    </div>
+                    <div>
+                        <span class="gs-text-primary" style="font-weight: 600;">Plats:</span>
+                        <?= h($event['location']) ?>
+                    </div>
+                    <?php if ($event['distance']): ?>
+                        <div>
+                            <span class="gs-text-primary" style="font-weight: 600;">Distans:</span>
+                            <?= $event['distance'] ?> km
+                        </div>
+                    <?php endif; ?>
+                    <div>
+                        <span class="gs-text-primary" style="font-weight: 600;">Typ:</span>
+                        <?= h(str_replace('_', ' ', $event['event_type'])) ?>
+                    </div>
+                </div>
             </div>
         </div>
 
-        <h2>Resultat (<?= count($results) ?> deltagare)</h2>
+        <h2 class="gs-h3 gs-text-primary gs-mb-lg">Resultat (<?= count($results) ?> deltagare)</h2>
 
         <?php if (empty($results)): ?>
-            <p class="no-data">Inga resultat ännu</p>
+            <div class="gs-card">
+                <div class="gs-card-content gs-text-center gs-py-xl">
+                    <p class="gs-text-secondary">Inga resultat ännu</p>
+                </div>
+            </div>
         <?php else: ?>
-            <div class="table-responsive">
-                <table class="results-table">
-                    <thead>
-                        <tr>
-                            <th class="col-position">Plac</th>
-                            <th class="col-bib">#</th>
-                            <th class="col-name">Namn</th>
-                            <th class="col-club">Klubb</th>
-                            <th class="col-category">Kategori</th>
-                            <th class="col-time">Tid</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ($results as $result): ?>
-                            <tr class="<?= $result['position'] <= 3 ? 'podium-' . $result['position'] : '' ?>">
-                                <td class="col-position">
-                                    <?php if ($result['position']): ?>
-                                        <?= $result['position'] ?>
-                                        <?php if ($result['position'] <= 3): ?>
-                                            <span class="medal">🏆</span>
-                                        <?php endif; ?>
-                                    <?php else: ?>
-                                        -
-                                    <?php endif; ?>
-                                </td>
-                                <td class="col-bib"><?= h($result['bib_number']) ?></td>
-                                <td class="col-name">
-                                    <a href="/public/cyclist.php?id=<?= $result['cyclist_id'] ?>">
-                                        <?= h($result['cyclist_name']) ?>
-                                    </a>
-                                    <?php if ($result['birth_year']): ?>
-                                        <span class="year">(<?= $result['birth_year'] ?>)</span>
-                                    <?php endif; ?>
-                                </td>
-                                <td class="col-club"><?= h($result['club_name']) ?></td>
-                                <td class="col-category"><?= h($result['category_name']) ?></td>
-                                <td class="col-time"><?= formatTime($result['finish_time']) ?></td>
+            <!-- Results Table -->
+            <div class="gs-card">
+                <div class="gs-table-responsive">
+                    <table class="gs-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 80px;">Plac</th>
+                                <th style="width: 60px;">#</th>
+                                <th>Namn</th>
+                                <th>Klubb</th>
+                                <th>Kategori</th>
+                                <th style="width: 100px;">Tid</th>
                             </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($results as $result): ?>
+                                <tr class="<?= $result['position'] >= 1 && $result['position'] <= 3 ? 'gs-podium-' . $result['position'] : '' ?>">
+                                    <td style="font-weight: 700; color: var(--gs-primary);">
+                                        <?php if ($result['position']): ?>
+                                            <?= $result['position'] ?>
+                                        <?php else: ?>
+                                            -
+                                        <?php endif; ?>
+                                    </td>
+                                    <td class="gs-text-secondary"><?= h($result['bib_number']) ?></td>
+                                    <td>
+                                        <a href="/public/cyclist.php?id=<?= $result['cyclist_id'] ?>" style="color: var(--gs-text-primary); text-decoration: none; font-weight: 500;">
+                                            <?= h($result['cyclist_name']) ?>
+                                        </a>
+                                        <?php if ($result['birth_year']): ?>
+                                            <span class="gs-text-secondary gs-text-xs" style="margin-left: var(--gs-space-xs);">
+                                                (<?= $result['birth_year'] ?>)
+                                            </span>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td class="gs-text-secondary"><?= h($result['club_name']) ?></td>
+                                    <td>
+                                        <span class="gs-badge gs-badge-primary gs-text-xs">
+                                            <?= h($result['category_name']) ?>
+                                        </span>
+                                    </td>
+                                    <td class="gs-text-secondary" style="font-family: monospace;">
+                                        <?= formatTime($result['finish_time']) ?>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
             </div>
         <?php endif; ?>
+
+        <!-- Back Button -->
+        <div class="gs-mt-lg">
+            <a href="/public/events.php" class="gs-btn gs-btn-outline">« Tillbaka till tävlingar</a>
+        </div>
     </main>
 
-    <footer class="site-footer">
-        <div class="container">
+    <!-- Footer -->
+    <footer class="gs-bg-dark gs-text-white gs-py-xl gs-text-center">
+        <div class="gs-container">
             <p>&copy; <?= date('Y') ?> TheHUB</p>
         </div>
     </footer>

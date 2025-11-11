@@ -44,81 +44,104 @@ $pageTitle = 'Tävlingar';
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= h($pageTitle) ?> - TheHUB</title>
-    <link rel="stylesheet" href="/public/css/style.css">
+    <link rel="stylesheet" href="/assets/gravityseries-theme.css">
 </head>
 <body>
-    <header class="site-header">
-        <div class="container">
-            <div class="header-content">
-                <h1 class="site-title">TheHUB</h1>
-            </div>
-            <nav class="main-nav">
-                <a href="/public/index.php">Hem</a>
-                <a href="/public/events.php" class="active">Tävlingar</a>
-                <a href="/public/results.php">Resultat</a>
-                <a href="/admin/login.php">Admin</a>
-            </nav>
+    <!-- Navigation -->
+    <nav class="gs-nav">
+        <div class="gs-container">
+            <ul class="gs-nav-list">
+                <li><a href="/public/index.php" class="gs-nav-link">Hem</a></li>
+                <li><a href="/public/events.php" class="gs-nav-link active">Tävlingar</a></li>
+                <li><a href="/public/results.php" class="gs-nav-link">Resultat</a></li>
+                <li style="margin-left: auto;"><a href="/admin/login.php" class="gs-btn gs-btn-sm gs-btn-primary">Admin</a></li>
+            </ul>
         </div>
-    </header>
+    </nav>
 
-    <main class="container">
-        <h1>Tävlingar</h1>
+    <main class="gs-container gs-py-xl">
+        <h1 class="gs-h1 gs-text-primary gs-mb-lg">Tävlingar</h1>
 
-        <div class="filters">
-            <div class="filter-group">
-                <label for="year">År:</label>
-                <select id="year" onchange="window.location.href='?year=' + this.value">
-                    <?php foreach ($years as $y): ?>
-                        <option value="<?= $y['year'] ?>" <?= $y['year'] == $year ? 'selected' : '' ?>>
-                            <?= $y['year'] ?>
-                        </option>
-                    <?php endforeach; ?>
-                </select>
+        <!-- Filters -->
+        <div class="gs-card gs-mb-lg">
+            <div class="gs-card-content">
+                <div class="gs-flex gs-items-center gs-gap-md">
+                    <label for="year" class="gs-label" style="margin-bottom: 0;">År:</label>
+                    <select id="year" class="gs-input" style="max-width: 200px;" onchange="window.location.href='?year=' + this.value">
+                        <?php foreach ($years as $y): ?>
+                            <option value="<?= $y['year'] ?>" <?= $y['year'] == $year ? 'selected' : '' ?>>
+                                <?= $y['year'] ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                    <span class="gs-text-secondary gs-text-sm">Totalt: <?= $totalCount ?> tävlingar</span>
+                </div>
             </div>
         </div>
 
         <?php if (empty($events)): ?>
-            <p class="no-data">Inga tävlingar hittades för <?= $year ?></p>
+            <div class="gs-card">
+                <div class="gs-card-content gs-text-center gs-py-xl">
+                    <p class="gs-text-secondary">Inga tävlingar hittades för <?= $year ?></p>
+                </div>
+            </div>
         <?php else: ?>
-            <div class="events-grid">
+            <!-- Events Grid -->
+            <div class="gs-grid gs-grid-cols-1 gs-md-grid-cols-2 gs-lg-grid-cols-3 gs-gap-lg gs-mb-lg">
                 <?php foreach ($events as $event): ?>
-                    <div class="event-card-large">
-                        <div class="event-header">
-                            <div class="event-date-large">
-                                <span class="day"><?= formatDate($event['event_date'], 'd') ?></span>
-                                <span class="month"><?= formatDate($event['event_date'], 'M Y') ?></span>
+                    <div class="gs-event-card">
+                        <div class="gs-event-header">
+                            <div class="gs-event-date" style="background-color: <?= $event['status'] === 'completed' ? 'var(--gs-success)' : 'var(--gs-primary)' ?>;">
+                                <div class="gs-event-date-day"><?= formatDate($event['event_date'], 'd') ?></div>
+                                <div class="gs-event-date-month"><?= formatDate($event['event_date'], 'M Y') ?></div>
                             </div>
-                            <span class="badge badge-<?= $event['status'] ?>"><?= h($event['status']) ?></span>
+                            <span class="gs-badge gs-badge-<?= $event['status'] === 'completed' ? 'success' : ($event['status'] === 'upcoming' ? 'warning' : 'primary') ?>">
+                                <?= h($event['status']) ?>
+                            </span>
                         </div>
-                        <h3><a href="/public/event.php?id=<?= $event['id'] ?>"><?= h($event['name']) ?></a></h3>
-                        <p class="event-location"><?= h($event['location']) ?></p>
-                        <p class="event-type"><?= h(str_replace('_', ' ', $event['event_type'])) ?></p>
-                        <?php if ($event['participant_count'] > 0): ?>
-                            <p class="event-participants"><?= $event['participant_count'] ?> deltagare</p>
-                        <?php endif; ?>
-                        <a href="/public/results.php?event_id=<?= $event['id'] ?>" class="btn btn-sm">Visa resultat</a>
+                        <div class="gs-event-content">
+                            <h3 class="gs-event-title">
+                                <a href="/public/event.php?id=<?= $event['id'] ?>"><?= h($event['name']) ?></a>
+                            </h3>
+                            <p class="gs-event-meta"><?= h($event['location']) ?></p>
+                            <p class="gs-event-meta gs-text-xs"><?= h(str_replace('_', ' ', $event['event_type'])) ?></p>
+                            <?php if ($event['participant_count'] > 0): ?>
+                                <p class="gs-event-meta gs-text-xs gs-text-primary" style="margin-top: var(--gs-space-sm);">
+                                    <?= $event['participant_count'] ?> deltagare
+                                </p>
+                            <?php endif; ?>
+                            <a href="/public/results.php?event_id=<?= $event['id'] ?>" class="gs-btn gs-btn-sm gs-btn-primary gs-mt-lg">
+                                Visa resultat
+                            </a>
+                        </div>
                     </div>
                 <?php endforeach; ?>
             </div>
 
+            <!-- Pagination -->
             <?php if ($pagination['total_pages'] > 1): ?>
-                <div class="pagination">
+                <div class="gs-flex gs-items-center gs-justify-between gs-gap-md">
                     <?php if ($pagination['has_prev']): ?>
-                        <a href="?year=<?= $year ?>&page=<?= $page - 1 ?>" class="btn btn-sm">« Föregående</a>
+                        <a href="?year=<?= $year ?>&page=<?= $page - 1 ?>" class="gs-btn gs-btn-outline">« Föregående</a>
+                    <?php else: ?>
+                        <span></span>
                     <?php endif; ?>
 
-                    <span class="page-info">Sida <?= $page ?> av <?= $pagination['total_pages'] ?></span>
+                    <span class="gs-text-secondary">Sida <?= $page ?> av <?= $pagination['total_pages'] ?></span>
 
                     <?php if ($pagination['has_next']): ?>
-                        <a href="?year=<?= $year ?>&page=<?= $page + 1 ?>" class="btn btn-sm">Nästa »</a>
+                        <a href="?year=<?= $year ?>&page=<?= $page + 1 ?>" class="gs-btn gs-btn-outline">Nästa »</a>
+                    <?php else: ?>
+                        <span></span>
                     <?php endif; ?>
                 </div>
             <?php endif; ?>
         <?php endif; ?>
     </main>
 
-    <footer class="site-footer">
-        <div class="container">
+    <!-- Footer -->
+    <footer class="gs-bg-dark gs-text-white gs-py-xl gs-text-center">
+        <div class="gs-container">
             <p>&copy; <?= date('Y') ?> TheHUB</p>
         </div>
     </footer>

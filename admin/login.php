@@ -29,35 +29,36 @@ $pageTitle = 'Admin Login';
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= h($pageTitle) ?> - TheHUB</title>
-    <link rel="stylesheet" href="/public/css/style.css">
+    <link rel="stylesheet" href="/assets/gravityseries-theme.css">
 </head>
-<body class="login-page">
-    <div class="login-container">
-        <div class="login-box">
-            <h1>TheHUB Admin</h1>
-            <p class="subtitle">Plattform för cykeltävlingar</p>
+<body class="gs-login-page">
+    <div class="gs-login-card">
+        <div class="gs-login-header">
+            <h1 class="gs-login-title">TheHUB Admin</h1>
+            <p class="gs-login-subtitle">Plattform för cykeltävlingar</p>
+        </div>
 
-            <?php if ($error): ?>
-                <div class="alert alert-error"><?= h($error) ?></div>
-            <?php endif; ?>
+        <?php if ($error): ?>
+            <div class="gs-alert gs-alert-error"><?= h($error) ?></div>
+        <?php endif; ?>
 
-            <form method="POST" action="">
-                <div class="form-group">
-                    <label for="username">Användarnamn:</label>
-                    <input type="text" id="username" name="username" required autofocus>
-                </div>
-
-                <div class="form-group">
-                    <label for="password">Lösenord:</label>
-                    <input type="password" id="password" name="password" required>
-                </div>
-
-                <button type="submit" class="btn btn-primary btn-block">Logga in</button>
-            </form>
-
-            <div class="login-info">
-                <p><small>Standard login: admin / changeme123</small></p>
+        <form method="POST" action="">
+            <div class="gs-form-group">
+                <label for="username" class="gs-label">Användarnamn</label>
+                <input type="text" id="username" name="username" class="gs-input" required autofocus>
             </div>
+
+            <div class="gs-form-group">
+                <label for="password" class="gs-label">Lösenord</label>
+                <input type="password" id="password" name="password" class="gs-input" required>
+            </div>
+
+            <button type="submit" class="gs-btn gs-btn-primary gs-w-full gs-btn-lg">Logga in</button>
+        </form>
+
+        <div class="gs-text-center gs-mt-lg">
+            <p class="gs-text-secondary gs-text-sm">Standard login: admin / changeme123</p>
+            <a href="/public/index.php" class="gs-text-primary gs-text-sm" style="text-decoration: none;">← Tillbaka till startsidan</a>
         </div>
     </div>
 </body>

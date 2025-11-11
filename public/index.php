@@ -10,7 +10,7 @@ $upcomingEvents = $db->getAll(
      FROM events
      WHERE event_date >= CURDATE()
      ORDER BY event_date ASC
-     LIMIT 10"
+     LIMIT 6"
 );
 
 // Get recent completed events
@@ -21,7 +21,7 @@ $recentEvents = $db->getAll(
      WHERE e.event_date < CURDATE()
      GROUP BY e.id
      ORDER BY e.event_date DESC
-     LIMIT 10"
+     LIMIT 6"
 );
 
 // Get statistics
@@ -39,91 +39,115 @@ $pageTitle = 'Hem';
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TheHUB - Plattform för cykeltävlingar</title>
-    <link rel="stylesheet" href="/public/css/style.css">
+    <link rel="stylesheet" href="/assets/gravityseries-theme.css">
 </head>
 <body>
-    <header class="site-header">
-        <div class="container">
-            <div class="header-content">
-                <h1 class="site-title">TheHUB</h1>
-                <p class="site-tagline">Sveriges centrala plattform för cykeltävlingar</p>
-            </div>
-            <nav class="main-nav">
-                <a href="/public/index.php" class="active">Hem</a>
-                <a href="/public/events.php">Tävlingar</a>
-                <a href="/public/results.php">Resultat</a>
-                <a href="/admin/login.php">Admin</a>
-            </nav>
+    <!-- Navigation -->
+    <nav class="gs-nav">
+        <div class="gs-container">
+            <ul class="gs-nav-list">
+                <li><a href="/public/index.php" class="gs-nav-link active">Hem</a></li>
+                <li><a href="/public/events.php" class="gs-nav-link">Tävlingar</a></li>
+                <li><a href="/public/results.php" class="gs-nav-link">Resultat</a></li>
+                <li style="margin-left: auto;"><a href="/admin/login.php" class="gs-btn gs-btn-sm gs-btn-primary">Admin</a></li>
+            </ul>
         </div>
-    </header>
+    </nav>
 
-    <main class="container">
-        <section class="hero">
-            <h2>Välkommen till TheHUB</h2>
-            <p>Hitta tävlingar, resultat och cyklistprofiler från hela Sverige</p>
+    <!-- Hero Section -->
+    <div class="gs-container">
+        <section class="gs-hero">
+            <div class="gs-hero-content gs-text-center">
+                <h1 class="gs-h1 gs-text-white gs-mb-md">TheHUB</h1>
+                <p class="gs-text-lg gs-text-white gs-mb-xl">Sveriges centrala plattform för cykeltävlingar</p>
 
-            <div class="stats-row">
-                <div class="stat-item">
-                    <span class="stat-value"><?= number_format($stats['total_cyclists']) ?></span>
-                    <span class="stat-label">Cyklister</span>
-                </div>
-                <div class="stat-item">
-                    <span class="stat-value"><?= number_format($stats['total_events']) ?></span>
-                    <span class="stat-label">Tävlingar</span>
-                </div>
-                <div class="stat-item">
-                    <span class="stat-value"><?= number_format($stats['total_clubs']) ?></span>
-                    <span class="stat-label">Klubbar</span>
+                <!-- Stats -->
+                <div class="gs-grid gs-grid-cols-1 gs-md-grid-cols-3 gs-gap-lg">
+                    <div class="gs-stat-card">
+                        <div class="gs-stat-number"><?= number_format($stats['total_cyclists']) ?></div>
+                        <div class="gs-stat-label">Cyklister</div>
+                    </div>
+                    <div class="gs-stat-card">
+                        <div class="gs-stat-number"><?= number_format($stats['total_events']) ?></div>
+                        <div class="gs-stat-label">Tävlingar</div>
+                    </div>
+                    <div class="gs-stat-card">
+                        <div class="gs-stat-number"><?= number_format($stats['total_clubs']) ?></div>
+                        <div class="gs-stat-label">Klubbar</div>
+                    </div>
                 </div>
             </div>
         </section>
+    </div>
+
+    <!-- Main Content -->
+    <main class="gs-container gs-py-xl">
 
         <?php if (!empty($upcomingEvents)): ?>
-            <section class="events-section">
-                <h2>Kommande tävlingar</h2>
-                <div class="event-list">
+            <!-- Upcoming Events -->
+            <section class="gs-mb-xl">
+                <h2 class="gs-h2 gs-text-primary gs-mb-lg">Kommande tävlingar</h2>
+
+                <div class="gs-grid gs-grid-cols-1 gs-md-grid-cols-2 gs-lg-grid-cols-3 gs-gap-lg gs-mb-lg">
                     <?php foreach ($upcomingEvents as $event): ?>
-                        <div class="event-card">
-                            <div class="event-date">
-                                <span class="day"><?= formatDate($event['event_date'], 'd') ?></span>
-                                <span class="month"><?= formatDate($event['event_date'], 'M') ?></span>
+                        <div class="gs-event-card">
+                            <div class="gs-event-header">
+                                <div class="gs-event-date">
+                                    <div class="gs-event-date-day"><?= formatDate($event['event_date'], 'd') ?></div>
+                                    <div class="gs-event-date-month"><?= formatDate($event['event_date'], 'M') ?></div>
+                                </div>
+                                <span class="gs-badge gs-badge-warning"><?= h($event['status']) ?></span>
                             </div>
-                            <div class="event-info">
-                                <h3><a href="/public/event.php?id=<?= $event['id'] ?>"><?= h($event['name']) ?></a></h3>
-                                <p class="event-location"><?= h($event['location']) ?></p>
-                                <span class="event-type"><?= h($event['event_type']) ?></span>
+                            <div class="gs-event-content">
+                                <h3 class="gs-event-title">
+                                    <a href="/public/event.php?id=<?= $event['id'] ?>"><?= h($event['name']) ?></a>
+                                </h3>
+                                <p class="gs-event-meta"><?= h($event['location']) ?></p>
+                                <p class="gs-event-meta gs-text-xs"><?= h(str_replace('_', ' ', $event['event_type'])) ?></p>
                             </div>
                         </div>
                     <?php endforeach; ?>
                 </div>
-                <a href="/public/events.php" class="btn btn-primary">Visa alla tävlingar</a>
+
+                <div class="gs-text-center">
+                    <a href="/public/events.php" class="gs-btn gs-btn-primary gs-btn-lg">Visa alla tävlingar</a>
+                </div>
             </section>
         <?php endif; ?>
 
         <?php if (!empty($recentEvents)): ?>
-            <section class="events-section">
-                <h2>Senaste resultaten</h2>
-                <div class="event-list">
+            <!-- Recent Results -->
+            <section class="gs-mb-xl">
+                <h2 class="gs-h2 gs-text-primary gs-mb-lg">Senaste resultaten</h2>
+
+                <div class="gs-grid gs-grid-cols-1 gs-md-grid-cols-2 gs-lg-grid-cols-3 gs-gap-lg">
                     <?php foreach ($recentEvents as $event): ?>
-                        <div class="event-card">
-                            <div class="event-date completed">
-                                <span class="day"><?= formatDate($event['event_date'], 'd') ?></span>
-                                <span class="month"><?= formatDate($event['event_date'], 'M') ?></span>
+                        <div class="gs-event-card">
+                            <div class="gs-event-header">
+                                <div class="gs-event-date" style="background-color: var(--gs-success);">
+                                    <div class="gs-event-date-day"><?= formatDate($event['event_date'], 'd') ?></div>
+                                    <div class="gs-event-date-month"><?= formatDate($event['event_date'], 'M') ?></div>
+                                </div>
+                                <span class="gs-badge gs-badge-success">Completed</span>
                             </div>
-                            <div class="event-info">
-                                <h3><a href="/public/results.php?event_id=<?= $event['id'] ?>"><?= h($event['name']) ?></a></h3>
-                                <p class="event-location"><?= h($event['location']) ?></p>
-                                <p class="event-meta"><?= $event['participant_count'] ?> deltagare</p>
+                            <div class="gs-event-content">
+                                <h3 class="gs-event-title">
+                                    <a href="/public/results.php?event_id=<?= $event['id'] ?>"><?= h($event['name']) ?></a>
+                                </h3>
+                                <p class="gs-event-meta"><?= h($event['location']) ?></p>
+                                <p class="gs-event-meta gs-text-xs"><?= $event['participant_count'] ?> deltagare</p>
                             </div>
                         </div>
                     <?php endforeach; ?>
                 </div>
             </section>
         <?php endif; ?>
+
     </main>
 
-    <footer class="site-footer">
-        <div class="container">
+    <!-- Footer -->
+    <footer class="gs-bg-dark gs-text-white gs-py-xl gs-text-center">
+        <div class="gs-container">
             <p>&copy; <?= date('Y') ?> TheHUB - Sveriges plattform för cykeltävlingar</p>
         </div>
     </footer>
