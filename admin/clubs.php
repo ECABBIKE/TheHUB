@@ -5,34 +5,60 @@ require_admin();
 $db = getDB();
 $current_admin = get_current_admin();
 
+// Demo mode check
+$is_demo = ($db->getConnection() === null);
+
 // Handle search
 $search = $_GET['search'] ?? '';
-$where = [];
-$params = [];
 
-if ($search) {
-    $where[] = "name LIKE ?";
-    $params[] = "%$search%";
+if ($is_demo) {
+    // Demo clubs
+    $all_clubs = [
+        ['id' => 1, 'name' => 'Team GravitySeries', 'short_name' => 'TGS', 'city' => 'Stockholm', 'country' => 'Sverige', 'active' => 1, 'rider_count' => 45],
+        ['id' => 2, 'name' => 'CK Olympia', 'short_name' => 'CKO', 'city' => 'Göteborg', 'country' => 'Sverige', 'active' => 1, 'rider_count' => 38],
+        ['id' => 3, 'name' => 'Uppsala CK', 'short_name' => 'UCK', 'city' => 'Uppsala', 'country' => 'Sverige', 'active' => 1, 'rider_count' => 52],
+        ['id' => 4, 'name' => 'Team Sportson', 'short_name' => 'TSP', 'city' => 'Malmö', 'country' => 'Sverige', 'active' => 1, 'rider_count' => 41],
+        ['id' => 5, 'name' => 'IFK Göteborg CK', 'short_name' => 'IFKG', 'city' => 'Göteborg', 'country' => 'Sverige', 'active' => 1, 'rider_count' => 67],
+        ['id' => 6, 'name' => 'Cykelklubben Borås', 'short_name' => 'CKB', 'city' => 'Borås', 'country' => 'Sverige', 'active' => 1, 'rider_count' => 29],
+    ];
+
+    // Filter by search
+    if ($search) {
+        $clubs = array_filter($all_clubs, function($c) use ($search) {
+            return stripos($c['name'], $search) !== false || stripos($c['city'], $search) !== false;
+        });
+        $clubs = array_values($clubs);
+    } else {
+        $clubs = $all_clubs;
+    }
+} else {
+    $where = [];
+    $params = [];
+
+    if ($search) {
+        $where[] = "name LIKE ?";
+        $params[] = "%$search%";
+    }
+
+    $whereClause = $where ? 'WHERE ' . implode(' AND ', $where) : '';
+
+    // Get clubs with rider count
+    $sql = "SELECT
+                cl.id,
+                cl.name,
+                cl.short_name,
+                cl.city,
+                cl.country,
+                cl.active,
+                COUNT(DISTINCT c.id) as rider_count
+            FROM clubs cl
+            LEFT JOIN cyclists c ON cl.id = c.club_id AND c.active = 1
+            $whereClause
+            GROUP BY cl.id
+            ORDER BY cl.name";
+
+    $clubs = $db->getAll($sql, $params);
 }
-
-$whereClause = $where ? 'WHERE ' . implode(' AND ', $where) : '';
-
-// Get clubs with rider count
-$sql = "SELECT
-            cl.id,
-            cl.name,
-            cl.short_name,
-            cl.city,
-            cl.country,
-            cl.active,
-            COUNT(DISTINCT c.id) as rider_count
-        FROM clubs cl
-        LEFT JOIN cyclists c ON cl.id = c.club_id AND c.active = 1
-        $whereClause
-        GROUP BY cl.id
-        ORDER BY cl.name";
-
-$clubs = $db->getAll($sql, $params);
 
 $pageTitle = 'Klubbar';
 ?>

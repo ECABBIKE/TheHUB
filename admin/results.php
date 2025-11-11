@@ -5,65 +5,116 @@ require_admin();
 $db = getDB();
 $current_admin = get_current_admin();
 
+// Demo mode check
+$is_demo = ($db->getConnection() === null);
+
 // Handle filters
 $event_id = $_GET['event_id'] ?? '';
 $category_id = $_GET['category_id'] ?? '';
 $search = $_GET['search'] ?? '';
 
-$where = [];
-$params = [];
+if ($is_demo) {
+    // Demo results
+    $all_results = [
+        ['id' => 1, 'position' => 1, 'bib_number' => 101, 'finish_time' => '01:45:23', 'status' => 'finished', 'points' => 100, 'event_name' => 'GravitySeries Järvsö XC', 'event_date' => '2025-06-15', 'event_id' => 1, 'rider_name' => 'Erik Andersson', 'rider_id' => 1, 'birth_year' => 1995, 'club_name' => 'Team GravitySeries', 'category_name' => 'Elite Herr', 'category_id' => 1],
+        ['id' => 2, 'position' => 2, 'bib_number' => 102, 'finish_time' => '01:46:45', 'status' => 'finished', 'points' => 90, 'event_name' => 'GravitySeries Järvsö XC', 'event_date' => '2025-06-15', 'event_id' => 1, 'rider_name' => 'Johan Svensson', 'rider_id' => 3, 'birth_year' => 1992, 'club_name' => 'Uppsala CK', 'category_name' => 'Elite Herr', 'category_id' => 1],
+        ['id' => 3, 'position' => 1, 'bib_number' => 201, 'finish_time' => '01:52:12', 'status' => 'finished', 'points' => 100, 'event_name' => 'GravitySeries Järvsö XC', 'event_date' => '2025-06-15', 'event_id' => 1, 'rider_name' => 'Anna Karlsson', 'rider_id' => 2, 'birth_year' => 1998, 'club_name' => 'CK Olympia', 'category_name' => 'Elite Dam', 'category_id' => 2],
+        ['id' => 4, 'position' => 2, 'bib_number' => 202, 'finish_time' => '01:54:30', 'status' => 'finished', 'points' => 90, 'event_name' => 'GravitySeries Järvsö XC', 'event_date' => '2025-06-15', 'event_id' => 1, 'rider_name' => 'Maria Lindström', 'rider_id' => 4, 'birth_year' => 1996, 'club_name' => 'Team Sportson', 'category_name' => 'Elite Dam', 'category_id' => 2],
+        ['id' => 5, 'position' => 1, 'bib_number' => 103, 'finish_time' => '02:15:45', 'status' => 'finished', 'points' => 100, 'event_name' => 'SM Lindesberg', 'event_date' => '2025-07-01', 'event_id' => 2, 'rider_name' => 'Peter Nilsson', 'rider_id' => 5, 'birth_year' => 1990, 'club_name' => 'IFK Göteborg CK', 'category_name' => 'Elite Herr', 'category_id' => 1],
+    ];
 
-if ($event_id) {
-    $where[] = "r.event_id = ?";
-    $params[] = $event_id;
+    // Filter by event
+    if ($event_id) {
+        $results = array_filter($all_results, fn($r) => $r['event_id'] == $event_id);
+        $results = array_values($results);
+    } else {
+        $results = $all_results;
+    }
+
+    // Filter by category
+    if ($category_id) {
+        $results = array_filter($results, fn($r) => $r['category_id'] == $category_id);
+        $results = array_values($results);
+    }
+
+    // Filter by search
+    if ($search) {
+        $results = array_filter($results, function($r) use ($search) {
+            return stripos($r['rider_name'], $search) !== false;
+        });
+        $results = array_values($results);
+    }
+
+    // Demo events for filter
+    $events = [
+        ['id' => 1, 'name' => 'GravitySeries Järvsö XC', 'event_date' => '2025-06-15'],
+        ['id' => 2, 'name' => 'SM Lindesberg', 'event_date' => '2025-07-01'],
+        ['id' => 3, 'name' => 'Cykelvasan 90', 'event_date' => '2025-08-10'],
+    ];
+
+    // Demo categories for filter
+    $categories = [
+        ['id' => 1, 'name' => 'Elite Herr'],
+        ['id' => 2, 'name' => 'Elite Dam'],
+        ['id' => 3, 'name' => 'Junior Herr'],
+        ['id' => 4, 'name' => 'Junior Dam'],
+    ];
+} else {
+    $where = [];
+    $params = [];
+
+    if ($event_id) {
+        $where[] = "r.event_id = ?";
+        $params[] = $event_id;
+    }
+
+    if ($category_id) {
+        $where[] = "r.category_id = ?";
+        $params[] = $category_id;
+    }
+
+    if ($search) {
+        $where[] = "(CONCAT(c.firstname, ' ', c.lastname) LIKE ? OR c.license_number LIKE ?)";
+        $params[] = "%$search%";
+        $params[] = "%$search%";
+    }
+
+    $whereClause = $where ? 'WHERE ' . implode(' AND ', $where) : '';
+
+    // Get results with all related data
+    $sql = "SELECT
+                r.id,
+                r.position,
+                r.bib_number,
+                r.finish_time,
+                r.status,
+                r.points,
+                e.name as event_name,
+                e.event_date,
+                e.id as event_id,
+                CONCAT(c.firstname, ' ', c.lastname) as rider_name,
+                c.id as rider_id,
+                c.birth_year,
+                cl.name as club_name,
+                cat.name as category_name,
+                cat.id as category_id
+            FROM results r
+            JOIN events e ON r.event_id = e.id
+            JOIN cyclists c ON r.cyclist_id = c.id
+            LEFT JOIN clubs cl ON c.club_id = cl.id
+            LEFT JOIN categories cat ON r.category_id = cat.id
+            $whereClause
+            ORDER BY e.event_date DESC, r.position ASC
+            LIMIT 200";
+
+    $results = $db->getAll($sql, $params);
+
+    // Get events for filter
+    $events = $db->getAll("SELECT id, name, event_date FROM events ORDER BY event_date DESC LIMIT 50");
+
+    // Get categories for filter
+    $categories = $db->getAll("SELECT id, name FROM categories ORDER BY name");
 }
-
-if ($category_id) {
-    $where[] = "r.category_id = ?";
-    $params[] = $category_id;
-}
-
-if ($search) {
-    $where[] = "(CONCAT(c.firstname, ' ', c.lastname) LIKE ? OR c.license_number LIKE ?)";
-    $params[] = "%$search%";
-    $params[] = "%$search%";
-}
-
-$whereClause = $where ? 'WHERE ' . implode(' AND ', $where) : '';
-
-// Get results with all related data
-$sql = "SELECT
-            r.id,
-            r.position,
-            r.bib_number,
-            r.finish_time,
-            r.status,
-            r.points,
-            e.name as event_name,
-            e.event_date,
-            e.id as event_id,
-            CONCAT(c.firstname, ' ', c.lastname) as rider_name,
-            c.id as rider_id,
-            c.birth_year,
-            cl.name as club_name,
-            cat.name as category_name,
-            cat.id as category_id
-        FROM results r
-        JOIN events e ON r.event_id = e.id
-        JOIN cyclists c ON r.cyclist_id = c.id
-        LEFT JOIN clubs cl ON c.club_id = cl.id
-        LEFT JOIN categories cat ON r.category_id = cat.id
-        $whereClause
-        ORDER BY e.event_date DESC, r.position ASC
-        LIMIT 200";
-
-$results = $db->getAll($sql, $params);
-
-// Get events for filter
-$events = $db->getAll("SELECT id, name, event_date FROM events ORDER BY event_date DESC LIMIT 50");
-
-// Get categories for filter
-$categories = $db->getAll("SELECT id, name FROM categories ORDER BY name");
 
 $pageTitle = 'Resultat';
 ?>

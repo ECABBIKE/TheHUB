@@ -5,37 +5,64 @@ require_admin();
 $db = getDB();
 $current_admin = get_current_admin();
 
+// Demo mode check
+$is_demo = ($db->getConnection() === null);
+
 // Handle search
 $search = $_GET['search'] ?? '';
-$where = [];
-$params = [];
 
-if ($search) {
-    $where[] = "(CONCAT(c.firstname, ' ', c.lastname) LIKE ? OR c.license_number LIKE ?)";
-    $params[] = "%$search%";
-    $params[] = "%$search%";
+if ($is_demo) {
+    // Demo riders
+    $all_riders = [
+        ['id' => 1, 'firstname' => 'Erik', 'lastname' => 'Andersson', 'birth_year' => 1995, 'gender' => 'M', 'license_number' => 'SWE-2025-1234', 'active' => 1, 'club_name' => 'Team GravitySeries', 'club_id' => 1],
+        ['id' => 2, 'firstname' => 'Anna', 'lastname' => 'Karlsson', 'birth_year' => 1998, 'gender' => 'F', 'license_number' => 'SWE-2025-2345', 'active' => 1, 'club_name' => 'CK Olympia', 'club_id' => 2],
+        ['id' => 3, 'firstname' => 'Johan', 'lastname' => 'Svensson', 'birth_year' => 1992, 'gender' => 'M', 'license_number' => 'SWE-2025-3456', 'active' => 1, 'club_name' => 'Uppsala CK', 'club_id' => 3],
+        ['id' => 4, 'firstname' => 'Maria', 'lastname' => 'Lindström', 'birth_year' => 1996, 'gender' => 'F', 'license_number' => 'SWE-2025-4567', 'active' => 1, 'club_name' => 'Team Sportson', 'club_id' => 4],
+        ['id' => 5, 'firstname' => 'Peter', 'lastname' => 'Nilsson', 'birth_year' => 1990, 'gender' => 'M', 'license_number' => 'SWE-2025-5678', 'active' => 1, 'club_name' => 'IFK Göteborg CK', 'club_id' => 5],
+        ['id' => 6, 'firstname' => 'Lisa', 'lastname' => 'Bergman', 'birth_year' => 1999, 'gender' => 'F', 'license_number' => 'SWE-2025-6789', 'active' => 1, 'club_name' => 'Team GravitySeries', 'club_id' => 1],
+    ];
+
+    // Filter by search
+    if ($search) {
+        $riders = array_filter($all_riders, function($r) use ($search) {
+            $name = $r['firstname'] . ' ' . $r['lastname'];
+            return stripos($name, $search) !== false || stripos($r['license_number'], $search) !== false;
+        });
+        $riders = array_values($riders);
+    } else {
+        $riders = $all_riders;
+    }
+} else {
+    $where = [];
+    $params = [];
+
+    if ($search) {
+        $where[] = "(CONCAT(c.firstname, ' ', c.lastname) LIKE ? OR c.license_number LIKE ?)";
+        $params[] = "%$search%";
+        $params[] = "%$search%";
+    }
+
+    $whereClause = $where ? 'WHERE ' . implode(' AND ', $where) : '';
+
+    // Get riders
+    $sql = "SELECT
+                c.id,
+                c.firstname,
+                c.lastname,
+                c.birth_year,
+                c.gender,
+                c.license_number,
+                c.active,
+                cl.name as club_name,
+                cl.id as club_id
+            FROM cyclists c
+            LEFT JOIN clubs cl ON c.club_id = cl.id
+            $whereClause
+            ORDER BY c.lastname, c.firstname
+            LIMIT 100";
+
+    $riders = $db->getAll($sql, $params);
 }
-
-$whereClause = $where ? 'WHERE ' . implode(' AND ', $where) : '';
-
-// Get riders
-$sql = "SELECT
-            c.id,
-            c.firstname,
-            c.lastname,
-            c.birth_year,
-            c.gender,
-            c.license_number,
-            c.active,
-            cl.name as club_name,
-            cl.id as club_id
-        FROM cyclists c
-        LEFT JOIN clubs cl ON c.club_id = cl.id
-        $whereClause
-        ORDER BY c.lastname, c.firstname
-        LIMIT 100";
-
-$riders = $db->getAll($sql, $params);
 
 $pageTitle = 'Deltagare';
 ?>

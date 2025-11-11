@@ -5,40 +5,72 @@ require_admin();
 $db = getDB();
 $current_admin = get_current_admin();
 
+// Demo mode check
+$is_demo = ($db->getConnection() === null);
+
 // Handle filters
 $status = $_GET['status'] ?? '';
 $year = $_GET['year'] ?? date('Y');
 
-$where = ["YEAR(event_date) = ?"];
-$params = [$year];
+if ($is_demo) {
+    // Demo events
+    $all_events = [
+        ['id' => 1, 'name' => 'GravitySeries Järvsö XC', 'event_date' => '2025-06-15', 'location' => 'Järvsö', 'event_type' => 'XC', 'status' => 'upcoming', 'distance' => '45 km', 'participant_count' => 145],
+        ['id' => 2, 'name' => 'SM Lindesberg', 'event_date' => '2025-07-01', 'location' => 'Lindesberg', 'event_type' => 'XC', 'status' => 'upcoming', 'distance' => '38 km', 'participant_count' => 220],
+        ['id' => 3, 'name' => 'Cykelvasan 90', 'event_date' => '2025-08-10', 'location' => 'Mora', 'event_type' => 'Landsväg', 'status' => 'upcoming', 'distance' => '90 km', 'participant_count' => 890],
+        ['id' => 4, 'name' => 'GravitySeries Åre', 'event_date' => '2024-08-20', 'location' => 'Åre', 'event_type' => 'XC', 'status' => 'completed', 'distance' => '42 km', 'participant_count' => 156],
+        ['id' => 5, 'name' => 'Vätternrundan', 'event_date' => '2024-06-15', 'location' => 'Motala', 'event_type' => 'Landsväg', 'status' => 'completed', 'distance' => '300 km', 'participant_count' => 1200],
+    ];
 
-if ($status) {
-    $where[] = "status = ?";
-    $params[] = $status;
+    // Filter by status
+    if ($status) {
+        $events = array_filter($all_events, fn($e) => $e['status'] === $status);
+    } else {
+        $events = $all_events;
+    }
+
+    // Filter by year
+    $events = array_filter($events, fn($e) => date('Y', strtotime($e['event_date'])) == $year);
+    $events = array_values($events);
+
+    // Available years
+    $years = [
+        ['year' => 2025],
+        ['year' => 2024],
+        ['year' => 2023],
+    ];
+} else {
+    $where = ["YEAR(event_date) = ?"];
+    $params = [$year];
+
+    if ($status) {
+        $where[] = "status = ?";
+        $params[] = $status;
+    }
+
+    $whereClause = 'WHERE ' . implode(' AND ', $where);
+
+    // Get events with participant count
+    $sql = "SELECT
+                e.id,
+                e.name,
+                e.event_date,
+                e.location,
+                e.event_type,
+                e.status,
+                e.distance,
+                COUNT(DISTINCT r.id) as participant_count
+            FROM events e
+            LEFT JOIN results r ON e.id = r.event_id
+            $whereClause
+            GROUP BY e.id
+            ORDER BY e.event_date DESC";
+
+    $events = $db->getAll($sql, $params);
+
+    // Get available years
+    $years = $db->getAll("SELECT DISTINCT YEAR(event_date) as year FROM events ORDER BY year DESC");
 }
-
-$whereClause = 'WHERE ' . implode(' AND ', $where);
-
-// Get events with participant count
-$sql = "SELECT
-            e.id,
-            e.name,
-            e.event_date,
-            e.location,
-            e.event_type,
-            e.status,
-            e.distance,
-            COUNT(DISTINCT r.id) as participant_count
-        FROM events e
-        LEFT JOIN results r ON e.id = r.event_id
-        $whereClause
-        GROUP BY e.id
-        ORDER BY e.event_date DESC";
-
-$events = $db->getAll($sql, $params);
-
-// Get available years
-$years = $db->getAll("SELECT DISTINCT YEAR(event_date) as year FROM events ORDER BY year DESC");
 
 $pageTitle = 'Tävlingar';
 ?>

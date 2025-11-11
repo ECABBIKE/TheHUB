@@ -5,19 +5,33 @@ require_admin();
 $db = getDB();
 $current_admin = get_current_admin();
 
-// Get unique venues from events (aggregated by location)
-$sql = "SELECT
-            location as name,
-            COUNT(DISTINCT id) as event_count,
-            MIN(event_date) as first_event,
-            MAX(event_date) as last_event,
-            GROUP_CONCAT(DISTINCT event_type) as event_types
-        FROM events
-        WHERE location IS NOT NULL AND location != ''
-        GROUP BY location
-        ORDER BY location";
+// Demo mode check
+$is_demo = ($db->getConnection() === null);
 
-$venues = $db->getAll($sql);
+if ($is_demo) {
+    // Demo venues
+    $venues = [
+        ['name' => 'Järvsö', 'event_count' => 3, 'first_event' => '2023-06-15', 'last_event' => '2025-06-15', 'event_types' => 'XC'],
+        ['name' => 'Lindesberg', 'event_count' => 2, 'first_event' => '2024-07-01', 'last_event' => '2025-07-01', 'event_types' => 'XC'],
+        ['name' => 'Mora', 'event_count' => 4, 'first_event' => '2022-08-10', 'last_event' => '2025-08-10', 'event_types' => 'Landsväg'],
+        ['name' => 'Åre', 'event_count' => 5, 'first_event' => '2022-08-20', 'last_event' => '2024-08-20', 'event_types' => 'XC,Enduro'],
+        ['name' => 'Motala', 'event_count' => 2, 'first_event' => '2023-06-15', 'last_event' => '2024-06-15', 'event_types' => 'Landsväg'],
+    ];
+} else {
+    // Get unique venues from events (aggregated by location)
+    $sql = "SELECT
+                location as name,
+                COUNT(DISTINCT id) as event_count,
+                MIN(event_date) as first_event,
+                MAX(event_date) as last_event,
+                GROUP_CONCAT(DISTINCT event_type) as event_types
+            FROM events
+            WHERE location IS NOT NULL AND location != ''
+            GROUP BY location
+            ORDER BY location";
+
+    $venues = $db->getAll($sql);
+}
 
 $pageTitle = 'Venues';
 ?>
