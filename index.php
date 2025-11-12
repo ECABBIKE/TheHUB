@@ -8,10 +8,21 @@
     <link rel="stylesheet" href="/assets/gravityseries-theme.css">
     <script src="https://unpkg.com/lucide@latest"></script>
 </head>
-<body class="gs-landing-pure">
+<body class="gs-public-page">
+
+    <!-- Hamburger -->
+    <button class="gs-mobile-menu-toggle" onclick="toggleMenu()" aria-label="Toggle menu">
+        <i data-lucide="menu"></i>
+    </button>
+
+    <!-- Sidebar -->
+    <?php include __DIR__ . '/includes/navigation.php'; ?>
+
+    <!-- Overlay -->
+    <div class="gs-sidebar-overlay" onclick="closeMenu()"></div>
 
     <!-- Main Content -->
-    <main>
+    <main style="padding-top: 0;">
         <!-- Hero Section -->
         <div class="gs-hero-landing">
             <div class="gs-container gs-text-center">
@@ -88,6 +99,25 @@
 
     <script>
         lucide.createIcons();
+
+        function toggleMenu() {
+            const sidebar = document.querySelector('.gs-sidebar');
+            const overlay = document.querySelector('.gs-sidebar-overlay');
+            sidebar.classList.toggle('open');
+            overlay.classList.toggle('active');
+        }
+
+        function closeMenu() {
+            const sidebar = document.querySelector('.gs-sidebar');
+            const overlay = document.querySelector('.gs-sidebar-overlay');
+            sidebar.classList.remove('open');
+            overlay.classList.remove('active');
+        }
+
+        // Close on link click
+        document.querySelectorAll('.gs-sidebar a').forEach(link => {
+            link.addEventListener('click', closeMenu);
+        });
     </script>
 </body>
 </html>

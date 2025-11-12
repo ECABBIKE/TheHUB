@@ -20,8 +20,8 @@ $is_admin = isLoggedIn();
             <li><a href="/events.php" class="<?= $current_page == 'events.php' && strpos($_SERVER['PHP_SELF'], '/admin/') === false ? 'active' : '' ?>">
                 <i data-lucide="calendar"></i> Kalender
             </a></li>
-            <li><a href="/results.php" class="<?= $current_page == 'results.php' && strpos($_SERVER['PHP_SELF'], '/admin/') === false ? 'active' : '' ?>">
-                <i data-lucide="trophy"></i> Resultat
+            <li><a href="/series.php" class="<?= $current_page == 'series.php' && strpos($_SERVER['PHP_SELF'], '/admin/') === false ? 'active' : '' ?>">
+                <i data-lucide="award"></i> Serier
             </a></li>
         </ul>
     </div>
