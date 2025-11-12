@@ -52,9 +52,9 @@ $pageTitle = $event['name'] . ' - Resultat';
     <link rel="stylesheet" href="/assets/gravityseries-theme.css">
     <script src="https://unpkg.com/lucide@latest"></script>
 </head>
-<body class="gs-page-with-menu">
-    <!-- Hamburger Menu Button -->
-    <button class="gs-mobile-menu-toggle" onclick="toggleSidebar()">
+<body class="gs-public-page">
+    <!-- Hamburger -->
+    <button class="gs-mobile-menu-toggle" onclick="toggleMenu()" aria-label="Toggle menu">
         <i data-lucide="menu"></i>
     </button>
 
@@ -62,10 +62,10 @@ $pageTitle = $event['name'] . ' - Resultat';
     <?php include __DIR__ . '/includes/navigation.php'; ?>
 
     <!-- Overlay -->
-    <div class="gs-sidebar-overlay" onclick="closeSidebar()"></div>
+    <div class="gs-sidebar-overlay" onclick="closeMenu()"></div>
 
     <!-- Main Content -->
-    <main class="gs-main-content" style="padding: 2rem;">
+    <main style="padding: 6rem 2rem 2rem;">
         <div class="gs-container">
             <!-- Header -->
             <div class="gs-mb-xl">
@@ -197,21 +197,23 @@ $pageTitle = $event['name'] . ' - Resultat';
     <script>
         lucide.createIcons();
 
-        function toggleSidebar() {
-            document.querySelector('.gs-sidebar').classList.toggle('open');
-            document.querySelector('.gs-sidebar-overlay').classList.toggle('active');
-            document.body.style.overflow = document.querySelector('.gs-sidebar').classList.contains('open') ? 'hidden' : '';
+        function toggleMenu() {
+            const sidebar = document.querySelector('.gs-sidebar');
+            const overlay = document.querySelector('.gs-sidebar-overlay');
+            sidebar.classList.toggle('open');
+            overlay.classList.toggle('active');
         }
 
-        function closeSidebar() {
-            document.querySelector('.gs-sidebar').classList.remove('open');
-            document.querySelector('.gs-sidebar-overlay').classList.remove('active');
-            document.body.style.overflow = '';
+        function closeMenu() {
+            const sidebar = document.querySelector('.gs-sidebar');
+            const overlay = document.querySelector('.gs-sidebar-overlay');
+            sidebar.classList.remove('open');
+            overlay.classList.remove('active');
         }
 
-        // Close sidebar when clicking a link
-        document.querySelectorAll('.gs-menu a').forEach(link => {
-            link.addEventListener('click', closeSidebar);
+        // Close on link click
+        document.querySelectorAll('.gs-sidebar a').forEach(link => {
+            link.addEventListener('click', closeMenu);
         });
     </script>
 </body>

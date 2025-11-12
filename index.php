@@ -8,13 +8,10 @@
     <link rel="stylesheet" href="/assets/gravityseries-theme.css">
     <script src="https://unpkg.com/lucide@latest"></script>
 </head>
-<body class="gs-landing-page-no-menu">
+<body class="gs-landing-pure">
 
-    <!-- INGEN HAMBURGER HÄR -->
-    <!-- INGEN SIDEBAR HÄR -->
-
-    <!-- Main Content - FULL WIDTH -->
-    <main class="gs-main-content">
+    <!-- Main Content -->
+    <main>
         <!-- Hero Section -->
         <div class="gs-hero-landing">
             <div class="gs-container gs-text-center">
@@ -69,19 +66,15 @@
                     </div>
                 </a>
 
-                <!-- Card 3: Resultat -->
-                <a href="/results.php" class="gs-landing-card">
+                <!-- Card 3: Serier -->
+                <a href="/series.php" class="gs-landing-card">
                     <div class="gs-card">
                         <div class="gs-card-content gs-text-center" style="padding: 3rem 2rem;">
-                            <i data-lucide="trophy" style="width: 64px; height: 64px; margin: 0 auto 1.5rem; display: block; color: var(--gs-success);"></i>
-                            <h3 class="gs-h3 gs-mb-md">Resultat</h3>
-                            <p class="gs-text-secondary gs-mb-lg">
-                                Se alla resultat och ställningar från tävlingar
+                            <i data-lucide="trophy" style="width: 64px; height: 64px; margin: 0 auto 1.5rem; display: block; color: #437264;"></i>
+                            <h3 class="gs-h3 gs-mb-md">Serier</h3>
+                            <p class="gs-text-secondary">
+                                Serietabeller och ställningar för alla GravitySeries
                             </p>
-                            <div class="gs-btn gs-btn-primary gs-w-full">
-                                <i data-lucide="arrow-right"></i>
-                                Se resultat
-                            </div>
                         </div>
                     </div>
                 </a>
