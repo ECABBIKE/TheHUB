@@ -81,10 +81,6 @@ $pageTitle = 'Klubbar';
                     <i data-lucide="building"></i>
                     Klubbar
                 </h1>
-                <a href="/admin/club-add.php" class="gs-btn gs-btn-primary">
-                    <i data-lucide="plus"></i>
-                    Lägg till klubb
-                </a>
             </div>
 
             <!-- Search -->
@@ -205,21 +201,7 @@ $pageTitle = 'Klubbar';
                                             <?php endif; ?>
                                         </td>
                                         <td style="text-align: right;">
-                                            <div class="gs-flex gs-gap-xs gs-justify-end">
-                                                <a href="/admin/club-edit.php?id=<?= $club['id'] ?>" class="gs-btn gs-btn-sm gs-btn-outline" title="Redigera">
-                                                    <i data-lucide="edit"></i>
-                                                </a>
-                                                <a href="/admin/club-view.php?id=<?= $club['id'] ?>" class="gs-btn gs-btn-sm gs-btn-outline" title="Visa">
-                                                    <i data-lucide="eye"></i>
-                                                </a>
-                                                <button
-                                                    onclick="if(confirm('Är du säker på att du vill radera denna klubb?')) location.href='/admin/club-delete.php?id=<?= $club['id'] ?>'"
-                                                    class="gs-btn gs-btn-sm gs-btn-danger"
-                                                    title="Radera"
-                                                >
-                                                    <i data-lucide="trash-2"></i>
-                                                </button>
-                                            </div>
+                                            <span class="gs-badge gs-badge-secondary">Demo</span>
                                         </td>
                                     </tr>
                                 <?php endforeach; ?>

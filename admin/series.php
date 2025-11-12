@@ -77,10 +77,6 @@ $pageTitle = 'Serier';
                     <i data-lucide="trophy"></i>
                     Serier
                 </h1>
-                <a href="/admin/series-add.php" class="gs-btn gs-btn-primary">
-                    <i data-lucide="plus"></i>
-                    Ny serie
-                </a>
             </div>
 
             <!-- Info Alert -->
@@ -169,21 +165,7 @@ $pageTitle = 'Serier';
                                         </span>
                                     </td>
                                     <td style="text-align: right;">
-                                        <div class="gs-flex gs-gap-xs gs-justify-end">
-                                            <a href="/admin/series-edit.php?id=<?= $serie['id'] ?>" class="gs-btn gs-btn-sm gs-btn-outline" title="Redigera">
-                                                <i data-lucide="edit"></i>
-                                            </a>
-                                            <a href="/admin/series-standings.php?id=<?= $serie['id'] ?>" class="gs-btn gs-btn-sm gs-btn-outline" title="Ställning">
-                                                <i data-lucide="bar-chart"></i>
-                                            </a>
-                                            <button
-                                                onclick="if(confirm('Är du säker på att du vill radera denna serie?')) location.href='/admin/series-delete.php?id=<?= $serie['id'] ?>'"
-                                                class="gs-btn gs-btn-sm gs-btn-danger"
-                                                title="Radera"
-                                            >
-                                                <i data-lucide="trash-2"></i>
-                                            </button>
-                                        </div>
+                                        <span class="gs-badge gs-badge-secondary">Demo</span>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>

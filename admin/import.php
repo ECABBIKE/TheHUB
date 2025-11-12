@@ -21,7 +21,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['import_file'])) {
         $messageType = 'error';
     } else {
         // Move uploaded file
-        $uploadDir = UPLOAD_PATH;
+        $uploadDir = UPLOADS_PATH;
         if (!is_dir($uploadDir)) {
             mkdir($uploadDir, 0755, true);
         }
@@ -107,11 +107,11 @@ $currentAdmin = getCurrentAdmin();
             </div>
             <nav>
                 <ul class="gs-admin-sidebar-nav">
-                    <li><a href="/admin/index.php" class="gs-admin-sidebar-link">
+                    <li><a href="/admin/dashboard.php" class="gs-admin-sidebar-link">
                         <i data-lucide="layout-dashboard"></i> Dashboard
                     </a></li>
-                    <li><a href="/admin/cyclists.php" class="gs-admin-sidebar-link">
-                        <i data-lucide="users"></i> Cyklister
+                    <li><a href="/admin/riders.php" class="gs-admin-sidebar-link">
+                        <i data-lucide="users"></i> Deltagare
                     </a></li>
                     <li><a href="/admin/events.php" class="gs-admin-sidebar-link">
                         <i data-lucide="calendar"></i> Tävlingar

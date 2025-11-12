@@ -93,10 +93,6 @@ $pageTitle = 'Tävlingar';
                     <i data-lucide="calendar"></i>
                     Tävlingar
                 </h1>
-                <a href="/admin/event-add.php" class="gs-btn gs-btn-primary">
-                    <i data-lucide="plus"></i>
-                    Ny tävling
-                </a>
             </div>
 
             <!-- Filters -->
@@ -248,21 +244,7 @@ $pageTitle = 'Tävlingar';
                                             <strong class="gs-text-primary"><?= $event['participant_count'] ?></strong>
                                         </td>
                                         <td style="text-align: right;">
-                                            <div class="gs-flex gs-gap-xs gs-justify-end">
-                                                <a href="/admin/event-edit.php?id=<?= $event['id'] ?>" class="gs-btn gs-btn-sm gs-btn-outline" title="Redigera">
-                                                    <i data-lucide="edit"></i>
-                                                </a>
-                                                <a href="/admin/event-results.php?id=<?= $event['id'] ?>" class="gs-btn gs-btn-sm gs-btn-outline" title="Resultat">
-                                                    <i data-lucide="list"></i>
-                                                </a>
-                                                <button
-                                                    onclick="if(confirm('Är du säker på att du vill radera denna tävling?')) location.href='/admin/event-delete.php?id=<?= $event['id'] ?>'"
-                                                    class="gs-btn gs-btn-sm gs-btn-danger"
-                                                    title="Radera"
-                                                >
-                                                    <i data-lucide="trash-2"></i>
-                                                </button>
-                                            </div>
+                                            <span class="gs-badge gs-badge-secondary">Demo</span>
                                         </td>
                                     </tr>
                                 <?php endforeach; ?>

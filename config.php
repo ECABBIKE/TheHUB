@@ -20,6 +20,7 @@ define('SESSION_LIFETIME', 86400); // 24 hours
 
 // File upload limits
 define('MAX_UPLOAD_SIZE', 10 * 1024 * 1024); // 10MB
+define('ALLOWED_EXTENSIONS', ['xlsx', 'xls', 'csv']);
 define('EVENTS_PER_PAGE', 12);
 define('RESULTS_PER_PAGE', 50);
 

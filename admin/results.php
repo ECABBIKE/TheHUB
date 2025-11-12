@@ -137,10 +137,6 @@ $pageTitle = 'Resultat';
                     <i data-lucide="trophy"></i>
                     Resultat
                 </h1>
-                <a href="/admin/result-add.php" class="gs-btn gs-btn-primary">
-                    <i data-lucide="plus"></i>
-                    Lägg till resultat
-                </a>
             </div>
 
             <!-- Filters -->
@@ -322,18 +318,7 @@ $pageTitle = 'Resultat';
                                             <?php endif; ?>
                                         </td>
                                         <td style="text-align: right;">
-                                            <div class="gs-flex gs-gap-xs gs-justify-end">
-                                                <a href="/admin/result-edit.php?id=<?= $result['id'] ?>" class="gs-btn gs-btn-sm gs-btn-outline" title="Redigera">
-                                                    <i data-lucide="edit"></i>
-                                                </a>
-                                                <button
-                                                    onclick="if(confirm('Är du säker på att du vill radera detta resultat?')) location.href='/admin/result-delete.php?id=<?= $result['id'] ?>'"
-                                                    class="gs-btn gs-btn-sm gs-btn-danger"
-                                                    title="Radera"
-                                                >
-                                                    <i data-lucide="trash-2"></i>
-                                                </button>
-                                            </div>
+                                            <span class="gs-badge gs-badge-secondary">Demo</span>
                                         </td>
                                     </tr>
                                 <?php endforeach; ?>

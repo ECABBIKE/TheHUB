@@ -85,10 +85,6 @@ $pageTitle = 'Deltagare';
                     <i data-lucide="users"></i>
                     Deltagare
                 </h1>
-                <a href="/admin/rider-add.php" class="gs-btn gs-btn-primary">
-                    <i data-lucide="plus"></i>
-                    Lägg till deltagare
-                </a>
             </div>
 
             <!-- Search -->
@@ -203,21 +199,7 @@ $pageTitle = 'Deltagare';
                                             <?php endif; ?>
                                         </td>
                                         <td style="text-align: right;">
-                                            <div class="gs-flex gs-gap-xs gs-justify-end">
-                                                <a href="/admin/rider-edit.php?id=<?= $rider['id'] ?>" class="gs-btn gs-btn-sm gs-btn-outline" title="Redigera">
-                                                    <i data-lucide="edit"></i>
-                                                </a>
-                                                <a href="/admin/rider-view.php?id=<?= $rider['id'] ?>" class="gs-btn gs-btn-sm gs-btn-outline" title="Visa">
-                                                    <i data-lucide="eye"></i>
-                                                </a>
-                                                <button
-                                                    onclick="if(confirm('Är du säker på att du vill radera denna deltagare?')) location.href='/admin/rider-delete.php?id=<?= $rider['id'] ?>'"
-                                                    class="gs-btn gs-btn-sm gs-btn-danger"
-                                                    title="Radera"
-                                                >
-                                                    <i data-lucide="trash-2"></i>
-                                                </button>
-                                            </div>
+                                            <span class="gs-badge gs-badge-secondary">Demo</span>
                                         </td>
                                     </tr>
                                 <?php endforeach; ?>

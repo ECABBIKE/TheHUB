@@ -54,10 +54,6 @@ $pageTitle = 'Venues';
                     <i data-lucide="mountain"></i>
                     Venues
                 </h1>
-                <a href="/admin/venue-add.php" class="gs-btn gs-btn-primary">
-                    <i data-lucide="plus"></i>
-                    Lägg till venue
-                </a>
             </div>
 
             <!-- Info Alert -->
@@ -159,21 +155,7 @@ $pageTitle = 'Venues';
                                             <?= formatDate($venue['last_event'], 'd M Y') ?>
                                         </td>
                                         <td style="text-align: right;">
-                                            <div class="gs-flex gs-gap-xs gs-justify-end">
-                                                <a
-                                                    href="/admin/events.php?location=<?= urlencode($venue['name']) ?>"
-                                                    class="gs-btn gs-btn-sm gs-btn-outline"
-                                                    title="Visa events"
-                                                >
-                                                    <i data-lucide="list"></i>
-                                                </a>
-                                                <a href="/admin/venue-edit.php?name=<?= urlencode($venue['name']) ?>" class="gs-btn gs-btn-sm gs-btn-outline" title="Redigera">
-                                                    <i data-lucide="edit"></i>
-                                                </a>
-                                                <a href="/admin/venue-view.php?name=<?= urlencode($venue['name']) ?>" class="gs-btn gs-btn-sm gs-btn-outline" title="Statistik">
-                                                    <i data-lucide="bar-chart"></i>
-                                                </a>
-                                            </div>
+                                            <span class="gs-badge gs-badge-secondary">Demo</span>
                                         </td>
                                     </tr>
                                 <?php endforeach; ?>
