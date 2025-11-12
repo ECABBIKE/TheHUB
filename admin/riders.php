@@ -14,12 +14,12 @@ $search = $_GET['search'] ?? '';
 if ($is_demo) {
     // Demo riders
     $all_riders = [
-        ['id' => 1, 'firstname' => 'Erik', 'lastname' => 'Andersson', 'birth_year' => 1995, 'gender' => 'M', 'license_number' => 'SWE-2025-1234', 'active' => 1, 'club_name' => 'Team GravitySeries', 'club_id' => 1],
-        ['id' => 2, 'firstname' => 'Anna', 'lastname' => 'Karlsson', 'birth_year' => 1998, 'gender' => 'F', 'license_number' => 'SWE-2025-2345', 'active' => 1, 'club_name' => 'CK Olympia', 'club_id' => 2],
-        ['id' => 3, 'firstname' => 'Johan', 'lastname' => 'Svensson', 'birth_year' => 1992, 'gender' => 'M', 'license_number' => 'SWE-2025-3456', 'active' => 1, 'club_name' => 'Uppsala CK', 'club_id' => 3],
-        ['id' => 4, 'firstname' => 'Maria', 'lastname' => 'Lindström', 'birth_year' => 1996, 'gender' => 'F', 'license_number' => 'SWE-2025-4567', 'active' => 1, 'club_name' => 'Team Sportson', 'club_id' => 4],
-        ['id' => 5, 'firstname' => 'Peter', 'lastname' => 'Nilsson', 'birth_year' => 1990, 'gender' => 'M', 'license_number' => 'SWE-2025-5678', 'active' => 1, 'club_name' => 'IFK Göteborg CK', 'club_id' => 5],
-        ['id' => 6, 'firstname' => 'Lisa', 'lastname' => 'Bergman', 'birth_year' => 1999, 'gender' => 'F', 'license_number' => 'SWE-2025-6789', 'active' => 1, 'club_name' => 'Team GravitySeries', 'club_id' => 1],
+        ['id' => 1, 'firstname' => 'Erik', 'lastname' => 'Andersson', 'birth_year' => 1995, 'gender' => 'M', 'license_number' => 'SWE19950101', 'license_type' => 'Elite', 'license_category' => 'Elite Men', 'discipline' => 'MTB', 'license_valid_until' => '2025-12-31', 'active' => 1, 'club_name' => 'Team GravitySeries', 'club_id' => 1],
+        ['id' => 2, 'firstname' => 'Anna', 'lastname' => 'Karlsson', 'birth_year' => 1998, 'gender' => 'F', 'license_number' => 'SWE19980315', 'license_type' => 'Elite', 'license_category' => 'Elite Women', 'discipline' => 'Road', 'license_valid_until' => '2025-12-31', 'active' => 1, 'club_name' => 'CK Olympia', 'club_id' => 2],
+        ['id' => 3, 'firstname' => 'Johan', 'lastname' => 'Svensson', 'birth_year' => 1992, 'gender' => 'M', 'license_number' => 'SWE19920812', 'license_type' => 'Elite', 'license_category' => 'Elite Men', 'discipline' => 'MTB', 'license_valid_until' => '2025-12-31', 'active' => 1, 'club_name' => 'Uppsala CK', 'club_id' => 3],
+        ['id' => 4, 'firstname' => 'Maria', 'lastname' => 'Lindström', 'birth_year' => 1996, 'gender' => 'F', 'license_number' => 'SWE19960524', 'license_type' => 'Elite', 'license_category' => 'Elite Women', 'discipline' => 'CX', 'license_valid_until' => '2025-12-31', 'active' => 1, 'club_name' => 'Team Sportson', 'club_id' => 4],
+        ['id' => 5, 'firstname' => 'Peter', 'lastname' => 'Nilsson', 'birth_year' => 1985, 'gender' => 'M', 'license_number' => 'SWE19850615', 'license_type' => 'Elite', 'license_category' => 'Master Men 35+', 'discipline' => 'MTB', 'license_valid_until' => '2025-12-31', 'active' => 1, 'club_name' => 'IFK Göteborg CK', 'club_id' => 5],
+        ['id' => 6, 'firstname' => 'Lisa', 'lastname' => 'Bergman', 'birth_year' => 2006, 'gender' => 'F', 'license_number' => 'SWE20060310', 'license_type' => 'Youth', 'license_category' => 'U19 Women', 'discipline' => 'Road', 'license_valid_until' => '2025-12-31', 'active' => 1, 'club_name' => 'Team GravitySeries', 'club_id' => 1],
     ];
 
     // Filter by search
@@ -52,6 +52,10 @@ if ($is_demo) {
                 c.birth_year,
                 c.gender,
                 c.license_number,
+                c.license_type,
+                c.license_category,
+                c.discipline,
+                c.license_valid_until,
                 c.active,
                 cl.name as club_name,
                 cl.id as club_id
@@ -157,15 +161,18 @@ $pageTitle = 'Deltagare';
                                         <i data-lucide="user-circle"></i>
                                         Namn
                                     </th>
-                                    <th>Födelseår</th>
+                                    <th>Född</th>
+                                    <th>Ålder</th>
                                     <th>Kön</th>
                                     <th>
                                         <i data-lucide="building"></i>
                                         Klubb
                                     </th>
-                                    <th>Licensnummer</th>
+                                    <th>Licenskategori</th>
+                                    <th>Gren</th>
+                                    <th>Licens</th>
                                     <th>Status</th>
-                                    <th style="width: 150px; text-align: right;">Åtgärder</th>
+                                    <th style="width: 100px; text-align: right;">Åtgärder</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -176,30 +183,64 @@ $pageTitle = 'Deltagare';
                                         </td>
                                         <td><?= h($rider['birth_year']) ?></td>
                                         <td>
-                                            <?php if ($rider['gender'] === 'M'): ?>
-                                                <span class="gs-badge gs-badge-primary">Man</span>
-                                            <?php elseif ($rider['gender'] === 'F'): ?>
-                                                <span class="gs-badge gs-badge-accent">Kvinna</span>
+                                            <?php if ($rider['birth_year']): ?>
+                                                <?= calculateAge($rider['birth_year']) ?> år
                                             <?php else: ?>
-                                                <span class="gs-badge">-</span>
+                                                <span class="gs-text-secondary">-</span>
+                                            <?php endif; ?>
+                                        </td>
+                                        <td>
+                                            <?php if ($rider['gender'] === 'M'): ?>
+                                                <span class="gs-badge gs-badge-primary">👨 Man</span>
+                                            <?php elseif ($rider['gender'] === 'F'): ?>
+                                                <span class="gs-badge gs-badge-accent">👩 Kvinna</span>
+                                            <?php else: ?>
+                                                <span class="gs-badge gs-badge-secondary">-</span>
                                             <?php endif; ?>
                                         </td>
                                         <td class="gs-text-secondary"><?= h($rider['club_name'] ?? '-') ?></td>
-                                        <td class="gs-text-secondary" style="font-family: monospace;">
-                                            <?= h($rider['license_number'] ?? '-') ?>
+                                        <td>
+                                            <?php if (!empty($rider['license_category'])): ?>
+                                                <span class="gs-badge gs-badge-primary gs-text-xs">
+                                                    <?= h($rider['license_category']) ?>
+                                                </span>
+                                            <?php else: ?>
+                                                <span class="gs-text-secondary">-</span>
+                                            <?php endif; ?>
+                                        </td>
+                                        <td>
+                                            <?php if (!empty($rider['discipline'])): ?>
+                                                <span class="gs-badge gs-badge-accent gs-text-xs">
+                                                    <?= h($rider['discipline']) ?>
+                                                </span>
+                                            <?php else: ?>
+                                                <span class="gs-text-secondary">-</span>
+                                            <?php endif; ?>
+                                        </td>
+                                        <td>
+                                            <?php
+                                            if (!empty($rider['license_type']) && $rider['license_type'] !== 'None') {
+                                                $licenseCheck = checkLicense($rider);
+                                                echo '<span class="gs-badge ' . $licenseCheck['class'] . ' gs-text-xs">';
+                                                echo h($licenseCheck['message']);
+                                                echo '</span>';
+                                            } else {
+                                                echo '<span class="gs-badge gs-badge-secondary gs-text-xs">Ingen</span>';
+                                            }
+                                            ?>
                                         </td>
                                         <td>
                                             <?php if ($rider['active']): ?>
-                                                <span class="gs-badge gs-badge-success">
+                                                <span class="gs-badge gs-badge-success gs-text-xs">
                                                     <i data-lucide="check-circle"></i>
                                                     Aktiv
                                                 </span>
                                             <?php else: ?>
-                                                <span class="gs-badge gs-badge-secondary">Inaktiv</span>
+                                                <span class="gs-badge gs-badge-secondary gs-text-xs">Inaktiv</span>
                                             <?php endif; ?>
                                         </td>
                                         <td style="text-align: right;">
-                                            <span class="gs-badge gs-badge-secondary">Demo</span>
+                                            <span class="gs-badge gs-badge-secondary gs-text-xs">View</span>
                                         </td>
                                     </tr>
                                 <?php endforeach; ?>
