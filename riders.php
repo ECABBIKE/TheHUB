@@ -37,18 +37,23 @@ $total_count = count($cyclists);
     <link rel="stylesheet" href="/assets/gravityseries-theme.css">
     <script src="https://unpkg.com/lucide@latest"></script>
 </head>
-<body>
-    <!-- Hamburger Menu Button -->
-    <button class="gs-hamburger" onclick="toggleSidebar()">
+<body class="gs-page-with-menu">
+
+    <!-- Hamburger Menu -->
+    <button class="gs-mobile-menu-toggle" onclick="toggleSidebar()">
         <i data-lucide="menu"></i>
     </button>
 
     <!-- Sidebar -->
     <?php include __DIR__ . '/includes/navigation.php'; ?>
 
+    <!-- Overlay -->
+    <div class="gs-sidebar-overlay" onclick="closeSidebar()"></div>
+
     <!-- Main Content -->
-    <main class="gs-content-with-sidebar">
+    <main class="gs-main-content" style="padding: 2rem;">
         <div class="gs-container">
+
             <!-- Header -->
             <div class="gs-mb-xl">
                 <h1 class="gs-h2 gs-text-primary gs-mb-sm">
@@ -165,21 +170,19 @@ $total_count = count($cyclists);
 
         function toggleSidebar() {
             document.querySelector('.gs-sidebar').classList.toggle('open');
-            document.body.classList.toggle('sidebar-open');
+            document.querySelector('.gs-sidebar-overlay').classList.toggle('active');
+            document.body.style.overflow = document.querySelector('.gs-sidebar').classList.contains('open') ? 'hidden' : '';
         }
 
         function closeSidebar() {
             document.querySelector('.gs-sidebar').classList.remove('open');
-            document.body.classList.remove('sidebar-open');
+            document.querySelector('.gs-sidebar-overlay').classList.remove('active');
+            document.body.style.overflow = '';
         }
 
-        // Close sidebar when clicking overlay
-        document.addEventListener('click', function(e) {
-            if (document.body.classList.contains('sidebar-open') &&
-                !e.target.closest('.gs-sidebar') &&
-                !e.target.closest('.gs-hamburger')) {
-                closeSidebar();
-            }
+        // Close sidebar when clicking a link
+        document.querySelectorAll('.gs-menu a').forEach(link => {
+            link.addEventListener('click', closeSidebar);
         });
 
         // Search functionality

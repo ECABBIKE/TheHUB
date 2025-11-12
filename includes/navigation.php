@@ -14,10 +14,13 @@ $is_admin = isLoggedIn();
             <li><a href="/index.php" class="<?= $current_page == 'index.php' ? 'active' : '' ?>">
                 <i data-lucide="home"></i> Hem
             </a></li>
-            <li><a href="/events.php" class="<?= $current_page == 'events.php' ? 'active' : '' ?>">
-                <i data-lucide="calendar"></i> Tävlingar
+            <li><a href="/riders.php" class="<?= $current_page == 'riders.php' && strpos($_SERVER['PHP_SELF'], '/admin/') === false ? 'active' : '' ?>">
+                <i data-lucide="users"></i> Deltagare
             </a></li>
-            <li><a href="/results.php" class="<?= $current_page == 'results.php' ? 'active' : '' ?>">
+            <li><a href="/events.php" class="<?= $current_page == 'events.php' && strpos($_SERVER['PHP_SELF'], '/admin/') === false ? 'active' : '' ?>">
+                <i data-lucide="calendar"></i> Kalender
+            </a></li>
+            <li><a href="/results.php" class="<?= $current_page == 'results.php' && strpos($_SERVER['PHP_SELF'], '/admin/') === false ? 'active' : '' ?>">
                 <i data-lucide="trophy"></i> Resultat
             </a></li>
         </ul>

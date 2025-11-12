@@ -1362,3 +1362,60 @@ body.sidebar-open::before {
     height: 32px;
   }
 }
+
+/* ========================================
+   PAGE DIFFERENTIATION - Landing vs Content Pages
+   ======================================== */
+
+/* Landing page: NO navigation at all */
+.gs-landing-page-no-menu .gs-mobile-menu-toggle {
+  display: none !important;
+}
+
+.gs-landing-page-no-menu .gs-sidebar {
+  display: none !important;
+}
+
+.gs-landing-page-no-menu .gs-sidebar-overlay {
+  display: none !important;
+}
+
+.gs-landing-page-no-menu .gs-main-content {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+}
+
+/* Content pages: WITH hamburger menu + sidebar */
+.gs-page-with-menu .gs-mobile-menu-toggle {
+  display: flex;
+  position: fixed;
+  top: 1.5rem;
+  left: 1.5rem;
+  z-index: 1000;
+  background-color: var(--gs-primary);
+  color: var(--gs-white);
+  border: none;
+  border-radius: var(--gs-radius-md);
+  padding: var(--gs-space-sm);
+  cursor: pointer;
+  box-shadow: var(--gs-shadow-lg);
+  transition: all var(--gs-transition-base);
+}
+
+.gs-page-with-menu .gs-mobile-menu-toggle:hover {
+  background-color: var(--gs-primary-dark);
+  transform: scale(1.05);
+}
+
+.gs-page-with-menu .gs-main-content {
+  padding-top: 80px;
+  min-height: 100vh;
+}
+
+@media (max-width: 768px) {
+  .gs-page-with-menu .gs-mobile-menu-toggle {
+    top: 1rem;
+    left: 1rem;
+  }
+}
