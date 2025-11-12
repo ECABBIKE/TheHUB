@@ -14,13 +14,19 @@ if (isLoggedIn()) {
 $error = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $username = $_POST['username'] ?? '';
-    $password = $_POST['password'] ?? '';
-
-    if (login($username, $password)) {
-        redirect('/admin/dashboard.php');
+    // Validate CSRF token
+    $token = $_POST['csrf_token'] ?? '';
+    if (!validateCsrfToken($token)) {
+        $error = 'Säkerhetsvalidering misslyckades. Försök igen.';
     } else {
-        $error = 'Felaktigt användarnamn eller lösenord';
+        $username = $_POST['username'] ?? '';
+        $password = $_POST['password'] ?? '';
+
+        if (login($username, $password)) {
+            redirect('/admin/dashboard.php');
+        } else {
+            $error = 'Felaktigt användarnamn eller lösenord';
+        }
     }
 }
 
@@ -50,6 +56,8 @@ $pageTitle = 'Admin Login';
         <?php endif; ?>
 
         <form method="POST" action="">
+            <?= csrfField() ?>
+
             <div class="gs-form-group">
                 <label for="username" class="gs-label">
                     <i data-lucide="user"></i>

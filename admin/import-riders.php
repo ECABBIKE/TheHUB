@@ -12,6 +12,9 @@ $errors = [];
 
 // Handle CSV/Excel upload
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['import_file'])) {
+    // Validate CSRF token
+    checkCsrf();
+
     $file = $_FILES['import_file'];
 
     // Validate file
@@ -330,6 +333,8 @@ $pageTitle = 'Importera Cyklister';
                 </div>
                 <div class="gs-card-content">
                     <form method="POST" enctype="multipart/form-data" id="uploadForm" style="max-width: 600px;">
+                        <?= csrfField() ?>
+
                         <div class="gs-form-group">
                             <label for="import_file" class="gs-label">
                                 <i data-lucide="file"></i>

@@ -55,9 +55,12 @@ function requireLogin() {
  * Login user
  */
 function login($username, $password) {
-    // Check hardcoded admin credentials first
-    // WARNING: Change this default password in production!
-    if ($username === 'admin' && $password === 'admin') {
+    // Check default admin credentials from config
+    // WARNING: Change these in .env file for production!
+    $defaultUsername = defined('DEFAULT_ADMIN_USERNAME') ? DEFAULT_ADMIN_USERNAME : 'admin';
+    $defaultPassword = defined('DEFAULT_ADMIN_PASSWORD') ? DEFAULT_ADMIN_PASSWORD : 'admin';
+
+    if ($username === $defaultUsername && $password === $defaultPassword) {
         // Regenerate session ID to prevent session fixation
         session_regenerate_id(true);
 
