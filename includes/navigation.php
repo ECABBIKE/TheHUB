@@ -11,13 +11,13 @@ $is_admin = isLoggedIn();
     <div class="gs-menu-section">
         <h3 class="gs-menu-title">TheHUB</h3>
         <ul class="gs-menu">
-            <li><a href="/public/index.php" class="<?= $current_page == 'index.php' ? 'active' : '' ?>">
+            <li><a href="/index.php" class="<?= $current_page == 'index.php' ? 'active' : '' ?>">
                 <i data-lucide="home"></i> Hem
             </a></li>
-            <li><a href="/public/events.php" class="<?= $current_page == 'events.php' ? 'active' : '' ?>">
+            <li><a href="/events.php" class="<?= $current_page == 'events.php' ? 'active' : '' ?>">
                 <i data-lucide="calendar"></i> Tävlingar
             </a></li>
-            <li><a href="/public/results.php" class="<?= $current_page == 'results.php' ? 'active' : '' ?>">
+            <li><a href="/results.php" class="<?= $current_page == 'results.php' ? 'active' : '' ?>">
                 <i data-lucide="trophy"></i> Resultat
             </a></li>
         </ul>
