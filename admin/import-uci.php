@@ -66,6 +66,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['uci_file'])) {
 }
 
 /**
+ * Auto-detect CSV separator
+ */
+function detectCsvSeparator($file_path) {
+    $delimiters = [',', ';', "\t", '|'];
+    $data = [];
+    $file = fopen($file_path, 'r');
+    $firstLine = fgets($file);
+    fclose($file);
+
+    foreach ($delimiters as $delimiter) {
+        $row = str_getcsv($firstLine, $delimiter);
+        $data[$delimiter] = count($row);
+    }
+
+    // Return delimiter with most columns
+    return array_search(max($data), $data);
+}
+
+/**
  * Import riders from UCI CSV file
  */
 function importUCIRiders($filepath, $db) {
@@ -83,6 +102,11 @@ function importUCIRiders($filepath, $db) {
     if (($handle = fopen($filepath, 'r')) === false) {
         throw new Exception('Kunde inte öppna filen');
     }
+
+    // Auto-detect separator
+    $separator = detectCsvSeparator($filepath);
+    $stats['separator'] = $separator;
+    $stats['separator_name'] = ($separator === "\t") ? 'TAB' : $separator;
 
     // Check if first line is header
     $first_line = fgets($handle);
@@ -105,8 +129,16 @@ function importUCIRiders($filepath, $db) {
         }
 
         try {
-            // Parse CSV row (comma-separated)
-            $row = str_getcsv($line, ',');
+            // Parse CSV row with detected separator
+            $row = str_getcsv($line, $separator);
+
+            // Debug first row
+            if ($stats['total'] === 1) {
+                error_log("UCI Import - First row debug:");
+                error_log("Separator: '" . $stats['separator_name'] . "'");
+                error_log("Column count: " . count($row));
+                error_log("Columns: " . print_r($row, true));
+            }
 
             if (count($row) < 11) {
                 $stats['failed']++;
@@ -304,6 +336,11 @@ $pageTitle = 'UCI Import';
 
                     <?php if ($stats): ?>
                         <div class="gs-mt-md">
+                            <?php if (isset($stats['separator_name'])): ?>
+                                <p class="gs-text-sm gs-mb-sm" style="background: var(--gs-bg-secondary); padding: 0.5rem; border-radius: 4px;">
+                                    🔍 <strong>Detekterad separator:</strong> <code style="background: var(--gs-bg); padding: 0.25rem 0.5rem; border-radius: 3px;"><?= h($stats['separator_name']) ?></code>
+                                </p>
+                            <?php endif; ?>
                             <p>📊 <strong>Statistik:</strong></p>
                             <ul style="margin-left: 1.5rem; margin-top: 0.5rem;">
                                 <li>Totalt rader: <?= $stats['total'] ?></li>
