@@ -1,206 +1,113 @@
-<?php
-require_once __DIR__ . '/includes/db.php';
-require_once __DIR__ . '/includes/functions.php';
-
-$db = getDB();
-
-// Get upcoming events
-$upcomingEvents = $db->getAll(
-    "SELECT id, name, event_date, location, event_type, status
-     FROM events
-     WHERE event_date >= CURDATE()
-     ORDER BY event_date ASC
-     LIMIT 6"
-);
-
-// Get recent completed events
-$recentEvents = $db->getAll(
-    "SELECT e.id, e.name, e.event_date, e.location, COUNT(r.id) as participant_count
-     FROM events e
-     LEFT JOIN results r ON e.id = r.event_id
-     WHERE e.event_date < CURDATE()
-     GROUP BY e.id
-     ORDER BY e.event_date DESC
-     LIMIT 6"
-);
-
-// Get statistics
-$stats = [
-    'total_cyclists' => $db->getRow("SELECT COUNT(*) as count FROM cyclists WHERE active = 1")['count'] ?? 0,
-    'total_events' => $db->getRow("SELECT COUNT(*) as count FROM events")['count'] ?? 0,
-    'total_clubs' => $db->getRow("SELECT COUNT(*) as count FROM clubs WHERE active = 1")['count'] ?? 0
-];
-
-$pageTitle = 'Hem';
-?>
+<?php require_once __DIR__ . '/config.php'; ?>
 <!DOCTYPE html>
 <html lang="sv">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TheHUB - Plattform för cykeltävlingar</title>
+    <title>TheHUB - GravitySeries</title>
     <link rel="stylesheet" href="/assets/gravityseries-theme.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 <body>
-    <!-- Navigation -->
-    <nav class="gs-nav">
-        <div class="gs-container">
-            <ul class="gs-nav-list">
-                <li><a href="/index.php" class="gs-nav-link active">
-                    <i data-lucide="home"></i> Hem
-                </a></li>
-                <li><a href="/events.php" class="gs-nav-link">
-                    <i data-lucide="calendar"></i> Tävlingar
-                </a></li>
-                <li><a href="/results.php" class="gs-nav-link">
-                    <i data-lucide="trophy"></i> Resultat
-                </a></li>
-                <li style="margin-left: auto;"><a href="/admin/login.php" class="gs-btn gs-btn-sm gs-btn-primary">
-                    <i data-lucide="log-in"></i> Admin
-                </a></li>
-            </ul>
-        </div>
-    </nav>
+    <!-- Hamburger Menu Button -->
+    <button class="gs-hamburger" onclick="toggleSidebar()">
+        <i data-lucide="menu"></i>
+    </button>
 
-    <!-- Hero Section -->
-    <div class="gs-container">
-        <section class="gs-hero">
-            <div class="gs-hero-content gs-text-center">
+    <!-- Sidebar (opens on hamburger click) -->
+    <?php include __DIR__ . '/includes/navigation.php'; ?>
+
+    <!-- Main Content -->
+    <main class="gs-landing">
+        <!-- Hero Section -->
+        <div class="gs-hero">
+            <div class="gs-container gs-text-center">
                 <img src="https://gravityseries.se/wp-content/uploads/2024/03/Gravity-Series.png"
                      alt="GravitySeries"
                      class="gs-hero-logo gs-mb-md">
-                <h1 class="gs-h1 gs-text-white gs-mb-xl">The HUB</h1>
-
-                <!-- Stats -->
-                <div class="gs-grid gs-grid-cols-1 gs-md-grid-cols-3 gs-gap-lg">
-                    <div class="gs-stat-card">
-                        <i data-lucide="users" class="gs-icon-lg gs-text-primary gs-mb-md"></i>
-                        <div class="gs-stat-number"><?= number_format($stats['total_cyclists']) ?></div>
-                        <div class="gs-stat-label">Cyklister</div>
-                    </div>
-                    <div class="gs-stat-card">
-                        <i data-lucide="calendar" class="gs-icon-lg gs-text-accent gs-mb-md"></i>
-                        <div class="gs-stat-number"><?= number_format($stats['total_events']) ?></div>
-                        <div class="gs-stat-label">Tävlingar</div>
-                    </div>
-                    <div class="gs-stat-card">
-                        <i data-lucide="building" class="gs-icon-lg gs-text-success gs-mb-md"></i>
-                        <div class="gs-stat-number"><?= number_format($stats['total_clubs']) ?></div>
-                        <div class="gs-stat-label">Klubbar</div>
-                    </div>
-                </div>
+                <h1 class="gs-h1 gs-text-white gs-mb-md">The HUB</h1>
+                <p class="gs-text-lg gs-text-white gs-mb-sm">
+                    Sveriges centrala plattform för cykeltävlingar
+                </p>
+                <p class="gs-text-white" style="margin-top: 1rem; opacity: 0.9;">
+                    Resultat, statistik och tävlingskalender för GravitySeries
+                </p>
             </div>
-        </section>
-    </div>
+        </div>
 
-    <!-- Main Content -->
-    <main class="gs-container gs-py-xl">
+        <!-- Three Main Cards -->
+        <div class="gs-container" style="margin-top: -60px; position: relative; z-index: 10;">
+            <div class="gs-grid gs-grid-cols-1 gs-md-grid-cols-3 gs-gap-lg">
 
-        <?php if (!empty($upcomingEvents)): ?>
-            <!-- Upcoming Events -->
-            <section class="gs-mb-xl">
-                <h2 class="gs-h2 gs-text-primary gs-mb-lg">
-                    <i data-lucide="calendar-clock"></i>
-                    Kommande tävlingar
-                </h2>
-
-                <div class="gs-grid gs-grid-cols-1 gs-md-grid-cols-2 gs-lg-grid-cols-3 gs-gap-lg gs-mb-lg">
-                    <?php foreach ($upcomingEvents as $event): ?>
-                        <div class="gs-event-card">
-                            <div class="gs-event-header">
-                                <div class="gs-event-date">
-                                    <div class="gs-event-date-day"><?= formatDate($event['event_date'], 'd') ?></div>
-                                    <div class="gs-event-date-month"><?= formatDate($event['event_date'], 'M') ?></div>
-                                </div>
-                                <span class="gs-badge gs-badge-warning">
-                                    <i data-lucide="clock"></i>
-                                    <?= h($event['status']) ?>
-                                </span>
+                <!-- Card 1: Deltagare -->
+                <a href="/riders.php" class="gs-landing-card">
+                    <div class="gs-card gs-card-hover">
+                        <div class="gs-card-content gs-text-center" style="padding: 3rem 2rem;">
+                            <div class="gs-icon-wrapper gs-bg-primary" style="margin: 0 auto 1.5rem;">
+                                <i data-lucide="users" style="width: 48px; height: 48px;" class="gs-text-white"></i>
                             </div>
-                            <div class="gs-event-content">
-                                <h3 class="gs-event-title">
-                                    <a href="/public/event.php?id=<?= $event['id'] ?>"><?= h($event['name']) ?></a>
-                                </h3>
-                                <p class="gs-event-icon">
-                                    <i data-lucide="map-pin"></i>
-                                    <?= h($event['location']) ?>
-                                </p>
-                                <p class="gs-event-icon">
-                                    <i data-lucide="flag"></i>
-                                    <?= h(str_replace('_', ' ', $event['event_type'])) ?>
-                                </p>
-                            </div>
+                            <h3 class="gs-h3 gs-mb-md">Deltagare</h3>
+                            <p class="gs-text-secondary">
+                                Sök bland alla aktiva cyklister och se deras resultat och statistik
+                            </p>
                         </div>
-                    <?php endforeach; ?>
-                </div>
+                    </div>
+                </a>
 
-                <div class="gs-text-center">
-                    <a href="/public/events.php" class="gs-btn gs-btn-primary gs-btn-lg">
-                        <i data-lucide="list"></i>
-                        Visa alla tävlingar
-                    </a>
-                </div>
-            </section>
-        <?php endif; ?>
-
-        <?php if (!empty($recentEvents)): ?>
-            <!-- Recent Results -->
-            <section class="gs-mb-xl">
-                <h2 class="gs-h2 gs-text-primary gs-mb-lg">
-                    <i data-lucide="check-circle"></i>
-                    Senaste resultaten
-                </h2>
-
-                <div class="gs-grid gs-grid-cols-1 gs-md-grid-cols-2 gs-lg-grid-cols-3 gs-gap-lg">
-                    <?php foreach ($recentEvents as $event): ?>
-                        <div class="gs-event-card">
-                            <div class="gs-event-header">
-                                <div class="gs-event-date" style="background-color: var(--gs-success);">
-                                    <div class="gs-event-date-day"><?= formatDate($event['event_date'], 'd') ?></div>
-                                    <div class="gs-event-date-month"><?= formatDate($event['event_date'], 'M') ?></div>
-                                </div>
-                                <span class="gs-badge gs-badge-success">
-                                    <i data-lucide="check-circle"></i>
-                                    Completed
-                                </span>
+                <!-- Card 2: Kalender -->
+                <a href="/events.php" class="gs-landing-card">
+                    <div class="gs-card gs-card-hover">
+                        <div class="gs-card-content gs-text-center" style="padding: 3rem 2rem;">
+                            <div class="gs-icon-wrapper" style="background-color: var(--gs-accent); margin: 0 auto 1.5rem;">
+                                <i data-lucide="calendar" style="width: 48px; height: 48px;" class="gs-text-white"></i>
                             </div>
-                            <div class="gs-event-content">
-                                <h3 class="gs-event-title">
-                                    <a href="/public/results.php?event_id=<?= $event['id'] ?>"><?= h($event['name']) ?></a>
-                                </h3>
-                                <p class="gs-event-icon">
-                                    <i data-lucide="map-pin"></i>
-                                    <?= h($event['location']) ?>
-                                </p>
-                                <p class="gs-event-icon">
-                                    <i data-lucide="users"></i>
-                                    <?= $event['participant_count'] ?> deltagare
-                                </p>
-                            </div>
+                            <h3 class="gs-h3 gs-mb-md">Kalender</h3>
+                            <p class="gs-text-secondary">
+                                Kommande tävlingar och resultat från tidigare events
+                            </p>
                         </div>
-                    <?php endforeach; ?>
-                </div>
-            </section>
-        <?php endif; ?>
+                    </div>
+                </a>
 
+                <!-- Card 3: Resultat -->
+                <a href="/results.php" class="gs-landing-card">
+                    <div class="gs-card gs-card-hover">
+                        <div class="gs-card-content gs-text-center" style="padding: 3rem 2rem;">
+                            <div class="gs-icon-wrapper" style="background-color: var(--gs-success); margin: 0 auto 1.5rem;">
+                                <i data-lucide="trophy" style="width: 48px; height: 48px;" class="gs-text-white"></i>
+                            </div>
+                            <h3 class="gs-h3 gs-mb-md">Resultat</h3>
+                            <p class="gs-text-secondary">
+                                Se resultat och ställningar från alla tävlingar
+                            </p>
+                        </div>
+                    </div>
+                </a>
+
+            </div>
+        </div>
     </main>
 
-    <!-- Footer -->
-    <footer class="gs-bg-dark gs-text-white gs-py-xl gs-text-center">
-        <div class="gs-container">
-            <p>&copy; <?= date('Y') ?> TheHUB - Sveriges plattform för cykeltävlingar</p>
-            <p class="gs-text-sm gs-text-secondary" style="margin-top: var(--gs-space-sm);">
-                <i data-lucide="palette"></i>
-                GravitySeries Design System + Lucide Icons
-            </p>
-        </div>
-    </footer>
-
-    <!-- Lucide Icons -->
-    <script src="https://unpkg.com/lucide@latest"></script>
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            lucide.createIcons();
+        lucide.createIcons();
+
+        function toggleSidebar() {
+            document.querySelector('.gs-sidebar').classList.toggle('open');
+            document.body.classList.toggle('sidebar-open');
+        }
+
+        function closeSidebar() {
+            document.querySelector('.gs-sidebar').classList.remove('open');
+            document.body.classList.remove('sidebar-open');
+        }
+
+        // Close sidebar when clicking overlay
+        document.addEventListener('click', function(e) {
+            if (document.body.classList.contains('sidebar-open') &&
+                !e.target.closest('.gs-sidebar') &&
+                !e.target.closest('.gs-hamburger')) {
+                closeSidebar();
+            }
         });
     </script>
 </body>

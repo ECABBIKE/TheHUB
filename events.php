@@ -45,143 +45,168 @@ $pageTitle = 'Tävlingar';
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= h($pageTitle) ?> - TheHUB</title>
     <link rel="stylesheet" href="/assets/gravityseries-theme.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 <body>
-    <!-- Navigation -->
-    <nav class="gs-nav">
+    <!-- Hamburger Menu Button -->
+    <button class="gs-hamburger" onclick="toggleSidebar()">
+        <i data-lucide="menu"></i>
+    </button>
+
+    <!-- Sidebar -->
+    <?php include __DIR__ . '/includes/navigation.php'; ?>
+
+    <!-- Main Content -->
+    <main class="gs-content-with-sidebar">
         <div class="gs-container">
-            <ul class="gs-nav-list">
-                <li><a href="/index.php" class="gs-nav-link">
-                    <i data-lucide="home"></i> Hem
-                </a></li>
-                <li><a href="/events.php" class="gs-nav-link active">
-                    <i data-lucide="calendar"></i> Tävlingar
-                </a></li>
-                <li><a href="/results.php" class="gs-nav-link">
-                    <i data-lucide="trophy"></i> Resultat
-                </a></li>
-                <li style="margin-left: auto;"><a href="/admin/login.php" class="gs-btn gs-btn-sm gs-btn-primary">
-                    <i data-lucide="log-in"></i> Admin
-                </a></li>
-            </ul>
-        </div>
-    </nav>
+            <!-- Header -->
+            <div class="gs-flex gs-justify-between gs-items-center gs-mb-xl">
+                <div>
+                    <h1 class="gs-h2 gs-text-primary gs-mb-sm">
+                        <i data-lucide="calendar"></i>
+                        Tävlingskalender
+                    </h1>
+                    <p class="gs-text-secondary">
+                        <?= $totalCount ?> tävlingar under <?= $year ?>
+                    </p>
+                </div>
 
-    <main class="gs-container gs-py-xl">
-        <h1 class="gs-h1 gs-text-primary gs-mb-lg">Tävlingar</h1>
-
-        <!-- Filters -->
-        <div class="gs-card gs-mb-lg">
-            <div class="gs-card-content">
-                <div class="gs-flex gs-items-center gs-gap-md">
-                    <i data-lucide="filter"></i>
-                    <label for="year" class="gs-label" style="margin-bottom: 0;">År:</label>
-                    <select id="year" class="gs-input" style="max-width: 200px;" onchange="window.location.href='?year=' + this.value">
+                <!-- Year Filter -->
+                <?php if (!empty($years)): ?>
+                    <div class="gs-flex gs-gap-sm">
                         <?php foreach ($years as $y): ?>
-                            <option value="<?= $y['year'] ?>" <?= $y['year'] == $year ? 'selected' : '' ?>>
+                            <a href="?year=<?= $y['year'] ?>"
+                               class="gs-btn <?= $y['year'] == $year ? 'gs-btn-primary' : 'gs-btn-outline' ?>">
                                 <?= $y['year'] ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                    <span class="gs-text-secondary gs-text-sm">
-                        <i data-lucide="list"></i>
-                        Totalt: <?= $totalCount ?> tävlingar
-                    </span>
-                </div>
-            </div>
-        </div>
-
-        <?php if (empty($events)): ?>
-            <div class="gs-card">
-                <div class="gs-card-content gs-text-center gs-py-xl">
-                    <p class="gs-text-secondary">Inga tävlingar hittades för <?= $year ?></p>
-                </div>
-            </div>
-        <?php else: ?>
-            <!-- Events Grid -->
-            <div class="gs-grid gs-grid-cols-1 gs-md-grid-cols-2 gs-lg-grid-cols-3 gs-gap-lg gs-mb-lg">
-                <?php foreach ($events as $event): ?>
-                    <div class="gs-event-card">
-                        <div class="gs-event-header">
-                            <div class="gs-event-date" style="background-color: <?= $event['status'] === 'completed' ? 'var(--gs-success)' : 'var(--gs-primary)' ?>;">
-                                <div class="gs-event-date-day"><?= formatDate($event['event_date'], 'd') ?></div>
-                                <div class="gs-event-date-month"><?= formatDate($event['event_date'], 'M Y') ?></div>
-                            </div>
-                            <span class="gs-badge gs-badge-<?= $event['status'] === 'completed' ? 'success' : ($event['status'] === 'upcoming' ? 'warning' : 'primary') ?>">
-                                <i data-lucide="<?= $event['status'] === 'completed' ? 'check-circle' : 'clock' ?>"></i>
-                                <?= h($event['status']) ?>
-                            </span>
-                        </div>
-                        <div class="gs-event-content">
-                            <h3 class="gs-event-title">
-                                <a href="/event.php?id=<?= $event['id'] ?>"><?= h($event['name']) ?></a>
-                            </h3>
-                            <p class="gs-event-icon">
-                                <i data-lucide="map-pin"></i>
-                                <?= h($event['location']) ?>
-                            </p>
-                            <p class="gs-event-icon">
-                                <i data-lucide="flag"></i>
-                                <?= h(str_replace('_', ' ', $event['event_type'])) ?>
-                            </p>
-                            <?php if ($event['participant_count'] > 0): ?>
-                                <p class="gs-event-icon gs-text-primary" style="margin-top: var(--gs-space-sm);">
-                                    <i data-lucide="users"></i>
-                                    <?= $event['participant_count'] ?> deltagare
-                                </p>
-                            <?php endif; ?>
-                            <a href="/results.php?event_id=<?= $event['id'] ?>" class="gs-btn gs-btn-sm gs-btn-primary gs-w-full gs-mt-lg">
-                                <i data-lucide="eye"></i>
-                                Visa resultat
                             </a>
-                        </div>
+                        <?php endforeach; ?>
                     </div>
-                <?php endforeach; ?>
+                <?php endif; ?>
             </div>
 
-            <!-- Pagination -->
-            <?php if ($pagination['total_pages'] > 1): ?>
-                <div class="gs-flex gs-items-center gs-justify-between gs-gap-md">
-                    <?php if ($pagination['has_prev']): ?>
-                        <a href="?year=<?= $year ?>&page=<?= $page - 1 ?>" class="gs-btn gs-btn-outline">
-                            <i data-lucide="chevron-left"></i>
-                            Föregående
-                        </a>
-                    <?php else: ?>
-                        <span></span>
-                    <?php endif; ?>
-
-                    <span class="gs-text-secondary">Sida <?= $page ?> av <?= $pagination['total_pages'] ?></span>
-
-                    <?php if ($pagination['has_next']): ?>
-                        <a href="?year=<?= $year ?>&page=<?= $page + 1 ?>" class="gs-btn gs-btn-outline">
-                            Nästa
-                            <i data-lucide="chevron-right"></i>
-                        </a>
-                    <?php else: ?>
-                        <span></span>
-                    <?php endif; ?>
+            <!-- Events Grid -->
+            <?php if (empty($events)): ?>
+                <div class="gs-card gs-text-center" style="padding: 3rem;">
+                    <i data-lucide="calendar-x" style="width: 64px; height: 64px; margin: 0 auto 1rem; opacity: 0.3;"></i>
+                    <h3 class="gs-h4 gs-mb-sm">Inga tävlingar hittades</h3>
+                    <p class="gs-text-secondary">
+                        Det finns inga registrerade tävlingar för <?= $year ?>.
+                    </p>
                 </div>
+            <?php else: ?>
+                <div class="gs-grid gs-grid-cols-1 gs-md-grid-cols-2 gs-lg-grid-cols-3 gs-gap-lg">
+                    <?php foreach ($events as $event): ?>
+                        <div class="gs-card gs-card-hover">
+                            <div class="gs-card-header">
+                                <div class="gs-flex gs-justify-between gs-items-start gs-mb-sm">
+                                    <div class="gs-event-date-badge">
+                                        <div class="gs-event-date-day"><?= formatDate($event['event_date'], 'd') ?></div>
+                                        <div class="gs-event-date-month"><?= formatDate($event['event_date'], 'M') ?></div>
+                                    </div>
+                                    <?php
+                                    $status_class = 'gs-badge-secondary';
+                                    $status_text = $event['status'];
+                                    if ($event['status'] == 'upcoming' || strtotime($event['event_date']) > time()) {
+                                        $status_class = 'gs-badge-warning';
+                                        $status_text = 'Kommande';
+                                    } elseif ($event['status'] == 'completed' || strtotime($event['event_date']) < time()) {
+                                        $status_class = 'gs-badge-success';
+                                        $status_text = 'Avklarad';
+                                    }
+                                    ?>
+                                    <span class="gs-badge <?= $status_class ?>">
+                                        <i data-lucide="<?= $status_text == 'Kommande' ? 'clock' : 'check-circle' ?>"></i>
+                                        <?= h($status_text) ?>
+                                    </span>
+                                </div>
+                                <h3 class="gs-h4 gs-mb-xs"><?= h($event['name']) ?></h3>
+                                <?php if ($event['location']): ?>
+                                    <p class="gs-text-sm gs-text-secondary">
+                                        <i data-lucide="map-pin" style="width: 14px; height: 14px;"></i>
+                                        <?= h($event['location']) ?>
+                                    </p>
+                                <?php endif; ?>
+                            </div>
+                            <div class="gs-card-content">
+                                <?php if ($event['event_type']): ?>
+                                    <p class="gs-mb-sm">
+                                        <strong>Typ:</strong>
+                                        <span class="gs-badge gs-badge-primary gs-text-xs">
+                                            <?= h(str_replace('_', ' ', $event['event_type'])) ?>
+                                        </span>
+                                    </p>
+                                <?php endif; ?>
+
+                                <?php if ($event['participant_count'] > 0): ?>
+                                    <p class="gs-text-sm gs-text-secondary gs-mb-md">
+                                        <i data-lucide="users" style="width: 14px; height: 14px;"></i>
+                                        <?= $event['participant_count'] ?> deltagare
+                                    </p>
+
+                                    <a href="/results.php?event_id=<?= $event['id'] ?>"
+                                       class="gs-btn gs-btn-primary gs-btn-sm gs-w-full">
+                                        <i data-lucide="trophy"></i>
+                                        Visa resultat
+                                    </a>
+                                <?php else: ?>
+                                    <p class="gs-text-sm gs-text-secondary">
+                                        <i data-lucide="info" style="width: 14px; height: 14px;"></i>
+                                        Inga resultat registrerade ännu
+                                    </p>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+
+                <!-- Pagination -->
+                <?php if ($pagination['total_pages'] > 1): ?>
+                    <div class="gs-flex gs-justify-center gs-gap-sm gs-mt-xl">
+                        <?php if ($pagination['has_prev']): ?>
+                            <a href="?year=<?= $year ?>&page=<?= $pagination['prev_page'] ?>"
+                               class="gs-btn gs-btn-outline">
+                                <i data-lucide="chevron-left"></i>
+                                Föregående
+                            </a>
+                        <?php endif; ?>
+
+                        <span class="gs-flex gs-items-center gs-px-md gs-text-secondary">
+                            Sida <?= $pagination['current_page'] ?> av <?= $pagination['total_pages'] ?>
+                        </span>
+
+                        <?php if ($pagination['has_next']): ?>
+                            <a href="?year=<?= $year ?>&page=<?= $pagination['next_page'] ?>"
+                               class="gs-btn gs-btn-outline">
+                                Nästa
+                                <i data-lucide="chevron-right"></i>
+                            </a>
+                        <?php endif; ?>
+                    </div>
+                <?php endif; ?>
             <?php endif; ?>
-        <?php endif; ?>
+        </div>
     </main>
 
-    <!-- Footer -->
-    <footer class="gs-bg-dark gs-text-white gs-py-xl gs-text-center">
-        <div class="gs-container">
-            <p>&copy; <?= date('Y') ?> TheHUB - Sveriges plattform för cykeltävlingar</p>
-            <p class="gs-text-sm gs-text-secondary" style="margin-top: var(--gs-space-sm);">
-                <i data-lucide="palette"></i>
-                GravitySeries Design System + Lucide Icons
-            </p>
-        </div>
-    </footer>
-
-    <!-- Lucide Icons -->
-    <script src="https://unpkg.com/lucide@latest"></script>
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            lucide.createIcons();
+        lucide.createIcons();
+
+        function toggleSidebar() {
+            document.querySelector('.gs-sidebar').classList.toggle('open');
+            document.body.classList.toggle('sidebar-open');
+        }
+
+        function closeSidebar() {
+            document.querySelector('.gs-sidebar').classList.remove('open');
+            document.body.classList.remove('sidebar-open');
+        }
+
+        // Close sidebar when clicking overlay
+        document.addEventListener('click', function(e) {
+            if (document.body.classList.contains('sidebar-open') &&
+                !e.target.closest('.gs-sidebar') &&
+                !e.target.closest('.gs-hamburger')) {
+                closeSidebar();
+            }
         });
     </script>
 </body>

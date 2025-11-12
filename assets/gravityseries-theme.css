@@ -1125,3 +1125,240 @@ body {
 .gs-text-left { text-align: left; }
 
 .gs-w-full { width: 100%; }
+
+/* ========================================
+   LANDING PAGE STYLES
+   ======================================== */
+
+.gs-landing {
+  min-height: 100vh;
+  background-color: var(--gs-light);
+}
+
+.gs-landing-card {
+  text-decoration: none;
+  display: block;
+  transition: all var(--gs-transition-base);
+}
+
+.gs-landing-card:hover {
+  transform: translateY(-8px);
+}
+
+.gs-icon-wrapper {
+  width: 80px;
+  height: 80px;
+  border-radius: var(--gs-radius-xl);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--gs-shadow-lg);
+}
+
+.gs-bg-primary {
+  background-color: var(--gs-primary);
+}
+
+/* ========================================
+   HAMBURGER MENU
+   ======================================== */
+
+.gs-hamburger {
+  position: fixed;
+  top: 1.5rem;
+  left: 1.5rem;
+  z-index: 200;
+  width: 48px;
+  height: 48px;
+  border: none;
+  border-radius: var(--gs-radius-md);
+  background-color: var(--gs-white);
+  box-shadow: var(--gs-shadow-lg);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--gs-transition-fast);
+}
+
+.gs-hamburger:hover {
+  background-color: var(--gs-primary);
+  transform: scale(1.05);
+}
+
+.gs-hamburger:hover i,
+.gs-hamburger:hover svg {
+  color: var(--gs-white);
+}
+
+.gs-hamburger i,
+.gs-hamburger svg {
+  width: 24px;
+  height: 24px;
+  color: var(--gs-primary);
+  transition: color var(--gs-transition-fast);
+}
+
+/* ========================================
+   SIDEBAR IMPROVEMENTS
+   ======================================== */
+
+.gs-sidebar {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 280px;
+  height: 100vh;
+  background-color: var(--gs-white);
+  border-right: 1px solid var(--gs-border);
+  padding: var(--gs-space-xl);
+  overflow-y: auto;
+  z-index: 150;
+  box-shadow: 2px 0 20px rgba(0, 0, 0, 0.1);
+  transform: translateX(-100%);
+  transition: transform var(--gs-transition-base);
+  display: flex;
+  flex-direction: column;
+}
+
+.gs-sidebar.open {
+  transform: translateX(0);
+}
+
+/* Overlay when sidebar open */
+body.sidebar-open::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 140;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* On pages with sidebar always visible */
+.gs-content-with-sidebar {
+  margin-left: 0;
+  padding: var(--gs-space-lg);
+  min-height: 100vh;
+  background-color: var(--gs-light);
+}
+
+.gs-content-with-sidebar .gs-sidebar {
+  transform: translateX(0);
+}
+
+.gs-content-with-sidebar .gs-hamburger {
+  display: none;
+}
+
+@media (min-width: 1024px) {
+  .gs-content-with-sidebar {
+    margin-left: 280px;
+  }
+
+  .gs-content-with-sidebar .gs-hamburger {
+    display: none;
+  }
+}
+
+/* ========================================
+   AVATAR & BADGE IMPROVEMENTS
+   ======================================== */
+
+.gs-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--gs-primary-light);
+}
+
+.gs-avatar i,
+.gs-avatar svg {
+  width: 24px;
+  height: 24px;
+}
+
+.gs-event-date-badge {
+  background-color: var(--gs-primary);
+  color: var(--gs-white);
+  border-radius: var(--gs-radius-md);
+  padding: var(--gs-space-sm);
+  text-align: center;
+  min-width: 60px;
+}
+
+.gs-event-date-day {
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.gs-event-date-month {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  opacity: 0.9;
+}
+
+.gs-badge-danger {
+  background-color: rgba(220, 38, 38, 0.1);
+  color: rgb(220, 38, 38);
+}
+
+/* ========================================
+   TYPOGRAPHY UTILITIES
+   ======================================== */
+
+.gs-font-mono {
+  font-family: 'Courier New', monospace;
+}
+
+.gs-font-bold {
+  font-weight: 700;
+}
+
+.gs-text-2xl {
+  font-size: 1.5rem;
+  line-height: 1.2;
+}
+
+/* ========================================
+   RESPONSIVE IMPROVEMENTS
+   ======================================== */
+
+@media (max-width: 768px) {
+  .gs-hamburger {
+    top: 1rem;
+    left: 1rem;
+  }
+
+  .gs-sidebar {
+    width: 280px;
+  }
+
+  .gs-landing-card {
+    margin-bottom: var(--gs-space-md);
+  }
+
+  .gs-icon-wrapper {
+    width: 64px;
+    height: 64px;
+  }
+
+  .gs-icon-wrapper i,
+  .gs-icon-wrapper svg {
+    width: 32px;
+    height: 32px;
+  }
+}

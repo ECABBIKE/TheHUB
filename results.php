@@ -50,152 +50,167 @@ $pageTitle = $event['name'] . ' - Resultat';
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= h($pageTitle) ?> - TheHUB</title>
     <link rel="stylesheet" href="/assets/gravityseries-theme.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 <body>
-    <!-- Navigation -->
-    <nav class="gs-nav">
-        <div class="gs-container">
-            <ul class="gs-nav-list">
-                <li><a href="/index.php" class="gs-nav-link">
-                    <i data-lucide="home"></i> Hem
-                </a></li>
-                <li><a href="/events.php" class="gs-nav-link">
-                    <i data-lucide="calendar"></i> Tävlingar
-                </a></li>
-                <li><a href="/results.php" class="gs-nav-link active">
-                    <i data-lucide="trophy"></i> Resultat
-                </a></li>
-                <li style="margin-left: auto;"><a href="/admin/login.php" class="gs-btn gs-btn-sm gs-btn-primary">
-                    <i data-lucide="log-in"></i> Admin
-                </a></li>
-            </ul>
-        </div>
-    </nav>
+    <!-- Hamburger Menu Button -->
+    <button class="gs-hamburger" onclick="toggleSidebar()">
+        <i data-lucide="menu"></i>
+    </button>
 
-    <main class="gs-container gs-py-xl">
-        <!-- Event Header -->
-        <div class="gs-card gs-mb-lg">
-            <div class="gs-card-content">
-                <h1 class="gs-h2 gs-text-primary gs-mb-md">
+    <!-- Sidebar -->
+    <?php include __DIR__ . '/includes/navigation.php'; ?>
+
+    <!-- Main Content -->
+    <main class="gs-content-with-sidebar">
+        <div class="gs-container">
+            <!-- Header -->
+            <div class="gs-mb-xl">
+                <a href="/events.php" class="gs-btn gs-btn-sm gs-btn-outline gs-mb-md">
+                    <i data-lucide="arrow-left"></i>
+                    Tillbaka till kalender
+                </a>
+
+                <h1 class="gs-h2 gs-text-primary gs-mb-sm">
                     <i data-lucide="trophy"></i>
                     <?= h($event['name']) ?>
                 </h1>
-                <div class="gs-flex gs-flex-col gs-gap-sm gs-text-secondary gs-text-sm">
-                    <div>
-                        <i data-lucide="calendar"></i>
-                        <span class="gs-text-primary" style="font-weight: 600;">Datum:</span>
+                <div class="gs-flex gs-gap-md gs-flex-wrap">
+                    <p class="gs-text-secondary">
+                        <i data-lucide="calendar" style="width: 16px; height: 16px;"></i>
                         <?= formatDate($event['event_date'], 'd M Y') ?>
-                    </div>
-                    <div>
-                        <i data-lucide="map-pin"></i>
-                        <span class="gs-text-primary" style="font-weight: 600;">Plats:</span>
-                        <?= h($event['location']) ?>
-                    </div>
-                    <?php if ($event['distance']): ?>
-                        <div>
-                            <i data-lucide="route"></i>
-                            <span class="gs-text-primary" style="font-weight: 600;">Distans:</span>
-                            <?= $event['distance'] ?> km
-                        </div>
+                    </p>
+                    <?php if ($event['location']): ?>
+                        <p class="gs-text-secondary">
+                            <i data-lucide="map-pin" style="width: 16px; height: 16px;"></i>
+                            <?= h($event['location']) ?>
+                        </p>
                     <?php endif; ?>
-                    <div>
-                        <i data-lucide="flag"></i>
-                        <span class="gs-text-primary" style="font-weight: 600;">Typ:</span>
-                        <?= h(str_replace('_', ' ', $event['event_type'])) ?>
+                    <p class="gs-text-secondary">
+                        <i data-lucide="users" style="width: 16px; height: 16px;"></i>
+                        <?= count($results) ?> deltagare
+                    </p>
+                </div>
+            </div>
+
+            <!-- Results Table -->
+            <?php if (empty($results)): ?>
+                <div class="gs-card gs-text-center" style="padding: 3rem;">
+                    <i data-lucide="trophy" style="width: 64px; height: 64px; margin: 0 auto 1rem; opacity: 0.3;"></i>
+                    <h3 class="gs-h4 gs-mb-sm">Inga resultat ännu</h3>
+                    <p class="gs-text-secondary">
+                        Resultat har inte registrerats för denna tävling.
+                    </p>
+                </div>
+            <?php else: ?>
+                <div class="gs-card">
+                    <div class="gs-card-header">
+                        <h3 class="gs-h4">
+                            <i data-lucide="list"></i>
+                            Resultat
+                        </h3>
+                    </div>
+                    <div class="gs-card-content" style="padding: 0; overflow-x: auto;">
+                        <table class="gs-table">
+                            <thead>
+                                <tr>
+                                    <th>Placering</th>
+                                    <th>Startnr</th>
+                                    <th>Namn</th>
+                                    <th>Klubb</th>
+                                    <th>Kategori</th>
+                                    <th>Tid</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($results as $result): ?>
+                                    <tr>
+                                        <td>
+                                            <?php if ($result['position'] == 1): ?>
+                                                <span class="gs-badge" style="background-color: gold; color: #000;">
+                                                    🥇 <?= $result['position'] ?>
+                                                </span>
+                                            <?php elseif ($result['position'] == 2): ?>
+                                                <span class="gs-badge" style="background-color: silver; color: #000;">
+                                                    🥈 <?= $result['position'] ?>
+                                                </span>
+                                            <?php elseif ($result['position'] == 3): ?>
+                                                <span class="gs-badge" style="background-color: #CD7F32; color: #fff;">
+                                                    🥉 <?= $result['position'] ?>
+                                                </span>
+                                            <?php else: ?>
+                                                <span class="gs-font-bold"><?= $result['position'] ?></span>
+                                            <?php endif; ?>
+                                        </td>
+                                        <td class="gs-text-secondary"><?= h($result['bib_number']) ?></td>
+                                        <td>
+                                            <strong><?= h($result['cyclist_name']) ?></strong>
+                                            <?php if ($result['birth_year']): ?>
+                                                <span class="gs-text-sm gs-text-secondary">
+                                                    (<?= $result['birth_year'] ?>)
+                                                </span>
+                                            <?php endif; ?>
+                                        </td>
+                                        <td class="gs-text-secondary">
+                                            <?= h($result['club_name'] ?? '-') ?>
+                                        </td>
+                                        <td>
+                                            <?php if ($result['category_name']): ?>
+                                                <span class="gs-badge gs-badge-secondary gs-text-xs">
+                                                    <?= h($result['category_name']) ?>
+                                                </span>
+                                            <?php else: ?>
+                                                <span class="gs-text-secondary">-</span>
+                                            <?php endif; ?>
+                                        </td>
+                                        <td class="gs-font-mono">
+                                            <?= h($result['finish_time'] ?? '-') ?>
+                                        </td>
+                                        <td>
+                                            <?php
+                                            $status_class = 'gs-badge-success';
+                                            $status_text = $result['status'] ?? 'Finished';
+                                            if ($status_text == 'DNF') {
+                                                $status_class = 'gs-badge-danger';
+                                            } elseif ($status_text == 'DNS') {
+                                                $status_class = 'gs-badge-secondary';
+                                            }
+                                            ?>
+                                            <span class="gs-badge <?= $status_class ?> gs-text-xs">
+                                                <?= h($status_text) ?>
+                                            </span>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
-            </div>
-        </div>
-
-        <h2 class="gs-h3 gs-text-primary gs-mb-lg">
-            <i data-lucide="list"></i>
-            Resultat (<?= count($results) ?> deltagare)
-        </h2>
-
-        <?php if (empty($results)): ?>
-            <div class="gs-card">
-                <div class="gs-card-content gs-text-center gs-py-xl">
-                    <p class="gs-text-secondary">Inga resultat ännu</p>
-                </div>
-            </div>
-        <?php else: ?>
-            <!-- Results Table -->
-            <div class="gs-card">
-                <div class="gs-table-responsive">
-                    <table class="gs-table">
-                        <thead>
-                            <tr>
-                                <th style="width: 80px;">Plac</th>
-                                <th style="width: 60px;">#</th>
-                                <th>Namn</th>
-                                <th>Klubb</th>
-                                <th>Kategori</th>
-                                <th style="width: 100px;">Tid</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php foreach ($results as $result): ?>
-                                <tr class="<?= $result['position'] >= 1 && $result['position'] <= 3 ? 'gs-podium-' . $result['position'] : '' ?>">
-                                    <td style="font-weight: 700; color: var(--gs-primary);">
-                                        <?php if ($result['position']): ?>
-                                            <?= $result['position'] ?>
-                                        <?php else: ?>
-                                            -
-                                        <?php endif; ?>
-                                    </td>
-                                    <td class="gs-text-secondary"><?= h($result['bib_number']) ?></td>
-                                    <td>
-                                        <a href="/cyclist.php?id=<?= $result['cyclist_id'] ?>" style="color: var(--gs-text-primary); text-decoration: none; font-weight: 500;">
-                                            <?= h($result['cyclist_name']) ?>
-                                        </a>
-                                        <?php if ($result['birth_year']): ?>
-                                            <span class="gs-text-secondary gs-text-xs" style="margin-left: var(--gs-space-xs);">
-                                                (<?= $result['birth_year'] ?>)
-                                            </span>
-                                        <?php endif; ?>
-                                    </td>
-                                    <td class="gs-text-secondary"><?= h($result['club_name']) ?></td>
-                                    <td>
-                                        <span class="gs-badge gs-badge-primary gs-text-xs">
-                                            <?= h($result['category_name']) ?>
-                                        </span>
-                                    </td>
-                                    <td class="gs-text-secondary" style="font-family: monospace;">
-                                        <?= formatTime($result['finish_time']) ?>
-                                    </td>
-                                </tr>
-                            <?php endforeach; ?>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        <?php endif; ?>
-
-        <!-- Back Button -->
-        <div class="gs-mt-lg">
-            <a href="/events.php" class="gs-btn gs-btn-outline">
-                <i data-lucide="arrow-left"></i>
-                Tillbaka till tävlingar
-            </a>
+            <?php endif; ?>
         </div>
     </main>
 
-    <!-- Footer -->
-    <footer class="gs-bg-dark gs-text-white gs-py-xl gs-text-center">
-        <div class="gs-container">
-            <p>&copy; <?= date('Y') ?> TheHUB - Sveriges plattform för cykeltävlingar</p>
-            <p class="gs-text-sm gs-text-secondary" style="margin-top: var(--gs-space-sm);">
-                <i data-lucide="palette"></i>
-                GravitySeries Design System + Lucide Icons
-            </p>
-        </div>
-    </footer>
-
-    <!-- Lucide Icons -->
-    <script src="https://unpkg.com/lucide@latest"></script>
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            lucide.createIcons();
+        lucide.createIcons();
+
+        function toggleSidebar() {
+            document.querySelector('.gs-sidebar').classList.toggle('open');
+            document.body.classList.toggle('sidebar-open');
+        }
+
+        function closeSidebar() {
+            document.querySelector('.gs-sidebar').classList.remove('open');
+            document.body.classList.remove('sidebar-open');
+        }
+
+        // Close sidebar when clicking overlay
+        document.addEventListener('click', function(e) {
+            if (document.body.classList.contains('sidebar-open') &&
+                !e.target.closest('.gs-sidebar') &&
+                !e.target.closest('.gs-hamburger')) {
+                closeSidebar();
+            }
         });
     </script>
 </body>
