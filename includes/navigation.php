@@ -1,0 +1,73 @@
+<?php
+/**
+ * Navigation sidebar for TheHUB
+ */
+
+// Get current page
+$current_page = basename($_SERVER['PHP_SELF']);
+$is_admin = isLoggedIn();
+?>
+<nav class="gs-sidebar">
+    <div class="gs-menu-section">
+        <h3 class="gs-menu-title">TheHUB</h3>
+        <ul class="gs-menu">
+            <li><a href="/index.php" class="<?= $current_page == 'index.php' ? 'active' : '' ?>">
+                <i data-lucide="home"></i> Hem
+            </a></li>
+            <li><a href="/events.php" class="<?= $current_page == 'events.php' ? 'active' : '' ?>">
+                <i data-lucide="calendar"></i> Tävlingar
+            </a></li>
+            <li><a href="/series.php" class="<?= $current_page == 'series.php' ? 'active' : '' ?>">
+                <i data-lucide="trophy"></i> Serier
+            </a></li>
+            <li><a href="/riders.php" class="<?= $current_page == 'riders.php' ? 'active' : '' ?>">
+                <i data-lucide="users"></i> Deltagare
+            </a></li>
+        </ul>
+    </div>
+
+    <?php if ($is_admin): ?>
+    <div class="gs-menu-section">
+        <h3 class="gs-menu-title">Admin</h3>
+        <ul class="gs-menu">
+            <li><a href="/admin/dashboard.php" class="<?= $current_page == 'dashboard.php' ? 'active' : '' ?>">
+                <i data-lucide="layout-dashboard"></i> Dashboard
+            </a></li>
+            <li><a href="/admin/events.php" class="<?= $current_page == 'events.php' && strpos($_SERVER['PHP_SELF'], '/admin/') !== false ? 'active' : '' ?>">
+                <i data-lucide="calendar-check"></i> Events
+            </a></li>
+            <li><a href="/admin/series.php" class="<?= $current_page == 'series.php' && strpos($_SERVER['PHP_SELF'], '/admin/') !== false ? 'active' : '' ?>">
+                <i data-lucide="award"></i> Serier
+            </a></li>
+            <li><a href="/admin/riders.php" class="<?= $current_page == 'riders.php' && strpos($_SERVER['PHP_SELF'], '/admin/') !== false ? 'active' : '' ?>">
+                <i data-lucide="user-circle"></i> Deltagare
+            </a></li>
+            <li><a href="/admin/clubs.php" class="<?= $current_page == 'clubs.php' ? 'active' : '' ?>">
+                <i data-lucide="building"></i> Klubbar
+            </a></li>
+            <li><a href="/admin/venues.php" class="<?= $current_page == 'venues.php' ? 'active' : '' ?>">
+                <i data-lucide="mountain"></i> Venues
+            </a></li>
+            <li><a href="/admin/results.php" class="<?= $current_page == 'results.php' && strpos($_SERVER['PHP_SELF'], '/admin/') !== false ? 'active' : '' ?>">
+                <i data-lucide="trophy"></i> Resultat
+            </a></li>
+            <li><a href="/admin/import.php" class="<?= $current_page == 'import.php' ? 'active' : '' ?>">
+                <i data-lucide="upload"></i> Import
+            </a></li>
+        </ul>
+        <div class="gs-menu-footer">
+            <a href="/admin/logout.php" class="gs-btn gs-btn-sm gs-btn-outline gs-w-full">
+                <i data-lucide="log-out"></i> Logga ut
+            </a>
+        </div>
+    </div>
+    <?php else: ?>
+    <div class="gs-menu-section">
+        <div class="gs-menu-footer">
+            <a href="/admin/login.php" class="gs-btn gs-btn-sm gs-btn-primary gs-w-full">
+                <i data-lucide="log-in"></i> Admin Login
+            </a>
+        </div>
+    </div>
+    <?php endif; ?>
+</nav>

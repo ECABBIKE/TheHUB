@@ -1,0 +1,28 @@
+# Configuration files with sensitive data
+config/database.php
+config/config.php
+.env
+
+# Uploaded files
+uploads/*
+!uploads/.gitkeep
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Temporary files
+tmp/*
+!tmp/.gitkeep
+
+# Backup files
+*.backup
