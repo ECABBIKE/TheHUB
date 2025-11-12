@@ -87,7 +87,6 @@ $recentImports = $db->getAll(
 );
 
 $pageTitle = 'Import Data';
-$currentAdmin = getCurrentAdmin();
 ?>
 <!DOCTYPE html>
 <html lang="sv">
@@ -98,44 +97,19 @@ $currentAdmin = getCurrentAdmin();
     <link rel="stylesheet" href="/assets/gravityseries-theme.css">
 </head>
 <body>
-    <div class="gs-admin-layout">
-        <!-- Sidebar -->
-        <aside class="gs-admin-sidebar">
-            <div class="gs-admin-sidebar-header">
-                <h1 class="gs-admin-sidebar-title">TheHUB</h1>
-                <p class="gs-text-secondary gs-text-sm">Inloggad: <?= h($currentAdmin['name']) ?></p>
-            </div>
-            <nav>
-                <ul class="gs-admin-sidebar-nav">
-                    <li><a href="/admin/dashboard.php" class="gs-admin-sidebar-link">
-                        <i data-lucide="layout-dashboard"></i> Dashboard
-                    </a></li>
-                    <li><a href="/admin/riders.php" class="gs-admin-sidebar-link">
-                        <i data-lucide="users"></i> Deltagare
-                    </a></li>
-                    <li><a href="/admin/events.php" class="gs-admin-sidebar-link">
-                        <i data-lucide="calendar"></i> Tävlingar
-                    </a></li>
-                    <li><a href="/admin/results.php" class="gs-admin-sidebar-link">
-                        <i data-lucide="trophy"></i> Resultat
-                    </a></li>
-                    <li><a href="/admin/import.php" class="gs-admin-sidebar-link active">
-                        <i data-lucide="upload"></i> Import
-                    </a></li>
-                    <li><a href="/admin/logout.php" class="gs-admin-sidebar-link">
-                        <i data-lucide="log-out"></i> Logga ut
-                    </a></li>
-                </ul>
-            </nav>
-            <div style="padding: var(--gs-space-lg); margin-top: auto; border-top: 1px solid var(--gs-gray);">
-                <a href="/public/index.php" target="_blank" class="gs-text-secondary gs-text-sm" style="text-decoration: none;">
-                    Visa publik sida →
-                </a>
-            </div>
-        </aside>
+    <!-- Mobile Menu Toggle -->
+    <button id="mobile-menu-toggle" class="gs-mobile-menu-toggle">
+        <i data-lucide="menu"></i>
+        <span>Meny</span>
+    </button>
 
-        <!-- Main Content -->
-        <main class="gs-admin-content">
+    <!-- Mobile Overlay -->
+    <div id="mobile-overlay" class="gs-mobile-overlay"></div>
+
+    <?php include __DIR__ . '/../includes/navigation.php'; ?>
+
+    <main class="gs-content-with-sidebar">
+        <div class="gs-container">
             <h1 class="gs-h1 gs-text-primary gs-mb-lg">Importera data</h1>
 
             <!-- Quick Links to Specialized Import Pages -->
@@ -311,15 +285,12 @@ $currentAdmin = getCurrentAdmin();
                     <?php endif; ?>
                 </div>
             </div>
-        </main>
-    </div>
+        </div>
+    </main>
 
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            lucide.createIcons();
-        });
-    </script>
+    <!-- TheHUB JavaScript -->
+    <script src="/assets/thehub.js"></script>
 </body>
 </html>
