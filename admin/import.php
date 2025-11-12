@@ -150,21 +150,27 @@ $pageTitle = 'Import Data';
 
                         <details class="gs-mb-md" style="cursor: pointer;">
                             <summary style="cursor: pointer; font-weight: 600; padding: 0.5rem; background: var(--gs-light); border-radius: var(--gs-radius-sm);">
-                                📄 Deltagare-kolumner (9 kolumner)
+                                📄 Deltagare-kolumner (12 kolumner)
                             </summary>
                             <ul style="margin-top: 0.75rem; margin-left: 1.5rem; line-height: 1.8;">
                                 <li><strong>first_name:</strong> Förnamn (required)</li>
                                 <li><strong>last_name:</strong> Efternamn (required)</li>
-                                <li><strong>birth_year:</strong> Födelseår, format: YYYY (required)</li>
+                                <li><strong>personnummer:</strong> Svenskt personnummer - YYYYMMDD-XXXX eller YYMMDD-XXXX (optional, parsas automatiskt till födelseår)</li>
+                                <li><strong>birth_year:</strong> Födelseår, format: YYYY (required om personnummer saknas)</li>
                                 <li><strong>uci_id:</strong> UCI-ID, format: SWE19950101 (optional, används för matchning)</li>
                                 <li><strong>swe_id:</strong> SWE-ID, format: SWE25XXXXX (optional, autogenereras om tomt)</li>
                                 <li><strong>club_name:</strong> Klubbnamn (fuzzy matching används för att hitta befintliga klubbar)</li>
-                                <li><strong>category:</strong> Kategori, ex: "Elite Men", "U21 Women", "Junior Boys"</li>
-                                <li><strong>gender:</strong> Kön: male/female/other</li>
-                                <li><strong>license_type:</strong> Licens-typ: Elite/Youth/Hobby</li>
+                                <li><strong>gender:</strong> Kön: M/F/Other (required)</li>
+                                <li><strong>license_type:</strong> Licens-typ: Elite/Youth/Hobby/Beginner/None</li>
+                                <li><strong>license_category:</strong> Licenskategori: "Elite Men", "Youth Women", "Master Men 35+", etc</li>
+                                <li><strong>discipline:</strong> Gren: MTB/Road/Track/BMX/CX/Trial/Para/E-cycling/Gravel</li>
+                                <li><strong>license_valid_until:</strong> Licens giltig till, format: YYYY-MM-DD</li>
                             </ul>
                             <div style="margin-top: 0.75rem; padding: 0.75rem; background: rgba(239, 118, 31, 0.1); border-left: 3px solid var(--gs-accent); border-radius: var(--gs-radius-sm);">
-                                <strong>💡 Tips:</strong> Om UCI-ID saknas kommer systemet automatiskt generera ett SWE-ID (format: SWE25XXXXX). Klubbnamn matchas automatiskt med fuzzy matching.
+                                <strong>💡 Tips personnummer:</strong> Både format 19950525-1234 och 950525-1234 fungerar. Systemet beräknar automatiskt ålder och föreslår lämplig licenskategori baserat på födelsedatum och kön.
+                            </div>
+                            <div style="margin-top: 0.75rem; padding: 0.75rem; background: rgba(67, 114, 100, 0.1); border-left: 3px solid var(--gs-success); border-radius: var(--gs-radius-sm);">
+                                <strong>💡 Tips licens:</strong> Om UCI-ID saknas genereras SWE-ID automatiskt (format: SWE25XXXXX). Licenskategori föreslås automatiskt baserat på ålder och kön om fältet lämnas tomt.
                             </div>
                         </details>
 

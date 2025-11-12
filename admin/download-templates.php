@@ -18,50 +18,77 @@ if ($template === 'riders') {
     fputcsv($output, [
         'first_name',
         'last_name',
+        'personnummer',
         'birth_year',
         'uci_id',
         'swe_id',
         'club_name',
-        'category',
         'gender',
-        'license_type'
+        'license_type',
+        'license_category',
+        'discipline',
+        'license_valid_until'
     ]);
 
     // Example rows
     fputcsv($output, [
         'Johan',
         'Andersson',
-        '1995',
+        '19950525-1234',  // Personnummer (parsas automatiskt)
+        '',               // Birth year (lämnas tom om personnummer finns)
         'SWE19950101',
         '',
         'Uppsala Cykelklubb',
-        'Elite Men',
-        'male',
-        'Elite'
+        'M',
+        'Elite',
+        'Elite Men',      // Licenskategori
+        'MTB',           // Gren
+        '2025-12-31'     // Licens giltig till
     ]);
 
     fputcsv($output, [
         'Emma',
         'Svensson',
-        '1998',
+        '19980315-5678',
+        '',
         'SWE19980315',
         '',
         'Göteborg MTB',
+        'F',
+        'Elite',
         'Elite Women',
-        'female',
-        'Elite'
+        'Road',
+        '2025-12-31'
     ]);
 
     fputcsv($output, [
         'Erik',
         'Nilsson',
-        '2003',
+        '',              // Inget personnummer
+        '2003',          // Använd birth_year istället
+        '',              // UCI-ID (autogenereras SWE-ID om tomt)
         '',
-        'SWE25001',
         'Stockholm CK',
+        'M',
+        'Youth',
         'U21 Men',
-        'male',
-        'Youth'
+        'CX',
+        '2025-12-31'
+    ]);
+
+    fputcsv($output, [
+        'Anna',
+        'Bergström',
+        '850812-9876',   // Kort format (YYMMDD-XXXX)
+        '',
+        'SWE19850812',
+        '',
+        'Luleå CK',
+        'F',
+        'Elite',
+        'Master Women 35+',
+        'MTB',
+        '2025-12-31'
     ]);
 
     fclose($output);
