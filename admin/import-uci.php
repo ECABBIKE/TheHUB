@@ -182,14 +182,12 @@ function importUCIRiders($filepath, $db) {
                 $gender = 'M';
             }
 
-            // 3. UCI ID: Remove spaces, add SWE prefix
-            $license_number = preg_replace('/\s+/', '', $uci_code);
-            if (!empty($license_number) && !str_starts_with(strtoupper($license_number), 'SWE')) {
-                $license_number = 'SWE' . $license_number;
-            }
-
-            // If no UCI code, generate SWE-ID
-            if (empty($license_number)) {
+            // 3. UCI ID: Keep exact format with spaces (e.g. "101 637 581 11")
+            // Only generate SWE-ID if UCI code is missing
+            if (!empty($uci_code)) {
+                $license_number = $uci_code; // Keep as-is with spaces
+            } else {
+                // Generate SWE-ID for riders without UCI code
                 $license_number = generateSweId($db);
             }
 
@@ -405,7 +403,7 @@ $pageTitle = 'UCI Import';
                         <li><strong>Kategori</strong> → gender (Men → M, Women → F)</li>
                         <li><strong>Licenstyp</strong> → license_category (Master Men, Elite Men, Base License Men, etc)</li>
                         <li><strong>LicensÅr</strong> → license_valid_until (2025 → 2025-12-31)</li>
-                        <li><strong>UCIKod</strong> → license_number (mellanslag tas bort, SWE-prefix läggs till)</li>
+                        <li><strong>UCIKod</strong> → license_number (sparas exakt som det är, t.ex. "101 637 581 11")</li>
                     </ol>
 
                     <div class="gs-mt-lg gs-p-md" style="background: var(--gs-bg-secondary); border-radius: 8px;">
@@ -420,9 +418,9 @@ $pageTitle = 'UCI Import';
                             <strong>✨ Automatiska funktioner:</strong><br>
                             • Personnummer parsas automatiskt (både YYYYMMDD-XXXX och YYMMDD-XXXX format)<br>
                             • Klubbar skapas automatiskt om de inte finns<br>
-                            • SWE-prefix läggs till på UCI-koder<br>
+                            • UCI-koder sparas exakt med mellanslag (t.ex. "101 637 581 11")<br>
                             • Befintliga riders uppdateras om de hittas (via license_number eller namn+födelseår)<br>
-                            • SWE-ID genereras automatiskt om UCI-kod saknas
+                            • SWE-ID (SWE25XXXXX) genereras automatiskt för riders utan UCI-kod
                         </p>
                     </div>
                 </div>
