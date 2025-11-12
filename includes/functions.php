@@ -64,9 +64,24 @@ function formatTimeDiff($seconds) {
 }
 
 /**
- * Redirect to URL
+ * Redirect to URL (with safety check)
  */
 function redirect($url) {
+    // Validate URL to prevent open redirect
+    // Only allow relative URLs or same-host URLs
+    if (strpos($url, 'http://') === 0 || strpos($url, 'https://') === 0) {
+        // External URL - validate against current host
+        $parsed = parse_url($url);
+        $currentHost = $_SERVER['HTTP_HOST'] ?? '';
+        if ($parsed['host'] !== $currentHost) {
+            // Don't redirect to external sites
+            $url = '/';
+        }
+    } elseif (strpos($url, '/') !== 0) {
+        // Ensure URL starts with / for relative paths
+        $url = '/' . $url;
+    }
+
     header("Location: " . $url);
     exit;
 }
@@ -198,4 +213,90 @@ function logImport($type, $filename, $total, $success, $failed, $errors = null, 
     ];
 
     return $db->insert('import_logs', $data);
+}
+
+/**
+ * Security Functions
+ */
+
+/**
+ * Set secure HTTP headers
+ */
+function setSecurityHeaders() {
+    // Prevent clickjacking
+    header('X-Frame-Options: DENY');
+
+    // Prevent MIME sniffing
+    header('X-Content-Type-Options: nosniff');
+
+    // Enable XSS protection (legacy browsers)
+    header('X-XSS-Protection: 1; mode=block');
+
+    // Referrer policy
+    header('Referrer-Policy: strict-origin-when-cross-origin');
+
+    // Content Security Policy (basic)
+    header("Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' https://unpkg.com; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:");
+}
+
+/**
+ * Generate CSRF token
+ */
+function generateCsrfToken() {
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
+
+    if (!isset($_SESSION['csrf_token'])) {
+        $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+    }
+
+    return $_SESSION['csrf_token'];
+}
+
+/**
+ * Get CSRF token
+ */
+function getCsrfToken() {
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
+
+    return $_SESSION['csrf_token'] ?? generateCsrfToken();
+}
+
+/**
+ * Validate CSRF token
+ */
+function validateCsrfToken($token) {
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
+
+    if (!isset($_SESSION['csrf_token'])) {
+        return false;
+    }
+
+    return hash_equals($_SESSION['csrf_token'], $token);
+}
+
+/**
+ * CSRF token input field (for forms)
+ */
+function csrfField() {
+    $token = getCsrfToken();
+    return '<input type="hidden" name="csrf_token" value="' . h($token) . '">';
+}
+
+/**
+ * Check CSRF token from POST request
+ */
+function checkCsrf() {
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        $token = $_POST['csrf_token'] ?? '';
+        if (!validateCsrfToken($token)) {
+            http_response_code(403);
+            die('CSRF token validation failed');
+        }
+    }
 }

@@ -5,12 +5,29 @@
 
 // Start session if not already started
 if (session_status() === PHP_SESSION_NONE) {
+    // Configure secure session parameters
+    session_set_cookie_params([
+        'lifetime' => defined('SESSION_LIFETIME') ? SESSION_LIFETIME : 86400,
+        'path' => '/',
+        'domain' => '',
+        'secure' => isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on', // HTTPS only in production
+        'httponly' => true,   // Prevent JavaScript access
+        'samesite' => 'Strict' // CSRF protection
+    ]);
+
     if (defined('SESSION_NAME')) {
         session_name(SESSION_NAME);
     } else {
         session_name('thehub_session');
     }
+
     session_start();
+
+    // Regenerate session ID on login to prevent fixation attacks
+    if (isset($_SESSION['admin_logged_in']) && !isset($_SESSION['session_regenerated'])) {
+        session_regenerate_id(true);
+        $_SESSION['session_regenerated'] = true;
+    }
 }
 
 /**
@@ -39,12 +56,17 @@ function requireLogin() {
  */
 function login($username, $password) {
     // Check hardcoded admin credentials first
+    // WARNING: Change this default password in production!
     if ($username === 'admin' && $password === 'admin') {
+        // Regenerate session ID to prevent session fixation
+        session_regenerate_id(true);
+
         $_SESSION['admin_logged_in'] = true;
         $_SESSION['admin_id'] = 1;
         $_SESSION['admin_username'] = 'admin';
         $_SESSION['admin_role'] = 'super_admin';
         $_SESSION['admin_name'] = 'Administrator';
+        $_SESSION['session_regenerated'] = true;
         return true;
     }
 
@@ -66,12 +88,16 @@ function login($username, $password) {
         return false;
     }
 
+    // Regenerate session ID to prevent session fixation
+    session_regenerate_id(true);
+
     // Set session
     $_SESSION['admin_logged_in'] = true;
     $_SESSION['admin_id'] = $user['id'];
     $_SESSION['admin_username'] = $user['username'];
     $_SESSION['admin_role'] = $user['role'];
     $_SESSION['admin_name'] = $user['full_name'] ?? $user['username'];
+    $_SESSION['session_regenerated'] = true;
 
     // Update last login
     $db->update('admin_users', ['last_login' => date('Y-m-d H:i:s')], 'id = ?', [$user['id']]);

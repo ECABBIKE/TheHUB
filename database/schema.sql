@@ -13,11 +13,14 @@ CREATE TABLE IF NOT EXISTS clubs (
     name VARCHAR(255) NOT NULL,
     short_name VARCHAR(50),
     region VARCHAR(100),
+    city VARCHAR(100),
+    country VARCHAR(100) DEFAULT 'Sverige',
     website VARCHAR(255),
     active BOOLEAN DEFAULT 1,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_name (name),
+    INDEX idx_city (city),
     INDEX idx_active (active)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -65,6 +68,23 @@ CREATE TABLE IF NOT EXISTS categories (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================================================
+-- SERIES TABLE
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS series (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    type VARCHAR(100),
+    status ENUM('planning', 'active', 'completed', 'cancelled') DEFAULT 'planning',
+    start_date DATE,
+    end_date DATE,
+    description TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_status (status),
+    INDEX idx_start_date (start_date)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================================================
 -- EVENTS TABLE
 -- ============================================================================
 CREATE TABLE IF NOT EXISTS events (
@@ -73,6 +93,7 @@ CREATE TABLE IF NOT EXISTS events (
     event_date DATE NOT NULL,
     location VARCHAR(255),
     event_type ENUM('road_race', 'time_trial', 'criterium', 'stage_race', 'other') DEFAULT 'road_race',
+    series_id INT,
     distance DECIMAL(6,2), -- in kilometers
     elevation_gain INT, -- in meters
     status ENUM('upcoming', 'ongoing', 'completed', 'cancelled') DEFAULT 'upcoming',
@@ -83,9 +104,11 @@ CREATE TABLE IF NOT EXISTS events (
     max_participants INT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (series_id) REFERENCES series(id) ON DELETE SET NULL,
     INDEX idx_date (event_date),
     INDEX idx_status (status),
-    INDEX idx_type (event_type)
+    INDEX idx_type (event_type),
+    INDEX idx_series (series_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================================================
