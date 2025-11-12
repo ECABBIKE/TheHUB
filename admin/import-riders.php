@@ -128,18 +128,53 @@ function importRidersFromCSV($filepath, $db) {
         }
 
         try {
+            // Parse personnummer to birth_year if provided
+            $birthYear = null;
+            if (!empty($data['personnummer'])) {
+                $birthYear = parsePersonnummer($data['personnummer']);
+            }
+            // Fall back to birth_year column if no personnummer or parsing failed
+            if (!$birthYear && !empty($data['birth_year'])) {
+                $birthYear = (int)$data['birth_year'];
+            }
+
             // Prepare rider data
+            $gender = strtoupper(substr(trim($data['gender'] ?? 'M'), 0, 1));
+
             $riderData = [
                 'firstname' => trim($data['firstname']),
                 'lastname' => trim($data['lastname']),
-                'birth_year' => !empty($data['birth_year']) ? (int)$data['birth_year'] : null,
-                'gender' => strtoupper(substr(trim($data['gender'] ?? 'M'), 0, 1)),
+                'birth_year' => $birthYear,
+                'gender' => $gender,
                 'license_number' => !empty($data['license_number']) ? trim($data['license_number']) : null,
                 'email' => !empty($data['email']) ? trim($data['email']) : null,
                 'phone' => !empty($data['phone']) ? trim($data['phone']) : null,
                 'city' => !empty($data['city']) ? trim($data['city']) : null,
                 'active' => 1
             ];
+
+            // Add new license fields
+            $riderData['license_type'] = !empty($data['license_type']) ? trim($data['license_type']) : null;
+            $riderData['discipline'] = !empty($data['discipline']) ? trim($data['discipline']) : null;
+            $riderData['license_valid_until'] = !empty($data['license_valid_until']) ? trim($data['license_valid_until']) : null;
+
+            // License category - use provided or auto-suggest
+            if (!empty($data['license_category'])) {
+                $riderData['license_category'] = trim($data['license_category']);
+            } elseif ($birthYear && $gender) {
+                // Auto-suggest license category based on age and gender
+                $riderData['license_category'] = suggestLicenseCategory($birthYear, $gender);
+            } else {
+                $riderData['license_category'] = null;
+            }
+
+            // Generate SWE-ID if no license number provided
+            if (empty($riderData['license_number']) && !empty($data['swe_id'])) {
+                $riderData['license_number'] = trim($data['swe_id']);
+            }
+            if (empty($riderData['license_number'])) {
+                $riderData['license_number'] = generateSweId($db);
+            }
 
             // Handle club - fuzzy matching
             if (!empty($data['club'])) {
