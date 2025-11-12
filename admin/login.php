@@ -85,7 +85,7 @@ $pageTitle = 'Admin Login';
                 <i data-lucide="info"></i>
                 Standard login: admin / admin
             </p>
-            <a href="/public/index.php" class="gs-text-primary gs-text-sm" style="text-decoration: none;">
+            <a href="/index.php" class="gs-text-primary gs-text-sm" style="text-decoration: none;">
                 <i data-lucide="arrow-left"></i>
                 Tillbaka till startsidan
             </a>
