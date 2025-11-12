@@ -220,25 +220,25 @@ function importRidersFromCSV($filepath, $db) {
 
             if ($riderData['license_number']) {
                 $existing = $db->getRow(
-                    "SELECT id FROM cyclists WHERE license_number = ? LIMIT 1",
+                    "SELECT id FROM riders WHERE license_number = ? LIMIT 1",
                     [$riderData['license_number']]
                 );
             }
 
             if (!$existing && $riderData['birth_year']) {
                 $existing = $db->getRow(
-                    "SELECT id FROM cyclists WHERE firstname = ? AND lastname = ? AND birth_year = ? LIMIT 1",
+                    "SELECT id FROM riders WHERE firstname = ? AND lastname = ? AND birth_year = ? LIMIT 1",
                     [$riderData['firstname'], $riderData['lastname'], $riderData['birth_year']]
                 );
             }
 
             if ($existing) {
                 // Update existing rider
-                $db->update('cyclists', $riderData, 'id = ?', [$existing['id']]);
+                $db->update('riders', $riderData, 'id = ?', [$existing['id']]);
                 $stats['updated']++;
             } else {
                 // Insert new rider
-                $db->insert('cyclists', $riderData);
+                $db->insert('riders', $riderData);
                 $stats['success']++;
             }
 

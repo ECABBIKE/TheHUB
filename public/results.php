@@ -33,7 +33,7 @@ $results = $db->getAll(
         cl.name as club_name,
         cat.name as category_name
      FROM results r
-     JOIN cyclists c ON r.cyclist_id = c.id
+     JOIN riders c ON r.cyclist_id = c.id
      LEFT JOIN clubs cl ON c.club_id = cl.id
      LEFT JOIN categories cat ON r.category_id = cat.id
      WHERE r.event_id = ?

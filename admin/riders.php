@@ -59,7 +59,7 @@ if ($is_demo) {
                 c.active,
                 cl.name as club_name,
                 cl.id as club_id
-            FROM cyclists c
+            FROM riders c
             LEFT JOIN clubs cl ON c.club_id = cl.id
             $whereClause
             ORDER BY c.lastname, c.firstname

@@ -100,7 +100,7 @@ if ($is_demo) {
                 cat.id as category_id
             FROM results r
             JOIN events e ON r.event_id = e.id
-            JOIN cyclists c ON r.cyclist_id = c.id
+            JOIN riders c ON r.cyclist_id = c.id
             LEFT JOIN clubs cl ON c.club_id = cl.id
             LEFT JOIN categories cat ON r.category_id = cat.id
             $whereClause

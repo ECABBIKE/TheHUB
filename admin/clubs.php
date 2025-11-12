@@ -52,7 +52,7 @@ if ($is_demo) {
                 cl.active,
                 COUNT(DISTINCT c.id) as rider_count
             FROM clubs cl
-            LEFT JOIN cyclists c ON cl.id = c.club_id AND c.active = 1
+            LEFT JOIN riders c ON cl.id = c.club_id AND c.active = 1
             $whereClause
             GROUP BY cl.id
             ORDER BY cl.name";
