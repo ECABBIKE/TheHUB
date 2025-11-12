@@ -1,6 +1,13 @@
 <?php
-require_once __DIR__ . '/includes/db.php';
-require_once __DIR__ . '/includes/functions.php';
+// Enable error reporting for debugging
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+
+// Load config first
+if (!file_exists(__DIR__ . '/config.php')) {
+    die('ERROR: config.php not found! Current directory: ' . __DIR__);
+}
+require_once __DIR__ . '/config.php';
 
 $db = getDB();
 

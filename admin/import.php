@@ -112,6 +112,100 @@ $pageTitle = 'Import Data';
         <div class="gs-container">
             <h1 class="gs-h1 gs-text-primary gs-mb-lg">Importera data</h1>
 
+            <!-- Download Templates -->
+            <div class="gs-card gs-mb-xl" style="background: linear-gradient(135deg, rgba(0, 74, 152, 0.05) 0%, rgba(239, 118, 31, 0.05) 100%); border: 2px solid var(--gs-primary);">
+                <div class="gs-card-header" style="background-color: var(--gs-primary); color: var(--gs-white);">
+                    <h2 class="gs-h4" style="color: var(--gs-white);">
+                        <i data-lucide="download"></i>
+                        📥 Ladda ner importmallar
+                    </h2>
+                </div>
+                <div class="gs-card-content">
+                    <p class="gs-text-secondary gs-mb-md">
+                        <strong>Använd dessa mallar för att säkerställa att dina CSV-filer har rätt kolumner och format.</strong> Mallarna innehåller exempel-data som visar exakt hur informationen ska struktureras.
+                    </p>
+
+                    <div class="gs-flex gs-gap-md gs-mb-lg">
+                        <a href="/admin/download-templates.php?template=riders"
+                           class="gs-btn gs-btn-primary gs-btn-lg"
+                           download>
+                            <i data-lucide="users"></i>
+                            Deltagare-mall (CSV)
+                        </a>
+
+                        <a href="/admin/download-templates.php?template=results"
+                           class="gs-btn gs-btn-accent gs-btn-lg"
+                           download>
+                            <i data-lucide="flag"></i>
+                            Resultat-mall (CSV)
+                        </a>
+                    </div>
+
+                    <!-- Column Info -->
+                    <div style="background: var(--gs-white); padding: 1.5rem; border-radius: var(--gs-radius-md); border: 1px solid var(--gs-border);">
+                        <h4 class="gs-h5 gs-mb-md" style="color: var(--gs-primary);">
+                            <i data-lucide="info"></i>
+                            Kolumn-beskrivningar
+                        </h4>
+
+                        <details class="gs-mb-md" style="cursor: pointer;">
+                            <summary style="cursor: pointer; font-weight: 600; padding: 0.5rem; background: var(--gs-light); border-radius: var(--gs-radius-sm);">
+                                📄 Deltagare-kolumner (9 kolumner)
+                            </summary>
+                            <ul style="margin-top: 0.75rem; margin-left: 1.5rem; line-height: 1.8;">
+                                <li><strong>first_name:</strong> Förnamn (required)</li>
+                                <li><strong>last_name:</strong> Efternamn (required)</li>
+                                <li><strong>birth_year:</strong> Födelseår, format: YYYY (required)</li>
+                                <li><strong>uci_id:</strong> UCI-ID, format: SWE19950101 (optional, används för matchning)</li>
+                                <li><strong>swe_id:</strong> SWE-ID, format: SWE25XXXXX (optional, autogenereras om tomt)</li>
+                                <li><strong>club_name:</strong> Klubbnamn (fuzzy matching används för att hitta befintliga klubbar)</li>
+                                <li><strong>category:</strong> Kategori, ex: "Elite Men", "U21 Women", "Junior Boys"</li>
+                                <li><strong>gender:</strong> Kön: male/female/other</li>
+                                <li><strong>license_type:</strong> Licens-typ: Elite/Youth/Hobby</li>
+                            </ul>
+                            <div style="margin-top: 0.75rem; padding: 0.75rem; background: rgba(239, 118, 31, 0.1); border-left: 3px solid var(--gs-accent); border-radius: var(--gs-radius-sm);">
+                                <strong>💡 Tips:</strong> Om UCI-ID saknas kommer systemet automatiskt generera ett SWE-ID (format: SWE25XXXXX). Klubbnamn matchas automatiskt med fuzzy matching.
+                            </div>
+                        </details>
+
+                        <details style="cursor: pointer;">
+                            <summary style="cursor: pointer; font-weight: 600; padding: 0.5rem; background: var(--gs-light); border-radius: var(--gs-radius-sm);">
+                                🏁 Resultat-kolumner (12 kolumner)
+                            </summary>
+                            <ul style="margin-top: 0.75rem; margin-left: 1.5rem; line-height: 1.8;">
+                                <li><strong>event_name:</strong> Tävlingsnamn (required, används för att matcha event)</li>
+                                <li><strong>event_date:</strong> Datum, format: YYYY-MM-DD (required)</li>
+                                <li><strong>discipline:</strong> Disciplin: EDR/DHI/DS/XC (required)</li>
+                                <li><strong>category:</strong> Kategori, ex: "Elite Men" (required)</li>
+                                <li><strong>position:</strong> Placering, nummer (required för finished)</li>
+                                <li><strong>first_name:</strong> Förnamn (required)</li>
+                                <li><strong>last_name:</strong> Efternamn (required)</li>
+                                <li><strong>club_name:</strong> Klubbnamn (optional)</li>
+                                <li><strong>uci_id:</strong> UCI-ID för matchning av cyklist (optional men rekommenderas)</li>
+                                <li><strong>swe_id:</strong> SWE-ID för matchning av cyklist (optional)</li>
+                                <li><strong>time_seconds:</strong> Tid i sekunder, ex: 185.45 (optional)</li>
+                                <li><strong>status:</strong> Status: finished/dnf/dns/dq (default: finished)</li>
+                            </ul>
+                            <div style="margin-top: 0.75rem; padding: 0.75rem; background: rgba(67, 114, 100, 0.1); border-left: 3px solid var(--gs-success); border-radius: var(--gs-radius-sm);">
+                                <strong>💡 Tips:</strong> Systemet matchar cyklister via UCI-ID eller namn. Events matchas via namn och datum. För DNF/DNS/DQ lämna position tom.
+                            </div>
+                        </details>
+
+                        <div style="margin-top: 1rem; padding: 1rem; background: rgba(0, 74, 152, 0.05); border-radius: var(--gs-radius-sm);">
+                            <h5 style="font-weight: 600; margin-bottom: 0.5rem;">📋 Import-flöde:</h5>
+                            <ol style="margin-left: 1.5rem; line-height: 1.8;">
+                                <li>Ladda ner mall (CSV)</li>
+                                <li>Öppna i Excel/Numbers/Google Sheets</li>
+                                <li>Ta bort exempel-raderna</li>
+                                <li>Lägg till din data</li>
+                                <li>Spara som CSV (UTF-8)</li>
+                                <li>Använd import-knapparna nedan</li>
+                            </ol>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Quick Links to Specialized Import Pages -->
             <div class="gs-grid gs-grid-cols-1 gs-md-grid-cols-2 gs-gap-lg gs-mb-xl">
                 <div class="gs-card">
