@@ -178,7 +178,7 @@ function importResultsFromCSV($filepath, $db) {
                 // Try license number first
                 if ($licenseNumber) {
                     $rider = $db->getRow(
-                        "SELECT id FROM cyclists WHERE license_number = ? LIMIT 1",
+                        "SELECT id FROM riders WHERE license_number = ? LIMIT 1",
                         [$licenseNumber]
                     );
                     if ($rider) {
@@ -191,7 +191,7 @@ function importResultsFromCSV($filepath, $db) {
                 // Try name + birth year
                 if (!$riderId && $birthYear) {
                     $rider = $db->getRow(
-                        "SELECT id FROM cyclists WHERE firstname = ? AND lastname = ? AND birth_year = ? LIMIT 1",
+                        "SELECT id FROM riders WHERE firstname = ? AND lastname = ? AND birth_year = ? LIMIT 1",
                         [$firstname, $lastname, $birthYear]
                     );
                     if ($rider) {
@@ -204,7 +204,7 @@ function importResultsFromCSV($filepath, $db) {
                 // Try name only (fuzzy)
                 if (!$riderId) {
                     $rider = $db->getRow(
-                        "SELECT id FROM cyclists WHERE firstname LIKE ? AND lastname LIKE ? LIMIT 1",
+                        "SELECT id FROM riders WHERE firstname LIKE ? AND lastname LIKE ? LIMIT 1",
                         ['%' . $firstname . '%', '%' . $lastname . '%']
                     );
                     if ($rider) {

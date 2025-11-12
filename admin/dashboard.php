@@ -37,7 +37,7 @@ if ($is_demo) {
     $stats = [
         'total_events' => $db->getRow("SELECT COUNT(*) as count FROM events")['count'] ?? 0,
         'upcoming_events' => $db->getRow("SELECT COUNT(*) as count FROM events WHERE status = 'upcoming'")['count'] ?? 0,
-        'total_riders' => $db->getRow("SELECT COUNT(*) as count FROM cyclists WHERE active = 1")['count'] ?? 0,
+        'total_riders' => $db->getRow("SELECT COUNT(*) as count FROM riders WHERE active = 1")['count'] ?? 0,
         'total_clubs' => $db->getRow("SELECT COUNT(*) as count FROM clubs WHERE active = 1")['count'] ?? 0,
         'total_results' => $db->getRow("SELECT COUNT(*) as count FROM results")['count'] ?? 0,
         'this_month_events' => $db->getRow("SELECT COUNT(*) as count FROM events WHERE MONTH(event_date) = MONTH(CURDATE()) AND YEAR(event_date) = YEAR(CURDATE())")['count'] ?? 0,
@@ -64,7 +64,7 @@ if ($is_demo) {
             cat.name as category_name
          FROM results r
          JOIN events e ON r.event_id = e.id
-         JOIN cyclists c ON r.cyclist_id = c.id
+         JOIN riders c ON r.cyclist_id = c.id
          LEFT JOIN categories cat ON r.category_id = cat.id
          ORDER BY r.created_at DESC
          LIMIT 5"

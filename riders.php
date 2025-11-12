@@ -24,7 +24,7 @@ $cyclists = $db->getAll("
         COUNT(DISTINCT r.id) as total_races,
         COUNT(CASE WHEN r.position <= 3 THEN 1 END) as podiums,
         MIN(r.position) as best_position
-    FROM cyclists c
+    FROM riders c
     LEFT JOIN clubs cl ON c.club_id = cl.id
     LEFT JOIN results r ON c.id = r.cyclist_id
     WHERE c.active = 1

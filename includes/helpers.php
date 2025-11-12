@@ -4,7 +4,7 @@
  */
 
 /**
- * Generate unique SWE ID for cyclists without UCI ID
+ * Generate unique SWE ID for riders without UCI ID
  * Format: SWE25XXXXX (5 random digits)
  *
  * @param object $db Database connection
@@ -17,7 +17,7 @@ function generateSweId($db) {
 
         // Check if exists
         $existing = $db->getRow(
-            "SELECT COUNT(*) as count FROM cyclists WHERE license_number = ?",
+            "SELECT COUNT(*) as count FROM riders WHERE license_number = ?",
             [$swe_id]
         );
         $exists = ($existing && $existing['count'] > 0);
@@ -27,25 +27,25 @@ function generateSweId($db) {
 }
 
 /**
- * Assign SWE IDs to cyclists without license number
+ * Assign SWE IDs to riders without license number
  *
  * @param object $db Database connection
- * @return int Number of cyclists updated
+ * @return int Number of riders updated
  */
 function assignSweIds($db) {
-    // Get cyclists without license number
-    $cyclists = $db->getAll("
-        SELECT id FROM cyclists
+    // Get riders without license number
+    $riders = $db->getAll("
+        SELECT id FROM riders
         WHERE (license_number IS NULL OR license_number = '' OR license_number = '0')
         AND active = 1
     ");
 
     $updated = 0;
-    foreach ($cyclists as $cyclist) {
+    foreach ($riders as $cyclist) {
         $swe_id = generateSweId($db);
 
         $result = $db->update(
-            'cyclists',
+            'riders',
             ['license_number' => $swe_id],
             'id = ?',
             [$cyclist['id']]
@@ -103,7 +103,7 @@ function getEventStats($db, $event_id) {
             COUNT(CASE WHEN r.status = 'DNS' THEN 1 END) as dns_count,
             COUNT(CASE WHEN r.status = 'Finished' OR r.status IS NULL THEN 1 END) as finished_count
         FROM results r
-        LEFT JOIN cyclists c ON r.cyclist_id = c.id
+        LEFT JOIN riders c ON r.cyclist_id = c.id
         WHERE r.event_id = ?
     ", [$event_id]);
 

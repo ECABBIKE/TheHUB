@@ -26,7 +26,7 @@ $recentEvents = $db->getAll(
 
 // Get statistics
 $stats = [
-    'total_cyclists' => $db->getRow("SELECT COUNT(*) as count FROM cyclists WHERE active = 1")['count'] ?? 0,
+    'total_cyclists' => $db->getRow("SELECT COUNT(*) as count FROM riders WHERE active = 1")['count'] ?? 0,
     'total_events' => $db->getRow("SELECT COUNT(*) as count FROM events")['count'] ?? 0,
     'total_clubs' => $db->getRow("SELECT COUNT(*) as count FROM clubs WHERE active = 1")['count'] ?? 0
 ];

@@ -166,14 +166,14 @@ class CyclistImporter {
     private function findExistingCyclist($data) {
         // First try license number
         if (!empty($data['license_number'])) {
-            $sql = "SELECT id FROM cyclists WHERE license_number = ? LIMIT 1";
+            $sql = "SELECT id FROM riders WHERE license_number = ? LIMIT 1";
             $result = $this->db->getRow($sql, [$data['license_number']]);
             if ($result) return $result['id'];
         }
 
         // Then try name + birth year
         if (!empty($data['birth_year'])) {
-            $sql = "SELECT id FROM cyclists
+            $sql = "SELECT id FROM riders
                     WHERE firstname = ? AND lastname = ? AND birth_year = ?
                     LIMIT 1";
             $result = $this->db->getRow($sql, [

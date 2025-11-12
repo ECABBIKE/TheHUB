@@ -194,7 +194,7 @@ class ResultImporter {
      * Find cyclist
      */
     private function findCyclist($data) {
-        $sql = "SELECT id FROM cyclists
+        $sql = "SELECT id FROM riders
                 WHERE firstname = ? AND lastname = ? AND birth_year = ?
                 LIMIT 1";
 
