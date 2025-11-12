@@ -60,7 +60,7 @@
 
 body {
   font-family: var(--gs-font-sans);
-  background-color: var(--gs-light);
+  background-color: #F9F9F9 !important;
   color: var(--gs-text-primary);
   line-height: 1.5;
 }
@@ -766,48 +766,55 @@ body {
 .gs-menu a {
   display: flex;
   align-items: center;
-  gap: var(--gs-space-sm);
-  padding: var(--gs-space-sm) var(--gs-space-md);
-  color: var(--gs-text-secondary);
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  color: #323539;
   text-decoration: none;
-  border-radius: var(--gs-radius-md);
-  transition: all var(--gs-transition-fast);
+  border-radius: 0.5rem;
+  transition: all 0.15s;
+  font-size: 0.95rem;
   font-weight: 500;
+}
+
+.gs-menu a i {
+  width: 18px;
+  height: 18px;
+  color: #323539;
+  flex-shrink: 0;
 }
 
 .gs-menu a svg {
   width: 18px;
   height: 18px;
+  color: #323539;
   flex-shrink: 0;
 }
 
 .gs-menu a:hover {
-  background-color: var(--gs-primary-light);
-  color: var(--gs-primary);
+  background-color: rgba(0, 74, 152, 0.1);
+  color: #004a98;
   transform: translateX(4px);
 }
 
+.gs-menu a:hover i,
+.gs-menu a:hover svg {
+  color: #004a98;
+}
+
 .gs-menu a.active {
-  background-color: var(--gs-primary);
-  color: var(--gs-white);
+  background-color: #004a98;
+  color: #FFFFFF;
+}
+
+.gs-menu a.active i,
+.gs-menu a.active svg {
+  color: #FFFFFF;
 }
 
 .gs-menu-footer {
   margin-top: var(--gs-space-lg);
   padding-top: var(--gs-space-lg);
   border-top: 1px solid var(--gs-border);
-}
-
-.gs-menu a i {
-  color: var(--gs-primary);
-}
-
-.gs-menu a:hover i {
-  color: var(--gs-primary);
-}
-
-.gs-menu a.active i {
-  color: var(--gs-white);
 }
 
 .gs-menu-footer .gs-btn-outline {
@@ -1364,57 +1371,153 @@ body.sidebar-open::before {
 }
 
 /* ========================================
-   PAGE DIFFERENTIATION - Landing vs Content Pages
+   PAGE DIFFERENTIATION - Landing vs Content Pages vs Admin
    ======================================== */
 
-/* Landing page: NO navigation at all */
-.gs-landing-page-no-menu .gs-mobile-menu-toggle {
-  display: none !important;
-}
-
-.gs-landing-page-no-menu .gs-sidebar {
-  display: none !important;
-}
-
-.gs-landing-page-no-menu .gs-sidebar-overlay {
-  display: none !important;
-}
-
-.gs-landing-page-no-menu .gs-main-content {
-  margin: 0;
-  padding: 0;
-  width: 100%;
-}
-
-/* Content pages: WITH hamburger menu + sidebar */
-.gs-page-with-menu .gs-mobile-menu-toggle {
-  display: flex;
+/* HAMBURGER MENU BUTTON - Default styling */
+.gs-mobile-menu-toggle {
   position: fixed;
   top: 1.5rem;
   left: 1.5rem;
-  z-index: 1000;
-  background-color: var(--gs-primary);
-  color: var(--gs-white);
+  z-index: 1100;
+  width: 48px;
+  height: 48px;
   border: none;
-  border-radius: var(--gs-radius-md);
-  padding: var(--gs-space-sm);
+  border-radius: 0.5rem;
+  background-color: #FFFFFF;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   cursor: pointer;
-  box-shadow: var(--gs-shadow-lg);
-  transition: all var(--gs-transition-base);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
 }
 
-.gs-page-with-menu .gs-mobile-menu-toggle:hover {
-  background-color: var(--gs-primary-dark);
+.gs-mobile-menu-toggle:hover {
+  background-color: #004a98;
   transform: scale(1.05);
 }
 
-.gs-page-with-menu .gs-main-content {
-  padding-top: 80px;
+.gs-mobile-menu-toggle:hover i {
+  color: #FFFFFF;
+}
+
+.gs-mobile-menu-toggle i {
+  width: 24px;
+  height: 24px;
+  color: #004a98;
+}
+
+/* SIDEBAR - Updated for all pages */
+.gs-sidebar {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 280px;
+  height: 100vh;
+  background-color: #FFFFFF;
+  border-right: 1px solid #E5E7EB;
+  padding: 5rem 1.5rem 1.5rem;
+  overflow-y: auto;
+  z-index: 1050;
+  box-shadow: 4px 0 20px rgba(0, 0, 0, 0.1);
+  transform: translateX(-100%);
+  transition: transform 0.3s ease;
+  display: flex;
+  flex-direction: column;
+}
+
+.gs-sidebar.open {
+  transform: translateX(0);
+}
+
+/* OVERLAY */
+.gs-sidebar-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 1040;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.3s ease;
+}
+
+.gs-sidebar-overlay.active {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* ========================================
+   PURE LANDING PAGE - No navigation at all
+   ======================================== */
+
+body.gs-landing-pure .gs-mobile-menu-toggle {
+  display: none !important;
+}
+
+body.gs-landing-pure .gs-sidebar {
+  display: none !important;
+}
+
+body.gs-landing-pure .gs-sidebar-overlay {
+  display: none !important;
+}
+
+/* ========================================
+   PUBLIC PAGES - Hamburger + sliding sidebar
+   ======================================== */
+
+/* Already handled by default .gs-mobile-menu-toggle styling */
+
+/* ========================================
+   ADMIN PAGES - Sidebar always visible on desktop
+   ======================================== */
+
+body.gs-admin-page .gs-sidebar {
+  transform: translateX(0);
+  padding-top: 1.5rem;
+}
+
+body.gs-admin-page .gs-content-with-sidebar {
+  margin-left: 280px;
+  padding: 1.5rem;
   min-height: 100vh;
 }
 
+body.gs-admin-page .gs-mobile-menu-toggle {
+  display: none;
+}
+
+body.gs-admin-page .gs-sidebar-overlay {
+  display: none;
+}
+
+/* Admin responsive - mobile behavior */
+@media (max-width: 1024px) {
+  body.gs-admin-page .gs-content-with-sidebar {
+    margin-left: 0;
+    padding-top: 80px;
+  }
+
+  body.gs-admin-page .gs-sidebar {
+    transform: translateX(-100%);
+  }
+
+  body.gs-admin-page .gs-sidebar.open {
+    transform: translateX(0);
+  }
+
+  body.gs-admin-page .gs-mobile-menu-toggle {
+    display: flex;
+  }
+}
+
+/* Mobile adjustments for all pages */
 @media (max-width: 768px) {
-  .gs-page-with-menu .gs-mobile-menu-toggle {
+  .gs-mobile-menu-toggle {
     top: 1rem;
     left: 1rem;
   }
