@@ -138,6 +138,57 @@ $currentAdmin = getCurrentAdmin();
         <main class="gs-admin-content">
             <h1 class="gs-h1 gs-text-primary gs-mb-lg">Importera data</h1>
 
+            <!-- Quick Links to Specialized Import Pages -->
+            <div class="gs-grid gs-grid-cols-1 gs-md-grid-cols-2 gs-gap-lg gs-mb-xl">
+                <div class="gs-card">
+                    <div class="gs-card-header">
+                        <h2 class="gs-h4 gs-text-primary">
+                            <i data-lucide="users-2"></i>
+                            Importera Cyklister
+                        </h2>
+                    </div>
+                    <div class="gs-card-content">
+                        <p class="gs-text-secondary gs-mb-md">
+                            Bulk-import av cyklister från CSV-fil med fuzzy matching för klubbar.
+                        </p>
+                        <ul class="gs-text-sm gs-text-secondary gs-mb-md" style="margin-left: var(--gs-space-lg); line-height: 1.8;">
+                            <li>Stöder upp till 3000+ cyklister</li>
+                            <li>Automatisk klubb-matchning</li>
+                            <li>Dubbletthantering via license/namn</li>
+                            <li>Progress tracking</li>
+                        </ul>
+                        <a href="/admin/import-riders.php" class="gs-btn gs-btn-primary">
+                            <i data-lucide="arrow-right"></i>
+                            Importera Cyklister
+                        </a>
+                    </div>
+                </div>
+
+                <div class="gs-card">
+                    <div class="gs-card-header">
+                        <h2 class="gs-h4 gs-text-primary">
+                            <i data-lucide="trophy"></i>
+                            Importera Resultat
+                        </h2>
+                    </div>
+                    <div class="gs-card-content">
+                        <p class="gs-text-secondary gs-mb-md">
+                            Bulk-import av tävlingsresultat från CSV-fil med automatisk matchning.
+                        </p>
+                        <ul class="gs-text-sm gs-text-secondary gs-mb-md" style="margin-left: var(--gs-space-lg); line-height: 1.8;">
+                            <li>Matchar cyklister via UCI/namn</li>
+                            <li>Matchar events via namn</li>
+                            <li>Detaljerad matchnings-statistik</li>
+                            <li>Uppdaterar befintliga resultat</li>
+                        </ul>
+                        <a href="/admin/import-results.php" class="gs-btn gs-btn-primary">
+                            <i data-lucide="arrow-right"></i>
+                            Importera Resultat
+                        </a>
+                    </div>
+                </div>
+            </div>
+
             <?php $flash = getFlash(); if ($flash): ?>
                 <div class="gs-alert gs-alert-<?= h($flash['type']) ?> gs-mb-lg">
                     <?= h($flash['message']) ?>
