@@ -66,8 +66,10 @@ $pageTitle = 'Hem';
     <div class="gs-container">
         <section class="gs-hero">
             <div class="gs-hero-content gs-text-center">
-                <h1 class="gs-h1 gs-text-white gs-mb-md">TheHUB</h1>
-                <p class="gs-text-lg gs-text-white gs-mb-xl">Sveriges centrala plattform för cykeltävlingar</p>
+                <img src="https://gravityseries.se/wp-content/uploads/2024/03/Gravity-Series.png"
+                     alt="GravitySeries"
+                     class="gs-hero-logo gs-mb-md">
+                <h1 class="gs-h1 gs-text-white gs-mb-xl">The HUB</h1>
 
                 <!-- Stats -->
                 <div class="gs-grid gs-grid-cols-1 gs-md-grid-cols-3 gs-gap-lg">

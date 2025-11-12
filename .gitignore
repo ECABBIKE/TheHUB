@@ -26,3 +26,7 @@ tmp/*
 
 # Backup files
 *.backup
+
+# Deployment packages
+*.zip
+thehub-deployment.zip
