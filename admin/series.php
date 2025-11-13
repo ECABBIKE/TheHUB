@@ -11,7 +11,7 @@ $message = '';
 $messageType = 'info';
 
 // Handle form submissions
-if ($_SERVER['REQUEST_METHOD'] === 'POST')) {
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     checkCsrf();
 
     $action = $_POST['action'] ?? '';
@@ -69,12 +69,11 @@ if (isset($_GET['edit']) && is_numeric($_GET['edit'])) {
     $editSeries = $db->getOne("SELECT * FROM series WHERE id = ?", [intval($_GET['edit'])]);
 }
 
-    // Get series from database
-    $series = $db->getAll("SELECT id, name, type, status, start_date, end_date,
-                          (SELECT COUNT(*) FROM events WHERE series_id = series.id) as events_count
-                          FROM series
-                          ORDER BY start_date DESC");
-}
+// Get series from database
+$series = $db->getAll("SELECT id, name, type, status, start_date, end_date,
+                      (SELECT COUNT(*) FROM events WHERE series_id = series.id) as events_count
+                      FROM series
+                      ORDER BY start_date DESC");
 
 $pageTitle = 'Serier';
 $pageType = 'admin';

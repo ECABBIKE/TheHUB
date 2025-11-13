@@ -14,7 +14,7 @@ $message = '';
 $messageType = 'info';
 
 // Handle rollback request
-if ($_SERVER['REQUEST_METHOD'] === 'POST')) {
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     checkCsrf();
 
     $action = $_POST['action'] ?? '';
