@@ -1,5 +1,6 @@
 -- TheHUB Database Schema
 -- MySQL/MariaDB database for cycling competition platform
+-- Updated: 2025-11-13 (Force deployment sync)
 
 -- Set charset
 SET NAMES utf8mb4;
