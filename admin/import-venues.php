@@ -64,9 +64,60 @@ function importVenuesFromCSV($filePath, $db) {
         return ['stats' => $stats, 'errors' => ['Ogiltig CSV-fil']];
     }
 
-    // Normalize header
+    // Normalize header - accept multiple variants of column names
     $header = array_map(function($col) {
-        return strtolower(trim($col));
+        $col = strtolower(trim($col));
+        $col = str_replace([' ', '-', '_'], '', $col); // Remove spaces, hyphens, underscores
+
+        // Map various column name variants to standard names
+        $mappings = [
+            'namn' => 'name',
+            'name' => 'name',
+            'bana' => 'name',
+            'anläggning' => 'name',
+            'anlaggning' => 'name',
+            'park' => 'name',
+            'bikepark' => 'name',
+
+            'stad' => 'city',
+            'city' => 'city',
+            'ort' => 'city',
+
+            'region' => 'region',
+            'län' => 'region',
+            'lan' => 'region',
+            'county' => 'region',
+            'område' => 'region',
+            'omrade' => 'region',
+
+            'land' => 'country',
+            'country' => 'country',
+
+            'adress' => 'address',
+            'address' => 'address',
+            'gatuadress' => 'address',
+            'streetaddress' => 'address',
+
+            'koordinater' => 'coordinates',
+            'coordinates' => 'coordinates',
+            'coords' => 'coordinates',
+            'gps' => 'coordinates',
+            'latlon' => 'coordinates',
+            'latlong' => 'coordinates',
+
+            'beskrivning' => 'description',
+            'description' => 'description',
+            'beskriv' => 'description',
+            'info' => 'description',
+
+            'webbplats' => 'website',
+            'website' => 'website',
+            'url' => 'website',
+            'hemsida' => 'website',
+            'web' => 'website',
+        ];
+
+        return $mappings[$col] ?? $col;
     }, $header);
 
     $lineNumber = 1;

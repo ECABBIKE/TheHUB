@@ -64,9 +64,75 @@ function importSeriesFromCSV($filePath, $db) {
         return ['stats' => $stats, 'errors' => ['Ogiltig CSV-fil']];
     }
 
-    // Normalize header
+    // Normalize header - accept multiple variants of column names
     $header = array_map(function($col) {
-        return strtolower(trim($col));
+        $col = strtolower(trim($col));
+        $col = str_replace([' ', '-', '_'], '', $col); // Remove spaces, hyphens, underscores
+
+        // Map various column name variants to standard names
+        $mappings = [
+            'namn' => 'name',
+            'name' => 'name',
+            'serienamn' => 'name',
+            'seriesname' => 'name',
+            'title' => 'name',
+
+            'typ' => 'type',
+            'type' => 'type',
+            'serietype' => 'type',
+            'serietyp' => 'type',
+
+            'gren' => 'discipline',
+            'discipline' => 'discipline',
+            'sport' => 'discipline',
+
+            'år' => 'year',
+            'ar' => 'year',
+            'year' => 'year',
+            'säsong' => 'year',
+            'sasong' => 'year',
+            'season' => 'year',
+
+            'status' => 'status',
+            'state' => 'status',
+            'tillstånd' => 'status',
+            'tillstand' => 'status',
+
+            'startdatum' => 'startdate',
+            'startdate' => 'startdate',
+            'start' => 'startdate',
+            'börjar' => 'startdate',
+            'borjar' => 'startdate',
+            'begins' => 'startdate',
+
+            'slutdatum' => 'enddate',
+            'enddate' => 'enddate',
+            'slut' => 'enddate',
+            'end' => 'enddate',
+            'slutar' => 'enddate',
+            'ends' => 'enddate',
+
+            'beskrivning' => 'description',
+            'description' => 'description',
+            'beskriv' => 'description',
+            'info' => 'description',
+
+            'webbplats' => 'website',
+            'website' => 'website',
+            'url' => 'website',
+            'hemsida' => 'website',
+            'web' => 'website',
+
+            'arrangör' => 'organizer',
+            'arrangor' => 'organizer',
+            'organizer' => 'organizer',
+            'organisatör' => 'organizer',
+            'organisator' => 'organizer',
+            'delegat' => 'organizer',
+            'delegate' => 'organizer',
+        ];
+
+        return $mappings[$col] ?? $col;
     }, $header);
 
     $lineNumber = 1;
@@ -96,10 +162,11 @@ function importSeriesFromCSV($filePath, $db) {
                 'discipline' => trim($data['discipline'] ?? ''),
                 'year' => !empty($data['year']) ? intval($data['year']) : date('Y'),
                 'status' => trim($data['status'] ?? 'planning'),
-                'start_date' => !empty($data['start_date']) ? trim($data['start_date']) : null,
-                'end_date' => !empty($data['end_date']) ? trim($data['end_date']) : null,
+                'start_date' => !empty($data['startdate']) ? trim($data['startdate']) : null,
+                'end_date' => !empty($data['enddate']) ? trim($data['enddate']) : null,
                 'description' => trim($data['description'] ?? ''),
                 'website' => trim($data['website'] ?? ''),
+                'organizer' => trim($data['organizer'] ?? ''),
                 'active' => 1
             ];
 

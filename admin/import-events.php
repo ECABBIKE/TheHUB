@@ -64,9 +64,111 @@ function importEventsFromCSV($filePath, $db) {
         return ['stats' => $stats, 'errors' => ['Ogiltig CSV-fil']];
     }
 
-    // Normalize header
+    // Normalize header - accept multiple variants of column names
     $header = array_map(function($col) {
-        return strtolower(trim($col));
+        $col = strtolower(trim($col));
+        $col = str_replace([' ', '-', '_'], '', $col); // Remove spaces, hyphens, underscores
+
+        // Map various column name variants to standard names
+        $mappings = [
+            'namn' => 'name',
+            'name' => 'name',
+            'eventnamn' => 'name',
+            'eventname' => 'name',
+            'tävling' => 'name',
+            'tavling' => 'name',
+            'title' => 'name',
+
+            'datum' => 'date',
+            'date' => 'date',
+            'eventdatum' => 'date',
+            'eventdate' => 'date',
+            'tävlingsdatum' => 'date',
+            'tavlingsdatum' => 'date',
+
+            'plats' => 'location',
+            'location' => 'location',
+            'ort' => 'location',
+            'stad' => 'location',
+            'place' => 'location',
+
+            'bana' => 'venue',
+            'venue' => 'venue',
+            'anläggning' => 'venue',
+            'anlaggning' => 'venue',
+            'park' => 'venue',
+            'bikepark' => 'venue',
+
+            'typ' => 'type',
+            'type' => 'type',
+            'eventtyp' => 'type',
+
+            'gren' => 'discipline',
+            'discipline' => 'discipline',
+            'sport' => 'discipline',
+
+            'serie' => 'series',
+            'series' => 'series',
+            'seriename' => 'series',
+            'serienamn' => 'series',
+
+            'distans' => 'distance',
+            'distance' => 'distance',
+            'längd' => 'distance',
+            'langd' => 'distance',
+            'sträcka' => 'distance',
+            'stracka' => 'distance',
+
+            'höjdmeter' => 'elevationgain',
+            'hojdmeter' => 'elevationgain',
+            'elevationgain' => 'elevationgain',
+            'climbing' => 'elevationgain',
+            'elevation' => 'elevationgain',
+
+            'status' => 'status',
+            'state' => 'status',
+
+            'beskrivning' => 'description',
+            'description' => 'description',
+            'info' => 'description',
+
+            'arrangör' => 'organizer',
+            'arrangor' => 'organizer',
+            'organizer' => 'organizer',
+            'organisatör' => 'organizer',
+            'organisator' => 'organizer',
+
+            'webbplats' => 'website',
+            'website' => 'website',
+            'url' => 'website',
+            'hemsida' => 'website',
+
+            'anmälningslänk' => 'registrationurl',
+            'anmalningslank' => 'registrationurl',
+            'registrationurl' => 'registrationurl',
+            'regurl' => 'registrationurl',
+            'registration' => 'registrationurl',
+
+            'anmälningssista' => 'registrationdeadline',
+            'anmalningssista' => 'registrationdeadline',
+            'registrationdeadline' => 'registrationdeadline',
+            'sista' => 'registrationdeadline',
+            'deadline' => 'registrationdeadline',
+
+            'maxdeltagare' => 'maxparticipants',
+            'maxparticipants' => 'maxparticipants',
+            'max' => 'maxparticipants',
+            'platser' => 'maxparticipants',
+
+            'startavgift' => 'entryfee',
+            'entryfee' => 'entryfee',
+            'avgift' => 'entryfee',
+            'pris' => 'entryfee',
+            'fee' => 'entryfee',
+            'price' => 'entryfee',
+        ];
+
+        return $mappings[$col] ?? $col;
     }, $header);
 
     $lineNumber = 1;
@@ -97,15 +199,15 @@ function importEventsFromCSV($filePath, $db) {
                 'type' => trim($data['type'] ?? 'competition'),
                 'discipline' => trim($data['discipline'] ?? ''),
                 'distance' => !empty($data['distance']) ? floatval($data['distance']) : null,
-                'elevation_gain' => !empty($data['elevation_gain']) ? intval($data['elevation_gain']) : null,
+                'elevation_gain' => !empty($data['elevationgain']) ? intval($data['elevationgain']) : null,
                 'status' => trim($data['status'] ?? 'upcoming'),
                 'description' => trim($data['description'] ?? ''),
                 'organizer' => trim($data['organizer'] ?? ''),
                 'website' => trim($data['website'] ?? ''),
-                'registration_url' => trim($data['registration_url'] ?? ''),
-                'registration_deadline' => !empty($data['registration_deadline']) ? trim($data['registration_deadline']) : null,
-                'max_participants' => !empty($data['max_participants']) ? intval($data['max_participants']) : null,
-                'entry_fee' => !empty($data['entry_fee']) ? floatval($data['entry_fee']) : null,
+                'registration_url' => trim($data['registrationurl'] ?? ''),
+                'registration_deadline' => !empty($data['registrationdeadline']) ? trim($data['registrationdeadline']) : null,
+                'max_participants' => !empty($data['maxparticipants']) ? intval($data['maxparticipants']) : null,
+                'entry_fee' => !empty($data['entryfee']) ? floatval($data['entryfee']) : null,
                 'active' => 1
             ];
 

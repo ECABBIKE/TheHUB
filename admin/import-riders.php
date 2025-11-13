@@ -133,14 +133,113 @@ function importRidersFromCSV($filepath, $db) {
     // Expected columns: firstname, lastname, birth_year, gender, club, license_number, email, phone, city
     $expectedColumns = ['firstname', 'lastname', 'birth_year', 'gender', 'club'];
 
-    // Normalize header (lowercase, trim, handle both underscore and non-underscore versions)
+    // Normalize header - accept multiple variants of column names
     $header = array_map(function($col) {
         $col = strtolower(trim($col));
-        // Normalize column names: convert first_name to firstname, last_name to lastname, etc
-        $col = str_replace(['first_name', 'last_name', 'club_name', 'e-mail', 'uci_id'],
-                          ['firstname', 'lastname', 'club', 'email', 'license_number'],
-                          $col);
-        return $col;
+        $col = str_replace([' ', '-', '_'], '', $col); // Remove spaces, hyphens, underscores
+
+        // Map various column name variants to standard names
+        $mappings = [
+            // Name fields
+            'förnamn' => 'firstname',
+            'fornamn' => 'firstname',
+            'firstname' => 'firstname',
+            'fname' => 'firstname',
+            'givenname' => 'firstname',
+            'name' => 'firstname',
+
+            'efternamn' => 'lastname',
+            'lastname' => 'lastname',
+            'surname' => 'lastname',
+            'familyname' => 'lastname',
+            'lname' => 'lastname',
+
+            // Birth year / age
+            'födelseår' => 'birthyear',
+            'fodelsear' => 'birthyear',
+            'birthyear' => 'birthyear',
+            'född' => 'birthyear',
+            'fodd' => 'birthyear',
+            'year' => 'birthyear',
+            'ålder' => 'birthyear',
+            'alder' => 'birthyear',
+            'age' => 'birthyear',
+            'personnummer' => 'personnummer',
+            'pnr' => 'personnummer',
+            'ssn' => 'personnummer',
+
+            // Gender
+            'kön' => 'gender',
+            'kon' => 'gender',
+            'gender' => 'gender',
+            'sex' => 'gender',
+
+            // Club
+            'klubb' => 'club',
+            'club' => 'club',
+            'klubbnamn' => 'club',
+            'clubname' => 'club',
+            'team' => 'club',
+            'lag' => 'club',
+
+            // License
+            'licensnummer' => 'licensenumber',
+            'licensnr' => 'licensenumber',
+            'licensenumber' => 'licensenumber',
+            'licencenumber' => 'licensenumber',
+            'uciid' => 'licensenumber',
+            'uci' => 'licensenumber',
+            'sweid' => 'licensenumber',
+            'licens' => 'licensenumber',
+            'license' => 'licensenumber',
+
+            'licenstyp' => 'licensetype',
+            'licensetype' => 'licensetype',
+            'licensetyp' => 'licensetype',
+            'type' => 'licensetype',
+
+            'licenskategori' => 'licensecategory',
+            'licensecategory' => 'licensecategory',
+            'kategori' => 'licensecategory',
+            'category' => 'licensecategory',
+
+            'licensgiltigtill' => 'licensevaliduntil',
+            'licensevaliduntil' => 'licensevaliduntil',
+            'giltigtill' => 'licensevaliduntil',
+            'validuntil' => 'licensevaliduntil',
+            'expiry' => 'licensevaliduntil',
+
+            // Discipline
+            'gren' => 'discipline',
+            'discipline' => 'discipline',
+            'sport' => 'discipline',
+
+            // Contact info
+            'epost' => 'email',
+            'email' => 'email',
+            'mail' => 'email',
+            'epostadress' => 'email',
+            'emailaddress' => 'email',
+
+            'telefon' => 'phone',
+            'phone' => 'phone',
+            'tel' => 'phone',
+            'mobil' => 'phone',
+            'mobile' => 'phone',
+
+            'stad' => 'city',
+            'city' => 'city',
+            'ort' => 'city',
+            'location' => 'city',
+
+            // Notes
+            'anteckningar' => 'notes',
+            'notes' => 'notes',
+            'kommentar' => 'notes',
+            'comment' => 'notes',
+        ];
+
+        return $mappings[$col] ?? $col;
     }, $header);
 
     // Cache for club lookups
@@ -168,9 +267,9 @@ function importRidersFromCSV($filepath, $db) {
             if (!empty($data['personnummer'])) {
                 $birthYear = parsePersonnummer($data['personnummer']);
             }
-            // Fall back to birth_year column if no personnummer or parsing failed
-            if (!$birthYear && !empty($data['birth_year'])) {
-                $birthYear = (int)$data['birth_year'];
+            // Fall back to birthyear column if no personnummer or parsing failed
+            if (!$birthYear && !empty($data['birthyear'])) {
+                $birthYear = (int)$data['birthyear'];
             }
 
             // Prepare rider data
@@ -189,7 +288,7 @@ function importRidersFromCSV($filepath, $db) {
                 'lastname' => trim($data['lastname']),
                 'birth_year' => $birthYear,
                 'gender' => $gender,
-                'license_number' => !empty($data['license_number']) ? trim($data['license_number']) : null,
+                'license_number' => !empty($data['licensenumber']) ? trim($data['licensenumber']) : null,
                 'email' => !empty($data['email']) ? trim($data['email']) : null,
                 'phone' => !empty($data['phone']) ? trim($data['phone']) : null,
                 'city' => !empty($data['city']) ? trim($data['city']) : null,
@@ -197,13 +296,13 @@ function importRidersFromCSV($filepath, $db) {
             ];
 
             // Add new license fields
-            $riderData['license_type'] = !empty($data['license_type']) ? trim($data['license_type']) : null;
+            $riderData['license_type'] = !empty($data['licensetype']) ? trim($data['licensetype']) : null;
             $riderData['discipline'] = !empty($data['discipline']) ? trim($data['discipline']) : null;
-            $riderData['license_valid_until'] = !empty($data['license_valid_until']) ? trim($data['license_valid_until']) : null;
+            $riderData['license_valid_until'] = !empty($data['licensevaliduntil']) ? trim($data['licensevaliduntil']) : null;
 
             // License category - use provided or auto-suggest
-            if (!empty($data['license_category'])) {
-                $riderData['license_category'] = trim($data['license_category']);
+            if (!empty($data['licensecategory'])) {
+                $riderData['license_category'] = trim($data['licensecategory']);
             } elseif ($birthYear && $gender) {
                 // Auto-suggest license category based on age and gender
                 $riderData['license_category'] = suggestLicenseCategory($birthYear, $gender);
@@ -212,8 +311,8 @@ function importRidersFromCSV($filepath, $db) {
             }
 
             // Generate SWE-ID if no license number provided
-            if (empty($riderData['license_number']) && !empty($data['swe_id'])) {
-                $riderData['license_number'] = trim($data['swe_id']);
+            if (empty($riderData['license_number']) && !empty($data['licensenumber'])) {
+                $riderData['license_number'] = trim($data['licensenumber']);
             }
             if (empty($riderData['license_number'])) {
                 $riderData['license_number'] = generateSweId($db);
