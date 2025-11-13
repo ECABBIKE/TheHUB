@@ -11,7 +11,7 @@ $message = '';
 $messageType = 'info';
 
 // Handle form submissions
-if ($_SERVER['REQUEST_METHOD'] === 'POST')) {
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     checkCsrf();
 
     $action = $_POST['action'] ?? '';
@@ -99,7 +99,6 @@ if (isset($_GET['edit']) && is_numeric($_GET['edit'])) {
             ORDER BY cl.name";
 
     $clubs = $db->getAll($sql, $params);
-}
 
 $pageTitle = 'Klubbar';
 $pageType = 'admin';
@@ -118,7 +117,6 @@ include __DIR__ . '/../includes/layout-header.php';
                         <i data-lucide="plus"></i>
                         Ny Klubb
                     </button>
-                <?php endif; ?>
             </div>
 
             <!-- Messages -->
@@ -273,7 +271,6 @@ include __DIR__ . '/../includes/layout-header.php';
                         </form>
                     </div>
                 </div>
-            <?php endif; ?>
 
             <!-- Search -->
             <div class="gs-card gs-mb-lg">
@@ -393,9 +390,6 @@ include __DIR__ . '/../includes/layout-header.php';
                                             <?php endif; ?>
                                         </td>
                                         <td style="text-align: right;">
-                                            
-                                                <span class="gs-badge gs-badge-secondary">Demo</span>
-                                            <?php else: ?>
                                                 <div class="gs-flex gs-gap-sm gs-justify-end">
                                                     <a
                                                         href="/admin/riders.php?club_id=<?= $club['id'] ?>"
@@ -422,7 +416,6 @@ include __DIR__ . '/../includes/layout-header.php';
                                                         <i data-lucide="trash-2"></i>
                                                     </button>
                                                 </div>
-                                            <?php endif; ?>
                                         </td>
                                     </tr>
                                 <?php endforeach; ?>
@@ -526,6 +519,5 @@ include __DIR__ . '/../includes/layout-header.php';
                 }
             });
         </script>
-        <?php endif; ?>
 
 <?php include __DIR__ . '/../includes/layout-footer.php'; ?>

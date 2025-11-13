@@ -291,13 +291,14 @@ include __DIR__ . '/../includes/layout-header.php';
 
             if (!empty($test_riders)) {
                 echo "<table class='gs-table gs-mt-md'>";
-                echo "<thead><tr><th>ID</th><th>Name</th><th>Birth Year</th><th>Club</th><th>Races</th><th>Podiums</th></tr></thead>";
+                echo "<thead><tr><th>ID</th><th>Name</th><th>Age</th><th>Club</th><th>Races</th><th>Podiums</th></tr></thead>";
                 echo "<tbody>";
                 foreach ($test_riders as $rider) {
                     echo "<tr>";
                     echo "<td>" . h($rider['id']) . "</td>";
                     echo "<td><strong>" . h($rider['firstname']) . " " . h($rider['lastname']) . "</strong></td>";
-                    echo "<td>" . h($rider['birth_year'] ?? 'N/A') . "</td>";
+                    $age = !empty($rider['birth_year']) ? calculateAge($rider['birth_year']) . ' år' : 'N/A';
+                    echo "<td>" . h($age) . "</td>";
                     echo "<td>" . h($rider['club_name'] ?? 'No club') . "</td>";
                     echo "<td>" . h($rider['total_races']) . "</td>";
                     echo "<td>" . h($rider['podiums']) . "</td>";

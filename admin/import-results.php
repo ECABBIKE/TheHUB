@@ -81,7 +81,8 @@ function importResultsFromCSV($filepath, $db) {
         'events_found' => 0,
         'events_not_found' => 0,
         'riders_found' => 0,
-        'riders_not_found' => 0
+        'riders_not_found' => 0,
+        'riders_created' => 0
     ];
 
     $errors = [];
@@ -217,10 +218,41 @@ function importResultsFromCSV($filepath, $db) {
                         $riderCache[$cacheKey] = $riderId;
                         $matching_stats['riders_found']++;
                     } else {
+                        // AUTO-CREATE: Rider not found, create new rider with SWE-ID
                         $matching_stats['riders_not_found']++;
-                        $stats['failed']++;
-                        $errors[] = "Rad {$lineNumber}: Cyklist '{$firstname} {$lastname}' hittades inte";
-                        continue;
+
+                        // Generate SWE-ID
+                        $sweId = generateSweId($db);
+
+                        // Get gender from data if available
+                        $gender = 'M'; // Default
+                        if (!empty($data['gender'])) {
+                            $genderRaw = strtolower(trim($data['gender']));
+                            if (in_array($genderRaw, ['woman', 'female', 'kvinna', 'dam', 'f'])) {
+                                $gender = 'F';
+                            } elseif (in_array($genderRaw, ['man', 'male', 'herr', 'm'])) {
+                                $gender = 'M';
+                            }
+                        }
+
+                        // Create new rider with SWE-ID valid for 1 year
+                        $validUntil = date('Y-m-d', strtotime('+1 year'));
+
+                        $newRiderData = [
+                            'firstname' => $firstname,
+                            'lastname' => $lastname,
+                            'birth_year' => $birthYear,
+                            'gender' => $gender,
+                            'license_number' => $sweId,
+                            'license_type' => 'SWE-ID',
+                            'license_valid_until' => $validUntil,
+                            'active' => 1
+                        ];
+
+                        $riderId = $db->insert('riders', $newRiderData);
+                        $riderCache[$cacheKey] = $riderId;
+                        $matching_stats['riders_created']++;
+                        error_log("Auto-created rider: {$firstname} {$lastname} with SWE-ID: {$sweId} (valid until {$validUntil})");
                     }
                 }
             }
@@ -344,7 +376,7 @@ include __DIR__ . '/../includes/layout-header.php';
                                     <i data-lucide="search"></i>
                                     Matchnings-statistik
                                 </h3>
-                                <div class="gs-grid gs-grid-cols-2 gs-md-grid-cols-4 gs-gap-md">
+                                <div class="gs-grid gs-grid-cols-2 gs-md-grid-cols-5 gs-gap-md">
                                     <div style="padding: var(--gs-space-md); background: var(--gs-background-secondary); border-radius: var(--gs-border-radius);">
                                         <div class="gs-text-sm gs-text-secondary">Events hittade</div>
                                         <div class="gs-h3 gs-text-success"><?= $matching_stats['events_found'] ?></div>
@@ -354,12 +386,16 @@ include __DIR__ . '/../includes/layout-header.php';
                                         <div class="gs-h3 gs-text-danger"><?= $matching_stats['events_not_found'] ?></div>
                                     </div>
                                     <div style="padding: var(--gs-space-md); background: var(--gs-background-secondary); border-radius: var(--gs-border-radius);">
-                                        <div class="gs-text-sm gs-text-secondary">Cyklister hittade</div>
+                                        <div class="gs-text-sm gs-text-secondary">Deltagare hittade</div>
                                         <div class="gs-h3 gs-text-success"><?= $matching_stats['riders_found'] ?></div>
                                     </div>
                                     <div style="padding: var(--gs-space-md); background: var(--gs-background-secondary); border-radius: var(--gs-border-radius);">
-                                        <div class="gs-text-sm gs-text-secondary">Cyklister ej hittade</div>
-                                        <div class="gs-h3 gs-text-danger"><?= $matching_stats['riders_not_found'] ?></div>
+                                        <div class="gs-text-sm gs-text-secondary">Nya deltagare skapade</div>
+                                        <div class="gs-h3 gs-text-accent"><?= $matching_stats['riders_created'] ?? 0 ?></div>
+                                    </div>
+                                    <div style="padding: var(--gs-space-md); background: var(--gs-background-secondary); border-radius: var(--gs-border-radius);">
+                                        <div class="gs-text-sm gs-text-secondary">SWE-ID tilldelat</div>
+                                        <div class="gs-h3 gs-text-primary"><?= $matching_stats['riders_created'] ?? 0 ?></div>
                                     </div>
                                 </div>
                             </div>

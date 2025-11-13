@@ -20,6 +20,8 @@ $cyclists = $db->getAll("
         c.birth_year,
         c.gender,
         c.license_number,
+        c.license_type,
+        c.license_valid_until,
         cl.name as club_name,
         COUNT(DISTINCT r.id) as total_races,
         COUNT(CASE WHEN r.position <= 3 THEN 1 END) as podiums,
@@ -60,6 +62,14 @@ include __DIR__ . '/includes/layout-header.php';
                        placeholder="🔍 Sök på namn, klubb eller licens...">
             </div>
 
+            <!-- Results Counter -->
+            <div class="gs-mb-md" id="resultsCounter" style="display: none;">
+                <div class="gs-alert gs-alert-info" style="padding: 0.75rem 1rem;">
+                    <i data-lucide="filter"></i>
+                    <span id="resultsCount"></span>
+                </div>
+            </div>
+
             <!-- Riders Grid -->
             <?php if (empty($cyclists)): ?>
                 <div class="gs-card gs-text-center" style="padding: 3rem;">
@@ -70,71 +80,77 @@ include __DIR__ . '/includes/layout-header.php';
                     </p>
                 </div>
             <?php else: ?>
-                <div class="gs-grid gs-grid-cols-1 gs-md-grid-cols-2 gs-lg-grid-cols-3 gs-gap-lg" id="ridersGrid">
+                <div class="gs-grid gs-grid-cols-1 gs-md-grid-cols-3 gs-lg-grid-cols-4 gs-xl-grid-cols-5 gs-gap-md" id="ridersGrid">
                     <?php foreach ($cyclists as $rider): ?>
                         <div class="gs-card gs-card-hover rider-card"
-                             data-search="<?= strtolower(h($rider['firstname'] . ' ' . $rider['lastname'] . ' ' . ($rider['club_name'] ?? '') . ' ' . ($rider['license_number'] ?? ''))) ?>">
-                            <div class="gs-card-header">
-                                <div class="gs-flex gs-items-center gs-gap-md">
-                                    <div class="gs-avatar gs-bg-primary">
-                                        <i data-lucide="user" class="gs-text-white"></i>
-                                    </div>
-                                    <div class="gs-flex-1">
-                                        <h3 class="gs-h4 gs-mb-xs">
-                                            <?= h($rider['firstname']) ?> <?= h($rider['lastname']) ?>
-                                        </h3>
-                                        <?php if ($rider['club_name']): ?>
-                                            <p class="gs-text-sm gs-text-secondary">
-                                                <i data-lucide="building" style="width: 14px; height: 14px;"></i>
-                                                <?= h($rider['club_name']) ?>
-                                            </p>
-                                        <?php endif; ?>
-                                    </div>
+                             data-search="<?= strtolower(h($rider['firstname'] . ' ' . $rider['lastname'] . ' ' . ($rider['club_name'] ?? '') . ' ' . ($rider['license_number'] ?? ''))) ?>"
+                             style="padding: 0.75rem;">
+                            <!-- Profile Header -->
+                            <div class="gs-flex gs-items-start gs-gap-sm gs-mb-sm">
+                                <div class="gs-avatar gs-avatar-sm gs-bg-primary" style="width: 40px; height: 40px; flex-shrink: 0;">
+                                    <i data-lucide="user" class="gs-text-white" style="width: 20px; height: 20px;"></i>
+                                </div>
+                                <div class="gs-flex-1" style="min-width: 0;">
+                                    <h3 class="gs-text-sm gs-font-bold gs-mb-xs" style="line-height: 1.3;">
+                                        <?= h($rider['firstname']) ?> <?= h($rider['lastname']) ?>
+                                    </h3>
+                                    <?php if ($rider['club_name']): ?>
+                                        <p class="gs-text-xs gs-text-secondary" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                            <i data-lucide="building" style="width: 12px; height: 12px;"></i>
+                                            <?= h($rider['club_name']) ?>
+                                        </p>
+                                    <?php endif; ?>
                                 </div>
                             </div>
-                            <div class="gs-card-content">
-                                <!-- Stats Grid -->
-                                <div class="gs-flex gs-justify-around gs-mb-md" style="padding: 1rem 0;">
-                                    <div class="gs-text-center">
-                                        <div class="gs-text-2xl gs-font-bold gs-text-primary">
-                                            <?= $rider['total_races'] ?>
-                                        </div>
-                                        <div class="gs-text-xs gs-text-secondary">Tävlingar</div>
-                                    </div>
-                                    <div class="gs-text-center">
-                                        <div class="gs-text-2xl gs-font-bold" style="color: var(--gs-accent);">
-                                            <?= $rider['podiums'] ?>
-                                        </div>
-                                        <div class="gs-text-xs gs-text-secondary">Pallplatser</div>
-                                    </div>
-                                    <?php if ($rider['best_position']): ?>
-                                        <div class="gs-text-center">
-                                            <div class="gs-text-2xl gs-font-bold" style="color: var(--gs-success);">
-                                                <?= $rider['best_position'] ?>
-                                            </div>
-                                            <div class="gs-text-xs gs-text-secondary">Bästa</div>
-                                        </div>
-                                    <?php endif; ?>
-                                </div>
 
-                                <!-- Badges -->
-                                <div class="gs-flex gs-gap-xs gs-flex-wrap">
-                                    <?php if ($rider['gender']): ?>
-                                        <span class="gs-badge gs-badge-secondary gs-text-xs">
-                                            <?= $rider['gender'] == 'M' ? '👨 Herr' : '👩 Dam' ?>
-                                        </span>
-                                    <?php endif; ?>
-                                    <?php if ($rider['birth_year']): ?>
-                                        <span class="gs-badge gs-badge-secondary gs-text-xs">
-                                            <?= $rider['birth_year'] ?>
-                                        </span>
-                                    <?php endif; ?>
-                                    <?php if ($rider['license_number']): ?>
-                                        <span class="gs-badge gs-badge-primary gs-text-xs">
-                                            <?= h($rider['license_number']) ?>
-                                        </span>
-                                    <?php endif; ?>
+                            <!-- Stats Compact -->
+                            <div class="gs-flex gs-justify-between gs-mb-sm" style="padding: 0.5rem 0; border-top: 1px solid var(--gs-border);">
+                                <div class="gs-text-center gs-flex-1">
+                                    <div class="gs-text-lg gs-font-bold gs-text-primary"><?= $rider['total_races'] ?></div>
+                                    <div class="gs-text-xs gs-text-secondary">Lopp</div>
                                 </div>
+                                <div class="gs-text-center gs-flex-1">
+                                    <div class="gs-text-lg gs-font-bold" style="color: var(--gs-accent);"><?= $rider['podiums'] ?></div>
+                                    <div class="gs-text-xs gs-text-secondary">Pall</div>
+                                </div>
+                                <?php if ($rider['best_position']): ?>
+                                    <div class="gs-text-center gs-flex-1">
+                                        <div class="gs-text-lg gs-font-bold" style="color: var(--gs-success);"><?= $rider['best_position'] ?></div>
+                                        <div class="gs-text-xs gs-text-secondary">Bäst</div>
+                                    </div>
+                                <?php endif; ?>
+                            </div>
+
+                            <!-- Info Badges -->
+                            <div class="gs-flex gs-gap-xs gs-flex-wrap" style="font-size: 0.7rem;">
+                                <span class="gs-badge gs-badge-secondary" style="padding: 0.15rem 0.4rem;">
+                                    <?= $rider['gender'] == 'M' ? '👨' : ($rider['gender'] == 'F' ? '👩' : '👤') ?>
+                                </span>
+                                <?php if ($rider['birth_year']): ?>
+                                    <span class="gs-badge gs-badge-secondary" style="padding: 0.15rem 0.4rem;">
+                                        <?= calculateAge($rider['birth_year']) ?> år
+                                    </span>
+                                <?php endif; ?>
+                                <?php if ($rider['license_number']): ?>
+                                    <span class="gs-badge gs-badge-primary" style="padding: 0.15rem 0.4rem; font-size: 0.65rem;">
+                                        <?= strpos($rider['license_number'], 'SWE') === 0 ? 'SWE' : 'UCI' ?>: <?= h(substr($rider['license_number'], 0, 12)) ?><?= strlen($rider['license_number']) > 12 ? '...' : '' ?>
+                                    </span>
+                                <?php endif; ?>
+                                <?php
+                                // Check license status
+                                if (!empty($rider['license_type']) && $rider['license_type'] !== 'None') {
+                                    $licenseCheck = checkLicense($rider);
+                                    if ($licenseCheck['valid']): ?>
+                                        <span class="gs-badge gs-badge-success" style="padding: 0.15rem 0.4rem; font-size: 0.65rem;">
+                                            ✓ Aktiv
+                                        </span>
+                                    <?php else: ?>
+                                        <span class="gs-badge gs-badge-warning" style="padding: 0.15rem 0.4rem; font-size: 0.65rem;">
+                                            ⚠ Utgången
+                                        </span>
+                                    <?php endif;
+                                }
+                                ?>
                             </div>
                         </div>
                     <?php endforeach; ?>
@@ -157,6 +173,9 @@ $additionalScripts = "
     const searchInput = document.getElementById('searchRiders');
     const ridersGrid = document.getElementById('ridersGrid');
     const noResults = document.getElementById('noResults');
+    const resultsCounter = document.getElementById('resultsCounter');
+    const resultsCount = document.getElementById('resultsCount');
+    const totalRiders = " . count($cyclists) . ";
 
     if (searchInput && ridersGrid) {
         searchInput.addEventListener('input', function(e) {
@@ -173,6 +192,18 @@ $additionalScripts = "
                     card.style.display = 'none';
                 }
             });
+
+            // Update results counter
+            if (search && resultsCounter && resultsCount) {
+                resultsCounter.style.display = 'block';
+                if (visibleCount === 1) {
+                    resultsCount.textContent = 'Visar 1 deltagare av ' + totalRiders + ' totalt';
+                } else {
+                    resultsCount.textContent = 'Visar ' + visibleCount + ' deltagare av ' + totalRiders + ' totalt';
+                }
+            } else if (resultsCounter) {
+                resultsCounter.style.display = 'none';
+            }
 
             // Show/hide no results message
             if (noResults) {

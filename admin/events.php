@@ -11,7 +11,7 @@ $message = '';
 $messageType = 'info';
 
 // Handle form submissions
-if ($_SERVER['REQUEST_METHOD'] === 'POST')) {
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     checkCsrf();
 
     $action = $_POST['action'] ?? '';
@@ -30,6 +30,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST')) {
                 'name' => $name,
                 'event_date' => $event_date,
                 'location' => trim($_POST['location'] ?? ''),
+                'venue_id' => !empty($_POST['venue_id']) ? intval($_POST['venue_id']) : null,
                 'event_type' => $_POST['event_type'] ?? 'road_race',
                 'status' => $_POST['status'] ?? 'upcoming',
                 'series_id' => !empty($_POST['series_id']) ? intval($_POST['series_id']) : null,
@@ -76,15 +77,16 @@ $status = $_GET['status'] ?? '';
 $year = $_GET['year'] ?? date('Y');
 $location = $_GET['location'] ?? '';
 
-// Fetch series for dropdown (if not in demo mode)
+// Fetch series and venues for dropdowns
 $series = [];
+$venues = [];
 $editEvent = null;
-    $series = $db->getAll("SELECT id, name FROM series WHERE status = 'active' ORDER BY name");
+$series = $db->getAll("SELECT id, name FROM series WHERE status = 'active' ORDER BY name");
+$venues = $db->getAll("SELECT id, name, city FROM venues WHERE active = 1 ORDER BY name");
 
-    // Check if editing an event
-    if (isset($_GET['edit']) && is_numeric($_GET['edit'])) {
-        $editEvent = $db->getOne("SELECT * FROM events WHERE id = ?", [intval($_GET['edit'])]);
-    }
+// Check if editing an event
+if (isset($_GET['edit']) && is_numeric($_GET['edit'])) {
+    $editEvent = $db->getOne("SELECT * FROM events WHERE id = ?", [intval($_GET['edit'])]);
 }
 
     $where = ["YEAR(event_date) = ?"];
@@ -102,18 +104,22 @@ $editEvent = null;
 
     $whereClause = 'WHERE ' . implode(' AND ', $where);
 
-    // Get events with participant count
+    // Get events with participant count and venue info
     $sql = "SELECT
                 e.id,
                 e.name,
                 e.event_date,
                 e.location,
+                e.venue_id,
+                v.name as venue_name,
+                v.city as venue_city,
                 e.event_type,
                 e.status,
                 e.distance,
                 COUNT(DISTINCT r.id) as participant_count
             FROM events e
             LEFT JOIN results r ON e.id = r.event_id
+            LEFT JOIN venues v ON e.venue_id = v.id
             $whereClause
             GROUP BY e.id
             ORDER BY e.event_date DESC";
@@ -122,7 +128,6 @@ $editEvent = null;
 
     // Get available years
     $years = $db->getAll("SELECT DISTINCT YEAR(event_date) as year FROM events ORDER BY year DESC");
-}
 
 $pageTitle = 'Tävlingar';
 $pageType = 'admin';
@@ -141,7 +146,6 @@ include __DIR__ . '/../includes/layout-header.php';
                         <i data-lucide="plus"></i>
                         Ny Tävling
                     </button>
-                <?php endif; ?>
             </div>
 
             <!-- Messages -->
@@ -212,7 +216,7 @@ include __DIR__ . '/../includes/layout-header.php';
             </div>
 
             <!-- Event Modal -->
-                <div id="eventModal" class="gs-modal" style="display: none;">
+            <div id="eventModal" class="gs-modal" style="display: none;">
                     <div class="gs-modal-overlay" onclick="closeEventModal()"></div>
                     <div class="gs-modal-content" style="max-width: 700px;">
                         <div class="gs-modal-header">
@@ -266,15 +270,39 @@ include __DIR__ . '/../includes/layout-header.php';
                                     <div>
                                         <label for="location" class="gs-label">
                                             <i data-lucide="map-pin"></i>
-                                            Plats
+                                            Plats (fritext)
                                         </label>
                                         <input
                                             type="text"
                                             id="location"
                                             name="location"
                                             class="gs-input"
-                                            placeholder="T.ex. Järvsö"
+                                            placeholder="T.ex. Järvsö, Dalarna"
                                         >
+                                        <small class="gs-text-secondary">Används om ingen specifik bana väljs nedan</small>
+                                    </div>
+
+                                    <!-- Venue (Bike Park/Facility) -->
+                                    <div>
+                                        <label for="venue_id" class="gs-label">
+                                            <i data-lucide="mountain"></i>
+                                            Bana/Anläggning
+                                        </label>
+                                        <select id="venue_id" name="venue_id" class="gs-input">
+                                            <option value="">Ingen specifik bana</option>
+                                            <?php foreach ($venues as $venue): ?>
+                                                <option value="<?= $venue['id'] ?>">
+                                                    <?= h($venue['name']) ?>
+                                                    <?php if ($venue['city']): ?>
+                                                        (<?= h($venue['city']) ?>)
+                                                    <?php endif; ?>
+                                                </option>
+                                            <?php endforeach; ?>
+                                        </select>
+                                        <small class="gs-text-secondary">
+                                            Välj bana/bike park om tillämpligt.
+                                            <a href="/admin/venues.php" target="_blank">Hantera banor</a>
+                                        </small>
                                     </div>
 
                                     <!-- Event Type -->
@@ -442,7 +470,6 @@ include __DIR__ . '/../includes/layout-header.php';
                         </form>
                     </div>
                 </div>
-            <?php endif; ?>
 
             <!-- Stats -->
             <div class="gs-grid gs-grid-cols-1 gs-md-grid-cols-4 gs-gap-lg gs-mb-lg">
@@ -524,7 +551,18 @@ include __DIR__ . '/../includes/layout-header.php';
                                                 <?= formatDate($event['event_date'], 'd M Y') ?>
                                             </span>
                                         </td>
-                                        <td><?= h($event['location']) ?></td>
+                                        <td>
+                                            <?php if ($event['venue_name']): ?>
+                                                <strong><?= h($event['venue_name']) ?></strong>
+                                                <?php if ($event['venue_city']): ?>
+                                                    <br><span class="gs-text-xs gs-text-secondary"><?= h($event['venue_city']) ?></span>
+                                                <?php endif; ?>
+                                            <?php elseif ($event['location']): ?>
+                                                <?= h($event['location']) ?>
+                                            <?php else: ?>
+                                                <span class="gs-text-secondary">-</span>
+                                            <?php endif; ?>
+                                        </td>
                                         <td>
                                             <span class="gs-badge gs-badge-primary">
                                                 <i data-lucide="flag"></i>
@@ -550,9 +588,6 @@ include __DIR__ . '/../includes/layout-header.php';
                                             <strong class="gs-text-primary"><?= $event['participant_count'] ?></strong>
                                         </td>
                                         <td style="text-align: right;">
-                                            
-                                                <span class="gs-badge gs-badge-secondary">Demo</span>
-                                            <?php else: ?>
                                                 <div class="gs-flex gs-gap-sm gs-justify-end">
                                                     <button
                                                         type="button"
@@ -571,7 +606,6 @@ include __DIR__ . '/../includes/layout-header.php';
                                                         <i data-lucide="trash-2"></i>
                                                     </button>
                                                 </div>
-                                            <?php endif; ?>
                                         </td>
                                     </tr>
                                 <?php endforeach; ?>
@@ -645,6 +679,7 @@ include __DIR__ . '/../includes/layout-header.php';
                     document.getElementById('name').value = '<?= addslashes($editEvent['name']) ?>';
                     document.getElementById('event_date').value = '<?= $editEvent['event_date'] ?>';
                     document.getElementById('location').value = '<?= addslashes($editEvent['location'] ?? '') ?>';
+                    document.getElementById('venue_id').value = '<?= $editEvent['venue_id'] ?? '' ?>';
                     document.getElementById('event_type').value = '<?= $editEvent['event_type'] ?? 'road_race' ?>';
                     document.getElementById('status').value = '<?= $editEvent['status'] ?? 'upcoming' ?>';
                     document.getElementById('series_id').value = '<?= $editEvent['series_id'] ?? '' ?>';
@@ -677,6 +712,5 @@ include __DIR__ . '/../includes/layout-header.php';
                 }
             });
         </script>
-        <?php endif; ?>
 
 <?php include __DIR__ . '/../includes/layout-footer.php'; ?>

@@ -29,6 +29,7 @@ $message = '';
 $messageType = 'info';
 $stats = null;
 $errors = [];
+$skippedRows = [];
 
 // Handle CSV/Excel upload
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['import_file'])) {
@@ -70,9 +71,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['import_file'])) {
 
                     $stats = $result['stats'];
                     $errors = $result['errors'];
+                    $skippedRows = $result['skipped_rows'] ?? [];
 
-                    if ($stats['success'] > 0) {
-                        $message = "Import klar! {$stats['success']} av {$stats['total']} cyklister importerade.";
+                    if ($stats['success'] > 0 || $stats['updated'] > 0) {
+                        $message = "Import klar! {$stats['success']} nya, {$stats['updated']} uppdaterade.";
+                        if ($stats['duplicates'] > 0) {
+                            $message .= " {$stats['duplicates']} dubletter borttagna.";
+                        }
                         $messageType = 'success';
                     } else {
                         $message = "Ingen data importerades. Kontrollera filformatet.";
@@ -104,16 +109,24 @@ function importRidersFromCSV($filepath, $db) {
         'success' => 0,
         'updated' => 0,
         'skipped' => 0,
-        'failed' => 0
+        'failed' => 0,
+        'duplicates' => 0
     ];
     $errors = [];
+    $skippedRows = []; // Detailed list of skipped rows
+    $seenInThisImport = []; // Track riders in this import to detect duplicates
 
     if (($handle = fopen($filepath, 'r')) === false) {
         throw new Exception('Kunde inte öppna filen');
     }
 
-    // Read header row
-    $header = fgetcsv($handle, 1000, ',');
+    // Auto-detect delimiter (comma or semicolon)
+    $firstLine = fgets($handle);
+    rewind($handle);
+    $delimiter = (substr_count($firstLine, ';') > substr_count($firstLine, ',')) ? ';' : ',';
+
+    // Read header row with detected delimiter
+    $header = fgetcsv($handle, 1000, $delimiter);
 
     if (!$header) {
         fclose($handle);
@@ -123,14 +136,113 @@ function importRidersFromCSV($filepath, $db) {
     // Expected columns: firstname, lastname, birth_year, gender, club, license_number, email, phone, city
     $expectedColumns = ['firstname', 'lastname', 'birth_year', 'gender', 'club'];
 
-    // Normalize header (lowercase, trim, handle both underscore and non-underscore versions)
+    // Normalize header - accept multiple variants of column names
     $header = array_map(function($col) {
         $col = strtolower(trim($col));
-        // Normalize column names: convert first_name to firstname, last_name to lastname, etc
-        $col = str_replace(['first_name', 'last_name', 'club_name', 'e-mail', 'uci_id'],
-                          ['firstname', 'lastname', 'club', 'email', 'license_number'],
-                          $col);
-        return $col;
+        $col = str_replace([' ', '-', '_'], '', $col); // Remove spaces, hyphens, underscores
+
+        // Map various column name variants to standard names
+        $mappings = [
+            // Name fields
+            'förnamn' => 'firstname',
+            'fornamn' => 'firstname',
+            'firstname' => 'firstname',
+            'fname' => 'firstname',
+            'givenname' => 'firstname',
+            'name' => 'firstname',
+
+            'efternamn' => 'lastname',
+            'lastname' => 'lastname',
+            'surname' => 'lastname',
+            'familyname' => 'lastname',
+            'lname' => 'lastname',
+
+            // Birth year / age
+            'födelseår' => 'birthyear',
+            'fodelsear' => 'birthyear',
+            'birthyear' => 'birthyear',
+            'född' => 'birthyear',
+            'fodd' => 'birthyear',
+            'year' => 'birthyear',
+            'ålder' => 'birthyear',
+            'alder' => 'birthyear',
+            'age' => 'birthyear',
+            'personnummer' => 'personnummer',
+            'pnr' => 'personnummer',
+            'ssn' => 'personnummer',
+
+            // Gender
+            'kön' => 'gender',
+            'kon' => 'gender',
+            'gender' => 'gender',
+            'sex' => 'gender',
+
+            // Club
+            'klubb' => 'club',
+            'club' => 'club',
+            'klubbnamn' => 'club',
+            'clubname' => 'club',
+            'team' => 'club',
+            'lag' => 'club',
+
+            // License
+            'licensnummer' => 'licensenumber',
+            'licensnr' => 'licensenumber',
+            'licensenumber' => 'licensenumber',
+            'licencenumber' => 'licensenumber',
+            'uciid' => 'licensenumber',
+            'uci' => 'licensenumber',
+            'sweid' => 'licensenumber',
+            'licens' => 'licensenumber',
+            'license' => 'licensenumber',
+
+            'licenstyp' => 'licensetype',
+            'licensetype' => 'licensetype',
+            'licensetyp' => 'licensetype',
+            'type' => 'licensetype',
+
+            'licenskategori' => 'licensecategory',
+            'licensecategory' => 'licensecategory',
+            'kategori' => 'licensecategory',
+            'category' => 'licensecategory',
+
+            'licensgiltigtill' => 'licensevaliduntil',
+            'licensevaliduntil' => 'licensevaliduntil',
+            'giltigtill' => 'licensevaliduntil',
+            'validuntil' => 'licensevaliduntil',
+            'expiry' => 'licensevaliduntil',
+
+            // Discipline
+            'gren' => 'discipline',
+            'discipline' => 'discipline',
+            'sport' => 'discipline',
+
+            // Contact info
+            'epost' => 'email',
+            'email' => 'email',
+            'mail' => 'email',
+            'epostadress' => 'email',
+            'emailaddress' => 'email',
+
+            'telefon' => 'phone',
+            'phone' => 'phone',
+            'tel' => 'phone',
+            'mobil' => 'phone',
+            'mobile' => 'phone',
+
+            'stad' => 'city',
+            'city' => 'city',
+            'ort' => 'city',
+            'location' => 'city',
+
+            // Notes
+            'anteckningar' => 'notes',
+            'notes' => 'notes',
+            'kommentar' => 'notes',
+            'comment' => 'notes',
+        ];
+
+        return $mappings[$col] ?? $col;
     }, $header);
 
     // Cache for club lookups
@@ -138,7 +250,7 @@ function importRidersFromCSV($filepath, $db) {
 
     $lineNumber = 1;
 
-    while (($row = fgetcsv($handle, 1000, ',')) !== false) {
+    while (($row = fgetcsv($handle, 1000, $delimiter)) !== false) {
         $lineNumber++;
         $stats['total']++;
 
@@ -149,6 +261,12 @@ function importRidersFromCSV($filepath, $db) {
         if (empty($data['firstname']) || empty($data['lastname'])) {
             $stats['skipped']++;
             $errors[] = "Rad {$lineNumber}: Saknar förnamn eller efternamn";
+            $skippedRows[] = [
+                'row' => $lineNumber,
+                'name' => trim(($data['firstname'] ?? '') . ' ' . ($data['lastname'] ?? '')),
+                'reason' => 'Saknar förnamn eller efternamn',
+                'type' => 'missing_fields'
+            ];
             continue;
         }
 
@@ -158,20 +276,28 @@ function importRidersFromCSV($filepath, $db) {
             if (!empty($data['personnummer'])) {
                 $birthYear = parsePersonnummer($data['personnummer']);
             }
-            // Fall back to birth_year column if no personnummer or parsing failed
-            if (!$birthYear && !empty($data['birth_year'])) {
-                $birthYear = (int)$data['birth_year'];
+            // Fall back to birthyear column if no personnummer or parsing failed
+            if (!$birthYear && !empty($data['birthyear'])) {
+                $birthYear = (int)$data['birthyear'];
             }
 
             // Prepare rider data
-            $gender = strtoupper(substr(trim($data['gender'] ?? 'M'), 0, 1));
+            // Normalize gender: Woman/Female/Kvinna → F, Man/Male/Herr → M
+            $genderRaw = strtolower(trim($data['gender'] ?? 'M'));
+            if (in_array($genderRaw, ['woman', 'female', 'kvinna', 'dam', 'f'])) {
+                $gender = 'F';
+            } elseif (in_array($genderRaw, ['man', 'male', 'herr', 'm'])) {
+                $gender = 'M';
+            } else {
+                $gender = strtoupper(substr($genderRaw, 0, 1)); // Fallback: first letter
+            }
 
             $riderData = [
                 'firstname' => trim($data['firstname']),
                 'lastname' => trim($data['lastname']),
                 'birth_year' => $birthYear,
                 'gender' => $gender,
-                'license_number' => !empty($data['license_number']) ? trim($data['license_number']) : null,
+                'license_number' => !empty($data['licensenumber']) ? trim($data['licensenumber']) : null,
                 'email' => !empty($data['email']) ? trim($data['email']) : null,
                 'phone' => !empty($data['phone']) ? trim($data['phone']) : null,
                 'city' => !empty($data['city']) ? trim($data['city']) : null,
@@ -179,13 +305,13 @@ function importRidersFromCSV($filepath, $db) {
             ];
 
             // Add new license fields
-            $riderData['license_type'] = !empty($data['license_type']) ? trim($data['license_type']) : null;
+            $riderData['license_type'] = !empty($data['licensetype']) ? trim($data['licensetype']) : null;
             $riderData['discipline'] = !empty($data['discipline']) ? trim($data['discipline']) : null;
-            $riderData['license_valid_until'] = !empty($data['license_valid_until']) ? trim($data['license_valid_until']) : null;
+            $riderData['license_valid_until'] = !empty($data['licensevaliduntil']) ? trim($data['licensevaliduntil']) : null;
 
             // License category - use provided or auto-suggest
-            if (!empty($data['license_category'])) {
-                $riderData['license_category'] = trim($data['license_category']);
+            if (!empty($data['licensecategory'])) {
+                $riderData['license_category'] = trim($data['licensecategory']);
             } elseif ($birthYear && $gender) {
                 // Auto-suggest license category based on age and gender
                 $riderData['license_category'] = suggestLicenseCategory($birthYear, $gender);
@@ -194,8 +320,8 @@ function importRidersFromCSV($filepath, $db) {
             }
 
             // Generate SWE-ID if no license number provided
-            if (empty($riderData['license_number']) && !empty($data['swe_id'])) {
-                $riderData['license_number'] = trim($data['swe_id']);
+            if (empty($riderData['license_number']) && !empty($data['licensenumber'])) {
+                $riderData['license_number'] = trim($data['licensenumber']);
             }
             if (empty($riderData['license_number'])) {
                 $riderData['license_number'] = generateSweId($db);
@@ -240,6 +366,35 @@ function importRidersFromCSV($filepath, $db) {
                 $riderData['club_id'] = null;
             }
 
+            // Check for duplicates within this import
+            // Create unique key: firstname_lastname_birthyear OR licensenumber
+            $uniqueKey = '';
+            if ($riderData['license_number']) {
+                $uniqueKey = 'lic_' . strtolower(trim($riderData['license_number']));
+            } else {
+                $uniqueKey = 'name_' . strtolower(trim($riderData['firstname'])) . '_' .
+                             strtolower(trim($riderData['lastname'])) . '_' .
+                             ($riderData['birth_year'] ?? '0');
+            }
+
+            if (isset($seenInThisImport[$uniqueKey])) {
+                // This is a duplicate within the same import - skip it
+                $stats['duplicates']++;
+                $stats['skipped']++;
+                $skippedRows[] = [
+                    'row' => $lineNumber,
+                    'name' => $riderData['firstname'] . ' ' . $riderData['lastname'],
+                    'license' => $riderData['license_number'] ?? '-',
+                    'reason' => 'Dublett (redan i denna import)',
+                    'type' => 'duplicate'
+                ];
+                error_log("Import: Skipped duplicate - {$riderData['firstname']} {$riderData['lastname']} (already in this import)");
+                continue;
+            }
+
+            // Mark as seen in this import
+            $seenInThisImport[$uniqueKey] = true;
+
             // Check if rider already exists (by license or name+birth_year)
             $existing = null;
 
@@ -272,6 +427,13 @@ function importRidersFromCSV($filepath, $db) {
         } catch (Exception $e) {
             $stats['failed']++;
             $errors[] = "Rad {$lineNumber}: " . $e->getMessage();
+            $skippedRows[] = [
+                'row' => $lineNumber,
+                'name' => trim(($data['firstname'] ?? '') . ' ' . ($data['lastname'] ?? '')),
+                'license' => $data['licensenumber'] ?? '-',
+                'reason' => 'Fel: ' . $e->getMessage(),
+                'type' => 'error'
+            ];
         }
     }
 
@@ -287,7 +449,8 @@ function importRidersFromCSV($filepath, $db) {
 
     return [
         'stats' => $stats,
-        'errors' => $errors
+        'errors' => $errors,
+        'skipped_rows' => $skippedRows
     ];
 }
 
@@ -386,6 +549,53 @@ include __DIR__ . '/../includes/layout-header.php';
                                         <i data-lucide="search"></i>
                                         Debug databas
                                     </a>
+                                </div>
+                            </div>
+                        <?php endif; ?>
+
+                        <!-- Skipped Rows Details -->
+                        <?php if (!empty($skippedRows)): ?>
+                            <div class="gs-mt-lg" style="padding-top: var(--gs-space-lg); border-top: 1px solid var(--gs-border);">
+                                <h3 class="gs-h5 gs-text-warning gs-mb-md">
+                                    <i data-lucide="alert-circle"></i>
+                                    Överhoppade rader (<?= count($skippedRows) ?>)
+                                </h3>
+                                <div style="max-height: 400px; overflow-y: auto; background: var(--gs-background-secondary); padding: var(--gs-space-md); border-radius: var(--gs-border-radius);">
+                                    <table class="gs-table gs-table-sm">
+                                        <thead>
+                                            <tr>
+                                                <th>Rad</th>
+                                                <th>Namn</th>
+                                                <th>Licens</th>
+                                                <th>Anledning</th>
+                                                <th>Typ</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <?php foreach ($skippedRows as $skip): ?>
+                                                <tr>
+                                                    <td><code><?= $skip['row'] ?></code></td>
+                                                    <td><?= h($skip['name']) ?></td>
+                                                    <td><?= h($skip['license'] ?? '-') ?></td>
+                                                    <td><?= h($skip['reason']) ?></td>
+                                                    <td>
+                                                        <?php if ($skip['type'] === 'duplicate'): ?>
+                                                            <span class="gs-badge gs-badge-warning gs-text-xs">Dublett</span>
+                                                        <?php elseif ($skip['type'] === 'missing_fields'): ?>
+                                                            <span class="gs-badge gs-badge-secondary gs-text-xs">Saknar fält</span>
+                                                        <?php elseif ($skip['type'] === 'error'): ?>
+                                                            <span class="gs-badge gs-badge-danger gs-text-xs">Fel</span>
+                                                        <?php endif; ?>
+                                                    </td>
+                                                </tr>
+                                            <?php endforeach; ?>
+                                        </tbody>
+                                    </table>
+                                    <?php if (count($skippedRows) > 100): ?>
+                                        <div class="gs-text-sm gs-text-secondary gs-mt-sm" style="font-style: italic;">
+                                            Visar första 100 av <?= count($skippedRows) ?> överhoppade rader
+                                        </div>
+                                    <?php endif; ?>
                                 </div>
                             </div>
                         <?php endif; ?>
