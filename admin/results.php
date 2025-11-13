@@ -79,76 +79,71 @@ $event_id = $_GET['event_id'] ?? '';
 $category_id = $_GET['category_id'] ?? '';
 $search = $_GET['search'] ?? '';
 
-// Fetch dropdown data and check for edit mode (if not in demo mode)
-$all_events = [];
-$all_riders = [];
-$all_categories = [];
+// Fetch dropdown data and check for edit mode
+$all_events = $db->getAll("SELECT id, name, date as event_date FROM events ORDER BY date DESC LIMIT 100");
+$all_riders = $db->getAll("SELECT id, CONCAT(firstname, ' ', lastname) as name, license_number FROM riders ORDER BY lastname, firstname LIMIT 500");
+$all_categories = $db->getAll("SELECT id, name FROM categories ORDER BY name");
+
+// Check if editing a result
 $editResult = null;
-    $all_events = $db->getAll("SELECT id, name, event_date FROM events ORDER BY event_date DESC LIMIT 100");
-    $all_riders = $db->getAll("SELECT id, CONCAT(firstname, ' ', lastname) as name, license_number FROM riders ORDER BY lastname, firstname LIMIT 500");
-    $all_categories = $db->getAll("SELECT id, name FROM categories ORDER BY name");
-
-    // Check if editing a result
-    if (isset($_GET['edit']) && is_numeric($_GET['edit'])) {
-        $editResult = $db->getOne("SELECT * FROM results WHERE id = ?", [intval($_GET['edit'])]);
-    }
+if (isset($_GET['edit']) && is_numeric($_GET['edit'])) {
+    $editResult = $db->getRow("SELECT * FROM results WHERE id = ?", [intval($_GET['edit'])]);
 }
 
-    $where = [];
-    $params = [];
+$where = [];
+$params = [];
 
-    if ($event_id) {
-        $where[] = "r.event_id = ?";
-        $params[] = $event_id;
-    }
-
-    if ($category_id) {
-        $where[] = "r.category_id = ?";
-        $params[] = $category_id;
-    }
-
-    if ($search) {
-        $where[] = "(CONCAT(c.firstname, ' ', c.lastname) LIKE ? OR c.license_number LIKE ?)";
-        $params[] = "%$search%";
-        $params[] = "%$search%";
-    }
-
-    $whereClause = $where ? 'WHERE ' . implode(' AND ', $where) : '';
-
-    // Get results with all related data
-    $sql = "SELECT
-                r.id,
-                r.position,
-                r.bib_number,
-                r.finish_time,
-                r.status,
-                r.points,
-                e.name as event_name,
-                e.event_date,
-                e.id as event_id,
-                CONCAT(c.firstname, ' ', c.lastname) as rider_name,
-                c.id as rider_id,
-                c.birth_year,
-                cl.name as club_name,
-                cat.name as category_name,
-                cat.id as category_id
-            FROM results r
-            JOIN events e ON r.event_id = e.id
-            JOIN riders c ON r.cyclist_id = c.id
-            LEFT JOIN clubs cl ON c.club_id = cl.id
-            LEFT JOIN categories cat ON r.category_id = cat.id
-            $whereClause
-            ORDER BY e.event_date DESC, r.position ASC
-            LIMIT 200";
-
-    $results = $db->getAll($sql, $params);
-
-    // Get events for filter
-    $events = $db->getAll("SELECT id, name, event_date FROM events ORDER BY event_date DESC LIMIT 50");
-
-    // Get categories for filter
-    $categories = $db->getAll("SELECT id, name FROM categories ORDER BY name");
+if ($event_id) {
+    $where[] = "r.event_id = ?";
+    $params[] = $event_id;
 }
+
+if ($category_id) {
+    $where[] = "r.category_id = ?";
+    $params[] = $category_id;
+}
+
+if ($search) {
+    $where[] = "(CONCAT(c.firstname, ' ', c.lastname) LIKE ? OR c.license_number LIKE ?)";
+    $params[] = "%$search%";
+    $params[] = "%$search%";
+}
+
+$whereClause = $where ? 'WHERE ' . implode(' AND ', $where) : '';
+
+// Get results with all related data
+$sql = "SELECT
+            r.id,
+            r.position,
+            r.bib_number,
+            r.finish_time,
+            r.status,
+            r.points,
+            e.name as event_name,
+            e.date as event_date,
+            e.id as event_id,
+            CONCAT(c.firstname, ' ', c.lastname) as rider_name,
+            c.id as rider_id,
+            c.birth_year,
+            cl.name as club_name,
+            cat.name as category_name,
+            cat.id as category_id
+        FROM results r
+        JOIN events e ON r.event_id = e.id
+        JOIN riders c ON r.cyclist_id = c.id
+        LEFT JOIN clubs cl ON c.club_id = cl.id
+        LEFT JOIN categories cat ON r.category_id = cat.id
+        $whereClause
+        ORDER BY e.date DESC, r.position ASC
+        LIMIT 200";
+
+$results = $db->getAll($sql, $params);
+
+// Get events for filter
+$events = $db->getAll("SELECT id, name, date as event_date FROM events ORDER BY date DESC LIMIT 50");
+
+// Get categories for filter
+$categories = $db->getAll("SELECT id, name FROM categories ORDER BY name");
 
 $pageTitle = 'Resultat';
 $pageType = 'admin';

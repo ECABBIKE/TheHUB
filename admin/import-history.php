@@ -31,9 +31,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // Handle filters
 $type = $_GET['type'] ?? '';
 
-    // Get real import history
-    $imports = getImportHistory($db, 100, $type ?: null);
-}
+// Get import history
+$imports = getImportHistory($db, 100, $type ?: null);
 
 $pageTitle = 'Import History';
 $pageType = 'admin';

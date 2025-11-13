@@ -11,28 +11,59 @@ require_once __DIR__ . '/config.php';
 
 $db = getDB();
 
-// Get all active cyclists with their statistics
-$cyclists = $db->getAll("
-    SELECT
-        c.id,
-        c.firstname,
-        c.lastname,
-        c.birth_year,
-        c.gender,
-        c.license_number,
-        c.license_type,
-        c.license_valid_until,
-        cl.name as club_name,
-        COUNT(DISTINCT r.id) as total_races,
-        COUNT(CASE WHEN r.position <= 3 THEN 1 END) as podiums,
-        MIN(r.position) as best_position
-    FROM riders c
-    LEFT JOIN clubs cl ON c.club_id = cl.id
-    LEFT JOIN results r ON c.id = r.cyclist_id
-    WHERE c.active = 1
-    GROUP BY c.id
-    ORDER BY c.lastname, c.firstname
-");
+// Load public display settings
+$publicSettings = require __DIR__ . '/config/public_settings.php';
+$displayMode = $publicSettings['public_riders_display'] ?? 'with_results';
+
+// Build query based on settings
+if ($displayMode === 'all') {
+    // Show ALL active riders
+    $cyclists = $db->getAll("
+        SELECT
+            c.id,
+            c.firstname,
+            c.lastname,
+            c.birth_year,
+            c.gender,
+            c.license_number,
+            c.license_type,
+            c.license_valid_until,
+            cl.name as club_name,
+            COUNT(DISTINCT r.id) as total_races,
+            COUNT(CASE WHEN r.position <= 3 THEN 1 END) as podiums,
+            MIN(r.position) as best_position
+        FROM riders c
+        LEFT JOIN clubs cl ON c.club_id = cl.id
+        LEFT JOIN results r ON c.id = r.cyclist_id
+        WHERE c.active = 1
+        GROUP BY c.id
+        ORDER BY c.lastname, c.firstname
+    ");
+} else {
+    // Show ONLY riders with results
+    $cyclists = $db->getAll("
+        SELECT
+            c.id,
+            c.firstname,
+            c.lastname,
+            c.birth_year,
+            c.gender,
+            c.license_number,
+            c.license_type,
+            c.license_valid_until,
+            cl.name as club_name,
+            COUNT(DISTINCT r.id) as total_races,
+            COUNT(CASE WHEN r.position <= 3 THEN 1 END) as podiums,
+            MIN(r.position) as best_position
+        FROM riders c
+        LEFT JOIN clubs cl ON c.club_id = cl.id
+        INNER JOIN results r ON c.id = r.cyclist_id
+        WHERE c.active = 1
+        GROUP BY c.id
+        HAVING total_races > 0
+        ORDER BY c.lastname, c.firstname
+    ");
+}
 
 $total_count = count($cyclists);
 $pageTitle = 'Deltagare';
@@ -82,9 +113,9 @@ include __DIR__ . '/includes/layout-header.php';
             <?php else: ?>
                 <div class="gs-grid gs-grid-cols-1 gs-md-grid-cols-3 gs-lg-grid-cols-4 gs-xl-grid-cols-5 gs-gap-md" id="ridersGrid">
                     <?php foreach ($cyclists as $rider): ?>
-                        <div class="gs-card gs-card-hover rider-card"
-                             data-search="<?= strtolower(h($rider['firstname'] . ' ' . $rider['lastname'] . ' ' . ($rider['club_name'] ?? '') . ' ' . ($rider['license_number'] ?? ''))) ?>"
-                             style="padding: 0.75rem;">
+                        <a href="/rider.php?id=<?= $rider['id'] ?>" class="gs-card gs-card-hover rider-card"
+                           data-search="<?= strtolower(h($rider['firstname'] . ' ' . $rider['lastname'] . ' ' . ($rider['club_name'] ?? '') . ' ' . ($rider['license_number'] ?? ''))) ?>"
+                           style="padding: 0.75rem; text-decoration: none; color: inherit; display: block; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;">
                             <!-- Profile Header -->
                             <div class="gs-flex gs-items-start gs-gap-sm gs-mb-sm">
                                 <div class="gs-avatar gs-avatar-sm gs-bg-primary" style="width: 40px; height: 40px; flex-shrink: 0;">
@@ -138,21 +169,26 @@ include __DIR__ . '/includes/layout-header.php';
                                 <?php endif; ?>
                                 <?php
                                 // Check license status
-                                if (!empty($rider['license_type']) && $rider['license_type'] !== 'None') {
+                                // SWE-ID = No real license (red badge)
+                                if (!empty($rider['license_number']) && strpos($rider['license_number'], 'SWE') === 0): ?>
+                                    <span class="gs-badge gs-badge-danger" style="padding: 0.15rem 0.4rem; font-size: 0.65rem;">
+                                        ✗ Ingen licens
+                                    </span>
+                                <?php elseif (!empty($rider['license_type']) && $rider['license_type'] !== 'None'):
                                     $licenseCheck = checkLicense($rider);
                                     if ($licenseCheck['valid']): ?>
                                         <span class="gs-badge gs-badge-success" style="padding: 0.15rem 0.4rem; font-size: 0.65rem;">
-                                            ✓ Aktiv
+                                            ✓ Aktiv licens
                                         </span>
                                     <?php else: ?>
                                         <span class="gs-badge gs-badge-warning" style="padding: 0.15rem 0.4rem; font-size: 0.65rem;">
                                             ⚠ Utgången
                                         </span>
                                     <?php endif;
-                                }
+                                endif;
                                 ?>
                             </div>
-                        </div>
+                        </a>
                     <?php endforeach; ?>
                 </div>
             <?php endif; ?>
@@ -167,8 +203,18 @@ include __DIR__ . '/includes/layout-header.php';
             </div>
         </div>
 <?php
-// Additional page-specific search functionality
+// Additional page-specific styles and scripts
 $additionalScripts = "
+    <style>
+    .rider-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1) !important;
+    }
+    .rider-card:active {
+        transform: translateY(-2px);
+    }
+    </style>
+
     // Search functionality
     const searchInput = document.getElementById('searchRiders');
     const ridersGrid = document.getElementById('ridersGrid');

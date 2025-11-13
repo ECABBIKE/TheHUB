@@ -638,7 +638,14 @@ function checkLicense($cyclist) {
 
     // Check expiry date
     if (!empty($cyclist['license_valid_until'])) {
-        $expiryDate = strtotime($cyclist['license_valid_until']);
+        $validUntil = trim($cyclist['license_valid_until']);
+
+        // If only year is provided (e.g., "2025"), treat as end of year (Dec 31)
+        if (preg_match('/^\d{4}$/', $validUntil)) {
+            $validUntil = $validUntil . '-12-31';
+        }
+
+        $expiryDate = strtotime($validUntil);
         $today = strtotime('today');
 
         if ($expiryDate < $today) {
@@ -655,16 +662,15 @@ function checkLicense($cyclist) {
             $result['class'] = 'gs-badge-warning';
             return $result;
         }
-    }
 
-    // Check license category
-    if (empty($cyclist['license_category'])) {
-        $result['message'] = 'Kategori saknas';
-        $result['class'] = 'gs-badge-warning';
+        // License is valid with more than 30 days left
+        $result['valid'] = true;
+        $result['message'] = 'Aktiv licens';
+        $result['class'] = 'gs-badge-success';
         return $result;
     }
 
-    // All checks passed
+    // No expiry date but has license type - consider valid
     $result['valid'] = true;
     $result['message'] = 'Aktiv licens';
     $result['class'] = 'gs-badge-success';
