@@ -558,9 +558,10 @@ body {
 }
 
 /* ========================================
-   SIDEBAR NAVIGATION - FIXED FOR MOBILE
+   SIDEBAR NAVIGATION - RESPONSIVE BEHAVIOR
    ======================================== */
 
+/* BASE: Sidebar structure (applies to all screen sizes) */
 .gs-sidebar {
   position: fixed;
   left: 0;
@@ -571,16 +572,69 @@ body {
   border-right: 1px solid var(--gs-border);
   padding: var(--gs-space-xl);
   overflow-y: auto;
-  z-index: 1100;
   box-shadow: 4px 0 20px rgba(0, 0, 0, 0.1);
   display: flex;
   flex-direction: column;
-  transform: translateX(-100%);
-  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.gs-sidebar.open {
-  transform: translateX(0);
+/* MOBILE (<1024px): Sidebar hidden by default, slides in */
+@media (max-width: 1023px) {
+  .gs-sidebar {
+    z-index: 1100;
+    transform: translateX(-100%);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .gs-sidebar.open {
+    transform: translateX(0);
+  }
+
+  /* Show hamburger on mobile */
+  .gs-mobile-menu-toggle {
+    display: flex;
+  }
+
+  /* Show overlay on mobile when menu open */
+  .gs-sidebar-overlay {
+    display: block;
+  }
+
+  /* No content offset on mobile */
+  .gs-main-content {
+    margin-left: 0;
+    width: 100%;
+  }
+}
+
+/* DESKTOP (≥1024px): Sidebar ALWAYS VISIBLE */
+@media (min-width: 1024px) {
+  .gs-sidebar {
+    z-index: 100;
+    transform: translateX(0) !important; /* Force visible */
+    transition: none; /* No animation needed */
+  }
+
+  /* HIDE hamburger on desktop */
+  .gs-mobile-menu-toggle {
+    display: none !important;
+  }
+
+  /* HIDE overlay on desktop */
+  .gs-sidebar-overlay {
+    display: none !important;
+  }
+
+  /* Content offset to make room for sidebar */
+  .gs-main-content {
+    margin-left: 280px;
+    width: calc(100% - 280px);
+    transition: margin-left 0.3s ease;
+  }
+
+  /* Prevent body scroll lock on desktop */
+  body {
+    overflow: auto !important;
+  }
 }
 
 .gs-menu-section {
@@ -675,7 +729,7 @@ body {
   background-color: var(--gs-light);
 }
 
-/* Sidebar Overlay - BELOW sidebar but clickable */
+/* Sidebar Overlay - BELOW sidebar but clickable (Mobile Only) */
 .gs-sidebar-overlay {
   position: fixed;
   top: 0;
@@ -688,6 +742,7 @@ body {
   visibility: hidden;
   transition: opacity 0.3s ease, visibility 0.3s ease;
   pointer-events: none;
+  display: none; /* Hidden by default, shown on mobile via media query */
   cursor: pointer;
 }
 
@@ -697,7 +752,7 @@ body {
   pointer-events: auto;
 }
 
-/* Mobile Menu Toggle - HIGHEST z-index */
+/* Mobile Menu Toggle - HIGHEST z-index (Mobile Only) */
 .gs-mobile-menu-toggle {
   position: fixed;
   top: 1.5rem;
@@ -710,7 +765,7 @@ body {
   background-color: var(--gs-white);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   cursor: pointer;
-  display: flex;
+  display: none; /* Hidden by default, shown on mobile via media query */
   align-items: center;
   justify-content: center;
   transition: all 0.2s ease;
@@ -1192,8 +1247,30 @@ body {
 .gs-podium-3::before { content: '🥉'; margin-right: var(--gs-space-xs); }
 
 /* ========================================
+   MAIN CONTENT RESPONSIVE
+   ======================================== */
+
+.gs-main-content {
+  min-height: 100vh;
+  padding: 2rem;
+  background-color: var(--gs-light);
+}
+
+/* ========================================
    PAGE TYPES
    ======================================== */
+
+/* Landing Page - No sidebar at all */
+.gs-landing-page .gs-sidebar,
+.gs-landing-page .gs-mobile-menu-toggle,
+.gs-landing-page .gs-sidebar-overlay {
+  display: none !important;
+}
+
+.gs-landing-page .gs-main-content {
+  margin-left: 0 !important;
+  width: 100% !important;
+}
 
 /* Pure Landing Page - No navigation */
 body.gs-landing-pure .gs-mobile-menu-toggle {
@@ -1206,26 +1283,6 @@ body.gs-landing-pure .gs-sidebar {
 
 body.gs-landing-pure .gs-sidebar-overlay {
   display: none !important;
-}
-
-/* Admin Pages - Sidebar always visible on desktop */
-body.gs-admin-page .gs-sidebar {
-  transform: translateX(0);
-  padding-top: var(--gs-space-xl);
-}
-
-body.gs-admin-page .gs-content-with-sidebar {
-  margin-left: 280px;
-  padding: var(--gs-space-xl);
-  min-height: 100vh;
-}
-
-body.gs-admin-page .gs-mobile-menu-toggle {
-  display: none;
-}
-
-body.gs-admin-page .gs-sidebar-overlay {
-  display: none;
 }
 
 /* ========================================
@@ -1243,8 +1300,9 @@ body.gs-admin-page .gs-sidebar-overlay {
 @media (min-width: 1024px) {
   .gs-lg-grid-cols-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 
-  .gs-content-with-sidebar {
-    margin-left: 280px;
+  /* Admin pages with permanent sidebar on desktop */
+  .gs-admin-page .gs-content-with-sidebar {
+    padding: 2rem;
   }
 }
 
@@ -1311,30 +1369,10 @@ body.gs-admin-page .gs-sidebar-overlay {
     width: 32px;
     height: 32px;
   }
-}
 
-/* Admin responsive - mobile behavior */
-@media (max-width: 1023px) {
-  /* Ensure sidebar can slide on mobile for admin pages */
-  body.gs-admin-page .gs-content-with-sidebar {
-    margin-left: 0;
-    padding-top: 80px;
-  }
-
-  body.gs-admin-page .gs-sidebar {
-    transform: translateX(-100%);
-    padding-top: 5rem;
-  }
-
-  body.gs-admin-page .gs-sidebar.open {
-    transform: translateX(0);
-  }
-
-  body.gs-admin-page .gs-mobile-menu-toggle {
-    display: flex;
-  }
-
-  body.gs-admin-page .gs-sidebar-overlay {
-    display: block;
+  /* Ensure proper spacing on mobile */
+  .gs-main-content {
+    padding: 1rem;
+    padding-top: 5rem; /* Space for hamburger button */
   }
 }
