@@ -15,7 +15,7 @@ $db = getDB();
 $year = isset($_GET['year']) ? (int)$_GET['year'] : date('Y');
 
 // Get all available years
-$years = $db->getAll("SELECT DISTINCT YEAR(event_date) as year FROM events ORDER BY year DESC");
+$years = $db->getAll("SELECT DISTINCT YEAR(date) as year FROM events ORDER BY year DESC");
 
 // Pagination
 $page = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1;
@@ -24,7 +24,7 @@ $offset = ($page - 1) * $perPage;
 
 // Get total count
 $totalCount = $db->getRow(
-    "SELECT COUNT(*) as count FROM events WHERE YEAR(event_date) = ?",
+    "SELECT COUNT(*) as count FROM events WHERE YEAR(date) = ?",
     [$year]
 )['count'] ?? 0;
 
@@ -32,13 +32,13 @@ $pagination = paginate($totalCount, $perPage, $page);
 
 // Get events
 $events = $db->getAll(
-    "SELECT e.id, e.name, e.event_date, e.location, e.event_type, e.status,
+    "SELECT e.id, e.name, e.date as event_date, e.location, e.type as event_type, e.status,
             COUNT(r.id) as participant_count
      FROM events e
      LEFT JOIN results r ON e.id = r.event_id
-     WHERE YEAR(e.event_date) = ?
+     WHERE YEAR(e.date) = ?
      GROUP BY e.id
-     ORDER BY e.event_date DESC
+     ORDER BY e.date DESC
      LIMIT ? OFFSET ?",
     [$year, $perPage, $offset]
 );
@@ -134,7 +134,7 @@ include __DIR__ . '/includes/layout-header.php';
                                         <?= $event['participant_count'] ?> deltagare
                                     </p>
 
-                                    <a href="/results.php?event_id=<?= $event['id'] ?>"
+                                    <a href="/event.php?id=<?= $event['id'] ?>"
                                        class="gs-btn gs-btn-primary gs-btn-sm gs-w-full">
                                         <i data-lucide="trophy"></i>
                                         Visa resultat
