@@ -123,9 +123,14 @@ function importRidersFromCSV($filepath, $db) {
     // Expected columns: firstname, lastname, birth_year, gender, club, license_number, email, phone, city
     $expectedColumns = ['firstname', 'lastname', 'birth_year', 'gender', 'club'];
 
-    // Normalize header (lowercase, trim)
+    // Normalize header (lowercase, trim, handle both underscore and non-underscore versions)
     $header = array_map(function($col) {
-        return strtolower(trim($col));
+        $col = strtolower(trim($col));
+        // Normalize column names: convert first_name to firstname, last_name to lastname, etc
+        $col = str_replace(['first_name', 'last_name', 'club_name', 'e-mail', 'uci_id'],
+                          ['firstname', 'lastname', 'club', 'email', 'license_number'],
+                          $col);
+        return $col;
     }, $header);
 
     // Cache for club lookups
@@ -444,13 +449,13 @@ include __DIR__ . '/../includes/layout-header.php';
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>firstname</code></td>
+                                    <td><code>firstname</code> eller <code>first_name</code></td>
                                     <td><span class="gs-badge gs-badge-danger">Ja</span></td>
                                     <td>Förnamn</td>
                                     <td>Erik</td>
                                 </tr>
                                 <tr>
-                                    <td><code>lastname</code></td>
+                                    <td><code>lastname</code> eller <code>last_name</code></td>
                                     <td><span class="gs-badge gs-badge-danger">Ja</span></td>
                                     <td>Efternamn</td>
                                     <td>Andersson</td>
@@ -468,19 +473,19 @@ include __DIR__ . '/../includes/layout-header.php';
                                     <td>M</td>
                                 </tr>
                                 <tr>
-                                    <td><code>club</code></td>
+                                    <td><code>club</code> eller <code>club_name</code></td>
                                     <td><span class="gs-badge gs-badge-secondary">Nej</span></td>
                                     <td>Klubbnamn (skapas om den inte finns)</td>
                                     <td>Team GravitySeries</td>
                                 </tr>
                                 <tr>
-                                    <td><code>license_number</code></td>
+                                    <td><code>license_number</code> eller <code>uci_id</code></td>
                                     <td><span class="gs-badge gs-badge-secondary">Nej</span></td>
                                     <td>UCI/SCF licensnummer (används för dubbletthantering)</td>
                                     <td>SWE-2025-1234</td>
                                 </tr>
                                 <tr>
-                                    <td><code>email</code></td>
+                                    <td><code>email</code> eller <code>e-mail</code></td>
                                     <td><span class="gs-badge gs-badge-secondary">Nej</span></td>
                                     <td>E-postadress</td>
                                     <td>erik@example.com</td>
@@ -509,6 +514,7 @@ include __DIR__ . '/../includes/layout-header.php';
                         <ul class="gs-text-secondary gs-text-sm" style="margin-left: var(--gs-space-lg); line-height: 1.8;">
                             <li>Använd komma (,) som separator</li>
                             <li>UTF-8 encoding för svenska tecken</li>
+                            <li>Stöder både <code>first_name</code> och <code>firstname</code> format</li>
                             <li>Dubbletter upptäcks via licensnummer eller namn+födelseår</li>
                             <li>Befintliga cyklister uppdateras automatiskt</li>
                             <li>Klubbar som inte finns skapas automatiskt</li>
