@@ -5,6 +5,9 @@ require_admin();
 $db = getDB();
 $current_admin = get_current_admin();
 
+// Load import history helper functions
+require_once __DIR__ . '/../includes/import-history.php';
+
 $message = '';
 $messageType = 'info';
 $stats = null;
@@ -37,14 +40,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['uci_file'])) {
 
             if (move_uploaded_file($file['tmp_name'], $uploaded)) {
                 try {
-                    $result = importUCIRiders($uploaded, $db);
+                    // Start import history tracking
+                    $importId = startImportHistory(
+                        $db,
+                        'uci',
+                        $file['name'],
+                        $file['size'],
+                        $current_admin['username'] ?? 'admin'
+                    );
+
+                    // Perform import
+                    $result = importUCIRiders($uploaded, $db, $importId);
 
                     $stats = $result['stats'];
                     $errors = $result['errors'];
                     $updated_riders = $result['updated'];
 
+                    // Update import history with final statistics
+                    $importStatus = ($stats['success'] > 0 || $stats['updated'] > 0) ? 'completed' : 'failed';
+                    updateImportHistory($db, $importId, $stats, $errors, $importStatus);
+
                     if ($stats['success'] > 0 || $stats['updated'] > 0) {
-                        $message = "Import klar! {$stats['success']} nya riders, {$stats['updated']} uppdaterade.";
+                        $message = "Import klar! {$stats['success']} nya riders, {$stats['updated']} uppdaterade. <a href='/admin/import-history.php' style='text-decoration:underline'>Visa historik</a>";
                         $messageType = 'success';
                     } else {
                         $message = "Ingen data importerades. Kontrollera filformatet.";
@@ -54,6 +71,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['uci_file'])) {
                 } catch (Exception $e) {
                     $message = 'Import misslyckades: ' . $e->getMessage();
                     $messageType = 'error';
+
+                    // Mark import as failed if importId was created
+                    if (isset($importId)) {
+                        updateImportHistory($db, $importId, ['total' => 0], [$e->getMessage()], 'failed');
+                    }
                 }
 
                 @unlink($uploaded);
@@ -115,8 +137,12 @@ function ensureUTF8($filepath) {
 
 /**
  * Import riders from UCI CSV file
+ *
+ * @param string $filepath Path to CSV file
+ * @param object $db Database connection
+ * @param int $importId Import history ID for tracking
  */
-function importUCIRiders($filepath, $db) {
+function importUCIRiders($filepath, $db, $importId = null) {
     $stats = [
         'total' => 0,
         'success' => 0,
@@ -321,14 +347,30 @@ function importUCIRiders($filepath, $db) {
             ];
 
             if ($existing) {
+                // Get old data before updating (for rollback)
+                $oldData = null;
+                if ($importId) {
+                    $oldData = $db->getRow("SELECT * FROM riders WHERE id = ?", [$existing['id']]);
+                }
+
                 // Update existing rider
                 $db->update('riders', $riderData, 'id = ?', [$existing['id']]);
                 $stats['updated']++;
                 $updated_riders[] = "{$firstname} {$lastname}";
+
+                // Track updated record
+                if ($importId) {
+                    trackImportRecord($db, $importId, 'rider', $existing['id'], 'updated', $oldData);
+                }
             } else {
                 // Insert new rider
-                $db->insert('riders', $riderData);
+                $riderId = $db->insert('riders', $riderData);
                 $stats['success']++;
+
+                // Track created record
+                if ($importId && $riderId) {
+                    trackImportRecord($db, $importId, 'rider', $riderId, 'created');
+                }
             }
 
         } catch (Exception $e) {

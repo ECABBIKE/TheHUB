@@ -54,6 +54,9 @@ $is_admin = isLoggedIn();
             <li><a href="/admin/import.php" class="<?= $current_page == 'import.php' ? 'active' : '' ?>">
                 <i data-lucide="upload"></i> Import
             </a></li>
+            <li><a href="/admin/import-history.php" class="<?= $current_page == 'import-history.php' ? 'active' : '' ?>">
+                <i data-lucide="history"></i> Import History
+            </a></li>
         </ul>
         <div class="gs-menu-footer">
             <a href="/admin/logout.php" class="gs-btn gs-btn-sm gs-btn-outline gs-w-full">
