@@ -29,7 +29,6 @@ $cyclists = $db->getAll("
     LEFT JOIN results r ON c.id = r.cyclist_id
     WHERE c.active = 1
     GROUP BY c.id
-    HAVING total_races > 0
     ORDER BY c.lastname, c.firstname
 ");
 
