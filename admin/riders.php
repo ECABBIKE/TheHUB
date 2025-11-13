@@ -75,18 +75,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$is_demo) {
     }
 }
 
-// Handle search
+// Handle search and filters
 $search = $_GET['search'] ?? '';
+$club_id = isset($_GET['club_id']) && is_numeric($_GET['club_id']) ? intval($_GET['club_id']) : null;
 
 // Fetch clubs for dropdown (if not in demo mode)
 $clubs = [];
 $editRider = null;
+$selectedClub = null;
 if (!$is_demo) {
     $clubs = $db->getAll("SELECT id, name FROM clubs ORDER BY name");
 
     // Check if editing a rider
     if (isset($_GET['edit']) && is_numeric($_GET['edit'])) {
         $editRider = $db->getOne("SELECT * FROM riders WHERE id = ?", [intval($_GET['edit'])]);
+    }
+
+    // Get selected club info if filtering by club
+    if ($club_id) {
+        $selectedClub = $db->getOne("SELECT * FROM clubs WHERE id = ?", [$club_id]);
     }
 }
 
@@ -101,15 +108,24 @@ if ($is_demo) {
         ['id' => 6, 'firstname' => 'Lisa', 'lastname' => 'Bergman', 'birth_year' => 2006, 'gender' => 'F', 'license_number' => 'SWE20060310', 'license_type' => 'Youth', 'license_category' => 'U19 Women', 'discipline' => 'Road', 'license_valid_until' => '2025-12-31', 'active' => 1, 'club_name' => 'Team GravitySeries', 'club_id' => 1],
     ];
 
-    // Filter by search
+    // Filter by club_id first
+    if ($club_id) {
+        $riders = array_filter($all_riders, fn($r) => $r['club_id'] == $club_id);
+        $riders = array_values($riders);
+        if (!empty($riders)) {
+            $selectedClub = ['id' => $club_id, 'name' => $riders[0]['club_name']];
+        }
+    } else {
+        $riders = $all_riders;
+    }
+
+    // Then filter by search
     if ($search) {
-        $riders = array_filter($all_riders, function($r) use ($search) {
+        $riders = array_filter($riders, function($r) use ($search) {
             $name = $r['firstname'] . ' ' . $r['lastname'];
             return stripos($name, $search) !== false || stripos($r['license_number'], $search) !== false;
         });
         $riders = array_values($riders);
-    } else {
-        $riders = $all_riders;
     }
 } else {
     $where = [];
@@ -119,6 +135,11 @@ if ($is_demo) {
         $where[] = "(CONCAT(c.firstname, ' ', c.lastname) LIKE ? OR c.license_number LIKE ?)";
         $params[] = "%$search%";
         $params[] = "%$search%";
+    }
+
+    if ($club_id) {
+        $where[] = "c.club_id = ?";
+        $params[] = $club_id;
     }
 
     $whereClause = $where ? 'WHERE ' . implode(' AND ', $where) : '';
@@ -173,6 +194,18 @@ include __DIR__ . '/../includes/layout-header.php';
                 <div class="gs-alert gs-alert-<?= $messageType ?> gs-mb-lg">
                     <i data-lucide="<?= $messageType === 'success' ? 'check-circle' : ($messageType === 'error' ? 'alert-circle' : 'info') ?>"></i>
                     <?= h($message) ?>
+                </div>
+            <?php endif; ?>
+
+            <!-- Filter indicator -->
+            <?php if ($selectedClub): ?>
+                <div class="gs-alert gs-alert-info gs-mb-lg">
+                    <i data-lucide="filter"></i>
+                    Visar deltagare från <strong><?= h($selectedClub['name']) ?></strong>
+                    <a href="/admin/riders.php" class="gs-btn gs-btn-sm gs-btn-outline" style="margin-left: auto;">
+                        <i data-lucide="x"></i>
+                        Rensa filter
+                    </a>
                 </div>
             <?php endif; ?>
 
