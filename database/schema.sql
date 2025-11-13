@@ -86,6 +86,8 @@ CREATE TABLE IF NOT EXISTS series (
     end_date DATE,
     description TEXT,
     website VARCHAR(255),
+    logo VARCHAR(255),
+    organizer VARCHAR(255),
     active BOOLEAN DEFAULT 1,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,

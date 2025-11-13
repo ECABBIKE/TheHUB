@@ -119,11 +119,17 @@ include __DIR__ . '/includes/layout-header.php';
 
                                 <!-- Badges -->
                                 <div class="gs-flex gs-gap-xs gs-flex-wrap">
-                                    <?php if ($rider['gender']): ?>
-                                        <span class="gs-badge gs-badge-secondary gs-text-xs">
-                                            <?= $rider['gender'] == 'M' ? '👨 Herr' : '👩 Dam' ?>
-                                        </span>
-                                    <?php endif; ?>
+                                    <span class="gs-badge gs-badge-secondary gs-text-xs">
+                                        <?php
+                                        if ($rider['gender'] == 'M') {
+                                            echo '👨 Herr';
+                                        } elseif ($rider['gender'] == 'F') {
+                                            echo '👩 Dam';
+                                        } else {
+                                            echo '👤 Okänt';
+                                        }
+                                        ?>
+                                    </span>
                                     <?php if ($rider['birth_year']): ?>
                                         <span class="gs-badge gs-badge-secondary gs-text-xs">
                                             <?= calculateAge($rider['birth_year']) ?> år

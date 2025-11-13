@@ -67,7 +67,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ORDER BY location";
 
     $venues = $db->getAll($sql);
-}
 
 $pageTitle = 'Venues';
 $pageType = 'admin';
@@ -222,9 +221,6 @@ ALTER TABLE events ADD FOREIGN KEY (venue_id) REFERENCES venues(id) ON DELETE SE
                                             <?= formatDate($venue['last_event'], 'd M Y') ?>
                                         </td>
                                         <td style="text-align: right;">
-                                            
-                                                <span class="gs-badge gs-badge-secondary">Demo</span>
-                                            <?php else: ?>
                                                 <div class="gs-flex gs-gap-sm gs-justify-end">
                                                     <a
                                                         href="/admin/events.php?location=<?= urlencode($venue['name']) ?>"
@@ -244,7 +240,6 @@ ALTER TABLE events ADD FOREIGN KEY (venue_id) REFERENCES venues(id) ON DELETE SE
                                                         Byt namn
                                                     </button>
                                                 </div>
-                                            <?php endif; ?>
                                         </td>
                                     </tr>
                                 <?php endforeach; ?>
@@ -373,6 +368,5 @@ ALTER TABLE events ADD FOREIGN KEY (venue_id) REFERENCES venues(id) ON DELETE SE
                         }
                     });
                 </script>
-            <?php endif; ?>
         </div>
 <?php include __DIR__ . '/../includes/layout-footer.php'; ?>

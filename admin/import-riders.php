@@ -117,8 +117,13 @@ function importRidersFromCSV($filepath, $db) {
         throw new Exception('Kunde inte öppna filen');
     }
 
-    // Read header row
-    $header = fgetcsv($handle, 1000, ',');
+    // Auto-detect delimiter (comma or semicolon)
+    $firstLine = fgets($handle);
+    rewind($handle);
+    $delimiter = (substr_count($firstLine, ';') > substr_count($firstLine, ',')) ? ';' : ',';
+
+    // Read header row with detected delimiter
+    $header = fgetcsv($handle, 1000, $delimiter);
 
     if (!$header) {
         fclose($handle);
@@ -143,7 +148,7 @@ function importRidersFromCSV($filepath, $db) {
 
     $lineNumber = 1;
 
-    while (($row = fgetcsv($handle, 1000, ',')) !== false) {
+    while (($row = fgetcsv($handle, 1000, $delimiter)) !== false) {
         $lineNumber++;
         $stats['total']++;
 

@@ -24,6 +24,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $message = 'Namn är obligatoriskt';
             $messageType = 'error';
         } else {
+            // Handle logo upload
+            $logoPath = null;
+            if (isset($_FILES['logo']) && $_FILES['logo']['error'] === UPLOAD_ERR_OK) {
+                $uploadDir = __DIR__ . '/../uploads/series/';
+                if (!is_dir($uploadDir)) {
+                    mkdir($uploadDir, 0755, true);
+                }
+
+                $fileExtension = strtolower(pathinfo($_FILES['logo']['name'], PATHINFO_EXTENSION));
+                $allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'];
+
+                if (in_array($fileExtension, $allowedExtensions)) {
+                    $fileName = uniqid('series_') . '.' . $fileExtension;
+                    $targetPath = $uploadDir . $fileName;
+
+                    if (move_uploaded_file($_FILES['logo']['tmp_name'], $targetPath)) {
+                        $logoPath = '/uploads/series/' . $fileName;
+                    }
+                }
+            }
+
             // Prepare series data
             $seriesData = [
                 'name' => $name,
@@ -32,7 +53,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'start_date' => !empty($_POST['start_date']) ? trim($_POST['start_date']) : null,
                 'end_date' => !empty($_POST['end_date']) ? trim($_POST['end_date']) : null,
                 'description' => trim($_POST['description'] ?? ''),
+                'organizer' => trim($_POST['organizer'] ?? ''),
             ];
+
+            // Add logo path if uploaded
+            if ($logoPath) {
+                $seriesData['logo'] = $logoPath;
+            }
 
             try {
                 if ($action === 'create') {
@@ -70,7 +97,7 @@ if (isset($_GET['edit']) && is_numeric($_GET['edit'])) {
 }
 
 // Get series from database
-$series = $db->getAll("SELECT id, name, type, status, start_date, end_date,
+$series = $db->getAll("SELECT id, name, type, status, start_date, end_date, logo, organizer,
                       (SELECT COUNT(*) FROM events WHERE series_id = series.id) as events_count
                       FROM series
                       ORDER BY start_date DESC");
@@ -88,11 +115,10 @@ include __DIR__ . '/../includes/layout-header.php';
                     <i data-lucide="trophy"></i>
                     Serier
                 </h1>
-                    <button type="button" class="gs-btn gs-btn-primary" onclick="openSeriesModal()">
-                        <i data-lucide="plus"></i>
-                        Ny Serie
-                    </button>
-                <?php endif; ?>
+                <button type="button" class="gs-btn gs-btn-primary" onclick="openSeriesModal()">
+                    <i data-lucide="plus"></i>
+                    Ny Serie
+                </button>
             </div>
 
             <!-- Messages -->
@@ -116,7 +142,7 @@ include __DIR__ . '/../includes/layout-header.php';
                                 <i data-lucide="x"></i>
                             </button>
                         </div>
-                        <form method="POST" id="seriesForm">
+                        <form method="POST" id="seriesForm" enctype="multipart/form-data">
                             <?= csrf_field() ?>
                             <input type="hidden" name="action" id="formAction" value="create">
                             <input type="hidden" name="id" id="seriesId" value="">
@@ -210,6 +236,43 @@ include __DIR__ . '/../includes/layout-header.php';
                                             placeholder="Beskriv serien..."
                                         ></textarea>
                                     </div>
+
+                                    <!-- Organizer -->
+                                    <div>
+                                        <label for="organizer" class="gs-label">
+                                            <i data-lucide="users"></i>
+                                            Arrangör/Delegat
+                                        </label>
+                                        <input
+                                            type="text"
+                                            id="organizer"
+                                            name="organizer"
+                                            class="gs-input"
+                                            placeholder="T.ex. Svenska Cykelförbundet, Lokala klubben"
+                                        >
+                                    </div>
+
+                                    <!-- Logo Upload -->
+                                    <div>
+                                        <label for="logo" class="gs-label">
+                                            <i data-lucide="image"></i>
+                                            Logotyp
+                                        </label>
+                                        <input
+                                            type="file"
+                                            id="logo"
+                                            name="logo"
+                                            class="gs-input"
+                                            accept="image/jpeg,image/jpg,image/png,image/gif,image/webp,image/svg+xml"
+                                        >
+                                        <small class="gs-text-secondary">
+                                            Godkända format: JPG, PNG, GIF, WebP, SVG. Max 5MB.
+                                        </small>
+                                        <div id="currentLogo" style="margin-top: 10px; display: none;">
+                                            <strong>Nuvarande logotyp:</strong><br>
+                                            <img id="currentLogoImg" src="" alt="Logotyp" style="max-width: 200px; max-height: 100px; margin-top: 5px;">
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 
@@ -225,7 +288,6 @@ include __DIR__ . '/../includes/layout-header.php';
                         </form>
                     </div>
                 </div>
-            <?php endif; ?>
 
             <!-- Stats -->
             <div class="gs-grid gs-grid-cols-1 gs-md-grid-cols-4 gs-gap-lg gs-mb-lg">
@@ -265,6 +327,7 @@ include __DIR__ . '/../includes/layout-header.php';
                                     <i data-lucide="trophy"></i>
                                     Namn
                                 </th>
+                                <th>Logotyp/Arrangör</th>
                                 <th>Typ</th>
                                 <th>Startdatum</th>
                                 <th>Slutdatum</th>
@@ -281,6 +344,17 @@ include __DIR__ . '/../includes/layout-header.php';
                                 <tr>
                                     <td>
                                         <strong><?= h($serie['name']) ?></strong>
+                                    </td>
+                                    <td>
+                                        <?php if (!empty($serie['logo'])): ?>
+                                            <img src="<?= h($serie['logo']) ?>" alt="<?= h($serie['name']) ?>" style="max-height: 40px; max-width: 80px;">
+                                        <?php endif; ?>
+                                        <?php if (!empty($serie['organizer'])): ?>
+                                            <div class="gs-text-xs gs-text-secondary" style="margin-top: 4px;">
+                                                <i data-lucide="users" style="width: 12px; height: 12px;"></i>
+                                                <?= h($serie['organizer']) ?>
+                                            </div>
+                                        <?php endif; ?>
                                     </td>
                                     <td>
                                         <span class="gs-badge gs-badge-primary">
@@ -313,9 +387,6 @@ include __DIR__ . '/../includes/layout-header.php';
                                         </span>
                                     </td>
                                     <td style="text-align: right;">
-                                        
-                                            <span class="gs-badge gs-badge-secondary">Demo</span>
-                                        <?php else: ?>
                                             <div class="gs-flex gs-gap-sm gs-justify-end">
                                                 <a
                                                     href="/admin/events.php?series_id=<?= $serie['id'] ?>"
@@ -342,7 +413,6 @@ include __DIR__ . '/../includes/layout-header.php';
                                                     <i data-lucide="trash-2"></i>
                                                 </button>
                                             </div>
-                                        <?php endif; ?>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>
@@ -418,6 +488,13 @@ include __DIR__ . '/../includes/layout-header.php';
                     document.getElementById('start_date').value = '<?= $editSeries['start_date'] ?? '' ?>';
                     document.getElementById('end_date').value = '<?= $editSeries['end_date'] ?? '' ?>';
                     document.getElementById('description').value = '<?= addslashes($editSeries['description'] ?? '') ?>';
+                    document.getElementById('organizer').value = '<?= addslashes($editSeries['organizer'] ?? '') ?>';
+
+                    // Show current logo if exists
+                    <?php if (!empty($editSeries['logo'])): ?>
+                        document.getElementById('currentLogo').style.display = 'block';
+                        document.getElementById('currentLogoImg').src = '<?= $editSeries['logo'] ?>';
+                    <?php endif; ?>
 
                     // Update modal title and button
                     document.getElementById('modalTitleText').textContent = 'Redigera Serie';
@@ -440,6 +517,5 @@ include __DIR__ . '/../includes/layout-header.php';
                 }
             });
         </script>
-        <?php endif; ?>
 
 <?php include __DIR__ . '/../includes/layout-footer.php'; ?>

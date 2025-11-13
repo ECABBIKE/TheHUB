@@ -76,15 +76,14 @@ $status = $_GET['status'] ?? '';
 $year = $_GET['year'] ?? date('Y');
 $location = $_GET['location'] ?? '';
 
-// Fetch series for dropdown (if not in demo mode)
+// Fetch series for dropdown
 $series = [];
 $editEvent = null;
-    $series = $db->getAll("SELECT id, name FROM series WHERE status = 'active' ORDER BY name");
+$series = $db->getAll("SELECT id, name FROM series WHERE status = 'active' ORDER BY name");
 
-    // Check if editing an event
-    if (isset($_GET['edit']) && is_numeric($_GET['edit'])) {
-        $editEvent = $db->getOne("SELECT * FROM events WHERE id = ?", [intval($_GET['edit'])]);
-    }
+// Check if editing an event
+if (isset($_GET['edit']) && is_numeric($_GET['edit'])) {
+    $editEvent = $db->getOne("SELECT * FROM events WHERE id = ?", [intval($_GET['edit'])]);
 }
 
     $where = ["YEAR(event_date) = ?"];
@@ -122,7 +121,6 @@ $editEvent = null;
 
     // Get available years
     $years = $db->getAll("SELECT DISTINCT YEAR(event_date) as year FROM events ORDER BY year DESC");
-}
 
 $pageTitle = 'Tävlingar';
 $pageType = 'admin';
@@ -141,7 +139,6 @@ include __DIR__ . '/../includes/layout-header.php';
                         <i data-lucide="plus"></i>
                         Ny Tävling
                     </button>
-                <?php endif; ?>
             </div>
 
             <!-- Messages -->
@@ -442,7 +439,6 @@ include __DIR__ . '/../includes/layout-header.php';
                         </form>
                     </div>
                 </div>
-            <?php endif; ?>
 
             <!-- Stats -->
             <div class="gs-grid gs-grid-cols-1 gs-md-grid-cols-4 gs-gap-lg gs-mb-lg">
@@ -550,9 +546,6 @@ include __DIR__ . '/../includes/layout-header.php';
                                             <strong class="gs-text-primary"><?= $event['participant_count'] ?></strong>
                                         </td>
                                         <td style="text-align: right;">
-                                            
-                                                <span class="gs-badge gs-badge-secondary">Demo</span>
-                                            <?php else: ?>
                                                 <div class="gs-flex gs-gap-sm gs-justify-end">
                                                     <button
                                                         type="button"
@@ -571,7 +564,6 @@ include __DIR__ . '/../includes/layout-header.php';
                                                         <i data-lucide="trash-2"></i>
                                                     </button>
                                                 </div>
-                                            <?php endif; ?>
                                         </td>
                                     </tr>
                                 <?php endforeach; ?>
@@ -677,6 +669,5 @@ include __DIR__ . '/../includes/layout-header.php';
                 }
             });
         </script>
-        <?php endif; ?>
 
 <?php include __DIR__ . '/../includes/layout-footer.php'; ?>
