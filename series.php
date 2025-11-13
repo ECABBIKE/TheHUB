@@ -26,7 +26,7 @@ $pageType = 'public';
 include __DIR__ . '/includes/layout-header.php';
 ?>
 
-    <main style="padding: 6rem 2rem 2rem;">
+    <main class="gs-main-content">
         <div class="gs-container">
             <!-- Header -->
             <div class="gs-mb-xl">

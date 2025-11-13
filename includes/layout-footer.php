@@ -14,37 +14,62 @@
     <script src="https://unpkg.com/lucide@latest"></script>
     <script>
         // Initialize Lucide icons
-        document.addEventListener('DOMContentLoaded', function() {
-            lucide.createIcons();
-        });
+        lucide.createIcons();
 
-        // Mobile menu toggle - FIXED
+        // Mobile menu toggle
         function toggleMenu() {
             const sidebar = document.querySelector('.gs-sidebar');
             const overlay = document.querySelector('.gs-sidebar-overlay');
-            const body = document.body;
 
-            if (sidebar && overlay) {
-                sidebar.classList.toggle('open');
-                overlay.classList.toggle('active');
-                body.classList.toggle('menu-open');
+            if (!sidebar || !overlay) return;
+
+            const isOpen = sidebar.classList.contains('open');
+
+            if (isOpen) {
+                sidebar.classList.remove('open');
+                overlay.classList.remove('active');
+                document.body.style.overflow = '';
+            } else {
+                sidebar.classList.add('open');
+                overlay.classList.add('active');
+                document.body.style.overflow = 'hidden';
             }
         }
 
         function closeMenu() {
             const sidebar = document.querySelector('.gs-sidebar');
             const overlay = document.querySelector('.gs-sidebar-overlay');
-            const body = document.body;
 
             if (sidebar && overlay) {
                 sidebar.classList.remove('open');
                 overlay.classList.remove('active');
-                body.classList.remove('menu-open');
+                document.body.style.overflow = '';
             }
         }
 
-        // Close menu on window resize to desktop size
+        // Close menu when clicking on links
+        document.addEventListener('DOMContentLoaded', function() {
+            const menuLinks = document.querySelectorAll('.gs-sidebar a');
+            menuLinks.forEach(link => {
+                link.addEventListener('click', closeMenu);
+            });
+        });
+
+        // AUTO-CLOSE menu when resizing to desktop
+        let resizeTimer;
         window.addEventListener('resize', function() {
+            clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(function() {
+                // If window is now desktop width, force close mobile menu
+                if (window.innerWidth >= 1024) {
+                    closeMenu();
+                    document.body.style.overflow = ''; // Restore scroll
+                }
+            }, 250);
+        });
+
+        // On page load, ensure menu is closed if on desktop
+        window.addEventListener('load', function() {
             if (window.innerWidth >= 1024) {
                 closeMenu();
             }
