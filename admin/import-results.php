@@ -235,7 +235,9 @@ function importResultsFromCSV($filepath, $db) {
                             }
                         }
 
-                        // Create new rider
+                        // Create new rider with SWE-ID valid for 1 year
+                        $validUntil = date('Y-m-d', strtotime('+1 year'));
+
                         $newRiderData = [
                             'firstname' => $firstname,
                             'lastname' => $lastname,
@@ -243,13 +245,14 @@ function importResultsFromCSV($filepath, $db) {
                             'gender' => $gender,
                             'license_number' => $sweId,
                             'license_type' => 'SWE-ID',
+                            'license_valid_until' => $validUntil,
                             'active' => 1
                         ];
 
                         $riderId = $db->insert('riders', $newRiderData);
                         $riderCache[$cacheKey] = $riderId;
                         $matching_stats['riders_created']++;
-                        error_log("Auto-created rider: {$firstname} {$lastname} with SWE-ID: {$sweId}");
+                        error_log("Auto-created rider: {$firstname} {$lastname} with SWE-ID: {$sweId} (valid until {$validUntil})");
                     }
                 }
             }
