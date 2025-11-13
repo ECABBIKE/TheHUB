@@ -145,11 +145,13 @@ CREATE TABLE IF NOT EXISTS events (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (series_id) REFERENCES series(id) ON DELETE SET NULL,
+    FOREIGN KEY (venue_id) REFERENCES venues(id) ON DELETE SET NULL,
     INDEX idx_date (date),
     INDEX idx_status (status),
     INDEX idx_type (type),
     INDEX idx_discipline (discipline),
     INDEX idx_series (series_id),
+    INDEX idx_venue (venue_id),
     INDEX idx_active (active)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
