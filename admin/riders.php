@@ -5,6 +5,9 @@ require_admin();
 $db = getDB();
 $current_admin = get_current_admin();
 
+// Demo mode disabled
+$is_demo = false;
+
 // Initialize message variables
 $message = '';
 $messageType = 'info';
