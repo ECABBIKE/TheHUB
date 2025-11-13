@@ -52,8 +52,13 @@ function importSeriesFromCSV($filePath, $db) {
         return ['stats' => $stats, 'errors' => ['Kunde inte öppna filen']];
     }
 
+    // Auto-detect delimiter (comma or semicolon)
+    $firstLine = fgets($handle);
+    rewind($handle);
+    $delimiter = (substr_count($firstLine, ';') > substr_count($firstLine, ',')) ? ';' : ',';
+
     // Read header
-    $header = fgetcsv($handle);
+    $header = fgetcsv($handle, 0, $delimiter);
     if (!$header) {
         fclose($handle);
         return ['stats' => $stats, 'errors' => ['Ogiltig CSV-fil']];
@@ -66,7 +71,7 @@ function importSeriesFromCSV($filePath, $db) {
 
     $lineNumber = 1;
 
-    while (($row = fgetcsv($handle)) !== false) {
+    while (($row = fgetcsv($handle, 0, $delimiter)) !== false) {
         $lineNumber++;
         $stats['total']++;
 

@@ -225,7 +225,7 @@ include __DIR__ . '/../includes/layout-header.php';
                                                     <option value="<?= $rider['id'] ?>">
                                                         <?= h($rider['name']) ?>
                                                         <?php if ($rider['license_number']): ?>
-                                                            (<?= h($rider['license_number']) ?>)
+                                                            (UCI-ID: <?= h($rider['license_number']) ?>)
                                                         <?php endif; ?>
                                                     </option>
                                                 <?php endforeach; ?>

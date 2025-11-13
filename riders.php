@@ -131,7 +131,7 @@ include __DIR__ . '/includes/layout-header.php';
                                     <?php endif; ?>
                                     <?php if ($rider['license_number']): ?>
                                         <span class="gs-badge gs-badge-primary gs-text-xs">
-                                            <?= h($rider['license_number']) ?>
+                                            UCI-ID: <?= h($rider['license_number']) ?>
                                         </span>
                                     <?php endif; ?>
                                 </div>
