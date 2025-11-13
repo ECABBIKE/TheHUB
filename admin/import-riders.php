@@ -1,5 +1,25 @@
 <?php
+// CRITICAL: Show ALL errors for debugging
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+ini_set('log_errors', 1);
+
+// Try to catch fatal errors
+register_shutdown_function(function() {
+    $error = error_get_last();
+    if ($error !== null && in_array($error['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR])) {
+        echo "<h1>Fatal Error Detected:</h1>";
+        echo "<pre style='background:#fee;padding:20px;border:2px solid red;'>";
+        echo "Type: " . $error['type'] . "\n";
+        echo "Message: " . htmlspecialchars($error['message']) . "\n";
+        echo "File: " . $error['file'] . "\n";
+        echo "Line: " . $error['line'];
+        echo "</pre>";
+    }
+});
+
 require_once __DIR__ . '/../config.php';
+require_once __DIR__ . '/../includes/helpers.php';
 require_admin();
 
 $db = getDB();

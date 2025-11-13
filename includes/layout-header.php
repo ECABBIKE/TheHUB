@@ -33,30 +33,83 @@ $bodyClass = isset($bodyClass) ? $defaultBodyClass . ' ' . $bodyClass : $default
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= h($pageTitle) ?><?= $titleSuffix ?></title>
-    <link rel="stylesheet" href="/assets/gravityseries-theme.css">
+
+    <!-- CRITICAL CSS - INLINE to ensure it loads FIRST -->
+    <style id="critical-sidebar-css">
+        /* Force sidebar permanent on desktop - INLINE to bypass loading issues */
+        @media (min-width: 1024px) {
+            /* Hide hamburger completely on desktop */
+            .gs-mobile-menu-toggle {
+                display: none !important;
+                visibility: hidden !important;
+                opacity: 0 !important;
+                pointer-events: none !important;
+            }
+
+            /* Show sidebar permanently */
+            .gs-sidebar {
+                display: flex !important;
+                position: fixed !important;
+                left: 0 !important;
+                top: 0 !important;
+                width: 280px !important;
+                height: 100vh !important;
+                transform: translateX(0) !important;
+                transition: none !important;
+                z-index: 100 !important;
+                background: #FFFFFF !important;
+                border-right: 1px solid #E5E7EB !important;
+            }
+
+            /* Hide overlay completely on desktop */
+            .gs-sidebar-overlay {
+                display: none !important;
+                visibility: hidden !important;
+                opacity: 0 !important;
+                pointer-events: none !important;
+            }
+
+            /* Offset content for sidebar */
+            .gs-main-content,
+            .gs-content-with-sidebar {
+                margin-left: 280px !important;
+                width: calc(100% - 280px) !important;
+            }
+
+            /* Prevent body scroll lock */
+            body {
+                overflow: auto !important;
+            }
+        }
+
+        /* Mobile behavior unchanged */
+        @media (max-width: 1023px) {
+            .gs-sidebar {
+                transform: translateX(-100%);
+                z-index: 1100;
+            }
+
+            .gs-sidebar.open {
+                transform: translateX(0);
+            }
+
+            .gs-mobile-menu-toggle {
+                display: flex !important;
+            }
+        }
+    </style>
+
+    <!-- Main CSS with cache busting -->
+    <link rel="stylesheet" href="/assets/gravityseries-theme.css?v=<?= filemtime(__DIR__ . '/../assets/gravityseries-theme.css') ?>">
 </head>
 <body class="<?= $bodyClass ?>">
-    <?php if ($pageType === 'admin'): ?>
-        <!-- Admin: Mobile Menu Toggle -->
-        <button class="gs-mobile-menu-toggle" onclick="toggleMenu()" aria-label="Toggle menu">
-            <i data-lucide="menu"></i>
-            <span>Meny</span>
-        </button>
+    <!-- Hamburger (hidden on desktop via inline CSS) -->
+    <button class="gs-mobile-menu-toggle" onclick="toggleMenu()" aria-label="Toggle menu">
+        <i data-lucide="menu"></i>
+    </button>
 
-        <!-- Mobile Overlay -->
-        <div class="gs-sidebar-overlay" onclick="closeMenu()"></div>
+    <!-- Navigation -->
+    <?php include __DIR__ . '/navigation.php'; ?>
 
-        <!-- Navigation -->
-        <?php include __DIR__ . '/navigation.php'; ?>
-    <?php else: ?>
-        <!-- Public: Mobile Menu Toggle -->
-        <button class="gs-mobile-menu-toggle" onclick="toggleMenu()" aria-label="Toggle menu">
-            <i data-lucide="menu"></i>
-        </button>
-
-        <!-- Navigation -->
-        <?php include __DIR__ . '/navigation.php'; ?>
-
-        <!-- Mobile Overlay -->
-        <div class="gs-sidebar-overlay" onclick="closeMenu()"></div>
-    <?php endif; ?>
+    <!-- Overlay (hidden on desktop via inline CSS) -->
+    <div class="gs-sidebar-overlay" onclick="closeMenu()"></div>
