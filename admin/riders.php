@@ -5,15 +5,12 @@ require_admin();
 $db = getDB();
 $current_admin = get_current_admin();
 
-// Demo mode check
-$is_demo = ($db->getConnection() === null);
-
 // Initialize message variables
 $message = '';
 $messageType = 'info';
 
 // Handle form submissions
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$is_demo) {
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     checkCsrf();
 
     $action = $_POST['action'] ?? '';
@@ -79,94 +76,60 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$is_demo) {
 $search = $_GET['search'] ?? '';
 $club_id = isset($_GET['club_id']) && is_numeric($_GET['club_id']) ? intval($_GET['club_id']) : null;
 
-// Fetch clubs for dropdown (if not in demo mode)
-$clubs = [];
+// Fetch clubs for dropdown
+$clubs = $db->getAll("SELECT id, name FROM clubs ORDER BY name");
+
+// Check if editing a rider
 $editRider = null;
+if (isset($_GET['edit']) && is_numeric($_GET['edit'])) {
+    $editRider = $db->getOne("SELECT * FROM riders WHERE id = ?", [intval($_GET['edit'])]);
+}
+
+// Get selected club info if filtering by club
 $selectedClub = null;
-if (!$is_demo) {
-    $clubs = $db->getAll("SELECT id, name FROM clubs ORDER BY name");
-
-    // Check if editing a rider
-    if (isset($_GET['edit']) && is_numeric($_GET['edit'])) {
-        $editRider = $db->getOne("SELECT * FROM riders WHERE id = ?", [intval($_GET['edit'])]);
-    }
-
-    // Get selected club info if filtering by club
-    if ($club_id) {
-        $selectedClub = $db->getOne("SELECT * FROM clubs WHERE id = ?", [$club_id]);
-    }
+if ($club_id) {
+    $selectedClub = $db->getOne("SELECT * FROM clubs WHERE id = ?", [$club_id]);
 }
 
-if ($is_demo) {
-    // Demo riders
-    $all_riders = [
-        ['id' => 1, 'firstname' => 'Erik', 'lastname' => 'Andersson', 'birth_year' => 1995, 'gender' => 'M', 'license_number' => 'SWE19950101', 'license_type' => 'Elite', 'license_category' => 'Elite Men', 'discipline' => 'MTB', 'license_valid_until' => '2025-12-31', 'active' => 1, 'club_name' => 'Team GravitySeries', 'club_id' => 1],
-        ['id' => 2, 'firstname' => 'Anna', 'lastname' => 'Karlsson', 'birth_year' => 1998, 'gender' => 'F', 'license_number' => 'SWE19980315', 'license_type' => 'Elite', 'license_category' => 'Elite Women', 'discipline' => 'Road', 'license_valid_until' => '2025-12-31', 'active' => 1, 'club_name' => 'CK Olympia', 'club_id' => 2],
-        ['id' => 3, 'firstname' => 'Johan', 'lastname' => 'Svensson', 'birth_year' => 1992, 'gender' => 'M', 'license_number' => 'SWE19920812', 'license_type' => 'Elite', 'license_category' => 'Elite Men', 'discipline' => 'MTB', 'license_valid_until' => '2025-12-31', 'active' => 1, 'club_name' => 'Uppsala CK', 'club_id' => 3],
-        ['id' => 4, 'firstname' => 'Maria', 'lastname' => 'Lindström', 'birth_year' => 1996, 'gender' => 'F', 'license_number' => 'SWE19960524', 'license_type' => 'Elite', 'license_category' => 'Elite Women', 'discipline' => 'CX', 'license_valid_until' => '2025-12-31', 'active' => 1, 'club_name' => 'Team Sportson', 'club_id' => 4],
-        ['id' => 5, 'firstname' => 'Peter', 'lastname' => 'Nilsson', 'birth_year' => 1985, 'gender' => 'M', 'license_number' => 'SWE19850615', 'license_type' => 'Elite', 'license_category' => 'Master Men 35+', 'discipline' => 'MTB', 'license_valid_until' => '2025-12-31', 'active' => 1, 'club_name' => 'IFK Göteborg CK', 'club_id' => 5],
-        ['id' => 6, 'firstname' => 'Lisa', 'lastname' => 'Bergman', 'birth_year' => 2006, 'gender' => 'F', 'license_number' => 'SWE20060310', 'license_type' => 'Youth', 'license_category' => 'U19 Women', 'discipline' => 'Road', 'license_valid_until' => '2025-12-31', 'active' => 1, 'club_name' => 'Team GravitySeries', 'club_id' => 1],
-    ];
+// Build query filters
+$where = [];
+$params = [];
 
-    // Filter by club_id first
-    if ($club_id) {
-        $riders = array_filter($all_riders, fn($r) => $r['club_id'] == $club_id);
-        $riders = array_values($riders);
-        if (!empty($riders)) {
-            $selectedClub = ['id' => $club_id, 'name' => $riders[0]['club_name']];
-        }
-    } else {
-        $riders = $all_riders;
-    }
-
-    // Then filter by search
-    if ($search) {
-        $riders = array_filter($riders, function($r) use ($search) {
-            $name = $r['firstname'] . ' ' . $r['lastname'];
-            return stripos($name, $search) !== false || stripos($r['license_number'], $search) !== false;
-        });
-        $riders = array_values($riders);
-    }
-} else {
-    $where = [];
-    $params = [];
-
-    if ($search) {
-        $where[] = "(CONCAT(c.firstname, ' ', c.lastname) LIKE ? OR c.license_number LIKE ?)";
-        $params[] = "%$search%";
-        $params[] = "%$search%";
-    }
-
-    if ($club_id) {
-        $where[] = "c.club_id = ?";
-        $params[] = $club_id;
-    }
-
-    $whereClause = $where ? 'WHERE ' . implode(' AND ', $where) : '';
-
-    // Get riders
-    $sql = "SELECT
-                c.id,
-                c.firstname,
-                c.lastname,
-                c.birth_year,
-                c.gender,
-                c.license_number,
-                c.license_type,
-                c.license_category,
-                c.discipline,
-                c.license_valid_until,
-                c.active,
-                cl.name as club_name,
-                cl.id as club_id
-            FROM riders c
-            LEFT JOIN clubs cl ON c.club_id = cl.id
-            $whereClause
-            ORDER BY c.lastname, c.firstname
-            LIMIT 1000";
-
-    $riders = $db->getAll($sql, $params);
+if ($search) {
+    $where[] = "(CONCAT(c.firstname, ' ', c.lastname) LIKE ? OR c.license_number LIKE ?)";
+    $params[] = "%$search%";
+    $params[] = "%$search%";
 }
+
+if ($club_id) {
+    $where[] = "c.club_id = ?";
+    $params[] = $club_id;
+}
+
+$whereClause = $where ? 'WHERE ' . implode(' AND ', $where) : '';
+
+// Get riders from database
+$sql = "SELECT
+            c.id,
+            c.firstname,
+            c.lastname,
+            c.birth_year,
+            c.gender,
+            c.license_number,
+            c.license_type,
+            c.license_category,
+            c.discipline,
+            c.license_valid_until,
+            c.active,
+            cl.name as club_name,
+            cl.id as club_id
+        FROM riders c
+        LEFT JOIN clubs cl ON c.club_id = cl.id
+        $whereClause
+        ORDER BY c.lastname, c.firstname
+        LIMIT 1000";
+
+$riders = $db->getAll($sql, $params);
 
 $pageTitle = 'Deltagare';
 $pageType = 'admin';

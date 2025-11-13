@@ -25,9 +25,9 @@ CREATE TABLE IF NOT EXISTS clubs (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================================================
--- CYCLISTS TABLE
+-- RIDERS TABLE (was CYCLISTS)
 -- ============================================================================
-CREATE TABLE IF NOT EXISTS cyclists (
+CREATE TABLE IF NOT EXISTS riders (
     id INT AUTO_INCREMENT PRIMARY KEY,
     firstname VARCHAR(100) NOT NULL,
     lastname VARCHAR(100) NOT NULL,
@@ -35,6 +35,10 @@ CREATE TABLE IF NOT EXISTS cyclists (
     gender ENUM('M', 'F', 'Other') DEFAULT 'M',
     club_id INT,
     license_number VARCHAR(50),
+    license_type VARCHAR(50),
+    license_category VARCHAR(100),
+    discipline VARCHAR(100),
+    license_valid_until DATE,
     email VARCHAR(255),
     phone VARCHAR(20),
     city VARCHAR(100),
@@ -74,14 +78,42 @@ CREATE TABLE IF NOT EXISTS series (
     id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
     type VARCHAR(100),
+    discipline VARCHAR(100),
+    year INT,
     status ENUM('planning', 'active', 'completed', 'cancelled') DEFAULT 'planning',
     start_date DATE,
     end_date DATE,
     description TEXT,
+    website VARCHAR(255),
+    active BOOLEAN DEFAULT 1,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_status (status),
+    INDEX idx_type (type),
+    INDEX idx_discipline (discipline),
+    INDEX idx_year (year),
+    INDEX idx_active (active),
     INDEX idx_start_date (start_date)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================================================
+-- VENUES TABLE
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS venues (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    city VARCHAR(100),
+    region VARCHAR(100),
+    country VARCHAR(100) DEFAULT 'Sverige',
+    address TEXT,
+    coordinates VARCHAR(100),
+    description TEXT,
+    website VARCHAR(255),
+    active BOOLEAN DEFAULT 1,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_city (city),
+    INDEX idx_active (active)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================================================
@@ -90,9 +122,11 @@ CREATE TABLE IF NOT EXISTS series (
 CREATE TABLE IF NOT EXISTS events (
     id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
-    event_date DATE NOT NULL,
+    date DATE NOT NULL,
     location VARCHAR(255),
-    event_type ENUM('road_race', 'time_trial', 'criterium', 'stage_race', 'other') DEFAULT 'road_race',
+    venue_id INT,
+    type VARCHAR(100),
+    discipline VARCHAR(100),
     series_id INT,
     distance DECIMAL(6,2), -- in kilometers
     elevation_gain INT, -- in meters
@@ -100,15 +134,20 @@ CREATE TABLE IF NOT EXISTS events (
     description TEXT,
     organizer VARCHAR(255),
     website VARCHAR(255),
+    registration_url VARCHAR(255),
     registration_deadline DATE,
     max_participants INT,
+    entry_fee DECIMAL(10,2),
+    active BOOLEAN DEFAULT 1,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (series_id) REFERENCES series(id) ON DELETE SET NULL,
-    INDEX idx_date (event_date),
+    INDEX idx_date (date),
     INDEX idx_status (status),
-    INDEX idx_type (event_type),
-    INDEX idx_series (series_id)
+    INDEX idx_type (type),
+    INDEX idx_discipline (discipline),
+    INDEX idx_series (series_id),
+    INDEX idx_active (active)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================================================
@@ -130,7 +169,7 @@ CREATE TABLE IF NOT EXISTS results (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE CASCADE,
-    FOREIGN KEY (cyclist_id) REFERENCES cyclists(id) ON DELETE CASCADE,
+    FOREIGN KEY (cyclist_id) REFERENCES riders(id) ON DELETE CASCADE,
     FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE SET NULL,
     INDEX idx_event (event_id),
     INDEX idx_cyclist (cyclist_id),
@@ -162,7 +201,7 @@ CREATE TABLE IF NOT EXISTS admin_users (
 -- ============================================================================
 CREATE TABLE IF NOT EXISTS import_logs (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    import_type ENUM('cyclists', 'results', 'events', 'clubs') NOT NULL,
+    import_type ENUM('riders', 'results', 'events', 'clubs', 'cyclists') NOT NULL,
     filename VARCHAR(255),
     records_total INT DEFAULT 0,
     records_success INT DEFAULT 0,
@@ -199,13 +238,13 @@ INSERT INTO admin_users (username, password_hash, email, full_name, role) VALUES
 -- VIEWS FOR COMMON QUERIES
 -- ============================================================================
 
--- View for complete results with cyclist and event info
+-- View for complete results with rider and event info
 CREATE OR REPLACE VIEW results_complete AS
 SELECT
     r.id,
     r.event_id,
     e.name AS event_name,
-    e.event_date,
+    e.date AS event_date,
     e.location,
     r.cyclist_id,
     CONCAT(c.firstname, ' ', c.lastname) AS cyclist_name,
@@ -220,12 +259,12 @@ SELECT
     r.status,
     r.average_speed
 FROM results r
-JOIN cyclists c ON r.cyclist_id = c.id
+JOIN riders c ON r.cyclist_id = c.id
 JOIN events e ON r.event_id = e.id
 LEFT JOIN clubs cl ON c.club_id = cl.id
 LEFT JOIN categories cat ON r.category_id = cat.id;
 
--- View for cyclist statistics
+-- View for rider statistics
 CREATE OR REPLACE VIEW cyclist_stats AS
 SELECT
     c.id AS cyclist_id,
@@ -237,7 +276,7 @@ SELECT
     COUNT(CASE WHEN r.position <= 10 THEN 1 END) AS top_10,
     SUM(r.points) AS total_points,
     MIN(r.position) AS best_position
-FROM cyclists c
+FROM riders c
 LEFT JOIN results r ON c.id = r.cyclist_id
 LEFT JOIN clubs cl ON c.club_id = cl.id
 GROUP BY c.id, cyclist_name, cl.name;
