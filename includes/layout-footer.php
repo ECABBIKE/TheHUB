@@ -18,14 +18,14 @@
             lucide.createIcons();
         });
 
-        // Mobile menu toggle
+        // Mobile menu toggle - FIXED
         function toggleMenu() {
             const sidebar = document.querySelector('.gs-sidebar');
             const overlay = document.querySelector('.gs-sidebar-overlay');
             const body = document.body;
 
             if (sidebar && overlay) {
-                sidebar.classList.toggle('active');
+                sidebar.classList.toggle('open');
                 overlay.classList.toggle('active');
                 body.classList.toggle('menu-open');
             }
@@ -37,7 +37,7 @@
             const body = document.body;
 
             if (sidebar && overlay) {
-                sidebar.classList.remove('active');
+                sidebar.classList.remove('open');
                 overlay.classList.remove('active');
                 body.classList.remove('menu-open');
             }
@@ -45,7 +45,7 @@
 
         // Close menu on window resize to desktop size
         window.addEventListener('resize', function() {
-            if (window.innerWidth >= 768) {
+            if (window.innerWidth >= 1024) {
                 closeMenu();
             }
         });

@@ -558,7 +558,7 @@ body {
 }
 
 /* ========================================
-   SIDEBAR NAVIGATION
+   SIDEBAR NAVIGATION - FIXED FOR MOBILE
    ======================================== */
 
 .gs-sidebar {
@@ -571,12 +571,12 @@ body {
   border-right: 1px solid var(--gs-border);
   padding: var(--gs-space-xl);
   overflow-y: auto;
-  z-index: 1050;
+  z-index: 1100;
   box-shadow: 4px 0 20px rgba(0, 0, 0, 0.1);
   display: flex;
   flex-direction: column;
   transform: translateX(-100%);
-  transition: transform var(--gs-transition-base);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .gs-sidebar.open {
@@ -675,7 +675,7 @@ body {
   background-color: var(--gs-light);
 }
 
-/* Sidebar Overlay */
+/* Sidebar Overlay - BELOW sidebar but clickable */
 .gs-sidebar-overlay {
   position: fixed;
   top: 0;
@@ -683,34 +683,37 @@ body {
   right: 0;
   bottom: 0;
   background-color: rgba(0, 0, 0, 0.5);
-  z-index: 1040;
+  z-index: 1050;
   opacity: 0;
   visibility: hidden;
-  transition: all var(--gs-transition-base);
+  transition: opacity 0.3s ease, visibility 0.3s ease;
+  pointer-events: none;
+  cursor: pointer;
 }
 
 .gs-sidebar-overlay.active {
   opacity: 1;
   visibility: visible;
+  pointer-events: auto;
 }
 
-/* Mobile Menu Toggle */
+/* Mobile Menu Toggle - HIGHEST z-index */
 .gs-mobile-menu-toggle {
   position: fixed;
   top: 1.5rem;
   left: 1.5rem;
-  z-index: 1100;
+  z-index: 1200;
   width: 48px;
   height: 48px;
   border: none;
-  border-radius: var(--gs-radius-md);
+  border-radius: 8px;
   background-color: var(--gs-white);
-  box-shadow: var(--gs-shadow-lg);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all var(--gs-transition-fast);
+  transition: all 0.2s ease;
 }
 
 .gs-mobile-menu-toggle:hover {
@@ -718,15 +721,21 @@ body {
   transform: scale(1.05);
 }
 
-.gs-mobile-menu-toggle:hover svg {
-  color: var(--gs-white);
+.gs-mobile-menu-toggle:active {
+  transform: scale(0.95);
 }
 
-.gs-mobile-menu-toggle svg {
+.gs-mobile-menu-toggle svg,
+.gs-mobile-menu-toggle i {
   width: 24px;
   height: 24px;
   color: var(--gs-primary);
-  transition: color var(--gs-transition-fast);
+  transition: color 0.2s ease;
+}
+
+.gs-mobile-menu-toggle:hover svg,
+.gs-mobile-menu-toggle:hover i {
+  color: var(--gs-white);
 }
 
 /* ========================================
@@ -1281,9 +1290,10 @@ body.gs-admin-page .gs-sidebar-overlay {
     left: 1rem;
   }
 
-  /* Sidebar */
+  /* Sidebar - Make responsive width */
   .gs-sidebar {
-    width: 280px;
+    width: 80vw;
+    max-width: 320px;
   }
 
   /* Landing cards */
@@ -1304,7 +1314,8 @@ body.gs-admin-page .gs-sidebar-overlay {
 }
 
 /* Admin responsive - mobile behavior */
-@media (max-width: 1024px) {
+@media (max-width: 1023px) {
+  /* Ensure sidebar can slide on mobile for admin pages */
   body.gs-admin-page .gs-content-with-sidebar {
     margin-left: 0;
     padding-top: 80px;
