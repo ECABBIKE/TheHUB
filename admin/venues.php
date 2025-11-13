@@ -5,15 +5,13 @@ require_admin();
 $db = getDB();
 $current_admin = get_current_admin();
 
-// Demo mode check
-$is_demo = ($db->getConnection() === null);
 
 // Initialize message variables
 $message = '';
 $messageType = 'info';
 
 // Handle form submissions
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$is_demo) {
+if ($_SERVER['REQUEST_METHOD'] === 'POST')) {
     checkCsrf();
 
     $action = $_POST['action'] ?? '';
@@ -56,16 +54,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$is_demo) {
     }
 }
 
-if ($is_demo) {
-    // Demo venues
-    $venues = [
-        ['name' => 'Järvsö', 'event_count' => 3, 'first_event' => '2023-06-15', 'last_event' => '2025-06-15', 'event_types' => 'XC'],
-        ['name' => 'Lindesberg', 'event_count' => 2, 'first_event' => '2024-07-01', 'last_event' => '2025-07-01', 'event_types' => 'XC'],
-        ['name' => 'Mora', 'event_count' => 4, 'first_event' => '2022-08-10', 'last_event' => '2025-08-10', 'event_types' => 'Landsväg'],
-        ['name' => 'Åre', 'event_count' => 5, 'first_event' => '2022-08-20', 'last_event' => '2024-08-20', 'event_types' => 'XC,Enduro'],
-        ['name' => 'Motala', 'event_count' => 2, 'first_event' => '2023-06-15', 'last_event' => '2024-06-15', 'event_types' => 'Landsväg'],
-    ];
-} else {
     // Get unique venues from events (aggregated by location)
     $sql = "SELECT
                 location as name,
@@ -234,7 +222,7 @@ ALTER TABLE events ADD FOREIGN KEY (venue_id) REFERENCES venues(id) ON DELETE SE
                                             <?= formatDate($venue['last_event'], 'd M Y') ?>
                                         </td>
                                         <td style="text-align: right;">
-                                            <?php if ($is_demo): ?>
+                                            
                                                 <span class="gs-badge gs-badge-secondary">Demo</span>
                                             <?php else: ?>
                                                 <div class="gs-flex gs-gap-sm gs-justify-end">
@@ -267,7 +255,6 @@ ALTER TABLE events ADD FOREIGN KEY (venue_id) REFERENCES venues(id) ON DELETE SE
             <?php endif; ?>
 
             <!-- Rename Location Modal -->
-            <?php if (!$is_demo): ?>
                 <div id="renameModal" class="gs-modal" style="display: none;">
                     <div class="gs-modal-overlay" onclick="closeRenameModal()"></div>
                     <div class="gs-modal-content" style="max-width: 500px;">

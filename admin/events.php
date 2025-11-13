@@ -5,15 +5,13 @@ require_admin();
 $db = getDB();
 $current_admin = get_current_admin();
 
-// Demo mode check
-$is_demo = ($db->getConnection() === null);
 
 // Initialize message variables
 $message = '';
 $messageType = 'info';
 
 // Handle form submissions
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$is_demo) {
+if ($_SERVER['REQUEST_METHOD'] === 'POST')) {
     checkCsrf();
 
     $action = $_POST['action'] ?? '';
@@ -81,7 +79,6 @@ $location = $_GET['location'] ?? '';
 // Fetch series for dropdown (if not in demo mode)
 $series = [];
 $editEvent = null;
-if (!$is_demo) {
     $series = $db->getAll("SELECT id, name FROM series WHERE status = 'active' ORDER BY name");
 
     // Check if editing an event
@@ -90,40 +87,6 @@ if (!$is_demo) {
     }
 }
 
-if ($is_demo) {
-    // Demo events
-    $all_events = [
-        ['id' => 1, 'name' => 'GravitySeries Järvsö XC', 'event_date' => '2025-06-15', 'location' => 'Järvsö', 'event_type' => 'XC', 'status' => 'upcoming', 'distance' => '45 km', 'participant_count' => 145],
-        ['id' => 2, 'name' => 'SM Lindesberg', 'event_date' => '2025-07-01', 'location' => 'Lindesberg', 'event_type' => 'XC', 'status' => 'upcoming', 'distance' => '38 km', 'participant_count' => 220],
-        ['id' => 3, 'name' => 'Cykelvasan 90', 'event_date' => '2025-08-10', 'location' => 'Mora', 'event_type' => 'Landsväg', 'status' => 'upcoming', 'distance' => '90 km', 'participant_count' => 890],
-        ['id' => 4, 'name' => 'GravitySeries Åre', 'event_date' => '2024-08-20', 'location' => 'Åre', 'event_type' => 'XC', 'status' => 'completed', 'distance' => '42 km', 'participant_count' => 156],
-        ['id' => 5, 'name' => 'Vätternrundan', 'event_date' => '2024-06-15', 'location' => 'Motala', 'event_type' => 'Landsväg', 'status' => 'completed', 'distance' => '300 km', 'participant_count' => 1200],
-    ];
-
-    // Filter by status
-    if ($status) {
-        $events = array_filter($all_events, fn($e) => $e['status'] === $status);
-    } else {
-        $events = $all_events;
-    }
-
-    // Filter by year
-    $events = array_filter($events, fn($e) => date('Y', strtotime($e['event_date'])) == $year);
-
-    // Filter by location
-    if ($location) {
-        $events = array_filter($events, fn($e) => $e['location'] === $location);
-    }
-
-    $events = array_values($events);
-
-    // Available years
-    $years = [
-        ['year' => 2025],
-        ['year' => 2024],
-        ['year' => 2023],
-    ];
-} else {
     $where = ["YEAR(event_date) = ?"];
     $params = [$year];
 
@@ -174,7 +137,6 @@ include __DIR__ . '/../includes/layout-header.php';
                     <i data-lucide="calendar"></i>
                     Tävlingar
                 </h1>
-                <?php if (!$is_demo): ?>
                     <button type="button" class="gs-btn gs-btn-primary" onclick="openEventModal()">
                         <i data-lucide="plus"></i>
                         Ny Tävling
@@ -250,7 +212,6 @@ include __DIR__ . '/../includes/layout-header.php';
             </div>
 
             <!-- Event Modal -->
-            <?php if (!$is_demo): ?>
                 <div id="eventModal" class="gs-modal" style="display: none;">
                     <div class="gs-modal-overlay" onclick="closeEventModal()"></div>
                     <div class="gs-modal-content" style="max-width: 700px;">
@@ -589,7 +550,7 @@ include __DIR__ . '/../includes/layout-header.php';
                                             <strong class="gs-text-primary"><?= $event['participant_count'] ?></strong>
                                         </td>
                                         <td style="text-align: right;">
-                                            <?php if ($is_demo): ?>
+                                            
                                                 <span class="gs-badge gs-badge-secondary">Demo</span>
                                             <?php else: ?>
                                                 <div class="gs-flex gs-gap-sm gs-justify-end">
@@ -621,7 +582,6 @@ include __DIR__ . '/../includes/layout-header.php';
             <?php endif; ?>
         </div>
 
-        <?php if (!$is_demo): ?>
         <script>
             // Open modal for creating new event
             function openEventModal() {

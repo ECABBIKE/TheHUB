@@ -8,15 +8,13 @@ $current_admin = get_current_admin();
 // Load import history helper functions
 require_once __DIR__ . '/../includes/import-history.php';
 
-// Demo mode check
-$is_demo = ($db->getConnection() === null);
 
 // Initialize message variables
 $message = '';
 $messageType = 'info';
 
 // Handle rollback request
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$is_demo) {
+if ($_SERVER['REQUEST_METHOD'] === 'POST')) {
     checkCsrf();
 
     $action = $_POST['action'] ?? '';
@@ -33,64 +31,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$is_demo) {
 // Handle filters
 $type = $_GET['type'] ?? '';
 
-if ($is_demo) {
-    // Demo import history
-    $imports = [
-        [
-            'id' => 1,
-            'import_type' => 'uci',
-            'filename' => 'uci_licensregister_2025.csv',
-            'file_size' => 245678,
-            'status' => 'completed',
-            'total_records' => 150,
-            'success_count' => 145,
-            'updated_count' => 5,
-            'failed_count' => 0,
-            'skipped_count' => 0,
-            'imported_by' => 'admin',
-            'imported_at' => '2025-01-13 10:30:00',
-            'records_count' => 150
-        ],
-        [
-            'id' => 2,
-            'import_type' => 'results',
-            'filename' => 'results_jarvsjo_2025.csv',
-            'file_size' => 89234,
-            'status' => 'completed',
-            'total_records' => 220,
-            'success_count' => 218,
-            'updated_count' => 0,
-            'failed_count' => 2,
-            'skipped_count' => 0,
-            'imported_by' => 'admin',
-            'imported_at' => '2025-01-12 15:45:00',
-            'records_count' => 218
-        ],
-        [
-            'id' => 3,
-            'import_type' => 'riders',
-            'filename' => 'riders_import.csv',
-            'file_size' => 156789,
-            'status' => 'rolled_back',
-            'total_records' => 100,
-            'success_count' => 98,
-            'updated_count' => 2,
-            'failed_count' => 0,
-            'skipped_count' => 0,
-            'imported_by' => 'admin',
-            'imported_at' => '2025-01-11 09:15:00',
-            'rolled_back_at' => '2025-01-11 09:30:00',
-            'rolled_back_by' => 'admin',
-            'records_count' => 100
-        ],
-    ];
-
-    // Filter by type
-    if ($type) {
-        $imports = array_filter($imports, fn($i) => $i['import_type'] === $type);
-        $imports = array_values($imports);
-    }
-} else {
     // Get real import history
     $imports = getImportHistory($db, 100, $type ?: null);
 }
@@ -312,7 +252,7 @@ include __DIR__ . '/../includes/layout-header.php';
                                             <?php endif; ?>
                                         </td>
                                         <td style="text-align: right;">
-                                            <?php if ($is_demo): ?>
+                                            
                                                 <span class="gs-badge gs-badge-secondary">Demo</span>
                                             <?php else: ?>
                                                 <div class="gs-flex gs-gap-sm gs-justify-end">
@@ -349,7 +289,6 @@ include __DIR__ . '/../includes/layout-header.php';
             <?php endif; ?>
         </div>
 
-        <?php if (!$is_demo): ?>
         <script>
             // Rollback import with confirmation
             function rollbackImport(id, filename, affectedRecords) {
