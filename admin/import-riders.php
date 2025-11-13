@@ -29,6 +29,7 @@ $message = '';
 $messageType = 'info';
 $stats = null;
 $errors = [];
+$skippedRows = [];
 
 // Handle CSV/Excel upload
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['import_file'])) {
@@ -70,6 +71,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['import_file'])) {
 
                     $stats = $result['stats'];
                     $errors = $result['errors'];
+                    $skippedRows = $result['skipped_rows'] ?? [];
 
                     if ($stats['success'] > 0 || $stats['updated'] > 0) {
                         $message = "Import klar! {$stats['success']} nya, {$stats['updated']} uppdaterade.";
@@ -111,6 +113,7 @@ function importRidersFromCSV($filepath, $db) {
         'duplicates' => 0
     ];
     $errors = [];
+    $skippedRows = []; // Detailed list of skipped rows
     $seenInThisImport = []; // Track riders in this import to detect duplicates
 
     if (($handle = fopen($filepath, 'r')) === false) {
@@ -258,6 +261,12 @@ function importRidersFromCSV($filepath, $db) {
         if (empty($data['firstname']) || empty($data['lastname'])) {
             $stats['skipped']++;
             $errors[] = "Rad {$lineNumber}: Saknar förnamn eller efternamn";
+            $skippedRows[] = [
+                'row' => $lineNumber,
+                'name' => trim(($data['firstname'] ?? '') . ' ' . ($data['lastname'] ?? '')),
+                'reason' => 'Saknar förnamn eller efternamn',
+                'type' => 'missing_fields'
+            ];
             continue;
         }
 
@@ -372,6 +381,13 @@ function importRidersFromCSV($filepath, $db) {
                 // This is a duplicate within the same import - skip it
                 $stats['duplicates']++;
                 $stats['skipped']++;
+                $skippedRows[] = [
+                    'row' => $lineNumber,
+                    'name' => $riderData['firstname'] . ' ' . $riderData['lastname'],
+                    'license' => $riderData['license_number'] ?? '-',
+                    'reason' => 'Dublett (redan i denna import)',
+                    'type' => 'duplicate'
+                ];
                 error_log("Import: Skipped duplicate - {$riderData['firstname']} {$riderData['lastname']} (already in this import)");
                 continue;
             }
@@ -411,6 +427,13 @@ function importRidersFromCSV($filepath, $db) {
         } catch (Exception $e) {
             $stats['failed']++;
             $errors[] = "Rad {$lineNumber}: " . $e->getMessage();
+            $skippedRows[] = [
+                'row' => $lineNumber,
+                'name' => trim(($data['firstname'] ?? '') . ' ' . ($data['lastname'] ?? '')),
+                'license' => $data['licensenumber'] ?? '-',
+                'reason' => 'Fel: ' . $e->getMessage(),
+                'type' => 'error'
+            ];
         }
     }
 
@@ -426,7 +449,8 @@ function importRidersFromCSV($filepath, $db) {
 
     return [
         'stats' => $stats,
-        'errors' => $errors
+        'errors' => $errors,
+        'skipped_rows' => $skippedRows
     ];
 }
 
@@ -525,6 +549,53 @@ include __DIR__ . '/../includes/layout-header.php';
                                         <i data-lucide="search"></i>
                                         Debug databas
                                     </a>
+                                </div>
+                            </div>
+                        <?php endif; ?>
+
+                        <!-- Skipped Rows Details -->
+                        <?php if (!empty($skippedRows)): ?>
+                            <div class="gs-mt-lg" style="padding-top: var(--gs-space-lg); border-top: 1px solid var(--gs-border);">
+                                <h3 class="gs-h5 gs-text-warning gs-mb-md">
+                                    <i data-lucide="alert-circle"></i>
+                                    Överhoppade rader (<?= count($skippedRows) ?>)
+                                </h3>
+                                <div style="max-height: 400px; overflow-y: auto; background: var(--gs-background-secondary); padding: var(--gs-space-md); border-radius: var(--gs-border-radius);">
+                                    <table class="gs-table gs-table-sm">
+                                        <thead>
+                                            <tr>
+                                                <th>Rad</th>
+                                                <th>Namn</th>
+                                                <th>Licens</th>
+                                                <th>Anledning</th>
+                                                <th>Typ</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <?php foreach ($skippedRows as $skip): ?>
+                                                <tr>
+                                                    <td><code><?= $skip['row'] ?></code></td>
+                                                    <td><?= h($skip['name']) ?></td>
+                                                    <td><?= h($skip['license'] ?? '-') ?></td>
+                                                    <td><?= h($skip['reason']) ?></td>
+                                                    <td>
+                                                        <?php if ($skip['type'] === 'duplicate'): ?>
+                                                            <span class="gs-badge gs-badge-warning gs-text-xs">Dublett</span>
+                                                        <?php elseif ($skip['type'] === 'missing_fields'): ?>
+                                                            <span class="gs-badge gs-badge-secondary gs-text-xs">Saknar fält</span>
+                                                        <?php elseif ($skip['type'] === 'error'): ?>
+                                                            <span class="gs-badge gs-badge-danger gs-text-xs">Fel</span>
+                                                        <?php endif; ?>
+                                                    </td>
+                                                </tr>
+                                            <?php endforeach; ?>
+                                        </tbody>
+                                    </table>
+                                    <?php if (count($skippedRows) > 100): ?>
+                                        <div class="gs-text-sm gs-text-secondary gs-mt-sm" style="font-style: italic;">
+                                            Visar första 100 av <?= count($skippedRows) ?> överhoppade rader
+                                        </div>
+                                    <?php endif; ?>
                                 </div>
                             </div>
                         <?php endif; ?>
