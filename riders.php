@@ -34,30 +34,11 @@ $cyclists = $db->getAll("
 ");
 
 $total_count = count($cyclists);
+$pageTitle = 'Deltagare';
+$pageType = 'public';
+include __DIR__ . '/includes/layout-header.php';
 ?>
-<!DOCTYPE html>
-<html lang="sv">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Deltagare - TheHUB</title>
-    <link rel="stylesheet" href="/assets/gravityseries-theme.css">
-    <script src="https://unpkg.com/lucide@latest"></script>
-</head>
-<body class="gs-public-page">
 
-    <!-- Hamburger -->
-    <button class="gs-mobile-menu-toggle" onclick="toggleMenu()" aria-label="Toggle menu">
-        <i data-lucide="menu"></i>
-    </button>
-
-    <!-- Sidebar -->
-    <?php include __DIR__ . '/includes/navigation.php'; ?>
-
-    <!-- Overlay -->
-    <div class="gs-sidebar-overlay" onclick="closeMenu()"></div>
-
-    <!-- Main Content -->
     <main style="padding: 6rem 2rem 2rem;">
         <div class="gs-container">
 
@@ -170,60 +151,39 @@ $total_count = count($cyclists);
                 </p>
             </div>
         </div>
-    </main>
+<?php
+// Additional page-specific search functionality
+$additionalScripts = "
+    // Search functionality
+    const searchInput = document.getElementById('searchRiders');
+    const ridersGrid = document.getElementById('ridersGrid');
+    const noResults = document.getElementById('noResults');
 
-    <script>
-        lucide.createIcons();
+    if (searchInput && ridersGrid) {
+        searchInput.addEventListener('input', function(e) {
+            const search = e.target.value.toLowerCase().trim();
+            const cards = ridersGrid.querySelectorAll('.rider-card');
+            let visibleCount = 0;
 
-        function toggleMenu() {
-            const sidebar = document.querySelector('.gs-sidebar');
-            const overlay = document.querySelector('.gs-sidebar-overlay');
-            sidebar.classList.toggle('open');
-            overlay.classList.toggle('active');
-        }
-
-        function closeMenu() {
-            const sidebar = document.querySelector('.gs-sidebar');
-            const overlay = document.querySelector('.gs-sidebar-overlay');
-            sidebar.classList.remove('open');
-            overlay.classList.remove('active');
-        }
-
-        // Close on link click
-        document.querySelectorAll('.gs-sidebar a').forEach(link => {
-            link.addEventListener('click', closeMenu);
-        });
-
-        // Search functionality
-        const searchInput = document.getElementById('searchRiders');
-        const ridersGrid = document.getElementById('ridersGrid');
-        const noResults = document.getElementById('noResults');
-
-        if (searchInput && ridersGrid) {
-            searchInput.addEventListener('input', function(e) {
-                const search = e.target.value.toLowerCase().trim();
-                const cards = ridersGrid.querySelectorAll('.rider-card');
-                let visibleCount = 0;
-
-                cards.forEach(card => {
-                    const searchData = card.getAttribute('data-search');
-                    if (!search || searchData.includes(search)) {
-                        card.style.display = 'block';
-                        visibleCount++;
-                    } else {
-                        card.style.display = 'none';
-                    }
-                });
-
-                // Show/hide no results message
-                if (noResults) {
-                    noResults.style.display = visibleCount === 0 && search ? 'block' : 'none';
-                }
-                if (ridersGrid) {
-                    ridersGrid.style.display = visibleCount === 0 && search ? 'none' : 'grid';
+            cards.forEach(card => {
+                const searchData = card.getAttribute('data-search');
+                if (!search || searchData.includes(search)) {
+                    card.style.display = 'block';
+                    visibleCount++;
+                } else {
+                    card.style.display = 'none';
                 }
             });
-        }
-    </script>
-</body>
-</html>
+
+            // Show/hide no results message
+            if (noResults) {
+                noResults.style.display = visibleCount === 0 && search ? 'block' : 'none';
+            }
+            if (ridersGrid) {
+                ridersGrid.style.display = visibleCount === 0 && search ? 'none' : 'grid';
+            }
+        });
+    }
+";
+include __DIR__ . '/includes/layout-footer.php';
+?>

@@ -1,27 +1,12 @@
-<?php require_once __DIR__ . '/config.php'; ?>
-<!DOCTYPE html>
-<html lang="sv">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TheHUB - GravitySeries</title>
-    <link rel="stylesheet" href="/assets/gravityseries-theme.css">
-    <script src="https://unpkg.com/lucide@latest"></script>
-</head>
-<body class="gs-public-page">
+<?php
+require_once __DIR__ . '/config.php';
 
-    <!-- Hamburger -->
-    <button class="gs-mobile-menu-toggle" onclick="toggleMenu()" aria-label="Toggle menu">
-        <i data-lucide="menu"></i>
-    </button>
+$pageTitle = 'TheHUB - GravitySeries';
+$pageType = 'public';
+$bodyClass = 'gs-landing-page';
+include __DIR__ . '/includes/layout-header.php';
+?>
 
-    <!-- Sidebar -->
-    <?php include __DIR__ . '/includes/navigation.php'; ?>
-
-    <!-- Overlay -->
-    <div class="gs-sidebar-overlay" onclick="closeMenu()"></div>
-
-    <!-- Main Content -->
     <main style="padding-top: 0;">
         <!-- Hero Section -->
         <div class="gs-hero-landing">
@@ -95,29 +80,12 @@
             <!-- Footer spacing -->
             <div style="height: 4rem;"></div>
         </div>
-    </main>
-
-    <script>
-        lucide.createIcons();
-
-        function toggleMenu() {
-            const sidebar = document.querySelector('.gs-sidebar');
-            const overlay = document.querySelector('.gs-sidebar-overlay');
-            sidebar.classList.toggle('open');
-            overlay.classList.toggle('active');
-        }
-
-        function closeMenu() {
-            const sidebar = document.querySelector('.gs-sidebar');
-            const overlay = document.querySelector('.gs-sidebar-overlay');
-            sidebar.classList.remove('open');
-            overlay.classList.remove('active');
-        }
-
-        // Close on link click
-        document.querySelectorAll('.gs-sidebar a').forEach(link => {
-            link.addEventListener('click', closeMenu);
-        });
-    </script>
-</body>
-</html>
+<?php
+// Additional script for closing menu on link click
+$additionalScripts = "
+    document.querySelectorAll('.gs-sidebar a').forEach(link => {
+        link.addEventListener('click', closeMenu);
+    });
+";
+include __DIR__ . '/includes/layout-footer.php';
+?>

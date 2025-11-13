@@ -87,26 +87,9 @@ $recentImports = $db->getAll(
 );
 
 $pageTitle = 'Import Data';
+$pageType = 'admin';
+include __DIR__ . '/../includes/layout-header.php';
 ?>
-<!DOCTYPE html>
-<html lang="sv">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?= h($pageTitle) ?> - TheHUB Admin</title>
-    <link rel="stylesheet" href="/assets/gravityseries-theme.css">
-</head>
-<body>
-    <!-- Mobile Menu Toggle -->
-    <button id="mobile-menu-toggle" class="gs-mobile-menu-toggle">
-        <i data-lucide="menu"></i>
-        <span>Meny</span>
-    </button>
-
-    <!-- Mobile Overlay -->
-    <div id="mobile-overlay" class="gs-mobile-overlay"></div>
-
-    <?php include __DIR__ . '/../includes/navigation.php'; ?>
 
     <main class="gs-content-with-sidebar">
         <div class="gs-container">
@@ -386,11 +369,4 @@ $pageTitle = 'Import Data';
                 </div>
             </div>
         </div>
-    </main>
-
-    <!-- Lucide Icons -->
-    <script src="https://unpkg.com/lucide@latest"></script>
-    <!-- TheHUB JavaScript -->
-    <script src="/assets/thehub.js"></script>
-</body>
-</html>
+<?php include __DIR__ . '/../includes/layout-footer.php'; ?>

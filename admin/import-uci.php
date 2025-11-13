@@ -66,22 +66,51 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['uci_file'])) {
 }
 
 /**
- * Auto-detect CSV separator
+ * Auto-detect CSV separator with improved logic
  */
 function detectCsvSeparator($file_path) {
-    $delimiters = [',', ';', "\t", '|'];
-    $data = [];
-    $file = fopen($file_path, 'r');
-    $firstLine = fgets($file);
-    fclose($file);
+    $handle = fopen($file_path, 'r');
+    $first_line = fgets($handle);
+    fclose($handle);
 
-    foreach ($delimiters as $delimiter) {
-        $row = str_getcsv($firstLine, $delimiter);
-        $data[$delimiter] = count($row);
+    // Try all common separators
+    $separators = [
+        ',' => str_getcsv($first_line, ','),
+        ';' => str_getcsv($first_line, ';'),
+        "\t" => str_getcsv($first_line, "\t"),
+        '|' => str_getcsv($first_line, '|')
+    ];
+
+    // Return separator with most columns (should be 11+)
+    $max_count = 0;
+    $best_sep = ',';
+    foreach ($separators as $sep => $row) {
+        $count = count($row);
+        if ($count > $max_count) {
+            $max_count = $count;
+            $best_sep = $sep;
+        }
     }
 
-    // Return delimiter with most columns
-    return array_search(max($data), $data);
+    error_log("Separator detection - Best: '$best_sep' with $max_count columns");
+    return $best_sep;
+}
+
+/**
+ * Detect and convert file encoding to UTF-8
+ */
+function ensureUTF8($filepath) {
+    $content = file_get_contents($filepath);
+    $encoding = mb_detect_encoding($content, ['UTF-8', 'ISO-8859-1', 'Windows-1252', 'CP1252'], true);
+
+    if ($encoding && $encoding !== 'UTF-8') {
+        error_log("Converting file from $encoding to UTF-8");
+        $content = mb_convert_encoding($content, 'UTF-8', $encoding);
+        file_put_contents($filepath, $content);
+        return true;
+    }
+
+    return false;
 }
 
 /**
@@ -99,14 +128,21 @@ function importUCIRiders($filepath, $db) {
     $updated_riders = [];
     $clubCache = [];
 
+    // STEP 1: Convert encoding to UTF-8 if needed
+    ensureUTF8($filepath);
+
     if (($handle = fopen($filepath, 'r')) === false) {
         throw new Exception('Kunde inte öppna filen');
     }
 
-    // Auto-detect separator
+    // STEP 2: Auto-detect separator
     $separator = detectCsvSeparator($filepath);
     $stats['separator'] = $separator;
     $stats['separator_name'] = ($separator === "\t") ? 'TAB' : $separator;
+
+    error_log("=== UCI IMPORT STARTED ===");
+    error_log("File: " . basename($filepath));
+    error_log("Separator detected: " . $stats['separator_name']);
 
     // Check if first line is header
     $first_line = fgets($handle);
@@ -132,32 +168,38 @@ function importUCIRiders($filepath, $db) {
             // Parse CSV row with detected separator
             $row = str_getcsv($line, $separator);
 
-            // Debug first row
-            if ($stats['total'] === 1) {
-                error_log("UCI Import - First row debug:");
-                error_log("Separator: '" . $stats['separator_name'] . "'");
-                error_log("Column count: " . count($row));
-                error_log("Columns: " . print_r($row, true));
+            // STEP 3: Handle missing columns gracefully (pad with empty strings)
+            while (count($row) < 11) {
+                $row[] = '';
             }
 
-            if (count($row) < 11) {
-                $stats['failed']++;
-                $errors[] = "Rad {$lineNumber}: För få kolumner (" . count($row) . " av 11)";
-                continue;
+            // Trim ALL values to remove whitespace
+            $row = array_map('trim', $row);
+
+            // STEP 4: Comprehensive error logging for first 3 rows
+            if ($stats['total'] <= 3) {
+                error_log("=== ROW " . $stats['total'] . " ===");
+                error_log("Raw line: " . substr($line, 0, 200)); // First 200 chars
+                error_log("Separator used: " . $stats['separator_name']);
+                error_log("Parsed columns: " . count($row));
+                error_log("Column data:");
+                for ($i = 0; $i < count($row); $i++) {
+                    error_log("  [$i] = '" . substr($row[$i], 0, 50) . "'");
+                }
             }
 
             // Extract data according to UCI format position
-            $personnummer = trim($row[0]);
-            $firstname = trim($row[1]);
-            $lastname = trim($row[2]);
-            $country = trim($row[3]); // Ignore, always Sweden
-            $email = trim($row[4]);
-            $club_name = trim($row[5]);
-            $discipline = trim($row[6]);
-            $gender_raw = trim($row[7]);
-            $license_category = trim($row[8]);
-            $license_year = trim($row[9]);
-            $uci_code = trim($row[10]);
+            $personnummer = $row[0];
+            $firstname = $row[1];
+            $lastname = $row[2];
+            $country = $row[3]; // Ignore, always Sweden
+            $email = $row[4];
+            $club_name = $row[5];
+            $discipline = $row[6];
+            $gender_raw = $row[7];
+            $license_category = $row[8];
+            $license_year = $row[9];
+            $uci_code = $row[10];
 
             // Validate required fields
             if (empty($firstname) || empty($lastname)) {
@@ -297,6 +339,14 @@ function importUCIRiders($filepath, $db) {
 
     fclose($handle);
 
+    // Final summary log
+    error_log("=== UCI IMPORT COMPLETED ===");
+    error_log("Total processed: " . $stats['total']);
+    error_log("Success (new): " . $stats['success']);
+    error_log("Updated: " . $stats['updated']);
+    error_log("Skipped: " . $stats['skipped']);
+    error_log("Failed: " . $stats['failed']);
+
     return [
         'stats' => $stats,
         'errors' => $errors,
@@ -305,17 +355,9 @@ function importUCIRiders($filepath, $db) {
 }
 
 $pageTitle = 'UCI Import';
+$pageType = 'admin';
+include __DIR__ . '/../includes/layout-header.php';
 ?>
-<!DOCTYPE html>
-<html lang="sv">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?= h($pageTitle) ?> - TheHUB Admin</title>
-    <link rel="stylesheet" href="/assets/gravityseries-theme.css">
-</head>
-<body>
-    <?php include __DIR__ . '/../includes/navigation.php'; ?>
 
     <main class="gs-content-with-sidebar">
         <div class="gs-container">
@@ -498,11 +540,4 @@ $pageTitle = 'UCI Import';
                 </div>
             </div>
         </div>
-    </main>
-
-    <script src="https://unpkg.com/lucide@latest"></script>
-    <script>
-        lucide.createIcons();
-    </script>
-</body>
-</html>
+<?php include __DIR__ . '/../includes/layout-footer.php'; ?>

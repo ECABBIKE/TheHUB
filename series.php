@@ -22,29 +22,10 @@ $series = $db->getAll("
 ");
 
 $pageTitle = 'Serier';
+$pageType = 'public';
+include __DIR__ . '/includes/layout-header.php';
 ?>
-<!DOCTYPE html>
-<html lang="sv">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?= h($pageTitle) ?> - TheHUB</title>
-    <link rel="stylesheet" href="/assets/gravityseries-theme.css">
-    <script src="https://unpkg.com/lucide@latest"></script>
-</head>
-<body class="gs-public-page">
-    <!-- Hamburger -->
-    <button class="gs-mobile-menu-toggle" onclick="toggleMenu()" aria-label="Toggle menu">
-        <i data-lucide="menu"></i>
-    </button>
 
-    <!-- Sidebar -->
-    <?php include __DIR__ . '/includes/navigation.php'; ?>
-
-    <!-- Overlay -->
-    <div class="gs-sidebar-overlay" onclick="closeMenu()"></div>
-
-    <!-- Main Content -->
     <main style="padding: 6rem 2rem 2rem;">
         <div class="gs-container">
             <!-- Header -->
@@ -98,29 +79,4 @@ $pageTitle = 'Serier';
                 </div>
             <?php endif; ?>
         </div>
-    </main>
-
-    <script>
-        lucide.createIcons();
-
-        function toggleMenu() {
-            const sidebar = document.querySelector('.gs-sidebar');
-            const overlay = document.querySelector('.gs-sidebar-overlay');
-            sidebar.classList.toggle('open');
-            overlay.classList.toggle('active');
-        }
-
-        function closeMenu() {
-            const sidebar = document.querySelector('.gs-sidebar');
-            const overlay = document.querySelector('.gs-sidebar-overlay');
-            sidebar.classList.remove('open');
-            overlay.classList.remove('active');
-        }
-
-        // Close on link click
-        document.querySelectorAll('.gs-sidebar a').forEach(link => {
-            link.addEventListener('click', closeMenu);
-        });
-    </script>
-</body>
-</html>
+<?php include __DIR__ . '/includes/layout-footer.php'; ?>
