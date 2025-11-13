@@ -1,7 +1,320 @@
 <?php
 /**
- * Helper functions for TheHUB
+ * TheHUB Helper Functions - Consolidated
+ * All utility functions in ONE place
  */
+
+// ============================================================================
+// CORE UTILITY FUNCTIONS
+// ============================================================================
+
+/**
+ * Sanitize output for HTML
+ */
+function h($str) {
+    return htmlspecialchars($str ?? '', ENT_QUOTES, 'UTF-8');
+}
+
+/**
+ * Format date for display
+ */
+function formatDate($date, $format = 'Y-m-d') {
+    if (empty($date)) return '';
+    $dt = new DateTime($date);
+    return $dt->format($format);
+}
+
+/**
+ * Format time for display (HH:MM:SS)
+ */
+function formatTime($time) {
+    if (empty($time)) return '';
+    return substr($time, 0, 8); // HH:MM:SS
+}
+
+/**
+ * Calculate age from birth year
+ *
+ * @param int $birthYear
+ * @param int $referenceYear Optional reference year (defaults to current year)
+ * @return int Age in years
+ */
+function calculateAge($birthYear, $referenceYear = null) {
+    if (empty($birthYear) || $birthYear < 1900 || $birthYear > date('Y')) {
+        return 0;
+    }
+    $year = $referenceYear ?? date('Y');
+    return $year - $birthYear;
+}
+
+/**
+ * Calculate time difference in seconds
+ */
+function timeDiff($time1, $time2) {
+    if (empty($time1) || empty($time2)) return 0;
+
+    $t1 = strtotime($time1);
+    $t2 = strtotime($time2);
+
+    return abs($t2 - $t1);
+}
+
+/**
+ * Format time difference
+ */
+function formatTimeDiff($seconds) {
+    $hours = floor($seconds / 3600);
+    $minutes = floor(($seconds % 3600) / 60);
+    $secs = $seconds % 60;
+
+    if ($hours > 0) {
+        return sprintf("%02d:%02d:%02d", $hours, $minutes, $secs);
+    } else {
+        return sprintf("%02d:%02d", $minutes, $secs);
+    }
+}
+
+/**
+ * Redirect to URL (with safety check)
+ */
+function redirect($url) {
+    // Validate URL to prevent open redirect
+    // Only allow relative URLs or same-host URLs
+    if (strpos($url, 'http://') === 0 || strpos($url, 'https://') === 0) {
+        // External URL - validate against current host
+        $parsed = parse_url($url);
+        $currentHost = $_SERVER['HTTP_HOST'] ?? '';
+        if ($parsed['host'] !== $currentHost) {
+            // Don't redirect to external sites
+            $url = '/';
+        }
+    } elseif (strpos($url, '/') !== 0) {
+        // Ensure URL starts with / for relative paths
+        $url = '/' . $url;
+    }
+
+    header("Location: " . $url);
+    exit;
+}
+
+/**
+ * Flash message system
+ */
+function setFlash($message, $type = 'success') {
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
+    $_SESSION['flash_message'] = $message;
+    $_SESSION['flash_type'] = $type;
+}
+
+function getFlash() {
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
+
+    if (isset($_SESSION['flash_message'])) {
+        $message = $_SESSION['flash_message'];
+        $type = $_SESSION['flash_type'] ?? 'success';
+
+        unset($_SESSION['flash_message']);
+        unset($_SESSION['flash_type']);
+
+        return ['message' => $message, 'type' => $type];
+    }
+
+    return null;
+}
+
+/**
+ * Generate pagination
+ */
+function paginate($total, $perPage, $currentPage) {
+    $totalPages = ceil($total / $perPage);
+    $currentPage = max(1, min($currentPage, $totalPages));
+
+    return [
+        'total' => $total,
+        'per_page' => $perPage,
+        'current_page' => $currentPage,
+        'total_pages' => $totalPages,
+        'offset' => ($currentPage - 1) * $perPage,
+        'has_prev' => $currentPage > 1,
+        'has_next' => $currentPage < $totalPages
+    ];
+}
+
+/**
+ * Validate email
+ */
+function isValidEmail($email) {
+    return filter_var($email, FILTER_VALIDATE_EMAIL) !== false;
+}
+
+/**
+ * Generate random string
+ */
+function generateRandomString($length = 10) {
+    return bin2hex(random_bytes($length / 2));
+}
+
+/**
+ * Check if uploaded file is valid
+ */
+function validateUpload($file, $allowedExtensions = null) {
+    if (!isset($file) || $file['error'] !== UPLOAD_ERR_OK) {
+        return ['valid' => false, 'error' => 'Upload failed'];
+    }
+
+    if ($file['size'] > MAX_UPLOAD_SIZE) {
+        return ['valid' => false, 'error' => 'File too large'];
+    }
+
+    $extension = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+    $allowed = $allowedExtensions ?? ALLOWED_EXTENSIONS;
+
+    if (!in_array($extension, $allowed)) {
+        return ['valid' => false, 'error' => 'Invalid file type'];
+    }
+
+    return ['valid' => true, 'extension' => $extension];
+}
+
+/**
+ * Get current year for category calculations
+ */
+function getCurrentYear() {
+    return date('Y');
+}
+
+/**
+ * Determine category based on age and gender
+ */
+function determineCategory($birthYear, $gender, $eventYear = null) {
+    $year = $eventYear ?? getCurrentYear();
+    $age = $year - $birthYear;
+
+    $db = getDB();
+
+    $sql = "SELECT id, name FROM categories
+            WHERE active = 1
+            AND (gender = ? OR gender = 'All')
+            AND (age_min IS NULL OR age_min <= ?)
+            AND (age_max IS NULL OR age_max >= ?)
+            ORDER BY age_min DESC
+            LIMIT 1";
+
+    return $db->getRow($sql, [$gender, $age, $age]);
+}
+
+/**
+ * Log import activity
+ */
+function logImport($type, $filename, $total, $success, $failed, $errors = null, $user = null) {
+    $db = getDB();
+
+    $data = [
+        'import_type' => $type,
+        'filename' => $filename,
+        'records_total' => $total,
+        'records_success' => $success,
+        'records_failed' => $failed,
+        'errors' => $errors ? json_encode($errors) : null,
+        'imported_by' => $user ?? 'system'
+    ];
+
+    return $db->insert('import_logs', $data);
+}
+
+// ============================================================================
+// SECURITY FUNCTIONS
+// ============================================================================
+
+/**
+ * Set secure HTTP headers
+ */
+function setSecurityHeaders() {
+    // Prevent clickjacking
+    header('X-Frame-Options: DENY');
+
+    // Prevent MIME sniffing
+    header('X-Content-Type-Options: nosniff');
+
+    // Enable XSS protection (legacy browsers)
+    header('X-XSS-Protection: 1; mode=block');
+
+    // Referrer policy
+    header('Referrer-Policy: strict-origin-when-cross-origin');
+
+    // Content Security Policy (basic)
+    header("Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' https://unpkg.com; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:");
+}
+
+/**
+ * Generate CSRF token
+ */
+function generateCsrfToken() {
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
+
+    if (!isset($_SESSION['csrf_token'])) {
+        $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+    }
+
+    return $_SESSION['csrf_token'];
+}
+
+/**
+ * Get CSRF token
+ */
+function getCsrfToken() {
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
+
+    return $_SESSION['csrf_token'] ?? generateCsrfToken();
+}
+
+/**
+ * Validate CSRF token
+ */
+function validateCsrfToken($token) {
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
+
+    if (!isset($_SESSION['csrf_token'])) {
+        return false;
+    }
+
+    return hash_equals($_SESSION['csrf_token'], $token);
+}
+
+/**
+ * CSRF token input field (for forms)
+ */
+function csrfField() {
+    $token = getCsrfToken();
+    return '<input type="hidden" name="csrf_token" value="' . h($token) . '">';
+}
+
+/**
+ * Check CSRF token from POST request
+ */
+function checkCsrf() {
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        $token = $_POST['csrf_token'] ?? '';
+        if (!validateCsrfToken($token)) {
+            http_response_code(403);
+            die('CSRF token validation failed');
+        }
+    }
+}
+
+// ============================================================================
+// RIDER/CYCLIST FUNCTIONS
+// ============================================================================
 
 /**
  * Generate unique SWE ID for riders without UCI ID
@@ -204,19 +517,6 @@ function parsePersonnummer($personnummer) {
 }
 
 /**
- * Calculate age from birth year
- *
- * @param int $birthYear
- * @return int Age in years
- */
-function calculateAge($birthYear) {
-    if (empty($birthYear) || $birthYear < 1900 || $birthYear > date('Y')) {
-        return 0;
-    }
-    return (int)date('Y') - $birthYear;
-}
-
-/**
  * Get age category based on birth year
  *
  * @param int $birthYear
@@ -404,4 +704,59 @@ function suggestLicenseCategory($birthYear, $gender) {
     if ($age < 45) return 'Master' . $suffix . ' 35+';
     if ($age < 55) return 'Master' . $suffix . ' 45+';
     return 'Master' . $suffix . ' 55+';
+}
+
+// ============================================================================
+// CSV PARSING FUNCTIONS
+// ============================================================================
+
+/**
+ * Detect CSV separator by testing which gives most columns
+ *
+ * @param string $file_path Path to CSV file
+ * @return string Detected separator
+ */
+function detectCsvSeparator($file_path) {
+    $handle = fopen($file_path, 'r');
+    if (!$handle) return ',';
+
+    $first_line = fgets($handle);
+    fclose($handle);
+
+    if (empty($first_line)) return ',';
+
+    $separators = [',', ';', "\t", '|'];
+    $max_count = 0;
+    $best_separator = ',';
+
+    foreach ($separators as $sep) {
+        $row = str_getcsv($first_line, $sep);
+        $count = count($row);
+
+        if ($count > $max_count) {
+            $max_count = $count;
+            $best_separator = $sep;
+        }
+    }
+
+    return $best_separator;
+}
+
+/**
+ * Convert file to UTF-8 if needed
+ *
+ * @param string $file_path Path to file
+ * @return string Original encoding detected
+ */
+function convertFileEncoding($file_path) {
+    $content = file_get_contents($file_path);
+    $encoding = mb_detect_encoding($content, ['UTF-8', 'ISO-8859-1', 'Windows-1252', 'UTF-16'], true);
+
+    if ($encoding && $encoding !== 'UTF-8') {
+        $content = mb_convert_encoding($content, 'UTF-8', $encoding);
+        file_put_contents($file_path, $content);
+        return $encoding;
+    }
+
+    return 'UTF-8';
 }
