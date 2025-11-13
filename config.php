@@ -87,7 +87,7 @@ define('DEFAULT_ADMIN_PASSWORD', env('ADMIN_PASSWORD', 'admin'));
 
 // Load core dependencies
 require_once INCLUDES_PATH . '/db.php';
-require_once INCLUDES_PATH . '/functions.php';
+require_once INCLUDES_PATH . '/helpers.php';
 require_once INCLUDES_PATH . '/auth.php';
 
 /**
