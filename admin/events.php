@@ -76,6 +76,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$is_demo) {
 // Handle filters
 $status = $_GET['status'] ?? '';
 $year = $_GET['year'] ?? date('Y');
+$location = $_GET['location'] ?? '';
 
 // Fetch series for dropdown (if not in demo mode)
 $series = [];
@@ -108,6 +109,12 @@ if ($is_demo) {
 
     // Filter by year
     $events = array_filter($events, fn($e) => date('Y', strtotime($e['event_date'])) == $year);
+
+    // Filter by location
+    if ($location) {
+        $events = array_filter($events, fn($e) => $e['location'] === $location);
+    }
+
     $events = array_values($events);
 
     // Available years
@@ -123,6 +130,11 @@ if ($is_demo) {
     if ($status) {
         $where[] = "status = ?";
         $params[] = $status;
+    }
+
+    if ($location) {
+        $where[] = "location = ?";
+        $params[] = $location;
     }
 
     $whereClause = 'WHERE ' . implode(' AND ', $where);
@@ -178,6 +190,22 @@ include __DIR__ . '/../includes/layout-header.php';
                 </div>
             <?php endif; ?>
 
+            <!-- Location Filter Badge -->
+            <?php if ($location): ?>
+                <div class="gs-alert gs-alert-info gs-mb-lg">
+                    <i data-lucide="map-pin"></i>
+                    <div class="gs-flex gs-items-center gs-gap-md">
+                        <span>
+                            Visar tävlingar för plats: <strong><?= h($location) ?></strong>
+                        </span>
+                        <a href="/admin/events.php" class="gs-btn gs-btn-sm gs-btn-outline">
+                            <i data-lucide="x"></i>
+                            Ta bort filter
+                        </a>
+                    </div>
+                </div>
+            <?php endif; ?>
+
             <!-- Filters -->
             <div class="gs-card gs-mb-lg">
                 <div class="gs-card-content">
@@ -212,7 +240,7 @@ include __DIR__ . '/../includes/layout-header.php';
                             <i data-lucide="filter"></i>
                             Filtrera
                         </button>
-                        <?php if ($status || $year != date('Y')): ?>
+                        <?php if ($status || $year != date('Y') || $location): ?>
                             <a href="/admin/events.php" class="gs-btn gs-btn-outline">
                                 Rensa
                             </a>
