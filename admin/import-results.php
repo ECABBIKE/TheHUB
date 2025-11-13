@@ -98,9 +98,14 @@ function importResultsFromCSV($filepath, $db) {
         throw new Exception('Tom fil eller ogiltigt format');
     }
 
-    // Normalize header
+    // Normalize header (lowercase, trim, handle both underscore and non-underscore versions)
     $header = array_map(function($col) {
-        return strtolower(trim($col));
+        $col = strtolower(trim($col));
+        // Normalize column names: convert first_name to firstname, last_name to lastname, etc
+        $col = str_replace(['first_name', 'last_name', 'club_name', 'e-mail', 'uci_id'],
+                          ['firstname', 'lastname', 'club', 'email', 'license_number'],
+                          $col);
+        return $col;
     }, $header);
 
     // Cache for lookups

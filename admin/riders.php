@@ -163,7 +163,7 @@ if ($is_demo) {
             LEFT JOIN clubs cl ON c.club_id = cl.id
             $whereClause
             ORDER BY c.lastname, c.firstname
-            LIMIT 100";
+            LIMIT 1000";
 
     $riders = $db->getAll($sql, $params);
 }
