@@ -5,71 +5,42 @@ require_admin();
 $db = getDB();
 $current_admin = get_current_admin();
 
-// Demo mode check
-$is_demo = ($db->getConnection() === null);
+// Get statistics from database
+$stats = [
+    'total_events' => $db->getRow("SELECT COUNT(*) as count FROM events")['count'] ?? 0,
+    'upcoming_events' => $db->getRow("SELECT COUNT(*) as count FROM events WHERE status = 'upcoming'")['count'] ?? 0,
+    'total_riders' => $db->getRow("SELECT COUNT(*) as count FROM riders WHERE active = 1")['count'] ?? 0,
+    'total_clubs' => $db->getRow("SELECT COUNT(*) as count FROM clubs WHERE active = 1")['count'] ?? 0,
+    'total_results' => $db->getRow("SELECT COUNT(*) as count FROM results")['count'] ?? 0,
+    'this_month_events' => $db->getRow("SELECT COUNT(*) as count FROM events WHERE MONTH(date) = MONTH(CURDATE()) AND YEAR(date) = YEAR(CURDATE())")['count'] ?? 0,
+];
 
-if ($is_demo) {
-    // Demo statistics
-    $stats = [
-        'total_events' => 12,
-        'upcoming_events' => 5,
-        'total_riders' => 342,
-        'total_clubs' => 28,
-        'total_results' => 1856,
-        'this_month_events' => 2,
-    ];
-
-    // Demo recent events
-    $recent_events = [
-        ['id' => 1, 'name' => 'GravitySeries Järvsö XC', 'event_date' => '2025-06-15', 'location' => 'Järvsö', 'status' => 'upcoming', 'participant_count' => 145],
-        ['id' => 2, 'name' => 'SM Lindesberg', 'event_date' => '2025-07-01', 'location' => 'Lindesberg', 'status' => 'upcoming', 'participant_count' => 220],
-        ['id' => 3, 'name' => 'Cykelvasan 90', 'event_date' => '2025-08-10', 'location' => 'Mora', 'status' => 'upcoming', 'participant_count' => 890],
-    ];
-
-    // Demo recent results
-    $recent_results = [
-        ['id' => 1, 'position' => 1, 'event_name' => 'GravitySeries Järvsö XC', 'event_date' => '2025-06-15', 'rider_name' => 'Erik Andersson', 'category_name' => 'Elite Herr'],
-        ['id' => 2, 'position' => 2, 'event_name' => 'GravitySeries Järvsö XC', 'event_date' => '2025-06-15', 'rider_name' => 'Anna Karlsson', 'category_name' => 'Elite Dam'],
-        ['id' => 3, 'position' => 3, 'event_name' => 'GravitySeries Järvsö XC', 'event_date' => '2025-06-15', 'rider_name' => 'Johan Svensson', 'category_name' => 'Elite Herr'],
-    ];
-} else {
-    // Get statistics from database
-    $stats = [
-        'total_events' => $db->getRow("SELECT COUNT(*) as count FROM events")['count'] ?? 0,
-        'upcoming_events' => $db->getRow("SELECT COUNT(*) as count FROM events WHERE status = 'upcoming'")['count'] ?? 0,
-        'total_riders' => $db->getRow("SELECT COUNT(*) as count FROM riders WHERE active = 1")['count'] ?? 0,
-        'total_clubs' => $db->getRow("SELECT COUNT(*) as count FROM clubs WHERE active = 1")['count'] ?? 0,
-        'total_results' => $db->getRow("SELECT COUNT(*) as count FROM results")['count'] ?? 0,
-        'this_month_events' => $db->getRow("SELECT COUNT(*) as count FROM events WHERE MONTH(event_date) = MONTH(CURDATE()) AND YEAR(event_date) = YEAR(CURDATE())")['count'] ?? 0,
-    ];
-
-    // Get recent events
-    $recent_events = $db->getAll(
-        "SELECT e.id, e.name, e.event_date, e.location, e.status, COUNT(r.id) as participant_count
-         FROM events e
-         LEFT JOIN results r ON e.id = r.event_id
+// Get recent events
+$recent_events = $db->getAll(
+    "SELECT e.id, e.name, e.date as event_date, e.location, e.status, COUNT(r.id) as participant_count
+     FROM events e
+     LEFT JOIN results r ON e.id = r.event_id
          GROUP BY e.id
          ORDER BY e.event_date DESC
          LIMIT 5"
     );
 
-    // Get recent results
-    $recent_results = $db->getAll(
-        "SELECT
-            r.id,
-            r.position,
-            e.name as event_name,
-            e.event_date,
-            CONCAT(c.firstname, ' ', c.lastname) as rider_name,
-            cat.name as category_name
-         FROM results r
-         JOIN events e ON r.event_id = e.id
-         JOIN riders c ON r.cyclist_id = c.id
-         LEFT JOIN categories cat ON r.category_id = cat.id
-         ORDER BY r.created_at DESC
-         LIMIT 5"
-    );
-}
+// Get recent results
+$recent_results = $db->getAll(
+    "SELECT
+        r.id,
+        r.position,
+        e.name as event_name,
+        e.date as event_date,
+        CONCAT(c.firstname, ' ', c.lastname) as rider_name,
+        cat.name as category_name
+     FROM results r
+     JOIN events e ON r.event_id = e.id
+     JOIN riders c ON r.cyclist_id = c.id
+     LEFT JOIN categories cat ON r.category_id = cat.id
+     ORDER BY r.created_at DESC
+     LIMIT 5"
+);
 
 $pageTitle = 'Dashboard';
 $pageType = 'admin';

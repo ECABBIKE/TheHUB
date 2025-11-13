@@ -5,15 +5,13 @@ require_admin();
 $db = getDB();
 $current_admin = get_current_admin();
 
-// Demo mode check
-$is_demo = ($db->getConnection() === null);
 
 // Initialize message variables
 $message = '';
 $messageType = 'info';
 
 // Handle form submissions
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$is_demo) {
+if ($_SERVER['REQUEST_METHOD'] === 'POST')) {
     checkCsrf();
 
     $action = $_POST['action'] ?? '';
@@ -86,7 +84,6 @@ $all_events = [];
 $all_riders = [];
 $all_categories = [];
 $editResult = null;
-if (!$is_demo) {
     $all_events = $db->getAll("SELECT id, name, event_date FROM events ORDER BY event_date DESC LIMIT 100");
     $all_riders = $db->getAll("SELECT id, CONCAT(firstname, ' ', lastname) as name, license_number FROM riders ORDER BY lastname, firstname LIMIT 500");
     $all_categories = $db->getAll("SELECT id, name FROM categories ORDER BY name");
@@ -97,53 +94,6 @@ if (!$is_demo) {
     }
 }
 
-if ($is_demo) {
-    // Demo results
-    $all_results = [
-        ['id' => 1, 'position' => 1, 'bib_number' => 101, 'finish_time' => '01:45:23', 'status' => 'finished', 'points' => 100, 'event_name' => 'GravitySeries Järvsö XC', 'event_date' => '2025-06-15', 'event_id' => 1, 'rider_name' => 'Erik Andersson', 'rider_id' => 1, 'birth_year' => 1995, 'club_name' => 'Team GravitySeries', 'category_name' => 'Elite Herr', 'category_id' => 1],
-        ['id' => 2, 'position' => 2, 'bib_number' => 102, 'finish_time' => '01:46:45', 'status' => 'finished', 'points' => 90, 'event_name' => 'GravitySeries Järvsö XC', 'event_date' => '2025-06-15', 'event_id' => 1, 'rider_name' => 'Johan Svensson', 'rider_id' => 3, 'birth_year' => 1992, 'club_name' => 'Uppsala CK', 'category_name' => 'Elite Herr', 'category_id' => 1],
-        ['id' => 3, 'position' => 1, 'bib_number' => 201, 'finish_time' => '01:52:12', 'status' => 'finished', 'points' => 100, 'event_name' => 'GravitySeries Järvsö XC', 'event_date' => '2025-06-15', 'event_id' => 1, 'rider_name' => 'Anna Karlsson', 'rider_id' => 2, 'birth_year' => 1998, 'club_name' => 'CK Olympia', 'category_name' => 'Elite Dam', 'category_id' => 2],
-        ['id' => 4, 'position' => 2, 'bib_number' => 202, 'finish_time' => '01:54:30', 'status' => 'finished', 'points' => 90, 'event_name' => 'GravitySeries Järvsö XC', 'event_date' => '2025-06-15', 'event_id' => 1, 'rider_name' => 'Maria Lindström', 'rider_id' => 4, 'birth_year' => 1996, 'club_name' => 'Team Sportson', 'category_name' => 'Elite Dam', 'category_id' => 2],
-        ['id' => 5, 'position' => 1, 'bib_number' => 103, 'finish_time' => '02:15:45', 'status' => 'finished', 'points' => 100, 'event_name' => 'SM Lindesberg', 'event_date' => '2025-07-01', 'event_id' => 2, 'rider_name' => 'Peter Nilsson', 'rider_id' => 5, 'birth_year' => 1990, 'club_name' => 'IFK Göteborg CK', 'category_name' => 'Elite Herr', 'category_id' => 1],
-    ];
-
-    // Filter by event
-    if ($event_id) {
-        $results = array_filter($all_results, fn($r) => $r['event_id'] == $event_id);
-        $results = array_values($results);
-    } else {
-        $results = $all_results;
-    }
-
-    // Filter by category
-    if ($category_id) {
-        $results = array_filter($results, fn($r) => $r['category_id'] == $category_id);
-        $results = array_values($results);
-    }
-
-    // Filter by search
-    if ($search) {
-        $results = array_filter($results, function($r) use ($search) {
-            return stripos($r['rider_name'], $search) !== false;
-        });
-        $results = array_values($results);
-    }
-
-    // Demo events for filter
-    $events = [
-        ['id' => 1, 'name' => 'GravitySeries Järvsö XC', 'event_date' => '2025-06-15'],
-        ['id' => 2, 'name' => 'SM Lindesberg', 'event_date' => '2025-07-01'],
-        ['id' => 3, 'name' => 'Cykelvasan 90', 'event_date' => '2025-08-10'],
-    ];
-
-    // Demo categories for filter
-    $categories = [
-        ['id' => 1, 'name' => 'Elite Herr'],
-        ['id' => 2, 'name' => 'Elite Dam'],
-        ['id' => 3, 'name' => 'Junior Herr'],
-        ['id' => 4, 'name' => 'Junior Dam'],
-    ];
-} else {
     $where = [];
     $params = [];
 
@@ -213,7 +163,6 @@ include __DIR__ . '/../includes/layout-header.php';
                     <i data-lucide="trophy"></i>
                     Resultat
                 </h1>
-                <?php if (!$is_demo): ?>
                     <button type="button" class="gs-btn gs-btn-primary" onclick="openResultModal()">
                         <i data-lucide="plus"></i>
                         Nytt Resultat
@@ -230,7 +179,6 @@ include __DIR__ . '/../includes/layout-header.php';
             <?php endif; ?>
 
             <!-- Result Modal -->
-            <?php if (!$is_demo): ?>
                 <div id="resultModal" class="gs-modal" style="display: none;">
                     <div class="gs-modal-overlay" onclick="closeResultModal()"></div>
                     <div class="gs-modal-content" style="max-width: 700px;">
@@ -620,7 +568,7 @@ include __DIR__ . '/../includes/layout-header.php';
                                             <?php endif; ?>
                                         </td>
                                         <td style="text-align: right;">
-                                            <?php if ($is_demo): ?>
+                                            
                                                 <span class="gs-badge gs-badge-secondary">Demo</span>
                                             <?php else: ?>
                                                 <div class="gs-flex gs-gap-sm gs-justify-end">
@@ -652,7 +600,6 @@ include __DIR__ . '/../includes/layout-header.php';
             <?php endif; ?>
         </div>
 
-        <?php if (!$is_demo): ?>
         <script>
             // Open modal for creating new result
             function openResultModal() {

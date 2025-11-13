@@ -5,6 +5,8 @@ ini_set('display_errors', 1);
 require_once __DIR__ . '/../config.php';
 require_admin();
 
+$db = getDB();
+
 $pageTitle = 'Database Setup';
 $pageType = 'admin';
 
@@ -32,9 +34,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 throw new Exception('Failed to read schema file');
             }
 
-            // Get PDO connection
-            if (!isset($pdo) || !$pdo instanceof PDO) {
-                throw new Exception('PDO connection not available');
+            // Get PDO connection from Database class
+            $pdo = $db->getConnection();
+            if (!$pdo || !$pdo instanceof PDO) {
+                throw new Exception('Database connection not available. Please check config.php database settings.');
             }
 
             // Execute schema (split by statement)
@@ -80,7 +83,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 // Check database status
 $dbStatus = [];
 try {
-    if (isset($pdo) && $pdo instanceof PDO) {
+    $pdo = $db->getConnection();
+    if ($pdo && $pdo instanceof PDO) {
         $dbStatus['connected'] = true;
 
         // Get current database name

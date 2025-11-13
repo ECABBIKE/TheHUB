@@ -5,15 +5,13 @@ require_admin();
 $db = getDB();
 $current_admin = get_current_admin();
 
-// Demo mode check
-$is_demo = ($db->getConnection() === null);
 
 // Initialize message variables
 $message = '';
 $messageType = 'info';
 
 // Handle form submissions
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$is_demo) {
+if ($_SERVER['REQUEST_METHOD'] === 'POST')) {
     checkCsrf();
 
     $action = $_POST['action'] ?? '';
@@ -67,42 +65,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$is_demo) {
 
 // Check if editing a series
 $editSeries = null;
-if (!$is_demo && isset($_GET['edit']) && is_numeric($_GET['edit'])) {
+if (isset($_GET['edit']) && is_numeric($_GET['edit'])) {
     $editSeries = $db->getOne("SELECT * FROM series WHERE id = ?", [intval($_GET['edit'])]);
 }
 
-if ($is_demo) {
-    // Demo series data
-    $series = [
-        [
-            'id' => 1,
-            'name' => 'GravitySeries 2025',
-            'type' => 'XC',
-            'events_count' => 6,
-            'status' => 'active',
-            'start_date' => '2025-05-01',
-            'end_date' => '2025-09-30'
-        ],
-        [
-            'id' => 2,
-            'name' => 'Svenska Cupen MTB',
-            'type' => 'XC',
-            'events_count' => 8,
-            'status' => 'active',
-            'start_date' => '2025-04-15',
-            'end_date' => '2025-10-15'
-        ],
-        [
-            'id' => 3,
-            'name' => 'Vasaloppet Cycling',
-            'type' => 'Landsväg',
-            'events_count' => 4,
-            'status' => 'active',
-            'start_date' => '2025-06-01',
-            'end_date' => '2025-08-31'
-        ],
-    ];
-} else {
     // Get series from database
     $series = $db->getAll("SELECT id, name, type, status, start_date, end_date,
                           (SELECT COUNT(*) FROM events WHERE series_id = series.id) as events_count
@@ -123,7 +89,6 @@ include __DIR__ . '/../includes/layout-header.php';
                     <i data-lucide="trophy"></i>
                     Serier
                 </h1>
-                <?php if (!$is_demo): ?>
                     <button type="button" class="gs-btn gs-btn-primary" onclick="openSeriesModal()">
                         <i data-lucide="plus"></i>
                         Ny Serie
@@ -140,7 +105,6 @@ include __DIR__ . '/../includes/layout-header.php';
             <?php endif; ?>
 
             <!-- Series Modal -->
-            <?php if (!$is_demo): ?>
                 <div id="seriesModal" class="gs-modal" style="display: none;">
                     <div class="gs-modal-overlay" onclick="closeSeriesModal()"></div>
                     <div class="gs-modal-content" style="max-width: 700px;">
@@ -350,7 +314,7 @@ include __DIR__ . '/../includes/layout-header.php';
                                         </span>
                                     </td>
                                     <td style="text-align: right;">
-                                        <?php if ($is_demo): ?>
+                                        
                                             <span class="gs-badge gs-badge-secondary">Demo</span>
                                         <?php else: ?>
                                             <div class="gs-flex gs-gap-sm gs-justify-end">
@@ -389,7 +353,6 @@ include __DIR__ . '/../includes/layout-header.php';
             </div>
         </div>
 
-        <?php if (!$is_demo): ?>
         <script>
             // Open modal for creating new series
             function openSeriesModal() {

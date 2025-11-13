@@ -5,15 +5,13 @@ require_admin();
 $db = getDB();
 $current_admin = get_current_admin();
 
-// Demo mode check
-$is_demo = ($db->getConnection() === null);
 
 // Initialize message variables
 $message = '';
 $messageType = 'info';
 
 // Handle form submissions
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$is_demo) {
+if ($_SERVER['REQUEST_METHOD'] === 'POST')) {
     checkCsrf();
 
     $action = $_POST['action'] ?? '';
@@ -71,31 +69,10 @@ $search = $_GET['search'] ?? '';
 
 // Check if editing a club
 $editClub = null;
-if (!$is_demo && isset($_GET['edit']) && is_numeric($_GET['edit'])) {
+if (isset($_GET['edit']) && is_numeric($_GET['edit'])) {
     $editClub = $db->getOne("SELECT * FROM clubs WHERE id = ?", [intval($_GET['edit'])]);
 }
 
-if ($is_demo) {
-    // Demo clubs
-    $all_clubs = [
-        ['id' => 1, 'name' => 'Team GravitySeries', 'short_name' => 'TGS', 'city' => 'Stockholm', 'country' => 'Sverige', 'active' => 1, 'rider_count' => 45],
-        ['id' => 2, 'name' => 'CK Olympia', 'short_name' => 'CKO', 'city' => 'Göteborg', 'country' => 'Sverige', 'active' => 1, 'rider_count' => 38],
-        ['id' => 3, 'name' => 'Uppsala CK', 'short_name' => 'UCK', 'city' => 'Uppsala', 'country' => 'Sverige', 'active' => 1, 'rider_count' => 52],
-        ['id' => 4, 'name' => 'Team Sportson', 'short_name' => 'TSP', 'city' => 'Malmö', 'country' => 'Sverige', 'active' => 1, 'rider_count' => 41],
-        ['id' => 5, 'name' => 'IFK Göteborg CK', 'short_name' => 'IFKG', 'city' => 'Göteborg', 'country' => 'Sverige', 'active' => 1, 'rider_count' => 67],
-        ['id' => 6, 'name' => 'Cykelklubben Borås', 'short_name' => 'CKB', 'city' => 'Borås', 'country' => 'Sverige', 'active' => 1, 'rider_count' => 29],
-    ];
-
-    // Filter by search
-    if ($search) {
-        $clubs = array_filter($all_clubs, function($c) use ($search) {
-            return stripos($c['name'], $search) !== false || stripos($c['city'], $search) !== false;
-        });
-        $clubs = array_values($clubs);
-    } else {
-        $clubs = $all_clubs;
-    }
-} else {
     $where = [];
     $params = [];
 
@@ -137,7 +114,6 @@ include __DIR__ . '/../includes/layout-header.php';
                     <i data-lucide="building"></i>
                     Klubbar
                 </h1>
-                <?php if (!$is_demo): ?>
                     <button type="button" class="gs-btn gs-btn-primary" onclick="openClubModal()">
                         <i data-lucide="plus"></i>
                         Ny Klubb
@@ -154,7 +130,6 @@ include __DIR__ . '/../includes/layout-header.php';
             <?php endif; ?>
 
             <!-- Club Modal -->
-            <?php if (!$is_demo): ?>
                 <div id="clubModal" class="gs-modal" style="display: none;">
                     <div class="gs-modal-overlay" onclick="closeClubModal()"></div>
                     <div class="gs-modal-content" style="max-width: 700px;">
@@ -418,7 +393,7 @@ include __DIR__ . '/../includes/layout-header.php';
                                             <?php endif; ?>
                                         </td>
                                         <td style="text-align: right;">
-                                            <?php if ($is_demo): ?>
+                                            
                                                 <span class="gs-badge gs-badge-secondary">Demo</span>
                                             <?php else: ?>
                                                 <div class="gs-flex gs-gap-sm gs-justify-end">
@@ -458,7 +433,6 @@ include __DIR__ . '/../includes/layout-header.php';
             <?php endif; ?>
         </div>
 
-        <?php if (!$is_demo): ?>
         <script>
             // Open modal for creating new club
             function openClubModal() {
