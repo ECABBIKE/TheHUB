@@ -8,9 +8,86 @@ $current_admin = get_current_admin();
 // Demo mode check
 $is_demo = ($db->getConnection() === null);
 
+// Initialize message variables
+$message = '';
+$messageType = 'info';
+
+// Handle form submissions
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$is_demo) {
+    checkCsrf();
+
+    $action = $_POST['action'] ?? '';
+
+    if ($action === 'create' || $action === 'update') {
+        // Validate required fields
+        $name = trim($_POST['name'] ?? '');
+        $event_date = trim($_POST['event_date'] ?? '');
+
+        if (empty($name) || empty($event_date)) {
+            $message = 'Namn och datum är obligatoriska';
+            $messageType = 'error';
+        } else {
+            // Prepare event data
+            $eventData = [
+                'name' => $name,
+                'event_date' => $event_date,
+                'location' => trim($_POST['location'] ?? ''),
+                'event_type' => $_POST['event_type'] ?? 'road_race',
+                'status' => $_POST['status'] ?? 'upcoming',
+                'series_id' => !empty($_POST['series_id']) ? intval($_POST['series_id']) : null,
+                'distance' => !empty($_POST['distance']) ? floatval($_POST['distance']) : null,
+                'elevation_gain' => !empty($_POST['elevation_gain']) ? intval($_POST['elevation_gain']) : null,
+                'description' => trim($_POST['description'] ?? ''),
+                'organizer' => trim($_POST['organizer'] ?? ''),
+                'website' => trim($_POST['website'] ?? ''),
+                'registration_deadline' => !empty($_POST['registration_deadline']) ? trim($_POST['registration_deadline']) : null,
+                'max_participants' => !empty($_POST['max_participants']) ? intval($_POST['max_participants']) : null,
+            ];
+
+            try {
+                if ($action === 'create') {
+                    $db->insert('events', $eventData);
+                    $message = 'Tävling skapad!';
+                    $messageType = 'success';
+                } else {
+                    $id = intval($_POST['id']);
+                    $db->update('events', $eventData, 'id = ?', [$id]);
+                    $message = 'Tävling uppdaterad!';
+                    $messageType = 'success';
+                }
+            } catch (Exception $e) {
+                $message = 'Ett fel uppstod: ' . $e->getMessage();
+                $messageType = 'error';
+            }
+        }
+    } elseif ($action === 'delete') {
+        $id = intval($_POST['id']);
+        try {
+            $db->delete('events', 'id = ?', [$id]);
+            $message = 'Tävling borttagen!';
+            $messageType = 'success';
+        } catch (Exception $e) {
+            $message = 'Ett fel uppstod: ' . $e->getMessage();
+            $messageType = 'error';
+        }
+    }
+}
+
 // Handle filters
 $status = $_GET['status'] ?? '';
 $year = $_GET['year'] ?? date('Y');
+
+// Fetch series for dropdown (if not in demo mode)
+$series = [];
+$editEvent = null;
+if (!$is_demo) {
+    $series = $db->getAll("SELECT id, name FROM series WHERE status = 'active' ORDER BY name");
+
+    // Check if editing an event
+    if (isset($_GET['edit']) && is_numeric($_GET['edit'])) {
+        $editEvent = $db->getOne("SELECT * FROM events WHERE id = ?", [intval($_GET['edit'])]);
+    }
+}
 
 if ($is_demo) {
     // Demo events
@@ -85,7 +162,21 @@ include __DIR__ . '/../includes/layout-header.php';
                     <i data-lucide="calendar"></i>
                     Tävlingar
                 </h1>
+                <?php if (!$is_demo): ?>
+                    <button type="button" class="gs-btn gs-btn-primary" onclick="openEventModal()">
+                        <i data-lucide="plus"></i>
+                        Ny Tävling
+                    </button>
+                <?php endif; ?>
             </div>
+
+            <!-- Messages -->
+            <?php if ($message): ?>
+                <div class="gs-alert gs-alert-<?= $messageType ?> gs-mb-lg">
+                    <i data-lucide="<?= $messageType === 'success' ? 'check-circle' : ($messageType === 'error' ? 'alert-circle' : 'info') ?>"></i>
+                    <?= h($message) ?>
+                </div>
+            <?php endif; ?>
 
             <!-- Filters -->
             <div class="gs-card gs-mb-lg">
@@ -129,6 +220,240 @@ include __DIR__ . '/../includes/layout-header.php';
                     </form>
                 </div>
             </div>
+
+            <!-- Event Modal -->
+            <?php if (!$is_demo): ?>
+                <div id="eventModal" class="gs-modal" style="display: none;">
+                    <div class="gs-modal-overlay" onclick="closeEventModal()"></div>
+                    <div class="gs-modal-content" style="max-width: 700px;">
+                        <div class="gs-modal-header">
+                            <h2 class="gs-modal-title" id="modalTitle">
+                                <i data-lucide="calendar"></i>
+                                <span id="modalTitleText">Ny Tävling</span>
+                            </h2>
+                            <button type="button" class="gs-modal-close" onclick="closeEventModal()">
+                                <i data-lucide="x"></i>
+                            </button>
+                        </div>
+                        <form method="POST" id="eventForm">
+                            <?= csrf_field() ?>
+                            <input type="hidden" name="action" id="formAction" value="create">
+                            <input type="hidden" name="id" id="eventId" value="">
+
+                            <div class="gs-modal-body">
+                                <div class="gs-grid gs-grid-cols-1 gs-gap-md">
+                                    <!-- Name (Required) -->
+                                    <div>
+                                        <label for="name" class="gs-label">
+                                            <i data-lucide="calendar"></i>
+                                            Namn <span class="gs-text-error">*</span>
+                                        </label>
+                                        <input
+                                            type="text"
+                                            id="name"
+                                            name="name"
+                                            class="gs-input"
+                                            required
+                                            placeholder="T.ex. GravitySeries Järvsö"
+                                        >
+                                    </div>
+
+                                    <!-- Event Date (Required) -->
+                                    <div>
+                                        <label for="event_date" class="gs-label">
+                                            <i data-lucide="calendar-days"></i>
+                                            Datum <span class="gs-text-error">*</span>
+                                        </label>
+                                        <input
+                                            type="date"
+                                            id="event_date"
+                                            name="event_date"
+                                            class="gs-input"
+                                            required
+                                        >
+                                    </div>
+
+                                    <!-- Location -->
+                                    <div>
+                                        <label for="location" class="gs-label">
+                                            <i data-lucide="map-pin"></i>
+                                            Plats
+                                        </label>
+                                        <input
+                                            type="text"
+                                            id="location"
+                                            name="location"
+                                            class="gs-input"
+                                            placeholder="T.ex. Järvsö"
+                                        >
+                                    </div>
+
+                                    <!-- Event Type -->
+                                    <div>
+                                        <label for="event_type" class="gs-label">
+                                            <i data-lucide="flag"></i>
+                                            Tävlingstyp
+                                        </label>
+                                        <select id="event_type" name="event_type" class="gs-input">
+                                            <option value="road_race">Road Race</option>
+                                            <option value="time_trial">Time Trial</option>
+                                            <option value="criterium">Criterium</option>
+                                            <option value="stage_race">Stage Race</option>
+                                            <option value="other">Other</option>
+                                        </select>
+                                    </div>
+
+                                    <!-- Status -->
+                                    <div>
+                                        <label for="status" class="gs-label">
+                                            <i data-lucide="activity"></i>
+                                            Status
+                                        </label>
+                                        <select id="status" name="status" class="gs-input">
+                                            <option value="upcoming">Kommande</option>
+                                            <option value="ongoing">Pågående</option>
+                                            <option value="completed">Avslutad</option>
+                                            <option value="cancelled">Inställd</option>
+                                        </select>
+                                    </div>
+
+                                    <!-- Series -->
+                                    <div>
+                                        <label for="series_id" class="gs-label">
+                                            <i data-lucide="trophy"></i>
+                                            Serie
+                                        </label>
+                                        <select id="series_id" name="series_id" class="gs-input">
+                                            <option value="">Ingen serie</option>
+                                            <?php foreach ($series as $s): ?>
+                                                <option value="<?= $s['id'] ?>"><?= h($s['name']) ?></option>
+                                            <?php endforeach; ?>
+                                        </select>
+                                    </div>
+
+                                    <!-- Distance and Elevation -->
+                                    <div class="gs-grid gs-grid-cols-2 gs-gap-md">
+                                        <div>
+                                            <label for="distance" class="gs-label">
+                                                <i data-lucide="route"></i>
+                                                Distans (km)
+                                            </label>
+                                            <input
+                                                type="number"
+                                                id="distance"
+                                                name="distance"
+                                                class="gs-input"
+                                                step="0.01"
+                                                min="0"
+                                                placeholder="T.ex. 42.5"
+                                            >
+                                        </div>
+                                        <div>
+                                            <label for="elevation_gain" class="gs-label">
+                                                <i data-lucide="mountain"></i>
+                                                Höjdmeter (m)
+                                            </label>
+                                            <input
+                                                type="number"
+                                                id="elevation_gain"
+                                                name="elevation_gain"
+                                                class="gs-input"
+                                                min="0"
+                                                placeholder="T.ex. 1200"
+                                            >
+                                        </div>
+                                    </div>
+
+                                    <!-- Organizer -->
+                                    <div>
+                                        <label for="organizer" class="gs-label">
+                                            <i data-lucide="user"></i>
+                                            Arrangör
+                                        </label>
+                                        <input
+                                            type="text"
+                                            id="organizer"
+                                            name="organizer"
+                                            class="gs-input"
+                                            placeholder="T.ex. GravitySeries AB"
+                                        >
+                                    </div>
+
+                                    <!-- Website -->
+                                    <div>
+                                        <label for="website" class="gs-label">
+                                            <i data-lucide="globe"></i>
+                                            Webbplats
+                                        </label>
+                                        <input
+                                            type="url"
+                                            id="website"
+                                            name="website"
+                                            class="gs-input"
+                                            placeholder="https://example.com"
+                                        >
+                                    </div>
+
+                                    <!-- Registration Deadline and Max Participants -->
+                                    <div class="gs-grid gs-grid-cols-2 gs-gap-md">
+                                        <div>
+                                            <label for="registration_deadline" class="gs-label">
+                                                <i data-lucide="calendar-clock"></i>
+                                                Anmälningsfrist
+                                            </label>
+                                            <input
+                                                type="date"
+                                                id="registration_deadline"
+                                                name="registration_deadline"
+                                                class="gs-input"
+                                            >
+                                        </div>
+                                        <div>
+                                            <label for="max_participants" class="gs-label">
+                                                <i data-lucide="users"></i>
+                                                Max deltagare
+                                            </label>
+                                            <input
+                                                type="number"
+                                                id="max_participants"
+                                                name="max_participants"
+                                                class="gs-input"
+                                                min="0"
+                                                placeholder="T.ex. 500"
+                                            >
+                                        </div>
+                                    </div>
+
+                                    <!-- Description -->
+                                    <div>
+                                        <label for="description" class="gs-label">
+                                            <i data-lucide="file-text"></i>
+                                            Beskrivning
+                                        </label>
+                                        <textarea
+                                            id="description"
+                                            name="description"
+                                            class="gs-input"
+                                            rows="4"
+                                            placeholder="Beskriv tävlingen..."
+                                        ></textarea>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="gs-modal-footer">
+                                <button type="button" class="gs-btn gs-btn-outline" onclick="closeEventModal()">
+                                    Avbryt
+                                </button>
+                                <button type="submit" class="gs-btn gs-btn-primary" id="submitButton">
+                                    <i data-lucide="check"></i>
+                                    <span id="submitButtonText">Skapa</span>
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            <?php endif; ?>
 
             <!-- Stats -->
             <div class="gs-grid gs-grid-cols-1 gs-md-grid-cols-4 gs-gap-lg gs-mb-lg">
@@ -236,7 +561,28 @@ include __DIR__ . '/../includes/layout-header.php';
                                             <strong class="gs-text-primary"><?= $event['participant_count'] ?></strong>
                                         </td>
                                         <td style="text-align: right;">
-                                            <span class="gs-badge gs-badge-secondary">Demo</span>
+                                            <?php if ($is_demo): ?>
+                                                <span class="gs-badge gs-badge-secondary">Demo</span>
+                                            <?php else: ?>
+                                                <div class="gs-flex gs-gap-sm gs-justify-end">
+                                                    <button
+                                                        type="button"
+                                                        class="gs-btn gs-btn-sm gs-btn-outline"
+                                                        onclick="editEvent(<?= $event['id'] ?>)"
+                                                        title="Redigera"
+                                                    >
+                                                        <i data-lucide="edit"></i>
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        class="gs-btn gs-btn-sm gs-btn-outline gs-btn-danger"
+                                                        onclick="deleteEvent(<?= $event['id'] ?>, '<?= addslashes(h($event['name'])) ?>')"
+                                                        title="Ta bort"
+                                                    >
+                                                        <i data-lucide="trash-2"></i>
+                                                    </button>
+                                                </div>
+                                            <?php endif; ?>
                                         </td>
                                     </tr>
                                 <?php endforeach; ?>
@@ -246,4 +592,103 @@ include __DIR__ . '/../includes/layout-header.php';
                 </div>
             <?php endif; ?>
         </div>
+
+        <?php if (!$is_demo): ?>
+        <script>
+            // Open modal for creating new event
+            function openEventModal() {
+                document.getElementById('eventModal').style.display = 'flex';
+                document.getElementById('eventForm').reset();
+                document.getElementById('formAction').value = 'create';
+                document.getElementById('eventId').value = '';
+                document.getElementById('modalTitleText').textContent = 'Ny Tävling';
+                document.getElementById('submitButtonText').textContent = 'Skapa';
+
+                // Re-initialize Lucide icons
+                if (typeof lucide !== 'undefined') {
+                    lucide.createIcons();
+                }
+            }
+
+            // Close modal
+            function closeEventModal() {
+                document.getElementById('eventModal').style.display = 'none';
+            }
+
+            // Edit event - reload page with edit parameter
+            function editEvent(id) {
+                window.location.href = `?edit=${id}`;
+            }
+
+            // Delete event
+            function deleteEvent(id, name) {
+                if (!confirm(`Är du säker på att du vill ta bort "${name}"?`)) {
+                    return;
+                }
+
+                // Create form and submit
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.innerHTML = `
+                    <?= csrf_field() ?>
+                    <input type="hidden" name="action" value="delete">
+                    <input type="hidden" name="id" value="${id}">
+                `;
+                document.body.appendChild(form);
+                form.submit();
+            }
+
+            // Close modal when clicking outside
+            document.addEventListener('DOMContentLoaded', function() {
+                const modal = document.getElementById('eventModal');
+                if (modal) {
+                    modal.addEventListener('click', function(e) {
+                        if (e.target === modal) {
+                            closeEventModal();
+                        }
+                    });
+                }
+
+                // Handle edit mode from URL parameter
+                <?php if ($editEvent): ?>
+                    // Populate form with event data
+                    document.getElementById('formAction').value = 'update';
+                    document.getElementById('eventId').value = '<?= $editEvent['id'] ?>';
+                    document.getElementById('name').value = '<?= addslashes($editEvent['name']) ?>';
+                    document.getElementById('event_date').value = '<?= $editEvent['event_date'] ?>';
+                    document.getElementById('location').value = '<?= addslashes($editEvent['location'] ?? '') ?>';
+                    document.getElementById('event_type').value = '<?= $editEvent['event_type'] ?? 'road_race' ?>';
+                    document.getElementById('status').value = '<?= $editEvent['status'] ?? 'upcoming' ?>';
+                    document.getElementById('series_id').value = '<?= $editEvent['series_id'] ?? '' ?>';
+                    document.getElementById('distance').value = '<?= $editEvent['distance'] ?? '' ?>';
+                    document.getElementById('elevation_gain').value = '<?= $editEvent['elevation_gain'] ?? '' ?>';
+                    document.getElementById('description').value = '<?= addslashes($editEvent['description'] ?? '') ?>';
+                    document.getElementById('organizer').value = '<?= addslashes($editEvent['organizer'] ?? '') ?>';
+                    document.getElementById('website').value = '<?= addslashes($editEvent['website'] ?? '') ?>';
+                    document.getElementById('registration_deadline').value = '<?= $editEvent['registration_deadline'] ?? '' ?>';
+                    document.getElementById('max_participants').value = '<?= $editEvent['max_participants'] ?? '' ?>';
+
+                    // Update modal title and button
+                    document.getElementById('modalTitleText').textContent = 'Redigera Tävling';
+                    document.getElementById('submitButtonText').textContent = 'Uppdatera';
+
+                    // Open modal
+                    document.getElementById('eventModal').style.display = 'flex';
+
+                    // Re-initialize Lucide icons
+                    if (typeof lucide !== 'undefined') {
+                        lucide.createIcons();
+                    }
+                <?php endif; ?>
+            });
+
+            // Close modal with Escape key
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape') {
+                    closeEventModal();
+                }
+            });
+        </script>
+        <?php endif; ?>
+
 <?php include __DIR__ . '/../includes/layout-footer.php'; ?>
