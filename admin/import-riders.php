@@ -261,10 +261,12 @@ function importRidersFromCSV($filepath, $db) {
                 // Update existing rider
                 $db->update('riders', $riderData, 'id = ?', [$existing['id']]);
                 $stats['updated']++;
+                error_log("Import: Updated rider ID {$existing['id']} - {$riderData['firstname']} {$riderData['lastname']}");
             } else {
                 // Insert new rider
-                $db->insert('riders', $riderData);
+                $newId = $db->insert('riders', $riderData);
                 $stats['success']++;
+                error_log("Import: Inserted new rider ID {$newId} - {$riderData['firstname']} {$riderData['lastname']} (active={$riderData['active']})");
             }
 
         } catch (Exception $e) {
@@ -274,6 +276,14 @@ function importRidersFromCSV($filepath, $db) {
     }
 
     fclose($handle);
+
+    // VERIFICATION: Check that data was actually saved
+    $verifyCount = $db->getRow("SELECT COUNT(*) as count FROM riders");
+    $totalInDb = $verifyCount['count'] ?? 0;
+    error_log("Import complete: {$stats['success']} new, {$stats['updated']} updated, {$stats['failed']} failed. Total riders in DB: {$totalInDb}");
+
+    // Add verification count to stats
+    $stats['total_in_db'] = $totalInDb;
 
     return [
         'stats' => $stats,
@@ -350,6 +360,35 @@ include __DIR__ . '/../includes/layout-header.php';
                                 <div class="gs-stat-label">Misslyckade</div>
                             </div>
                         </div>
+
+                        <!-- Verification Section -->
+                        <?php if (isset($stats['total_in_db'])): ?>
+                            <div class="gs-mt-lg" style="padding-top: var(--gs-space-lg); border-top: 1px solid var(--gs-border);">
+                                <h3 class="gs-h5 gs-text-primary gs-mb-md">
+                                    <i data-lucide="database"></i>
+                                    Verifiering
+                                </h3>
+                                <div class="gs-alert gs-alert-info">
+                                    <p style="margin: 0; font-size: 1.1rem;">
+                                        <strong>Totalt i databasen:</strong>
+                                        <span style="font-size: 1.3rem; font-weight: bold; color: var(--gs-primary);">
+                                            <?= number_format($stats['total_in_db']) ?>
+                                        </span>
+                                        cyklister
+                                    </p>
+                                </div>
+                                <div class="gs-flex gs-gap-md gs-mt-md">
+                                    <a href="/admin/riders.php" class="gs-btn gs-btn-primary">
+                                        <i data-lucide="users"></i>
+                                        Se alla deltagare
+                                    </a>
+                                    <a href="/admin/debug-database.php" class="gs-btn gs-btn-outline">
+                                        <i data-lucide="search"></i>
+                                        Debug databas
+                                    </a>
+                                </div>
+                            </div>
+                        <?php endif; ?>
 
                         <?php if (!empty($errors)): ?>
                             <div class="gs-mt-lg" style="padding-top: var(--gs-space-lg); border-top: 1px solid var(--gs-border);">
