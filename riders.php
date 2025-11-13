@@ -11,28 +11,59 @@ require_once __DIR__ . '/config.php';
 
 $db = getDB();
 
-// Get all active cyclists with their statistics
-$cyclists = $db->getAll("
-    SELECT
-        c.id,
-        c.firstname,
-        c.lastname,
-        c.birth_year,
-        c.gender,
-        c.license_number,
-        c.license_type,
-        c.license_valid_until,
-        cl.name as club_name,
-        COUNT(DISTINCT r.id) as total_races,
-        COUNT(CASE WHEN r.position <= 3 THEN 1 END) as podiums,
-        MIN(r.position) as best_position
-    FROM riders c
-    LEFT JOIN clubs cl ON c.club_id = cl.id
-    LEFT JOIN results r ON c.id = r.cyclist_id
-    WHERE c.active = 1
-    GROUP BY c.id
-    ORDER BY c.lastname, c.firstname
-");
+// Load public display settings
+$publicSettings = require __DIR__ . '/config/public_settings.php';
+$displayMode = $publicSettings['public_riders_display'] ?? 'with_results';
+
+// Build query based on settings
+if ($displayMode === 'all') {
+    // Show ALL active riders
+    $cyclists = $db->getAll("
+        SELECT
+            c.id,
+            c.firstname,
+            c.lastname,
+            c.birth_year,
+            c.gender,
+            c.license_number,
+            c.license_type,
+            c.license_valid_until,
+            cl.name as club_name,
+            COUNT(DISTINCT r.id) as total_races,
+            COUNT(CASE WHEN r.position <= 3 THEN 1 END) as podiums,
+            MIN(r.position) as best_position
+        FROM riders c
+        LEFT JOIN clubs cl ON c.club_id = cl.id
+        LEFT JOIN results r ON c.id = r.cyclist_id
+        WHERE c.active = 1
+        GROUP BY c.id
+        ORDER BY c.lastname, c.firstname
+    ");
+} else {
+    // Show ONLY riders with results
+    $cyclists = $db->getAll("
+        SELECT
+            c.id,
+            c.firstname,
+            c.lastname,
+            c.birth_year,
+            c.gender,
+            c.license_number,
+            c.license_type,
+            c.license_valid_until,
+            cl.name as club_name,
+            COUNT(DISTINCT r.id) as total_races,
+            COUNT(CASE WHEN r.position <= 3 THEN 1 END) as podiums,
+            MIN(r.position) as best_position
+        FROM riders c
+        LEFT JOIN clubs cl ON c.club_id = cl.id
+        INNER JOIN results r ON c.id = r.cyclist_id
+        WHERE c.active = 1
+        GROUP BY c.id
+        HAVING total_races > 0
+        ORDER BY c.lastname, c.firstname
+    ");
+}
 
 $total_count = count($cyclists);
 $pageTitle = 'Deltagare';
@@ -138,18 +169,23 @@ include __DIR__ . '/includes/layout-header.php';
                                 <?php endif; ?>
                                 <?php
                                 // Check license status
-                                if (!empty($rider['license_type']) && $rider['license_type'] !== 'None') {
+                                // SWE-ID = No real license (red badge)
+                                if (!empty($rider['license_number']) && strpos($rider['license_number'], 'SWE') === 0): ?>
+                                    <span class="gs-badge gs-badge-danger" style="padding: 0.15rem 0.4rem; font-size: 0.65rem;">
+                                        ✗ Ingen licens
+                                    </span>
+                                <?php elseif (!empty($rider['license_type']) && $rider['license_type'] !== 'None'):
                                     $licenseCheck = checkLicense($rider);
                                     if ($licenseCheck['valid']): ?>
                                         <span class="gs-badge gs-badge-success" style="padding: 0.15rem 0.4rem; font-size: 0.65rem;">
-                                            ✓ Aktiv
+                                            ✓ Aktiv licens
                                         </span>
                                     <?php else: ?>
                                         <span class="gs-badge gs-badge-warning" style="padding: 0.15rem 0.4rem; font-size: 0.65rem;">
                                             ⚠ Utgången
                                         </span>
                                     <?php endif;
-                                }
+                                endif;
                                 ?>
                             </div>
                         </div>

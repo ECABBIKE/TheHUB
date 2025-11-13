@@ -80,6 +80,8 @@ function importResultsFromCSV($filepath, $db) {
     $matching_stats = [
         'events_found' => 0,
         'events_not_found' => 0,
+        'events_created' => 0,
+        'venues_created' => 0,
         'riders_found' => 0,
         'riders_not_found' => 0,
         'riders_created' => 0
@@ -91,22 +93,86 @@ function importResultsFromCSV($filepath, $db) {
         throw new Exception('Kunde inte öppna filen');
     }
 
+    // Auto-detect delimiter (comma or semicolon)
+    $firstLine = fgets($handle);
+    rewind($handle);
+    $delimiter = (substr_count($firstLine, ';') > substr_count($firstLine, ',')) ? ';' : ',';
+
     // Read header row
-    $header = fgetcsv($handle, 1000, ',');
+    $header = fgetcsv($handle, 1000, $delimiter);
 
     if (!$header) {
         fclose($handle);
         throw new Exception('Tom fil eller ogiltigt format');
     }
 
-    // Normalize header (lowercase, trim, handle both underscore and non-underscore versions)
+    // Normalize header - accept multiple variants
     $header = array_map(function($col) {
         $col = strtolower(trim($col));
-        // Normalize column names: convert first_name to firstname, last_name to lastname, etc
-        $col = str_replace(['first_name', 'last_name', 'club_name', 'e-mail', 'uci_id'],
-                          ['firstname', 'lastname', 'club', 'email', 'license_number'],
-                          $col);
-        return $col;
+        // Remove spaces, hyphens, underscores for comparison
+        $col = str_replace([' ', '-', '_'], '', $col);
+
+        // Map Swedish and English column names
+        $mappings = [
+            // Event fields
+            'eventname' => 'event_name',
+            'tävling' => 'event_name',
+            'tavling' => 'event_name',
+            'event' => 'event_name',
+            'eventdate' => 'event_date',
+            'tävlingsdatum' => 'event_date',
+            'tavlingsdatum' => 'event_date',
+            'datum' => 'event_date',
+            'date' => 'event_date',
+            'eventlocation' => 'event_location',
+            'location' => 'event_location',
+            'plats' => 'event_location',
+            'ort' => 'event_location',
+            'eventvenue' => 'event_venue',
+            'venue' => 'event_venue',
+            'bana' => 'event_venue',
+            'anläggning' => 'event_venue',
+            'anlaggning' => 'event_venue',
+
+            // Rider fields
+            'firstname' => 'firstname',
+            'förnamn' => 'firstname',
+            'fornamn' => 'firstname',
+            'fname' => 'firstname',
+            'lastname' => 'lastname',
+            'efternamn' => 'lastname',
+            'lname' => 'lastname',
+            'surname' => 'lastname',
+
+            // Other fields
+            'licensenumber' => 'license_number',
+            'uciid' => 'license_number',
+            'sweid' => 'license_number',
+            'licens' => 'license_number',
+            'birthyear' => 'birth_year',
+            'födelseår' => 'birth_year',
+            'fodelsear' => 'birth_year',
+            'position' => 'position',
+            'placering' => 'position',
+            'finishtime' => 'finish_time',
+            'sluttid' => 'finish_time',
+            'tid' => 'finish_time',
+            'time' => 'finish_time',
+            'bibnumber' => 'bib_number',
+            'startnummer' => 'bib_number',
+            'bib' => 'bib_number',
+            'status' => 'status',
+            'points' => 'points',
+            'poäng' => 'points',
+            'poang' => 'points',
+            'notes' => 'notes',
+            'anteckningar' => 'notes',
+            'gender' => 'gender',
+            'kön' => 'gender',
+            'kon' => 'gender',
+        ];
+
+        return $mappings[$col] ?? $col;
     }, $header);
 
     // Cache for lookups
@@ -115,7 +181,7 @@ function importResultsFromCSV($filepath, $db) {
 
     $lineNumber = 1;
 
-    while (($row = fgetcsv($handle, 1000, ',')) !== false) {
+    while (($row = fgetcsv($handle, 1000, $delimiter)) !== false) {
         $lineNumber++;
         $stats['total']++;
 
@@ -162,10 +228,60 @@ function importResultsFromCSV($filepath, $db) {
                     $eventCache[$eventName] = $eventId;
                     $matching_stats['events_found']++;
                 } else {
+                    // AUTO-CREATE: Event not found, create it
                     $matching_stats['events_not_found']++;
-                    $stats['failed']++;
-                    $errors[] = "Rad {$lineNumber}: Tävling '{$eventName}' hittades inte";
-                    continue;
+
+                    // Get event data from CSV
+                    $eventDate = !empty($data['event_date']) ? trim($data['event_date']) : date('Y-m-d');
+                    $eventLocation = !empty($data['event_location']) ? trim($data['event_location']) : null;
+                    $eventVenueName = !empty($data['event_venue']) ? trim($data['event_venue']) : null;
+
+                    // Parse date if needed (handle various formats)
+                    if (!empty($data['event_date'])) {
+                        $dateParsed = strtotime($data['event_date']);
+                        if ($dateParsed) {
+                            $eventDate = date('Y-m-d', $dateParsed);
+                        }
+                    }
+
+                    // Auto-create venue if specified
+                    $venueId = null;
+                    if ($eventVenueName) {
+                        // Check if venue exists
+                        $venue = $db->getRow(
+                            "SELECT id FROM venues WHERE name LIKE ? LIMIT 1",
+                            ['%' . $eventVenueName . '%']
+                        );
+
+                        if ($venue) {
+                            $venueId = $venue['id'];
+                        } else {
+                            // Create new venue
+                            $venueData = [
+                                'name' => $eventVenueName,
+                                'city' => $eventLocation,
+                                'active' => 1
+                            ];
+                            $venueId = $db->insert('venues', $venueData);
+                            $matching_stats['venues_created']++;
+                            error_log("Auto-created venue: {$eventVenueName}");
+                        }
+                    }
+
+                    // Create new event
+                    $newEventData = [
+                        'name' => $eventName,
+                        'date' => $eventDate,
+                        'location' => $eventLocation,
+                        'venue_id' => $venueId,
+                        'status' => 'completed',
+                        'active' => 1
+                    ];
+
+                    $eventId = $db->insert('events', $newEventData);
+                    $eventCache[$eventName] = $eventId;
+                    $matching_stats['events_created']++;
+                    error_log("Auto-created event: {$eventName} on {$eventDate}");
                 }
             }
 
@@ -235,9 +351,7 @@ function importResultsFromCSV($filepath, $db) {
                             }
                         }
 
-                        // Create new rider with SWE-ID valid for 1 year
-                        $validUntil = date('Y-m-d', strtotime('+1 year'));
-
+                        // Create new rider with SWE-ID (no real license)
                         $newRiderData = [
                             'firstname' => $firstname,
                             'lastname' => $lastname,
@@ -245,14 +359,13 @@ function importResultsFromCSV($filepath, $db) {
                             'gender' => $gender,
                             'license_number' => $sweId,
                             'license_type' => 'SWE-ID',
-                            'license_valid_until' => $validUntil,
                             'active' => 1
                         ];
 
                         $riderId = $db->insert('riders', $newRiderData);
                         $riderCache[$cacheKey] = $riderId;
                         $matching_stats['riders_created']++;
-                        error_log("Auto-created rider: {$firstname} {$lastname} with SWE-ID: {$sweId} (valid until {$validUntil})");
+                        error_log("Auto-created rider: {$firstname} {$lastname} with SWE-ID: {$sweId} (no license)");
                     }
                 }
             }
@@ -374,17 +487,23 @@ include __DIR__ . '/../includes/layout-header.php';
                             <div style="padding-top: var(--gs-space-lg); border-top: 1px solid var(--gs-border);">
                                 <h3 class="gs-h5 gs-text-primary gs-mb-md">
                                     <i data-lucide="search"></i>
-                                    Matchnings-statistik
+                                    Matchnings- och Auto-Create statistik
                                 </h3>
-                                <div class="gs-grid gs-grid-cols-2 gs-md-grid-cols-5 gs-gap-md">
+                                <div class="gs-grid gs-grid-cols-2 gs-md-grid-cols-3 gs-gap-md gs-mb-md">
                                     <div style="padding: var(--gs-space-md); background: var(--gs-background-secondary); border-radius: var(--gs-border-radius);">
-                                        <div class="gs-text-sm gs-text-secondary">Events hittade</div>
+                                        <div class="gs-text-sm gs-text-secondary">Tävlingar hittade</div>
                                         <div class="gs-h3 gs-text-success"><?= $matching_stats['events_found'] ?></div>
                                     </div>
                                     <div style="padding: var(--gs-space-md); background: var(--gs-background-secondary); border-radius: var(--gs-border-radius);">
-                                        <div class="gs-text-sm gs-text-secondary">Events ej hittade</div>
-                                        <div class="gs-h3 gs-text-danger"><?= $matching_stats['events_not_found'] ?></div>
+                                        <div class="gs-text-sm gs-text-secondary">Nya tävlingar skapade</div>
+                                        <div class="gs-h3 gs-text-accent"><?= $matching_stats['events_created'] ?? 0 ?></div>
                                     </div>
+                                    <div style="padding: var(--gs-space-md); background: var(--gs-background-secondary); border-radius: var(--gs-border-radius);">
+                                        <div class="gs-text-sm gs-text-secondary">Nya banor skapade</div>
+                                        <div class="gs-h3 gs-text-primary"><?= $matching_stats['venues_created'] ?? 0 ?></div>
+                                    </div>
+                                </div>
+                                <div class="gs-grid gs-grid-cols-2 gs-md-grid-cols-3 gs-gap-md">
                                     <div style="padding: var(--gs-space-md); background: var(--gs-background-secondary); border-radius: var(--gs-border-radius);">
                                         <div class="gs-text-sm gs-text-secondary">Deltagare hittade</div>
                                         <div class="gs-h3 gs-text-success"><?= $matching_stats['riders_found'] ?></div>
@@ -395,7 +514,7 @@ include __DIR__ . '/../includes/layout-header.php';
                                     </div>
                                     <div style="padding: var(--gs-space-md); background: var(--gs-background-secondary); border-radius: var(--gs-border-radius);">
                                         <div class="gs-text-sm gs-text-secondary">SWE-ID tilldelat</div>
-                                        <div class="gs-h3 gs-text-primary"><?= $matching_stats['riders_created'] ?? 0 ?></div>
+                                        <div class="gs-h3 gs-text-warning"><?= $matching_stats['riders_created'] ?? 0 ?></div>
                                     </div>
                                 </div>
                             </div>
@@ -434,9 +553,9 @@ include __DIR__ . '/../includes/layout-header.php';
                     </h2>
                 </div>
                 <div class="gs-card-content">
-                    <div class="gs-alert gs-alert-warning gs-mb-md">
-                        <i data-lucide="alert-circle"></i>
-                        <strong>OBS:</strong> Se till att tävlingar och cyklister redan finns i systemet innan du importerar resultat.
+                    <div class="gs-alert gs-alert-info gs-mb-md">
+                        <i data-lucide="info"></i>
+                        <strong>Auto-Create:</strong> Tävlingar, banor och deltagare som inte hittas skapas automatiskt. Inkludera event_date, event_location och event_venue för bästa resultat.
                     </div>
 
                     <form method="POST" enctype="multipart/form-data" id="uploadForm" style="max-width: 600px;">
@@ -506,8 +625,26 @@ include __DIR__ . '/../includes/layout-header.php';
                                 <tr>
                                     <td><code>event_name</code></td>
                                     <td><span class="gs-badge gs-badge-danger">Ja</span></td>
-                                    <td>Tävlingens namn (måste finnas i systemet)</td>
+                                    <td>Tävlingens namn (skapas automatiskt om den inte finns)</td>
                                     <td>GravitySeries Järvsö XC</td>
+                                </tr>
+                                <tr>
+                                    <td><code>event_date</code></td>
+                                    <td><span class="gs-badge gs-badge-secondary">Nej</span></td>
+                                    <td>Tävlingsdatum (används vid auto-create)</td>
+                                    <td>2025-06-15</td>
+                                </tr>
+                                <tr>
+                                    <td><code>event_location</code></td>
+                                    <td><span class="gs-badge gs-badge-secondary">Nej</span></td>
+                                    <td>Plats/ort (används vid auto-create)</td>
+                                    <td>Järvsö</td>
+                                </tr>
+                                <tr>
+                                    <td><code>event_venue</code></td>
+                                    <td><span class="gs-badge gs-badge-secondary">Nej</span></td>
+                                    <td>Bana/anläggning (skapas automatiskt om den inte finns)</td>
+                                    <td>Järvsö Bergscykelpark</td>
                                 </tr>
                                 <tr>
                                     <td><code>firstname</code></td>
@@ -579,12 +716,14 @@ include __DIR__ . '/../includes/layout-header.php';
                             Matchnings-logik
                         </h3>
                         <ul class="gs-text-secondary gs-text-sm" style="margin-left: var(--gs-space-lg); line-height: 1.8;">
-                            <li><strong>Events:</strong> Matchas via exakt namn eller fuzzy match (LIKE)</li>
+                            <li><strong>Tävlingar:</strong> Matchas via exakt namn eller fuzzy match. Om inte hittad, skapas automatiskt med data från CSV.</li>
+                            <li><strong>Banor:</strong> Om event_venue anges och inte hittas, skapas automatiskt</li>
                             <li><strong>Cyklister:</strong> Matchas i följande ordning:
                                 <ol style="margin-left: var(--gs-space-lg); margin-top: 4px;">
                                     <li>Licensnummer (exakt match)</li>
                                     <li>Namn + födelseår (exakt match)</li>
                                     <li>Namn (fuzzy match)</li>
+                                    <li>Om inte hittad: Skapas automatiskt med SWE-ID</li>
                                 </ol>
                             </li>
                             <li>Dubbletter upptäcks via event_id + cyclist_id</li>
@@ -594,12 +733,15 @@ include __DIR__ . '/../includes/layout-header.php';
 
                     <div class="gs-mt-md">
                         <p class="gs-text-sm gs-text-secondary">
-                            <strong>Exempel på CSV-fil:</strong>
+                            <strong>Exempel på CSV-fil med auto-create:</strong>
                         </p>
-                        <pre style="background: var(--gs-background-secondary); padding: var(--gs-space-md); border-radius: var(--gs-border-radius); overflow-x: auto; font-size: 12px; margin-top: var(--gs-space-sm);">event_name,firstname,lastname,position,finish_time,license_number,birth_year,bib_number,status,points
-GravitySeries Järvsö XC,Erik,Andersson,1,02:15:30,SWE-2025-1234,1995,42,finished,100
-GravitySeries Järvsö XC,Anna,Karlsson,2,02:18:45,SWE-2025-2345,1998,43,finished,80
-GravitySeries Järvsö XC,Johan,Svensson,3,02:20:12,SWE-2025-3456,1992,44,finished,60</pre>
+                        <pre style="background: var(--gs-background-secondary); padding: var(--gs-space-md); border-radius: var(--gs-border-radius); overflow-x: auto; font-size: 12px; margin-top: var(--gs-space-sm);">event_name,event_date,event_location,event_venue,firstname,lastname,position,finish_time,license_number,birth_year,bib_number,status,points,gender
+GravitySeries Järvsö XC,2025-06-15,Järvsö,Järvsö Bergscykelpark,Erik,Andersson,1,02:15:30,SWE-2025-1234,1995,42,finished,100,M
+GravitySeries Järvsö XC,2025-06-15,Järvsö,Järvsö Bergscykelpark,Anna,Karlsson,2,02:18:45,SWE-2025-2345,1998,43,finished,80,F
+GravitySeries Järvsö XC,2025-06-15,Järvsö,Järvsö Bergscykelpark,Johan,Svensson,3,02:20:12,,1992,44,finished,60,M</pre>
+                        <p class="gs-text-sm gs-text-secondary gs-mt-sm">
+                            <strong>Obs:</strong> Om event, venue eller rider inte finns kommer de skapas automatiskt. Johan Svensson saknar licensnummer och får ett SWE-ID.
+                        </p>
                     </div>
                 </div>
             </div>
