@@ -113,9 +113,9 @@ include __DIR__ . '/includes/layout-header.php';
             <?php else: ?>
                 <div class="gs-grid gs-grid-cols-1 gs-md-grid-cols-3 gs-lg-grid-cols-4 gs-xl-grid-cols-5 gs-gap-md" id="ridersGrid">
                     <?php foreach ($cyclists as $rider): ?>
-                        <div class="gs-card gs-card-hover rider-card"
-                             data-search="<?= strtolower(h($rider['firstname'] . ' ' . $rider['lastname'] . ' ' . ($rider['club_name'] ?? '') . ' ' . ($rider['license_number'] ?? ''))) ?>"
-                             style="padding: 0.75rem;">
+                        <a href="/rider.php?id=<?= $rider['id'] ?>" class="gs-card gs-card-hover rider-card"
+                           data-search="<?= strtolower(h($rider['firstname'] . ' ' . $rider['lastname'] . ' ' . ($rider['club_name'] ?? '') . ' ' . ($rider['license_number'] ?? ''))) ?>"
+                           style="padding: 0.75rem; text-decoration: none; color: inherit; display: block; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;">
                             <!-- Profile Header -->
                             <div class="gs-flex gs-items-start gs-gap-sm gs-mb-sm">
                                 <div class="gs-avatar gs-avatar-sm gs-bg-primary" style="width: 40px; height: 40px; flex-shrink: 0;">
@@ -188,7 +188,7 @@ include __DIR__ . '/includes/layout-header.php';
                                 endif;
                                 ?>
                             </div>
-                        </div>
+                        </a>
                     <?php endforeach; ?>
                 </div>
             <?php endif; ?>
@@ -203,8 +203,18 @@ include __DIR__ . '/includes/layout-header.php';
             </div>
         </div>
 <?php
-// Additional page-specific search functionality
+// Additional page-specific styles and scripts
 $additionalScripts = "
+    <style>
+    .rider-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1) !important;
+    }
+    .rider-card:active {
+        transform: translateY(-2px);
+    }
+    </style>
+
     // Search functionality
     const searchInput = document.getElementById('searchRiders');
     const ridersGrid = document.getElementById('ridersGrid');
