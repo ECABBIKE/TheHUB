@@ -30,3 +30,4 @@ tmp/*
 # Deployment packages
 *.zip
 thehub-deployment.zip
+includes/functions.php.OLD
