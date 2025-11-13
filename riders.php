@@ -126,7 +126,7 @@ include __DIR__ . '/includes/layout-header.php';
                                     <?php endif; ?>
                                     <?php if ($rider['birth_year']): ?>
                                         <span class="gs-badge gs-badge-secondary gs-text-xs">
-                                            <?= $rider['birth_year'] ?>
+                                            <?= calculateAge($rider['birth_year']) ?> år
                                         </span>
                                     <?php endif; ?>
                                     <?php if ($rider['license_number']): ?>

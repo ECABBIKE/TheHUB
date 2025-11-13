@@ -169,7 +169,15 @@ function importRidersFromCSV($filepath, $db) {
             }
 
             // Prepare rider data
-            $gender = strtoupper(substr(trim($data['gender'] ?? 'M'), 0, 1));
+            // Normalize gender: Woman/Female/Kvinna → F, Man/Male/Herr → M
+            $genderRaw = strtolower(trim($data['gender'] ?? 'M'));
+            if (in_array($genderRaw, ['woman', 'female', 'kvinna', 'dam', 'f'])) {
+                $gender = 'F';
+            } elseif (in_array($genderRaw, ['man', 'male', 'herr', 'm'])) {
+                $gender = 'M';
+            } else {
+                $gender = strtoupper(substr($genderRaw, 0, 1)); // Fallback: first letter
+            }
 
             $riderData = [
                 'firstname' => trim($data['firstname']),
