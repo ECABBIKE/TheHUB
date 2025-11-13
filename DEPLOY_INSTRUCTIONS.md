@@ -115,35 +115,66 @@ Din `/htdocs/` mapp ska nu innehålla:
 
 ## 🗄️ Databas-setup (VIKTIGT!)
 
-Efter att filerna är uppladdade måste du skapa databasen:
+Efter att filerna är uppladdade måste du skapa databasen.
 
-### Steg 1: Logga in på MySQL
+### ⭐ Metod 1: Web-baserad setup (REKOMMENDERAS)
+
+Detta är det enklaste sättet - allt sker via webbläsaren!
+
+#### Steg 1: Kontrollera .env-filen
+Säkerställ att `/htdocs/.env` innehåller rätt databas-uppgifter:
+```bash
+DB_HOST=sql100.infinityfree.com
+DB_NAME=if0_40400950_THEHUB
+DB_USER=if0_40400950
+DB_PASS=qv19oAyv44J2xX
+```
+
+#### Steg 2: Kör databas-setup via webbläsare
+1. Gå till: `https://thehub.infinityfreeapp.com/admin/login.php`
+2. Logga in med:
+   - Användarnamn: `admin`
+   - Lösenord: `changeme_immediately!` (standard från schema)
+3. Gå till: `https://thehub.infinityfreeapp.com/admin/setup-database.php`
+4. Klicka på knappen "Run Database Setup"
+5. Vänta tills meddelandet "Database schema setup complete!" visas
+
+✅ **Klart!** Alla tabeller är nu skapade och databasen är redo att användas.
+
+#### Steg 3: Byt admin-lösenord (VIKTIGT!)
+Efter första inloggningen, uppdatera admin-lösenordet i databasen.
+
+---
+
+### Metod 2: Manuell setup via phpMyAdmin (Backup-metod)
+
+Om den web-baserade setupen inte fungerar:
+
+#### Steg 1: Logga in på phpMyAdmin
 Via InfinityFree Control Panel:
 ```
 Tools → MySQL Databases → phpMyAdmin
 ```
 
-Eller direkt via SSH/terminal:
-```bash
-mysql -h sql123.infinityfree.com -u if0_40400950 -p
-# Password: qv19oAyv44J2xX
-```
-
-### Steg 2: Välj databas
+#### Steg 2: Välj databas
 ```sql
 USE if0_40400950_THEHUB;
 ```
 
-### Steg 3: Kör schema
-Kör innehållet från `/database/schema.sql`:
-```sql
--- Kopiera och klistra in allt från schema.sql
--- Eller via phpMyAdmin: Import → Välj schema.sql
-```
+#### Steg 3: Importera schema
+1. Klicka på "Import" i phpMyAdmin
+2. Välj filen `/htdocs/database/schema.sql`
+3. Klicka "Go"
 
-### Steg 4: (Valfritt) Ladda exempel-data
-```sql
--- Kör innehållet från /database/example_data.sql
+Eller kopiera hela innehållet från `schema.sql` och kör det i SQL-fältet.
+
+---
+
+### Metod 3: Via SSH/Terminal
+
+```bash
+mysql -h sql100.infinityfree.com -u if0_40400950 -p if0_40400950_THEHUB < /htdocs/database/schema.sql
+# Password: qv19oAyv44J2xX
 ```
 
 ---
@@ -185,11 +216,17 @@ Alla mappar: 755
 **Lösning:** Verifiera .env-filen
 ```bash
 # Kontrollera att dessa värden stämmer i /htdocs/.env:
-DB_HOST=sql123.infinityfree.com
+DB_HOST=sql100.infinityfree.com
 DB_NAME=if0_40400950_THEHUB
 DB_USER=if0_40400950
 DB_PASS=qv19oAyv44J2xX
 ```
+
+**Testa anslutningen:**
+1. Gå till `https://thehub.infinityfreeapp.com/admin/setup-database.php`
+2. Kontrollera "Database Status" sektionen
+3. Om "✅ Connected" visas → Anslutningen fungerar!
+4. Om "❌ Database not connected" visas → Kontrollera .env-värdena
 
 ### Problem: Sidan är tom
 **Lösning:** Kontrollera index-filen

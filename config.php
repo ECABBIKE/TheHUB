@@ -85,6 +85,26 @@ define('RESULTS_PER_PAGE', 50);
 define('DEFAULT_ADMIN_USERNAME', env('ADMIN_USERNAME', 'admin'));
 define('DEFAULT_ADMIN_PASSWORD', env('ADMIN_PASSWORD', 'admin'));
 
+// Database configuration (define constants before loading db.php)
+if (!defined('DB_HOST')) {
+    define('DB_HOST', env('DB_HOST', 'localhost'));
+}
+if (!defined('DB_NAME')) {
+    define('DB_NAME', env('DB_NAME', 'thehub'));
+}
+if (!defined('DB_USER')) {
+    define('DB_USER', env('DB_USER', 'root'));
+}
+if (!defined('DB_PASS')) {
+    define('DB_PASS', env('DB_PASS', ''));
+}
+if (!defined('DB_CHARSET')) {
+    define('DB_CHARSET', env('DB_CHARSET', 'utf8mb4'));
+}
+if (!defined('DB_ERROR_DISPLAY')) {
+    define('DB_ERROR_DISPLAY', $appEnv !== 'production');
+}
+
 // Load core dependencies
 require_once INCLUDES_PATH . '/db.php';
 require_once INCLUDES_PATH . '/helpers.php';
