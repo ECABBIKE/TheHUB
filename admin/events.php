@@ -216,7 +216,7 @@ include __DIR__ . '/../includes/layout-header.php';
             </div>
 
             <!-- Event Modal -->
-                <div id="eventModal" class="gs-modal" style="display: none;">
+            <div id="eventModal" class="gs-modal" style="display: none;">
                     <div class="gs-modal-overlay" onclick="closeEventModal()"></div>
                     <div class="gs-modal-content" style="max-width: 700px;">
                         <div class="gs-modal-header">
