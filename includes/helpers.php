@@ -625,20 +625,29 @@ function getDisciplineOptions() {
 function checkLicense($cyclist) {
     $result = [
         'valid' => false,
-        'message' => '',
+        'message' => 'Ej aktiv licens',
         'class' => 'gs-badge-danger'
     ];
 
     // Check if license exists
     if (empty($cyclist['license_type']) || $cyclist['license_type'] === 'None') {
-        $result['message'] = 'Ingen licens';
-        $result['class'] = 'gs-badge-secondary';
+        $result['message'] = 'Ej aktiv licens';
+        $result['class'] = 'gs-badge-danger';
         return $result;
     }
 
     // Check expiry date
     if (!empty($cyclist['license_valid_until'])) {
         $validUntil = trim($cyclist['license_valid_until']);
+
+        // Skip invalid dates (0000-00-00, 0000, etc.)
+        if ($validUntil === '0000-00-00' || $validUntil === '0000' || $validUntil === '0') {
+            // Has license type but invalid date - treat as active
+            $result['valid'] = true;
+            $result['message'] = 'Aktiv licens';
+            $result['class'] = 'gs-badge-success';
+            return $result;
+        }
 
         // If only year is provided (e.g., "2025"), treat as end of year (Dec 31)
         if (preg_match('/^\d{4}$/', $validUntil)) {
@@ -648,22 +657,22 @@ function checkLicense($cyclist) {
         $expiryDate = strtotime($validUntil);
         $today = strtotime('today');
 
+        // Check if date parsing failed or date is invalid
+        if ($expiryDate === false || $expiryDate < 0) {
+            // Invalid date but has license type - treat as active
+            $result['valid'] = true;
+            $result['message'] = 'Aktiv licens';
+            $result['class'] = 'gs-badge-success';
+            return $result;
+        }
+
         if ($expiryDate < $today) {
-            $result['message'] = 'Utgången: ' . date('Y-m-d', $expiryDate);
+            $result['message'] = 'Ej aktiv licens';
             $result['class'] = 'gs-badge-danger';
             return $result;
         }
 
-        // Warning if expires within 30 days
-        $daysUntilExpiry = floor(($expiryDate - $today) / 86400);
-        if ($daysUntilExpiry <= 30) {
-            $result['valid'] = true;
-            $result['message'] = 'Går ut om ' . $daysUntilExpiry . ' dagar';
-            $result['class'] = 'gs-badge-warning';
-            return $result;
-        }
-
-        // License is valid with more than 30 days left
+        // License is valid
         $result['valid'] = true;
         $result['message'] = 'Aktiv licens';
         $result['class'] = 'gs-badge-success';

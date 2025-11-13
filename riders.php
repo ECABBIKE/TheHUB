@@ -172,7 +172,7 @@ include __DIR__ . '/includes/layout-header.php';
                                 // SWE-ID = No real license (red badge)
                                 if (!empty($rider['license_number']) && strpos($rider['license_number'], 'SWE') === 0): ?>
                                     <span class="gs-badge gs-badge-danger" style="padding: 0.15rem 0.4rem; font-size: 0.65rem;">
-                                        ✗ Ingen licens
+                                        ✗ Ej aktiv licens
                                     </span>
                                 <?php elseif (!empty($rider['license_type']) && $rider['license_type'] !== 'None'):
                                     $licenseCheck = checkLicense($rider);
@@ -181,8 +181,8 @@ include __DIR__ . '/includes/layout-header.php';
                                             ✓ Aktiv licens
                                         </span>
                                     <?php else: ?>
-                                        <span class="gs-badge gs-badge-warning" style="padding: 0.15rem 0.4rem; font-size: 0.65rem;">
-                                            ⚠ Utgången
+                                        <span class="gs-badge gs-badge-danger" style="padding: 0.15rem 0.4rem; font-size: 0.65rem;">
+                                            ✗ Ej aktiv licens
                                         </span>
                                     <?php endif;
                                 endif;
