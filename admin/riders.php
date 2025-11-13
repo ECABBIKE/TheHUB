@@ -541,7 +541,6 @@ include __DIR__ . '/../includes/layout-header.php';
                                         <i data-lucide="user-circle"></i>
                                         Namn
                                     </th>
-                                    <th>Född</th>
                                     <th>Ålder</th>
                                     <th>Kön</th>
                                     <th>
@@ -561,7 +560,6 @@ include __DIR__ . '/../includes/layout-header.php';
                                         <td>
                                             <strong><?= h($rider['firstname'] . ' ' . $rider['lastname']) ?></strong>
                                         </td>
-                                        <td><?= h($rider['birth_year']) ?></td>
                                         <td>
                                             <?php if ($rider['birth_year']): ?>
                                                 <?= calculateAge($rider['birth_year']) ?> år

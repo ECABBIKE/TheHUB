@@ -71,8 +71,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['import_file'])) {
                     $stats = $result['stats'];
                     $errors = $result['errors'];
 
-                    if ($stats['success'] > 0) {
-                        $message = "Import klar! {$stats['success']} av {$stats['total']} cyklister importerade.";
+                    if ($stats['success'] > 0 || $stats['updated'] > 0) {
+                        $message = "Import klar! {$stats['success']} nya, {$stats['updated']} uppdaterade.";
+                        if ($stats['duplicates'] > 0) {
+                            $message .= " {$stats['duplicates']} dubletter borttagna.";
+                        }
                         $messageType = 'success';
                     } else {
                         $message = "Ingen data importerades. Kontrollera filformatet.";
@@ -104,9 +107,11 @@ function importRidersFromCSV($filepath, $db) {
         'success' => 0,
         'updated' => 0,
         'skipped' => 0,
-        'failed' => 0
+        'failed' => 0,
+        'duplicates' => 0
     ];
     $errors = [];
+    $seenInThisImport = []; // Track riders in this import to detect duplicates
 
     if (($handle = fopen($filepath, 'r')) === false) {
         throw new Exception('Kunde inte öppna filen');
@@ -239,6 +244,28 @@ function importRidersFromCSV($filepath, $db) {
             } else {
                 $riderData['club_id'] = null;
             }
+
+            // Check for duplicates within this import
+            // Create unique key: firstname_lastname_birthyear OR licensenumber
+            $uniqueKey = '';
+            if ($riderData['license_number']) {
+                $uniqueKey = 'lic_' . strtolower(trim($riderData['license_number']));
+            } else {
+                $uniqueKey = 'name_' . strtolower(trim($riderData['firstname'])) . '_' .
+                             strtolower(trim($riderData['lastname'])) . '_' .
+                             ($riderData['birth_year'] ?? '0');
+            }
+
+            if (isset($seenInThisImport[$uniqueKey])) {
+                // This is a duplicate within the same import - skip it
+                $stats['duplicates']++;
+                $stats['skipped']++;
+                error_log("Import: Skipped duplicate - {$riderData['firstname']} {$riderData['lastname']} (already in this import)");
+                continue;
+            }
+
+            // Mark as seen in this import
+            $seenInThisImport[$uniqueKey] = true;
 
             // Check if rider already exists (by license or name+birth_year)
             $existing = null;

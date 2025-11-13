@@ -666,7 +666,7 @@ function checkLicense($cyclist) {
 
     // All checks passed
     $result['valid'] = true;
-    $result['message'] = 'Giltig licens';
+    $result['message'] = 'Aktiv licens';
     $result['class'] = 'gs-badge-success';
     return $result;
 }
