@@ -117,17 +117,9 @@ if ($is_demo) {
 }
 
 $pageTitle = 'Resultat';
+$pageType = 'admin';
+include __DIR__ . '/../includes/layout-header.php';
 ?>
-<!DOCTYPE html>
-<html lang="sv">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?= h($pageTitle) ?> - TheHUB Admin</title>
-    <link rel="stylesheet" href="/assets/gravityseries-theme.css">
-</head>
-<body>
-    <?php include __DIR__ . '/../includes/navigation.php'; ?>
 
     <main class="gs-content-with-sidebar">
         <div class="gs-container">
@@ -328,14 +320,4 @@ $pageTitle = 'Resultat';
                 </div>
             <?php endif; ?>
         </div>
-    </main>
-
-    <!-- Lucide Icons -->
-    <script src="https://unpkg.com/lucide@latest"></script>
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            lucide.createIcons();
-        });
-    </script>
-</body>
-</html>
+<?php include __DIR__ . '/../includes/layout-footer.php'; ?>

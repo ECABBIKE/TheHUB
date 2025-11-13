@@ -257,17 +257,9 @@ function importRidersFromCSV($filepath, $db) {
 }
 
 $pageTitle = 'Importera Cyklister';
+$pageType = 'admin';
+include __DIR__ . '/../includes/layout-header.php';
 ?>
-<!DOCTYPE html>
-<html lang="sv">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?= h($pageTitle) ?> - TheHUB Admin</title>
-    <link rel="stylesheet" href="/assets/gravityseries-theme.css">
-</head>
-<body>
-    <?php include __DIR__ . '/../includes/navigation.php'; ?>
 
     <main class="gs-content-with-sidebar">
         <div class="gs-container">
@@ -516,36 +508,34 @@ Johan,Svensson,1992,M,Uppsala CK,SWE-2025-3456,johan@example.com,070-3456789,Upp
                 </div>
             </div>
         </div>
-    </main>
+<?php
+$additionalScripts = <<<'SCRIPT'
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Show progress bar on form submit
+        const form = document.getElementById('uploadForm');
+        const progressBar = document.getElementById('progressBar');
+        const progressFill = document.getElementById('progressFill');
+        const progressPercent = document.getElementById('progressPercent');
 
-    <!-- Lucide Icons -->
-    <script src="https://unpkg.com/lucide@latest"></script>
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            lucide.createIcons();
+        form.addEventListener('submit', function() {
+            progressBar.style.display = 'block';
 
-            // Show progress bar on form submit
-            const form = document.getElementById('uploadForm');
-            const progressBar = document.getElementById('progressBar');
-            const progressFill = document.getElementById('progressFill');
-            const progressPercent = document.getElementById('progressPercent');
-
-            form.addEventListener('submit', function() {
-                progressBar.style.display = 'block';
-
-                // Simulate progress (since we can't track real progress in PHP)
-                let progress = 0;
-                const interval = setInterval(function() {
-                    progress += Math.random() * 15;
-                    if (progress > 90) {
-                        progress = 90;
-                        clearInterval(interval);
-                    }
-                    progressFill.style.width = progress + '%';
-                    progressPercent.textContent = Math.round(progress) + '%';
-                }, 200);
-            });
+            // Simulate progress (since we can't track real progress in PHP)
+            let progress = 0;
+            const interval = setInterval(function() {
+                progress += Math.random() * 15;
+                if (progress > 90) {
+                    progress = 90;
+                    clearInterval(interval);
+                }
+                progressFill.style.width = progress + '%';
+                progressPercent.textContent = Math.round(progress) + '%';
+            }, 200);
         });
-    </script>
-</body>
-</html>
+    });
+</script>
+SCRIPT;
+
+include __DIR__ . '/../includes/layout-footer.php';
+?>
