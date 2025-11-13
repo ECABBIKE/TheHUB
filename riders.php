@@ -20,6 +20,8 @@ $cyclists = $db->getAll("
         c.birth_year,
         c.gender,
         c.license_number,
+        c.license_type,
+        c.license_valid_until,
         cl.name as club_name,
         COUNT(DISTINCT r.id) as total_races,
         COUNT(CASE WHEN r.position <= 3 THEN 1 END) as podiums,
@@ -131,9 +133,24 @@ include __DIR__ . '/includes/layout-header.php';
                                 <?php endif; ?>
                                 <?php if ($rider['license_number']): ?>
                                     <span class="gs-badge gs-badge-primary" style="padding: 0.15rem 0.4rem; font-size: 0.65rem;">
-                                        UCI: <?= h(substr($rider['license_number'], 0, 12)) ?><?= strlen($rider['license_number']) > 12 ? '...' : '' ?>
+                                        <?= strpos($rider['license_number'], 'SWE') === 0 ? 'SWE' : 'UCI' ?>: <?= h(substr($rider['license_number'], 0, 12)) ?><?= strlen($rider['license_number']) > 12 ? '...' : '' ?>
                                     </span>
                                 <?php endif; ?>
+                                <?php
+                                // Check license status
+                                if (!empty($rider['license_type']) && $rider['license_type'] !== 'None') {
+                                    $licenseCheck = checkLicense($rider);
+                                    if ($licenseCheck['valid']): ?>
+                                        <span class="gs-badge gs-badge-success" style="padding: 0.15rem 0.4rem; font-size: 0.65rem;">
+                                            ✓ Aktiv
+                                        </span>
+                                    <?php else: ?>
+                                        <span class="gs-badge gs-badge-warning" style="padding: 0.15rem 0.4rem; font-size: 0.65rem;">
+                                            ⚠ Utgången
+                                        </span>
+                                    <?php endif;
+                                }
+                                ?>
                             </div>
                         </div>
                     <?php endforeach; ?>
