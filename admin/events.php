@@ -8,11 +8,13 @@ $db = getDB();
 // Get events
 $sql = "SELECT 
     e.id, e.name, e.date, e.location, e.discipline, e.status,
-    v.name as venue_name
+    v.name as venue_name,
+    s.name as series_name
 FROM events e
 LEFT JOIN venues v ON e.venue_id = v.id
+LEFT JOIN series s ON e.series_id = s.id
 ORDER BY e.date DESC
-LIMIT 100";
+LIMIT 200";
 
 try {
     $events = $db->getAll($sql);
@@ -58,10 +60,12 @@ include __DIR__ . '/../includes/layout-header.php';
                                 <tr>
                                     <th>Datum</th>
                                     <th>Namn</th>
+                                    <th>Serie</th>
                                     <th>Plats</th>
                                     <th>Venue</th>
                                     <th>Disciplin</th>
                                     <th>Status</th>
+                                    <th style="width: 120px;">Åtgärder</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -71,6 +75,7 @@ include __DIR__ . '/../includes/layout-header.php';
                                         <td>
                                             <strong><?= htmlspecialchars($event['name']) ?></strong>
                                         </td>
+                                        <td><?= htmlspecialchars($event['series_name'] ?? '-') ?></td>
                                         <td><?= htmlspecialchars($event['location'] ?? '-') ?></td>
                                         <td><?= htmlspecialchars($event['venue_name'] ?? '-') ?></td>
                                         <td>
@@ -89,6 +94,16 @@ include __DIR__ . '/../includes/layout-header.php';
                                                 <span class="gs-badge gs-badge-secondary">Okänd</span>
                                             <?php endif; ?>
                                         </td>
+                                        <td>
+                                            <div class="gs-flex gs-gap-sm">
+                                                <a href="/admin/event-edit.php?id=<?= $event['id'] ?>" class="gs-btn gs-btn-sm gs-btn-outline" title="Redigera">
+                                                    <i data-lucide="edit" style="width: 14px;"></i>
+                                                </a>
+                                                <button onclick="deleteEvent(<?= $event['id'] ?>, '<?= addslashes($event['name']) ?>')" class="gs-btn gs-btn-sm gs-btn-outline gs-btn-danger" title="Ta bort">
+                                                    <i data-lucide="trash-2" style="width: 14px;"></i>
+                                                </button>
+                                            </div>
+                                        </td>
                                     </tr>
                                 <?php endforeach; ?>
                             </tbody>
@@ -99,5 +114,23 @@ include __DIR__ . '/../includes/layout-header.php';
         </div>
     </div>
 </main>
+
+<script src="https://unpkg.com/lucide@latest"></script>
+<script>
+    lucide.createIcons();
+    
+    function deleteEvent(id, name) {
+        if (!confirm('Är du säker på att du vill ta bort eventet "' + name + '"?')) {
+            return;
+        }
+        
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '/admin/event-delete.php';
+        form.innerHTML = '<input type="hidden" name="id" value="' + id + '">';
+        document.body.appendChild(form);
+        form.submit();
+    }
+</script>
 
 <?php include __DIR__ . '/../includes/layout-footer.php'; ?>
