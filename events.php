@@ -122,8 +122,8 @@ include __DIR__ . '/includes/layout-header.php';
                             <div class="gs-card-header">
                                 <div class="gs-flex gs-justify-between gs-items-start gs-mb-sm">
                                     <div class="gs-event-date-badge">
-                                        <div class="gs-event-date-day"><?= formatDate($event['event_date'], 'd') ?></div>
-                                        <div class="gs-event-date-month"><?= formatDate($event['event_date'], 'M') ?></div>
+                                        <div class="gs-event-date-day"><?= date('d', strtotime($event['event_date'])) ?></div>
+                                        <div class="gs-event-date-month"><?= date('M', strtotime($event['event_date'])) ?></div>
                                     </div>
                                     <?php
                                     $status_class = 'gs-badge-secondary';
@@ -210,4 +210,6 @@ include __DIR__ . '/includes/layout-header.php';
                 <?php endif; ?>
             <?php endif; ?>
         </div>
+    </main>
+
 <?php include __DIR__ . '/includes/layout-footer.php'; ?>
