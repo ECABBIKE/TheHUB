@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/../config.php';
+require_once __DIR__ . '/../includes/import-history.php';
 require_admin();
 
 $db = getDB();
@@ -10,90 +11,104 @@ $messageType = 'info';
 $previewData = [];
 $eventsSummary = [];
 
-// Handle CSV upload for preview
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['import_file']) && !isset($_POST['confirm_import'])) {
+// Check if we have a file to preview
+if (!isset($_SESSION['import_preview_file']) || !file_exists($_SESSION['import_preview_file'])) {
+    header('Location: /admin/import-results.php');
+    exit;
+}
+
+// Load existing events for dropdown
+$existingEvents = $db->getAll("
+    SELECT id, name, date, advent_id
+    FROM events
+    ORDER BY date DESC
+    LIMIT 200
+");
+
+// Parse CSV if not already done
+if (!isset($_SESSION['import_preview_data'])) {
+    try {
+        $previewData = parseResultsCSVForPreview($_SESSION['import_preview_file']);
+        $eventsSummary = groupResultsByEvent($previewData);
+
+        $_SESSION['import_preview_data'] = $previewData;
+        $_SESSION['import_events_summary'] = $eventsSummary;
+    } catch (Exception $e) {
+        $message = 'Parsning misslyckades: ' . $e->getMessage();
+        $messageType = 'error';
+    }
+} else {
+    $previewData = $_SESSION['import_preview_data'];
+    $eventsSummary = $_SESSION['import_events_summary'];
+}
+
+// Handle confirmed import
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_import'])) {
     checkCsrf();
 
-    $file = $_FILES['import_file'];
+    // Get event mapping from form
+    $eventMapping = $_POST['event_mapping'] ?? [];
 
-    if ($file['error'] !== UPLOAD_ERR_OK) {
-        $message = 'Filuppladdning misslyckades';
+    try {
+        require_once __DIR__ . '/import-results.php';
+
+        // Import with event mapping
+        $importId = startImportHistory(
+            $db,
+            'results',
+            $_SESSION['import_preview_filename'],
+            filesize($_SESSION['import_preview_file']),
+            $current_admin['username'] ?? 'admin'
+        );
+
+        $result = importResultsFromCSVWithMapping(
+            $_SESSION['import_preview_file'],
+            $db,
+            $importId,
+            $eventMapping
+        );
+
+        $stats = $result['stats'];
+        $matching_stats = $result['matching'];
+        $errors = $result['errors'];
+
+        // Update import history
+        $importStatus = ($stats['success'] > 0) ? 'completed' : 'failed';
+        updateImportHistory($db, $importId, $stats, $errors, $importStatus);
+
+        // Clean up
+        @unlink($_SESSION['import_preview_file']);
+        unset($_SESSION['import_preview_file']);
+        unset($_SESSION['import_preview_filename']);
+        unset($_SESSION['import_preview_data']);
+        unset($_SESSION['import_events_summary']);
+
+        // Redirect to results page with success message
+        $_SESSION['import_message'] = "Import klar! {$stats['success']} av {$stats['total']} resultat importerade.";
+        $_SESSION['import_stats'] = $stats;
+        $_SESSION['import_matching'] = $matching_stats;
+        header('Location: /admin/results.php');
+        exit;
+
+    } catch (Exception $e) {
+        $message = 'Import misslyckades: ' . $e->getMessage();
         $messageType = 'error';
-    } elseif ($file['size'] > MAX_UPLOAD_SIZE) {
-        $message = 'Filen är för stor (max ' . (MAX_UPLOAD_SIZE / 1024 / 1024) . 'MB)';
-        $messageType = 'error';
-    } else {
-        $extension = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
-
-        if ($extension !== 'csv') {
-            $message = 'Endast CSV-filer stöds';
-            $messageType = 'error';
-        } else {
-            $uploaded = UPLOADS_PATH . '/' . time() . '_preview_' . basename($file['name']);
-
-            if (move_uploaded_file($file['tmp_name'], $uploaded)) {
-                try {
-                    // Parse CSV for preview
-                    $previewData = parseResultsCSVForPreview($uploaded);
-                    $eventsSummary = groupResultsByEvent($previewData);
-
-                    // Store file path in session for later import
-                    $_SESSION['preview_file'] = $uploaded;
-                    $_SESSION['preview_data'] = $previewData;
-                    $_SESSION['events_summary'] = $eventsSummary;
-
-                } catch (Exception $e) {
-                    $message = 'Parsning misslyckades: ' . $e->getMessage();
-                    $messageType = 'error';
-                    @unlink($uploaded);
-                }
-            } else {
-                $message = 'Kunde inte ladda upp filen';
-                $messageType = 'error';
-            }
-        }
     }
-} elseif ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_import'])) {
-    // Handle confirmed import
-    checkCsrf();
+}
 
-    if (isset($_SESSION['preview_file']) && file_exists($_SESSION['preview_file'])) {
-        try {
-            require_once __DIR__ . '/../includes/import-history.php';
-
-            // Import the file
-            $result = importResultsFromCSV($_SESSION['preview_file'], $db, null);
-
-            $stats = $result['stats'];
-            $errors = $result['errors'];
-
-            if ($stats['success'] > 0) {
-                $message = "Import klar! {$stats['success']} av {$stats['total']} resultat importerade.";
-                $messageType = 'success';
-            } else {
-                $message = "Ingen data importerades.";
-                $messageType = 'error';
-            }
-
-            // Clean up
-            @unlink($_SESSION['preview_file']);
-            unset($_SESSION['preview_file']);
-            unset($_SESSION['preview_data']);
-            unset($_SESSION['events_summary']);
-
-        } catch (Exception $e) {
-            $message = 'Import misslyckades: ' . $e->getMessage();
-            $messageType = 'error';
-        }
-    }
-} elseif (isset($_SESSION['preview_data'])) {
-    // Restore preview data from session
-    $previewData = $_SESSION['preview_data'];
-    $eventsSummary = $_SESSION['events_summary'];
+// Handle cancel
+if (isset($_GET['cancel'])) {
+    @unlink($_SESSION['import_preview_file']);
+    unset($_SESSION['import_preview_file']);
+    unset($_SESSION['import_preview_filename']);
+    unset($_SESSION['import_preview_data']);
+    unset($_SESSION['import_events_summary']);
+    header('Location: /admin/import-results.php');
+    exit;
 }
 
 /**
- * Parse CSV and extract preview data
+ * Parse CSV for preview
  */
 function parseResultsCSVForPreview($filepath) {
     $results = [];
@@ -109,37 +124,55 @@ function parseResultsCSVForPreview($filepath) {
 
     // Read header
     $header = fgetcsv($handle, 1000, $delimiter);
-
     if (!$header) {
         fclose($handle);
         throw new Exception('Tom fil eller ogiltigt format');
     }
 
     // Normalize header
-    $header = array_map('strtolower', array_map('trim', $header));
+    $header = array_map(function($col) {
+        $col = strtolower(trim(str_replace([' ', '-', '_'], '', $col)));
 
+        $mappings = [
+            'eventname' => 'event_name',
+            'tävling' => 'event_name',
+            'tavling' => 'event_name',
+            'event' => 'event_name',
+            'eventdate' => 'event_date',
+            'date' => 'event_date',
+            'datum' => 'event_date',
+            'firstname' => 'firstname',
+            'first_name' => 'firstname',
+            'förnamn' => 'firstname',
+            'lastname' => 'lastname',
+            'last_name' => 'lastname',
+            'efternamn' => 'lastname',
+            'category' => 'category',
+            'class' => 'category',
+            'klass' => 'category',
+            'club' => 'club_name',
+            'clubname' => 'club_name',
+            'club_name' => 'club_name',
+            'team' => 'club_name',
+            'position' => 'position',
+            'placering' => 'position',
+            'time' => 'finish_time',
+            'tid' => 'finish_time',
+            'finish_time' => 'finish_time',
+            'status' => 'status',
+        ];
+
+        return $mappings[$col] ?? $col;
+    }, $header);
+
+    // Read all rows
     $lineNumber = 1;
     while (($row = fgetcsv($handle, 1000, $delimiter)) !== false) {
         $lineNumber++;
-
-        if (count($row) !== count($header)) {
-            continue;
-        }
+        if (count($row) < 2) continue; // Skip empty rows
 
         $data = array_combine($header, $row);
-
-        $results[] = [
-            'line' => $lineNumber,
-            'event_name' => trim($data['event_name'] ?? $data['event'] ?? $data['tävling'] ?? ''),
-            'event_date' => trim($data['event_date'] ?? $data['date'] ?? $data['datum'] ?? ''),
-            'event_location' => trim($data['event_location'] ?? $data['location'] ?? $data['plats'] ?? ''),
-            'firstname' => trim($data['firstname'] ?? $data['förnamn'] ?? ''),
-            'lastname' => trim($data['lastname'] ?? $data['efternamn'] ?? ''),
-            'position' => trim($data['position'] ?? $data['placering'] ?? ''),
-            'class' => trim($data['class'] ?? $data['category'] ?? $data['klass'] ?? $data['kategori'] ?? ''),
-            'finish_time' => trim($data['finish_time'] ?? $data['time'] ?? $data['tid'] ?? ''),
-            'license_number' => trim($data['license_number'] ?? $data['licens'] ?? '')
-        ];
+        $results[] = $data;
     }
 
     fclose($handle);
@@ -147,235 +180,198 @@ function parseResultsCSVForPreview($filepath) {
 }
 
 /**
- * Group results by event for summary
+ * Group results by event
  */
 function groupResultsByEvent($results) {
     $events = [];
 
     foreach ($results as $result) {
-        $eventKey = $result['event_name'] . '|' . $result['event_date'];
+        $eventKey = $result['event_name'] ?? 'Unknown Event';
 
         if (!isset($events[$eventKey])) {
             $events[$eventKey] = [
-                'name' => $result['event_name'],
-                'date' => $result['event_date'],
-                'location' => $result['event_location'],
+                'name' => $eventKey,
+                'date' => $result['event_date'] ?? '',
                 'participant_count' => 0,
-                'classes' => []
+                'categories' => [],
+                'clubs' => [],
+                'riders' => []
             ];
         }
 
         $events[$eventKey]['participant_count']++;
 
-        if (!empty($result['class']) && !in_array($result['class'], $events[$eventKey]['classes'])) {
-            $events[$eventKey]['classes'][] = $result['class'];
+        // Track categories
+        if (!empty($result['category']) && !in_array($result['category'], $events[$eventKey]['categories'])) {
+            $events[$eventKey]['categories'][] = $result['category'];
+        }
+
+        // Track clubs
+        if (!empty($result['club_name']) && !in_array($result['club_name'], $events[$eventKey]['clubs'])) {
+            $events[$eventKey]['clubs'][] = $result['club_name'];
+        }
+
+        // Track riders
+        $riderName = ($result['firstname'] ?? '') . ' ' . ($result['lastname'] ?? '');
+        if (!in_array($riderName, $events[$eventKey]['riders'])) {
+            $events[$eventKey]['riders'][] = trim($riderName);
         }
     }
 
     return $events;
 }
 
-$pageTitle = 'Förhandsgranska Resultatimport';
+$pageTitle = 'Förhandsgranska import';
 $pageType = 'admin';
 include __DIR__ . '/../includes/layout-header.php';
 ?>
 
 <main class="gs-main-content">
     <div class="gs-container">
-        <!-- Header -->
-        <div class="gs-flex gs-items-center gs-justify-between gs-mb-lg">
-            <h1 class="gs-h1 gs-text-primary">
+        <div class="gs-flex gs-justify-between gs-items-center gs-mb-lg">
+            <h1 class="gs-h2">
                 <i data-lucide="eye"></i>
-                Förhandsgranska Resultatimport
+                Förhandsgranska import
             </h1>
-            <a href="/admin/import-results.php" class="gs-btn gs-btn-outline">
-                <i data-lucide="arrow-left"></i>
-                Tillbaka
+            <a href="?cancel=1" class="gs-btn gs-btn-outline">
+                <i data-lucide="x"></i>
+                Avbryt
             </a>
         </div>
 
-        <!-- Messages -->
         <?php if ($message): ?>
-            <div class="gs-alert gs-alert-<?= $messageType ?> gs-mb-lg">
-                <i data-lucide="<?= $messageType === 'success' ? 'check-circle' : ($messageType === 'error' ? 'alert-circle' : 'info') ?>"></i>
-                <?= $message ?>
+            <div class="gs-alert gs-alert-<?= h($messageType) ?> gs-mb-lg">
+                <i data-lucide="<?= $messageType === 'success' ? 'check-circle' : 'alert-circle' ?>"></i>
+                <?= h($message) ?>
             </div>
         <?php endif; ?>
 
+        <div class="gs-alert gs-alert-info gs-mb-lg">
+            <i data-lucide="info"></i>
+            <strong>Fil:</strong> <?= h($_SESSION['import_preview_filename'] ?? 'Okänd') ?><br>
+            <strong>Antal rader:</strong> <?= count($previewData) ?><br>
+            <strong>Event i filen:</strong> <?= count($eventsSummary) ?>
+        </div>
+
         <?php if (empty($eventsSummary)): ?>
-            <!-- Upload Form -->
             <div class="gs-card">
-                <div class="gs-card-header">
-                    <h2 class="gs-h4">
-                        <i data-lucide="upload"></i>
-                        Ladda upp CSV för förhandsgranskning
-                    </h2>
-                </div>
                 <div class="gs-card-content">
-                    <form method="POST" enctype="multipart/form-data">
-                        <?= csrf_field() ?>
-
-                        <div class="gs-form-group">
-                            <label for="import_file" class="gs-label">
-                                <i data-lucide="file"></i>
-                                Välj CSV-fil
-                            </label>
-                            <input
-                                type="file"
-                                id="import_file"
-                                name="import_file"
-                                class="gs-input"
-                                accept=".csv"
-                                required
-                            >
-                            <small class="gs-text-secondary">
-                                Maximalt <?= round(MAX_UPLOAD_SIZE / 1024 / 1024) ?>MB. Filen parsas och visas för granskning innan import.
-                            </small>
-                        </div>
-
-                        <button type="submit" class="gs-btn gs-btn-primary">
-                            <i data-lucide="eye"></i>
-                            Förhandsgranska
-                        </button>
-                    </form>
+                    <p class="gs-text-secondary">Ingen data att förhandsgranska</p>
                 </div>
             </div>
         <?php else: ?>
-            <!-- Event Summary -->
-            <div class="gs-card gs-mb-lg">
-                <div class="gs-card-header">
-                    <h2 class="gs-h4">
-                        <i data-lucide="bar-chart"></i>
-                        Sammanställning av Importerade Event
-                    </h2>
-                </div>
-                <div class="gs-card-content">
-                    <div class="gs-alert gs-alert-info gs-mb-md">
-                        <i data-lucide="info"></i>
-                        Totalt <strong><?= count($eventsSummary) ?></strong> event med <strong><?= count($previewData) ?></strong> resultat
-                    </div>
+            <form method="POST">
+                <?= csrf_field() ?>
 
-                    <div class="gs-table-responsive">
-                        <table class="gs-table">
-                            <thead>
-                                <tr>
-                                    <th>Tävling</th>
-                                    <th>Datum</th>
-                                    <th>Plats</th>
-                                    <th>Antal Deltagare</th>
-                                    <th>Klasser</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php foreach ($eventsSummary as $event): ?>
-                                    <tr>
-                                        <td>
-                                            <strong><?= h($event['name']) ?></strong>
-                                        </td>
-                                        <td><?= h($event['date']) ?></td>
-                                        <td><?= h($event['location']) ?></td>
-                                        <td class="gs-text-center">
-                                            <span class="gs-badge gs-badge-primary">
-                                                <?= $event['participant_count'] ?>
+                <?php foreach ($eventsSummary as $eventKey => $eventData): ?>
+                    <div class="gs-card gs-mb-lg">
+                        <div class="gs-card-header">
+                            <h3 class="gs-h4 gs-text-primary">
+                                <i data-lucide="calendar"></i>
+                                <?= h($eventData['name']) ?>
+                                <?php if ($eventData['date']): ?>
+                                    <span class="gs-badge gs-badge-secondary gs-ml-sm">
+                                        <?= h($eventData['date']) ?>
+                                    </span>
+                                <?php endif; ?>
+                            </h3>
+                        </div>
+                        <div class="gs-card-content">
+                            <div class="gs-grid gs-grid-cols-1 gs-md-grid-cols-3 gs-gap-md gs-mb-lg">
+                                <div>
+                                    <div class="gs-text-sm gs-text-secondary">Deltagare</div>
+                                    <div class="gs-h3"><?= $eventData['participant_count'] ?></div>
+                                </div>
+                                <div>
+                                    <div class="gs-text-sm gs-text-secondary">Kategorier</div>
+                                    <div class="gs-h3"><?= count($eventData['categories']) ?></div>
+                                </div>
+                                <div>
+                                    <div class="gs-text-sm gs-text-secondary">Klubbar</div>
+                                    <div class="gs-h3"><?= count($eventData['clubs']) ?></div>
+                                </div>
+                            </div>
+
+                            <!-- Event Mapping -->
+                            <div class="gs-form-group">
+                                <label class="gs-label">
+                                    <i data-lucide="link"></i>
+                                    Koppla till event
+                                </label>
+                                <select name="event_mapping[<?= h($eventKey) ?>]" class="gs-input">
+                                    <option value="create">✨ Skapa nytt event</option>
+                                    <optgroup label="Befintliga event">
+                                        <?php foreach ($existingEvents as $event): ?>
+                                            <?php
+                                            $selected = '';
+                                            // Auto-select if names match
+                                            if (stripos($event['name'], $eventData['name']) !== false ||
+                                                stripos($eventData['name'], $event['name']) !== false) {
+                                                $selected = 'selected';
+                                            }
+                                            ?>
+                                            <option value="<?= $event['id'] ?>" <?= $selected ?>>
+                                                <?= h($event['name']) ?> (<?= date('Y-m-d', strtotime($event['date'])) ?>)
+                                                <?= $event['advent_id'] ? '- ' . h($event['advent_id']) : '' ?>
+                                            </option>
+                                        <?php endforeach; ?>
+                                    </optgroup>
+                                </select>
+                                <small class="gs-text-sm gs-text-secondary">
+                                    Välj ett befintligt event eller skapa ett nytt
+                                </small>
+                            </div>
+
+                            <!-- Categories -->
+                            <?php if (!empty($eventData['categories'])): ?>
+                                <div class="gs-mb-sm">
+                                    <strong class="gs-text-sm">Kategorier:</strong>
+                                    <div class="gs-flex gs-flex-wrap gs-gap-xs gs-mt-xs">
+                                        <?php foreach ($eventData['categories'] as $cat): ?>
+                                            <span class="gs-badge gs-badge-primary gs-badge-sm"><?= h($cat) ?></span>
+                                        <?php endforeach; ?>
+                                    </div>
+                                </div>
+                            <?php endif; ?>
+
+                            <!-- Clubs -->
+                            <?php if (!empty($eventData['clubs'])): ?>
+                                <div>
+                                    <strong class="gs-text-sm">Klubbar:</strong>
+                                    <div class="gs-flex gs-flex-wrap gs-gap-xs gs-mt-xs">
+                                        <?php foreach (array_slice($eventData['clubs'], 0, 10) as $club): ?>
+                                            <span class="gs-badge gs-badge-secondary gs-badge-sm"><?= h($club) ?></span>
+                                        <?php endforeach; ?>
+                                        <?php if (count($eventData['clubs']) > 10): ?>
+                                            <span class="gs-badge gs-badge-secondary gs-badge-sm">
+                                                +<?= count($eventData['clubs']) - 10 ?> fler
                                             </span>
-                                        </td>
-                                        <td>
-                                            <?php if (!empty($event['classes'])): ?>
-                                                <?php foreach ($event['classes'] as $class): ?>
-                                                    <span class="gs-badge gs-badge-secondary gs-badge-sm">
-                                                        <?= h($class) ?>
-                                                    </span>
-                                                <?php endforeach; ?>
-                                            <?php else: ?>
-                                                <span class="gs-text-secondary">-</span>
-                                            <?php endif; ?>
-                                        </td>
-                                    </tr>
-                                <?php endforeach; ?>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Detailed Results Preview -->
-            <div class="gs-card gs-mb-lg">
-                <div class="gs-card-header">
-                    <h2 class="gs-h4">
-                        <i data-lucide="list"></i>
-                        Detaljerade Resultat (Första 100)
-                    </h2>
-                </div>
-                <div class="gs-card-content">
-                    <div class="gs-table-responsive" style="max-height: 500px; overflow-y: auto;">
-                        <table class="gs-table">
-                            <thead style="position: sticky; top: 0; background: var(--gs-background); z-index: 10;">
-                                <tr>
-                                    <th style="width: 50px;">Rad</th>
-                                    <th>Event</th>
-                                    <th>Datum</th>
-                                    <th>Förnamn</th>
-                                    <th>Efternamn</th>
-                                    <th>Klass</th>
-                                    <th>Placering</th>
-                                    <th>Tid</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php foreach (array_slice($previewData, 0, 100) as $result): ?>
-                                    <tr>
-                                        <td class="gs-text-secondary"><?= $result['line'] ?></td>
-                                        <td><?= h($result['event_name']) ?></td>
-                                        <td><?= h($result['event_date']) ?></td>
-                                        <td><?= h($result['firstname']) ?></td>
-                                        <td><?= h($result['lastname']) ?></td>
-                                        <td><?= h($result['class']) ?></td>
-                                        <td class="gs-text-center"><?= h($result['position']) ?></td>
-                                        <td><?= h($result['finish_time']) ?></td>
-                                    </tr>
-                                <?php endforeach; ?>
-                            </tbody>
-                        </table>
-                    </div>
-                    <?php if (count($previewData) > 100): ?>
-                        <div class="gs-text-sm gs-text-secondary gs-mt-sm">
-                            ... och <?= count($previewData) - 100 ?> fler resultat
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+                            <?php endif; ?>
                         </div>
-                    <?php endif; ?>
-                </div>
-            </div>
+                    </div>
+                <?php endforeach; ?>
 
-            <!-- Confirm Import -->
-            <div class="gs-card">
-                <div class="gs-card-content">
-                    <form method="POST">
-                        <?= csrf_field() ?>
-                        <input type="hidden" name="confirm_import" value="1">
-
-                        <div class="gs-flex gs-items-center gs-justify-between">
-                            <div>
-                                <h3 class="gs-h5 gs-mb-sm">Bekräfta Import</h3>
-                                <p class="gs-text-secondary">
-                                    Detta kommer att importera <strong><?= count($previewData) ?></strong> resultat
-                                    från <strong><?= count($eventsSummary) ?></strong> event till databasen.
-                                </p>
-                            </div>
-                            <div class="gs-flex gs-gap-md">
-                                <a href="/admin/import-results-preview.php" class="gs-btn gs-btn-outline" onclick="return confirm('Avbryta förhandsgranskningen?');">
-                                    <i data-lucide="x"></i>
-                                    Avbryt
-                                </a>
-                                <button type="submit" class="gs-btn gs-btn-success gs-btn-lg">
-                                    <i data-lucide="check"></i>
-                                    Bekräfta & Importera
-                                </button>
-                            </div>
-                        </div>
-                    </form>
+                <div class="gs-flex gs-justify-end gs-gap-md gs-mt-xl">
+                    <a href="?cancel=1" class="gs-btn gs-btn-outline">
+                        <i data-lucide="x"></i>
+                        Avbryt
+                    </a>
+                    <button type="submit" name="confirm_import" class="gs-btn gs-btn-primary gs-btn-lg">
+                        <i data-lucide="check"></i>
+                        Godkänn & Importera
+                    </button>
                 </div>
-            </div>
+            </form>
         <?php endif; ?>
     </div>
 </main>
+
+<script src="https://unpkg.com/lucide@latest"></script>
+<script>
+    lucide.createIcons();
+</script>
 
 <?php include __DIR__ . '/../includes/layout-footer.php'; ?>
