@@ -843,31 +843,7 @@ function getDB() {
 /**
  * Alias for check_csrf (legacy compatibility)
  */
-function checkCsrf() {
-    return check_csrf();
-}
 
-/**
- * Alias for get_admin_user (legacy compatibility)
- */
-function get_current_admin() {
-    return get_admin_user();
-}
-
-/**
- * Calculate age from birth year
- */
-function calculateAge($birthYear) {
-    if (empty($birthYear)) return null;
-    return date('Y') - $birthYear;
-}
-
-/**
- * Check license validity
- */
-function checkLicense($rider) {
-    if (empty($rider['license_valid_until']) || $rider['license_valid_until'] === '0000-00-00') {
-        return ['class' => 'gs-badge-secondary', 'message' => 'Ingen giltighetstid'];
     }
     
     $validUntil = strtotime($rider['license_valid_until']);
