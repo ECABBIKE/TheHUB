@@ -832,7 +832,7 @@ function getDB() {
             return $stmt->execute(array_merge($values, $params));
         }
         
-        public function delete($table, $where, $params = []) {
+ public function delete($table, $where, $params = []) {
             $sql = "DELETE FROM $table WHERE $where";
             $stmt = $this->pdo->prepare($sql);
             return $stmt->execute($params);
