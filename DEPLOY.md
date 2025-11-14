@@ -1,70 +1,52 @@
-# 🚀 Quick Deploy to InfinityFree
+# 🚀 SUPER-ENKEL Deploy till InfinityFree
 
-## Enkel deployment från git (enbart för uppdateringar)
+## ⚡ ONE-CLICK SETUP (Första gången)
 
-När du har gjort setup en gång kan du uppdatera siten genom att köra i SSH eller File Manager:
+### Steg 1: Git pull på servern
 
+Via InfinityFree File Manager eller SSH:
 ```bash
 cd /htdocs
 git pull origin claude/thehub-comprehensive-audit-01Sf5tTNHBQtMzEgsXZUmLP9
 ```
 
----
+### Steg 2: Besök deploy-scriptet EN GÅNG
 
-## 📦 Initial Setup (gör EN gång)
-
-### Steg 1: Pusha från din dator
-
-InfinityFree File Manager eller FTP:
-```bash
-cd htdocs
-git pull origin claude/thehub-comprehensive-audit-01Sf5tTNHBQtMzEgsXZUmLP9
+Öppna i webbläsaren (från mobil funkar!):
+```
+https://thehub.infinityfree.me/deploy-infinityfree.php
 ```
 
-### Steg 2: Kör setup-scriptet
+Detta fixar automatiskt:
+- ✅ Skapar `.env` med alla credentials
+- ✅ Konfigurerar databas
+- ✅ Aktiverar produktion-läge
+- ✅ Visar nästa steg
 
-**ENKLASTE SÄTTET (från mobil):**
+### Steg 3: RADERA deploy-infinityfree.php
 
-Besök denna URL i din webbläsare:
-```
-https://thehub.infinityfree.me/setup-production.php?password=qv19oAyv44J2xX
-```
+**VIKTIGT!** Radera filen direkt i File Manager efter att du körst den!
 
-Detta skapar `.env` filen automatiskt med rätt inställningar!
-
-**ALTERNATIV (via File Manager):**
-1. Öppna `setup-production.php` i File Manager
-2. Lägg till lösenordet på rad 17: `$db_password = 'qv19oAyv44J2xX';`
-3. Besök: `https://thehub.infinityfree.me/setup-production.php`
-
-### Steg 3: RADERA setup-production.php
-
-**VIKTIGT FÖR SÄKERHET!**
-
-Gå till File Manager och radera `setup-production.php` direkt efter att den körts!
+(`.htaccess` blockerar access, men radera ändå för säkerhet)
 
 ### Steg 4: Kör SQL migrations
 
-Gå till phpMyAdmin (InfinityFree cPanel → phpMyAdmin)
+Gå till phpMyAdmin och kör dessa två filer:
 
-**Kör dessa två filer:**
-
-1. Kopiera innehållet från `database/migrations/003_import_history.sql`
-2. Klistra in i phpMyAdmin SQL tab → Kör
-3. Kopiera innehållet från `database/migrations/004_point_scales.sql`
-4. Klistra in i phpMyAdmin SQL tab → Kör
+1. `database/migrations/003_import_history.sql`
+2. `database/migrations/004_point_scales.sql`
 
 ### Steg 5: Verifiera
 
 Besök: `https://thehub.infinityfree.me/admin/test-database-connection.php`
 
-Du ska se:
+Förväntat resultat:
 - ✅ Config files exist
 - ✅ Database constants defined
 - ✅ NOT in demo mode
 - ✅ Connection successful
 - ✅ All tables exist
-- ✅ 2598 riders in database
+- ✅ 2598+ riders in database
 
 ---
 

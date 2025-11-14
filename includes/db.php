@@ -9,8 +9,11 @@
 $db_config_file = __DIR__ . '/../config/database.php';
 if (file_exists($db_config_file)) {
     require_once $db_config_file;
-} else {
-    // Demo mode - define dummy constants
+}
+
+// Check if constants are defined (from config.php via .env or config/database.php)
+// If not, use fallback demo mode
+if (!defined('DB_HOST')) {
     define('DB_HOST', 'localhost');
     define('DB_NAME', 'thehub_demo');
     define('DB_USER', 'demo');

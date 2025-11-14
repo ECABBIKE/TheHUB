@@ -1,0 +1,45 @@
+# TheHUB Security Configuration
+
+# Deny access to .env files
+<FilesMatch "^\.env">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+# Deny access to git files
+<FilesMatch "^\.git">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+# Deny access to deployment files (if not deleted)
+<FilesMatch "(deploy-infinityfree|setup-production)\.php$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+# Deny access to composer files
+<FilesMatch "composer\.(json|lock)$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+# Deny access to package manager files
+<FilesMatch "(package\.json|package-lock\.json|yarn\.lock)$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+# Enable rewrite engine
+RewriteEngine On
+
+# Redirect to HTTPS (optional - enable if you have SSL)
+# RewriteCond %{HTTPS} off
+# RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+# Prevent directory listing
+Options -Indexes
+
+# Custom error pages (optional)
+# ErrorDocument 404 /404.php
+# ErrorDocument 500 /500.php
