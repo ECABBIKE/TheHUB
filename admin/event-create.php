@@ -8,6 +8,9 @@ $db = getDB();
 $message = '';
 $messageType = 'info';
 
+// Generate suggested advent_id for new events
+$suggested_advent_id = generateEventAdventId($pdo);
+
 // Handle form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     checkCsrf();
@@ -21,9 +24,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $messageType = 'error';
     } else {
         // Prepare event data
+        // Auto-generate advent_id if not provided
+        $advent_id_input = trim($_POST['advent_id'] ?? '');
+        if (empty($advent_id_input)) {
+            // Extract year from event date for better ID generation
+            $event_year = date('Y', strtotime($date));
+            $advent_id_input = generateEventAdventId($pdo, $event_year);
+        }
+
         $eventData = [
             'name' => $name,
-            'advent_id' => trim($_POST['advent_id'] ?? '') ?: null,
+            'advent_id' => $advent_id_input,
             'date' => $date,
             'location' => trim($_POST['location'] ?? ''),
             'venue_id' => !empty($_POST['venue_id']) ? intval($_POST['venue_id']) : null,
@@ -121,10 +132,10 @@ include __DIR__ . '/../includes/layout-header.php';
                             id="advent_id"
                             name="advent_id"
                             class="gs-input"
-                            value="<?= htmlspecialchars($_POST['advent_id'] ?? '') ?>"
-                            placeholder="T.ex. event-2024-001"
+                            value="<?= htmlspecialchars($_POST['advent_id'] ?? $suggested_advent_id) ?>"
+                            placeholder="<?= htmlspecialchars($suggested_advent_id) ?>"
                         >
-                        <small class="gs-text-muted">Externt ID för import av resultat</small>
+                        <small class="gs-text-muted">Externt ID för import av resultat. Lämna tomt för auto-generering.</small>
                     </div>
 
                     <!-- Date (Required) -->

@@ -292,7 +292,7 @@ include __DIR__ . '/../includes/layout-header.php';
             </div>
             <div class="gs-card-content">
                 <form method="POST" enctype="multipart/form-data" class="gs-form">
-                    <?= csrfField() ?>
+                    <?= csrf_field() ?>
 
                     <div class="gs-alert gs-alert-info gs-mb-md">
                         <i data-lucide="info"></i>

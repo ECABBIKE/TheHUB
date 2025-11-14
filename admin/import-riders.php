@@ -634,7 +634,7 @@ include __DIR__ . '/../includes/layout-header.php';
                 </div>
                 <div class="gs-card-content">
                     <form method="POST" enctype="multipart/form-data" id="uploadForm" style="max-width: 600px;">
-                        <?= csrfField() ?>
+                        <?= csrf_field() ?>
 
                         <div class="gs-form-group">
                             <label for="import_file" class="gs-label">

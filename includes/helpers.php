@@ -22,10 +22,10 @@ function checkLicense($rider) {
     if (empty($rider['license_valid_until']) || $rider['license_valid_until'] === '0000-00-00') {
         return array('class' => 'gs-badge-secondary', 'message' => 'Ingen giltighetstid');
     }
-    
+
     $validUntil = strtotime($rider['license_valid_until']);
     $now = time();
-    
+
     if ($validUntil < $now) {
         return array('class' => 'gs-badge-danger', 'message' => 'Utgången');
     } elseif ($validUntil < strtotime('+30 days')) {
@@ -33,6 +33,40 @@ function checkLicense($rider) {
     } else {
         return array('class' => 'gs-badge-success', 'message' => 'Giltig');
     }
+}
+
+/**
+ * Generate a unique advent_id for an event
+ * Format: event-YYYY-NNN where YYYY is year and NNN is sequential number
+ *
+ * @param PDO $pdo Database connection
+ * @param string $year Year for the event (YYYY format)
+ * @return string Generated advent_id
+ */
+function generateEventAdventId($pdo, $year = null) {
+    if ($year === null) {
+        $year = date('Y');
+    }
+
+    // Find the highest number used for this year
+    $stmt = $pdo->prepare("
+        SELECT advent_id
+        FROM events
+        WHERE advent_id LIKE ?
+        ORDER BY advent_id DESC
+        LIMIT 1
+    ");
+    $stmt->execute(["event-$year-%"]);
+    $existing = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if ($existing && preg_match('/event-\d{4}-(\d+)/', $existing['advent_id'], $matches)) {
+        $nextNum = intval($matches[1]) + 1;
+    } else {
+        $nextNum = 1;
+    }
+
+    // Format with leading zeros (3 digits)
+    return sprintf('event-%s-%03d', $year, $nextNum);
 }
 
 class DatabaseWrapper {

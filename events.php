@@ -11,36 +11,57 @@ require_once __DIR__ . '/config.php';
 
 $db = getDB();
 
-// Get year filter
+// Get filters
 $year = isset($_GET['year']) ? (int)$_GET['year'] : date('Y');
+$series_id = isset($_GET['series']) ? (int)$_GET['series'] : null;
 
 // Get all available years
 $years = $db->getAll("SELECT DISTINCT YEAR(date) as year FROM events ORDER BY year DESC");
+
+// Get series info if filtering by series
+$series_info = null;
+if ($series_id) {
+    $series_info = $db->getRow("SELECT * FROM series WHERE id = ?", [$series_id]);
+}
 
 // Pagination
 $page = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1;
 $perPage = EVENTS_PER_PAGE;
 $offset = ($page - 1) * $perPage;
 
+// Build WHERE clause
+$where_clauses = ["YEAR(e.date) = ?"];
+$params = [$year];
+
+if ($series_id) {
+    $where_clauses[] = "e.series_id = ?";
+    $params[] = $series_id;
+}
+
+$where_sql = implode(' AND ', $where_clauses);
+
 // Get total count
 $totalCount = $db->getRow(
-    "SELECT COUNT(*) as count FROM events WHERE YEAR(date) = ?",
-    [$year]
+    "SELECT COUNT(*) as count FROM events e WHERE $where_sql",
+    $params
 )['count'] ?? 0;
 
 $pagination = paginate($totalCount, $perPage, $page);
 
 // Get events
+$params_with_limit = array_merge($params, [$perPage, $offset]);
 $events = $db->getAll(
     "SELECT e.id, e.name, e.date as event_date, e.location, e.type as event_type, e.status,
+            s.name as series_name,
             COUNT(r.id) as participant_count
      FROM events e
      LEFT JOIN results r ON e.id = r.event_id
-     WHERE YEAR(e.date) = ?
+     LEFT JOIN series s ON e.series_id = s.id
+     WHERE $where_sql
      GROUP BY e.id
      ORDER BY e.date DESC
      LIMIT ? OFFSET ?",
-    [$year, $perPage, $offset]
+    $params_with_limit
 );
 
 $pageTitle = 'Tävlingar';
@@ -55,10 +76,20 @@ include __DIR__ . '/includes/layout-header.php';
                 <div>
                     <h1 class="gs-h2 gs-text-primary gs-mb-sm">
                         <i data-lucide="calendar"></i>
-                        Tävlingskalender
+                        <?php if ($series_info): ?>
+                            <?= h($series_info['name']) ?> - Tävlingar
+                        <?php else: ?>
+                            Tävlingskalender
+                        <?php endif; ?>
                     </h1>
                     <p class="gs-text-secondary">
                         <?= $totalCount ?> tävlingar under <?= $year ?>
+                        <?php if ($series_info): ?>
+                            <a href="/events.php?year=<?= $year ?>" class="gs-btn gs-btn-sm gs-btn-outline gs-ml-sm">
+                                <i data-lucide="x"></i>
+                                Visa alla
+                            </a>
+                        <?php endif; ?>
                     </p>
                 </div>
 
@@ -66,7 +97,7 @@ include __DIR__ . '/includes/layout-header.php';
                 <?php if (!empty($years)): ?>
                     <div class="gs-flex gs-gap-sm">
                         <?php foreach ($years as $y): ?>
-                            <a href="?year=<?= $y['year'] ?>"
+                            <a href="?year=<?= $y['year'] ?><?= $series_id ? '&series=' . $series_id : '' ?>"
                                class="gs-btn <?= $y['year'] == $year ? 'gs-btn-primary' : 'gs-btn-outline' ?>">
                                 <?= $y['year'] ?>
                             </a>
@@ -153,8 +184,11 @@ include __DIR__ . '/includes/layout-header.php';
                 <!-- Pagination -->
                 <?php if ($pagination['total_pages'] > 1): ?>
                     <div class="gs-flex gs-justify-center gs-gap-sm gs-mt-xl">
+                        <?php
+                        $base_url = "?year=$year" . ($series_id ? "&series=$series_id" : "");
+                        ?>
                         <?php if ($pagination['has_prev']): ?>
-                            <a href="?year=<?= $year ?>&page=<?= $pagination['prev_page'] ?>"
+                            <a href="<?= $base_url ?>&page=<?= $pagination['prev_page'] ?>"
                                class="gs-btn gs-btn-outline">
                                 <i data-lucide="chevron-left"></i>
                                 Föregående
@@ -166,7 +200,7 @@ include __DIR__ . '/includes/layout-header.php';
                         </span>
 
                         <?php if ($pagination['has_next']): ?>
-                            <a href="?year=<?= $year ?>&page=<?= $pagination['next_page'] ?>"
+                            <a href="<?= $base_url ?>&page=<?= $pagination['next_page'] ?>"
                                class="gs-btn gs-btn-outline">
                                 Nästa
                                 <i data-lucide="chevron-right"></i>

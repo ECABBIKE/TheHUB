@@ -220,7 +220,7 @@ include __DIR__ . '/../includes/layout-header.php';
             </div>
             <div class="gs-card-content">
                 <form method="POST" onsubmit="return confirm('This will create/update database tables. Continue?');">
-                    <?= csrfField() ?>
+                    <?= csrf_field() ?>
                     <input type="hidden" name="action" value="run_schema">
 
                     <div class="gs-alert gs-alert-info gs-mb-md">

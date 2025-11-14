@@ -293,8 +293,13 @@ function importResultsFromCSV($filepath, $db, $importId = null) {
                     }
 
                     // Create new event
+                    // Auto-generate advent_id for new event
+                    $event_year = date('Y', strtotime($eventDate));
+                    $advent_id = generateEventAdventId($pdo, $event_year);
+
                     $newEventData = [
                         'name' => $eventName,
+                        'advent_id' => $advent_id,
                         'date' => $eventDate,
                         'location' => $eventLocation,
                         'venue_id' => $venueId,
@@ -638,7 +643,7 @@ include __DIR__ . '/../includes/layout-header.php';
                     </div>
 
                     <form method="POST" enctype="multipart/form-data" id="uploadForm" style="max-width: 600px;">
-                        <?= csrfField() ?>
+                        <?= csrf_field() ?>
 
                         <div class="gs-form-group">
                             <label for="import_file" class="gs-label">
