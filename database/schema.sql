@@ -41,6 +41,10 @@ CREATE TABLE IF NOT EXISTS riders (
     discipline VARCHAR(100),
     license_valid_until DATE,
     email VARCHAR(255),
+    password VARCHAR(255) DEFAULT NULL,
+    password_reset_token VARCHAR(255) DEFAULT NULL,
+    password_reset_expires DATETIME DEFAULT NULL,
+    last_login DATETIME DEFAULT NULL,
     phone VARCHAR(20),
     city VARCHAR(100),
     active BOOLEAN DEFAULT 1,
@@ -52,6 +56,8 @@ CREATE TABLE IF NOT EXISTS riders (
     INDEX idx_club (club_id),
     INDEX idx_license (license_number),
     INDEX idx_active (active),
+    INDEX idx_email (email),
+    INDEX idx_reset_token (password_reset_token),
     UNIQUE KEY unique_license (license_number)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 

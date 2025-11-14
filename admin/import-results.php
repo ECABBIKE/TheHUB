@@ -192,6 +192,13 @@ function importResultsFromCSV($filepath, $db, $importId = null) {
             'discipline' => 'discipline',
             'disciplin' => 'discipline',
             'gren' => 'discipline',
+
+            // Contact
+            'email' => 'email',
+            'epost' => 'email',
+            'e-post' => 'email',
+            'mail' => 'email',
+
             'birthyear' => 'birth_year',
             'födelseår' => 'birth_year',
             'fodelsear' => 'birth_year',
@@ -484,6 +491,7 @@ function importResultsFromCSV($filepath, $db, $importId = null) {
                             'license_number' => $sweId,
                             'license_type' => $licenseType,
                             'club_id' => $clubId,
+                            'email' => !empty($data['email']) ? trim($data['email']) : null,
                             'active' => 1
                         ];
 
