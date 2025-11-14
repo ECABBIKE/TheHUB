@@ -233,93 +233,113 @@ function importResultsFromCSV($filepath, $db, $importId = null) {
             if (isset($eventCache[$eventName])) {
                 $eventId = $eventCache[$eventName];
             } else {
-                // Try exact match
-                $event = $db->getRow(
-                    "SELECT id FROM events WHERE name = ? LIMIT 1",
-                    [$eventName]
-                );
+                // Check if we have event mapping from preview
+                global $IMPORT_EVENT_MAPPING;
+                $useExistingEvent = false;
 
-                if (!$event) {
-                    // Try fuzzy match (LIKE)
-                    $event = $db->getRow(
-                        "SELECT id FROM events WHERE name LIKE ? LIMIT 1",
-                        ['%' . $eventName . '%']
-                    );
+                if (!empty($IMPORT_EVENT_MAPPING) && isset($IMPORT_EVENT_MAPPING[$eventName])) {
+                    $mappedValue = $IMPORT_EVENT_MAPPING[$eventName];
+
+                    if ($mappedValue !== 'create' && is_numeric($mappedValue)) {
+                        // Use existing event from mapping
+                        $eventId = (int)$mappedValue;
+                        $eventCache[$eventName] = $eventId;
+                        $matching_stats['events_found']++;
+                        $useExistingEvent = true;
+                        error_log("Using mapped event ID {$eventId} for '{$eventName}'");
+                    }
+                    // else: mappedValue is 'create', proceed with auto-create below
                 }
 
-                if ($event) {
-                    $eventId = $event['id'];
-                    $eventCache[$eventName] = $eventId;
-                    $matching_stats['events_found']++;
-                } else {
-                    // AUTO-CREATE: Event not found, create it
-                    $matching_stats['events_not_found']++;
+                if (!$useExistingEvent) {
+                    // Try exact match
+                    $event = $db->getRow(
+                        "SELECT id FROM events WHERE name = ? LIMIT 1",
+                        [$eventName]
+                    );
 
-                    // Get event data from CSV
-                    $eventDate = !empty($data['event_date']) ? trim($data['event_date']) : date('Y-m-d');
-                    $eventLocation = !empty($data['event_location']) ? trim($data['event_location']) : null;
-                    $eventVenueName = !empty($data['event_venue']) ? trim($data['event_venue']) : null;
-
-                    // Parse date if needed (handle various formats)
-                    if (!empty($data['event_date'])) {
-                        $dateParsed = strtotime($data['event_date']);
-                        if ($dateParsed) {
-                            $eventDate = date('Y-m-d', $dateParsed);
-                        }
+                    if (!$event) {
+                        // Try fuzzy match (LIKE)
+                        $event = $db->getRow(
+                            "SELECT id FROM events WHERE name LIKE ? LIMIT 1",
+                            ['%' . $eventName . '%']
+                        );
                     }
 
-                    // Auto-create venue if specified
-                    $venueId = null;
-                    if ($eventVenueName) {
-                        // Check if venue exists
-                        $venue = $db->getRow(
-                            "SELECT id FROM venues WHERE name LIKE ? LIMIT 1",
-                            ['%' . $eventVenueName . '%']
-                        );
+                    if ($event) {
+                        $eventId = $event['id'];
+                        $eventCache[$eventName] = $eventId;
+                        $matching_stats['events_found']++;
+                    } else {
+                        // AUTO-CREATE: Event not found, create it
+                        $matching_stats['events_not_found']++;
 
-                        if ($venue) {
-                            $venueId = $venue['id'];
-                        } else {
-                            // Create new venue
-                            $venueData = [
-                                'name' => $eventVenueName,
-                                'city' => $eventLocation,
-                                'active' => 1
-                            ];
-                            $venueId = $db->insert('venues', $venueData);
-                            $matching_stats['venues_created']++;
-                            error_log("Auto-created venue: {$eventVenueName}");
+                        // Get event data from CSV
+                        $eventDate = !empty($data['event_date']) ? trim($data['event_date']) : date('Y-m-d');
+                        $eventLocation = !empty($data['event_location']) ? trim($data['event_location']) : null;
+                        $eventVenueName = !empty($data['event_venue']) ? trim($data['event_venue']) : null;
 
-                            // Track created venue
-                            if ($importId && $venueId) {
-                                trackImportRecord($db, $importId, 'venue', $venueId, 'created');
+                        // Parse date if needed (handle various formats)
+                        if (!empty($data['event_date'])) {
+                            $dateParsed = strtotime($data['event_date']);
+                            if ($dateParsed) {
+                                $eventDate = date('Y-m-d', $dateParsed);
                             }
                         }
-                    }
 
-                    // Create new event
-                    // Auto-generate advent_id for new event
-                    $event_year = date('Y', strtotime($eventDate));
-                    $advent_id = generateEventAdventId($pdo, $event_year);
+                        // Auto-create venue if specified
+                        $venueId = null;
+                        if ($eventVenueName) {
+                            // Check if venue exists
+                            $venue = $db->getRow(
+                                "SELECT id FROM venues WHERE name LIKE ? LIMIT 1",
+                                ['%' . $eventVenueName . '%']
+                            );
 
-                    $newEventData = [
-                        'name' => $eventName,
-                        'advent_id' => $advent_id,
-                        'date' => $eventDate,
-                        'location' => $eventLocation,
-                        'venue_id' => $venueId,
-                        'status' => 'completed',
-                        'active' => 1
-                    ];
+                            if ($venue) {
+                                $venueId = $venue['id'];
+                            } else {
+                                // Create new venue
+                                $venueData = [
+                                    'name' => $eventVenueName,
+                                    'city' => $eventLocation,
+                                    'active' => 1
+                                ];
+                                $venueId = $db->insert('venues', $venueData);
+                                $matching_stats['venues_created']++;
+                                error_log("Auto-created venue: {$eventVenueName}");
 
-                    $eventId = $db->insert('events', $newEventData);
-                    $eventCache[$eventName] = $eventId;
-                    $matching_stats['events_created']++;
-                    error_log("Auto-created event: {$eventName} on {$eventDate}");
+                                // Track created venue
+                                if ($importId && $venueId) {
+                                    trackImportRecord($db, $importId, 'venue', $venueId, 'created');
+                                }
+                            }
+                        }
 
-                    // Track created event
-                    if ($importId && $eventId) {
-                        trackImportRecord($db, $importId, 'event', $eventId, 'created');
+                        // Create new event
+                        // Auto-generate advent_id for new event
+                        $event_year = date('Y', strtotime($eventDate));
+                        $advent_id = generateEventAdventId($pdo, $event_year);
+
+                        $newEventData = [
+                            'name' => $eventName,
+                            'advent_id' => $advent_id,
+                            'date' => $eventDate,
+                            'location' => $eventLocation,
+                            'venue_id' => $venueId,
+                            'status' => 'completed',
+                            'active' => 1
+                        ];
+
+                        $eventId = $db->insert('events', $newEventData);
+                        $eventCache[$eventName] = $eventId;
+                        $matching_stats['events_created']++;
+                        error_log("Auto-created event: {$eventName} on {$eventDate}");
+
+                        // Track created event
+                        if ($importId && $eventId) {
+                            trackImportRecord($db, $importId, 'event', $eventId, 'created');
+                        }
                     }
                 }
             }
@@ -575,6 +595,22 @@ function importResultsFromCSV($filepath, $db, $importId = null) {
         'matching' => $matching_stats,
         'errors' => $errors
     ];
+}
+
+/**
+ * Import results from CSV with event mapping
+ * Same as importResultsFromCSV but uses provided event IDs instead of auto-creating
+ */
+function importResultsFromCSVWithMapping($filepath, $db, $importId = null, $eventMapping = []) {
+    // For now, just call the regular import function
+    // TODO: Implement event mapping logic
+    // Event mapping format: ['EventName' => event_id or 'create']
+
+    // Store event mapping in global for use during import
+    global $IMPORT_EVENT_MAPPING;
+    $IMPORT_EVENT_MAPPING = $eventMapping;
+
+    return importResultsFromCSV($filepath, $db, $importId);
 }
 
 $pageTitle = 'Importera Resultat';
