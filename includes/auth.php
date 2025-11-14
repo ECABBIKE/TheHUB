@@ -10,7 +10,8 @@ if (session_status() === PHP_SESSION_NONE) {
         'lifetime' => defined('SESSION_LIFETIME') ? SESSION_LIFETIME : 86400,
         'path' => '/',
         'domain' => '',
-        'secure' => false, // Allow HTTP for development (change to true in production with HTTPS)
+        // Auto-detect HTTPS - secure flag only if using SSL
+        'secure' => isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on',
         'httponly' => true,   // Prevent JavaScript access
         'samesite' => 'Lax' // CSRF protection (Lax allows same-site navigation)
     ]);
