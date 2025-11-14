@@ -125,6 +125,7 @@ CREATE TABLE IF NOT EXISTS venues (
 CREATE TABLE IF NOT EXISTS events (
     id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
+    advent_id VARCHAR(50), -- External ID for result imports
     date DATE NOT NULL,
     location VARCHAR(255),
     venue_id INT,
@@ -152,7 +153,8 @@ CREATE TABLE IF NOT EXISTS events (
     INDEX idx_discipline (discipline),
     INDEX idx_series (series_id),
     INDEX idx_venue (venue_id),
-    INDEX idx_active (active)
+    INDEX idx_active (active),
+    INDEX idx_advent_id (advent_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================================================

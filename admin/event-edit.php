@@ -43,6 +43,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Prepare event data
         $eventData = [
             'name' => $name,
+            'advent_id' => trim($_POST['advent_id'] ?? '') ?: null,
             'date' => $date,
             'location' => trim($_POST['location'] ?? ''),
             'venue_id' => !empty($_POST['venue_id']) ? intval($_POST['venue_id']) : null,
@@ -127,6 +128,23 @@ include __DIR__ . '/../includes/layout-header.php';
                             value="<?= htmlspecialchars($event['name']) ?>"
                             placeholder="T.ex. GravitySeries Järvsö"
                         >
+                    </div>
+
+                    <!-- Advent ID -->
+                    <div>
+                        <label for="advent_id" class="gs-label">
+                            <i data-lucide="hash"></i>
+                            Advent ID
+                        </label>
+                        <input
+                            type="text"
+                            id="advent_id"
+                            name="advent_id"
+                            class="gs-input"
+                            value="<?= htmlspecialchars($event['advent_id'] ?? '') ?>"
+                            placeholder="T.ex. event-2024-001"
+                        >
+                        <small class="gs-text-muted">Externt ID för import av resultat</small>
                     </div>
 
                     <!-- Date (Required) -->
