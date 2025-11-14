@@ -86,7 +86,7 @@ $venues = $db->getAll("SELECT id, name, city FROM venues WHERE active = 1 ORDER 
 
 // Check if editing an event
 if (isset($_GET['edit']) && is_numeric($_GET['edit'])) {
-    $editEvent = $db->getOne("SELECT * FROM events WHERE id = ?", [intval($_GET['edit'])]);
+    $editEvent = $db->getRow("SELECT * FROM events WHERE id = ?", [intval($_GET['edit'])]);
 }
 
     $where = ["YEAR(event_date) = ?"];

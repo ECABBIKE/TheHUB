@@ -1,5 +1,4 @@
 <?php
-define('DEBUG', true);
 /**
  * TheHUB Configuration
  * Main configuration file that loads all necessary dependencies
