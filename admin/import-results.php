@@ -103,7 +103,9 @@ function importResultsFromCSV($filepath, $db, $importId = null) {
         'venues_created' => 0,
         'riders_found' => 0,
         'riders_not_found' => 0,
-        'riders_created' => 0
+        'riders_created' => 0,
+        'clubs_created' => 0,
+        'categories_created' => 0
     ];
 
     $errors = [];
@@ -158,16 +160,38 @@ function importResultsFromCSV($filepath, $db, $importId = null) {
             'förnamn' => 'firstname',
             'fornamn' => 'firstname',
             'fname' => 'firstname',
+            'first_name' => 'firstname',
             'lastname' => 'lastname',
             'efternamn' => 'lastname',
             'lname' => 'lastname',
             'surname' => 'lastname',
+            'last_name' => 'lastname',
 
-            // Other fields
+            // License fields
             'licensenumber' => 'license_number',
             'uciid' => 'license_number',
             'sweid' => 'license_number',
             'licens' => 'license_number',
+            'uci_id' => 'license_number',
+            'swe_id' => 'license_number',
+
+            // Club/Team
+            'club' => 'club_name',
+            'clubname' => 'club_name',
+            'team' => 'club_name',
+            'klubb' => 'club_name',
+            'club_name' => 'club_name',
+
+            // Category
+            'category' => 'category',
+            'kategori' => 'category',
+            'class' => 'category',
+            'klass' => 'category',
+
+            // Discipline
+            'discipline' => 'discipline',
+            'disciplin' => 'discipline',
+            'gren' => 'discipline',
             'birthyear' => 'birth_year',
             'födelseår' => 'birth_year',
             'fodelsear' => 'birth_year',
@@ -177,6 +201,7 @@ function importResultsFromCSV($filepath, $db, $importId = null) {
             'sluttid' => 'finish_time',
             'tid' => 'finish_time',
             'time' => 'finish_time',
+            'finish_time' => 'finish_time',
             'bibnumber' => 'bib_number',
             'startnummer' => 'bib_number',
             'bib' => 'bib_number',
@@ -319,6 +344,61 @@ function importResultsFromCSV($filepath, $db, $importId = null) {
                 }
             }
 
+            // Find or create club
+            $clubId = null;
+            if (!empty($data['club_name'])) {
+                $clubName = trim($data['club_name']);
+                $club = $db->getRow(
+                    "SELECT id FROM clubs WHERE name LIKE ? LIMIT 1",
+                    ['%' . $clubName . '%']
+                );
+
+                if ($club) {
+                    $clubId = $club['id'];
+                } else {
+                    // Auto-create club
+                    $clubData = [
+                        'name' => $clubName,
+                        'active' => 1
+                    ];
+                    $clubId = $db->insert('clubs', $clubData);
+                    $matching_stats['clubs_created']++;
+                    error_log("Auto-created club: {$clubName}");
+
+                    if ($importId && $clubId) {
+                        trackImportRecord($db, $importId, 'club', $clubId, 'created');
+                    }
+                }
+            }
+
+            // Find or create category
+            $categoryId = null;
+            if (!empty($data['category'])) {
+                $categoryName = trim($data['category']);
+                $category = $db->getRow(
+                    "SELECT id FROM categories WHERE name = ? OR short_name = ? LIMIT 1",
+                    [$categoryName, $categoryName]
+                );
+
+                if ($category) {
+                    $categoryId = $category['id'];
+                } else {
+                    // Auto-create category
+                    $categoryData = [
+                        'name' => $categoryName,
+                        'short_name' => substr($categoryName, 0, 20),
+                        'active' => 1
+                    ];
+                    $categoryId = $db->insert('categories', $categoryData);
+                    $matching_stats['categories_created']++;
+                    error_log("Auto-created category: {$categoryName}");
+
+                    if ($importId && $categoryId) {
+                        trackImportRecord($db, $importId, 'category', $categoryId, 'created');
+                    }
+                }
+            }
+
             // Find rider
             $firstname = trim($data['firstname']);
             $lastname = trim($data['lastname']);
@@ -403,6 +483,7 @@ function importResultsFromCSV($filepath, $db, $importId = null) {
                             'gender' => $gender,
                             'license_number' => $sweId,
                             'license_type' => $licenseType,
+                            'club_id' => $clubId,
                             'active' => 1
                         ];
 
@@ -441,14 +522,32 @@ function importResultsFromCSV($filepath, $db, $importId = null) {
                 }
             }
 
+            // Normalize status (FIN/DNS/DNF/DQ -> finished/dns/dnf/dq)
+            $status = 'finished';
+            if (!empty($data['status'])) {
+                $statusRaw = strtoupper(trim($data['status']));
+                if ($statusRaw === 'FIN' || $statusRaw === 'FINISHED' || $statusRaw === 'OK') {
+                    $status = 'finished';
+                } elseif ($statusRaw === 'DNF') {
+                    $status = 'dnf';
+                } elseif ($statusRaw === 'DNS') {
+                    $status = 'dns';
+                } elseif ($statusRaw === 'DQ' || $statusRaw === 'DSQ') {
+                    $status = 'dq';
+                } else {
+                    $status = strtolower($statusRaw);
+                }
+            }
+
             // Prepare result data
             $resultData = [
                 'event_id' => $eventId,
                 'cyclist_id' => $riderId,
+                'category_id' => $categoryId,
                 'position' => !empty($data['position']) ? (int)$data['position'] : null,
                 'finish_time' => $finishTime,
                 'bib_number' => !empty($data['bib_number']) ? trim($data['bib_number']) : null,
-                'status' => !empty($data['status']) ? strtolower(trim($data['status'])) : 'finished',
+                'status' => $status,
                 'points' => !empty($data['points']) ? (int)$data['points'] : 0,
                 'notes' => !empty($data['notes']) ? trim($data['notes']) : null
             ];
@@ -587,7 +686,7 @@ include __DIR__ . '/../includes/layout-header.php';
                                         <div class="gs-h3 gs-text-primary"><?= $matching_stats['venues_created'] ?? 0 ?></div>
                                     </div>
                                 </div>
-                                <div class="gs-grid gs-grid-cols-2 gs-md-grid-cols-3 gs-gap-md">
+                                <div class="gs-grid gs-grid-cols-2 gs-md-grid-cols-3 gs-gap-md gs-mb-md">
                                     <div style="padding: var(--gs-space-md); background: var(--gs-background-secondary); border-radius: var(--gs-border-radius);">
                                         <div class="gs-text-sm gs-text-secondary">Deltagare hittade</div>
                                         <div class="gs-h3 gs-text-success"><?= $matching_stats['riders_found'] ?></div>
@@ -599,6 +698,16 @@ include __DIR__ . '/../includes/layout-header.php';
                                     <div style="padding: var(--gs-space-md); background: var(--gs-background-secondary); border-radius: var(--gs-border-radius);">
                                         <div class="gs-text-sm gs-text-secondary">SWE-ID tilldelat</div>
                                         <div class="gs-h3 gs-text-warning"><?= $matching_stats['riders_created'] ?? 0 ?></div>
+                                    </div>
+                                </div>
+                                <div class="gs-grid gs-grid-cols-2 gs-md-grid-cols-2 gs-gap-md">
+                                    <div style="padding: var(--gs-space-md); background: var(--gs-background-secondary); border-radius: var(--gs-border-radius);">
+                                        <div class="gs-text-sm gs-text-secondary">Nya klubbar skapade</div>
+                                        <div class="gs-h3 gs-text-accent"><?= $matching_stats['clubs_created'] ?? 0 ?></div>
+                                    </div>
+                                    <div style="padding: var(--gs-space-md); background: var(--gs-background-secondary); border-radius: var(--gs-border-radius);">
+                                        <div class="gs-text-sm gs-text-secondary">Nya kategorier skapade</div>
+                                        <div class="gs-h3 gs-text-accent"><?= $matching_stats['categories_created'] ?? 0 ?></div>
                                     </div>
                                 </div>
                             </div>
