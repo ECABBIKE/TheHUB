@@ -151,7 +151,7 @@ include __DIR__ . '/includes/layout-header.php';
                                     // Show license status
                                     if (!empty($rider['license_number']) && strpos($rider['license_number'], 'SWE') === 0): ?>
                                         <span class="gs-badge gs-badge-danger">
-                                            ✗ Ingen aktiv licens
+                                            ✗ Ej aktiv licens
                                         </span>
                                     <?php elseif (!empty($rider['license_type']) && $rider['license_type'] !== 'None'):
                                         if ($licenseCheck['valid']): ?>
@@ -164,12 +164,6 @@ include __DIR__ . '/includes/layout-header.php';
                                             </span>
                                         <?php endif;
                                     endif; ?>
-
-                                    <?php if ($rider['license_valid_until']): ?>
-                                        <span class="gs-badge gs-badge-secondary">
-                                            Giltig t.o.m: <?= h($rider['license_valid_until']) ?>
-                                        </span>
-                                    <?php endif; ?>
                                 </div>
                             </div>
 

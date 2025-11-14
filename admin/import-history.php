@@ -251,33 +251,29 @@ include __DIR__ . '/../includes/layout-header.php';
                                             <?php endif; ?>
                                         </td>
                                         <td style="text-align: right;">
-                                            
-                                                <span class="gs-badge gs-badge-secondary">Demo</span>
-                                            <?php else: ?>
-                                                <div class="gs-flex gs-gap-sm gs-justify-end">
-                                                    <?php if ($import['status'] === 'completed'): ?>
-                                                        <button
-                                                            type="button"
-                                                            class="gs-btn gs-btn-sm gs-btn-outline gs-btn-warning"
-                                                            onclick="rollbackImport(<?= $import['id'] ?>, '<?= addslashes(h($import['filename'])) ?>', <?= $import['success_count'] + $import['updated_count'] ?>)"
-                                                            title="Återställ import"
-                                                        >
-                                                            <i data-lucide="rotate-ccw"></i>
-                                                            Rollback
-                                                        </button>
-                                                    <?php endif; ?>
-                                                    <?php if ($import['error_summary']): ?>
-                                                        <button
-                                                            type="button"
-                                                            class="gs-btn gs-btn-sm gs-btn-outline"
-                                                            onclick="showErrors(<?= $import['id'] ?>, <?= htmlspecialchars(json_encode($import['error_summary']), ENT_QUOTES) ?>)"
-                                                            title="Visa fel"
-                                                        >
-                                                            <i data-lucide="alert-circle"></i>
-                                                        </button>
-                                                    <?php endif; ?>
-                                                </div>
-                                            <?php endif; ?>
+                                            <div class="gs-flex gs-gap-sm gs-justify-end">
+                                                <?php if ($import['status'] === 'completed'): ?>
+                                                    <button
+                                                        type="button"
+                                                        class="gs-btn gs-btn-sm gs-btn-outline gs-btn-warning"
+                                                        onclick="rollbackImport(<?= $import['id'] ?>, '<?= addslashes(h($import['filename'])) ?>', <?= $import['success_count'] + $import['updated_count'] ?>)"
+                                                        title="Återställ import"
+                                                    >
+                                                        <i data-lucide="rotate-ccw"></i>
+                                                        Rollback
+                                                    </button>
+                                                <?php endif; ?>
+                                                <?php if ($import['error_summary']): ?>
+                                                    <button
+                                                        type="button"
+                                                        class="gs-btn gs-btn-sm gs-btn-outline"
+                                                        onclick="showErrors(<?= $import['id'] ?>, <?= htmlspecialchars(json_encode($import['error_summary']), ENT_QUOTES) ?>)"
+                                                        title="Visa fel"
+                                                    >
+                                                        <i data-lucide="alert-circle"></i>
+                                                    </button>
+                                                <?php endif; ?>
+                                            </div>
                                         </td>
                                     </tr>
                                 <?php endforeach; ?>
@@ -312,7 +308,6 @@ include __DIR__ . '/../includes/layout-header.php';
                 alert('Fel från import:\n\n' + errorSummary);
             }
         </script>
-        <?php endif; ?>
 
 <?php include __DIR__ . '/../includes/layout-footer.php'; ?>
 

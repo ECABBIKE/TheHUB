@@ -75,38 +75,50 @@ function login($username, $password) {
     }
 
     // Try database authentication
-    $db = getDB();
-
-    $sql = "SELECT id, username, password_hash, email, full_name, role, active
-            FROM admin_users
-            WHERE username = ? AND active = 1
-            LIMIT 1";
-
-    $user = $db->getRow($sql, [$username]);
-
-    if (!$user) {
+    global $pdo;
+    
+    if (!$pdo) {
         return false;
     }
 
-    if (!password_verify($password, $user['password_hash'])) {
+    try {
+        $sql = "SELECT id, username, password_hash, email, full_name, role, active
+                FROM admin_users
+                WHERE username = ? AND active = 1
+                LIMIT 1";
+
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute([$username]);
+        $user = $stmt->fetch();
+
+        if (!$user) {
+            return false;
+        }
+
+        if (!password_verify($password, $user['password_hash'])) {
+            return false;
+        }
+
+        // Regenerate session ID to prevent session fixation
+        session_regenerate_id(true);
+
+        // Set session
+        $_SESSION['admin_logged_in'] = true;
+        $_SESSION['admin_id'] = $user['id'];
+        $_SESSION['admin_username'] = $user['username'];
+        $_SESSION['admin_role'] = $user['role'];
+        $_SESSION['admin_name'] = $user['full_name'] ?? $user['username'];
+        $_SESSION['session_regenerated'] = true;
+
+        // Update last login
+        $stmt = $pdo->prepare("UPDATE admin_users SET last_login = NOW() WHERE id = ?");
+        $stmt->execute([$user['id']]);
+
+        return true;
+    } catch (PDOException $e) {
+        error_log("Login error: " . $e->getMessage());
         return false;
     }
-
-    // Regenerate session ID to prevent session fixation
-    session_regenerate_id(true);
-
-    // Set session
-    $_SESSION['admin_logged_in'] = true;
-    $_SESSION['admin_id'] = $user['id'];
-    $_SESSION['admin_username'] = $user['username'];
-    $_SESSION['admin_role'] = $user['role'];
-    $_SESSION['admin_name'] = $user['full_name'] ?? $user['username'];
-    $_SESSION['session_regenerated'] = true;
-
-    // Update last login
-    $db->update('admin_users', ['last_login' => date('Y-m-d H:i:s')], 'id = ?', [$user['id']]);
-
-    return true;
 }
 
 /**
@@ -157,4 +169,145 @@ function hasRole($role) {
     $roles = ['editor' => 1, 'admin' => 2, 'super_admin' => 3];
 
     return ($roles[$currentRole] ?? 0) >= ($roles[$role] ?? 999);
+}
+
+// ==============================================
+// LEGACY FUNCTION ALIASES
+// For backward compatibility with old code
+// ==============================================
+
+/**
+ * Alias for requireLogin()
+ */
+function require_admin() {
+    return requireLogin();
+}
+
+/**
+ * Alias for isLoggedIn()
+ */
+function is_admin() {
+    return isLoggedIn();
+}
+
+/**
+ * Alias for login()
+ */
+function login_admin($username, $password) {
+    return login($username, $password);
+}
+
+/**
+ * Alias for logout()
+ */
+function logout_admin() {
+    return logout();
+}
+
+/**
+ * Alias for getCurrentAdmin()
+ */
+function get_admin_user() {
+    return getCurrentAdmin();
+}
+
+/**
+ * Alias for hasRole()
+ */
+function has_admin_role($role) {
+    return hasRole($role);
+}
+
+// ==============================================
+// CSRF PROTECTION FUNCTIONS
+// ==============================================
+
+/**
+ * Generate CSRF token
+ */
+function generate_csrf_token() {
+    if (!isset($_SESSION['csrf_token'])) {
+        $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+    }
+    return $_SESSION['csrf_token'];
+}
+
+/**
+ * Verify CSRF token
+ */
+function verify_csrf_token($token) {
+    if (!isset($_SESSION['csrf_token'])) {
+        return false;
+    }
+    return hash_equals($_SESSION['csrf_token'], $token);
+}
+
+/**
+ * Check CSRF token from POST request
+ */
+function check_csrf() {
+    $token = $_POST['csrf_token'] ?? '';
+    
+    if (!verify_csrf_token($token)) {
+        die('CSRF token validation failed');
+    }
+}
+
+/**
+ * Generate CSRF field for forms
+ */
+function csrf_field() {
+    $token = generate_csrf_token();
+    return '<input type="hidden" name="csrf_token" value="' . htmlspecialchars($token) . '">';
+}
+
+/**
+ * Get CSRF token (for AJAX)
+ */
+function get_csrf_token() {
+    return generate_csrf_token();
+}
+
+// ==============================================
+// FLASH MESSAGE FUNCTIONS
+// ==============================================
+
+/**
+ * Set flash message
+ */
+function set_flash($type, $message) {
+    if (!isset($_SESSION['flash'])) {
+        $_SESSION['flash'] = [];
+    }
+    $_SESSION['flash'][$type] = $message;
+}
+
+/**
+ * Get and clear flash message
+ */
+function get_flash($type) {
+    if (!isset($_SESSION['flash'][$type])) {
+        return null;
+    }
+    
+    $message = $_SESSION['flash'][$type];
+    unset($_SESSION['flash'][$type]);
+    
+    return $message;
+}
+
+/**
+ * Check if flash message exists
+ */
+function has_flash($type) {
+    return isset($_SESSION['flash'][$type]);
+}
+
+/**
+ * Get all flash messages and clear them
+ */
+function get_all_flashes() {
+    $flashes = $_SESSION['flash'] ?? [];
+    unset($_SESSION['flash']);
+    return $flashes;
 }

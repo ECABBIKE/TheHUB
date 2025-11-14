@@ -1,125 +1,62 @@
 <?php
-/**
- * TheHUB Configuration
- * Main configuration file that loads all necessary dependencies
- */
+define('THEHUB_INIT', true);
+error_reporting(E_ALL);
+ini_set('display_errors', '0');
 
-// Define base paths first
-define('BASE_PATH', __DIR__);
-
-/**
- * Load environment variables from .env file
- */
-function loadEnv($path) {
-    if (!file_exists($path)) {
-        return;
-    }
-
-    $lines = file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-    foreach ($lines as $line) {
-        // Skip comments and empty lines
-        if (strpos(trim($line), '#') === 0 || empty(trim($line))) {
-            continue;
-        }
-
-        // Parse KEY=VALUE
-        $parts = explode('=', $line, 2);
-        if (count($parts) === 2) {
-            $key = trim($parts[0]);
-            $value = trim($parts[1]);
-
-            // Remove quotes if present
-            if ((substr($value, 0, 1) === '"' && substr($value, -1) === '"') ||
-                (substr($value, 0, 1) === "'" && substr($value, -1) === "'")) {
-                $value = substr($value, 1, -1);
-            }
-
-            // Set as environment variable
-            $_ENV[$key] = $value;
-            putenv("$key=$value");
-        }
-    }
-}
-
-// Load .env file
-loadEnv(BASE_PATH . '/.env');
-
-// Get environment helper function
 function env($key, $default = null) {
-    return $_ENV[$key] ?? getenv($key) ?: $default;
+    $value = getenv($key);
+    if ($value === false) {
+        $envFile = __DIR__ . '/.env';
+        if (file_exists($envFile)) {
+            $lines = file($envFile);
+            foreach ($lines as $line) {
+                if (strpos($line, '=') !== false) {
+                    list($k, $v) = explode('=', trim($line), 2);
+                    if (trim($k) === $key) {
+                        return trim($v);
+                    }
+                }
+            }
+        }
+        return $default;
+    }
+    return $value;
 }
 
-// Application settings
-$appEnv = env('APP_ENV', 'development');
-$appDebug = env('APP_DEBUG', 'true') === 'true';
+define('ROOT_PATH', __DIR__);
+define('INCLUDES_PATH', __DIR__ . '/includes');
+define('SITE_URL', 'https://thehub.infinityfree.me');
+define('DB_HOST', env('DB_HOST', 'sql100.infinityfree.com'));
+define('DB_NAME', env('DB_NAME', 'if0_40400950_THEHUB'));
+define('DB_USER', env('DB_USER', 'if0_40400950'));
+define('DB_PASS', env('DB_PASS', ''));
+define('APP_NAME', 'TheHUB');
+define('DEFAULT_ADMIN_USERNAME', 'admin');
+define('DEFAULT_ADMIN_PASSWORD', 'admin');
+define('CSRF_TOKEN_NAME', 'csrf_token');
 
-// Set error reporting based on environment
-if ($appEnv === 'production' && !$appDebug) {
-    error_reporting(E_ALL);
-    ini_set('display_errors', 0);
-    ini_set('log_errors', 1);
-    ini_set('error_log', BASE_PATH . '/logs/error.log');
-} else {
-    error_reporting(E_ALL);
-    ini_set('display_errors', 1);
+try {
+    $pdo = new PDO(
+        'mysql:host=' . DB_HOST . ';dbname=' . DB_NAME . ';charset=utf8mb4',
+        DB_USER,
+        DB_PASS,
+        array(
+            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+            PDO::ATTR_EMULATE_PREPARES => false
+        )
+    );
+    $GLOBALS['pdo'] = $pdo;
+} catch (PDOException $e) {
+    die('Database connection failed');
 }
 
-// Define other paths
-define('INCLUDES_PATH', BASE_PATH . '/includes');
-define('ASSETS_PATH', BASE_PATH . '/assets');
-define('UPLOADS_PATH', BASE_PATH . '/uploads');
-
-// Session configuration
-define('SESSION_NAME', env('SESSION_NAME', 'thehub_session'));
-define('SESSION_LIFETIME', (int)env('SESSION_LIFETIME', '86400')); // 24 hours
-
-// File upload limits
-define('MAX_UPLOAD_SIZE', (int)env('MAX_UPLOAD_SIZE', 10 * 1024 * 1024)); // 10MB
-$allowedExtensions = env('ALLOWED_EXTENSIONS', 'xlsx,xls,csv');
-define('ALLOWED_EXTENSIONS', explode(',', $allowedExtensions));
-define('EVENTS_PER_PAGE', 12);
-define('RESULTS_PER_PAGE', 50);
-
-// Admin credentials (for fallback)
-define('DEFAULT_ADMIN_USERNAME', env('ADMIN_USERNAME', 'admin'));
-define('DEFAULT_ADMIN_PASSWORD', env('ADMIN_PASSWORD', 'admin'));
-
-// Database configuration (define constants before loading db.php)
-if (!defined('DB_HOST')) {
-    define('DB_HOST', env('DB_HOST', 'localhost'));
-}
-if (!defined('DB_NAME')) {
-    define('DB_NAME', env('DB_NAME', 'thehub'));
-}
-if (!defined('DB_USER')) {
-    define('DB_USER', env('DB_USER', 'root'));
-}
-if (!defined('DB_PASS')) {
-    define('DB_PASS', env('DB_PASS', ''));
-}
-if (!defined('DB_CHARSET')) {
-    define('DB_CHARSET', env('DB_CHARSET', 'utf8mb4'));
-}
-if (!defined('DB_ERROR_DISPLAY')) {
-    define('DB_ERROR_DISPLAY', $appEnv !== 'production');
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
 }
 
-// Load core dependencies
-require_once INCLUDES_PATH . '/db.php';
-require_once INCLUDES_PATH . '/helpers.php';
-require_once INCLUDES_PATH . '/auth.php';
+date_default_timezone_set('Europe/Stockholm');
 
-/**
- * Require admin authentication
- * Redirects to login page if not authenticated
- */
-function require_admin() {
-    requireLogin();
-}
-
-/**
- * Get current admin user
- */
-function get_current_admin() {
-    return getCurrentAdmin();
-}
+require_once __DIR__ . '/includes/helpers.php';
+require_once __DIR__ . '/includes/auth.php';
+?>
