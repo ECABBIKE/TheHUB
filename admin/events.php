@@ -589,6 +589,14 @@ include __DIR__ . '/../includes/layout-header.php';
                                         </td>
                                         <td style="text-align: right;">
                                                 <div class="gs-flex gs-gap-sm gs-justify-end">
+                                                    <a
+                                                        href="/admin/results.php?event_id=<?= $event['id'] ?>"
+                                                        class="gs-btn gs-btn-sm gs-btn-outline"
+                                                        title="Visa resultat"
+                                                    >
+                                                        <i data-lucide="trophy"></i>
+                                                        <?= $event['participant_count'] ?>
+                                                    </a>
                                                     <button
                                                         type="button"
                                                         class="gs-btn gs-btn-sm gs-btn-outline"

@@ -622,6 +622,14 @@ include __DIR__ . '/../includes/layout-header.php';
                                                 <span class="gs-badge gs-badge-secondary">Demo</span>
                                             <?php else: ?>
                                                 <div class="gs-flex gs-gap-sm gs-justify-end">
+                                                    <a
+                                                        href="/rider.php?id=<?= $rider['id'] ?>"
+                                                        class="gs-btn gs-btn-sm gs-btn-outline"
+                                                        title="Visa profil"
+                                                        target="_blank"
+                                                    >
+                                                        <i data-lucide="user"></i>
+                                                    </a>
                                                     <button
                                                         type="button"
                                                         class="gs-btn gs-btn-sm gs-btn-outline"
