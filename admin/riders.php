@@ -21,13 +21,15 @@ $pageType = 'admin';
 include __DIR__ . '/../includes/layout-header.php';
 ?>
 
-<main class="gs-content-with-sidebar" style="margin-left: 260px; padding: 2rem; width: calc(100% - 260px);">
+<!-- Main content area that respects sidebar -->
+<main class="gs-main-content">
     <div class="gs-container">
         <div class="gs-flex gs-justify-between gs-items-center gs-mb-lg">
             <h1 class="gs-h2">
                 Deltagare (<?= count($riders) ?>)
             </h1>
             <a href="/admin/import-uci.php" class="gs-btn gs-btn-primary">
+                <i data-lucide="upload"></i>
                 Importera
             </a>
         </div>
@@ -35,7 +37,9 @@ include __DIR__ . '/../includes/layout-header.php';
         <div class="gs-card">
             <div class="gs-card-content">
                 <?php if (empty($riders)): ?>
-                    <p>Inga deltagare hittades.</p>
+                    <div class="gs-alert gs-alert-warning">
+                        <p>Inga deltagare hittades.</p>
+                    </div>
                 <?php else: ?>
                     <div style="overflow-x: auto;">
                         <table class="gs-table">
@@ -76,59 +80,5 @@ include __DIR__ . '/../includes/layout-header.php';
         </div>
     </div>
 </main>
-
-<?php include __DIR__ . '/../includes/layout-footer.php'; ?>
-
-<div class="gs-container">
-    <div class="gs-flex gs-justify-between gs-items-center gs-mb-lg">
-        <h1 class="gs-h2">
-            Deltagare (<?= count($riders) ?>)
-        </h1>
-        <a href="/admin/import-uci.php" class="gs-btn gs-btn-primary">
-            Importera
-        </a>
-    </div>
-
-    <div class="gs-card">
-        <div class="gs-card-content">
-            <?php if (empty($riders)): ?>
-                <p>Inga deltagare hittades.</p>
-            <?php else: ?>
-                <table class="gs-table">
-                    <thead>
-                        <tr>
-                            <th>Namn</th>
-                            <th>Födelseår</th>
-                            <th>Klubb</th>
-                            <th>License</th>
-                            <th>Disciplin</th>
-                            <th>Status</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ($riders as $rider): ?>
-                            <tr>
-                                <td>
-                                    <strong><?= htmlspecialchars($rider['firstname'] . ' ' . $rider['lastname']) ?></strong>
-                                </td>
-                                <td><?= htmlspecialchars($rider['birth_year'] ?? '-') ?></td>
-                                <td><?= htmlspecialchars($rider['club_name'] ?? '-') ?></td>
-                                <td><?= htmlspecialchars($rider['license_category'] ?? '-') ?></td>
-                                <td><?= htmlspecialchars($rider['discipline'] ?? '-') ?></td>
-                                <td>
-                                    <?php if ($rider['active']): ?>
-                                        <span class="gs-badge gs-badge-success">Aktiv</span>
-                                    <?php else: ?>
-                                        <span class="gs-badge gs-badge-secondary">Inaktiv</span>
-                                    <?php endif; ?>
-                                </td>
-                            </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
-            <?php endif; ?>
-        </div>
-    </div>
-</div>
 
 <?php include __DIR__ . '/../includes/layout-footer.php'; ?>
