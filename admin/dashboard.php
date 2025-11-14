@@ -3,81 +3,95 @@ require_once __DIR__ . '/../config.php';
 require_admin();
 
 global $pdo;
-$db = getDB();
 
-$sql = "SELECT 
-    c.id, c.firstname, c.lastname, c.birth_year, c.gender,
-    c.license_number, c.license_category, c.discipline, c.active,
-    cl.name as club_name
-FROM riders c
-LEFT JOIN clubs cl ON c.club_id = cl.id
-ORDER BY c.lastname, c.firstname
-LIMIT 100";
+// Get statistics
+$stats = [];
 
-$riders = $db->getAll($sql);
+try {
+    $stats['riders'] = $pdo->query("SELECT COUNT(*) FROM riders")->fetchColumn();
+    $stats['events'] = $pdo->query("SELECT COUNT(*) FROM events")->fetchColumn();
+    $stats['clubs'] = $pdo->query("SELECT COUNT(*) FROM clubs")->fetchColumn();
+    $stats['series'] = $pdo->query("SELECT COUNT(*) FROM series")->fetchColumn();
+} catch (Exception $e) {
+    $stats = ['riders' => 0, 'events' => 0, 'clubs' => 0, 'series' => 0];
+}
 
-$pageTitle = 'Deltagare';
+$pageTitle = 'Dashboard';
 $pageType = 'admin';
 include __DIR__ . '/../includes/layout-header.php';
 ?>
 
-<!-- Main content area that respects sidebar -->
 <main class="gs-main-content">
     <div class="gs-container">
-        <div class="gs-flex gs-justify-between gs-items-center gs-mb-lg">
-            <h1 class="gs-h2">
-                Deltagare (<?= count($riders) ?>)
-            </h1>
-            <a href="/admin/import-uci.php" class="gs-btn gs-btn-primary">
-                <i data-lucide="upload"></i>
-                Importera
-            </a>
+        <h1 class="gs-h2 gs-mb-lg">
+            <i data-lucide="layout-dashboard"></i>
+            Dashboard
+        </h1>
+
+        <!-- Stats Grid -->
+        <div class="gs-grid gs-grid-cols-1 gs-md-grid-cols-2 gs-lg-grid-cols-4 gs-gap-lg gs-mb-lg">
+            
+            <div class="gs-stat-card">
+                <i data-lucide="users" class="gs-icon-lg gs-text-primary gs-mb-md"></i>
+                <div class="gs-stat-number"><?= number_format($stats['riders']) ?></div>
+                <div class="gs-stat-label">Deltagare</div>
+                <a href="/admin/riders.php" class="gs-btn gs-btn-sm gs-btn-outline gs-mt-md">
+                    Visa alla →
+                </a>
+            </div>
+
+            <div class="gs-stat-card">
+                <i data-lucide="calendar" class="gs-icon-lg gs-text-success gs-mb-md"></i>
+                <div class="gs-stat-number"><?= number_format($stats['events']) ?></div>
+                <div class="gs-stat-label">Events</div>
+                <a href="/admin/events.php" class="gs-btn gs-btn-sm gs-btn-outline gs-mt-md">
+                    Visa alla →
+                </a>
+            </div>
+
+            <div class="gs-stat-card">
+                <i data-lucide="building" class="gs-icon-lg gs-text-accent gs-mb-md"></i>
+                <div class="gs-stat-number"><?= number_format($stats['clubs']) ?></div>
+                <div class="gs-stat-label">Klubbar</div>
+                <a href="/admin/clubs.php" class="gs-btn gs-btn-sm gs-btn-outline gs-mt-md">
+                    Visa alla →
+                </a>
+            </div>
+
+            <div class="gs-stat-card">
+                <i data-lucide="trophy" class="gs-icon-lg gs-text-warning gs-mb-md"></i>
+                <div class="gs-stat-number"><?= number_format($stats['series']) ?></div>
+                <div class="gs-stat-label">Serier</div>
+                <a href="/admin/series.php" class="gs-btn gs-btn-sm gs-btn-outline gs-mt-md">
+                    Visa alla →
+                </a>
+            </div>
+
         </div>
 
+        <!-- Quick Actions -->
         <div class="gs-card">
+            <div class="gs-card-header">
+                <h2 class="gs-h4">Snabbåtgärder</h2>
+            </div>
             <div class="gs-card-content">
-                <?php if (empty($riders)): ?>
-                    <div class="gs-alert gs-alert-warning">
-                        <p>Inga deltagare hittades.</p>
-                    </div>
-                <?php else: ?>
-                    <div style="overflow-x: auto;">
-                        <table class="gs-table">
-                            <thead>
-                                <tr>
-                                    <th>Namn</th>
-                                    <th>Födelseår</th>
-                                    <th>Klubb</th>
-                                    <th>License</th>
-                                    <th>Disciplin</th>
-                                    <th>Status</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php foreach ($riders as $rider): ?>
-                                    <tr>
-                                        <td>
-                                            <strong><?= htmlspecialchars($rider['firstname'] . ' ' . $rider['lastname']) ?></strong>
-                                        </td>
-                                        <td><?= htmlspecialchars($rider['birth_year'] ?? '-') ?></td>
-                                        <td><?= htmlspecialchars($rider['club_name'] ?? '-') ?></td>
-                                        <td><?= htmlspecialchars($rider['license_category'] ?? '-') ?></td>
-                                        <td><?= htmlspecialchars($rider['discipline'] ?? '-') ?></td>
-                                        <td>
-                                            <?php if ($rider['active']): ?>
-                                                <span class="gs-badge gs-badge-success">Aktiv</span>
-                                            <?php else: ?>
-                                                <span class="gs-badge gs-badge-secondary">Inaktiv</span>
-                                            <?php endif; ?>
-                                        </td>
-                                    </tr>
-                                <?php endforeach; ?>
-                            </tbody>
-                        </table>
-                    </div>
-                <?php endif; ?>
+                <div class="gs-flex gs-gap-md gs-flex-wrap">
+                    <a href="/admin/import-uci.php" class="gs-btn gs-btn-primary">
+                        <i data-lucide="upload"></i>
+                        Importera cyklister
+                    </a>
+                    <a href="/admin/events.php" class="gs-btn gs-btn-outline">
+                        <i data-lucide="calendar-plus"></i>
+                        Nytt event
+                    </a>
+                    <a href="/admin/import-history.php" class="gs-btn gs-btn-outline">
+                        <i data-lucide="history"></i>
+                        Import-historik
+                    </a>
+                </div>
             </div>
         </div>
+
     </div>
 </main>
 
