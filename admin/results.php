@@ -5,9 +5,9 @@ require_admin();
 global $pdo;
 $db = getDB();
 
-// Get recent results
+// Get recent results - adjusted query based on actual schema
 $sql = "SELECT 
-    r.id, r.position, r.time, r.points,
+    r.id, r.position, r.points, r.dnf, r.dns, r.dsq,
     e.name as event_name, e.date as event_date,
     c.firstname, c.lastname
 FROM results r
@@ -51,7 +51,7 @@ include __DIR__ . '/../includes/layout-header.php';
             <div class="gs-card-content">
                 <?php if (empty($results)): ?>
                     <div class="gs-alert gs-alert-warning">
-                        <p>Inga resultat hittades.</p>
+                        <p>Inga resultat hittades. Importera resultat för att komma igång.</p>
                     </div>
                 <?php else: ?>
                     <div style="overflow-x: auto;">
@@ -62,8 +62,8 @@ include __DIR__ . '/../includes/layout-header.php';
                                     <th>Event</th>
                                     <th>Deltagare</th>
                                     <th>Placering</th>
-                                    <th>Tid</th>
                                     <th>Poäng</th>
+                                    <th>Status</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -74,9 +74,25 @@ include __DIR__ . '/../includes/layout-header.php';
                                         <td>
                                             <strong><?= htmlspecialchars($result['firstname'] . ' ' . $result['lastname']) ?></strong>
                                         </td>
-                                        <td><?= htmlspecialchars($result['position'] ?? '-') ?></td>
-                                        <td><?= htmlspecialchars($result['time'] ?? '-') ?></td>
-                                        <td><?= htmlspecialchars($result['points'] ?? '-') ?></td>
+                                        <td>
+                                            <?php if ($result['dnf']): ?>
+                                                <span class="gs-badge gs-badge-danger">DNF</span>
+                                            <?php elseif ($result['dns']): ?>
+                                                <span class="gs-badge gs-badge-warning">DNS</span>
+                                            <?php elseif ($result['dsq']): ?>
+                                                <span class="gs-badge gs-badge-danger">DSQ</span>
+                                            <?php else: ?>
+                                                <?= htmlspecialchars($result['position'] ?? '-') ?>
+                                            <?php endif; ?>
+                                        </td>
+                                        <td><?= $result['points'] ? number_format($result['points'], 0) : '-' ?></td>
+                                        <td>
+                                            <?php if ($result['dnf'] || $result['dns'] || $result['dsq']): ?>
+                                                <span class="gs-badge gs-badge-secondary">Ej slutförd</span>
+                                            <?php else: ?>
+                                                <span class="gs-badge gs-badge-success">Slutförd</span>
+                                            <?php endif; ?>
+                                        </td>
                                     </tr>
                                 <?php endforeach; ?>
                             </tbody>
