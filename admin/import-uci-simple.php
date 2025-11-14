@@ -340,7 +340,7 @@ include '../includes/layout-header.php';
             </div>
             <div class="gs-card-content">
                 <form method="POST" enctype="multipart/form-data">
-                    <?= csrfField() ?>
+                    <?= csrf_field() ?>
                     <div class="gs-form-group">
                         <label class="gs-label">CSV-fil från UCI</label>
                         <input type="file" name="csv_file" accept=".csv,.txt" class="gs-input" required>

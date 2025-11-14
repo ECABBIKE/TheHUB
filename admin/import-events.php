@@ -192,8 +192,16 @@ function importEventsFromCSV($filePath, $db) {
             }
 
             // Prepare event data
+            // Auto-generate advent_id if not provided
+            $advent_id = trim($data['advent_id'] ?? $data['adventid'] ?? '');
+            if (empty($advent_id)) {
+                $event_year = date('Y', strtotime(trim($data['date'])));
+                $advent_id = generateEventAdventId($pdo, $event_year);
+            }
+
             $eventData = [
                 'name' => trim($data['name']),
+                'advent_id' => $advent_id,
                 'date' => trim($data['date']),
                 'location' => trim($data['location'] ?? ''),
                 'type' => trim($data['type'] ?? 'competition'),
@@ -375,7 +383,7 @@ include __DIR__ . '/../includes/layout-header.php';
             </div>
             <div class="gs-card-content">
                 <form method="POST" enctype="multipart/form-data" class="gs-form">
-                    <?= csrfField() ?>
+                    <?= csrf_field() ?>
 
                     <div class="gs-alert gs-alert-info gs-mb-md">
                         <i data-lucide="info"></i>

@@ -69,10 +69,17 @@ include __DIR__ . '/includes/layout-header.php';
                                         <?= h($s['description']) ?>
                                     </p>
                                 <?php endif; ?>
-                                <div class="gs-flex gs-items-center gs-gap-sm gs-text-sm gs-text-secondary">
+                                <div class="gs-flex gs-items-center gs-gap-sm gs-text-sm gs-text-secondary gs-mb-md">
                                     <i data-lucide="calendar" style="width: 16px; height: 16px;"></i>
                                     <span><?= $s['event_count'] ?> tävlingar</span>
                                 </div>
+                                <?php if ($s['event_count'] > 0): ?>
+                                    <a href="/events.php?series=<?= $s['id'] ?>&year=<?= $s['year'] ?: date('Y') ?>"
+                                       class="gs-btn gs-btn-primary gs-btn-sm gs-w-full">
+                                        <i data-lucide="list"></i>
+                                        Visa tävlingar
+                                    </a>
+                                <?php endif; ?>
                             </div>
                         </div>
                     <?php endforeach; ?>

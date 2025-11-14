@@ -8,6 +8,9 @@ $db = getDB();
 $message = '';
 $messageType = 'info';
 
+// Generate suggested advent_id for new events
+$suggested_advent_id = generateEventAdventId($pdo);
+
 // Handle form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     checkCsrf();
@@ -21,8 +24,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $messageType = 'error';
     } else {
         // Prepare event data
+        // Auto-generate advent_id if not provided
+        $advent_id_input = trim($_POST['advent_id'] ?? '');
+        if (empty($advent_id_input)) {
+            // Extract year from event date for better ID generation
+            $event_year = date('Y', strtotime($date));
+            $advent_id_input = generateEventAdventId($pdo, $event_year);
+        }
+
         $eventData = [
             'name' => $name,
+            'advent_id' => $advent_id_input,
             'date' => $date,
             'location' => trim($_POST['location'] ?? ''),
             'venue_id' => !empty($_POST['venue_id']) ? intval($_POST['venue_id']) : null,
@@ -107,6 +119,23 @@ include __DIR__ . '/../includes/layout-header.php';
                             value="<?= htmlspecialchars($_POST['name'] ?? '') ?>"
                             placeholder="T.ex. GravitySeries Järvsö"
                         >
+                    </div>
+
+                    <!-- Advent ID -->
+                    <div>
+                        <label for="advent_id" class="gs-label">
+                            <i data-lucide="hash"></i>
+                            Advent ID
+                        </label>
+                        <input
+                            type="text"
+                            id="advent_id"
+                            name="advent_id"
+                            class="gs-input"
+                            value="<?= htmlspecialchars($_POST['advent_id'] ?? $suggested_advent_id) ?>"
+                            placeholder="<?= htmlspecialchars($suggested_advent_id) ?>"
+                        >
+                        <small class="gs-text-muted">Externt ID för import av resultat. Lämna tomt för auto-generering.</small>
                     </div>
 
                     <!-- Date (Required) -->

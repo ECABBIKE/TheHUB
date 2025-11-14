@@ -118,16 +118,20 @@ include __DIR__ . '/../includes/layout-header.php';
 <script src="https://unpkg.com/lucide@latest"></script>
 <script>
     lucide.createIcons();
-    
+
+    // Store CSRF token from PHP session
+    const csrfToken = '<?= htmlspecialchars(generate_csrf_token()) ?>';
+
     function deleteEvent(id, name) {
         if (!confirm('Är du säker på att du vill ta bort eventet "' + name + '"?')) {
             return;
         }
-        
+
         const form = document.createElement('form');
         form.method = 'POST';
         form.action = '/admin/event-delete.php';
-        form.innerHTML = '<input type="hidden" name="id" value="' + id + '">';
+        form.innerHTML = '<input type="hidden" name="id" value="' + id + '">' +
+                        '<input type="hidden" name="csrf_token" value="' + csrfToken + '">';
         document.body.appendChild(form);
         form.submit();
     }
