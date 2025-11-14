@@ -26,6 +26,8 @@ class Database {
     private function __construct() {
         // In demo mode, don't connect to database
         if (DB_NAME === 'thehub_demo') {
+            error_log("🚨 DEMO MODE ACTIVE - NO DATA WILL BE SAVED!");
+            error_log("   Create config/database.php or .env file with real database credentials");
             $this->conn = null;
             return;
         }
@@ -40,9 +42,14 @@ class Database {
             ];
 
             $this->conn = new PDO($dsn, DB_USER, DB_PASS, $options);
+            error_log("✅ Database connected successfully");
+            error_log("   Host: " . DB_HOST . " | Database: " . DB_NAME);
         } catch(PDOException $e) {
-            // In demo mode, silently fail
-            error_log("Database connection failed: " . $e->getMessage());
+            // Database connection failed
+            error_log("🚨 DATABASE CONNECTION FAILED!");
+            error_log("   Error: " . $e->getMessage());
+            error_log("   Host: " . DB_HOST . " | Database: " . DB_NAME . " | User: " . DB_USER);
+            error_log("   ⚠️  ALL DATABASE OPERATIONS WILL FAIL!");
             $this->conn = null;
         }
     }
@@ -111,6 +118,9 @@ class Database {
     public function insert($table, $data) {
         // Demo mode - return 0
         if ($this->conn === null) {
+            error_log("🚨 INSERT FAILED: No database connection (demo mode or connection error)");
+            error_log("   Table: {$table}");
+            error_log("   Data: " . json_encode($data));
             return 0;
         }
 
@@ -122,8 +132,14 @@ class Database {
                 VALUES (" . implode(', ', $placeholders) . ")";
 
         $stmt = $this->query($sql, $values);
-        if (!$stmt) return 0;
-        return $this->conn->lastInsertId();
+        if (!$stmt) {
+            error_log("🚨 INSERT QUERY FAILED for table: {$table}");
+            return 0;
+        }
+
+        $insertId = $this->conn->lastInsertId();
+        error_log("✅ INSERT successful in {$table}, ID: {$insertId}");
+        return $insertId;
     }
 
     /**

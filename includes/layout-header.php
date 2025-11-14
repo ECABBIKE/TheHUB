@@ -13,6 +13,39 @@
  *   - $bodyClass (optional): Additional body classes
  */
 
+// ============================================================================
+// SECURITY HEADERS
+// ============================================================================
+// Prevent page from being displayed in an iframe (clickjacking protection)
+header("X-Frame-Options: DENY");
+
+// Prevent MIME type sniffing
+header("X-Content-Type-Options: nosniff");
+
+// Control referrer information
+header("Referrer-Policy: no-referrer-when-downgrade");
+
+// Permissions policy (disable unnecessary features)
+header("Permissions-Policy: geolocation=(), microphone=(), camera=()");
+
+// XSS Protection (for older browsers)
+header("X-XSS-Protection: 1; mode=block");
+
+// Content Security Policy (allow self + unpkg.com for Lucide icons)
+$csp = implode('; ', [
+    "default-src 'self'",
+    "script-src 'self' 'unsafe-inline' https://unpkg.com",
+    "style-src 'self' 'unsafe-inline'",
+    "img-src 'self' data: https:",
+    "font-src 'self' data:",
+    "connect-src 'self'",
+    "frame-ancestors 'none'"
+]);
+header("Content-Security-Policy: {$csp}");
+
+// ============================================================================
+// PAGE SETUP
+// ============================================================================
 // Validate required variables
 if (!isset($pageTitle)) {
     $pageTitle = 'TheHUB';
