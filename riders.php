@@ -202,9 +202,7 @@ include __DIR__ . '/includes/layout-header.php';
                 </p>
             </div>
         </div>
-<?php
-// Additional page-specific styles and scripts
-$additionalScripts = "
+
     <style>
     .rider-card:hover {
         transform: translateY(-4px);
@@ -215,6 +213,9 @@ $additionalScripts = "
     }
     </style>
 
+<?php
+// Additional page-specific scripts
+$additionalScripts = "
     // Search functionality
     const searchInput = document.getElementById('searchRiders');
     const ridersGrid = document.getElementById('ridersGrid');
