@@ -25,6 +25,7 @@ function env($key, $default = null) {
 
 define('ROOT_PATH', __DIR__);
 define('INCLUDES_PATH', __DIR__ . '/includes');
+define('UPLOADS_PATH', __DIR__ . '/uploads');
 define('SITE_URL', 'https://thehub.infinityfree.me');
 define('DB_HOST', env('DB_HOST', 'sql100.infinityfree.com'));
 define('DB_NAME', env('DB_NAME', 'if0_40400950_THEHUB'));
