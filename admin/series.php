@@ -93,7 +93,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // Check if editing a series
 $editSeries = null;
 if (isset($_GET['edit']) && is_numeric($_GET['edit'])) {
-    $editSeries = $db->getOne("SELECT * FROM series WHERE id = ?", [intval($_GET['edit'])]);
+    $editSeries = $db->getRow("SELECT * FROM series WHERE id = ?", [intval($_GET['edit'])]);
 }
 
 // Get series from database

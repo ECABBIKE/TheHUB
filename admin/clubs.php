@@ -70,7 +70,7 @@ $search = $_GET['search'] ?? '';
 // Check if editing a club
 $editClub = null;
 if (isset($_GET['edit']) && is_numeric($_GET['edit'])) {
-    $editClub = $db->getOne("SELECT * FROM clubs WHERE id = ?", [intval($_GET['edit'])]);
+    $editClub = $db->getRow("SELECT * FROM clubs WHERE id = ?", [intval($_GET['edit'])]);
 }
 
     $where = [];

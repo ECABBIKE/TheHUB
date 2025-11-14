@@ -29,7 +29,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             try {
                 // Check if new location already exists (for merge case)
-                $existingCount = $db->getOne(
+                $existingCount = $db->getRow(
                     "SELECT COUNT(*) as count FROM events WHERE location = ?",
                     [$new_location]
                 );

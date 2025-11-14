@@ -85,13 +85,13 @@ $clubs = $db->getAll("SELECT id, name FROM clubs ORDER BY name");
 // Check if editing a rider
 $editRider = null;
 if (isset($_GET['edit']) && is_numeric($_GET['edit'])) {
-    $editRider = $db->getOne("SELECT * FROM riders WHERE id = ?", [intval($_GET['edit'])]);
+    $editRider = $db->getRow("SELECT * FROM riders WHERE id = ?", [intval($_GET['edit'])]);
 }
 
 // Get selected club info if filtering by club
 $selectedClub = null;
 if ($club_id) {
-    $selectedClub = $db->getOne("SELECT * FROM clubs WHERE id = ?", [$club_id]);
+    $selectedClub = $db->getRow("SELECT * FROM clubs WHERE id = ?", [$club_id]);
 }
 
 // Build query filters
