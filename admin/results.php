@@ -69,29 +69,47 @@ include __DIR__ . '/../includes/layout-header.php';
                             <tbody>
                                 <?php foreach ($results as $result): ?>
                                     <tr>
-                                        <td><?= htmlspecialchars($result['event_date'] ?? '-') ?></td>
-                                        <td><?= htmlspecialchars($result['event_name']) ?></td>
+                                        <td><?= date('Y-m-d', strtotime($result['event_date'])) ?></td>
                                         <td>
-                                            <strong><?= htmlspecialchars($result['firstname'] . ' ' . $result['lastname']) ?></strong>
+                                            <a href="/event.php?id=<?= $result['event_id'] ?>" class="gs-link">
+                                                <?= h($result['event_name']) ?>
+                                            </a>
                                         </td>
                                         <td>
-                                            <?php if ($result['dnf']): ?>
+                                            <a href="/rider.php?id=<?= $result['cyclist_id'] ?>" class="gs-link">
+                                                <strong><?= h($result['firstname'] . ' ' . $result['lastname']) ?></strong>
+                                            </a>
+                                        </td>
+                                        <td>
+                                            <?php if ($result['status'] === 'dnf'): ?>
                                                 <span class="gs-badge gs-badge-danger">DNF</span>
-                                            <?php elseif ($result['dns']): ?>
+                                            <?php elseif ($result['status'] === 'dns'): ?>
                                                 <span class="gs-badge gs-badge-warning">DNS</span>
-                                            <?php elseif ($result['dsq']): ?>
-                                                <span class="gs-badge gs-badge-danger">DSQ</span>
+                                            <?php elseif ($result['status'] === 'dq'): ?>
+                                                <span class="gs-badge gs-badge-danger">DQ</span>
                                             <?php else: ?>
-                                                <?= htmlspecialchars($result['position'] ?? '-') ?>
+                                                <?= h($result['position'] ?? '-') ?>
                                             <?php endif; ?>
                                         </td>
                                         <td><?= $result['points'] ? number_format($result['points'], 0) : '-' ?></td>
                                         <td>
-                                            <?php if ($result['dnf'] || $result['dns'] || $result['dsq']): ?>
-                                                <span class="gs-badge gs-badge-secondary">Ej slutförd</span>
-                                            <?php else: ?>
-                                                <span class="gs-badge gs-badge-success">Slutförd</span>
-                                            <?php endif; ?>
+                                            <?php
+                                            $statusBadge = 'gs-badge-success';
+                                            $statusText = 'Slutförd';
+                                            if ($result['status'] === 'dnf') {
+                                                $statusBadge = 'gs-badge-danger';
+                                                $statusText = 'DNF';
+                                            } elseif ($result['status'] === 'dns') {
+                                                $statusBadge = 'gs-badge-warning';
+                                                $statusText = 'DNS';
+                                            } elseif ($result['status'] === 'dq') {
+                                                $statusBadge = 'gs-badge-danger';
+                                                $statusText = 'Diskad';
+                                            }
+                                            ?>
+                                            <span class="gs-badge <?= $statusBadge ?>">
+                                                <?= $statusText ?>
+                                            </span>
                                         </td>
                                     </tr>
                                 <?php endforeach; ?>
