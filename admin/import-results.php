@@ -631,15 +631,23 @@ include __DIR__ . '/../includes/layout-header.php';
             <!-- Upload Form -->
             <div class="gs-card gs-mb-xl">
                 <div class="gs-card-header">
-                    <h2 class="gs-h4 gs-text-primary">
-                        <i data-lucide="upload"></i>
-                        Ladda upp CSV-fil
-                    </h2>
+                    <div class="gs-flex gs-justify-between gs-items-center">
+                        <h2 class="gs-h4 gs-text-primary">
+                            <i data-lucide="upload"></i>
+                            Ladda upp CSV-fil
+                        </h2>
+                        <a href="/admin/import-results-preview.php" class="gs-btn gs-btn-outline gs-btn-sm">
+                            <i data-lucide="eye"></i>
+                            Förhandsgranska Import
+                        </a>
+                    </div>
                 </div>
                 <div class="gs-card-content">
                     <div class="gs-alert gs-alert-info gs-mb-md">
                         <i data-lucide="info"></i>
                         <strong>Auto-Create:</strong> Tävlingar, banor och deltagare som inte hittas skapas automatiskt. Inkludera event_date, event_location och event_venue för bästa resultat.
+                        <br>
+                        <strong>Rekommendation:</strong> Använd <a href="/admin/import-results-preview.php" class="gs-link">"Förhandsgranska Import"</a> för att granska data innan import.
                     </div>
 
                     <form method="POST" enctype="multipart/form-data" id="uploadForm" style="max-width: 600px;">
