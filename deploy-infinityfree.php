@@ -3,18 +3,27 @@
  * ONE-CLICK DEPLOY FOR INFINITYFREE
  *
  * Visit this URL once: https://thehub.infinityfree.me/deploy-infinityfree.php
- * Then DELETE this file!
+ * Script will auto-disable after first run. Manual deletion still recommended!
  */
 
 header('Content-Type: text/html; charset=utf-8');
 
 // Security check - only allow running once
-if (file_exists(__DIR__ . '/.env')) {
+if (file_exists(__DIR__ . '/.deployed') || file_exists(__DIR__ . '/.env')) {
     die('
+    <!DOCTYPE html>
+    <html>
+    <head><title>Already Deployed</title></head>
+    <body style="font-family: Arial; max-width: 800px; margin: 50px auto; padding: 20px;">
     <h2>✅ Already deployed!</h2>
-    <p>.env file already exists.</p>
-    <p style="color: red;"><strong>DELETE deploy-infinityfree.php for security!</strong></p>
-    <p><a href="/admin/test-database-connection.php">Test Database Connection</a></p>
+    <p>This script has already been run.</p>
+    <p style="background: #f8d7da; border: 2px solid #dc3545; padding: 15px;">
+        <strong>⚠️ Security Warning:</strong><br>
+        DELETE deploy-infinityfree.php from your server immediately!
+    </p>
+    <p><a href="/admin/test-database-connection.php" style="background: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">Test Database Connection</a></p>
+    </body>
+    </html>
     ');
 }
 
@@ -71,6 +80,9 @@ if ($success === false) {
     <p>Could not create .env file. Check file permissions on /htdocs/</p>
     ');
 }
+
+// Create marker file to prevent re-running
+file_put_contents(__DIR__ . '/.deployed', date('Y-m-d H:i:s'));
 
 // Success!
 ?>

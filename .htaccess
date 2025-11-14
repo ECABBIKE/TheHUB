@@ -12,12 +12,6 @@
     Deny from all
 </FilesMatch>
 
-# Deny access to deployment files (if not deleted)
-<FilesMatch "(deploy-infinityfree|setup-production)\.php$">
-    Order allow,deny
-    Deny from all
-</FilesMatch>
-
 # Deny access to composer files
 <FilesMatch "composer\.(json|lock)$">
     Order allow,deny

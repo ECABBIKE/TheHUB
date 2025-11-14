@@ -1,6 +1,7 @@
 # Configuration files with sensitive data
 config/config.php
 .env
+.deployed
 # NOTE: config/database.php is now safe to commit (it's just a loader, not credentials)
 
 # Uploaded files
