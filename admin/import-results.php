@@ -320,14 +320,21 @@ function importResultsFromCSV($filepath, $db, $importId = null) {
             $licenseNumber = !empty($data['license_number']) ? trim($data['license_number']) : null;
             $birthYear = !empty($data['birth_year']) ? (int)$data['birth_year'] : null;
 
+            // Check for single-use license
+            $isSingleUseLicense = false;
+            if ($licenseNumber && stripos($licenseNumber, 'engångslicens') !== false) {
+                $isSingleUseLicense = true;
+                $licenseNumber = null; // Don't use "Engångslicens" as a license number for matching
+            }
+
             $riderId = null;
             $cacheKey = $licenseNumber ?: "{$firstname}|{$lastname}|{$birthYear}";
 
             if (isset($riderCache[$cacheKey])) {
                 $riderId = $riderCache[$cacheKey];
             } else {
-                // Try license number first
-                if ($licenseNumber) {
+                // Try license number first (if not single-use license)
+                if ($licenseNumber && !$isSingleUseLicense) {
                     $rider = $db->getRow(
                         "SELECT id FROM riders WHERE license_number = ? LIMIT 1",
                         [$licenseNumber]
@@ -380,21 +387,26 @@ function importResultsFromCSV($filepath, $db, $importId = null) {
                             }
                         }
 
-                        // Create new rider with SWE-ID (no real license)
+                        // Determine license type
+                        $licenseType = $isSingleUseLicense ? 'Engångslicens' : 'SWE-ID';
+
+                        // Create new rider with SWE-ID
                         $newRiderData = [
                             'firstname' => $firstname,
                             'lastname' => $lastname,
                             'birth_year' => $birthYear,
                             'gender' => $gender,
                             'license_number' => $sweId,
-                            'license_type' => 'SWE-ID',
+                            'license_type' => $licenseType,
                             'active' => 1
                         ];
 
                         $riderId = $db->insert('riders', $newRiderData);
                         $riderCache[$cacheKey] = $riderId;
                         $matching_stats['riders_created']++;
-                        error_log("Auto-created rider: {$firstname} {$lastname} with SWE-ID: {$sweId} (no license)");
+
+                        $licenseTypeLabel = $isSingleUseLicense ? 'Engångslicens' : 'no license';
+                        error_log("Auto-created rider: {$firstname} {$lastname} with SWE-ID: {$sweId} ({$licenseTypeLabel})");
 
                         // Track created rider
                         if ($importId && $riderId) {

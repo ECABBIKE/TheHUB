@@ -636,6 +636,14 @@ function checkLicense($cyclist) {
         return $result;
     }
 
+    // Check for single-use license
+    if ($cyclist['license_type'] === 'Engångslicens') {
+        $result['valid'] = true;
+        $result['message'] = 'Engångslicens';
+        $result['class'] = 'gs-badge-warning';
+        return $result;
+    }
+
     // Check expiry date
     if (!empty($cyclist['license_valid_until'])) {
         $validUntil = trim($cyclist['license_valid_until']);
