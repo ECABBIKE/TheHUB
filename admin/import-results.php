@@ -33,49 +33,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['import_file'])) {
             $message = 'Endast CSV-filer stöds för resultatimport';
             $messageType = 'error';
         } else {
-            // Process the file
-            $uploaded = UPLOADS_PATH . '/' . time() . '_' . basename($file['name']);
+            // Save file and redirect to preview
+            $uploaded = UPLOADS_PATH . '/' . time() . '_preview_' . basename($file['name']);
 
             if (move_uploaded_file($file['tmp_name'], $uploaded)) {
-                try {
-                    // Start import history tracking
-                    $importId = startImportHistory(
-                        $db,
-                        'results',
-                        $file['name'],
-                        $file['size'],
-                        $current_admin['username'] ?? 'admin'
-                    );
+                // Clear old preview data
+                unset($_SESSION['import_preview_file']);
+                unset($_SESSION['import_preview_filename']);
+                unset($_SESSION['import_preview_data']);
+                unset($_SESSION['import_events_summary']);
 
-                    $result = importResultsFromCSV($uploaded, $db, $importId);
+                // Store in session and redirect to preview
+                $_SESSION['import_preview_file'] = $uploaded;
+                $_SESSION['import_preview_filename'] = $file['name'];
 
-                    $stats = $result['stats'];
-                    $matching_stats = $result['matching'];
-                    $errors = $result['errors'];
-
-                    // Update import history with final statistics
-                    $importStatus = ($stats['success'] > 0) ? 'completed' : 'failed';
-                    updateImportHistory($db, $importId, $stats, $errors, $importStatus);
-
-                    if ($stats['success'] > 0) {
-                        $message = "Import klar! {$stats['success']} av {$stats['total']} resultat importerade. <a href='/admin/import-history.php' style='text-decoration:underline'>Visa historik</a>";
-                        $messageType = 'success';
-                    } else {
-                        $message = "Ingen data importerades. Kontrollera filformatet och matchningar.";
-                        $messageType = 'error';
-                    }
-
-                } catch (Exception $e) {
-                    $message = 'Import misslyckades: ' . $e->getMessage();
-                    $messageType = 'error';
-
-                    // Mark import as failed if importId was created
-                    if (isset($importId)) {
-                        updateImportHistory($db, $importId, ['total' => 0], [$e->getMessage()], 'failed');
-                    }
-                }
-
-                @unlink($uploaded);
+                header('Location: /admin/import-results-preview.php');
+                exit;
             } else {
                 $message = 'Kunde inte ladda upp filen';
                 $messageType = 'error';
