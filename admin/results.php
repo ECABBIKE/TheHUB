@@ -104,4 +104,9 @@ include __DIR__ . '/../includes/layout-header.php';
     </div>
 </main>
 
+<script src="https://unpkg.com/lucide@latest"></script>
+<script>
+    lucide.createIcons();
+</script>
+
 <?php include __DIR__ . '/../includes/layout-footer.php'; ?>
