@@ -416,12 +416,32 @@ function importResultsFromCSV($filepath, $db, $importId = null) {
                 }
             }
 
+            // Normalize finish time (handle formats like "0:12:41.22" or "02:15:30")
+            $finishTime = null;
+            if (!empty($data['finish_time'])) {
+                $rawTime = trim($data['finish_time']);
+                // Remove any newlines, carriage returns, or extra whitespace
+                $rawTime = preg_replace('/[\r\n\t]+/', '', $rawTime);
+                $rawTime = trim($rawTime);
+
+                // Remove decimal seconds if present (MySQL TIME doesn't support them)
+                if (preg_match('/^(\d{1,2}):(\d{2}):(\d{2})\.?\d*$/', $rawTime, $matches)) {
+                    $hours = str_pad($matches[1], 2, '0', STR_PAD_LEFT);
+                    $minutes = $matches[2];
+                    $seconds = $matches[3];
+                    $finishTime = "{$hours}:{$minutes}:{$seconds}";
+                } elseif (!empty($rawTime)) {
+                    // Keep as-is if it's already in the right format
+                    $finishTime = $rawTime;
+                }
+            }
+
             // Prepare result data
             $resultData = [
                 'event_id' => $eventId,
                 'cyclist_id' => $riderId,
                 'position' => !empty($data['position']) ? (int)$data['position'] : null,
-                'finish_time' => !empty($data['finish_time']) ? trim($data['finish_time']) : null,
+                'finish_time' => $finishTime,
                 'bib_number' => !empty($data['bib_number']) ? trim($data['bib_number']) : null,
                 'status' => !empty($data['status']) ? strtolower(trim($data['status'])) : 'finished',
                 'points' => !empty($data['points']) ? (int)$data['points'] : 0,
