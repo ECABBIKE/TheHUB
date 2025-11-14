@@ -26,9 +26,9 @@ if ($club_id) {
 
 $whereClause = $where ? 'WHERE ' . implode(' AND ', $where) : '';
 
-$sql = "SELECT 
+$sql = "SELECT
     c.id, c.firstname, c.lastname, c.birth_year, c.gender,
-    c.license_number, c.license_category, c.discipline, c.active,
+    c.license_number, c.license_type, c.license_category, c.license_valid_until, c.discipline, c.active,
     cl.name as club_name, cl.id as club_id
 FROM riders c
 LEFT JOIN clubs cl ON c.club_id = cl.id
@@ -120,7 +120,8 @@ include __DIR__ . '/../includes/layout-header.php';
                                     <th>Namn</th>
                                     <th>Ålder</th>
                                     <th>Klubb</th>
-                                    <th>License</th>
+                                    <th>Licensnummer</th>
+                                    <th>Licensstatus</th>
                                     <th>Disciplin</th>
                                     <th>Status</th>
                                     <th style="width: 120px;">Åtgärder</th>
@@ -130,7 +131,9 @@ include __DIR__ . '/../includes/layout-header.php';
                                 <?php foreach ($riders as $rider): ?>
                                     <tr>
                                         <td>
-                                            <strong><?= htmlspecialchars($rider['firstname'] . ' ' . $rider['lastname']) ?></strong>
+                                            <a href="/rider.php?id=<?= $rider['id'] ?>" class="gs-link">
+                                                <strong><?= htmlspecialchars($rider['firstname'] . ' ' . $rider['lastname']) ?></strong>
+                                            </a>
                                         </td>
                                         <td>
                                             <?php if ($rider['birth_year']): ?>
@@ -141,14 +144,49 @@ include __DIR__ . '/../includes/layout-header.php';
                                         </td>
                                         <td>
                                             <?php if ($rider['club_name']): ?>
-                                                <a href="/admin/riders.php?club_id=<?= $rider['club_id'] ?>" class="gs-link">
+                                                <?php if ($club_id): ?>
+                                                    <!-- Already filtering by club, no need for link -->
                                                     <?= htmlspecialchars($rider['club_name']) ?>
-                                                </a>
+                                                <?php else: ?>
+                                                    <a href="/admin/riders.php?club_id=<?= $rider['club_id'] ?>" class="gs-link">
+                                                        <?= htmlspecialchars($rider['club_name']) ?>
+                                                    </a>
+                                                <?php endif; ?>
                                             <?php else: ?>
                                                 -
                                             <?php endif; ?>
                                         </td>
-                                        <td><?= htmlspecialchars($rider['license_category'] ?? '-') ?></td>
+                                        <td>
+                                            <?php if ($rider['license_number']): ?>
+                                                <span class="gs-badge gs-badge-sm <?= strpos($rider['license_number'], 'SWE') === 0 ? 'gs-badge-warning' : 'gs-badge-primary' ?>">
+                                                    <?= htmlspecialchars($rider['license_number']) ?>
+                                                </span>
+                                            <?php else: ?>
+                                                -
+                                            <?php endif; ?>
+                                        </td>
+                                        <td>
+                                            <?php
+                                            // Check license status
+                                            if (!empty($rider['license_number']) && strpos($rider['license_number'], 'SWE') === 0): ?>
+                                                <span class="gs-badge gs-badge-danger">
+                                                    ✗ Ej aktiv licens
+                                                </span>
+                                            <?php elseif (!empty($rider['license_type']) && $rider['license_type'] !== 'None'):
+                                                $licenseCheck = checkLicense($rider);
+                                                if ($licenseCheck['valid']): ?>
+                                                    <span class="gs-badge gs-badge-success">
+                                                        ✓ <?= h($licenseCheck['message']) ?>
+                                                    </span>
+                                                <?php else: ?>
+                                                    <span class="gs-badge gs-badge-danger">
+                                                        ✗ <?= h($licenseCheck['message']) ?>
+                                                    </span>
+                                                <?php endif;
+                                            else: ?>
+                                                <span class="gs-badge gs-badge-secondary">-</span>
+                                            <?php endif; ?>
+                                        </td>
                                         <td>
                                             <?php if ($rider['discipline']): ?>
                                                 <span class="gs-badge"><?= htmlspecialchars($rider['discipline']) ?></span>
