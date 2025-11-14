@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/../config.php';
+require_once __DIR__ . '/../includes/import-history.php';
 require_admin();
 
 $db = getDB();
@@ -37,14 +38,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['import_file'])) {
 
             if (move_uploaded_file($file['tmp_name'], $uploaded)) {
                 try {
-                    $result = importResultsFromCSV($uploaded, $db);
+                    // Start import history tracking
+                    $importId = startImportHistory(
+                        $db,
+                        'results',
+                        $file['name'],
+                        $file['size'],
+                        $current_admin['username'] ?? 'admin'
+                    );
+
+                    $result = importResultsFromCSV($uploaded, $db, $importId);
 
                     $stats = $result['stats'];
                     $matching_stats = $result['matching'];
                     $errors = $result['errors'];
 
+                    // Update import history with final statistics
+                    $importStatus = ($stats['success'] > 0) ? 'completed' : 'failed';
+                    updateImportHistory($db, $importId, $stats, $errors, $importStatus);
+
                     if ($stats['success'] > 0) {
-                        $message = "Import klar! {$stats['success']} av {$stats['total']} resultat importerade.";
+                        $message = "Import klar! {$stats['success']} av {$stats['total']} resultat importerade. <a href='/admin/import-history.php' style='text-decoration:underline'>Visa historik</a>";
                         $messageType = 'success';
                     } else {
                         $message = "Ingen data importerades. Kontrollera filformatet och matchningar.";
@@ -54,6 +68,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['import_file'])) {
                 } catch (Exception $e) {
                     $message = 'Import misslyckades: ' . $e->getMessage();
                     $messageType = 'error';
+
+                    // Mark import as failed if importId was created
+                    if (isset($importId)) {
+                        updateImportHistory($db, $importId, ['total' => 0], [$e->getMessage()], 'failed');
+                    }
                 }
 
                 @unlink($uploaded);
@@ -68,7 +87,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['import_file'])) {
 /**
  * Import results from CSV file
  */
-function importResultsFromCSV($filepath, $db) {
+function importResultsFromCSV($filepath, $db, $importId = null) {
     $stats = [
         'total' => 0,
         'success' => 0,
@@ -265,6 +284,11 @@ function importResultsFromCSV($filepath, $db) {
                             $venueId = $db->insert('venues', $venueData);
                             $matching_stats['venues_created']++;
                             error_log("Auto-created venue: {$eventVenueName}");
+
+                            // Track created venue
+                            if ($importId && $venueId) {
+                                trackImportRecord($db, $importId, 'venue', $venueId, 'created');
+                            }
                         }
                     }
 
@@ -282,6 +306,11 @@ function importResultsFromCSV($filepath, $db) {
                     $eventCache[$eventName] = $eventId;
                     $matching_stats['events_created']++;
                     error_log("Auto-created event: {$eventName} on {$eventDate}");
+
+                    // Track created event
+                    if ($importId && $eventId) {
+                        trackImportRecord($db, $importId, 'event', $eventId, 'created');
+                    }
                 }
             }
 
@@ -291,14 +320,21 @@ function importResultsFromCSV($filepath, $db) {
             $licenseNumber = !empty($data['license_number']) ? trim($data['license_number']) : null;
             $birthYear = !empty($data['birth_year']) ? (int)$data['birth_year'] : null;
 
+            // Check for single-use license
+            $isSingleUseLicense = false;
+            if ($licenseNumber && stripos($licenseNumber, 'engångslicens') !== false) {
+                $isSingleUseLicense = true;
+                $licenseNumber = null; // Don't use "Engångslicens" as a license number for matching
+            }
+
             $riderId = null;
             $cacheKey = $licenseNumber ?: "{$firstname}|{$lastname}|{$birthYear}";
 
             if (isset($riderCache[$cacheKey])) {
                 $riderId = $riderCache[$cacheKey];
             } else {
-                // Try license number first
-                if ($licenseNumber) {
+                // Try license number first (if not single-use license)
+                if ($licenseNumber && !$isSingleUseLicense) {
                     $rider = $db->getRow(
                         "SELECT id FROM riders WHERE license_number = ? LIMIT 1",
                         [$licenseNumber]
@@ -351,22 +387,52 @@ function importResultsFromCSV($filepath, $db) {
                             }
                         }
 
-                        // Create new rider with SWE-ID (no real license)
+                        // Determine license type
+                        $licenseType = $isSingleUseLicense ? 'Engångslicens' : 'SWE-ID';
+
+                        // Create new rider with SWE-ID
                         $newRiderData = [
                             'firstname' => $firstname,
                             'lastname' => $lastname,
                             'birth_year' => $birthYear,
                             'gender' => $gender,
                             'license_number' => $sweId,
-                            'license_type' => 'SWE-ID',
+                            'license_type' => $licenseType,
                             'active' => 1
                         ];
 
                         $riderId = $db->insert('riders', $newRiderData);
                         $riderCache[$cacheKey] = $riderId;
                         $matching_stats['riders_created']++;
-                        error_log("Auto-created rider: {$firstname} {$lastname} with SWE-ID: {$sweId} (no license)");
+
+                        $licenseTypeLabel = $isSingleUseLicense ? 'Engångslicens' : 'no license';
+                        error_log("Auto-created rider: {$firstname} {$lastname} with SWE-ID: {$sweId} ({$licenseTypeLabel})");
+
+                        // Track created rider
+                        if ($importId && $riderId) {
+                            trackImportRecord($db, $importId, 'rider', $riderId, 'created');
+                        }
                     }
+                }
+            }
+
+            // Normalize finish time (handle formats like "0:12:41.22" or "02:15:30")
+            $finishTime = null;
+            if (!empty($data['finish_time'])) {
+                $rawTime = trim($data['finish_time']);
+                // Remove any newlines, carriage returns, or extra whitespace
+                $rawTime = preg_replace('/[\r\n\t]+/', '', $rawTime);
+                $rawTime = trim($rawTime);
+
+                // Remove decimal seconds if present (MySQL TIME doesn't support them)
+                if (preg_match('/^(\d{1,2}):(\d{2}):(\d{2})\.?\d*$/', $rawTime, $matches)) {
+                    $hours = str_pad($matches[1], 2, '0', STR_PAD_LEFT);
+                    $minutes = $matches[2];
+                    $seconds = $matches[3];
+                    $finishTime = "{$hours}:{$minutes}:{$seconds}";
+                } elseif (!empty($rawTime)) {
+                    // Keep as-is if it's already in the right format
+                    $finishTime = $rawTime;
                 }
             }
 
@@ -375,7 +441,7 @@ function importResultsFromCSV($filepath, $db) {
                 'event_id' => $eventId,
                 'cyclist_id' => $riderId,
                 'position' => !empty($data['position']) ? (int)$data['position'] : null,
-                'finish_time' => !empty($data['finish_time']) ? trim($data['finish_time']) : null,
+                'finish_time' => $finishTime,
                 'bib_number' => !empty($data['bib_number']) ? trim($data['bib_number']) : null,
                 'status' => !empty($data['status']) ? strtolower(trim($data['status'])) : 'finished',
                 'points' => !empty($data['points']) ? (int)$data['points'] : 0,
@@ -389,13 +455,26 @@ function importResultsFromCSV($filepath, $db) {
             );
 
             if ($existing) {
+                // Get old data for rollback
+                $oldData = $db->getRow("SELECT * FROM results WHERE id = ?", [$existing['id']]);
+
                 // Update existing result
                 $db->update('results', $resultData, 'id = ?', [$existing['id']]);
                 $stats['updated']++;
+
+                // Track updated record
+                if ($importId) {
+                    trackImportRecord($db, $importId, 'result', $existing['id'], 'updated', $oldData);
+                }
             } else {
                 // Insert new result
-                $db->insert('results', $resultData);
+                $resultId = $db->insert('results', $resultData);
                 $stats['success']++;
+
+                // Track created record
+                if ($importId && $resultId) {
+                    trackImportRecord($db, $importId, 'result', $resultId, 'created');
+                }
             }
 
         } catch (Exception $e) {

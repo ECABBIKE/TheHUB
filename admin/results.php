@@ -158,11 +158,10 @@ include __DIR__ . '/../includes/layout-header.php';
                     <i data-lucide="trophy"></i>
                     Resultat
                 </h1>
-                    <button type="button" class="gs-btn gs-btn-primary" onclick="openResultModal()">
-                        <i data-lucide="plus"></i>
-                        Nytt Resultat
-                    </button>
-                <?php endif; ?>
+                <button type="button" class="gs-btn gs-btn-primary" onclick="openResultModal()">
+                    <i data-lucide="plus"></i>
+                    Nytt Resultat
+                </button>
             </div>
 
             <!-- Messages -->
@@ -382,7 +381,6 @@ include __DIR__ . '/../includes/layout-header.php';
                         </form>
                     </div>
                 </div>
-            <?php endif; ?>
 
             <!-- Filters -->
             <div class="gs-card gs-mb-lg">
@@ -563,28 +561,24 @@ include __DIR__ . '/../includes/layout-header.php';
                                             <?php endif; ?>
                                         </td>
                                         <td style="text-align: right;">
-                                            
-                                                <span class="gs-badge gs-badge-secondary">Demo</span>
-                                            <?php else: ?>
-                                                <div class="gs-flex gs-gap-sm gs-justify-end">
-                                                    <button
-                                                        type="button"
-                                                        class="gs-btn gs-btn-sm gs-btn-outline"
-                                                        onclick="editResult(<?= $result['id'] ?>)"
-                                                        title="Redigera"
-                                                    >
-                                                        <i data-lucide="edit"></i>
-                                                    </button>
-                                                    <button
-                                                        type="button"
-                                                        class="gs-btn gs-btn-sm gs-btn-outline gs-btn-danger"
-                                                        onclick="deleteResult(<?= $result['id'] ?>, '<?= addslashes(h($result['rider_name'])) ?>')"
-                                                        title="Ta bort"
-                                                    >
-                                                        <i data-lucide="trash-2"></i>
-                                                    </button>
-                                                </div>
-                                            <?php endif; ?>
+                                            <div class="gs-flex gs-gap-sm gs-justify-end">
+                                                <button
+                                                    type="button"
+                                                    class="gs-btn gs-btn-sm gs-btn-outline"
+                                                    onclick="editResult(<?= $result['id'] ?>)"
+                                                    title="Redigera"
+                                                >
+                                                    <i data-lucide="edit"></i>
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    class="gs-btn gs-btn-sm gs-btn-outline gs-btn-danger"
+                                                    onclick="deleteResult(<?= $result['id'] ?>, '<?= addslashes(h($result['rider_name'])) ?>')"
+                                                    title="Ta bort"
+                                                >
+                                                    <i data-lucide="trash-2"></i>
+                                                </button>
+                                            </div>
                                         </td>
                                     </tr>
                                 <?php endforeach; ?>
@@ -688,6 +682,5 @@ include __DIR__ . '/../includes/layout-header.php';
                 }
             });
         </script>
-        <?php endif; ?>
 
 <?php include __DIR__ . '/../includes/layout-footer.php'; ?>
