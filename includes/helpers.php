@@ -20,18 +20,18 @@ function calculateAge($birthYear) {
 
 function checkLicense($rider) {
     if (empty($rider['license_valid_until']) || $rider['license_valid_until'] === '0000-00-00') {
-        return array('class' => 'gs-badge-secondary', 'message' => 'Ingen giltighetstid');
+        return array('class' => 'gs-badge-secondary', 'message' => 'Ingen giltighetstid', 'valid' => false);
     }
 
     $validUntil = strtotime($rider['license_valid_until']);
     $now = time();
 
     if ($validUntil < $now) {
-        return array('class' => 'gs-badge-danger', 'message' => 'Utgången');
+        return array('class' => 'gs-badge-danger', 'message' => 'Utgången', 'valid' => false);
     } elseif ($validUntil < strtotime('+30 days')) {
-        return array('class' => 'gs-badge-warning', 'message' => 'Löper snart ut');
+        return array('class' => 'gs-badge-warning', 'message' => 'Löper snart ut', 'valid' => true);
     } else {
-        return array('class' => 'gs-badge-success', 'message' => 'Giltig');
+        return array('class' => 'gs-badge-success', 'message' => 'Giltig', 'valid' => true);
     }
 }
 
