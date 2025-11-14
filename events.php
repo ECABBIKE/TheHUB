@@ -51,11 +51,13 @@ $pagination = paginate($totalCount, $perPage, $page);
 // Get events
 $params_with_limit = array_merge($params, [$perPage, $offset]);
 $events = $db->getAll(
-    "SELECT e.id, e.name, e.date as event_date, e.location, e.type as event_type, e.status,
-            s.name as series_name,
-            COUNT(r.id) as participant_count
+    "SELECT e.id, e.name, e.advent_id, e.date as event_date, e.location, e.type as event_type, e.status,
+            s.name as series_name, s.id as series_id,
+            COUNT(r.id) as participant_count,
+            COUNT(DISTINCT res.category_id) as category_count
      FROM events e
      LEFT JOIN results r ON e.id = r.event_id
+     LEFT JOIN results res ON e.id = res.event_id
      LEFT JOIN series s ON e.series_id = s.id
      WHERE $where_sql
      GROUP BY e.id
@@ -118,66 +120,91 @@ include __DIR__ . '/includes/layout-header.php';
             <?php else: ?>
                 <div class="gs-grid gs-grid-cols-1 gs-md-grid-cols-2 gs-lg-grid-cols-3 gs-gap-lg">
                     <?php foreach ($events as $event): ?>
-                        <div class="gs-card gs-card-hover">
-                            <div class="gs-card-header">
-                                <div class="gs-flex gs-justify-between gs-items-start gs-mb-sm">
-                                    <div class="gs-event-date-badge">
-                                        <div class="gs-event-date-day"><?= date('d', strtotime($event['event_date'])) ?></div>
-                                        <div class="gs-event-date-month"><?= date('M', strtotime($event['event_date'])) ?></div>
-                                    </div>
-                                    <?php
-                                    $status_class = 'gs-badge-secondary';
-                                    $status_text = $event['status'];
-                                    if ($event['status'] == 'upcoming' || strtotime($event['event_date']) > time()) {
-                                        $status_class = 'gs-badge-warning';
-                                        $status_text = 'Kommande';
-                                    } elseif ($event['status'] == 'completed' || strtotime($event['event_date']) < time()) {
-                                        $status_class = 'gs-badge-success';
-                                        $status_text = 'Avklarad';
-                                    }
-                                    ?>
-                                    <span class="gs-badge <?= $status_class ?>">
-                                        <i data-lucide="<?= $status_text == 'Kommande' ? 'clock' : 'check-circle' ?>"></i>
-                                        <?= h($status_text) ?>
-                                    </span>
-                                </div>
-                                <h3 class="gs-h4 gs-mb-xs"><?= h($event['name']) ?></h3>
-                                <?php if ($event['location']): ?>
-                                    <p class="gs-text-sm gs-text-secondary">
-                                        <i data-lucide="map-pin" style="width: 14px; height: 14px;"></i>
-                                        <?= h($event['location']) ?>
-                                    </p>
-                                <?php endif; ?>
-                            </div>
-                            <div class="gs-card-content">
-                                <?php if ($event['event_type']): ?>
-                                    <p class="gs-mb-sm">
-                                        <strong>Typ:</strong>
-                                        <span class="gs-badge gs-badge-primary gs-text-xs">
-                                            <?= h(str_replace('_', ' ', $event['event_type'])) ?>
+                        <a href="/event.php?id=<?= $event['id'] ?>" style="text-decoration: none; color: inherit;">
+                            <div class="gs-card gs-card-hover" style="height: 100%; transition: transform 0.2s, box-shadow 0.2s;">
+                                <div class="gs-card-header">
+                                    <div class="gs-flex gs-justify-between gs-items-start gs-mb-sm">
+                                        <div class="gs-event-date-badge">
+                                            <div class="gs-event-date-day"><?= date('d', strtotime($event['event_date'])) ?></div>
+                                            <div class="gs-event-date-month"><?= date('M', strtotime($event['event_date'])) ?></div>
+                                        </div>
+                                        <?php
+                                        $status_class = 'gs-badge-secondary';
+                                        $status_text = $event['status'];
+                                        if ($event['status'] == 'upcoming' || strtotime($event['event_date']) > time()) {
+                                            $status_class = 'gs-badge-warning';
+                                            $status_text = 'Kommande';
+                                        } elseif ($event['status'] == 'completed' || strtotime($event['event_date']) < time()) {
+                                            $status_class = 'gs-badge-success';
+                                            $status_text = 'Avklarad';
+                                        }
+                                        ?>
+                                        <span class="gs-badge <?= $status_class ?>">
+                                            <i data-lucide="<?= $status_text == 'Kommande' ? 'clock' : 'check-circle' ?>"></i>
+                                            <?= h($status_text) ?>
                                         </span>
-                                    </p>
-                                <?php endif; ?>
+                                    </div>
+                                    <h3 class="gs-h4 gs-mb-xs"><?= h($event['name']) ?></h3>
 
-                                <?php if ($event['participant_count'] > 0): ?>
-                                    <p class="gs-text-sm gs-text-secondary gs-mb-md">
-                                        <i data-lucide="users" style="width: 14px; height: 14px;"></i>
-                                        <?= $event['participant_count'] ?> deltagare
-                                    </p>
+                                    <?php if ($event['series_name']): ?>
+                                        <p class="gs-text-sm gs-text-secondary gs-mb-xs">
+                                            <i data-lucide="award" style="width: 14px; height: 14px;"></i>
+                                            <?= h($event['series_name']) ?>
+                                        </p>
+                                    <?php endif; ?>
 
-                                    <a href="/event.php?id=<?= $event['id'] ?>"
-                                       class="gs-btn gs-btn-primary gs-btn-sm gs-w-full">
-                                        <i data-lucide="trophy"></i>
-                                        Visa resultat
-                                    </a>
-                                <?php else: ?>
-                                    <p class="gs-text-sm gs-text-secondary">
-                                        <i data-lucide="info" style="width: 14px; height: 14px;"></i>
-                                        Inga resultat registrerade ännu
-                                    </p>
-                                <?php endif; ?>
+                                    <?php if ($event['location']): ?>
+                                        <p class="gs-text-sm gs-text-secondary">
+                                            <i data-lucide="map-pin" style="width: 14px; height: 14px;"></i>
+                                            <?= h($event['location']) ?>
+                                        </p>
+                                    <?php endif; ?>
+
+                                    <?php if ($event['advent_id']): ?>
+                                        <p class="gs-text-xs gs-text-secondary gs-mt-xs">
+                                            ID: <?= h($event['advent_id']) ?>
+                                        </p>
+                                    <?php endif; ?>
+                                </div>
+                                <div class="gs-card-content">
+                                    <div class="gs-flex gs-gap-sm gs-mb-md gs-flex-wrap">
+                                        <?php if ($event['event_type']): ?>
+                                            <span class="gs-badge gs-badge-primary gs-text-xs">
+                                                <?= h(str_replace('_', ' ', $event['event_type'])) ?>
+                                            </span>
+                                        <?php endif; ?>
+
+                                        <?php if ($event['participant_count'] > 0): ?>
+                                            <span class="gs-badge gs-badge-secondary gs-text-xs">
+                                                <i data-lucide="users" style="width: 12px; height: 12px;"></i>
+                                                <?= $event['participant_count'] ?> deltagare
+                                            </span>
+                                        <?php endif; ?>
+
+                                        <?php if ($event['category_count'] > 0): ?>
+                                            <span class="gs-badge gs-badge-secondary gs-text-xs">
+                                                <i data-lucide="layers" style="width: 12px; height: 12px;"></i>
+                                                <?= $event['category_count'] ?> <?= $event['category_count'] == 1 ? 'klass' : 'klasser' ?>
+                                            </span>
+                                        <?php endif; ?>
+                                    </div>
+
+                                    <div class="gs-flex gs-justify-between gs-items-center">
+                                        <?php if ($event['participant_count'] > 0): ?>
+                                            <span class="gs-text-sm gs-text-primary" style="font-weight: 600;">
+                                                <i data-lucide="trophy" style="width: 14px; height: 14px;"></i>
+                                                Visa resultat →
+                                            </span>
+                                        <?php else: ?>
+                                            <span class="gs-text-sm gs-text-secondary">
+                                                <i data-lucide="info" style="width: 14px; height: 14px;"></i>
+                                                Inga resultat ännu
+                                            </span>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
                             </div>
-                        </div>
+                        </a>
                     <?php endforeach; ?>
                 </div>
 
