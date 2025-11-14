@@ -99,3 +99,4 @@ require_once INCLUDES_PATH . '/auth.php';
 ```
    ✅ config.php loaded!
    ✅ PDO exists
+    
