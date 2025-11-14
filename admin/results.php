@@ -47,6 +47,17 @@ include __DIR__ . '/../includes/layout-header.php';
             </div>
         </div>
 
+        <?php if (isset($_SESSION['recalc_message'])): ?>
+            <div class="gs-alert gs-alert-<?= h($_SESSION['recalc_type'] ?? 'info') ?> gs-mb-lg">
+                <i data-lucide="<?= ($_SESSION['recalc_type'] ?? 'info') === 'success' ? 'check-circle' : 'alert-circle' ?>"></i>
+                <?= h($_SESSION['recalc_message']) ?>
+            </div>
+            <?php
+            unset($_SESSION['recalc_message']);
+            unset($_SESSION['recalc_type']);
+            ?>
+        <?php endif; ?>
+
         <?php if (isset($error)): ?>
             <div class="gs-alert gs-alert-danger gs-mb-lg">
                 <strong>Fel:</strong> <?= htmlspecialchars($error) ?>
@@ -158,7 +169,7 @@ include __DIR__ . '/../includes/layout-header.php';
                                 </div>
 
                                 <!-- Actions -->
-                                <div class="gs-flex gs-gap-sm">
+                                <div class="gs-flex gs-gap-sm gs-flex-wrap">
                                     <a href="/event.php?id=<?= $event['id'] ?>"
                                        class="gs-btn gs-btn-outline gs-btn-sm"
                                        title="Visa resultat">
@@ -171,7 +182,13 @@ include __DIR__ . '/../includes/layout-header.php';
                                            class="gs-btn gs-btn-primary gs-btn-sm"
                                            title="Editera resultat">
                                             <i data-lucide="edit" style="width: 14px; height: 14px;"></i>
-                                            Editera Resultat
+                                            Editera
+                                        </a>
+                                        <a href="/admin/recalculate-results.php?event_id=<?= $event['id'] ?>"
+                                           class="gs-btn gs-btn-secondary gs-btn-sm"
+                                           title="Räkna om placeringar och poäng">
+                                            <i data-lucide="refresh-cw" style="width: 14px; height: 14px;"></i>
+                                            Räkna om
                                         </a>
                                     <?php else: ?>
                                         <a href="/admin/import-results.php"

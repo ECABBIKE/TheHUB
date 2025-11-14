@@ -251,3 +251,88 @@ function getScalePreview($db, $scale_id) {
         [$scale_id]
     );
 }
+
+/**
+ * Recalculate positions and points for an event
+ * Recalculates positions within each category based on finish time,
+ * then recalculates points based on new positions
+ *
+ * @param object $db Database instance
+ * @param int $event_id Event ID
+ * @param int $new_scale_id Optional: Change to new point scale
+ * @return array Stats (positions_updated, points_updated, errors)
+ */
+function recalculateEventResults($db, $event_id, $new_scale_id = null) {
+    $stats = [
+        'positions_updated' => 0,
+        'points_updated' => 0,
+        'errors' => []
+    ];
+
+    try {
+        // Update point scale if provided
+        if ($new_scale_id) {
+            $db->update('events', ['point_scale_id' => $new_scale_id], 'id = ?', [$event_id]);
+            error_log("Updated point scale for event {$event_id} to scale {$new_scale_id}");
+        }
+
+        // Get all results grouped by category
+        $results = $db->getAll("
+            SELECT id, category_id, finish_time, status
+            FROM results
+            WHERE event_id = ?
+            ORDER BY category_id,
+                     CASE WHEN status = 'finished' THEN 0 ELSE 1 END,
+                     finish_time ASC
+        ", [$event_id]);
+
+        // Group by category
+        $byCategory = [];
+        foreach ($results as $result) {
+            $catId = $result['category_id'] ?? 0; // 0 for uncategorized
+            if (!isset($byCategory[$catId])) {
+                $byCategory[$catId] = [];
+            }
+            $byCategory[$catId][] = $result;
+        }
+
+        // Recalculate positions within each category
+        foreach ($byCategory as $categoryId => $categoryResults) {
+            $position = 1;
+
+            foreach ($categoryResults as $result) {
+                $newPosition = null;
+
+                if ($result['status'] === 'finished' && !empty($result['finish_time'])) {
+                    $newPosition = $position;
+                    $position++;
+                }
+
+                // Calculate points based on new position
+                $newPoints = calculatePoints($db, $event_id, $newPosition, $result['status']);
+
+                // Update result
+                try {
+                    $db->update('results', [
+                        'position' => $newPosition,
+                        'points' => $newPoints
+                    ], 'id = ?', [$result['id']]);
+
+                    $stats['positions_updated']++;
+                    $stats['points_updated']++;
+                } catch (Exception $e) {
+                    $stats['errors'][] = "Result {$result['id']}: " . $e->getMessage();
+                    error_log("Failed to update result {$result['id']}: " . $e->getMessage());
+                }
+            }
+        }
+
+        error_log("✅ Recalculated event {$event_id}: {$stats['positions_updated']} positions, {$stats['points_updated']} points");
+
+    } catch (Exception $e) {
+        $stats['errors'][] = "Fatal error: " . $e->getMessage();
+        error_log("Failed to recalculate event {$event_id}: " . $e->getMessage());
+    }
+
+    return $stats;
+}
