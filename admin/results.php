@@ -6,13 +6,13 @@ global $pdo;
 $db = getDB();
 
 // Get recent results - adjusted query based on actual schema
-$sql = "SELECT 
-    r.id, r.position, r.points, r.dnf, r.dns, r.dsq,
-    e.name as event_name, e.date as event_date,
-    c.firstname, c.lastname
+$sql = "SELECT
+    r.id, r.position, r.points, r.status, r.finish_time,
+    e.name as event_name, e.date as event_date, e.id as event_id,
+    c.firstname, c.lastname, c.id as cyclist_id
 FROM results r
 JOIN events e ON r.event_id = e.id
-JOIN riders c ON r.rider_id = c.id
+JOIN riders c ON r.cyclist_id = c.id
 ORDER BY e.date DESC, r.position ASC
 LIMIT 100";
 
