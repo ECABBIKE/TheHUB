@@ -225,12 +225,24 @@ include __DIR__ . '/../includes/layout-header.php';
 <script src="https://unpkg.com/lucide@latest"></script>
 <script>
     lucide.createIcons();
-    
+
+    // Store CSRF token from PHP session
+    const csrfToken = '<?= htmlspecialchars(generate_csrf_token()) ?>';
+
     function deleteRider(id, name) {
         if (!confirm('Är du säker på att du vill ta bort "' + name + '"?')) {
             return;
         }
-        
+
         // Create form and submit
         const form = document.createElement('form');
-        f
+        form.method = 'POST';
+        form.action = '/admin/rider-delete.php';
+        form.innerHTML = '<input type="hidden" name="id" value="' + id + '">' +
+                        '<input type="hidden" name="csrf_token" value="' + csrfToken + '">';
+        document.body.appendChild(form);
+        form.submit();
+    }
+</script>
+
+<?php include __DIR__ . '/../includes/layout-footer.php'; ?>
