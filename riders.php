@@ -112,69 +112,69 @@ include __DIR__ . '/includes/layout-header.php';
                     </p>
                 </div>
             <?php else: ?>
-                <div class="gs-grid gs-grid-cols-2 gs-md-grid-cols-4 gs-lg-grid-cols-5 gs-xl-grid-cols-6 gs-gap-sm" id="ridersGrid">
+                <div class="gs-grid gs-grid-cols-1 gs-md-grid-cols-2 gs-lg-grid-cols-3 gs-xl-grid-cols-4 gs-gap-md" id="ridersGrid">
                     <?php foreach ($cyclists as $rider): ?>
                         <a href="/rider.php?id=<?= $rider['id'] ?>" class="gs-card gs-card-hover rider-card"
                            data-search="<?= strtolower(h($rider['firstname'] . ' ' . $rider['lastname'] . ' ' . ($rider['club_name'] ?? '') . ' ' . ($rider['license_number'] ?? ''))) ?>"
-                           style="padding: 0.5rem; text-decoration: none; color: inherit; display: block; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;">
-                            <!-- Profile Header -->
-                            <div class="gs-flex gs-items-start gs-gap-xs" style="margin-bottom: 0.4rem;">
-                                <div class="gs-avatar gs-avatar-sm gs-bg-primary" style="width: 32px; height: 32px; flex-shrink: 0;">
-                                    <i data-lucide="user" class="gs-text-white" style="width: 16px; height: 16px;"></i>
+                           style="padding: 1rem; text-decoration: none; color: inherit; display: block; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;">
+                            <!-- Profile Header with Larger Avatar -->
+                            <div class="gs-flex gs-items-start gs-gap-md gs-mb-md">
+                                <div class="gs-avatar gs-bg-primary" style="width: 56px; height: 56px; flex-shrink: 0; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                                    <i data-lucide="user" class="gs-text-white" style="width: 28px; height: 28px;"></i>
                                 </div>
                                 <div class="gs-flex-1" style="min-width: 0;">
-                                    <h3 class="gs-text-sm gs-font-bold" style="line-height: 1.2; margin-bottom: 0.1rem;">
+                                    <h3 class="gs-h5 gs-font-bold gs-mb-xs">
                                         <?= h($rider['firstname']) ?> <?= h($rider['lastname']) ?>
                                     </h3>
                                     <?php if ($rider['club_name']): ?>
-                                        <p class="gs-text-xs gs-text-secondary" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.2;">
-                                            <i data-lucide="building" style="width: 10px; height: 10px;"></i>
+                                        <p class="gs-text-sm gs-text-secondary" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                            <i data-lucide="building" style="width: 14px; height: 14px;"></i>
                                             <?= h($rider['club_name']) ?>
                                         </p>
                                     <?php endif; ?>
                                 </div>
                             </div>
 
-                            <!-- Stats Compact -->
-                            <div class="gs-flex gs-justify-between" style="padding: 0.35rem 0; border-top: 1px solid var(--gs-border); margin-bottom: 0.35rem;">
+                            <!-- Stats -->
+                            <div class="gs-flex gs-justify-between gs-mb-md" style="padding: 0.75rem 0; border-top: 1px solid var(--gs-border);">
                                 <div class="gs-text-center gs-flex-1">
-                                    <div class="gs-text-base gs-font-bold gs-text-primary" style="line-height: 1;"><?= $rider['total_races'] ?></div>
-                                    <div class="gs-text-xs gs-text-secondary" style="line-height: 1.2;">Lopp</div>
+                                    <div class="gs-h4 gs-font-bold gs-text-primary"><?= $rider['total_races'] ?></div>
+                                    <div class="gs-text-sm gs-text-secondary">Lopp</div>
                                 </div>
                                 <div class="gs-text-center gs-flex-1">
-                                    <div class="gs-text-base gs-font-bold" style="color: var(--gs-accent); line-height: 1;"><?= $rider['podiums'] ?></div>
-                                    <div class="gs-text-xs gs-text-secondary" style="line-height: 1.2;">Pall</div>
+                                    <div class="gs-h4 gs-font-bold" style="color: var(--gs-accent);"><?= $rider['podiums'] ?></div>
+                                    <div class="gs-text-sm gs-text-secondary">Pall</div>
                                 </div>
                                 <?php if ($rider['best_position']): ?>
                                     <div class="gs-text-center gs-flex-1">
-                                        <div class="gs-text-base gs-font-bold" style="color: var(--gs-success); line-height: 1;"><?= $rider['best_position'] ?></div>
-                                        <div class="gs-text-xs gs-text-secondary" style="line-height: 1.2;">Bäst</div>
+                                        <div class="gs-h4 gs-font-bold" style="color: var(--gs-success);"><?= $rider['best_position'] ?></div>
+                                        <div class="gs-text-sm gs-text-secondary">Bäst</div>
                                     </div>
                                 <?php endif; ?>
                             </div>
 
                             <!-- Info Badges -->
-                            <div class="gs-flex gs-gap-xs gs-flex-wrap" style="font-size: 0.65rem;">
+                            <div class="gs-flex gs-gap-xs gs-flex-wrap">
                                 <?php if ($rider['birth_year']): ?>
-                                    <span class="gs-badge gs-badge-secondary" style="padding: 0.1rem 0.3rem; font-size: 0.6rem;">
-                                        <?= $rider['gender'] == 'M' ? '👨' : ($rider['gender'] == 'F' ? '👩' : '👤') ?> <?= calculateAge($rider['birth_year']) ?>
+                                    <span class="gs-badge gs-badge-secondary">
+                                        <?= $rider['gender'] == 'M' ? '👨' : ($rider['gender'] == 'F' ? '👩' : '👤') ?> <?= calculateAge($rider['birth_year']) ?> år
                                     </span>
                                 <?php endif; ?>
                                 <?php
-                                // Check license status - compact display
+                                // Check license status
                                 if (!empty($rider['license_number']) && strpos($rider['license_number'], 'SWE') === 0): ?>
-                                    <span class="gs-badge gs-badge-danger" style="padding: 0.1rem 0.3rem; font-size: 0.6rem;">
-                                        ✗ Licens
+                                    <span class="gs-badge gs-badge-danger">
+                                        ✗ Ej aktiv licens
                                     </span>
                                 <?php elseif (!empty($rider['license_type']) && $rider['license_type'] !== 'None'):
                                     $licenseCheck = checkLicense($rider);
                                     if ($licenseCheck['valid']): ?>
-                                        <span class="gs-badge gs-badge-success" style="padding: 0.1rem 0.3rem; font-size: 0.6rem;">
-                                            ✓ Licens
+                                        <span class="gs-badge gs-badge-success">
+                                            ✓ Aktiv licens
                                         </span>
                                     <?php else: ?>
-                                        <span class="gs-badge gs-badge-danger" style="padding: 0.1rem 0.3rem; font-size: 0.6rem;">
-                                            ✗ Licens
+                                        <span class="gs-badge gs-badge-danger">
+                                            ✗ Ej aktiv licens
                                         </span>
                                     <?php endif;
                                 endif;
@@ -197,16 +197,16 @@ include __DIR__ . '/includes/layout-header.php';
 
     <style>
     .rider-card {
-        min-height: 140px;
+        min-height: 200px;
         display: flex;
         flex-direction: column;
     }
     .rider-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+        transform: translateY(-4px);
+        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15) !important;
     }
     .rider-card:active {
-        transform: translateY(-1px);
+        transform: translateY(-2px);
     }
     </style>
 

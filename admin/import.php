@@ -193,7 +193,7 @@ include __DIR__ . '/../includes/layout-header.php';
             </div>
 
             <!-- Quick Links to Specialized Import Pages -->
-            <div class="gs-grid gs-grid-cols-1 gs-md-grid-cols-2 gs-gap-lg gs-mb-xl">
+            <div class="gs-grid gs-grid-cols-1 gs-md-grid-cols-2 gs-lg-grid-cols-3 gs-gap-lg gs-mb-xl">
                 <div class="gs-card">
                     <div class="gs-card-header">
                         <h2 class="gs-h4 gs-text-primary">

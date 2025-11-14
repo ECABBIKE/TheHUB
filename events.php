@@ -118,7 +118,7 @@ include __DIR__ . '/includes/layout-header.php';
                     </p>
                 </div>
             <?php else: ?>
-                <div class="gs-grid gs-grid-cols-1 gs-md-grid-cols-2 gs-lg-grid-cols-3 gs-gap-lg">
+                <div class="gs-grid gs-grid-cols-1 gs-md-grid-cols-2 gs-lg-grid-cols-3 gs-xl-grid-cols-4 gs-gap-lg">
                     <?php foreach ($events as $event): ?>
                         <a href="/event.php?id=<?= $event['id'] ?>" style="text-decoration: none; color: inherit;">
                             <div class="gs-card gs-card-hover" style="height: 100%; transition: transform 0.2s, box-shadow 0.2s;">
