@@ -136,4 +136,29 @@ function checkCsrf() {
 function get_current_admin() {
     return get_admin_user();
 }
+
+/**
+ * Paginate results
+ *
+ * @param int $totalItems Total number of items
+ * @param int $perPage Items per page
+ * @param int $currentPage Current page number
+ * @return array Pagination data
+ */
+function paginate($totalItems, $perPage, $currentPage = 1) {
+    $totalPages = max(1, ceil($totalItems / $perPage));
+    $currentPage = max(1, min($currentPage, $totalPages));
+
+    return [
+        'total_items' => $totalItems,
+        'per_page' => $perPage,
+        'current_page' => $currentPage,
+        'total_pages' => $totalPages,
+        'has_prev' => $currentPage > 1,
+        'has_next' => $currentPage < $totalPages,
+        'prev_page' => max(1, $currentPage - 1),
+        'next_page' => min($totalPages, $currentPage + 1),
+        'offset' => ($currentPage - 1) * $perPage
+    ];
+}
 ?>

@@ -204,10 +204,10 @@ include __DIR__ . '/../includes/layout-header.php';
                                         <td>
                                             <div class="gs-flex gs-gap-sm">
                                                 <a href="/admin/rider-edit.php?id=<?= $rider['id'] ?>" class="gs-btn gs-btn-sm gs-btn-outline" title="Redigera">
-                                                    <i data-lucide="edit" style="width: 14px;"></i>
+                                                    <i data-lucide="edit" style="width: 14px; height: 14px;"></i>
                                                 </a>
                                                 <button onclick="deleteRider(<?= $rider['id'] ?>, '<?= addslashes($rider['firstname'] . ' ' . $rider['lastname']) ?>')" class="gs-btn gs-btn-sm gs-btn-outline gs-btn-danger" title="Ta bort">
-                                                    <i data-lucide="trash-2" style="width: 14px;"></i>
+                                                    <i data-lucide="trash-2" style="width: 14px; height: 14px;"></i>
                                                 </button>
                                             </div>
                                         </td>
