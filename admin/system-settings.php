@@ -6,6 +6,10 @@ require_admin();
 $db = getDB();
 $message = '';
 $messageType = 'info';
+$executedStatements = [];
+
+// Get active tab
+$activeTab = $_GET['tab'] ?? 'point-scales';
 
 // Handle create/update scale
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
@@ -105,7 +109,7 @@ $scales = $db->getAll("
     ORDER BY ps.is_default DESC, ps.name ASC
 ");
 
-$pageTitle = 'Poängmallar';
+$pageTitle = 'Systeminställningar';
 $pageType = 'admin';
 include __DIR__ . '/../includes/layout-header.php';
 ?>
@@ -114,13 +118,9 @@ include __DIR__ . '/../includes/layout-header.php';
     <div class="gs-container">
         <div class="gs-flex gs-justify-between gs-items-center gs-mb-lg">
             <h1 class="gs-h2">
-                <i data-lucide="award"></i>
-                Poängmallar (<?= count($scales) ?>)
+                <i data-lucide="settings"></i>
+                Systeminställningar
             </h1>
-            <button class="gs-btn gs-btn-primary" onclick="showCreateModal()">
-                <i data-lucide="plus"></i>
-                Ny poängmall
-            </button>
         </div>
 
         <?php if ($message): ?>
@@ -130,84 +130,164 @@ include __DIR__ . '/../includes/layout-header.php';
             </div>
         <?php endif; ?>
 
-        <!-- Scales Grid -->
-        <?php if (empty($scales)): ?>
-            <div class="gs-card gs-text-center" style="padding: 3rem;">
-                <i data-lucide="award" style="width: 64px; height: 64px; margin: 0 auto 1rem; opacity: 0.3;"></i>
-                <h3 class="gs-h4 gs-mb-sm">Inga poängmallar ännu</h3>
-                <p class="gs-text-secondary gs-mb-lg">
-                    Skapa din första poängmall för att börja räkna poäng i events och serier.
-                </p>
+        <!-- Tabs -->
+        <div class="gs-tabs gs-mb-lg">
+            <a href="?tab=point-scales" class="gs-tab <?= $activeTab === 'point-scales' ? 'active' : '' ?>">
+                <i data-lucide="award"></i>
+                Poängmallar
+            </a>
+            <a href="?tab=migrations" class="gs-tab <?= $activeTab === 'migrations' ? 'active' : '' ?>">
+                <i data-lucide="database"></i>
+                Migrationer
+            </a>
+        </div>
+
+        <!-- Point Scales Tab -->
+        <?php if ($activeTab === 'point-scales'): ?>
+            <div class="gs-flex gs-justify-end gs-mb-md">
                 <button class="gs-btn gs-btn-primary" onclick="showCreateModal()">
                     <i data-lucide="plus"></i>
-                    Skapa poängmall
+                    Ny poängmall
                 </button>
             </div>
-        <?php else: ?>
-            <div class="gs-grid gs-grid-cols-1 gs-md-grid-cols-2 gs-lg-grid-cols-3 gs-gap-lg">
-                <?php foreach ($scales as $scale): ?>
-                    <div class="gs-card">
-                        <div class="gs-card-header">
-                            <div class="gs-flex gs-justify-between gs-items-start">
-                                <div>
-                                    <h3 class="gs-h4 gs-text-primary gs-mb-xs">
-                                        <?= h($scale['name']) ?>
-                                        <?php if ($scale['is_default']): ?>
-                                            <span class="gs-badge gs-badge-warning gs-badge-sm">Standard</span>
+
+            <?php if (empty($scales)): ?>
+                <div class="gs-card gs-text-center" style="padding: 3rem;">
+                    <i data-lucide="award" style="width: 64px; height: 64px; margin: 0 auto 1rem; opacity: 0.3;"></i>
+                    <h3 class="gs-h4 gs-mb-sm">Inga poängmallar ännu</h3>
+                    <p class="gs-text-secondary gs-mb-lg">
+                        Skapa din första poängmall för att börja räkna poäng i events och serier.
+                    </p>
+                    <button class="gs-btn gs-btn-primary" onclick="showCreateModal()">
+                        <i data-lucide="plus"></i>
+                        Skapa poängmall
+                    </button>
+                </div>
+            <?php else: ?>
+                <div class="gs-grid gs-grid-cols-1 gs-md-grid-cols-2 gs-lg-grid-cols-3 gs-xl-grid-cols-4 gs-gap-lg">
+                    <?php foreach ($scales as $scale): ?>
+                        <div class="gs-card">
+                            <div class="gs-card-header">
+                                <div class="gs-flex gs-justify-between gs-items-start">
+                                    <div>
+                                        <h3 class="gs-h5 gs-text-primary gs-mb-xs">
+                                            <?= h($scale['name']) ?>
+                                            <?php if ($scale['is_default']): ?>
+                                                <span class="gs-badge gs-badge-warning gs-badge-sm">Standard</span>
+                                            <?php endif; ?>
+                                        </h3>
+                                        <?php if ($scale['discipline'] !== 'ALL'): ?>
+                                            <span class="gs-badge gs-badge-secondary gs-badge-sm">
+                                                <?= h($scale['discipline']) ?>
+                                            </span>
                                         <?php endif; ?>
-                                    </h3>
-                                    <?php if ($scale['discipline'] !== 'ALL'): ?>
-                                        <span class="gs-badge gs-badge-secondary gs-badge-sm">
-                                            <?= h($scale['discipline']) ?>
-                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="gs-card-content">
+                                <?php if ($scale['description']): ?>
+                                    <p class="gs-text-sm gs-text-secondary gs-mb-md">
+                                        <?= h($scale['description']) ?>
+                                    </p>
+                                <?php endif; ?>
+
+                                <!-- Stats -->
+                                <div class="gs-grid gs-grid-cols-3 gs-gap-sm gs-mb-md">
+                                    <div class="gs-text-center" style="padding: 0.5rem; background: var(--gs-background-secondary); border-radius: var(--gs-border-radius);">
+                                        <div class="gs-h4 gs-text-primary"><?= $scale['value_count'] ?></div>
+                                        <div class="gs-text-xs gs-text-secondary">Poäng</div>
+                                    </div>
+                                    <div class="gs-text-center" style="padding: 0.5rem; background: var(--gs-background-secondary); border-radius: var(--gs-border-radius);">
+                                        <div class="gs-h4 gs-text-success"><?= $scale['event_count'] ?></div>
+                                        <div class="gs-text-xs gs-text-secondary">Events</div>
+                                    </div>
+                                    <div class="gs-text-center" style="padding: 0.5rem; background: var(--gs-background-secondary); border-radius: var(--gs-border-radius);">
+                                        <div class="gs-h4 gs-text-accent"><?= $scale['series_count'] ?></div>
+                                        <div class="gs-text-xs gs-text-secondary">Serier</div>
+                                    </div>
+                                </div>
+
+                                <!-- Actions -->
+                                <div class="gs-flex gs-gap-xs">
+                                    <button class="gs-btn gs-btn-primary gs-btn-sm gs-flex-1"
+                                            onclick="editScaleValues(<?= $scale['id'] ?>, '<?= h(addslashes($scale['name'])) ?>')">
+                                        <i data-lucide="edit" style="width: 14px; height: 14px;"></i>
+                                        Editera
+                                    </button>
+                                    <?php if ($scale['event_count'] == 0 && $scale['series_count'] == 0): ?>
+                                        <button class="gs-btn gs-btn-danger gs-btn-sm"
+                                                onclick="deleteScale(<?= $scale['id'] ?>, '<?= h(addslashes($scale['name'])) ?>')">
+                                            <i data-lucide="trash" style="width: 14px; height: 14px;"></i>
+                                        </button>
                                     <?php endif; ?>
                                 </div>
                             </div>
                         </div>
-                        <div class="gs-card-content">
-                            <?php if ($scale['description']): ?>
-                                <p class="gs-text-sm gs-text-secondary gs-mb-md">
-                                    <?= h($scale['description']) ?>
-                                </p>
-                            <?php endif; ?>
+                    <?php endforeach; ?>
+                </div>
+            <?php endif; ?>
 
-                            <!-- Stats -->
-                            <div class="gs-grid gs-grid-cols-3 gs-gap-sm gs-mb-md">
-                                <div class="gs-text-center" style="padding: 0.5rem; background: var(--gs-background-secondary); border-radius: var(--gs-border-radius);">
-                                    <div class="gs-h4 gs-text-primary"><?= $scale['value_count'] ?></div>
-                                    <div class="gs-text-xs gs-text-secondary">Poäng</div>
-                                </div>
-                                <div class="gs-text-center" style="padding: 0.5rem; background: var(--gs-background-secondary); border-radius: var(--gs-border-radius);">
-                                    <div class="gs-h4 gs-text-success"><?= $scale['event_count'] ?></div>
-                                    <div class="gs-text-xs gs-text-secondary">Events</div>
-                                </div>
-                                <div class="gs-text-center" style="padding: 0.5rem; background: var(--gs-background-secondary); border-radius: var(--gs-border-radius);">
-                                    <div class="gs-h4 gs-text-accent"><?= $scale['series_count'] ?></div>
-                                    <div class="gs-text-xs gs-text-secondary">Serier</div>
-                                </div>
-                            </div>
+        <!-- Migrations Tab -->
+        <?php elseif ($activeTab === 'migrations'): ?>
+            <?php
+            // Get all migration files
+            $migrationFiles = glob(__DIR__ . '/../database/migrations/*.sql');
+            sort($migrationFiles);
 
-                            <!-- Actions -->
-                            <div class="gs-flex gs-gap-xs">
-                                <button class="gs-btn gs-btn-primary gs-btn-sm gs-flex-1"
-                                        onclick="editScaleValues(<?= $scale['id'] ?>, '<?= h($scale['name']) ?>')">
-                                    <i data-lucide="edit" style="width: 14px; height: 14px;"></i>
-                                    Editera poäng
-                                </button>
-                                <button class="gs-btn gs-btn-outline gs-btn-sm"
-                                        onclick="viewScale(<?= $scale['id'] ?>, '<?= h($scale['name']) ?>')">
-                                    <i data-lucide="eye" style="width: 14px; height: 14px;"></i>
-                                </button>
-                                <?php if ($scale['event_count'] == 0 && $scale['series_count'] == 0): ?>
-                                    <button class="gs-btn gs-btn-danger gs-btn-sm"
-                                            onclick="deleteScale(<?= $scale['id'] ?>, '<?= h($scale['name']) ?>')">
-                                        <i data-lucide="trash" style="width: 14px; height: 14px;"></i>
-                                    </button>
-                                <?php endif; ?>
-                            </div>
+            $migrations = [];
+            foreach ($migrationFiles as $file) {
+                $filename = basename($file);
+                $migrations[] = [
+                    'file' => $file,
+                    'filename' => $filename,
+                    'number' => preg_replace('/^(\d+)_.*\.sql$/', '$1', $filename),
+                    'name' => preg_replace('/^\d+_(.*)\.sql$/', '$1', $filename)
+                ];
+            }
+            ?>
+
+            <div class="gs-alert gs-alert-warning gs-mb-lg">
+                <i data-lucide="alert-triangle"></i>
+                <strong>Varning!</strong> Migrationer ändrar din databasstruktur. Se till att du har en backup innan du kör dem.
+            </div>
+
+            <div class="gs-card">
+                <div class="gs-card-header">
+                    <h2 class="gs-h4">Tillgängliga migrationer</h2>
+                </div>
+                <div class="gs-card-content">
+                    <?php if (empty($migrations)): ?>
+                        <p class="gs-text-secondary gs-text-center gs-py-lg">Inga migrationer hittades</p>
+                    <?php else: ?>
+                        <div class="gs-grid gs-grid-cols-1 gs-gap-md">
+                            <?php foreach ($migrations as $migration): ?>
+                                <div class="gs-card" style="background: var(--gs-background-secondary);">
+                                    <div class="gs-card-content">
+                                        <div class="gs-flex gs-justify-between gs-items-center">
+                                            <div>
+                                                <div class="gs-flex gs-items-center gs-gap-sm gs-mb-xs">
+                                                    <span class="gs-badge gs-badge-primary">
+                                                        #<?= h($migration['number']) ?>
+                                                    </span>
+                                                    <h3 class="gs-h5">
+                                                        <?= h(str_replace('_', ' ', ucfirst($migration['name']))) ?>
+                                                    </h3>
+                                                </div>
+                                                <p class="gs-text-sm gs-text-secondary">
+                                                    <?= h($migration['filename']) ?>
+                                                </p>
+                                            </div>
+                                            <a href="/admin/run-migrations.php" class="gs-btn gs-btn-primary gs-btn-sm">
+                                                <i data-lucide="play" style="width: 14px; height: 14px;"></i>
+                                                Kör migrationer
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
                         </div>
-                    </div>
-                <?php endforeach; ?>
+                    <?php endif; ?>
+                </div>
             </div>
         <?php endif; ?>
     </div>
@@ -339,10 +419,6 @@ include __DIR__ . '/../includes/layout-header.php';
 
         document.getElementById('editModal').style.display = 'flex';
         lucide.createIcons();
-    }
-
-    function viewScale(scaleId, scaleName) {
-        window.location.href = `/admin/point-scale-preview.php?id=${scaleId}`;
     }
 
     function deleteScale(scaleId, scaleName) {
