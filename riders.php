@@ -14,6 +14,7 @@ $db = getDB();
 // Load public display settings
 $publicSettings = require __DIR__ . '/config/public_settings.php';
 $displayMode = $publicSettings['public_riders_display'] ?? 'with_results';
+$minResults = intval($publicSettings['min_results_to_show'] ?? 1);
 
 // Build query based on settings
 if ($displayMode === 'all') {
@@ -40,7 +41,7 @@ if ($displayMode === 'all') {
         ORDER BY c.lastname, c.firstname
     ");
 } else {
-    // Show ONLY riders with results
+    // Show ONLY riders with results (minimum required results)
     $cyclists = $db->getAll("
         SELECT
             c.id,
@@ -60,9 +61,9 @@ if ($displayMode === 'all') {
         INNER JOIN results r ON c.id = r.cyclist_id
         WHERE c.active = 1
         GROUP BY c.id
-        HAVING total_races > 0
+        HAVING total_races >= ?
         ORDER BY c.lastname, c.firstname
-    ");
+    ", [$minResults]);
 }
 
 $total_count = count($cyclists);
