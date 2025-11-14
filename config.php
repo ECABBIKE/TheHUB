@@ -34,6 +34,8 @@ define('APP_NAME', 'TheHUB');
 define('DEFAULT_ADMIN_USERNAME', 'admin');
 define('DEFAULT_ADMIN_PASSWORD', 'admin');
 define('CSRF_TOKEN_NAME', 'csrf_token');
+define('MAX_UPLOAD_SIZE', 10 * 1024 * 1024); // 10MB
+define('EVENTS_PER_PAGE', 20);
 
 try {
     $pdo = new PDO(
