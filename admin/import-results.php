@@ -202,6 +202,8 @@ function importResultsFromCSV($filepath, $db, $importId = null) {
     // Cache for lookups
     $eventCache = [];
     $riderCache = [];
+    $categoryCache = [];
+    $clubCache = [];
 
     $lineNumber = 1;
 
@@ -348,25 +350,34 @@ function importResultsFromCSV($filepath, $db, $importId = null) {
             $clubId = null;
             if (!empty($data['club_name'])) {
                 $clubName = trim($data['club_name']);
-                $club = $db->getRow(
-                    "SELECT id FROM clubs WHERE name LIKE ? LIMIT 1",
-                    ['%' . $clubName . '%']
-                );
+                $clubKey = strtolower($clubName); // Use lowercase for cache key
 
-                if ($club) {
-                    $clubId = $club['id'];
+                if (isset($clubCache[$clubKey])) {
+                    $clubId = $clubCache[$clubKey];
                 } else {
-                    // Auto-create club
-                    $clubData = [
-                        'name' => $clubName,
-                        'active' => 1
-                    ];
-                    $clubId = $db->insert('clubs', $clubData);
-                    $matching_stats['clubs_created']++;
-                    error_log("Auto-created club: {$clubName}");
+                    // Fuzzy match with LIKE (case-insensitive)
+                    $club = $db->getRow(
+                        "SELECT id FROM clubs WHERE LOWER(name) LIKE LOWER(?) LIMIT 1",
+                        ['%' . $clubName . '%']
+                    );
 
-                    if ($importId && $clubId) {
-                        trackImportRecord($db, $importId, 'club', $clubId, 'created');
+                    if ($club) {
+                        $clubId = $club['id'];
+                        $clubCache[$clubKey] = $clubId;
+                    } else {
+                        // Auto-create club
+                        $clubData = [
+                            'name' => $clubName,
+                            'active' => 1
+                        ];
+                        $clubId = $db->insert('clubs', $clubData);
+                        $clubCache[$clubKey] = $clubId;
+                        $matching_stats['clubs_created']++;
+                        error_log("Auto-created club: {$clubName}");
+
+                        if ($importId && $clubId) {
+                            trackImportRecord($db, $importId, 'club', $clubId, 'created');
+                        }
                     }
                 }
             }
@@ -375,26 +386,35 @@ function importResultsFromCSV($filepath, $db, $importId = null) {
             $categoryId = null;
             if (!empty($data['category'])) {
                 $categoryName = trim($data['category']);
-                $category = $db->getRow(
-                    "SELECT id FROM categories WHERE name = ? OR short_name = ? LIMIT 1",
-                    [$categoryName, $categoryName]
-                );
+                $categoryKey = strtolower($categoryName); // Use lowercase for cache key
 
-                if ($category) {
-                    $categoryId = $category['id'];
+                if (isset($categoryCache[$categoryKey])) {
+                    $categoryId = $categoryCache[$categoryKey];
                 } else {
-                    // Auto-create category
-                    $categoryData = [
-                        'name' => $categoryName,
-                        'short_name' => substr($categoryName, 0, 20),
-                        'active' => 1
-                    ];
-                    $categoryId = $db->insert('categories', $categoryData);
-                    $matching_stats['categories_created']++;
-                    error_log("Auto-created category: {$categoryName}");
+                    // Case-insensitive match
+                    $category = $db->getRow(
+                        "SELECT id, name FROM categories WHERE LOWER(name) = LOWER(?) OR LOWER(short_name) = LOWER(?) LIMIT 1",
+                        [$categoryName, $categoryName]
+                    );
 
-                    if ($importId && $categoryId) {
-                        trackImportRecord($db, $importId, 'category', $categoryId, 'created');
+                    if ($category) {
+                        $categoryId = $category['id'];
+                        $categoryCache[$categoryKey] = $categoryId;
+                    } else {
+                        // Auto-create category
+                        $categoryData = [
+                            'name' => $categoryName,
+                            'short_name' => substr($categoryName, 0, 20),
+                            'active' => 1
+                        ];
+                        $categoryId = $db->insert('categories', $categoryData);
+                        $categoryCache[$categoryKey] = $categoryId;
+                        $matching_stats['categories_created']++;
+                        error_log("Auto-created category: {$categoryName}");
+
+                        if ($importId && $categoryId) {
+                            trackImportRecord($db, $importId, 'category', $categoryId, 'created');
+                        }
                     }
                 }
             }
