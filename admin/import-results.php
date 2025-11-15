@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/../includes/import-history.php';
+require_once __DIR__ . '/../includes/class-calculations.php';
 require_admin();
 
 $db = getDB();
@@ -560,11 +561,28 @@ function importResultsFromCSV($filepath, $db, $importId = null) {
                 }
             }
 
+            // Auto-assign class based on rider's age and gender
+            $classId = null;
+            $event = $db->getRow("SELECT date, discipline FROM events WHERE id = ?", [$eventId]);
+            $rider = $db->getRow("SELECT birth_year, gender FROM riders WHERE id = ?", [$riderId]);
+
+            if ($event && $rider && !empty($rider['birth_year']) && !empty($rider['gender'])) {
+                $eventDate = $event['date'] ?: date('Y-m-d');
+                $discipline = $event['discipline'] ?: 'ROAD';
+
+                $classId = determineRiderClass($db, $rider['birth_year'], $rider['gender'], $eventDate, $discipline);
+
+                if ($classId) {
+                    error_log("Assigned class ID {$classId} to rider {$riderId} for event {$eventId}");
+                }
+            }
+
             // Prepare result data
             $resultData = [
                 'event_id' => $eventId,
                 'cyclist_id' => $riderId,
                 'category_id' => $categoryId,
+                'class_id' => $classId,
                 'position' => !empty($data['position']) ? (int)$data['position'] : null,
                 'finish_time' => $finishTime,
                 'bib_number' => !empty($data['bib_number']) ? trim($data['bib_number']) : null,
