@@ -16,12 +16,20 @@
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
-require_once __DIR__ . '/../config.php';
-require_admin();
+// Start output buffering to catch any early errors
+ob_start();
 
-$db = getDB();
-$errors = [];
-$success = [];
+try {
+    require_once __DIR__ . '/../config.php';
+    require_admin();
+
+    $db = getDB();
+    $errors = [];
+    $success = [];
+} catch (Exception $e) {
+    ob_end_clean();
+    die("INITIALIZATION ERROR: " . $e->getMessage() . "<br><br>Stack trace:<br>" . nl2br($e->getTraceAsString()));
+}
 
 // Run each migration step
 $migrations = [
@@ -50,8 +58,29 @@ $migrations = [
 // Run migrations
 foreach ($migrations as $sql => $description) {
     try {
-        $db->query($sql);
-        $success[] = "✓ " . $description;
+        $result = $db->query($sql);
+        if ($result === false) {
+            // Query failed but didn't throw exception
+            // Try to get error from PDO
+            $pdo = $db->getConnection();
+            if ($pdo) {
+                $errorInfo = $pdo->errorInfo();
+                $errorMsg = $errorInfo[2] ?? 'Unknown database error';
+
+                // Check if it's a duplicate column error
+                if (strpos($errorMsg, 'Duplicate column name') !== false ||
+                    strpos($errorMsg, 'column') !== false ||
+                    $errorInfo[1] == 1060) {  // MySQL error code for duplicate column
+                    $success[] = "↷ " . $description . " (already exists)";
+                } else {
+                    $errors[] = "✗ " . $description . ": " . $errorMsg;
+                }
+            } else {
+                $errors[] = "✗ " . $description . ": Database connection is null";
+            }
+        } else {
+            $success[] = "✓ " . $description;
+        }
     } catch (Exception $e) {
         // Check if error is because column already exists
         if (strpos($e->getMessage(), 'Duplicate column name') !== false ||
@@ -72,8 +101,28 @@ $indexes = [
 
 foreach ($indexes as $sql => $description) {
     try {
-        $db->query($sql);
-        $success[] = "✓ " . $description;
+        $result = $db->query($sql);
+        if ($result === false) {
+            // Query failed but didn't throw exception
+            $pdo = $db->getConnection();
+            if ($pdo) {
+                $errorInfo = $pdo->errorInfo();
+                $errorMsg = $errorInfo[2] ?? 'Unknown database error';
+
+                // Check if it's a duplicate index error
+                if (strpos($errorMsg, 'Duplicate key name') !== false ||
+                    strpos($errorMsg, 'duplicate') !== false ||
+                    $errorInfo[1] == 1061) {  // MySQL error code for duplicate key
+                    $success[] = "↷ " . $description . " (already exists)";
+                } else {
+                    $errors[] = "✗ " . $description . ": " . $errorMsg;
+                }
+            } else {
+                $errors[] = "✗ " . $description . ": Database connection is null";
+            }
+        } else {
+            $success[] = "✓ " . $description;
+        }
     } catch (Exception $e) {
         // Check if error is because index already exists
         if (strpos($e->getMessage(), 'Duplicate key name') !== false ||
@@ -88,7 +137,33 @@ foreach ($indexes as $sql => $description) {
 
 $pageTitle = 'Migration: Extended Rider Fields';
 $pageType = 'admin';
-include __DIR__ . '/../includes/layout-header.php';
+
+// Debug: Log what happened
+error_log("Migration script completed. Success: " . count($success) . ", Errors: " . count($errors));
+
+// Flush buffer and start normal output
+ob_end_flush();
+
+try {
+    include __DIR__ . '/../includes/layout-header.php';
+} catch (Exception $e) {
+    // If header fails, show a simple HTML header instead
+    ?>
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title><?= htmlspecialchars($pageTitle) ?></title>
+        <style>
+            body { font-family: system-ui, sans-serif; max-width: 1200px; margin: 0 auto; padding: 20px; }
+            .error { color: #dc3545; background: #f8d7da; padding: 15px; border-radius: 5px; margin: 10px 0; }
+        </style>
+    </head>
+    <body>
+        <div class="error">
+            <strong>WARNING:</strong> Layout header failed to load: <?= htmlspecialchars($e->getMessage()) ?>
+        </div>
+    <?php
+}
 ?>
 
 <main class="gs-content-with-sidebar">
@@ -182,4 +257,10 @@ include __DIR__ . '/../includes/layout-header.php';
     </div>
 </main>
 
-<?php include __DIR__ . '/../includes/layout-footer.php'; ?>
+<?php
+try {
+    include __DIR__ . '/../includes/layout-footer.php';
+} catch (Exception $e) {
+    echo "<p style='color:red;'>ERROR loading footer: " . htmlspecialchars($e->getMessage()) . "</p>";
+}
+?>
