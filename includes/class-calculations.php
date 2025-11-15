@@ -35,17 +35,29 @@ function determineRiderClass($db, $birthYear, $gender, $eventDate, $discipline =
 
     // Normalize gender
     $gender = strtoupper($gender);
-    if (!in_array($gender, ['M', 'K'])) {
+    // Support both F (Female) and K (Kvinna) for backwards compatibility
+    if ($gender === 'K') {
+        $gender = 'F';
+    }
+    if (!in_array($gender, ['M', 'F'])) {
         return null;
     }
 
     // Find matching class
+    // Support comma-separated disciplines (e.g., "XC,ENDURO")
     $class = $db->getRow("
         SELECT id
         FROM classes
         WHERE active = 1
-          AND (gender = ? OR gender = 'ALL')
-          AND (discipline = ? OR discipline = 'ALL')
+          AND (gender = ? OR gender = 'ALL' OR gender IS NULL OR gender = '')
+          AND (
+              discipline IS NULL
+              OR discipline = ''
+              OR discipline = ?
+              OR discipline LIKE ?
+              OR discipline LIKE ?
+              OR discipline LIKE ?
+          )
           AND (min_age IS NULL OR min_age <= ?)
           AND (max_age IS NULL OR max_age >= ?)
         ORDER BY
@@ -53,7 +65,17 @@ function determineRiderClass($db, $birthYear, $gender, $eventDate, $discipline =
             CASE WHEN gender = ? THEN 0 ELSE 1 END,
             sort_order ASC
         LIMIT 1
-    ", [$gender, $discipline, $age, $age, $discipline, $gender]);
+    ", [
+        $gender,
+        $discipline,                    // Exact match
+        $discipline . ',%',            // Start of list: "XC,..."
+        '%,' . $discipline . ',%',     // Middle of list: "...,XC,..."
+        '%,' . $discipline,            // End of list: "...,XC"
+        $age,
+        $age,
+        $discipline,
+        $gender
+    ]);
 
     return $class ? (int)$class['id'] : null;
 }
@@ -356,8 +378,19 @@ function getActiveClasses($db, $discipline = null) {
     $params = [];
 
     if ($discipline && $discipline !== 'ALL') {
-        $where[] = "(discipline = ? OR discipline = 'ALL')";
-        $params[] = $discipline;
+        // Support comma-separated disciplines
+        $where[] = "(
+            discipline IS NULL
+            OR discipline = ''
+            OR discipline = ?
+            OR discipline LIKE ?
+            OR discipline LIKE ?
+            OR discipline LIKE ?
+        )";
+        $params[] = $discipline;                    // Exact match
+        $params[] = $discipline . ',%';            // Start of list
+        $params[] = '%,' . $discipline . ',%';     // Middle of list
+        $params[] = '%,' . $discipline;            // End of list
     }
 
     $whereClause = implode(' AND ', $where);

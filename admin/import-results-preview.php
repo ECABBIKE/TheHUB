@@ -26,6 +26,14 @@ $existingEvents = $db->getAll("
     LIMIT 200
 ");
 
+// Load all classes for dropdown
+$allClasses = $db->getAll("
+    SELECT id, display_name, name, discipline, gender
+    FROM classes
+    WHERE active = 1
+    ORDER BY sort_order ASC, display_name ASC
+");
+
 // Parse CSV if not already done
 if (!isset($_SESSION['import_preview_data'])) {
     try {
@@ -47,13 +55,14 @@ if (!isset($_SESSION['import_preview_data'])) {
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_import'])) {
     checkCsrf();
 
-    // Get event mapping from form
+    // Get event mapping and class override from form
     $eventMapping = $_POST['event_mapping'] ?? [];
+    $forceClassId = !empty($_POST['force_class_id']) ? (int)$_POST['force_class_id'] : null;
 
     try {
         require_once __DIR__ . '/import-results.php';
 
-        // Import with event mapping
+        // Import with event mapping and class override
         $importId = startImportHistory(
             $db,
             'results',
@@ -66,7 +75,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_import'])) {
             $_SESSION['import_preview_file'],
             $db,
             $importId,
-            $eventMapping
+            $eventMapping,
+            $forceClassId
         );
 
         $stats = $result['stats'];
@@ -404,6 +414,43 @@ include __DIR__ . '/../includes/layout-header.php';
                         </div>
                     </div>
                 <?php endforeach; ?>
+
+                <!-- Class Override Section -->
+                <div class="gs-card gs-mb-lg">
+                    <div class="gs-card-header">
+                        <h3 class="gs-h4 gs-text-primary">
+                            <i data-lucide="layers"></i>
+                            Klassval (Valfritt)
+                        </h3>
+                    </div>
+                    <div class="gs-card-content">
+                        <div class="gs-form-group">
+                            <label class="gs-label">
+                                <i data-lucide="filter"></i>
+                                Tvinga alla resultat till specifik klass
+                            </label>
+                            <select name="force_class_id" class="gs-input">
+                                <option value="">Auto-beräkna från ålder/kön eller använd klass från CSV</option>
+                                <optgroup label="Tillgängliga klasser">
+                                    <?php foreach ($allClasses as $class): ?>
+                                        <option value="<?= $class['id'] ?>">
+                                            <?= h($class['display_name']) ?>
+                                            <?php if ($class['discipline']): ?>
+                                                (<?= h($class['discipline']) ?>)
+                                            <?php endif; ?>
+                                            <?php if ($class['gender']): ?>
+                                                - <?= $class['gender'] === 'M' ? 'Herr' : 'Dam' ?>
+                                            <?php endif; ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </optgroup>
+                            </select>
+                            <small class="gs-text-sm gs-text-secondary">
+                                <strong>Tips:</strong> Lämna tomt för automatisk klassberäkning. Välj en klass endast om du vill tvinga alla resultat till samma klass.
+                            </small>
+                        </div>
+                    </div>
+                </div>
 
                 <div class="gs-flex gs-justify-end gs-gap-md gs-mt-xl">
                     <a href="?cancel=1" class="gs-btn gs-btn-outline">
