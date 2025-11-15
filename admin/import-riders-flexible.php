@@ -181,9 +181,9 @@ function mapColumns($header) {
 
         // License
         'category' => ['kategori', 'category', 'cat'],
-        'licensetype' => ['licenstyp', 'licensetype', 'licenstype', 'license_type'],
-        'licenseyear' => ['licensar', 'licenseyear', 'licensyear', 'license_year', 'licensår'],
-        'ucicode' => ['ucikod', 'ucicode', 'uci_code', 'uciid', 'uci_id', 'licens', 'license', 'licensnummer', 'licensenumber'],
+        'licensetype' => ['licenstyp', 'licensetype', 'licenstype'],
+        'licenseyear' => ['licensar', 'licenseyear'],
+        'ucicode' => ['ucikod', 'ucicode', 'uciid', 'licens', 'license', 'licensnummer', 'licensenumber'],
     ];
 
     foreach ($header as $index => $column) {

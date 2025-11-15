@@ -249,6 +249,43 @@ include __DIR__ . '/includes/layout-header.php';
     /* Main Content */
     .license-content {
         padding: 1.5rem;
+        display: grid;
+        grid-template-columns: 180px 1fr;
+        gap: 1.5rem;
+        align-items: start;
+    }
+
+    /* Photo Section */
+    .license-photo {
+        width: 100%;
+    }
+
+    .photo-frame {
+        width: 180px;
+        height: 240px;
+        border-radius: 8px;
+        overflow: hidden;
+        background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    .photo-frame img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .photo-placeholder {
+        font-size: 4rem;
+        opacity: 0.3;
+    }
+
+    /* Info Section */
+    .license-info {
+        flex: 1;
     }
 
     /* Name */
@@ -259,12 +296,12 @@ include __DIR__ . '/includes/layout-header.php';
         line-height: 1.2;
         text-transform: uppercase;
         margin-bottom: 0.75rem;
-        text-align: center;
+        text-align: left;
     }
 
     /* License ID */
     .license-id {
-        text-align: center;
+        text-align: left;
         font-size: clamp(0.875rem, 3vw, 1rem);
         color: #667eea;
         font-weight: 600;
@@ -372,13 +409,28 @@ include __DIR__ . '/includes/layout-header.php';
         color: #718096;
     }
 
+    @media (max-width: 768px) {
+        .license-content {
+            grid-template-columns: 1fr;
+            gap: 1rem;
+            padding: 1rem;
+        }
+
+        .photo-frame {
+            width: 150px;
+            height: 200px;
+            margin: 0 auto;
+        }
+
+        .rider-name,
+        .license-id {
+            text-align: center;
+        }
+    }
+
     @media (max-width: 480px) {
         .info-grid-compact {
             grid-template-columns: repeat(2, 1fr);
-        }
-
-        .license-content {
-            padding: 1rem;
         }
     }
 </style>
@@ -407,23 +459,36 @@ include __DIR__ . '/includes/layout-header.php';
 
                     <!-- Main Content -->
                     <div class="license-content">
-                        <!-- Rider Name -->
-                        <div class="rider-name">
-                            <?= h($rider['firstname']) ?> <?= h($rider['lastname']) ?>
+                        <!-- Photo Section (LEFT) -->
+                        <div class="license-photo">
+                            <div class="photo-frame">
+                                <?php if (!empty($rider['photo'])): ?>
+                                    <img src="<?= h($rider['photo']) ?>" alt="<?= h($rider['firstname'] . ' ' . $rider['lastname']) ?>">
+                                <?php else: ?>
+                                    <div class="photo-placeholder">👤</div>
+                                <?php endif; ?>
+                            </div>
                         </div>
 
-                        <!-- License ID -->
-                        <div class="license-id">
-                            <?php
-                            $isUciLicense = !empty($rider['license_number']) && strpos($rider['license_number'], 'SWE') !== 0;
-                            if ($isUciLicense): ?>
-                                UCI: <?= h($rider['license_number']) ?>
-                            <?php elseif (!empty($rider['license_number'])): ?>
-                                SWE-ID: <?= h($rider['license_number']) ?>
-                            <?php else: ?>
-                                ID: #<?= sprintf('%04d', $riderId) ?>
-                            <?php endif; ?>
-                        </div>
+                        <!-- Info Section (RIGHT) -->
+                        <div class="license-info">
+                            <!-- Rider Name -->
+                            <div class="rider-name">
+                                <?= h($rider['firstname']) ?> <?= h($rider['lastname']) ?>
+                            </div>
+
+                            <!-- License ID -->
+                            <div class="license-id">
+                                <?php
+                                $isUciLicense = !empty($rider['license_number']) && strpos($rider['license_number'], 'SWE') !== 0;
+                                if ($isUciLicense): ?>
+                                    UCI: <?= h($rider['license_number']) ?>
+                                <?php elseif (!empty($rider['license_number'])): ?>
+                                    SWE-ID: <?= h($rider['license_number']) ?>
+                                <?php else: ?>
+                                    ID: #<?= sprintf('%04d', $riderId) ?>
+                                <?php endif; ?>
+                            </div>
 
                         <!-- Compact Info Boxes -->
                         <div class="info-grid-compact">
@@ -538,7 +603,8 @@ include __DIR__ . '/includes/layout-header.php';
                                 <div class="class-name"><?= h($currentClassName) ?> (<?= h($currentClass) ?>)</div>
                             </div>
                         <?php endif; ?>
-                    </div>
+                        </div><!-- .license-info -->
+                    </div><!-- .license-content -->
 
                     <!-- Footer -->
                     <div class="license-footer">
