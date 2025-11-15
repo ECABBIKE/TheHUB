@@ -79,7 +79,8 @@ function importResultsFromCSV($filepath, $db, $importId = null) {
         'riders_not_found' => 0,
         'riders_created' => 0,
         'clubs_created' => 0,
-        'categories_created' => 0
+        'categories_created' => 0,
+        'classes_created' => 0
     ];
 
     $errors = [];
@@ -156,11 +157,14 @@ function importResultsFromCSV($filepath, $db, $importId = null) {
             'klubb' => 'club_name',
             'club_name' => 'club_name',
 
-            // Category
+            // Category (race category, not age/gender class)
             'category' => 'category',
             'kategori' => 'category',
-            'class' => 'category',
-            'klass' => 'category',
+
+            // Class (age/gender class)
+            'class' => 'class_name',
+            'klass' => 'class_name',
+            'classname' => 'class_name',
 
             // Discipline
             'discipline' => 'discipline',
@@ -205,6 +209,7 @@ function importResultsFromCSV($filepath, $db, $importId = null) {
     $riderCache = [];
     $categoryCache = [];
     $clubCache = [];
+    $classCache = [];
 
     $lineNumber = 1;
 
@@ -561,19 +566,60 @@ function importResultsFromCSV($filepath, $db, $importId = null) {
                 }
             }
 
-            // Auto-assign class based on rider's age and gender
+            // Find or create class
             $classId = null;
-            $event = $db->getRow("SELECT date, discipline FROM events WHERE id = ?", [$eventId]);
-            $rider = $db->getRow("SELECT birth_year, gender FROM riders WHERE id = ?", [$riderId]);
 
-            if ($event && $rider && !empty($rider['birth_year']) && !empty($rider['gender'])) {
-                $eventDate = $event['date'] ?: date('Y-m-d');
-                $discipline = $event['discipline'] ?: 'ROAD';
+            // First, check if class is specified in CSV
+            if (!empty($data['class_name'])) {
+                $className = trim($data['class_name']);
+                $classKey = strtolower($className);
 
-                $classId = determineRiderClass($db, $rider['birth_year'], $rider['gender'], $eventDate, $discipline);
+                if (isset($classCache[$classKey])) {
+                    $classId = $classCache[$classKey];
+                } else {
+                    // Try to find existing class by name or display_name
+                    $class = $db->getRow(
+                        "SELECT id FROM classes WHERE LOWER(name) = LOWER(?) OR LOWER(display_name) = LOWER(?) LIMIT 1",
+                        [$className, $className]
+                    );
 
-                if ($classId) {
-                    error_log("Assigned class ID {$classId} to rider {$riderId} for event {$eventId}");
+                    if ($class) {
+                        $classId = $class['id'];
+                        $classCache[$classKey] = $classId;
+                    } else {
+                        // Auto-create class if it doesn't exist
+                        $classData = [
+                            'name' => $className,
+                            'display_name' => $className,
+                            'active' => 1,
+                            'sort_order' => 999 // Put new classes at the end
+                        ];
+                        $classId = $db->insert('classes', $classData);
+                        $classCache[$classKey] = $classId;
+                        $matching_stats['classes_created']++;
+                        error_log("Auto-created class: {$className}");
+
+                        if ($importId && $classId) {
+                            trackImportRecord($db, $importId, 'class', $classId, 'created');
+                        }
+                    }
+                }
+            }
+
+            // If no class specified in CSV, auto-assign based on rider's age and gender
+            if (!$classId) {
+                $event = $db->getRow("SELECT date, discipline FROM events WHERE id = ?", [$eventId]);
+                $rider = $db->getRow("SELECT birth_year, gender FROM riders WHERE id = ?", [$riderId]);
+
+                if ($event && $rider && !empty($rider['birth_year']) && !empty($rider['gender'])) {
+                    $eventDate = $event['date'] ?: date('Y-m-d');
+                    $discipline = $event['discipline'] ?: 'ROAD';
+
+                    $classId = determineRiderClass($db, $rider['birth_year'], $rider['gender'], $eventDate, $discipline);
+
+                    if ($classId) {
+                        error_log("Auto-assigned class ID {$classId} to rider {$riderId} for event {$eventId}");
+                    }
                 }
             }
 
@@ -755,7 +801,7 @@ include __DIR__ . '/../includes/layout-header.php';
                                         <div class="gs-h3 gs-text-warning"><?= $matching_stats['riders_created'] ?? 0 ?></div>
                                     </div>
                                 </div>
-                                <div class="gs-grid gs-grid-cols-2 gs-md-grid-cols-2 gs-gap-md">
+                                <div class="gs-grid gs-grid-cols-2 gs-md-grid-cols-3 gs-gap-md">
                                     <div style="padding: var(--gs-space-md); background: var(--gs-background-secondary); border-radius: var(--gs-border-radius);">
                                         <div class="gs-text-sm gs-text-secondary">Nya klubbar skapade</div>
                                         <div class="gs-h3 gs-text-accent"><?= $matching_stats['clubs_created'] ?? 0 ?></div>
@@ -763,6 +809,10 @@ include __DIR__ . '/../includes/layout-header.php';
                                     <div style="padding: var(--gs-space-md); background: var(--gs-background-secondary); border-radius: var(--gs-border-radius);">
                                         <div class="gs-text-sm gs-text-secondary">Nya kategorier skapade</div>
                                         <div class="gs-h3 gs-text-accent"><?= $matching_stats['categories_created'] ?? 0 ?></div>
+                                    </div>
+                                    <div style="padding: var(--gs-space-md); background: var(--gs-background-secondary); border-radius: var(--gs-border-radius);">
+                                        <div class="gs-text-sm gs-text-secondary">Nya klasser skapade</div>
+                                        <div class="gs-h3 gs-text-accent"><?= $matching_stats['classes_created'] ?? 0 ?></div>
                                     </div>
                                 </div>
                             </div>
@@ -957,6 +1007,24 @@ include __DIR__ . '/../includes/layout-header.php';
                                     <td>100</td>
                                 </tr>
                                 <tr>
+                                    <td><code>class</code></td>
+                                    <td><span class="gs-badge gs-badge-secondary">Nej</span></td>
+                                    <td>Klass (t.ex. "Elite Herr", "Junior Dam"). Skapas automatiskt om den inte finns. Om inte angiven, beräknas automatiskt från ålder/kön.</td>
+                                    <td>Elite Herr</td>
+                                </tr>
+                                <tr>
+                                    <td><code>category</code></td>
+                                    <td><span class="gs-badge gs-badge-secondary">Nej</span></td>
+                                    <td>Kategori/heat (t.ex. "Final", "Kval 1")</td>
+                                    <td>Final</td>
+                                </tr>
+                                <tr>
+                                    <td><code>club_name</code></td>
+                                    <td><span class="gs-badge gs-badge-secondary">Nej</span></td>
+                                    <td>Klubb/team (skapas automatiskt om den inte finns)</td>
+                                    <td>Velodrom CC</td>
+                                </tr>
+                                <tr>
                                     <td><code>notes</code></td>
                                     <td><span class="gs-badge gs-badge-secondary">Nej</span></td>
                                     <td>Anteckningar</td>
@@ -982,6 +1050,8 @@ include __DIR__ . '/../includes/layout-header.php';
                                     <li>Om inte hittad: Skapas automatiskt med SWE-ID</li>
                                 </ol>
                             </li>
+                            <li><strong>Klasser:</strong> Om "class" kolumn finns i CSV, används den klassen (skapas automatiskt om den inte finns). Om inte angiven, beräknas klass automatiskt från ålder/kön.</li>
+                            <li><strong>Klubbar & Kategorier:</strong> Skapas automatiskt om de inte finns</li>
                             <li>Dubbletter upptäcks via event_id + cyclist_id</li>
                             <li>Befintliga resultat uppdateras automatiskt</li>
                         </ul>
