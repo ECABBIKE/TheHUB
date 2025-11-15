@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/../includes/import-history.php';
+require_once __DIR__ . '/../includes/class-calculations.php';
 require_admin();
 
 $db = getDB();
@@ -183,6 +184,7 @@ function parseResultsCSVForPreview($filepath) {
  * Group results by event
  */
 function groupResultsByEvent($results) {
+    global $db;
     $events = [];
 
     foreach ($results as $result) {
@@ -195,7 +197,8 @@ function groupResultsByEvent($results) {
                 'participant_count' => 0,
                 'categories' => [],
                 'clubs' => [],
-                'riders' => []
+                'riders' => [],
+                'riders_data' => [] // For class distribution
             ];
         }
 
@@ -211,11 +214,30 @@ function groupResultsByEvent($results) {
             $events[$eventKey]['clubs'][] = $result['club_name'];
         }
 
-        // Track riders
+        // Track riders with full data for class calculation
         $riderName = ($result['firstname'] ?? '') . ' ' . ($result['lastname'] ?? '');
-        if (!in_array($riderName, $events[$eventKey]['riders'])) {
-            $events[$eventKey]['riders'][] = trim($riderName);
+        $events[$eventKey]['riders'][] = trim($riderName);
+
+        // Store rider data for class distribution
+        if (!empty($result['firstname']) && !empty($result['lastname'])) {
+            $events[$eventKey]['riders_data'][] = [
+                'firstname' => $result['firstname'],
+                'lastname' => $result['lastname'],
+                'birth_year' => $result['birth_year'] ?? null,
+                'gender' => isset($result['gender']) ? strtoupper($result['gender']) : null
+            ];
         }
+    }
+
+    // Calculate class distribution for each event
+    foreach ($events as $eventKey => &$eventData) {
+        $eventDate = $eventData['date'] ?: date('Y-m-d');
+        $eventData['class_distribution'] = getClassDistributionPreview(
+            $eventData['riders_data'],
+            $eventDate,
+            'ROAD',
+            $db
+        );
     }
 
     return $events;
@@ -348,6 +370,35 @@ include __DIR__ . '/../includes/layout-header.php';
                                             </span>
                                         <?php endif; ?>
                                     </div>
+                                </div>
+                            <?php endif; ?>
+
+                            <!-- Class Distribution -->
+                            <?php if (!empty($eventData['class_distribution'])): ?>
+                                <?php $classDist = $eventData['class_distribution']; ?>
+                                <div class="gs-mt-lg" style="padding-top: 1rem; border-top: 1px solid var(--gs-border);">
+                                    <strong class="gs-text-sm">
+                                        <i data-lucide="users" style="width: 14px; height: 14px;"></i>
+                                        Klassfördelning (förhandsvisning)
+                                    </strong>
+                                    <?php if (!empty($classDist['distribution'])): ?>
+                                        <div class="gs-grid gs-grid-cols-2 gs-md-grid-cols-4 gs-gap-sm gs-mt-sm">
+                                            <?php foreach ($classDist['distribution'] as $classData): ?>
+                                                <div class="gs-card" style="background: var(--gs-background-secondary); padding: 0.5rem;">
+                                                    <div class="gs-text-xs gs-text-secondary"><?= h($classData['class_name']) ?></div>
+                                                    <div class="gs-h4 gs-text-primary"><?= $classData['count'] ?></div>
+                                                </div>
+                                            <?php endforeach; ?>
+                                        </div>
+                                    <?php endif; ?>
+                                    <?php if ($classDist['unassigned'] > 0): ?>
+                                        <div class="gs-alert gs-alert-warning gs-mt-sm" style="padding: 0.5rem;">
+                                            <small>
+                                                <i data-lucide="alert-triangle" style="width: 14px; height: 14px;"></i>
+                                                <?= $classDist['unassigned'] ?> deltagare saknar ålder/kön och kan inte tilldelas klass
+                                            </small>
+                                        </div>
+                                    <?php endif; ?>
                                 </div>
                             <?php endif; ?>
                         </div>
