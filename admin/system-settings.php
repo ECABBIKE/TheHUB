@@ -335,6 +335,11 @@ include __DIR__ . '/../includes/layout-header.php';
                 </button>
             </div>
 
+            <div class="gs-alert gs-alert-info gs-mb-lg">
+                <i data-lucide="info"></i>
+                <strong>Tips:</strong> Alla klasser (inklusive förinstallerade) kan redigeras helt fritt. Klicka på "Editera" för att ändra namn, åldersintervall, disciplin eller andra inställningar.
+            </div>
+
             <?php if (empty($classes)): ?>
                 <div class="gs-card gs-text-center" style="padding: 3rem;">
                     <i data-lucide="users" style="width: 64px; height: 64px; margin: 0 auto 1rem; opacity: 0.3;"></i>
@@ -413,13 +418,24 @@ include __DIR__ . '/../includes/layout-header.php';
                                         <td>
                                             <div class="gs-flex gs-gap-xs">
                                                 <button class="gs-btn gs-btn-primary gs-btn-sm"
-                                                        onclick="editClass(<?= htmlspecialchars(json_encode($class)) ?>)">
+                                                        onclick="editClass(<?= htmlspecialchars(json_encode($class)) ?>)"
+                                                        title="Redigera klass">
                                                     <i data-lucide="edit" style="width: 14px; height: 14px;"></i>
+                                                </button>
+                                                <button class="gs-btn gs-btn-secondary gs-btn-sm"
+                                                        onclick="duplicateClass(<?= htmlspecialchars(json_encode($class)) ?>)"
+                                                        title="Duplicera klass">
+                                                    <i data-lucide="copy" style="width: 14px; height: 14px;"></i>
                                                 </button>
                                                 <?php if ($class['result_count'] == 0): ?>
                                                     <button class="gs-btn gs-btn-danger gs-btn-sm"
-                                                            onclick="deleteClass(<?= $class['id'] ?>, '<?= h(addslashes($class['name'])) ?>')">
+                                                            onclick="deleteClass(<?= $class['id'] ?>, '<?= h(addslashes($class['name'])) ?>')"
+                                                            title="Radera klass">
                                                         <i data-lucide="trash" style="width: 14px; height: 14px;"></i>
+                                                    </button>
+                                                <?php else: ?>
+                                                    <button class="gs-btn gs-btn-sm gs-btn-ghost" disabled title="Kan inte raderas - används av <?= $class['result_count'] ?> resultat">
+                                                        <i data-lucide="lock" style="width: 14px; height: 14px;"></i>
                                                     </button>
                                                 <?php endif; ?>
                                             </div>
@@ -837,6 +853,91 @@ include __DIR__ . '/../includes/layout-header.php';
             document.body.appendChild(form);
             form.submit();
         }
+    }
+
+    function duplicateClass(classData) {
+        // Create a copy with modified name
+        const modal = document.createElement('div');
+        modal.className = 'gs-modal';
+        modal.innerHTML = `
+            <div class="gs-modal-backdrop" onclick="this.parentElement.remove()"></div>
+            <div class="gs-modal-content" style="max-width: 600px;">
+                <div class="gs-modal-header">
+                    <h3 class="gs-h4">Duplicera klass: ${classData.name}</h3>
+                    <button class="gs-btn gs-btn-sm gs-btn-ghost" onclick="this.closest('.gs-modal').remove()">
+                        <i data-lucide="x"></i>
+                    </button>
+                </div>
+                <form method="POST">
+                    <?= csrf_field() ?>
+                    <input type="hidden" name="action" value="create_class">
+                    <div class="gs-modal-body">
+                        <div class="gs-alert gs-alert-info gs-mb-md">
+                            <i data-lucide="info"></i>
+                            Skapar en kopia av "${classData.display_name}". Ändra namn och inställningar nedan.
+                        </div>
+                        <div class="gs-form-group">
+                            <label class="gs-label">Kort namn *</label>
+                            <input type="text" name="name" class="gs-input" value="${classData.name}-kopia" required>
+                        </div>
+                        <div class="gs-form-group">
+                            <label class="gs-label">Visningsnamn *</label>
+                            <input type="text" name="display_name" class="gs-input" value="${classData.display_name} (kopia)" required>
+                        </div>
+                        <div class="gs-grid gs-grid-cols-2 gs-gap-md">
+                            <div class="gs-form-group">
+                                <label class="gs-label">Kön</label>
+                                <select name="gender" class="gs-input">
+                                    <option value="M" ${classData.gender === 'M' ? 'selected' : ''}>M (Män)</option>
+                                    <option value="K" ${classData.gender === 'K' ? 'selected' : ''}>K (Kvinnor)</option>
+                                    <option value="ALL" ${classData.gender === 'ALL' ? 'selected' : ''}>ALL (Alla)</option>
+                                </select>
+                            </div>
+                            <div class="gs-form-group">
+                                <label class="gs-label">Disciplin</label>
+                                <select name="discipline" class="gs-input">
+                                    <option value="ALL" ${classData.discipline === 'ALL' ? 'selected' : ''}>Alla</option>
+                                    <option value="ROAD" ${classData.discipline === 'ROAD' ? 'selected' : ''}>Landsväg</option>
+                                    <option value="MTB" ${classData.discipline === 'MTB' ? 'selected' : ''}>MTB</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="gs-grid gs-grid-cols-2 gs-gap-md">
+                            <div class="gs-form-group">
+                                <label class="gs-label">Min ålder</label>
+                                <input type="number" name="min_age" class="gs-input" value="${classData.min_age || ''}" min="0">
+                            </div>
+                            <div class="gs-form-group">
+                                <label class="gs-label">Max ålder</label>
+                                <input type="number" name="max_age" class="gs-input" value="${classData.max_age || ''}" min="0">
+                            </div>
+                        </div>
+                        <div class="gs-form-group">
+                            <label class="gs-label">Poängmall (valfri)</label>
+                            <select name="point_scale_id" class="gs-input">
+                                <option value="">Standard</option>
+                                <?php foreach ($scales as $scale): ?>
+                                    <option value="<?= $scale['id'] ?>" ${classData.point_scale_id == <?= $scale['id'] ?> ? 'selected' : ''}>
+                                        <?= h($scale['name']) ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="gs-form-group">
+                            <label class="gs-label">Sorteringsordning</label>
+                            <input type="number" name="sort_order" class="gs-input" value="${classData.sort_order + 5}" step="10">
+                            <small class="gs-text-sm gs-text-secondary">Standard satt till ${classData.sort_order + 5} (efter originalet)</small>
+                        </div>
+                    </div>
+                    <div class="gs-modal-footer">
+                        <button type="button" class="gs-btn gs-btn-outline" onclick="this.closest('.gs-modal').remove()">Avbryt</button>
+                        <button type="submit" class="gs-btn gs-btn-primary">Skapa kopia</button>
+                    </div>
+                </form>
+            </div>
+        `;
+        document.body.appendChild(modal);
+        lucide.createIcons();
     }
 </script>
 
