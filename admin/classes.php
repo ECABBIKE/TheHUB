@@ -27,11 +27,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $message = 'Visningsnamn är obligatoriskt';
             $messageType = 'error';
         } else {
+            // Handle multiple disciplines (checkboxes)
+            $disciplines = $_POST['disciplines'] ?? [];
+            $disciplineString = is_array($disciplines) ? implode(',', $disciplines) : '';
+
             // Prepare class data
             $classData = [
                 'name' => $name,
                 'display_name' => $displayName,
-                'discipline' => trim($_POST['discipline'] ?? ''),
+                'discipline' => $disciplineString,
                 'gender' => trim($_POST['gender'] ?? ''),
                 'min_age' => !empty($_POST['min_age']) ? (int)$_POST['min_age'] : null,
                 'max_age' => !empty($_POST['max_age']) ? (int)$_POST['max_age'] : null,
@@ -89,8 +93,12 @@ if ($search) {
 }
 
 if ($disciplineFilter) {
-    $where[] = "discipline = ?";
-    $params[] = $disciplineFilter;
+    // Support filtering by discipline when stored as comma-separated list
+    $where[] = "(discipline = ? OR discipline LIKE ? OR discipline LIKE ? OR discipline LIKE ?)";
+    $params[] = $disciplineFilter; // Exact match
+    $params[] = $disciplineFilter . ',%'; // Start of list
+    $params[] = '%,' . $disciplineFilter . ',%'; // Middle of list
+    $params[] = '%,' . $disciplineFilter; // End of list
 }
 
 $whereClause = $where ? 'WHERE ' . implode(' AND ', $where) : '';
@@ -131,10 +139,16 @@ include __DIR__ . '/../includes/layout-header.php';
                     <i data-lucide="layers"></i>
                     Klasser
                 </h1>
-                <button type="button" class="gs-btn gs-btn-primary" onclick="openClassModal()">
-                    <i data-lucide="plus"></i>
-                    Ny Klass
-                </button>
+                <div class="gs-flex gs-gap-sm">
+                    <a href="/admin/import-classes.php" class="gs-btn gs-btn-outline">
+                        <i data-lucide="upload"></i>
+                        Importera CSV
+                    </a>
+                    <button type="button" class="gs-btn gs-btn-primary" onclick="openClassModal()">
+                        <i data-lucide="plus"></i>
+                        Ny Klass
+                    </button>
+                </div>
             </div>
 
             <!-- Messages -->
@@ -228,11 +242,21 @@ include __DIR__ . '/../includes/layout-header.php';
                                             <td><?= h($class['name']) ?></td>
                                             <td>
                                                 <?php if ($class['discipline']): ?>
-                                                    <span class="gs-badge gs-badge-secondary">
-                                                        <?= h($class['discipline']) ?>
-                                                    </span>
+                                                    <?php
+                                                    $disciplines = explode(',', $class['discipline']);
+                                                    foreach ($disciplines as $disc):
+                                                        $disc = trim($disc);
+                                                        if ($disc):
+                                                    ?>
+                                                        <span class="gs-badge gs-badge-secondary" style="margin-right: 4px;">
+                                                            <?= h($disc) ?>
+                                                        </span>
+                                                    <?php
+                                                        endif;
+                                                    endforeach;
+                                                    ?>
                                                 <?php else: ?>
-                                                    <span class="gs-text-secondary">–</span>
+                                                    <span class="gs-badge gs-badge-info">Alla</span>
                                                 <?php endif; ?>
                                             </td>
                                             <td>
@@ -340,20 +364,44 @@ include __DIR__ . '/../includes/layout-header.php';
                                     <small class="gs-text-secondary">Internt namn (får inte innehålla mellanslag)</small>
                                 </div>
 
-                                <!-- Discipline -->
+                                <!-- Disciplines (Multiple) -->
                                 <div class="gs-form-group">
-                                    <label class="gs-label">Disciplin</label>
-                                    <select name="discipline" id="discipline" class="gs-input">
-                                        <option value="">Välj disciplin (valfritt)</option>
-                                        <option value="XC">XC (Cross-Country)</option>
-                                        <option value="DH">DH (Downhill)</option>
-                                        <option value="ENDURO">Enduro</option>
-                                        <option value="ROAD">Road (Landsväg)</option>
-                                        <option value="TRACK">Track (Bana)</option>
-                                        <option value="BMX">BMX</option>
-                                        <option value="CX">CX (Cyclocross)</option>
-                                        <option value="GRAVEL">Gravel</option>
-                                    </select>
+                                    <label class="gs-label">Discipliner</label>
+                                    <p class="gs-text-secondary gs-text-sm gs-mb-sm">Välj vilka discipliner denna klass gäller för (tom = alla)</p>
+                                    <div class="gs-grid gs-grid-cols-2 gs-gap-sm">
+                                        <label class="gs-checkbox-label">
+                                            <input type="checkbox" name="disciplines[]" value="XC" class="discipline-checkbox">
+                                            <span>XC (Cross-Country)</span>
+                                        </label>
+                                        <label class="gs-checkbox-label">
+                                            <input type="checkbox" name="disciplines[]" value="DH" class="discipline-checkbox">
+                                            <span>DH (Downhill)</span>
+                                        </label>
+                                        <label class="gs-checkbox-label">
+                                            <input type="checkbox" name="disciplines[]" value="ENDURO" class="discipline-checkbox">
+                                            <span>Enduro</span>
+                                        </label>
+                                        <label class="gs-checkbox-label">
+                                            <input type="checkbox" name="disciplines[]" value="ROAD" class="discipline-checkbox">
+                                            <span>Road (Landsväg)</span>
+                                        </label>
+                                        <label class="gs-checkbox-label">
+                                            <input type="checkbox" name="disciplines[]" value="TRACK" class="discipline-checkbox">
+                                            <span>Track (Bana)</span>
+                                        </label>
+                                        <label class="gs-checkbox-label">
+                                            <input type="checkbox" name="disciplines[]" value="BMX" class="discipline-checkbox">
+                                            <span>BMX</span>
+                                        </label>
+                                        <label class="gs-checkbox-label">
+                                            <input type="checkbox" name="disciplines[]" value="CX" class="discipline-checkbox">
+                                            <span>CX (Cyclocross)</span>
+                                        </label>
+                                        <label class="gs-checkbox-label">
+                                            <input type="checkbox" name="disciplines[]" value="GRAVEL" class="discipline-checkbox">
+                                            <span>Gravel</span>
+                                        </label>
+                                    </div>
                                 </div>
 
                                 <!-- Gender and Age -->
@@ -434,6 +482,9 @@ function openClassModal() {
     document.getElementById('classForm').reset();
     document.getElementById('classId').value = '';
     document.getElementById('active').checked = true;
+
+    // Uncheck all discipline checkboxes
+    document.querySelectorAll('.discipline-checkbox').forEach(cb => cb.checked = false);
 }
 
 function closeClassModal() {
@@ -448,12 +499,24 @@ function editClass(classData) {
     document.getElementById('classId').value = classData.id;
     document.getElementById('name').value = classData.name;
     document.getElementById('displayName').value = classData.display_name;
-    document.getElementById('discipline').value = classData.discipline || '';
     document.getElementById('gender').value = classData.gender || '';
     document.getElementById('minAge').value = classData.min_age || '';
     document.getElementById('maxAge').value = classData.max_age || '';
     document.getElementById('sortOrder').value = classData.sort_order || 999;
     document.getElementById('active').checked = classData.active == 1;
+
+    // Uncheck all disciplines first
+    document.querySelectorAll('.discipline-checkbox').forEach(cb => cb.checked = false);
+
+    // Check the disciplines for this class (comma-separated string)
+    if (classData.discipline) {
+        const disciplines = classData.discipline.split(',').map(d => d.trim());
+        document.querySelectorAll('.discipline-checkbox').forEach(cb => {
+            if (disciplines.includes(cb.value)) {
+                cb.checked = true;
+            }
+        });
+    }
 }
 
 // Close modal on escape key
