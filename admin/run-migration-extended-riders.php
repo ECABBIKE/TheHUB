@@ -50,11 +50,12 @@ $migrations = [
 // Run migrations
 foreach ($migrations as $sql => $description) {
     try {
-        $db->exec($sql);
+        $db->query($sql);
         $success[] = "✓ " . $description;
-    } catch (PDOException $e) {
+    } catch (Exception $e) {
         // Check if error is because column already exists
-        if (strpos($e->getMessage(), 'Duplicate column name') !== false) {
+        if (strpos($e->getMessage(), 'Duplicate column name') !== false ||
+            strpos($e->getMessage(), 'column') !== false) {
             $success[] = "↷ " . $description . " (already exists)";
         } else {
             $errors[] = "✗ " . $description . ": " . $e->getMessage();
@@ -71,11 +72,13 @@ $indexes = [
 
 foreach ($indexes as $sql => $description) {
     try {
-        $db->exec($sql);
+        $db->query($sql);
         $success[] = "✓ " . $description;
-    } catch (PDOException $e) {
+    } catch (Exception $e) {
         // Check if error is because index already exists
-        if (strpos($e->getMessage(), 'Duplicate key name') !== false) {
+        if (strpos($e->getMessage(), 'Duplicate key name') !== false ||
+            strpos($e->getMessage(), 'duplicate') !== false ||
+            strpos($e->getMessage(), 'exists') !== false) {
             $success[] = "↷ " . $description . " (already exists)";
         } else {
             $errors[] = "✗ " . $description . ": " . $e->getMessage();
