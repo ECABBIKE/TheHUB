@@ -98,49 +98,73 @@ foreach ($results as $result) {
 // Get recent results (last 5)
 $recentResults = array_slice($results, 0, 5);
 
-// Get series standings for this rider
-// First get the basic series data
-$riderSeriesData = $db->getAll("
-    SELECT
-        s.id as series_id,
-        s.name as series_name,
-        s.year,
-        SUM(r.points) as total_points,
-        COUNT(DISTINCT r.event_id) as events_count
-    FROM results r
-    JOIN events e ON r.event_id = e.id
-    JOIN series s ON e.series_id = s.id
-    WHERE r.cyclist_id = ? AND s.active = 1
-    GROUP BY s.id
-    ORDER BY s.year DESC, total_points DESC
-", [$riderId]);
-
-// Calculate position for each series
+// Get series standings for this rider - CLASS BASED
 $seriesStandings = [];
-foreach ($riderSeriesData as $seriesData) {
-    // Get all riders' total points for this series
-    $allRidersPoints = $db->getAll("
-        SELECT
-            r.cyclist_id,
-            SUM(r.points) as total_points
-        FROM results r
-        JOIN events e ON r.event_id = e.id
-        WHERE e.series_id = ?
-        GROUP BY r.cyclist_id
-        ORDER BY total_points DESC
-    ", [$seriesData['series_id']]);
 
-    // Find position
-    $position = 1;
-    foreach ($allRidersPoints as $riderPoints) {
-        if ($riderPoints['cyclist_id'] == $riderId) {
-            break;
+// Get rider's current class
+if ($rider['birth_year'] && $rider['gender']) {
+    $riderClassId = determineRiderClass($db, $rider['birth_year'], $rider['gender'], date('Y-m-d'));
+
+    if ($riderClassId) {
+        $riderClass = $db->getRow("SELECT name, display_name FROM classes WHERE id = ?", [$riderClassId]);
+
+        // Get series data for this rider
+        $riderSeriesData = $db->getAll("
+            SELECT
+                s.id as series_id,
+                s.name as series_name,
+                s.year,
+                SUM(r.points) as total_points,
+                COUNT(DISTINCT r.event_id) as events_count
+            FROM results r
+            JOIN events e ON r.event_id = e.id
+            JOIN series s ON e.series_id = s.id
+            WHERE r.cyclist_id = ? AND s.active = 1
+            GROUP BY s.id
+            ORDER BY s.year DESC, total_points DESC
+        ", [$riderId]);
+
+        // Calculate class-based position for each series
+        foreach ($riderSeriesData as $seriesData) {
+            // Get all riders in the same class for this series
+            $classRidersPoints = $db->getAll("
+                SELECT
+                    riders.id as cyclist_id,
+                    riders.birth_year,
+                    riders.gender,
+                    SUM(results.points) as total_points
+                FROM results
+                JOIN events ON results.event_id = events.id
+                JOIN riders ON results.cyclist_id = riders.id
+                WHERE events.series_id = ?
+                GROUP BY riders.id
+                ORDER BY total_points DESC
+            ", [$seriesData['series_id']]);
+
+            // Filter to only riders in the same class and calculate position
+            $position = 1;
+            $classCount = 0;
+            $riderPosition = null;
+
+            foreach ($classRidersPoints as $riderPoints) {
+                // Check if this rider is in the same class
+                $otherRiderClassId = determineRiderClass($db, $riderPoints['birth_year'], $riderPoints['gender'], date('Y-m-d'));
+
+                if ($otherRiderClassId == $riderClassId) {
+                    $classCount++;
+                    if ($riderPoints['cyclist_id'] == $riderId) {
+                        $riderPosition = $position;
+                    }
+                    $position++;
+                }
+            }
+
+            $seriesData['position'] = $riderPosition ?? '?';
+            $seriesData['class_total'] = $classCount;
+            $seriesData['class_name'] = $riderClass['display_name'];
+            $seriesStandings[] = $seriesData;
         }
-        $position++;
     }
-
-    $seriesData['position'] = $position;
-    $seriesStandings[] = $seriesData;
 }
 
 // Get results by year
@@ -485,7 +509,13 @@ include __DIR__ . '/includes/layout-header.php';
                                 <div class="info-field" style="grid-column: span 2;">
                                     <div class="info-label">Klubb</div>
                                     <div class="info-value">
-                                        <?= $rider['club_name'] ? h($rider['club_name']) : 'Klubbtillhörighet saknas' ?>
+                                        <?php if ($rider['club_name'] && $rider['club_id']): ?>
+                                            <a href="/club.php?id=<?= $rider['club_id'] ?>" style="color: #667eea; text-decoration: none; font-weight: 700;">
+                                                <?= h($rider['club_name']) ?>
+                                            </a>
+                                        <?php else: ?>
+                                            Klubbtillhörighet saknas
+                                        <?php endif; ?>
                                     </div>
                                 </div>
 
@@ -536,9 +566,13 @@ include __DIR__ . '/includes/layout-header.php';
                     <div style="display: flex; flex-direction: column; gap: 0.25rem;">
                         <?php if (!empty($seriesStandings)): ?>
                             <?php foreach ($seriesStandings as $standing): ?>
-                                <div style="font-size: 11px; line-height: 1.3;">
+                                <div style="font-size: 10px; line-height: 1.4;">
                                     <strong><?= h($standing['series_name']) ?>:</strong>
                                     #<?= $standing['position'] ?? '?' ?> (<?= $standing['total_points'] ?>p)
+                                    <br>
+                                    <span style="color: #718096; font-size: 9px;">
+                                        <?= h($standing['class_name']) ?> (<?= $standing['class_total'] ?> deltagare)
+                                    </span>
                                 </div>
                             <?php endforeach; ?>
                         <?php else: ?>
