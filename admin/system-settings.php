@@ -120,6 +120,10 @@ include __DIR__ . '/../includes/layout-header.php';
                 <i data-lucide="users"></i>
                 Klasser
             </a>
+            <a href="?tab=tools" class="gs-tab <?= $activeTab === 'tools' ? 'active' : '' ?>">
+                <i data-lucide="wrench"></i>
+                Verktyg & Migration
+            </a>
         </div>
 
         <!-- Classes Tab -->
@@ -199,6 +203,154 @@ include __DIR__ . '/../includes/layout-header.php';
                             <?php endforeach; ?>
                         </tbody>
                     </table>
+                </div>
+            </div>
+        <?php endif; ?>
+
+        <!-- Tools & Migration Tab -->
+        <?php if ($activeTab === 'tools'): ?>
+            <div class="gs-alert gs-alert-info gs-mb-lg">
+                <i data-lucide="info"></i>
+                <strong>Snabblänkar:</strong> Verktyg för migration och debug av databas och import.
+            </div>
+
+            <!-- Migration Tools -->
+            <div class="gs-card gs-mb-lg">
+                <div class="gs-card-header">
+                    <h3 class="gs-h4" style="margin: 0;">
+                        <i data-lucide="database"></i>
+                        Databasmigrationer
+                    </h3>
+                </div>
+                <div class="gs-card-content">
+                    <div class="gs-grid gs-grid-cols-1 gs-gap-md">
+                        <!-- Standalone Migration -->
+                        <div style="padding: 1rem; background: #f0fdf4; border: 2px solid #86efac; border-radius: 8px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <div>
+                                    <h4 style="margin: 0 0 0.5rem 0; font-size: 1rem; color: #16a34a;">
+                                        <i data-lucide="check-circle" style="width: 18px; height: 18px;"></i>
+                                        Fristående Migration (Rekommenderad)
+                                    </h4>
+                                    <p style="margin: 0; font-size: 0.875rem; color: #15803d;">
+                                        Kör databas migration utan inloggningskrav. Lägger till utökade fält för deltagare.
+                                    </p>
+                                </div>
+                                <a href="/admin/migrate.php" target="_blank" class="gs-btn gs-btn-success">
+                                    <i data-lucide="external-link"></i>
+                                    Öppna
+                                </a>
+                            </div>
+                        </div>
+
+                        <!-- Original Migration -->
+                        <div style="padding: 1rem; background: #fef2f2; border: 2px solid #fca5a5; border-radius: 8px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <div>
+                                    <h4 style="margin: 0 0 0.5rem 0; font-size: 1rem; color: #dc2626;">
+                                        <i data-lucide="alert-circle" style="width: 18px; height: 18px;"></i>
+                                        Original Migration (Kräver inloggning)
+                                    </h4>
+                                    <p style="margin: 0; font-size: 0.875rem; color: #b91c1c;">
+                                        Kräver admin-inloggning. Använd fristående migration istället om denna inte fungerar.
+                                    </p>
+                                </div>
+                                <a href="/admin/run-migration-extended-riders.php" target="_blank" class="gs-btn gs-btn-outline">
+                                    <i data-lucide="external-link"></i>
+                                    Öppna
+                                </a>
+                            </div>
+                        </div>
+
+                        <!-- Debug Test -->
+                        <div style="padding: 1rem; background: #eff6ff; border: 2px solid #93c5fd; border-radius: 8px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <div>
+                                    <h4 style="margin: 0 0 0.5rem 0; font-size: 1rem; color: #2563eb;">
+                                        <i data-lucide="bug" style="width: 18px; height: 18px;"></i>
+                                        Debug Test
+                                    </h4>
+                                    <p style="margin: 0; font-size: 0.875rem; color: #1e40af;">
+                                        Testar databas-anslutning och admin-behörighet steg för steg.
+                                    </p>
+                                </div>
+                                <a href="/admin/test-migration.php" target="_blank" class="gs-btn gs-btn-outline">
+                                    <i data-lucide="external-link"></i>
+                                    Öppna
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Import Tools -->
+            <div class="gs-card">
+                <div class="gs-card-header">
+                    <h3 class="gs-h4" style="margin: 0;">
+                        <i data-lucide="upload"></i>
+                        Import-verktyg
+                    </h3>
+                </div>
+                <div class="gs-card-content">
+                    <div class="gs-grid gs-grid-cols-1 gs-gap-md">
+                        <!-- Flexible Import -->
+                        <div style="padding: 1rem; background: #f0fdf4; border: 2px solid #86efac; border-radius: 8px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <div>
+                                    <h4 style="margin: 0 0 0.5rem 0; font-size: 1rem; color: #16a34a;">
+                                        <i data-lucide="sparkles" style="width: 18px; height: 18px;"></i>
+                                        Flexibel Import (Rekommenderad)
+                                    </h4>
+                                    <p style="margin: 0; font-size: 0.875rem; color: #15803d;">
+                                        Importera CSV med kolumner i valfri ordning. Okända kolumner ignoreras automatiskt.
+                                    </p>
+                                </div>
+                                <a href="/admin/import-riders-flexible.php" target="_blank" class="gs-btn gs-btn-success">
+                                    <i data-lucide="external-link"></i>
+                                    Öppna
+                                </a>
+                            </div>
+                        </div>
+
+                        <!-- Extended Import -->
+                        <div style="padding: 1rem; background: #eff6ff; border: 2px solid #93c5fd; border-radius: 8px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <div>
+                                    <h4 style="margin: 0 0 0.5rem 0; font-size: 1rem; color: #2563eb;">
+                                        <i data-lucide="file-text" style="width: 18px; height: 18px;"></i>
+                                        Utökad Import
+                                    </h4>
+                                    <p style="margin: 0; font-size: 0.875rem; color: #1e40af;">
+                                        Importera fullständiga deltagardata med fast kolumnordning. Inkluderar privata fält.
+                                    </p>
+                                </div>
+                                <a href="/admin/import-riders-extended.php" target="_blank" class="gs-btn gs-btn-outline">
+                                    <i data-lucide="external-link"></i>
+                                    Öppna
+                                </a>
+                            </div>
+                        </div>
+
+                        <!-- Standard Import -->
+                        <div style="padding: 1rem; background: #fafafa; border: 2px solid #e5e7eb; border-radius: 8px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <div>
+                                    <h4 style="margin: 0 0 0.5rem 0; font-size: 1rem; color: #6b7280;">
+                                        <i data-lucide="upload" style="width: 18px; height: 18px;"></i>
+                                        Standard Import
+                                    </h4>
+                                    <p style="margin: 0; font-size: 0.875rem; color: #6b7280;">
+                                        Grundläggande import med enbart publika fält (förnamn, efternamn, klubb, etc.)
+                                    </p>
+                                </div>
+                                <a href="/admin/import-riders.php" target="_blank" class="gs-btn gs-btn-outline">
+                                    <i data-lucide="external-link"></i>
+                                    Öppna
+                                </a>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         <?php endif; ?>

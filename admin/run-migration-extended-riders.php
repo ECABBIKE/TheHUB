@@ -21,7 +21,37 @@ ob_start();
 
 try {
     require_once __DIR__ . '/../config.php';
-    require_admin();
+
+    // Check if user is admin WITHOUT redirecting
+    if (!is_admin()) {
+        ob_end_clean();
+        ?>
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Migration - Access Denied</title>
+            <style>
+                body { font-family: system-ui, sans-serif; max-width: 800px; margin: 50px auto; padding: 20px; }
+                .error-box { background: #fee; border: 2px solid #dc3545; border-radius: 8px; padding: 30px; }
+                .error-box h1 { color: #dc3545; margin: 0 0 20px 0; }
+                .error-box p { line-height: 1.6; }
+                .btn { display: inline-block; background: #667eea; color: white; padding: 12px 24px;
+                       text-decoration: none; border-radius: 6px; margin-top: 20px; }
+            </style>
+        </head>
+        <body>
+            <div class="error-box">
+                <h1>🔒 Access Denied</h1>
+                <p><strong>You must be logged in as an administrator to access this page.</strong></p>
+                <p>This migration tool can only be run by authenticated admin users for security reasons.</p>
+                <p>Please log in to the admin panel first:</p>
+                <a href="/admin/login.php" class="btn">Go to Admin Login</a>
+            </div>
+        </body>
+        </html>
+        <?php
+        exit;
+    }
 
     $db = getDB();
     $errors = [];
