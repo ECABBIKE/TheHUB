@@ -44,6 +44,41 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             $message = "Klass '{$name}' uppdaterad!";
             $messageType = 'success';
         }
+    } elseif ($_POST['action'] === 'create_class') {
+        $name = trim($_POST['name']);
+        $displayName = trim($_POST['display_name']);
+        $gender = $_POST['gender'] ?? 'ALL';
+        $minAge = !empty($_POST['min_age']) ? (int)$_POST['min_age'] : null;
+        $maxAge = !empty($_POST['max_age']) ? (int)$_POST['max_age'] : null;
+        $discipline = $_POST['discipline'] ?? 'ALL';
+        $sortOrder = !empty($_POST['sort_order']) ? (int)$_POST['sort_order'] : 0;
+        $active = isset($_POST['active']) ? 1 : 0;
+
+        if (empty($name) || empty($displayName)) {
+            $message = 'Namn och visningsnamn krävs';
+            $messageType = 'error';
+        } else {
+            // Check if class name already exists
+            $existing = $db->getRow("SELECT id FROM classes WHERE name = ?", [$name]);
+            if ($existing) {
+                $message = "Klass med namnet '{$name}' finns redan!";
+                $messageType = 'error';
+            } else {
+                $db->insert('classes', [
+                    'name' => $name,
+                    'display_name' => $displayName,
+                    'gender' => $gender,
+                    'min_age' => $minAge,
+                    'max_age' => $maxAge,
+                    'discipline' => $discipline,
+                    'sort_order' => $sortOrder,
+                    'active' => $active
+                ]);
+
+                $message = "Klass '{$name}' skapad!";
+                $messageType = 'success';
+            }
+        }
     }
 }
 
@@ -96,7 +131,13 @@ include __DIR__ . '/../includes/layout-header.php';
 
             <div class="gs-card">
                 <div class="gs-card-header">
-                    <h3 class="gs-h4">Alla klasser (<?= count($classes) ?>)</h3>
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <h3 class="gs-h4" style="margin: 0;">Alla klasser (<?= count($classes) ?>)</h3>
+                        <button type="button" class="gs-btn gs-btn-primary" onclick="openCreateModal()">
+                            <i data-lucide="plus"></i>
+                            Ny klass
+                        </button>
+                    </div>
                 </div>
                 <div class="gs-card-content" style="padding: 0;">
                     <table class="gs-table">
@@ -109,6 +150,7 @@ include __DIR__ . '/../includes/layout-header.php';
                                 <th>Disciplin</th>
                                 <th>Resultat</th>
                                 <th>Status</th>
+                                <th>Åtgärder</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -147,6 +189,12 @@ include __DIR__ . '/../includes/layout-header.php';
                                             <span class="gs-badge gs-badge-secondary gs-badge-sm">Inaktiv</span>
                                         <?php endif; ?>
                                     </td>
+                                    <td>
+                                        <button type="button" class="gs-btn gs-btn-sm gs-btn-outline" onclick="editClass(<?= htmlspecialchars(json_encode($class), ENT_QUOTES, 'UTF-8') ?>)">
+                                            <i data-lucide="edit" style="width: 14px; height: 14px;"></i>
+                                            Redigera
+                                        </button>
+                                    </td>
                                 </tr>
                             <?php endforeach; ?>
                         </tbody>
@@ -157,9 +205,261 @@ include __DIR__ . '/../includes/layout-header.php';
     </div>
 </main>
 
+<!-- Edit Class Modal -->
+<div id="editClassModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.5); z-index: 9999; align-items: center; justify-content: center;">
+    <div style="background: white; border-radius: 12px; width: 90%; max-width: 600px; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);">
+        <div style="padding: 1.5rem; border-bottom: 1px solid var(--gs-border); display: flex; justify-content: space-between; align-items: center;">
+            <h3 class="gs-h4" style="margin: 0;">
+                <i data-lucide="edit"></i>
+                Redigera klass
+            </h3>
+            <button type="button" onclick="closeEditModal()" style="background: none; border: none; cursor: pointer; font-size: 24px; color: var(--gs-text-secondary);">
+                ×
+            </button>
+        </div>
+
+        <form method="POST" action="" style="padding: 1.5rem;">
+            <?= csrf() ?>
+            <input type="hidden" name="action" value="update_class">
+            <input type="hidden" name="class_id" id="edit_class_id">
+
+            <div class="gs-grid gs-grid-cols-2 gs-gap-md gs-mb-lg">
+                <div>
+                    <label class="gs-label">Namn (kod)</label>
+                    <input type="text" name="name" id="edit_name" class="gs-input" required>
+                    <small class="gs-text-secondary">T.ex. M17, K40</small>
+                </div>
+
+                <div>
+                    <label class="gs-label">Visningsnamn</label>
+                    <input type="text" name="display_name" id="edit_display_name" class="gs-input" required>
+                    <small class="gs-text-secondary">T.ex. Män 17-18 år</small>
+                </div>
+            </div>
+
+            <div class="gs-grid gs-grid-cols-2 gs-gap-md gs-mb-lg">
+                <div>
+                    <label class="gs-label">Kön</label>
+                    <select name="gender" id="edit_gender" class="gs-input">
+                        <option value="M">M (Man)</option>
+                        <option value="K">K (Kvinna)</option>
+                        <option value="ALL">ALL (Alla)</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="gs-label">Disciplin</label>
+                    <select name="discipline" id="edit_discipline" class="gs-input">
+                        <option value="ROAD">ROAD (Landsväg)</option>
+                        <option value="MTB">MTB (Mountainbike)</option>
+                        <option value="ALL">ALL (Alla)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="gs-grid gs-grid-cols-3 gs-gap-md gs-mb-lg">
+                <div>
+                    <label class="gs-label">Min ålder</label>
+                    <input type="number" name="min_age" id="edit_min_age" class="gs-input" min="0" max="120">
+                    <small class="gs-text-secondary">Lämna tom för ingen min</small>
+                </div>
+
+                <div>
+                    <label class="gs-label">Max ålder</label>
+                    <input type="number" name="max_age" id="edit_max_age" class="gs-input" min="0" max="120">
+                    <small class="gs-text-secondary">Lämna tom för ingen max</small>
+                </div>
+
+                <div>
+                    <label class="gs-label">Sorteringsordning</label>
+                    <input type="number" name="sort_order" id="edit_sort_order" class="gs-input" value="0">
+                    <small class="gs-text-secondary">Lägre = högre upp</small>
+                </div>
+            </div>
+
+            <div class="gs-mb-lg">
+                <label class="gs-checkbox">
+                    <input type="checkbox" name="active" id="edit_active" value="1">
+                    <span>Aktiv klass</span>
+                </label>
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; gap: 0.5rem; padding-top: 1rem; border-top: 1px solid var(--gs-border);">
+                <button type="button" onclick="closeEditModal()" class="gs-btn gs-btn-outline">
+                    Avbryt
+                </button>
+                <button type="submit" class="gs-btn gs-btn-primary">
+                    <i data-lucide="save"></i>
+                    Spara ändringar
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Create Class Modal -->
+<div id="createClassModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.5); z-index: 9999; align-items: center; justify-content: center;">
+    <div style="background: white; border-radius: 12px; width: 90%; max-width: 600px; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);">
+        <div style="padding: 1.5rem; border-bottom: 1px solid var(--gs-border); display: flex; justify-content: space-between; align-items: center;">
+            <h3 class="gs-h4" style="margin: 0;">
+                <i data-lucide="plus"></i>
+                Skapa ny klass
+            </h3>
+            <button type="button" onclick="closeCreateModal()" style="background: none; border: none; cursor: pointer; font-size: 24px; color: var(--gs-text-secondary);">
+                ×
+            </button>
+        </div>
+
+        <form method="POST" action="" style="padding: 1.5rem;">
+            <?= csrf() ?>
+            <input type="hidden" name="action" value="create_class">
+
+            <div class="gs-grid gs-grid-cols-2 gs-gap-md gs-mb-lg">
+                <div>
+                    <label class="gs-label">Namn (kod)</label>
+                    <input type="text" name="name" id="create_name" class="gs-input" required>
+                    <small class="gs-text-secondary">T.ex. M17, K40</small>
+                </div>
+
+                <div>
+                    <label class="gs-label">Visningsnamn</label>
+                    <input type="text" name="display_name" id="create_display_name" class="gs-input" required>
+                    <small class="gs-text-secondary">T.ex. Män 17-18 år</small>
+                </div>
+            </div>
+
+            <div class="gs-grid gs-grid-cols-2 gs-gap-md gs-mb-lg">
+                <div>
+                    <label class="gs-label">Kön</label>
+                    <select name="gender" id="create_gender" class="gs-input">
+                        <option value="M">M (Man)</option>
+                        <option value="K">K (Kvinna)</option>
+                        <option value="ALL">ALL (Alla)</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="gs-label">Disciplin</label>
+                    <select name="discipline" id="create_discipline" class="gs-input">
+                        <option value="ROAD">ROAD (Landsväg)</option>
+                        <option value="MTB">MTB (Mountainbike)</option>
+                        <option value="ALL">ALL (Alla)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="gs-grid gs-grid-cols-3 gs-gap-md gs-mb-lg">
+                <div>
+                    <label class="gs-label">Min ålder</label>
+                    <input type="number" name="min_age" id="create_min_age" class="gs-input" min="0" max="120">
+                    <small class="gs-text-secondary">Lämna tom för ingen min</small>
+                </div>
+
+                <div>
+                    <label class="gs-label">Max ålder</label>
+                    <input type="number" name="max_age" id="create_max_age" class="gs-input" min="0" max="120">
+                    <small class="gs-text-secondary">Lämna tom för ingen max</small>
+                </div>
+
+                <div>
+                    <label class="gs-label">Sorteringsordning</label>
+                    <input type="number" name="sort_order" id="create_sort_order" class="gs-input" value="0">
+                    <small class="gs-text-secondary">Lägre = högre upp</small>
+                </div>
+            </div>
+
+            <div class="gs-mb-lg">
+                <label class="gs-checkbox">
+                    <input type="checkbox" name="active" id="create_active" value="1" checked>
+                    <span>Aktiv klass</span>
+                </label>
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; gap: 0.5rem; padding-top: 1rem; border-top: 1px solid var(--gs-border);">
+                <button type="button" onclick="closeCreateModal()" class="gs-btn gs-btn-outline">
+                    Avbryt
+                </button>
+                <button type="submit" class="gs-btn gs-btn-primary">
+                    <i data-lucide="plus"></i>
+                    Skapa klass
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <script src="https://unpkg.com/lucide@latest"></script>
 <script>
     lucide.createIcons();
+
+    function editClass(classData) {
+        // Populate form fields
+        document.getElementById('edit_class_id').value = classData.id;
+        document.getElementById('edit_name').value = classData.name;
+        document.getElementById('edit_display_name').value = classData.display_name;
+        document.getElementById('edit_gender').value = classData.gender;
+        document.getElementById('edit_discipline').value = classData.discipline;
+        document.getElementById('edit_min_age').value = classData.min_age || '';
+        document.getElementById('edit_max_age').value = classData.max_age || '';
+        document.getElementById('edit_sort_order').value = classData.sort_order || 0;
+        document.getElementById('edit_active').checked = classData.active == 1;
+
+        // Show modal
+        const modal = document.getElementById('editClassModal');
+        modal.style.display = 'flex';
+
+        // Re-render icons in modal
+        lucide.createIcons();
+    }
+
+    function closeEditModal() {
+        document.getElementById('editClassModal').style.display = 'none';
+    }
+
+    // Close modal on outside click
+    document.getElementById('editClassModal').addEventListener('click', function(e) {
+        if (e.target === this) {
+            closeEditModal();
+        }
+    });
+
+    // Close modal on Escape key
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            closeEditModal();
+            closeCreateModal();
+        }
+    });
+
+    // Create modal functions
+    function openCreateModal() {
+        const modal = document.getElementById('createClassModal');
+        modal.style.display = 'flex';
+
+        // Clear form fields
+        document.getElementById('create_name').value = '';
+        document.getElementById('create_display_name').value = '';
+        document.getElementById('create_gender').value = 'M';
+        document.getElementById('create_discipline').value = 'ROAD';
+        document.getElementById('create_min_age').value = '';
+        document.getElementById('create_max_age').value = '';
+        document.getElementById('create_sort_order').value = '0';
+        document.getElementById('create_active').checked = true;
+
+        // Re-render icons in modal
+        lucide.createIcons();
+    }
+
+    function closeCreateModal() {
+        document.getElementById('createClassModal').style.display = 'none';
+    }
+
+    // Close create modal on outside click
+    document.getElementById('createClassModal').addEventListener('click', function(e) {
+        if (e.target === this) {
+            closeCreateModal();
+        }
+    });
 </script>
 
 <?php include __DIR__ . '/../includes/layout-footer.php'; ?>
