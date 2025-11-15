@@ -68,6 +68,31 @@ foreach ($results as $result) {
 // Get recent results (last 5)
 $recentResults = array_slice($results, 0, 5);
 
+// Get series standings for this rider
+$seriesStandings = $db->getAll("
+    SELECT
+        s.id as series_id,
+        s.name as series_name,
+        s.year,
+        SUM(r.points) as total_points,
+        COUNT(DISTINCT r.event_id) as events_count,
+        (
+            SELECT COUNT(DISTINCT c2.id) + 1
+            FROM riders c2
+            JOIN results r2 ON c2.id = r2.cyclist_id
+            JOIN events e2 ON r2.event_id = e2.id
+            WHERE e2.series_id = s.id
+            GROUP BY c2.id
+            HAVING SUM(r2.points) > SUM(r.points)
+        ) as position
+    FROM results r
+    JOIN events e ON r.event_id = e.id
+    JOIN series s ON e.series_id = s.id
+    WHERE r.cyclist_id = ? AND s.active = 1
+    GROUP BY s.id
+    ORDER BY s.year DESC, total_points DESC
+", [$riderId]);
+
 // Get results by year
 $resultsByYear = [];
 foreach ($results as $result) {
@@ -426,12 +451,12 @@ include __DIR__ . '/includes/layout-header.php';
                                     </div>
                                 </div>
 
-                                <?php if ($rider['club_name']): ?>
-                                    <div class="info-field" style="grid-column: span 2;">
-                                        <div class="info-label">Klubb</div>
-                                        <div class="info-value"><?= h($rider['club_name']) ?></div>
+                                <div class="info-field" style="grid-column: span 2;">
+                                    <div class="info-label">Klubb</div>
+                                    <div class="info-value">
+                                        <?= $rider['club_name'] ? h($rider['club_name']) : 'Klubbtillhörighet saknas' ?>
                                     </div>
-                                <?php endif; ?>
+                                </div>
 
                                 <?php if ($currentClass): ?>
                                     <div class="class-badge">
@@ -463,26 +488,33 @@ include __DIR__ . '/includes/layout-header.php';
             </div>
 
             <!-- Quick Stats -->
-            <div class="gs-grid gs-grid-cols-2 gs-md-grid-cols-5 gs-gap-md gs-mb-xl">
-                <div class="gs-card" style="text-align: center;">
-                    <div class="gs-h2 gs-text-primary"><?= $totalRaces ?></div>
-                    <div class="gs-text-sm gs-text-secondary">Lopp</div>
+            <div class="gs-grid gs-grid-cols-2 gs-md-grid-cols-4 gs-gap-sm gs-mb-xl">
+                <div class="gs-card" style="text-align: center; padding: 0.75rem;">
+                    <div class="gs-h3 gs-text-primary"><?= $totalRaces ?></div>
+                    <div class="gs-text-xs gs-text-secondary">Race</div>
                 </div>
-                <div class="gs-card" style="text-align: center;">
-                    <div class="gs-h2" style="color: var(--gs-success);"><?= $wins ?></div>
-                    <div class="gs-text-sm gs-text-secondary">Segrar</div>
+                <div class="gs-card" style="text-align: center; padding: 0.75rem;">
+                    <div class="gs-h3" style="color: var(--gs-success);"><?= $wins ?></div>
+                    <div class="gs-text-xs gs-text-secondary">Segrar</div>
                 </div>
-                <div class="gs-card" style="text-align: center;">
-                    <div class="gs-h2" style="color: var(--gs-accent);"><?= $podiums ?></div>
-                    <div class="gs-text-sm gs-text-secondary">Pallplatser</div>
+                <div class="gs-card" style="text-align: center; padding: 0.75rem;">
+                    <div class="gs-h3" style="color: var(--gs-warning);"><?= $bestPosition ?? '-' ?></div>
+                    <div class="gs-text-xs gs-text-secondary">Bästa placering</div>
                 </div>
-                <div class="gs-card" style="text-align: center;">
-                    <div class="gs-h2 gs-text-primary"><?= $totalPoints ?></div>
-                    <div class="gs-text-sm gs-text-secondary">Poäng</div>
-                </div>
-                <div class="gs-card" style="text-align: center;">
-                    <div class="gs-h2" style="color: var(--gs-warning);"><?= $bestPosition ?? '-' ?></div>
-                    <div class="gs-text-sm gs-text-secondary">Bästa placering</div>
+                <div class="gs-card" style="text-align: center; padding: 0.75rem;">
+                    <div style="display: flex; flex-direction: column; gap: 0.25rem;">
+                        <?php if (!empty($seriesStandings)): ?>
+                            <?php foreach ($seriesStandings as $standing): ?>
+                                <div style="font-size: 11px; line-height: 1.3;">
+                                    <strong><?= h($standing['series_name']) ?>:</strong>
+                                    #<?= $standing['position'] ?? '?' ?> (<?= $standing['total_points'] ?>p)
+                                </div>
+                            <?php endforeach; ?>
+                        <?php else: ?>
+                            <div class="gs-h3 gs-text-primary">0</div>
+                        <?php endif; ?>
+                    </div>
+                    <div class="gs-text-xs gs-text-secondary" style="margin-top: 0.25rem;">Points</div>
                 </div>
             </div>
 
