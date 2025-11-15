@@ -74,11 +74,18 @@ include __DIR__ . '/includes/layout-header.php';
                                     <span><?= $s['event_count'] ?> tävlingar</span>
                                 </div>
                                 <?php if ($s['event_count'] > 0): ?>
-                                    <a href="/events.php?series=<?= $s['id'] ?>&year=<?= $s['year'] ?: date('Y') ?>"
-                                       class="gs-btn gs-btn-primary gs-btn-sm gs-w-full">
-                                        <i data-lucide="list"></i>
-                                        Visa tävlingar
-                                    </a>
+                                    <div class="gs-flex gs-gap-sm">
+                                        <a href="/series-standings.php?id=<?= $s['id'] ?>"
+                                           class="gs-btn gs-btn-primary gs-btn-sm gs-flex-1">
+                                            <i data-lucide="trophy"></i>
+                                            Ställning
+                                        </a>
+                                        <a href="/events.php?series=<?= $s['id'] ?>&year=<?= $s['year'] ?: date('Y') ?>"
+                                           class="gs-btn gs-btn-outline gs-btn-sm gs-flex-1">
+                                            <i data-lucide="list"></i>
+                                            Tävlingar
+                                        </a>
+                                    </div>
                                 <?php endif; ?>
                             </div>
                         </div>
