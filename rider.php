@@ -246,15 +246,8 @@ include __DIR__ . '/includes/layout-header.php';
 
     .license-header-content {
         display: flex;
-        justify-content: space-between;
+        justify-content: center;
         align-items: center;
-    }
-
-    .license-title {
-        font-size: 28px;
-        font-weight: 700;
-        letter-spacing: 1px;
-        text-transform: uppercase;
     }
 
     .license-season {
@@ -452,7 +445,6 @@ include __DIR__ . '/includes/layout-header.php';
                     <!-- Header -->
                     <div class="license-header">
                         <div class="license-header-content">
-                            <div class="license-title">Cycling License</div>
                             <div class="license-season"><?= $currentYear ?></div>
                         </div>
                     </div>
@@ -506,6 +498,24 @@ include __DIR__ . '/includes/layout-header.php';
                                     </div>
                                 </div>
 
+                                <?php if (!empty($rider['license_type']) && $rider['license_type'] !== 'None'): ?>
+                                    <div class="info-field">
+                                        <div class="info-label">Licenstyp</div>
+                                        <div class="info-value" style="font-size: 16px;">
+                                            <?= h($rider['license_type']) ?>
+                                        </div>
+                                    </div>
+                                <?php endif; ?>
+
+                                <?php if (!empty($rider['license_year'])): ?>
+                                    <div class="info-field">
+                                        <div class="info-label">Licensår</div>
+                                        <div class="info-value">
+                                            <?= h($rider['license_year']) ?>
+                                        </div>
+                                    </div>
+                                <?php endif; ?>
+
                                 <div class="info-field" style="grid-column: span 2;">
                                     <div class="info-label">Klubb</div>
                                     <div class="info-value">
@@ -518,6 +528,51 @@ include __DIR__ . '/includes/layout-header.php';
                                         <?php endif; ?>
                                     </div>
                                 </div>
+
+                                <?php if (!empty($rider['team'])): ?>
+                                    <div class="info-field" style="grid-column: span 2;">
+                                        <div class="info-label">Team</div>
+                                        <div class="info-value">
+                                            <?= h($rider['team']) ?>
+                                        </div>
+                                    </div>
+                                <?php endif; ?>
+
+                                <?php if (!empty($rider['city'])): ?>
+                                    <div class="info-field">
+                                        <div class="info-label">Stad</div>
+                                        <div class="info-value">
+                                            <?= h($rider['city']) ?>
+                                        </div>
+                                    </div>
+                                <?php endif; ?>
+
+                                <?php if (!empty($rider['district'])): ?>
+                                    <div class="info-field">
+                                        <div class="info-label">Distrikt</div>
+                                        <div class="info-value">
+                                            <?= h($rider['district']) ?>
+                                        </div>
+                                    </div>
+                                <?php endif; ?>
+
+                                <?php if (!empty($rider['disciplines'])): ?>
+                                    <?php
+                                    $disciplines = json_decode($rider['disciplines'], true);
+                                    if ($disciplines && is_array($disciplines) && count($disciplines) > 0):
+                                    ?>
+                                        <div class="info-field" style="grid-column: span 2;">
+                                            <div class="info-label">Grenar</div>
+                                            <div class="info-value" style="font-size: 14px; display: flex; flex-wrap: wrap; gap: 6px;">
+                                                <?php foreach ($disciplines as $discipline): ?>
+                                                    <span style="background: #667eea; color: white; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600;">
+                                                        <?= h($discipline) ?>
+                                                    </span>
+                                                <?php endforeach; ?>
+                                            </div>
+                                        </div>
+                                    <?php endif; ?>
+                                <?php endif; ?>
 
                                 <?php if ($currentClass): ?>
                                     <div class="class-badge">
@@ -538,7 +593,7 @@ include __DIR__ . '/includes/layout-header.php';
                             <?php if ($rider['club_logo']): ?>
                                 <img src="<?= h($rider['club_logo']) ?>" alt="<?= h($rider['club_name']) ?>" class="club-logo">
                             <?php else: ?>
-                                TheHUB Cycling Management
+                                TheHUB by GravitySeries
                             <?php endif; ?>
                         </div>
                         <div>
