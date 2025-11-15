@@ -33,49 +33,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['import_file'])) {
             $message = 'Endast CSV-filer stöds för resultatimport';
             $messageType = 'error';
         } else {
-            // Process the file
-            $uploaded = UPLOADS_PATH . '/' . time() . '_' . basename($file['name']);
+            // Save file and redirect to preview
+            $uploaded = UPLOADS_PATH . '/' . time() . '_preview_' . basename($file['name']);
 
             if (move_uploaded_file($file['tmp_name'], $uploaded)) {
-                try {
-                    // Start import history tracking
-                    $importId = startImportHistory(
-                        $db,
-                        'results',
-                        $file['name'],
-                        $file['size'],
-                        $current_admin['username'] ?? 'admin'
-                    );
+                // Clear old preview data
+                unset($_SESSION['import_preview_file']);
+                unset($_SESSION['import_preview_filename']);
+                unset($_SESSION['import_preview_data']);
+                unset($_SESSION['import_events_summary']);
 
-                    $result = importResultsFromCSV($uploaded, $db, $importId);
+                // Store in session and redirect to preview
+                $_SESSION['import_preview_file'] = $uploaded;
+                $_SESSION['import_preview_filename'] = $file['name'];
 
-                    $stats = $result['stats'];
-                    $matching_stats = $result['matching'];
-                    $errors = $result['errors'];
-
-                    // Update import history with final statistics
-                    $importStatus = ($stats['success'] > 0) ? 'completed' : 'failed';
-                    updateImportHistory($db, $importId, $stats, $errors, $importStatus);
-
-                    if ($stats['success'] > 0) {
-                        $message = "Import klar! {$stats['success']} av {$stats['total']} resultat importerade. <a href='/admin/import-history.php' style='text-decoration:underline'>Visa historik</a>";
-                        $messageType = 'success';
-                    } else {
-                        $message = "Ingen data importerades. Kontrollera filformatet och matchningar.";
-                        $messageType = 'error';
-                    }
-
-                } catch (Exception $e) {
-                    $message = 'Import misslyckades: ' . $e->getMessage();
-                    $messageType = 'error';
-
-                    // Mark import as failed if importId was created
-                    if (isset($importId)) {
-                        updateImportHistory($db, $importId, ['total' => 0], [$e->getMessage()], 'failed');
-                    }
-                }
-
-                @unlink($uploaded);
+                header('Location: /admin/import-results-preview.php');
+                exit;
             } else {
                 $message = 'Kunde inte ladda upp filen';
                 $messageType = 'error';
@@ -103,7 +76,9 @@ function importResultsFromCSV($filepath, $db, $importId = null) {
         'venues_created' => 0,
         'riders_found' => 0,
         'riders_not_found' => 0,
-        'riders_created' => 0
+        'riders_created' => 0,
+        'clubs_created' => 0,
+        'categories_created' => 0
     ];
 
     $errors = [];
@@ -158,16 +133,45 @@ function importResultsFromCSV($filepath, $db, $importId = null) {
             'förnamn' => 'firstname',
             'fornamn' => 'firstname',
             'fname' => 'firstname',
+            'first_name' => 'firstname',
             'lastname' => 'lastname',
             'efternamn' => 'lastname',
             'lname' => 'lastname',
             'surname' => 'lastname',
+            'last_name' => 'lastname',
 
-            // Other fields
+            // License fields
             'licensenumber' => 'license_number',
             'uciid' => 'license_number',
             'sweid' => 'license_number',
             'licens' => 'license_number',
+            'uci_id' => 'license_number',
+            'swe_id' => 'license_number',
+
+            // Club/Team
+            'club' => 'club_name',
+            'clubname' => 'club_name',
+            'team' => 'club_name',
+            'klubb' => 'club_name',
+            'club_name' => 'club_name',
+
+            // Category
+            'category' => 'category',
+            'kategori' => 'category',
+            'class' => 'category',
+            'klass' => 'category',
+
+            // Discipline
+            'discipline' => 'discipline',
+            'disciplin' => 'discipline',
+            'gren' => 'discipline',
+
+            // Contact
+            'email' => 'email',
+            'epost' => 'email',
+            'e-post' => 'email',
+            'mail' => 'email',
+
             'birthyear' => 'birth_year',
             'födelseår' => 'birth_year',
             'fodelsear' => 'birth_year',
@@ -177,6 +181,7 @@ function importResultsFromCSV($filepath, $db, $importId = null) {
             'sluttid' => 'finish_time',
             'tid' => 'finish_time',
             'time' => 'finish_time',
+            'finish_time' => 'finish_time',
             'bibnumber' => 'bib_number',
             'startnummer' => 'bib_number',
             'bib' => 'bib_number',
@@ -197,6 +202,8 @@ function importResultsFromCSV($filepath, $db, $importId = null) {
     // Cache for lookups
     $eventCache = [];
     $riderCache = [];
+    $categoryCache = [];
+    $clubCache = [];
 
     $lineNumber = 1;
 
@@ -228,93 +235,186 @@ function importResultsFromCSV($filepath, $db, $importId = null) {
             if (isset($eventCache[$eventName])) {
                 $eventId = $eventCache[$eventName];
             } else {
-                // Try exact match
-                $event = $db->getRow(
-                    "SELECT id FROM events WHERE name = ? LIMIT 1",
-                    [$eventName]
-                );
+                // Check if we have event mapping from preview
+                global $IMPORT_EVENT_MAPPING;
+                $useExistingEvent = false;
 
-                if (!$event) {
-                    // Try fuzzy match (LIKE)
-                    $event = $db->getRow(
-                        "SELECT id FROM events WHERE name LIKE ? LIMIT 1",
-                        ['%' . $eventName . '%']
-                    );
+                if (!empty($IMPORT_EVENT_MAPPING) && isset($IMPORT_EVENT_MAPPING[$eventName])) {
+                    $mappedValue = $IMPORT_EVENT_MAPPING[$eventName];
+
+                    if ($mappedValue !== 'create' && is_numeric($mappedValue)) {
+                        // Use existing event from mapping
+                        $eventId = (int)$mappedValue;
+                        $eventCache[$eventName] = $eventId;
+                        $matching_stats['events_found']++;
+                        $useExistingEvent = true;
+                        error_log("Using mapped event ID {$eventId} for '{$eventName}'");
+                    }
+                    // else: mappedValue is 'create', proceed with auto-create below
                 }
 
-                if ($event) {
-                    $eventId = $event['id'];
-                    $eventCache[$eventName] = $eventId;
-                    $matching_stats['events_found']++;
-                } else {
-                    // AUTO-CREATE: Event not found, create it
-                    $matching_stats['events_not_found']++;
+                if (!$useExistingEvent) {
+                    // Try exact match
+                    $event = $db->getRow(
+                        "SELECT id FROM events WHERE name = ? LIMIT 1",
+                        [$eventName]
+                    );
 
-                    // Get event data from CSV
-                    $eventDate = !empty($data['event_date']) ? trim($data['event_date']) : date('Y-m-d');
-                    $eventLocation = !empty($data['event_location']) ? trim($data['event_location']) : null;
-                    $eventVenueName = !empty($data['event_venue']) ? trim($data['event_venue']) : null;
-
-                    // Parse date if needed (handle various formats)
-                    if (!empty($data['event_date'])) {
-                        $dateParsed = strtotime($data['event_date']);
-                        if ($dateParsed) {
-                            $eventDate = date('Y-m-d', $dateParsed);
-                        }
+                    if (!$event) {
+                        // Try fuzzy match (LIKE)
+                        $event = $db->getRow(
+                            "SELECT id FROM events WHERE name LIKE ? LIMIT 1",
+                            ['%' . $eventName . '%']
+                        );
                     }
 
-                    // Auto-create venue if specified
-                    $venueId = null;
-                    if ($eventVenueName) {
-                        // Check if venue exists
-                        $venue = $db->getRow(
-                            "SELECT id FROM venues WHERE name LIKE ? LIMIT 1",
-                            ['%' . $eventVenueName . '%']
-                        );
+                    if ($event) {
+                        $eventId = $event['id'];
+                        $eventCache[$eventName] = $eventId;
+                        $matching_stats['events_found']++;
+                    } else {
+                        // AUTO-CREATE: Event not found, create it
+                        $matching_stats['events_not_found']++;
 
-                        if ($venue) {
-                            $venueId = $venue['id'];
-                        } else {
-                            // Create new venue
-                            $venueData = [
-                                'name' => $eventVenueName,
-                                'city' => $eventLocation,
-                                'active' => 1
-                            ];
-                            $venueId = $db->insert('venues', $venueData);
-                            $matching_stats['venues_created']++;
-                            error_log("Auto-created venue: {$eventVenueName}");
+                        // Get event data from CSV
+                        $eventDate = !empty($data['event_date']) ? trim($data['event_date']) : date('Y-m-d');
+                        $eventLocation = !empty($data['event_location']) ? trim($data['event_location']) : null;
+                        $eventVenueName = !empty($data['event_venue']) ? trim($data['event_venue']) : null;
 
-                            // Track created venue
-                            if ($importId && $venueId) {
-                                trackImportRecord($db, $importId, 'venue', $venueId, 'created');
+                        // Parse date if needed (handle various formats)
+                        if (!empty($data['event_date'])) {
+                            $dateParsed = strtotime($data['event_date']);
+                            if ($dateParsed) {
+                                $eventDate = date('Y-m-d', $dateParsed);
                             }
                         }
+
+                        // Auto-create venue if specified
+                        $venueId = null;
+                        if ($eventVenueName) {
+                            // Check if venue exists
+                            $venue = $db->getRow(
+                                "SELECT id FROM venues WHERE name LIKE ? LIMIT 1",
+                                ['%' . $eventVenueName . '%']
+                            );
+
+                            if ($venue) {
+                                $venueId = $venue['id'];
+                            } else {
+                                // Create new venue
+                                $venueData = [
+                                    'name' => $eventVenueName,
+                                    'city' => $eventLocation,
+                                    'active' => 1
+                                ];
+                                $venueId = $db->insert('venues', $venueData);
+                                $matching_stats['venues_created']++;
+                                error_log("Auto-created venue: {$eventVenueName}");
+
+                                // Track created venue
+                                if ($importId && $venueId) {
+                                    trackImportRecord($db, $importId, 'venue', $venueId, 'created');
+                                }
+                            }
+                        }
+
+                        // Create new event
+                        // Auto-generate advent_id for new event
+                        $event_year = date('Y', strtotime($eventDate));
+                        $advent_id = generateEventAdventId($pdo, $event_year);
+
+                        $newEventData = [
+                            'name' => $eventName,
+                            'advent_id' => $advent_id,
+                            'date' => $eventDate,
+                            'location' => $eventLocation,
+                            'venue_id' => $venueId,
+                            'status' => 'completed',
+                            'active' => 1
+                        ];
+
+                        $eventId = $db->insert('events', $newEventData);
+                        $eventCache[$eventName] = $eventId;
+                        $matching_stats['events_created']++;
+                        error_log("Auto-created event: {$eventName} on {$eventDate}");
+
+                        // Track created event
+                        if ($importId && $eventId) {
+                            trackImportRecord($db, $importId, 'event', $eventId, 'created');
+                        }
                     }
+                }
+            }
 
-                    // Create new event
-                    // Auto-generate advent_id for new event
-                    $event_year = date('Y', strtotime($eventDate));
-                    $advent_id = generateEventAdventId($pdo, $event_year);
+            // Find or create club
+            $clubId = null;
+            if (!empty($data['club_name'])) {
+                $clubName = trim($data['club_name']);
+                $clubKey = strtolower($clubName); // Use lowercase for cache key
 
-                    $newEventData = [
-                        'name' => $eventName,
-                        'advent_id' => $advent_id,
-                        'date' => $eventDate,
-                        'location' => $eventLocation,
-                        'venue_id' => $venueId,
-                        'status' => 'completed',
-                        'active' => 1
-                    ];
+                if (isset($clubCache[$clubKey])) {
+                    $clubId = $clubCache[$clubKey];
+                } else {
+                    // Fuzzy match with LIKE (case-insensitive)
+                    $club = $db->getRow(
+                        "SELECT id FROM clubs WHERE LOWER(name) LIKE LOWER(?) LIMIT 1",
+                        ['%' . $clubName . '%']
+                    );
 
-                    $eventId = $db->insert('events', $newEventData);
-                    $eventCache[$eventName] = $eventId;
-                    $matching_stats['events_created']++;
-                    error_log("Auto-created event: {$eventName} on {$eventDate}");
+                    if ($club) {
+                        $clubId = $club['id'];
+                        $clubCache[$clubKey] = $clubId;
+                    } else {
+                        // Auto-create club
+                        $clubData = [
+                            'name' => $clubName,
+                            'active' => 1
+                        ];
+                        $clubId = $db->insert('clubs', $clubData);
+                        $clubCache[$clubKey] = $clubId;
+                        $matching_stats['clubs_created']++;
+                        error_log("Auto-created club: {$clubName}");
 
-                    // Track created event
-                    if ($importId && $eventId) {
-                        trackImportRecord($db, $importId, 'event', $eventId, 'created');
+                        if ($importId && $clubId) {
+                            trackImportRecord($db, $importId, 'club', $clubId, 'created');
+                        }
+                    }
+                }
+            }
+
+            // Find or create category
+            $categoryId = null;
+            if (!empty($data['category'])) {
+                $categoryName = trim($data['category']);
+                $categoryKey = strtolower($categoryName); // Use lowercase for cache key
+
+                if (isset($categoryCache[$categoryKey])) {
+                    $categoryId = $categoryCache[$categoryKey];
+                } else {
+                    // Case-insensitive match
+                    $category = $db->getRow(
+                        "SELECT id, name FROM categories WHERE LOWER(name) = LOWER(?) OR LOWER(short_name) = LOWER(?) LIMIT 1",
+                        [$categoryName, $categoryName]
+                    );
+
+                    if ($category) {
+                        $categoryId = $category['id'];
+                        $categoryCache[$categoryKey] = $categoryId;
+                    } else {
+                        // Auto-create category
+                        $categoryData = [
+                            'name' => $categoryName,
+                            'short_name' => substr($categoryName, 0, 20),
+                            'active' => 1
+                        ];
+                        $categoryId = $db->insert('categories', $categoryData);
+                        $categoryCache[$categoryKey] = $categoryId;
+                        $matching_stats['categories_created']++;
+                        error_log("Auto-created category: {$categoryName}");
+
+                        if ($importId && $categoryId) {
+                            trackImportRecord($db, $importId, 'category', $categoryId, 'created');
+                        }
                     }
                 }
             }
@@ -403,6 +503,8 @@ function importResultsFromCSV($filepath, $db, $importId = null) {
                             'gender' => $gender,
                             'license_number' => $sweId,
                             'license_type' => $licenseType,
+                            'club_id' => $clubId,
+                            'email' => !empty($data['email']) ? trim($data['email']) : null,
                             'active' => 1
                         ];
 
@@ -441,14 +543,32 @@ function importResultsFromCSV($filepath, $db, $importId = null) {
                 }
             }
 
+            // Normalize status (FIN/DNS/DNF/DQ -> finished/dns/dnf/dq)
+            $status = 'finished';
+            if (!empty($data['status'])) {
+                $statusRaw = strtoupper(trim($data['status']));
+                if ($statusRaw === 'FIN' || $statusRaw === 'FINISHED' || $statusRaw === 'OK') {
+                    $status = 'finished';
+                } elseif ($statusRaw === 'DNF') {
+                    $status = 'dnf';
+                } elseif ($statusRaw === 'DNS') {
+                    $status = 'dns';
+                } elseif ($statusRaw === 'DQ' || $statusRaw === 'DSQ') {
+                    $status = 'dq';
+                } else {
+                    $status = strtolower($statusRaw);
+                }
+            }
+
             // Prepare result data
             $resultData = [
                 'event_id' => $eventId,
                 'cyclist_id' => $riderId,
+                'category_id' => $categoryId,
                 'position' => !empty($data['position']) ? (int)$data['position'] : null,
                 'finish_time' => $finishTime,
                 'bib_number' => !empty($data['bib_number']) ? trim($data['bib_number']) : null,
-                'status' => !empty($data['status']) ? strtolower(trim($data['status'])) : 'finished',
+                'status' => $status,
                 'points' => !empty($data['points']) ? (int)$data['points'] : 0,
                 'notes' => !empty($data['notes']) ? trim($data['notes']) : null
             ];
@@ -495,6 +615,22 @@ function importResultsFromCSV($filepath, $db, $importId = null) {
         'matching' => $matching_stats,
         'errors' => $errors
     ];
+}
+
+/**
+ * Import results from CSV with event mapping
+ * Same as importResultsFromCSV but uses provided event IDs instead of auto-creating
+ */
+function importResultsFromCSVWithMapping($filepath, $db, $importId = null, $eventMapping = []) {
+    // For now, just call the regular import function
+    // TODO: Implement event mapping logic
+    // Event mapping format: ['EventName' => event_id or 'create']
+
+    // Store event mapping in global for use during import
+    global $IMPORT_EVENT_MAPPING;
+    $IMPORT_EVENT_MAPPING = $eventMapping;
+
+    return importResultsFromCSV($filepath, $db, $importId);
 }
 
 $pageTitle = 'Importera Resultat';
@@ -587,7 +723,7 @@ include __DIR__ . '/../includes/layout-header.php';
                                         <div class="gs-h3 gs-text-primary"><?= $matching_stats['venues_created'] ?? 0 ?></div>
                                     </div>
                                 </div>
-                                <div class="gs-grid gs-grid-cols-2 gs-md-grid-cols-3 gs-gap-md">
+                                <div class="gs-grid gs-grid-cols-2 gs-md-grid-cols-3 gs-gap-md gs-mb-md">
                                     <div style="padding: var(--gs-space-md); background: var(--gs-background-secondary); border-radius: var(--gs-border-radius);">
                                         <div class="gs-text-sm gs-text-secondary">Deltagare hittade</div>
                                         <div class="gs-h3 gs-text-success"><?= $matching_stats['riders_found'] ?></div>
@@ -599,6 +735,16 @@ include __DIR__ . '/../includes/layout-header.php';
                                     <div style="padding: var(--gs-space-md); background: var(--gs-background-secondary); border-radius: var(--gs-border-radius);">
                                         <div class="gs-text-sm gs-text-secondary">SWE-ID tilldelat</div>
                                         <div class="gs-h3 gs-text-warning"><?= $matching_stats['riders_created'] ?? 0 ?></div>
+                                    </div>
+                                </div>
+                                <div class="gs-grid gs-grid-cols-2 gs-md-grid-cols-2 gs-gap-md">
+                                    <div style="padding: var(--gs-space-md); background: var(--gs-background-secondary); border-radius: var(--gs-border-radius);">
+                                        <div class="gs-text-sm gs-text-secondary">Nya klubbar skapade</div>
+                                        <div class="gs-h3 gs-text-accent"><?= $matching_stats['clubs_created'] ?? 0 ?></div>
+                                    </div>
+                                    <div style="padding: var(--gs-space-md); background: var(--gs-background-secondary); border-radius: var(--gs-border-radius);">
+                                        <div class="gs-text-sm gs-text-secondary">Nya kategorier skapade</div>
+                                        <div class="gs-h3 gs-text-accent"><?= $matching_stats['categories_created'] ?? 0 ?></div>
                                     </div>
                                 </div>
                             </div>
@@ -631,15 +777,23 @@ include __DIR__ . '/../includes/layout-header.php';
             <!-- Upload Form -->
             <div class="gs-card gs-mb-xl">
                 <div class="gs-card-header">
-                    <h2 class="gs-h4 gs-text-primary">
-                        <i data-lucide="upload"></i>
-                        Ladda upp CSV-fil
-                    </h2>
+                    <div class="gs-flex gs-justify-between gs-items-center">
+                        <h2 class="gs-h4 gs-text-primary">
+                            <i data-lucide="upload"></i>
+                            Ladda upp CSV-fil
+                        </h2>
+                        <a href="/admin/import-results-preview.php" class="gs-btn gs-btn-outline gs-btn-sm">
+                            <i data-lucide="eye"></i>
+                            Förhandsgranska Import
+                        </a>
+                    </div>
                 </div>
                 <div class="gs-card-content">
                     <div class="gs-alert gs-alert-info gs-mb-md">
                         <i data-lucide="info"></i>
                         <strong>Auto-Create:</strong> Tävlingar, banor och deltagare som inte hittas skapas automatiskt. Inkludera event_date, event_location och event_venue för bästa resultat.
+                        <br>
+                        <strong>Rekommendation:</strong> Använd <a href="/admin/import-results-preview.php" class="gs-link">"Förhandsgranska Import"</a> för att granska data innan import.
                     </div>
 
                     <form method="POST" enctype="multipart/form-data" id="uploadForm" style="max-width: 600px;">

@@ -86,7 +86,7 @@ include __DIR__ . '/includes/layout-header.php';
                 Våra Serier
             </h2>
 
-            <div class="gs-grid gs-grid-cols-1 gs-md-grid-cols-2 gs-lg-grid-cols-3 gs-gap-lg">
+            <div class="gs-grid gs-grid-cols-1 gs-md-grid-cols-2 gs-lg-grid-cols-3 gs-xl-grid-cols-4 gs-gap-lg">
 
                 <!-- Enduro Series -->
                 <div class="gs-card" style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); color: white; border: none;">

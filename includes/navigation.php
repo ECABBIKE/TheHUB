@@ -57,6 +57,9 @@ $is_admin = isLoggedIn();
             <li><a href="/admin/import-history.php" class="<?= $current_page == 'import-history.php' ? 'active' : '' ?>">
                 <i data-lucide="history"></i> Import History
             </a></li>
+            <li><a href="/admin/public-settings.php" class="<?= $current_page == 'public-settings.php' ? 'active' : '' ?>">
+                <i data-lucide="settings"></i> Publika Inställningar
+            </a></li>
         </ul>
         <div class="gs-menu-footer">
             <a href="/admin/logout.php" class="gs-btn gs-btn-sm gs-btn-outline gs-w-full">

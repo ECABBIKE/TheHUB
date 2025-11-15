@@ -103,10 +103,6 @@ function rollbackImport($db, $importId, $rolledBackBy = 'admin') {
             return ['success' => false, 'message' => 'Import hittades inte'];
         }
 
-        if ($import['status'] === 'rolled_back') {
-            return ['success' => false, 'message' => 'Denna import har redan återställts'];
-        }
-
         // Get all records from this import
         $records = $db->getAll("SELECT * FROM import_records WHERE import_id = ? ORDER BY id DESC", [$importId]);
 
@@ -141,15 +137,13 @@ function rollbackImport($db, $importId, $rolledBackBy = 'admin') {
             }
         }
 
-        // Mark import as rolled back
-        $db->update('import_history', [
-            'status' => 'rolled_back',
-            'rolled_back_at' => date('Y-m-d H:i:s'),
-            'rolled_back_by' => $rolledBackBy,
-            'notes' => "Rollback: $deletedCount deleted, $restoredCount restored" . (!empty($errors) ? "\nErrors: " . implode('; ', array_slice($errors, 0, 5)) : '')
-        ], 'id = ?', [$importId]);
+        // Delete all import records
+        $db->delete('import_records', 'import_id = ?', [$importId]);
 
-        $message = "Import återställd! $deletedCount poster raderade, $restoredCount återställda.";
+        // Delete import history (remove from list completely)
+        $db->delete('import_history', 'id = ?', [$importId]);
+
+        $message = "Import återställd och raderad! $deletedCount poster raderade, $restoredCount återställda.";
         if (!empty($errors)) {
             $message .= " " . count($errors) . " fel uppstod.";
         }

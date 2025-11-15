@@ -233,6 +233,7 @@ include __DIR__ . '/includes/layout-header.php';
                                                 <th style="text-align: center;">Tid</th>
                                                 <th style="text-align: center;">Poäng</th>
                                                 <th style="text-align: center;">Status</th>
+                                                <th style="text-align: center;">Resultat</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -240,7 +241,13 @@ include __DIR__ . '/includes/layout-header.php';
                                                 <tr>
                                                     <td><?= date('Y-m-d', strtotime($result['event_date'])) ?></td>
                                                     <td>
-                                                        <strong><?= h($result['event_name']) ?></strong>
+                                                        <?php if ($result['event_id']): ?>
+                                                            <a href="/event.php?id=<?= $result['event_id'] ?>" class="gs-link">
+                                                                <strong><?= h($result['event_name']) ?></strong>
+                                                            </a>
+                                                        <?php else: ?>
+                                                            <strong><?= h($result['event_name']) ?></strong>
+                                                        <?php endif; ?>
                                                         <?php if ($result['venue_name']): ?>
                                                             <br><span class="gs-text-xs gs-text-secondary">
                                                                 <i data-lucide="map-pin"></i>
@@ -305,6 +312,15 @@ include __DIR__ . '/includes/layout-header.php';
                                                         <span class="gs-badge <?= $statusBadge ?> gs-badge-sm">
                                                             <?= $statusText ?>
                                                         </span>
+                                                    </td>
+                                                    <td style="text-align: center;">
+                                                        <?php if ($result['event_id']): ?>
+                                                            <a href="/event.php?id=<?= $result['event_id'] ?>" class="gs-btn gs-btn-sm gs-btn-outline" title="Se alla resultat">
+                                                                <i data-lucide="list" style="width: 14px; height: 14px;"></i>
+                                                            </a>
+                                                        <?php else: ?>
+                                                            -
+                                                        <?php endif; ?>
                                                     </td>
                                                 </tr>
                                             <?php endforeach; ?>

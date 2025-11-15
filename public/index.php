@@ -103,7 +103,7 @@ $pageTitle = 'Hem';
                     Kommande tävlingar
                 </h2>
 
-                <div class="gs-grid gs-grid-cols-1 gs-md-grid-cols-2 gs-lg-grid-cols-3 gs-gap-lg gs-mb-lg">
+                <div class="gs-grid gs-grid-cols-1 gs-md-grid-cols-2 gs-lg-grid-cols-3 gs-xl-grid-cols-4 gs-gap-lg gs-mb-lg">
                     <?php foreach ($upcomingEvents as $event): ?>
                         <div class="gs-event-card">
                             <div class="gs-event-header">
@@ -150,7 +150,7 @@ $pageTitle = 'Hem';
                     Senaste resultaten
                 </h2>
 
-                <div class="gs-grid gs-grid-cols-1 gs-md-grid-cols-2 gs-lg-grid-cols-3 gs-gap-lg">
+                <div class="gs-grid gs-grid-cols-1 gs-md-grid-cols-2 gs-lg-grid-cols-3 gs-xl-grid-cols-4 gs-gap-lg">
                     <?php foreach ($recentEvents as $event): ?>
                         <div class="gs-event-card">
                             <div class="gs-event-header">

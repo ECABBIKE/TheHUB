@@ -14,6 +14,7 @@ $db = getDB();
 // Load public display settings
 $publicSettings = require __DIR__ . '/config/public_settings.php';
 $displayMode = $publicSettings['public_riders_display'] ?? 'with_results';
+$minResults = intval($publicSettings['min_results_to_show'] ?? 1);
 
 // Build query based on settings
 if ($displayMode === 'all') {
@@ -40,7 +41,7 @@ if ($displayMode === 'all') {
         ORDER BY c.lastname, c.firstname
     ");
 } else {
-    // Show ONLY riders with results
+    // Show ONLY riders with results (minimum required results)
     $cyclists = $db->getAll("
         SELECT
             c.id,
@@ -60,9 +61,9 @@ if ($displayMode === 'all') {
         INNER JOIN results r ON c.id = r.cyclist_id
         WHERE c.active = 1
         GROUP BY c.id
-        HAVING total_races > 0
+        HAVING total_races >= ?
         ORDER BY c.lastname, c.firstname
-    ");
+    ", [$minResults]);
 }
 
 $total_count = count($cyclists);
@@ -111,77 +112,68 @@ include __DIR__ . '/includes/layout-header.php';
                     </p>
                 </div>
             <?php else: ?>
-                <div class="gs-grid gs-grid-cols-1 gs-md-grid-cols-3 gs-lg-grid-cols-4 gs-xl-grid-cols-5 gs-gap-md" id="ridersGrid">
+                <div class="gs-grid gs-grid-cols-1 gs-md-grid-cols-2 gs-lg-grid-cols-3 gs-xl-grid-cols-4 gs-gap-md" id="ridersGrid">
                     <?php foreach ($cyclists as $rider): ?>
                         <a href="/rider.php?id=<?= $rider['id'] ?>" class="gs-card gs-card-hover rider-card"
                            data-search="<?= strtolower(h($rider['firstname'] . ' ' . $rider['lastname'] . ' ' . ($rider['club_name'] ?? '') . ' ' . ($rider['license_number'] ?? ''))) ?>"
-                           style="padding: 0.75rem; text-decoration: none; color: inherit; display: block; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;">
-                            <!-- Profile Header -->
-                            <div class="gs-flex gs-items-start gs-gap-sm gs-mb-sm">
-                                <div class="gs-avatar gs-avatar-sm gs-bg-primary" style="width: 40px; height: 40px; flex-shrink: 0;">
-                                    <i data-lucide="user" class="gs-text-white" style="width: 20px; height: 20px;"></i>
+                           style="padding: 1rem; text-decoration: none; color: inherit; display: block; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;">
+                            <!-- Profile Header with Larger Avatar -->
+                            <div class="gs-flex gs-items-start gs-gap-md gs-mb-md">
+                                <div class="gs-avatar gs-bg-primary" style="width: 56px; height: 56px; flex-shrink: 0; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                                    <i data-lucide="user" class="gs-text-white" style="width: 28px; height: 28px;"></i>
                                 </div>
                                 <div class="gs-flex-1" style="min-width: 0;">
-                                    <h3 class="gs-text-sm gs-font-bold gs-mb-xs" style="line-height: 1.3;">
+                                    <h3 class="gs-h5 gs-font-bold gs-mb-xs">
                                         <?= h($rider['firstname']) ?> <?= h($rider['lastname']) ?>
                                     </h3>
                                     <?php if ($rider['club_name']): ?>
-                                        <p class="gs-text-xs gs-text-secondary" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                                            <i data-lucide="building" style="width: 12px; height: 12px;"></i>
+                                        <p class="gs-text-sm gs-text-secondary" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                            <i data-lucide="building" style="width: 14px; height: 14px;"></i>
                                             <?= h($rider['club_name']) ?>
                                         </p>
                                     <?php endif; ?>
                                 </div>
                             </div>
 
-                            <!-- Stats Compact -->
-                            <div class="gs-flex gs-justify-between gs-mb-sm" style="padding: 0.5rem 0; border-top: 1px solid var(--gs-border);">
+                            <!-- Stats -->
+                            <div class="gs-flex gs-justify-between gs-mb-md" style="padding: 0.75rem 0; border-top: 1px solid var(--gs-border);">
                                 <div class="gs-text-center gs-flex-1">
-                                    <div class="gs-text-lg gs-font-bold gs-text-primary"><?= $rider['total_races'] ?></div>
-                                    <div class="gs-text-xs gs-text-secondary">Lopp</div>
+                                    <div class="gs-h4 gs-font-bold gs-text-primary"><?= $rider['total_races'] ?></div>
+                                    <div class="gs-text-sm gs-text-secondary">Lopp</div>
                                 </div>
                                 <div class="gs-text-center gs-flex-1">
-                                    <div class="gs-text-lg gs-font-bold" style="color: var(--gs-accent);"><?= $rider['podiums'] ?></div>
-                                    <div class="gs-text-xs gs-text-secondary">Pall</div>
+                                    <div class="gs-h4 gs-font-bold" style="color: var(--gs-accent);"><?= $rider['podiums'] ?></div>
+                                    <div class="gs-text-sm gs-text-secondary">Pall</div>
                                 </div>
                                 <?php if ($rider['best_position']): ?>
                                     <div class="gs-text-center gs-flex-1">
-                                        <div class="gs-text-lg gs-font-bold" style="color: var(--gs-success);"><?= $rider['best_position'] ?></div>
-                                        <div class="gs-text-xs gs-text-secondary">Bäst</div>
+                                        <div class="gs-h4 gs-font-bold" style="color: var(--gs-success);"><?= $rider['best_position'] ?></div>
+                                        <div class="gs-text-sm gs-text-secondary">Bäst</div>
                                     </div>
                                 <?php endif; ?>
                             </div>
 
                             <!-- Info Badges -->
-                            <div class="gs-flex gs-gap-xs gs-flex-wrap" style="font-size: 0.7rem;">
-                                <span class="gs-badge gs-badge-secondary" style="padding: 0.15rem 0.4rem;">
-                                    <?= $rider['gender'] == 'M' ? '👨' : ($rider['gender'] == 'F' ? '👩' : '👤') ?>
-                                </span>
+                            <div class="gs-flex gs-gap-xs gs-flex-wrap">
                                 <?php if ($rider['birth_year']): ?>
-                                    <span class="gs-badge gs-badge-secondary" style="padding: 0.15rem 0.4rem;">
-                                        <?= calculateAge($rider['birth_year']) ?> år
-                                    </span>
-                                <?php endif; ?>
-                                <?php if ($rider['license_number']): ?>
-                                    <span class="gs-badge gs-badge-primary" style="padding: 0.15rem 0.4rem; font-size: 0.65rem;">
-                                        <?= strpos($rider['license_number'], 'SWE') === 0 ? 'SWE' : 'UCI' ?>: <?= h(substr($rider['license_number'], 0, 12)) ?><?= strlen($rider['license_number']) > 12 ? '...' : '' ?>
+                                    <span class="gs-badge gs-badge-secondary">
+                                        <?= $rider['gender'] == 'M' ? '👨' : ($rider['gender'] == 'F' ? '👩' : '👤') ?> <?= calculateAge($rider['birth_year']) ?> år
                                     </span>
                                 <?php endif; ?>
                                 <?php
                                 // Check license status
-                                // SWE-ID = No real license (red badge)
                                 if (!empty($rider['license_number']) && strpos($rider['license_number'], 'SWE') === 0): ?>
-                                    <span class="gs-badge gs-badge-danger" style="padding: 0.15rem 0.4rem; font-size: 0.65rem;">
+                                    <span class="gs-badge gs-badge-danger">
                                         ✗ Ej aktiv licens
                                     </span>
                                 <?php elseif (!empty($rider['license_type']) && $rider['license_type'] !== 'None'):
                                     $licenseCheck = checkLicense($rider);
                                     if ($licenseCheck['valid']): ?>
-                                        <span class="gs-badge gs-badge-success" style="padding: 0.15rem 0.4rem; font-size: 0.65rem;">
+                                        <span class="gs-badge gs-badge-success">
                                             ✓ Aktiv licens
                                         </span>
                                     <?php else: ?>
-                                        <span class="gs-badge gs-badge-danger" style="padding: 0.15rem 0.4rem; font-size: 0.65rem;">
+                                        <span class="gs-badge gs-badge-danger">
                                             ✗ Ej aktiv licens
                                         </span>
                                     <?php endif;
@@ -204,9 +196,14 @@ include __DIR__ . '/includes/layout-header.php';
         </div>
 
     <style>
+    .rider-card {
+        min-height: 200px;
+        display: flex;
+        flex-direction: column;
+    }
     .rider-card:hover {
         transform: translateY(-4px);
-        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1) !important;
+        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15) !important;
     }
     .rider-card:active {
         transform: translateY(-2px);

@@ -98,7 +98,7 @@ $pageTitle = 'Tävlingar';
             </div>
         <?php else: ?>
             <!-- Events Grid -->
-            <div class="gs-grid gs-grid-cols-1 gs-md-grid-cols-2 gs-lg-grid-cols-3 gs-gap-lg gs-mb-lg">
+            <div class="gs-grid gs-grid-cols-1 gs-md-grid-cols-2 gs-lg-grid-cols-3 gs-xl-grid-cols-4 gs-gap-lg gs-mb-lg">
                 <?php foreach ($events as $event): ?>
                     <div class="gs-event-card">
                         <div class="gs-event-header">
