@@ -69,22 +69,14 @@ foreach ($results as $result) {
 $recentResults = array_slice($results, 0, 5);
 
 // Get series standings for this rider
-$seriesStandings = $db->getAll("
+// First get the basic series data
+$riderSeriesData = $db->getAll("
     SELECT
         s.id as series_id,
         s.name as series_name,
         s.year,
         SUM(r.points) as total_points,
-        COUNT(DISTINCT r.event_id) as events_count,
-        (
-            SELECT COUNT(DISTINCT c2.id) + 1
-            FROM riders c2
-            JOIN results r2 ON c2.id = r2.cyclist_id
-            JOIN events e2 ON r2.event_id = e2.id
-            WHERE e2.series_id = s.id
-            GROUP BY c2.id
-            HAVING SUM(r2.points) > SUM(r.points)
-        ) as position
+        COUNT(DISTINCT r.event_id) as events_count
     FROM results r
     JOIN events e ON r.event_id = e.id
     JOIN series s ON e.series_id = s.id
@@ -92,6 +84,34 @@ $seriesStandings = $db->getAll("
     GROUP BY s.id
     ORDER BY s.year DESC, total_points DESC
 ", [$riderId]);
+
+// Calculate position for each series
+$seriesStandings = [];
+foreach ($riderSeriesData as $seriesData) {
+    // Get all riders' total points for this series
+    $allRidersPoints = $db->getAll("
+        SELECT
+            r.cyclist_id,
+            SUM(r.points) as total_points
+        FROM results r
+        JOIN events e ON r.event_id = e.id
+        WHERE e.series_id = ?
+        GROUP BY r.cyclist_id
+        ORDER BY total_points DESC
+    ", [$seriesData['series_id']]);
+
+    // Find position
+    $position = 1;
+    foreach ($allRidersPoints as $riderPoints) {
+        if ($riderPoints['cyclist_id'] == $riderId) {
+            break;
+        }
+        $position++;
+    }
+
+    $seriesData['position'] = $position;
+    $seriesStandings[] = $seriesData;
+}
 
 // Get results by year
 $resultsByYear = [];
@@ -107,7 +127,9 @@ krsort($resultsByYear); // Sort by year descending
 // Calculate age and determine current class
 require_once __DIR__ . '/includes/class-calculations.php';
 $currentYear = date('Y');
-$age = $currentYear - ($rider['birth_year'] ?? 0);
+$age = ($rider['birth_year'] && $rider['birth_year'] > 0)
+    ? ($currentYear - $rider['birth_year'])
+    : null;
 $currentClass = null;
 $currentClassName = null;
 
@@ -412,7 +434,7 @@ include __DIR__ . '/includes/layout-header.php';
                                 <div class="info-field">
                                     <div class="info-label">Ålder</div>
                                     <div class="info-value">
-                                        <?= $age ?> år
+                                        <?= $age !== null ? $age . ' år' : '–' ?>
                                     </div>
                                 </div>
 
