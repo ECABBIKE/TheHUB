@@ -60,6 +60,9 @@ $is_admin = isLoggedIn();
             <li><a href="/admin/public-settings.php" class="<?= $current_page == 'public-settings.php' ? 'active' : '' ?>">
                 <i data-lucide="settings"></i> Publika Inställningar
             </a></li>
+            <li><a href="/admin/system-settings.php" class="<?= $current_page == 'system-settings.php' ? 'active' : '' ?>">
+                <i data-lucide="cog"></i> Systeminställningar
+            </a></li>
         </ul>
         <div class="gs-menu-footer">
             <a href="/admin/logout.php" class="gs-btn gs-btn-sm gs-btn-outline gs-w-full">
