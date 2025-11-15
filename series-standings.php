@@ -9,6 +9,7 @@ $db = getDB();
 $seriesId = isset($_GET['id']) ? (int)$_GET['id'] : 0;
 
 if (!$seriesId) {
+    // Redirect to series page if no ID provided
     header('Location: /series.php');
     exit;
 }
@@ -58,7 +59,7 @@ $activeClasses = $db->getAll("
     FROM classes c
     JOIN results r ON c.id = r.class_id
     JOIN events e ON r.event_id = e.id
-    WHERE e.series_id = ? AND c.active = 1
+    WHERE e.series_id = ?
     GROUP BY c.id
     ORDER BY c.sort_order ASC
 ", [$seriesId]);
