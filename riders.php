@@ -259,9 +259,18 @@ include __DIR__ . '/includes/layout-header.php';
                 </div>
             </div>
 
+            <!-- Initial Message -->
+            <div id="initialMessage" class="gs-card gs-text-center" style="padding: 3rem;">
+                <i data-lucide="search" style="width: 64px; height: 64px; margin: 0 auto 1rem; opacity: 0.3;"></i>
+                <h3 class="gs-h4 gs-mb-sm">Sök efter deltagare</h3>
+                <p class="gs-text-secondary">
+                    Börja skriva i sökfältet ovan för att hitta deltagare
+                </p>
+            </div>
+
             <!-- Riders Grid -->
             <?php if (empty($cyclists)): ?>
-                <div class="gs-card gs-text-center" style="padding: 3rem;">
+                <div class="gs-card gs-text-center" style="padding: 3rem; display: none;" id="noRidersMessage">
                     <i data-lucide="user-x" style="width: 64px; height: 64px; margin: 0 auto 1rem; opacity: 0.3;"></i>
                     <h3 class="gs-h4 gs-mb-sm">Inga deltagare hittades</h3>
                     <p class="gs-text-secondary">
@@ -269,12 +278,14 @@ include __DIR__ . '/includes/layout-header.php';
                     </p>
                 </div>
             <?php else: ?>
-                <div class="gs-grid gs-grid-cols-1 gs-md-grid-cols-2 gs-lg-grid-cols-3 gs-xl-grid-cols-4 gs-gap-md" id="ridersGrid">
+                <div class="gs-grid gs-grid-cols-1 gs-md-grid-cols-2 gs-lg-grid-cols-3 gs-xl-grid-cols-4 gs-gap-md" id="ridersGrid" style="display: none;">
                     <?php
                     $currentYear = date('Y');
                     foreach ($cyclists as $rider):
                         // Calculate age and class
-                        $age = $currentYear - ($rider['birth_year'] ?? 0);
+                        $age = ($rider['birth_year'] && $rider['birth_year'] > 0)
+                            ? ($currentYear - $rider['birth_year'])
+                            : null;
                         $classId = null;
                         $className = null;
                         if ($rider['birth_year'] && $rider['gender']) {
@@ -338,7 +349,7 @@ include __DIR__ . '/includes/layout-header.php';
                                     <div class="info-field-compact">
                                         <div class="info-label-compact">Ålder</div>
                                         <div class="info-value-compact">
-                                            <?= $age ?> år
+                                            <?= $age !== null ? $age . ' år' : '–' ?>
                                         </div>
                                     </div>
 
@@ -359,21 +370,33 @@ include __DIR__ . '/includes/layout-header.php';
                                     <?php endif; ?>
 
                                     <div class="info-field-compact">
-                                        <div class="info-label-compact">Lopp</div>
+                                        <div class="info-label-compact">Race</div>
                                         <div class="info-value-compact">
                                             <?= $rider['total_races'] ?>
                                         </div>
                                     </div>
 
-                                    <!-- Club on wide row -->
-                                    <?php if ($rider['club_name']): ?>
-                                        <div class="club-field-wide">
-                                            <div class="info-label-compact">Klubb</div>
-                                            <div class="info-value-compact" style="font-size: 13px;">
-                                                <?= h($rider['club_name']) ?>
-                                            </div>
+                                    <div class="info-field-compact">
+                                        <div class="info-label-compact">Best</div>
+                                        <div class="info-value-compact">
+                                            <?= $rider['best_position'] ?? '–' ?>
                                         </div>
-                                    <?php endif; ?>
+                                    </div>
+
+                                    <div class="info-field-compact">
+                                        <div class="info-label-compact">Points Total</div>
+                                        <div class="info-value-compact">
+                                            0
+                                        </div>
+                                    </div>
+
+                                    <!-- Club on wide row -->
+                                    <div class="club-field-wide">
+                                        <div class="info-label-compact">Klubb</div>
+                                        <div class="info-value-compact" style="font-size: 13px;">
+                                            <?= $rider['club_name'] ? h($rider['club_name']) : 'Klubbtillhörighet saknas' ?>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 
@@ -408,15 +431,29 @@ $additionalScripts = "
     const resultsCount = document.getElementById('resultsCount');
     const totalRiders = " . count($cyclists) . ";
 
+    const initialMessage = document.getElementById('initialMessage');
+
     if (searchInput && ridersGrid) {
         searchInput.addEventListener('input', function(e) {
             const search = e.target.value.toLowerCase().trim();
             const cards = ridersGrid.querySelectorAll('.license-card-compact');
             let visibleCount = 0;
 
+            // Show/hide initial message and grid
+            if (search) {
+                if (initialMessage) initialMessage.style.display = 'none';
+                ridersGrid.style.display = 'grid';
+            } else {
+                if (initialMessage) initialMessage.style.display = 'block';
+                ridersGrid.style.display = 'none';
+                if (resultsCounter) resultsCounter.style.display = 'none';
+                if (noResults) noResults.style.display = 'none';
+                return;
+            }
+
             cards.forEach(card => {
                 const searchData = card.getAttribute('data-search');
-                if (!search || searchData.includes(search)) {
+                if (searchData.includes(search)) {
                     card.style.display = 'block';
                     visibleCount++;
                 } else {
@@ -425,23 +462,21 @@ $additionalScripts = "
             });
 
             // Update results counter
-            if (search && resultsCounter && resultsCount) {
+            if (resultsCounter && resultsCount) {
                 resultsCounter.style.display = 'block';
                 if (visibleCount === 1) {
                     resultsCount.textContent = 'Visar 1 deltagare av ' + totalRiders + ' totalt';
                 } else {
                     resultsCount.textContent = 'Visar ' + visibleCount + ' deltagare av ' + totalRiders + ' totalt';
                 }
-            } else if (resultsCounter) {
-                resultsCounter.style.display = 'none';
             }
 
             // Show/hide no results message
             if (noResults) {
-                noResults.style.display = visibleCount === 0 && search ? 'block' : 'none';
+                noResults.style.display = visibleCount === 0 ? 'block' : 'none';
             }
             if (ridersGrid) {
-                ridersGrid.style.display = visibleCount === 0 && search ? 'none' : 'grid';
+                ridersGrid.style.display = visibleCount === 0 ? 'none' : 'grid';
             }
         });
     }
