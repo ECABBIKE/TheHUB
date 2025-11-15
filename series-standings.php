@@ -129,7 +129,7 @@ if ($selectedClass) {
     });
 }
 
-$pageTitle = $series['name'] . ' - Ställning';
+$pageTitle = $series['name'] . ' - Kvalpoäng & Ställning';
 $pageType = 'public';
 include __DIR__ . '/includes/layout-header.php';
 ?>
@@ -182,7 +182,7 @@ include __DIR__ . '/includes/layout-header.php';
         <div class="gs-mb-xl">
             <h1 class="gs-h2 gs-text-primary gs-mb-sm">
                 <i data-lucide="trophy"></i>
-                <?= h($series['name']) ?>
+                <?= h($series['name']) ?> - Kvalpoäng & Ställning
             </h1>
             <?php if ($series['description']): ?>
                 <p class="gs-text-secondary">
@@ -319,7 +319,7 @@ include __DIR__ . '/includes/layout-header.php';
                 <div class="gs-card-header">
                     <h3 class="gs-h4">
                         <i data-lucide="trophy"></i>
-                        <?= h($selectedClassDisplay) ?> - <?= h($selectedClassName) ?>
+                        Kvalpoängställning: <?= h($selectedClassDisplay) ?> - <?= h($selectedClassName) ?>
                     </h3>
                     <?php if ($searchName): ?>
                         <p class="gs-text-sm gs-text-secondary">
