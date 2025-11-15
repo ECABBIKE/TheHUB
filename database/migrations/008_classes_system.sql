@@ -30,13 +30,41 @@ ALTER TABLE `results`
 ADD COLUMN `class_position` INT DEFAULT NULL COMMENT 'Position within class' AFTER `position`,
 ADD COLUMN `class_points` DECIMAL(10,2) DEFAULT NULL COMMENT 'Points earned in class' AFTER `points`;
 
--- Add class support to events
-ALTER TABLE `events`
-ADD COLUMN `enable_classes` TINYINT(1) NOT NULL DEFAULT 0 COMMENT 'Enable class-based results' AFTER `point_scale_id`;
+-- Add class support to events (only if not exists)
+SET @columnExists = (
+    SELECT COUNT(*)
+    FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE()
+    AND TABLE_NAME = 'events'
+    AND COLUMN_NAME = 'enable_classes'
+);
 
--- Add class support to series
-ALTER TABLE `series`
-ADD COLUMN `enable_classes` TINYINT(1) NOT NULL DEFAULT 0 COMMENT 'Enable class-based standings' AFTER `point_scale_id`;
+SET @sql = IF(@columnExists = 0,
+    'ALTER TABLE `events` ADD COLUMN `enable_classes` TINYINT(1) NOT NULL DEFAULT 0 COMMENT "Enable class-based results"',
+    'SELECT "Column enable_classes already exists in events" AS Info'
+);
+
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+-- Add class support to series (only if not exists)
+SET @columnExists = (
+    SELECT COUNT(*)
+    FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE()
+    AND TABLE_NAME = 'series'
+    AND COLUMN_NAME = 'enable_classes'
+);
+
+SET @sql = IF(@columnExists = 0,
+    'ALTER TABLE `series` ADD COLUMN `enable_classes` TINYINT(1) NOT NULL DEFAULT 0 COMMENT "Enable class-based standings"',
+    'SELECT "Column enable_classes already exists in series" AS Info'
+);
+
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
 
 -- Insert default Swedish cycling classes for Road
 INSERT INTO `classes` (`name`, `display_name`, `gender`, `min_age`, `max_age`, `discipline`, `sort_order`, `active`) VALUES
