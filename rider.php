@@ -64,6 +64,7 @@ $results = $db->getAll("
         e.name as event_name,
         e.date as event_date,
         e.location as event_location,
+        e.series_id,
         s.name as series_name,
         v.name as venue_name,
         v.city as venue_city
@@ -685,8 +686,6 @@ include __DIR__ . '/includes/layout-header.php';
                                                 <th style="text-align: center;">Placering</th>
                                                 <th style="text-align: center;">Tid</th>
                                                 <th style="text-align: center;">Poäng</th>
-                                                <th style="text-align: center;">Status</th>
-                                                <th style="text-align: center;">Resultat</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -718,7 +717,11 @@ include __DIR__ . '/includes/layout-header.php';
                                                         <?php endif; ?>
                                                     </td>
                                                     <td>
-                                                        <?php if ($result['series_name']): ?>
+                                                        <?php if ($result['series_name'] && $result['series_id']): ?>
+                                                            <a href="/series-standings.php?id=<?= $result['series_id'] ?>" class="gs-badge gs-badge-primary gs-badge-sm" style="text-decoration: none;">
+                                                                <?= h($result['series_name']) ?>
+                                                            </a>
+                                                        <?php elseif ($result['series_name']): ?>
                                                             <span class="gs-badge gs-badge-primary gs-badge-sm">
                                                                 <?= h($result['series_name']) ?>
                                                             </span>
@@ -742,38 +745,23 @@ include __DIR__ . '/includes/layout-header.php';
                                                         <?php endif; ?>
                                                     </td>
                                                     <td style="text-align: center;">
-                                                        <?= $result['finish_time'] ? h($result['finish_time']) : '-' ?>
+                                                        <?php
+                                                        if ($result['finish_time']) {
+                                                            // Format time: remove leading hours if 0
+                                                            $time = $result['finish_time'];
+                                                            // Check if time starts with "00:" or "0:"
+                                                            if (preg_match('/^0?0:/', $time)) {
+                                                                // Remove leading "00:" or "0:"
+                                                                $time = preg_replace('/^0?0:/', '', $time);
+                                                            }
+                                                            echo h($time);
+                                                        } else {
+                                                            echo '-';
+                                                        }
+                                                        ?>
                                                     </td>
                                                     <td style="text-align: center;">
                                                         <?= $result['points'] ?? 0 ?>
-                                                    </td>
-                                                    <td style="text-align: center;">
-                                                        <?php
-                                                        $statusBadge = 'gs-badge-success';
-                                                        $statusText = 'Slutförd';
-                                                        if ($result['status'] === 'dnf') {
-                                                            $statusBadge = 'gs-badge-danger';
-                                                            $statusText = 'DNF';
-                                                        } elseif ($result['status'] === 'dns') {
-                                                            $statusBadge = 'gs-badge-secondary';
-                                                            $statusText = 'DNS';
-                                                        } elseif ($result['status'] === 'dq') {
-                                                            $statusBadge = 'gs-badge-danger';
-                                                            $statusText = 'DQ';
-                                                        }
-                                                        ?>
-                                                        <span class="gs-badge <?= $statusBadge ?> gs-badge-sm">
-                                                            <?= $statusText ?>
-                                                        </span>
-                                                    </td>
-                                                    <td style="text-align: center;">
-                                                        <?php if ($result['event_id']): ?>
-                                                            <a href="/event.php?id=<?= $result['event_id'] ?>" class="gs-btn gs-btn-sm gs-btn-outline" title="Se alla resultat">
-                                                                <i data-lucide="list" style="width: 14px; height: 14px;"></i>
-                                                            </a>
-                                                        <?php else: ?>
-                                                            -
-                                                        <?php endif; ?>
                                                     </td>
                                                 </tr>
                                             <?php endforeach; ?>
