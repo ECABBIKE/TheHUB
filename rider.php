@@ -12,9 +12,28 @@ if (!$riderId) {
 }
 
 // Fetch rider details
+// IMPORTANT: Only select PUBLIC fields - never expose private data (personnummer, address, phone, etc.)
 $rider = $db->getRow("
     SELECT
-        r.*,
+        r.id,
+        r.firstname,
+        r.lastname,
+        r.birth_year,
+        r.gender,
+        r.club_id,
+        r.team,
+        r.license_number,
+        r.license_type,
+        r.license_category,
+        r.discipline,
+        r.disciplines,
+        r.license_valid_until,
+        r.license_year,
+        r.city,
+        r.country,
+        r.district,
+        r.active,
+        r.photo,
         c.name as club_name,
         c.city as club_city
     FROM riders r
