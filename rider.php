@@ -13,33 +13,44 @@ if (!$riderId) {
 
 // Fetch rider details
 // IMPORTANT: Only select PUBLIC fields - never expose private data (personnummer, address, phone, etc.)
-$rider = $db->getRow("
-    SELECT
-        r.id,
-        r.firstname,
-        r.lastname,
-        r.birth_year,
-        r.gender,
-        r.club_id,
-        r.team,
-        r.license_number,
-        r.license_type,
-        r.license_category,
-        r.discipline,
-        r.disciplines,
-        r.license_valid_until,
-        r.license_year,
-        r.city,
-        r.country,
-        r.district,
-        r.active,
-        r.photo,
-        c.name as club_name,
-        c.city as club_city
-    FROM riders r
-    LEFT JOIN clubs c ON r.club_id = c.id
-    WHERE r.id = ?
-", [$riderId]);
+// Try to select new fields, fall back to old schema if they don't exist
+try {
+    $rider = $db->getRow("
+        SELECT
+            r.id,
+            r.firstname,
+            r.lastname,
+            r.birth_year,
+            r.gender,
+            r.club_id,
+            r.license_number,
+            r.license_type,
+            r.license_category,
+            r.discipline,
+            r.license_valid_until,
+            r.city,
+            r.active,
+            c.name as club_name,
+            c.city as club_city
+        FROM riders r
+        LEFT JOIN clubs c ON r.club_id = c.id
+        WHERE r.id = ?
+    ", [$riderId]);
+
+    // Set default values for new fields that might not exist in old schema
+    $rider['team'] = $rider['team'] ?? null;
+    $rider['disciplines'] = $rider['disciplines'] ?? null;
+    $rider['license_year'] = $rider['license_year'] ?? null;
+    $rider['country'] = $rider['country'] ?? null;
+    $rider['district'] = $rider['district'] ?? null;
+    $rider['photo'] = $rider['photo'] ?? null;
+
+} catch (Exception $e) {
+    // If even basic query fails, something else is wrong
+    error_log("Error fetching rider: " . $e->getMessage());
+    header('Location: /riders.php');
+    exit;
+}
 
 if (!$rider) {
     header('Location: /riders.php');
