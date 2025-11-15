@@ -9,6 +9,7 @@ $db = getDB();
 $seriesId = isset($_GET['id']) ? (int)$_GET['id'] : 0;
 
 if (!$seriesId) {
+    // Redirect to series page if no ID provided
     header('Location: /series.php');
     exit;
 }
