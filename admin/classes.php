@@ -139,10 +139,16 @@ include __DIR__ . '/../includes/layout-header.php';
                     <i data-lucide="layers"></i>
                     Klasser
                 </h1>
-                <button type="button" class="gs-btn gs-btn-primary" onclick="openClassModal()">
-                    <i data-lucide="plus"></i>
-                    Ny Klass
-                </button>
+                <div class="gs-flex gs-gap-sm">
+                    <a href="/admin/import-classes.php" class="gs-btn gs-btn-outline">
+                        <i data-lucide="upload"></i>
+                        Importera CSV
+                    </a>
+                    <button type="button" class="gs-btn gs-btn-primary" onclick="openClassModal()">
+                        <i data-lucide="plus"></i>
+                        Ny Klass
+                    </button>
+                </div>
             </div>
 
             <!-- Messages -->
