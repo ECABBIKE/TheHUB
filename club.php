@@ -52,41 +52,148 @@ include __DIR__ . '/includes/layout-header.php';
 ?>
 
 <style>
-    .club-header-card {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        border-radius: 12px;
-        padding: 2rem;
+    /* Club License Card */
+    .club-license-card-container {
         margin-bottom: 2rem;
-        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
     }
 
-    .club-stats {
+    .club-license-card {
+        max-width: 800px;
+        margin: 0 auto;
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+        overflow: hidden;
+    }
+
+    /* GravitySeries Stripe */
+    .club-uci-stripe {
+        height: 6px;
+        background: linear-gradient(90deg,
+            #004a98 0% 25%,
+            #8A9A5B 25% 50%,
+            #EF761F 50% 75%,
+            #FFE009 75% 100%
+        );
+    }
+
+    /* Header */
+    .club-license-header {
+        padding: 1.5rem;
+        background: linear-gradient(135deg, #2d3748 0%, #1a202c 100%);
+        color: white;
+        text-align: center;
+    }
+
+    .club-license-season {
+        font-size: 1rem;
+        font-weight: 600;
+        background: rgba(255, 255, 255, 0.2);
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        display: inline-block;
+    }
+
+    /* Main Content */
+    .club-license-content {
+        padding: 2rem;
+    }
+
+    /* Club Name */
+    .club-name {
+        font-size: clamp(1.75rem, 6vw, 2.5rem);
+        font-weight: 800;
+        color: #1a202c;
+        line-height: 1.2;
+        text-transform: uppercase;
+        margin-bottom: 0.5rem;
+        text-align: center;
+    }
+
+    /* Club Location */
+    .club-location {
+        text-align: center;
+        font-size: clamp(1rem, 3.5vw, 1.25rem);
+        color: #667eea;
+        font-weight: 600;
+        margin-bottom: 2rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+    }
+
+    /* Stats Grid */
+    .club-stats-grid {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
         gap: 1rem;
-        margin-top: 1.5rem;
+        margin-bottom: 1.5rem;
     }
 
-    .club-stat {
-        text-align: center;
-        background: rgba(255, 255, 255, 0.1);
-        padding: 1rem;
+    .club-stat-box {
+        background: #f8f9fa;
+        padding: 1.5rem;
         border-radius: 8px;
+        border-left: 4px solid #667eea;
+        text-align: center;
     }
 
     .club-stat-number {
-        font-size: 2rem;
+        font-size: clamp(2rem, 8vw, 3rem);
         font-weight: 800;
+        color: #667eea;
         line-height: 1;
         margin-bottom: 0.5rem;
     }
 
     .club-stat-label {
-        font-size: 0.875rem;
-        opacity: 0.9;
+        font-size: clamp(0.75rem, 2.5vw, 0.875rem);
+        color: #718096;
+        font-weight: 600;
         text-transform: uppercase;
         letter-spacing: 0.5px;
+    }
+
+    /* Club Badge */
+    .club-badge {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 1.5rem;
+        border-radius: 8px;
+        text-align: center;
+    }
+
+    .club-badge-label {
+        font-size: clamp(0.75rem, 2.5vw, 0.875rem);
+        opacity: 0.9;
+        font-weight: 600;
+        text-transform: uppercase;
+        margin-bottom: 0.5rem;
+    }
+
+    .club-badge-text {
+        font-size: clamp(1.25rem, 5vw, 1.5rem);
+        font-weight: 800;
+    }
+
+    /* Footer */
+    .club-license-footer {
+        padding: 0.75rem 2rem;
+        background: rgba(0, 0, 0, 0.03);
+        text-align: center;
+        font-size: clamp(0.625rem, 2vw, 0.75rem);
+        color: #718096;
+    }
+
+    @media (max-width: 768px) {
+        .club-license-content {
+            padding: 1.5rem;
+        }
+
+        .club-stats-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
     }
 
     .rider-card {
@@ -150,35 +257,63 @@ include __DIR__ . '/includes/layout-header.php';
             </a>
         </div>
 
-        <!-- Club Header -->
-        <div class="club-header-card">
-            <h1 class="gs-h1" style="margin: 0 0 0.5rem 0;">
-                <i data-lucide="users"></i>
-                <?= h($club['name']) ?>
-            </h1>
-            <?php if ($club['city']): ?>
-                <p style="font-size: 1.125rem; opacity: 0.9; margin: 0 0 1.5rem 0;">
-                    <i data-lucide="map-pin"></i>
-                    <?= h($club['city']) ?>
-                </p>
-            <?php endif; ?>
+        <!-- Club License Card -->
+        <div class="club-license-card-container">
+            <div class="club-license-card">
+                <!-- GravitySeries Stripe -->
+                <div class="club-uci-stripe"></div>
 
-            <div class="club-stats">
-                <div class="club-stat">
-                    <div class="club-stat-number"><?= count($clubRiders) ?></div>
-                    <div class="club-stat-label">Aktiva medlemmar</div>
+                <!-- Header -->
+                <div class="club-license-header">
+                    <div class="club-license-season"><?= $currentYear ?></div>
                 </div>
-                <div class="club-stat">
-                    <div class="club-stat-number"><?= array_sum(array_column($clubRiders, 'total_races')) ?></div>
-                    <div class="club-stat-label">Totalt lopp</div>
+
+                <!-- Main Content -->
+                <div class="club-license-content">
+                    <!-- Club Name -->
+                    <div class="club-name">
+                        <i data-lucide="users" style="display: inline-block; vertical-align: middle;"></i>
+                        <?= h($club['name']) ?>
+                    </div>
+
+                    <!-- Club Location -->
+                    <?php if ($club['city']): ?>
+                        <div class="club-location">
+                            <i data-lucide="map-pin"></i>
+                            <?= h($club['city']) ?>
+                        </div>
+                    <?php endif; ?>
+
+                    <!-- Stats Grid -->
+                    <div class="club-stats-grid">
+                        <div class="club-stat-box">
+                            <div class="club-stat-number"><?= count($clubRiders) ?></div>
+                            <div class="club-stat-label">Aktiva Cyklister</div>
+                        </div>
+                        <div class="club-stat-box">
+                            <div class="club-stat-number"><?= array_sum(array_column($clubRiders, 'total_races')) ?></div>
+                            <div class="club-stat-label">Totalt Lopp</div>
+                        </div>
+                        <div class="club-stat-box">
+                            <div class="club-stat-number"><?= array_sum(array_column($clubRiders, 'total_points')) ?: 0 ?></div>
+                            <div class="club-stat-label">Totala Poäng</div>
+                        </div>
+                        <div class="club-stat-box">
+                            <div class="club-stat-number"><?= array_sum(array_column($clubRiders, 'wins')) ?></div>
+                            <div class="club-stat-label">Segrar</div>
+                        </div>
+                    </div>
+
+                    <!-- Club Badge -->
+                    <div class="club-badge">
+                        <div class="club-badge-label">Registrerad Klubb</div>
+                        <div class="club-badge-text">GravitySeries <?= $currentYear ?></div>
+                    </div>
                 </div>
-                <div class="club-stat">
-                    <div class="club-stat-number"><?= array_sum(array_column($clubRiders, 'total_points')) ?: 0 ?></div>
-                    <div class="club-stat-label">Totala poäng</div>
-                </div>
-                <div class="club-stat">
-                    <div class="club-stat-number"><?= array_sum(array_column($clubRiders, 'wins')) ?></div>
-                    <div class="club-stat-label">Segrar</div>
+
+                <!-- Footer -->
+                <div class="club-license-footer">
+                    TheHUB by GravitySeries • Klubbprofil <?= $currentYear ?>
                 </div>
             </div>
         </div>

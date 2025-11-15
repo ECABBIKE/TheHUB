@@ -31,6 +31,24 @@ if (!$series) {
 $viewMode = isset($_GET['view']) ? $_GET['view'] : 'overall';
 $selectedClass = isset($_GET['class']) ? (int)$_GET['class'] : null;
 
+// Get all events in this series
+$seriesEvents = $db->getAll("
+    SELECT
+        e.id,
+        e.name,
+        e.date,
+        e.location,
+        v.name as venue_name,
+        v.city as venue_city,
+        COUNT(DISTINCT r.id) as result_count
+    FROM events e
+    LEFT JOIN venues v ON e.venue_id = v.id
+    LEFT JOIN results r ON e.id = r.event_id
+    WHERE e.series_id = ?
+    GROUP BY e.id
+    ORDER BY e.date ASC
+", [$seriesId]);
+
 // Get overall standings
 $overallStandings = getSeriesStandings($db, $seriesId, null, 100);
 
@@ -100,6 +118,53 @@ include __DIR__ . '/includes/layout-header.php';
                 <?php endif; ?>
             </div>
         </div>
+
+        <!-- Events List -->
+        <?php if (!empty($seriesEvents)): ?>
+            <div class="gs-card gs-mb-xl">
+                <div class="gs-card-header">
+                    <h3 class="gs-h4">
+                        <i data-lucide="calendar"></i>
+                        Tävlingar i serien
+                    </h3>
+                </div>
+                <div class="gs-card-content">
+                    <div class="gs-grid gs-grid-cols-1 gs-md-grid-cols-2 gs-gap-md">
+                        <?php foreach ($seriesEvents as $event): ?>
+                            <a href="/event.php?id=<?= $event['id'] ?>" class="gs-card gs-card-hover" style="text-decoration: none; color: inherit;">
+                                <div class="gs-card-content">
+                                    <div class="gs-flex gs-items-start gs-gap-md">
+                                        <div style="flex: 1;">
+                                            <h4 class="gs-h5 gs-mb-xs">
+                                                <?= h($event['name']) ?>
+                                            </h4>
+                                            <div class="gs-text-sm gs-text-secondary gs-mb-xs">
+                                                <i data-lucide="calendar" style="width: 14px; height: 14px; display: inline-block; vertical-align: middle;"></i>
+                                                <?= date('Y-m-d', strtotime($event['date'])) ?>
+                                            </div>
+                                            <?php if ($event['venue_name'] || $event['location']): ?>
+                                                <div class="gs-text-sm gs-text-secondary">
+                                                    <i data-lucide="map-pin" style="width: 14px; height: 14px; display: inline-block; vertical-align: middle;"></i>
+                                                    <?= h($event['venue_name'] ?: $event['location']) ?>
+                                                    <?php if ($event['venue_city']): ?>
+                                                        • <?= h($event['venue_city']) ?>
+                                                    <?php endif; ?>
+                                                </div>
+                                            <?php endif; ?>
+                                        </div>
+                                        <div style="text-align: right;">
+                                            <span class="gs-badge gs-badge-primary">
+                                                <?= $event['result_count'] ?> resultat
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </a>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+            </div>
+        <?php endif; ?>
 
         <!-- View Mode Tabs -->
         <?php if ($series['enable_classes'] && !empty($activeClasses)): ?>

@@ -194,30 +194,85 @@ include __DIR__ . '/../includes/layout-header.php';
 
             <!-- Quick Links to Specialized Import Pages -->
             <div class="gs-grid gs-grid-cols-1 gs-md-grid-cols-2 gs-lg-grid-cols-3 gs-gap-lg gs-mb-xl">
-                <div class="gs-card">
-                    <div class="gs-card-header">
-                        <h2 class="gs-h4 gs-text-primary">
-                            <i data-lucide="users-2"></i>
-                            Importera Cyklister
+                <!-- Flexibel Import -->
+                <div class="gs-card" style="border: 2px solid #86efac; background: #f0fdf4;">
+                    <div class="gs-card-header" style="background: #10b981;">
+                        <h2 class="gs-h4" style="color: white; margin: 0;">
+                            <i data-lucide="sparkles"></i>
+                            Flexibel Import ⭐
                         </h2>
                     </div>
                     <div class="gs-card-content">
                         <p class="gs-text-secondary gs-mb-md">
-                            Bulk-import av cyklister från CSV-fil med fuzzy matching för klubbar.
+                            <strong>REKOMMENDERAD!</strong> Importera CSV med kolumner i valfri ordning.
                         </p>
                         <ul class="gs-text-sm gs-text-secondary gs-mb-md" style="margin-left: var(--gs-space-lg); line-height: 1.8;">
-                            <li>Stöder upp till 3000+ cyklister</li>
-                            <li>Automatisk klubb-matchning</li>
-                            <li>Dubbletthantering via license/namn</li>
-                            <li>Progress tracking</li>
+                            <li><strong>Kolumner i valfri ordning</strong></li>
+                            <li>Okända kolumner ignoreras</li>
+                            <li>Förhandsgranska innan import</li>
+                            <li>Svenska & engelska kolumnnamn</li>
+                            <li>Inkluderar privata fält (sekretess)</li>
                         </ul>
-                        <a href="/admin/import-riders.php" class="gs-btn gs-btn-primary">
+                        <a href="/admin/import-riders-flexible.php" class="gs-btn gs-btn-success gs-w-full">
                             <i data-lucide="arrow-right"></i>
-                            Importera Cyklister
+                            Använd Flexibel Import
                         </a>
                     </div>
                 </div>
 
+                <!-- Extended Import -->
+                <div class="gs-card" style="border: 2px solid #93c5fd;">
+                    <div class="gs-card-header" style="background: #3b82f6;">
+                        <h2 class="gs-h4" style="color: white; margin: 0;">
+                            <i data-lucide="file-text"></i>
+                            Utökad Import
+                        </h2>
+                    </div>
+                    <div class="gs-card-content">
+                        <p class="gs-text-secondary gs-mb-md">
+                            Fullständig deltagardata med fast kolumnordning.
+                        </p>
+                        <ul class="gs-text-sm gs-text-secondary gs-mb-md" style="margin-left: var(--gs-space-lg); line-height: 1.8;">
+                            <li>Fast kolumnordning (mall krävs)</li>
+                            <li>Inkluderar privata fält (sekretess)</li>
+                            <li>Personnummer, adress, telefon</li>
+                            <li>Team, distrikt, grenar</li>
+                            <li>Licensår och licenstyp</li>
+                        </ul>
+                        <a href="/admin/import-riders-extended.php" class="gs-btn gs-btn-primary gs-w-full">
+                            <i data-lucide="arrow-right"></i>
+                            Använd Utökad Import
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Standard Import -->
+                <div class="gs-card">
+                    <div class="gs-card-header">
+                        <h2 class="gs-h4 gs-text-primary">
+                            <i data-lucide="users-2"></i>
+                            Standard Import
+                        </h2>
+                    </div>
+                    <div class="gs-card-content">
+                        <p class="gs-text-secondary gs-mb-md">
+                            Grundläggande import med endast publika fält.
+                        </p>
+                        <ul class="gs-text-sm gs-text-secondary gs-mb-md" style="margin-left: var(--gs-space-lg); line-height: 1.8;">
+                            <li>Förnamn, efternamn, klubb</li>
+                            <li>Födelseår, kön, stad</li>
+                            <li>Licensnummer och typ</li>
+                            <li>Automatisk klubb-matchning</li>
+                            <li>Dubbletthantering</li>
+                        </ul>
+                        <a href="/admin/import-riders.php" class="gs-btn gs-btn-outline gs-w-full">
+                            <i data-lucide="arrow-right"></i>
+                            Använd Standard Import
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Results Import -->
                 <div class="gs-card">
                     <div class="gs-card-header">
                         <h2 class="gs-h4 gs-text-primary">
@@ -227,7 +282,7 @@ include __DIR__ . '/../includes/layout-header.php';
                     </div>
                     <div class="gs-card-content">
                         <p class="gs-text-secondary gs-mb-md">
-                            Bulk-import av tävlingsresultat från CSV-fil med automatisk matchning.
+                            Bulk-import av tävlingsresultat från CSV-fil.
                         </p>
                         <ul class="gs-text-sm gs-text-secondary gs-mb-md" style="margin-left: var(--gs-space-lg); line-height: 1.8;">
                             <li>Matchar cyklister via UCI/namn</li>
@@ -235,7 +290,7 @@ include __DIR__ . '/../includes/layout-header.php';
                             <li>Detaljerad matchnings-statistik</li>
                             <li>Uppdaterar befintliga resultat</li>
                         </ul>
-                        <a href="/admin/import-results.php" class="gs-btn gs-btn-primary">
+                        <a href="/admin/import-results.php" class="gs-btn gs-btn-primary gs-w-full">
                             <i data-lucide="arrow-right"></i>
                             Importera Resultat
                         </a>
