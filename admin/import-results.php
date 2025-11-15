@@ -199,6 +199,38 @@ function importResultsFromCSV($filepath, $db, $importId = null) {
             'gender' => 'gender',
             'kön' => 'gender',
             'kon' => 'gender',
+
+            // Split times for Enduro/DH
+            'ss1' => 'ss1',
+            'ss2' => 'ss2',
+            'ss3' => 'ss3',
+            'ss4' => 'ss4',
+            'ss5' => 'ss5',
+            'ss6' => 'ss6',
+            'ss7' => 'ss7',
+            'ss8' => 'ss8',
+            'ss9' => 'ss9',
+            'ss10' => 'ss10',
+            'ss11' => 'ss11',
+            'ss12' => 'ss12',
+            'ss13' => 'ss13',
+            'ss14' => 'ss14',
+            'ss15' => 'ss15',
+            'splittid1' => 'ss1',
+            'splittid2' => 'ss2',
+            'splittid3' => 'ss3',
+            'splittid4' => 'ss4',
+            'splittid5' => 'ss5',
+            'splittid6' => 'ss6',
+            'splittid7' => 'ss7',
+            'splittid8' => 'ss8',
+            'splittid9' => 'ss9',
+            'splittid10' => 'ss10',
+            'splittid11' => 'ss11',
+            'splittid12' => 'ss12',
+            'splittid13' => 'ss13',
+            'splittid14' => 'ss14',
+            'splittid15' => 'ss15',
         ];
 
         return $mappings[$col] ?? $col;
@@ -569,8 +601,14 @@ function importResultsFromCSV($filepath, $db, $importId = null) {
             // Find or create class
             $classId = null;
 
+            // Check if manual class override is set (from form)
+            global $IMPORT_FORCE_CLASS_ID;
+            if (isset($IMPORT_FORCE_CLASS_ID) && $IMPORT_FORCE_CLASS_ID > 0) {
+                $classId = (int)$IMPORT_FORCE_CLASS_ID;
+                error_log("Using manual class override: class_id = {$classId}");
+            }
             // First, check if class is specified in CSV
-            if (!empty($data['class_name'])) {
+            elseif (!empty($data['class_name'])) {
                 $className = trim($data['class_name']);
                 $classKey = strtolower($className);
 
@@ -623,6 +661,31 @@ function importResultsFromCSV($filepath, $db, $importId = null) {
                 }
             }
 
+            // Normalize split times (handle same format as finish time)
+            $splitTimes = [];
+            for ($i = 1; $i <= 15; $i++) {
+                $splitKey = 'ss' . $i;
+                $splitTime = null;
+
+                if (!empty($data[$splitKey])) {
+                    $rawTime = trim($data[$splitKey]);
+                    $rawTime = preg_replace('/[\r\n\t]+/', '', $rawTime);
+                    $rawTime = trim($rawTime);
+
+                    // Remove decimal seconds if present
+                    if (preg_match('/^(\d{1,2}):(\d{2}):(\d{2})\.?\d*$/', $rawTime, $matches)) {
+                        $hours = str_pad($matches[1], 2, '0', STR_PAD_LEFT);
+                        $minutes = $matches[2];
+                        $seconds = $matches[3];
+                        $splitTime = "{$hours}:{$minutes}:{$seconds}";
+                    } elseif (!empty($rawTime)) {
+                        $splitTime = $rawTime;
+                    }
+                }
+
+                $splitTimes[$splitKey] = $splitTime;
+            }
+
             // Prepare result data
             $resultData = [
                 'event_id' => $eventId,
@@ -634,7 +697,23 @@ function importResultsFromCSV($filepath, $db, $importId = null) {
                 'bib_number' => !empty($data['bib_number']) ? trim($data['bib_number']) : null,
                 'status' => $status,
                 'points' => !empty($data['points']) ? (int)$data['points'] : 0,
-                'notes' => !empty($data['notes']) ? trim($data['notes']) : null
+                'notes' => !empty($data['notes']) ? trim($data['notes']) : null,
+                // Add all split times
+                'ss1' => $splitTimes['ss1'],
+                'ss2' => $splitTimes['ss2'],
+                'ss3' => $splitTimes['ss3'],
+                'ss4' => $splitTimes['ss4'],
+                'ss5' => $splitTimes['ss5'],
+                'ss6' => $splitTimes['ss6'],
+                'ss7' => $splitTimes['ss7'],
+                'ss8' => $splitTimes['ss8'],
+                'ss9' => $splitTimes['ss9'],
+                'ss10' => $splitTimes['ss10'],
+                'ss11' => $splitTimes['ss11'],
+                'ss12' => $splitTimes['ss12'],
+                'ss13' => $splitTimes['ss13'],
+                'ss14' => $splitTimes['ss14'],
+                'ss15' => $splitTimes['ss15']
             ];
 
             // Check if result already exists
@@ -682,17 +761,14 @@ function importResultsFromCSV($filepath, $db, $importId = null) {
 }
 
 /**
- * Import results from CSV with event mapping
+ * Import results from CSV with event mapping and optional class override
  * Same as importResultsFromCSV but uses provided event IDs instead of auto-creating
  */
-function importResultsFromCSVWithMapping($filepath, $db, $importId = null, $eventMapping = []) {
-    // For now, just call the regular import function
-    // TODO: Implement event mapping logic
-    // Event mapping format: ['EventName' => event_id or 'create']
-
-    // Store event mapping in global for use during import
-    global $IMPORT_EVENT_MAPPING;
+function importResultsFromCSVWithMapping($filepath, $db, $importId = null, $eventMapping = [], $forceClassId = null) {
+    // Store event mapping and class override in globals for use during import
+    global $IMPORT_EVENT_MAPPING, $IMPORT_FORCE_CLASS_ID;
     $IMPORT_EVENT_MAPPING = $eventMapping;
+    $IMPORT_FORCE_CLASS_ID = $forceClassId;
 
     return importResultsFromCSV($filepath, $db, $importId);
 }
@@ -1029,6 +1105,12 @@ include __DIR__ . '/../includes/layout-header.php';
                                     <td><span class="gs-badge gs-badge-secondary">Nej</span></td>
                                     <td>Anteckningar</td>
                                     <td>-</td>
+                                </tr>
+                                <tr>
+                                    <td><code>ss1</code> till <code>ss15</code></td>
+                                    <td><span class="gs-badge gs-badge-secondary">Nej</span></td>
+                                    <td>Splittider för Enduro/DH (upp till 15 stycken). Format: HH:MM:SS eller MM:SS</td>
+                                    <td>00:05:23</td>
                                 </tr>
                             </tbody>
                         </table>
