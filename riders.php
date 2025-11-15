@@ -8,6 +8,7 @@ if (!file_exists(__DIR__ . '/config.php')) {
     die('ERROR: config.php not found! Current directory: ' . __DIR__);
 }
 require_once __DIR__ . '/config.php';
+require_once __DIR__ . '/includes/class-calculations.php';
 
 $db = getDB();
 
@@ -67,10 +68,161 @@ if ($displayMode === 'all') {
 }
 
 $total_count = count($cyclists);
+
+// Count active clubs
+$active_clubs = array_unique(array_filter(array_column($cyclists, 'club_name')));
+$club_count = count($active_clubs);
+
 $pageTitle = 'Deltagare';
 $pageType = 'public';
 include __DIR__ . '/includes/layout-header.php';
 ?>
+
+<style>
+    .license-card-compact {
+        background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+        border-radius: 12px;
+        overflow: hidden;
+        transition: transform 0.2s, box-shadow 0.2s;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        text-decoration: none;
+        color: inherit;
+        display: block;
+    }
+
+    .license-card-compact:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+    }
+
+    /* UCI Stripe */
+    .uci-stripe {
+        height: 6px;
+        background: linear-gradient(90deg,
+            #E31E24 0% 20%,
+            #000000 20% 40%,
+            #FFD700 40% 60%,
+            #0066CC 60% 80%,
+            #009B3A 80% 100%
+        );
+    }
+
+    /* Compact Header */
+    .license-header-compact {
+        padding: 12px 16px;
+        background: linear-gradient(135deg, #2d3748 0%, #1a202c 100%);
+        color: white;
+        display: flex;
+        justify-content: flex-end;
+        align-items: center;
+    }
+
+    .license-season {
+        font-size: 14px;
+        font-weight: 600;
+        background: rgba(255, 255, 255, 0.2);
+        padding: 4px 12px;
+        border-radius: 12px;
+    }
+
+    /* Card Content */
+    .license-card-content {
+        padding: 16px;
+    }
+
+    .rider-name-line {
+        font-size: 18px;
+        font-weight: 800;
+        color: #1a202c;
+        margin-bottom: 4px;
+        text-transform: uppercase;
+        letter-spacing: -0.2px;
+    }
+
+    .license-id {
+        font-size: 12px;
+        color: #718096;
+        margin-bottom: 12px;
+        font-weight: 600;
+    }
+
+    .license-info-compact {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        margin-bottom: 12px;
+    }
+
+    .info-field-compact {
+        background: white;
+        padding: 8px 12px;
+        border-radius: 6px;
+        border-left: 3px solid #667eea;
+    }
+
+    .info-label-compact {
+        font-size: 9px;
+        color: #718096;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+        margin-bottom: 2px;
+    }
+
+    .info-value-compact {
+        font-size: 14px;
+        color: #1a202c;
+        font-weight: 700;
+    }
+
+    .club-field-wide {
+        grid-column: span 2;
+        background: white;
+        padding: 8px 12px;
+        border-radius: 6px;
+        border-left: 3px solid #667eea;
+    }
+
+    .license-type-badge {
+        display: inline-block;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 6px 12px;
+        border-radius: 6px;
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 8px;
+    }
+
+    .license-status {
+        display: inline-block;
+        padding: 4px 10px;
+        border-radius: 6px;
+        font-size: 10px;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+
+    .license-status.active {
+        background: #10b981;
+        color: white;
+    }
+
+    .license-status.inactive {
+        background: #ef4444;
+        color: white;
+    }
+
+    .card-footer-compact {
+        padding: 8px 16px;
+        background: rgba(0, 0, 0, 0.03);
+        font-size: 9px;
+        color: #718096;
+        text-align: center;
+    }
+</style>
 
     <main class="gs-main-content">
         <div class="gs-container">
@@ -81,9 +233,14 @@ include __DIR__ . '/includes/layout-header.php';
                     <i data-lucide="users"></i>
                     Aktiva Deltagare
                 </h1>
-                <p class="gs-text-secondary">
-                    <?= $total_count ?> cyklister med resultat
-                </p>
+                <div class="gs-flex gs-gap-md gs-flex-wrap">
+                    <span class="gs-badge gs-badge-primary">
+                        <?= $total_count ?> deltagare med resultat
+                    </span>
+                    <span class="gs-badge gs-badge-secondary">
+                        <?= $club_count ?> aktiva klubbar
+                    </span>
+                </div>
             </div>
 
             <!-- Search Box -->
@@ -113,72 +270,116 @@ include __DIR__ . '/includes/layout-header.php';
                 </div>
             <?php else: ?>
                 <div class="gs-grid gs-grid-cols-1 gs-md-grid-cols-2 gs-lg-grid-cols-3 gs-xl-grid-cols-4 gs-gap-md" id="ridersGrid">
-                    <?php foreach ($cyclists as $rider): ?>
-                        <a href="/rider.php?id=<?= $rider['id'] ?>" class="gs-card gs-card-hover rider-card"
-                           data-search="<?= strtolower(h($rider['firstname'] . ' ' . $rider['lastname'] . ' ' . ($rider['club_name'] ?? '') . ' ' . ($rider['license_number'] ?? ''))) ?>"
-                           style="padding: 1rem; text-decoration: none; color: inherit; display: block; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;">
-                            <!-- Profile Header with Larger Avatar -->
-                            <div class="gs-flex gs-items-start gs-gap-md gs-mb-md">
-                                <div class="gs-avatar gs-bg-primary" style="width: 56px; height: 56px; flex-shrink: 0; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
-                                    <i data-lucide="user" class="gs-text-white" style="width: 28px; height: 28px;"></i>
+                    <?php
+                    $currentYear = date('Y');
+                    foreach ($cyclists as $rider):
+                        // Calculate age and class
+                        $age = $currentYear - ($rider['birth_year'] ?? 0);
+                        $classId = null;
+                        $className = null;
+                        if ($rider['birth_year'] && $rider['gender']) {
+                            $classId = determineRiderClass($db, $rider['birth_year'], $rider['gender'], date('Y-m-d'));
+                            if ($classId) {
+                                $class = $db->getRow("SELECT name, display_name FROM classes WHERE id = ?", [$classId]);
+                                $className = $class ? $class['display_name'] : null;
+                            }
+                        }
+
+                        // Check license status
+                        $isUciLicense = !empty($rider['license_number']) && strpos($rider['license_number'], 'SWE') !== 0;
+                        $licenseCheck = checkLicense($rider);
+                        $isLicenseActive = $isUciLicense && !empty($rider['license_type']) && $rider['license_type'] !== 'None' && $licenseCheck['valid'];
+                    ?>
+                        <a href="/rider.php?id=<?= $rider['id'] ?>"
+                           class="license-card-compact"
+                           data-search="<?= strtolower(h($rider['firstname'] . ' ' . $rider['lastname'] . ' ' . ($rider['club_name'] ?? '') . ' ' . ($rider['license_number'] ?? ''))) ?>">
+
+                            <!-- UCI Color Stripe -->
+                            <div class="uci-stripe"></div>
+
+                            <!-- Compact Header -->
+                            <div class="license-header-compact">
+                                <div class="license-season"><?= $currentYear ?></div>
+                            </div>
+
+                            <!-- Card Content -->
+                            <div class="license-card-content">
+                                <!-- Name on one line -->
+                                <div class="rider-name-line">
+                                    <?= h($rider['firstname']) ?> <?= h($rider['lastname']) ?>
                                 </div>
-                                <div class="gs-flex-1" style="min-width: 0;">
-                                    <h3 class="gs-h5 gs-font-bold gs-mb-xs">
-                                        <?= h($rider['firstname']) ?> <?= h($rider['lastname']) ?>
-                                    </h3>
+
+                                <!-- License ID under name -->
+                                <div class="license-id">
+                                    <?php if ($isUciLicense): ?>
+                                        UCI: <?= h($rider['license_number']) ?>
+                                    <?php elseif (!empty($rider['license_number'])): ?>
+                                        SWE-ID: <?= h($rider['license_number']) ?>
+                                    <?php else: ?>
+                                        ID: #<?= sprintf('%04d', $rider['id']) ?>
+                                    <?php endif; ?>
+                                </div>
+
+                                <!-- License Type & Status -->
+                                <?php if (!empty($rider['license_type']) && $rider['license_type'] !== 'None'): ?>
+                                    <div style="margin-bottom: 12px;">
+                                        <span class="license-type-badge"><?= h($rider['license_type']) ?></span>
+
+                                        <?php if ($isUciLicense): ?>
+                                            <span class="license-status <?= $isLicenseActive ? 'active' : 'inactive' ?>">
+                                                <?= $isLicenseActive ? '✓ Aktiv ' . $currentYear : '✗ Ej aktiv ' . $currentYear ?>
+                                            </span>
+                                        <?php endif; ?>
+                                    </div>
+                                <?php endif; ?>
+
+                                <!-- Info Grid -->
+                                <div class="license-info-compact">
+                                    <div class="info-field-compact">
+                                        <div class="info-label-compact">Ålder</div>
+                                        <div class="info-value-compact">
+                                            <?= $age ?> år
+                                        </div>
+                                    </div>
+
+                                    <div class="info-field-compact">
+                                        <div class="info-label-compact">Kön</div>
+                                        <div class="info-value-compact">
+                                            <?= $rider['gender'] === 'M' ? 'Man' : ($rider['gender'] === 'K' ? 'Kvinna' : '–') ?>
+                                        </div>
+                                    </div>
+
+                                    <?php if ($className): ?>
+                                        <div class="info-field-compact">
+                                            <div class="info-label-compact">Klass</div>
+                                            <div class="info-value-compact" style="font-size: 11px;">
+                                                <?= h($className) ?>
+                                            </div>
+                                        </div>
+                                    <?php endif; ?>
+
+                                    <div class="info-field-compact">
+                                        <div class="info-label-compact">Lopp</div>
+                                        <div class="info-value-compact">
+                                            <?= $rider['total_races'] ?>
+                                        </div>
+                                    </div>
+
+                                    <!-- Club on wide row -->
                                     <?php if ($rider['club_name']): ?>
-                                        <p class="gs-text-sm gs-text-secondary" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                                            <i data-lucide="building" style="width: 14px; height: 14px;"></i>
-                                            <?= h($rider['club_name']) ?>
-                                        </p>
+                                        <div class="club-field-wide">
+                                            <div class="info-label-compact">Klubb</div>
+                                            <div class="info-value-compact" style="font-size: 13px;">
+                                                <?= h($rider['club_name']) ?>
+                                            </div>
+                                        </div>
                                     <?php endif; ?>
                                 </div>
                             </div>
 
-                            <!-- Stats -->
-                            <div class="gs-flex gs-justify-between gs-mb-md" style="padding: 0.75rem 0; border-top: 1px solid var(--gs-border);">
-                                <div class="gs-text-center gs-flex-1">
-                                    <div class="gs-h4 gs-font-bold gs-text-primary"><?= $rider['total_races'] ?></div>
-                                    <div class="gs-text-sm gs-text-secondary">Lopp</div>
-                                </div>
-                                <div class="gs-text-center gs-flex-1">
-                                    <div class="gs-h4 gs-font-bold" style="color: var(--gs-accent);"><?= $rider['podiums'] ?></div>
-                                    <div class="gs-text-sm gs-text-secondary">Pall</div>
-                                </div>
-                                <?php if ($rider['best_position']): ?>
-                                    <div class="gs-text-center gs-flex-1">
-                                        <div class="gs-h4 gs-font-bold" style="color: var(--gs-success);"><?= $rider['best_position'] ?></div>
-                                        <div class="gs-text-sm gs-text-secondary">Bäst</div>
-                                    </div>
-                                <?php endif; ?>
-                            </div>
-
-                            <!-- Info Badges -->
-                            <div class="gs-flex gs-gap-xs gs-flex-wrap">
-                                <?php if ($rider['birth_year']): ?>
-                                    <span class="gs-badge gs-badge-secondary">
-                                        <?= $rider['gender'] == 'M' ? '👨' : ($rider['gender'] == 'F' ? '👩' : '👤') ?> <?= calculateAge($rider['birth_year']) ?> år
-                                    </span>
-                                <?php endif; ?>
-                                <?php
-                                // Check license status
-                                if (!empty($rider['license_number']) && strpos($rider['license_number'], 'SWE') === 0): ?>
-                                    <span class="gs-badge gs-badge-danger">
-                                        ✗ Ej aktiv licens
-                                    </span>
-                                <?php elseif (!empty($rider['license_type']) && $rider['license_type'] !== 'None'):
-                                    $licenseCheck = checkLicense($rider);
-                                    if ($licenseCheck['valid']): ?>
-                                        <span class="gs-badge gs-badge-success">
-                                            ✓ Aktiv licens
-                                        </span>
-                                    <?php else: ?>
-                                        <span class="gs-badge gs-badge-danger">
-                                            ✗ Ej aktiv licens
-                                        </span>
-                                    <?php endif;
-                                endif;
-                                ?>
+                            <!-- Footer -->
+                            <div class="card-footer-compact">
+                                TheHUB by GravitySeries
                             </div>
                         </a>
                     <?php endforeach; ?>
@@ -195,20 +396,6 @@ include __DIR__ . '/includes/layout-header.php';
             </div>
         </div>
 
-    <style>
-    .rider-card {
-        min-height: 200px;
-        display: flex;
-        flex-direction: column;
-    }
-    .rider-card:hover {
-        transform: translateY(-4px);
-        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15) !important;
-    }
-    .rider-card:active {
-        transform: translateY(-2px);
-    }
-    </style>
 
 <?php
 // Additional page-specific scripts
@@ -224,7 +411,7 @@ $additionalScripts = "
     if (searchInput && ridersGrid) {
         searchInput.addEventListener('input', function(e) {
             const search = e.target.value.toLowerCase().trim();
-            const cards = ridersGrid.querySelectorAll('.rider-card');
+            const cards = ridersGrid.querySelectorAll('.license-card-compact');
             let visibleCount = 0;
 
             cards.forEach(card => {
