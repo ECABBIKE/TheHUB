@@ -12,9 +12,28 @@ if (!$riderId) {
 }
 
 // Fetch rider details
+// IMPORTANT: Only select PUBLIC fields - never expose private data (personnummer, address, phone, etc.)
 $rider = $db->getRow("
     SELECT
-        r.*,
+        r.id,
+        r.firstname,
+        r.lastname,
+        r.birth_year,
+        r.gender,
+        r.club_id,
+        r.team,
+        r.license_number,
+        r.license_type,
+        r.license_category,
+        r.discipline,
+        r.disciplines,
+        r.license_valid_until,
+        r.license_year,
+        r.city,
+        r.country,
+        r.district,
+        r.active,
+        r.photo,
         c.name as club_name,
         c.city as club_city
     FROM riders r
@@ -68,6 +87,51 @@ foreach ($results as $result) {
 // Get recent results (last 5)
 $recentResults = array_slice($results, 0, 5);
 
+// Get series standings for this rider
+// First get the basic series data
+$riderSeriesData = $db->getAll("
+    SELECT
+        s.id as series_id,
+        s.name as series_name,
+        s.year,
+        SUM(r.points) as total_points,
+        COUNT(DISTINCT r.event_id) as events_count
+    FROM results r
+    JOIN events e ON r.event_id = e.id
+    JOIN series s ON e.series_id = s.id
+    WHERE r.cyclist_id = ? AND s.active = 1
+    GROUP BY s.id
+    ORDER BY s.year DESC, total_points DESC
+", [$riderId]);
+
+// Calculate position for each series
+$seriesStandings = [];
+foreach ($riderSeriesData as $seriesData) {
+    // Get all riders' total points for this series
+    $allRidersPoints = $db->getAll("
+        SELECT
+            r.cyclist_id,
+            SUM(r.points) as total_points
+        FROM results r
+        JOIN events e ON r.event_id = e.id
+        WHERE e.series_id = ?
+        GROUP BY r.cyclist_id
+        ORDER BY total_points DESC
+    ", [$seriesData['series_id']]);
+
+    // Find position
+    $position = 1;
+    foreach ($allRidersPoints as $riderPoints) {
+        if ($riderPoints['cyclist_id'] == $riderId) {
+            break;
+        }
+        $position++;
+    }
+
+    $seriesData['position'] = $position;
+    $seriesStandings[] = $seriesData;
+}
+
 // Get results by year
 $resultsByYear = [];
 foreach ($results as $result) {
@@ -82,7 +146,9 @@ krsort($resultsByYear); // Sort by year descending
 // Calculate age and determine current class
 require_once __DIR__ . '/includes/class-calculations.php';
 $currentYear = date('Y');
-$age = $currentYear - ($rider['birth_year'] ?? 0);
+$age = ($rider['birth_year'] && $rider['birth_year'] > 0)
+    ? ($currentYear - $rider['birth_year'])
+    : null;
 $currentClass = null;
 $currentClassName = null;
 
@@ -125,15 +191,14 @@ include __DIR__ . '/includes/layout-header.php';
         transform: rotateY(2deg) rotateX(1deg);
     }
 
-    /* UCI Stripe */
+    /* GravitySeries Stripe */
     .uci-stripe {
         height: 8px;
         background: linear-gradient(90deg,
-            #E31E24 0% 20%,
-            #000000 20% 40%,
-            #FFD700 40% 60%,
-            #0066CC 60% 80%,
-            #009B3A 80% 100%
+            #004a98 0% 25%,
+            #8A9A5B 25% 50%,
+            #EF761F 50% 75%,
+            #FFE009 75% 100%
         );
     }
 
@@ -178,7 +243,6 @@ include __DIR__ . '/includes/layout-header.php';
         display: flex;
         flex-direction: column;
         align-items: center;
-        gap: 20px;
     }
 
     .photo-frame {
@@ -203,21 +267,6 @@ include __DIR__ . '/includes/layout-header.php';
     .photo-placeholder {
         font-size: 64px;
         color: #999;
-    }
-
-    .qr-code {
-        width: 120px;
-        height: 120px;
-        background: white;
-        border: 2px solid #e0e0e0;
-        border-radius: 8px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 10px;
-        color: #999;
-        text-align: center;
-        padding: 10px;
     }
 
     /* Info Section */
@@ -375,7 +424,7 @@ include __DIR__ . '/includes/layout-header.php';
 
                     <!-- Main Content -->
                     <div class="license-content">
-                        <!-- Photo & QR Section -->
+                        <!-- Photo Section -->
                         <div class="license-photo">
                             <div class="photo-frame">
                                 <?php if (!empty($rider['photo'])): ?>
@@ -383,10 +432,6 @@ include __DIR__ . '/includes/layout-header.php';
                                 <?php else: ?>
                                     <div class="photo-placeholder">👤</div>
                                 <?php endif; ?>
-                            </div>
-                            <div class="qr-code">
-                                QR-kod<br>
-                                <?= h($rider['license_number'] ?? 'ID: ' . $riderId) ?>
                             </div>
                         </div>
 
@@ -408,7 +453,7 @@ include __DIR__ . '/includes/layout-header.php';
                                 <div class="info-field">
                                     <div class="info-label">Ålder</div>
                                     <div class="info-value">
-                                        <?= $age ?> år
+                                        <?= $age !== null ? $age . ' år' : '–' ?>
                                     </div>
                                 </div>
 
@@ -426,12 +471,12 @@ include __DIR__ . '/includes/layout-header.php';
                                     </div>
                                 </div>
 
-                                <?php if ($rider['club_name']): ?>
-                                    <div class="info-field" style="grid-column: span 2;">
-                                        <div class="info-label">Klubb</div>
-                                        <div class="info-value"><?= h($rider['club_name']) ?></div>
+                                <div class="info-field" style="grid-column: span 2;">
+                                    <div class="info-label">Klubb</div>
+                                    <div class="info-value">
+                                        <?= $rider['club_name'] ? h($rider['club_name']) : 'Klubbtillhörighet saknas' ?>
                                     </div>
-                                <?php endif; ?>
+                                </div>
 
                                 <?php if ($currentClass): ?>
                                     <div class="class-badge">
@@ -463,26 +508,33 @@ include __DIR__ . '/includes/layout-header.php';
             </div>
 
             <!-- Quick Stats -->
-            <div class="gs-grid gs-grid-cols-2 gs-md-grid-cols-5 gs-gap-md gs-mb-xl">
-                <div class="gs-card" style="text-align: center;">
-                    <div class="gs-h2 gs-text-primary"><?= $totalRaces ?></div>
-                    <div class="gs-text-sm gs-text-secondary">Lopp</div>
+            <div class="gs-grid gs-grid-cols-2 gs-md-grid-cols-4 gs-gap-sm gs-mb-xl">
+                <div class="gs-card" style="text-align: center; padding: 0.75rem;">
+                    <div class="gs-h3 gs-text-primary"><?= $totalRaces ?></div>
+                    <div class="gs-text-xs gs-text-secondary">Race</div>
                 </div>
-                <div class="gs-card" style="text-align: center;">
-                    <div class="gs-h2" style="color: var(--gs-success);"><?= $wins ?></div>
-                    <div class="gs-text-sm gs-text-secondary">Segrar</div>
+                <div class="gs-card" style="text-align: center; padding: 0.75rem;">
+                    <div class="gs-h3" style="color: var(--gs-success);"><?= $wins ?></div>
+                    <div class="gs-text-xs gs-text-secondary">Segrar</div>
                 </div>
-                <div class="gs-card" style="text-align: center;">
-                    <div class="gs-h2" style="color: var(--gs-accent);"><?= $podiums ?></div>
-                    <div class="gs-text-sm gs-text-secondary">Pallplatser</div>
+                <div class="gs-card" style="text-align: center; padding: 0.75rem;">
+                    <div class="gs-h3" style="color: var(--gs-warning);"><?= $bestPosition ?? '-' ?></div>
+                    <div class="gs-text-xs gs-text-secondary">Bästa placering</div>
                 </div>
-                <div class="gs-card" style="text-align: center;">
-                    <div class="gs-h2 gs-text-primary"><?= $totalPoints ?></div>
-                    <div class="gs-text-sm gs-text-secondary">Poäng</div>
-                </div>
-                <div class="gs-card" style="text-align: center;">
-                    <div class="gs-h2" style="color: var(--gs-warning);"><?= $bestPosition ?? '-' ?></div>
-                    <div class="gs-text-sm gs-text-secondary">Bästa placering</div>
+                <div class="gs-card" style="text-align: center; padding: 0.75rem;">
+                    <div style="display: flex; flex-direction: column; gap: 0.25rem;">
+                        <?php if (!empty($seriesStandings)): ?>
+                            <?php foreach ($seriesStandings as $standing): ?>
+                                <div style="font-size: 11px; line-height: 1.3;">
+                                    <strong><?= h($standing['series_name']) ?>:</strong>
+                                    #<?= $standing['position'] ?? '?' ?> (<?= $standing['total_points'] ?>p)
+                                </div>
+                            <?php endforeach; ?>
+                        <?php else: ?>
+                            <div class="gs-h3 gs-text-primary">0</div>
+                        <?php endif; ?>
+                    </div>
+                    <div class="gs-text-xs gs-text-secondary" style="margin-top: 0.25rem;">Points</div>
                 </div>
             </div>
 

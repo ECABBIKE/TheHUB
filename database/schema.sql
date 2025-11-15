@@ -28,38 +28,69 @@ CREATE TABLE IF NOT EXISTS clubs (
 -- ============================================================================
 -- RIDERS TABLE (was CYCLISTS)
 -- ============================================================================
+-- PRIVACY NOTE: Fields marked with [PRIVATE] contain sensitive data and must
+-- NEVER be exposed publicly. Only use for internal admin and autofill features.
 CREATE TABLE IF NOT EXISTS riders (
     id INT AUTO_INCREMENT PRIMARY KEY,
     firstname VARCHAR(100) NOT NULL,
     lastname VARCHAR(100) NOT NULL,
     birth_year INT,
-    gender ENUM('M', 'F', 'Other') DEFAULT 'M',
+    personnummer VARCHAR(15), -- [PRIVATE] Swedish personal number
+    gender ENUM('M', 'F', 'K', 'Other') DEFAULT 'M',
+
+    -- Club and Team
     club_id INT,
+    team VARCHAR(255), -- Team name (separate from club)
+
+    -- License Information
     license_number VARCHAR(50),
     license_type VARCHAR(50),
     license_category VARCHAR(100),
-    discipline VARCHAR(100),
+    discipline VARCHAR(100), -- Legacy single discipline
+    disciplines JSON, -- Multiple disciplines (Road, Track, BMX, CX, Trial, Para, MTB, E-cycling, Gravel)
     license_valid_until DATE,
+    license_year INT,
+
+    -- Authentication
     email VARCHAR(255),
     password VARCHAR(255) DEFAULT NULL,
     password_reset_token VARCHAR(255) DEFAULT NULL,
     password_reset_expires DATETIME DEFAULT NULL,
     last_login DATETIME DEFAULT NULL,
-    phone VARCHAR(20),
+
+    -- Contact Information [PRIVATE]
+    phone VARCHAR(20), -- [PRIVATE]
+    emergency_contact VARCHAR(255), -- [PRIVATE] Emergency contact name and phone
+
+    -- Address Information [PRIVATE]
     city VARCHAR(100),
+    address VARCHAR(255), -- [PRIVATE] Street address
+    postal_code VARCHAR(10), -- [PRIVATE] Postal code
+    country VARCHAR(100) DEFAULT 'Sverige',
+    district VARCHAR(100), -- District/Region
+
+    -- Status and Metadata
     active BOOLEAN DEFAULT 1,
     notes TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+    -- Foreign Keys
     FOREIGN KEY (club_id) REFERENCES clubs(id) ON DELETE SET NULL,
+
+    -- Indexes
     INDEX idx_name (lastname, firstname),
     INDEX idx_club (club_id),
     INDEX idx_license (license_number),
     INDEX idx_active (active),
     INDEX idx_email (email),
     INDEX idx_reset_token (password_reset_token),
+    INDEX idx_personnummer (personnummer),
+    INDEX idx_postal_code (postal_code),
+    INDEX idx_district (district),
     UNIQUE KEY unique_license (license_number)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+COMMENT='PRIVACY: Fields personnummer, address, postal_code, phone, emergency_contact are PRIVATE';
 
 -- ============================================================================
 -- CATEGORIES TABLE
