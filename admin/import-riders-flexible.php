@@ -181,8 +181,8 @@ function mapColumns($header) {
 
         // License
         'category' => ['kategori', 'category', 'cat'],
-        'licensetype' => ['licenstyp', 'licensetype', 'license_type'],
-        'licenseyear' => ['licensår', 'licensar', 'licenseyear', 'license_year'],
+        'licensetype' => ['licenstyp', 'licensetype', 'licenstype', 'license_type'],
+        'licenseyear' => ['licensar', 'licenseyear', 'licensyear', 'license_year', 'licensår'],
         'ucicode' => ['ucikod', 'ucicode', 'uci_code', 'uciid', 'uci_id', 'licens', 'license', 'licensnummer', 'licensenumber'],
     ];
 
