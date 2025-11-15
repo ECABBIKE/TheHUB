@@ -51,7 +51,7 @@ include __DIR__ . '/includes/layout-header.php';
             <?php else: ?>
                 <div class="gs-grid gs-grid-cols-1 gs-md-grid-cols-2 gs-lg-grid-cols-3 gs-xl-grid-cols-4 gs-gap-lg">
                     <?php foreach ($series as $s): ?>
-                        <div class="gs-card gs-card-hover">
+                        <a href="/series-standings.php?id=<?= $s['id'] ?>" class="gs-card gs-card-hover" style="text-decoration: none; color: inherit; display: block;">
                             <div class="gs-card-header">
                                 <h3 class="gs-h4">
                                     <i data-lucide="award"></i>
@@ -74,21 +74,13 @@ include __DIR__ . '/includes/layout-header.php';
                                     <span><?= $s['event_count'] ?> tävlingar</span>
                                 </div>
                                 <?php if ($s['event_count'] > 0): ?>
-                                    <div class="gs-flex gs-gap-sm">
-                                        <a href="/series-standings.php?id=<?= $s['id'] ?>"
-                                           class="gs-btn gs-btn-primary gs-btn-sm gs-flex-1">
-                                            <i data-lucide="trophy"></i>
-                                            Ställning
-                                        </a>
-                                        <a href="/events.php?series=<?= $s['id'] ?>&year=<?= $s['year'] ?: date('Y') ?>"
-                                           class="gs-btn gs-btn-outline gs-btn-sm gs-flex-1">
-                                            <i data-lucide="list"></i>
-                                            Tävlingar
-                                        </a>
+                                    <div class="gs-btn gs-btn-primary gs-btn-sm" style="width: 100%; text-align: center;">
+                                        <i data-lucide="info"></i>
+                                        INFO
                                     </div>
                                 <?php endif; ?>
                             </div>
-                        </div>
+                        </a>
                     <?php endforeach; ?>
                 </div>
             <?php endif; ?>
