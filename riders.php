@@ -95,15 +95,14 @@ include __DIR__ . '/includes/layout-header.php';
         box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
     }
 
-    /* UCI Stripe */
+    /* GravitySeries Stripe */
     .uci-stripe {
         height: 6px;
         background: linear-gradient(90deg,
-            #E31E24 0% 20%,
-            #000000 20% 40%,
-            #FFD700 40% 60%,
-            #0066CC 60% 80%,
-            #009B3A 80% 100%
+            #004a98 0% 25%,
+            #8A9A5B 25% 50%,
+            #EF761F 50% 75%,
+            #FFE009 75% 100%
         );
     }
 

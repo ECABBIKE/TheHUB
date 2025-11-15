@@ -150,15 +150,14 @@ include __DIR__ . '/includes/layout-header.php';
         transform: rotateY(2deg) rotateX(1deg);
     }
 
-    /* UCI Stripe */
+    /* GravitySeries Stripe */
     .uci-stripe {
         height: 8px;
         background: linear-gradient(90deg,
-            #E31E24 0% 20%,
-            #000000 20% 40%,
-            #FFD700 40% 60%,
-            #0066CC 60% 80%,
-            #009B3A 80% 100%
+            #004a98 0% 25%,
+            #8A9A5B 25% 50%,
+            #EF761F 50% 75%,
+            #FFE009 75% 100%
         );
     }
 
@@ -203,7 +202,6 @@ include __DIR__ . '/includes/layout-header.php';
         display: flex;
         flex-direction: column;
         align-items: center;
-        gap: 20px;
     }
 
     .photo-frame {
@@ -228,21 +226,6 @@ include __DIR__ . '/includes/layout-header.php';
     .photo-placeholder {
         font-size: 64px;
         color: #999;
-    }
-
-    .qr-code {
-        width: 120px;
-        height: 120px;
-        background: white;
-        border: 2px solid #e0e0e0;
-        border-radius: 8px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 10px;
-        color: #999;
-        text-align: center;
-        padding: 10px;
     }
 
     /* Info Section */
@@ -400,7 +383,7 @@ include __DIR__ . '/includes/layout-header.php';
 
                     <!-- Main Content -->
                     <div class="license-content">
-                        <!-- Photo & QR Section -->
+                        <!-- Photo Section -->
                         <div class="license-photo">
                             <div class="photo-frame">
                                 <?php if (!empty($rider['photo'])): ?>
@@ -408,10 +391,6 @@ include __DIR__ . '/includes/layout-header.php';
                                 <?php else: ?>
                                     <div class="photo-placeholder">👤</div>
                                 <?php endif; ?>
-                            </div>
-                            <div class="qr-code">
-                                QR-kod<br>
-                                <?= h($rider['license_number'] ?? 'ID: ' . $riderId) ?>
                             </div>
                         </div>
 
