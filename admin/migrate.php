@@ -7,11 +7,8 @@
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
-// Minimal database connection
-define('DB_HOST', 'sql111.infinityfree.me');
-define('DB_NAME', 'if0_37997459_thehub');
-define('DB_USER', 'if0_37997459');
-define('DB_PASS', 'cXtRDYO0cQ7HL');
+// Load config to get correct database credentials
+require_once __DIR__ . '/../config.php';
 
 $pdo = null;
 try {
