@@ -192,11 +192,14 @@ function importResultsFromCSV($filepath, $db, $importId = null) {
             'fodelsedatum' => 'birth_year',
             'position' => 'position',
             'placering' => 'position',
+            'placebycategory' => 'position',
             'finishtime' => 'finish_time',
             'sluttid' => 'finish_time',
             'tid' => 'finish_time',
             'time' => 'finish_time',
             'finish_time' => 'finish_time',
+            'nettime' => 'finish_time',
+            'nettid' => 'finish_time',
             'bibnumber' => 'bib_number',
             'startnummer' => 'bib_number',
             'bib' => 'bib_number',
@@ -247,6 +250,25 @@ function importResultsFromCSV($filepath, $db, $importId = null) {
 
         return $mappings[$col] ?? $col;
     }, $header);
+
+    // Special handling for headers that contain actual event data
+    // Some export formats use the event name/date/discipline as column headers
+    for ($i = 0; $i < count($header); $i++) {
+        $originalCol = mb_strtolower(trim($header[$i]), 'UTF-8');
+
+        // Detect date patterns (YYYY-MM-DD or YYYYMMDD)
+        if (preg_match('/^\d{4}-?\d{2}-?\d{2}$/', str_replace([' ', '-', '_'], '', $originalCol))) {
+            $header[$i] = 'event_date';
+        }
+        // Detect discipline codes (END, DHI, XC, EDR, DS, etc.)
+        elseif (in_array(strtoupper(str_replace([' ', '-', '_'], '', $originalCol)), ['END', 'EDR', 'DHI', 'XC', 'DS', 'DH', 'CX', 'ROAD', 'MTB'])) {
+            $header[$i] = 'discipline';
+        }
+        // Detect event name patterns (SweCup, GravitySeries, etc.)
+        elseif (preg_match('/(swecup|gravityseries|cup|enduro|dh|xc)/i', $originalCol)) {
+            $header[$i] = 'event_name';
+        }
+    }
 
     // Cache for lookups
     $eventCache = [];
