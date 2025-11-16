@@ -290,30 +290,30 @@ include __DIR__ . '/../includes/layout-header.php';
                 </div>
 
             <!-- Stats -->
-            <div class="gs-grid gs-grid-cols-1 gs-md-grid-cols-4 gs-gap-lg gs-mb-lg">
-                <div class="gs-stat-card">
-                    <i data-lucide="trophy" class="gs-icon-lg gs-text-primary gs-mb-md"></i>
-                    <div class="gs-stat-number"><?= count($series) ?></div>
-                    <div class="gs-stat-label">Totalt serier</div>
+            <div class="gs-grid gs-grid-cols-2 gs-md-grid-cols-4 gs-gap-md gs-mb-md">
+                <div class="gs-stat-card" style="padding: var(--gs-space-md);">
+                    <i data-lucide="trophy" style="width: 32px; height: 32px; color: var(--gs-primary); margin-bottom: var(--gs-space-sm);"></i>
+                    <div class="gs-stat-number" style="font-size: 1.75rem;"><?= count($series) ?></div>
+                    <div class="gs-stat-label" style="font-size: 0.813rem;">Totalt serier</div>
                 </div>
-                <div class="gs-stat-card">
-                    <i data-lucide="check-circle" class="gs-icon-lg gs-text-success gs-mb-md"></i>
-                    <div class="gs-stat-number">
+                <div class="gs-stat-card" style="padding: var(--gs-space-md);">
+                    <i data-lucide="check-circle" style="width: 32px; height: 32px; color: var(--gs-success); margin-bottom: var(--gs-space-sm);"></i>
+                    <div class="gs-stat-number" style="font-size: 1.75rem;">
                         <?= count(array_filter($series, fn($s) => $s['status'] === 'active')) ?>
                     </div>
-                    <div class="gs-stat-label">Aktiva</div>
+                    <div class="gs-stat-label" style="font-size: 0.813rem;">Aktiva</div>
                 </div>
-                <div class="gs-stat-card">
-                    <i data-lucide="calendar" class="gs-icon-lg gs-text-accent gs-mb-md"></i>
-                    <div class="gs-stat-number">
+                <div class="gs-stat-card" style="padding: var(--gs-space-md);">
+                    <i data-lucide="calendar" style="width: 32px; height: 32px; color: var(--gs-accent); margin-bottom: var(--gs-space-sm);"></i>
+                    <div class="gs-stat-number" style="font-size: 1.75rem;">
                         <?= array_sum(array_column($series, 'events_count')) ?>
                     </div>
-                    <div class="gs-stat-label">Totalt events</div>
+                    <div class="gs-stat-label" style="font-size: 0.813rem;">Totalt events</div>
                 </div>
-                <div class="gs-stat-card">
-                    <i data-lucide="users" class="gs-icon-lg gs-text-warning gs-mb-md"></i>
-                    <div class="gs-stat-number">~1,200</div>
-                    <div class="gs-stat-label">Deltagare</div>
+                <div class="gs-stat-card" style="padding: var(--gs-space-md);">
+                    <i data-lucide="users" style="width: 32px; height: 32px; color: var(--gs-warning); margin-bottom: var(--gs-space-sm);"></i>
+                    <div class="gs-stat-number" style="font-size: 1.75rem;">~1,200</div>
+                    <div class="gs-stat-label" style="font-size: 0.813rem;">Deltagare</div>
                 </div>
             </div>
 
