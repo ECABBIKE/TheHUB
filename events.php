@@ -39,8 +39,8 @@ $where_sql = !empty($where_clauses) ? 'AND ' . implode(' AND ', $where_clauses) 
 
 // Get UPCOMING events (date >= today, nearest first)
 $upcomingEvents = $db->getAll(
-    "SELECT e.id, e.name, e.advent_id, e.date as event_date, e.location, e.type as event_type, e.status,
-            s.name as series_name, s.id as series_id, s.logo as series_logo, s.organizer as series_organizer,
+    "SELECT e.id, e.name, e.advent_id, e.date as event_date, e.location, e.organizer, e.type as event_type, e.status,
+            s.name as series_name, s.id as series_id, s.logo as series_logo,
             COUNT(r.id) as participant_count,
             COUNT(DISTINCT res.category_id) as category_count
      FROM events e
@@ -55,8 +55,8 @@ $upcomingEvents = $db->getAll(
 
 // Get COMPLETED events (date < today, newest first)
 $completedEvents = $db->getAll(
-    "SELECT e.id, e.name, e.advent_id, e.date as event_date, e.location, e.type as event_type, e.status,
-            s.name as series_name, s.id as series_id, s.logo as series_logo, s.organizer as series_organizer,
+    "SELECT e.id, e.name, e.advent_id, e.date as event_date, e.location, e.organizer, e.type as event_type, e.status,
+            s.name as series_name, s.id as series_id, s.logo as series_logo,
             COUNT(r.id) as participant_count,
             COUNT(DISTINCT res.category_id) as category_count
      FROM events e
@@ -278,10 +278,10 @@ include __DIR__ . '/includes/layout-header.php';
                                                             <?= h($event['location']) ?>
                                                         </div>
                                                     <?php endif; ?>
-                                                    <?php if ($event['series_organizer']): ?>
+                                                    <?php if ($event['organizer']): ?>
                                                         <div>
                                                             <i data-lucide="user" style="width: 14px; height: 14px;"></i>
-                                                            <?= h($event['series_organizer']) ?>
+                                                            <?= h($event['organizer']) ?>
                                                         </div>
                                                     <?php endif; ?>
                                                 </div>
@@ -340,10 +340,10 @@ include __DIR__ . '/includes/layout-header.php';
                                                             <?= h($event['location']) ?>
                                                         </div>
                                                     <?php endif; ?>
-                                                    <?php if ($event['series_organizer']): ?>
+                                                    <?php if ($event['organizer']): ?>
                                                         <div>
                                                             <i data-lucide="user" style="width: 14px; height: 14px;"></i>
-                                                            <?= h($event['series_organizer']) ?>
+                                                            <?= h($event['organizer']) ?>
                                                         </div>
                                                     <?php endif; ?>
                                                     <?php if ($event['participant_count'] > 0): ?>
