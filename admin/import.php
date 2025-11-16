@@ -169,7 +169,7 @@ include __DIR__ . '/../includes/layout-header.php';
                                 <li><strong>club_name:</strong> Klubbnamn (optional)</li>
                                 <li><strong>uci_id:</strong> UCI-ID för matchning av cyklist (optional men rekommenderas)</li>
                                 <li><strong>swe_id:</strong> SWE-ID för matchning av cyklist (optional)</li>
-                                <li><strong>time_seconds:</strong> Tid i sekunder, ex: 185.45 (optional)</li>
+                                <li><strong>time</strong> eller <strong>finish_time:</strong> Total tid i format mm:ss.cc eller h:mm:ss.mmm, ex: 16:19.16 eller 1:16:19.164 (optional)</li>
                                 <li><strong>status:</strong> Status: finished/dnf/dns/dq (default: finished)</li>
                             </ul>
                             <div style="margin-top: 0.75rem; padding: 0.75rem; background: rgba(67, 114, 100, 0.1); border-left: 3px solid var(--gs-success); border-radius: var(--gs-radius-sm);">
@@ -280,9 +280,9 @@ SweCup Enduro Falun 2025,2025-09-14,END,Herrar Elite,2,Erik,SVENSSON,Göteborg M
                             <ul class="gs-text-xs" style="line-height: 1.7; margin-left: 1.25rem;">
                                 <li><code>club_name</code>: Klubbnamn</li>
                                 <li><code>uci_id</code>: UCI-ID (optional)</li>
-                                <li><code>time_seconds</code>: Total tid i sekunder</li>
+                                <li><code>time</code> eller <code>finish_time</code>: Total tid (format: mm:ss.cc eller h:mm:ss.mmm)</li>
                                 <li><code>status</code>: FIN/DNF/DNS/DQ</li>
-                                <li><code>SS1, SS2...</code>: Stage-tider (sekunder)</li>
+                                <li><code>SS1, SS2...</code>: Stage-tider (format: mm:ss.cc eller h:mm:ss.mmm)</li>
                             </ul>
                         </div>
                     </div>

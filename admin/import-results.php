@@ -664,7 +664,7 @@ function importResultsFromCSV($filepath, $db, $importId = null) {
                 }
             }
 
-            // Normalize finish time (handle formats like "0:12:41.22" or "02:15:30")
+            // Normalize finish time (handle formats like "16:19.16", "0:16:19.16", "1:16:19.164")
             $finishTime = null;
             if (!empty($data['finish_time'])) {
                 $rawTime = trim($data['finish_time']);
@@ -672,13 +672,37 @@ function importResultsFromCSV($filepath, $db, $importId = null) {
                 $rawTime = preg_replace('/[\r\n\t]+/', '', $rawTime);
                 $rawTime = trim($rawTime);
 
-                // Remove decimal seconds if present (MySQL TIME doesn't support them)
-                if (preg_match('/^(\d{1,2}):(\d{2}):(\d{2})\.?\d*$/', $rawTime, $matches)) {
+                // Format: h:mm:ss.cc or h:mm:ss.mmm (with decimal seconds)
+                if (preg_match('/^(\d{1,2}):(\d{2}):(\d{2})\.(\d{1,3})$/', $rawTime, $matches)) {
+                    $hours = str_pad($matches[1], 2, '0', STR_PAD_LEFT);
+                    $minutes = $matches[2];
+                    $seconds = $matches[3];
+                    $decimals = str_pad($matches[4], 2, '0', STR_PAD_RIGHT); // Pad to 2 digits (hundredths)
+                    $finishTime = "{$hours}:{$minutes}:{$seconds}.{$decimals}";
+                }
+                // Format: mm:ss.cc or mm:ss.mmm (no hours, with decimal seconds)
+                elseif (preg_match('/^(\d{1,2}):(\d{2})\.(\d{1,3})$/', $rawTime, $matches)) {
+                    $hours = '00';
+                    $minutes = str_pad($matches[1], 2, '0', STR_PAD_LEFT);
+                    $seconds = $matches[2];
+                    $decimals = str_pad($matches[3], 2, '0', STR_PAD_RIGHT); // Pad to 2 digits (hundredths)
+                    $finishTime = "{$hours}:{$minutes}:{$seconds}.{$decimals}";
+                }
+                // Format: h:mm:ss (no decimal seconds)
+                elseif (preg_match('/^(\d{1,2}):(\d{2}):(\d{2})$/', $rawTime, $matches)) {
                     $hours = str_pad($matches[1], 2, '0', STR_PAD_LEFT);
                     $minutes = $matches[2];
                     $seconds = $matches[3];
                     $finishTime = "{$hours}:{$minutes}:{$seconds}";
-                } elseif (!empty($rawTime)) {
+                }
+                // Format: mm:ss (no hours, no decimal seconds)
+                elseif (preg_match('/^(\d{1,2}):(\d{2})$/', $rawTime, $matches)) {
+                    $hours = '00';
+                    $minutes = str_pad($matches[1], 2, '0', STR_PAD_LEFT);
+                    $seconds = $matches[2];
+                    $finishTime = "{$hours}:{$minutes}:{$seconds}";
+                }
+                elseif (!empty($rawTime)) {
                     // Keep as-is if it's already in the right format
                     $finishTime = $rawTime;
                 }
@@ -775,13 +799,37 @@ function importResultsFromCSV($filepath, $db, $importId = null) {
                     $rawTime = preg_replace('/[\r\n\t]+/', '', $rawTime);
                     $rawTime = trim($rawTime);
 
-                    // Remove decimal seconds if present
-                    if (preg_match('/^(\d{1,2}):(\d{2}):(\d{2})\.?\d*$/', $rawTime, $matches)) {
+                    // Format: h:mm:ss.cc or h:mm:ss.mmm (with decimal seconds)
+                    if (preg_match('/^(\d{1,2}):(\d{2}):(\d{2})\.(\d{1,3})$/', $rawTime, $matches)) {
+                        $hours = str_pad($matches[1], 2, '0', STR_PAD_LEFT);
+                        $minutes = $matches[2];
+                        $seconds = $matches[3];
+                        $decimals = str_pad($matches[4], 2, '0', STR_PAD_RIGHT);
+                        $splitTime = "{$hours}:{$minutes}:{$seconds}.{$decimals}";
+                    }
+                    // Format: mm:ss.cc or mm:ss.mmm (no hours, with decimal seconds)
+                    elseif (preg_match('/^(\d{1,2}):(\d{2})\.(\d{1,3})$/', $rawTime, $matches)) {
+                        $hours = '00';
+                        $minutes = str_pad($matches[1], 2, '0', STR_PAD_LEFT);
+                        $seconds = $matches[2];
+                        $decimals = str_pad($matches[3], 2, '0', STR_PAD_RIGHT);
+                        $splitTime = "{$hours}:{$minutes}:{$seconds}.{$decimals}";
+                    }
+                    // Format: h:mm:ss (no decimal seconds)
+                    elseif (preg_match('/^(\d{1,2}):(\d{2}):(\d{2})$/', $rawTime, $matches)) {
                         $hours = str_pad($matches[1], 2, '0', STR_PAD_LEFT);
                         $minutes = $matches[2];
                         $seconds = $matches[3];
                         $splitTime = "{$hours}:{$minutes}:{$seconds}";
-                    } elseif (!empty($rawTime)) {
+                    }
+                    // Format: mm:ss (no hours, no decimal seconds)
+                    elseif (preg_match('/^(\d{1,2}):(\d{2})$/', $rawTime, $matches)) {
+                        $hours = '00';
+                        $minutes = str_pad($matches[1], 2, '0', STR_PAD_LEFT);
+                        $seconds = $matches[2];
+                        $splitTime = "{$hours}:{$minutes}:{$seconds}";
+                    }
+                    elseif (!empty($rawTime)) {
                         $splitTime = $rawTime;
                     }
                 }

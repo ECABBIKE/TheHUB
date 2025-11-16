@@ -97,11 +97,31 @@ if (isset($_GET['edit']) && is_numeric($_GET['edit'])) {
     $editSeries = $db->getRow("SELECT * FROM series WHERE id = ?", [intval($_GET['edit'])]);
 }
 
+// Get filter parameters
+$filterYear = isset($_GET['year']) && is_numeric($_GET['year']) ? intval($_GET['year']) : null;
+
+// Build WHERE clause
+$where = [];
+$params = [];
+
+if ($filterYear) {
+    $where[] = "YEAR(start_date) = ?";
+    $params[] = $filterYear;
+}
+
+$whereClause = !empty($where) ? 'WHERE ' . implode(' AND ', $where) : '';
+
 // Get series from database
-$series = $db->getAll("SELECT id, name, type, format, status, start_date, end_date, logo, organizer,
-                      (SELECT COUNT(*) FROM events WHERE series_id = series.id) as events_count
-                      FROM series
-                      ORDER BY start_date DESC");
+$sql = "SELECT id, name, type, format, status, start_date, end_date, logo, organizer,
+        (SELECT COUNT(*) FROM events WHERE series_id = series.id) as events_count
+        FROM series
+        {$whereClause}
+        ORDER BY start_date DESC";
+
+$series = $db->getAll($sql, $params);
+
+// Get all years from series
+$allYears = $db->getAll("SELECT DISTINCT YEAR(start_date) as year FROM series WHERE start_date IS NOT NULL ORDER BY year DESC");
 
 $pageTitle = 'Serier';
 $pageType = 'admin';
@@ -111,10 +131,10 @@ include __DIR__ . '/../includes/layout-header.php';
     <main class="gs-content-with-sidebar">
         <div class="gs-container">
             <!-- Header -->
-            <div class="gs-flex gs-items-center gs-justify-between gs-mb-xl">
-                <h1 class="gs-h1 gs-text-primary">
+            <div class="gs-flex gs-items-center gs-justify-between gs-mb-lg">
+                <h1 class="gs-h2">
                     <i data-lucide="trophy"></i>
-                    Serier
+                    Serier (<?= count($series) ?>)
                 </h1>
                 <button type="button" class="gs-btn gs-btn-primary" onclick="openSeriesModal()">
                     <i data-lucide="plus"></i>
@@ -129,6 +149,45 @@ include __DIR__ . '/../includes/layout-header.php';
                     <?= h($message) ?>
                 </div>
             <?php endif; ?>
+
+            <!-- Filter Section -->
+            <div class="gs-card gs-mb-lg">
+                <div class="gs-card-content">
+                    <!-- Year Filter -->
+                    <div>
+                        <label class="gs-label gs-mb-sm">
+                            <i data-lucide="calendar"></i>
+                            Filtrera på år:
+                        </label>
+                        <div class="gs-flex gs-gap-sm gs-flex-wrap">
+                            <a href="/admin/series.php"
+                               class="gs-btn gs-btn-sm <?= !$filterYear ? 'gs-btn-primary' : 'gs-btn-outline' ?>">
+                                Alla år
+                            </a>
+                            <?php foreach ($allYears as $yearRow): ?>
+                                <a href="/admin/series.php?year=<?= $yearRow['year'] ?>"
+                                   class="gs-btn gs-btn-sm <?= $filterYear == $yearRow['year'] ? 'gs-btn-primary' : 'gs-btn-outline' ?>">
+                                    <?= $yearRow['year'] ?>
+                                </a>
+                            <?php endforeach; ?>
+                        </div>
+                    </div>
+
+                    <!-- Active Filters Info -->
+                    <?php if ($filterYear): ?>
+                        <div class="gs-mt-md" style="padding-top: var(--gs-space-md); border-top: 1px solid var(--gs-border);">
+                            <div class="gs-flex gs-items-center gs-gap-sm">
+                                <span class="gs-text-sm gs-text-secondary">Aktivt filter:</span>
+                                <span class="gs-badge gs-badge-accent"><?= $filterYear ?></span>
+                                <a href="/admin/series.php" class="gs-btn gs-btn-sm gs-btn-outline gs-text-xs">
+                                    <i data-lucide="x"></i>
+                                    Rensa filter
+                                </a>
+                            </div>
+                        </div>
+                    <?php endif; ?>
+                </div>
+            </div>
 
             <!-- Series Modal -->
                 <div id="seriesModal" class="gs-modal" style="display: none;">
@@ -333,100 +392,92 @@ include __DIR__ . '/../includes/layout-header.php';
                 </div>
             </div>
 
-            <!-- Series Grid -->
-            <div class="gs-grid gs-grid-cols-1 gs-md-grid-cols-2 gs-gap-md">
-                <?php foreach ($series as $serie): ?>
-                    <?php
-                    $statusMap = [
-                        'planning' => ['badge' => 'secondary', 'icon' => 'clock', 'text' => 'Planering'],
-                        'active' => ['badge' => 'success', 'icon' => 'check-circle', 'text' => 'Aktiv'],
-                        'completed' => ['badge' => 'primary', 'icon' => 'check-circle-2', 'text' => 'Avslutad'],
-                        'cancelled' => ['badge' => 'secondary', 'icon' => 'x-circle', 'text' => 'Inställd']
-                    ];
-                    $statusInfo = $statusMap[$serie['status']] ?? ['badge' => 'secondary', 'icon' => 'help-circle', 'text' => ucfirst($serie['status'])];
-                    ?>
-                    <div class="gs-card">
-                        <div class="gs-card-content" style="padding: var(--gs-space-md);">
-                            <!-- Header -->
-                            <div class="gs-flex gs-items-center gs-justify-between gs-mb-sm">
-                                <h3 class="gs-h5 gs-text-primary" style="margin: 0;">
-                                    <?= h($serie['name']) ?>
-                                </h3>
-                                <span class="gs-badge gs-badge-<?= $statusInfo['badge'] ?> gs-badge-sm">
-                                    <i data-lucide="<?= $statusInfo['icon'] ?>" style="width: 12px; height: 12px;"></i>
-                                    <?= $statusInfo['text'] ?>
-                                </span>
-                            </div>
-
-                            <!-- Logo and Organizer -->
-                            <?php if (!empty($serie['logo']) || !empty($serie['organizer'])): ?>
-                                <div class="gs-flex gs-items-center gs-gap-sm gs-mb-sm">
-                                    <?php if (!empty($serie['logo'])): ?>
-                                        <img src="<?= h($serie['logo']) ?>" alt="<?= h($serie['name']) ?>" style="max-height: 30px; max-width: 60px; object-fit: contain;">
-                                    <?php endif; ?>
-                                    <?php if (!empty($serie['organizer'])): ?>
-                                        <span class="gs-text-xs gs-text-secondary">
-                                            <i data-lucide="users" style="width: 12px; height: 12px;"></i>
-                                            <?= h($serie['organizer']) ?>
-                                        </span>
-                                    <?php endif; ?>
-                                </div>
-                            <?php endif; ?>
-
-                            <!-- Info -->
-                            <div class="gs-flex gs-items-center gs-gap-md gs-mb-sm" style="padding: var(--gs-space-sm) 0; border-top: 1px solid var(--gs-border); border-bottom: 1px solid var(--gs-border);">
-                                <div class="gs-flex gs-items-center gs-gap-xs">
-                                    <i data-lucide="flag" style="width: 14px; height: 14px; color: var(--gs-text-secondary);"></i>
-                                    <span class="gs-text-xs gs-text-secondary"><?= h($serie['type']) ?></span>
-                                </div>
-                                <div class="gs-flex gs-items-center gs-gap-xs">
-                                    <i data-lucide="trophy" style="width: 14px; height: 14px; color: var(--gs-text-secondary);"></i>
-                                    <span class="gs-text-xs gs-text-secondary"><?= h($serie['format'] ?? 'Championship') ?></span>
-                                </div>
-                                <div class="gs-flex gs-items-center gs-gap-xs">
-                                    <i data-lucide="calendar" style="width: 14px; height: 14px; color: var(--gs-primary);"></i>
-                                    <span class="gs-text-xs gs-text-primary"><?= $serie['events_count'] ?></span>
-                                    <span class="gs-text-xs gs-text-secondary">events</span>
-                                </div>
-                            </div>
-
-                            <!-- Dates -->
-                            <div class="gs-flex gs-items-center gs-gap-sm gs-mb-sm gs-text-xs gs-text-secondary">
-                                <span><?= date('d M Y', strtotime($serie['start_date'])) ?></span>
-                                <span>→</span>
-                                <span><?= date('d M Y', strtotime($serie['end_date'])) ?></span>
-                            </div>
-
-                            <!-- Actions -->
-                            <div class="gs-flex gs-gap-xs">
-                                <a
-                                    href="/admin/events.php?series_id=<?= $serie['id'] ?>"
-                                    class="gs-btn gs-btn-xs gs-btn-primary gs-flex-1"
-                                    title="Visa events"
-                                >
-                                    <i data-lucide="calendar" style="width: 12px; height: 12px;"></i>
-                                    Events
-                                </a>
-                                <button
-                                    type="button"
-                                    class="gs-btn gs-btn-xs gs-btn-outline"
-                                    onclick="editSeries(<?= $serie['id'] ?>)"
-                                    title="Redigera"
-                                >
-                                    <i data-lucide="edit" style="width: 12px; height: 12px;"></i>
-                                </button>
-                                <button
-                                    type="button"
-                                    class="gs-btn gs-btn-xs gs-btn-outline gs-btn-danger"
-                                    onclick="deleteSeries(<?= $serie['id'] ?>, '<?= addslashes(h($serie['name'])) ?>')"
-                                    title="Ta bort"
-                                >
-                                    <i data-lucide="trash-2" style="width: 12px; height: 12px;"></i>
-                                </button>
-                            </div>
+            <!-- Series List -->
+            <div class="gs-card">
+                <div class="gs-card-content">
+                    <?php if (empty($series)): ?>
+                        <div class="gs-alert gs-alert-warning">
+                            <p>Inga serier hittades.</p>
                         </div>
-                    </div>
-                <?php endforeach; ?>
+                    <?php else: ?>
+                        <div style="overflow-x: auto;">
+                            <table class="gs-table">
+                                <thead>
+                                    <tr>
+                                        <th>Namn</th>
+                                        <th>Typ</th>
+                                        <th>Format</th>
+                                        <th>Status</th>
+                                        <th>Startdatum</th>
+                                        <th>Slutdatum</th>
+                                        <th>Arrangör</th>
+                                        <th>Events</th>
+                                        <th style="width: 100px;">Åtgärder</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php foreach ($series as $serie): ?>
+                                        <?php
+                                        $statusMap = [
+                                            'planning' => ['badge' => 'secondary', 'text' => 'Planering'],
+                                            'active' => ['badge' => 'success', 'text' => 'Aktiv'],
+                                            'completed' => ['badge' => 'primary', 'text' => 'Avslutad'],
+                                            'cancelled' => ['badge' => 'secondary', 'text' => 'Inställd']
+                                        ];
+                                        $statusInfo = $statusMap[$serie['status']] ?? ['badge' => 'secondary', 'text' => ucfirst($serie['status'])];
+                                        $isCompleted = $serie['status'] === 'completed';
+                                        ?>
+                                        <tr>
+                                            <td>
+                                                <div class="gs-flex gs-items-center gs-gap-xs">
+                                                    <?php if ($isCompleted): ?>
+                                                        <i data-lucide="lock" style="width: 14px; height: 14px; color: var(--gs-primary);" title="Serie är låst/avslutad"></i>
+                                                    <?php endif; ?>
+                                                    <strong><?= h($serie['name']) ?></strong>
+                                                </div>
+                                            </td>
+                                            <td><?= h($serie['type'] ?? '-') ?></td>
+                                            <td>
+                                                <span class="gs-badge"><?= h($serie['format'] ?? 'Championship') ?></span>
+                                            </td>
+                                            <td>
+                                                <span class="gs-badge gs-badge-<?= $statusInfo['badge'] ?>">
+                                                    <?= $statusInfo['text'] ?>
+                                                </span>
+                                            </td>
+                                            <td><?= $serie['start_date'] ? date('d M Y', strtotime($serie['start_date'])) : '-' ?></td>
+                                            <td><?= $serie['end_date'] ? date('d M Y', strtotime($serie['end_date'])) : '-' ?></td>
+                                            <td><?= h($serie['organizer'] ?? '-') ?></td>
+                                            <td>
+                                                <span class="gs-text-sm"><?= $serie['events_count'] ?></span>
+                                            </td>
+                                            <td>
+                                                <div class="gs-flex gs-gap-sm">
+                                                    <button
+                                                        type="button"
+                                                        class="gs-btn gs-btn-sm gs-btn-outline"
+                                                        onclick="editSeries(<?= $serie['id'] ?>)"
+                                                        title="Redigera"
+                                                    >
+                                                        <i data-lucide="edit" style="width: 14px;"></i>
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        class="gs-btn gs-btn-sm gs-btn-outline gs-btn-danger"
+                                                        onclick="deleteSeries(<?= $serie['id'] ?>, '<?= addslashes(h($serie['name'])) ?>')"
+                                                        title="Ta bort"
+                                                    >
+                                                        <i data-lucide="trash-2" style="width: 14px;"></i>
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    <?php endif; ?>
+                </div>
             </div>
         </div>
 
@@ -492,6 +543,7 @@ include __DIR__ . '/../includes/layout-header.php';
                     document.getElementById('seriesId').value = '<?= $editSeries['id'] ?>';
                     document.getElementById('name').value = '<?= addslashes($editSeries['name']) ?>';
                     document.getElementById('type').value = '<?= addslashes($editSeries['type'] ?? '') ?>';
+                    document.getElementById('format').value = '<?= $editSeries['format'] ?? 'Championship' ?>';
                     document.getElementById('status').value = '<?= $editSeries['status'] ?? 'planning' ?>';
                     document.getElementById('start_date').value = '<?= $editSeries['start_date'] ?? '' ?>';
                     document.getElementById('end_date').value = '<?= $editSeries['end_date'] ?? '' ?>';
