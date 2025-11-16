@@ -149,6 +149,10 @@ function importResultsFromCSV($filepath, $db, $importId = null) {
             'licens' => 'license_number',
             'uci_id' => 'license_number',
             'swe_id' => 'license_number',
+            'licensår' => 'license_year',
+            'licensar' => 'license_year',
+            'licenseyear' => 'license_year',
+            'license_year' => 'license_year',
 
             // Club/Team
             'club' => 'club_name',
@@ -486,6 +490,29 @@ function importResultsFromCSV($filepath, $db, $importId = null) {
                         $riderId = $rider['id'];
                         $riderCache[$cacheKey] = $riderId;
                         $matching_stats['riders_found']++;
+
+                        // Normalize gender from CSV
+                        $genderToUpdate = null;
+                        if (!empty($data['gender'])) {
+                            $genderRaw = strtolower(trim($data['gender']));
+                            if (in_array($genderRaw, ['woman', 'women', 'female', 'kvinna', 'dam', 'f', 'k'])) {
+                                $genderToUpdate = 'F';
+                            } elseif (in_array($genderRaw, ['man', 'men', 'male', 'herr', 'm'])) {
+                                $genderToUpdate = 'M';
+                            }
+                        }
+
+                        // Update license_year and gender if provided in CSV
+                        $updateData = [];
+                        if (!empty($data['license_year'])) {
+                            $updateData['license_year'] = (int)$data['license_year'];
+                        }
+                        if ($genderToUpdate) {
+                            $updateData['gender'] = $genderToUpdate;
+                        }
+                        if (!empty($updateData)) {
+                            $db->update('riders', $updateData, 'id = ?', [$riderId]);
+                        }
                     }
                 }
 
@@ -499,6 +526,29 @@ function importResultsFromCSV($filepath, $db, $importId = null) {
                         $riderId = $rider['id'];
                         $riderCache[$cacheKey] = $riderId;
                         $matching_stats['riders_found']++;
+
+                        // Normalize gender from CSV
+                        $genderToUpdate = null;
+                        if (!empty($data['gender'])) {
+                            $genderRaw = strtolower(trim($data['gender']));
+                            if (in_array($genderRaw, ['woman', 'women', 'female', 'kvinna', 'dam', 'f', 'k'])) {
+                                $genderToUpdate = 'F';
+                            } elseif (in_array($genderRaw, ['man', 'men', 'male', 'herr', 'm'])) {
+                                $genderToUpdate = 'M';
+                            }
+                        }
+
+                        // Update license_year and gender if provided in CSV
+                        $updateData = [];
+                        if (!empty($data['license_year'])) {
+                            $updateData['license_year'] = (int)$data['license_year'];
+                        }
+                        if ($genderToUpdate) {
+                            $updateData['gender'] = $genderToUpdate;
+                        }
+                        if (!empty($updateData)) {
+                            $db->update('riders', $updateData, 'id = ?', [$riderId]);
+                        }
                     }
                 }
 
@@ -512,6 +562,29 @@ function importResultsFromCSV($filepath, $db, $importId = null) {
                         $riderId = $rider['id'];
                         $riderCache[$cacheKey] = $riderId;
                         $matching_stats['riders_found']++;
+
+                        // Normalize gender from CSV
+                        $genderToUpdate = null;
+                        if (!empty($data['gender'])) {
+                            $genderRaw = strtolower(trim($data['gender']));
+                            if (in_array($genderRaw, ['woman', 'women', 'female', 'kvinna', 'dam', 'f', 'k'])) {
+                                $genderToUpdate = 'F';
+                            } elseif (in_array($genderRaw, ['man', 'men', 'male', 'herr', 'm'])) {
+                                $genderToUpdate = 'M';
+                            }
+                        }
+
+                        // Update license_year and gender if provided in CSV
+                        $updateData = [];
+                        if (!empty($data['license_year'])) {
+                            $updateData['license_year'] = (int)$data['license_year'];
+                        }
+                        if ($genderToUpdate) {
+                            $updateData['gender'] = $genderToUpdate;
+                        }
+                        if (!empty($updateData)) {
+                            $db->update('riders', $updateData, 'id = ?', [$riderId]);
+                        }
                     } else {
                         // AUTO-CREATE: Rider not found, create new rider with SWE-ID
                         $matching_stats['riders_not_found']++;
@@ -523,15 +596,21 @@ function importResultsFromCSV($filepath, $db, $importId = null) {
                         $gender = 'M'; // Default
                         if (!empty($data['gender'])) {
                             $genderRaw = strtolower(trim($data['gender']));
-                            if (in_array($genderRaw, ['woman', 'female', 'kvinna', 'dam', 'f'])) {
+                            if (in_array($genderRaw, ['woman', 'women', 'female', 'kvinna', 'dam', 'f', 'k'])) {
                                 $gender = 'F';
-                            } elseif (in_array($genderRaw, ['man', 'male', 'herr', 'm'])) {
+                            } elseif (in_array($genderRaw, ['man', 'men', 'male', 'herr', 'm'])) {
                                 $gender = 'M';
                             }
                         }
 
                         // Determine license type
                         $licenseType = $isSingleUseLicense ? 'Engångslicens' : 'SWE-ID';
+
+                        // Get license year from data if available
+                        $licenseYear = null;
+                        if (!empty($data['license_year'])) {
+                            $licenseYear = (int)$data['license_year'];
+                        }
 
                         // Create new rider with SWE-ID
                         $newRiderData = [
@@ -541,6 +620,7 @@ function importResultsFromCSV($filepath, $db, $importId = null) {
                             'gender' => $gender,
                             'license_number' => $sweId,
                             'license_type' => $licenseType,
+                            'license_year' => $licenseYear,
                             'club_id' => $clubId,
                             'email' => !empty($data['email']) ? trim($data['email']) : null,
                             'active' => 1

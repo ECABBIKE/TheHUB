@@ -503,7 +503,15 @@ include __DIR__ . '/includes/layout-header.php';
                             <div class="info-box">
                                 <div class="info-box-label">Kön</div>
                                 <div class="info-box-value">
-                                    <?= $rider['gender'] === 'M' ? 'Man' : ($rider['gender'] === 'K' ? 'Kvinna' : '–') ?>
+                                    <?php
+                                    $genderDisplay = '–';
+                                    if ($rider['gender'] === 'M' || strtolower($rider['gender']) === 'men') {
+                                        $genderDisplay = 'Man';
+                                    } elseif (in_array(strtolower($rider['gender'] ?? ''), ['k', 'f', 'women', 'female', 'kvinna'])) {
+                                        $genderDisplay = 'Kvinna';
+                                    }
+                                    echo $genderDisplay;
+                                    ?>
                                 </div>
                             </div>
 

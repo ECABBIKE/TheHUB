@@ -34,22 +34,34 @@ function determineRiderClass($db, $birthYear, $gender, $eventDate, $discipline =
     $age = calculateAgeAtEvent($birthYear, $eventDate);
 
     // Normalize gender
-    $gender = strtoupper($gender);
-    // Support both F (Female) and K (Kvinna) for backwards compatibility
-    if ($gender === 'K') {
+    $genderLower = strtolower(trim($gender));
+    if (in_array($genderLower, ['woman', 'women', 'female', 'kvinna', 'dam', 'f', 'k'])) {
         $gender = 'F';
+    } elseif (in_array($genderLower, ['man', 'men', 'male', 'herr', 'm'])) {
+        $gender = 'M';
+    } else {
+        $gender = strtoupper($gender);
     }
-    if (!in_array($gender, ['M', 'F'])) {
+
+    // Support both F (Female) and K (Kvinna) for backwards compatibility
+    if (!in_array($gender, ['M', 'F', 'K'])) {
         return null;
     }
 
     // Find matching class
     // Support comma-separated disciplines (e.g., "XC,ENDURO")
+    // Support both 'F' and 'K' for female classes
     $class = $db->getRow("
         SELECT id
         FROM classes
         WHERE active = 1
-          AND (gender = ? OR gender = 'ALL' OR gender IS NULL OR gender = '')
+          AND (
+              gender = ?
+              OR gender = 'ALL'
+              OR gender IS NULL
+              OR gender = ''
+              OR (? IN ('F', 'K') AND gender IN ('F', 'K'))
+          )
           AND (
               discipline IS NULL
               OR discipline = ''
@@ -66,6 +78,7 @@ function determineRiderClass($db, $birthYear, $gender, $eventDate, $discipline =
             sort_order ASC
         LIMIT 1
     ", [
+        $gender,
         $gender,
         $discipline,                    // Exact match
         $discipline . ',%',            // Start of list: "XC,..."

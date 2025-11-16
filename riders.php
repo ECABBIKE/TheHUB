@@ -355,7 +355,15 @@ include __DIR__ . '/includes/layout-header.php';
                                     <div class="info-field-compact">
                                         <div class="info-label-compact">Kön</div>
                                         <div class="info-value-compact">
-                                            <?= $rider['gender'] === 'M' ? 'Man' : ($rider['gender'] === 'K' ? 'Kvinna' : '–') ?>
+                                            <?php
+                                            $genderDisplay = '–';
+                                            if ($rider['gender'] === 'M' || strtolower($rider['gender']) === 'men') {
+                                                $genderDisplay = 'Man';
+                                            } elseif (in_array(strtolower($rider['gender'] ?? ''), ['k', 'f', 'women', 'female', 'kvinna'])) {
+                                                $genderDisplay = 'Kvinna';
+                                            }
+                                            echo $genderDisplay;
+                                            ?>
                                         </div>
                                     </div>
 
