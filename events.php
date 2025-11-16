@@ -91,11 +91,11 @@ include __DIR__ . '/includes/layout-header.php';
 
             <!-- Filter Controls -->
             <div class="gs-card gs-mb-lg" style="padding: 1rem;">
-                <form method="GET" action="" class="gs-flex gs-gap-md gs-flex-wrap gs-items-end">
+                <form method="GET" action="" id="filterForm" class="gs-flex gs-gap-md gs-flex-wrap gs-items-end">
                     <!-- Series Filter -->
                     <div style="flex: 1; min-width: 200px;">
                         <label class="gs-label">Serie</label>
-                        <select name="series" class="gs-input">
+                        <select name="series" class="gs-input" onchange="document.getElementById('filterForm').submit()">
                             <option value="">Alla serier</option>
                             <?php foreach ($allSeries as $series): ?>
                                 <option value="<?= $series['id'] ?>" <?= $series_id == $series['id'] ? 'selected' : '' ?>>
@@ -108,7 +108,7 @@ include __DIR__ . '/includes/layout-header.php';
                     <!-- Event Type Filter -->
                     <div style="flex: 1; min-width: 200px;">
                         <label class="gs-label">Tävlingsformat</label>
-                        <select name="format" class="gs-input">
+                        <select name="format" class="gs-input" onchange="document.getElementById('filterForm').submit()">
                             <option value="">Alla format</option>
                             <?php foreach ($allEventTypes as $type): ?>
                                 <option value="<?= h($type['type']) ?>" <?= $event_type == $type['type'] ? 'selected' : '' ?>>
@@ -118,12 +118,8 @@ include __DIR__ . '/includes/layout-header.php';
                         </select>
                     </div>
 
-                    <!-- Apply and Reset Buttons -->
-                    <div class="gs-flex gs-gap-sm">
-                        <button type="submit" class="gs-btn gs-btn-primary">
-                            <i data-lucide="filter"></i>
-                            Filtrera
-                        </button>
+                    <!-- Reset Button -->
+                    <div>
                         <a href="/events.php" class="gs-btn gs-btn-outline">
                             <i data-lucide="x"></i>
                             Rensa filter
