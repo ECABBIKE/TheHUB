@@ -35,7 +35,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['csv_file'])) {
         // Normalize header (same as import does)
         $header = array_map(function($col) {
             $original = $col;
-            $col = strtolower(trim($col));
+            $col = mb_strtolower(trim($col), 'UTF-8');
             $col = str_replace([' ', '-', '_'], '', $col);
             return ['original' => $original, 'normalized' => $col];
         }, $rawHeader);
@@ -55,9 +55,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['csv_file'])) {
             'sex' => 'gender',
             'licensår' => 'license_year',
             'licensar' => 'license_year',
+            'år' => 'license_year',
+            'ar' => 'license_year',
             'ucikod' => 'license_number',
+            'uciid' => 'license_number',
             'huvudförening' => 'club_name',
             'huvudforening' => 'club_name',
+            'team' => 'club_name',
+            'förnamn' => 'firstname',
+            'fornamn' => 'firstname',
+            'efternamn' => 'lastname',
+            'födelsedatum' => 'birth_year',
+            'fodelsedatum' => 'birth_year',
+            'födelseår' => 'birth_year',
+            'fodelsear' => 'birth_year',
+            'epost' => 'email',
+            'epostadress' => 'email',
         ];
 
         foreach ($header as $h) {

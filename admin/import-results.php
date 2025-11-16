@@ -104,7 +104,7 @@ function importResultsFromCSV($filepath, $db, $importId = null) {
 
     // Normalize header - accept multiple variants
     $header = array_map(function($col) {
-        $col = strtolower(trim($col));
+        $col = mb_strtolower(trim($col), 'UTF-8');
         // Remove spaces, hyphens, underscores for comparison
         $col = str_replace([' ', '-', '_'], '', $col);
 
@@ -188,6 +188,8 @@ function importResultsFromCSV($filepath, $db, $importId = null) {
             'birthyear' => 'birth_year',
             'födelseår' => 'birth_year',
             'fodelsear' => 'birth_year',
+            'födelsedatum' => 'birth_year',
+            'fodelsedatum' => 'birth_year',
             'position' => 'position',
             'placering' => 'position',
             'finishtime' => 'finish_time',
@@ -471,7 +473,22 @@ function importResultsFromCSV($filepath, $db, $importId = null) {
             $firstname = trim($data['firstname']);
             $lastname = trim($data['lastname']);
             $licenseNumber = !empty($data['license_number']) ? trim($data['license_number']) : null;
-            $birthYear = !empty($data['birth_year']) ? (int)$data['birth_year'] : null;
+
+            // Extract birth year from various formats
+            $birthYear = null;
+            if (!empty($data['birth_year'])) {
+                $birthYearRaw = trim($data['birth_year']);
+                // Handle Swedish personnummer format: YYYYMMDD-XXXX or YYMMDD-XXXX
+                if (preg_match('/^(\d{4})\d{4}-?\d{4}$/', $birthYearRaw, $matches)) {
+                    $birthYear = (int)$matches[1]; // YYYYMMDD-XXXX → YYYY
+                } elseif (preg_match('/^(\d{2})\d{4}-?\d{4}$/', $birthYearRaw, $matches)) {
+                    // YYMMDD-XXXX → 19YY or 20YY
+                    $yy = (int)$matches[1];
+                    $birthYear = $yy < 30 ? 2000 + $yy : 1900 + $yy;
+                } else {
+                    $birthYear = (int)$birthYearRaw; // Just a year number
+                }
+            }
 
             // Check for single-use license
             $isSingleUseLicense = false;
