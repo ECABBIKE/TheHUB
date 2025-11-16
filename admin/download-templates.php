@@ -117,7 +117,7 @@ if ($template === 'results') {
         'club_name',
         'uci_id',
         'swe_id',
-        'time_seconds',
+        'finish_time',
         'status'
     ]);
 
@@ -133,7 +133,7 @@ if ($template === 'results') {
         'Uppsala Cykelklubb',
         'SWE19950101',
         '',
-        '185.45',
+        '3:05.45',
         'finished'
     ]);
 
@@ -148,7 +148,7 @@ if ($template === 'results') {
         'Göteborg MTB',
         'SWE19980315',
         '',
-        '195.78',
+        '3:15.78',
         'finished'
     ]);
 
@@ -163,7 +163,7 @@ if ($template === 'results') {
         'Stockholm CK',
         '',
         'SWE25001',
-        '189.23',
+        '3:09.23',
         'finished'
     ]);
 
@@ -178,7 +178,7 @@ if ($template === 'results') {
         'Malmö CK',
         'SWE19930812',
         '',
-        '187.92',
+        '3:07.92',
         'finished'
     ]);
 
