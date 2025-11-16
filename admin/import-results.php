@@ -523,9 +523,9 @@ function importResultsFromCSV($filepath, $db, $importId = null) {
                         $gender = 'M'; // Default
                         if (!empty($data['gender'])) {
                             $genderRaw = strtolower(trim($data['gender']));
-                            if (in_array($genderRaw, ['woman', 'female', 'kvinna', 'dam', 'f'])) {
+                            if (in_array($genderRaw, ['woman', 'women', 'female', 'kvinna', 'dam', 'f', 'k'])) {
                                 $gender = 'F';
-                            } elseif (in_array($genderRaw, ['man', 'male', 'herr', 'm'])) {
+                            } elseif (in_array($genderRaw, ['man', 'men', 'male', 'herr', 'm'])) {
                                 $gender = 'M';
                             }
                         }

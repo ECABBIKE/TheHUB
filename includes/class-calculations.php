@@ -34,7 +34,15 @@ function determineRiderClass($db, $birthYear, $gender, $eventDate, $discipline =
     $age = calculateAgeAtEvent($birthYear, $eventDate);
 
     // Normalize gender
-    $gender = strtoupper($gender);
+    $genderLower = strtolower(trim($gender));
+    if (in_array($genderLower, ['woman', 'women', 'female', 'kvinna', 'dam', 'f', 'k'])) {
+        $gender = 'F';
+    } elseif (in_array($genderLower, ['man', 'men', 'male', 'herr', 'm'])) {
+        $gender = 'M';
+    } else {
+        $gender = strtoupper($gender);
+    }
+
     // Support both F (Female) and K (Kvinna) for backwards compatibility
     if (!in_array($gender, ['M', 'F', 'K'])) {
         return null;
