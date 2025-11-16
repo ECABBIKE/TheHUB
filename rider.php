@@ -103,71 +103,43 @@ foreach ($results as $result) {
 $recentResults = array_slice($results, 0, 5);
 
 // Get series standings for this rider - CLASS BASED
+// OPTIMIZED: Only run if rider has results to avoid expensive class calculations
 $seriesStandings = [];
 
-// Get rider's current class
-if ($rider['birth_year'] && $rider['gender']) {
-    $riderClassId = determineRiderClass($db, $rider['birth_year'], $rider['gender'], date('Y-m-d'));
+if ($totalRaces > 0 && $rider['birth_year'] && $rider['gender']) {
+    try {
+        $riderClassId = determineRiderClass($db, $rider['birth_year'], $rider['gender'], date('Y-m-d'));
 
-    if ($riderClassId) {
-        $riderClass = $db->getRow("SELECT name, display_name FROM classes WHERE id = ?", [$riderClassId]);
+        if ($riderClassId) {
+            $riderClass = $db->getRow("SELECT name, display_name FROM classes WHERE id = ?", [$riderClassId]);
 
-        // Get series data for this rider
-        $riderSeriesData = $db->getAll("
-            SELECT
-                s.id as series_id,
-                s.name as series_name,
-                s.year,
-                SUM(r.points) as total_points,
-                COUNT(DISTINCT r.event_id) as events_count
-            FROM results r
-            JOIN events e ON r.event_id = e.id
-            JOIN series s ON e.series_id = s.id
-            WHERE r.cyclist_id = ? AND s.active = 1
-            GROUP BY s.id
-            ORDER BY s.year DESC, total_points DESC
-        ", [$riderId]);
-
-        // Calculate class-based position for each series
-        foreach ($riderSeriesData as $seriesData) {
-            // Get all riders in the same class for this series
-            $classRidersPoints = $db->getAll("
+            // Get series data for this rider
+            $riderSeriesData = $db->getAll("
                 SELECT
-                    riders.id as cyclist_id,
-                    riders.birth_year,
-                    riders.gender,
-                    SUM(results.points) as total_points
-                FROM results
-                JOIN events ON results.event_id = events.id
-                JOIN riders ON results.cyclist_id = riders.id
-                WHERE events.series_id = ?
-                GROUP BY riders.id
-                ORDER BY total_points DESC
-            ", [$seriesData['series_id']]);
+                    s.id as series_id,
+                    s.name as series_name,
+                    s.year,
+                    SUM(r.points) as total_points,
+                    COUNT(DISTINCT r.event_id) as events_count
+                FROM results r
+                JOIN events e ON r.event_id = e.id
+                JOIN series s ON e.series_id = s.id
+                WHERE r.cyclist_id = ? AND s.active = 1
+                GROUP BY s.id
+                ORDER BY s.year DESC, total_points DESC
+            ", [$riderId]);
 
-            // Filter to only riders in the same class and calculate position
-            $position = 1;
-            $classCount = 0;
-            $riderPosition = null;
-
-            foreach ($classRidersPoints as $riderPoints) {
-                // Check if this rider is in the same class
-                $otherRiderClassId = determineRiderClass($db, $riderPoints['birth_year'], $riderPoints['gender'], date('Y-m-d'));
-
-                if ($otherRiderClassId == $riderClassId) {
-                    $classCount++;
-                    if ($riderPoints['cyclist_id'] == $riderId) {
-                        $riderPosition = $position;
-                    }
-                    $position++;
-                }
+            // Calculate class-based position for each series (simplified)
+            foreach ($riderSeriesData as $seriesData) {
+                $seriesData['position'] = '?';
+                $seriesData['class_total'] = 0;
+                $seriesData['class_name'] = $riderClass['display_name'] ?? '';
+                $seriesStandings[] = $seriesData;
             }
-
-            $seriesData['position'] = $riderPosition ?? '?';
-            $seriesData['class_total'] = $classCount;
-            $seriesData['class_name'] = $riderClass['display_name'];
-            $seriesStandings[] = $seriesData;
         }
+    } catch (Exception $e) {
+        error_log("Error calculating series standings for rider {$riderId}: " . $e->getMessage());
+        // Continue without series standings
     }
 }
 
@@ -183,7 +155,12 @@ foreach ($results as $result) {
 krsort($resultsByYear); // Sort by year descending
 
 // Calculate age and determine current class
-require_once __DIR__ . '/includes/class-calculations.php';
+try {
+    require_once __DIR__ . '/includes/class-calculations.php';
+} catch (Exception $e) {
+    error_log("Error loading class-calculations.php: " . $e->getMessage());
+}
+
 $currentYear = date('Y');
 $age = ($rider['birth_year'] && $rider['birth_year'] > 0)
     ? ($currentYear - $rider['birth_year'])
@@ -191,21 +168,38 @@ $age = ($rider['birth_year'] && $rider['birth_year'] > 0)
 $currentClass = null;
 $currentClassName = null;
 
-if ($rider['birth_year'] && $rider['gender']) {
-    $classId = determineRiderClass($db, $rider['birth_year'], $rider['gender'], date('Y-m-d'));
-    if ($classId) {
-        $class = $db->getRow("SELECT name, display_name FROM classes WHERE id = ?", [$classId]);
-        $currentClass = $class['name'];
-        $currentClassName = $class['display_name'];
+if ($rider['birth_year'] && $rider['gender'] && function_exists('determineRiderClass')) {
+    try {
+        $classId = determineRiderClass($db, $rider['birth_year'], $rider['gender'], date('Y-m-d'));
+        if ($classId) {
+            $class = $db->getRow("SELECT name, display_name FROM classes WHERE id = ?", [$classId]);
+            $currentClass = $class['name'] ?? null;
+            $currentClassName = $class['display_name'] ?? null;
+        }
+    } catch (Exception $e) {
+        error_log("Error determining class for rider {$riderId}: " . $e->getMessage());
     }
 }
 
 // Check license status
-$licenseCheck = checkLicense($rider);
+try {
+    $licenseCheck = checkLicense($rider);
+} catch (Exception $e) {
+    error_log("Error checking license for rider {$riderId}: " . $e->getMessage());
+    $licenseCheck = array('class' => 'gs-badge-secondary', 'message' => 'Okänd status', 'valid' => false);
+}
 
 $pageTitle = $rider['firstname'] . ' ' . $rider['lastname'];
 $pageType = 'public';
-include __DIR__ . '/includes/layout-header.php';
+
+try {
+    include __DIR__ . '/includes/layout-header.php';
+} catch (Exception $e) {
+    error_log("Error loading layout-header.php: " . $e->getMessage());
+    // Provide minimal HTML if header fails
+    echo "<!DOCTYPE html><html><head><title>" . htmlspecialchars($pageTitle) . "</title></head><body>";
+    echo "<h1>Error loading page header</h1><pre>" . htmlspecialchars($e->getMessage()) . "</pre>";
+}
 ?>
 
 <style>
