@@ -16,10 +16,30 @@ $db = getDB();
 $publicSettings = require __DIR__ . '/config/public_settings.php';
 $displayMode = $publicSettings['public_riders_display'] ?? 'with_results';
 $minResults = intval($publicSettings['min_results_to_show'] ?? 1);
+$filterDiscipline = $publicSettings['filter_discipline'] ?? null;
+
+// Build WHERE clause for discipline filter
+$disciplineWhere = '';
+$disciplineParam = [];
+if ($filterDiscipline) {
+    // Check if disciplines JSON contains the filter discipline
+    $disciplineWhere = " AND (
+        c.disciplines LIKE ? OR
+        c.disciplines LIKE ? OR
+        c.disciplines LIKE ? OR
+        c.disciplines LIKE ?
+    )";
+    $disciplineParam = [
+        '%"' . $filterDiscipline . '"%',    // Exact match in JSON
+        '%' . strtolower($filterDiscipline) . '%',  // Lowercase variant
+        '%' . ucfirst(strtolower($filterDiscipline)) . '%',  // Capitalized
+        '%' . strtoupper($filterDiscipline) . '%'   // Uppercase
+    ];
+}
 
 // Build query based on settings
 if ($displayMode === 'all') {
-    // Show ALL active riders
+    // Show ALL active riders (optionally filtered by discipline)
     $cyclists = $db->getAll("
         SELECT
             c.id,
@@ -38,12 +58,13 @@ if ($displayMode === 'all') {
         FROM riders c
         LEFT JOIN clubs cl ON c.club_id = cl.id
         LEFT JOIN results r ON c.id = r.cyclist_id
-        WHERE c.active = 1
+        WHERE c.active = 1 {$disciplineWhere}
         GROUP BY c.id
         ORDER BY c.lastname, c.firstname
-    ");
+    ", $disciplineParam);
 } else {
     // Show ONLY riders with results (minimum required results)
+    $params = array_merge($disciplineParam, [$minResults]);
     $cyclists = $db->getAll("
         SELECT
             c.id,
@@ -62,11 +83,11 @@ if ($displayMode === 'all') {
         FROM riders c
         LEFT JOIN clubs cl ON c.club_id = cl.id
         INNER JOIN results r ON c.id = r.cyclist_id
-        WHERE c.active = 1
+        WHERE c.active = 1 {$disciplineWhere}
         GROUP BY c.id
         HAVING total_races >= ?
         ORDER BY c.lastname, c.firstname
-    ", [$minResults]);
+    ", $params);
 }
 
 $total_count = count($cyclists);
