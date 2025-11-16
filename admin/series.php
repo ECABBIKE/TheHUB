@@ -49,6 +49,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $seriesData = [
                 'name' => $name,
                 'type' => trim($_POST['type'] ?? ''),
+                'format' => $_POST['format'] ?? 'Championship',
                 'status' => $_POST['status'] ?? 'planning',
                 'start_date' => !empty($_POST['start_date']) ? trim($_POST['start_date']) : null,
                 'end_date' => !empty($_POST['end_date']) ? trim($_POST['end_date']) : null,
@@ -97,7 +98,7 @@ if (isset($_GET['edit']) && is_numeric($_GET['edit'])) {
 }
 
 // Get series from database
-$series = $db->getAll("SELECT id, name, type, status, start_date, end_date, logo, organizer,
+$series = $db->getAll("SELECT id, name, type, format, status, start_date, end_date, logo, organizer,
                       (SELECT COUNT(*) FROM events WHERE series_id = series.id) as events_count
                       FROM series
                       ORDER BY start_date DESC");
@@ -178,6 +179,21 @@ include __DIR__ . '/../includes/layout-header.php';
                                             class="gs-input"
                                             placeholder="T.ex. XC, Landsväg, MTB"
                                         >
+                                    </div>
+
+                                    <!-- Format -->
+                                    <div>
+                                        <label for="format" class="gs-label">
+                                            <i data-lucide="trophy"></i>
+                                            Format (Kvalpoäng)
+                                        </label>
+                                        <select id="format" name="format" class="gs-input">
+                                            <option value="Championship">Championship (Individuellt)</option>
+                                            <option value="Team">Team</option>
+                                        </select>
+                                        <p class="gs-text-xs gs-text-secondary gs-mt-xs">
+                                            Hur kvalificeringspoäng räknas för denna serie
+                                        </p>
                                     </div>
 
                                     <!-- Status -->
@@ -364,8 +380,12 @@ include __DIR__ . '/../includes/layout-header.php';
                                     <span class="gs-text-xs gs-text-secondary"><?= h($serie['type']) ?></span>
                                 </div>
                                 <div class="gs-flex gs-items-center gs-gap-xs">
+                                    <i data-lucide="trophy" style="width: 14px; height: 14px; color: var(--gs-text-secondary);"></i>
+                                    <span class="gs-text-xs gs-text-secondary"><?= h($serie['format'] ?? 'Championship') ?></span>
+                                </div>
+                                <div class="gs-flex gs-items-center gs-gap-xs">
                                     <i data-lucide="calendar" style="width: 14px; height: 14px; color: var(--gs-primary);"></i>
-                                    <strong class="gs-text-sm gs-text-primary"><?= $serie['events_count'] ?></strong>
+                                    <span class="gs-text-xs gs-text-primary"><?= $serie['events_count'] ?></span>
                                     <span class="gs-text-xs gs-text-secondary">events</span>
                                 </div>
                             </div>
