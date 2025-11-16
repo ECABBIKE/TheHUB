@@ -601,14 +601,6 @@ try {
                                 </div>
                             <?php endif; ?>
                         <?php endif; ?>
-
-                        <!-- Class Badge -->
-                        <?php if ($currentClass): ?>
-                            <div class="class-badge-compact">
-                                <div class="class-label">Tävlingsklass <?= $currentYear ?></div>
-                                <div class="class-name"><?= h($currentClassName) ?> (<?= h($currentClass) ?>)</div>
-                            </div>
-                        <?php endif; ?>
                         </div><!-- .license-info -->
                     </div><!-- .license-content -->
 
