@@ -19,6 +19,22 @@ function calculateAge($birthYear) {
 }
 
 function checkLicense($rider) {
+    $currentYear = (int)date('Y');
+
+    // Check license_year first (preferred for UCI registrations)
+    if (!empty($rider['license_year'])) {
+        $licenseYear = (int)$rider['license_year'];
+
+        if ($licenseYear == $currentYear) {
+            return array('class' => 'gs-badge-success', 'message' => 'Giltig ' . $currentYear, 'valid' => true);
+        } elseif ($licenseYear > $currentYear) {
+            return array('class' => 'gs-badge-success', 'message' => 'Giltig ' . $licenseYear, 'valid' => true);
+        } else {
+            return array('class' => 'gs-badge-danger', 'message' => 'Utgången ' . $licenseYear, 'valid' => false);
+        }
+    }
+
+    // Fallback to license_valid_until (for manually entered licenses)
     if (empty($rider['license_valid_until']) || $rider['license_valid_until'] === '0000-00-00') {
         return array('class' => 'gs-badge-secondary', 'message' => 'Ingen giltighetstid', 'valid' => false);
     }

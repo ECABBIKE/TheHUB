@@ -150,7 +150,7 @@ function mapColumns($header) {
         'birthyear' => ['födelseår', 'fodelsear', 'birthyear', 'birth_year', 'född', 'fodd', 'year', 'ålder', 'alder', 'age'],
 
         // Gender
-        'gender' => ['kön', 'kon', 'gender', 'sex'],
+        'gender' => ['kön', 'kon', 'gender', 'sex', 'kategori'],
 
         // Address (PRIVATE)
         'address' => ['postadress', 'adress', 'address', 'streetaddress', 'street'],
@@ -180,9 +180,9 @@ function mapColumns($header) {
         'gravel' => ['gravel'],
 
         // License
-        'category' => ['kategori', 'category', 'cat'],
+        'category' => ['category', 'cat'],
         'licensetype' => ['licenstyp', 'licensetype', 'licenstype'],
-        'licenseyear' => ['licensar', 'licenseyear'],
+        'licenseyear' => ['licensår', 'licensar', 'licenseyear', 'år', 'ar'],
         'ucicode' => ['ucikod', 'ucicode', 'uciid', 'licens', 'license', 'licensnummer', 'licensenumber'],
     ];
 
@@ -219,9 +219,9 @@ function mapColumns($header) {
  * Normalize column name for matching
  */
 function normalizeColumnName($name) {
-    $name = strtolower(trim($name));
+    $name = mb_strtolower(trim($name), 'UTF-8');
     $name = str_replace([' ', '-', '_'], '', $name);
-    $name = str_replace(['å', 'ä', 'ö'], ['a', 'a', 'o'], $name);
+    // DO NOT replace å, ä, ö - we need them for proper Swedish column matching!
     return $name;
 }
 
@@ -327,10 +327,10 @@ function importRidersFlexible($filepath, $db) {
             }
 
             // Normalize gender
-            $genderRaw = strtolower($getField($row, 'gender') ?? 'M');
-            if (in_array($genderRaw, ['woman', 'female', 'kvinna', 'dam', 'f', 'k'])) {
+            $genderRaw = mb_strtolower($getField($row, 'gender') ?? 'M', 'UTF-8');
+            if (in_array($genderRaw, ['woman', 'women', 'female', 'kvinna', 'dam', 'f', 'k'])) {
                 $gender = 'F';
-            } elseif (in_array($genderRaw, ['man', 'male', 'herr', 'm'])) {
+            } elseif (in_array($genderRaw, ['man', 'men', 'male', 'herr', 'm'])) {
                 $gender = 'M';
             } else {
                 $gender = 'M';

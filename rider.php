@@ -1,4 +1,8 @@
 <?php
+// Enable error reporting for debugging
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+
 require_once __DIR__ . '/config.php';
 
 $db = getDB();
@@ -7,7 +11,7 @@ $db = getDB();
 $riderId = isset($_GET['id']) ? (int)$_GET['id'] : 0;
 
 if (!$riderId) {
-    header('Location: /riders.php');
+    header('Location: riders.php');
     exit;
 }
 
@@ -26,6 +30,7 @@ try {
             r.license_number,
             r.license_type,
             r.license_category,
+            r.license_year,
             r.discipline,
             r.license_valid_until,
             r.city,
@@ -37,10 +42,10 @@ try {
         WHERE r.id = ?
     ", [$riderId]);
 
-    // Set default values for new fields that might not exist in old schema
+    // Set default values for fields that might not exist in database yet
+    // license_year is now in the SELECT above
     $rider['team'] = $rider['team'] ?? null;
     $rider['disciplines'] = $rider['disciplines'] ?? null;
-    $rider['license_year'] = $rider['license_year'] ?? null;
     $rider['country'] = $rider['country'] ?? null;
     $rider['district'] = $rider['district'] ?? null;
     $rider['photo'] = $rider['photo'] ?? null;
@@ -48,13 +53,11 @@ try {
 } catch (Exception $e) {
     // If even basic query fails, something else is wrong
     error_log("Error fetching rider: " . $e->getMessage());
-    header('Location: /riders.php');
-    exit;
+    die("Database error: " . htmlspecialchars($e->getMessage()));
 }
 
 if (!$rider) {
-    header('Location: /riders.php');
-    exit;
+    die("Deltagare med ID {$riderId} finns inte i databasen. <a href='riders.php'>Gå tillbaka till deltagarlistan</a>");
 }
 
 // Fetch rider's results with event details
