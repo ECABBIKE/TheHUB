@@ -1,25 +1,22 @@
 -- Check if license_year is being imported correctly
 
--- Check license_year distribution
+-- 1. Check license_year distribution
 SELECT
-    'License Year Distribution' as Check,
     license_year,
-    COUNT(*) as Count
+    COUNT(*) as rider_count
 FROM riders
 WHERE license_year IS NOT NULL
 GROUP BY license_year
 ORDER BY license_year DESC;
 
--- Check riders with missing license_year
+-- 2. Check riders with missing license_year
 SELECT
-    'Missing License Year' as Check,
-    COUNT(*) as Count
+    COUNT(*) as missing_license_year_count
 FROM riders
 WHERE license_year IS NULL OR license_year = 0;
 
--- Sample riders with license data
+-- 3. Sample riders with license data
 SELECT
-    'Sample Riders with License Data' as Check,
     id,
     firstname,
     lastname,
