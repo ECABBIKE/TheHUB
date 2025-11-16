@@ -35,17 +35,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_reset'])) {
         $importRecordsCount = $db->getOne("SELECT COUNT(*) FROM import_records");
 
         // Delete all results
-        $db->delete('results', '1=1', []);
+        $db->query("DELETE FROM results");
         $stats['results_deleted'] = $resultsCount;
         error_log("Deleted {$resultsCount} results");
 
         // Delete all import records (tracking data)
-        $db->delete('import_records', '1=1', []);
+        $db->query("DELETE FROM import_records");
         $stats['import_records_deleted'] = $importRecordsCount;
         error_log("Deleted {$importRecordsCount} import records");
 
         // Delete all import history
-        $db->delete('import_history', '1=1', []);
+        $db->query("DELETE FROM import_history");
         $stats['import_history_deleted'] = $importHistoryCount;
         error_log("Deleted {$importHistoryCount} import history entries");
 
