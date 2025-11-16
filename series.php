@@ -13,7 +13,7 @@ $db = getDB();
 
 // Get all series
 $series = $db->getAll("
-    SELECT s.id, s.name, s.description, s.year,
+    SELECT s.id, s.name, s.description, s.year, s.logo, s.start_date, s.end_date,
            COUNT(DISTINCT e.id) as event_count
     FROM series s
     LEFT JOIN events e ON s.id = e.series_id
@@ -39,7 +39,7 @@ include __DIR__ . '/includes/layout-header.php';
                 </p>
             </div>
 
-            <!-- Series Grid -->
+            <!-- Series List -->
             <?php if (empty($series)): ?>
                 <div class="gs-card gs-text-center" style="padding: 3rem;">
                     <i data-lucide="inbox" style="width: 64px; height: 64px; margin: 0 auto 1rem; opacity: 0.3;"></i>
@@ -49,36 +49,140 @@ include __DIR__ . '/includes/layout-header.php';
                     </p>
                 </div>
             <?php else: ?>
-                <div class="gs-grid gs-grid-cols-1 gs-md-grid-cols-2 gs-lg-grid-cols-3 gs-xl-grid-cols-4 gs-gap-lg">
+                <style>
+                    .series-list {
+                        display: flex;
+                        flex-direction: column;
+                        gap: 1rem;
+                        max-width: 900px;
+                        margin: 0 auto;
+                    }
+                    .series-card-horizontal {
+                        display: grid;
+                        grid-template-columns: 140px 1fr;
+                        gap: 1.25rem;
+                        padding: 1.25rem;
+                        min-height: 120px;
+                    }
+                    .series-logo-container {
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        background: #f8f9fa;
+                        border-radius: 8px;
+                        padding: 0.75rem;
+                    }
+                    .series-logo-container img {
+                        max-width: 100%;
+                        max-height: 90px;
+                        object-fit: contain;
+                    }
+                    .series-info-right {
+                        display: flex;
+                        flex-direction: column;
+                        gap: 0.5rem;
+                    }
+                    .series-header-row {
+                        display: flex;
+                        align-items: center;
+                        gap: 0.75rem;
+                        flex-wrap: wrap;
+                    }
+                    .series-title {
+                        font-size: 1.375rem;
+                        font-weight: 700;
+                        color: #1a202c;
+                        line-height: 1.3;
+                    }
+                    .series-year-badge {
+                        display: inline-flex;
+                        align-items: center;
+                        padding: 0.25rem 0.75rem;
+                        background: #667eea;
+                        color: white;
+                        border-radius: 4px;
+                        font-size: 0.875rem;
+                        font-weight: 600;
+                    }
+                    .series-description {
+                        color: #4a5568;
+                        font-size: 0.9375rem;
+                        line-height: 1.5;
+                        margin: 0.25rem 0;
+                    }
+                    .series-meta {
+                        display: flex;
+                        align-items: center;
+                        gap: 0.5rem;
+                        font-size: 0.875rem;
+                        color: #718096;
+                        margin-top: 0.25rem;
+                    }
+                    @media (max-width: 640px) {
+                        .series-card-horizontal {
+                            grid-template-columns: 100px 1fr;
+                            gap: 1rem;
+                            padding: 1rem;
+                        }
+                        .series-logo-container img {
+                            max-height: 65px;
+                        }
+                        .series-title {
+                            font-size: 1.125rem;
+                        }
+                        .series-description {
+                            font-size: 0.875rem;
+                        }
+                    }
+                </style>
+
+                <div class="series-list">
                     <?php foreach ($series as $s): ?>
-                        <a href="/series-standings.php?id=<?= $s['id'] ?>" class="gs-card gs-card-hover" style="text-decoration: none; color: inherit; display: block;">
-                            <div class="gs-card-header">
-                                <h3 class="gs-h4">
-                                    <i data-lucide="award"></i>
-                                    <?= h($s['name']) ?>
-                                </h3>
-                                <?php if ($s['year']): ?>
-                                    <span class="gs-badge gs-badge-primary gs-text-xs">
-                                        <?= $s['year'] ?>
-                                    </span>
-                                <?php endif; ?>
-                            </div>
-                            <div class="gs-card-content">
-                                <?php if ($s['description']): ?>
-                                    <p class="gs-text-secondary gs-mb-md">
-                                        <?= h($s['description']) ?>
-                                    </p>
-                                <?php endif; ?>
-                                <div class="gs-flex gs-items-center gs-gap-sm gs-text-sm gs-text-secondary gs-mb-md">
-                                    <i data-lucide="calendar" style="width: 16px; height: 16px;"></i>
-                                    <span><?= $s['event_count'] ?> tävlingar</span>
+                        <a href="/series-standings.php?id=<?= $s['id'] ?>" style="text-decoration: none; color: inherit;">
+                            <div class="gs-card gs-card-hover series-card-horizontal" style="transition: transform 0.2s, box-shadow 0.2s;">
+                                <!-- Logo Left -->
+                                <div class="series-logo-container">
+                                    <?php if ($s['logo']): ?>
+                                        <img src="<?= h($s['logo']) ?>"
+                                             alt="<?= h($s['name']) ?>">
+                                    <?php else: ?>
+                                        <div style="font-size: 2rem; color: #cbd5e0;">
+                                            <i data-lucide="award" style="width: 48px; height: 48px;"></i>
+                                        </div>
+                                    <?php endif; ?>
                                 </div>
-                                <?php if ($s['event_count'] > 0): ?>
-                                    <div class="gs-btn gs-btn-primary gs-btn-sm" style="width: 100%; text-align: center;">
-                                        <i data-lucide="info"></i>
-                                        INFO
+
+                                <!-- Info Right -->
+                                <div class="series-info-right">
+                                    <div class="series-header-row">
+                                        <div class="series-title">
+                                            <?= h($s['name']) ?>
+                                        </div>
+                                        <?php if ($s['year']): ?>
+                                            <span class="series-year-badge">
+                                                <?= $s['year'] ?>
+                                            </span>
+                                        <?php endif; ?>
                                     </div>
-                                <?php endif; ?>
+
+                                    <?php if ($s['description']): ?>
+                                        <div class="series-description">
+                                            <?= h($s['description']) ?>
+                                        </div>
+                                    <?php endif; ?>
+
+                                    <div class="series-meta">
+                                        <i data-lucide="calendar" style="width: 14px; height: 14px;"></i>
+                                        <span style="font-weight: 600; color: #667eea;">
+                                            <?= $s['event_count'] ?> <?= $s['event_count'] == 1 ? 'tävling' : 'tävlingar' ?>
+                                        </span>
+                                        <?php if ($s['start_date'] && $s['end_date']): ?>
+                                            <span style="margin-left: 0.5rem;">
+                                                • <?= date('M Y', strtotime($s['start_date'])) ?> - <?= date('M Y', strtotime($s['end_date'])) ?>
+                                            </span>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
                             </div>
                         </a>
                     <?php endforeach; ?>
