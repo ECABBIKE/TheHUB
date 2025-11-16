@@ -281,7 +281,20 @@ function importResultsFromCSV($filepath, $db, $importId = null) {
 
     while (($row = fgetcsv($handle, 1000, $delimiter)) !== false) {
         $lineNumber++;
+
+        // Skip empty rows (all columns empty or only whitespace)
+        if (empty(array_filter($row, function($val) { return !empty(trim($val)); }))) {
+            continue;
+        }
+
         $stats['total']++;
+
+        // Ensure row has same number of columns as header (pad with empty strings if needed)
+        if (count($row) < count($header)) {
+            $row = array_pad($row, count($header), '');
+        } elseif (count($row) > count($header)) {
+            $row = array_slice($row, 0, count($header));
+        }
 
         // Map row to associative array
         $data = array_combine($header, $row);
