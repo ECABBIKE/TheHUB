@@ -285,19 +285,10 @@ include __DIR__ . '/includes/layout-header.php';
                     <?php
                     $currentYear = date('Y');
                     foreach ($cyclists as $rider):
-                        // Calculate age and class
+                        // Calculate age
                         $age = ($rider['birth_year'] && $rider['birth_year'] > 0)
                             ? ($currentYear - $rider['birth_year'])
                             : null;
-                        $classId = null;
-                        $className = null;
-                        if ($rider['birth_year'] && $rider['gender']) {
-                            $classId = determineRiderClass($db, $rider['birth_year'], $rider['gender'], date('Y-m-d'));
-                            if ($classId) {
-                                $class = $db->getRow("SELECT name, display_name FROM classes WHERE id = ?", [$classId]);
-                                $className = $class ? $class['display_name'] : null;
-                            }
-                        }
 
                         // Check license status
                         $isUciLicense = !empty($rider['license_number']) && strpos($rider['license_number'], 'SWE') !== 0;
@@ -370,15 +361,6 @@ include __DIR__ . '/includes/layout-header.php';
                                             ?>
                                         </div>
                                     </div>
-
-                                    <?php if ($className): ?>
-                                        <div class="info-field-compact">
-                                            <div class="info-label-compact">Klass</div>
-                                            <div class="info-value-compact" style="font-size: 11px;">
-                                                <?= h($className) ?>
-                                            </div>
-                                        </div>
-                                    <?php endif; ?>
 
                                     <div class="info-field-compact">
                                         <div class="info-label-compact">Race</div>

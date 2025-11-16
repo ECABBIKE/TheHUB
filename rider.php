@@ -1,4 +1,8 @@
 <?php
+// Enable error reporting for debugging
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+
 require_once __DIR__ . '/config.php';
 
 $db = getDB();
@@ -7,7 +11,7 @@ $db = getDB();
 $riderId = isset($_GET['id']) ? (int)$_GET['id'] : 0;
 
 if (!$riderId) {
-    header('Location: /riders.php');
+    header('Location: riders.php');
     exit;
 }
 
@@ -48,13 +52,11 @@ try {
 } catch (Exception $e) {
     // If even basic query fails, something else is wrong
     error_log("Error fetching rider: " . $e->getMessage());
-    header('Location: /riders.php');
-    exit;
+    die("Database error: " . htmlspecialchars($e->getMessage()));
 }
 
 if (!$rider) {
-    header('Location: /riders.php');
-    exit;
+    die("Deltagare med ID {$riderId} finns inte i databasen. <a href='riders.php'>Gå tillbaka till deltagarlistan</a>");
 }
 
 // Fetch rider's results with event details
