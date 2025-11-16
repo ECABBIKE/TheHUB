@@ -49,13 +49,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $seriesData = [
                 'name' => $name,
                 'type' => trim($_POST['type'] ?? ''),
-                'format' => $_POST['format'] ?? 'Championship',
                 'status' => $_POST['status'] ?? 'planning',
                 'start_date' => !empty($_POST['start_date']) ? trim($_POST['start_date']) : null,
                 'end_date' => !empty($_POST['end_date']) ? trim($_POST['end_date']) : null,
                 'description' => trim($_POST['description'] ?? ''),
                 'organizer' => trim($_POST['organizer'] ?? ''),
             ];
+
+            // Only add format if column exists
+            $formatColumnExists = false;
+            try {
+                $columns = $db->getAll("SHOW COLUMNS FROM series LIKE 'format'");
+                $formatColumnExists = !empty($columns);
+            } catch (Exception $e) {}
+
+            if ($formatColumnExists) {
+                $seriesData['format'] = $_POST['format'] ?? 'Championship';
+            }
 
             // Add logo path if uploaded
             if ($logoPath) {
@@ -111,8 +121,18 @@ if ($filterYear) {
 
 $whereClause = !empty($where) ? 'WHERE ' . implode(' AND ', $where) : '';
 
+// Check if format column exists
+$formatColumnExists = false;
+try {
+    $columns = $db->getAll("SHOW COLUMNS FROM series LIKE 'format'");
+    $formatColumnExists = !empty($columns);
+} catch (Exception $e) {
+    // Column doesn't exist, that's ok
+}
+
 // Get series from database
-$sql = "SELECT id, name, type, format, status, start_date, end_date, logo, organizer,
+$formatSelect = $formatColumnExists ? ', format' : ', "Championship" as format';
+$sql = "SELECT id, name, type{$formatSelect}, status, start_date, end_date, logo, organizer,
         (SELECT COUNT(*) FROM events WHERE series_id = series.id) as events_count
         FROM series
         {$whereClause}
