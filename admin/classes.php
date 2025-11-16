@@ -262,7 +262,7 @@ include __DIR__ . '/../includes/layout-header.php';
                                             <td>
                                                 <?php if ($class['gender'] === 'M'): ?>
                                                     Herr
-                                                <?php elseif ($class['gender'] === 'F'): ?>
+                                                <?php elseif ($class['gender'] === 'K' || $class['gender'] === 'F'): ?>
                                                     Dam
                                                 <?php else: ?>
                                                     <span class="gs-text-secondary">–</span>
@@ -411,7 +411,7 @@ include __DIR__ . '/../includes/layout-header.php';
                                         <select name="gender" id="gender" class="gs-input">
                                             <option value="">Alla</option>
                                             <option value="M">Herr</option>
-                                            <option value="F">Dam</option>
+                                            <option value="K">Dam</option>
                                         </select>
                                     </div>
                                     <div class="gs-form-group">
