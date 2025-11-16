@@ -203,6 +203,8 @@ function importResultsFromCSV($filepath, $db, $importId = null) {
             'gender' => 'gender',
             'kön' => 'gender',
             'kon' => 'gender',
+            'kategori' => 'gender',
+            'sex' => 'gender',
 
             // Split times for Enduro/DH
             'ss1' => 'ss1',
