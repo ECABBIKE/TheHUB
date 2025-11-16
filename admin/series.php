@@ -133,7 +133,7 @@ try {
 // Get series from database
 $formatSelect = $formatColumnExists ? ', format' : ', "Championship" as format';
 $sql = "SELECT id, name, type{$formatSelect}, status, start_date, end_date, logo, organizer,
-        (SELECT COUNT(*) FROM events WHERE series_id = series.id) as events_count
+        (SELECT COUNT(*) FROM series_events WHERE series_id = series.id) as events_count
         FROM series
         {$whereClause}
         ORDER BY start_date DESC";
@@ -473,6 +473,13 @@ include __DIR__ . '/../includes/layout-header.php';
                                             </td>
                                             <td>
                                                 <div class="gs-flex gs-gap-sm">
+                                                    <a
+                                                        href="/admin/series-events.php?series_id=<?= $serie['id'] ?>"
+                                                        class="gs-btn gs-btn-sm gs-btn-primary"
+                                                        title="Hantera events"
+                                                    >
+                                                        <i data-lucide="calendar" style="width: 14px;"></i>
+                                                    </a>
                                                     <button
                                                         type="button"
                                                         class="gs-btn gs-btn-sm gs-btn-outline"
