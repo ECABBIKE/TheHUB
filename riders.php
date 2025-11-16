@@ -124,10 +124,11 @@ include __DIR__ . '/includes/layout-header.php';
     .uci-stripe {
         height: 3px;
         background: linear-gradient(90deg,
-            #004a98 0% 25%,
-            #8A9A5B 25% 50%,
-            #EF761F 50% 75%,
-            #FFE009 75% 100%
+            #c8161b 0% 20%,
+            #8a9859 20% 40%,
+            #fcce05 40% 60%,
+            #207fc0 60% 80%,
+            #ee7622 80% 100%
         );
     }
 
