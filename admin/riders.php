@@ -9,6 +9,24 @@ $db = getDB();
 $search = $_GET['search'] ?? '';
 $club_id = isset($_GET['club_id']) && is_numeric($_GET['club_id']) ? intval($_GET['club_id']) : null;
 
+// Handle sorting
+$sortBy = $_GET['sort'] ?? 'name';
+$sortOrder = $_GET['order'] ?? 'asc';
+
+// Validate sort parameters
+$allowedSorts = ['name', 'year'];
+$allowedOrders = ['asc', 'desc'];
+if (!in_array($sortBy, $allowedSorts)) $sortBy = 'name';
+if (!in_array($sortOrder, $allowedOrders)) $sortOrder = 'asc';
+
+// Build ORDER BY clause
+$orderBy = '';
+if ($sortBy === 'name') {
+    $orderBy = $sortOrder === 'asc' ? 'c.lastname ASC, c.firstname ASC' : 'c.lastname DESC, c.firstname DESC';
+} elseif ($sortBy === 'year') {
+    $orderBy = $sortOrder === 'asc' ? 'c.birth_year ASC' : 'c.birth_year DESC';
+}
+
 // Build query filters
 $where = [];
 $params = [];
@@ -33,7 +51,7 @@ $sql = "SELECT
 FROM riders c
 LEFT JOIN clubs cl ON c.club_id = cl.id
 $whereClause
-ORDER BY c.lastname, c.firstname
+ORDER BY {$orderBy}
 LIMIT 1000";
 
 $riders = $db->getAll($sql, $params);
@@ -117,13 +135,28 @@ include __DIR__ . '/../includes/layout-header.php';
                         <table class="gs-table">
                             <thead>
                                 <tr>
-                                    <th>Namn</th>
-                                    <th>Ålder</th>
+                                    <th>
+                                        <a href="?sort=name&order=<?= $sortBy === 'name' && $sortOrder === 'asc' ? 'desc' : 'asc' ?><?= $search ? '&search=' . urlencode($search) : '' ?><?= $club_id ? '&club_id=' . $club_id : '' ?>"
+                                           class="gs-link" style="display: flex; align-items: center; gap: 4px; text-decoration: none; color: inherit;">
+                                            Namn
+                                            <?php if ($sortBy === 'name'): ?>
+                                                <i data-lucide="<?= $sortOrder === 'asc' ? 'arrow-up' : 'arrow-down' ?>" style="width: 14px; height: 14px;"></i>
+                                            <?php endif; ?>
+                                        </a>
+                                    </th>
+                                    <th>
+                                        <a href="?sort=year&order=<?= $sortBy === 'year' && $sortOrder === 'asc' ? 'desc' : 'asc' ?><?= $search ? '&search=' . urlencode($search) : '' ?><?= $club_id ? '&club_id=' . $club_id : '' ?>"
+                                           class="gs-link" style="display: flex; align-items: center; gap: 4px; text-decoration: none; color: inherit;">
+                                            År
+                                            <?php if ($sortBy === 'year'): ?>
+                                                <i data-lucide="<?= $sortOrder === 'asc' ? 'arrow-up' : 'arrow-down' ?>" style="width: 14px; height: 14px;"></i>
+                                            <?php endif; ?>
+                                        </a>
+                                    </th>
                                     <th>Klubb</th>
                                     <th>Licensnummer</th>
                                     <th>Licensstatus</th>
                                     <th>Disciplin</th>
-                                    <th>Status</th>
                                     <th style="width: 120px;">Åtgärder</th>
                                 </tr>
                             </thead>
@@ -137,7 +170,8 @@ include __DIR__ . '/../includes/layout-header.php';
                                         </td>
                                         <td>
                                             <?php if ($rider['birth_year']): ?>
-                                                <?= calculateAge($rider['birth_year']) ?> år
+                                                <strong><?= $rider['birth_year'] ?></strong>
+                                                <span class="gs-text-secondary gs-text-xs"> (<?= calculateAge($rider['birth_year']) ?> år)</span>
                                             <?php else: ?>
                                                 -
                                             <?php endif; ?>
@@ -168,37 +202,46 @@ include __DIR__ . '/../includes/layout-header.php';
                                         <td>
                                             <?php
                                             // Check license status
-                                            if (!empty($rider['license_number']) && strpos($rider['license_number'], 'SWE') === 0): ?>
-                                                <span class="gs-badge gs-badge-danger">
-                                                    ✗ Ej aktiv licens
-                                                </span>
-                                            <?php elseif (!empty($rider['license_type']) && $rider['license_type'] !== 'None'):
-                                                $licenseCheck = checkLicense($rider);
-                                                if ($licenseCheck['valid']): ?>
-                                                    <span class="gs-badge gs-badge-success">
-                                                        ✓ <?= h($licenseCheck['message']) ?>
-                                                    </span>
-                                                <?php else: ?>
-                                                    <span class="gs-badge gs-badge-danger">
-                                                        ✗ <?= h($licenseCheck['message']) ?>
-                                                    </span>
-                                                <?php endif;
-                                            else: ?>
-                                                <span class="gs-badge gs-badge-secondary">-</span>
-                                            <?php endif; ?>
+                                            $hasValidLicense = false;
+                                            $licenseStatusMessage = '-';
+                                            $licenseStatusClass = 'gs-badge-secondary';
+
+                                            // Check if license number exists and is not a SWE-ID
+                                            if (!empty($rider['license_number']) && strpos($rider['license_number'], 'SWE') !== 0) {
+                                                // Has non-SWE license number - check validity
+                                                if (!empty($rider['license_valid_until'])) {
+                                                    $validUntil = strtotime($rider['license_valid_until']);
+                                                    $today = time();
+
+                                                    if ($validUntil >= $today) {
+                                                        $hasValidLicense = true;
+                                                        $licenseStatusMessage = '✓ Aktiv';
+                                                        $licenseStatusClass = 'gs-badge-success';
+                                                    } else {
+                                                        $licenseStatusMessage = '✗ Utgången';
+                                                        $licenseStatusClass = 'gs-badge-danger';
+                                                    }
+                                                } else {
+                                                    // Has license number but no validity date - assume active
+                                                    $hasValidLicense = true;
+                                                    $licenseStatusMessage = '✓ Aktiv';
+                                                    $licenseStatusClass = 'gs-badge-success';
+                                                }
+                                            } elseif (!empty($rider['license_number']) && strpos($rider['license_number'], 'SWE') === 0) {
+                                                // SWE-ID (internal ID, not a real license)
+                                                $licenseStatusMessage = '✗ Ingen licens (SWE-ID)';
+                                                $licenseStatusClass = 'gs-badge-danger';
+                                            }
+                                            ?>
+                                            <span class="gs-badge <?= $licenseStatusClass ?>">
+                                                <?= $licenseStatusMessage ?>
+                                            </span>
                                         </td>
                                         <td>
                                             <?php if ($rider['discipline']): ?>
                                                 <span class="gs-badge"><?= htmlspecialchars($rider['discipline']) ?></span>
                                             <?php else: ?>
                                                 -
-                                            <?php endif; ?>
-                                        </td>
-                                        <td>
-                                            <?php if ($rider['active']): ?>
-                                                <span class="gs-badge gs-badge-success">Aktiv</span>
-                                            <?php else: ?>
-                                                <span class="gs-badge gs-badge-secondary">Inaktiv</span>
                                             <?php endif; ?>
                                         </td>
                                         <td>
