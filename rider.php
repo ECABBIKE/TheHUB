@@ -30,6 +30,7 @@ try {
             r.license_number,
             r.license_type,
             r.license_category,
+            r.license_year,
             r.discipline,
             r.license_valid_until,
             r.city,
@@ -41,10 +42,10 @@ try {
         WHERE r.id = ?
     ", [$riderId]);
 
-    // Set default values for new fields that might not exist in old schema
+    // Set default values for fields that might not exist in database yet
+    // license_year is now in the SELECT above
     $rider['team'] = $rider['team'] ?? null;
     $rider['disciplines'] = $rider['disciplines'] ?? null;
-    $rider['license_year'] = $rider['license_year'] ?? null;
     $rider['country'] = $rider['country'] ?? null;
     $rider['district'] = $rider['district'] ?? null;
     $rider['photo'] = $rider['photo'] ?? null;
