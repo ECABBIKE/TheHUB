@@ -45,11 +45,21 @@ try {
     $error = $e->getMessage();
 }
 
-// Get all series for filter buttons
-$allSeries = $db->getAll("SELECT id, name FROM series WHERE active = 1 ORDER BY name");
-
 // Get all years from events
 $allYears = $db->getAll("SELECT DISTINCT YEAR(date) as year FROM events WHERE date IS NOT NULL ORDER BY year DESC");
+
+// Get series for filter buttons - only series with events in the selected year
+if ($filterYear) {
+    $allSeries = $db->getAll("
+        SELECT DISTINCT s.id, s.name
+        FROM series s
+        INNER JOIN events e ON s.id = e.series_id
+        WHERE s.active = 1 AND YEAR(e.date) = ?
+        ORDER BY s.name
+    ", [$filterYear]);
+} else {
+    $allSeries = $db->getAll("SELECT id, name FROM series WHERE active = 1 ORDER BY name");
+}
 
 $pageTitle = 'Events';
 $pageType = 'admin';
@@ -78,45 +88,47 @@ include __DIR__ . '/../includes/layout-header.php';
         <!-- Filter Section -->
         <div class="gs-card gs-mb-lg">
             <div class="gs-card-content">
-                <!-- Serie Filter -->
+                <!-- Year Filter (First) -->
                 <div class="gs-mb-md">
-                    <label class="gs-label gs-mb-sm">
-                        <i data-lucide="trophy"></i>
-                        Filtrera på serie:
-                    </label>
-                    <div class="gs-flex gs-gap-sm gs-flex-wrap">
-                        <a href="/admin/events.php<?= $filterYear ? '?year=' . $filterYear : '' ?>"
-                           class="gs-btn gs-btn-sm <?= !$filterSeries ? 'gs-btn-primary' : 'gs-btn-outline' ?>">
-                            Alla serier
-                        </a>
-                        <?php foreach ($allSeries as $series): ?>
-                            <a href="/admin/events.php?series_id=<?= $series['id'] ?><?= $filterYear ? '&year=' . $filterYear : '' ?>"
-                               class="gs-btn gs-btn-sm <?= $filterSeries == $series['id'] ? 'gs-btn-primary' : 'gs-btn-outline' ?>">
-                                <?= htmlspecialchars($series['name']) ?>
-                            </a>
-                        <?php endforeach; ?>
-                    </div>
-                </div>
-
-                <!-- Year Filter -->
-                <div>
                     <label class="gs-label gs-mb-sm">
                         <i data-lucide="calendar"></i>
                         Filtrera på år:
                     </label>
                     <div class="gs-flex gs-gap-sm gs-flex-wrap">
-                        <a href="/admin/events.php<?= $filterSeries ? '?series_id=' . $filterSeries : '' ?>"
+                        <a href="/admin/events.php"
                            class="gs-btn gs-btn-sm <?= !$filterYear ? 'gs-btn-primary' : 'gs-btn-outline' ?>">
                             Alla år
                         </a>
                         <?php foreach ($allYears as $yearRow): ?>
-                            <a href="/admin/events.php?year=<?= $yearRow['year'] ?><?= $filterSeries ? '&series_id=' . $filterSeries : '' ?>"
+                            <a href="/admin/events.php?year=<?= $yearRow['year'] ?>"
                                class="gs-btn gs-btn-sm <?= $filterYear == $yearRow['year'] ? 'gs-btn-primary' : 'gs-btn-outline' ?>">
                                 <?= $yearRow['year'] ?>
                             </a>
                         <?php endforeach; ?>
                     </div>
                 </div>
+
+                <!-- Serie Filter (Second - only visible if year is selected or showing all) -->
+                <?php if ($filterYear || !empty($allSeries)): ?>
+                    <div>
+                        <label class="gs-label gs-mb-sm">
+                            <i data-lucide="trophy"></i>
+                            Filtrera på serie<?= $filterYear ? ' (' . $filterYear . ')' : '' ?>:
+                        </label>
+                        <div class="gs-flex gs-gap-sm gs-flex-wrap">
+                            <a href="/admin/events.php<?= $filterYear ? '?year=' . $filterYear : '' ?>"
+                               class="gs-btn gs-btn-sm <?= !$filterSeries ? 'gs-btn-primary' : 'gs-btn-outline' ?>">
+                                Alla serier
+                            </a>
+                            <?php foreach ($allSeries as $series): ?>
+                                <a href="/admin/events.php?series_id=<?= $series['id'] ?><?= $filterYear ? '&year=' . $filterYear : '' ?>"
+                                   class="gs-btn gs-btn-sm <?= $filterSeries == $series['id'] ? 'gs-btn-primary' : 'gs-btn-outline' ?>">
+                                    <?= htmlspecialchars($series['name']) ?>
+                                </a>
+                            <?php endforeach; ?>
+                        </div>
+                    </div>
+                <?php endif; ?>
 
                 <!-- Active Filters Info -->
                 <?php if ($filterSeries || $filterYear): ?>
