@@ -753,6 +753,40 @@ function importResultsFromCSV($filepath, $db, $importId = null) {
 
     fclose($handle);
 
+    // Auto-update rider gender based on their class results
+    // This ensures riders in female classes get gender='F' automatically
+    try {
+        // Update riders in female classes (K) to gender 'F'
+        $femaleUpdated = $db->query("
+            UPDATE riders r
+            SET r.gender = 'F'
+            WHERE r.gender IS NULL OR r.gender = ''
+              AND r.id IN (
+                SELECT DISTINCT res.cyclist_id
+                FROM results res
+                JOIN classes c ON res.class_id = c.id
+                WHERE c.gender = 'K'
+            )
+        ");
+
+        // Update riders in male classes (M) to gender 'M'
+        $maleUpdated = $db->query("
+            UPDATE riders r
+            SET r.gender = 'M'
+            WHERE r.gender IS NULL OR r.gender = ''
+              AND r.id IN (
+                SELECT DISTINCT res.cyclist_id
+                FROM results res
+                JOIN classes c ON res.class_id = c.id
+                WHERE c.gender = 'M'
+            )
+        ");
+
+        error_log("Auto-updated rider genders after import");
+    } catch (Exception $e) {
+        error_log("Failed to auto-update rider genders: " . $e->getMessage());
+    }
+
     return [
         'stats' => $stats,
         'matching' => $matching_stats,
