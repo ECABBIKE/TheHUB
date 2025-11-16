@@ -234,7 +234,11 @@ include __DIR__ . '/includes/layout-header.php';
                 </h1>
                 <div class="gs-flex gs-gap-md gs-flex-wrap">
                     <span class="gs-badge gs-badge-primary">
-                        <?= $total_count ?> deltagare med resultat
+                        <?php if ($displayMode === 'all'): ?>
+                            <?= $total_count ?> aktiva deltagare
+                        <?php else: ?>
+                            <?= $total_count ?> deltagare med resultat
+                        <?php endif; ?>
                     </span>
                     <span class="gs-badge gs-badge-secondary">
                         <?= $club_count ?> aktiva klubbar
