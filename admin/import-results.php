@@ -784,30 +784,35 @@ function importResultsFromCSV($filepath, $db, $importId = null) {
 
             // Find or create class
             $classId = null;
+            $classSource = 'none';
 
             // Check if manual class override is set (from form)
             global $IMPORT_FORCE_CLASS_ID;
             if (isset($IMPORT_FORCE_CLASS_ID) && $IMPORT_FORCE_CLASS_ID > 0) {
                 $classId = (int)$IMPORT_FORCE_CLASS_ID;
+                $classSource = 'manual_override';
                 error_log("Using manual class override: class_id = {$classId}");
             }
-            // First, check if class is specified in CSV
+            // PRIORITY 1: Check if class is specified in CSV (from Category column in SweCup format)
             elseif (!empty($data['class_name'])) {
                 $className = trim($data['class_name']);
                 $classKey = strtolower($className);
 
                 if (isset($classCache[$classKey])) {
                     $classId = $classCache[$classKey];
+                    $classSource = 'csv_cached';
                 } else {
-                    // Try to find existing class by name or display_name
+                    // Try to find existing class by name or display_name (case-insensitive)
                     $class = $db->getRow(
-                        "SELECT id FROM classes WHERE LOWER(name) = LOWER(?) OR LOWER(display_name) = LOWER(?) LIMIT 1",
+                        "SELECT id, name FROM classes WHERE LOWER(name) = LOWER(?) OR LOWER(display_name) = LOWER(?) LIMIT 1",
                         [$className, $className]
                     );
 
                     if ($class) {
                         $classId = $class['id'];
                         $classCache[$classKey] = $classId;
+                        $classSource = 'csv_found';
+                        error_log("Row {$lineNumber}: Matched class '{$className}' to existing class '{$class['name']}' (ID: {$classId})");
                     } else {
                         // Auto-create class if it doesn't exist
                         $classData = [
@@ -819,7 +824,8 @@ function importResultsFromCSV($filepath, $db, $importId = null) {
                         $classId = $db->insert('classes', $classData);
                         $classCache[$classKey] = $classId;
                         $matching_stats['classes_created']++;
-                        error_log("Auto-created class: {$className}");
+                        $classSource = 'csv_created';
+                        error_log("Row {$lineNumber}: Auto-created class: '{$className}' (ID: {$classId})");
 
                         if ($importId && $classId) {
                             trackImportRecord($db, $importId, 'class', $classId, 'created');
