@@ -5,10 +5,31 @@ require_admin();
 global $pdo;
 $db = getDB();
 
+// Get filter parameters
+$filterSeries = isset($_GET['series_id']) && is_numeric($_GET['series_id']) ? intval($_GET['series_id']) : null;
+$filterYear = isset($_GET['year']) && is_numeric($_GET['year']) ? intval($_GET['year']) : null;
+
+// Build WHERE clause
+$where = [];
+$params = [];
+
+if ($filterSeries) {
+    $where[] = "e.series_id = ?";
+    $params[] = $filterSeries;
+}
+
+if ($filterYear) {
+    $where[] = "YEAR(e.date) = ?";
+    $params[] = $filterYear;
+}
+
+$whereClause = !empty($where) ? 'WHERE ' . implode(' AND ', $where) : '';
+
 // Get all events with result counts
 $sql = "SELECT
     e.id, e.name, e.advent_id, e.date, e.location, e.status,
     s.name as series_name,
+    s.id as series_id,
     COUNT(DISTINCT r.id) as result_count,
     COUNT(DISTINCT r.category_id) as category_count,
     COUNT(DISTINCT CASE WHEN r.status = 'finished' THEN r.id END) as finished_count,
@@ -17,15 +38,22 @@ $sql = "SELECT
 FROM events e
 LEFT JOIN results r ON e.id = r.event_id
 LEFT JOIN series s ON e.series_id = s.id
+{$whereClause}
 GROUP BY e.id
 ORDER BY e.date DESC";
 
 try {
-    $events = $db->getAll($sql);
+    $events = $db->getAll($sql, $params);
 } catch (Exception $e) {
     $events = [];
     $error = $e->getMessage();
 }
+
+// Get all series for filter buttons
+$allSeries = $db->getAll("SELECT id, name FROM series WHERE active = 1 ORDER BY name");
+
+// Get all years from events
+$allYears = $db->getAll("SELECT DISTINCT YEAR(date) as year FROM events WHERE date IS NOT NULL ORDER BY year DESC");
 
 $pageTitle = 'Resultat - Event';
 $pageType = 'admin';
@@ -63,6 +91,83 @@ include __DIR__ . '/../includes/layout-header.php';
                 <strong>Fel:</strong> <?= htmlspecialchars($error) ?>
             </div>
         <?php endif; ?>
+
+        <!-- Filter Section -->
+        <div class="gs-card gs-mb-lg">
+            <div class="gs-card-header">
+                <h2 class="gs-h4 gs-text-primary">
+                    <i data-lucide="filter"></i>
+                    Filter
+                </h2>
+            </div>
+            <div class="gs-card-content">
+                <!-- Serie Filter -->
+                <div class="gs-mb-md">
+                    <label class="gs-label gs-mb-sm">
+                        <i data-lucide="trophy"></i>
+                        Filtrera på serie:
+                    </label>
+                    <div class="gs-flex gs-gap-sm gs-flex-wrap">
+                        <a href="/admin/results.php<?= $filterYear ? '?year=' . $filterYear : '' ?>"
+                           class="gs-btn gs-btn-sm <?= !$filterSeries ? 'gs-btn-primary' : 'gs-btn-outline' ?>">
+                            Alla serier
+                        </a>
+                        <?php foreach ($allSeries as $series): ?>
+                            <a href="/admin/results.php?series_id=<?= $series['id'] ?><?= $filterYear ? '&year=' . $filterYear : '' ?>"
+                               class="gs-btn gs-btn-sm <?= $filterSeries == $series['id'] ? 'gs-btn-primary' : 'gs-btn-outline' ?>">
+                                <?= htmlspecialchars($series['name']) ?>
+                            </a>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+
+                <!-- Year Filter -->
+                <div>
+                    <label class="gs-label gs-mb-sm">
+                        <i data-lucide="calendar"></i>
+                        Filtrera på år:
+                    </label>
+                    <div class="gs-flex gs-gap-sm gs-flex-wrap">
+                        <a href="/admin/results.php<?= $filterSeries ? '?series_id=' . $filterSeries : '' ?>"
+                           class="gs-btn gs-btn-sm <?= !$filterYear ? 'gs-btn-primary' : 'gs-btn-outline' ?>">
+                            Alla år
+                        </a>
+                        <?php foreach ($allYears as $yearRow): ?>
+                            <a href="/admin/results.php?year=<?= $yearRow['year'] ?><?= $filterSeries ? '&series_id=' . $filterSeries : '' ?>"
+                               class="gs-btn gs-btn-sm <?= $filterYear == $yearRow['year'] ? 'gs-btn-primary' : 'gs-btn-outline' ?>">
+                                <?= $yearRow['year'] ?>
+                            </a>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+
+                <!-- Active Filters Info -->
+                <?php if ($filterSeries || $filterYear): ?>
+                    <div class="gs-mt-md" style="padding-top: var(--gs-space-md); border-top: 1px solid var(--gs-border);">
+                        <div class="gs-flex gs-items-center gs-gap-sm">
+                            <span class="gs-text-sm gs-text-secondary">Aktiva filter:</span>
+                            <?php if ($filterSeries): ?>
+                                <span class="gs-badge gs-badge-primary">
+                                    <?php
+                                    $seriesName = array_filter($allSeries, function($s) use ($filterSeries) {
+                                        return $s['id'] == $filterSeries;
+                                    });
+                                    echo $seriesName ? htmlspecialchars(reset($seriesName)['name']) : 'Serie #' . $filterSeries;
+                                    ?>
+                                </span>
+                            <?php endif; ?>
+                            <?php if ($filterYear): ?>
+                                <span class="gs-badge gs-badge-accent"><?= $filterYear ?></span>
+                            <?php endif; ?>
+                            <a href="/admin/results.php" class="gs-btn gs-btn-sm gs-btn-outline gs-text-xs">
+                                <i data-lucide="x"></i>
+                                Rensa alla filter
+                            </a>
+                        </div>
+                    </div>
+                <?php endif; ?>
+            </div>
+        </div>
 
         <?php if (empty($events)): ?>
             <div class="gs-card">

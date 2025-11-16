@@ -355,7 +355,6 @@ include __DIR__ . '/../includes/layout-header.php';
                                         <i data-lucide="users"></i>
                                         Medlemmar
                                     </th>
-                                    <th>Status</th>
                                     <th style="width: 150px; text-align: right;">Åtgärder</th>
                                 </tr>
                             </thead>
@@ -378,16 +377,6 @@ include __DIR__ . '/../includes/layout-header.php';
                                         </td>
                                         <td class="gs-text-center">
                                             <strong class="gs-text-primary"><?= $club['rider_count'] ?></strong>
-                                        </td>
-                                        <td>
-                                            <?php if ($club['active']): ?>
-                                                <span class="gs-badge gs-badge-success">
-                                                    <i data-lucide="check-circle"></i>
-                                                    Aktiv
-                                                </span>
-                                            <?php else: ?>
-                                                <span class="gs-badge gs-badge-secondary">Inaktiv</span>
-                                            <?php endif; ?>
                                         </td>
                                         <td style="text-align: right;">
                                                 <div class="gs-flex gs-gap-sm gs-justify-end">

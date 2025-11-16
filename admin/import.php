@@ -192,232 +192,105 @@ include __DIR__ . '/../includes/layout-header.php';
                 </div>
             </div>
 
-            <!-- Quick Links to Specialized Import Pages -->
-            <div class="gs-grid gs-grid-cols-1 gs-md-grid-cols-2 gs-lg-grid-cols-3 gs-gap-lg gs-mb-xl">
-                <!-- Flexibel Import -->
-                <div class="gs-card" style="border: 2px solid #86efac; background: #f0fdf4;">
-                    <div class="gs-card-header" style="background: #10b981;">
-                        <h2 class="gs-h4" style="color: white; margin: 0;">
-                            <i data-lucide="sparkles"></i>
-                            Flexibel Import ⭐
-                        </h2>
-                    </div>
-                    <div class="gs-card-content">
-                        <p class="gs-text-secondary gs-mb-md">
-                            <strong>REKOMMENDERAD!</strong> Importera CSV med kolumner i valfri ordning.
-                        </p>
-                        <ul class="gs-text-sm gs-text-secondary gs-mb-md" style="margin-left: var(--gs-space-lg); line-height: 1.8;">
-                            <li><strong>Kolumner i valfri ordning</strong></li>
-                            <li>Okända kolumner ignoreras</li>
-                            <li>Förhandsgranska innan import</li>
-                            <li>Svenska & engelska kolumnnamn</li>
-                            <li>Inkluderar privata fält (sekretess)</li>
-                        </ul>
-                        <a href="/admin/import-riders-flexible.php" class="gs-btn gs-btn-success gs-w-full">
-                            <i data-lucide="arrow-right"></i>
-                            Använd Flexibel Import
-                        </a>
-                    </div>
-                </div>
-
-                <!-- Extended Import -->
-                <div class="gs-card" style="border: 2px solid #93c5fd;">
-                    <div class="gs-card-header" style="background: #3b82f6;">
-                        <h2 class="gs-h4" style="color: white; margin: 0;">
-                            <i data-lucide="file-text"></i>
-                            Utökad Import
-                        </h2>
-                    </div>
-                    <div class="gs-card-content">
-                        <p class="gs-text-secondary gs-mb-md">
-                            Fullständig deltagardata med fast kolumnordning.
-                        </p>
-                        <ul class="gs-text-sm gs-text-secondary gs-mb-md" style="margin-left: var(--gs-space-lg); line-height: 1.8;">
-                            <li>Fast kolumnordning (mall krävs)</li>
-                            <li>Inkluderar privata fält (sekretess)</li>
-                            <li>Personnummer, adress, telefon</li>
-                            <li>Team, distrikt, grenar</li>
-                            <li>Licensår och licenstyp</li>
-                        </ul>
-                        <a href="/admin/import-riders-extended.php" class="gs-btn gs-btn-primary gs-w-full">
-                            <i data-lucide="arrow-right"></i>
-                            Använd Utökad Import
-                        </a>
-                    </div>
-                </div>
-
-                <!-- Standard Import -->
-                <div class="gs-card">
-                    <div class="gs-card-header">
-                        <h2 class="gs-h4 gs-text-primary">
-                            <i data-lucide="users-2"></i>
-                            Standard Import
-                        </h2>
-                    </div>
-                    <div class="gs-card-content">
-                        <p class="gs-text-secondary gs-mb-md">
-                            Grundläggande import med endast publika fält.
-                        </p>
-                        <ul class="gs-text-sm gs-text-secondary gs-mb-md" style="margin-left: var(--gs-space-lg); line-height: 1.8;">
-                            <li>Förnamn, efternamn, klubb</li>
-                            <li>Födelseår, kön, stad</li>
-                            <li>Licensnummer och typ</li>
-                            <li>Automatisk klubb-matchning</li>
-                            <li>Dubbletthantering</li>
-                        </ul>
-                        <a href="/admin/import-riders.php" class="gs-btn gs-btn-outline gs-w-full">
-                            <i data-lucide="arrow-right"></i>
-                            Använd Standard Import
-                        </a>
-                    </div>
-                </div>
-
-                <!-- Results Import -->
-                <div class="gs-card">
-                    <div class="gs-card-header">
-                        <h2 class="gs-h4 gs-text-primary">
-                            <i data-lucide="trophy"></i>
-                            Importera Resultat
-                        </h2>
-                    </div>
-                    <div class="gs-card-content">
-                        <p class="gs-text-secondary gs-mb-md">
-                            Bulk-import av tävlingsresultat från CSV-fil.
-                        </p>
-                        <ul class="gs-text-sm gs-text-secondary gs-mb-md" style="margin-left: var(--gs-space-lg); line-height: 1.8;">
-                            <li>Matchar cyklister via UCI/namn</li>
-                            <li>Matchar events via namn</li>
-                            <li>Detaljerad matchnings-statistik</li>
-                            <li>Uppdaterar befintliga resultat</li>
-                        </ul>
-                        <a href="/admin/import-results.php" class="gs-btn gs-btn-primary gs-w-full">
-                            <i data-lucide="arrow-right"></i>
-                            Importera Resultat
-                        </a>
-                    </div>
-                </div>
-            </div>
-
-            <?php $flash = getFlash(); if ($flash): ?>
-                <div class="gs-alert gs-alert-<?= h($flash['type']) ?> gs-mb-lg">
-                    <?= h($flash['message']) ?>
-                </div>
-            <?php endif; ?>
-
-            <!-- Upload Form -->
-            <div class="gs-card gs-mb-xl">
-                <div class="gs-card-header">
-                    <h2 class="gs-h4 gs-text-primary">
-                        <i data-lucide="file-up"></i>
-                        Ladda upp Excel-fil
+            <!-- Flexibel Import -->
+            <div class="gs-card" style="border: 2px solid #86efac; background: #f0fdf4; margin-bottom: var(--gs-space-xl);">
+                <div class="gs-card-header" style="background: #10b981;">
+                    <h2 class="gs-h4" style="color: white; margin: 0;">
+                        <i data-lucide="sparkles"></i>
+                        Flexibel Deltagare Import ⭐
                     </h2>
                 </div>
                 <div class="gs-card-content">
-                    <form method="POST" enctype="multipart/form-data" style="max-width: 600px;">
-                        <div class="gs-form-group">
-                            <label for="import_type" class="gs-label">Importtyp</label>
-                            <select id="import_type" name="import_type" class="gs-input" required>
-                                <option value="">Välj typ...</option>
-                                <option value="cyclists">Cyklister</option>
-                                <option value="results">Resultat</option>
-                            </select>
-                        </div>
+                    <p class="gs-text-secondary gs-mb-md">
+                        <strong>REKOMMENDERAD!</strong> Importera CSV med kolumner i valfri ordning.
+                    </p>
+                    <ul class="gs-text-sm gs-text-secondary gs-mb-md" style="margin-left: var(--gs-space-lg); line-height: 1.8;">
+                        <li><strong>Kolumner i valfri ordning</strong></li>
+                        <li>Okända kolumner ignoreras</li>
+                        <li>Förhandsgranska innan import</li>
+                        <li>Svenska & engelska kolumnnamn</li>
+                        <li>Inkluderar privata fält (sekretess)</li>
+                    </ul>
+                    <a href="/admin/import-riders-flexible.php" class="gs-btn gs-btn-success gs-btn-lg gs-w-full">
+                        <i data-lucide="arrow-right"></i>
+                        Använd Flexibel Deltagare Import
+                    </a>
+                </div>
+            </div>
 
-                        <div class="gs-form-group">
-                            <label for="import_file" class="gs-label">Excel-fil (.xlsx, .xls)</label>
-                            <input type="file" id="import_file" name="import_file" class="gs-input" accept=".xlsx,.xls,.csv" required>
-                            <small class="gs-text-secondary gs-text-sm">Max storlek: <?= round(MAX_UPLOAD_SIZE / 1024 / 1024) ?>MB</small>
-                        </div>
+            <!-- Flexibel Enduro Resultat Import -->
+            <div class="gs-card" style="border: 2px solid #fbbf24; background: #fffbeb; margin-bottom: var(--gs-space-xl);">
+                <div class="gs-card-header" style="background: #f59e0b;">
+                    <h2 class="gs-h4" style="color: white; margin: 0;">
+                        <i data-lucide="zap"></i>
+                        Flexibel Enduro Resultat Import 🏁
+                    </h2>
+                </div>
+                <div class="gs-card-content">
+                    <p class="gs-text-secondary gs-mb-md">
+                        <strong>NY!</strong> Importera Enduro-resultat med flexibelt antal stage-sektioner (SS1, SS2, SS3...)
+                    </p>
 
-                        <button type="submit" class="gs-btn gs-btn-primary gs-btn-lg">
-                            <i data-lucide="upload"></i>
-                            Importera
-                        </button>
-                    </form>
-
-                    <!-- Import Info -->
-                    <div class="gs-mt-xl" style="padding-top: var(--gs-space-xl); border-top: 1px solid var(--gs-border);">
-                        <h3 class="gs-h4 gs-text-primary gs-mb-md">
+                    <div style="background: white; padding: 1.25rem; border-radius: var(--gs-radius-md); border: 1px solid #fbbf24; margin-bottom: 1rem;">
+                        <h4 class="gs-h5 gs-mb-md" style="color: #f59e0b;">
                             <i data-lucide="file-text"></i>
-                            Filformat
-                        </h3>
+                            CSV Format-krav
+                        </h4>
+                        <p class="gs-text-sm gs-mb-sm"><strong>Obligatoriska kolumner:</strong></p>
+                        <code style="display: block; background: #f3f4f6; padding: 0.75rem; border-radius: 4px; font-size: 0.875rem; margin-bottom: 1rem;">
+event_name, event_date, discipline, category, position, first_name, last_name, club_name, uci_id, time_seconds, status
+                        </code>
 
-                        <div class="gs-mb-lg">
-                            <h4 class="gs-text-base gs-text-primary gs-mb-sm" style="font-weight: 600;">Cyklister (cyclists):</h4>
-                            <ul class="gs-text-secondary gs-text-sm" style="margin-left: var(--gs-space-lg); line-height: 1.8;">
-                                <li>Kolumn A: Förnamn</li>
-                                <li>Kolumn B: Efternamn</li>
-                                <li>Kolumn C: Födelseår</li>
-                                <li>Kolumn D: Kön (M/F)</li>
-                                <li>Kolumn E: Klubb</li>
-                                <li>Kolumn F: Licensnummer</li>
-                                <li>Kolumn G: E-post</li>
-                                <li>Kolumn H: Telefon</li>
-                                <li>Kolumn I: Ort</li>
-                            </ul>
+                        <p class="gs-text-sm gs-mb-sm"><strong>Flexibla Stage-kolumner:</strong></p>
+                        <code style="display: block; background: #f3f4f6; padding: 0.75rem; border-radius: 4px; font-size: 0.875rem; margin-bottom: 1rem;">
+SS1, SS2, SS3, SS4, SS5, SS6, SS7, ... (valfritt antal)
+                        </code>
+
+                        <div style="background: #eff6ff; padding: 1rem; border-left: 3px solid #3b82f6; border-radius: 4px; margin-top: 1rem;">
+                            <p class="gs-text-sm" style="margin: 0;"><strong>💡 Tips:</strong> Systemet detekterar automatiskt antalet SS-kolumner i din CSV. Du kan ha 1, 5, 7, 10 eller vilket antal som helst!</p>
                         </div>
+                    </div>
 
+                    <details class="gs-mb-md" style="cursor: pointer;">
+                        <summary style="cursor: pointer; font-weight: 600; padding: 0.75rem; background: var(--gs-light); border-radius: var(--gs-radius-sm); margin-bottom: 0.5rem;">
+                            📋 Exempel CSV-format (SweCup Falun)
+                        </summary>
+                        <pre style="background: #1f2937; color: #f3f4f6; padding: 1rem; border-radius: 6px; font-size: 0.813rem; overflow-x: auto; line-height: 1.5;">
+event_name,event_date,discipline,category,position,first_name,last_name,club_name,uci_id,time_seconds,status,SS1,SS2,SS3,SS4,SS5,SS6,SS7
+SweCup Enduro Falun 2025,2025-09-14,END,Damer Junior,1,Ella,MÅRTENSSON,Borås CA,10022510347,979.16,FIN,130.55,107.08,111.10,127.70,92.10,74.83,157.35
+SweCup Enduro Falun 2025,2025-09-14,END,Herrar Elite,1,Johan,ANDERSSON,Stockholm CK,10011223344,856.42,FIN,118.22,98.55,102.33,115.88,84.12,68.91,144.21
+SweCup Enduro Falun 2025,2025-09-14,END,Herrar Elite,2,Erik,SVENSSON,Göteborg MTB,,DNF,DNF,115.34,99.21,DNF,DNF,DNF,DNF,DNF</pre>
+                    </details>
+
+                    <div class="gs-grid gs-grid-cols-2 gs-gap-md">
                         <div>
-                            <h4 class="gs-text-base gs-text-primary gs-mb-sm" style="font-weight: 600;">Resultat (results):</h4>
-                            <ul class="gs-text-secondary gs-text-sm" style="margin-left: var(--gs-space-lg); line-height: 1.8;">
-                                <li>Kolumn A: Tävlingsnamn</li>
-                                <li>Kolumn B: Datum (YYYY-MM-DD)</li>
-                                <li>Kolumn C: Plats</li>
-                                <li>Kolumn D: Placering</li>
-                                <li>Kolumn E: Startnummer</li>
-                                <li>Kolumn F: Förnamn</li>
-                                <li>Kolumn G: Efternamn</li>
-                                <li>Kolumn H: Födelseår</li>
-                                <li>Kolumn I: Klubb</li>
-                                <li>Kolumn J: Tid (HH:MM:SS)</li>
-                                <li>Kolumn K: Kategori</li>
+                            <h5 class="gs-text-sm gs-text-primary" style="font-weight: 600; margin-bottom: 0.5rem;">Kolumnbeskrivningar:</h5>
+                            <ul class="gs-text-xs" style="line-height: 1.7; margin-left: 1.25rem;">
+                                <li><code>event_name</code>: Tävlingsnamn</li>
+                                <li><code>event_date</code>: YYYY-MM-DD</li>
+                                <li><code>discipline</code>: END/EDR/DHI/XC</li>
+                                <li><code>category</code>: "Damer Junior", "Herrar Elite"</li>
+                                <li><code>position</code>: Placering (nummer)</li>
+                                <li><code>first_name</code>: Förnamn</li>
+                                <li><code>last_name</code>: Efternamn</li>
+                            </ul>
+                        </div>
+                        <div>
+                            <h5 class="gs-text-sm gs-text-primary" style="font-weight: 600; margin-bottom: 0.5rem;">Fler kolumner:</h5>
+                            <ul class="gs-text-xs" style="line-height: 1.7; margin-left: 1.25rem;">
+                                <li><code>club_name</code>: Klubbnamn</li>
+                                <li><code>uci_id</code>: UCI-ID (optional)</li>
+                                <li><code>time_seconds</code>: Total tid i sekunder</li>
+                                <li><code>status</code>: FIN/DNF/DNS/DQ</li>
+                                <li><code>SS1, SS2...</code>: Stage-tider (sekunder)</li>
                             </ul>
                         </div>
                     </div>
-                </div>
-            </div>
 
-            <!-- Import History -->
-            <div class="gs-card">
-                <div class="gs-card-header">
-                    <h2 class="gs-h4 gs-text-primary">
-                        <i data-lucide="clock"></i>
-                        Importhistorik
-                    </h2>
-                </div>
-                <div class="gs-card-content">
-                    <?php if (empty($recentImports)): ?>
-                        <p class="gs-text-secondary gs-text-center gs-py-lg">Inga importer ännu</p>
-                    <?php else: ?>
-                        <div class="gs-table-responsive">
-                            <table class="gs-table">
-                                <thead>
-                                    <tr>
-                                        <th>Datum</th>
-                                        <th>Typ</th>
-                                        <th>Fil</th>
-                                        <th>Totalt</th>
-                                        <th>Lyckade</th>
-                                        <th>Misslyckade</th>
-                                        <th>Importerad av</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php foreach ($recentImports as $import): ?>
-                                        <tr>
-                                            <td class="gs-text-sm"><?= formatDate($import['created_at'], 'd M Y H:i') ?></td>
-                                            <td class="gs-text-sm"><?= h($import['import_type']) ?></td>
-                                            <td class="gs-text-secondary gs-text-sm"><?= h($import['filename']) ?></td>
-                                            <td class="gs-text-sm"><?= number_format($import['records_total']) ?></td>
-                                            <td style="color: var(--gs-success); font-weight: 600;"><?= number_format($import['records_success']) ?></td>
-                                            <td style="color: #dc2626; font-weight: 600;"><?= number_format($import['records_failed']) ?></td>
-                                            <td class="gs-text-secondary gs-text-sm"><?= h($import['imported_by']) ?></td>
-                                        </tr>
-                                    <?php endforeach; ?>
-                                </tbody>
-                            </table>
-                        </div>
-                    <?php endif; ?>
+                    <a href="/admin/import-results.php" class="gs-btn gs-btn-warning gs-btn-lg gs-w-full" style="margin-top: 1rem; background: #f59e0b; color: white;">
+                        <i data-lucide="upload"></i>
+                        Importera Enduro Resultat
+                    </a>
                 </div>
             </div>
         </div>
