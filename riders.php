@@ -348,7 +348,6 @@ include __DIR__ . '/includes/layout-header.php';
                         </a>
                     <?php endforeach; ?>
                 </div>
-            <?php endif; ?>
 
             <!-- No Results Message (hidden by default) -->
             <div id="noResults" class="gs-card gs-text-center" style="display: none; padding: 3rem; margin-top: 2rem;">
