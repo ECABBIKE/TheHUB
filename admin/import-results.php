@@ -105,6 +105,12 @@ function importResultsFromCSV($filepath, $db, $importId = null) {
     // Normalize header - accept multiple variants
     $header = array_map(function($col) {
         $col = mb_strtolower(trim($col), 'UTF-8');
+
+        // Skip empty columns (give them unique names to avoid conflicts)
+        if (empty($col)) {
+            return 'empty_' . uniqid();
+        }
+
         // Remove spaces, hyphens, underscores for comparison
         $col = str_replace([' ', '-', '_'], '', $col);
 
@@ -173,6 +179,9 @@ function importResultsFromCSV($filepath, $db, $importId = null) {
             'class' => 'class_name',
             'klass' => 'class_name',
             'classname' => 'class_name',
+
+            // PWR is used in some exports but we ignore it
+            'pwr' => 'pwr',
 
             // Discipline
             'discipline' => 'discipline',
@@ -253,20 +262,33 @@ function importResultsFromCSV($filepath, $db, $importId = null) {
 
     // Special handling for headers that contain actual event data
     // Some export formats use the event name/date/discipline as column headers
+    $hasEventInHeader = false;
     for ($i = 0; $i < count($header); $i++) {
         $originalCol = mb_strtolower(trim($header[$i]), 'UTF-8');
 
         // Detect date patterns (YYYY-MM-DD or YYYYMMDD)
         if (preg_match('/^\d{4}-?\d{2}-?\d{2}$/', str_replace([' ', '-', '_'], '', $originalCol))) {
             $header[$i] = 'event_date';
+            $hasEventInHeader = true;
         }
         // Detect discipline codes (END, DHI, XC, EDR, DS, etc.)
         elseif (in_array(strtoupper(str_replace([' ', '-', '_'], '', $originalCol)), ['END', 'EDR', 'DHI', 'XC', 'DS', 'DH', 'CX', 'ROAD', 'MTB'])) {
             $header[$i] = 'discipline';
+            $hasEventInHeader = true;
         }
         // Detect event name patterns (SweCup, GravitySeries, etc.)
         elseif (preg_match('/(swecup|gravityseries|cup|enduro|dh|xc)/i', $originalCol)) {
             $header[$i] = 'event_name';
+            $hasEventInHeader = true;
+        }
+    }
+
+    // If event data is in header (SweCup format), then "category" column actually means "class_name"
+    if ($hasEventInHeader) {
+        for ($i = 0; $i < count($header); $i++) {
+            if ($header[$i] === 'category') {
+                $header[$i] = 'class_name';
+            }
         }
     }
 
