@@ -48,6 +48,9 @@ $is_admin = isLoggedIn();
             <li><a href="/admin/classes.php" class="<?= $current_page == 'classes.php' ? 'active' : '' ?>">
                 <i data-lucide="layers"></i> Klasser
             </a></li>
+            <li><a href="/admin/point-templates.php" class="<?= $current_page == 'point-templates.php' ? 'active' : '' ?>">
+                <i data-lucide="target"></i> Poängmallar
+            </a></li>
             <li><a href="/admin/venues.php" class="<?= $current_page == 'venues.php' ? 'active' : '' ?>">
                 <i data-lucide="mountain"></i> Venues
             </a></li>
