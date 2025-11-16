@@ -145,6 +145,7 @@ function importResultsFromCSV($filepath, $db, $importId = null) {
             // License fields
             'licensenumber' => 'license_number',
             'uciid' => 'license_number',
+            'ucikod' => 'license_number',
             'sweid' => 'license_number',
             'licens' => 'license_number',
             'uci_id' => 'license_number',
@@ -153,6 +154,8 @@ function importResultsFromCSV($filepath, $db, $importId = null) {
             'licensar' => 'license_year',
             'licenseyear' => 'license_year',
             'license_year' => 'license_year',
+            'år' => 'license_year',
+            'ar' => 'license_year',
 
             // Club/Team
             'club' => 'club_name',
@@ -160,10 +163,11 @@ function importResultsFromCSV($filepath, $db, $importId = null) {
             'team' => 'club_name',
             'klubb' => 'club_name',
             'club_name' => 'club_name',
+            'huvudförening' => 'club_name',
+            'huvudforening' => 'club_name',
 
             // Category (race category, not age/gender class)
             'category' => 'category',
-            'kategori' => 'category',
 
             // Class (age/gender class)
             'class' => 'class_name',
