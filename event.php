@@ -60,6 +60,15 @@ $results = $db->getAll("
         res.finish_time
 ", [$eventId]);
 
+// Detect if this is a DH event (check if any result has run_1_time or run_2_time)
+$isDH = false;
+foreach ($results as $result) {
+    if (!empty($result['run_1_time']) || !empty($result['run_2_time'])) {
+        $isDH = true;
+        break;
+    }
+}
+
 // Group results by category
 $resultsByCategory = [];
 $resultsByClass = [];
@@ -307,9 +316,18 @@ include __DIR__ . '/includes/layout-header.php';
                                             <span style="cursor: pointer;">Klubb <i data-lucide="arrow-up-down" style="width: 14px; height: 14px;"></i></span>
                                         </th>
                                         <th style="width: 100px; text-align: center;">Startnr</th>
-                                        <th style="width: 120px; text-align: center;" data-sort="time">
-                                            <span style="cursor: pointer;">Tid <i data-lucide="arrow-up-down" style="width: 14px; height: 14px;"></i></span>
-                                        </th>
+                                        <?php if ($isDH): ?>
+                                            <th style="width: 120px; text-align: center;" data-sort="run1">
+                                                <span style="cursor: pointer;">Åk 1 <i data-lucide="arrow-up-down" style="width: 14px; height: 14px;"></i></span>
+                                            </th>
+                                            <th style="width: 120px; text-align: center;" data-sort="run2">
+                                                <span style="cursor: pointer;">Åk 2 <i data-lucide="arrow-up-down" style="width: 14px; height: 14px;"></i></span>
+                                            </th>
+                                        <?php else: ?>
+                                            <th style="width: 120px; text-align: center;" data-sort="time">
+                                                <span style="cursor: pointer;">Tid <i data-lucide="arrow-up-down" style="width: 14px; height: 14px;"></i></span>
+                                            </th>
+                                        <?php endif; ?>
                                         <th style="width: 100px; text-align: center;">+Tid</th>
                                         <th style="width: 80px; text-align: center;" data-sort="points">
                                             <span style="cursor: pointer;">Poäng <i data-lucide="arrow-up-down" style="width: 14px; height: 14px;"></i></span>
@@ -378,14 +396,52 @@ include __DIR__ . '/includes/layout-header.php';
                                                 <?= $result['bib_number'] ? h($result['bib_number']) : '<span class="gs-text-secondary">-</span>' ?>
                                             </td>
 
-                                            <!-- Finish Time -->
-                                            <td style="text-align: center; font-family: monospace; font-weight: 600;">
-                                                <?php if ($result['finish_time'] && $result['status'] === 'finished'): ?>
-                                                    <?= h($result['finish_time']) ?>
-                                                <?php else: ?>
-                                                    <span class="gs-text-secondary">-</span>
-                                                <?php endif; ?>
-                                            </td>
+                                            <?php if ($isDH): ?>
+                                                <?php
+                                                // Determine fastest run
+                                                $run1IsFastest = false;
+                                                $run2IsFastest = false;
+                                                if ($result['run_1_time'] && $result['run_2_time']) {
+                                                    $run1Seconds = strtotime("1970-01-01 {$result['run_1_time']} UTC");
+                                                    $run2Seconds = strtotime("1970-01-01 {$result['run_2_time']} UTC");
+                                                    if ($run1Seconds < $run2Seconds) {
+                                                        $run1IsFastest = true;
+                                                    } elseif ($run2Seconds < $run1Seconds) {
+                                                        $run2IsFastest = true;
+                                                    }
+                                                }
+                                                ?>
+                                                <!-- DH Run 1 Time -->
+                                                <td style="text-align: center; font-family: monospace; font-weight: 600;">
+                                                    <?php if ($result['run_1_time'] && $result['status'] === 'finished'): ?>
+                                                        <span style="<?= $run1IsFastest ? 'color: var(--gs-success); font-weight: 700;' : '' ?>">
+                                                            <?= h($result['run_1_time']) ?>
+                                                        </span>
+                                                    <?php else: ?>
+                                                        <span class="gs-text-secondary">-</span>
+                                                    <?php endif; ?>
+                                                </td>
+
+                                                <!-- DH Run 2 Time -->
+                                                <td style="text-align: center; font-family: monospace; font-weight: 600;">
+                                                    <?php if ($result['run_2_time'] && $result['status'] === 'finished'): ?>
+                                                        <span style="<?= $run2IsFastest ? 'color: var(--gs-success); font-weight: 700;' : '' ?>">
+                                                            <?= h($result['run_2_time']) ?>
+                                                        </span>
+                                                    <?php else: ?>
+                                                        <span class="gs-text-secondary">-</span>
+                                                    <?php endif; ?>
+                                                </td>
+                                            <?php else: ?>
+                                                <!-- Standard Finish Time -->
+                                                <td style="text-align: center; font-family: monospace; font-weight: 600;">
+                                                    <?php if ($result['finish_time'] && $result['status'] === 'finished'): ?>
+                                                        <?= h($result['finish_time']) ?>
+                                                    <?php else: ?>
+                                                        <span class="gs-text-secondary">-</span>
+                                                    <?php endif; ?>
+                                                </td>
+                                            <?php endif; ?>
 
                                             <!-- Time Behind -->
                                             <td style="text-align: center; font-family: monospace; color: var(--gs-text-secondary);">
@@ -429,6 +485,27 @@ include __DIR__ . '/includes/layout-header.php';
                 <?php endforeach; ?>
             <?php endif; ?>
         </div>
+
+        <!-- Responsive styles for DH results -->
+        <style>
+            /* DH Results: Desktop - side by side, Mobile - stacked */
+            @media (max-width: 768px) {
+                .results-table th[data-sort="run1"],
+                .results-table th[data-sort="run2"] {
+                    font-size: 0.85rem;
+                    padding: 0.5rem 0.25rem;
+                }
+
+                .results-table td:has(.gs-text-secondary) {
+                    font-size: 0.875rem;
+                }
+            }
+
+            /* Make times stand out */
+            .results-table td[style*="monospace"] {
+                background: var(--gs-background-secondary);
+            }
+        </style>
     </main>
 
 <?php
