@@ -26,7 +26,7 @@ if ($seriesEventsTableExists) {
     $series = $db->getAll("
         SELECT s.id, s.name, s.description, s.year, s.status,
                COUNT(DISTINCT se.event_id) as event_count,
-               (SELECT COUNT(DISTINCT r.rider_id)
+               (SELECT COUNT(DISTINCT r.cyclist_id)
                 FROM results r
                 INNER JOIN series_events se2 ON r.event_id = se2.event_id
                 WHERE se2.series_id = s.id) as participant_count
@@ -41,7 +41,7 @@ if ($seriesEventsTableExists) {
     $series = $db->getAll("
         SELECT s.id, s.name, s.description, s.year, s.status,
                COUNT(DISTINCT e.id) as event_count,
-               (SELECT COUNT(DISTINCT r.rider_id)
+               (SELECT COUNT(DISTINCT r.cyclist_id)
                 FROM results r
                 INNER JOIN events e2 ON r.event_id = e2.id
                 WHERE e2.series_id = s.id) as participant_count

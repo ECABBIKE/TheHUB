@@ -161,7 +161,7 @@ $uniqueParticipants = 0;
 if ($seriesEventsTableExists) {
     // Count unique riders from results where event is in an active series
     $participantCount = $db->getRow("
-        SELECT COUNT(DISTINCT r.rider_id) as unique_riders
+        SELECT COUNT(DISTINCT r.cyclist_id) as unique_riders
         FROM results r
         INNER JOIN series_events se ON r.event_id = se.event_id
         INNER JOIN series s ON se.series_id = s.id
