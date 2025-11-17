@@ -130,10 +130,23 @@ try {
     // Column doesn't exist, that's ok
 }
 
+// Check if series_events table exists
+$seriesEventsTableExists = false;
+try {
+    $tables = $db->getAll("SHOW TABLES LIKE 'series_events'");
+    $seriesEventsTableExists = !empty($tables);
+} catch (Exception $e) {
+    // Table doesn't exist, that's ok
+}
+
 // Get series from database
 $formatSelect = $formatColumnExists ? ', format' : ', "Championship" as format';
+$eventsCountSelect = $seriesEventsTableExists
+    ? '(SELECT COUNT(*) FROM series_events WHERE series_id = series.id)'
+    : '0';
+
 $sql = "SELECT id, name, type{$formatSelect}, status, start_date, end_date, logo, organizer,
-        (SELECT COUNT(*) FROM series_events WHERE series_id = series.id) as events_count
+        {$eventsCountSelect} as events_count
         FROM series
         {$whereClause}
         ORDER BY start_date DESC";
@@ -473,6 +486,7 @@ include __DIR__ . '/../includes/layout-header.php';
                                             </td>
                                             <td>
                                                 <div class="gs-flex gs-gap-sm">
+                                                    <?php if ($seriesEventsTableExists): ?>
                                                     <a
                                                         href="/admin/series-events.php?series_id=<?= $serie['id'] ?>"
                                                         class="gs-btn gs-btn-sm gs-btn-primary"
@@ -480,6 +494,7 @@ include __DIR__ . '/../includes/layout-header.php';
                                                     >
                                                         <i data-lucide="calendar" style="width: 14px;"></i>
                                                     </a>
+                                                    <?php endif; ?>
                                                     <button
                                                         type="button"
                                                         class="gs-btn gs-btn-sm gs-btn-outline"
