@@ -203,23 +203,22 @@ try {
 ?>
 
 <style>
-    /* VERY COMPACT HORIZONTAL CARD - Focus on results below */
+    /* COMPACT HORIZONTAL CARD with Photo */
     .license-card-container {
         margin-bottom: 1rem;
     }
 
     .license-card {
-        max-width: 100%;
+        max-width: 900px;
         width: 100%;
         margin: 0 auto;
         background: white;
         border-radius: 8px;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
         overflow: hidden;
-        border-left: 4px solid #667eea;
     }
 
-    /* UCI Stripe - New colors */
+    /* UCI Stripe */
     .uci-stripe {
         height: 4px;
         background: linear-gradient(90deg,
@@ -231,43 +230,69 @@ try {
         );
     }
 
-    /* Horizontal Layout */
+    /* Horizontal Layout: Photo LEFT, Info RIGHT */
     .license-content {
-        padding: 12px 16px;
+        padding: 12px;
+        display: grid;
+        grid-template-columns: 100px 1fr;
+        gap: 16px;
+        align-items: start;
+    }
+
+    /* Photo Section */
+    .license-photo {
+        width: 100px;
+        height: 120px;
+        border-radius: 6px;
+        overflow: hidden;
+        background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
         display: flex;
-        flex-wrap: wrap;
         align-items: center;
-        gap: 12px;
+        justify-content: center;
+    }
+
+    .license-photo img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .photo-placeholder {
+        font-size: 3rem;
+        opacity: 0.3;
+    }
+
+    /* Info Section */
+    .license-info {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
     }
 
     /* Name - on one line */
     .rider-name {
-        font-size: 16px;
+        font-size: 18px;
         font-weight: 700;
         color: #1a202c;
         text-transform: uppercase;
-        letter-spacing: -0.1px;
+        letter-spacing: -0.2px;
         line-height: 1.2;
-        flex: 0 0 auto;
         margin: 0;
     }
 
-    /* License ID - under name */
+    /* License ID */
     .license-id {
         font-size: 11px;
         color: #667eea;
         font-weight: 600;
-        flex: 0 0 100%;
-        margin: 0 0 4px 0;
     }
 
-    /* License Type and Status - horizontal */
+    /* License Type and Status */
     .license-info-inline {
         display: flex;
         gap: 8px;
         align-items: center;
-        flex: 0 0 100%;
-        margin-bottom: 8px;
+        flex-wrap: wrap;
     }
 
     .license-type-text {
@@ -295,44 +320,72 @@ try {
         color: white;
     }
 
-    /* Compact Info Grid */
+    /* Info Grid */
     .info-grid-compact {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
-        gap: 8px;
-        width: 100%;
+        grid-template-columns: repeat(auto-fit, minmax(70px, 1fr));
+        gap: 6px;
     }
 
     .info-box {
         background: #f8f9fa;
-        padding: 6px 10px;
-        border-radius: 6px;
+        padding: 4px 8px;
+        border-radius: 4px;
         text-align: center;
     }
 
     .info-box-label {
-        font-size: 9px;
+        font-size: 8px;
         color: #718096;
         font-weight: 600;
         text-transform: uppercase;
-        letter-spacing: 0.3px;
+        letter-spacing: 0.2px;
         margin-bottom: 2px;
     }
 
     .info-box-value {
-        font-size: 13px;
+        font-size: 12px;
         color: #1a202c;
-        font-weight: 700;
+        font-weight: 600;
     }
 
-    /* Mobile - Make everything smaller */
-    @media (max-width: 768px) {
-        .license-card-content {
-            padding: 8px 12px;
+    /* Tablet */
+    @media (max-width: 900px) {
+        .license-content {
+            grid-template-columns: 80px 1fr;
+            gap: 12px;
+            padding: 10px;
+        }
+
+        .license-photo {
+            width: 80px;
+            height: 100px;
         }
 
         .rider-name {
-            font-size: 13px;
+            font-size: 16px;
+        }
+    }
+
+    /* Mobile - Smaller photo */
+    @media (max-width: 640px) {
+        .license-content {
+            grid-template-columns: 60px 1fr;
+            gap: 10px;
+            padding: 8px;
+        }
+
+        .license-photo {
+            width: 60px;
+            height: 75px;
+        }
+
+        .photo-placeholder {
+            font-size: 2rem;
+        }
+
+        .rider-name {
+            font-size: 14px;
         }
 
         .license-id {
@@ -349,57 +402,11 @@ try {
         }
 
         .info-box {
-            padding: 4px 6px;
+            padding: 3px 6px;
         }
 
         .info-box-label {
             font-size: 7px;
-        }
-
-        .info-box-value {
-            font-size: 11px;
-        }
-
-        .info-grid-compact {
-            gap: 6px;
-            grid-template-columns: repeat(3, 1fr);
-        }
-    }
-
-    /* Very small mobile */
-    @media (max-width: 480px) {
-        .license-card {
-            border-radius: 6px;
-        }
-
-        .license-content {
-            padding: 6px 10px;
-            gap: 8px;
-        }
-
-        .rider-name {
-            font-size: 12px;
-        }
-
-        .license-id {
-            font-size: 8px;
-            margin-bottom: 2px;
-        }
-
-        .license-info-inline {
-            margin-bottom: 6px;
-        }
-
-        .info-grid-compact {
-            gap: 4px;
-        }
-
-        .info-box {
-            padding: 3px 5px;
-        }
-
-        .info-box-label {
-            font-size: 6px;
         }
 
         .info-box-value {
@@ -425,71 +432,83 @@ try {
                     <!-- Stripe -->
                     <div class="uci-stripe"></div>
 
-                    <!-- Compact Content -->
+                    <!-- Compact Content: Photo LEFT + Info RIGHT -->
                     <div class="license-content">
-                        <!-- Name on one line -->
-                        <div class="rider-name">
-                            <?= h($rider['firstname']) ?> <?= h($rider['lastname']) ?>
-                        </div>
-
-                        <!-- UCI License under name -->
-                        <div class="license-id">
-                            <?php
-                            $isUciLicense = !empty($rider['license_number']) && strpos($rider['license_number'], 'SWE') !== 0;
-                            if ($isUciLicense): ?>
-                                UCI: <?= h($rider['license_number']) ?>
-                            <?php elseif (!empty($rider['license_number'])): ?>
-                                Licens: <?= h($rider['license_number']) ?>
+                        <!-- Photo Section LEFT -->
+                        <div class="license-photo">
+                            <?php if (!empty($rider['photo'])): ?>
+                                <img src="<?= h($rider['photo']) ?>" alt="<?= h($rider['firstname'] . ' ' . $rider['lastname']) ?>">
+                            <?php else: ?>
+                                <div class="photo-placeholder">👤</div>
                             <?php endif; ?>
                         </div>
 
-                        <!-- License Type and Active Status -->
-                        <?php if (!empty($rider['license_type']) && $rider['license_type'] !== 'None'): ?>
-                            <div class="license-info-inline">
-                                <span class="license-type-text"><?= h($rider['license_type']) ?></span>
-                                <?php if (!empty($rider['license_year'])): ?>
-                                    <?php
-                                    $isActive = ($rider['license_year'] == $currentYear);
-                                    ?>
-                                    <span class="license-status-badge <?= $isActive ? 'active' : 'inactive' ?>">
-                                        <?= $isActive ? '✓ Aktiv ' . $currentYear : '✗ ' . $rider['license_year'] ?>
-                                    </span>
+                        <!-- Info Section RIGHT -->
+                        <div class="license-info">
+                            <!-- Name on one line -->
+                            <div class="rider-name">
+                                <?= h($rider['firstname']) ?> <?= h($rider['lastname']) ?>
+                            </div>
+
+                            <!-- UCI License under name -->
+                            <div class="license-id">
+                                <?php
+                                $isUciLicense = !empty($rider['license_number']) && strpos($rider['license_number'], 'SWE') !== 0;
+                                if ($isUciLicense): ?>
+                                    UCI: <?= h($rider['license_number']) ?>
+                                <?php elseif (!empty($rider['license_number'])): ?>
+                                    Licens: <?= h($rider['license_number']) ?>
                                 <?php endif; ?>
                             </div>
-                        <?php endif; ?>
 
-                        <!-- Compact Info: Age, Gender, Club -->
-                        <div class="info-grid-compact">
-                            <div class="info-box">
-                                <div class="info-box-label">Ålder</div>
-                                <div class="info-box-value">
-                                    <?= $age !== null ? $age : '–' ?>
+                            <!-- License Type and Active Status -->
+                            <?php if (!empty($rider['license_type']) && $rider['license_type'] !== 'None'): ?>
+                                <div class="license-info-inline">
+                                    <span class="license-type-text"><?= h($rider['license_type']) ?></span>
+                                    <?php if (!empty($rider['license_year'])): ?>
+                                        <?php
+                                        $isActive = ($rider['license_year'] == $currentYear);
+                                        ?>
+                                        <span class="license-status-badge <?= $isActive ? 'active' : 'inactive' ?>">
+                                            <?= $isActive ? '✓ Aktiv ' . $currentYear : '✗ ' . $rider['license_year'] ?>
+                                        </span>
+                                    <?php endif; ?>
+                                </div>
+                            <?php endif; ?>
+
+                            <!-- Compact Info: Age, Gender, Club -->
+                            <div class="info-grid-compact">
+                                <div class="info-box">
+                                    <div class="info-box-label">Ålder</div>
+                                    <div class="info-box-value">
+                                        <?= $age !== null ? $age : '–' ?>
+                                    </div>
+                                </div>
+
+                                <div class="info-box">
+                                    <div class="info-box-label">Kön</div>
+                                    <div class="info-box-value">
+                                        <?php
+                                        if ($rider['gender'] === 'M') {
+                                            echo 'Man';
+                                        } elseif (in_array($rider['gender'], ['F', 'K'])) {
+                                            echo 'Kvinna';
+                                        } else {
+                                            echo '–';
+                                        }
+                                        ?>
+                                    </div>
+                                </div>
+
+                                <div class="info-box">
+                                    <div class="info-box-label">Klubb</div>
+                                    <div class="info-box-value" style="font-size: 11px;">
+                                        <?= $rider['club_name'] ? h($rider['club_name']) : '–' ?>
+                                    </div>
                                 </div>
                             </div>
-
-                            <div class="info-box">
-                                <div class="info-box-label">Kön</div>
-                                <div class="info-box-value">
-                                    <?php
-                                    if ($rider['gender'] === 'M') {
-                                        echo 'Man';
-                                    } elseif (in_array($rider['gender'], ['F', 'K'])) {
-                                        echo 'Kvinna';
-                                    } else {
-                                        echo '–';
-                                    }
-                                    ?>
-                                </div>
-                            </div>
-
-                            <div class="info-box">
-                                <div class="info-box-label">Klubb</div>
-                                <div class="info-box-value" style="font-size: 11px;">
-                                    <?= $rider['club_name'] ? h($rider['club_name']) : '–' ?>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                        </div><!-- .license-info -->
+                    </div><!-- .license-content -->
                 </div>
             </div>
 
