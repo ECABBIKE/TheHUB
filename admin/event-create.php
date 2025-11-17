@@ -40,6 +40,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'venue_id' => !empty($_POST['venue_id']) ? intval($_POST['venue_id']) : null,
             'type' => trim($_POST['type'] ?? ''),
             'discipline' => trim($_POST['discipline'] ?? ''),
+            'event_format' => trim($_POST['event_format'] ?? 'ENDURO'),
             'series_id' => !empty($_POST['series_id']) ? intval($_POST['series_id']) : null,
             'distance' => !empty($_POST['distance']) ? floatval($_POST['distance']) : null,
             'elevation_gain' => !empty($_POST['elevation_gain']) ? intval($_POST['elevation_gain']) : null,
@@ -189,8 +190,8 @@ include __DIR__ . '/../includes/layout-header.php';
                         </div>
                     </div>
 
-                    <!-- Type, Discipline, and Series -->
-                    <div class="gs-grid gs-grid-cols-3 gs-gap-md">
+                    <!-- Type, Discipline, Event Format, and Series -->
+                    <div class="gs-grid gs-grid-cols-2 gs-gap-md">
                         <div>
                             <label for="type" class="gs-label">
                                 <i data-lucide="flag"></i>
@@ -218,6 +219,32 @@ include __DIR__ . '/../includes/layout-header.php';
                                 value="<?= htmlspecialchars($_POST['discipline'] ?? '') ?>"
                                 placeholder="T.ex. MTB"
                             >
+                        </div>
+                    </div>
+
+                    <div class="gs-grid gs-grid-cols-2 gs-gap-md">
+                        <div>
+                            <label for="event_format" class="gs-label">
+                                <i data-lucide="layout-list"></i>
+                                Event-format
+                            </label>
+                            <select id="event_format" name="event_format" class="gs-input">
+                                <option value="ENDURO" <?= ($_POST['event_format'] ?? 'ENDURO') === 'ENDURO' ? 'selected' : '' ?>>
+                                    Enduro (en tid, splittider)
+                                </option>
+                                <option value="DH_STANDARD" <?= ($_POST['event_format'] ?? '') === 'DH_STANDARD' ? 'selected' : '' ?>>
+                                    Downhill Standard (två åk, snabbaste räknas)
+                                </option>
+                                <option value="DH_SWECUP" <?= ($_POST['event_format'] ?? '') === 'DH_SWECUP' ? 'selected' : '' ?>>
+                                    SweCUP Downhill (två åk, båda ger poäng)
+                                </option>
+                                <option value="DUAL_SLALOM" <?= ($_POST['event_format'] ?? '') === 'DUAL_SLALOM' ? 'selected' : '' ?>>
+                                    Dual Slalom
+                                </option>
+                            </select>
+                            <small class="gs-text-muted">
+                                Bestämmer hur resultat visas och poängräknas
+                            </small>
                         </div>
                         <div>
                             <label for="series_id" class="gs-label">

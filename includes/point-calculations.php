@@ -5,6 +5,97 @@
  */
 
 /**
+ * Calculate points for a DH result (two runs)
+ *
+ * For standard DH: Only fastest run gets points (position based on fastest time)
+ * For SweCUP DH: Both runs get points separately (run_1_points + run_2_points)
+ *
+ * @param object $db Database instance
+ * @param int $event_id Event ID
+ * @param int $position Rider's position (based on fastest run)
+ * @param int $run1_position Position in run 1
+ * @param int $run2_position Position in run 2
+ * @param string $status Result status (finished, dnf, dns, dq)
+ * @param bool $use_swecup_dh Use SweCUP DH format (both runs award points)
+ * @return array ['run_1_points' => int, 'run_2_points' => int, 'total_points' => int]
+ */
+function calculateDHPoints($db, $event_id, $position, $run1_position, $run2_position, $status = 'finished', $use_swecup_dh = false) {
+    // No points for DNF, DNS, or DQ
+    if (in_array($status, ['dnf', 'dns', 'dq'])) {
+        return [
+            'run_1_points' => 0,
+            'run_2_points' => 0,
+            'total_points' => 0
+        ];
+    }
+
+    // Get event's point scale
+    $event = $db->getRow(
+        "SELECT point_scale_id FROM events WHERE id = ?",
+        [$event_id]
+    );
+
+    if (!$event || !$event['point_scale_id']) {
+        // No scale assigned - use default
+        $scale = $db->getRow(
+            "SELECT id FROM point_scales WHERE is_default = 1 LIMIT 1"
+        );
+
+        if (!$scale) {
+            error_log("⚠️  No point scale found for event {$event_id}");
+            return ['run_1_points' => 0, 'run_2_points' => 0, 'total_points' => 0];
+        }
+
+        $scale_id = $scale['id'];
+    } else {
+        $scale_id = $event['point_scale_id'];
+    }
+
+    if ($use_swecup_dh) {
+        // SweCUP DH: Both runs award points
+        $run1_points = 0;
+        $run2_points = 0;
+
+        if ($run1_position && $run1_position >= 1) {
+            $value = $db->getRow(
+                "SELECT points FROM point_scale_values WHERE scale_id = ? AND position = ?",
+                [$scale_id, $run1_position]
+            );
+            $run1_points = $value ? (float)$value['points'] : 0;
+        }
+
+        if ($run2_position && $run2_position >= 1) {
+            $value = $db->getRow(
+                "SELECT points FROM point_scale_values WHERE scale_id = ? AND position = ?",
+                [$scale_id, $run2_position]
+            );
+            $run2_points = $value ? (float)$value['points'] : 0;
+        }
+
+        $total_points = $run1_points + $run2_points;
+
+        error_log("✅ DH SweCUP Points: Run 1 (P{$run1_position}) = {$run1_points}, Run 2 (P{$run2_position}) = {$run2_points}, Total = {$total_points}");
+
+        return [
+            'run_1_points' => $run1_points,
+            'run_2_points' => $run2_points,
+            'total_points' => $total_points
+        ];
+    } else {
+        // Standard DH: Only fastest run counts (position based on best time)
+        $points = calculatePoints($db, $event_id, $position, $status);
+
+        error_log("✅ DH Standard Points: Position {$position} = {$points} points");
+
+        return [
+            'run_1_points' => 0,
+            'run_2_points' => 0,
+            'total_points' => $points
+        ];
+    }
+}
+
+/**
  * Calculate points for a result
  *
  * @param object $db Database instance
@@ -143,18 +234,27 @@ function getRiderSeriesPoints($db, $rider_id, $series_id, $category_id = null, $
     $series = $db->getRow("SELECT count_best_results FROM series WHERE id = ?", [$series_id]);
     $countBestResults = $series['count_best_results'] ?? null;
 
-    // Get all results ordered by points (best first)
+    // Get all results with DH points support
+    // For DH events (SweCUP format): points = run_1_points + run_2_points
+    // For standard events or standard DH: points = points column
     $sql = "SELECT
                 r.id,
                 r.event_id,
-                r.points,
+                COALESCE(
+                    CASE
+                        WHEN r.run_1_points > 0 OR r.run_2_points > 0
+                        THEN r.run_1_points + r.run_2_points
+                        ELSE r.points
+                    END,
+                    r.points
+                ) as points,
                 r.position,
                 e.name as event_name,
                 e.date as event_date
             FROM results r
             JOIN events e ON r.event_id = e.id
             WHERE {$whereClause}
-            ORDER BY r.points DESC, r.position ASC";
+            ORDER BY points DESC, r.position ASC";
 
     $results = $db->getAll($sql, $params);
 
@@ -212,6 +312,9 @@ function getSeriesStandings($db, $series_id, $category_id = null, $limit = 50) {
 
     $whereClause = implode(' AND ', $where);
 
+    // Sum points including DH runs
+    // For DH SweCUP events: run_1_points + run_2_points
+    // For standard events or standard DH: points column
     $sql = "SELECT
                 c.id as rider_id,
                 c.firstname,
@@ -220,7 +323,16 @@ function getSeriesStandings($db, $series_id, $category_id = null, $limit = 50) {
                 c.gender,
                 cl.name as club_name,
                 COUNT(DISTINCT r.event_id) as events_count,
-                SUM(r.points) as total_points,
+                SUM(
+                    COALESCE(
+                        CASE
+                            WHEN r.run_1_points > 0 OR r.run_2_points > 0
+                            THEN r.run_1_points + r.run_2_points
+                            ELSE r.points
+                        END,
+                        r.points
+                    )
+                ) as total_points,
                 COUNT(CASE WHEN r.position = 1 THEN 1 END) as wins,
                 COUNT(CASE WHEN r.position <= 3 THEN 1 END) as podiums,
                 MIN(r.position) as best_position
@@ -283,6 +395,166 @@ function getScalePreview($db, $scale_id) {
         "SELECT position, points FROM point_scale_values WHERE scale_id = ? ORDER BY position ASC LIMIT 20",
         [$scale_id]
     );
+}
+
+/**
+ * Recalculate positions and points for a DH event
+ * Recalculates positions for each run separately, then overall position based on fastest time
+ *
+ * @param object $db Database instance
+ * @param int $event_id Event ID
+ * @param int $new_scale_id Optional: Change to new point scale
+ * @param bool $use_swecup_dh Use SweCUP DH format (both runs award points)
+ * @return array Stats (positions_updated, points_updated, errors)
+ */
+function recalculateDHEventResults($db, $event_id, $new_scale_id = null, $use_swecup_dh = false) {
+    $stats = [
+        'positions_updated' => 0,
+        'points_updated' => 0,
+        'errors' => []
+    ];
+
+    try {
+        // Update point scale if provided
+        if ($new_scale_id) {
+            $db->update('events', ['point_scale_id' => $new_scale_id], 'id = ?', [$event_id]);
+            error_log("Updated point scale for event {$event_id} to scale {$new_scale_id}");
+        }
+
+        // Get all results grouped by category/class
+        $results = $db->getAll("
+            SELECT id, category_id, class_id, run_1_time, run_2_time, status
+            FROM results
+            WHERE event_id = ?
+            ORDER BY category_id, class_id
+        ", [$event_id]);
+
+        // Group by category and class
+        $byGroup = [];
+        foreach ($results as $result) {
+            $catId = $result['category_id'] ?? 0;
+            $classId = $result['class_id'] ?? 0;
+            $groupKey = "{$catId}_{$classId}";
+
+            if (!isset($byGroup[$groupKey])) {
+                $byGroup[$groupKey] = [];
+            }
+            $byGroup[$groupKey][] = $result;
+        }
+
+        // Recalculate positions for each group
+        foreach ($byGroup as $groupKey => $groupResults) {
+            // Sort by run 1 time for run 1 positions
+            $run1Results = $groupResults;
+            usort($run1Results, function($a, $b) {
+                if ($a['status'] !== 'finished' || empty($a['run_1_time'])) return 1;
+                if ($b['status'] !== 'finished' || empty($b['run_1_time'])) return -1;
+                return strcmp($a['run_1_time'], $b['run_1_time']);
+            });
+
+            // Assign run 1 positions
+            $run1Positions = [];
+            $pos = 1;
+            foreach ($run1Results as $result) {
+                if ($result['status'] === 'finished' && !empty($result['run_1_time'])) {
+                    $run1Positions[$result['id']] = $pos++;
+                } else {
+                    $run1Positions[$result['id']] = null;
+                }
+            }
+
+            // Sort by run 2 time for run 2 positions
+            $run2Results = $groupResults;
+            usort($run2Results, function($a, $b) {
+                if ($a['status'] !== 'finished' || empty($a['run_2_time'])) return 1;
+                if ($b['status'] !== 'finished' || empty($b['run_2_time'])) return -1;
+                return strcmp($a['run_2_time'], $b['run_2_time']);
+            });
+
+            // Assign run 2 positions
+            $run2Positions = [];
+            $pos = 1;
+            foreach ($run2Results as $result) {
+                if ($result['status'] === 'finished' && !empty($result['run_2_time'])) {
+                    $run2Positions[$result['id']] = $pos++;
+                } else {
+                    $run2Positions[$result['id']] = null;
+                }
+            }
+
+            // Sort by fastest time (best of two runs) for overall position
+            $overallResults = $groupResults;
+            usort($overallResults, function($a, $b) {
+                if ($a['status'] !== 'finished') return 1;
+                if ($b['status'] !== 'finished') return -1;
+
+                // Get fastest time for each rider
+                $aFastest = null;
+                if (!empty($a['run_1_time'])) $aFastest = $a['run_1_time'];
+                if (!empty($a['run_2_time']) && (!$aFastest || $a['run_2_time'] < $aFastest)) {
+                    $aFastest = $a['run_2_time'];
+                }
+
+                $bFastest = null;
+                if (!empty($b['run_1_time'])) $bFastest = $b['run_1_time'];
+                if (!empty($b['run_2_time']) && (!$bFastest || $b['run_2_time'] < $bFastest)) {
+                    $bFastest = $b['run_2_time'];
+                }
+
+                if (!$aFastest) return 1;
+                if (!$bFastest) return -1;
+
+                return strcmp($aFastest, $bFastest);
+            });
+
+            // Assign overall positions and calculate points
+            $pos = 1;
+            foreach ($overallResults as $result) {
+                $overallPosition = null;
+                if ($result['status'] === 'finished' && (!empty($result['run_1_time']) || !empty($result['run_2_time']))) {
+                    $overallPosition = $pos++;
+                }
+
+                // Calculate DH points
+                $run1Pos = $run1Positions[$result['id']];
+                $run2Pos = $run2Positions[$result['id']];
+
+                $pointsData = calculateDHPoints(
+                    $db,
+                    $event_id,
+                    $overallPosition,
+                    $run1Pos,
+                    $run2Pos,
+                    $result['status'],
+                    $use_swecup_dh
+                );
+
+                // Update result with positions and points
+                try {
+                    $db->update('results', [
+                        'position' => $overallPosition,
+                        'points' => $pointsData['total_points'],
+                        'run_1_points' => $pointsData['run_1_points'],
+                        'run_2_points' => $pointsData['run_2_points']
+                    ], 'id = ?', [$result['id']]);
+
+                    $stats['positions_updated']++;
+                    $stats['points_updated']++;
+                } catch (Exception $e) {
+                    $stats['errors'][] = "Result {$result['id']}: " . $e->getMessage();
+                    error_log("Failed to update DH result {$result['id']}: " . $e->getMessage());
+                }
+            }
+        }
+
+        error_log("✅ Recalculated DH event {$event_id}: {$stats['positions_updated']} positions, {$stats['points_updated']} points");
+
+    } catch (Exception $e) {
+        $stats['errors'][] = "Fatal error: " . $e->getMessage();
+        error_log("Failed to recalculate DH event {$event_id}: " . $e->getMessage());
+    }
+
+    return $stats;
 }
 
 /**
