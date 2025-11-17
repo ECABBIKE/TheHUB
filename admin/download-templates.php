@@ -201,6 +201,102 @@ if ($template === 'results') {
     exit;
 }
 
+if ($template === 'results_dh') {
+    // CSV template for Downhill results (two runs)
+    header('Content-Type: text/csv; charset=utf-8');
+    header('Content-Disposition: attachment; filename="thehub_dh_results_template.csv"');
+
+    $output = fopen('php://output', 'w');
+
+    // BOM for UTF-8
+    fprintf($output, chr(0xEF).chr(0xBB).chr(0xBF));
+
+    // Headers
+    fputcsv($output, [
+        'event_name',
+        'event_date',
+        'discipline',
+        'class_name',
+        'position',
+        'first_name',
+        'last_name',
+        'club_name',
+        'uci_id',
+        'swe_id',
+        'run_1_time',
+        'run_2_time',
+        'status'
+    ]);
+
+    // Example rows - Standard DH (both runs, fastest counts)
+    fputcsv($output, [
+        'Järvsö DH 2024',
+        '2024-09-15',
+        'DHI',
+        'Elite Men',
+        '1',
+        'Johan',
+        'Andersson',
+        'Uppsala Cykelklubb',
+        'SWE19950101',
+        '',
+        '3:07.45',   // Run 1
+        '3:05.12',   // Run 2 (fastest = position)
+        'finished'
+    ]);
+
+    fputcsv($output, [
+        'Järvsö DH 2024',
+        '2024-09-15',
+        'DHI',
+        'Elite Men',
+        '2',
+        'Erik',
+        'Nilsson',
+        'Stockholm CK',
+        'SWE20031201',
+        '',
+        '3:08.23',   // Run 1
+        '3:06.89',   // Run 2 (fastest)
+        'finished'
+    ]);
+
+    fputcsv($output, [
+        'Järvsö DH 2024',
+        '2024-09-15',
+        'DHI',
+        'Elite Women',
+        '1',
+        'Emma',
+        'Svensson',
+        'Göteborg MTB',
+        'SWE19980315',
+        '',
+        '3:18.45',   // Run 1
+        '3:15.78',   // Run 2 (fastest)
+        'finished'
+    ]);
+
+    fputcsv($output, [
+        'Järvsö DH 2024',
+        '2024-09-15',
+        'DHI',
+        'Elite Men',
+        '',
+        'Lars',
+        'Persson',
+        'Umeå MTB',
+        'SWE19940205',
+        '',
+        '3:12.45',   // Run 1 OK
+        '',          // Run 2 DNF
+        'dnf'
+    ]);
+
+    fclose($output);
+    exit;
+}
+
 // If no template selected
 header('HTTP/1.1 400 Bad Request');
-die('Invalid template requested. Use ?template=riders or ?template=results');
+die('Invalid template requested. Use ?template=riders, ?template=results, or ?template=results_dh');

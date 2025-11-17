@@ -105,7 +105,7 @@ include __DIR__ . '/../includes/layout-header.php';
                         <strong>Använd dessa mallar för att säkerställa att dina CSV-filer har rätt kolumner och format.</strong> Mallarna innehåller exempel-data som visar exakt hur informationen ska struktureras.
                     </p>
 
-                    <div class="gs-flex gs-gap-md gs-mb-lg">
+                    <div class="gs-flex gs-gap-md gs-mb-lg gs-flex-wrap">
                         <a href="/admin/download-templates.php?template=riders"
                            class="gs-btn gs-btn-primary gs-btn-lg"
                            download>
@@ -117,7 +117,14 @@ include __DIR__ . '/../includes/layout-header.php';
                            class="gs-btn gs-btn-accent gs-btn-lg"
                            download>
                             <i data-lucide="flag"></i>
-                            Resultat-mall (CSV)
+                            Enduro-resultat (CSV)
+                        </a>
+
+                        <a href="/admin/download-templates.php?template=results_dh"
+                           class="gs-btn gs-btn-accent gs-btn-lg"
+                           download>
+                            <i data-lucide="mountain"></i>
+                            DH-resultat (CSV)
                         </a>
                     </div>
 
