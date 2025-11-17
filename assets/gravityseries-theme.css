@@ -589,6 +589,15 @@ body {
     transform: translateX(0);
   }
 
+  /* Admin Login at top on mobile */
+  .gs-admin-login-section {
+    order: -1;
+  }
+
+  .gs-main-menu {
+    order: 0;
+  }
+
   /* Show hamburger on mobile */
   .gs-mobile-menu-toggle {
     display: flex;
