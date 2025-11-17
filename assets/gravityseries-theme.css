@@ -1458,3 +1458,245 @@ body.gs-landing-pure .gs-sidebar-overlay {
 .gs-gap-xl {
   gap: 2rem;
 }
+
+/* ========================================
+   MOBILE RESPONSIVE ENHANCEMENTS
+   Updated: 2025-11-17
+   ======================================== */
+
+@media (max-width: 640px) {
+  /* ===== TABLES ===== */
+  .gs-table {
+    font-size: 0.875rem;
+  }
+
+  .gs-table th,
+  .gs-table td {
+    padding: 0.5rem 0.75rem;
+  }
+
+  .gs-table th {
+    font-size: 0.8125rem;
+  }
+
+  /* Make tables horizontally scrollable */
+  .gs-table-container,
+  .gs-card-content:has(.gs-table) {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Prevent text wrapping in table cells */
+  .gs-table th,
+  .gs-table td {
+    white-space: nowrap;
+  }
+
+  /* ===== STATS & CARDS ===== */
+  .stat,
+  .gs-stat-card {
+    padding: 1rem;
+  }
+
+  .stat-number,
+  .gs-stat-number {
+    font-size: 1.5rem !important;
+  }
+
+  .stat-label,
+  .gs-stat-label {
+    font-size: 0.75rem !important;
+  }
+
+  /* Smaller cards on mobile */
+  .gs-card {
+    border-radius: var(--gs-radius-md);
+  }
+
+  .gs-card-content {
+    padding: 1rem;
+  }
+
+  .gs-card-header {
+    padding: 1rem;
+  }
+
+  /* ===== ALERTS ===== */
+  .gs-alert {
+    padding: 0.75rem 1rem;
+    font-size: 0.875rem;
+  }
+
+  .gs-alert svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  /* ===== MODALS ===== */
+  .gs-modal-content,
+  div[id$="Modal"] > div:not(.gs-modal-overlay) {
+    width: 95% !important;
+    max-width: 95% !important;
+    margin: 1rem;
+    max-height: 90vh;
+  }
+
+  .gs-modal-header,
+  div[style*="padding: 1.5rem"][style*="border-bottom"] {
+    padding: 1rem !important;
+  }
+
+  .gs-modal-title,
+  .gs-h4 {
+    font-size: 1.125rem;
+  }
+
+  /* Modal forms */
+  div[id$="Modal"] form {
+    padding: 1rem !important;
+  }
+
+  /* ===== FORMS ===== */
+  .gs-grid-cols-2,
+  .gs-grid-cols-3 {
+    grid-template-columns: 1fr !important;
+  }
+
+  .gs-input,
+  .gs-input-sm {
+    font-size: 16px !important; /* Prevent zoom on iOS */
+  }
+
+  /* ===== BUTTONS ===== */
+  .gs-btn {
+    padding: 0.625rem 1rem;
+    font-size: 0.875rem;
+  }
+
+  .gs-btn-sm {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.8125rem;
+  }
+
+  .gs-btn-lg {
+    padding: 0.875rem 1.25rem;
+    font-size: 1rem;
+  }
+
+  /* Button icons */
+  .gs-btn svg,
+  .gs-btn i {
+    width: 16px;
+    height: 16px;
+  }
+
+  /* ===== HEADERS ===== */
+  .gs-h2 {
+    font-size: 1.5rem;
+  }
+
+  .gs-h3 {
+    font-size: 1.25rem;
+  }
+
+  .gs-h4 {
+    font-size: 1.125rem;
+  }
+
+  /* ===== SPACING ===== */
+  .gs-container {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
+  .gs-mb-lg {
+    margin-bottom: 1rem;
+  }
+
+  .gs-gap-md {
+    gap: 0.75rem;
+  }
+
+  /* ===== BADGES ===== */
+  .gs-badge {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+  }
+
+  .gs-badge-sm {
+    font-size: 0.6875rem;
+    padding: 0.1875rem 0.375rem;
+  }
+
+  /* ===== SPECIFIC COMPONENTS ===== */
+  
+  /* Point scale tables */
+  table.gs-table tbody tr td:first-child {
+    position: sticky;
+    left: 0;
+    background: white;
+    z-index: 1;
+  }
+
+  /* Prevent button text wrapping */
+  .gs-btn {
+    white-space: nowrap;
+  }
+
+  /* Flex headers stack on mobile */
+  .gs-flex.gs-justify-between {
+    flex-direction: column;
+    gap: 0.75rem;
+    align-items: flex-start !important;
+  }
+
+  .gs-flex.gs-justify-between > .gs-btn,
+  .gs-flex.gs-justify-between > div:has(.gs-btn) {
+    width: 100%;
+  }
+
+  .gs-flex.gs-justify-between .gs-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+/* ===== TABLET (641px - 1023px) ===== */
+@media (min-width: 641px) and (max-width: 1023px) {
+  .stat-number,
+  .gs-stat-number {
+    font-size: 2rem;
+  }
+
+  .stat-label,
+  .gs-stat-label {
+    font-size: 0.875rem;
+  }
+
+  .gs-table {
+    font-size: 0.9375rem;
+  }
+
+  .gs-card-content {
+    padding: 1.25rem;
+  }
+}
+
+/* ===== FORCE RESPONSIVE TABLES ===== */
+@media (max-width: 1023px) {
+  /* Ensure all tables are in scrollable containers */
+  .gs-card-content:has(table:not([style*="min-width"])) {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Table minimum width on mobile */
+  .gs-table {
+    min-width: 600px;
+  }
+
+  /* Smaller minimum for simple tables */
+  .gs-table:not(:has(th:nth-child(5))) {
+    min-width: 400px;
+  }
+}

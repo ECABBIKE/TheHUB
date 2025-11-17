@@ -11,7 +11,7 @@ $error = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $username = $_POST['username'] ?? '';
     $password = $_POST['password'] ?? '';
-    
+
     if (login_admin($username, $password)) {
         redirect('/admin/dashboard.php');
     } else {
@@ -28,6 +28,41 @@ $pageTitle = 'Logga in';
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= $pageTitle ?> - TheHUB</title>
     <link rel="stylesheet" href="/assets/gravityseries-theme.css">
+    <style>
+        /* Mobile responsive login */
+        .gs-login-container {
+            padding: 1rem;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .gs-login-card {
+            width: 100%;
+            max-width: 400px;
+            padding: 2rem;
+        }
+
+        @media (max-width: 640px) {
+            .gs-login-card {
+                padding: 1.5rem;
+            }
+
+            .gs-login-header h1 {
+                font-size: 1.5rem;
+            }
+
+            .gs-login-header p {
+                font-size: 0.875rem;
+            }
+
+            .gs-btn-lg {
+                padding: 0.75rem 1rem;
+                font-size: 1rem;
+            }
+        }
+    </style>
 </head>
 <body class="gs-login-page">
 
@@ -47,12 +82,12 @@ $pageTitle = 'Logga in';
         <form method="POST" class="gs-login-form">
             <div class="gs-form-group">
                 <label for="username" class="gs-label">Användarnamn</label>
-                <input 
-                    type="text" 
-                    id="username" 
-                    name="username" 
-                    class="gs-input" 
-                    required 
+                <input
+                    type="text"
+                    id="username"
+                    name="username"
+                    class="gs-input"
+                    required
                     autofocus
                     placeholder="admin"
                 >
@@ -60,11 +95,11 @@ $pageTitle = 'Logga in';
 
             <div class="gs-form-group">
                 <label for="password" class="gs-label">Lösenord</label>
-                <input 
-                    type="password" 
-                    id="password" 
-                    name="password" 
-                    class="gs-input" 
+                <input
+                    type="password"
+                    id="password"
+                    name="password"
+                    class="gs-input"
                     required
                     placeholder="********"
                 >
@@ -90,37 +125,3 @@ $pageTitle = 'Logga in';
 
 </body>
 </html>
-```
-
----
-
-## 📝 **EFTER ERSÄTTNING:**
-
-1. **Ladda om:** `https://thehub.infinityfree.me/admin/login.php`
-2. **Ska nu se:** Formulär med Username + Password fält
-3. **Logga in:** admin / admin
-4. **Redirects till:** Dashboard eller riders
-
----
-
-## 🎯 **OM CSS SAKNAS:**
-
-**Formuläret kommer synas ändå (utan styling), men fungerar!**
-
-**Viktigt är att du ser:**
-- Username-fält
-- Password-fält  
-- Login-knapp
-
----
-
-## 💡 **ALTERNATIV - BYPASS LOGIN:**
-
-**Om login inte fungerar, gå direkt till:**
-```
-https://thehub.infinityfree.me/admin/riders.php
-```
-
-**Om det säger "not logged in" - gå då till debug:**
-```
-https://thehub.infinityfree.me/admin/debug.php
