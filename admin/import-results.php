@@ -255,6 +255,18 @@ function importResultsFromCSV($filepath, $db, $importId = null) {
             'splittid13' => 'ss13',
             'splittid14' => 'ss14',
             'splittid15' => 'ss15',
+
+            // DH two-run times
+            'run1time' => 'run_1_time',
+            'run_1_time' => 'run_1_time',
+            'run1' => 'run_1_time',
+            'åk1' => 'run_1_time',
+            'ak1' => 'run_1_time',
+            'run2time' => 'run_2_time',
+            'run_2_time' => 'run_2_time',
+            'run2' => 'run_2_time',
+            'åk2' => 'run_2_time',
+            'ak2' => 'run_2_time',
         ];
 
         return $mappings[$col] ?? $col;
@@ -765,6 +777,90 @@ function importResultsFromCSV($filepath, $db, $importId = null) {
                 }
             }
 
+            // Normalize run_1_time (DH format) - same logic as finish_time
+            $run1Time = null;
+            if (!empty($data['run_1_time'])) {
+                $rawTime = trim($data['run_1_time']);
+                $rawTime = preg_replace('/[\r\n\t]+/', '', $rawTime);
+                $rawTime = trim($rawTime);
+
+                // Format: h:mm:ss.cc or h:mm:ss.mmm (with decimal seconds)
+                if (preg_match('/^(\d{1,2}):(\d{2}):(\d{2})\.(\d{1,3})$/', $rawTime, $matches)) {
+                    $hours = str_pad($matches[1], 2, '0', STR_PAD_LEFT);
+                    $minutes = $matches[2];
+                    $seconds = $matches[3];
+                    $decimals = str_pad($matches[4], 2, '0', STR_PAD_RIGHT);
+                    $run1Time = "{$hours}:{$minutes}:{$seconds}.{$decimals}";
+                }
+                // Format: mm:ss.cc or mm:ss.mmm (no hours, with decimal seconds)
+                elseif (preg_match('/^(\d{1,2}):(\d{2})\.(\d{1,3})$/', $rawTime, $matches)) {
+                    $hours = '00';
+                    $minutes = str_pad($matches[1], 2, '0', STR_PAD_LEFT);
+                    $seconds = $matches[2];
+                    $decimals = str_pad($matches[3], 2, '0', STR_PAD_RIGHT);
+                    $run1Time = "{$hours}:{$minutes}:{$seconds}.{$decimals}";
+                }
+                // Format: h:mm:ss (no decimal seconds)
+                elseif (preg_match('/^(\d{1,2}):(\d{2}):(\d{2})$/', $rawTime, $matches)) {
+                    $hours = str_pad($matches[1], 2, '0', STR_PAD_LEFT);
+                    $minutes = $matches[2];
+                    $seconds = $matches[3];
+                    $run1Time = "{$hours}:{$minutes}:{$seconds}";
+                }
+                // Format: mm:ss (no hours, no decimal seconds)
+                elseif (preg_match('/^(\d{1,2}):(\d{2})$/', $rawTime, $matches)) {
+                    $hours = '00';
+                    $minutes = str_pad($matches[1], 2, '0', STR_PAD_LEFT);
+                    $seconds = $matches[2];
+                    $run1Time = "{$hours}:{$minutes}:{$seconds}";
+                }
+                elseif (!empty($rawTime)) {
+                    $run1Time = $rawTime;
+                }
+            }
+
+            // Normalize run_2_time (DH format) - same logic as finish_time
+            $run2Time = null;
+            if (!empty($data['run_2_time'])) {
+                $rawTime = trim($data['run_2_time']);
+                $rawTime = preg_replace('/[\r\n\t]+/', '', $rawTime);
+                $rawTime = trim($rawTime);
+
+                // Format: h:mm:ss.cc or h:mm:ss.mmm (with decimal seconds)
+                if (preg_match('/^(\d{1,2}):(\d{2}):(\d{2})\.(\d{1,3})$/', $rawTime, $matches)) {
+                    $hours = str_pad($matches[1], 2, '0', STR_PAD_LEFT);
+                    $minutes = $matches[2];
+                    $seconds = $matches[3];
+                    $decimals = str_pad($matches[4], 2, '0', STR_PAD_RIGHT);
+                    $run2Time = "{$hours}:{$minutes}:{$seconds}.{$decimals}";
+                }
+                // Format: mm:ss.cc or mm:ss.mmm (no hours, with decimal seconds)
+                elseif (preg_match('/^(\d{1,2}):(\d{2})\.(\d{1,3})$/', $rawTime, $matches)) {
+                    $hours = '00';
+                    $minutes = str_pad($matches[1], 2, '0', STR_PAD_LEFT);
+                    $seconds = $matches[2];
+                    $decimals = str_pad($matches[3], 2, '0', STR_PAD_RIGHT);
+                    $run2Time = "{$hours}:{$minutes}:{$seconds}.{$decimals}";
+                }
+                // Format: h:mm:ss (no decimal seconds)
+                elseif (preg_match('/^(\d{1,2}):(\d{2}):(\d{2})$/', $rawTime, $matches)) {
+                    $hours = str_pad($matches[1], 2, '0', STR_PAD_LEFT);
+                    $minutes = $matches[2];
+                    $seconds = $matches[3];
+                    $run2Time = "{$hours}:{$minutes}:{$seconds}";
+                }
+                // Format: mm:ss (no hours, no decimal seconds)
+                elseif (preg_match('/^(\d{1,2}):(\d{2})$/', $rawTime, $matches)) {
+                    $hours = '00';
+                    $minutes = str_pad($matches[1], 2, '0', STR_PAD_LEFT);
+                    $seconds = $matches[2];
+                    $run2Time = "{$hours}:{$minutes}:{$seconds}";
+                }
+                elseif (!empty($rawTime)) {
+                    $run2Time = $rawTime;
+                }
+            }
+
             // Normalize status (FIN/DNS/DNF/DQ -> finished/dns/dnf/dq)
             $status = 'finished';
             if (!empty($data['status'])) {
@@ -912,6 +1008,9 @@ function importResultsFromCSV($filepath, $db, $importId = null) {
                 'status' => $status,
                 'points' => !empty($data['points']) ? (int)$data['points'] : 0,
                 'notes' => !empty($data['notes']) ? trim($data['notes']) : null,
+                // DH two-run times
+                'run_1_time' => $run1Time,
+                'run_2_time' => $run2Time,
                 // Add all split times
                 'ss1' => $splitTimes['ss1'],
                 'ss2' => $splitTimes['ss2'],
@@ -1321,9 +1420,21 @@ include __DIR__ . '/../includes/layout-header.php';
                                     <td>-</td>
                                 </tr>
                                 <tr>
+                                    <td><code>run_1_time</code></td>
+                                    <td><span class="gs-badge gs-badge-secondary">Nej</span></td>
+                                    <td>DH första åk. Format: MM:SS.CC eller HH:MM:SS.CC</td>
+                                    <td>3:05.45</td>
+                                </tr>
+                                <tr>
+                                    <td><code>run_2_time</code></td>
+                                    <td><span class="gs-badge gs-badge-secondary">Nej</span></td>
+                                    <td>DH andra åk. Format: MM:SS.CC eller HH:MM:SS.CC</td>
+                                    <td>3:02.12</td>
+                                </tr>
+                                <tr>
                                     <td><code>ss1</code> till <code>ss15</code></td>
                                     <td><span class="gs-badge gs-badge-secondary">Nej</span></td>
-                                    <td>Splittider för Enduro/DH (upp till 15 stycken). Format: HH:MM:SS eller MM:SS</td>
+                                    <td>Splittider för Enduro (upp till 15 special stages). Format: HH:MM:SS eller MM:SS</td>
                                     <td>00:05:23</td>
                                 </tr>
                             </tbody>
