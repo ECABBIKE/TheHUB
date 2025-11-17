@@ -8,6 +8,15 @@ $current_page = basename($_SERVER['PHP_SELF']);
 $is_admin = isLoggedIn();
 ?>
 <nav class="gs-sidebar">
+    <!-- Admin Login (shown at top when not logged in) -->
+    <?php if (!$is_admin): ?>
+    <div class="gs-menu-section" style="padding-bottom: 0.5rem;">
+        <a href="/admin/login.php" class="gs-btn gs-btn-sm gs-btn-primary gs-w-full">
+            <i data-lucide="log-in"></i> Admin Login
+        </a>
+    </div>
+    <?php endif; ?>
+
     <div class="gs-menu-section">
         <h3 class="gs-menu-title">TheHUB</h3>
         <ul class="gs-menu">
@@ -73,14 +82,6 @@ $is_admin = isLoggedIn();
         <div class="gs-menu-footer">
             <a href="/admin/logout.php" class="gs-btn gs-btn-sm gs-btn-outline gs-w-full">
                 <i data-lucide="log-out"></i> Logga ut
-            </a>
-        </div>
-    </div>
-    <?php else: ?>
-    <div class="gs-menu-section">
-        <div class="gs-menu-footer">
-            <a href="/admin/login.php" class="gs-btn gs-btn-sm gs-btn-primary gs-w-full">
-                <i data-lucide="log-in"></i> Admin Login
             </a>
         </div>
     </div>

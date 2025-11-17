@@ -178,7 +178,7 @@ include __DIR__ . '/../includes/layout-header.php';
 
                 <div>
                     <label class="gs-label">Poängvärden</label>
-                    <div style="overflow-x: auto;">
+                    <div style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
                         <table class="gs-table" style="min-width: 600px;">
                             <thead>
                                 <tr>

@@ -111,7 +111,7 @@ include __DIR__ . '/../includes/layout-header.php';
 
         <!-- Point Scales Table -->
         <div class="gs-card">
-            <div class="gs-card-content" style="padding: 0;">
+            <div class="gs-card-content gs-table-container" style="padding: 0; overflow-x: auto;">
                 <table class="gs-table">
                     <thead>
                         <tr>
