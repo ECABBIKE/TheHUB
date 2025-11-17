@@ -1629,14 +1629,6 @@ body.gs-landing-pure .gs-sidebar-overlay {
   }
 
   /* ===== SPECIFIC COMPONENTS ===== */
-  
-  /* Point scale tables */
-  table.gs-table tbody tr td:first-child {
-    position: sticky;
-    left: 0;
-    background: white;
-    z-index: 1;
-  }
 
   /* Prevent button text wrapping */
   .gs-btn {
