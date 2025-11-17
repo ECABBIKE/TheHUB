@@ -52,24 +52,24 @@ function calculateDHPoints($db, $event_id, $position, $run1_position, $run2_posi
     }
 
     if ($use_swecup_dh) {
-        // SweCUP DH: Both runs award points
+        // SweCUP DH: Both runs award points from separate columns
         $run1_points = 0;
         $run2_points = 0;
 
         if ($run1_position && $run1_position >= 1) {
             $value = $db->getRow(
-                "SELECT points FROM point_scale_values WHERE scale_id = ? AND position = ?",
+                "SELECT run_1_points FROM point_scale_values WHERE scale_id = ? AND position = ?",
                 [$scale_id, $run1_position]
             );
-            $run1_points = $value ? (float)$value['points'] : 0;
+            $run1_points = $value ? (float)$value['run_1_points'] : 0;
         }
 
         if ($run2_position && $run2_position >= 1) {
             $value = $db->getRow(
-                "SELECT points FROM point_scale_values WHERE scale_id = ? AND position = ?",
+                "SELECT run_2_points FROM point_scale_values WHERE scale_id = ? AND position = ?",
                 [$scale_id, $run2_position]
             );
-            $run2_points = $value ? (float)$value['points'] : 0;
+            $run2_points = $value ? (float)$value['run_2_points'] : 0;
         }
 
         $total_points = $run1_points + $run2_points;

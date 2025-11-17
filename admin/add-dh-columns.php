@@ -41,6 +41,12 @@ $resultsMigrations = [
     "ALTER TABLE results ADD COLUMN run_2_points INT DEFAULT 0 AFTER run_1_points" => "Add run_2_points for DH second run points",
 ];
 
+// Migration steps for Point Scale Values table (dual points for SweCUP DH)
+$pointScaleValuesMigrations = [
+    "ALTER TABLE point_scale_values ADD COLUMN run_1_points DECIMAL(10,2) DEFAULT 0 AFTER points" => "Add run_1_points for SweCUP DH Kval",
+    "ALTER TABLE point_scale_values ADD COLUMN run_2_points DECIMAL(10,2) DEFAULT 0 AFTER run_1_points" => "Add run_2_points for SweCUP DH Final",
+];
+
 // Run events migrations
 foreach ($eventsMigrations as $sql => $description) {
     try {
@@ -57,6 +63,20 @@ foreach ($eventsMigrations as $sql => $description) {
 
 // Run results migrations
 foreach ($resultsMigrations as $sql => $description) {
+    try {
+        $pdo->exec($sql);
+        $success[] = $description;
+    } catch (PDOException $e) {
+        if ($e->getCode() == '42S21' || strpos($e->getMessage(), 'Duplicate column') !== false) {
+            $success[] = $description . " (redan finns)";
+        } else {
+            $errors[] = $description . ": " . $e->getMessage();
+        }
+    }
+}
+
+// Run point scale values migrations
+foreach ($pointScaleValuesMigrations as $sql => $description) {
     try {
         $pdo->exec($sql);
         $success[] = $description;
@@ -94,6 +114,8 @@ $verifyQueries = [
     "SELECT COUNT(*) as count FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'results' AND COLUMN_NAME = 'run_2_time'" => "Verify run_2_time exists",
     "SELECT COUNT(*) as count FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'results' AND COLUMN_NAME = 'run_1_points'" => "Verify run_1_points exists",
     "SELECT COUNT(*) as count FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'results' AND COLUMN_NAME = 'run_2_points'" => "Verify run_2_points exists",
+    "SELECT COUNT(*) as count FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'point_scale_values' AND COLUMN_NAME = 'run_1_points'" => "Verify point_scale_values.run_1_points exists",
+    "SELECT COUNT(*) as count FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'point_scale_values' AND COLUMN_NAME = 'run_2_points'" => "Verify point_scale_values.run_2_points exists",
 ];
 
 $verified = [];
@@ -271,7 +293,7 @@ foreach ($verifyQueries as $sql => $description) {
                     <div class="stat-label">Fel</div>
                 </div>
                 <div class="stat">
-                    <div class="stat-number"><?= count($eventsMigrations) + count($resultsMigrations) ?></div>
+                    <div class="stat-number"><?= count($eventsMigrations) + count($resultsMigrations) + count($pointScaleValuesMigrations) ?></div>
                     <div class="stat-label">Totalt steg</div>
                 </div>
             </div>
