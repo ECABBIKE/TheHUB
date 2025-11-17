@@ -22,23 +22,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['event_id'])) {
         $message = 'Event hittades inte';
         $messageType = 'error';
     } else {
-        // Check if this is a DH event (has run_1_time or run_2_time data)
-        $isDH = $db->getRow("
-            SELECT COUNT(*) as count
-            FROM results
-            WHERE event_id = ? AND (run_1_time IS NOT NULL OR run_2_time IS NOT NULL)
-            LIMIT 1
-        ", [$eventId]);
+        // Get event format to determine calculation method
+        $eventFormatRow = $db->getRow("SELECT event_format FROM events WHERE id = ?", [$eventId]);
+        $eventFormat = $eventFormatRow['event_format'] ?? 'ENDURO';
 
-        $isDHEvent = $isDH && $isDH['count'] > 0;
+        // Recalculate based on event format
+        $isDHEvent = in_array($eventFormat, ['DH_STANDARD', 'DH_SWECUP']);
 
-        // Recalculate results (DH or standard)
         if ($isDHEvent) {
-            $stats = recalculateDHEventResults($db, $eventId, $newScaleId, $useSweCupDH);
-            $eventType = $useSweCupDH ? 'DH (SweCUP-format)' : 'DH (standard)';
+            // For DH events, use SweCUP format if specified OR if checkbox is checked
+            $useSweCupFormat = ($eventFormat === 'DH_SWECUP') || $useSweCupDH;
+            $stats = recalculateDHEventResults($db, $eventId, $newScaleId, $useSweCupFormat);
+            $eventType = $useSweCupFormat ? 'DH (SweCUP-format)' : 'DH (standard)';
         } else {
             $stats = recalculateEventResults($db, $eventId, $newScaleId);
-            $eventType = 'standard';
+            $eventType = ucfirst(strtolower($eventFormat));
         }
 
         if (!empty($stats['errors'])) {
@@ -82,15 +80,9 @@ if (!$event) {
     exit;
 }
 
-// Check if this is a DH event
-$isDH = $db->getRow("
-    SELECT COUNT(*) as count
-    FROM results
-    WHERE event_id = ? AND (run_1_time IS NOT NULL OR run_2_time IS NOT NULL)
-    LIMIT 1
-", [$eventId]);
-
-$isDHEvent = $isDH && $isDH['count'] > 0;
+// Check event format
+$eventFormat = $event['event_format'] ?? 'ENDURO';
+$isDHEvent = in_array($eventFormat, ['DH_STANDARD', 'DH_SWECUP']);
 
 // Get all point scales
 $pointScales = getPointScales($db, null, true);

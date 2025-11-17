@@ -31,6 +31,10 @@ if (!$event) {
     exit;
 }
 
+// Check event format to determine display mode
+$eventFormat = $event['event_format'] ?? 'ENDURO';
+$isDH = in_array($eventFormat, ['DH_STANDARD', 'DH_SWECUP']);
+
 // Get view mode (category or class)
 $viewMode = isset($_GET['view']) ? $_GET['view'] : 'category';
 
@@ -59,15 +63,6 @@ $results = $db->getAll("
         CASE WHEN res.status = 'finished' THEN res.position ELSE 999 END,
         res.finish_time
 ", [$eventId]);
-
-// Detect if this is a DH event (check if any result has run_1_time or run_2_time)
-$isDH = false;
-foreach ($results as $result) {
-    if (!empty($result['run_1_time']) || !empty($result['run_2_time'])) {
-        $isDH = true;
-        break;
-    }
-}
 
 // Group results by category
 $resultsByCategory = [];
