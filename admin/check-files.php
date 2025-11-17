@@ -37,11 +37,15 @@ foreach ($filesToCheck as $file => $description) {
 echo "</table>";
 
 echo "<h2>Git Information (if available)</h2>";
-$gitBranch = @shell_exec('cd ' . __DIR__ . '/.. && git branch 2>&1');
-if ($gitBranch) {
-    echo "<pre>" . htmlspecialchars($gitBranch) . "</pre>";
+if (function_exists('shell_exec')) {
+    $gitBranch = @shell_exec('cd ' . __DIR__ . '/.. && git branch 2>&1');
+    if ($gitBranch) {
+        echo "<pre>" . htmlspecialchars($gitBranch) . "</pre>";
+    } else {
+        echo "<p>Git not available or not a git repository on live server</p>";
+    }
 } else {
-    echo "<p>Git not available or not a git repository on live server</p>";
+    echo "<p>shell_exec() is disabled on this server</p>";
 }
 
 echo "<h2>Instructions</h2>";

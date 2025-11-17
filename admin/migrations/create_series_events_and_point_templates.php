@@ -8,10 +8,19 @@
  * - Each event in a series can have a specific point template
  */
 
+// Enable error reporting
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+
 require_once __DIR__ . '/../../config.php';
 require_admin();
 
 $db = getDB();
+
+echo "<!DOCTYPE html><html><head><meta charset='UTF-8'><title>Migration: Series Events & Point Templates</title>";
+echo "<style>body{font-family:monospace;padding:20px;background:#f5f5f5;} .success{color:green;} .error{color:red;} .info{color:blue;}</style>";
+echo "</head><body>";
+echo "<h1>Migration: Create Series Events & Point Templates Tables</h1>";
 
 try {
     // Create qualification_point_templates table
@@ -27,9 +36,10 @@ try {
             INDEX idx_active (active)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     ");
-    echo "✓ Created qualification_point_templates table\n";
+    echo "<p class='success'>✓ Created qualification_point_templates table</p>";
 
     // Create series_events junction table
+    echo "<p>Creating series_events junction table...</p>";
     $db->query("
         CREATE TABLE IF NOT EXISTS series_events (
             id INT AUTO_INCREMENT PRIMARY KEY,
@@ -47,9 +57,10 @@ try {
             INDEX idx_template (template_id)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     ");
-    echo "✓ Created series_events table\n";
+    echo "<p class='success'>✓ Created series_events table</p>";
 
     // Insert some default point templates
+    echo "<p>Creating default point templates...</p>";
     $defaultTemplates = [
         [
             'name' => 'SweCup Standard',
@@ -92,16 +103,16 @@ try {
 
         if (!$existing) {
             $db->insert('qualification_point_templates', $template);
-            echo "  ✓ Created template: {$template['name']}\n";
+            echo "<p class='success'>  ✓ Created template: " . htmlspecialchars($template['name']) . "</p>";
         } else {
-            echo "  ℹ Template already exists: {$template['name']}\n";
+            echo "<p class='info'>  ℹ Template already exists: " . htmlspecialchars($template['name']) . "</p>";
         }
     }
 
     // Migrate existing event->series relationships if series_id column exists in events
     $eventsColumns = $db->getAll("SHOW COLUMNS FROM events LIKE 'series_id'");
     if (!empty($eventsColumns)) {
-        echo "\nMigrating existing event->series relationships...\n";
+        echo "<h2>Migrating existing event->series relationships...</h2>";
 
         $events = $db->getAll("SELECT id, series_id FROM events WHERE series_id IS NOT NULL");
         foreach ($events as $event) {
@@ -118,17 +129,22 @@ try {
                     'template_id' => null,
                     'sort_order' => 0
                 ]);
-                echo "  ✓ Migrated event {$event['id']} to series {$event['series_id']}\n";
+                echo "<p class='success'>  ✓ Migrated event {$event['id']} to series {$event['series_id']}</p>";
             }
         }
 
-        echo "\n⚠ Note: The old 'series_id' column in 'events' table is still present.\n";
-        echo "   You can remove it manually later with: ALTER TABLE events DROP COLUMN series_id;\n";
+        echo "<p class='info'>⚠ Note: The old 'series_id' column in 'events' table is still present.</p>";
+        echo "<p class='info'>   You can remove it manually later with: ALTER TABLE events DROP COLUMN series_id;</p>";
     }
 
-    echo "\n✅ Migration completed successfully!\n";
+    echo "<h2 class='success'>✅ Migration completed successfully!</h2>";
+    echo "<p><a href='/admin/series.php'>Go to Series page</a> | <a href='/admin/point-templates.php'>Go to Point Templates page</a></p>";
 
 } catch (Exception $e) {
-    echo "✗ Migration failed: " . $e->getMessage() . "\n";
+    echo "<h2 class='error'>✗ Migration failed!</h2>";
+    echo "<p class='error'>Error: " . htmlspecialchars($e->getMessage()) . "</p>";
+    echo "<pre>" . htmlspecialchars($e->getTraceAsString()) . "</pre>";
     exit(1);
 }
+
+echo "</body></html>";
