@@ -1692,3 +1692,80 @@ body.gs-landing-pure .gs-sidebar-overlay {
     min-width: 400px;
   }
 }
+
+/* ========================================
+   COMPACT STAT CARDS
+   Updated: 2025-11-17
+   ======================================== */
+
+.gs-stat-card-compact {
+  text-align: center;
+  padding: 0.625rem;
+  min-height: 70px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.gs-stat-number-compact {
+  font-size: 1.75rem;
+  font-weight: 700;
+  line-height: 1;
+  margin-bottom: 0.25rem;
+}
+
+.gs-stat-label-compact {
+  font-size: 0.75rem;
+  color: var(--gs-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+}
+
+/* Mobile optimization for compact stats */
+@media (max-width: 640px) {
+  .gs-stat-card-compact {
+    padding: 0.5rem;
+    min-height: 60px;
+  }
+
+  .gs-stat-number-compact {
+    font-size: 1.5rem;
+  }
+
+  .gs-stat-label-compact {
+    font-size: 0.6875rem;
+  }
+}
+
+/* Tablet optimization */
+@media (min-width: 641px) and (max-width: 1023px) {
+  .gs-stat-card-compact {
+    padding: 0.75rem;
+    min-height: 80px;
+  }
+
+  .gs-stat-number-compact {
+    font-size: 2rem;
+  }
+
+  .gs-stat-label-compact {
+    font-size: 0.8125rem;
+  }
+}
+
+/* Desktop - full size */
+@media (min-width: 1024px) {
+  .gs-stat-card-compact {
+    padding: 1rem;
+    min-height: 90px;
+  }
+
+  .gs-stat-number-compact {
+    font-size: 2.25rem;
+  }
+
+  .gs-stat-label-compact {
+    font-size: 0.875rem;
+  }
+}
