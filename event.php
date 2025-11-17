@@ -216,15 +216,15 @@ include __DIR__ . '/includes/layout-header.php';
 
                             <!-- Event Stats -->
                             <div class="event-stats">
-                                <div style="padding: var(--gs-space-sm) var(--gs-space-md); background: var(--gs-background-secondary); border-radius: var(--gs-border-radius);">
+                                <div class="event-stat-full" style="padding: var(--gs-space-sm) var(--gs-space-md); background: var(--gs-background-secondary); border-radius: var(--gs-border-radius);">
                                     <span class="gs-text-sm gs-text-secondary">Deltagare: </span>
                                     <strong class="gs-text-primary"><?= $totalParticipants ?></strong>
                                 </div>
-                                <div style="padding: var(--gs-space-sm) var(--gs-space-md); background: var(--gs-background-secondary); border-radius: var(--gs-border-radius);">
+                                <div class="event-stat-half" style="padding: var(--gs-space-sm) var(--gs-space-md); background: var(--gs-background-secondary); border-radius: var(--gs-border-radius);">
                                     <span class="gs-text-sm gs-text-secondary">Slutförda: </span>
                                     <strong class="gs-text-success"><?= $totalFinished ?></strong>
                                 </div>
-                                <div style="padding: var(--gs-space-sm) var(--gs-space-md); background: var(--gs-background-secondary); border-radius: var(--gs-border-radius);">
+                                <div class="event-stat-half" style="padding: var(--gs-space-sm) var(--gs-space-md); background: var(--gs-background-secondary); border-radius: var(--gs-border-radius);">
                                     <span class="gs-text-sm gs-text-secondary">Kategorier: </span>
                                     <strong class="gs-text-primary"><?= count($resultsByCategory) ?></strong>
                                 </div>
@@ -480,28 +480,27 @@ include __DIR__ . '/includes/layout-header.php';
                 <?php endforeach; ?>
             <?php endif; ?>
         </div>
-
-        <!-- Responsive styles for DH results -->
-        <style>
-            /* DH Results: Desktop - side by side, Mobile - stacked */
-            @media (max-width: 768px) {
-                .results-table th[data-sort="run1"],
-                .results-table th[data-sort="run2"] {
-                    font-size: 0.85rem;
-                    padding: 0.5rem 0.25rem;
-                }
-
-                .results-table td:has(.gs-text-secondary) {
-                    font-size: 0.875rem;
-                }
-            }
-
-            /* Make times stand out */
-            .results-table td[style*="monospace"] {
-                background: var(--gs-background-secondary);
-            }
-        </style>
     </main>
+
+<style>
+    /* DH Results: Desktop - side by side, Mobile - stacked */
+    @media (max-width: 768px) {
+        .results-table th[data-sort="run1"],
+        .results-table th[data-sort="run2"] {
+            font-size: 0.85rem;
+            padding: 0.5rem 0.25rem;
+        }
+
+        .results-table td:has(.gs-text-secondary) {
+            font-size: 0.875rem;
+        }
+    }
+
+    /* Make times stand out */
+    .results-table td[style*="monospace"] {
+        background: var(--gs-background-secondary);
+    }
+</style>
 
 <?php
 $additionalScripts = <<<'SCRIPT'

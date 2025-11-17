@@ -589,6 +589,15 @@ body {
     transform: translateX(0);
   }
 
+  /* Admin Login at top on mobile */
+  .gs-admin-login-section {
+    order: -1;
+  }
+
+  .gs-main-menu {
+    order: 0;
+  }
+
   /* Show hamburger on mobile */
   .gs-mobile-menu-toggle {
     display: flex;
@@ -1791,9 +1800,17 @@ body.gs-landing-pure .gs-sidebar-overlay {
 }
 
 .event-stats {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: 0.75rem;
-  flex-wrap: wrap;
+}
+
+.event-stat-full {
+  grid-column: span 2;
+}
+
+.event-stat-half {
+  grid-column: span 1;
 }
 
 /* Mobile: Stack logo and info vertically */
@@ -1838,7 +1855,6 @@ body.gs-landing-pure .gs-sidebar-overlay {
   }
 
   .event-stats {
-    flex-direction: column;
     gap: 0.5rem;
   }
 
