@@ -31,6 +31,7 @@ $errors = [];
 // Migration steps for Events table
 $eventsMigrations = [
     "ALTER TABLE events ADD COLUMN event_format VARCHAR(20) DEFAULT 'ENDURO' AFTER discipline" => "Add event_format column to events",
+    "ALTER TABLE events ADD COLUMN point_scale_id_run2 INT NULL AFTER point_scale_id" => "Add point_scale_id_run2 for SweCUP DH dual scales",
 ];
 
 // Migration steps for Results table
@@ -72,6 +73,7 @@ foreach ($resultsMigrations as $sql => $description) {
 // Add indexes
 $indexes = [
     "CREATE INDEX idx_event_format ON events(event_format)" => "Add event_format index",
+    "CREATE INDEX idx_point_scale_id_run2 ON events(point_scale_id_run2)" => "Add point_scale_id_run2 index",
 ];
 
 foreach ($indexes as $sql => $description) {
@@ -90,6 +92,7 @@ foreach ($indexes as $sql => $description) {
 // Verify columns exist
 $verifyQueries = [
     "SELECT COUNT(*) as count FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'events' AND COLUMN_NAME = 'event_format'" => "Verify event_format exists",
+    "SELECT COUNT(*) as count FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'events' AND COLUMN_NAME = 'point_scale_id_run2'" => "Verify point_scale_id_run2 exists",
     "SELECT COUNT(*) as count FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'results' AND COLUMN_NAME = 'run_1_time'" => "Verify run_1_time exists",
     "SELECT COUNT(*) as count FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'results' AND COLUMN_NAME = 'run_2_time'" => "Verify run_2_time exists",
     "SELECT COUNT(*) as count FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'results' AND COLUMN_NAME = 'run_1_points'" => "Verify run_1_points exists",
