@@ -156,7 +156,7 @@ include __DIR__ . '/includes/layout-header.php';
 
             <!-- Event Header -->
             <div class="gs-card gs-mb-xl">
-                <div class="gs-card-content" style="padding: var(--gs-space-xl);">
+                <div class="gs-card-content event-header-content" style="padding: var(--gs-space-xl);">
                     <!-- Back Button -->
                     <div class="gs-mb-lg">
                         <a href="/events.php" class="gs-btn gs-btn-outline gs-btn-sm">
@@ -165,21 +165,21 @@ include __DIR__ . '/includes/layout-header.php';
                         </a>
                     </div>
 
-                    <div class="gs-flex gs-items-start gs-gap-lg">
+                    <div class="event-header-layout">
                         <?php if ($event['series_logo']): ?>
-                            <div style="flex-shrink: 0;">
+                            <div class="event-logo">
                                 <img src="<?= h($event['series_logo']) ?>"
                                      alt="<?= h($event['series_name'] ?? 'Serie') ?>"
                                      style="width: 120px; height: auto; border-radius: var(--gs-border-radius);">
                             </div>
                         <?php endif; ?>
 
-                        <div class="gs-flex-1">
-                            <h1 class="gs-h1 gs-text-primary gs-mb-sm">
+                        <div class="event-info">
+                            <h1 class="gs-h1 gs-text-primary gs-mb-sm event-title">
                                 <?= h($event['name']) ?>
                             </h1>
 
-                            <div class="gs-flex gs-gap-md gs-flex-wrap gs-mb-md">
+                            <div class="gs-flex gs-gap-md gs-flex-wrap gs-mb-md event-meta">
                                 <div class="gs-flex gs-items-center gs-gap-xs">
                                     <i data-lucide="calendar" style="width: 18px; height: 18px;"></i>
                                     <span class="gs-text-secondary">
@@ -215,7 +215,7 @@ include __DIR__ . '/includes/layout-header.php';
                             </div>
 
                             <!-- Event Stats -->
-                            <div class="gs-flex gs-gap-md">
+                            <div class="event-stats">
                                 <div style="padding: var(--gs-space-sm) var(--gs-space-md); background: var(--gs-background-secondary); border-radius: var(--gs-border-radius);">
                                     <span class="gs-text-sm gs-text-secondary">Deltagare: </span>
                                     <strong class="gs-text-primary"><?= $totalParticipants ?></strong>

@@ -343,6 +343,173 @@ $pageType = 'public';
                 display: none;
             }
         }
+
+        /* Mobile Responsive */
+        @media (max-width: 900px) {
+            body {
+                padding: 1rem;
+            }
+
+            .license-card {
+                width: 100%;
+                max-width: 100%;
+                height: auto;
+                min-height: auto;
+            }
+
+            .license-card:hover {
+                transform: none;
+            }
+
+            .license-header {
+                padding: 20px;
+            }
+
+            .license-title {
+                font-size: 20px;
+            }
+
+            .license-season {
+                font-size: 16px;
+                padding: 6px 16px;
+            }
+
+            .license-content {
+                grid-template-columns: 1fr;
+                gap: 25px;
+                padding: 25px 20px;
+            }
+
+            .license-photo {
+                flex-direction: row;
+                justify-content: center;
+                gap: 15px;
+            }
+
+            .photo-frame {
+                width: 120px;
+                height: 160px;
+            }
+
+            .qr-code {
+                width: 100px;
+                height: 100px;
+                font-size: 9px;
+            }
+
+            .rider-name {
+                font-size: 28px;
+                text-align: center;
+            }
+
+            .info-grid {
+                grid-template-columns: 1fr;
+                gap: 12px;
+            }
+
+            .info-field {
+                padding: 12px 16px;
+            }
+
+            .info-label {
+                font-size: 10px;
+            }
+
+            .info-value {
+                font-size: 16px;
+            }
+
+            .class-badge {
+                flex-direction: column;
+                padding: 16px 20px;
+                gap: 12px;
+                text-align: center;
+            }
+
+            .class-label {
+                font-size: 11px;
+            }
+
+            .class-name {
+                font-size: 24px;
+            }
+
+            .class-code {
+                padding: 10px 20px;
+                font-size: 20px;
+            }
+
+            .license-footer {
+                padding: 12px 20px;
+                font-size: 10px;
+                flex-direction: column;
+                gap: 8px;
+                text-align: center;
+            }
+
+            .back-button {
+                top: 10px;
+                left: 10px;
+                padding: 10px 20px;
+                font-size: 14px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            body {
+                padding: 0.5rem;
+            }
+
+            .license-header {
+                padding: 15px;
+            }
+
+            .license-title {
+                font-size: 18px;
+            }
+
+            .license-season {
+                font-size: 14px;
+                padding: 5px 12px;
+            }
+
+            .license-content {
+                padding: 20px 15px;
+                gap: 20px;
+            }
+
+            .license-photo {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .photo-frame {
+                width: 100px;
+                height: 133px;
+            }
+
+            .qr-code {
+                width: 80px;
+                height: 80px;
+                font-size: 8px;
+            }
+
+            .rider-name {
+                font-size: 24px;
+            }
+
+            .info-value {
+                font-size: 14px;
+            }
+
+            .class-name {
+                font-size: 20px;
+            }
+
+            .class-code {
+                font-size: 18px;
+            }
+        }
     </style>
 </head>
 <body>

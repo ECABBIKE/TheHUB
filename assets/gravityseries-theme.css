@@ -1769,3 +1769,105 @@ body.gs-landing-pure .gs-sidebar-overlay {
     font-size: 0.875rem;
   }
 }
+
+/* ========================================
+   EVENT HEADER RESPONSIVE LAYOUT
+   Updated: 2025-11-17
+   ======================================== */
+
+/* Desktop: Logo and info side by side */
+.event-header-layout {
+  display: flex;
+  align-items: flex-start;
+  gap: 1.5rem;
+}
+
+.event-logo {
+  flex-shrink: 0;
+}
+
+.event-info {
+  flex: 1;
+}
+
+.event-stats {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+/* Mobile: Stack logo and info vertically */
+@media (max-width: 640px) {
+  .event-header-content {
+    padding: 1rem !important;
+  }
+
+  .event-header-layout {
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .event-logo {
+    text-align: center;
+  }
+
+  .event-logo img {
+    width: 80px !important;
+    max-width: 80px !important;
+  }
+
+  .event-info {
+    width: 100%;
+  }
+
+  .event-title {
+    font-size: 1.5rem !important;
+    text-align: center;
+  }
+
+  .event-meta {
+    font-size: 0.875rem;
+    gap: 0.5rem !important;
+    justify-content: center;
+  }
+
+  .event-meta i {
+    width: 16px !important;
+    height: 16px !important;
+  }
+
+  .event-stats {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .event-stats > div {
+    padding: 0.5rem 0.75rem !important;
+    font-size: 0.875rem !important;
+  }
+
+  .event-stats .gs-text-sm {
+    font-size: 0.75rem !important;
+  }
+}
+
+/* Tablet: Smaller logo, side by side layout */
+@media (min-width: 641px) and (max-width: 1023px) {
+  .event-header-content {
+    padding: 1.5rem !important;
+  }
+
+  .event-logo img {
+    width: 100px !important;
+    max-width: 100px !important;
+  }
+
+  .event-title {
+    font-size: 1.75rem !important;
+  }
+
+  .event-stats {
+    gap: 0.625rem;
+  }
+}

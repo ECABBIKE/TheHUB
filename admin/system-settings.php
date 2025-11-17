@@ -143,7 +143,7 @@ include __DIR__ . '/../includes/layout-header.php';
                         </button>
                     </div>
                 </div>
-                <div class="gs-card-content" style="padding: 0;">
+                <div class="gs-card-content" style="padding: 0; overflow-x: auto; -webkit-overflow-scrolling: touch;">
                     <table class="gs-table">
                         <thead>
                             <tr>
