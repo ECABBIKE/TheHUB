@@ -31,7 +31,6 @@ $errors = [];
 // Migration steps for Events table
 $eventsMigrations = [
     "ALTER TABLE events ADD COLUMN event_format VARCHAR(20) DEFAULT 'ENDURO' AFTER discipline" => "Add event_format column to events",
-    "ALTER TABLE events ADD COLUMN point_scale_id_run2 INT NULL AFTER point_scale_id" => "Add point_scale_id_run2 for SweCUP DH dual scales",
 ];
 
 // Migration steps for Results table
@@ -40,6 +39,12 @@ $resultsMigrations = [
     "ALTER TABLE results ADD COLUMN run_2_time TIME NULL AFTER run_1_time" => "Add run_2_time for DH second run",
     "ALTER TABLE results ADD COLUMN run_1_points INT DEFAULT 0 AFTER points" => "Add run_1_points for DH first run points",
     "ALTER TABLE results ADD COLUMN run_2_points INT DEFAULT 0 AFTER run_1_points" => "Add run_2_points for DH second run points",
+];
+
+// Migration steps for Point Scale Values table (dual points for SweCUP DH)
+$pointScaleValuesMigrations = [
+    "ALTER TABLE point_scale_values ADD COLUMN run_1_points DECIMAL(10,2) DEFAULT 0 AFTER points" => "Add run_1_points for SweCUP DH Kval",
+    "ALTER TABLE point_scale_values ADD COLUMN run_2_points DECIMAL(10,2) DEFAULT 0 AFTER run_1_points" => "Add run_2_points for SweCUP DH Final",
 ];
 
 // Run events migrations
@@ -70,10 +75,23 @@ foreach ($resultsMigrations as $sql => $description) {
     }
 }
 
+// Run point scale values migrations
+foreach ($pointScaleValuesMigrations as $sql => $description) {
+    try {
+        $pdo->exec($sql);
+        $success[] = $description;
+    } catch (PDOException $e) {
+        if ($e->getCode() == '42S21' || strpos($e->getMessage(), 'Duplicate column') !== false) {
+            $success[] = $description . " (redan finns)";
+        } else {
+            $errors[] = $description . ": " . $e->getMessage();
+        }
+    }
+}
+
 // Add indexes
 $indexes = [
     "CREATE INDEX idx_event_format ON events(event_format)" => "Add event_format index",
-    "CREATE INDEX idx_point_scale_id_run2 ON events(point_scale_id_run2)" => "Add point_scale_id_run2 index",
 ];
 
 foreach ($indexes as $sql => $description) {
@@ -92,11 +110,12 @@ foreach ($indexes as $sql => $description) {
 // Verify columns exist
 $verifyQueries = [
     "SELECT COUNT(*) as count FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'events' AND COLUMN_NAME = 'event_format'" => "Verify event_format exists",
-    "SELECT COUNT(*) as count FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'events' AND COLUMN_NAME = 'point_scale_id_run2'" => "Verify point_scale_id_run2 exists",
     "SELECT COUNT(*) as count FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'results' AND COLUMN_NAME = 'run_1_time'" => "Verify run_1_time exists",
     "SELECT COUNT(*) as count FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'results' AND COLUMN_NAME = 'run_2_time'" => "Verify run_2_time exists",
     "SELECT COUNT(*) as count FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'results' AND COLUMN_NAME = 'run_1_points'" => "Verify run_1_points exists",
     "SELECT COUNT(*) as count FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'results' AND COLUMN_NAME = 'run_2_points'" => "Verify run_2_points exists",
+    "SELECT COUNT(*) as count FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'point_scale_values' AND COLUMN_NAME = 'run_1_points'" => "Verify point_scale_values.run_1_points exists",
+    "SELECT COUNT(*) as count FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'point_scale_values' AND COLUMN_NAME = 'run_2_points'" => "Verify point_scale_values.run_2_points exists",
 ];
 
 $verified = [];
@@ -274,7 +293,7 @@ foreach ($verifyQueries as $sql => $description) {
                     <div class="stat-label">Fel</div>
                 </div>
                 <div class="stat">
-                    <div class="stat-number"><?= count($eventsMigrations) + count($resultsMigrations) ?></div>
+                    <div class="stat-number"><?= count($eventsMigrations) + count($resultsMigrations) + count($pointScaleValuesMigrations) ?></div>
                     <div class="stat-label">Totalt steg</div>
                 </div>
             </div>
