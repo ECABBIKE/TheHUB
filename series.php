@@ -11,15 +11,47 @@ require_once __DIR__ . '/config.php';
 
 $db = getDB();
 
-// Get all series
-$series = $db->getAll("
-    SELECT s.id, s.name, s.description, s.year, s.logo, s.start_date, s.end_date,
-           COUNT(DISTINCT e.id) as event_count
-    FROM series s
-    LEFT JOIN events e ON s.id = e.series_id
-    GROUP BY s.id
-    ORDER BY s.year DESC, s.name ASC
-");
+// Check if series_events table exists
+$seriesEventsTableExists = false;
+try {
+    $tables = $db->getAll("SHOW TABLES LIKE 'series_events'");
+    $seriesEventsTableExists = !empty($tables);
+} catch (Exception $e) {
+    // Table doesn't exist, that's ok
+}
+
+// Get all series with event and participant counts
+if ($seriesEventsTableExists) {
+    // Use series_events table (many-to-many)
+    $series = $db->getAll("
+        SELECT s.id, s.name, s.description, s.year, s.status, s.logo, s.start_date, s.end_date,
+               COUNT(DISTINCT se.event_id) as event_count,
+               (SELECT COUNT(DISTINCT r.cyclist_id)
+                FROM results r
+                INNER JOIN series_events se2 ON r.event_id = se2.event_id
+                WHERE se2.series_id = s.id) as participant_count
+        FROM series s
+        LEFT JOIN series_events se ON s.id = se.series_id
+        WHERE s.status = 'active'
+        GROUP BY s.id
+        ORDER BY s.year DESC, s.name ASC
+    ");
+} else {
+    // Fallback to old series_id column in events
+    $series = $db->getAll("
+        SELECT s.id, s.name, s.description, s.year, s.status, s.logo, s.start_date, s.end_date,
+               COUNT(DISTINCT e.id) as event_count,
+               (SELECT COUNT(DISTINCT r.cyclist_id)
+                FROM results r
+                INNER JOIN events e2 ON r.event_id = e2.id
+                WHERE e2.series_id = s.id) as participant_count
+        FROM series s
+        LEFT JOIN events e ON s.id = e.series_id
+        WHERE s.status = 'active'
+        GROUP BY s.id
+        ORDER BY s.year DESC, s.name ASC
+    ");
+}
 
 $pageTitle = 'Serier';
 $pageType = 'public';
@@ -117,6 +149,7 @@ include __DIR__ . '/includes/layout-header.php';
                         font-size: 0.875rem;
                         color: #718096;
                         margin-top: 0.25rem;
+                        flex-wrap: wrap;
                     }
                     @media (max-width: 640px) {
                         .series-card-horizontal {
@@ -176,9 +209,17 @@ include __DIR__ . '/includes/layout-header.php';
                                         <span style="font-weight: 600; color: #667eea;">
                                             <?= $s['event_count'] ?> <?= $s['event_count'] == 1 ? 'tävling' : 'tävlingar' ?>
                                         </span>
+                                        <?php if ($s['participant_count'] > 0): ?>
+                                            <span style="margin-left: 0.25rem;">•</span>
+                                            <i data-lucide="users" style="width: 14px; height: 14px;"></i>
+                                            <span style="font-weight: 600; color: #667eea;">
+                                                <?= number_format($s['participant_count'], 0, ',', ' ') ?> deltagare
+                                            </span>
+                                        <?php endif; ?>
                                         <?php if ($s['start_date'] && $s['end_date']): ?>
-                                            <span style="margin-left: 0.5rem;">
-                                                • <?= date('M Y', strtotime($s['start_date'])) ?> - <?= date('M Y', strtotime($s['end_date'])) ?>
+                                            <span style="margin-left: 0.25rem;">•</span>
+                                            <span>
+                                                <?= date('M Y', strtotime($s['start_date'])) ?> - <?= date('M Y', strtotime($s['end_date'])) ?>
                                             </span>
                                         <?php endif; ?>
                                     </div>
