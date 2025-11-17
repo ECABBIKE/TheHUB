@@ -13,6 +13,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['event_id'])) {
 
     $eventId = (int)$_POST['event_id'];
     $newScaleId = !empty($_POST['point_scale_id']) ? (int)$_POST['point_scale_id'] : null;
+    $useSweCupDH = isset($_POST['use_swecup_dh']) && $_POST['use_swecup_dh'] === '1';
 
     // Get event info
     $event = $db->getRow("SELECT name FROM events WHERE id = ?", [$eventId]);
@@ -21,14 +22,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['event_id'])) {
         $message = 'Event hittades inte';
         $messageType = 'error';
     } else {
-        // Recalculate results
-        $stats = recalculateEventResults($db, $eventId, $newScaleId);
+        // Check if this is a DH event (has run_1_time or run_2_time data)
+        $isDH = $db->getRow("
+            SELECT COUNT(*) as count
+            FROM results
+            WHERE event_id = ? AND (run_1_time IS NOT NULL OR run_2_time IS NOT NULL)
+            LIMIT 1
+        ", [$eventId]);
+
+        $isDHEvent = $isDH && $isDH['count'] > 0;
+
+        // Recalculate results (DH or standard)
+        if ($isDHEvent) {
+            $stats = recalculateDHEventResults($db, $eventId, $newScaleId, $useSweCupDH);
+            $eventType = $useSweCupDH ? 'DH (SweCUP-format)' : 'DH (standard)';
+        } else {
+            $stats = recalculateEventResults($db, $eventId, $newScaleId);
+            $eventType = 'standard';
+        }
 
         if (!empty($stats['errors'])) {
-            $message = "Omräkning klar med fel: {$stats['positions_updated']} placeringar uppdaterade, {$stats['points_updated']} poäng uppdaterade. " . count($stats['errors']) . " fel uppstod.";
+            $message = "Omräkning klar med fel ({$eventType}): {$stats['positions_updated']} placeringar uppdaterade, {$stats['points_updated']} poäng uppdaterade. " . count($stats['errors']) . " fel uppstod.";
             $messageType = 'warning';
         } else {
-            $message = "Omräkning klar! {$stats['positions_updated']} placeringar och {$stats['points_updated']} poäng uppdaterade för '{$event['name']}'.";
+            $message = "Omräkning klar ({$eventType})! {$stats['positions_updated']} placeringar och {$stats['points_updated']} poäng uppdaterade för '{$event['name']}'.";
             $messageType = 'success';
         }
     }
@@ -64,6 +81,16 @@ if (!$event) {
     header('Location: /admin/results.php');
     exit;
 }
+
+// Check if this is a DH event
+$isDH = $db->getRow("
+    SELECT COUNT(*) as count
+    FROM results
+    WHERE event_id = ? AND (run_1_time IS NOT NULL OR run_2_time IS NOT NULL)
+    LIMIT 1
+", [$eventId]);
+
+$isDHEvent = $isDH && $isDH['count'] > 0;
 
 // Get all point scales
 $pointScales = getPointScales($db, null, true);
@@ -112,12 +139,25 @@ include __DIR__ . '/../includes/layout-header.php';
                 </div>
 
                 <!-- Warning Alert -->
+                <?php if ($isDHEvent): ?>
+                    <div class="gs-alert gs-alert-info gs-mb-md">
+                        <i data-lucide="info"></i>
+                        <strong>DH-resultat detekterat!</strong> Detta event innehåller DH två-åk resultat.
+                    </div>
+                <?php endif; ?>
+
                 <div class="gs-alert gs-alert-warning gs-mb-lg">
                     <i data-lucide="alert-triangle"></i>
                     <strong>Varning!</strong> Detta kommer att:
                     <ul style="margin: 0.5rem 0 0 1.5rem;">
-                        <li>Räkna om alla placeringar inom varje kategori baserat på tid</li>
-                        <li>Räkna om alla poäng baserat på nya placeringar</li>
+                        <?php if ($isDHEvent): ?>
+                            <li>Räkna om placeringar för varje åk separat</li>
+                            <li>Räkna om total placering baserat på snabbaste åket</li>
+                            <li>Räkna om poäng (standard DH: snabbaste räknas, SweCUP DH: båda räknas)</li>
+                        <?php else: ?>
+                            <li>Räkna om alla placeringar inom varje kategori baserat på tid</li>
+                            <li>Räkna om alla poäng baserat på nya placeringar</li>
+                        <?php endif; ?>
                         <li>Kan ändra poängmall om du väljer en annan nedan</li>
                     </ul>
                 </div>
@@ -150,6 +190,21 @@ include __DIR__ . '/../includes/layout-header.php';
                             Välj en poängmall om du vill ändra från nuvarande. Lämna tom för att behålla nuvarande mall.
                         </small>
                     </div>
+
+                    <?php if ($isDHEvent): ?>
+                        <div class="gs-form-group">
+                            <label class="gs-checkbox-label">
+                                <input type="checkbox" name="use_swecup_dh" value="1" class="gs-checkbox">
+                                <span>
+                                    <strong>SweCUP DH-format</strong>
+                                    <span class="gs-text-sm gs-text-secondary" style="display: block; margin-top: 0.25rem;">
+                                        Båda åken ger poäng separat (run_1_points + run_2_points).
+                                        Lämna avmarkerad för standard DH där endast snabbaste åket räknas.
+                                    </span>
+                                </span>
+                            </label>
+                        </div>
+                    <?php endif; ?>
 
                     <div class="gs-flex gs-justify-end gs-gap-md gs-mt-xl">
                         <a href="/admin/results.php" class="gs-btn gs-btn-outline">
