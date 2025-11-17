@@ -156,6 +156,20 @@ $series = $db->getAll($sql, $params);
 // Get all years from series
 $allYears = $db->getAll("SELECT DISTINCT YEAR(start_date) as year FROM series WHERE start_date IS NOT NULL ORDER BY year DESC");
 
+// Count unique participants in active series
+$uniqueParticipants = 0;
+if ($seriesEventsTableExists) {
+    // Count unique riders from results where event is in an active series
+    $participantCount = $db->getRow("
+        SELECT COUNT(DISTINCT r.rider_id) as unique_riders
+        FROM results r
+        INNER JOIN series_events se ON r.event_id = se.event_id
+        INNER JOIN series s ON se.series_id = s.id
+        WHERE s.status = 'active'
+    ");
+    $uniqueParticipants = $participantCount['unique_riders'] ?? 0;
+}
+
 $pageTitle = 'Serier';
 $pageType = 'admin';
 include __DIR__ . '/../includes/layout-header.php';
@@ -420,8 +434,10 @@ include __DIR__ . '/../includes/layout-header.php';
                 </div>
                 <div class="gs-stat-card" style="padding: var(--gs-space-md);">
                     <i data-lucide="users" style="width: 32px; height: 32px; color: var(--gs-warning); margin-bottom: var(--gs-space-sm);"></i>
-                    <div class="gs-stat-number" style="font-size: 1.75rem;">~1,200</div>
-                    <div class="gs-stat-label" style="font-size: 0.813rem;">Deltagare</div>
+                    <div class="gs-stat-number" style="font-size: 1.75rem;">
+                        <?= number_format($uniqueParticipants, 0, ',', ' ') ?>
+                    </div>
+                    <div class="gs-stat-label" style="font-size: 0.813rem;">Unika deltagare</div>
                 </div>
             </div>
 

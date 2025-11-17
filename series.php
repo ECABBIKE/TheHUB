@@ -11,15 +11,47 @@ require_once __DIR__ . '/config.php';
 
 $db = getDB();
 
-// Get all series
-$series = $db->getAll("
-    SELECT s.id, s.name, s.description, s.year,
-           COUNT(DISTINCT e.id) as event_count
-    FROM series s
-    LEFT JOIN events e ON s.id = e.series_id
-    GROUP BY s.id
-    ORDER BY s.year DESC, s.name ASC
-");
+// Check if series_events table exists
+$seriesEventsTableExists = false;
+try {
+    $tables = $db->getAll("SHOW TABLES LIKE 'series_events'");
+    $seriesEventsTableExists = !empty($tables);
+} catch (Exception $e) {
+    // Table doesn't exist, that's ok
+}
+
+// Get all series with event and participant counts
+if ($seriesEventsTableExists) {
+    // Use series_events table (many-to-many)
+    $series = $db->getAll("
+        SELECT s.id, s.name, s.description, s.year, s.status,
+               COUNT(DISTINCT se.event_id) as event_count,
+               (SELECT COUNT(DISTINCT r.rider_id)
+                FROM results r
+                INNER JOIN series_events se2 ON r.event_id = se2.event_id
+                WHERE se2.series_id = s.id) as participant_count
+        FROM series s
+        LEFT JOIN series_events se ON s.id = se.series_id
+        WHERE s.status = 'active'
+        GROUP BY s.id
+        ORDER BY s.year DESC, s.name ASC
+    ");
+} else {
+    // Fallback to old series_id column in events
+    $series = $db->getAll("
+        SELECT s.id, s.name, s.description, s.year, s.status,
+               COUNT(DISTINCT e.id) as event_count,
+               (SELECT COUNT(DISTINCT r.rider_id)
+                FROM results r
+                INNER JOIN events e2 ON r.event_id = e2.id
+                WHERE e2.series_id = s.id) as participant_count
+        FROM series s
+        LEFT JOIN events e ON s.id = e.series_id
+        WHERE s.status = 'active'
+        GROUP BY s.id
+        ORDER BY s.year DESC, s.name ASC
+    ");
+}
 
 $pageTitle = 'Serier';
 $pageType = 'public';
@@ -69,9 +101,17 @@ include __DIR__ . '/includes/layout-header.php';
                                         <?= h($s['description']) ?>
                                     </p>
                                 <?php endif; ?>
-                                <div class="gs-flex gs-items-center gs-gap-sm gs-text-sm gs-text-secondary gs-mb-md">
-                                    <i data-lucide="calendar" style="width: 16px; height: 16px;"></i>
-                                    <span><?= $s['event_count'] ?> tävlingar</span>
+                                <div class="gs-flex gs-flex-col gs-gap-xs gs-text-sm gs-text-secondary gs-mb-md">
+                                    <div class="gs-flex gs-items-center gs-gap-sm">
+                                        <i data-lucide="calendar" style="width: 16px; height: 16px;"></i>
+                                        <span><?= $s['event_count'] ?> tävlingar</span>
+                                    </div>
+                                    <?php if ($s['participant_count'] > 0): ?>
+                                    <div class="gs-flex gs-items-center gs-gap-sm">
+                                        <i data-lucide="users" style="width: 16px; height: 16px;"></i>
+                                        <span><?= number_format($s['participant_count'], 0, ',', ' ') ?> unika deltagare</span>
+                                    </div>
+                                    <?php endif; ?>
                                 </div>
                                 <?php if ($s['event_count'] > 0): ?>
                                     <div class="gs-btn gs-btn-primary gs-btn-sm" style="width: 100%; text-align: center;">
