@@ -1128,7 +1128,7 @@ include __DIR__ . '/../includes/layout-header.php';
                         </h2>
                     </div>
                     <div class="gs-card-content">
-                        <div class="gs-grid gs-grid-cols-2 gs-md-grid-cols-5 gs-gap-md gs-mb-lg">
+                        <div class="gs-grid gs-grid-cols-1 gs-sm-grid-cols-2 gs-md-grid-cols-3 gs-lg-grid-cols-5 gs-gap-md gs-mb-lg">
                             <div class="gs-stat-card">
                                 <i data-lucide="file-text" class="gs-icon-lg gs-text-primary gs-mb-sm"></i>
                                 <div class="gs-stat-number"><?= number_format($stats['total']) ?></div>

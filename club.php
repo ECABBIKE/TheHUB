@@ -245,6 +245,28 @@ include __DIR__ . '/includes/layout-header.php';
     .no-points {
         opacity: 0.6;
     }
+
+    /* Mobile Responsive */
+    @media (max-width: 640px) {
+        .rider-stats {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.75rem;
+        }
+
+        .rider-stat-value {
+            font-size: 1.125rem;
+        }
+
+        .rider-stat-label {
+            font-size: 0.6875rem;
+        }
+    }
+
+    @media (min-width: 641px) and (max-width: 1023px) {
+        .rider-stats {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
 </style>
 
 <main class="gs-main-content">

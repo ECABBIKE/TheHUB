@@ -159,12 +159,20 @@ include __DIR__ . '/includes/layout-header.php';
 
     @media (max-width: 768px) {
         .standings-table {
-            font-size: 0.75rem;
+            font-size: 0.8125rem;
         }
 
         .standings-table th,
         .standings-table td {
-            padding: 0.25rem;
+            padding: 0.375rem 0.5rem;
+        }
+
+        .event-col {
+            min-width: 45px;
+        }
+
+        .total-col {
+            min-width: 60px;
         }
     }
 </style>

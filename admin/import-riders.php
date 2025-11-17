@@ -496,7 +496,7 @@ include __DIR__ . '/../includes/layout-header.php';
                         </h2>
                     </div>
                     <div class="gs-card-content">
-                        <div class="gs-grid gs-grid-cols-2 gs-md-grid-cols-5 gs-gap-md">
+                        <div class="gs-grid gs-grid-cols-1 gs-sm-grid-cols-2 gs-md-grid-cols-3 gs-lg-grid-cols-5 gs-gap-md">
                             <div class="gs-stat-card">
                                 <i data-lucide="file-text" class="gs-icon-lg gs-text-primary gs-mb-sm"></i>
                                 <div class="gs-stat-number"><?= number_format($stats['total']) ?></div>
@@ -560,7 +560,7 @@ include __DIR__ . '/../includes/layout-header.php';
                                     <i data-lucide="alert-circle"></i>
                                     Överhoppade rader (<?= count($skippedRows) ?>)
                                 </h3>
-                                <div style="max-height: 400px; overflow-y: auto; background: var(--gs-background-secondary); padding: var(--gs-space-md); border-radius: var(--gs-border-radius);">
+                                <div style="max-height: 400px; overflow-y: auto; overflow-x: auto; -webkit-overflow-scrolling: touch; background: var(--gs-background-secondary); padding: var(--gs-space-md); border-radius: var(--gs-border-radius);">
                                     <table class="gs-table gs-table-sm">
                                         <thead>
                                             <tr>

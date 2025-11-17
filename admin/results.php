@@ -232,7 +232,7 @@ include __DIR__ . '/../includes/layout-header.php';
                                     </div>
 
                                     <!-- Result Statistics -->
-                                    <div class="gs-flex gs-gap-md">
+                                    <div class="gs-flex gs-gap-md gs-flex-wrap">
                                         <div class="gs-flex gs-items-center gs-gap-xs">
                                             <i data-lucide="users" style="width: 16px; height: 16px;"></i>
                                             <strong><?= $event['result_count'] ?></strong>
