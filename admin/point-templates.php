@@ -65,6 +65,53 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $message = 'Ett fel uppstod: ' . $e->getMessage();
             $messageType = 'error';
         }
+    } elseif ($action === 'import') {
+        $importData = trim($_POST['import_data'] ?? '');
+
+        if (empty($importData)) {
+            $message = 'Ingen data att importera';
+            $messageType = 'error';
+        } else {
+            try {
+                // Try to parse as JSON first
+                $imported = json_decode($importData, true);
+
+                if (json_last_error() !== JSON_ERROR_NONE) {
+                    // Try CSV format: position,points (one per line)
+                    $lines = explode("\n", $importData);
+                    $imported = ['points' => []];
+
+                    foreach ($lines as $line) {
+                        $line = trim($line);
+                        if (empty($line) || strpos($line, '#') === 0) continue; // Skip empty and comments
+
+                        $parts = array_map('trim', explode(',', $line));
+                        if (count($parts) >= 2 && is_numeric($parts[0]) && is_numeric($parts[1])) {
+                            $imported['points'][$parts[0]] = (int)$parts[1];
+                        }
+                    }
+                }
+
+                if (!empty($imported['points'])) {
+                    $templateData = [
+                        'name' => $imported['name'] ?? 'Importerad mall ' . date('Y-m-d H:i'),
+                        'description' => $imported['description'] ?? 'Importerad poängmall',
+                        'points' => json_encode($imported['points']),
+                        'active' => 1
+                    ];
+
+                    $db->insert('qualification_point_templates', $templateData);
+                    $message = 'Poängmall importerad!';
+                    $messageType = 'success';
+                } else {
+                    $message = 'Kunde inte hitta poäng i importerad data';
+                    $messageType = 'error';
+                }
+            } catch (Exception $e) {
+                $message = 'Import misslyckades: ' . $e->getMessage();
+                $messageType = 'error';
+            }
+        }
     }
 }
 
@@ -93,10 +140,16 @@ include __DIR__ . '/../includes/layout-header.php';
                 <i data-lucide="award"></i>
                 Kvalpoängmallar
             </h1>
-            <button type="button" class="gs-btn gs-btn-primary" onclick="openTemplateModal()">
-                <i data-lucide="plus"></i>
-                Ny Mall
-            </button>
+            <div class="gs-flex gs-gap-sm">
+                <button type="button" class="gs-btn gs-btn-outline" onclick="openImportModal()">
+                    <i data-lucide="upload"></i>
+                    Importera
+                </button>
+                <button type="button" class="gs-btn gs-btn-primary" onclick="openTemplateModal()">
+                    <i data-lucide="plus"></i>
+                    Ny Mall
+                </button>
+            </div>
         </div>
 
         <!-- Messages -->
@@ -143,21 +196,17 @@ include __DIR__ . '/../includes/layout-header.php';
 
                             <!-- Points Grid -->
                             <div>
-                                <label class="gs-label">Poängfördelning per placering</label>
-                                <p class="gs-text-xs gs-text-secondary gs-mb-sm">Ange hur många poäng varje placering ger. Tomma fält = 0 poäng.</p>
+                                <div class="gs-flex gs-items-center gs-justify-between gs-mb-sm">
+                                    <label class="gs-label" style="margin:0;">Poängfördelning per placering</label>
+                                    <button type="button" class="gs-btn gs-btn-xs gs-btn-outline" onclick="addPointRow()">
+                                        <i data-lucide="plus" style="width:12px;height:12px;"></i>
+                                        Lägg till rad
+                                    </button>
+                                </div>
+                                <p class="gs-text-xs gs-text-secondary gs-mb-sm">Klicka på "Lägg till rad" för att lägga till fler placeringar</p>
 
-                                <div id="pointsGrid" class="gs-grid gs-grid-cols-5 gs-md-grid-cols-10 gs-gap-sm">
-                                    <?php for ($i = 1; $i <= 30; $i++): ?>
-                                        <div>
-                                            <label for="points_<?= $i ?>" class="gs-text-xs gs-text-secondary">#<?= $i ?></label>
-                                            <input type="number"
-                                                   id="points_<?= $i ?>"
-                                                   name="points[<?= $i ?>]"
-                                                   class="gs-input gs-input-sm"
-                                                   min="0"
-                                                   placeholder="0">
-                                        </div>
-                                    <?php endfor; ?>
+                                <div id="pointsContainer" style="max-height: 400px; overflow-y: auto; padding-right: 10px;">
+                                    <!-- Rows will be added dynamically -->
                                 </div>
                             </div>
                         </div>
@@ -170,6 +219,62 @@ include __DIR__ . '/../includes/layout-header.php';
                         <button type="submit" class="gs-btn gs-btn-primary">
                             <i data-lucide="check"></i>
                             <span id="submitButtonText">Skapa</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Import Modal -->
+        <div id="importModal" class="gs-modal" style="display: none;">
+            <div class="gs-modal-overlay" onclick="closeImportModal()"></div>
+            <div class="gs-modal-content" style="max-width: 700px;">
+                <div class="gs-modal-header">
+                    <h2 class="gs-modal-title">
+                        <i data-lucide="upload"></i>
+                        Importera Poängmall
+                    </h2>
+                    <button type="button" class="gs-modal-close" onclick="closeImportModal()">
+                        <i data-lucide="x"></i>
+                    </button>
+                </div>
+                <form method="POST">
+                    <?= csrf_field() ?>
+                    <input type="hidden" name="action" value="import">
+
+                    <div class="gs-modal-body">
+                        <div class="gs-mb-md">
+                            <label class="gs-label">Importera data (JSON eller CSV)</label>
+                            <textarea name="import_data" class="gs-input" rows="12" placeholder='JSON format:
+{
+  "name": "Min mall",
+  "description": "Beskrivning",
+  "points": {
+    "1": 100,
+    "2": 80,
+    "3": 60
+  }
+}
+
+CSV format:
+1,100
+2,80
+3,60'></textarea>
+                        </div>
+
+                        <div class="gs-alert gs-alert-info">
+                            <p class="gs-text-xs"><strong>JSON format:</strong> Klistra in exporterad JSON-data</p>
+                            <p class="gs-text-xs"><strong>CSV format:</strong> En rad per placering: placering,poäng</p>
+                        </div>
+                    </div>
+
+                    <div class="gs-modal-footer">
+                        <button type="button" class="gs-btn gs-btn-outline" onclick="closeImportModal()">
+                            Avbryt
+                        </button>
+                        <button type="submit" class="gs-btn gs-btn-primary">
+                            <i data-lucide="upload"></i>
+                            Importera
                         </button>
                     </div>
                 </form>
@@ -203,12 +308,20 @@ include __DIR__ . '/../includes/layout-header.php';
                                     <div class="gs-flex gs-gap-sm">
                                         <button type="button"
                                                 class="gs-btn gs-btn-sm gs-btn-outline"
-                                                onclick="editTemplate(<?= $template['id'] ?>)">
+                                                onclick="exportTemplate(<?= $template['id'] ?>)"
+                                                title="Exportera">
+                                            <i data-lucide="download"></i>
+                                        </button>
+                                        <button type="button"
+                                                class="gs-btn gs-btn-sm gs-btn-outline"
+                                                onclick="editTemplate(<?= $template['id'] ?>)"
+                                                title="Redigera">
                                             <i data-lucide="edit"></i>
                                         </button>
                                         <button type="button"
                                                 class="gs-btn gs-btn-sm gs-btn-outline gs-btn-danger"
-                                                onclick="deleteTemplate(<?= $template['id'] ?>, '<?= addslashes(h($template['name'])) ?>')">
+                                                onclick="deleteTemplate(<?= $template['id'] ?>, '<?= addslashes(h($template['name'])) ?>')"
+                                                title="Ta bort">
                                             <i data-lucide="trash-2"></i>
                                         </button>
                                     </div>
@@ -237,6 +350,9 @@ include __DIR__ . '/../includes/layout-header.php';
     </div>
 
     <script>
+        let pointRowCounter = 0;
+        const templates = <?= json_encode($templates) ?>;
+
         function openTemplateModal() {
             document.getElementById('templateModal').style.display = 'flex';
             document.getElementById('templateForm').reset();
@@ -244,6 +360,13 @@ include __DIR__ . '/../includes/layout-header.php';
             document.getElementById('templateId').value = '';
             document.getElementById('modalTitleText').textContent = 'Ny Poängmall';
             document.getElementById('submitButtonText').textContent = 'Skapa';
+
+            // Reset points container and add initial rows
+            document.getElementById('pointsContainer').innerHTML = '';
+            pointRowCounter = 0;
+            for (let i = 1; i <= 10; i++) {
+                addPointRow(i, '');
+            }
 
             if (typeof lucide !== 'undefined') {
                 lucide.createIcons();
@@ -254,8 +377,71 @@ include __DIR__ . '/../includes/layout-header.php';
             document.getElementById('templateModal').style.display = 'none';
         }
 
+        function openImportModal() {
+            document.getElementById('importModal').style.display = 'flex';
+            if (typeof lucide !== 'undefined') {
+                lucide.createIcons();
+            }
+        }
+
+        function closeImportModal() {
+            document.getElementById('importModal').style.display = 'none';
+        }
+
+        function addPointRow(position = null, points = '') {
+            const container = document.getElementById('pointsContainer');
+            const nextPosition = position || (pointRowCounter + 1);
+            pointRowCounter = Math.max(pointRowCounter, nextPosition);
+
+            const row = document.createElement('div');
+            row.className = 'gs-flex gs-items-center gs-gap-sm gs-mb-xs';
+            row.innerHTML = `
+                <div style="width: 80px;">
+                    <label class="gs-text-xs gs-text-secondary">Plats #${nextPosition}</label>
+                </div>
+                <div style="flex: 1;">
+                    <input type="number"
+                           name="points[${nextPosition}]"
+                           class="gs-input gs-input-sm"
+                           value="${points}"
+                           min="0"
+                           placeholder="Poäng">
+                </div>
+                <button type="button" class="gs-btn gs-btn-xs gs-btn-outline gs-btn-danger" onclick="this.parentElement.remove()">
+                    <i data-lucide="x" style="width:12px;height:12px;"></i>
+                </button>
+            `;
+            container.appendChild(row);
+
+            if (typeof lucide !== 'undefined') {
+                lucide.createIcons();
+            }
+        }
+
         function editTemplate(id) {
             window.location.href = `?edit=${id}`;
+        }
+
+        function exportTemplate(id) {
+            const template = templates.find(t => t.id == id);
+            if (!template) return;
+
+            const exportData = {
+                name: template.name,
+                description: template.description || '',
+                points: JSON.parse(template.points)
+            };
+
+            const dataStr = JSON.stringify(exportData, null, 2);
+            const blob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `pointtemplate_${template.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
         }
 
         function deleteTemplate(id, name) {
@@ -282,13 +468,21 @@ include __DIR__ . '/../includes/layout-header.php';
                 document.getElementById('name').value = '<?= addslashes($editTemplate['name']) ?>';
                 document.getElementById('description').value = '<?= addslashes($editTemplate['description'] ?? '') ?>';
 
-                // Populate points
-                <?php foreach ($editTemplate['points'] ?? [] as $position => $pointValue): ?>
-                    const input<?= $position ?> = document.getElementById('points_<?= $position ?>');
-                    if (input<?= $position ?>) {
-                        input<?= $position ?>.value = '<?= $pointValue ?>';
-                    }
-                <?php endforeach; ?>
+                // Reset and populate points
+                document.getElementById('pointsContainer').innerHTML = '';
+                pointRowCounter = 0;
+
+                const editPoints = <?= json_encode($editTemplate['points'] ?? []) ?>;
+                const positions = Object.keys(editPoints).map(Number).sort((a, b) => a - b);
+
+                positions.forEach(position => {
+                    addPointRow(position, editPoints[position]);
+                });
+
+                // Add a few empty rows
+                for (let i = 0; i < 3; i++) {
+                    addPointRow();
+                }
 
                 document.getElementById('modalTitleText').textContent = 'Redigera Poängmall';
                 document.getElementById('submitButtonText').textContent = 'Uppdatera';
@@ -304,6 +498,7 @@ include __DIR__ . '/../includes/layout-header.php';
         document.addEventListener('keydown', function(e) {
             if (e.key === 'Escape') {
                 closeTemplateModal();
+                closeImportModal();
             }
         });
     </script>
