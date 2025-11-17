@@ -205,7 +205,7 @@ try {
 <style>
     /* COMPACT HORIZONTAL CARD with Photo */
     .license-card-container {
-        margin-bottom: 1rem;
+        margin-bottom: 2rem;
     }
 
     .license-card {
@@ -213,14 +213,14 @@ try {
         width: 100%;
         margin: 0 auto;
         background: white;
-        border-radius: 8px;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        border-radius: 12px;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
         overflow: hidden;
     }
 
     /* UCI Stripe */
     .uci-stripe {
-        height: 4px;
+        height: 6px;
         background: linear-gradient(90deg,
             #c8161b 0% 20%,
             #8a9859 20% 40%,
@@ -230,25 +230,26 @@ try {
         );
     }
 
-    /* Horizontal Layout: Photo LEFT, Info RIGHT */
+    /* Desktop: Larger Photo and Better Layout */
     .license-content {
-        padding: 12px;
+        padding: 24px;
         display: grid;
-        grid-template-columns: 100px 1fr;
-        gap: 16px;
+        grid-template-columns: 180px 1fr;
+        gap: 32px;
         align-items: start;
     }
 
-    /* Photo Section */
+    /* Photo Section - Desktop: Larger */
     .license-photo {
-        width: 100px;
-        height: 120px;
-        border-radius: 6px;
+        width: 180px;
+        height: 240px;
+        border-radius: 8px;
         overflow: hidden;
         background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
         display: flex;
         align-items: center;
         justify-content: center;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
     }
 
     .license-photo img {
@@ -258,31 +259,31 @@ try {
     }
 
     .photo-placeholder {
-        font-size: 3rem;
+        font-size: 4rem;
         opacity: 0.3;
     }
 
-    /* Info Section */
+    /* Info Section - Desktop: Better spacing */
     .license-info {
         display: flex;
         flex-direction: column;
-        gap: 6px;
+        gap: 12px;
     }
 
-    /* Name - on one line */
+    /* Name - Desktop: Larger */
     .rider-name {
-        font-size: 18px;
+        font-size: 28px;
         font-weight: 700;
         color: #1a202c;
         text-transform: uppercase;
-        letter-spacing: -0.2px;
+        letter-spacing: -0.5px;
         line-height: 1.2;
         margin: 0;
     }
 
-    /* License ID */
+    /* License ID - Desktop: Larger */
     .license-id {
-        font-size: 11px;
+        font-size: 14px;
         color: #667eea;
         font-weight: 600;
     }
@@ -290,22 +291,22 @@ try {
     /* License Type and Status */
     .license-info-inline {
         display: flex;
-        gap: 8px;
+        gap: 12px;
         align-items: center;
         flex-wrap: wrap;
     }
 
     .license-type-text {
-        font-size: 11px;
+        font-size: 14px;
         color: #718096;
         font-weight: 600;
     }
 
     .license-status-badge {
         display: inline-block;
-        padding: 2px 8px;
-        border-radius: 10px;
-        font-size: 10px;
+        padding: 4px 12px;
+        border-radius: 12px;
+        font-size: 12px;
         font-weight: 600;
         text-transform: uppercase;
     }
@@ -320,50 +321,126 @@ try {
         color: white;
     }
 
-    /* Info Grid */
+    /* Info Grid - Desktop: Better spacing */
     .info-grid-compact {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(70px, 1fr));
-        gap: 6px;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 12px;
     }
 
     .info-box {
         background: #f8f9fa;
-        padding: 4px 8px;
-        border-radius: 4px;
+        padding: 12px 16px;
+        border-radius: 8px;
         text-align: center;
+        border-left: 3px solid #667eea;
     }
 
     .info-box-label {
-        font-size: 8px;
+        font-size: 11px;
         color: #718096;
         font-weight: 600;
         text-transform: uppercase;
-        letter-spacing: 0.2px;
-        margin-bottom: 2px;
+        letter-spacing: 0.5px;
+        margin-bottom: 4px;
     }
 
     .info-box-value {
-        font-size: 12px;
+        font-size: 16px;
         color: #1a202c;
-        font-weight: 600;
+        font-weight: 700;
+    }
+
+    /* Club Link Styling */
+    .club-link {
+        color: #667eea;
+        text-decoration: none;
+        font-weight: 700;
+        transition: color 0.2s, text-decoration 0.2s;
+    }
+
+    .club-link:hover {
+        color: #764ba2;
+        text-decoration: underline;
+    }
+
+    /* Statistics Cards - Equal Width on Desktop */
+    .gs-stat-card-compact {
+        min-height: 120px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        padding: 1rem;
     }
 
     /* Tablet */
     @media (max-width: 900px) {
+        .license-card-container {
+            margin-bottom: 1rem;
+        }
+
+        .license-card {
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .uci-stripe {
+            height: 4px;
+        }
+
         .license-content {
-            grid-template-columns: 80px 1fr;
-            gap: 12px;
-            padding: 10px;
+            grid-template-columns: 100px 1fr;
+            gap: 16px;
+            padding: 12px;
         }
 
         .license-photo {
-            width: 80px;
-            height: 100px;
+            width: 100px;
+            height: 120px;
+            border-radius: 6px;
+        }
+
+        .photo-placeholder {
+            font-size: 3rem;
+        }
+
+        .license-info {
+            gap: 6px;
         }
 
         .rider-name {
-            font-size: 16px;
+            font-size: 18px;
+            letter-spacing: -0.2px;
+        }
+
+        .license-id {
+            font-size: 11px;
+        }
+
+        .license-type-text {
+            font-size: 11px;
+        }
+
+        .license-status-badge {
+            font-size: 10px;
+            padding: 2px 8px;
+        }
+
+        .info-grid-compact {
+            gap: 6px;
+        }
+
+        .info-box {
+            padding: 4px 8px;
+        }
+
+        .info-box-label {
+            font-size: 8px;
+            margin-bottom: 2px;
+        }
+
+        .info-box-value {
+            font-size: 12px;
         }
     }
 
@@ -411,6 +488,10 @@ try {
 
         .info-box-value {
             font-size: 10px;
+        }
+
+        .info-grid-compact {
+            grid-template-columns: repeat(auto-fit, minmax(70px, 1fr));
         }
     }
 </style>
@@ -503,7 +584,13 @@ try {
                                 <div class="info-box">
                                     <div class="info-box-label">Klubb</div>
                                     <div class="info-box-value" style="font-size: 11px;">
-                                        <?= $rider['club_name'] ? h($rider['club_name']) : '–' ?>
+                                        <?php if ($rider['club_name'] && $rider['club_id']): ?>
+                                            <a href="/club.php?id=<?= $rider['club_id'] ?>" class="club-link" title="Se alla medlemmar i <?= h($rider['club_name']) ?>">
+                                                <?= h($rider['club_name']) ?>
+                                            </a>
+                                        <?php else: ?>
+                                            <?= $rider['club_name'] ? h($rider['club_name']) : '–' ?>
+                                        <?php endif; ?>
                                     </div>
                                 </div>
                             </div>

@@ -1,102 +1,321 @@
 <?php
 require_once __DIR__ . '/../config.php';
-require_once __DIR__ . '/../includes/point-calculations.php';
-require_once __DIR__ . '/../includes/class-calculations.php';
 require_admin();
 
 $db = getDB();
-$message = '';
-$messageType = 'info';
-
-// Get active tab
-$activeTab = $_GET['tab'] ?? 'classes';
-
-// Handle class actions
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
-    checkCsrf();
-
-    if ($_POST['action'] === 'update_class') {
-        $classId = (int)$_POST['class_id'];
-        $name = trim($_POST['name']);
-        $displayName = trim($_POST['display_name']);
-        $gender = $_POST['gender'] ?? 'ALL';
-        $minAge = !empty($_POST['min_age']) ? (int)$_POST['min_age'] : null;
-        $maxAge = !empty($_POST['max_age']) ? (int)$_POST['max_age'] : null;
-        $discipline = $_POST['discipline'] ?? 'ALL';
-        $sortOrder = !empty($_POST['sort_order']) ? (int)$_POST['sort_order'] : 0;
-        $active = isset($_POST['active']) ? 1 : 0;
-
-        if (empty($name) || empty($displayName)) {
-            $message = 'Namn och visningsnamn krävs';
-            $messageType = 'error';
-        } else {
-            $db->update('classes', [
-                'name' => $name,
-                'display_name' => $displayName,
-                'gender' => $gender,
-                'min_age' => $minAge,
-                'max_age' => $maxAge,
-                'discipline' => $discipline,
-                'sort_order' => $sortOrder,
-                'active' => $active
-            ], 'id = ?', [$classId]);
-
-            $message = "Klass '{$name}' uppdaterad!";
-            $messageType = 'success';
-        }
-    } elseif ($_POST['action'] === 'create_class') {
-        $name = trim($_POST['name']);
-        $displayName = trim($_POST['display_name']);
-        $gender = $_POST['gender'] ?? 'ALL';
-        $minAge = !empty($_POST['min_age']) ? (int)$_POST['min_age'] : null;
-        $maxAge = !empty($_POST['max_age']) ? (int)$_POST['max_age'] : null;
-        $discipline = $_POST['discipline'] ?? 'ALL';
-        $sortOrder = !empty($_POST['sort_order']) ? (int)$_POST['sort_order'] : 0;
-        $active = isset($_POST['active']) ? 1 : 0;
-
-        if (empty($name) || empty($displayName)) {
-            $message = 'Namn och visningsnamn krävs';
-            $messageType = 'error';
-        } else {
-            // Check if class name already exists
-            $existing = $db->getRow("SELECT id FROM classes WHERE name = ?", [$name]);
-            if ($existing) {
-                $message = "Klass med namnet '{$name}' finns redan!";
-                $messageType = 'error';
-            } else {
-                $db->insert('classes', [
-                    'name' => $name,
-                    'display_name' => $displayName,
-                    'gender' => $gender,
-                    'min_age' => $minAge,
-                    'max_age' => $maxAge,
-                    'discipline' => $discipline,
-                    'sort_order' => $sortOrder,
-                    'active' => $active
-                ]);
-
-                $message = "Klass '{$name}' skapad!";
-                $messageType = 'success';
-            }
-        }
-    }
-}
-
-// Get all classes
-$classes = $db->getAll("
-    SELECT
-        c.*,
-        ps.name as scale_name,
-        (SELECT COUNT(*) FROM results WHERE class_id = c.id) as result_count
-    FROM classes c
-    LEFT JOIN point_scales ps ON c.point_scale_id = ps.id
-    ORDER BY c.sort_order ASC, c.name ASC
-");
 
 $pageTitle = 'Systeminställningar';
 $pageType = 'admin';
 include __DIR__ . '/../includes/layout-header.php';
+
+// Define all debug and test tools organized by category
+$tools = [
+    'database' => [
+        'title' => 'Databas & Migrationer',
+        'icon' => 'database',
+        'color' => 'primary',
+        'items' => [
+            [
+                'name' => 'Fristående Migration',
+                'url' => '/admin/migrate.php',
+                'description' => 'Kör databas migration utan inloggningskrav. Lägger till utökade fält.',
+                'status' => 'recommended'
+            ],
+            [
+                'name' => 'Test DB Connection',
+                'url' => '/admin/test-database-connection.php',
+                'description' => 'Testar databas-anslutning och verifierar konfiguration.',
+                'status' => 'test'
+            ],
+            [
+                'name' => 'Debug Database',
+                'url' => '/admin/debug-database.php',
+                'description' => 'Visar detaljerad databasinformation och tabellstruktur.',
+                'status' => 'debug'
+            ],
+            [
+                'name' => 'Debug Migration',
+                'url' => '/admin/debug-migration.php',
+                'description' => 'Debug-verktyg för migration problem.',
+                'status' => 'debug'
+            ],
+            [
+                'name' => 'Test Migration',
+                'url' => '/admin/test-migration.php',
+                'description' => 'Testar migration steg för steg.',
+                'status' => 'test'
+            ]
+        ]
+    ],
+    'series' => [
+        'title' => 'Serier & Format',
+        'icon' => 'trophy',
+        'color' => 'success',
+        'items' => [
+            [
+                'name' => 'Check Series Format',
+                'url' => '/admin/check-series-format.php',
+                'description' => 'Diagnostik för Team format sparning. Kontrollerar om format-kolumnen existerar.',
+                'status' => 'recommended'
+            ],
+            [
+                'name' => 'Debug Series',
+                'url' => '/admin/debug-series.php',
+                'description' => 'Visar serie-information och debug-data.',
+                'status' => 'debug'
+            ]
+        ]
+    ],
+    'riders' => [
+        'title' => 'Deltagare & Licenser',
+        'icon' => 'users',
+        'color' => 'accent',
+        'items' => [
+            [
+                'name' => 'Test Riders',
+                'url' => '/admin/test-riders.php',
+                'description' => 'Testar deltagarfunktionalitet.',
+                'status' => 'test'
+            ],
+            [
+                'name' => 'Test Riders Simple',
+                'url' => '/admin/test-riders-simple.php',
+                'description' => 'Enklare test av deltagarfunktioner.',
+                'status' => 'test'
+            ],
+            [
+                'name' => 'Debug Licenses',
+                'url' => '/admin/debug-licenses.php',
+                'description' => 'Visar licensinformation och validering.',
+                'status' => 'debug'
+            ]
+        ]
+    ],
+    'import' => [
+        'title' => 'Import & CSV',
+        'icon' => 'upload',
+        'color' => 'warning',
+        'items' => [
+            [
+                'name' => 'Test Import',
+                'url' => '/admin/test-import.php',
+                'description' => 'Testar import-funktionalitet.',
+                'status' => 'test'
+            ],
+            [
+                'name' => 'Debug CSV Mapping',
+                'url' => '/admin/debug-csv-mapping.php',
+                'description' => 'Debug CSV-kolumn mapping.',
+                'status' => 'debug'
+            ]
+        ]
+    ],
+    'system' => [
+        'title' => 'System & Session',
+        'icon' => 'settings',
+        'color' => 'secondary',
+        'items' => [
+            [
+                'name' => 'Debug System Settings',
+                'url' => '/admin/debug-system-settings.php',
+                'description' => 'Visar systeminställningar och konfiguration.',
+                'status' => 'debug'
+            ],
+            [
+                'name' => 'Debug Session',
+                'url' => '/admin/debug-session.php',
+                'description' => 'Testar sessionshantering och inloggning.',
+                'status' => 'debug'
+            ],
+            [
+                'name' => 'Debug General',
+                'url' => '/admin/debug.php',
+                'description' => 'Allmän debug-information.',
+                'status' => 'debug'
+            ],
+            [
+                'name' => 'Check Files',
+                'url' => '/admin/check-files.php',
+                'description' => 'Kontrollerar att alla viktiga filer finns.',
+                'status' => 'test'
+            ],
+            [
+                'name' => 'Test GetDB',
+                'url' => '/admin/test-getdb.php',
+                'description' => 'Testar getDB() funktionen.',
+                'status' => 'test'
+            ]
+        ]
+    ],
+    'classes' => [
+        'title' => 'Klasser',
+        'icon' => 'layers',
+        'color' => 'info',
+        'items' => [
+            [
+                'name' => 'Test Classes',
+                'url' => '/admin/test-classes.php',
+                'description' => 'Testar klass-funktionalitet.',
+                'status' => 'test'
+            ]
+        ]
+    ]
+];
+
 ?>
+
+<style>
+    .tool-item {
+        position: relative;
+        padding: 1rem;
+        background: white;
+        border: 2px solid #e5e7eb;
+        border-radius: 8px;
+        transition: all 0.2s;
+    }
+
+    .tool-item:hover {
+        border-color: var(--gs-primary);
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+    }
+
+    .tool-item.completed {
+        background: #f0fdf4;
+        border-color: #86efac;
+    }
+
+    .tool-item.completed .tool-name {
+        text-decoration: line-through;
+        opacity: 0.7;
+    }
+
+    .tool-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 0.5rem;
+    }
+
+    .tool-name {
+        font-weight: 700;
+        font-size: 1rem;
+        color: #1a202c;
+        margin-bottom: 0.25rem;
+    }
+
+    .tool-description {
+        font-size: 0.875rem;
+        color: #718096;
+        margin-bottom: 0.75rem;
+    }
+
+    .tool-actions {
+        display: flex;
+        gap: 0.5rem;
+        align-items: center;
+    }
+
+    .tool-status-badge {
+        font-size: 0.75rem;
+        padding: 2px 8px;
+        border-radius: 12px;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+
+    .tool-status-recommended {
+        background: #10b981;
+        color: white;
+    }
+
+    .tool-status-test {
+        background: #3b82f6;
+        color: white;
+    }
+
+    .tool-status-debug {
+        background: #f59e0b;
+        color: white;
+    }
+
+    .checkbox-complete {
+        width: 24px;
+        height: 24px;
+        cursor: pointer;
+    }
+
+    .category-card {
+        margin-bottom: 2rem;
+    }
+
+    .category-header {
+        padding: 1rem 1.5rem;
+        background: linear-gradient(135deg, var(--gs-primary) 0%, var(--gs-primary-dark) 100%);
+        color: white;
+        border-radius: 8px 8px 0 0;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .category-header.color-success {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    }
+
+    .category-header.color-accent {
+        background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    }
+
+    .category-header.color-warning {
+        background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    }
+
+    .category-header.color-secondary {
+        background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
+    }
+
+    .category-header.color-info {
+        background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    }
+
+    .category-body {
+        padding: 1.5rem;
+        background: white;
+        border: 2px solid #e5e7eb;
+        border-top: none;
+        border-radius: 0 0 8px 8px;
+    }
+
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+
+    .stat-card {
+        padding: 1.5rem;
+        background: white;
+        border: 2px solid #e5e7eb;
+        border-radius: 8px;
+        text-align: center;
+    }
+
+    .stat-number {
+        font-size: 2.5rem;
+        font-weight: 800;
+        color: var(--gs-primary);
+        line-height: 1;
+        margin-bottom: 0.5rem;
+    }
+
+    .stat-label {
+        font-size: 0.875rem;
+        color: #718096;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+</style>
 
 <main class="gs-main-content">
     <div class="gs-container">
@@ -107,445 +326,159 @@ include __DIR__ . '/../includes/layout-header.php';
             </h1>
         </div>
 
-        <?php if ($message): ?>
-            <div class="gs-alert gs-alert-<?= h($messageType) ?> gs-mb-lg">
-                <i data-lucide="<?= $messageType === 'success' ? 'check-circle' : 'alert-circle' ?>"></i>
-                <?= h($message) ?>
-            </div>
-        <?php endif; ?>
-
-        <!-- Tabs -->
-        <div class="gs-tabs gs-mb-lg">
-            <a href="?tab=classes" class="gs-tab <?= $activeTab === 'classes' ? 'active' : '' ?>">
-                <i data-lucide="users"></i>
-                Klasser
-            </a>
-            <a href="?tab=migration" class="gs-tab <?= $activeTab === 'migration' ? 'active' : '' ?>">
-                <i data-lucide="database"></i>
-                Databasmigrationer
-            </a>
+        <div class="gs-alert gs-alert-info gs-mb-lg">
+            <i data-lucide="info"></i>
+            <strong>Debug & Test Verktyg:</strong> Klicka på en länk för att öppna verktyget. Markera som klar när du är färdig med att använda det.
         </div>
 
-        <!-- Classes Tab -->
-        <?php if ($activeTab === 'classes'): ?>
-            <div class="gs-alert gs-alert-info gs-mb-lg">
-                <i data-lucide="info"></i>
-                <strong>Tips:</strong> Alla klasser kan redigeras. Klicka på en klass för att ändra inställningar.
+        <!-- Stats -->
+        <div class="stats-grid">
+            <?php
+            $totalTools = 0;
+            foreach ($tools as $category) {
+                $totalTools += count($category['items']);
+            }
+            ?>
+            <div class="stat-card">
+                <div class="stat-number"><?= count($tools) ?></div>
+                <div class="stat-label">Kategorier</div>
             </div>
-
-            <div class="gs-card">
-                <div class="gs-card-header">
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <h3 class="gs-h4" style="margin: 0;">Alla klasser (<?= count($classes) ?>)</h3>
-                        <button type="button" class="gs-btn gs-btn-primary" onclick="openCreateModal()">
-                            <i data-lucide="plus"></i>
-                            Ny klass
-                        </button>
-                    </div>
-                </div>
-                <div class="gs-card-content" style="padding: 0; overflow-x: auto; -webkit-overflow-scrolling: touch;">
-                    <table class="gs-table">
-                        <thead>
-                            <tr>
-                                <th>Namn</th>
-                                <th>Visningsnamn</th>
-                                <th>Kön</th>
-                                <th>Åldersintervall</th>
-                                <th>Disciplin</th>
-                                <th>Resultat</th>
-                                <th>Status</th>
-                                <th>Åtgärder</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php foreach ($classes as $class): ?>
-                                <tr>
-                                    <td>
-                                        <strong class="gs-text-primary"><?= h($class['name']) ?></strong>
-                                    </td>
-                                    <td><?= h($class['display_name']) ?></td>
-                                    <td>
-                                        <span class="gs-badge gs-badge-<?= $class['gender'] === 'M' ? 'primary' : ($class['gender'] === 'K' ? 'accent' : 'secondary') ?> gs-badge-sm">
-                                            <?= h($class['gender']) ?>
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <?php if ($class['min_age'] || $class['max_age']): ?>
-                                            <?= $class['min_age'] ?? '–' ?> – <?= $class['max_age'] ?? '–' ?> år
-                                        <?php else: ?>
-                                            <span class="gs-text-secondary">–</span>
-                                        <?php endif; ?>
-                                    </td>
-                                    <td>
-                                        <span class="gs-badge gs-badge-secondary gs-badge-sm">
-                                            <?= h($class['discipline']) ?>
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <span class="gs-badge gs-badge-info gs-badge-sm">
-                                            <?= $class['result_count'] ?>
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <?php if ($class['active']): ?>
-                                            <span class="gs-badge gs-badge-success gs-badge-sm">Aktiv</span>
-                                        <?php else: ?>
-                                            <span class="gs-badge gs-badge-secondary gs-badge-sm">Inaktiv</span>
-                                        <?php endif; ?>
-                                    </td>
-                                    <td>
-                                        <button type="button" class="gs-btn gs-btn-sm gs-btn-outline" onclick="editClass(<?= htmlspecialchars(json_encode($class), ENT_QUOTES, 'UTF-8') ?>)">
-                                            <i data-lucide="edit" style="width: 14px; height: 14px;"></i>
-                                            Redigera
-                                        </button>
-                                    </td>
-                                </tr>
-                            <?php endforeach; ?>
-                        </tbody>
-                    </table>
-                </div>
+            <div class="stat-card">
+                <div class="stat-number"><?= $totalTools ?></div>
+                <div class="stat-label">Totalt verktyg</div>
             </div>
-        <?php endif; ?>
-
-        <!-- Migration Tab -->
-        <?php if ($activeTab === 'migration'): ?>
-            <div class="gs-alert gs-alert-info gs-mb-lg">
-                <i data-lucide="info"></i>
-                <strong>Snabblänkar:</strong> Verktyg för databas migration och debug.
+            <div class="stat-card">
+                <div class="stat-number" id="completedCount">0</div>
+                <div class="stat-label">Klarmarkerade</div>
             </div>
-
-            <div class="gs-alert gs-alert-warning gs-mb-lg">
-                <i data-lucide="alert-triangle"></i>
-                <strong>OBS:</strong> Import-verktyg har flyttat till <a href="/admin/import.php" style="color: #EF761F; text-decoration: underline; font-weight: 600;">Import-sidan</a>.
+            <div class="stat-card">
+                <button type="button" class="gs-btn gs-btn-outline gs-btn-sm" onclick="clearAllCompleted()">
+                    <i data-lucide="x"></i>
+                    Rensa alla markeringar
+                </button>
             </div>
+        </div>
 
-            <!-- Migration Tools -->
-            <div class="gs-card">
-                <div class="gs-card-header">
-                    <h3 class="gs-h4" style="margin: 0;">
-                        <i data-lucide="database"></i>
-                        Databasmigrationer
+        <!-- Tool Categories -->
+        <?php foreach ($tools as $categoryKey => $category): ?>
+            <div class="category-card">
+                <div class="category-header color-<?= $category['color'] ?>">
+                    <i data-lucide="<?= $category['icon'] ?>" style="width: 24px; height: 24px;"></i>
+                    <h3 style="margin: 0; font-size: 1.25rem;">
+                        <?= h($category['title']) ?>
+                        <span style="opacity: 0.8; font-size: 0.875rem; font-weight: normal;">
+                            (<?= count($category['items']) ?> verktyg)
+                        </span>
                     </h3>
                 </div>
-                <div class="gs-card-content">
+                <div class="category-body">
                     <div class="gs-grid gs-grid-cols-1 gs-gap-md">
-                        <!-- Standalone Migration -->
-                        <div style="padding: 1rem; background: #f0fdf4; border: 2px solid #86efac; border-radius: 8px;">
-                            <div style="display: flex; justify-content: space-between; align-items: center;">
-                                <div>
-                                    <h4 style="margin: 0 0 0.5rem 0; font-size: 1rem; color: #16a34a;">
-                                        <i data-lucide="check-circle" style="width: 18px; height: 18px;"></i>
-                                        Fristående Migration (Rekommenderad)
-                                    </h4>
-                                    <p style="margin: 0; font-size: 0.875rem; color: #15803d;">
-                                        Kör databas migration utan inloggningskrav. Lägger till utökade fält för deltagare.
-                                    </p>
+                        <?php foreach ($category['items'] as $index => $tool): ?>
+                            <?php $toolId = $categoryKey . '-' . $index; ?>
+                            <div class="tool-item" id="tool-<?= $toolId ?>" data-tool-id="<?= $toolId ?>">
+                                <div class="tool-header">
+                                    <div style="flex: 1;">
+                                        <div class="tool-name"><?= h($tool['name']) ?></div>
+                                        <div class="tool-description"><?= h($tool['description']) ?></div>
+                                    </div>
+                                    <div class="tool-actions">
+                                        <input
+                                            type="checkbox"
+                                            class="checkbox-complete"
+                                            id="check-<?= $toolId ?>"
+                                            onchange="toggleComplete('<?= $toolId ?>')"
+                                            title="Markera som klar"
+                                        >
+                                    </div>
                                 </div>
-                                <a href="/admin/migrate.php" target="_blank" class="gs-btn gs-btn-success">
-                                    <i data-lucide="external-link"></i>
-                                    Öppna
-                                </a>
-                            </div>
-                        </div>
-
-                        <!-- Original Migration -->
-                        <div style="padding: 1rem; background: #fef2f2; border: 2px solid #fca5a5; border-radius: 8px;">
-                            <div style="display: flex; justify-content: space-between; align-items: center;">
-                                <div>
-                                    <h4 style="margin: 0 0 0.5rem 0; font-size: 1rem; color: #dc2626;">
-                                        <i data-lucide="alert-circle" style="width: 18px; height: 18px;"></i>
-                                        Original Migration (Kräver inloggning)
-                                    </h4>
-                                    <p style="margin: 0; font-size: 0.875rem; color: #b91c1c;">
-                                        Kräver admin-inloggning. Använd fristående migration istället om denna inte fungerar.
-                                    </p>
+                                <div style="display: flex; gap: 0.5rem; align-items: center;">
+                                    <a href="<?= h($tool['url']) ?>" target="_blank" class="gs-btn gs-btn-sm gs-btn-primary">
+                                        <i data-lucide="external-link" style="width: 14px; height: 14px;"></i>
+                                        Öppna verktyg
+                                    </a>
+                                    <?php if (isset($tool['status'])): ?>
+                                        <span class="tool-status-badge tool-status-<?= $tool['status'] ?>">
+                                            <?= $tool['status'] === 'recommended' ? 'Rekommenderad' : ($tool['status'] === 'test' ? 'Test' : 'Debug') ?>
+                                        </span>
+                                    <?php endif; ?>
                                 </div>
-                                <a href="/admin/run-migration-extended-riders.php" target="_blank" class="gs-btn gs-btn-outline">
-                                    <i data-lucide="external-link"></i>
-                                    Öppna
-                                </a>
                             </div>
-                        </div>
-
-                        <!-- Debug Test -->
-                        <div style="padding: 1rem; background: #eff6ff; border: 2px solid #93c5fd; border-radius: 8px;">
-                            <div style="display: flex; justify-content: space-between; align-items: center;">
-                                <div>
-                                    <h4 style="margin: 0 0 0.5rem 0; font-size: 1rem; color: #2563eb;">
-                                        <i data-lucide="bug" style="width: 18px; height: 18px;"></i>
-                                        Debug Test
-                                    </h4>
-                                    <p style="margin: 0; font-size: 0.875rem; color: #1e40af;">
-                                        Testar databas-anslutning och admin-behörighet steg för steg.
-                                    </p>
-                                </div>
-                                <a href="/admin/test-migration.php" target="_blank" class="gs-btn gs-btn-outline">
-                                    <i data-lucide="external-link"></i>
-                                    Öppna
-                                </a>
-                            </div>
-                        </div>
+                        <?php endforeach; ?>
                     </div>
                 </div>
             </div>
-        <?php endif; ?>
+        <?php endforeach; ?>
     </div>
 </main>
-
-<!-- Edit Class Modal -->
-<div id="editClassModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.5); z-index: 9999; align-items: center; justify-content: center;">
-    <div style="background: white; border-radius: 12px; width: 90%; max-width: 600px; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);">
-        <div style="padding: 1.5rem; border-bottom: 1px solid var(--gs-border); display: flex; justify-content: space-between; align-items: center;">
-            <h3 class="gs-h4" style="margin: 0;">
-                <i data-lucide="edit"></i>
-                Redigera klass
-            </h3>
-            <button type="button" onclick="closeEditModal()" style="background: none; border: none; cursor: pointer; font-size: 24px; color: var(--gs-text-secondary);">
-                ×
-            </button>
-        </div>
-
-        <form method="POST" action="" style="padding: 1.5rem;">
-            <?= csrf() ?>
-            <input type="hidden" name="action" value="update_class">
-            <input type="hidden" name="class_id" id="edit_class_id">
-
-            <div class="gs-grid gs-grid-cols-2 gs-gap-md gs-mb-lg">
-                <div>
-                    <label class="gs-label">Namn (kod)</label>
-                    <input type="text" name="name" id="edit_name" class="gs-input" required>
-                    <small class="gs-text-secondary">T.ex. M17, K40</small>
-                </div>
-
-                <div>
-                    <label class="gs-label">Visningsnamn</label>
-                    <input type="text" name="display_name" id="edit_display_name" class="gs-input" required>
-                    <small class="gs-text-secondary">T.ex. Män 17-18 år</small>
-                </div>
-            </div>
-
-            <div class="gs-grid gs-grid-cols-2 gs-gap-md gs-mb-lg">
-                <div>
-                    <label class="gs-label">Kön</label>
-                    <select name="gender" id="edit_gender" class="gs-input">
-                        <option value="M">M (Man)</option>
-                        <option value="K">K (Kvinna)</option>
-                        <option value="ALL">ALL (Alla)</option>
-                    </select>
-                </div>
-
-                <div>
-                    <label class="gs-label">Disciplin</label>
-                    <select name="discipline" id="edit_discipline" class="gs-input">
-                        <option value="ROAD">ROAD (Landsväg)</option>
-                        <option value="MTB">MTB (Mountainbike)</option>
-                        <option value="ALL">ALL (Alla)</option>
-                    </select>
-                </div>
-            </div>
-
-            <div class="gs-grid gs-grid-cols-3 gs-gap-md gs-mb-lg">
-                <div>
-                    <label class="gs-label">Min ålder</label>
-                    <input type="number" name="min_age" id="edit_min_age" class="gs-input" min="0" max="120">
-                    <small class="gs-text-secondary">Lämna tom för ingen min</small>
-                </div>
-
-                <div>
-                    <label class="gs-label">Max ålder</label>
-                    <input type="number" name="max_age" id="edit_max_age" class="gs-input" min="0" max="120">
-                    <small class="gs-text-secondary">Lämna tom för ingen max</small>
-                </div>
-
-                <div>
-                    <label class="gs-label">Sorteringsordning</label>
-                    <input type="number" name="sort_order" id="edit_sort_order" class="gs-input" value="0">
-                    <small class="gs-text-secondary">Lägre = högre upp</small>
-                </div>
-            </div>
-
-            <div class="gs-mb-lg">
-                <label class="gs-checkbox">
-                    <input type="checkbox" name="active" id="edit_active" value="1">
-                    <span>Aktiv klass</span>
-                </label>
-            </div>
-
-            <div style="display: flex; justify-content: flex-end; gap: 0.5rem; padding-top: 1rem; border-top: 1px solid var(--gs-border);">
-                <button type="button" onclick="closeEditModal()" class="gs-btn gs-btn-outline">
-                    Avbryt
-                </button>
-                <button type="submit" class="gs-btn gs-btn-primary">
-                    <i data-lucide="save"></i>
-                    Spara ändringar
-                </button>
-            </div>
-        </form>
-    </div>
-</div>
-
-<!-- Create Class Modal -->
-<div id="createClassModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.5); z-index: 9999; align-items: center; justify-content: center;">
-    <div style="background: white; border-radius: 12px; width: 90%; max-width: 600px; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);">
-        <div style="padding: 1.5rem; border-bottom: 1px solid var(--gs-border); display: flex; justify-content: space-between; align-items: center;">
-            <h3 class="gs-h4" style="margin: 0;">
-                <i data-lucide="plus"></i>
-                Skapa ny klass
-            </h3>
-            <button type="button" onclick="closeCreateModal()" style="background: none; border: none; cursor: pointer; font-size: 24px; color: var(--gs-text-secondary);">
-                ×
-            </button>
-        </div>
-
-        <form method="POST" action="" style="padding: 1.5rem;">
-            <?= csrf() ?>
-            <input type="hidden" name="action" value="create_class">
-
-            <div class="gs-grid gs-grid-cols-2 gs-gap-md gs-mb-lg">
-                <div>
-                    <label class="gs-label">Namn (kod)</label>
-                    <input type="text" name="name" id="create_name" class="gs-input" required>
-                    <small class="gs-text-secondary">T.ex. M17, K40</small>
-                </div>
-
-                <div>
-                    <label class="gs-label">Visningsnamn</label>
-                    <input type="text" name="display_name" id="create_display_name" class="gs-input" required>
-                    <small class="gs-text-secondary">T.ex. Män 17-18 år</small>
-                </div>
-            </div>
-
-            <div class="gs-grid gs-grid-cols-2 gs-gap-md gs-mb-lg">
-                <div>
-                    <label class="gs-label">Kön</label>
-                    <select name="gender" id="create_gender" class="gs-input">
-                        <option value="M">M (Man)</option>
-                        <option value="K">K (Kvinna)</option>
-                        <option value="ALL">ALL (Alla)</option>
-                    </select>
-                </div>
-
-                <div>
-                    <label class="gs-label">Disciplin</label>
-                    <select name="discipline" id="create_discipline" class="gs-input">
-                        <option value="ROAD">ROAD (Landsväg)</option>
-                        <option value="MTB">MTB (Mountainbike)</option>
-                        <option value="ALL">ALL (Alla)</option>
-                    </select>
-                </div>
-            </div>
-
-            <div class="gs-grid gs-grid-cols-3 gs-gap-md gs-mb-lg">
-                <div>
-                    <label class="gs-label">Min ålder</label>
-                    <input type="number" name="min_age" id="create_min_age" class="gs-input" min="0" max="120">
-                    <small class="gs-text-secondary">Lämna tom för ingen min</small>
-                </div>
-
-                <div>
-                    <label class="gs-label">Max ålder</label>
-                    <input type="number" name="max_age" id="create_max_age" class="gs-input" min="0" max="120">
-                    <small class="gs-text-secondary">Lämna tom för ingen max</small>
-                </div>
-
-                <div>
-                    <label class="gs-label">Sorteringsordning</label>
-                    <input type="number" name="sort_order" id="create_sort_order" class="gs-input" value="0">
-                    <small class="gs-text-secondary">Lägre = högre upp</small>
-                </div>
-            </div>
-
-            <div class="gs-mb-lg">
-                <label class="gs-checkbox">
-                    <input type="checkbox" name="active" id="create_active" value="1" checked>
-                    <span>Aktiv klass</span>
-                </label>
-            </div>
-
-            <div style="display: flex; justify-content: flex-end; gap: 0.5rem; padding-top: 1rem; border-top: 1px solid var(--gs-border);">
-                <button type="button" onclick="closeCreateModal()" class="gs-btn gs-btn-outline">
-                    Avbryt
-                </button>
-                <button type="submit" class="gs-btn gs-btn-primary">
-                    <i data-lucide="plus"></i>
-                    Skapa klass
-                </button>
-            </div>
-        </form>
-    </div>
-</div>
 
 <script src="https://unpkg.com/lucide@latest"></script>
 <script>
     lucide.createIcons();
 
-    function editClass(classData) {
-        // Populate form fields
-        document.getElementById('edit_class_id').value = classData.id;
-        document.getElementById('edit_name').value = classData.name;
-        document.getElementById('edit_display_name').value = classData.display_name;
-        document.getElementById('edit_gender').value = classData.gender;
-        document.getElementById('edit_discipline').value = classData.discipline;
-        document.getElementById('edit_min_age').value = classData.min_age || '';
-        document.getElementById('edit_max_age').value = classData.max_age || '';
-        document.getElementById('edit_sort_order').value = classData.sort_order || 0;
-        document.getElementById('edit_active').checked = classData.active == 1;
+    // Load completed tools from localStorage
+    function loadCompleted() {
+        const completed = JSON.parse(localStorage.getItem('completedTools') || '[]');
+        let count = 0;
 
-        // Show modal
-        const modal = document.getElementById('editClassModal');
-        modal.style.display = 'flex';
+        completed.forEach(toolId => {
+            const toolElement = document.getElementById('tool-' + toolId);
+            const checkbox = document.getElementById('check-' + toolId);
 
-        // Re-render icons in modal
-        lucide.createIcons();
+            if (toolElement && checkbox) {
+                toolElement.classList.add('completed');
+                checkbox.checked = true;
+                count++;
+            }
+        });
+
+        document.getElementById('completedCount').textContent = count;
     }
 
-    function closeEditModal() {
-        document.getElementById('editClassModal').style.display = 'none';
-    }
+    // Toggle complete status
+    function toggleComplete(toolId) {
+        const completed = JSON.parse(localStorage.getItem('completedTools') || '[]');
+        const toolElement = document.getElementById('tool-' + toolId);
+        const checkbox = document.getElementById('check-' + toolId);
 
-    // Close modal on outside click
-    document.getElementById('editClassModal').addEventListener('click', function(e) {
-        if (e.target === this) {
-            closeEditModal();
+        if (checkbox.checked) {
+            if (!completed.includes(toolId)) {
+                completed.push(toolId);
+            }
+            toolElement.classList.add('completed');
+        } else {
+            const index = completed.indexOf(toolId);
+            if (index > -1) {
+                completed.splice(index, 1);
+            }
+            toolElement.classList.remove('completed');
         }
-    });
 
-    // Close modal on Escape key
-    document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape') {
-            closeEditModal();
-            closeCreateModal();
-        }
-    });
-
-    // Create modal functions
-    function openCreateModal() {
-        const modal = document.getElementById('createClassModal');
-        modal.style.display = 'flex';
-
-        // Clear form fields
-        document.getElementById('create_name').value = '';
-        document.getElementById('create_display_name').value = '';
-        document.getElementById('create_gender').value = 'M';
-        document.getElementById('create_discipline').value = 'ROAD';
-        document.getElementById('create_min_age').value = '';
-        document.getElementById('create_max_age').value = '';
-        document.getElementById('create_sort_order').value = '0';
-        document.getElementById('create_active').checked = true;
-
-        // Re-render icons in modal
-        lucide.createIcons();
+        localStorage.setItem('completedTools', JSON.stringify(completed));
+        document.getElementById('completedCount').textContent = completed.length;
     }
 
-    function closeCreateModal() {
-        document.getElementById('createClassModal').style.display = 'none';
+    // Clear all completed
+    function clearAllCompleted() {
+        if (!confirm('Är du säker på att du vill rensa alla markeringar?')) {
+            return;
+        }
+
+        localStorage.removeItem('completedTools');
+
+        document.querySelectorAll('.tool-item').forEach(tool => {
+            tool.classList.remove('completed');
+        });
+
+        document.querySelectorAll('.checkbox-complete').forEach(checkbox => {
+            checkbox.checked = false;
+        });
+
+        document.getElementById('completedCount').textContent = '0';
     }
 
-    // Close create modal on outside click
-    document.getElementById('createClassModal').addEventListener('click', function(e) {
-        if (e.target === this) {
-            closeCreateModal();
-        }
+    // Load completed on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        loadCompleted();
     });
 </script>
 
