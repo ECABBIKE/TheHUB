@@ -92,9 +92,9 @@ include __DIR__ . '/includes/layout-header.php';
                     .series-card-horizontal {
                         display: grid;
                         grid-template-columns: 140px 1fr;
-                        gap: 1.25rem;
-                        padding: 1.25rem;
-                        min-height: 120px;
+                        gap: 1rem;
+                        padding: 1rem;
+                        min-height: auto;
                     }
                     .series-logo-container {
                         display: flex;
@@ -153,18 +153,29 @@ include __DIR__ . '/includes/layout-header.php';
                     }
                     @media (max-width: 640px) {
                         .series-card-horizontal {
-                            grid-template-columns: 100px 1fr;
-                            gap: 1rem;
-                            padding: 1rem;
+                            grid-template-columns: 80px 1fr;
+                            gap: 0.75rem;
+                            padding: 0.75rem;
+                        }
+                        .series-logo-container {
+                            padding: 0.5rem;
                         }
                         .series-logo-container img {
-                            max-height: 65px;
+                            max-height: 55px;
                         }
                         .series-title {
-                            font-size: 1.125rem;
+                            font-size: 1rem;
                         }
                         .series-description {
-                            font-size: 0.875rem;
+                            font-size: 0.8125rem;
+                            line-height: 1.4;
+                        }
+                        .series-year-badge {
+                            font-size: 0.75rem;
+                            padding: 0.1875rem 0.5rem;
+                        }
+                        .series-meta {
+                            font-size: 0.75rem;
                         }
                     }
                 </style>

@@ -514,36 +514,36 @@ try {
 
             <!-- Quick Stats -->
             <div class="gs-grid gs-grid-cols-2 gs-md-grid-cols-4 gs-gap-sm gs-mb-xl">
-                <div class="gs-card" style="text-align: center; padding: 0.75rem;">
-                    <div class="gs-h3 gs-text-primary"><?= $totalRaces ?></div>
-                    <div class="gs-text-xs gs-text-secondary">Race</div>
+                <div class="gs-card gs-stat-card-compact">
+                    <div class="gs-stat-number-compact gs-text-primary"><?= $totalRaces ?></div>
+                    <div class="gs-stat-label-compact">Race</div>
                 </div>
-                <div class="gs-card" style="text-align: center; padding: 0.75rem;">
-                    <div class="gs-h3" style="color: var(--gs-success);"><?= $wins ?></div>
-                    <div class="gs-text-xs gs-text-secondary">Segrar</div>
+                <div class="gs-card gs-stat-card-compact">
+                    <div class="gs-stat-number-compact" style="color: var(--gs-success);"><?= $wins ?></div>
+                    <div class="gs-stat-label-compact">Segrar</div>
                 </div>
-                <div class="gs-card" style="text-align: center; padding: 0.75rem;">
-                    <div class="gs-h3" style="color: var(--gs-warning);"><?= $bestPosition ?? '-' ?></div>
-                    <div class="gs-text-xs gs-text-secondary">Bästa placering</div>
+                <div class="gs-card gs-stat-card-compact">
+                    <div class="gs-stat-number-compact" style="color: var(--gs-warning);"><?= $bestPosition ?? '-' ?></div>
+                    <div class="gs-stat-label-compact">Bästa placering</div>
                 </div>
-                <div class="gs-card" style="text-align: center; padding: 0.75rem;">
+                <div class="gs-card gs-stat-card-compact">
                     <div style="display: flex; flex-direction: column; gap: 0.25rem;">
                         <?php if (!empty($seriesStandings)): ?>
                             <?php foreach ($seriesStandings as $standing): ?>
-                                <div style="font-size: 10px; line-height: 1.4;">
+                                <div style="font-size: 9px; line-height: 1.3;">
                                     <strong><?= h($standing['series_name']) ?>:</strong>
                                     #<?= $standing['position'] ?? '?' ?> (<?= $standing['total_points'] ?>p)
                                     <br>
-                                    <span style="color: #718096; font-size: 9px;">
+                                    <span style="color: #718096; font-size: 8px;">
                                         <?= h($standing['class_name']) ?> (<?= $standing['class_total'] ?> deltagare)
                                     </span>
                                 </div>
                             <?php endforeach; ?>
                         <?php else: ?>
-                            <div class="gs-h3 gs-text-primary">0</div>
+                            <div class="gs-stat-number-compact gs-text-primary">0</div>
                         <?php endif; ?>
                     </div>
-                    <div class="gs-text-xs gs-text-secondary" style="margin-top: 0.25rem;">Points</div>
+                    <div class="gs-stat-label-compact" style="margin-top: 0.25rem;">Points</div>
                 </div>
             </div>
 

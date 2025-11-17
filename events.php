@@ -91,9 +91,9 @@ include __DIR__ . '/includes/layout-header.php';
 
             <!-- Filter Controls -->
             <div class="gs-card gs-mb-lg" style="padding: 1rem;">
-                <form method="GET" action="" id="filterForm" class="gs-flex gs-gap-md gs-flex-wrap gs-items-end">
+                <form method="GET" action="" id="filterForm" class="gs-grid gs-grid-cols-1 gs-md-grid-cols-2 gs-gap-md">
                     <!-- Series Filter -->
-                    <div style="flex: 1; min-width: 200px;">
+                    <div>
                         <label class="gs-label">Serie</label>
                         <select name="series" class="gs-input" onchange="document.getElementById('filterForm').submit()">
                             <option value="">Alla serier</option>
@@ -106,7 +106,7 @@ include __DIR__ . '/includes/layout-header.php';
                     </div>
 
                     <!-- Event Type Filter -->
-                    <div style="flex: 1; min-width: 200px;">
+                    <div>
                         <label class="gs-label">Tävlingsformat</label>
                         <select name="format" class="gs-input" onchange="document.getElementById('filterForm').submit()">
                             <option value="">Alla format</option>
