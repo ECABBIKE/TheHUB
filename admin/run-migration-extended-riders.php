@@ -204,7 +204,7 @@ try {
         </h1>
 
         <?php if (!empty($success)): ?>
-            <div class="gs-card gs-mb-lg" style="border-left: 4px solid var(--gs-success);">
+            <div class="gs-card gs-mb-lg gs-bg-success">
                 <div class="gs-card-header">
                     <h2 class="gs-h4 gs-text-success">
                         <i data-lucide="check-circle"></i>
@@ -213,7 +213,7 @@ try {
                 </div>
                 <div class="gs-card-content">
                     <?php foreach ($success as $msg): ?>
-                        <div class="gs-text-sm gs-mb-xs" style="font-family: monospace;">
+                        <div class="gs-text-sm gs-mb-xs gs-font-monospace">
                             <?= h($msg) ?>
                         </div>
                     <?php endforeach; ?>
@@ -222,7 +222,7 @@ try {
         <?php endif; ?>
 
         <?php if (!empty($errors)): ?>
-            <div class="gs-card gs-mb-lg" style="border-left: 4px solid var(--gs-danger);">
+            <div class="gs-card gs-mb-lg gs-alert-border-danger">
                 <div class="gs-card-header">
                     <h2 class="gs-h4 gs-text-danger">
                         <i data-lucide="alert-circle"></i>
@@ -231,7 +231,7 @@ try {
                 </div>
                 <div class="gs-card-content">
                     <?php foreach ($errors as $error): ?>
-                        <div class="gs-text-sm gs-mb-xs gs-text-danger" style="font-family: monospace;">
+                        <div class="gs-text-sm gs-mb-xs gs-text-danger gs-font-monospace">
                             <?= h($error) ?>
                         </div>
                     <?php endforeach; ?>
@@ -248,7 +248,7 @@ try {
             </div>
             <div class="gs-card-content">
                 <h3 class="gs-h5 gs-mb-md">Added Fields:</h3>
-                <ul class="gs-text-sm" style="line-height: 1.8; margin-left: var(--gs-space-lg);">
+                <ul class="gs-text-sm gs-list-ml-lg-lh-1-8">
                     <li><code>personnummer</code> - Swedish personal number (YYYYMMDD-XXXX)</li>
                     <li><code>address</code> - Street address</li>
                     <li><code>postal_code</code> - Postal code</li>
@@ -263,7 +263,7 @@ try {
                 <div class="gs-alert gs-alert-warning gs-mt-lg">
                     <i data-lucide="shield-alert"></i>
                     <strong>PRIVACY WARNING:</strong> The following fields contain PRIVATE data and must NOT be exposed publicly:
-                    <ul style="margin-top: 0.5rem; margin-left: 1.5rem;">
+                    <ul class="gs-list-ml-1-5">
                         <li><code>personnummer</code></li>
                         <li><code>address</code></li>
                         <li><code>postal_code</code></li>
@@ -291,6 +291,6 @@ try {
 try {
     include __DIR__ . '/../includes/layout-footer.php';
 } catch (Exception $e) {
-    echo "<p style='color:red;'>ERROR loading footer: " . htmlspecialchars($e->getMessage()) . "</p>";
+    echo "<p class='gs-text-danger'>ERROR loading footer: " . htmlspecialchars($e->getMessage()) . "</p>";
 }
 ?>

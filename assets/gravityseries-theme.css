@@ -3876,3 +3876,199 @@ details.gs-details-lg summary {
   padding: 20px;
   border: 2px solid red;
 }
+
+/* ===== BATCH 4 REFACTORING - ADMIN UTILITIES ===== */
+
+/* Container max-width utilities */
+.gs-container-max-1200 {
+  max-width: 1200px;
+}
+
+.gs-container-max-800-center {
+  max-width: 800px;
+  margin: 2rem auto;
+}
+
+.gs-container-max-700 {
+  max-width: 700px;
+}
+
+.gs-container-max-600 {
+  max-width: 600px;
+}
+
+/* Table column width utilities */
+.gs-table-col-w-50 {
+  width: 50px;
+}
+
+.gs-table-col-w-80 {
+  width: 80px;
+}
+
+.gs-table-col-w-100 {
+  width: 100px;
+}
+
+.gs-table-col-w-150-right {
+  width: 150px;
+  text-align: right;
+}
+
+.gs-table-min-w-600 {
+  min-width: 600px;
+}
+
+/* Table/form input utilities */
+.gs-input-min-w-150 {
+  min-width: 150px;
+}
+
+/* Horizontal scroll container with touch scrolling */
+.gs-scroll-x-touch {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Vertical scroll containers */
+.gs-scroll-y-300 {
+  max-height: 300px;
+  overflow-y: auto;
+  background: var(--gs-background-secondary);
+  padding: var(--gs-space-md);
+  border-radius: var(--gs-border-radius);
+}
+
+.gs-scroll-y-400-simple {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+/* Icon sizing utilities */
+.gs-icon-48-empty {
+  width: 48px;
+  height: 48px;
+  margin: 0 auto 1rem;
+  opacity: 0.3;
+}
+
+.gs-icon-64-secondary {
+  width: 64px;
+  height: 64px;
+  color: var(--gs-text-secondary);
+  margin-bottom: var(--gs-space-md);
+}
+
+/* Display utilities */
+.gs-display-none {
+  display: none;
+}
+
+.gs-display-inline {
+  display: inline;
+}
+
+.gs-display-inline-block {
+  display: inline-block;
+}
+
+/* Form footer with actions */
+.gs-form-footer-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--gs-border);
+  margin-top: 1rem;
+}
+
+/* Spacing utilities */
+.gs-line-height-1-8 {
+  line-height: 1.8;
+}
+
+.gs-mb-4px {
+  margin-bottom: 4px;
+}
+
+.gs-mr-4px {
+  margin-right: 4px;
+}
+
+.gs-mt-4px {
+  margin-top: 4px;
+}
+
+.gs-mt-qtr {
+  margin-top: 0.25rem;
+}
+
+.gs-margin-list {
+  margin: 0.5rem 0 0 1.5rem;
+}
+
+.gs-block-mt-qtr {
+  display: block;
+  margin-top: 0.25rem;
+}
+
+/* Background and border utilities */
+.gs-bg-info-box {
+  padding: 1rem;
+  background: var(--gs-background-secondary);
+  border-radius: var(--gs-border-radius);
+}
+
+.gs-bg-info-box-primary {
+  padding: var(--gs-space-md);
+  background: var(--gs-background-secondary);
+  border-radius: var(--gs-border-radius);
+  border-left: 4px solid var(--gs-primary);
+}
+
+.gs-gradient-brand {
+  background: linear-gradient(135deg, rgba(0, 74, 152, 0.05) 0%, rgba(239, 118, 31, 0.05) 100%);
+}
+
+/* Border utilities */
+.gs-border-top {
+  border-top: 1px solid var(--gs-border);
+}
+
+/* Pre/code block formatting */
+.gs-pre-code-block {
+  background: var(--gs-background-secondary);
+  padding: var(--gs-space-md);
+  border-radius: var(--gs-border-radius);
+  overflow-x: auto;
+  font-size: 12px;
+  margin-top: var(--gs-space-sm);
+}
+
+/* Font utilities */
+.gs-font-monospace {
+  font-family: monospace;
+}
+
+.gs-font-italic {
+  font-style: italic;
+}
+
+/* Padding utilities */
+.gs-padding-0 {
+  padding: 0;
+}
+
+.gs-padding-3rem-center {
+  padding: 3rem;
+  text-align: center;
+}
+
+/* Error display utilities */
+.gs-error-box-danger {
+  color: #dc3545;
+  background: #f8d7da;
+  padding: 15px;
+  border-radius: 5px;
+  margin: 10px 0;
+}
