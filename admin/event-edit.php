@@ -62,6 +62,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'max_participants' => !empty($_POST['max_participants']) ? intval($_POST['max_participants']) : null,
             'entry_fee' => !empty($_POST['entry_fee']) ? floatval($_POST['entry_fee']) : null,
             'active' => isset($_POST['active']) ? 1 : 0,
+            // Extended information fields
+            'schedule' => trim($_POST['schedule'] ?? ''),
+            'practical_info' => trim($_POST['practical_info'] ?? ''),
+            'safety_rules' => trim($_POST['safety_rules'] ?? ''),
+            'course_description' => trim($_POST['course_description'] ?? ''),
+            'course_map_url' => trim($_POST['course_map_url'] ?? ''),
+            'gpx_file_url' => trim($_POST['gpx_file_url'] ?? ''),
+            'contact_email' => trim($_POST['contact_email'] ?? ''),
+            'contact_phone' => trim($_POST['contact_phone'] ?? ''),
+            'parking_info' => trim($_POST['parking_info'] ?? ''),
+            'accommodation_info' => trim($_POST['accommodation_info'] ?? ''),
+            'food_info' => trim($_POST['food_info'] ?? ''),
+            'prizes_info' => trim($_POST['prizes_info'] ?? ''),
+            'sponsors' => trim($_POST['sponsors'] ?? ''),
         ];
 
         try {
@@ -429,6 +443,214 @@ include __DIR__ . '/../includes/layout-header.php';
                             rows="4"
                             placeholder="Beskriv eventet..."
                         ><?= htmlspecialchars($event['description'] ?? '') ?></textarea>
+                    </div>
+
+                    <!-- EXTENDED INFORMATION FIELDS -->
+                    <div class="gs-section-divider gs-mt-lg gs-mb-md">
+                        <h3 class="gs-h4 gs-text-primary">Detaljerad Event-information</h3>
+                        <p class="gs-text-sm gs-text-secondary">Utökad information som visas på event-sidan</p>
+                    </div>
+
+                    <!-- Schedule -->
+                    <div>
+                        <label for="schedule" class="gs-label">
+                            <i data-lucide="clock"></i>
+                            Schema
+                        </label>
+                        <textarea
+                            id="schedule"
+                            name="schedule"
+                            class="gs-input"
+                            rows="5"
+                            placeholder="09:00 - Registrering öppnar&#10;10:00 - Tävlingen startar&#10;15:00 - Prisutdelning"
+                        ><?= htmlspecialchars($event['schedule'] ?? '') ?></textarea>
+                        <small class="gs-text-muted">Tidsschema för eventet</small>
+                    </div>
+
+                    <!-- Course Information -->
+                    <div>
+                        <label for="course_description" class="gs-label">
+                            <i data-lucide="route"></i>
+                            Banbeskrivning
+                        </label>
+                        <textarea
+                            id="course_description"
+                            name="course_description"
+                            class="gs-input"
+                            rows="5"
+                            placeholder="Detaljerad beskrivning av banan, sträckning, utmaningar, etc."
+                        ><?= htmlspecialchars($event['course_description'] ?? '') ?></textarea>
+                    </div>
+
+                    <!-- Course Map and GPX -->
+                    <div class="gs-grid gs-grid-cols-2 gs-gap-md">
+                        <div>
+                            <label for="course_map_url" class="gs-label">
+                                <i data-lucide="map"></i>
+                                Bankarta URL
+                            </label>
+                            <input
+                                type="url"
+                                id="course_map_url"
+                                name="course_map_url"
+                                class="gs-input"
+                                value="<?= htmlspecialchars($event['course_map_url'] ?? '') ?>"
+                                placeholder="https://example.com/map.jpg"
+                            >
+                            <small class="gs-text-muted">Länk till bild av bankarta</small>
+                        </div>
+                        <div>
+                            <label for="gpx_file_url" class="gs-label">
+                                <i data-lucide="download"></i>
+                                GPX-fil URL
+                            </label>
+                            <input
+                                type="url"
+                                id="gpx_file_url"
+                                name="gpx_file_url"
+                                class="gs-input"
+                                value="<?= htmlspecialchars($event['gpx_file_url'] ?? '') ?>"
+                                placeholder="https://example.com/route.gpx"
+                            >
+                            <small class="gs-text-muted">Länk till nedladdningsbar GPX-fil</small>
+                        </div>
+                    </div>
+
+                    <!-- Safety Rules -->
+                    <div>
+                        <label for="safety_rules" class="gs-label">
+                            <i data-lucide="shield"></i>
+                            Säkerhet & Regler
+                        </label>
+                        <textarea
+                            id="safety_rules"
+                            name="safety_rules"
+                            class="gs-input"
+                            rows="5"
+                            placeholder="Säkerhetsregler, tävlingsregler, obligatorisk utrustning, etc."
+                        ><?= htmlspecialchars($event['safety_rules'] ?? '') ?></textarea>
+                    </div>
+
+                    <!-- Practical Information -->
+                    <div>
+                        <label for="practical_info" class="gs-label">
+                            <i data-lucide="info"></i>
+                            Praktisk information
+                        </label>
+                        <textarea
+                            id="practical_info"
+                            name="practical_info"
+                            class="gs-input"
+                            rows="5"
+                            placeholder="Allmän praktisk information för deltagare"
+                        ><?= htmlspecialchars($event['practical_info'] ?? '') ?></textarea>
+                    </div>
+
+                    <!-- Contact Information -->
+                    <div class="gs-grid gs-grid-cols-2 gs-gap-md">
+                        <div>
+                            <label for="contact_email" class="gs-label">
+                                <i data-lucide="mail"></i>
+                                Kontakt e-post
+                            </label>
+                            <input
+                                type="email"
+                                id="contact_email"
+                                name="contact_email"
+                                class="gs-input"
+                                value="<?= htmlspecialchars($event['contact_email'] ?? '') ?>"
+                                placeholder="info@example.com"
+                            >
+                        </div>
+                        <div>
+                            <label for="contact_phone" class="gs-label">
+                                <i data-lucide="phone"></i>
+                                Kontakt telefon
+                            </label>
+                            <input
+                                type="tel"
+                                id="contact_phone"
+                                name="contact_phone"
+                                class="gs-input"
+                                value="<?= htmlspecialchars($event['contact_phone'] ?? '') ?>"
+                                placeholder="+46 70 123 45 67"
+                            >
+                        </div>
+                    </div>
+
+                    <!-- Parking Information -->
+                    <div>
+                        <label for="parking_info" class="gs-label">
+                            <i data-lucide="car"></i>
+                            Parkering
+                        </label>
+                        <textarea
+                            id="parking_info"
+                            name="parking_info"
+                            class="gs-input"
+                            rows="3"
+                            placeholder="Information om parkering, avgifter, tillgänglighet, etc."
+                        ><?= htmlspecialchars($event['parking_info'] ?? '') ?></textarea>
+                    </div>
+
+                    <!-- Accommodation Information -->
+                    <div>
+                        <label for="accommodation_info" class="gs-label">
+                            <i data-lucide="bed"></i>
+                            Boende
+                        </label>
+                        <textarea
+                            id="accommodation_info"
+                            name="accommodation_info"
+                            class="gs-input"
+                            rows="3"
+                            placeholder="Rekommenderade boenden, camping, etc."
+                        ><?= htmlspecialchars($event['accommodation_info'] ?? '') ?></textarea>
+                    </div>
+
+                    <!-- Food Information -->
+                    <div>
+                        <label for="food_info" class="gs-label">
+                            <i data-lucide="utensils"></i>
+                            Mat & Dryck
+                        </label>
+                        <textarea
+                            id="food_info"
+                            name="food_info"
+                            class="gs-input"
+                            rows="3"
+                            placeholder="Mat och dryck på plats, restauranger i närheten, etc."
+                        ><?= htmlspecialchars($event['food_info'] ?? '') ?></textarea>
+                    </div>
+
+                    <!-- Prizes Information -->
+                    <div>
+                        <label for="prizes_info" class="gs-label">
+                            <i data-lucide="award"></i>
+                            Priser
+                        </label>
+                        <textarea
+                            id="prizes_info"
+                            name="prizes_info"
+                            class="gs-input"
+                            rows="3"
+                            placeholder="Information om priser, prisutdelning, etc."
+                        ><?= htmlspecialchars($event['prizes_info'] ?? '') ?></textarea>
+                    </div>
+
+                    <!-- Sponsors -->
+                    <div>
+                        <label for="sponsors" class="gs-label">
+                            <i data-lucide="handshake"></i>
+                            Sponsorer
+                        </label>
+                        <textarea
+                            id="sponsors"
+                            name="sponsors"
+                            class="gs-input"
+                            rows="3"
+                            placeholder="Lista sponsorer och partners"
+                        ><?= htmlspecialchars($event['sponsors'] ?? '') ?></textarea>
                     </div>
 
                     <!-- Active Status -->

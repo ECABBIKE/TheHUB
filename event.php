@@ -31,120 +31,35 @@ if (!$event) {
     exit;
 }
 
-// Check event format to determine display mode
-$eventFormat = $event['event_format'] ?? 'ENDURO';
-$isDH = in_array($eventFormat, ['DH_STANDARD', 'DH_SWECUP']);
+// Get active tab (default: info)
+$activeTab = isset($_GET['tab']) ? $_GET['tab'] : 'info';
 
-// Get view mode (category or class)
-$viewMode = isset($_GET['view']) ? $_GET['view'] : 'category';
-
-// Fetch all results for this event with rider, category and class info
-$results = $db->getAll("
+// Fetch registered participants for this event
+$registrations = $db->getAll("
     SELECT
-        res.*,
+        reg.*,
+        r.id as rider_id,
         r.firstname,
         r.lastname,
-        r.gender,
-        r.birth_year,
-        r.license_number,
-        c.name as club_name,
-        cat.name as category_name,
-        cat.short_name as category_short,
-        cls.name as class_name,
-        cls.display_name as class_display_name
-    FROM results res
-    INNER JOIN riders r ON res.cyclist_id = r.id
+        c.name as club_name
+    FROM event_registrations reg
+    LEFT JOIN riders r ON reg.rider_id = r.id
     LEFT JOIN clubs c ON r.club_id = c.id
-    LEFT JOIN categories cat ON res.category_id = cat.id
-    LEFT JOIN classes cls ON res.class_id = cls.id
-    WHERE res.event_id = ?
-    ORDER BY
-        COALESCE(cat.name, 'Okategoriserad'),
-        CASE WHEN res.status = 'finished' THEN res.position ELSE 999 END,
-        res.finish_time
+    WHERE reg.event_id = ?
+    ORDER BY reg.registration_date ASC
 ", [$eventId]);
 
-// Group results by category
-$resultsByCategory = [];
-$resultsByClass = [];
-$totalParticipants = count($results);
-$totalFinished = 0;
+$totalRegistrations = count($registrations);
+$confirmedRegistrations = count(array_filter($registrations, function($r) {
+    return $r['status'] === 'confirmed';
+}));
 
-foreach ($results as $result) {
-    // Group by category
-    $categoryName = $result['category_name'] ?? 'Okategoriserad';
-
-    if (!isset($resultsByCategory[$categoryName])) {
-        $resultsByCategory[$categoryName] = [
-            'short_name' => $result['category_short'] ?? 'N/A',
-            'results' => []
-        ];
-    }
-
-    $resultsByCategory[$categoryName]['results'][] = $result;
-
-    // Group by class (if class is assigned)
-    if (!empty($result['class_name'])) {
-        $className = $result['class_name'];
-
-        if (!isset($resultsByClass[$className])) {
-            $resultsByClass[$className] = [
-                'display_name' => $result['class_display_name'] ?? $className,
-                'results' => []
-            ];
-        }
-
-        $resultsByClass[$className]['results'][] = $result;
-    }
-
-    if ($result['status'] === 'finished') {
-        $totalFinished++;
-    }
-}
-
-// Sort classes by their sort_order if possible
-if (!empty($resultsByClass)) {
-    uksort($resultsByClass, function($a, $b) use ($db) {
-        $classA = $db->getRow("SELECT sort_order FROM classes WHERE name = ?", [$a]);
-        $classB = $db->getRow("SELECT sort_order FROM classes WHERE name = ?", [$b]);
-        return ($classA['sort_order'] ?? 999) - ($classB['sort_order'] ?? 999);
-    });
-}
-
-// Calculate time behind leader for each category
-foreach ($resultsByCategory as $categoryName => &$categoryData) {
-    $winnerTime = null;
-
-    // Find winner's time
-    foreach ($categoryData['results'] as $result) {
-        if ($result['position'] == 1 && !empty($result['finish_time']) && $result['status'] === 'finished') {
-            $winnerTime = $result['finish_time'];
-            break;
-        }
-    }
-
-    // Calculate time behind for each result
-    foreach ($categoryData['results'] as &$result) {
-        if ($winnerTime && !empty($result['finish_time']) && $result['status'] === 'finished' && $result['position'] > 1) {
-            $winnerSeconds = strtotime("1970-01-01 $winnerTime UTC");
-            $riderSeconds = strtotime("1970-01-01 {$result['finish_time']} UTC");
-            $diffSeconds = $riderSeconds - $winnerSeconds;
-
-            $hours = floor($diffSeconds / 3600);
-            $minutes = floor(($diffSeconds % 3600) / 60);
-            $seconds = $diffSeconds % 60;
-
-            if ($hours > 0) {
-                $result['time_behind_formatted'] = sprintf('+%d:%02d:%02d', $hours, $minutes, $seconds);
-            } else {
-                $result['time_behind_formatted'] = sprintf('+%d:%02d', $minutes, $seconds);
-            }
-        } else {
-            $result['time_behind_formatted'] = null;
-        }
-    }
-}
-unset($categoryData); // Break reference
+// Fetch results count for this event (for tab badge)
+$results = $db->getAll("
+    SELECT id
+    FROM results
+    WHERE event_id = ?
+", [$eventId]);
 
 $pageTitle = $event['name'];
 $pageType = 'public';
@@ -233,8 +148,41 @@ include __DIR__ . '/includes/layout-header.php';
                 </div>
             </div>
 
-            <!-- Event Information Section -->
-            <?php if (!empty($event['description']) || !empty($event['website']) || !empty($event['registration_url']) || !empty($event['organizer'])): ?>
+            <!-- Tab Navigation -->
+            <div class="gs-tabs gs-mb-lg">
+                <a href="?id=<?= $eventId ?>&tab=info"
+                   class="gs-tab <?= $activeTab === 'info' ? 'active' : '' ?>">
+                    <i data-lucide="info"></i>
+                    Information
+                </a>
+                <a href="?id=<?= $eventId ?>&tab=anmalda"
+                   class="gs-tab <?= $activeTab === 'anmalda' ? 'active' : '' ?>">
+                    <i data-lucide="users"></i>
+                    Anmälda
+                    <span class="gs-badge gs-badge-secondary gs-badge-sm gs-ml-xs">
+                        <?= $totalRegistrations ?>
+                    </span>
+                </a>
+                <a href="?id=<?= $eventId ?>&tab=anmalan"
+                   class="gs-tab <?= $activeTab === 'anmalan' ? 'active' : '' ?>">
+                    <i data-lucide="user-plus"></i>
+                    Anmälan
+                </a>
+                <?php if (!empty($results)): ?>
+                    <a href="/event-results.php?id=<?= $eventId ?>"
+                       class="gs-tab">
+                        <i data-lucide="trophy"></i>
+                        Resultat
+                        <span class="gs-badge gs-badge-accent gs-badge-sm gs-ml-xs">
+                            <?= count($results) ?>
+                        </span>
+                    </a>
+                <?php endif; ?>
+            </div>
+
+            <!-- Tab Content -->
+            <?php if ($activeTab === 'info'): ?>
+                <!-- INFORMATION TAB -->
                 <div class="gs-card gs-mb-xl">
                     <div class="gs-card-header">
                         <h2 class="gs-h3 gs-text-primary">
@@ -258,25 +206,74 @@ include __DIR__ . '/includes/layout-header.php';
                                     </div>
                                 <?php endif; ?>
 
-                                <?php if (!empty($event['distance']) || !empty($event['elevation_gain'])): ?>
+                                <?php if (!empty($event['schedule'])): ?>
                                     <div class="gs-mb-lg">
                                         <h3 class="gs-h5 gs-mb-sm gs-text-primary">
-                                            <i data-lucide="mountain" class="gs-icon-14"></i>
-                                            Bana-info
+                                            <i data-lucide="clock" class="gs-icon-14"></i>
+                                            Schema
                                         </h3>
-                                        <div class="gs-flex gs-gap-md">
-                                            <?php if (!empty($event['distance'])): ?>
-                                                <div>
-                                                    <span class="gs-text-sm gs-text-secondary">Distans: </span>
-                                                    <strong><?= $event['distance'] ?> km</strong>
-                                                </div>
-                                            <?php endif; ?>
-                                            <?php if (!empty($event['elevation_gain'])): ?>
-                                                <div>
-                                                    <span class="gs-text-sm gs-text-secondary">Höjdmeter: </span>
-                                                    <strong><?= $event['elevation_gain'] ?> m</strong>
-                                                </div>
-                                            <?php endif; ?>
+                                        <div class="gs-text-secondary">
+                                            <?= nl2br(h($event['schedule'])) ?>
+                                        </div>
+                                    </div>
+                                <?php endif; ?>
+
+                                <?php if (!empty($event['course_description'])): ?>
+                                    <div class="gs-mb-lg">
+                                        <h3 class="gs-h5 gs-mb-sm gs-text-primary">
+                                            <i data-lucide="route" class="gs-icon-14"></i>
+                                            Bana
+                                        </h3>
+                                        <p class="gs-text-secondary">
+                                            <?= nl2br(h($event['course_description'])) ?>
+                                        </p>
+                                        <?php if (!empty($event['distance']) || !empty($event['elevation_gain'])): ?>
+                                            <div class="gs-flex gs-gap-md gs-mt-sm">
+                                                <?php if (!empty($event['distance'])): ?>
+                                                    <div>
+                                                        <span class="gs-text-sm gs-text-secondary">Distans: </span>
+                                                        <strong><?= $event['distance'] ?> km</strong>
+                                                    </div>
+                                                <?php endif; ?>
+                                                <?php if (!empty($event['elevation_gain'])): ?>
+                                                    <div>
+                                                        <span class="gs-text-sm gs-text-secondary">Höjdmeter: </span>
+                                                        <strong><?= $event['elevation_gain'] ?> m</strong>
+                                                    </div>
+                                                <?php endif; ?>
+                                            </div>
+                                        <?php endif; ?>
+                                        <?php if (!empty($event['course_map_url']) || !empty($event['gpx_file_url'])): ?>
+                                            <div class="gs-flex gs-gap-sm gs-mt-sm">
+                                                <?php if (!empty($event['course_map_url'])): ?>
+                                                    <a href="<?= h($event['course_map_url']) ?>"
+                                                       target="_blank"
+                                                       class="gs-btn gs-btn-sm gs-btn-outline">
+                                                        <i data-lucide="map" class="gs-icon-14"></i>
+                                                        Bankarta
+                                                    </a>
+                                                <?php endif; ?>
+                                                <?php if (!empty($event['gpx_file_url'])): ?>
+                                                    <a href="<?= h($event['gpx_file_url']) ?>"
+                                                       download
+                                                       class="gs-btn gs-btn-sm gs-btn-outline">
+                                                        <i data-lucide="download" class="gs-icon-14"></i>
+                                                        Ladda ner GPX
+                                                    </a>
+                                                <?php endif; ?>
+                                            </div>
+                                        <?php endif; ?>
+                                    </div>
+                                <?php endif; ?>
+
+                                <?php if (!empty($event['safety_rules'])): ?>
+                                    <div class="gs-mb-lg">
+                                        <h3 class="gs-h5 gs-mb-sm gs-text-primary">
+                                            <i data-lucide="shield" class="gs-icon-14"></i>
+                                            Säkerhet & Regler
+                                        </h3>
+                                        <div class="gs-text-secondary">
+                                            <?= nl2br(h($event['safety_rules'])) ?>
                                         </div>
                                     </div>
                                 <?php endif; ?>
@@ -290,51 +287,115 @@ include __DIR__ . '/includes/layout-header.php';
                                         <p class="gs-text-secondary">
                                             <?= h($event['organizer']) ?>
                                         </p>
+                                        <?php if (!empty($event['contact_email']) || !empty($event['contact_phone'])): ?>
+                                            <div class="gs-mt-sm">
+                                                <?php if (!empty($event['contact_email'])): ?>
+                                                    <p class="gs-text-sm gs-mb-xs">
+                                                        <i data-lucide="mail" class="gs-icon-sm"></i>
+                                                        <a href="mailto:<?= h($event['contact_email']) ?>" class="gs-link">
+                                                            <?= h($event['contact_email']) ?>
+                                                        </a>
+                                                    </p>
+                                                <?php endif; ?>
+                                                <?php if (!empty($event['contact_phone'])): ?>
+                                                    <p class="gs-text-sm">
+                                                        <i data-lucide="phone" class="gs-icon-sm"></i>
+                                                        <a href="tel:<?= h($event['contact_phone']) ?>" class="gs-link">
+                                                            <?= h($event['contact_phone']) ?>
+                                                        </a>
+                                                    </p>
+                                                <?php endif; ?>
+                                            </div>
+                                        <?php endif; ?>
                                     </div>
                                 <?php endif; ?>
                             </div>
 
                             <!-- Right Column -->
                             <div>
-                                <?php if (!empty($event['registration_url']) || !empty($event['registration_deadline'])): ?>
-                                    <div class="gs-alert gs-alert-primary gs-mb-lg">
-                                        <h3 class="gs-h5 gs-mb-sm">
-                                            <i data-lucide="user-plus" class="gs-icon-14"></i>
-                                            Anmälan
-                                        </h3>
-                                        <?php if (!empty($event['registration_deadline'])): ?>
-                                            <p class="gs-text-sm gs-mb-sm">
-                                                <strong>Sista anmälan:</strong> <?= date('d M Y', strtotime($event['registration_deadline'])) ?>
-                                            </p>
-                                        <?php endif; ?>
-                                        <?php if (!empty($event['registration_url'])): ?>
-                                            <a href="<?= h($event['registration_url']) ?>"
-                                               target="_blank"
-                                               rel="noopener noreferrer"
-                                               class="gs-btn gs-btn-primary gs-btn-sm gs-w-full">
-                                                <i data-lucide="external-link" class="gs-icon-14"></i>
-                                                Anmäl dig här
-                                            </a>
-                                        <?php endif; ?>
-                                    </div>
-                                <?php endif; ?>
-
-                                <?php if (!empty($event['entry_fee']) || !empty($event['max_participants'])): ?>
+                                <?php if (!empty($event['practical_info'])): ?>
                                     <div class="gs-mb-lg">
                                         <h3 class="gs-h5 gs-mb-sm gs-text-primary">
                                             <i data-lucide="info" class="gs-icon-14"></i>
                                             Praktisk information
                                         </h3>
-                                        <?php if (!empty($event['entry_fee'])): ?>
-                                            <p class="gs-text-sm gs-mb-xs">
-                                                <strong>Startavgift:</strong> <?= $event['entry_fee'] ?> kr
-                                            </p>
+                                        <div class="gs-text-secondary">
+                                            <?= nl2br(h($event['practical_info'])) ?>
+                                        </div>
+                                        <?php if (!empty($event['entry_fee']) || !empty($event['max_participants'])): ?>
+                                            <div class="gs-mt-sm">
+                                                <?php if (!empty($event['entry_fee'])): ?>
+                                                    <p class="gs-text-sm gs-mb-xs">
+                                                        <strong>Startavgift:</strong> <?= $event['entry_fee'] ?> kr
+                                                    </p>
+                                                <?php endif; ?>
+                                                <?php if (!empty($event['max_participants'])): ?>
+                                                    <p class="gs-text-sm gs-mb-xs">
+                                                        <strong>Max deltagare:</strong> <?= $event['max_participants'] ?>
+                                                    </p>
+                                                <?php endif; ?>
+                                            </div>
                                         <?php endif; ?>
-                                        <?php if (!empty($event['max_participants'])): ?>
-                                            <p class="gs-text-sm gs-mb-xs">
-                                                <strong>Max deltagare:</strong> <?= $event['max_participants'] ?>
-                                            </p>
-                                        <?php endif; ?>
+                                    </div>
+                                <?php endif; ?>
+
+                                <?php if (!empty($event['parking_info'])): ?>
+                                    <div class="gs-mb-lg">
+                                        <h3 class="gs-h5 gs-mb-sm gs-text-primary">
+                                            <i data-lucide="car" class="gs-icon-14"></i>
+                                            Parkering
+                                        </h3>
+                                        <div class="gs-text-secondary">
+                                            <?= nl2br(h($event['parking_info'])) ?>
+                                        </div>
+                                    </div>
+                                <?php endif; ?>
+
+                                <?php if (!empty($event['accommodation_info'])): ?>
+                                    <div class="gs-mb-lg">
+                                        <h3 class="gs-h5 gs-mb-sm gs-text-primary">
+                                            <i data-lucide="bed" class="gs-icon-14"></i>
+                                            Boende
+                                        </h3>
+                                        <div class="gs-text-secondary">
+                                            <?= nl2br(h($event['accommodation_info'])) ?>
+                                        </div>
+                                    </div>
+                                <?php endif; ?>
+
+                                <?php if (!empty($event['food_info'])): ?>
+                                    <div class="gs-mb-lg">
+                                        <h3 class="gs-h5 gs-mb-sm gs-text-primary">
+                                            <i data-lucide="utensils" class="gs-icon-14"></i>
+                                            Mat & Dryck
+                                        </h3>
+                                        <div class="gs-text-secondary">
+                                            <?= nl2br(h($event['food_info'])) ?>
+                                        </div>
+                                    </div>
+                                <?php endif; ?>
+
+                                <?php if (!empty($event['prizes_info'])): ?>
+                                    <div class="gs-mb-lg">
+                                        <h3 class="gs-h5 gs-mb-sm gs-text-primary">
+                                            <i data-lucide="award" class="gs-icon-14"></i>
+                                            Priser
+                                        </h3>
+                                        <div class="gs-text-secondary">
+                                            <?= nl2br(h($event['prizes_info'])) ?>
+                                        </div>
+                                    </div>
+                                <?php endif; ?>
+
+                                <?php if (!empty($event['sponsors'])): ?>
+                                    <div class="gs-mb-lg">
+                                        <h3 class="gs-h5 gs-mb-sm gs-text-primary">
+                                            <i data-lucide="handshake" class="gs-icon-14"></i>
+                                            Sponsorer
+                                        </h3>
+                                        <div class="gs-text-secondary">
+                                            <?= nl2br(h($event['sponsors'])) ?>
+                                        </div>
                                     </div>
                                 <?php endif; ?>
 
@@ -353,325 +414,156 @@ include __DIR__ . '/includes/layout-header.php';
                         </div>
                     </div>
                 </div>
-            <?php endif; ?>
 
-            <?php if (empty($results)): ?>
-                <!-- No Results -->
-                <div class="gs-card gs-empty-state">
-                    <i data-lucide="trophy" class="gs-empty-icon"></i>
-                    <h3 class="gs-h4 gs-mb-sm">Inga resultat ännu</h3>
-                    <p class="gs-text-secondary">
-                        Resultat har inte laddats upp för denna tävling.
-                    </p>
-                </div>
-            <?php else: ?>
-                <!-- View Mode Tabs (if classes are enabled) -->
-                <?php if ($event['enable_classes'] && !empty($resultsByClass)): ?>
-                    <div class="gs-tabs gs-mb-lg">
-                        <a href="?id=<?= $eventId ?>&view=category"
-                           class="gs-tab <?= $viewMode === 'category' ? 'active' : '' ?>">
-                            <i data-lucide="folder"></i>
-                            Kategorier
-                            <span class="gs-badge gs-badge-secondary gs-badge-sm gs-ml-xs">
-                                <?= count($resultsByCategory) ?>
-                            </span>
-                        </a>
-                        <a href="?id=<?= $eventId ?>&view=class"
-                           class="gs-tab <?= $viewMode === 'class' ? 'active' : '' ?>">
+            <?php elseif ($activeTab === 'anmalda'): ?>
+                <!-- REGISTERED PARTICIPANTS TAB -->
+                <div class="gs-card gs-mb-xl">
+                    <div class="gs-card-header">
+                        <h2 class="gs-h3 gs-text-primary">
                             <i data-lucide="users"></i>
-                            Klasser
-                            <span class="gs-badge gs-badge-secondary gs-badge-sm gs-ml-xs">
-                                <?= count($resultsByClass) ?>
+                            Anmälda deltagare
+                            <span class="gs-badge gs-badge-primary gs-ml-sm">
+                                <?= $totalRegistrations ?> anmälda
                             </span>
-                        </a>
+                            <span class="gs-badge gs-badge-success gs-ml-xs">
+                                <?= $confirmedRegistrations ?> bekräftade
+                            </span>
+                        </h2>
                     </div>
-                <?php endif; ?>
-
-                <!-- Results by Category or Class -->
-                <?php if ($viewMode === 'class' && !empty($resultsByClass)): ?>
-                    <!-- Results by Class -->
-                    <?php $resultsToShow = $resultsByClass; ?>
-                    <?php $isClassView = true; ?>
-                <?php else: ?>
-                    <!-- Results by Category --><?php $resultsToShow = $resultsByCategory; ?>
-                    <?php $isClassView = false; ?>
-                <?php endif; ?>
-                <?php foreach ($resultsToShow as $groupName => $groupData): ?>
-                    <div class="gs-card gs-mb-xl <?= $isClassView ? 'class-section' : 'category-section' ?>"
-                         data-group="<?= h($groupName) ?>">
-                        <div class="gs-card-header">
-                            <h2 class="gs-h4 gs-text-primary">
-                                <i data-lucide="users" class="gs-icon-md"></i>
-                                <?php if ($isClassView): ?>
-                                    <?= h($groupData['display_name']) ?>
-                                    <span class="gs-badge gs-badge-primary gs-badge-sm gs-ml-xs">
-                                        <?= h($groupName) ?>
-                                    </span>
-                                <?php else: ?>
-                                    <?= h($groupName) ?>
-                                <?php endif; ?>
-                                <span class="gs-badge gs-badge-secondary gs-ml-sm">
-                                    <?= count($groupData['results']) ?> deltagare
-                                </span>
-                            </h2>
-                        </div>
-                        <div class="gs-card-content gs-card-table-container">
-                            <table class="gs-table results-table">
-                                <thead>
-                                    <tr>
-                                        <th class="gs-table-col-narrow" data-sort="position">
-                                            <span>
-                                                <?= $isClassView ? 'Klass' : 'Plac.' ?>
-                                                <i data-lucide="arrow-up-down" class="gs-icon-sm"></i>
-                                            </span>
-                                        </th>
-                                        <th data-sort="name">
-                                            <span>Namn <i data-lucide="arrow-up-down" class="gs-icon-sm"></i></span>
-                                        </th>
-                                        <th data-sort="club">
-                                            <span>Klubb <i data-lucide="arrow-up-down" class="gs-icon-sm"></i></span>
-                                        </th>
-                                        <th class="gs-table-col-medium">Startnr</th>
-                                        <?php if ($isDH): ?>
-                                            <th class="gs-table-col-wide" data-sort="run1">
-                                                <span>Åk 1 <i data-lucide="arrow-up-down" class="gs-icon-sm"></i></span>
-                                            </th>
-                                            <th class="gs-table-col-wide" data-sort="run2">
-                                                <span>Åk 2 <i data-lucide="arrow-up-down" class="gs-icon-sm"></i></span>
-                                            </th>
-                                        <?php else: ?>
-                                            <th class="gs-table-col-wide" data-sort="time">
-                                                <span>Tid <i data-lucide="arrow-up-down" class="gs-icon-sm"></i></span>
-                                            </th>
-                                        <?php endif; ?>
-                                        <th class="gs-table-col-medium">+Tid</th>
-                                        <th class="gs-table-col-narrow" data-sort="points">
-                                            <span>Poäng <i data-lucide="arrow-up-down" class="gs-icon-sm"></i></span>
-                                        </th>
-                                        <th class="gs-table-col-medium">Status</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php foreach ($groupData['results'] as $result): ?>
-                                        <tr class="result-row"
-                                            data-position="<?= $result['position'] ?? 999 ?>"
-                                            data-name="<?= h($result['lastname'] . ' ' . $result['firstname']) ?>"
-                                            data-club="<?= h($result['club_name'] ?? '') ?>"
-                                            data-time="<?= $result['finish_time'] ?? '' ?>"
-                                            data-points="<?= $result['points'] ?? 0 ?>">
-
-                                            <!-- Position (Category or Class) -->
-                                            <td class="gs-table-center gs-font-bold">
-                                                <?php
-                                                $displayPosition = $isClassView ? $result['class_position'] : $result['position'];
-                                                ?>
-                                                <?php if ($result['status'] === 'finished' && $displayPosition): ?>
-                                                    <?php if ($displayPosition == 1): ?>
-                                                        <span class="gs-medal">🥇</span>
-                                                    <?php elseif ($displayPosition == 2): ?>
-                                                        <span class="gs-medal">🥈</span>
-                                                    <?php elseif ($displayPosition == 3): ?>
-                                                        <span class="gs-medal">🥉</span>
-                                                    <?php else: ?>
-                                                        <?= $displayPosition ?>
-                                                    <?php endif; ?>
-                                                <?php else: ?>
-                                                    <span class="gs-text-secondary">-</span>
-                                                <?php endif; ?>
-                                            </td>
-
-                                            <!-- Name -->
-                                            <td>
-                                                <a href="/rider.php?id=<?= $result['cyclist_id'] ?>"
-                                                   class="gs-rider-link">
-                                                    <?= h($result['firstname']) ?> <?= h($result['lastname']) ?>
-                                                </a>
-                                                <div class="gs-rider-meta">
-                                                    <?php if ($result['birth_year']): ?>
-                                                        <?= calculateAge($result['birth_year']) ?> år
-                                                    <?php endif; ?>
-                                                    <?php if ($result['gender']): ?>
-                                                        • <?= $result['gender'] == 'M' ? 'Herr' : ($result['gender'] == 'F' ? 'Dam' : '') ?>
-                                                    <?php endif; ?>
-                                                </div>
-                                            </td>
-
-                                            <!-- Club -->
-                                            <td>
-                                                <?php if ($result['club_name']): ?>
-                                                    <span class="gs-badge gs-badge-secondary gs-badge-sm">
-                                                        <?= h($result['club_name']) ?>
-                                                    </span>
-                                                <?php else: ?>
-                                                    <span class="gs-text-secondary">-</span>
-                                                <?php endif; ?>
-                                            </td>
-
-                                            <!-- Bib Number -->
-                                            <td class="gs-table-center">
-                                                <?= $result['bib_number'] ? h($result['bib_number']) : '<span class="gs-text-secondary">-</span>' ?>
-                                            </td>
-
-                                            <?php if ($isDH): ?>
-                                                <?php
-                                                // Determine fastest run
-                                                $run1IsFastest = false;
-                                                $run2IsFastest = false;
-                                                if ($result['run_1_time'] && $result['run_2_time']) {
-                                                    $run1Seconds = strtotime("1970-01-01 {$result['run_1_time']} UTC");
-                                                    $run2Seconds = strtotime("1970-01-01 {$result['run_2_time']} UTC");
-                                                    if ($run1Seconds < $run2Seconds) {
-                                                        $run1IsFastest = true;
-                                                    } elseif ($run2Seconds < $run1Seconds) {
-                                                        $run2IsFastest = true;
-                                                    }
-                                                }
-                                                ?>
-                                                <!-- DH Run 1 Time -->
-                                                <td class="gs-table-time-cell">
-                                                    <?php if ($result['run_1_time'] && $result['status'] === 'finished'): ?>
-                                                        <span class="<?= $run1IsFastest ? 'gs-table-fastest' : '' ?>">
-                                                            <?= h($result['run_1_time']) ?>
-                                                        </span>
-                                                    <?php else: ?>
-                                                        <span class="gs-text-secondary">-</span>
-                                                    <?php endif; ?>
-                                                </td>
-
-                                                <!-- DH Run 2 Time -->
-                                                <td class="gs-table-time-cell">
-                                                    <?php if ($result['run_2_time'] && $result['status'] === 'finished'): ?>
-                                                        <span class="<?= $run2IsFastest ? 'gs-table-fastest' : '' ?>">
-                                                            <?= h($result['run_2_time']) ?>
-                                                        </span>
-                                                    <?php else: ?>
-                                                        <span class="gs-text-secondary">-</span>
-                                                    <?php endif; ?>
-                                                </td>
-                                            <?php else: ?>
-                                                <!-- Standard Finish Time -->
-                                                <td class="gs-table-time-cell">
-                                                    <?php if ($result['finish_time'] && $result['status'] === 'finished'): ?>
-                                                        <?= h($result['finish_time']) ?>
-                                                    <?php else: ?>
-                                                        <span class="gs-text-secondary">-</span>
-                                                    <?php endif; ?>
-                                                </td>
-                                            <?php endif; ?>
-
-                                            <!-- Time Behind -->
-                                            <td class="gs-table-center gs-table-mono gs-text-secondary">
-                                                <?= $result['time_behind_formatted'] ?? '<span class="gs-text-secondary">-</span>' ?>
-                                            </td>
-
-                                            <!-- Points (Category or Class) -->
-                                            <td class="gs-table-center gs-font-bold">
-                                                <?php
-                                                $displayPoints = $isClassView ? $result['class_points'] : $result['points'];
-                                                ?>
-                                                <?= $displayPoints ?? 0 ?>
-                                            </td>
-
-                                            <!-- Status -->
-                                            <td class="gs-table-center">
-                                                <?php
-                                                $statusBadge = 'gs-badge-success';
-                                                $statusText = 'OK';
-                                                if ($result['status'] === 'dnf') {
-                                                    $statusBadge = 'gs-badge-danger';
-                                                    $statusText = 'DNF';
-                                                } elseif ($result['status'] === 'dns') {
-                                                    $statusBadge = 'gs-badge-secondary';
-                                                    $statusText = 'DNS';
-                                                } elseif ($result['status'] === 'dq') {
-                                                    $statusBadge = 'gs-badge-danger';
-                                                    $statusText = 'DQ';
-                                                }
-                                                ?>
-                                                <span class="gs-badge <?= $statusBadge ?> gs-badge-sm">
-                                                    <?= $statusText ?>
-                                                </span>
-                                            </td>
+                    <div class="gs-card-content">
+                        <?php if (empty($registrations)): ?>
+                            <div class="gs-alert gs-alert-warning">
+                                <p>Inga anmälningar ännu. Var först med att anmäla dig!</p>
+                            </div>
+                        <?php else: ?>
+                            <div class="gs-table-responsive">
+                                <table class="gs-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Nr</th>
+                                            <th>Namn</th>
+                                            <th>Klubb</th>
+                                            <th>Kategori</th>
+                                            <th>Status</th>
+                                            <th>Anmäld</th>
                                         </tr>
-                                    <?php endforeach; ?>
-                                </tbody>
-                            </table>
-                        </div>
+                                    </thead>
+                                    <tbody>
+                                        <?php foreach ($registrations as $index => $reg): ?>
+                                            <tr>
+                                                <td class="gs-table-center"><?= $index + 1 ?></td>
+                                                <td>
+                                                    <strong>
+                                                        <?= h($reg['first_name']) ?> <?= h($reg['last_name']) ?>
+                                                    </strong>
+                                                    <?php if ($reg['birth_year']): ?>
+                                                        <div class="gs-text-sm gs-text-secondary">
+                                                            <?= calculateAge($reg['birth_year']) ?> år
+                                                            <?php if ($reg['gender']): ?>
+                                                                • <?= $reg['gender'] == 'M' ? 'Herr' : ($reg['gender'] == 'F' ? 'Dam' : 'Övrigt') ?>
+                                                            <?php endif; ?>
+                                                        </div>
+                                                    <?php endif; ?>
+                                                </td>
+                                                <td>
+                                                    <?php if (!empty($reg['club_name'])): ?>
+                                                        <span class="gs-badge gs-badge-secondary gs-badge-sm">
+                                                            <?= h($reg['club_name']) ?>
+                                                        </span>
+                                                    <?php else: ?>
+                                                        <span class="gs-text-secondary">-</span>
+                                                    <?php endif; ?>
+                                                </td>
+                                                <td>
+                                                    <?= !empty($reg['category']) ? h($reg['category']) : '<span class="gs-text-secondary">-</span>' ?>
+                                                </td>
+                                                <td>
+                                                    <?php
+                                                    $statusBadge = 'gs-badge-secondary';
+                                                    $statusText = ucfirst($reg['status']);
+                                                    if ($reg['status'] === 'confirmed') {
+                                                        $statusBadge = 'gs-badge-success';
+                                                        $statusText = 'Bekräftad';
+                                                    } elseif ($reg['status'] === 'pending') {
+                                                        $statusBadge = 'gs-badge-warning';
+                                                        $statusText = 'Väntande';
+                                                    } elseif ($reg['status'] === 'waitlist') {
+                                                        $statusBadge = 'gs-badge-accent';
+                                                        $statusText = 'Reserv';
+                                                    } elseif ($reg['status'] === 'cancelled') {
+                                                        $statusBadge = 'gs-badge-danger';
+                                                        $statusText = 'Avbokad';
+                                                    }
+                                                    ?>
+                                                    <span class="gs-badge <?= $statusBadge ?> gs-badge-sm">
+                                                        <?= $statusText ?>
+                                                    </span>
+                                                </td>
+                                                <td class="gs-text-sm gs-text-secondary">
+                                                    <?= date('d M Y', strtotime($reg['registration_date'])) ?>
+                                                </td>
+                                            </tr>
+                                        <?php endforeach; ?>
+                                    </tbody>
+                                </table>
+                            </div>
+                        <?php endif; ?>
                     </div>
-                <?php endforeach; ?>
+                </div>
+
+            <?php elseif ($activeTab === 'anmalan'): ?>
+                <!-- REGISTRATION FORM TAB -->
+                <div class="gs-card gs-mb-xl">
+                    <div class="gs-card-header">
+                        <h2 class="gs-h3 gs-text-primary">
+                            <i data-lucide="user-plus"></i>
+                            Anmälan till <?= h($event['name']) ?>
+                        </h2>
+                    </div>
+                    <div class="gs-card-content">
+                        <?php if (!empty($event['registration_deadline']) && strtotime($event['registration_deadline']) < time()): ?>
+                            <div class="gs-alert gs-alert-danger">
+                                <h3 class="gs-h5 gs-mb-sm">Anmälan stängd</h3>
+                                <p>Anmälan stängde <?= date('d M Y', strtotime($event['registration_deadline'])) ?>.</p>
+                            </div>
+                        <?php elseif (!empty($event['registration_url'])): ?>
+                            <div class="gs-alert gs-alert-primary gs-mb-lg">
+                                <h3 class="gs-h5 gs-mb-sm">
+                                    <i data-lucide="external-link" class="gs-icon-14"></i>
+                                    Extern anmälan
+                                </h3>
+                                <p class="gs-mb-sm">
+                                    Anmälan till detta event görs via en extern webbplats.
+                                </p>
+                                <?php if (!empty($event['registration_deadline'])): ?>
+                                    <p class="gs-text-sm gs-mb-sm">
+                                        <strong>Sista anmälan:</strong> <?= date('d M Y', strtotime($event['registration_deadline'])) ?>
+                                    </p>
+                                <?php endif; ?>
+                                <a href="<?= h($event['registration_url']) ?>"
+                                   target="_blank"
+                                   rel="noopener noreferrer"
+                                   class="gs-btn gs-btn-primary">
+                                    <i data-lucide="external-link" class="gs-icon-14"></i>
+                                    Gå till anmälan
+                                </a>
+                            </div>
+                        <?php else: ?>
+                            <!-- Registration form coming soon -->
+                            <div class="gs-alert gs-alert-info">
+                                <h3 class="gs-h5 gs-mb-sm">Anmälningsformulär</h3>
+                                <p>Anmälningsfunktionen är under utveckling och kommer snart att vara tillgänglig här.</p>
+                                <?php if (!empty($event['registration_deadline'])): ?>
+                                    <p class="gs-text-sm gs-mt-sm">
+                                        <strong>Planerad sista anmälan:</strong> <?= date('d M Y', strtotime($event['registration_deadline'])) ?>
+                                    </p>
+                                <?php endif; ?>
+                            </div>
+                        <?php endif; ?>
+                    </div>
+                </div>
             <?php endif; ?>
         </div>
     </main>
 
-<?php
-$additionalScripts = <<<'SCRIPT'
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Table sorting functionality
-    const tables = document.querySelectorAll('.results-table');
-
-    tables.forEach(table => {
-        const headers = table.querySelectorAll('th[data-sort]');
-
-        headers.forEach(header => {
-            header.style.cursor = 'pointer';
-            header.addEventListener('click', function() {
-                const sortKey = this.getAttribute('data-sort');
-                const tbody = table.querySelector('tbody');
-                const rows = Array.from(tbody.querySelectorAll('tr'));
-
-                // Determine sort direction
-                const currentDir = this.getAttribute('data-sort-dir') || 'asc';
-                const newDir = currentDir === 'asc' ? 'desc' : 'asc';
-
-                // Reset all headers
-                headers.forEach(h => {
-                    h.removeAttribute('data-sort-dir');
-                    const icon = h.querySelector('i[data-lucide]');
-                    if (icon) icon.setAttribute('data-lucide', 'arrow-up-down');
-                });
-
-                // Set current header
-                this.setAttribute('data-sort-dir', newDir);
-                const icon = this.querySelector('i[data-lucide]');
-                if (icon) icon.setAttribute('data-lucide', newDir === 'asc' ? 'arrow-up' : 'arrow-down');
-
-                // Sort rows
-                rows.sort((a, b) => {
-                    let aVal, bVal;
-
-                    if (sortKey === 'position') {
-                        aVal = parseInt(a.getAttribute('data-position')) || 999;
-                        bVal = parseInt(b.getAttribute('data-position')) || 999;
-                    } else if (sortKey === 'points') {
-                        aVal = parseInt(a.getAttribute('data-points')) || 0;
-                        bVal = parseInt(b.getAttribute('data-points')) || 0;
-                    } else if (sortKey === 'time') {
-                        aVal = a.getAttribute('data-time') || 'ZZZ';
-                        bVal = b.getAttribute('data-time') || 'ZZZ';
-                    } else {
-                        aVal = a.getAttribute('data-' + sortKey).toLowerCase();
-                        bVal = b.getAttribute('data-' + sortKey).toLowerCase();
-                    }
-
-                    if (aVal < bVal) return newDir === 'asc' ? -1 : 1;
-                    if (aVal > bVal) return newDir === 'asc' ? 1 : -1;
-                    return 0;
-                });
-
-                // Reorder DOM
-                rows.forEach(row => tbody.appendChild(row));
-
-                // Reinitialize Lucide icons
-                if (typeof lucide !== 'undefined') {
-                    lucide.createIcons();
-                }
-            });
-        });
-    });
-});
-</script>
-SCRIPT;
-
-include __DIR__ . '/includes/layout-footer.php';
-?>
+<?php include __DIR__ . '/includes/layout-footer.php'; ?>
