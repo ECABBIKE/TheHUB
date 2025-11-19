@@ -11,9 +11,6 @@ $filterYear = isset($_GET['year']) && is_numeric($_GET['year']) ? intval($_GET['
 $where = [];
 $params = [];
 
-// Only show events with results
-$where[] = "result_count > 0";
-
 if ($filterSeries) {
     $where[] = "e.series_id = ?";
     $params[] = $filterSeries;
@@ -24,7 +21,7 @@ if ($filterYear) {
     $params[] = $filterYear;
 }
 
-$whereClause = 'WHERE ' . implode(' AND ', $where);
+$whereClause = !empty($where) ? 'WHERE ' . implode(' AND ', $where) : '';
 
 // Get all events with result counts
 $sql = "SELECT
