@@ -35,10 +35,7 @@ if (!$event) {
 $eventFormat = $event['event_format'] ?? 'ENDURO';
 $isDH = in_array($eventFormat, ['DH_STANDARD', 'DH_SWECUP']);
 
-// Get view mode (category or class)
-$viewMode = isset($_GET['view']) ? $_GET['view'] : 'category';
-
-// Fetch all results for this event with rider, category and class info
+// Fetch all results for this event with rider and class info
 $results = $db->getAll("
     SELECT
         res.*,
@@ -48,84 +45,65 @@ $results = $db->getAll("
         r.birth_year,
         r.license_number,
         c.name as club_name,
-        cat.name as category_name,
-        cat.short_name as category_short,
         cls.name as class_name,
-        cls.display_name as class_display_name
+        cls.display_name as class_display_name,
+        cls.sort_order as class_sort_order
     FROM results res
     INNER JOIN riders r ON res.cyclist_id = r.id
     LEFT JOIN clubs c ON r.club_id = c.id
-    LEFT JOIN categories cat ON res.category_id = cat.id
     LEFT JOIN classes cls ON res.class_id = cls.id
     WHERE res.event_id = ?
     ORDER BY
-        COALESCE(cat.name, 'Okategoriserad'),
-        CASE WHEN res.status = 'finished' THEN res.position ELSE 999 END,
+        cls.sort_order ASC,
+        COALESCE(cls.name, 'Oklassificerad'),
+        CASE WHEN res.status = 'finished' THEN res.class_position ELSE 999 END,
         res.finish_time
 ", [$eventId]);
 
-// Group results by category
-$resultsByCategory = [];
+// Group results by class
 $resultsByClass = [];
 $totalParticipants = count($results);
 $totalFinished = 0;
 
 foreach ($results as $result) {
-    // Group by category
-    $categoryName = $result['category_name'] ?? 'Okategoriserad';
+    // Group by class
+    $className = $result['class_name'] ?? 'Oklassificerad';
 
-    if (!isset($resultsByCategory[$categoryName])) {
-        $resultsByCategory[$categoryName] = [
-            'short_name' => $result['category_short'] ?? 'N/A',
+    if (!isset($resultsByClass[$className])) {
+        $resultsByClass[$className] = [
+            'display_name' => $result['class_display_name'] ?? $className,
+            'sort_order' => $result['class_sort_order'] ?? 999,
             'results' => []
         ];
     }
 
-    $resultsByCategory[$categoryName]['results'][] = $result;
-
-    // Group by class (if class is assigned)
-    if (!empty($result['class_name'])) {
-        $className = $result['class_name'];
-
-        if (!isset($resultsByClass[$className])) {
-            $resultsByClass[$className] = [
-                'display_name' => $result['class_display_name'] ?? $className,
-                'results' => []
-            ];
-        }
-
-        $resultsByClass[$className]['results'][] = $result;
-    }
+    $resultsByClass[$className]['results'][] = $result;
 
     if ($result['status'] === 'finished') {
         $totalFinished++;
     }
 }
 
-// Sort classes by their sort_order if possible
-if (!empty($resultsByClass)) {
-    uksort($resultsByClass, function($a, $b) use ($db) {
-        $classA = $db->getRow("SELECT sort_order FROM classes WHERE name = ?", [$a]);
-        $classB = $db->getRow("SELECT sort_order FROM classes WHERE name = ?", [$b]);
-        return ($classA['sort_order'] ?? 999) - ($classB['sort_order'] ?? 999);
-    });
-}
+// Sort classes by their sort_order
+uksort($resultsByClass, function($a, $b) use ($resultsByClass) {
+    return $resultsByClass[$a]['sort_order'] - $resultsByClass[$b]['sort_order'];
+});
 
-// Calculate time behind leader for each category
-foreach ($resultsByCategory as $categoryName => &$categoryData) {
+// Calculate time behind leader for each class
+foreach ($resultsByClass as $className => &$classData) {
     $winnerTime = null;
 
     // Find winner's time
-    foreach ($categoryData['results'] as $result) {
-        if ($result['position'] == 1 && !empty($result['finish_time']) && $result['status'] === 'finished') {
+    foreach ($classData['results'] as $result) {
+        if ($result['class_position'] == 1 && !empty($result['finish_time']) && $result['status'] === 'finished') {
             $winnerTime = $result['finish_time'];
             break;
         }
     }
 
     // Calculate time behind for each result
-    foreach ($categoryData['results'] as &$result) {
-        if ($winnerTime && !empty($result['finish_time']) && $result['status'] === 'finished' && $result['position'] > 1) {
+    foreach ($classData['results'] as &$result) {
+        if ($winnerTime && !empty($result['finish_time']) && $result['status'] === 'finished' && $result['class_position'] > 1) {
             $winnerSeconds = strtotime("1970-01-01 $winnerTime UTC");
             $riderSeconds = strtotime("1970-01-01 {$result['finish_time']} UTC");
             $diffSeconds = $riderSeconds - $winnerSeconds;
@@ -144,7 +122,7 @@ foreach ($resultsByCategory as $categoryName => &$categoryData) {
         }
     }
 }
-unset($categoryData); // Break reference
+unset($classData); // Break reference
 
 $pageTitle = $event['name'];
 $pageType = 'public';
@@ -224,8 +202,8 @@ include __DIR__ . '/includes/layout-header.php';
                                     <strong class="gs-text-success"><?= $totalFinished ?></strong>
                                 </div>
                                 <div class="event-stat-half">
-                                    <span class="gs-text-sm gs-text-secondary">Kategorier: </span>
-                                    <strong class="gs-text-primary"><?= count($resultsByCategory) ?></strong>
+                                    <span class="gs-text-sm gs-text-secondary">Klasser: </span>
+                                    <strong class="gs-text-primary"><?= count($resultsByClass) ?></strong>
                                 </div>
                             </div>
                         </div>
@@ -243,51 +221,17 @@ include __DIR__ . '/includes/layout-header.php';
                     </p>
                 </div>
             <?php else: ?>
-                <!-- View Mode Tabs (if classes are enabled) -->
-                <?php if ($event['enable_classes'] && !empty($resultsByClass)): ?>
-                    <div class="gs-tabs gs-mb-lg">
-                        <a href="?id=<?= $eventId ?>&view=category"
-                           class="gs-tab <?= $viewMode === 'category' ? 'active' : '' ?>">
-                            <i data-lucide="folder"></i>
-                            Kategorier
-                            <span class="gs-badge gs-badge-secondary gs-badge-sm gs-ml-xs">
-                                <?= count($resultsByCategory) ?>
-                            </span>
-                        </a>
-                        <a href="?id=<?= $eventId ?>&view=class"
-                           class="gs-tab <?= $viewMode === 'class' ? 'active' : '' ?>">
-                            <i data-lucide="users"></i>
-                            Klasser
-                            <span class="gs-badge gs-badge-secondary gs-badge-sm gs-ml-xs">
-                                <?= count($resultsByClass) ?>
-                            </span>
-                        </a>
-                    </div>
-                <?php endif; ?>
-
-                <!-- Results by Category or Class -->
-                <?php if ($viewMode === 'class' && !empty($resultsByClass)): ?>
-                    <!-- Results by Class -->
-                    <?php $resultsToShow = $resultsByClass; ?>
-                    <?php $isClassView = true; ?>
-                <?php else: ?>
-                    <!-- Results by Category --><?php $resultsToShow = $resultsByCategory; ?>
-                    <?php $isClassView = false; ?>
-                <?php endif; ?>
-                <?php foreach ($resultsToShow as $groupName => $groupData): ?>
-                    <div class="gs-card gs-mb-xl <?= $isClassView ? 'class-section' : 'category-section' ?>"
+                <!-- Results by Class -->
+                <?php foreach ($resultsByClass as $groupName => $groupData): ?>
+                    <div class="gs-card gs-mb-xl class-section"
                          data-group="<?= h($groupName) ?>">
                         <div class="gs-card-header">
                             <h2 class="gs-h4 gs-text-primary">
                                 <i data-lucide="users" class="gs-icon-md"></i>
-                                <?php if ($isClassView): ?>
-                                    <?= h($groupData['display_name']) ?>
-                                    <span class="gs-badge gs-badge-primary gs-badge-sm gs-ml-xs">
-                                        <?= h($groupName) ?>
-                                    </span>
-                                <?php else: ?>
+                                <?= h($groupData['display_name']) ?>
+                                <span class="gs-badge gs-badge-primary gs-badge-sm gs-ml-xs">
                                     <?= h($groupName) ?>
-                                <?php endif; ?>
+                                </span>
                                 <span class="gs-badge gs-badge-secondary gs-ml-sm">
                                     <?= count($groupData['results']) ?> deltagare
                                 </span>
@@ -299,7 +243,7 @@ include __DIR__ . '/includes/layout-header.php';
                                     <tr>
                                         <th class="gs-table-col-narrow" data-sort="position">
                                             <span>
-                                                <?= $isClassView ? 'Klass' : 'Plac.' ?>
+                                                Plac.
                                                 <i data-lucide="arrow-up-down" class="gs-icon-sm"></i>
                                             </span>
                                         </th>
@@ -338,20 +282,17 @@ include __DIR__ . '/includes/layout-header.php';
                                             data-time="<?= $result['finish_time'] ?? '' ?>"
                                             data-points="<?= $result['points'] ?? 0 ?>">
 
-                                            <!-- Position (Category or Class) -->
+                                            <!-- Position (Class) -->
                                             <td class="gs-table-center gs-font-bold">
-                                                <?php
-                                                $displayPosition = $isClassView ? $result['class_position'] : $result['position'];
-                                                ?>
-                                                <?php if ($result['status'] === 'finished' && $displayPosition): ?>
-                                                    <?php if ($displayPosition == 1): ?>
+                                                <?php if ($result['status'] === 'finished' && $result['class_position']): ?>
+                                                    <?php if ($result['class_position'] == 1): ?>
                                                         <span class="gs-medal">🥇</span>
-                                                    <?php elseif ($displayPosition == 2): ?>
+                                                    <?php elseif ($result['class_position'] == 2): ?>
                                                         <span class="gs-medal">🥈</span>
-                                                    <?php elseif ($displayPosition == 3): ?>
+                                                    <?php elseif ($result['class_position'] == 3): ?>
                                                         <span class="gs-medal">🥉</span>
                                                     <?php else: ?>
-                                                        <?= $displayPosition ?>
+                                                        <?= $result['class_position'] ?>
                                                     <?php endif; ?>
                                                 <?php else: ?>
                                                     <span class="gs-text-secondary">-</span>
@@ -442,12 +383,9 @@ include __DIR__ . '/includes/layout-header.php';
                                                 <?= $result['time_behind_formatted'] ?? '<span class="gs-text-secondary">-</span>' ?>
                                             </td>
 
-                                            <!-- Points (Category or Class) -->
+                                            <!-- Points (Class) -->
                                             <td class="gs-table-center gs-font-bold">
-                                                <?php
-                                                $displayPoints = $isClassView ? $result['class_points'] : $result['points'];
-                                                ?>
-                                                <?= $displayPoints ?? 0 ?>
+                                                <?= $result['class_points'] ?? 0 ?>
                                             </td>
 
                                             <!-- Status -->

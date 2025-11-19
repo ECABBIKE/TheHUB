@@ -70,31 +70,42 @@ $results = $db->getAll("
         r.gender,
         r.birth_year,
         c.name as club_name,
-        cat.name as category_name,
-        cat.short_name as category_short
+        cls.name as class_name,
+        cls.display_name as class_display_name,
+        cls.sort_order as class_sort_order
     FROM results res
     INNER JOIN riders r ON res.cyclist_id = r.id
     LEFT JOIN clubs c ON r.club_id = c.id
-    LEFT JOIN categories cat ON res.category_id = cat.id
+    LEFT JOIN classes cls ON res.class_id = cls.id
     WHERE res.event_id = ?
     ORDER BY
-        COALESCE(cat.name, 'Okategoriserad'),
-        CASE WHEN res.status = 'finished' THEN res.position ELSE 999 END,
+        cls.sort_order ASC,
+        COALESCE(cls.name, 'Oklassificerad'),
+        CASE WHEN res.status = 'finished' THEN res.class_position ELSE 999 END,
         res.finish_time
 ", [$eventId]);
 
-// Group results by category
-$resultsByCategory = [];
+// Group results by class
+$resultsByClass = [];
 foreach ($results as $result) {
-    $categoryName = $result['category_name'] ?? 'Okategoriserad';
-    if (!isset($resultsByCategory[$categoryName])) {
-        $resultsByCategory[$categoryName] = [];
+    $className = $result['class_name'] ?? 'Oklassificerad';
+    if (!isset($resultsByClass[$className])) {
+        $resultsByClass[$className] = [
+            'display_name' => $result['class_display_name'] ?? $className,
+            'sort_order' => $result['class_sort_order'] ?? 999,
+            'results' => []
+        ];
     }
-    $resultsByCategory[$categoryName][] = $result;
+    $resultsByClass[$className]['results'][] = $result;
 }
 
-// Get all categories for dropdown
-$categories = $db->getAll("SELECT id, name FROM categories ORDER BY name");
+// Sort by sort_order
+uksort($resultsByClass, function($a, $b) use ($resultsByClass) {
+    return $resultsByClass[$a]['sort_order'] - $resultsByClass[$b]['sort_order'];
+});
+
+// Get all classes for dropdown
+$classes = $db->getAll("SELECT id, name, display_name FROM classes WHERE active = 1 ORDER BY sort_order, name");
 
 $pageTitle = 'Editera Resultat - ' . $event['name'];
 $pageType = 'admin';
@@ -187,15 +198,18 @@ include __DIR__ . '/../includes/layout-header.php';
                 </div>
             </div>
         <?php else: ?>
-            <!-- Results by Category -->
-            <?php foreach ($resultsByCategory as $categoryName => $categoryResults): ?>
+            <!-- Results by Class -->
+            <?php foreach ($resultsByClass as $className => $classData): ?>
                 <div class="gs-card gs-mb-lg">
                     <div class="gs-card-header">
                         <h3 class="gs-h4 gs-text-primary">
                             <i data-lucide="users"></i>
-                            <?= h($categoryName) ?>
+                            <?= h($classData['display_name']) ?>
+                            <span class="gs-badge gs-badge-primary gs-badge-sm gs-ml-xs">
+                                <?= h($className) ?>
+                            </span>
                             <span class="gs-badge gs-badge-secondary gs-ml-sm">
-                                <?= count($categoryResults) ?> deltagare
+                                <?= count($classData['results']) ?> deltagare
                             </span>
                         </h3>
                     </div>
@@ -214,7 +228,7 @@ include __DIR__ . '/../includes/layout-header.php';
                                 </tr>
                             </thead>
                             <tbody>
-                                <?php foreach ($categoryResults as $result): ?>
+                                <?php foreach ($classData['results'] as $result): ?>
                                     <tr id="result-row-<?= $result['id'] ?>">
                                         <form method="POST" style="display: contents;" class="result-form">
                                             <?= csrf_field() ?>

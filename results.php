@@ -22,7 +22,7 @@ if (!$event) {
 // Get results
 $results = $db->getAll(
     "SELECT
-        r.position,
+        r.class_position as position,
         r.bib_number,
         r.finish_time,
         r.status,
@@ -30,13 +30,14 @@ $results = $db->getAll(
         c.id as cyclist_id,
         c.birth_year,
         cl.name as club_name,
-        cat.name as category_name
+        cls.name as class_name,
+        cls.display_name as class_display_name
      FROM results r
      JOIN riders c ON r.cyclist_id = c.id
      LEFT JOIN clubs cl ON c.club_id = cl.id
-     LEFT JOIN categories cat ON r.category_id = cat.id
+     LEFT JOIN classes cls ON r.class_id = cls.id
      WHERE r.event_id = ?
-     ORDER BY r.position ASC, r.finish_time ASC",
+     ORDER BY cls.sort_order ASC, r.class_position ASC, r.finish_time ASC",
     [$eventId]
 );
 
@@ -101,7 +102,7 @@ include __DIR__ . '/includes/layout-header.php';
                                     <th>Startnr</th>
                                     <th>Namn</th>
                                     <th>Klubb</th>
-                                    <th>Kategori</th>
+                                    <th>Klass</th>
                                     <th>Tid</th>
                                     <th>Status</th>
                                 </tr>
@@ -139,9 +140,9 @@ include __DIR__ . '/includes/layout-header.php';
                                             <?= h($result['club_name'] ?? '-') ?>
                                         </td>
                                         <td>
-                                            <?php if ($result['category_name']): ?>
+                                            <?php if ($result['class_display_name']): ?>
                                                 <span class="gs-badge gs-badge-secondary gs-text-xs">
-                                                    <?= h($result['category_name']) ?>
+                                                    <?= h($result['class_display_name']) ?>
                                                 </span>
                                             <?php else: ?>
                                                 <span class="gs-text-secondary">-</span>
