@@ -10,11 +10,11 @@ include __DIR__ . '/includes/layout-header.php';
     <div class="gs-container">
 
         <!-- Hero Section -->
-        <div class="gs-hero" style="background: linear-gradient(135deg, #004a98 0%, #0066cc 100%); color: white; padding: 4rem 2rem; border-radius: 12px; margin-bottom: 3rem; text-align: center;">
-            <h1 class="gs-h1" style="color: white; font-size: 3rem; margin-bottom: 1rem;">
+        <div class="gs-hero gs-text-center">
+            <h1 class="gs-h1 gs-hero-title-white">
                 Välkommen till TheHUB
             </h1>
-            <p style="font-size: 1.5rem; opacity: 0.95; max-width: 800px; margin: 0 auto;">
+            <p class="gs-hero-subtitle">
                 Din kompletta plattform för cykeltävlingar i Sverige
             </p>
         </div>
@@ -27,7 +27,7 @@ include __DIR__ . '/includes/layout-header.php';
                     En awesome plattform för alla
                 </h2>
             </div>
-            <div class="gs-card-content" style="font-size: 1.1rem; line-height: 1.8;">
+            <div class="gs-card-content gs-card-content-large">
                 <p>
                     <strong>TheHUB</strong> är det centrala navet för alla som älskar att tävla på cykel i Sverige.
                     Här samlas cyklister, arrangörer och serier under samma tak med allt du behöver för att
@@ -36,7 +36,7 @@ include __DIR__ . '/includes/layout-header.php';
                 <p>
                     Med TheHUB får du tillgång till:
                 </p>
-                <ul style="margin-left: 2rem; margin-top: 1rem;">
+                <ul class="gs-list-styled">
                     <li><strong>Live-resultat</strong> från alla stora serier</li>
                     <li><strong>Detaljerade poänglistor</strong> över hela säsongen</li>
                     <li><strong>Enkel anmälan</strong> till kommande events</li>
@@ -55,7 +55,7 @@ include __DIR__ . '/includes/layout-header.php';
                     Om Gravity Series
                 </h2>
             </div>
-            <div class="gs-card-content" style="font-size: 1.1rem; line-height: 1.8;">
+            <div class="gs-card-content gs-card-content-large">
                 <p>
                     <strong>Gravity Series</strong> är en fristående tävlingsorganisation som kompletterar
                     Svenska Cykelförbundets SweCup-tävlingar. Huvudfokus ligger på disciplinerna
@@ -81,7 +81,7 @@ include __DIR__ . '/includes/layout-header.php';
 
         <!-- Series Overview -->
         <div class="gs-mb-xl">
-            <h2 class="gs-h2 gs-mb-lg" style="text-align: center;">
+            <h2 class="gs-h2 gs-mb-lg gs-text-center">
                 <i data-lucide="trophy"></i>
                 Våra Serier
             </h2>
@@ -89,11 +89,11 @@ include __DIR__ . '/includes/layout-header.php';
             <div class="gs-grid gs-grid-cols-1 gs-md-grid-cols-2 gs-lg-grid-cols-3 gs-xl-grid-cols-4 gs-gap-lg">
 
                 <!-- Enduro Series -->
-                <div class="gs-card" style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); color: white; border: none;">
-                    <div class="gs-card-content" style="padding: 2rem; text-align: center;">
-                        <i data-lucide="mountain" style="width: 64px; height: 64px; margin: 0 auto 1.5rem; display: block;"></i>
-                        <h3 class="gs-h3" style="color: white; margin-bottom: 1rem;">Enduro Series</h3>
-                        <p style="opacity: 0.9; margin-bottom: 1.5rem;">
+                <div class="gs-card gs-series-card-enduro">
+                    <div class="gs-card-content gs-series-card-content">
+                        <i data-lucide="mountain" class="gs-series-icon"></i>
+                        <h3 class="gs-h3 gs-series-heading-white">Enduro Series</h3>
+                        <p class="gs-series-text">
                             Sveriges största enduroserie med tävlingar på de bästa banorna runt om i landet.
                         </p>
                         <a href="/series.php?discipline=enduro" class="gs-btn gs-btn-primary gs-w-full">
@@ -103,11 +103,11 @@ include __DIR__ . '/includes/layout-header.php';
                 </div>
 
                 <!-- Downhill Series -->
-                <div class="gs-card" style="background: linear-gradient(135deg, #c21500 0%, #ffc500 100%); color: white; border: none;">
-                    <div class="gs-card-content" style="padding: 2rem; text-align: center;">
-                        <i data-lucide="zap" style="width: 64px; height: 64px; margin: 0 auto 1.5rem; display: block;"></i>
-                        <h3 class="gs-h3" style="color: white; margin-bottom: 1rem;">Downhill Series</h3>
-                        <p style="opacity: 0.9; margin-bottom: 1.5rem;">
+                <div class="gs-card gs-series-card-downhill">
+                    <div class="gs-card-content gs-series-card-content">
+                        <i data-lucide="zap" class="gs-series-icon"></i>
+                        <h3 class="gs-h3 gs-series-heading-white">Downhill Series</h3>
+                        <p class="gs-series-text">
                             Ren fart och teknik på de snabbaste och tuffaste nedförsbanorna.
                         </p>
                         <a href="/series.php?discipline=downhill" class="gs-btn gs-btn-primary gs-w-full">
@@ -117,11 +117,11 @@ include __DIR__ . '/includes/layout-header.php';
                 </div>
 
                 <!-- Dual Slalom -->
-                <div class="gs-card" style="background: linear-gradient(135deg, #134e5e 0%, #71b280 100%); color: white; border: none;">
-                    <div class="gs-card-content" style="padding: 2rem; text-align: center;">
-                        <i data-lucide="users" style="width: 64px; height: 64px; margin: 0 auto 1.5rem; display: block;"></i>
-                        <h3 class="gs-h3" style="color: white; margin-bottom: 1rem;">Dual Slalom</h3>
-                        <p style="opacity: 0.9; margin-bottom: 1.5rem;">
+                <div class="gs-card gs-series-card-dual">
+                    <div class="gs-card-content gs-series-card-content">
+                        <i data-lucide="users" class="gs-series-icon"></i>
+                        <h3 class="gs-h3 gs-series-heading-white">Dual Slalom</h3>
+                        <p class="gs-series-text">
                             Head-to-head racing där två cyklister kör parallella banor samtidigt.
                         </p>
                         <a href="/series.php?discipline=dual-slalom" class="gs-btn gs-btn-primary gs-w-full">
@@ -131,11 +131,11 @@ include __DIR__ . '/includes/layout-header.php';
                 </div>
 
                 <!-- Hillclimb -->
-                <div class="gs-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none;">
-                    <div class="gs-card-content" style="padding: 2rem; text-align: center;">
-                        <i data-lucide="trending-up" style="width: 64px; height: 64px; margin: 0 auto 1.5rem; display: block;"></i>
-                        <h3 class="gs-h3" style="color: white; margin-bottom: 1rem;">Hillclimb</h3>
-                        <p style="opacity: 0.9; margin-bottom: 1.5rem;">
+                <div class="gs-card gs-series-card-hillclimb">
+                    <div class="gs-card-content gs-series-card-content">
+                        <i data-lucide="trending-up" class="gs-series-icon"></i>
+                        <h3 class="gs-h3 gs-series-heading-white">Hillclimb</h3>
+                        <p class="gs-series-text">
                             Utmanande uppförstävlingar som testar uthållighet och styrka.
                         </p>
                         <a href="/series.php?discipline=hillclimb" class="gs-btn gs-btn-primary gs-w-full">
@@ -145,11 +145,11 @@ include __DIR__ . '/includes/layout-header.php';
                 </div>
 
                 <!-- Local Series -->
-                <div class="gs-card" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; border: none;">
-                    <div class="gs-card-content" style="padding: 2rem; text-align: center;">
-                        <i data-lucide="map-pin" style="width: 64px; height: 64px; margin: 0 auto 1.5rem; display: block;"></i>
-                        <h3 class="gs-h3" style="color: white; margin-bottom: 1rem;">Lokala Serier</h3>
-                        <p style="opacity: 0.9; margin-bottom: 1.5rem;">
+                <div class="gs-card gs-series-card-local">
+                    <div class="gs-card-content gs-series-card-content">
+                        <i data-lucide="map-pin" class="gs-series-icon"></i>
+                        <h3 class="gs-h3 gs-series-heading-white">Lokala Serier</h3>
+                        <p class="gs-series-text">
                             Mindre regionala serier som erbjuder fler tävlingsmöjligheter lokalt.
                         </p>
                         <a href="/series.php?type=local" class="gs-btn gs-btn-primary gs-w-full">
@@ -159,14 +159,14 @@ include __DIR__ . '/includes/layout-header.php';
                 </div>
 
                 <!-- SweCup -->
-                <div class="gs-card" style="background: linear-gradient(135deg, #005aa7 0%, #fffde4 100%); color: #1a1a1a; border: none;">
-                    <div class="gs-card-content" style="padding: 2rem; text-align: center;">
-                        <i data-lucide="award" style="width: 64px; height: 64px; margin: 0 auto 1.5rem; display: block; color: #005aa7;"></i>
-                        <h3 class="gs-h3" style="color: #1a1a1a; margin-bottom: 1rem;">SweCup</h3>
-                        <p style="margin-bottom: 1.5rem;">
+                <div class="gs-card gs-series-card-swecup">
+                    <div class="gs-card-content gs-series-card-content">
+                        <i data-lucide="award" class="gs-series-icon-swecup"></i>
+                        <h3 class="gs-h3 gs-series-heading-dark">SweCup</h3>
+                        <p class="gs-mb-lg">
                             Svenska Cykelförbundets officiella tävlingsserier med nationella mästerskap.
                         </p>
-                        <a href="/series.php?type=swecup" class="gs-btn" style="background: #005aa7; color: white; width: 100%;">
+                        <a href="/series.php?type=swecup" class="gs-btn gs-btn-swecup">
                             Mer info
                         </a>
                     </div>
@@ -186,25 +186,25 @@ include __DIR__ . '/includes/layout-header.php';
             <div class="gs-card-content">
                 <div class="gs-grid gs-grid-cols-1 gs-md-grid-cols-3 gs-gap-md">
 
-                    <a href="/events.php" class="gs-card gs-card-hover" style="text-decoration: none;">
-                        <div class="gs-card-content gs-text-center" style="padding: 2rem;">
-                            <i data-lucide="calendar" style="width: 48px; height: 48px; margin: 0 auto 1rem; display: block; color: #004a98;"></i>
+                    <a href="/events.php" class="gs-card gs-card-hover gs-quicklink-card">
+                        <div class="gs-card-content gs-text-center gs-quicklink-content">
+                            <i data-lucide="calendar" class="gs-quicklink-icon"></i>
                             <h4 class="gs-h4">Kommande Events</h4>
                             <p class="gs-text-secondary gs-mt-sm">Se alla tävlingar i kalendern</p>
                         </div>
                     </a>
 
-                    <a href="/riders.php" class="gs-card gs-card-hover" style="text-decoration: none;">
-                        <div class="gs-card-content gs-text-center" style="padding: 2rem;">
-                            <i data-lucide="users" style="width: 48px; height: 48px; margin: 0 auto 1rem; display: block; color: #004a98;"></i>
+                    <a href="/riders.php" class="gs-card gs-card-hover gs-quicklink-card">
+                        <div class="gs-card-content gs-text-center gs-quicklink-content">
+                            <i data-lucide="users" class="gs-quicklink-icon"></i>
                             <h4 class="gs-h4">Deltagare</h4>
                             <p class="gs-text-secondary gs-mt-sm">Sök efter cyklister och klubbar</p>
                         </div>
                     </a>
 
-                    <a href="/series.php" class="gs-card gs-card-hover" style="text-decoration: none;">
-                        <div class="gs-card-content gs-text-center" style="padding: 2rem;">
-                            <i data-lucide="trophy" style="width: 48px; height: 48px; margin: 0 auto 1rem; display: block; color: #004a98;"></i>
+                    <a href="/series.php" class="gs-card gs-card-hover gs-quicklink-card">
+                        <div class="gs-card-content gs-text-center gs-quicklink-content">
+                            <i data-lucide="trophy" class="gs-quicklink-icon"></i>
                             <h4 class="gs-h4">Poänglistor</h4>
                             <p class="gs-text-secondary gs-mt-sm">Se ställningen i alla serier</p>
                         </div>

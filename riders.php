@@ -255,27 +255,27 @@ include __DIR__ . '/includes/layout-header.php';
             </div>
 
             <!-- Results Counter -->
-            <div class="gs-mb-md" id="resultsCounter" style="display: none;">
-                <div class="gs-alert gs-alert-info" style="padding: 0.75rem 1rem;">
+            <div class="gs-mb-md gs-hidden" id="resultsCounter">
+                <div class="gs-alert gs-alert-info gs-p-3">
                     <i data-lucide="filter"></i>
                     <span id="resultsCount"></span>
                 </div>
             </div>
 
             <!-- Initial Message -->
-            <div id="initialMessage" class="gs-card gs-text-center" style="padding: 3rem;">
-                <i data-lucide="search" style="width: 64px; height: 64px; margin: 0 auto 1rem; opacity: 0.3;"></i>
+            <div id="initialMessage" class="gs-card gs-text-center gs-empty-state-container">
+                <i data-lucide="search" class="gs-empty-state-icon-lg"></i>
                 <h3 class="gs-h4 gs-mb-sm">Sök efter deltagare</h3>
                 <p class="gs-text-secondary">
                     Börja skriva minst 2 tecken för att hitta deltagare<br>
-                    <span style="font-size: 0.875rem; color: #9ca3af;">
+                    <span class="gs-text-xs-special">
                         (<?= number_format($total_count, 0, ',', ' ') ?> deltagare i databasen)
                     </span>
                 </p>
             </div>
 
             <!-- Riders Grid - Will be populated via search -->
-            <div class="gs-grid gs-grid-cols-1 gs-md-grid-cols-2 gs-lg-grid-cols-3 gs-xl-grid-cols-4 gs-gap-md" id="ridersGrid" style="display: none;">
+            <div class="gs-grid gs-grid-cols-1 gs-md-grid-cols-2 gs-lg-grid-cols-3 gs-xl-grid-cols-4 gs-gap-md gs-hidden" id="ridersGrid">
                     <?php
                     $currentYear = date('Y');
                     foreach ($cyclists as $rider):
@@ -339,7 +339,7 @@ include __DIR__ . '/includes/layout-header.php';
                                     <!-- Club -->
                                     <div class="club-field-wide">
                                         <div class="info-label-compact">Klubb</div>
-                                        <div class="info-value-compact" style="font-size: 11px;">
+                                        <div class="info-value-compact gs-text-11">
                                             <?= $rider['club_name'] ? h($rider['club_name']) : '–' ?>
                                         </div>
                                     </div>
@@ -350,8 +350,8 @@ include __DIR__ . '/includes/layout-header.php';
                 </div>
 
             <!-- No Results Message (hidden by default) -->
-            <div id="noResults" class="gs-card gs-text-center" style="display: none; padding: 3rem; margin-top: 2rem;">
-                <i data-lucide="search-x" style="width: 64px; height: 64px; margin: 0 auto 1rem; opacity: 0.3;"></i>
+            <div id="noResults" class="gs-card gs-text-center gs-hidden gs-empty-state-container gs-mt-8">
+                <i data-lucide="search-x" class="gs-empty-state-icon-lg"></i>
                 <h3 class="gs-h4 gs-mb-sm">Inga matchande deltagare</h3>
                 <p class="gs-text-secondary">
                     Prova att söka med andra ord eller rensa sökningen.

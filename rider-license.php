@@ -584,7 +584,7 @@ $pageType = 'public';
                         </div>
 
                         <?php if ($rider['club_name']): ?>
-                            <div class="info-field" style="grid-column: span 2;">
+                            <div class="info-field gs-col-span-2">
                                 <div class="info-label">Klubb</div>
                                 <div class="info-value"><?= h($rider['club_name']) ?></div>
                             </div>

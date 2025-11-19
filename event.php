@@ -156,11 +156,11 @@ include __DIR__ . '/includes/layout-header.php';
 
             <!-- Event Header -->
             <div class="gs-card gs-mb-xl">
-                <div class="gs-card-content event-header-content" style="padding: var(--gs-space-xl);">
+                <div class="gs-card-content event-header-content">
                     <!-- Back Button -->
                     <div class="gs-mb-lg">
                         <a href="/events.php" class="gs-btn gs-btn-outline gs-btn-sm">
-                            <i data-lucide="arrow-left"></i>
+                            <i data-lucide="arrow-left" class="gs-icon-md"></i>
                             Tillbaka till tävlingar
                         </a>
                     </div>
@@ -169,8 +169,7 @@ include __DIR__ . '/includes/layout-header.php';
                         <?php if ($event['series_logo']): ?>
                             <div class="event-logo">
                                 <img src="<?= h($event['series_logo']) ?>"
-                                     alt="<?= h($event['series_name'] ?? 'Serie') ?>"
-                                     style="width: 120px; height: auto; border-radius: var(--gs-border-radius);">
+                                     alt="<?= h($event['series_name'] ?? 'Serie') ?>">
                             </div>
                         <?php endif; ?>
 
@@ -181,7 +180,7 @@ include __DIR__ . '/includes/layout-header.php';
 
                             <div class="gs-flex gs-gap-md gs-flex-wrap gs-mb-md event-meta">
                                 <div class="gs-flex gs-items-center gs-gap-xs">
-                                    <i data-lucide="calendar" style="width: 18px; height: 18px;"></i>
+                                    <i data-lucide="calendar" class="gs-icon-md"></i>
                                     <span class="gs-text-secondary">
                                         <?= date('l j F Y', strtotime($event['date'])) ?>
                                     </span>
@@ -189,7 +188,7 @@ include __DIR__ . '/includes/layout-header.php';
 
                                 <?php if ($event['venue_name']): ?>
                                     <div class="gs-flex gs-items-center gs-gap-xs">
-                                        <i data-lucide="map-pin" style="width: 18px; height: 18px;"></i>
+                                        <i data-lucide="map-pin" class="gs-icon-md"></i>
                                         <span class="gs-text-secondary">
                                             <?= h($event['venue_name']) ?>
                                             <?php if ($event['venue_city']): ?>
@@ -199,14 +198,14 @@ include __DIR__ . '/includes/layout-header.php';
                                     </div>
                                 <?php elseif ($event['location']): ?>
                                     <div class="gs-flex gs-items-center gs-gap-xs">
-                                        <i data-lucide="map-pin" style="width: 18px; height: 18px;"></i>
+                                        <i data-lucide="map-pin" class="gs-icon-md"></i>
                                         <span class="gs-text-secondary"><?= h($event['location']) ?></span>
                                     </div>
                                 <?php endif; ?>
 
                                 <?php if ($event['series_name']): ?>
                                     <div class="gs-flex gs-items-center gs-gap-xs">
-                                        <i data-lucide="award" style="width: 18px; height: 18px;"></i>
+                                        <i data-lucide="award" class="gs-icon-md"></i>
                                         <span class="gs-badge gs-badge-primary">
                                             <?= h($event['series_name']) ?>
                                         </span>
@@ -216,15 +215,15 @@ include __DIR__ . '/includes/layout-header.php';
 
                             <!-- Event Stats -->
                             <div class="event-stats">
-                                <div class="event-stat-full" style="padding: var(--gs-space-sm) var(--gs-space-md); background: var(--gs-background-secondary); border-radius: var(--gs-border-radius);">
+                                <div class="event-stat-full">
                                     <span class="gs-text-sm gs-text-secondary">Deltagare: </span>
                                     <strong class="gs-text-primary"><?= $totalParticipants ?></strong>
                                 </div>
-                                <div class="event-stat-half" style="padding: var(--gs-space-sm) var(--gs-space-md); background: var(--gs-background-secondary); border-radius: var(--gs-border-radius);">
+                                <div class="event-stat-half">
                                     <span class="gs-text-sm gs-text-secondary">Slutförda: </span>
                                     <strong class="gs-text-success"><?= $totalFinished ?></strong>
                                 </div>
-                                <div class="event-stat-half" style="padding: var(--gs-space-sm) var(--gs-space-md); background: var(--gs-background-secondary); border-radius: var(--gs-border-radius);">
+                                <div class="event-stat-half">
                                     <span class="gs-text-sm gs-text-secondary">Kategorier: </span>
                                     <strong class="gs-text-primary"><?= count($resultsByCategory) ?></strong>
                                 </div>
@@ -236,8 +235,8 @@ include __DIR__ . '/includes/layout-header.php';
 
             <?php if (empty($results)): ?>
                 <!-- No Results -->
-                <div class="gs-card gs-text-center" style="padding: 3rem;">
-                    <i data-lucide="trophy" style="width: 64px; height: 64px; margin: 0 auto 1rem; opacity: 0.3;"></i>
+                <div class="gs-card gs-empty-state">
+                    <i data-lucide="trophy" class="gs-empty-icon"></i>
                     <h3 class="gs-h4 gs-mb-sm">Inga resultat ännu</h3>
                     <p class="gs-text-secondary">
                         Resultat har inte laddats upp för denna tävling.
@@ -280,7 +279,7 @@ include __DIR__ . '/includes/layout-header.php';
                          data-group="<?= h($groupName) ?>">
                         <div class="gs-card-header">
                             <h2 class="gs-h4 gs-text-primary">
-                                <i data-lucide="users"></i>
+                                <i data-lucide="users" class="gs-icon-md"></i>
                                 <?php if ($isClassView): ?>
                                     <?= h($groupData['display_name']) ?>
                                     <span class="gs-badge gs-badge-primary gs-badge-sm gs-ml-xs">
@@ -294,40 +293,40 @@ include __DIR__ . '/includes/layout-header.php';
                                 </span>
                             </h2>
                         </div>
-                        <div class="gs-card-content" style="padding: 0; overflow-x: auto;">
+                        <div class="gs-card-content gs-card-table-container">
                             <table class="gs-table results-table">
                                 <thead>
                                     <tr>
-                                        <th style="width: 60px; text-align: center;" data-sort="position">
-                                            <span style="cursor: pointer;">
+                                        <th class="gs-table-col-narrow" data-sort="position">
+                                            <span>
                                                 <?= $isClassView ? 'Klass' : 'Plac.' ?>
-                                                <i data-lucide="arrow-up-down" style="width: 14px; height: 14px;"></i>
+                                                <i data-lucide="arrow-up-down" class="gs-icon-sm"></i>
                                             </span>
                                         </th>
                                         <th data-sort="name">
-                                            <span style="cursor: pointer;">Namn <i data-lucide="arrow-up-down" style="width: 14px; height: 14px;"></i></span>
+                                            <span>Namn <i data-lucide="arrow-up-down" class="gs-icon-sm"></i></span>
                                         </th>
                                         <th data-sort="club">
-                                            <span style="cursor: pointer;">Klubb <i data-lucide="arrow-up-down" style="width: 14px; height: 14px;"></i></span>
+                                            <span>Klubb <i data-lucide="arrow-up-down" class="gs-icon-sm"></i></span>
                                         </th>
-                                        <th style="width: 100px; text-align: center;">Startnr</th>
+                                        <th class="gs-table-col-medium">Startnr</th>
                                         <?php if ($isDH): ?>
-                                            <th style="width: 120px; text-align: center;" data-sort="run1">
-                                                <span style="cursor: pointer;">Åk 1 <i data-lucide="arrow-up-down" style="width: 14px; height: 14px;"></i></span>
+                                            <th class="gs-table-col-wide" data-sort="run1">
+                                                <span>Åk 1 <i data-lucide="arrow-up-down" class="gs-icon-sm"></i></span>
                                             </th>
-                                            <th style="width: 120px; text-align: center;" data-sort="run2">
-                                                <span style="cursor: pointer;">Åk 2 <i data-lucide="arrow-up-down" style="width: 14px; height: 14px;"></i></span>
+                                            <th class="gs-table-col-wide" data-sort="run2">
+                                                <span>Åk 2 <i data-lucide="arrow-up-down" class="gs-icon-sm"></i></span>
                                             </th>
                                         <?php else: ?>
-                                            <th style="width: 120px; text-align: center;" data-sort="time">
-                                                <span style="cursor: pointer;">Tid <i data-lucide="arrow-up-down" style="width: 14px; height: 14px;"></i></span>
+                                            <th class="gs-table-col-wide" data-sort="time">
+                                                <span>Tid <i data-lucide="arrow-up-down" class="gs-icon-sm"></i></span>
                                             </th>
                                         <?php endif; ?>
-                                        <th style="width: 100px; text-align: center;">+Tid</th>
-                                        <th style="width: 80px; text-align: center;" data-sort="points">
-                                            <span style="cursor: pointer;">Poäng <i data-lucide="arrow-up-down" style="width: 14px; height: 14px;"></i></span>
+                                        <th class="gs-table-col-medium">+Tid</th>
+                                        <th class="gs-table-col-narrow" data-sort="points">
+                                            <span>Poäng <i data-lucide="arrow-up-down" class="gs-icon-sm"></i></span>
                                         </th>
-                                        <th style="width: 100px; text-align: center;">Status</th>
+                                        <th class="gs-table-col-medium">Status</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -340,17 +339,17 @@ include __DIR__ . '/includes/layout-header.php';
                                             data-points="<?= $result['points'] ?? 0 ?>">
 
                                             <!-- Position (Category or Class) -->
-                                            <td style="text-align: center; font-weight: bold;">
+                                            <td class="gs-table-center gs-font-bold">
                                                 <?php
                                                 $displayPosition = $isClassView ? $result['class_position'] : $result['position'];
                                                 ?>
                                                 <?php if ($result['status'] === 'finished' && $displayPosition): ?>
                                                     <?php if ($displayPosition == 1): ?>
-                                                        <span style="font-size: 1.2em;">🥇</span>
+                                                        <span class="gs-medal">🥇</span>
                                                     <?php elseif ($displayPosition == 2): ?>
-                                                        <span style="font-size: 1.2em;">🥈</span>
+                                                        <span class="gs-medal">🥈</span>
                                                     <?php elseif ($displayPosition == 3): ?>
-                                                        <span style="font-size: 1.2em;">🥉</span>
+                                                        <span class="gs-medal">🥉</span>
                                                     <?php else: ?>
                                                         <?= $displayPosition ?>
                                                     <?php endif; ?>
@@ -362,10 +361,10 @@ include __DIR__ . '/includes/layout-header.php';
                                             <!-- Name -->
                                             <td>
                                                 <a href="/rider.php?id=<?= $result['cyclist_id'] ?>"
-                                                   style="text-decoration: none; color: inherit; font-weight: 600;">
+                                                   class="gs-rider-link">
                                                     <?= h($result['firstname']) ?> <?= h($result['lastname']) ?>
                                                 </a>
-                                                <div style="font-size: 0.75rem; color: var(--gs-text-secondary); margin-top: 2px;">
+                                                <div class="gs-rider-meta">
                                                     <?php if ($result['birth_year']): ?>
                                                         <?= calculateAge($result['birth_year']) ?> år
                                                     <?php endif; ?>
@@ -387,7 +386,7 @@ include __DIR__ . '/includes/layout-header.php';
                                             </td>
 
                                             <!-- Bib Number -->
-                                            <td style="text-align: center;">
+                                            <td class="gs-table-center">
                                                 <?= $result['bib_number'] ? h($result['bib_number']) : '<span class="gs-text-secondary">-</span>' ?>
                                             </td>
 
@@ -407,9 +406,9 @@ include __DIR__ . '/includes/layout-header.php';
                                                 }
                                                 ?>
                                                 <!-- DH Run 1 Time -->
-                                                <td style="text-align: center; font-family: monospace; font-weight: 600;">
+                                                <td class="gs-table-time-cell">
                                                     <?php if ($result['run_1_time'] && $result['status'] === 'finished'): ?>
-                                                        <span style="<?= $run1IsFastest ? 'color: var(--gs-success); font-weight: 700;' : '' ?>">
+                                                        <span class="<?= $run1IsFastest ? 'gs-table-fastest' : '' ?>">
                                                             <?= h($result['run_1_time']) ?>
                                                         </span>
                                                     <?php else: ?>
@@ -418,9 +417,9 @@ include __DIR__ . '/includes/layout-header.php';
                                                 </td>
 
                                                 <!-- DH Run 2 Time -->
-                                                <td style="text-align: center; font-family: monospace; font-weight: 600;">
+                                                <td class="gs-table-time-cell">
                                                     <?php if ($result['run_2_time'] && $result['status'] === 'finished'): ?>
-                                                        <span style="<?= $run2IsFastest ? 'color: var(--gs-success); font-weight: 700;' : '' ?>">
+                                                        <span class="<?= $run2IsFastest ? 'gs-table-fastest' : '' ?>">
                                                             <?= h($result['run_2_time']) ?>
                                                         </span>
                                                     <?php else: ?>
@@ -429,7 +428,7 @@ include __DIR__ . '/includes/layout-header.php';
                                                 </td>
                                             <?php else: ?>
                                                 <!-- Standard Finish Time -->
-                                                <td style="text-align: center; font-family: monospace; font-weight: 600;">
+                                                <td class="gs-table-time-cell">
                                                     <?php if ($result['finish_time'] && $result['status'] === 'finished'): ?>
                                                         <?= h($result['finish_time']) ?>
                                                     <?php else: ?>
@@ -439,12 +438,12 @@ include __DIR__ . '/includes/layout-header.php';
                                             <?php endif; ?>
 
                                             <!-- Time Behind -->
-                                            <td style="text-align: center; font-family: monospace; color: var(--gs-text-secondary);">
+                                            <td class="gs-table-center gs-table-mono gs-text-secondary">
                                                 <?= $result['time_behind_formatted'] ?? '<span class="gs-text-secondary">-</span>' ?>
                                             </td>
 
                                             <!-- Points (Category or Class) -->
-                                            <td style="text-align: center; font-weight: 600;">
+                                            <td class="gs-table-center gs-font-bold">
                                                 <?php
                                                 $displayPoints = $isClassView ? $result['class_points'] : $result['points'];
                                                 ?>
@@ -452,7 +451,7 @@ include __DIR__ . '/includes/layout-header.php';
                                             </td>
 
                                             <!-- Status -->
-                                            <td style="text-align: center;">
+                                            <td class="gs-table-center">
                                                 <?php
                                                 $statusBadge = 'gs-badge-success';
                                                 $statusText = 'OK';
@@ -481,26 +480,6 @@ include __DIR__ . '/includes/layout-header.php';
             <?php endif; ?>
         </div>
     </main>
-
-<style>
-    /* DH Results: Desktop - side by side, Mobile - stacked */
-    @media (max-width: 768px) {
-        .results-table th[data-sort="run1"],
-        .results-table th[data-sort="run2"] {
-            font-size: 0.85rem;
-            padding: 0.5rem 0.25rem;
-        }
-
-        .results-table td:has(.gs-text-secondary) {
-            font-size: 0.875rem;
-        }
-    }
-
-    /* Make times stand out */
-    .results-table td[style*="monospace"] {
-        background: var(--gs-background-secondary);
-    }
-</style>
 
 <?php
 $additionalScripts = <<<'SCRIPT'
