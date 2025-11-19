@@ -128,9 +128,9 @@ include __DIR__ . '/../includes/layout-header.php';
             <?php endif; ?>
 
             <!-- Club Modal -->
-                <div id="clubModal" class="gs-modal" style="display: none;">
+                <div id="clubModal" class="gs-modal gs-modal-hidden">
                     <div class="gs-modal-overlay" onclick="closeClubModal()"></div>
-                    <div class="gs-modal-content" style="max-width: 700px;">
+                    <div class="gs-modal-content gs-modal-content-md">
                         <div class="gs-modal-header">
                             <h2 class="gs-modal-title" id="modalTitle">
                                 <i data-lucide="building"></i>
@@ -328,7 +328,7 @@ include __DIR__ . '/../includes/layout-header.php';
             <?php if (empty($clubs)): ?>
                 <div class="gs-card">
                     <div class="gs-card-content gs-text-center gs-py-xl">
-                        <i data-lucide="building-2" style="width: 64px; height: 64px; color: var(--gs-text-secondary); margin-bottom: var(--gs-space-md);"></i>
+                        <i data-lucide="building-2" class="gs-icon-xl gs-text-secondary gs-mb-md"></i>
                         <p class="gs-text-secondary">Inga klubbar hittades</p>
                     </div>
                 </div>
@@ -355,7 +355,7 @@ include __DIR__ . '/../includes/layout-header.php';
                                         <i data-lucide="users"></i>
                                         Medlemmar
                                     </th>
-                                    <th style="width: 150px; text-align: right;">Åtgärder</th>
+                                    <th class="gs-table-col-actions-lg">Åtgärder</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -378,7 +378,7 @@ include __DIR__ . '/../includes/layout-header.php';
                                         <td class="gs-text-center">
                                             <strong class="gs-text-primary"><?= $club['rider_count'] ?></strong>
                                         </td>
-                                        <td style="text-align: right;">
+                                        <td class="gs-text-right">
                                                 <div class="gs-flex gs-gap-sm gs-justify-end">
                                                     <a
                                                         href="/admin/riders.php?club_id=<?= $club['id'] ?>"

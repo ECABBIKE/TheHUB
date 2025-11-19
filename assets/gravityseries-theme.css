@@ -2829,3 +2829,175 @@ body.gs-landing-pure .gs-sidebar-overlay {
   margin-left: var(--gs-space-sm);
   margin-right: var(--gs-space-sm);
 }
+
+/* ========================================
+   ADMIN-SPECIFIC CLASSES
+   Updated: 2025-11-19
+   ======================================== */
+
+/* Stat boxes with secondary background */
+.gs-stat-box {
+  padding: var(--gs-space-md);
+  background: var(--gs-background-secondary);
+  border-radius: var(--gs-border-radius);
+}
+
+.gs-stat-box-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--gs-space-md);
+}
+
+/* Error/scrollable list container */
+.gs-error-list-container {
+  max-height: 300px;
+  overflow-y: auto;
+  background: var(--gs-background-secondary);
+  padding: var(--gs-space-md);
+  border-radius: var(--gs-border-radius);
+}
+
+.gs-error-list-item {
+  margin-bottom: 4px;
+}
+
+/* Text utilities */
+.gs-text-italic {
+  font-style: italic;
+}
+
+.gs-font-weight-600 {
+  font-weight: 600;
+}
+
+/* Form max-width container */
+.gs-form-max-width {
+  max-width: 600px;
+}
+
+/* Progress bar */
+.gs-progress-container {
+  display: none;
+  margin-top: var(--gs-space-lg);
+}
+
+.gs-progress-bar {
+  width: 100%;
+  height: 8px;
+  background: var(--gs-background-secondary);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.gs-progress-fill {
+  width: 0%;
+  height: 100%;
+  background: var(--gs-primary);
+  transition: width 0.3s;
+}
+
+/* Info box with accent border */
+.gs-info-box-accent {
+  padding: var(--gs-space-md);
+  background: var(--gs-background-secondary);
+  border-radius: var(--gs-border-radius);
+  border-left: 4px solid var(--gs-primary);
+}
+
+/* Indented lists */
+.gs-list-indented {
+  margin-left: var(--gs-space-lg);
+  line-height: 1.8;
+}
+
+.gs-list-indented-nested {
+  margin-left: var(--gs-space-lg);
+  margin-top: 4px;
+}
+
+/* Code blocks */
+.gs-code-block {
+  background: var(--gs-background-secondary);
+  padding: var(--gs-space-md);
+  border-radius: var(--gs-border-radius);
+  overflow-x: auto;
+  font-size: 12px;
+  margin-top: var(--gs-space-sm);
+}
+
+/* Margin auto utility */
+.gs-ml-auto {
+  margin-left: auto;
+}
+
+/* Sortable table header */
+.gs-sortable-header {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  text-decoration: none;
+  color: inherit;
+}
+
+/* Table column widths */
+.gs-table-col-actions {
+  width: 120px;
+}
+
+.gs-table-col-actions-lg {
+  width: 150px;
+  text-align: right;
+}
+
+/* Color utilities for icons */
+.gs-icon-success {
+  color: var(--gs-success);
+}
+
+.gs-icon-danger {
+  color: var(--gs-danger);
+}
+
+.gs-icon-warning {
+  color: var(--gs-warning);
+}
+
+/* Text color utilities */
+.gs-text-success {
+  color: var(--gs-success);
+}
+
+.gs-text-danger {
+  color: var(--gs-danger);
+}
+
+.gs-text-warning {
+  color: var(--gs-warning);
+}
+
+.gs-text-error {
+  color: var(--gs-danger);
+}
+
+/* Display utilities */
+.gs-display-none {
+  display: none;
+}
+
+/* Background colors */
+.gs-background-secondary {
+  background: #F3F4F6;
+}
+
+.gs-border-radius {
+  border-radius: var(--gs-radius-md);
+}
+
+/* Modal utilities */
+.gs-modal-hidden {
+  display: none;
+}
+
+.gs-modal-content-md {
+  max-width: 700px;
+}

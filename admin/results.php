@@ -143,7 +143,7 @@ include __DIR__ . '/../includes/layout-header.php';
 
                 <!-- Active Filters Info -->
                 <?php if ($filterSeries || $filterYear): ?>
-                    <div class="gs-mt-md" style="padding-top: var(--gs-space-md); border-top: 1px solid var(--gs-border);">
+                    <div class="gs-mt-md gs-section-divider">
                         <div class="gs-flex gs-items-center gs-gap-sm">
                             <span class="gs-text-sm gs-text-secondary">Aktiva filter:</span>
                             <?php if ($filterSeries): ?>
@@ -208,24 +208,24 @@ include __DIR__ . '/../includes/layout-header.php';
 
                                     <div class="gs-flex gs-gap-md gs-text-sm gs-text-secondary gs-mb-md">
                                         <span>
-                                            <i data-lucide="calendar" style="width: 14px; height: 14px;"></i>
+                                            <i data-lucide="calendar" class="gs-icon-14"></i>
                                             <?= date('Y-m-d', strtotime($event['date'])) ?>
                                         </span>
                                         <?php if ($event['location']): ?>
                                             <span>
-                                                <i data-lucide="map-pin" style="width: 14px; height: 14px;"></i>
+                                                <i data-lucide="map-pin" class="gs-icon-14"></i>
                                                 <?= h($event['location']) ?>
                                             </span>
                                         <?php endif; ?>
                                         <?php if ($event['series_name']): ?>
                                             <span>
-                                                <i data-lucide="award" style="width: 14px; height: 14px;"></i>
+                                                <i data-lucide="award" class="gs-icon-14"></i>
                                                 <?= h($event['series_name']) ?>
                                             </span>
                                         <?php endif; ?>
                                         <?php if ($event['advent_id']): ?>
                                             <span>
-                                                <i data-lucide="hash" style="width: 14px; height: 14px;"></i>
+                                                <i data-lucide="hash" class="gs-icon-14"></i>
                                                 <?= h($event['advent_id']) ?>
                                             </span>
                                         <?php endif; ?>
@@ -234,14 +234,14 @@ include __DIR__ . '/../includes/layout-header.php';
                                     <!-- Result Statistics -->
                                     <div class="gs-flex gs-gap-md gs-flex-wrap">
                                         <div class="gs-flex gs-items-center gs-gap-xs">
-                                            <i data-lucide="users" style="width: 16px; height: 16px;"></i>
+                                            <i data-lucide="users" class="gs-icon-md"></i>
                                             <strong><?= $event['result_count'] ?></strong>
                                             <span class="gs-text-secondary gs-text-sm">deltagare</span>
                                         </div>
 
                                         <?php if ($event['category_count'] > 0): ?>
                                             <div class="gs-flex gs-items-center gs-gap-xs">
-                                                <i data-lucide="layers" style="width: 16px; height: 16px;"></i>
+                                                <i data-lucide="layers" class="gs-icon-md"></i>
                                                 <strong><?= $event['category_count'] ?></strong>
                                                 <span class="gs-text-secondary gs-text-sm"><?= $event['category_count'] == 1 ? 'kategori' : 'kategorier' ?></span>
                                             </div>
@@ -249,7 +249,7 @@ include __DIR__ . '/../includes/layout-header.php';
 
                                         <?php if ($event['finished_count'] > 0): ?>
                                             <div class="gs-flex gs-items-center gs-gap-xs">
-                                                <i data-lucide="check-circle" style="width: 16px; height: 16px; color: var(--gs-success);"></i>
+                                                <i data-lucide="check-circle" class="gs-icon-md gs-icon-success"></i>
                                                 <strong><?= $event['finished_count'] ?></strong>
                                                 <span class="gs-text-secondary gs-text-sm">slutförda</span>
                                             </div>
@@ -257,7 +257,7 @@ include __DIR__ . '/../includes/layout-header.php';
 
                                         <?php if ($event['dnf_count'] > 0): ?>
                                             <div class="gs-flex gs-items-center gs-gap-xs">
-                                                <i data-lucide="x-circle" style="width: 16px; height: 16px; color: var(--gs-danger);"></i>
+                                                <i data-lucide="x-circle" class="gs-icon-md gs-icon-danger"></i>
                                                 <strong><?= $event['dnf_count'] ?></strong>
                                                 <span class="gs-text-secondary gs-text-sm">DNF</span>
                                             </div>
@@ -265,7 +265,7 @@ include __DIR__ . '/../includes/layout-header.php';
 
                                         <?php if ($event['dns_count'] > 0): ?>
                                             <div class="gs-flex gs-items-center gs-gap-xs">
-                                                <i data-lucide="minus-circle" style="width: 16px; height: 16px; color: var(--gs-warning);"></i>
+                                                <i data-lucide="minus-circle" class="gs-icon-md gs-icon-warning"></i>
                                                 <strong><?= $event['dns_count'] ?></strong>
                                                 <span class="gs-text-secondary gs-text-sm">DNS</span>
                                             </div>
@@ -278,7 +278,7 @@ include __DIR__ . '/../includes/layout-header.php';
                                     <a href="/event.php?id=<?= $event['id'] ?>"
                                        class="gs-btn gs-btn-outline gs-btn-sm"
                                        title="Visa resultat">
-                                        <i data-lucide="eye" style="width: 14px; height: 14px;"></i>
+                                        <i data-lucide="eye" class="gs-icon-14"></i>
                                         Visa
                                     </a>
 
@@ -286,20 +286,20 @@ include __DIR__ . '/../includes/layout-header.php';
                                         <a href="/admin/edit-results.php?event_id=<?= $event['id'] ?>"
                                            class="gs-btn gs-btn-primary gs-btn-sm"
                                            title="Editera resultat">
-                                            <i data-lucide="edit" style="width: 14px; height: 14px;"></i>
+                                            <i data-lucide="edit" class="gs-icon-14"></i>
                                             Editera
                                         </a>
                                         <a href="/admin/recalculate-results.php?event_id=<?= $event['id'] ?>"
                                            class="gs-btn gs-btn-secondary gs-btn-sm"
                                            title="Räkna om placeringar och poäng">
-                                            <i data-lucide="refresh-cw" style="width: 14px; height: 14px;"></i>
+                                            <i data-lucide="refresh-cw" class="gs-icon-14"></i>
                                             Räkna om
                                         </a>
                                     <?php else: ?>
                                         <a href="/admin/import-results.php"
                                            class="gs-btn gs-btn-secondary gs-btn-sm"
                                            title="Importera resultat">
-                                            <i data-lucide="upload" style="width: 14px; height: 14px;"></i>
+                                            <i data-lucide="upload" class="gs-icon-14"></i>
                                             Importera
                                         </a>
                                     <?php endif; ?>

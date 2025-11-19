@@ -124,7 +124,7 @@ include __DIR__ . '/../includes/layout-header.php';
 
                 <!-- Active Filters Info -->
                 <?php if ($filterSeries || $filterYear): ?>
-                    <div class="gs-mt-md" style="padding-top: var(--gs-space-md); border-top: 1px solid var(--gs-border);">
+                    <div class="gs-mt-md gs-section-divider">
                         <div class="gs-flex gs-items-center gs-gap-sm gs-flex-wrap">
                             <span class="gs-text-sm gs-text-secondary">Visar:</span>
                             <?php if ($filterSeries): ?>
@@ -157,7 +157,7 @@ include __DIR__ . '/../includes/layout-header.php';
                         <p>Inga events hittades.</p>
                     </div>
                 <?php else: ?>
-                    <div style="overflow-x: auto;">
+                    <div class="gs-table-responsive">
                         <table class="gs-table">
                             <thead>
                                 <tr>
@@ -168,7 +168,7 @@ include __DIR__ . '/../includes/layout-header.php';
                                     <th>Venue</th>
                                     <th>Disciplin</th>
                                     <th>Status</th>
-                                    <th style="width: 120px;">Åtgärder</th>
+                                    <th class="gs-table-col-actions">Åtgärder</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -200,10 +200,10 @@ include __DIR__ . '/../includes/layout-header.php';
                                         <td>
                                             <div class="gs-flex gs-gap-sm">
                                                 <a href="/admin/event-edit.php?id=<?= $event['id'] ?>" class="gs-btn gs-btn-sm gs-btn-outline" title="Redigera">
-                                                    <i data-lucide="edit" style="width: 14px;"></i>
+                                                    <i data-lucide="edit" class="gs-icon-14"></i>
                                                 </a>
                                                 <button onclick="deleteEvent(<?= $event['id'] ?>, '<?= addslashes($event['name']) ?>')" class="gs-btn gs-btn-sm gs-btn-outline gs-btn-danger" title="Ta bort">
-                                                    <i data-lucide="trash-2" style="width: 14px;"></i>
+                                                    <i data-lucide="trash-2" class="gs-icon-14"></i>
                                                 </button>
                                             </div>
                                         </td>
