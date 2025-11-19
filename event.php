@@ -233,6 +233,128 @@ include __DIR__ . '/includes/layout-header.php';
                 </div>
             </div>
 
+            <!-- Event Information Section -->
+            <?php if (!empty($event['description']) || !empty($event['website']) || !empty($event['registration_url']) || !empty($event['organizer'])): ?>
+                <div class="gs-card gs-mb-xl">
+                    <div class="gs-card-header">
+                        <h2 class="gs-h3 gs-text-primary">
+                            <i data-lucide="info"></i>
+                            Event-information
+                        </h2>
+                    </div>
+                    <div class="gs-card-content">
+                        <div class="gs-grid gs-grid-cols-1 gs-md-grid-cols-2 gs-gap-lg">
+                            <!-- Left Column -->
+                            <div>
+                                <?php if (!empty($event['description'])): ?>
+                                    <div class="gs-mb-lg">
+                                        <h3 class="gs-h5 gs-mb-sm gs-text-primary">
+                                            <i data-lucide="file-text" class="gs-icon-14"></i>
+                                            Beskrivning
+                                        </h3>
+                                        <p class="gs-text-secondary">
+                                            <?= nl2br(h($event['description'])) ?>
+                                        </p>
+                                    </div>
+                                <?php endif; ?>
+
+                                <?php if (!empty($event['distance']) || !empty($event['elevation_gain'])): ?>
+                                    <div class="gs-mb-lg">
+                                        <h3 class="gs-h5 gs-mb-sm gs-text-primary">
+                                            <i data-lucide="mountain" class="gs-icon-14"></i>
+                                            Bana-info
+                                        </h3>
+                                        <div class="gs-flex gs-gap-md">
+                                            <?php if (!empty($event['distance'])): ?>
+                                                <div>
+                                                    <span class="gs-text-sm gs-text-secondary">Distans: </span>
+                                                    <strong><?= $event['distance'] ?> km</strong>
+                                                </div>
+                                            <?php endif; ?>
+                                            <?php if (!empty($event['elevation_gain'])): ?>
+                                                <div>
+                                                    <span class="gs-text-sm gs-text-secondary">Höjdmeter: </span>
+                                                    <strong><?= $event['elevation_gain'] ?> m</strong>
+                                                </div>
+                                            <?php endif; ?>
+                                        </div>
+                                    </div>
+                                <?php endif; ?>
+
+                                <?php if (!empty($event['organizer'])): ?>
+                                    <div class="gs-mb-lg">
+                                        <h3 class="gs-h5 gs-mb-sm gs-text-primary">
+                                            <i data-lucide="user" class="gs-icon-14"></i>
+                                            Arrangör
+                                        </h3>
+                                        <p class="gs-text-secondary">
+                                            <?= h($event['organizer']) ?>
+                                        </p>
+                                    </div>
+                                <?php endif; ?>
+                            </div>
+
+                            <!-- Right Column -->
+                            <div>
+                                <?php if (!empty($event['registration_url']) || !empty($event['registration_deadline'])): ?>
+                                    <div class="gs-alert gs-alert-primary gs-mb-lg">
+                                        <h3 class="gs-h5 gs-mb-sm">
+                                            <i data-lucide="user-plus" class="gs-icon-14"></i>
+                                            Anmälan
+                                        </h3>
+                                        <?php if (!empty($event['registration_deadline'])): ?>
+                                            <p class="gs-text-sm gs-mb-sm">
+                                                <strong>Sista anmälan:</strong> <?= date('d M Y', strtotime($event['registration_deadline'])) ?>
+                                            </p>
+                                        <?php endif; ?>
+                                        <?php if (!empty($event['registration_url'])): ?>
+                                            <a href="<?= h($event['registration_url']) ?>"
+                                               target="_blank"
+                                               rel="noopener noreferrer"
+                                               class="gs-btn gs-btn-primary gs-btn-sm gs-w-full">
+                                                <i data-lucide="external-link" class="gs-icon-14"></i>
+                                                Anmäl dig här
+                                            </a>
+                                        <?php endif; ?>
+                                    </div>
+                                <?php endif; ?>
+
+                                <?php if (!empty($event['entry_fee']) || !empty($event['max_participants'])): ?>
+                                    <div class="gs-mb-lg">
+                                        <h3 class="gs-h5 gs-mb-sm gs-text-primary">
+                                            <i data-lucide="info" class="gs-icon-14"></i>
+                                            Praktisk information
+                                        </h3>
+                                        <?php if (!empty($event['entry_fee'])): ?>
+                                            <p class="gs-text-sm gs-mb-xs">
+                                                <strong>Startavgift:</strong> <?= $event['entry_fee'] ?> kr
+                                            </p>
+                                        <?php endif; ?>
+                                        <?php if (!empty($event['max_participants'])): ?>
+                                            <p class="gs-text-sm gs-mb-xs">
+                                                <strong>Max deltagare:</strong> <?= $event['max_participants'] ?>
+                                            </p>
+                                        <?php endif; ?>
+                                    </div>
+                                <?php endif; ?>
+
+                                <?php if (!empty($event['website'])): ?>
+                                    <div>
+                                        <a href="<?= h($event['website']) ?>"
+                                           target="_blank"
+                                           rel="noopener noreferrer"
+                                           class="gs-btn gs-btn-outline gs-w-full">
+                                            <i data-lucide="globe" class="gs-icon-14"></i>
+                                            Event-webbplats
+                                        </a>
+                                    </div>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            <?php endif; ?>
+
             <?php if (empty($results)): ?>
                 <!-- No Results -->
                 <div class="gs-card gs-empty-state">
