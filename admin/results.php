@@ -94,58 +94,46 @@ include __DIR__ . '/../includes/layout-header.php';
 
         <!-- Filter Section -->
         <div class="gs-card gs-mb-lg">
-            <div class="gs-card-header">
-                <h2 class="gs-h4 gs-text-primary">
-                    <i data-lucide="filter"></i>
-                    Filter
-                </h2>
-            </div>
             <div class="gs-card-content">
-                <!-- Serie Filter -->
-                <div class="gs-mb-md">
-                    <label class="gs-label gs-mb-sm">
-                        <i data-lucide="trophy"></i>
-                        Filtrera på serie:
-                    </label>
-                    <div class="gs-flex gs-gap-sm gs-flex-wrap">
-                        <a href="/admin/results.php<?= $filterYear ? '?year=' . $filterYear : '' ?>"
-                           class="gs-btn gs-btn-sm <?= !$filterSeries ? 'gs-btn-primary' : 'gs-btn-outline' ?>">
-                            Alla serier
-                        </a>
-                        <?php foreach ($allSeries as $series): ?>
-                            <a href="/admin/results.php?series_id=<?= $series['id'] ?><?= $filterYear ? '&year=' . $filterYear : '' ?>"
-                               class="gs-btn gs-btn-sm <?= $filterSeries == $series['id'] ? 'gs-btn-primary' : 'gs-btn-outline' ?>">
-                                <?= htmlspecialchars($series['name']) ?>
-                            </a>
-                        <?php endforeach; ?>
+                <form method="GET" class="gs-grid gs-grid-cols-1 gs-md-grid-cols-2 gs-gap-md">
+                    <!-- Year Filter -->
+                    <div>
+                        <label for="year-filter" class="gs-label">
+                            <i data-lucide="calendar"></i>
+                            År
+                        </label>
+                        <select id="year-filter" name="year" class="gs-input" onchange="this.form.submit()">
+                            <option value="">Alla år</option>
+                            <?php foreach ($allYears as $yearRow): ?>
+                                <option value="<?= $yearRow['year'] ?>" <?= $filterYear == $yearRow['year'] ? 'selected' : '' ?>>
+                                    <?= $yearRow['year'] ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
                     </div>
-                </div>
 
-                <!-- Year Filter -->
-                <div>
-                    <label class="gs-label gs-mb-sm">
-                        <i data-lucide="calendar"></i>
-                        Filtrera på år:
-                    </label>
-                    <div class="gs-flex gs-gap-sm gs-flex-wrap">
-                        <a href="/admin/results.php<?= $filterSeries ? '?series_id=' . $filterSeries : '' ?>"
-                           class="gs-btn gs-btn-sm <?= !$filterYear ? 'gs-btn-primary' : 'gs-btn-outline' ?>">
-                            Alla år
-                        </a>
-                        <?php foreach ($allYears as $yearRow): ?>
-                            <a href="/admin/results.php?year=<?= $yearRow['year'] ?><?= $filterSeries ? '&series_id=' . $filterSeries : '' ?>"
-                               class="gs-btn gs-btn-sm <?= $filterYear == $yearRow['year'] ? 'gs-btn-primary' : 'gs-btn-outline' ?>">
-                                <?= $yearRow['year'] ?>
-                            </a>
-                        <?php endforeach; ?>
+                    <!-- Series Filter -->
+                    <div>
+                        <label for="series-filter" class="gs-label">
+                            <i data-lucide="trophy"></i>
+                            Serie<?= $filterYear ? ' (' . $filterYear . ')' : '' ?>
+                        </label>
+                        <select id="series-filter" name="series_id" class="gs-input" onchange="this.form.submit()">
+                            <option value="">Alla serier</option>
+                            <?php foreach ($allSeries as $series): ?>
+                                <option value="<?= $series['id'] ?>" <?= $filterSeries == $series['id'] ? 'selected' : '' ?>>
+                                    <?= htmlspecialchars($series['name']) ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
                     </div>
-                </div>
+                </form>
 
                 <!-- Active Filters Info -->
                 <?php if ($filterSeries || $filterYear): ?>
                     <div class="gs-mt-md gs-section-divider">
-                        <div class="gs-flex gs-items-center gs-gap-sm">
-                            <span class="gs-text-sm gs-text-secondary">Aktiva filter:</span>
+                        <div class="gs-flex gs-items-center gs-gap-sm gs-flex-wrap">
+                            <span class="gs-text-sm gs-text-secondary">Visar:</span>
                             <?php if ($filterSeries): ?>
                                 <span class="gs-badge gs-badge-primary">
                                     <?php
@@ -159,9 +147,9 @@ include __DIR__ . '/../includes/layout-header.php';
                             <?php if ($filterYear): ?>
                                 <span class="gs-badge gs-badge-accent"><?= $filterYear ?></span>
                             <?php endif; ?>
-                            <a href="/admin/results.php" class="gs-btn gs-btn-sm gs-btn-outline gs-text-xs">
+                            <a href="/admin/results.php" class="gs-btn gs-btn-sm gs-btn-outline">
                                 <i data-lucide="x"></i>
-                                Rensa alla filter
+                                Visa alla
                             </a>
                         </div>
                     </div>
