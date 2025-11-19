@@ -4215,3 +4215,33 @@ details.gs-details-lg summary {
 .gs-border-w-3 {
   border-width: 3px;
 }
+
+/* ============================================
+   FOOTER
+   ============================================ */
+
+.gs-footer {
+  padding: 1.5rem 0;
+  background: var(--gs-background);
+  border-top: 1px solid var(--gs-border);
+  margin-top: 3rem;
+}
+
+.gs-footer-version {
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--gs-text-secondary);
+  margin: 0;
+  font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+}
+
+@media (max-width: 640px) {
+  .gs-footer {
+    padding: 1rem 0;
+    margin-top: 2rem;
+  }
+
+  .gs-footer-version {
+    font-size: 0.7rem;
+  }
+}
