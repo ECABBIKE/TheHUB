@@ -48,7 +48,7 @@ include __DIR__ . '/includes/layout-header.php';
 ?>
 
 <main class="gs-main-content">
-    <div class="gs-container" style="max-width: 500px; margin: 3rem auto;">
+    <div class="gs-container gs-form-container">
         <div class="gs-card">
             <div class="gs-card-header gs-text-center">
                 <h1 class="gs-h2 gs-text-primary">
@@ -134,7 +134,7 @@ include __DIR__ . '/includes/layout-header.php';
                     </button>
                 </form>
 
-                <div class="gs-text-center gs-mt-lg" style="padding-top: var(--gs-space-lg); border-top: 1px solid var(--gs-border);">
+                <div class="gs-text-center gs-mt-lg gs-section-divider">
                     <p class="gs-text-sm gs-text-secondary gs-mb-sm">
                         Har du redan ett konto?
                     </p>
