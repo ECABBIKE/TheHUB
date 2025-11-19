@@ -166,7 +166,7 @@ include __DIR__ . '/../includes/layout-header.php';
                 <p class="gs-text-danger gs-mb-md">
                     <strong>Detta script kommer att:</strong>
                 </p>
-                <ul class="gs-text-secondary" style="margin-left: var(--gs-space-lg); line-height: 1.8;">
+                <ul class="gs-text-secondary" class="gs-list-ml-lg-lh-1-8">
                     <li>Radera <strong>ALLA resultat</strong> från results-tabellen</li>
                     <li>Radera <strong>ALLA importhistorik</strong> från import_history-tabellen</li>
                     <li>Radera <strong>ALLA spårningsposter</strong> från import_records-tabellen</li>
@@ -191,7 +191,7 @@ include __DIR__ . '/../includes/layout-header.php';
                 </h2>
             </div>
             <div class="gs-card-content">
-                <ul class="gs-text-secondary" style="margin-left: var(--gs-space-lg); line-height: 1.8;">
+                <ul class="gs-text-secondary" class="gs-list-ml-lg-lh-1-8">
                     <li>Rollback-menyn blir tom (inga importer att rulla tillbaka)</li>
                     <li>Framtida importer kommer att spåras korrekt</li>
                     <li>Du kan importera resultat på nytt</li>
@@ -246,7 +246,7 @@ include __DIR__ . '/../includes/layout-header.php';
             <div class="gs-card">
                 <div class="gs-card-content">
                     <div class="gs-text-center">
-                        <i data-lucide="check-circle" style="width: 64px; height: 64px; margin: 0 auto 1rem; color: var(--gs-success);"></i>
+                        <i data-lucide="check-circle" class="gs-icon-success-center"></i>
                         <h3 class="gs-h4 gs-text-success gs-mb-sm">Databasen är redan tom</h3>
                         <p class="gs-text-secondary">Det finns inga resultat eller importhistorik att radera.</p>
                         <a href="/admin/results.php" class="gs-btn gs-btn-primary gs-mt-lg">

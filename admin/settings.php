@@ -92,7 +92,7 @@ include __DIR__ . '/../includes/layout-header.php';
                                            <?= ($currentSettings['public_riders_display'] ?? 'with_results') === 'with_results' ? 'checked' : '' ?>>
                                     <span class="gs-radio-text">
                                         <strong>Endast deltagare med resultat</strong>
-                                        <span class="gs-text-secondary gs-text-sm" style="display: block; margin-top: 0.25rem;">
+                                        <span class="gs-text-secondary gs-text-sm" class="gs-block-mt-qtr">
                                             Visar bara cyklister som har minst ett tävlingsresultat uppladdat
                                         </span>
                                     </span>
@@ -105,7 +105,7 @@ include __DIR__ . '/../includes/layout-header.php';
                                            <?= ($currentSettings['public_riders_display'] ?? 'with_results') === 'all' ? 'checked' : '' ?>>
                                     <span class="gs-radio-text">
                                         <strong>Alla aktiva deltagare</strong>
-                                        <span class="gs-text-secondary gs-text-sm" style="display: block; margin-top: 0.25rem;">
+                                        <span class="gs-text-secondary gs-text-sm" class="gs-block-mt-qtr">
                                             Visar alla cyklister i databasen, även de utan resultat
                                         </span>
                                     </span>
@@ -132,7 +132,7 @@ include __DIR__ . '/../includes/layout-header.php';
                 <i data-lucide="info"></i>
                 <div>
                     <strong>Information:</strong>
-                    <ul style="margin: 0.5rem 0 0 1.5rem;">
+                    <ul class="gs-margin-list">
                         <li>Ändringarna träder i kraft omedelbart på den publika sidan</li>
                         <li>Admin-sidan visar alltid alla deltagare oavsett denna inställning</li>
                         <li>Deltagare med SWE-ID (ingen licens) visas med röd badge</li>

@@ -144,7 +144,7 @@ include __DIR__ . '/../includes/layout-header.php';
 
                 <div class="gs-mt-lg">
                     <h3 class="gs-h4 gs-mb-sm">Nästa steg efter installation:</h3>
-                    <ol class="gs-list" style="list-style: decimal; margin-left: 1.5rem;">
+                    <ol class="gs-list" class="gs-list-decimal">
                         <li>Lägg till tabellerna genom att klicka på knappen ovan</li>
                         <li>Gör en ny testimport</li>
                         <li>Gå till <a href="/admin/import-history.php" class="gs-link">Import History</a> för att se importen</li>

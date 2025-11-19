@@ -296,10 +296,10 @@ include '../includes/layout-header.php';
 
                 <?php if (!empty($result['errors'])): ?>
                     <details class="gs-mt-md">
-                        <summary style="cursor: pointer; font-weight: 600;">
+                        <summary class="gs-summary-pointer">
                             <?= count($result['errors']) ?> fel/varningar
                         </summary>
-                        <ul style="max-height: 300px; overflow-y: auto; margin-top: 0.5rem;">
+                        <ul class="gs-scroll-list-300">
                             <?php foreach ($result['errors'] as $error): ?>
                                 <li><?= htmlspecialchars($error) ?></li>
                             <?php endforeach; ?>
@@ -316,7 +316,7 @@ include '../includes/layout-header.php';
             <div class="gs-card-content">
                 <p>Denna import hanterar CSV direkt från UCI Licensregister.</p>
                 <h4 class="gs-h5 gs-mt-md">Kolumner (11 st, ingen header krävs):</h4>
-                <ol style="font-size: 0.9rem; line-height: 1.6;">
+                <ol class="gs-text-sm-lh16">
                     <li><strong>Födelsedatum</strong> (YYYYMMDD-XXXX)</li>
                     <li><strong>Förnamn</strong></li>
                     <li><strong>Efternamn</strong></li>

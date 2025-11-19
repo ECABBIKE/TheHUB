@@ -77,7 +77,7 @@ include __DIR__ . '/../includes/layout-header.php';
 ?>
 
 <main class="gs-main-content">
-    <div class="gs-container" style="max-width: 900px;">
+    <div class="gs-container" class="gs-max-w-900">
         <!-- Header -->
         <div class="gs-flex gs-items-center gs-justify-between gs-mb-lg">
             <h1 class="gs-h1 gs-text-primary">

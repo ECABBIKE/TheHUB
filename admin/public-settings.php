@@ -80,7 +80,7 @@ include __DIR__ . '/../includes/layout-header.php';
 ?>
 
 <main class="gs-main-content">
-    <div class="gs-container" style="max-width: 900px;">
+    <div class="gs-container" class="gs-max-w-900">
         <!-- Header -->
         <div class="gs-flex gs-items-center gs-justify-between gs-mb-xl">
             <h1 class="gs-h1 gs-text-primary">
@@ -205,7 +205,7 @@ include __DIR__ . '/../includes/layout-header.php';
                 </div>
 
                 <!-- Minimum Results (shown only when 'with_results' is selected) -->
-                <div class="gs-mb-lg" id="minResultsSection" style="<?= $currentSettings['public_riders_display'] === 'with_results' ? '' : 'display: none;' ?>">
+                <div class="gs-mb-lg <?= $currentSettings['public_riders_display'] === 'with_results' ? '' : 'gs-hidden' ?>" id="minResultsSection">
                     <label for="min_results_to_show" class="gs-label">
                         <i data-lucide="hash"></i>
                         Minsta antal resultat
@@ -217,7 +217,7 @@ include __DIR__ . '/../includes/layout-header.php';
                         class="gs-input"
                         min="1"
                         value="<?= $currentSettings['min_results_to_show'] ?>"
-                        style="max-width: 200px;"
+                        class="gs-max-w-200"
                     >
                     <small class="gs-text-muted">
                         Deltagare måste ha minst detta antal registrerade resultat för att visas.
@@ -225,7 +225,7 @@ include __DIR__ . '/../includes/layout-header.php';
                 </div>
 
                 <!-- Save Button -->
-                <div class="gs-flex gs-justify-end gs-gap-md gs-pt-md" style="border-top: 1px solid var(--gs-border);">
+                <div class="gs-flex gs-justify-end gs-gap-md gs-pt-md" class="gs-border-top">
                     <a href="/admin/dashboard.php" class="gs-btn gs-btn-outline">
                         <i data-lucide="x"></i>
                         Avbryt

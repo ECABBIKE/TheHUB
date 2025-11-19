@@ -4072,3 +4072,137 @@ details.gs-details-lg summary {
   border-radius: 5px;
   margin: 10px 0;
 }
+
+/* ========================================
+   FINAL ADMIN REFACTORING - INLINE STYLE REMOVAL
+   Added: 2025-11-19
+   ======================================== */
+
+/* Max-width container utilities */
+.gs-max-w-800 {
+  max-width: 800px;
+}
+
+.gs-max-w-900 {
+  max-width: 900px;
+}
+
+.gs-max-w-200 {
+  max-width: 200px;
+}
+
+/* Icon size utilities - 24px */
+.gs-icon-24 {
+  width: 24px;
+  height: 24px;
+}
+
+/* Flex utilities */
+.gs-flex-1 {
+  flex: 1;
+}
+
+/* List reset utility */
+.gs-list-reset {
+  list-style: none;
+  padding: 0;
+}
+
+/* Margin utilities - specific */
+.gs-my-4 {
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+}
+
+.gs-mt-5 {
+  margin-top: 1.25rem;
+}
+
+/* Text/heading utilities */
+.gs-heading-m0-fs125 {
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+.gs-text-subdued {
+  opacity: 0.8;
+  font-size: 0.875rem;
+  font-weight: normal;
+}
+
+/* Table column utilities */
+.gs-table-col-w150-right {
+  width: 150px;
+  text-align: right;
+}
+
+/* Stat display utilities */
+.gs-stat-display-lg {
+  padding: 1rem;
+  background: var(--gs-background-secondary);
+  border-radius: 8px;
+}
+
+.gs-stat-display-number {
+  font-size: 2rem;
+  font-weight: bold;
+  color: var(--gs-primary);
+}
+
+/* Success icon large */
+.gs-icon-success-center {
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 1rem;
+  color: var(--gs-success);
+}
+
+/* Center content with padding */
+.gs-center-p20 {
+  text-align: center;
+  padding: 20px;
+}
+
+/* List decimal with margin */
+.gs-list-decimal {
+  list-style: decimal;
+  margin-left: 1.5rem;
+}
+
+/* Form margin top */
+.gs-form-mt-5 {
+  margin-top: 20px;
+}
+
+/* Pre code block (alternative) */
+.gs-pre-gray {
+  background: #f5f5f5;
+  padding: 1rem;
+  border-radius: 4px;
+  overflow-x: auto;
+}
+
+/* Summary cursor pointer */
+.gs-summary-pointer {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+/* Scrollable list container */
+.gs-scroll-list-300 {
+  max-height: 300px;
+  overflow-y: auto;
+  margin-top: 0.5rem;
+}
+
+/* Font size and line height utilities */
+.gs-text-sm-lh16 {
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+
+/* Border width utility */
+.gs-border-w-3 {
+  border-width: 3px;
+}
