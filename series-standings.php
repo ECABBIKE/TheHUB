@@ -222,7 +222,7 @@ include __DIR__ . '/includes/layout-header.php';
                         Tävlingar i serien
                     </h3>
                 </div>
-                <div class="gs-card-content" style="padding: 0;">
+                <div class="gs-card-content gs-p-0">
                     <div class="gs-table-responsive">
                         <table class="gs-table">
                             <thead>
@@ -231,7 +231,7 @@ include __DIR__ . '/includes/layout-header.php';
                                     <th>Tävling</th>
                                     <th>Plats</th>
                                     <th>Arrangör</th>
-                                    <th style="text-align: center;">Resultat</th>
+                                    <th class="gs-text-center">Resultat</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -256,7 +256,7 @@ include __DIR__ . '/includes/layout-header.php';
                                             <?php endif; ?>
                                         </td>
                                         <td><?= $event['organizer'] ? h($event['organizer']) : '–' ?></td>
-                                        <td style="text-align: center;">
+                                        <td class="gs-text-center">
                                             <a href="/event.php?id=<?= $event['id'] ?>" class="gs-btn gs-btn-sm gs-btn-primary">
                                                 <i data-lucide="list"></i>
                                                 Se resultat (<?= $event['result_count'] ?>)
@@ -291,7 +291,7 @@ include __DIR__ . '/includes/layout-header.php';
                         <!-- Name Search -->
                         <div>
                             <label class="gs-label">Sök på namn</label>
-                            <form method="get" action="" style="display: flex; gap: 0.5rem;">
+                            <form method="get" action="" class="gs-flex gs-gap-sm">
                                 <input type="hidden" name="id" value="<?= $seriesId ?>">
                                 <input type="hidden" name="class" value="<?= $selectedClass ?>">
                                 <input type="text" name="search" class="gs-input" placeholder="Skriv namn..." value="<?= h($searchName) ?>">
@@ -336,13 +336,13 @@ include __DIR__ . '/includes/layout-header.php';
                         </p>
                     <?php endif; ?>
                 </div>
-                <div class="gs-card-content" style="padding: 0; overflow-x: auto;">
+                <div class="gs-card-table-container">
                     <table class="gs-table standings-table">
                         <thead>
                             <tr>
-                                <th style="position: sticky; left: 0; background: white; z-index: 2;">Plac.</th>
-                                <th style="position: sticky; left: 60px; background: white; z-index: 2;">Namn</th>
-                                <th style="position: sticky; left: 250px; background: white; z-index: 2;">Klubb</th>
+                                <th class="standings-sticky-th-rank">Plac.</th>
+                                <th class="standings-sticky-th-name">Namn</th>
+                                <th class="standings-sticky-th-club">Klubb</th>
                                 <?php $eventNum = 1; ?>
                                 <?php foreach ($seriesEvents as $event): ?>
                                     <th class="event-col" title="<?= h($event['name']) ?> - <?= date('Y-m-d', strtotime($event['date'])) ?>">
@@ -350,30 +350,30 @@ include __DIR__ . '/includes/layout-header.php';
                                     </th>
                                     <?php $eventNum++; ?>
                                 <?php endforeach; ?>
-                                <th class="total-col" style="text-align: center;">Total</th>
+                                <th class="total-col gs-text-center">Total</th>
                             </tr>
                         </thead>
                         <tbody>
                             <?php $position = 1; ?>
                             <?php foreach ($standings as $rider): ?>
                                 <tr>
-                                    <td style="position: sticky; left: 0; background: white;">
+                                    <td class="standings-sticky-td-rank">
                                         <?php if ($position == 1): ?>
-                                            <span class="gs-badge gs-badge-success" style="font-size: 0.75rem;">🥇 1</span>
+                                            <span class="gs-badge gs-badge-success gs-badge-xs">🥇 1</span>
                                         <?php elseif ($position == 2): ?>
-                                            <span class="gs-badge gs-badge-secondary" style="font-size: 0.75rem;">🥈 2</span>
+                                            <span class="gs-badge gs-badge-secondary gs-badge-xs">🥈 2</span>
                                         <?php elseif ($position == 3): ?>
-                                            <span class="gs-badge gs-badge-warning" style="font-size: 0.75rem;">🥉 3</span>
+                                            <span class="gs-badge gs-badge-warning gs-badge-xs">🥉 3</span>
                                         <?php else: ?>
                                             <?= $position ?>
                                         <?php endif; ?>
                                     </td>
-                                    <td style="position: sticky; left: 60px; background: white;">
+                                    <td class="standings-sticky-td-name">
                                         <a href="/rider.php?id=<?= $rider['rider_id'] ?>" class="gs-link">
                                             <strong><?= h($rider['firstname']) ?> <?= h($rider['lastname']) ?></strong>
                                         </a>
                                     </td>
-                                    <td style="position: sticky; left: 250px; background: white;">
+                                    <td class="standings-sticky-td-club">
                                         <?= h($rider['club_name']) ?: '–' ?>
                                     </td>
                                     <?php foreach ($seriesEvents as $event): ?>
@@ -384,11 +384,11 @@ include __DIR__ . '/includes/layout-header.php';
                                             ?>
                                                 <?= $points ?>
                                             <?php else: ?>
-                                                <span style="color: #ccc;">–</span>
+                                                <span class="gs-text-muted">–</span>
                                             <?php endif; ?>
                                         </td>
                                     <?php endforeach; ?>
-                                    <td class="total-col" style="text-align: center;">
+                                    <td class="total-col gs-text-center">
                                         <strong class="gs-text-primary"><?= $rider['total_points'] ?></strong>
                                     </td>
                                 </tr>
@@ -400,8 +400,8 @@ include __DIR__ . '/includes/layout-header.php';
             </div>
         <?php elseif ($selectedClass && empty($standings)): ?>
             <div class="gs-card">
-                <div class="gs-card-content" style="padding: 3rem; text-align: center;">
-                    <i data-lucide="inbox" style="width: 48px; height: 48px; margin: 0 auto 1rem; opacity: 0.3;"></i>
+                <div class="gs-card-content gs-empty-state">
+                    <i data-lucide="inbox" class="gs-empty-icon"></i>
                     <p class="gs-text-secondary">
                         <?php if ($searchName): ?>
                             Inga resultat hittades för "<?= h($searchName) ?>"

@@ -202,300 +202,6 @@ try {
 }
 ?>
 
-<style>
-    /* COMPACT HORIZONTAL CARD with Photo */
-    .license-card-container {
-        margin-bottom: 2rem;
-    }
-
-    .license-card {
-        max-width: 900px;
-        width: 100%;
-        margin: 0 auto;
-        background: white;
-        border-radius: 12px;
-        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
-        overflow: hidden;
-    }
-
-    /* UCI Stripe */
-    .uci-stripe {
-        height: 6px;
-        background: linear-gradient(90deg,
-            #c8161b 0% 20%,
-            #8a9859 20% 40%,
-            #fcce05 40% 60%,
-            #207fc0 60% 80%,
-            #ee7622 80% 100%
-        );
-    }
-
-    /* Desktop: Larger Photo and Better Layout */
-    .license-content {
-        padding: 24px;
-        display: grid;
-        grid-template-columns: 180px 1fr;
-        gap: 32px;
-        align-items: start;
-    }
-
-    /* Photo Section - Desktop: Larger */
-    .license-photo {
-        width: 180px;
-        height: 240px;
-        border-radius: 8px;
-        overflow: hidden;
-        background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    }
-
-    .license-photo img {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-    }
-
-    .photo-placeholder {
-        font-size: 4rem;
-        opacity: 0.3;
-    }
-
-    /* Info Section - Desktop: Better spacing */
-    .license-info {
-        display: flex;
-        flex-direction: column;
-        gap: 12px;
-    }
-
-    /* Name - Desktop: Larger */
-    .rider-name {
-        font-size: 28px;
-        font-weight: 700;
-        color: #1a202c;
-        text-transform: uppercase;
-        letter-spacing: -0.5px;
-        line-height: 1.2;
-        margin: 0;
-    }
-
-    /* License ID - Desktop: Larger */
-    .license-id {
-        font-size: 14px;
-        color: #667eea;
-        font-weight: 600;
-    }
-
-    /* License Type and Status */
-    .license-info-inline {
-        display: flex;
-        gap: 12px;
-        align-items: center;
-        flex-wrap: wrap;
-    }
-
-    .license-type-text {
-        font-size: 14px;
-        color: #718096;
-        font-weight: 600;
-    }
-
-    .license-status-badge {
-        display: inline-block;
-        padding: 4px 12px;
-        border-radius: 12px;
-        font-size: 12px;
-        font-weight: 600;
-        text-transform: uppercase;
-    }
-
-    .license-status-badge.active {
-        background: #10b981;
-        color: white;
-    }
-
-    .license-status-badge.inactive {
-        background: #ef4444;
-        color: white;
-    }
-
-    /* Info Grid - Desktop: Better spacing */
-    .info-grid-compact {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 12px;
-    }
-
-    .info-box {
-        background: #f8f9fa;
-        padding: 12px 16px;
-        border-radius: 8px;
-        text-align: center;
-        border-left: 3px solid #667eea;
-    }
-
-    .info-box-label {
-        font-size: 11px;
-        color: #718096;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        margin-bottom: 4px;
-    }
-
-    .info-box-value {
-        font-size: 16px;
-        color: #1a202c;
-        font-weight: 700;
-    }
-
-    /* Club Link Styling */
-    .club-link {
-        color: #667eea;
-        text-decoration: none;
-        font-weight: 700;
-        transition: color 0.2s, text-decoration 0.2s;
-    }
-
-    .club-link:hover {
-        color: #764ba2;
-        text-decoration: underline;
-    }
-
-    /* Statistics Cards - Equal Width on Desktop */
-    .gs-stat-card-compact {
-        min-height: 120px;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
-        padding: 1rem;
-    }
-
-    /* Tablet */
-    @media (max-width: 900px) {
-        .license-card-container {
-            margin-bottom: 1rem;
-        }
-
-        .license-card {
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-        }
-
-        .uci-stripe {
-            height: 4px;
-        }
-
-        .license-content {
-            grid-template-columns: 100px 1fr;
-            gap: 16px;
-            padding: 12px;
-        }
-
-        .license-photo {
-            width: 100px;
-            height: 120px;
-            border-radius: 6px;
-        }
-
-        .photo-placeholder {
-            font-size: 3rem;
-        }
-
-        .license-info {
-            gap: 6px;
-        }
-
-        .rider-name {
-            font-size: 18px;
-            letter-spacing: -0.2px;
-        }
-
-        .license-id {
-            font-size: 11px;
-        }
-
-        .license-type-text {
-            font-size: 11px;
-        }
-
-        .license-status-badge {
-            font-size: 10px;
-            padding: 2px 8px;
-        }
-
-        .info-grid-compact {
-            gap: 6px;
-        }
-
-        .info-box {
-            padding: 4px 8px;
-        }
-
-        .info-box-label {
-            font-size: 8px;
-            margin-bottom: 2px;
-        }
-
-        .info-box-value {
-            font-size: 12px;
-        }
-    }
-
-    /* Mobile - Smaller photo */
-    @media (max-width: 640px) {
-        .license-content {
-            grid-template-columns: 60px 1fr;
-            gap: 10px;
-            padding: 8px;
-        }
-
-        .license-photo {
-            width: 60px;
-            height: 75px;
-        }
-
-        .photo-placeholder {
-            font-size: 2rem;
-        }
-
-        .rider-name {
-            font-size: 14px;
-        }
-
-        .license-id {
-            font-size: 9px;
-        }
-
-        .license-type-text {
-            font-size: 9px;
-        }
-
-        .license-status-badge {
-            font-size: 8px;
-            padding: 2px 6px;
-        }
-
-        .info-box {
-            padding: 3px 6px;
-        }
-
-        .info-box-label {
-            font-size: 7px;
-        }
-
-        .info-box-value {
-            font-size: 10px;
-        }
-
-        .info-grid-compact {
-            grid-template-columns: repeat(auto-fit, minmax(70px, 1fr));
-        }
-    }
-</style>
-
     <main class="gs-main-content">
         <div class="gs-container">
 
@@ -583,7 +289,7 @@ try {
 
                                 <div class="info-box">
                                     <div class="info-box-label">Klubb</div>
-                                    <div class="info-box-value" style="font-size: 11px;">
+                                    <div class="info-box-value info-box-value-small">
                                         <?php if ($rider['club_name'] && $rider['club_id']): ?>
                                             <a href="/club.php?id=<?= $rider['club_id'] ?>" class="club-link" title="Se alla medlemmar i <?= h($rider['club_name']) ?>">
                                                 <?= h($rider['club_name']) ?>
@@ -606,22 +312,22 @@ try {
                     <div class="gs-stat-label-compact">Race</div>
                 </div>
                 <div class="gs-card gs-stat-card-compact">
-                    <div class="gs-stat-number-compact" style="color: var(--gs-success);"><?= $wins ?></div>
+                    <div class="gs-stat-number-compact gs-text-success"><?= $wins ?></div>
                     <div class="gs-stat-label-compact">Segrar</div>
                 </div>
                 <div class="gs-card gs-stat-card-compact">
-                    <div class="gs-stat-number-compact" style="color: var(--gs-warning);"><?= $bestPosition ?? '-' ?></div>
+                    <div class="gs-stat-number-compact gs-text-warning"><?= $bestPosition ?? '-' ?></div>
                     <div class="gs-stat-label-compact">Bästa placering</div>
                 </div>
                 <div class="gs-card gs-stat-card-compact">
-                    <div style="display: flex; flex-direction: column; gap: 0.25rem;">
+                    <div class="series-standings-list">
                         <?php if (!empty($seriesStandings)): ?>
                             <?php foreach ($seriesStandings as $standing): ?>
-                                <div style="font-size: 9px; line-height: 1.3;">
+                                <div class="series-standing-item">
                                     <strong><?= h($standing['series_name']) ?>:</strong>
                                     #<?= $standing['position'] ?? '?' ?> (<?= $standing['total_points'] ?>p)
                                     <br>
-                                    <span style="color: #718096; font-size: 8px;">
+                                    <span class="series-standing-meta">
                                         <?= h($standing['class_name']) ?> (<?= $standing['class_total'] ?> deltagare)
                                     </span>
                                 </div>
@@ -630,14 +336,14 @@ try {
                             <div class="gs-stat-number-compact gs-text-primary">0</div>
                         <?php endif; ?>
                     </div>
-                    <div class="gs-stat-label-compact" style="margin-top: 0.25rem;">Points</div>
+                    <div class="gs-stat-label-compact">Points</div>
                 </div>
             </div>
 
             <?php if (empty($results)): ?>
                 <!-- No Results -->
-                <div class="gs-card gs-text-center" style="padding: 3rem;">
-                    <i data-lucide="trophy" style="width: 64px; height: 64px; margin: 0 auto 1rem; opacity: 0.3;"></i>
+                <div class="gs-card gs-empty-state">
+                    <i data-lucide="trophy" class="gs-empty-icon"></i>
                     <h3 class="gs-h4 gs-mb-sm">Inga resultat ännu</h3>
                     <p class="gs-text-secondary">
                         Denna deltagare har inte några tävlingsresultat uppladdat.
@@ -668,9 +374,9 @@ try {
                                                 <th>Tävling</th>
                                                 <th>Plats</th>
                                                 <th>Serie</th>
-                                                <th style="text-align: center;">Placering</th>
-                                                <th style="text-align: center;">Tid</th>
-                                                <th style="text-align: center;">Poäng</th>
+                                                <th class="gs-text-center">Placering</th>
+                                                <th class="gs-text-center">Tid</th>
+                                                <th class="gs-text-center">Poäng</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -703,7 +409,7 @@ try {
                                                     </td>
                                                     <td>
                                                         <?php if ($result['series_name'] && $result['series_id']): ?>
-                                                            <a href="/series-standings.php?id=<?= $result['series_id'] ?>" class="gs-badge gs-badge-primary gs-badge-sm" style="text-decoration: none;">
+                                                            <a href="/series-standings.php?id=<?= $result['series_id'] ?>" class="gs-badge gs-badge-primary gs-badge-sm">
                                                                 <?= h($result['series_name']) ?>
                                                             </a>
                                                         <?php elseif ($result['series_name']): ?>
@@ -714,14 +420,14 @@ try {
                                                             -
                                                         <?php endif; ?>
                                                     </td>
-                                                    <td style="text-align: center;">
+                                                    <td class="gs-text-center">
                                                         <?php if ($result['position']): ?>
                                                             <?php if ($result['position'] == 1): ?>
-                                                                <span class="gs-badge gs-badge-success" style="font-weight: bold;">🥇 1</span>
+                                                                <span class="gs-badge gs-badge-success">🥇 1</span>
                                                             <?php elseif ($result['position'] == 2): ?>
-                                                                <span class="gs-badge gs-badge-secondary" style="font-weight: bold;">🥈 2</span>
+                                                                <span class="gs-badge gs-badge-secondary">🥈 2</span>
                                                             <?php elseif ($result['position'] == 3): ?>
-                                                                <span class="gs-badge gs-badge-warning" style="font-weight: bold;">🥉 3</span>
+                                                                <span class="gs-badge gs-badge-warning">🥉 3</span>
                                                             <?php else: ?>
                                                                 <span><?= $result['position'] ?></span>
                                                             <?php endif; ?>
@@ -729,7 +435,7 @@ try {
                                                             -
                                                         <?php endif; ?>
                                                     </td>
-                                                    <td style="text-align: center;">
+                                                    <td class="gs-text-center">
                                                         <?php
                                                         if ($result['finish_time']) {
                                                             // Format time: remove leading hours if 0
@@ -745,7 +451,7 @@ try {
                                                         }
                                                         ?>
                                                     </td>
-                                                    <td style="text-align: center;">
+                                                    <td class="gs-text-center">
                                                         <?= $result['points'] ?? 0 ?>
                                                     </td>
                                                 </tr>

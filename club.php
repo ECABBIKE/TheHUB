@@ -294,7 +294,7 @@ include __DIR__ . '/includes/layout-header.php';
                 <div class="club-license-content">
                     <!-- Club Name -->
                     <div class="club-name">
-                        <i data-lucide="users" style="display: inline-block; vertical-align: middle;"></i>
+                        <i data-lucide="users" class="gs-inline-block gs-vertical-middle"></i>
                         <?= h($club['name']) ?>
                     </div>
 
@@ -350,8 +350,8 @@ include __DIR__ . '/includes/layout-header.php';
             </div>
             <div class="gs-card-content">
                 <?php if (empty($clubRiders)): ?>
-                    <div class="gs-text-center" style="padding: 3rem;">
-                        <i data-lucide="users" style="width: 64px; height: 64px; margin: 0 auto 1rem; opacity: 0.3;"></i>
+                    <div class="gs-text-center gs-empty-state-container">
+                        <i data-lucide="users" class="gs-empty-state-icon-lg"></i>
                         <h3 class="gs-h4 gs-mb-sm">Inga medlemmar hittades</h3>
                         <p class="gs-text-secondary">
                             Denna klubb har inga aktiva medlemmar registrerade.
@@ -383,13 +383,13 @@ include __DIR__ . '/includes/layout-header.php';
                                 </div>
 
                                 <?php if ($riderClass): ?>
-                                    <div class="gs-badge gs-badge-primary gs-badge-sm" style="margin-bottom: 0.5rem;">
+                                    <div class="gs-badge gs-badge-primary gs-badge-sm gs-mb-2">
                                         <?= h($riderClass) ?>
                                     </div>
                                 <?php endif; ?>
 
                                 <?php if ($age !== null): ?>
-                                    <div class="gs-text-sm gs-text-secondary" style="margin-bottom: 0.5rem;">
+                                    <div class="gs-text-sm gs-text-secondary gs-mb-2">
                                         <?= $age ?> år
                                         <?php if ($rider['city']): ?>
                                             • <?= h($rider['city']) ?>

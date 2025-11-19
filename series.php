@@ -73,8 +73,8 @@ include __DIR__ . '/includes/layout-header.php';
 
             <!-- Series List -->
             <?php if (empty($series)): ?>
-                <div class="gs-card gs-text-center" style="padding: 3rem;">
-                    <i data-lucide="inbox" style="width: 64px; height: 64px; margin: 0 auto 1rem; opacity: 0.3;"></i>
+                <div class="gs-card gs-text-center gs-empty-state-container">
+                    <i data-lucide="inbox" class="gs-empty-state-icon-lg"></i>
                     <h3 class="gs-h4 gs-mb-sm">Inga serier ännu</h3>
                     <p class="gs-text-secondary">
                         Det finns inga tävlingsserier registrerade ännu.
@@ -182,16 +182,16 @@ include __DIR__ . '/includes/layout-header.php';
 
                 <div class="series-list">
                     <?php foreach ($series as $s): ?>
-                        <a href="/series-standings.php?id=<?= $s['id'] ?>" style="text-decoration: none; color: inherit;">
-                            <div class="gs-card gs-card-hover series-card-horizontal" style="transition: transform 0.2s, box-shadow 0.2s;">
+                        <a href="/series-standings.php?id=<?= $s['id'] ?>" class="gs-link-inherit">
+                            <div class="gs-card gs-card-hover series-card-horizontal gs-transition-card">
                                 <!-- Logo Left -->
                                 <div class="series-logo-container">
                                     <?php if ($s['logo']): ?>
                                         <img src="<?= h($s['logo']) ?>"
                                              alt="<?= h($s['name']) ?>">
                                     <?php else: ?>
-                                        <div style="font-size: 2rem; color: #cbd5e0;">
-                                            <i data-lucide="award" style="width: 48px; height: 48px;"></i>
+                                        <div class="gs-placeholder-icon">
+                                            <i data-lucide="award" class="gs-icon-48"></i>
                                         </div>
                                     <?php endif; ?>
                                 </div>
@@ -216,19 +216,19 @@ include __DIR__ . '/includes/layout-header.php';
                                     <?php endif; ?>
 
                                     <div class="series-meta">
-                                        <i data-lucide="calendar" style="width: 14px; height: 14px;"></i>
-                                        <span style="font-weight: 600; color: #667eea;">
+                                        <i data-lucide="calendar" class="gs-icon-14"></i>
+                                        <span class="gs-font-semibold gs-text-purple">
                                             <?= $s['event_count'] ?> <?= $s['event_count'] == 1 ? 'tävling' : 'tävlingar' ?>
                                         </span>
                                         <?php if ($s['participant_count'] > 0): ?>
-                                            <span style="margin-left: 0.25rem;">•</span>
-                                            <i data-lucide="users" style="width: 14px; height: 14px;"></i>
-                                            <span style="font-weight: 600; color: #667eea;">
+                                            <span class="gs-ml-1">•</span>
+                                            <i data-lucide="users" class="gs-icon-14"></i>
+                                            <span class="gs-font-semibold gs-text-purple">
                                                 <?= number_format($s['participant_count'], 0, ',', ' ') ?> deltagare
                                             </span>
                                         <?php endif; ?>
                                         <?php if ($s['start_date'] && $s['end_date']): ?>
-                                            <span style="margin-left: 0.25rem;">•</span>
+                                            <span class="gs-ml-1">•</span>
                                             <span>
                                                 <?= date('M Y', strtotime($s['start_date'])) ?> - <?= date('M Y', strtotime($s['end_date'])) ?>
                                             </span>

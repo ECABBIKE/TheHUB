@@ -1390,6 +1390,132 @@ body.gs-landing-pure .gs-sidebar-overlay {
    LANDING PAGE ENHANCEMENTS
    ======================================== */
 
+/* Hero Section Specific Styles */
+.gs-hero-title-white {
+  color: white !important;
+  font-size: 3rem;
+  margin-bottom: 1rem;
+}
+
+.gs-hero-subtitle {
+  font-size: 1.5rem;
+  opacity: 0.95;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+/* Card Content Large Text */
+.gs-card-content-large {
+  font-size: 1.1rem;
+  line-height: 1.8;
+}
+
+/* List with Indentation */
+.gs-list-styled {
+  margin-left: 2rem;
+  margin-top: 1rem;
+}
+
+/* Series Cards - Gradient Backgrounds */
+.gs-series-card-enduro {
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  color: white;
+  border: none;
+}
+
+.gs-series-card-downhill {
+  background: linear-gradient(135deg, #c21500 0%, #ffc500 100%);
+  color: white;
+  border: none;
+}
+
+.gs-series-card-dual {
+  background: linear-gradient(135deg, #134e5e 0%, #71b280 100%);
+  color: white;
+  border: none;
+}
+
+.gs-series-card-hillclimb {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+}
+
+.gs-series-card-local {
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  color: white;
+  border: none;
+}
+
+.gs-series-card-swecup {
+  background: linear-gradient(135deg, #005aa7 0%, #fffde4 100%);
+  color: #1a1a1a;
+  border: none;
+}
+
+/* Series Card Content */
+.gs-series-card-content {
+  padding: 2rem;
+  text-align: center;
+}
+
+/* Series Card Icons */
+.gs-series-icon {
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 1.5rem;
+  display: block;
+}
+
+.gs-series-icon-swecup {
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 1.5rem;
+  display: block;
+  color: #005aa7;
+}
+
+/* Series Card Headings */
+.gs-series-heading-white {
+  color: white;
+  margin-bottom: 1rem;
+}
+
+.gs-series-heading-dark {
+  color: #1a1a1a;
+  margin-bottom: 1rem;
+}
+
+/* Series Card Description Text */
+.gs-series-text {
+  opacity: 0.9;
+  margin-bottom: 1.5rem;
+}
+
+/* SweCup Button */
+.gs-btn-swecup {
+  background: #005aa7;
+  color: white;
+  width: 100%;
+}
+
+/* Quick Links Cards */
+.gs-quicklink-card {
+  text-decoration: none;
+}
+
+.gs-quicklink-content {
+  padding: 2rem;
+}
+
+.gs-quicklink-icon {
+  width: 48px;
+  height: 48px;
+  margin: 0 auto 1rem;
+  display: block;
+  color: #004a98;
+}
+
 /* Hero section animation */
 .gs-hero {
   animation: fadeIn 0.6s ease-in;
@@ -1781,10 +1907,14 @@ body.gs-landing-pure .gs-sidebar-overlay {
 
 /* ========================================
    EVENT HEADER RESPONSIVE LAYOUT
-   Updated: 2025-11-17
+   Updated: 2025-11-19
    ======================================== */
 
 /* Desktop: Logo and info side by side */
+.event-header-content {
+  padding: var(--gs-space-xl);
+}
+
 .event-header-layout {
   display: flex;
   align-items: flex-start;
@@ -1795,6 +1925,12 @@ body.gs-landing-pure .gs-sidebar-overlay {
   flex-shrink: 0;
 }
 
+.event-logo img {
+  width: 120px;
+  height: auto;
+  border-radius: var(--gs-radius-lg);
+}
+
 .event-info {
   flex: 1;
 }
@@ -1803,6 +1939,14 @@ body.gs-landing-pure .gs-sidebar-overlay {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 0.75rem;
+  margin-top: var(--gs-space-md);
+}
+
+.event-stat-full,
+.event-stat-half {
+  padding: var(--gs-space-sm) var(--gs-space-md);
+  background: var(--gs-light);
+  border-radius: var(--gs-radius-md);
 }
 
 .event-stat-full {
@@ -1849,11 +1993,6 @@ body.gs-landing-pure .gs-sidebar-overlay {
     justify-content: center;
   }
 
-  .event-meta i {
-    width: 16px !important;
-    height: 16px !important;
-  }
-
   .event-stats {
     gap: 0.5rem;
   }
@@ -1886,4 +2025,710 @@ body.gs-landing-pure .gs-sidebar-overlay {
   .event-stats {
     gap: 0.625rem;
   }
+}
+
+/* ========================================
+   RESULTS TABLE ENHANCEMENTS
+   Updated: 2025-11-19
+   ======================================== */
+
+/* Icon sizes */
+.gs-icon-sm {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+
+.gs-icon-md {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+.gs-icon-lg {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+}
+
+/* Sortable table headers */
+.gs-table th[data-sort] {
+  cursor: pointer;
+  user-select: none;
+}
+
+.gs-table th[data-sort]:hover {
+  background-color: rgba(0, 74, 152, 0.05);
+}
+
+/* Table column utilities */
+.gs-table-col-narrow {
+  width: 60px;
+  text-align: center;
+}
+
+.gs-table-col-medium {
+  width: 100px;
+  text-align: center;
+}
+
+.gs-table-col-wide {
+  width: 120px;
+  text-align: center;
+}
+
+.gs-table-center {
+  text-align: center;
+}
+
+.gs-table-mono {
+  font-family: var(--gs-font-mono);
+  font-weight: 600;
+}
+
+.gs-table-time-cell {
+  text-align: center;
+  font-family: var(--gs-font-mono);
+  font-weight: 600;
+  background: var(--gs-light);
+}
+
+.gs-table-fastest {
+  color: var(--gs-success);
+  font-weight: 700;
+}
+
+/* Rider name link in table */
+.gs-rider-link {
+  text-decoration: none;
+  color: inherit;
+  font-weight: 600;
+  transition: color var(--gs-transition-fast);
+}
+
+.gs-rider-link:hover {
+  color: var(--gs-primary);
+}
+
+.gs-rider-meta {
+  font-size: 0.75rem;
+  color: var(--gs-text-secondary);
+  margin-top: 2px;
+}
+
+/* Medal emojis */
+.gs-medal {
+  font-size: 1.2em;
+}
+
+/* Empty state */
+.gs-empty-state {
+  padding: 3rem;
+  text-align: center;
+}
+
+.gs-empty-icon {
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 1rem;
+  opacity: 0.3;
+}
+
+.gs-empty-icon-md {
+  width: 48px;
+  height: 48px;
+  margin: 0 auto 0.5rem;
+  opacity: 0.3;
+}
+
+/* Tabs */
+.gs-tabs {
+  display: flex;
+  gap: var(--gs-space-sm);
+  margin-bottom: var(--gs-space-lg);
+  border-bottom: 2px solid var(--gs-border);
+}
+
+.gs-tab {
+  display: flex;
+  align-items: center;
+  gap: var(--gs-space-xs);
+  padding: var(--gs-space-sm) var(--gs-space-md);
+  text-decoration: none;
+  color: var(--gs-text-secondary);
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  transition: all var(--gs-transition-fast);
+  font-weight: 500;
+}
+
+.gs-tab:hover {
+  color: var(--gs-primary);
+  background-color: var(--gs-primary-light);
+}
+
+.gs-tab.active {
+  color: var(--gs-primary);
+  border-bottom-color: var(--gs-primary);
+  font-weight: 600;
+}
+
+/* Margin utilities */
+.gs-ml-xs {
+  margin-left: var(--gs-space-xs);
+}
+
+.gs-ml-sm {
+  margin-left: var(--gs-space-sm);
+}
+
+.gs-mb-xl {
+  margin-bottom: var(--gs-space-xl);
+}
+
+/* Padding utility */
+.gs-p-0 {
+  padding: 0;
+}
+
+.gs-p-sm {
+  padding: var(--gs-space-sm);
+}
+
+.gs-p-xl {
+  padding: var(--gs-space-xl);
+}
+
+.gs-p-2xl {
+  padding: var(--gs-space-2xl);
+}
+
+.gs-p-3xl {
+  padding: var(--gs-space-3xl);
+}
+
+/* Flex wrap */
+.gs-flex-wrap {
+  flex-wrap: wrap;
+}
+
+/* No padding with auto scroll for table containers */
+.gs-card-table-container {
+  padding: 0;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ========================================
+   SERIES STANDINGS TABLE - STICKY COLUMNS
+   Updated: 2025-11-19
+   ======================================== */
+
+/* Sticky header columns */
+.standings-sticky-th-rank {
+  position: sticky;
+  left: 0;
+  background: white;
+  z-index: 2;
+}
+
+.standings-sticky-th-name {
+  position: sticky;
+  left: 60px;
+  background: white;
+  z-index: 2;
+}
+
+.standings-sticky-th-club {
+  position: sticky;
+  left: 250px;
+  background: white;
+  z-index: 2;
+}
+
+/* Sticky body cells */
+.standings-sticky-td-rank {
+  position: sticky;
+  left: 0;
+  background: white;
+}
+
+.standings-sticky-td-name {
+  position: sticky;
+  left: 60px;
+  background: white;
+}
+
+.standings-sticky-td-club {
+  position: sticky;
+  left: 250px;
+  background: white;
+}
+
+/* Muted text color */
+.gs-text-muted {
+  color: #ccc;
+}
+
+/* Extra small badge */
+.gs-badge-xs {
+  font-size: 0.75rem;
+}
+
+/* Link utilities */
+.gs-link-unstyled {
+  text-decoration: none;
+  color: inherit;
+}
+
+/* Event card specific styles */
+.gs-event-card-link {
+  text-decoration: none;
+  color: inherit;
+}
+
+.gs-event-card-transition {
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.gs-event-no-logo {
+  font-size: 0.75rem;
+  color: #9ca3af;
+  text-align: center;
+}
+
+.gs-event-participant-info {
+  font-weight: 600;
+  color: #667eea;
+}
+
+/* ========================================
+   RIDER LICENSE CARD
+   Updated: 2025-11-19
+   ======================================== */
+
+/* COMPACT HORIZONTAL CARD with Photo */
+.license-card-container {
+  margin-bottom: 2rem;
+}
+
+.license-card {
+  max-width: 900px;
+  width: 100%;
+  margin: 0 auto;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+/* UCI Stripe */
+.uci-stripe {
+  height: 6px;
+  background: linear-gradient(90deg,
+    #c8161b 0% 20%,
+    #8a9859 20% 40%,
+    #fcce05 40% 60%,
+    #207fc0 60% 80%,
+    #ee7622 80% 100%
+  );
+}
+
+/* Desktop: Larger Photo and Better Layout */
+.license-content {
+  padding: 24px;
+  display: grid;
+  grid-template-columns: 180px 1fr;
+  gap: 32px;
+  align-items: start;
+}
+
+/* Photo Section - Desktop: Larger */
+.license-photo {
+  width: 180px;
+  height: 240px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.license-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.photo-placeholder {
+  font-size: 4rem;
+  opacity: 0.3;
+}
+
+/* Info Section - Desktop: Better spacing */
+.license-info {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Name - Desktop: Larger */
+.rider-name {
+  font-size: 28px;
+  font-weight: 700;
+  color: #1a202c;
+  text-transform: uppercase;
+  letter-spacing: -0.5px;
+  line-height: 1.2;
+  margin: 0;
+}
+
+/* License ID - Desktop: Larger */
+.license-id {
+  font-size: 14px;
+  color: #667eea;
+  font-weight: 600;
+}
+
+/* License Type and Status */
+.license-info-inline {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.license-type-text {
+  font-size: 14px;
+  color: #718096;
+  font-weight: 600;
+}
+
+.license-status-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.license-status-badge.active {
+  background: #10b981;
+  color: white;
+}
+
+.license-status-badge.inactive {
+  background: #ef4444;
+  color: white;
+}
+
+/* Info Grid - Desktop: Better spacing */
+.info-grid-compact {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.info-box {
+  background: #f8f9fa;
+  padding: 12px 16px;
+  border-radius: 8px;
+  text-align: center;
+  border-left: 3px solid #667eea;
+}
+
+.info-box-label {
+  font-size: 11px;
+  color: #718096;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+
+.info-box-value {
+  font-size: 16px;
+  color: #1a202c;
+  font-weight: 700;
+}
+
+.info-box-value-small {
+  font-size: 11px;
+}
+
+/* Club Link Styling */
+.club-link {
+  color: #667eea;
+  text-decoration: none;
+  font-weight: 700;
+  transition: color 0.2s, text-decoration 0.2s;
+}
+
+.club-link:hover {
+  color: #764ba2;
+  text-decoration: underline;
+}
+
+/* Series standings in stat card */
+.series-standings-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.series-standing-item {
+  font-size: 9px;
+  line-height: 1.3;
+}
+
+.series-standing-meta {
+  color: #718096;
+  font-size: 8px;
+}
+
+/* Statistics Cards - Equal Width on Desktop */
+.gs-stat-card-compact {
+  min-height: 120px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 1rem;
+}
+
+/* Tablet */
+@media (max-width: 900px) {
+  .license-card-container {
+    margin-bottom: 1rem;
+  }
+
+  .license-card {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  }
+
+  .uci-stripe {
+    height: 4px;
+  }
+
+  .license-content {
+    grid-template-columns: 100px 1fr;
+    gap: 16px;
+    padding: 12px;
+  }
+
+  .license-photo {
+    width: 100px;
+    height: 120px;
+    border-radius: 6px;
+  }
+
+  .photo-placeholder {
+    font-size: 3rem;
+  }
+
+  .license-info {
+    gap: 6px;
+  }
+
+  .rider-name {
+    font-size: 18px;
+    letter-spacing: -0.2px;
+  }
+
+  .license-id {
+    font-size: 11px;
+  }
+
+  .license-type-text {
+    font-size: 11px;
+  }
+
+  .license-status-badge {
+    font-size: 10px;
+    padding: 2px 8px;
+  }
+
+  .info-grid-compact {
+    gap: 6px;
+  }
+
+  .info-box {
+    padding: 4px 8px;
+  }
+
+  .info-box-label {
+    font-size: 8px;
+    margin-bottom: 2px;
+  }
+
+  .info-box-value {
+    font-size: 12px;
+  }
+}
+
+/* Mobile - Smaller photo */
+@media (max-width: 640px) {
+  .license-content {
+    grid-template-columns: 60px 1fr;
+    gap: 10px;
+    padding: 8px;
+  }
+
+  .license-photo {
+    width: 60px;
+    height: 75px;
+  }
+
+  .photo-placeholder {
+    font-size: 2rem;
+  }
+
+  .rider-name {
+    font-size: 14px;
+  }
+
+  .license-id {
+    font-size: 9px;
+  }
+
+  .license-type-text {
+    font-size: 9px;
+  }
+
+  .license-status-badge {
+    font-size: 8px;
+    padding: 2px 6px;
+  }
+
+  .info-box {
+    padding: 3px 6px;
+  }
+
+  .info-box-label {
+    font-size: 7px;
+  }
+
+  .info-box-value {
+    font-size: 10px;
+  }
+
+  .info-grid-compact {
+    grid-template-columns: repeat(auto-fit, minmax(70px, 1fr));
+  }
+}
+
+/* ========================================
+   ADDITIONAL UTILITY CLASSES
+   Updated: 2025-11-19
+   ======================================== */
+
+/* Display utilities */
+.gs-hidden {
+  display: none;
+}
+
+.gs-inline-block {
+  display: inline-block;
+}
+
+.gs-vertical-middle {
+  vertical-align: middle;
+}
+
+/* Empty state utilities */
+.gs-empty-state-container {
+  padding: 3rem;
+}
+
+.gs-empty-state-icon-lg {
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 1rem;
+  opacity: 0.3;
+}
+
+/* Icon size variations */
+.gs-icon-48 {
+  width: 48px;
+  height: 48px;
+}
+
+.gs-icon-14 {
+  width: 14px;
+  height: 14px;
+}
+
+/* Placeholder styling */
+.gs-placeholder-icon {
+  font-size: 2rem;
+  color: #cbd5e0;
+}
+
+/* Link styling */
+.gs-link-inherit {
+  text-decoration: none;
+  color: inherit;
+}
+
+/* Transition utilities */
+.gs-transition-card {
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+/* Font weight utilities */
+.gs-font-semibold {
+  font-weight: 600;
+}
+
+/* Color utilities */
+.gs-text-purple {
+  color: #667eea;
+}
+
+.gs-text-gray-400 {
+  color: #9ca3af;
+}
+
+/* Spacing utilities - specific cases */
+.gs-ml-1 {
+  margin-left: 0.25rem;
+}
+
+.gs-mb-2 {
+  margin-bottom: 0.5rem;
+}
+
+.gs-mt-8 {
+  margin-top: 2rem;
+}
+
+/* Padding utilities - specific cases */
+.gs-p-3 {
+  padding: 0.75rem 1rem;
+}
+
+.gs-p-12 {
+  padding: 3rem;
+}
+
+/* Grid utilities */
+.gs-col-span-2 {
+  grid-column: span 2;
+}
+
+/* Font size utilities */
+.gs-text-2xs {
+  font-size: 0.6875rem;
+}
+
+.gs-text-11 {
+  font-size: 11px;
+}
+
+.gs-text-xs-special {
+  font-size: 0.875rem;
+  color: #9ca3af;
 }

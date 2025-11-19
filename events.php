@@ -90,7 +90,7 @@ include __DIR__ . '/includes/layout-header.php';
             </div>
 
             <!-- Filter Controls -->
-            <div class="gs-card gs-mb-lg" style="padding: 1rem;">
+            <div class="gs-card gs-mb-lg gs-p-md">
                 <form method="GET" action="" id="filterForm" class="gs-grid gs-grid-cols-1 gs-md-grid-cols-2 gs-gap-md">
                     <!-- Series Filter -->
                     <div>
@@ -130,8 +130,8 @@ include __DIR__ . '/includes/layout-header.php';
 
             <!-- 2-Column Layout: Upcoming (Left) and Completed (Right) -->
             <?php if (empty($upcomingEvents) && empty($completedEvents)): ?>
-                <div class="gs-card gs-text-center" style="padding: 3rem;">
-                    <i data-lucide="calendar-x" style="width: 64px; height: 64px; margin: 0 auto 1rem; opacity: 0.3;"></i>
+                <div class="gs-card gs-text-center gs-p-3xl">
+                    <i data-lucide="calendar-x" class="gs-empty-icon"></i>
                     <h3 class="gs-h4 gs-mb-sm">Inga tävlingar hittades</h3>
                     <p class="gs-text-secondary">
                         Inga tävlingar matchade dina filter.
@@ -239,22 +239,22 @@ include __DIR__ . '/includes/layout-header.php';
                         </div>
 
                         <?php if (empty($upcomingEvents)): ?>
-                            <div class="gs-card gs-text-center" style="padding: 2rem;">
-                                <i data-lucide="calendar-x" style="width: 48px; height: 48px; margin: 0 auto 0.5rem; opacity: 0.3;"></i>
+                            <div class="gs-card gs-text-center gs-p-2xl">
+                                <i data-lucide="calendar-x" class="gs-empty-icon-md"></i>
                                 <p class="gs-text-secondary">Inga kommande tävlingar</p>
                             </div>
                         <?php else: ?>
                             <div class="event-list">
                                 <?php foreach ($upcomingEvents as $event): ?>
-                                    <a href="/event.php?id=<?= $event['id'] ?>" style="text-decoration: none; color: inherit;">
-                                        <div class="gs-card gs-card-hover event-card-horizontal" style="transition: transform 0.2s, box-shadow 0.2s;">
+                                    <a href="/event.php?id=<?= $event['id'] ?>" class="gs-event-card-link">
+                                        <div class="gs-card gs-card-hover event-card-horizontal gs-event-card-transition">
                                             <!-- Logo Left -->
                                             <div class="event-logo-container">
                                                 <?php if ($event['series_logo']): ?>
                                                     <img src="<?= h($event['series_logo']) ?>"
                                                          alt="<?= h($event['series_name']) ?>">
                                                 <?php else: ?>
-                                                    <div style="font-size: 0.75rem; color: #9ca3af; text-align: center;">
+                                                    <div class="gs-event-no-logo">
                                                         <?= h($event['series_name'] ?? 'Event') ?>
                                                     </div>
                                                 <?php endif; ?>
@@ -263,7 +263,7 @@ include __DIR__ . '/includes/layout-header.php';
                                             <!-- Info Right -->
                                             <div class="event-info-right">
                                                 <div class="event-date-box">
-                                                    <i data-lucide="calendar" style="width: 14px; height: 14px;"></i>
+                                                    <i data-lucide="calendar" class="gs-icon-sm"></i>
                                                     <?= date('d M Y', strtotime($event['event_date'])) ?>
                                                 </div>
 
@@ -274,13 +274,13 @@ include __DIR__ . '/includes/layout-header.php';
                                                 <div class="event-meta">
                                                     <?php if ($event['location']): ?>
                                                         <div>
-                                                            <i data-lucide="map-pin" style="width: 14px; height: 14px;"></i>
+                                                            <i data-lucide="map-pin" class="gs-icon-sm"></i>
                                                             <?= h($event['location']) ?>
                                                         </div>
                                                     <?php endif; ?>
                                                     <?php if ($event['organizer']): ?>
                                                         <div>
-                                                            <i data-lucide="user" style="width: 14px; height: 14px;"></i>
+                                                            <i data-lucide="user" class="gs-icon-sm"></i>
                                                             <?= h($event['organizer']) ?>
                                                         </div>
                                                     <?php endif; ?>
@@ -301,22 +301,22 @@ include __DIR__ . '/includes/layout-header.php';
                         </div>
 
                         <?php if (empty($completedEvents)): ?>
-                            <div class="gs-card gs-text-center" style="padding: 2rem;">
-                                <i data-lucide="calendar-x" style="width: 48px; height: 48px; margin: 0 auto 0.5rem; opacity: 0.3;"></i>
+                            <div class="gs-card gs-text-center gs-p-2xl">
+                                <i data-lucide="calendar-x" class="gs-empty-icon-md"></i>
                                 <p class="gs-text-secondary">Inga avklarade tävlingar</p>
                             </div>
                         <?php else: ?>
                             <div class="event-list">
                                 <?php foreach ($completedEvents as $event): ?>
-                                    <a href="/event.php?id=<?= $event['id'] ?>" style="text-decoration: none; color: inherit;">
-                                        <div class="gs-card gs-card-hover event-card-horizontal" style="transition: transform 0.2s, box-shadow 0.2s;">
+                                    <a href="/event.php?id=<?= $event['id'] ?>" class="gs-event-card-link">
+                                        <div class="gs-card gs-card-hover event-card-horizontal gs-event-card-transition">
                                             <!-- Logo Left -->
                                             <div class="event-logo-container">
                                                 <?php if ($event['series_logo']): ?>
                                                     <img src="<?= h($event['series_logo']) ?>"
                                                          alt="<?= h($event['series_name']) ?>">
                                                 <?php else: ?>
-                                                    <div style="font-size: 0.75rem; color: #9ca3af; text-align: center;">
+                                                    <div class="gs-event-no-logo">
                                                         <?= h($event['series_name'] ?? 'Event') ?>
                                                     </div>
                                                 <?php endif; ?>
@@ -325,7 +325,7 @@ include __DIR__ . '/includes/layout-header.php';
                                             <!-- Info Right -->
                                             <div class="event-info-right">
                                                 <div class="event-date-box completed">
-                                                    <i data-lucide="check-circle" style="width: 14px; height: 14px;"></i>
+                                                    <i data-lucide="check-circle" class="gs-icon-sm"></i>
                                                     <?= date('d M Y', strtotime($event['event_date'])) ?>
                                                 </div>
 
@@ -336,19 +336,19 @@ include __DIR__ . '/includes/layout-header.php';
                                                 <div class="event-meta">
                                                     <?php if ($event['location']): ?>
                                                         <div>
-                                                            <i data-lucide="map-pin" style="width: 14px; height: 14px;"></i>
+                                                            <i data-lucide="map-pin" class="gs-icon-sm"></i>
                                                             <?= h($event['location']) ?>
                                                         </div>
                                                     <?php endif; ?>
                                                     <?php if ($event['organizer']): ?>
                                                         <div>
-                                                            <i data-lucide="user" style="width: 14px; height: 14px;"></i>
+                                                            <i data-lucide="user" class="gs-icon-sm"></i>
                                                             <?= h($event['organizer']) ?>
                                                         </div>
                                                     <?php endif; ?>
                                                     <?php if ($event['participant_count'] > 0): ?>
-                                                        <div style="font-weight: 600; color: #667eea;">
-                                                            <i data-lucide="trophy" style="width: 14px; height: 14px;"></i>
+                                                        <div class="gs-event-participant-info">
+                                                            <i data-lucide="trophy" class="gs-icon-sm"></i>
                                                             <?= $event['participant_count'] ?> deltagare •
                                                             <?= $event['category_count'] ?> <?= $event['category_count'] == 1 ? 'klass' : 'klasser' ?>
                                                         </div>
