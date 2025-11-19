@@ -59,7 +59,7 @@ include __DIR__ . '/includes/layout-header.php';
 
         <!-- Profile Header -->
         <div class="gs-card gs-mb-xl">
-            <div class="gs-card-content" style="padding: var(--gs-space-xl);">
+            <div class="gs-card-content gs-p-xl">
                 <div class="gs-flex gs-justify-between gs-items-start">
                     <div>
                         <h1 class="gs-h1 gs-text-primary gs-mb-sm">
@@ -68,14 +68,14 @@ include __DIR__ . '/includes/layout-header.php';
                         <div class="gs-flex gs-gap-md gs-flex-wrap">
                             <?php if ($rider['club_name']): ?>
                                 <span class="gs-badge gs-badge-secondary">
-                                    <i data-lucide="building" style="width: 14px; height: 14px;"></i>
+                                    <i data-lucide="building" class="gs-icon-14"></i>
                                     <?= h($rider['club_name']) ?>
                                 </span>
                             <?php endif; ?>
 
                             <?php if ($rider['birth_year']): ?>
                                 <span class="gs-badge gs-badge-secondary">
-                                    <i data-lucide="calendar" style="width: 14px; height: 14px;"></i>
+                                    <i data-lucide="calendar" class="gs-icon-14"></i>
                                     <?= calculateAge($rider['birth_year']) ?> år (<?= h($rider['birth_year']) ?>)
                                 </span>
                             <?php endif; ?>
@@ -111,15 +111,15 @@ include __DIR__ . '/includes/layout-header.php';
                         <div class="gs-grid gs-grid-cols-1 gs-md-grid-cols-2 gs-gap-md">
                             <div>
                                 <div class="gs-text-sm gs-text-secondary">Licensnummer</div>
-                                <div class="gs-text-lg" style="font-weight: 600;"><?= h($rider['license_number'] ?: '-') ?></div>
+                                <div class="gs-text-lg gs-font-semibold"><?= h($rider['license_number'] ?: '-') ?></div>
                             </div>
                             <div>
                                 <div class="gs-text-sm gs-text-secondary">Licenstyp</div>
-                                <div class="gs-text-lg" style="font-weight: 600;"><?= h($rider['license_type'] ?: '-') ?></div>
+                                <div class="gs-text-lg gs-font-semibold"><?= h($rider['license_type'] ?: '-') ?></div>
                             </div>
                             <div>
                                 <div class="gs-text-sm gs-text-secondary">Giltig till</div>
-                                <div class="gs-text-lg" style="font-weight: 600;">
+                                <div class="gs-text-lg gs-font-semibold">
                                     <?php if ($rider['license_valid_until'] && $rider['license_valid_until'] !== '0000-00-00'): ?>
                                         <?= date('Y-m-d', strtotime($rider['license_valid_until'])) ?>
                                     <?php else: ?>
@@ -147,22 +147,22 @@ include __DIR__ . '/includes/layout-header.php';
                             Mina resultat (<?= count($results) ?>)
                         </h2>
                     </div>
-                    <div class="gs-card-content" style="padding: 0;">
+                    <div class="gs-card-content gs-p-0">
                         <?php if (empty($results)): ?>
-                            <div style="padding: var(--gs-space-lg); text-align: center;">
+                            <div class="gs-empty-state">
                                 <p class="gs-text-secondary">Inga resultat registrerade ännu</p>
                             </div>
                         <?php else: ?>
-                            <div style="overflow-x: auto;">
+                            <div class="gs-table-scrollable">
                                 <table class="gs-table">
                                     <thead>
                                         <tr>
                                             <th>Datum</th>
                                             <th>Tävling</th>
                                             <th>Kategori</th>
-                                            <th style="text-align: center;">Placering</th>
-                                            <th style="text-align: center;">Poäng</th>
-                                            <th style="text-align: center;">Status</th>
+                                            <th class="gs-text-center">Placering</th>
+                                            <th class="gs-text-center">Poäng</th>
+                                            <th class="gs-text-center">Status</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -183,15 +183,15 @@ include __DIR__ . '/includes/layout-header.php';
                                                         -
                                                     <?php endif; ?>
                                                 </td>
-                                                <td style="text-align: center;">
+                                                <td class="gs-text-center">
                                                     <?php if ($result['status'] === 'finished' && $result['position']): ?>
                                                         <strong><?= $result['position'] ?></strong>
                                                     <?php else: ?>
                                                         -
                                                     <?php endif; ?>
                                                 </td>
-                                                <td style="text-align: center;"><?= $result['points'] ?: '-' ?></td>
-                                                <td style="text-align: center;">
+                                                <td class="gs-text-center"><?= $result['points'] ?: '-' ?></td>
+                                                <td class="gs-text-center">
                                                     <?php
                                                     $statusClass = 'gs-badge-success';
                                                     $statusText = 'OK';

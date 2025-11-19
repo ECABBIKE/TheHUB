@@ -62,7 +62,7 @@ include __DIR__ . '/includes/layout-header.php';
 ?>
 
 <main class="gs-main-content">
-    <div class="gs-container" style="max-width: 500px; margin: 3rem auto;">
+    <div class="gs-container gs-form-container">
         <div class="gs-card">
             <div class="gs-card-header gs-text-center">
                 <h1 class="gs-h2 gs-text-primary">
@@ -160,7 +160,7 @@ include __DIR__ . '/includes/layout-header.php';
                 <?php elseif ($step === 'success'): ?>
                     <!-- Step 3: Success -->
                     <div class="gs-text-center">
-                        <div style="font-size: 4rem; margin-bottom: 1rem;">✅</div>
+                        <div class="gs-success-icon-lg">✅</div>
                         <p class="gs-text-lg gs-mb-lg">Lösenordet har återställts!</p>
                         <a href="/rider-login.php" class="gs-btn gs-btn-primary">
                             <i data-lucide="log-in"></i>
@@ -170,7 +170,7 @@ include __DIR__ . '/includes/layout-header.php';
                 <?php endif; ?>
 
                 <?php if ($step !== 'success'): ?>
-                    <div class="gs-text-center gs-mt-lg" style="padding-top: var(--gs-space-lg); border-top: 1px solid var(--gs-border);">
+                    <div class="gs-text-center gs-mt-lg gs-section-divider">
                         <a href="/rider-login.php" class="gs-link">
                             <i data-lucide="arrow-left"></i>
                             Tillbaka till inloggning

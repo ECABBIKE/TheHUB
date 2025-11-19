@@ -2732,3 +2732,100 @@ body.gs-landing-pure .gs-sidebar-overlay {
   font-size: 0.875rem;
   color: #9ca3af;
 }
+
+/* ========================================
+   FORM CONTAINERS & MOBILE-FIRST FORMS
+   Updated: 2025-11-19
+   ======================================== */
+
+/* Centered form containers */
+.gs-form-container {
+  max-width: 500px;
+  margin: 3rem auto;
+}
+
+.gs-form-container-md {
+  max-width: 600px;
+  margin: 3rem auto;
+}
+
+/* Mobile-first adjustments for form containers */
+@media (max-width: 640px) {
+  .gs-form-container,
+  .gs-form-container-md {
+    margin: 1rem auto;
+    padding: 0 1rem;
+  }
+
+  /* Ensure inputs meet iOS minimum font size (prevents zoom) */
+  .gs-input,
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="tel"],
+  input[type="number"],
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+
+  /* Full-width buttons on mobile (thumb zone) */
+  .gs-btn-lg {
+    width: 100%;
+    min-height: 44px; /* iOS touch target minimum */
+  }
+
+  /* Stack form elements */
+  .gs-form-group {
+    margin-bottom: 1rem;
+  }
+}
+
+/* Table scrollable wrapper */
+.gs-table-scrollable {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Section divider */
+.gs-section-divider {
+  padding-top: var(--gs-space-lg);
+  border-top: 1px solid var(--gs-border);
+}
+
+/* Success/Large icon for confirmations */
+.gs-success-icon-lg {
+  font-size: 4rem;
+  margin-bottom: 1rem;
+}
+
+/* Mobile adjustments */
+@media (max-width: 640px) {
+  .gs-section-divider {
+    padding-top: var(--gs-space-md);
+  }
+
+  .gs-success-icon-lg {
+    font-size: 3rem;
+    margin-bottom: 0.75rem;
+  }
+}
+
+/* Utility: Max-widths for responsive centering */
+.gs-max-w-sm {
+  max-width: 500px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.gs-max-w-md {
+  max-width: 600px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Spacing utilities for mobile */
+.gs-mx-sm {
+  margin-left: var(--gs-space-sm);
+  margin-right: var(--gs-space-sm);
+}

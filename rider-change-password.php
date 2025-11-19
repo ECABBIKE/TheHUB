@@ -39,7 +39,7 @@ include __DIR__ . '/includes/layout-header.php';
 ?>
 
 <main class="gs-main-content">
-    <div class="gs-container" style="max-width: 600px; margin: 3rem auto;">
+    <div class="gs-container gs-form-container-md">
         <div class="gs-card">
             <div class="gs-card-header">
                 <div class="gs-flex gs-justify-between gs-items-center">
