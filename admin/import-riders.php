@@ -9,7 +9,7 @@ register_shutdown_function(function() {
     $error = error_get_last();
     if ($error !== null && in_array($error['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR])) {
         echo "<h1>Fatal Error Detected:</h1>";
-        echo "<pre style='background:#fee;padding:20px;border:2px solid red;'>";
+        echo "<pre class='gs-pre-error'>";
         echo "Type: " . $error['type'] . "\n";
         echo "Message: " . htmlspecialchars($error['message']) . "\n";
         echo "File: " . $error['file'] . "\n";

@@ -75,11 +75,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['csv_file'])) {
 
         foreach ($header as $h) {
             $mapped = isset($mappings[$h['normalized']]) ? $mappings[$h['normalized']] : '❌ INGEN MAPPNING';
-            $style = strpos($mapped, '❌') !== false ? 'color: red; font-weight: bold;' : '';
+            $hasError = strpos($mapped, '❌') !== false;
+            $cellClass = $hasError ? 'class="gs-text-error gs-font-weight-600"' : '';
             echo "<tr>";
             echo "<td>" . h($h['original']) . "</td>";
             echo "<td>" . h($h['normalized']) . "</td>";
-            echo "<td style='$style'>" . h($mapped) . "</td>";
+            echo "<td {$cellClass}>" . h($mapped) . "</td>";
             echo "</tr>";
         }
 

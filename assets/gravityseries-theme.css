@@ -4182,6 +4182,15 @@ details.gs-details-lg summary {
   overflow-x: auto;
 }
 
+/* Pre code block (error) */
+.gs-pre-error {
+  background: #fee;
+  padding: 20px;
+  border: 2px solid #dc2626;
+  border-radius: 4px;
+  overflow-x: auto;
+}
+
 /* Summary cursor pointer */
 .gs-summary-pointer {
   cursor: pointer;

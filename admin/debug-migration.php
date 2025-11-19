@@ -6,7 +6,7 @@ $db = getDB();
 $pdo = getPDO();
 
 echo "<h1>Migration Debug</h1>";
-echo "<pre style='background: #f5f5f5; padding: 20px; border-radius: 5px;'>";
+echo "<pre class='gs-pre-gray'>";
 
 // Check current events table structure
 echo "=== CHECKING EVENTS TABLE ===\n";

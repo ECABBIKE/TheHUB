@@ -29,7 +29,8 @@ foreach ($filesToCheck as $file => $description) {
 
     echo "<tr>";
     echo "<td><code>" . htmlspecialchars($file) . "</code></td>";
-    echo "<td style='color: {$statusColor}; font-weight: bold;'>{$status}</td>";
+    $statusClass = $exists ? 'gs-text-success' : 'gs-text-error';
+    echo "<td class='{$statusClass} gs-font-weight-600'>{$status}</td>";
     echo "<td>" . htmlspecialchars($description) . "</td>";
     echo "</tr>";
 }
