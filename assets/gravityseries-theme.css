@@ -2638,6 +2638,10 @@ body.gs-landing-pure .gs-sidebar-overlay {
   vertical-align: middle;
 }
 
+.gs-form-inline {
+  display: contents;
+}
+
 /* Empty state utilities */
 .gs-empty-state-container {
   padding: 3rem;
@@ -2697,12 +2701,350 @@ body.gs-landing-pure .gs-sidebar-overlay {
   margin-left: 0.25rem;
 }
 
+/* ========================================
+   IMPORT PAGE & FEATURED CARDS
+   ======================================== */
+
+/* Featured card - primary gradient */
+.gs-featured-card-primary {
+  background: linear-gradient(135deg, rgba(0, 74, 152, 0.05) 0%, rgba(239, 118, 31, 0.05) 100%);
+  border: 2px solid var(--gs-primary);
+}
+
+/* Featured card - success (green) */
+.gs-featured-card-success {
+  border: 2px solid #86efac;
+  background: #f0fdf4;
+  margin-bottom: var(--gs-space-xl);
+}
+
+/* Featured card - warning (yellow) */
+.gs-featured-card-warning {
+  border: 2px solid #fbbf24;
+  background: #fffbeb;
+  margin-bottom: var(--gs-space-xl);
+}
+
+/* Featured card headers */
+.gs-featured-header-primary {
+  background-color: var(--gs-primary);
+  color: var(--gs-white);
+}
+
+.gs-featured-header-success {
+  background: #10b981;
+}
+
+.gs-featured-header-warning {
+  background: #f59e0b;
+}
+
+.gs-featured-header-title {
+  color: white;
+  margin: 0;
+}
+
+/* Info/Alert boxes */
+.gs-info-box {
+  background: var(--gs-white);
+  padding: 1.5rem;
+  border-radius: var(--gs-radius-md);
+  border: 1px solid var(--gs-border);
+}
+
+.gs-info-box-bordered {
+  background: white;
+  padding: 1.25rem;
+  border-radius: var(--gs-radius-md);
+  border: 1px solid #fbbf24;
+  margin-bottom: 1rem;
+}
+
+.gs-alert-accent {
+  margin-top: 0.75rem;
+  padding: 0.75rem;
+  background: rgba(239, 118, 31, 0.1);
+  border-left: 3px solid var(--gs-accent);
+  border-radius: var(--gs-radius-sm);
+}
+
+.gs-alert-success {
+  margin-top: 0.75rem;
+  padding: 0.75rem;
+  background: rgba(67, 114, 100, 0.1);
+  border-left: 3px solid var(--gs-success);
+  border-radius: var(--gs-radius-sm);
+}
+
+.gs-alert-info {
+  background: #eff6ff;
+  padding: 1rem;
+  border-left: 3px solid #3b82f6;
+  border-radius: 4px;
+  margin-top: 1rem;
+}
+
+.gs-alert-primary {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: rgba(0, 74, 152, 0.05);
+  border-radius: var(--gs-radius-sm);
+}
+
+/* Details/Summary styling */
+details.gs-details {
+  cursor: pointer;
+}
+
+details.gs-details summary {
+  cursor: pointer;
+  font-weight: 600;
+  padding: 0.5rem;
+  background: var(--gs-light);
+  border-radius: var(--gs-radius-sm);
+}
+
+details.gs-details-lg summary {
+  cursor: pointer;
+  font-weight: 600;
+  padding: 0.75rem;
+  background: var(--gs-light);
+  border-radius: var(--gs-radius-sm);
+  margin-bottom: 0.5rem;
+}
+
+/* Code blocks */
+.gs-code-block {
+  display: block;
+  background: #f3f4f6;
+  padding: 0.75rem;
+  border-radius: 4px;
+  font-size: 0.875rem;
+  margin-bottom: 1rem;
+}
+
+.gs-code-dark {
+  background: #1f2937;
+  color: #f3f4f6;
+  padding: 1rem;
+  border-radius: 6px;
+  font-size: 0.813rem;
+  overflow-x: auto;
+  line-height: 1.5;
+}
+
+/* List utilities */
+.gs-list-spaced {
+  margin-top: 0.75rem;
+  margin-left: 1.5rem;
+  line-height: 1.8;
+}
+
+.gs-list-compact {
+  line-height: 1.7;
+  margin-left: 1.25rem;
+}
+
+.gs-list-lg {
+  margin-left: var(--gs-space-lg);
+  line-height: 1.8;
+}
+
+/* Heading utilities */
+.gs-heading-semibold {
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.gs-heading-primary {
+  color: var(--gs-primary);
+}
+
+.gs-heading-warning {
+  color: #f59e0b;
+}
+
+.gs-heading-white {
+  color: var(--gs-white);
+}
+
+/* Button variations */
+.gs-btn-warning-solid {
+  margin-top: 1rem;
+  background: #f59e0b;
+  color: white;
+}
+
+/* Text margin utilities */
+.gs-m-0 {
+  margin: 0;
+}
+
 .gs-mb-2 {
   margin-bottom: 0.5rem;
 }
 
+.gs-mt-2 {
+  margin-top: 0.5rem;
+}
+
+.gs-mt-4 {
+  margin-top: 1rem;
+}
+
+/* ========================================
+   DEBUG & DATABASE PAGES
+   ======================================== */
+
+/* Stat display text */
+.gs-stat-text {
+  font-size: 1.2rem;
+  margin-bottom: 1rem;
+}
+
+.gs-stat-text-md {
+  font-size: 1.1rem;
+  margin-bottom: 1rem;
+}
+
+.gs-stat-value-primary {
+  color: var(--gs-primary);
+  font-weight: bold;
+}
+
+.gs-stat-value-success {
+  color: var(--gs-success);
+}
+
+.gs-stat-value-secondary {
+  color: var(--gs-secondary);
+}
+
+/* Multi-column layout */
+.gs-cols-2 {
+  columns: 2;
+  column-gap: 2rem;
+}
+
+/* Monospace font */
+.gs-font-mono {
+  font-family: monospace;
+}
+
+.gs-font-mono-sm {
+  font-family: monospace;
+  font-size: 0.85rem;
+}
+
+/* Code preview block */
+.gs-code-preview {
+  background: var(--gs-background-secondary);
+  padding: 1rem;
+  border-radius: 4px;
+  overflow-x: auto;
+  font-size: 0.75rem;
+}
+
+/* Alert text utilities */
+.gs-alert-text-bold {
+  margin: 0;
+  font-weight: bold;
+}
+
 .gs-mt-8 {
   margin-top: 2rem;
+}
+
+/* ========================================
+   SERIES & STATS CARDS
+   ======================================== */
+
+/* Stat card content padding */
+.gs-stat-card-content {
+  padding: var(--gs-space-md);
+}
+
+/* Stat card icons */
+.gs-stat-icon-primary {
+  width: 32px;
+  height: 32px;
+  color: var(--gs-primary);
+  margin-bottom: var(--gs-space-sm);
+}
+
+.gs-stat-icon-success {
+  width: 32px;
+  height: 32px;
+  color: var(--gs-success);
+  margin-bottom: var(--gs-space-sm);
+}
+
+.gs-stat-icon-accent {
+  width: 32px;
+  height: 32px;
+  color: var(--gs-accent);
+  margin-bottom: var(--gs-space-sm);
+}
+
+.gs-stat-icon-warning {
+  width: 32px;
+  height: 32px;
+  color: var(--gs-warning);
+  margin-bottom: var(--gs-space-sm);
+}
+
+/* Stat number display */
+.gs-stat-number-xl {
+  font-size: 1.75rem;
+}
+
+/* Stat label display */
+.gs-stat-label-sm {
+  font-size: 0.813rem;
+}
+
+/* Filter section border */
+.gs-filter-active {
+  padding-top: var(--gs-space-md);
+  border-top: 1px solid var(--gs-border);
+}
+
+/* Modal utilities */
+.gs-modal-md {
+  max-width: 700px;
+}
+
+/* Logo preview utilities */
+.gs-logo-preview {
+  margin-top: 10px;
+  display: none;
+}
+
+.gs-logo-preview img {
+  max-width: 200px;
+  max-height: 100px;
+  margin-top: 5px;
+}
+
+/* Visibility utilities */
+.gs-hidden {
+  display: none;
+}
+
+/* Table column widths */
+.gs-table-col-100 {
+  width: 100px;
+}
+
+/* Icon color utilities */
+.gs-icon-primary-sm {
+  width: 14px;
+  height: 14px;
+  color: var(--gs-primary);
+}
+
+.gs-icon-14 {
+  width: 14px;
 }
 
 /* Padding utilities - specific cases */
@@ -3000,4 +3342,138 @@ body.gs-landing-pure .gs-sidebar-overlay {
 
 .gs-modal-content-md {
   max-width: 700px;
+}
+
+/* ========================================
+   EDIT RESULTS & ADMIN TABLE UTILITIES
+   Added: 2025-11-19
+   ======================================== */
+
+/* Table font sizes */
+.gs-table-sm {
+  font-size: 0.9rem;
+}
+
+/* Table header widths with centering */
+.gs-table-th-w60 {
+  width: 60px;
+  text-align: center;
+}
+
+.gs-table-th-w80 {
+  width: 80px;
+  text-align: center;
+}
+
+.gs-table-th-w100 {
+  width: 100px;
+  text-align: center;
+}
+
+.gs-table-th-w120 {
+  width: 120px;
+  text-align: center;
+}
+
+.gs-table-th-w150 {
+  width: 150px;
+}
+
+/* Input field widths with centering and padding */
+.gs-input-xs {
+  padding: 0.25rem;
+}
+
+.gs-input-w60 {
+  width: 60px;
+  text-align: center;
+  padding: 0.25rem;
+}
+
+.gs-input-w70 {
+  width: 70px;
+  text-align: center;
+  padding: 0.25rem;
+}
+
+.gs-input-w80 {
+  width: 80px;
+  text-align: center;
+  padding: 0.25rem;
+}
+
+.gs-input-w100 {
+  width: 100px;
+  text-align: center;
+  padding: 0.25rem;
+}
+
+.gs-input-w100-mono {
+  width: 100px;
+  text-align: center;
+  padding: 0.25rem;
+  font-family: monospace;
+}
+
+/* Rider metadata text */
+.gs-rider-meta-text {
+  font-size: 0.75rem;
+  color: var(--gs-text-secondary);
+}
+
+/* ========================================
+   IMPORT PAGE UTILITIES
+   Added: 2025-11-19
+   ======================================== */
+
+/* Stat text sizes */
+.gs-text-stat {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.gs-text-stat-lg {
+  font-size: 1.3rem;
+  font-weight: bold;
+  color: var(--gs-primary);
+}
+
+/* Scrollable containers */
+.gs-scrollable-lg {
+  max-height: 400px;
+  overflow-y: auto;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  background: var(--gs-background-secondary);
+  padding: var(--gs-space-md);
+  border-radius: var(--gs-border-radius);
+}
+
+.gs-scrollable-md {
+  max-height: 300px;
+  overflow-y: auto;
+  background: var(--gs-background-secondary);
+  padding: var(--gs-space-md);
+  border-radius: var(--gs-border-radius);
+}
+
+/* Margin utilities */
+.gs-mb-4px {
+  margin-bottom: 4px;
+}
+
+/* Progress bar components */
+.gs-progress-bar-container {
+  width: 100%;
+  height: 8px;
+  background: var(--gs-background-secondary);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.gs-progress-bar-fill {
+  width: 0%;
+  height: 100%;
+  background: var(--gs-primary);
+  transition: width 0.3s;
 }

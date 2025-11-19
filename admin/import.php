@@ -93,9 +93,9 @@ include __DIR__ . '/../includes/layout-header.php';
             <h1 class="gs-h1 gs-text-primary gs-mb-lg">Importera data</h1>
 
             <!-- Download Templates -->
-            <div class="gs-card gs-mb-xl" style="background: linear-gradient(135deg, rgba(0, 74, 152, 0.05) 0%, rgba(239, 118, 31, 0.05) 100%); border: 2px solid var(--gs-primary);">
-                <div class="gs-card-header" style="background-color: var(--gs-primary); color: var(--gs-white);">
-                    <h2 class="gs-h4" style="color: var(--gs-white);">
+            <div class="gs-card gs-mb-xl gs-featured-card-primary">
+                <div class="gs-card-header gs-featured-header-primary">
+                    <h2 class="gs-h4 gs-heading-white">
                         <i data-lucide="download"></i>
                         📥 Ladda ner importmallar
                     </h2>
@@ -129,17 +129,17 @@ include __DIR__ . '/../includes/layout-header.php';
                     </div>
 
                     <!-- Column Info -->
-                    <div style="background: var(--gs-white); padding: 1.5rem; border-radius: var(--gs-radius-md); border: 1px solid var(--gs-border);">
-                        <h4 class="gs-h5 gs-mb-md" style="color: var(--gs-primary);">
+                    <div class="gs-info-box">
+                        <h4 class="gs-h5 gs-mb-md gs-heading-primary">
                             <i data-lucide="info"></i>
                             Kolumn-beskrivningar
                         </h4>
 
-                        <details class="gs-mb-md" style="cursor: pointer;">
-                            <summary style="cursor: pointer; font-weight: 600; padding: 0.5rem; background: var(--gs-light); border-radius: var(--gs-radius-sm);">
+                        <details class="gs-mb-md gs-details">
+                            <summary>
                                 📄 Deltagare-kolumner (12 kolumner)
                             </summary>
-                            <ul style="margin-top: 0.75rem; margin-left: 1.5rem; line-height: 1.8;">
+                            <ul class="gs-list-spaced">
                                 <li><strong>first_name:</strong> Förnamn (required)</li>
                                 <li><strong>last_name:</strong> Efternamn (required)</li>
                                 <li><strong>personnummer:</strong> Svenskt personnummer - YYYYMMDD-XXXX eller YYMMDD-XXXX (optional, parsas automatiskt till födelseår)</li>
@@ -153,19 +153,19 @@ include __DIR__ . '/../includes/layout-header.php';
                                 <li><strong>discipline:</strong> Gren: MTB/Road/Track/BMX/CX/Trial/Para/E-cycling/Gravel</li>
                                 <li><strong>license_valid_until:</strong> Licens giltig till, format: YYYY-MM-DD</li>
                             </ul>
-                            <div style="margin-top: 0.75rem; padding: 0.75rem; background: rgba(239, 118, 31, 0.1); border-left: 3px solid var(--gs-accent); border-radius: var(--gs-radius-sm);">
+                            <div class="gs-alert-accent">
                                 <strong>💡 Tips personnummer:</strong> Både format 19950525-1234 och 950525-1234 fungerar. Systemet beräknar automatiskt ålder och föreslår lämplig licenskategori baserat på födelsedatum och kön.
                             </div>
-                            <div style="margin-top: 0.75rem; padding: 0.75rem; background: rgba(67, 114, 100, 0.1); border-left: 3px solid var(--gs-success); border-radius: var(--gs-radius-sm);">
+                            <div class="gs-alert-success">
                                 <strong>💡 Tips licens:</strong> Om UCI-ID saknas genereras SWE-ID automatiskt (format: SWE25XXXXX). Licenskategori föreslås automatiskt baserat på ålder och kön om fältet lämnas tomt.
                             </div>
                         </details>
 
-                        <details style="cursor: pointer;">
-                            <summary style="cursor: pointer; font-weight: 600; padding: 0.5rem; background: var(--gs-light); border-radius: var(--gs-radius-sm);">
+                        <details class="gs-details">
+                            <summary>
                                 🏁 Resultat-kolumner (12 kolumner)
                             </summary>
-                            <ul style="margin-top: 0.75rem; margin-left: 1.5rem; line-height: 1.8;">
+                            <ul class="gs-list-spaced">
                                 <li><strong>event_name:</strong> Tävlingsnamn (required, används för att matcha event)</li>
                                 <li><strong>event_date:</strong> Datum, format: YYYY-MM-DD (required)</li>
                                 <li><strong>discipline:</strong> Disciplin: EDR/DHI/DS/XC (required)</li>
@@ -179,14 +179,14 @@ include __DIR__ . '/../includes/layout-header.php';
                                 <li><strong>time</strong> eller <strong>finish_time:</strong> Total tid i format mm:ss.cc eller h:mm:ss.mmm, ex: 16:19.16 eller 1:16:19.164 (optional)</li>
                                 <li><strong>status:</strong> Status: finished/dnf/dns/dq (default: finished)</li>
                             </ul>
-                            <div style="margin-top: 0.75rem; padding: 0.75rem; background: rgba(67, 114, 100, 0.1); border-left: 3px solid var(--gs-success); border-radius: var(--gs-radius-sm);">
+                            <div class="gs-alert-success">
                                 <strong>💡 Tips:</strong> Systemet matchar cyklister via UCI-ID eller namn. Events matchas via namn och datum. För DNF/DNS/DQ lämna position tom.
                             </div>
                         </details>
 
-                        <div style="margin-top: 1rem; padding: 1rem; background: rgba(0, 74, 152, 0.05); border-radius: var(--gs-radius-sm);">
-                            <h5 style="font-weight: 600; margin-bottom: 0.5rem;">📋 Import-flöde:</h5>
-                            <ol style="margin-left: 1.5rem; line-height: 1.8;">
+                        <div class="gs-alert-primary">
+                            <h5 class="gs-heading-semibold">📋 Import-flöde:</h5>
+                            <ol class="gs-list-spaced">
                                 <li>Ladda ner mall (CSV)</li>
                                 <li>Öppna i Excel/Numbers/Google Sheets</li>
                                 <li>Ta bort exempel-raderna</li>
@@ -200,9 +200,9 @@ include __DIR__ . '/../includes/layout-header.php';
             </div>
 
             <!-- Flexibel Import -->
-            <div class="gs-card" style="border: 2px solid #86efac; background: #f0fdf4; margin-bottom: var(--gs-space-xl);">
-                <div class="gs-card-header" style="background: #10b981;">
-                    <h2 class="gs-h4" style="color: white; margin: 0;">
+            <div class="gs-card gs-featured-card-success">
+                <div class="gs-card-header gs-featured-header-success">
+                    <h2 class="gs-h4 gs-featured-header-title">
                         <i data-lucide="sparkles"></i>
                         Flexibel Deltagare Import ⭐
                     </h2>
@@ -211,7 +211,7 @@ include __DIR__ . '/../includes/layout-header.php';
                     <p class="gs-text-secondary gs-mb-md">
                         <strong>REKOMMENDERAD!</strong> Importera CSV med kolumner i valfri ordning.
                     </p>
-                    <ul class="gs-text-sm gs-text-secondary gs-mb-md" style="margin-left: var(--gs-space-lg); line-height: 1.8;">
+                    <ul class="gs-text-sm gs-text-secondary gs-mb-md gs-list-lg">
                         <li><strong>Kolumner i valfri ordning</strong></li>
                         <li>Okända kolumner ignoreras</li>
                         <li>Förhandsgranska innan import</li>
@@ -226,9 +226,9 @@ include __DIR__ . '/../includes/layout-header.php';
             </div>
 
             <!-- Flexibel Enduro Resultat Import -->
-            <div class="gs-card" style="border: 2px solid #fbbf24; background: #fffbeb; margin-bottom: var(--gs-space-xl);">
-                <div class="gs-card-header" style="background: #f59e0b;">
-                    <h2 class="gs-h4" style="color: white; margin: 0;">
+            <div class="gs-card gs-featured-card-warning">
+                <div class="gs-card-header gs-featured-header-warning">
+                    <h2 class="gs-h4 gs-featured-header-title">
                         <i data-lucide="zap"></i>
                         Flexibel Enduro Resultat Import 🏁
                     </h2>
@@ -238,31 +238,31 @@ include __DIR__ . '/../includes/layout-header.php';
                         <strong>NY!</strong> Importera Enduro-resultat med flexibelt antal stage-sektioner (SS1, SS2, SS3...)
                     </p>
 
-                    <div style="background: white; padding: 1.25rem; border-radius: var(--gs-radius-md); border: 1px solid #fbbf24; margin-bottom: 1rem;">
-                        <h4 class="gs-h5 gs-mb-md" style="color: #f59e0b;">
+                    <div class="gs-info-box-bordered">
+                        <h4 class="gs-h5 gs-mb-md gs-heading-warning">
                             <i data-lucide="file-text"></i>
                             CSV Format-krav
                         </h4>
                         <p class="gs-text-sm gs-mb-sm"><strong>Obligatoriska kolumner:</strong></p>
-                        <code style="display: block; background: #f3f4f6; padding: 0.75rem; border-radius: 4px; font-size: 0.875rem; margin-bottom: 1rem;">
+                        <code class="gs-code-block">
 event_name, event_date, discipline, category, position, first_name, last_name, club_name, uci_id, time_seconds, status
                         </code>
 
                         <p class="gs-text-sm gs-mb-sm"><strong>Flexibla Stage-kolumner:</strong></p>
-                        <code style="display: block; background: #f3f4f6; padding: 0.75rem; border-radius: 4px; font-size: 0.875rem; margin-bottom: 1rem;">
+                        <code class="gs-code-block">
 SS1, SS2, SS3, SS4, SS5, SS6, SS7, ... (valfritt antal)
                         </code>
 
-                        <div style="background: #eff6ff; padding: 1rem; border-left: 3px solid #3b82f6; border-radius: 4px; margin-top: 1rem;">
-                            <p class="gs-text-sm" style="margin: 0;"><strong>💡 Tips:</strong> Systemet detekterar automatiskt antalet SS-kolumner i din CSV. Du kan ha 1, 5, 7, 10 eller vilket antal som helst!</p>
+                        <div class="gs-alert-info">
+                            <p class="gs-text-sm gs-m-0"><strong>💡 Tips:</strong> Systemet detekterar automatiskt antalet SS-kolumner i din CSV. Du kan ha 1, 5, 7, 10 eller vilket antal som helst!</p>
                         </div>
                     </div>
 
-                    <details class="gs-mb-md" style="cursor: pointer;">
-                        <summary style="cursor: pointer; font-weight: 600; padding: 0.75rem; background: var(--gs-light); border-radius: var(--gs-radius-sm); margin-bottom: 0.5rem;">
+                    <details class="gs-mb-md gs-details-lg">
+                        <summary>
                             📋 Exempel CSV-format (SweCup Falun)
                         </summary>
-                        <pre style="background: #1f2937; color: #f3f4f6; padding: 1rem; border-radius: 6px; font-size: 0.813rem; overflow-x: auto; line-height: 1.5;">
+                        <pre class="gs-code-dark">
 event_name,event_date,discipline,category,position,first_name,last_name,club_name,uci_id,time_seconds,status,SS1,SS2,SS3,SS4,SS5,SS6,SS7
 SweCup Enduro Falun 2025,2025-09-14,END,Damer Junior,1,Ella,MÅRTENSSON,Borås CA,10022510347,979.16,FIN,130.55,107.08,111.10,127.70,92.10,74.83,157.35
 SweCup Enduro Falun 2025,2025-09-14,END,Herrar Elite,1,Johan,ANDERSSON,Stockholm CK,10011223344,856.42,FIN,118.22,98.55,102.33,115.88,84.12,68.91,144.21
@@ -271,8 +271,8 @@ SweCup Enduro Falun 2025,2025-09-14,END,Herrar Elite,2,Erik,SVENSSON,Göteborg M
 
                     <div class="gs-grid gs-grid-cols-2 gs-gap-md">
                         <div>
-                            <h5 class="gs-text-sm gs-text-primary" style="font-weight: 600; margin-bottom: 0.5rem;">Kolumnbeskrivningar:</h5>
-                            <ul class="gs-text-xs" style="line-height: 1.7; margin-left: 1.25rem;">
+                            <h5 class="gs-text-sm gs-text-primary gs-heading-semibold">Kolumnbeskrivningar:</h5>
+                            <ul class="gs-text-xs gs-list-compact">
                                 <li><code>event_name</code>: Tävlingsnamn</li>
                                 <li><code>event_date</code>: YYYY-MM-DD</li>
                                 <li><code>discipline</code>: END/EDR/DHI/XC</li>
@@ -283,8 +283,8 @@ SweCup Enduro Falun 2025,2025-09-14,END,Herrar Elite,2,Erik,SVENSSON,Göteborg M
                             </ul>
                         </div>
                         <div>
-                            <h5 class="gs-text-sm gs-text-primary" style="font-weight: 600; margin-bottom: 0.5rem;">Fler kolumner:</h5>
-                            <ul class="gs-text-xs" style="line-height: 1.7; margin-left: 1.25rem;">
+                            <h5 class="gs-text-sm gs-text-primary gs-heading-semibold">Fler kolumner:</h5>
+                            <ul class="gs-text-xs gs-list-compact">
                                 <li><code>club_name</code>: Klubbnamn</li>
                                 <li><code>uci_id</code>: UCI-ID (optional)</li>
                                 <li><code>time</code> eller <code>finish_time</code>: Total tid (format: mm:ss.cc eller h:mm:ss.mmm)</li>
@@ -294,7 +294,7 @@ SweCup Enduro Falun 2025,2025-09-14,END,Herrar Elite,2,Erik,SVENSSON,Göteborg M
                         </div>
                     </div>
 
-                    <a href="/admin/import-results.php" class="gs-btn gs-btn-warning gs-btn-lg gs-w-full" style="margin-top: 1rem; background: #f59e0b; color: white;">
+                    <a href="/admin/import-results.php" class="gs-btn gs-btn-warning gs-btn-lg gs-w-full gs-btn-warning-solid">
                         <i data-lucide="upload"></i>
                         Importera Enduro Resultat
                     </a>
