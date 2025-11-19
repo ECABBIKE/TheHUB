@@ -32,3 +32,8 @@ tmp/*
 *.zip
 thehub-deployment.zip
 includes/functions.php.OLD
+
+# Analysis/planning documents
+PROJECT-STRUCTURE-ANALYSIS.md
+REFACTORING-CHECKLIST.md
+VISUAL-PROJECT-MAP.txt
