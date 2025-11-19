@@ -161,9 +161,9 @@ include __DIR__ . '/../includes/layout-header.php';
         <?php endif; ?>
 
         <!-- Template Modal -->
-        <div id="templateModal" class="gs-modal" style="display: none;">
+        <div id="templateModal" class="gs-modal gs-modal-overlay-hidden">
             <div class="gs-modal-overlay" onclick="closeTemplateModal()"></div>
-            <div class="gs-modal-content" style="max-width: 900px;">
+            <div class="gs-modal-content gs-modal-content-md">
                 <div class="gs-modal-header">
                     <h2 class="gs-modal-title">
                         <i data-lucide="award"></i>
@@ -197,15 +197,15 @@ include __DIR__ . '/../includes/layout-header.php';
                             <!-- Points Grid -->
                             <div>
                                 <div class="gs-flex gs-items-center gs-justify-between gs-mb-sm">
-                                    <label class="gs-label" style="margin:0;">Poängfördelning per placering</label>
+                                    <label class="gs-label gs-margin-0">Poängfördelning per placering</label>
                                     <button type="button" class="gs-btn gs-btn-xs gs-btn-outline" onclick="addPointRow()">
-                                        <i data-lucide="plus" style="width:12px;height:12px;"></i>
+                                        <i data-lucide="plus" class="gs-icon-12"></i>
                                         Lägg till rad
                                     </button>
                                 </div>
                                 <p class="gs-text-xs gs-text-secondary gs-mb-sm">Klicka på "Lägg till rad" för att lägga till fler placeringar</p>
 
-                                <div id="pointsContainer" style="max-height: 400px; overflow-y: auto; padding-right: 10px;">
+                                <div id="pointsContainer" class="gs-scroll-container-400-pr10">
                                     <!-- Rows will be added dynamically -->
                                 </div>
                             </div>
@@ -226,9 +226,9 @@ include __DIR__ . '/../includes/layout-header.php';
         </div>
 
         <!-- Import Modal -->
-        <div id="importModal" class="gs-modal" style="display: none;">
+        <div id="importModal" class="gs-modal gs-modal-overlay-hidden">
             <div class="gs-modal-overlay" onclick="closeImportModal()"></div>
-            <div class="gs-modal-content" style="max-width: 700px;">
+            <div class="gs-modal-content gs-modal-content-sm">
                 <div class="gs-modal-header">
                     <h2 class="gs-modal-title">
                         <i data-lucide="upload"></i>
@@ -294,11 +294,11 @@ CSV format:
                         $points = json_decode($template['points'], true);
                         $maxPosition = !empty($points) ? max(array_keys($points)) : 0;
                         ?>
-                        <div class="gs-card gs-mb-md" style="background: var(--gs-background-secondary);">
+                        <div class="gs-card gs-mb-md gs-bg-secondary">
                             <div class="gs-card-content">
                                 <div class="gs-flex gs-items-start gs-justify-between gs-mb-sm">
                                     <div>
-                                        <h3 class="gs-h5 gs-text-primary" style="margin: 0 0 0.25rem 0;">
+                                        <h3 class="gs-h5 gs-text-primary gs-margin-0-0-qtr-0">
                                             <?= h($template['name']) ?>
                                         </h3>
                                         <?php if (!empty($template['description'])): ?>
@@ -334,7 +334,7 @@ CSV format:
                                     <?php else: ?>
                                         <div class="gs-flex gs-gap-xs gs-flex-wrap gs-mt-xs">
                                             <?php foreach ($points as $position => $pointValue): ?>
-                                                <span class="gs-badge gs-badge-sm" style="background: var(--gs-background); color: var(--gs-text);">
+                                                <span class="gs-badge gs-badge-sm gs-bg-badge-neutral">
                                                     #<?= $position ?>: <?= $pointValue ?>p
                                                 </span>
                                             <?php endforeach; ?>
@@ -396,10 +396,10 @@ CSV format:
             const row = document.createElement('div');
             row.className = 'gs-flex gs-items-center gs-gap-sm gs-mb-xs';
             row.innerHTML = `
-                <div style="width: 80px;">
+                <div class="gs-point-row-label-wrapper">
                     <label class="gs-text-xs gs-text-secondary">Plats #${nextPosition}</label>
                 </div>
-                <div style="flex: 1;">
+                <div class="gs-point-row-input-wrapper">
                     <input type="number"
                            name="points[${nextPosition}]"
                            class="gs-input gs-input-sm"
@@ -408,7 +408,7 @@ CSV format:
                            placeholder="Poäng">
                 </div>
                 <button type="button" class="gs-btn gs-btn-xs gs-btn-outline gs-btn-danger" onclick="this.parentElement.remove()">
-                    <i data-lucide="x" style="width:12px;height:12px;"></i>
+                    <i data-lucide="x" class="gs-icon-12"></i>
                 </button>
             `;
             container.appendChild(row);
