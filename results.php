@@ -3,173 +3,258 @@ require_once __DIR__ . '/config.php';
 
 $db = getDB();
 
-$eventId = isset($_GET['event_id']) ? (int)$_GET['event_id'] : 0;
+// Get filter parameters
+$filterSeries = isset($_GET['series_id']) && is_numeric($_GET['series_id']) ? intval($_GET['series_id']) : null;
+$filterYear = isset($_GET['year']) && is_numeric($_GET['year']) ? intval($_GET['year']) : null;
 
-if (!$eventId) {
-    die("Event ID required");
+// Build WHERE clause
+$where = [];
+$params = [];
+
+// Only show events with results
+$where[] = "result_count > 0";
+
+if ($filterSeries) {
+    $where[] = "e.series_id = ?";
+    $params[] = $filterSeries;
 }
 
-// Get event info
-$event = $db->getRow(
-    "SELECT * FROM events WHERE id = ?",
-    [$eventId]
-);
-
-if (!$event) {
-    die("Event not found");
+if ($filterYear) {
+    $where[] = "YEAR(e.date) = ?";
+    $params[] = $filterYear;
 }
 
-// Get results
-$results = $db->getAll(
-    "SELECT
-        r.position,
-        r.bib_number,
-        r.finish_time,
-        r.status,
-        CONCAT(c.firstname, ' ', c.lastname) as cyclist_name,
-        c.id as cyclist_id,
-        c.birth_year,
-        cl.name as club_name,
-        cat.name as category_name
-     FROM results r
-     JOIN riders c ON r.cyclist_id = c.id
-     LEFT JOIN clubs cl ON c.club_id = cl.id
-     LEFT JOIN categories cat ON r.category_id = cat.id
-     WHERE r.event_id = ?
-     ORDER BY r.position ASC, r.finish_time ASC",
-    [$eventId]
-);
+$whereClause = 'WHERE ' . implode(' AND ', $where);
 
-$pageTitle = $event['name'] . ' - Resultat';
+// Get all events with result counts
+$sql = "SELECT
+    e.id, e.name, e.advent_id, e.date, e.location, e.status,
+    s.name as series_name,
+    s.id as series_id,
+    s.logo as series_logo,
+    COUNT(DISTINCT r.id) as result_count,
+    COUNT(DISTINCT r.category_id) as category_count,
+    COUNT(DISTINCT CASE WHEN r.status = 'finished' THEN r.id END) as finished_count
+FROM events e
+LEFT JOIN results r ON e.id = r.event_id
+LEFT JOIN series s ON e.series_id = s.id
+{$whereClause}
+GROUP BY e.id
+HAVING result_count > 0
+ORDER BY e.date DESC";
+
+try {
+    $events = $db->getAll($sql, $params);
+} catch (Exception $e) {
+    $events = [];
+    $error = $e->getMessage();
+}
+
+// Get all series for filter buttons (only series with results)
+$allSeries = $db->getAll("
+    SELECT DISTINCT s.id, s.name
+    FROM series s
+    INNER JOIN events e ON s.id = e.series_id
+    INNER JOIN results r ON e.id = r.event_id
+    WHERE s.active = 1
+    ORDER BY s.name
+");
+
+// Get all years from events with results
+$allYears = $db->getAll("
+    SELECT DISTINCT YEAR(e.date) as year
+    FROM events e
+    INNER JOIN results r ON e.id = r.event_id
+    WHERE e.date IS NOT NULL
+    ORDER BY year DESC
+");
+
+$pageTitle = 'Resultat';
 $pageType = 'public';
 include __DIR__ . '/includes/layout-header.php';
 ?>
 
-    <main class="gs-main-content">
-        <div class="gs-container">
-            <!-- Header -->
-            <div class="gs-mb-xl">
-                <a href="/events.php" class="gs-btn gs-btn-sm gs-btn-outline gs-mb-md">
-                    <i data-lucide="arrow-left"></i>
-                    Tillbaka till kalender
-                </a>
+<main class="gs-main-content">
+    <div class="gs-container">
+        <div class="gs-mb-xl">
+            <h1 class="gs-h2 gs-text-primary gs-mb-sm">
+                <i data-lucide="trophy"></i>
+                Resultat
+            </h1>
+            <p class="gs-text-secondary">
+                <?= count($events) ?> tävlingar med resultat
+            </p>
+        </div>
 
-                <h1 class="gs-h2 gs-text-primary gs-mb-sm">
-                    <i data-lucide="trophy"></i>
-                    <?= h($event['name']) ?>
-                </h1>
-                <div class="gs-flex gs-gap-md gs-flex-wrap">
-                    <p class="gs-text-secondary">
-                        <i data-lucide="calendar" style="width: 16px; height: 16px;"></i>
-                        <?= formatDate($event['event_date'], 'd M Y') ?>
-                    </p>
-                    <?php if ($event['location']): ?>
-                        <p class="gs-text-secondary">
-                            <i data-lucide="map-pin" style="width: 16px; height: 16px;"></i>
-                            <?= h($event['location']) ?>
-                        </p>
-                    <?php endif; ?>
-                    <p class="gs-text-secondary">
-                        <i data-lucide="users" style="width: 16px; height: 16px;"></i>
-                        <?= count($results) ?> deltagare
-                    </p>
+        <?php if (isset($error)): ?>
+            <div class="gs-alert gs-alert-danger gs-mb-lg">
+                <strong>Fel:</strong> <?= htmlspecialchars($error) ?>
+            </div>
+        <?php endif; ?>
+
+        <!-- Filter Section -->
+        <div class="gs-card gs-mb-lg">
+            <div class="gs-card-content">
+                <form method="GET" class="gs-grid gs-grid-cols-1 gs-md-grid-cols-2 gs-gap-md">
+                    <!-- Year Filter -->
+                    <div>
+                        <label for="year-filter" class="gs-label">
+                            <i data-lucide="calendar"></i>
+                            År
+                        </label>
+                        <select id="year-filter" name="year" class="gs-input" onchange="this.form.submit()">
+                            <option value="">Alla år</option>
+                            <?php foreach ($allYears as $yearRow): ?>
+                                <option value="<?= $yearRow['year'] ?>" <?= $filterYear == $yearRow['year'] ? 'selected' : '' ?>>
+                                    <?= $yearRow['year'] ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+
+                    <!-- Series Filter -->
+                    <div>
+                        <label for="series-filter" class="gs-label">
+                            <i data-lucide="trophy"></i>
+                            Serie<?= $filterYear ? ' (' . $filterYear . ')' : '' ?>
+                        </label>
+                        <select id="series-filter" name="series_id" class="gs-input" onchange="this.form.submit()">
+                            <option value="">Alla serier</option>
+                            <?php foreach ($allSeries as $series): ?>
+                                <option value="<?= $series['id'] ?>" <?= $filterSeries == $series['id'] ? 'selected' : '' ?>>
+                                    <?= htmlspecialchars($series['name']) ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                </form>
+
+                <!-- Active Filters Info -->
+                <?php if ($filterSeries || $filterYear): ?>
+                    <div class="gs-mt-md gs-section-divider">
+                        <div class="gs-flex gs-items-center gs-gap-sm gs-flex-wrap">
+                            <span class="gs-text-sm gs-text-secondary">Visar:</span>
+                            <?php if ($filterSeries): ?>
+                                <span class="gs-badge gs-badge-primary">
+                                    <?php
+                                    $seriesName = array_filter($allSeries, function($s) use ($filterSeries) {
+                                        return $s['id'] == $filterSeries;
+                                    });
+                                    echo $seriesName ? htmlspecialchars(reset($seriesName)['name']) : 'Serie #' . $filterSeries;
+                                    ?>
+                                </span>
+                            <?php endif; ?>
+                            <?php if ($filterYear): ?>
+                                <span class="gs-badge gs-badge-accent"><?= $filterYear ?></span>
+                            <?php endif; ?>
+                            <a href="/results.php" class="gs-btn gs-btn-sm gs-btn-outline">
+                                <i data-lucide="x"></i>
+                                Visa alla
+                            </a>
+                        </div>
+                    </div>
+                <?php endif; ?>
+            </div>
+        </div>
+
+        <?php if (empty($events)): ?>
+            <div class="gs-card">
+                <div class="gs-card-content">
+                    <div class="gs-alert gs-alert-warning">
+                        <p>Inga resultat hittades. Skapa ett event först eller importera resultat.</p>
+                    </div>
                 </div>
             </div>
+        <?php else: ?>
+            <!-- Events Grid -->
+            <div class="gs-grid gs-grid-cols-1 gs-gap-md">
+                <?php foreach ($events as $event): ?>
+                    <div class="gs-card gs-card-hover">
+                        <div class="gs-card-content">
+                            <div class="gs-flex gs-justify-between gs-items-start gs-gap-md">
+                                <!-- Event Info -->
+                                <div class="gs-flex-1">
+                                    <!-- Series Logo and Title -->
+                                    <div class="gs-flex gs-items-center gs-gap-md gs-mb-sm">
+                                        <?php if ($event['series_logo']): ?>
+                                            <img src="<?= h($event['series_logo']) ?>"
+                                                 alt="<?= h($event['series_name']) ?>"
+                                                 class="gs-series-logo-sm">
+                                        <?php endif; ?>
+                                        <div>
+                                            <h3 class="gs-h4 gs-text-primary gs-mb-xs">
+                                                <?= h($event['name']) ?>
+                                            </h3>
+                                            <?php if ($event['series_name']): ?>
+                                                <div class="gs-text-sm gs-text-secondary">
+                                                    <?= h($event['series_name']) ?>
+                                                </div>
+                                            <?php endif; ?>
+                                        </div>
+                                    </div>
 
-            <!-- Results Table -->
-            <?php if (empty($results)): ?>
-                <div class="gs-card gs-text-center" style="padding: 3rem;">
-                    <i data-lucide="trophy" style="width: 64px; height: 64px; margin: 0 auto 1rem; opacity: 0.3;"></i>
-                    <h3 class="gs-h4 gs-mb-sm">Inga resultat ännu</h3>
-                    <p class="gs-text-secondary">
-                        Resultat har inte registrerats för denna tävling.
-                    </p>
-                </div>
-            <?php else: ?>
-                <div class="gs-card">
-                    <div class="gs-card-header">
-                        <h3 class="gs-h4">
-                            <i data-lucide="list"></i>
-                            Resultat
-                        </h3>
-                    </div>
-                    <div class="gs-card-content" style="padding: 0; overflow-x: auto;">
-                        <table class="gs-table">
-                            <thead>
-                                <tr>
-                                    <th>Placering</th>
-                                    <th>Startnr</th>
-                                    <th>Namn</th>
-                                    <th>Klubb</th>
-                                    <th>Kategori</th>
-                                    <th>Tid</th>
-                                    <th>Status</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php foreach ($results as $result): ?>
-                                    <tr>
-                                        <td>
-                                            <?php if ($result['position'] == 1): ?>
-                                                <span class="gs-badge" style="background-color: gold; color: #000;">
-                                                    🥇 <?= $result['position'] ?>
-                                                </span>
-                                            <?php elseif ($result['position'] == 2): ?>
-                                                <span class="gs-badge" style="background-color: silver; color: #000;">
-                                                    🥈 <?= $result['position'] ?>
-                                                </span>
-                                            <?php elseif ($result['position'] == 3): ?>
-                                                <span class="gs-badge" style="background-color: #CD7F32; color: #fff;">
-                                                    🥉 <?= $result['position'] ?>
-                                                </span>
-                                            <?php else: ?>
-                                                <span class="gs-font-bold"><?= $result['position'] ?></span>
-                                            <?php endif; ?>
-                                        </td>
-                                        <td class="gs-text-secondary"><?= h($result['bib_number']) ?></td>
-                                        <td>
-                                            <strong><?= h($result['cyclist_name']) ?></strong>
-                                            <?php if ($result['birth_year']): ?>
-                                                <span class="gs-text-sm gs-text-secondary">
-                                                    (<?= $result['birth_year'] ?>)
-                                                </span>
-                                            <?php endif; ?>
-                                        </td>
-                                        <td class="gs-text-secondary">
-                                            <?= h($result['club_name'] ?? '-') ?>
-                                        </td>
-                                        <td>
-                                            <?php if ($result['category_name']): ?>
-                                                <span class="gs-badge gs-badge-secondary gs-text-xs">
-                                                    <?= h($result['category_name']) ?>
-                                                </span>
-                                            <?php else: ?>
-                                                <span class="gs-text-secondary">-</span>
-                                            <?php endif; ?>
-                                        </td>
-                                        <td class="gs-font-mono">
-                                            <?= h($result['finish_time'] ?? '-') ?>
-                                        </td>
-                                        <td>
-                                            <?php
-                                            $status_class = 'gs-badge-success';
-                                            $status_text = $result['status'] ?? 'Finished';
-                                            if ($status_text == 'DNF') {
-                                                $status_class = 'gs-badge-danger';
-                                            } elseif ($status_text == 'DNS') {
-                                                $status_class = 'gs-badge-secondary';
-                                            }
-                                            ?>
-                                            <span class="gs-badge <?= $status_class ?> gs-text-xs">
-                                                <?= h($status_text) ?>
+                                    <!-- Event Meta -->
+                                    <div class="gs-flex gs-gap-md gs-text-sm gs-text-secondary gs-mb-md gs-flex-wrap">
+                                        <span>
+                                            <i data-lucide="calendar" class="gs-icon-14"></i>
+                                            <?= date('d M Y', strtotime($event['date'])) ?>
+                                        </span>
+                                        <?php if ($event['location']): ?>
+                                            <span>
+                                                <i data-lucide="map-pin" class="gs-icon-14"></i>
+                                                <?= h($event['location']) ?>
                                             </span>
-                                        </td>
-                                    </tr>
-                                <?php endforeach; ?>
-                            </tbody>
-                        </table>
+                                        <?php endif; ?>
+                                    </div>
+
+                                    <!-- Result Statistics -->
+                                    <div class="gs-flex gs-gap-md gs-flex-wrap">
+                                        <div class="gs-flex gs-items-center gs-gap-xs">
+                                            <i data-lucide="users" class="gs-icon-md gs-icon-primary"></i>
+                                            <strong><?= $event['result_count'] ?></strong>
+                                            <span class="gs-text-secondary gs-text-sm">deltagare</span>
+                                        </div>
+
+                                        <?php if ($event['category_count'] > 0): ?>
+                                            <div class="gs-flex gs-items-center gs-gap-xs">
+                                                <i data-lucide="layers" class="gs-icon-md gs-icon-accent"></i>
+                                                <strong><?= $event['category_count'] ?></strong>
+                                                <span class="gs-text-secondary gs-text-sm"><?= $event['category_count'] == 1 ? 'kategori' : 'kategorier' ?></span>
+                                            </div>
+                                        <?php endif; ?>
+
+                                        <?php if ($event['finished_count'] > 0): ?>
+                                            <div class="gs-flex gs-items-center gs-gap-xs">
+                                                <i data-lucide="check-circle" class="gs-icon-md gs-icon-success"></i>
+                                                <strong><?= $event['finished_count'] ?></strong>
+                                                <span class="gs-text-secondary gs-text-sm">slutförda</span>
+                                            </div>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+
+                                <!-- Actions -->
+                                <div class="gs-flex gs-gap-sm gs-flex-col">
+                                    <a href="/event.php?id=<?= $event['id'] ?>"
+                                       class="gs-btn gs-btn-primary gs-btn-sm"
+                                       title="Visa resultat">
+                                        <i data-lucide="trophy" class="gs-icon-14"></i>
+                                        Visa resultat
+                                    </a>
+                                    <a href="/event.php?id=<?= $event['id'] ?>"
+                                       class="gs-btn gs-btn-outline gs-btn-sm"
+                                       title="Event-info">
+                                        <i data-lucide="info" class="gs-icon-14"></i>
+                                        Info
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                </div>
-            <?php endif; ?>
-        </div>
+                <?php endforeach; ?>
+            </div>
+        <?php endif; ?>
+    </div>
+</main>
+
 <?php include __DIR__ . '/includes/layout-footer.php'; ?>
