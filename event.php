@@ -31,8 +31,16 @@ if (!$event) {
     exit;
 }
 
-// Get active tab (default: info)
-$activeTab = isset($_GET['tab']) ? $_GET['tab'] : 'info';
+// Get active tab - default to 'anmalan' if registration is still open, otherwise 'info'
+$defaultTab = 'info';
+if (!isset($_GET['tab'])) {
+    // Check if registration is still open
+    $registrationDeadline = $event['registration_deadline'] ?? null;
+    if (empty($registrationDeadline) || strtotime($registrationDeadline) >= time()) {
+        $defaultTab = 'anmalan';
+    }
+}
+$activeTab = isset($_GET['tab']) ? $_GET['tab'] : $defaultTab;
 
 // Fetch registered participants for this event
 $registrations = $db->getAll("
@@ -143,21 +151,43 @@ include __DIR__ . '/includes/layout-header.php';
                                 <?php endif; ?>
                             </div>
 
-                            <!-- Event Stats -->
-                            <div class="event-stats">
-                                <div class="event-stat-full">
-                                    <span class="gs-text-sm gs-text-secondary">Anmälda: </span>
-                                    <strong class="gs-text-primary"><?= $totalRegistrations ?></strong>
+                            <!-- Organizing Club Info -->
+                            <?php if (!empty($event['organizer'])): ?>
+                            <div class="event-organizer-info gs-mt-md">
+                                <div class="gs-flex gs-items-center gs-gap-xs gs-mb-sm">
+                                    <i data-lucide="building-2" class="gs-icon-md gs-text-primary"></i>
+                                    <strong class="gs-text-primary"><?= h($event['organizer']) ?></strong>
                                 </div>
-                                <div class="event-stat-half">
-                                    <span class="gs-text-sm gs-text-secondary">Bekräftade: </span>
-                                    <strong class="gs-text-success"><?= $confirmedRegistrations ?></strong>
-                                </div>
-                                <div class="event-stat-half">
-                                    <span class="gs-text-sm gs-text-secondary">Resultat: </span>
-                                    <strong class="gs-text-primary"><?= count($results) ?></strong>
+
+                                <div class="gs-flex gs-gap-md gs-flex-wrap">
+                                    <?php if (!empty($event['website'])): ?>
+                                    <a href="<?= h($event['website']) ?>"
+                                       target="_blank"
+                                       rel="noopener noreferrer"
+                                       class="gs-flex gs-items-center gs-gap-xs gs-link gs-text-sm">
+                                        <i data-lucide="globe" class="gs-icon-sm"></i>
+                                        Webbplats
+                                    </a>
+                                    <?php endif; ?>
+
+                                    <?php if (!empty($event['contact_email'])): ?>
+                                    <a href="mailto:<?= h($event['contact_email']) ?>"
+                                       class="gs-flex gs-items-center gs-gap-xs gs-link gs-text-sm">
+                                        <i data-lucide="mail" class="gs-icon-sm"></i>
+                                        <?= h($event['contact_email']) ?>
+                                    </a>
+                                    <?php endif; ?>
+
+                                    <?php if (!empty($event['contact_phone'])): ?>
+                                    <a href="tel:<?= h($event['contact_phone']) ?>"
+                                       class="gs-flex gs-items-center gs-gap-xs gs-link gs-text-sm">
+                                        <i data-lucide="phone" class="gs-icon-sm"></i>
+                                        <?= h($event['contact_phone']) ?>
+                                    </a>
+                                    <?php endif; ?>
                                 </div>
                             </div>
+                            <?php endif; ?>
                         </div>
                     </div>
                 </div>
