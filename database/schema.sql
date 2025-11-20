@@ -93,7 +93,11 @@ CREATE TABLE IF NOT EXISTS riders (
 COMMENT='PRIVACY: Fields personnummer, address, postal_code, phone, emergency_contact are PRIVATE';
 
 -- ============================================================================
--- CATEGORIES TABLE
+-- CATEGORIES TABLE - DEPRECATED
+-- ============================================================================
+-- WARNING: This table is DEPRECATED as of 2025-11-19
+-- Use the 'classes' table instead (see migration 008_classes_system.sql)
+-- This table is kept for historical reference only
 -- ============================================================================
 CREATE TABLE IF NOT EXISTS categories (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -103,11 +107,12 @@ CREATE TABLE IF NOT EXISTS categories (
     age_max INT,
     gender ENUM('M', 'F', 'All') DEFAULT 'All',
     description TEXT,
-    active BOOLEAN DEFAULT 1,
+    active BOOLEAN DEFAULT 0,  -- Set to 0 to prevent new usage
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_active (active)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+COMMENT='DEPRECATED: Use classes table instead. Kept for historical reference only.';
 
 -- ============================================================================
 -- SERIES TABLE
@@ -337,10 +342,13 @@ SELECT
     c.birth_year,
     c.gender,
     cl.name AS club_name,
-    cat.name AS category_name,
+    cls.name AS class_name,
+    cls.display_name AS class_display_name,
     r.position,
+    r.class_position,
     r.finish_time,
     r.points,
+    r.class_points,
     r.bib_number,
     r.status,
     r.average_speed
@@ -348,20 +356,20 @@ FROM results r
 JOIN riders c ON r.cyclist_id = c.id
 JOIN events e ON r.event_id = e.id
 LEFT JOIN clubs cl ON c.club_id = cl.id
-LEFT JOIN categories cat ON r.category_id = cat.id;
+LEFT JOIN classes cls ON r.class_id = cls.id;
 
--- View for rider statistics
+-- View for rider statistics (using class-based results)
 CREATE OR REPLACE VIEW cyclist_stats AS
 SELECT
     c.id AS cyclist_id,
     CONCAT(c.firstname, ' ', c.lastname) AS cyclist_name,
     cl.name AS club_name,
     COUNT(r.id) AS total_races,
-    COUNT(CASE WHEN r.position = 1 THEN 1 END) AS wins,
-    COUNT(CASE WHEN r.position <= 3 THEN 1 END) AS podiums,
-    COUNT(CASE WHEN r.position <= 10 THEN 1 END) AS top_10,
-    SUM(r.points) AS total_points,
-    MIN(r.position) AS best_position
+    COUNT(CASE WHEN r.class_position = 1 THEN 1 END) AS class_wins,
+    COUNT(CASE WHEN r.class_position <= 3 THEN 1 END) AS class_podiums,
+    COUNT(CASE WHEN r.class_position <= 10 THEN 1 END) AS class_top_10,
+    SUM(r.class_points) AS total_class_points,
+    MIN(r.class_position) AS best_class_position
 FROM riders c
 LEFT JOIN results r ON c.id = r.cyclist_id
 LEFT JOIN clubs cl ON c.club_id = cl.id
