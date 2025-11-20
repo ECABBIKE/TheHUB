@@ -113,10 +113,16 @@ include __DIR__ . '/../includes/layout-header.php';
                     <i data-lucide="building"></i>
                     Klubbar
                 </h1>
+                <div class="gs-flex gs-gap-sm">
+                    <a href="/admin/import-clubs.php" class="gs-btn gs-btn-outline">
+                        <i data-lucide="upload"></i>
+                        Importera
+                    </a>
                     <button type="button" class="gs-btn gs-btn-primary" onclick="openClubModal()">
                         <i data-lucide="plus"></i>
                         Ny Klubb
                     </button>
+                </div>
             </div>
 
             <!-- Messages -->
@@ -440,9 +446,9 @@ include __DIR__ . '/../includes/layout-header.php';
                 document.getElementById('clubModal').style.display = 'none';
             }
 
-            // Edit club - reload page with edit parameter
+            // Edit club - go to edit page
             function editClub(id) {
-                window.location.href = `?edit=${id}`;
+                window.location.href = `/admin/club-edit.php?id=${id}`;
             }
 
             // Delete club

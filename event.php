@@ -31,12 +31,12 @@ if (!$event) {
     exit;
 }
 
-// Get active tab - default to 'anmalan' if registration is still open, otherwise 'info'
+// Get active tab - default to 'anmalan' if registration deadline exists and hasn't passed
 $defaultTab = 'info';
 if (!isset($_GET['tab'])) {
-    // Check if registration is still open
+    // Check if registration is still open (deadline exists AND hasn't passed)
     $registrationDeadline = $event['registration_deadline'] ?? null;
-    if (empty($registrationDeadline) || strtotime($registrationDeadline) >= time()) {
+    if (!empty($registrationDeadline) && strtotime($registrationDeadline) >= time()) {
         $defaultTab = 'anmalan';
     }
 }
