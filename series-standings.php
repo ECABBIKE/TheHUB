@@ -203,7 +203,7 @@ include __DIR__ . '/includes/layout-header.php';
                     <?= $series['year'] ?>
                 </span>
                 <span class="gs-badge gs-badge-secondary">
-                    <?= $series['event_count'] ?> tävlingar
+                    <?= count($seriesEvents) ?> tävlingar
                 </span>
                 <?php if ($series['count_best_results']): ?>
                     <span class="gs-badge gs-badge-info">
@@ -214,14 +214,14 @@ include __DIR__ . '/includes/layout-header.php';
         </div>
 
         <!-- Events List -->
-        <?php if (!empty($seriesEvents)): ?>
-            <div class="gs-card gs-mb-xl">
-                <div class="gs-card-header">
-                    <h3 class="gs-h4">
-                        <i data-lucide="calendar"></i>
-                        Tävlingar i serien
-                    </h3>
-                </div>
+        <div class="gs-card gs-mb-xl">
+            <div class="gs-card-header">
+                <h3 class="gs-h4">
+                    <i data-lucide="calendar"></i>
+                    Tävlingar i serien (<?= count($seriesEvents) ?>)
+                </h3>
+            </div>
+            <?php if (!empty($seriesEvents)): ?>
                 <div class="gs-card-content gs-p-0">
                     <div class="gs-table-responsive">
                         <table class="gs-table">
@@ -268,8 +268,15 @@ include __DIR__ . '/includes/layout-header.php';
                         </table>
                     </div>
                 </div>
-            </div>
-        <?php endif; ?>
+            <?php else: ?>
+                <div class="gs-card-content gs-empty-state">
+                    <i data-lucide="calendar-x" class="gs-empty-icon"></i>
+                    <p class="gs-text-secondary">
+                        Inga tävlingar har lagts till i denna serie ännu.
+                    </p>
+                </div>
+            <?php endif; ?>
+        </div>
 
         <!-- Class Selector and Search -->
         <?php if (!empty($activeClasses)): ?>
