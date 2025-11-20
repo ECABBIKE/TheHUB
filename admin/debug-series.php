@@ -111,7 +111,7 @@ try {
     echo "<p><a href='/admin/series.php'>Try series.php again</a></p>";
 
 } catch (Exception $e) {
-    echo "<h2 style='color: red;'>✗ Error occurred!</h2>";
+    echo "<h2 class='gs-text-error'>✗ Error occurred!</h2>";
     echo "<p><strong>Error:</strong> " . htmlspecialchars($e->getMessage()) . "</p>";
     echo "<p><strong>File:</strong> " . htmlspecialchars($e->getFile()) . "</p>";
     echo "<p><strong>Line:</strong> " . htmlspecialchars($e->getLine()) . "</p>";

@@ -38,6 +38,11 @@ define('CSRF_TOKEN_NAME', 'csrf_token');
 define('MAX_UPLOAD_SIZE', 10 * 1024 * 1024); // 10MB
 define('EVENTS_PER_PAGE', 20);
 
+// Version info
+define('APP_VERSION', '2.0.0');
+define('APP_VERSION_NAME', 'Mobile-First Refactor');
+define('DEPLOYMENT_OFFSET', 119); // Deployments before git repo
+
 try {
     $pdo = new PDO(
         'mysql:host=' . DB_HOST . ';dbname=' . DB_NAME . ';charset=utf8mb4',

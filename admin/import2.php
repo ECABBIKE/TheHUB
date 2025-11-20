@@ -17,18 +17,18 @@ include '../includes/layout-header.php';
     <div class="gs-card">
         <div class="gs-card-content">
             <h3>Import-alternativ:</h3>
-            <ul style="list-style: none; padding: 0;">
-                <li style="margin: 1rem 0;">
+            <ul class="gs-list-reset">
+                <li class="gs-my-4">
                     <a href="import-uci.php" class="gs-btn gs-btn-primary gs-btn-lg">
                         📥 UCI Licensregister Import
                     </a>
                 </li>
-                <li style="margin: 1rem 0;">
+                <li class="gs-my-4">
                     <button class="gs-btn gs-btn-outline" disabled>
                         📊 Resultat Import (Kommer snart)
                     </button>
                 </li>
-                <li style="margin: 1rem 0;">
+                <li class="gs-my-4">
                     <button class="gs-btn gs-btn-outline" disabled>
                         📅 Event Import (Kommer snart)
                     </button>

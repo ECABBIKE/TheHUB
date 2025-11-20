@@ -147,7 +147,7 @@ include __DIR__ . '/../includes/layout-header.php';
 
         <div class="gs-grid gs-grid-cols-1 gs-lg-grid-cols-3 gs-gap-lg">
             <!-- Add Event Card -->
-            <div class="gs-card" style="background: linear-gradient(135deg, rgba(0, 74, 152, 0.05) 0%, rgba(239, 118, 31, 0.05) 100%);">
+            <div class="gs-card gs-gradient-brand">
                 <div class="gs-card-header">
                     <h2 class="gs-h5">
                         <i data-lucide="plus"></i>
@@ -198,7 +198,7 @@ include __DIR__ . '/../includes/layout-header.php';
                             </button>
                         </form>
 
-                        <div class="gs-mt-md gs-pt-md" style="border-top: 1px solid var(--gs-border);">
+                        <div class="gs-mt-md gs-pt-md gs-border-top">
                             <a href="/admin/point-templates.php" class="gs-text-sm gs-link">
                                 <i data-lucide="settings"></i>
                                 Hantera poängmallar
@@ -227,12 +227,12 @@ include __DIR__ . '/../includes/layout-header.php';
                                 <table class="gs-table">
                                     <thead>
                                         <tr>
-                                            <th style="width: 50px;">Ordning</th>
+                                            <th class="gs-table-col-w-50">Ordning</th>
                                             <th>Event</th>
                                             <th>Datum</th>
                                             <th>Plats</th>
                                             <th>Poängmall</th>
-                                            <th style="width: 100px;">Åtgärder</th>
+                                            <th class="gs-table-col-w-100">Åtgärder</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -250,14 +250,13 @@ include __DIR__ . '/../includes/layout-header.php';
                                                 <td><?= $se['event_date'] ? date('Y-m-d', strtotime($se['event_date'])) : '-' ?></td>
                                                 <td><?= h($se['location'] ?? '-') ?></td>
                                                 <td>
-                                                    <form method="POST" class="gs-flex gs-gap-xs gs-items-center" style="display: inline-block;">
+                                                    <form method="POST" class="gs-flex gs-gap-xs gs-items-center gs-display-inline-block">
                                                         <?= csrf_field() ?>
                                                         <input type="hidden" name="action" value="update_template">
                                                         <input type="hidden" name="series_event_id" value="<?= $se['id'] ?>">
                                                         <select name="template_id"
-                                                                class="gs-input gs-input-sm"
-                                                                onchange="this.form.submit()"
-                                                                style="min-width: 150px;">
+                                                                class="gs-input gs-input-sm gs-input-min-w-150"
+                                                                onchange="this.form.submit()">
                                                             <option value="">-- Ingen mall --</option>
                                                             <?php foreach ($templates as $template): ?>
                                                                 <option value="<?= $template['id'] ?>"
@@ -269,7 +268,7 @@ include __DIR__ . '/../includes/layout-header.php';
                                                     </form>
                                                 </td>
                                                 <td>
-                                                    <form method="POST" style="display: inline;" onsubmit="return confirm('Är du säker?');">
+                                                    <form method="POST" class="gs-display-inline" onsubmit="return confirm('Är du säker?');">
                                                         <?= csrf_field() ?>
                                                         <input type="hidden" name="action" value="remove_event">
                                                         <input type="hidden" name="series_event_id" value="<?= $se['id'] ?>">

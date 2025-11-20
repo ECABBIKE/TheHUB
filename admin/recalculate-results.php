@@ -93,7 +93,7 @@ include __DIR__ . '/../includes/layout-header.php';
 ?>
 
 <main class="gs-main-content">
-    <div class="gs-container" style="max-width: 800px; margin: 2rem auto;">
+    <div class="gs-container gs-container-max-800-center">
         <div class="gs-card">
             <div class="gs-card-header">
                 <div class="gs-flex gs-justify-between gs-items-center">
@@ -110,20 +110,20 @@ include __DIR__ . '/../includes/layout-header.php';
 
             <div class="gs-card-content">
                 <!-- Event Info -->
-                <div class="gs-mb-xl" style="padding: 1rem; background: var(--gs-background-secondary); border-radius: var(--gs-border-radius);">
+                <div class="gs-mb-xl gs-bg-info-box">
                     <h2 class="gs-h4 gs-mb-sm"><?= h($event['name']) ?></h2>
                     <div class="gs-flex gs-gap-md gs-text-sm gs-text-secondary">
                         <span>
-                            <i data-lucide="calendar" style="width: 14px; height: 14px;"></i>
+                            <i data-lucide="calendar" class="gs-icon-14"></i>
                             <?= date('Y-m-d', strtotime($event['date'])) ?>
                         </span>
                         <span>
-                            <i data-lucide="users" style="width: 14px; height: 14px;"></i>
+                            <i data-lucide="users" class="gs-icon-14"></i>
                             <?= $event['result_count'] ?> resultat
                         </span>
                         <?php if ($event['current_scale_name']): ?>
                             <span>
-                                <i data-lucide="award" style="width: 14px; height: 14px;"></i>
+                                <i data-lucide="award" class="gs-icon-14"></i>
                                 <?= h($event['current_scale_name']) ?>
                             </span>
                         <?php endif; ?>
@@ -141,7 +141,7 @@ include __DIR__ . '/../includes/layout-header.php';
                 <div class="gs-alert gs-alert-warning gs-mb-lg">
                     <i data-lucide="alert-triangle"></i>
                     <strong>Varning!</strong> Detta kommer att:
-                    <ul style="margin: 0.5rem 0 0 1.5rem;">
+                    <ul class="gs-margin-list">
                         <?php if ($isDHEvent): ?>
                             <li>Räkna om placeringar för varje åk separat</li>
                             <li>Räkna om total placering baserat på snabbaste åket</li>
@@ -189,7 +189,7 @@ include __DIR__ . '/../includes/layout-header.php';
                                 <input type="checkbox" name="use_swecup_dh" value="1" class="gs-checkbox">
                                 <span>
                                     <strong>SweCUP DH-format</strong>
-                                    <span class="gs-text-sm gs-text-secondary" style="display: block; margin-top: 0.25rem;">
+                                    <span class="gs-text-sm gs-text-secondary gs-block-mt-qtr">
                                         Båda åken ger poäng separat (run_1_points + run_2_points).
                                         Lämna avmarkerad för standard DH där endast snabbaste åket räknas.
                                     </span>

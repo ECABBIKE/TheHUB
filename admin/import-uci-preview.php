@@ -103,7 +103,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_import'])) {
             updateImportHistory($db, $importId, $stats, $errors, $importStatus);
 
             if ($stats['success'] > 0 || $stats['updated'] > 0) {
-                $message = "✅ Import genomförd! {$stats['success']} nya riders, {$stats['updated']} uppdaterade. <a href='/admin/import-history.php' style='text-decoration:underline'>Visa historik</a>";
+                $message = "✅ Import genomförd! {$stats['success']} nya riders, {$stats['updated']} uppdaterade. <a href='/admin/import-history.php' class='gs-text-underline'>Visa historik</a>";
                 $messageType = 'success';
             } else {
                 $message = "Ingen data importerades.";
@@ -555,21 +555,21 @@ include __DIR__ . '/../includes/layout-header.php';
                     ?>
 
                     <div class="gs-grid gs-grid-cols-2 gs-md-grid-cols-4 gs-gap-md gs-mb-lg">
-                        <div class="gs-stat-card" style="background: #d1fae5; padding: 1rem; border-radius: 8px;">
-                            <div style="font-size: 2rem; font-weight: bold; color: #065f46;"><?= $ready ?></div>
-                            <div style="color: #047857;">✓ Redo att spara</div>
+                        <div class="gs-stat-card-success">
+                            <div class="gs-stat-number-success"><?= $ready ?></div>
+                            <div class="gs-stat-label-success">✓ Redo att spara</div>
                         </div>
-                        <div class="gs-stat-card" style="background: #dbeafe; padding: 1rem; border-radius: 8px;">
-                            <div style="font-size: 2rem; font-weight: bold; color: #1e40af;"><?= $updates ?></div>
-                            <div style="color: #1d4ed8;">⟳ Uppdaterar befintliga</div>
+                        <div class="gs-stat-card-info">
+                            <div class="gs-stat-number-info"><?= $updates ?></div>
+                            <div class="gs-stat-label-info">⟳ Uppdaterar befintliga</div>
                         </div>
-                        <div class="gs-stat-card" style="background: #fef3c7; padding: 1rem; border-radius: 8px;">
-                            <div style="font-size: 2rem; font-weight: bold; color: #92400e;"><?= $warnings ?></div>
-                            <div style="color: #b45309;">⚠ Varningar</div>
+                        <div class="gs-stat-card-warning">
+                            <div class="gs-stat-number-warning"><?= $warnings ?></div>
+                            <div class="gs-stat-label-warning">⚠ Varningar</div>
                         </div>
-                        <div class="gs-stat-card" style="background: #fee2e2; padding: 1rem; border-radius: 8px;">
-                            <div style="font-size: 2rem; font-weight: bold; color: #991b1b;"><?= $errors_count ?></div>
-                            <div style="color: #dc2626;">✗ Fel (hoppas över)</div>
+                        <div class="gs-stat-card-error">
+                            <div class="gs-stat-number-error"><?= $errors_count ?></div>
+                            <div class="gs-stat-label-error">✗ Fel (hoppas över)</div>
                         </div>
                     </div>
 
@@ -596,10 +596,10 @@ include __DIR__ . '/../includes/layout-header.php';
                             </thead>
                             <tbody>
                                 <?php foreach (array_slice($preview_data['riders'], 0, 100) as $rider): // Show first 100 ?>
-                                    <tr style="background: <?=
-                                        $rider['status'] === 'error' ? '#fee2e2' :
-                                        ($rider['status'] === 'warning' ? '#fef3c7' :
-                                        ($rider['rider_status'] === 'update' ? '#dbeafe' : 'transparent'))
+                                    <tr class="<?=
+                                        $rider['status'] === 'error' ? 'gs-table-row-bg-error' :
+                                        ($rider['status'] === 'warning' ? 'gs-table-row-bg-warning' :
+                                        ($rider['rider_status'] === 'update' ? 'gs-table-row-bg-info' : 'gs-table-row-bg-transparent'))
                                     ?>">
                                         <td><?= $rider['line'] ?></td>
                                         <td>
@@ -616,7 +616,7 @@ include __DIR__ . '/../includes/layout-header.php';
                                             <?php endif; ?>
                                         </td>
                                         <td>
-                                            <code style="font-size: 0.75rem;"><?= h($rider['license_number']) ?></code>
+                                            <code class="gs-code-xs"><?= h($rider['license_number']) ?></code>
                                         </td>
                                         <td>
                                             <span class="gs-badge gs-badge-xs gs-badge-secondary">
@@ -651,7 +651,7 @@ include __DIR__ . '/../includes/layout-header.php';
 
                     <!-- Action Buttons -->
                     <div class="gs-flex gs-gap-md gs-mt-xl">
-                        <form method="POST" style="flex: 1;">
+                        <form method="POST" class="gs-form-flex-1">
                             <?= csrf_field() ?>
                             <input type="hidden" name="confirm_import" value="1">
                             <button type="submit" class="gs-btn gs-btn-primary gs-btn-lg gs-w-full">

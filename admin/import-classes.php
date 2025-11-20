@@ -276,19 +276,19 @@ include __DIR__ . '/../includes/layout-header.php';
                         </div>
 
                         <?php if (!empty($errors)): ?>
-                            <div class="gs-mt-lg" style="padding-top: var(--gs-space-lg); border-top: 1px solid var(--gs-border);">
+                            <div class="gs-mt-lg gs-section-divider-top">
                                 <h3 class="gs-h5 gs-text-danger gs-mb-md">
                                     <i data-lucide="alert-triangle"></i>
                                     Fel och varningar (<?= count($errors) ?>)
                                 </h3>
-                                <div style="max-height: 300px; overflow-y: auto; background: var(--gs-background-secondary); padding: var(--gs-space-md); border-radius: var(--gs-border-radius);">
+                                <div class="gs-scroll-y-300">
                                     <?php foreach (array_slice($errors, 0, 50) as $error): ?>
-                                        <div class="gs-text-sm gs-text-secondary" style="margin-bottom: 4px;">
+                                        <div class="gs-text-sm gs-text-secondary gs-mb-4px">
                                             • <?= h($error) ?>
                                         </div>
                                     <?php endforeach; ?>
                                     <?php if (count($errors) > 50): ?>
-                                        <div class="gs-text-sm gs-text-secondary gs-mt-sm" style="font-style: italic;">
+                                        <div class="gs-text-sm gs-text-secondary gs-mt-sm gs-font-italic">
                                             ... och <?= count($errors) - 50 ?> fler
                                         </div>
                                     <?php endif; ?>
@@ -308,7 +308,7 @@ include __DIR__ . '/../includes/layout-header.php';
                     </h2>
                 </div>
                 <div class="gs-card-content">
-                    <form method="POST" enctype="multipart/form-data" style="max-width: 600px;">
+                    <form method="POST" enctype="multipart/form-data" class="gs-container-max-600">
                         <?= csrf_field() ?>
 
                         <div class="gs-form-group">
@@ -413,12 +413,12 @@ include __DIR__ . '/../includes/layout-header.php';
                         </table>
                     </div>
 
-                    <div class="gs-mt-lg" style="padding: var(--gs-space-md); background: var(--gs-background-secondary); border-radius: var(--gs-border-radius); border-left: 4px solid var(--gs-primary);">
+                    <div class="gs-mt-lg gs-bg-info-box-primary">
                         <h3 class="gs-h5 gs-text-primary gs-mb-sm">
                             <i data-lucide="lightbulb"></i>
                             Import-logik
                         </h3>
-                        <ul class="gs-text-secondary gs-text-sm" style="margin-left: var(--gs-space-lg); line-height: 1.8;">
+                        <ul class="gs-text-secondary gs-text-sm gs-list-ml-lg-lh-1-8">
                             <li>Klasser matchas via namn (name)</li>
                             <li>Befintliga klasser uppdateras automatiskt</li>
                             <li>Nya klasser skapas automatiskt</li>
@@ -431,7 +431,7 @@ include __DIR__ . '/../includes/layout-header.php';
                         <p class="gs-text-sm gs-text-secondary">
                             <strong>Exempel på CSV-fil:</strong>
                         </p>
-                        <pre style="background: var(--gs-background-secondary); padding: var(--gs-space-md); border-radius: var(--gs-border-radius); overflow-x: auto; font-size: 12px; margin-top: var(--gs-space-sm);">name,display_name,discipline,gender,min_age,max_age,sort_order,active
+                        <pre class="gs-pre-code-block">name,display_name,discipline,gender,min_age,max_age,sort_order,active
 ELITE_M,Elite Herr,XC,M,19,29,10,1
 ELITE_F,Elite Dam,XC,F,19,29,20,1
 JUNIOR_M_17_18,Junior Herr 17-18,XC,M,17,18,30,1

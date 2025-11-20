@@ -10,6 +10,24 @@
 ?>
     </main>
 
+    <!-- Footer -->
+    <footer class="gs-footer">
+        <div class="gs-container">
+            <?php
+            $versionInfo = getVersionInfo();
+            ?>
+            <p class="gs-footer-version">
+                TheHUB v<?= h($versionInfo['version']) ?> (<?= h($versionInfo['name']) ?>)
+                <?php if ($versionInfo['deployment'] > 0): ?>
+                    • Build #<?= $versionInfo['deployment'] ?>
+                <?php endif; ?>
+                <?php if ($versionInfo['commit']): ?>
+                    • <?= h($versionInfo['commit']) ?>
+                <?php endif; ?>
+            </p>
+        </div>
+    </footer>
+
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
     <script>

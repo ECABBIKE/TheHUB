@@ -400,7 +400,7 @@ foreach ($verifyQueries as $sql => $description) {
                     <strong>🎉 Migration klar!</strong><br>
                     Alla DH-kolumner har lagts till. Du kan nu skapa events med DH-format och importera DH-resultat.
                 </div>
-                <div style="text-align: center; padding: 20px;">
+                <div class="gs-center-p20">
                     <a href="/admin/events.php" class="btn btn-success">
                         Gå till Events
                     </a>

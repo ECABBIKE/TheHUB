@@ -78,11 +78,11 @@ try {
     }
     flush();
 
-    echo "<h2 style='color: green;'>All steps completed successfully!</h2>";
+    echo "<h2 class='gs-text-success'>All steps completed successfully!</h2>";
 
 } catch (Exception $e) {
-    echo "<h2 style='color: red;'>ERROR at some step:</h2>";
-    echo "<pre style='background: #fee; padding: 20px; border: 2px solid red;'>";
+    echo "<h2 class='gs-text-error'>ERROR at some step:</h2>";
+    echo "<pre class='gs-pre-error'>";
     echo "Message: " . htmlspecialchars($e->getMessage()) . "\n\n";
     echo "File: " . $e->getFile() . "\n";
     echo "Line: " . $e->getLine() . "\n\n";

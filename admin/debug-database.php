@@ -29,19 +29,19 @@ include __DIR__ . '/../includes/layout-header.php';
             // Count total riders
             $total = $db->getRow("SELECT COUNT(*) as count FROM riders");
             $total_count = $total['count'] ?? 0;
-            echo "<p style='font-size: 1.2rem; margin-bottom: 1rem;'><strong>Total riders:</strong> <span style='color: var(--gs-primary); font-weight: bold;'>$total_count</span></p>";
+            echo "<p class='gs-stat-text'><strong>Total riders:</strong> <span class='gs-stat-value-primary'>$total_count</span></p>";
 
             // Count active riders
             $active = $db->getRow("SELECT COUNT(*) as count FROM riders WHERE active = 1");
             $active_count = $active['count'] ?? 0;
-            echo "<p style='font-size: 1.1rem; margin-bottom: 1rem;'><strong>Active riders:</strong> <span style='color: var(--gs-success);'>$active_count</span></p>";
+            echo "<p class='gs-stat-text-md'><strong>Active riders:</strong> <span class='gs-stat-value-success'>$active_count</span></p>";
 
             if ($total_count > 0) {
                 // Show first 10 riders
                 $riders = $db->getAll("SELECT * FROM riders ORDER BY id DESC LIMIT 10");
 
                 echo "<h4 class='gs-h4 gs-mt-lg gs-mb-md'>Latest 10 riders:</h4>";
-                echo "<div style='overflow-x: auto;'>";
+                echo "<div class='gs-table-scrollable'>";
                 echo "<table class='gs-table'>";
                 echo "<thead><tr>";
                 if (!empty($riders)) {
@@ -66,14 +66,14 @@ include __DIR__ . '/../includes/layout-header.php';
                 echo "</div>";
             } else {
                 echo "<div class='gs-alert gs-alert-danger gs-mt-md'>";
-                echo "<p style='margin: 0; font-weight: bold;'>⚠️ NO RIDERS IN DATABASE!</p>";
-                echo "<p style='margin-top: 0.5rem;'>Import has not saved any data yet.</p>";
+                echo "<p class='gs-alert-text-bold'>⚠️ NO RIDERS IN DATABASE!</p>";
+                echo "<p class='gs-mt-2'>Import has not saved any data yet.</p>";
                 echo "</div>";
             }
 
         } catch (Exception $e) {
             echo "<div class='gs-alert gs-alert-danger'>";
-            echo "<p style='margin: 0;'><strong>ERROR:</strong> " . h($e->getMessage()) . "</p>";
+            echo "<p class='gs-m-0'><strong>ERROR:</strong> " . h($e->getMessage()) . "</p>";
             echo "</div>";
         }
 
@@ -87,25 +87,25 @@ include __DIR__ . '/../includes/layout-header.php';
         try {
             $total = $db->getRow("SELECT COUNT(*) as count FROM clubs");
             $count = $total['count'] ?? 0;
-            echo "<p style='font-size: 1.2rem; margin-bottom: 1rem;'><strong>Total clubs:</strong> <span style='color: var(--gs-primary); font-weight: bold;'>$count</span></p>";
+            echo "<p class='gs-stat-text'><strong>Total clubs:</strong> <span class='gs-stat-value-primary'>$count</span></p>";
 
             if ($count > 0) {
                 $clubs = $db->getAll("SELECT * FROM clubs ORDER BY id DESC LIMIT 20");
 
                 echo "<h4 class='gs-h4 gs-mb-md'>Latest 20 clubs:</h4>";
-                echo "<ul class='gs-list' style='columns: 2; column-gap: 2rem;'>";
+                echo "<ul class='gs-list gs-cols-2'>";
                 foreach ($clubs as $club) {
-                    $active_badge = $club['active'] ? "<span style='color: var(--gs-success);'>✅</span>" : "<span style='color: var(--gs-secondary);'>❌</span>";
+                    $active_badge = $club['active'] ? "<span class='gs-stat-value-success'>✅</span>" : "<span class='gs-stat-value-secondary'>❌</span>";
                     echo "<li>" . $active_badge . " <strong>" . h($club['name']) . "</strong> (ID: " . $club['id'] . ")</li>";
                 }
                 echo "</ul>";
             } else {
-                echo "<p style='color: var(--gs-secondary);'>No clubs in database</p>";
+                echo "<p class='gs-stat-value-secondary'>No clubs in database</p>";
             }
 
         } catch (Exception $e) {
             echo "<div class='gs-alert gs-alert-danger'>";
-            echo "<p style='margin: 0;'><strong>ERROR:</strong> " . h($e->getMessage()) . "</p>";
+            echo "<p class='gs-m-0'><strong>ERROR:</strong> " . h($e->getMessage()) . "</p>";
             echo "</div>";
         }
 
@@ -119,13 +119,13 @@ include __DIR__ . '/../includes/layout-header.php';
         try {
             $total = $db->getRow("SELECT COUNT(*) as count FROM events");
             $count = $total['count'] ?? 0;
-            echo "<p style='font-size: 1.2rem; margin-bottom: 1rem;'><strong>Total events:</strong> <span style='color: var(--gs-primary); font-weight: bold;'>$count</span></p>";
+            echo "<p class='gs-stat-text'><strong>Total events:</strong> <span class='gs-stat-value-primary'>$count</span></p>";
 
             if ($count > 0) {
                 $events = $db->getAll("SELECT * FROM events ORDER BY date DESC LIMIT 10");
 
                 echo "<h4 class='gs-h4 gs-mb-md'>Latest 10 events:</h4>";
-                echo "<div style='overflow-x: auto;'>";
+                echo "<div class='gs-table-scrollable'>";
                 echo "<table class='gs-table'>";
                 echo "<thead><tr><th>ID</th><th>Name</th><th>Date</th><th>Location</th><th>Series</th><th>Status</th></tr></thead>";
                 echo "<tbody>";
@@ -142,12 +142,12 @@ include __DIR__ . '/../includes/layout-header.php';
                 echo "</tbody></table>";
                 echo "</div>";
             } else {
-                echo "<p style='color: var(--gs-secondary);'>⚠️ No events in database</p>";
+                echo "<p class='gs-stat-value-secondary'>⚠️ No events in database</p>";
             }
 
         } catch (Exception $e) {
             echo "<div class='gs-alert gs-alert-danger'>";
-            echo "<p style='margin: 0;'><strong>ERROR:</strong> " . h($e->getMessage()) . "</p>";
+            echo "<p class='gs-m-0'><strong>ERROR:</strong> " . h($e->getMessage()) . "</p>";
             echo "</div>";
         }
 
@@ -161,7 +161,7 @@ include __DIR__ . '/../includes/layout-header.php';
         try {
             $total = $db->getRow("SELECT COUNT(*) as count FROM series");
             $count = $total['count'] ?? 0;
-            echo "<p style='font-size: 1.2rem; margin-bottom: 1rem;'><strong>Total series:</strong> <span style='color: var(--gs-primary); font-weight: bold;'>$count</span></p>";
+            echo "<p class='gs-stat-text'><strong>Total series:</strong> <span class='gs-stat-value-primary'>$count</span></p>";
 
             if ($count > 0) {
                 $series_list = $db->getAll("SELECT * FROM series ORDER BY id");
@@ -181,12 +181,12 @@ include __DIR__ . '/../includes/layout-header.php';
                 }
                 echo "</tbody></table>";
             } else {
-                echo "<p style='color: var(--gs-secondary);'>⚠️ No series in database</p>";
+                echo "<p class='gs-stat-value-secondary'>⚠️ No series in database</p>";
             }
 
         } catch (Exception $e) {
             echo "<div class='gs-alert gs-alert-danger'>";
-            echo "<p style='margin: 0;'><strong>ERROR:</strong> " . h($e->getMessage()) . "</p>";
+            echo "<p class='gs-m-0'><strong>ERROR:</strong> " . h($e->getMessage()) . "</p>";
             echo "</div>";
         }
 
@@ -200,17 +200,17 @@ include __DIR__ . '/../includes/layout-header.php';
         try {
             $total = $db->getRow("SELECT COUNT(*) as count FROM results");
             $count = $total['count'] ?? 0;
-            echo "<p style='font-size: 1.2rem; margin-bottom: 1rem;'><strong>Total results:</strong> <span style='color: var(--gs-primary); font-weight: bold;'>$count</span></p>";
+            echo "<p class='gs-stat-text'><strong>Total results:</strong> <span class='gs-stat-value-primary'>$count</span></p>";
 
             if ($count > 0) {
-                echo "<p style='color: var(--gs-success);'>✅ Results exist in database</p>";
+                echo "<p class='gs-stat-value-success'>✅ Results exist in database</p>";
             } else {
-                echo "<p style='color: var(--gs-secondary);'>⚠️ No results in database yet</p>";
+                echo "<p class='gs-stat-value-secondary'>⚠️ No results in database yet</p>";
             }
 
         } catch (Exception $e) {
             echo "<div class='gs-alert gs-alert-danger'>";
-            echo "<p style='margin: 0;'><strong>ERROR:</strong> " . h($e->getMessage()) . "</p>";
+            echo "<p class='gs-m-0'><strong>ERROR:</strong> " . h($e->getMessage()) . "</p>";
             echo "</div>";
         }
 
@@ -225,10 +225,10 @@ include __DIR__ . '/../includes/layout-header.php';
 
         foreach ($tables as $table) {
             try {
-                echo "<h4 class='gs-h4 gs-mt-lg gs-mb-sm' style='font-family: monospace;'>$table</h4>";
+                echo "<h4 class='gs-h4 gs-mt-lg gs-mb-sm gs-font-mono'>$table</h4>";
                 $columns = $db->getAll("DESCRIBE $table");
 
-                echo "<table class='gs-table' style='font-family: monospace; font-size: 0.85rem;'>";
+                echo "<table class='gs-table gs-font-mono-sm'>";
                 echo "<thead><tr><th>Field</th><th>Type</th><th>Null</th><th>Key</th><th>Default</th><th>Extra</th></tr></thead>";
                 echo "<tbody>";
                 foreach ($columns as $col) {
@@ -245,7 +245,7 @@ include __DIR__ . '/../includes/layout-header.php';
 
             } catch (Exception $e) {
                 echo "<div class='gs-alert gs-alert-danger gs-mt-sm'>";
-                echo "<p style='margin: 0;'><strong>Table '$table':</strong> " . h($e->getMessage()) . "</p>";
+                echo "<p class='gs-m-0'><strong>Table '$table':</strong> " . h($e->getMessage()) . "</p>";
                 echo "</div>";
             }
         }
@@ -281,13 +281,13 @@ include __DIR__ . '/../includes/layout-header.php';
                 LIMIT 10
             ";
 
-            echo "<pre style='background: var(--gs-background-secondary); padding: 1rem; border-radius: 4px; overflow-x: auto; font-size: 0.75rem;'>";
+            echo "<pre class='gs-code-preview'>";
             echo h($query);
             echo "</pre>";
 
             $test_riders = $db->getAll($query);
 
-            echo "<p style='margin-top: 1rem;'><strong>Result:</strong> <span style='color: var(--gs-primary); font-weight: bold;'>" . count($test_riders) . " riders returned</span></p>";
+            echo "<p class='gs-mt-4'><strong>Result:</strong> <span class='gs-stat-value-primary'>" . count($test_riders) . " riders returned</span></p>";
 
             if (!empty($test_riders)) {
                 echo "<table class='gs-table gs-mt-md'>";
@@ -307,14 +307,14 @@ include __DIR__ . '/../includes/layout-header.php';
                 echo "</tbody></table>";
             } else {
                 echo "<div class='gs-alert gs-alert-warning gs-mt-md'>";
-                echo "<p style='margin: 0;'>⚠️ Query returned 0 riders even though riders exist in database.</p>";
-                echo "<p style='margin-top: 0.5rem;'>This means: All riders have <code>active = 0</code> OR there's a column name mismatch.</p>";
+                echo "<p class='gs-m-0'>⚠️ Query returned 0 riders even though riders exist in database.</p>";
+                echo "<p class='gs-mt-2'>This means: All riders have <code>active = 0</code> OR there's a column name mismatch.</p>";
                 echo "</div>";
             }
 
         } catch (Exception $e) {
             echo "<div class='gs-alert gs-alert-danger'>";
-            echo "<p style='margin: 0;'><strong>QUERY ERROR:</strong> " . h($e->getMessage()) . "</p>";
+            echo "<p class='gs-m-0'><strong>QUERY ERROR:</strong> " . h($e->getMessage()) . "</p>";
             echo "</div>";
         }
 

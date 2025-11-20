@@ -183,7 +183,7 @@ $pageTitle = 'Database Connection Test';
                 <p><?= h($test['description']) ?></p>
                 <strong><?= h($msg) ?></strong>
                 <?php if ($test['info']): ?>
-                    <p style="margin-top: 0.5rem; font-size: 0.875rem; opacity: 0.8;">
+                    <p class="gs-mt-2 gs-text-sm">
                         ℹ️ <?= h($test['info']) ?>
                     </p>
                 <?php endif; ?>
@@ -197,7 +197,7 @@ $pageTitle = 'Database Connection Test';
         }, true);
         ?>
 
-        <div class="test-result <?= $all_passed ? 'test-success' : 'test-info' ?>" style="margin-top: 2rem; border-width: 3px;">
+        <div class="test-result <?= $all_passed ? 'test-success' : 'test-info' ?>" class="gs-mt-8 gs-border-w-3">
             <h2><?= $all_passed ? '🎉 All Tests Passed!' : '⚠️ Some Tests Failed' ?></h2>
             <?php if ($all_passed): ?>
                 <p>Your database is configured correctly and ready to use!</p>
@@ -226,7 +226,7 @@ nano config/database.php  # Edit with your credentials</div>
             <?php endif; ?>
         </div>
 
-        <div style="margin-top: 2rem; padding: 1rem; background: #f3f4f6; border-radius: 8px;">
+        <div class="gs-mt-8 gs-bg-info-box">
             <h3>📚 Documentation</h3>
             <ul>
                 <li><a href="../docs/DEPLOYMENT.md">Deployment Guide</a></li>

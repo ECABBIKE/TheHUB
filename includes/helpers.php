@@ -177,4 +177,47 @@ function paginate($totalItems, $perPage, $currentPage = 1) {
         'offset' => ($currentPage - 1) * $perPage
     ];
 }
+
+/**
+ * Get version and deployment information
+ *
+ * @return array Version information
+ */
+function getVersionInfo() {
+    // Try to get git commit count
+    $gitCommits = 0;
+    try {
+        if (function_exists('shell_exec')) {
+            $output = @shell_exec('cd ' . ROOT_PATH . ' && git rev-list --count HEAD 2>/dev/null');
+            if ($output !== null) {
+                $gitCommits = (int)trim($output);
+            }
+        }
+    } catch (Exception $e) {
+        // Silently fail if git is not available
+    }
+
+    // Calculate total deployments
+    $totalDeployments = $gitCommits + DEPLOYMENT_OFFSET;
+
+    // Get short commit hash
+    $commitHash = '';
+    try {
+        if (function_exists('shell_exec')) {
+            $output = @shell_exec('cd ' . ROOT_PATH . ' && git rev-parse --short HEAD 2>/dev/null');
+            if ($output !== null) {
+                $commitHash = trim($output);
+            }
+        }
+    } catch (Exception $e) {
+        // Silently fail
+    }
+
+    return [
+        'version' => APP_VERSION,
+        'name' => APP_VERSION_NAME,
+        'deployment' => $totalDeployments,
+        'commit' => $commitHash
+    ];
+}
 ?>

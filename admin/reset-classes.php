@@ -159,7 +159,7 @@ include __DIR__ . '/../includes/layout-header.php';
                 <p class="gs-text-danger gs-mb-md">
                     <strong>Detta script kommer att:</strong>
                 </p>
-                <ul class="gs-text-secondary" style="margin-left: var(--gs-space-lg); line-height: 1.8;">
+                <ul class="gs-text-secondary" class="gs-list-ml-lg-lh-1-8">
                     <li>Radera ALLA befintliga klasser i databasen</li>
                     <li>Koppla bort alla resultat från deras klasser (class_id sätts till NULL)</li>
                     <li>Skapa 17 nya standardklasser</li>

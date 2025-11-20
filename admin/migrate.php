@@ -231,9 +231,9 @@ foreach ($indexes as $sql => $description) {
             <?php endif; ?>
 
             <?php if (count($errors) === 0): ?>
-                <div style="text-align: center; padding: 20px;">
-                    <h3 style="color: #10b981; margin-bottom: 15px;">🎉 Migration Complete!</h3>
-                    <p style="color: #6b7280; margin-bottom: 20px;">
+                <div class="gs-center-p20">
+                    <h3 class="gs-text-success gs-mb-md">🎉 Migration Complete!</h3>
+                    <p class="gs-text-secondary gs-mb-lg">
                         All database fields have been added successfully.
                     </p>
                     <a href="/admin/import-riders-extended.php" class="btn">

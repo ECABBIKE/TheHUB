@@ -1157,49 +1157,49 @@ include __DIR__ . '/../includes/layout-header.php';
                         </div>
 
                         <?php if ($matching_stats): ?>
-                            <div style="padding-top: var(--gs-space-lg); border-top: 1px solid var(--gs-border);">
+                            <div class="gs-section-divider">
                                 <h3 class="gs-h5 gs-text-primary gs-mb-md">
                                     <i data-lucide="search"></i>
                                     Matchnings- och Auto-Create statistik
                                 </h3>
                                 <div class="gs-grid gs-grid-cols-2 gs-md-grid-cols-3 gs-gap-md gs-mb-md">
-                                    <div style="padding: var(--gs-space-md); background: var(--gs-background-secondary); border-radius: var(--gs-border-radius);">
+                                    <div class="gs-stat-box">
                                         <div class="gs-text-sm gs-text-secondary">Tävlingar hittade</div>
                                         <div class="gs-h3 gs-text-success"><?= $matching_stats['events_found'] ?></div>
                                     </div>
-                                    <div style="padding: var(--gs-space-md); background: var(--gs-background-secondary); border-radius: var(--gs-border-radius);">
+                                    <div class="gs-stat-box">
                                         <div class="gs-text-sm gs-text-secondary">Nya tävlingar skapade</div>
                                         <div class="gs-h3 gs-text-accent"><?= $matching_stats['events_created'] ?? 0 ?></div>
                                     </div>
-                                    <div style="padding: var(--gs-space-md); background: var(--gs-background-secondary); border-radius: var(--gs-border-radius);">
+                                    <div class="gs-stat-box">
                                         <div class="gs-text-sm gs-text-secondary">Nya banor skapade</div>
                                         <div class="gs-h3 gs-text-primary"><?= $matching_stats['venues_created'] ?? 0 ?></div>
                                     </div>
                                 </div>
                                 <div class="gs-grid gs-grid-cols-2 gs-md-grid-cols-3 gs-gap-md gs-mb-md">
-                                    <div style="padding: var(--gs-space-md); background: var(--gs-background-secondary); border-radius: var(--gs-border-radius);">
+                                    <div class="gs-stat-box">
                                         <div class="gs-text-sm gs-text-secondary">Deltagare hittade</div>
                                         <div class="gs-h3 gs-text-success"><?= $matching_stats['riders_found'] ?></div>
                                     </div>
-                                    <div style="padding: var(--gs-space-md); background: var(--gs-background-secondary); border-radius: var(--gs-border-radius);">
+                                    <div class="gs-stat-box">
                                         <div class="gs-text-sm gs-text-secondary">Nya deltagare skapade</div>
                                         <div class="gs-h3 gs-text-accent"><?= $matching_stats['riders_created'] ?? 0 ?></div>
                                     </div>
-                                    <div style="padding: var(--gs-space-md); background: var(--gs-background-secondary); border-radius: var(--gs-border-radius);">
+                                    <div class="gs-stat-box">
                                         <div class="gs-text-sm gs-text-secondary">SWE-ID tilldelat</div>
                                         <div class="gs-h3 gs-text-warning"><?= $matching_stats['riders_created'] ?? 0 ?></div>
                                     </div>
                                 </div>
                                 <div class="gs-grid gs-grid-cols-2 gs-md-grid-cols-3 gs-gap-md">
-                                    <div style="padding: var(--gs-space-md); background: var(--gs-background-secondary); border-radius: var(--gs-border-radius);">
+                                    <div class="gs-stat-box">
                                         <div class="gs-text-sm gs-text-secondary">Nya klubbar skapade</div>
                                         <div class="gs-h3 gs-text-accent"><?= $matching_stats['clubs_created'] ?? 0 ?></div>
                                     </div>
-                                    <div style="padding: var(--gs-space-md); background: var(--gs-background-secondary); border-radius: var(--gs-border-radius);">
+                                    <div class="gs-stat-box">
                                         <div class="gs-text-sm gs-text-secondary">Nya kategorier skapade</div>
                                         <div class="gs-h3 gs-text-accent"><?= $matching_stats['categories_created'] ?? 0 ?></div>
                                     </div>
-                                    <div style="padding: var(--gs-space-md); background: var(--gs-background-secondary); border-radius: var(--gs-border-radius);">
+                                    <div class="gs-stat-box">
                                         <div class="gs-text-sm gs-text-secondary">Nya klasser skapade</div>
                                         <div class="gs-h3 gs-text-accent"><?= $matching_stats['classes_created'] ?? 0 ?></div>
                                     </div>
@@ -1208,19 +1208,19 @@ include __DIR__ . '/../includes/layout-header.php';
                         <?php endif; ?>
 
                         <?php if (!empty($errors)): ?>
-                            <div class="gs-mt-lg" style="padding-top: var(--gs-space-lg); border-top: 1px solid var(--gs-border);">
+                            <div class="gs-mt-lg gs-section-divider">
                                 <h3 class="gs-h5 gs-text-danger gs-mb-md">
                                     <i data-lucide="alert-triangle"></i>
                                     Fel och varningar (<?= count($errors) ?>)
                                 </h3>
-                                <div style="max-height: 300px; overflow-y: auto; background: var(--gs-background-secondary); padding: var(--gs-space-md); border-radius: var(--gs-border-radius);">
+                                <div class="gs-error-list-container">
                                     <?php foreach (array_slice($errors, 0, 50) as $error): ?>
-                                        <div class="gs-text-sm gs-text-secondary" style="margin-bottom: 4px;">
+                                        <div class="gs-text-sm gs-text-secondary gs-error-list-item">
                                             • <?= h($error) ?>
                                         </div>
                                     <?php endforeach; ?>
                                     <?php if (count($errors) > 50): ?>
-                                        <div class="gs-text-sm gs-text-secondary gs-mt-sm" style="font-style: italic;">
+                                        <div class="gs-text-sm gs-text-secondary gs-mt-sm gs-text-italic">
                                             ... och <?= count($errors) - 50 ?> fler
                                         </div>
                                     <?php endif; ?>
@@ -1253,7 +1253,7 @@ include __DIR__ . '/../includes/layout-header.php';
                         <strong>Rekommendation:</strong> Använd <a href="/admin/import-results-preview.php" class="gs-link">"Förhandsgranska Import"</a> för att granska data innan import.
                     </div>
 
-                    <form method="POST" enctype="multipart/form-data" id="uploadForm" style="max-width: 600px;">
+                    <form method="POST" enctype="multipart/form-data" id="uploadForm" class="gs-form-max-width">
                         <?= csrf_field() ?>
 
                         <div class="gs-form-group">
@@ -1281,13 +1281,13 @@ include __DIR__ . '/../includes/layout-header.php';
                     </form>
 
                     <!-- Progress Bar -->
-                    <div id="progressBar" style="display: none; margin-top: var(--gs-space-lg);">
+                    <div id="progressBar" class="gs-progress-container">
                         <div class="gs-flex gs-items-center gs-justify-between gs-mb-sm">
-                            <span class="gs-text-sm gs-text-primary" style="font-weight: 600;">Importerar och matchar...</span>
+                            <span class="gs-text-sm gs-text-primary gs-font-weight-600">Importerar och matchar...</span>
                             <span class="gs-text-sm gs-text-secondary" id="progressPercent">0%</span>
                         </div>
-                        <div style="width: 100%; height: 8px; background: var(--gs-background-secondary); border-radius: 4px; overflow: hidden;">
-                            <div id="progressFill" style="width: 0%; height: 100%; background: var(--gs-primary); transition: width 0.3s;"></div>
+                        <div class="gs-progress-bar">
+                            <div id="progressFill" class="gs-progress-fill"></div>
                         </div>
                     </div>
                 </div>
@@ -1441,16 +1441,16 @@ include __DIR__ . '/../includes/layout-header.php';
                         </table>
                     </div>
 
-                    <div class="gs-mt-lg" style="padding: var(--gs-space-md); background: var(--gs-background-secondary); border-radius: var(--gs-border-radius); border-left: 4px solid var(--gs-primary);">
+                    <div class="gs-mt-lg gs-info-box-accent">
                         <h3 class="gs-h5 gs-text-primary gs-mb-sm">
                             <i data-lucide="lightbulb"></i>
                             Matchnings-logik
                         </h3>
-                        <ul class="gs-text-secondary gs-text-sm" style="margin-left: var(--gs-space-lg); line-height: 1.8;">
+                        <ul class="gs-text-secondary gs-text-sm gs-list-indented">
                             <li><strong>Tävlingar:</strong> Matchas via exakt namn eller fuzzy match. Om inte hittad, skapas automatiskt med data från CSV.</li>
                             <li><strong>Banor:</strong> Om event_venue anges och inte hittas, skapas automatiskt</li>
                             <li><strong>Cyklister:</strong> Matchas i följande ordning:
-                                <ol style="margin-left: var(--gs-space-lg); margin-top: 4px;">
+                                <ol class="gs-list-indented-nested">
                                     <li>Licensnummer (exakt match)</li>
                                     <li>Namn + födelseår (exakt match)</li>
                                     <li>Namn (fuzzy match)</li>
@@ -1468,7 +1468,7 @@ include __DIR__ . '/../includes/layout-header.php';
                         <p class="gs-text-sm gs-text-secondary">
                             <strong>Exempel på CSV-fil med auto-create:</strong>
                         </p>
-                        <pre style="background: var(--gs-background-secondary); padding: var(--gs-space-md); border-radius: var(--gs-border-radius); overflow-x: auto; font-size: 12px; margin-top: var(--gs-space-sm);">event_name,event_date,event_location,event_venue,firstname,lastname,position,finish_time,license_number,birth_year,bib_number,status,points,gender
+                        <pre class="gs-code-block">event_name,event_date,event_location,event_venue,firstname,lastname,position,finish_time,license_number,birth_year,bib_number,status,points,gender
 GravitySeries Järvsö XC,2025-06-15,Järvsö,Järvsö Bergscykelpark,Erik,Andersson,1,02:15:30,SWE-2025-1234,1995,42,finished,100,M
 GravitySeries Järvsö XC,2025-06-15,Järvsö,Järvsö Bergscykelpark,Anna,Karlsson,2,02:18:45,SWE-2025-2345,1998,43,finished,80,F
 GravitySeries Järvsö XC,2025-06-15,Järvsö,Järvsö Bergscykelpark,Johan,Svensson,3,02:20:12,,1992,44,finished,60,M</pre>

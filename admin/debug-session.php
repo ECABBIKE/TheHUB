@@ -60,7 +60,7 @@ header('Content-Type: text/html; charset=utf-8');
         <p><a href="/admin/login.php">→ Go to Login</a></p>
         <p><a href="/admin/dashboard.php">→ Go to Dashboard</a></p>
         <p><a href="/admin/logout.php">→ Logout</a></p>
-        <form method="POST" action="/admin/login.php" style="margin-top: 20px;">
+        <form method="POST" action="/admin/login.php" class="gs-form-mt-5">
             <input type="hidden" name="username" value="admin">
             <input type="hidden" name="password" value="admin">
             <button type="submit">Quick Login (admin/admin)</button>

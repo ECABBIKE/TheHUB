@@ -80,7 +80,7 @@ include __DIR__ . '/../includes/layout-header.php';
                                 <i data-lucide="filter"></i>
                                 Importtyp
                             </label>
-                            <select id="type" name="type" class="gs-input" style="max-width: 200px;">
+                            <select id="type" name="type" class="gs-input" class="gs-max-w-200">
                                 <option value="">Alla</option>
                                 <option value="uci" <?= $type === 'uci' ? 'selected' : '' ?>>UCI Import</option>
                                 <option value="riders" <?= $type === 'riders' ? 'selected' : '' ?>>Riders</option>
@@ -136,7 +136,7 @@ include __DIR__ . '/../includes/layout-header.php';
             <?php if (empty($imports)): ?>
                 <div class="gs-card">
                     <div class="gs-card-content gs-text-center gs-py-xl">
-                        <i data-lucide="database" style="width: 64px; height: 64px; color: var(--gs-text-secondary); margin-bottom: var(--gs-space-md);"></i>
+                        <i data-lucide="database" class="gs-icon-64-secondary"></i>
                         <p class="gs-text-secondary">Ingen importhistorik ännu</p>
                     </div>
                 </div>
@@ -178,14 +178,14 @@ include __DIR__ . '/../includes/layout-header.php';
                                         <i data-lucide="activity"></i>
                                         Status
                                     </th>
-                                    <th style="width: 150px; text-align: right;">Åtgärder</th>
+                                    <th class="gs-table-col-w150-right">Åtgärder</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <?php foreach ($imports as $import): ?>
                                     <tr>
                                         <td>
-                                            <span class="gs-text-secondary" style="font-family: monospace;">
+                                            <span class="gs-text-secondary" class="gs-font-monospace">
                                                 <?= date('Y-m-d H:i', strtotime($import['imported_at'])) ?>
                                             </span>
                                             <br>
@@ -250,7 +250,7 @@ include __DIR__ . '/../includes/layout-header.php';
                                                 </span>
                                             <?php endif; ?>
                                         </td>
-                                        <td style="text-align: right;">
+                                        <td class="gs-text-right">
                                             <div class="gs-flex gs-gap-sm gs-justify-end">
                                                 <?php if ($import['status'] === 'completed'): ?>
                                                     <button
