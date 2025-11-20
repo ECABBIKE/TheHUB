@@ -247,8 +247,21 @@ include __DIR__ . '/includes/layout-header.php';
             }
             </style>
 
+            <?php
+            // Check if registration is open for tab ordering
+            $registrationOpen = !empty($event['registration_deadline']) && strtotime($event['registration_deadline']) >= time();
+            ?>
             <div class="event-tabs-wrapper gs-mb-lg">
                 <div class="event-tabs">
+                    <?php if ($registrationOpen): ?>
+                    <!-- Anmälan first when registration is open -->
+                    <a href="?id=<?= $eventId ?>&tab=anmalan"
+                       class="event-tab <?= $activeTab === 'anmalan' ? 'active' : '' ?>">
+                        <i data-lucide="user-plus"></i>
+                        Anmälan
+                    </a>
+                    <?php endif; ?>
+
                     <a href="?id=<?= $eventId ?>&tab=info"
                        class="event-tab <?= $activeTab === 'info' ? 'active' : '' ?>">
                         <i data-lucide="info"></i>
@@ -311,11 +324,13 @@ include __DIR__ . '/includes/layout-header.php';
                         <span class="gs-badge gs-badge-secondary gs-badge-sm"><?= $totalRegistrations ?></span>
                     </a>
 
+                    <?php if (!$registrationOpen): ?>
                     <a href="?id=<?= $eventId ?>&tab=anmalan"
                        class="event-tab <?= $activeTab === 'anmalan' ? 'active' : '' ?>">
                         <i data-lucide="user-plus"></i>
                         Anmälan
                     </a>
+                    <?php endif; ?>
                 </div>
             </div>
 
