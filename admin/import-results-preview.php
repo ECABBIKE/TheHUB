@@ -285,6 +285,35 @@ include __DIR__ . '/../includes/layout-header.php';
             <strong>Event i filen:</strong> <?= count($eventsSummary) ?>
         </div>
 
+        <?php
+        // Warning: Too many events detected (likely CSV error)
+        if (count($eventsSummary) > 10 && count($eventsSummary) > count($previewData) * 0.3):
+        ?>
+        <div class="gs-alert gs-alert-danger gs-mb-lg">
+            <i data-lucide="alert-triangle"></i>
+            <strong>Varning: Många olika event-namn upptäckta!</strong><br>
+            Din fil innehåller <?= count($eventsSummary) ?> olika event-namn för <?= count($previewData) ?> rader.
+            Detta tyder på ett fel i CSV-filen där varje rad har ett unikt event-namn (t.ex. radnummer i event-kolumnen).<br><br>
+            <strong>Rekommendation:</strong> Avbryt importen och kontrollera att alla rader har samma event-namn i första kolumnen.
+        </div>
+        <?php endif; ?>
+
+        <?php
+        // Warning: No event name column detected
+        $hasEventName = false;
+        if (!empty($previewData)) {
+            $sampleRow = reset($previewData);
+            $hasEventName = !empty($sampleRow['event_name']);
+        }
+        if (!$hasEventName):
+        ?>
+        <div class="gs-alert gs-alert-warning gs-mb-lg">
+            <i data-lucide="alert-circle"></i>
+            <strong>Obs: Ingen event-kolumn hittades.</strong><br>
+            Se till att välja rätt event i dropdown-menyn nedan för att koppla alla resultat till ett event.
+        </div>
+        <?php endif; ?>
+
         <?php if (empty($eventsSummary)): ?>
             <div class="gs-card">
                 <div class="gs-card-content">
@@ -295,6 +324,120 @@ include __DIR__ . '/../includes/layout-header.php';
             <form method="POST">
                 <?= csrf_field() ?>
 
+                <!-- Column Mapping Display -->
+                <div class="gs-card gs-mb-lg">
+                    <div class="gs-card-header">
+                        <h3 class="gs-h4 gs-text-primary">
+                            <i data-lucide="columns"></i>
+                            Kolumnmappning
+                        </h3>
+                    </div>
+                    <div class="gs-card-content">
+                        <p class="gs-text-secondary gs-mb-md">Så här tolkas kolumnerna i din fil:</p>
+                        <div class="gs-flex gs-flex-wrap gs-gap-sm">
+                            <?php
+                            // Get column mapping from first row
+                            $sampleRow = reset($previewData);
+                            if ($sampleRow):
+                                foreach (array_keys($sampleRow) as $col):
+                                    if (strpos($col, 'empty_') === 0) continue;
+                            ?>
+                                <div class="gs-badge gs-badge-secondary">
+                                    <?= h($col) ?>
+                                </div>
+                            <?php
+                                endforeach;
+                            endif;
+                            ?>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Data Preview Table -->
+                <div class="gs-card gs-mb-lg">
+                    <div class="gs-card-header">
+                        <h3 class="gs-h4 gs-text-primary">
+                            <i data-lucide="table"></i>
+                            Förhandsgranskning av data (första 20 rader)
+                        </h3>
+                    </div>
+                    <div class="gs-card-content gs-padding-0">
+                        <div class="gs-table-responsive" style="max-height: 400px; overflow-y: auto;">
+                            <table class="gs-table gs-table-sm">
+                                <thead style="position: sticky; top: 0; background: var(--gs-bg-primary); z-index: 10;">
+                                    <tr>
+                                        <th>#</th>
+                                        <th>Event</th>
+                                        <th>Namn</th>
+                                        <th>Klubb</th>
+                                        <th>Klass</th>
+                                        <th>Plac.</th>
+                                        <th>Tid</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php
+                                    $rowNum = 0;
+                                    foreach (array_slice($previewData, 0, 20) as $row):
+                                        $rowNum++;
+                                    ?>
+                                    <tr>
+                                        <td class="gs-text-secondary"><?= $rowNum ?></td>
+                                        <td>
+                                            <span class="gs-text-xs" title="<?= h($row['event_name'] ?? '') ?>">
+                                                <?= h(mb_substr($row['event_name'] ?? '–', 0, 25)) ?>
+                                                <?= strlen($row['event_name'] ?? '') > 25 ? '...' : '' ?>
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <strong><?= h(($row['firstname'] ?? '') . ' ' . ($row['lastname'] ?? '')) ?></strong>
+                                        </td>
+                                        <td>
+                                            <span class="gs-text-xs"><?= h($row['club_name'] ?? '–') ?></span>
+                                        </td>
+                                        <td>
+                                            <?php if (!empty($row['category'])): ?>
+                                                <span class="gs-badge gs-badge-sm gs-badge-primary"><?= h($row['category']) ?></span>
+                                            <?php else: ?>
+                                                <span class="gs-text-secondary">Auto</span>
+                                            <?php endif; ?>
+                                        </td>
+                                        <td class="gs-text-center">
+                                            <?php if (!empty($row['position'])): ?>
+                                                <?php if ($row['position'] <= 3): ?>
+                                                    <strong class="gs-text-success"><?= h($row['position']) ?></strong>
+                                                <?php else: ?>
+                                                    <?= h($row['position']) ?>
+                                                <?php endif; ?>
+                                            <?php else: ?>
+                                                –
+                                            <?php endif; ?>
+                                        </td>
+                                        <td>
+                                            <span class="gs-text-xs"><?= h($row['finish_time'] ?? '–') ?></span>
+                                        </td>
+                                        <td>
+                                            <?php
+                                            $status = strtolower($row['status'] ?? 'finished');
+                                            $statusClass = $status === 'finished' || $status === 'fin' ? 'gs-badge-success' : 'gs-badge-warning';
+                                            ?>
+                                            <span class="gs-badge gs-badge-sm <?= $statusClass ?>"><?= h($status) ?></span>
+                                        </td>
+                                    </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                        <?php if (count($previewData) > 20): ?>
+                            <div class="gs-padding-md gs-text-center gs-text-secondary gs-text-sm">
+                                Visar 20 av <?= count($previewData) ?> rader
+                            </div>
+                        <?php endif; ?>
+                    </div>
+                </div>
+
+                <!-- Event Summaries -->
                 <?php foreach ($eventsSummary as $eventKey => $eventData): ?>
                     <div class="gs-card gs-mb-lg">
                         <div class="gs-card-header">
