@@ -1322,7 +1322,6 @@ body.gs-landing-pure .gs-sidebar-overlay {
   .gs-h2 { font-size: 1.75rem; }
 
   /* Grid collapses to single column */
-  .gs-grid-cols-2,
   .gs-grid-cols-3,
   .gs-grid-cols-4 {
     grid-template-columns: repeat(1, minmax(0, 1fr));
