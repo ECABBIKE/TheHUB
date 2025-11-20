@@ -48,12 +48,6 @@ $is_admin = isLoggedIn();
             <li><a href="/admin/clubs.php" class="<?= $current_page == 'clubs.php' ? 'active' : '' ?>">
                 <i data-lucide="building"></i> Klubbar
             </a></li>
-            <li><a href="/admin/classes.php" class="<?= $current_page == 'classes.php' ? 'active' : '' ?>">
-                <i data-lucide="layers"></i> Klasser
-            </a></li>
-            <li><a href="/admin/point-templates.php" class="<?= $current_page == 'point-templates.php' ? 'active' : '' ?>">
-                <i data-lucide="target"></i> Poängmallar
-            </a></li>
             <li><a href="/admin/venues.php" class="<?= $current_page == 'venues.php' ? 'active' : '' ?>">
                 <i data-lucide="mountain"></i> Venues
             </a></li>
@@ -68,9 +62,6 @@ $is_admin = isLoggedIn();
             </a></li>
             <li><a href="/admin/public-settings.php" class="<?= $current_page == 'public-settings.php' ? 'active' : '' ?>">
                 <i data-lucide="settings"></i> Publika Inställningar
-            </a></li>
-            <li><a href="/admin/global-texts.php" class="<?= $current_page == 'global-texts.php' ? 'active' : '' ?>">
-                <i data-lucide="file-text"></i> Globala Texter
             </a></li>
             <li><a href="/admin/system-settings.php" class="<?= $current_page == 'system-settings.php' ? 'active' : '' ?>">
                 <i data-lucide="cog"></i> Systeminställningar
