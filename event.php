@@ -131,16 +131,16 @@ include __DIR__ . '/includes/layout-header.php';
                             <!-- Event Stats -->
                             <div class="event-stats">
                                 <div class="event-stat-full">
-                                    <span class="gs-text-sm gs-text-secondary">Deltagare: </span>
-                                    <strong class="gs-text-primary"><?= $totalParticipants ?></strong>
+                                    <span class="gs-text-sm gs-text-secondary">Anmälda: </span>
+                                    <strong class="gs-text-primary"><?= $totalRegistrations ?></strong>
                                 </div>
                                 <div class="event-stat-half">
-                                    <span class="gs-text-sm gs-text-secondary">Slutförda: </span>
-                                    <strong class="gs-text-success"><?= $totalFinished ?></strong>
+                                    <span class="gs-text-sm gs-text-secondary">Bekräftade: </span>
+                                    <strong class="gs-text-success"><?= $confirmedRegistrations ?></strong>
                                 </div>
                                 <div class="event-stat-half">
-                                    <span class="gs-text-sm gs-text-secondary">Kategorier: </span>
-                                    <strong class="gs-text-primary"><?= count($resultsByCategory) ?></strong>
+                                    <span class="gs-text-sm gs-text-secondary">Resultat: </span>
+                                    <strong class="gs-text-primary"><?= count($results) ?></strong>
                                 </div>
                             </div>
                         </div>

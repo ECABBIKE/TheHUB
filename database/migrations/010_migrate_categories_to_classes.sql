@@ -69,12 +69,9 @@ SET r.class_id = (
 WHERE r.category_id IS NOT NULL
   AND r.class_id IS NULL;
 
--- Step 4: Recalculate class positions for all events
--- This is done via PHP, but we'll log which events need recalculation
-CREATE TEMPORARY TABLE IF NOT EXISTS events_to_recalculate AS
-SELECT DISTINCT event_id
-FROM results
-WHERE class_id IS NOT NULL;
+-- Step 4: Note about recalculating class positions
+-- This will be done via PHP script after the SQL migration completes
+-- Events that need recalculation: all events with results that have class_id set
 
 -- Step 5: Add deprecation comment to categories table
 ALTER TABLE categories
