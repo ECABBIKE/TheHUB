@@ -724,7 +724,7 @@ include __DIR__ . '/../includes/layout-header.php';
                     <!-- NEW EXTENDED FIELDS WITH GLOBAL TEXT SUPPORT -->
                     <div class="gs-section-divider gs-mt-xl gs-mb-md">
                         <h3 class="gs-h4 gs-text-primary">Event-flikar Information</h3>
-                        <p class="gs-text-sm gs-text-secondary">Innehåll för event-sidans flikar. Markera "Använd global text" för att visa standardtext.</p>
+                        <p class="gs-text-sm gs-text-secondary">Innehåll för event-sidans flikar. Markera "Använd global text" för att använda standardtext från <a href="/admin/global-texts.php">Globala Texter</a>.</p>
                     </div>
 
                     <!-- PM (Promemoria) -->
@@ -735,10 +735,21 @@ include __DIR__ . '/../includes/layout-header.php';
                         <div class="gs-card-content">
                             <div class="gs-mb-sm">
                                 <label class="gs-checkbox-label">
-                                    <input type="checkbox" name="pm_use_global" class="gs-checkbox" <?= !empty($event['pm_use_global']) ? 'checked' : '' ?>>
+                                    <input type="checkbox" name="pm_use_global" class="gs-checkbox use-global-toggle" data-target="pm_content" data-global="<?= htmlspecialchars($globalTextMap['pm_content'] ?? '') ?>" <?= !empty($event['pm_use_global']) ? 'checked' : '' ?>>
                                     <span>Använd global text</span>
                                 </label>
+                                <?php if (!empty($globalTextMap['pm_content'])): ?>
+                                    <small class="gs-text-muted gs-ml-md">(Global text finns)</small>
+                                <?php else: ?>
+                                    <small class="gs-text-warning gs-ml-md">(Ingen global text definierad)</small>
+                                <?php endif; ?>
                             </div>
+                            <?php if (!empty($globalTextMap['pm_content'])): ?>
+                            <details class="gs-mb-sm">
+                                <summary class="gs-text-sm gs-text-muted" style="cursor: pointer;">Visa global text</summary>
+                                <div class="gs-p-sm gs-bg-light gs-rounded gs-mt-xs gs-text-sm" style="white-space: pre-wrap;"><?= htmlspecialchars($globalTextMap['pm_content']) ?></div>
+                            </details>
+                            <?php endif; ?>
                             <textarea
                                 id="pm_content"
                                 name="pm_content"
@@ -757,10 +768,21 @@ include __DIR__ . '/../includes/layout-header.php';
                         <div class="gs-card-content">
                             <div class="gs-mb-sm">
                                 <label class="gs-checkbox-label">
-                                    <input type="checkbox" name="jury_use_global" class="gs-checkbox" <?= !empty($event['jury_use_global']) ? 'checked' : '' ?>>
+                                    <input type="checkbox" name="jury_use_global" class="gs-checkbox use-global-toggle" data-target="jury_communication" data-global="<?= htmlspecialchars($globalTextMap['jury_communication'] ?? '') ?>" <?= !empty($event['jury_use_global']) ? 'checked' : '' ?>>
                                     <span>Använd global text</span>
                                 </label>
+                                <?php if (!empty($globalTextMap['jury_communication'])): ?>
+                                    <small class="gs-text-muted gs-ml-md">(Global text finns)</small>
+                                <?php else: ?>
+                                    <small class="gs-text-warning gs-ml-md">(Ingen global text definierad)</small>
+                                <?php endif; ?>
                             </div>
+                            <?php if (!empty($globalTextMap['jury_communication'])): ?>
+                            <details class="gs-mb-sm">
+                                <summary class="gs-text-sm gs-text-muted" style="cursor: pointer;">Visa global text</summary>
+                                <div class="gs-p-sm gs-bg-light gs-rounded gs-mt-xs gs-text-sm" style="white-space: pre-wrap;"><?= htmlspecialchars($globalTextMap['jury_communication']) ?></div>
+                            </details>
+                            <?php endif; ?>
                             <textarea
                                 id="jury_communication"
                                 name="jury_communication"
@@ -779,10 +801,21 @@ include __DIR__ . '/../includes/layout-header.php';
                         <div class="gs-card-content">
                             <div class="gs-mb-sm">
                                 <label class="gs-checkbox-label">
-                                    <input type="checkbox" name="schedule_use_global" class="gs-checkbox" <?= !empty($event['schedule_use_global']) ? 'checked' : '' ?>>
+                                    <input type="checkbox" name="schedule_use_global" class="gs-checkbox use-global-toggle" data-target="competition_schedule" data-global="<?= htmlspecialchars($globalTextMap['competition_schedule'] ?? '') ?>" <?= !empty($event['schedule_use_global']) ? 'checked' : '' ?>>
                                     <span>Använd global text</span>
                                 </label>
+                                <?php if (!empty($globalTextMap['competition_schedule'])): ?>
+                                    <small class="gs-text-muted gs-ml-md">(Global text finns)</small>
+                                <?php else: ?>
+                                    <small class="gs-text-warning gs-ml-md">(Ingen global text definierad)</small>
+                                <?php endif; ?>
                             </div>
+                            <?php if (!empty($globalTextMap['competition_schedule'])): ?>
+                            <details class="gs-mb-sm">
+                                <summary class="gs-text-sm gs-text-muted" style="cursor: pointer;">Visa global text</summary>
+                                <div class="gs-p-sm gs-bg-light gs-rounded gs-mt-xs gs-text-sm" style="white-space: pre-wrap;"><?= htmlspecialchars($globalTextMap['competition_schedule']) ?></div>
+                            </details>
+                            <?php endif; ?>
                             <textarea
                                 id="competition_schedule"
                                 name="competition_schedule"
@@ -801,10 +834,21 @@ include __DIR__ . '/../includes/layout-header.php';
                         <div class="gs-card-content">
                             <div class="gs-mb-sm">
                                 <label class="gs-checkbox-label">
-                                    <input type="checkbox" name="start_times_use_global" class="gs-checkbox" <?= !empty($event['start_times_use_global']) ? 'checked' : '' ?>>
+                                    <input type="checkbox" name="start_times_use_global" class="gs-checkbox use-global-toggle" data-target="start_times" data-global="<?= htmlspecialchars($globalTextMap['start_times'] ?? '') ?>" <?= !empty($event['start_times_use_global']) ? 'checked' : '' ?>>
                                     <span>Använd global text</span>
                                 </label>
+                                <?php if (!empty($globalTextMap['start_times'])): ?>
+                                    <small class="gs-text-muted gs-ml-md">(Global text finns)</small>
+                                <?php else: ?>
+                                    <small class="gs-text-warning gs-ml-md">(Ingen global text definierad)</small>
+                                <?php endif; ?>
                             </div>
+                            <?php if (!empty($globalTextMap['start_times'])): ?>
+                            <details class="gs-mb-sm">
+                                <summary class="gs-text-sm gs-text-muted" style="cursor: pointer;">Visa global text</summary>
+                                <div class="gs-p-sm gs-bg-light gs-rounded gs-mt-xs gs-text-sm" style="white-space: pre-wrap;"><?= htmlspecialchars($globalTextMap['start_times']) ?></div>
+                            </details>
+                            <?php endif; ?>
                             <textarea
                                 id="start_times"
                                 name="start_times"
@@ -823,10 +867,21 @@ include __DIR__ . '/../includes/layout-header.php';
                         <div class="gs-card-content">
                             <div class="gs-mb-sm">
                                 <label class="gs-checkbox-label">
-                                    <input type="checkbox" name="map_use_global" class="gs-checkbox" <?= !empty($event['map_use_global']) ? 'checked' : '' ?>>
+                                    <input type="checkbox" name="map_use_global" class="gs-checkbox use-global-toggle" data-target="map_content" data-global="<?= htmlspecialchars($globalTextMap['map_content'] ?? '') ?>" <?= !empty($event['map_use_global']) ? 'checked' : '' ?>>
                                     <span>Använd global text</span>
                                 </label>
+                                <?php if (!empty($globalTextMap['map_content'])): ?>
+                                    <small class="gs-text-muted gs-ml-md">(Global text finns)</small>
+                                <?php else: ?>
+                                    <small class="gs-text-warning gs-ml-md">(Ingen global text definierad)</small>
+                                <?php endif; ?>
                             </div>
+                            <?php if (!empty($globalTextMap['map_content'])): ?>
+                            <details class="gs-mb-sm">
+                                <summary class="gs-text-sm gs-text-muted" style="cursor: pointer;">Visa global text</summary>
+                                <div class="gs-p-sm gs-bg-light gs-rounded gs-mt-xs gs-text-sm" style="white-space: pre-wrap;"><?= htmlspecialchars($globalTextMap['map_content']) ?></div>
+                            </details>
+                            <?php endif; ?>
                             <div class="gs-mb-md">
                                 <label for="map_image_url" class="gs-label">Kartbild URL</label>
                                 <input
