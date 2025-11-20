@@ -1,8 +1,9 @@
 -- Migration 012: Insert default global texts
 -- Run this after migration 011 to add standard templates
+-- Uses INSERT IGNORE to skip if entries already exist
 
 -- PM (Promemoria) - main tab
-INSERT INTO global_texts (field_key, field_name, field_category, content, is_active, sort_order) VALUES
+INSERT IGNORE INTO global_texts (field_key, field_name, field_category, content, is_active, sort_order) VALUES
 ('pm_content', 'PM (Promemoria)', 'event_tabs', 'Välkommen till tävlingen!
 
 ALLMÄN INFORMATION
@@ -22,7 +23,7 @@ SÄKERHET
 Lycka till!', 1, 1);
 
 -- Jurykommuniké
-INSERT INTO global_texts (field_key, field_name, field_category, content, is_active, sort_order) VALUES
+INSERT IGNORE INTO global_texts (field_key, field_name, field_category, content, is_active, sort_order) VALUES
 ('jury_communication', 'Jurykommuniké', 'event_tabs', 'JURYKOMMUNIKÉ
 
 Jury för tävlingen:
@@ -35,7 +36,7 @@ Eventuella protester ska lämnas in skriftligt till juryn senast 15 minuter efte
 Beslut och meddelanden från juryn publiceras här under tävlingen.', 1, 2);
 
 -- Tävlingsschema
-INSERT INTO global_texts (field_key, field_name, field_category, content, is_active, sort_order) VALUES
+INSERT IGNORE INTO global_texts (field_key, field_name, field_category, content, is_active, sort_order) VALUES
 ('competition_schedule', 'Tävlingsschema', 'event_tabs', 'TÄVLINGSSCHEMA
 
 LÖRDAG
@@ -51,7 +52,7 @@ LÖRDAG
 Tiderna är preliminära och kan ändras.', 1, 3);
 
 -- Starttider
-INSERT INTO global_texts (field_key, field_name, field_category, content, is_active, sort_order) VALUES
+INSERT IGNORE INTO global_texts (field_key, field_name, field_category, content, is_active, sort_order) VALUES
 ('start_times', 'Starttider', 'event_tabs', 'STARTTIDER
 
 Starttider publiceras här när anmälan stängt.
@@ -64,7 +65,7 @@ Startordning bestäms av:
 Individuella starttider skickas även via e-post till anmälda deltagare.', 1, 4);
 
 -- Karta
-INSERT INTO global_texts (field_key, field_name, field_category, content, is_active, sort_order) VALUES
+INSERT IGNORE INTO global_texts (field_key, field_name, field_category, content, is_active, sort_order) VALUES
 ('map_content', 'Karta', 'event_tabs', 'KARTA OCH VÄGBESKRIVNING
 
 Arena och parkering markeras på kartan ovan.
@@ -80,7 +81,7 @@ PARKERING
 - Tänk på att lämna plats för utryckningsfordon', 1, 5);
 
 -- Facilities
-INSERT INTO global_texts (field_key, field_name, field_category, content, is_active, sort_order) VALUES
+INSERT IGNORE INTO global_texts (field_key, field_name, field_category, content, is_active, sort_order) VALUES
 ('driver_meeting', 'Förarmöte', 'facilities', 'Obligatoriskt förarmöte hålls 30 minuter före första start vid arenan. Alla deltagare måste närvara.', 1, 10),
 ('training_info', 'Träning', 'facilities', 'Träning på tävlingssträckorna öppnar enligt schemat. Träningskort krävs för liftåkning under träning.', 1, 11),
 ('timing_info', 'Tidtagning', 'facilities', 'Tidtagning sker med SPORTident eller MyLaps-system. Transpondrar delas ut vid sekretariatet.', 1, 12),
@@ -91,13 +92,13 @@ INSERT INTO global_texts (field_key, field_name, field_category, content, is_act
 ('food_cafe', 'Mat/Café', 'facilities', 'Café/servering finns på plats med mat och dryck.', 1, 17);
 
 -- Rules & Safety
-INSERT INTO global_texts (field_key, field_name, field_category, content, is_active, sort_order) VALUES
+INSERT IGNORE INTO global_texts (field_key, field_name, field_category, content, is_active, sort_order) VALUES
 ('competition_rules', 'Tävlingsregler', 'rules', 'Tävlingen genomförs enligt Svenska Cykelförbundets regler för [disciplin]. Regelbrott rapporteras till juryn.', 1, 20),
 ('insurance_info', 'Försäkring', 'rules', 'Deltagare tävlar på egen risk. Försäkring genom SCF-licens eller dagslicens som tecknas vid anmälan.', 1, 21),
 ('equipment_info', 'Utrustning', 'rules', 'Obligatorisk utrustning:\n- Godkänd cykelhjälm\n- Handskar\n- Korrekt monterat startnummer', 1, 22),
 ('medical_info', 'Sjukvård', 'rules', 'Sjukvårdspersonal finns på plats. Vid olycka, kontakta närmaste funktionär omedelbart.', 1, 23);
 
 -- Contacts & Info
-INSERT INTO global_texts (field_key, field_name, field_category, content, is_active, sort_order) VALUES
+INSERT IGNORE INTO global_texts (field_key, field_name, field_category, content, is_active, sort_order) VALUES
 ('contacts_info', 'Kontakter', 'contacts', 'KONTAKTPERSONER\n\nTävlingsledare: [Namn]\nTelefon: [Nummer]\nE-post: [E-post]\n\nSekretariat: [Telefon]', 1, 30),
 ('results_info', 'Resultat', 'contacts', 'Resultat publiceras löpande på resultattavlan vid arenan och på webbplatsen.', 1, 31);
