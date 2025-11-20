@@ -409,8 +409,13 @@ include __DIR__ . '/../includes/layout-header.php';
 /* System info card */
 .info-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    grid-template-columns: repeat(2, 1fr);
     gap: 1rem;
+}
+@media (min-width: 768px) {
+    .info-grid {
+        grid-template-columns: repeat(4, 1fr);
+    }
 }
 .info-item {
     padding: 1rem;
