@@ -5,7 +5,7 @@
  */
 
 require_once __DIR__ . '/../config.php';
-requireAdmin();
+require_admin();
 
 $db = getDB();
 $message = '';

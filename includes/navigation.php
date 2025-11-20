@@ -69,6 +69,9 @@ $is_admin = isLoggedIn();
             <li><a href="/admin/public-settings.php" class="<?= $current_page == 'public-settings.php' ? 'active' : '' ?>">
                 <i data-lucide="settings"></i> Publika Inställningar
             </a></li>
+            <li><a href="/admin/global-texts.php" class="<?= $current_page == 'global-texts.php' ? 'active' : '' ?>">
+                <i data-lucide="file-text"></i> Globala Texter
+            </a></li>
             <li><a href="/admin/system-settings.php" class="<?= $current_page == 'system-settings.php' ? 'active' : '' ?>">
                 <i data-lucide="cog"></i> Systeminställningar
             </a></li>
