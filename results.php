@@ -232,7 +232,7 @@ include __DIR__ . '/includes/layout-header.php';
 
                                 <!-- Actions -->
                                 <div class="gs-flex gs-gap-sm gs-flex-col">
-                                    <a href="/event.php?id=<?= $event['id'] ?>"
+                                    <a href="/event-results.php?id=<?= $event['id'] ?>"
                                        class="gs-btn gs-btn-primary gs-btn-sm"
                                        title="Visa resultat">
                                         <i data-lucide="trophy" class="gs-icon-14"></i>
