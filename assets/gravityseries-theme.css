@@ -1726,6 +1726,12 @@ body.gs-landing-pure .gs-sidebar-overlay {
     grid-template-columns: 1fr !important;
   }
 
+  /* Keep 2-column grid for stat cards on mobile */
+  .gs-grid-cols-2:has(.gs-stat-card-compact),
+  .gs-grid-cols-2:has(.gs-card-stat) {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+
   .gs-input,
   .gs-input-sm {
     font-size: 16px !important; /* Prevent zoom on iOS */
