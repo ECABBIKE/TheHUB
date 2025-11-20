@@ -61,6 +61,21 @@ $results = $db->getAll("
     WHERE event_id = ?
 ", [$eventId]);
 
+// Fetch global texts for use_global functionality
+$globalTexts = $db->getAll("SELECT field_key, content FROM global_texts WHERE is_active = 1");
+$globalTextMap = [];
+foreach ($globalTexts as $gt) {
+    $globalTextMap[$gt['field_key']] = $gt['content'];
+}
+
+// Helper function to get content with global text fallback
+function getEventContent($event, $field, $useGlobalField, $globalTextMap) {
+    if (!empty($event[$useGlobalField]) && !empty($globalTextMap[$field])) {
+        return $globalTextMap[$field];
+    }
+    return $event[$field] ?? '';
+}
+
 $pageTitle = $event['name'];
 $pageType = 'public';
 include __DIR__ . '/includes/layout-header.php';
@@ -277,231 +292,361 @@ include __DIR__ . '/includes/layout-header.php';
             <!-- Tab Content -->
             <?php if ($activeTab === 'info'): ?>
                 <!-- INFORMATION TAB -->
-                <div class="gs-card gs-mb-xl">
+
+                <!-- Section 1: Faciliteter & Logistik -->
+                <div class="gs-card gs-mb-lg">
                     <div class="gs-card-header">
                         <h2 class="gs-h3 gs-text-primary">
-                            <i data-lucide="info"></i>
-                            Event-information
+                            <i data-lucide="building"></i>
+                            Faciliteter & Logistik
                         </h2>
                     </div>
                     <div class="gs-card-content">
                         <div class="gs-grid gs-grid-cols-1 gs-md-grid-cols-2 gs-gap-lg">
                             <!-- Left Column -->
                             <div>
-                                <?php if (!empty($event['description'])): ?>
+                                <?php
+                                $driverMeeting = getEventContent($event, 'driver_meeting', 'driver_meeting_use_global', $globalTextMap);
+                                if (!empty($driverMeeting)): ?>
                                     <div class="gs-mb-lg">
                                         <h3 class="gs-h5 gs-mb-sm gs-text-primary">
-                                            <i data-lucide="file-text" class="gs-icon-14"></i>
-                                            Beskrivning
-                                        </h3>
-                                        <p class="gs-text-secondary">
-                                            <?= nl2br(h($event['description'])) ?>
-                                        </p>
-                                    </div>
-                                <?php endif; ?>
-
-                                <?php if (!empty($event['schedule'])): ?>
-                                    <div class="gs-mb-lg">
-                                        <h3 class="gs-h5 gs-mb-sm gs-text-primary">
-                                            <i data-lucide="clock" class="gs-icon-14"></i>
-                                            Schema
+                                            <i data-lucide="megaphone" class="gs-icon-14"></i>
+                                            Förarmöte
                                         </h3>
                                         <div class="gs-text-secondary">
-                                            <?= nl2br(h($event['schedule'])) ?>
+                                            <?= nl2br(h($driverMeeting)) ?>
                                         </div>
                                     </div>
                                 <?php endif; ?>
 
-                                <?php if (!empty($event['course_description'])): ?>
+                                <?php
+                                $trainingInfo = getEventContent($event, 'training_info', 'training_use_global', $globalTextMap);
+                                if (!empty($trainingInfo)): ?>
                                     <div class="gs-mb-lg">
                                         <h3 class="gs-h5 gs-mb-sm gs-text-primary">
-                                            <i data-lucide="route" class="gs-icon-14"></i>
-                                            Bana
-                                        </h3>
-                                        <p class="gs-text-secondary">
-                                            <?= nl2br(h($event['course_description'])) ?>
-                                        </p>
-                                        <?php if (!empty($event['distance']) || !empty($event['elevation_gain'])): ?>
-                                            <div class="gs-flex gs-gap-md gs-mt-sm">
-                                                <?php if (!empty($event['distance'])): ?>
-                                                    <div>
-                                                        <span class="gs-text-sm gs-text-secondary">Distans: </span>
-                                                        <strong><?= $event['distance'] ?> km</strong>
-                                                    </div>
-                                                <?php endif; ?>
-                                                <?php if (!empty($event['elevation_gain'])): ?>
-                                                    <div>
-                                                        <span class="gs-text-sm gs-text-secondary">Höjdmeter: </span>
-                                                        <strong><?= $event['elevation_gain'] ?> m</strong>
-                                                    </div>
-                                                <?php endif; ?>
-                                            </div>
-                                        <?php endif; ?>
-                                        <?php if (!empty($event['course_map_url']) || !empty($event['gpx_file_url'])): ?>
-                                            <div class="gs-flex gs-gap-sm gs-mt-sm">
-                                                <?php if (!empty($event['course_map_url'])): ?>
-                                                    <a href="<?= h($event['course_map_url']) ?>"
-                                                       target="_blank"
-                                                       class="gs-btn gs-btn-sm gs-btn-outline">
-                                                        <i data-lucide="map" class="gs-icon-14"></i>
-                                                        Bankarta
-                                                    </a>
-                                                <?php endif; ?>
-                                                <?php if (!empty($event['gpx_file_url'])): ?>
-                                                    <a href="<?= h($event['gpx_file_url']) ?>"
-                                                       download
-                                                       class="gs-btn gs-btn-sm gs-btn-outline">
-                                                        <i data-lucide="download" class="gs-icon-14"></i>
-                                                        Ladda ner GPX
-                                                    </a>
-                                                <?php endif; ?>
-                                            </div>
-                                        <?php endif; ?>
-                                    </div>
-                                <?php endif; ?>
-
-                                <?php if (!empty($event['safety_rules'])): ?>
-                                    <div class="gs-mb-lg">
-                                        <h3 class="gs-h5 gs-mb-sm gs-text-primary">
-                                            <i data-lucide="shield" class="gs-icon-14"></i>
-                                            Säkerhet & Regler
+                                            <i data-lucide="bike" class="gs-icon-14"></i>
+                                            Träning
                                         </h3>
                                         <div class="gs-text-secondary">
-                                            <?= nl2br(h($event['safety_rules'])) ?>
+                                            <?= nl2br(h($trainingInfo)) ?>
                                         </div>
                                     </div>
                                 <?php endif; ?>
 
-                                <?php if (!empty($event['organizer'])): ?>
+                                <?php
+                                $timingInfo = getEventContent($event, 'timing_info', 'timing_use_global', $globalTextMap);
+                                if (!empty($timingInfo)): ?>
                                     <div class="gs-mb-lg">
                                         <h3 class="gs-h5 gs-mb-sm gs-text-primary">
-                                            <i data-lucide="user" class="gs-icon-14"></i>
-                                            Arrangör
+                                            <i data-lucide="timer" class="gs-icon-14"></i>
+                                            Tidtagning
                                         </h3>
-                                        <p class="gs-text-secondary">
-                                            <?= h($event['organizer']) ?>
-                                        </p>
-                                        <?php if (!empty($event['contact_email']) || !empty($event['contact_phone'])): ?>
-                                            <div class="gs-mt-sm">
-                                                <?php if (!empty($event['contact_email'])): ?>
-                                                    <p class="gs-text-sm gs-mb-xs">
-                                                        <i data-lucide="mail" class="gs-icon-sm"></i>
-                                                        <a href="mailto:<?= h($event['contact_email']) ?>" class="gs-link">
-                                                            <?= h($event['contact_email']) ?>
-                                                        </a>
-                                                    </p>
-                                                <?php endif; ?>
-                                                <?php if (!empty($event['contact_phone'])): ?>
-                                                    <p class="gs-text-sm">
-                                                        <i data-lucide="phone" class="gs-icon-sm"></i>
-                                                        <a href="tel:<?= h($event['contact_phone']) ?>" class="gs-link">
-                                                            <?= h($event['contact_phone']) ?>
-                                                        </a>
-                                                    </p>
-                                                <?php endif; ?>
-                                            </div>
-                                        <?php endif; ?>
+                                        <div class="gs-text-secondary">
+                                            <?= nl2br(h($timingInfo)) ?>
+                                        </div>
+                                    </div>
+                                <?php endif; ?>
+
+                                <?php
+                                $liftInfo = getEventContent($event, 'lift_info', 'lift_use_global', $globalTextMap);
+                                if (!empty($liftInfo)): ?>
+                                    <div class="gs-mb-lg">
+                                        <h3 class="gs-h5 gs-mb-sm gs-text-primary">
+                                            <i data-lucide="cable-car" class="gs-icon-14"></i>
+                                            Lift
+                                        </h3>
+                                        <div class="gs-text-secondary">
+                                            <?= nl2br(h($liftInfo)) ?>
+                                        </div>
+                                    </div>
+                                <?php endif; ?>
+
+                                <?php
+                                $hydrationStations = getEventContent($event, 'hydration_stations', 'hydration_use_global', $globalTextMap);
+                                if (!empty($hydrationStations)): ?>
+                                    <div class="gs-mb-lg">
+                                        <h3 class="gs-h5 gs-mb-sm gs-text-primary">
+                                            <i data-lucide="droplet" class="gs-icon-14"></i>
+                                            Vätskekontroller
+                                        </h3>
+                                        <div class="gs-text-secondary">
+                                            <?= nl2br(h($hydrationStations)) ?>
+                                        </div>
+                                    </div>
+                                <?php endif; ?>
+
+                                <?php
+                                $toiletsShowers = getEventContent($event, 'toilets_showers', 'toilets_use_global', $globalTextMap);
+                                if (!empty($toiletsShowers)): ?>
+                                    <div class="gs-mb-lg">
+                                        <h3 class="gs-h5 gs-mb-sm gs-text-primary">
+                                            <i data-lucide="bath" class="gs-icon-14"></i>
+                                            Toaletter/Dusch
+                                        </h3>
+                                        <div class="gs-text-secondary">
+                                            <?= nl2br(h($toiletsShowers)) ?>
+                                        </div>
                                     </div>
                                 <?php endif; ?>
                             </div>
 
                             <!-- Right Column -->
                             <div>
-                                <?php if (!empty($event['practical_info'])): ?>
+                                <?php
+                                $bikeWash = getEventContent($event, 'bike_wash', 'bike_wash_use_global', $globalTextMap);
+                                if (!empty($bikeWash)): ?>
                                     <div class="gs-mb-lg">
                                         <h3 class="gs-h5 gs-mb-sm gs-text-primary">
-                                            <i data-lucide="info" class="gs-icon-14"></i>
-                                            Praktisk information
+                                            <i data-lucide="spray-can" class="gs-icon-14"></i>
+                                            Cykeltvätt
                                         </h3>
                                         <div class="gs-text-secondary">
-                                            <?= nl2br(h($event['practical_info'])) ?>
+                                            <?= nl2br(h($bikeWash)) ?>
                                         </div>
-                                        <?php if (!empty($event['entry_fee']) || !empty($event['max_participants'])): ?>
-                                            <div class="gs-mt-sm">
-                                                <?php if (!empty($event['entry_fee'])): ?>
-                                                    <p class="gs-text-sm gs-mb-xs">
-                                                        <strong>Startavgift:</strong> <?= $event['entry_fee'] ?> kr
-                                                    </p>
-                                                <?php endif; ?>
-                                                <?php if (!empty($event['max_participants'])): ?>
-                                                    <p class="gs-text-sm gs-mb-xs">
-                                                        <strong>Max deltagare:</strong> <?= $event['max_participants'] ?>
-                                                    </p>
-                                                <?php endif; ?>
-                                            </div>
-                                        <?php endif; ?>
                                     </div>
                                 <?php endif; ?>
 
-                                <?php if (!empty($event['parking_info'])): ?>
+                                <?php
+                                $foodCafe = getEventContent($event, 'food_cafe', 'food_use_global', $globalTextMap);
+                                if (!empty($foodCafe)): ?>
+                                    <div class="gs-mb-lg">
+                                        <h3 class="gs-h5 gs-mb-sm gs-text-primary">
+                                            <i data-lucide="utensils" class="gs-icon-14"></i>
+                                            Mat/Café
+                                        </h3>
+                                        <div class="gs-text-secondary">
+                                            <?= nl2br(h($foodCafe)) ?>
+                                        </div>
+                                    </div>
+                                <?php endif; ?>
+
+                                <?php if (!empty($event['shops_info'])): ?>
+                                    <div class="gs-mb-lg">
+                                        <h3 class="gs-h5 gs-mb-sm gs-text-primary">
+                                            <i data-lucide="store" class="gs-icon-14"></i>
+                                            Affärer/Butiker
+                                        </h3>
+                                        <div class="gs-text-secondary">
+                                            <?= nl2br(h($event['shops_info'])) ?>
+                                        </div>
+                                    </div>
+                                <?php endif; ?>
+
+                                <?php if (!empty($event['exhibitors'])): ?>
+                                    <div class="gs-mb-lg">
+                                        <h3 class="gs-h5 gs-mb-sm gs-text-primary">
+                                            <i data-lucide="tent" class="gs-icon-14"></i>
+                                            Utställare
+                                        </h3>
+                                        <div class="gs-text-secondary">
+                                            <?= nl2br(h($event['exhibitors'])) ?>
+                                        </div>
+                                    </div>
+                                <?php endif; ?>
+
+                                <?php if (!empty($event['parking_detailed'])): ?>
                                     <div class="gs-mb-lg">
                                         <h3 class="gs-h5 gs-mb-sm gs-text-primary">
                                             <i data-lucide="car" class="gs-icon-14"></i>
                                             Parkering
                                         </h3>
                                         <div class="gs-text-secondary">
-                                            <?= nl2br(h($event['parking_info'])) ?>
+                                            <?= nl2br(h($event['parking_detailed'])) ?>
                                         </div>
                                     </div>
                                 <?php endif; ?>
 
-                                <?php if (!empty($event['accommodation_info'])): ?>
+                                <?php if (!empty($event['hotel_accommodation'])): ?>
                                     <div class="gs-mb-lg">
                                         <h3 class="gs-h5 gs-mb-sm gs-text-primary">
                                             <i data-lucide="bed" class="gs-icon-14"></i>
-                                            Boende
+                                            Hotell/Boende
                                         </h3>
                                         <div class="gs-text-secondary">
-                                            <?= nl2br(h($event['accommodation_info'])) ?>
+                                            <?= nl2br(h($event['hotel_accommodation'])) ?>
                                         </div>
                                     </div>
                                 <?php endif; ?>
 
-                                <?php if (!empty($event['food_info'])): ?>
+                                <?php if (!empty($event['local_info'])): ?>
                                     <div class="gs-mb-lg">
                                         <h3 class="gs-h5 gs-mb-sm gs-text-primary">
-                                            <i data-lucide="utensils" class="gs-icon-14"></i>
-                                            Mat & Dryck
+                                            <i data-lucide="map-pin" class="gs-icon-14"></i>
+                                            Lokal information
                                         </h3>
                                         <div class="gs-text-secondary">
-                                            <?= nl2br(h($event['food_info'])) ?>
+                                            <?= nl2br(h($event['local_info'])) ?>
                                         </div>
                                     </div>
                                 <?php endif; ?>
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
-                                <?php if (!empty($event['prizes_info'])): ?>
+                <!-- Section 2: Regler & Säkerhet -->
+                <div class="gs-card gs-mb-lg">
+                    <div class="gs-card-header">
+                        <h2 class="gs-h3 gs-text-primary">
+                            <i data-lucide="shield"></i>
+                            Regler & Säkerhet
+                        </h2>
+                    </div>
+                    <div class="gs-card-content">
+                        <div class="gs-grid gs-grid-cols-1 gs-md-grid-cols-2 gs-gap-lg">
+                            <!-- Left Column -->
+                            <div>
+                                <?php if (!empty($event['competition_tracks'])): ?>
                                     <div class="gs-mb-lg">
                                         <h3 class="gs-h5 gs-mb-sm gs-text-primary">
-                                            <i data-lucide="award" class="gs-icon-14"></i>
-                                            Priser
+                                            <i data-lucide="route" class="gs-icon-14"></i>
+                                            Tävlingsbanor
                                         </h3>
                                         <div class="gs-text-secondary">
-                                            <?= nl2br(h($event['prizes_info'])) ?>
+                                            <?= nl2br(h($event['competition_tracks'])) ?>
                                         </div>
                                     </div>
                                 <?php endif; ?>
 
-                                <?php if (!empty($event['sponsors'])): ?>
+                                <?php
+                                $competitionRules = getEventContent($event, 'competition_rules', 'rules_use_global', $globalTextMap);
+                                if (!empty($competitionRules)): ?>
                                     <div class="gs-mb-lg">
                                         <h3 class="gs-h5 gs-mb-sm gs-text-primary">
-                                            <i data-lucide="handshake" class="gs-icon-14"></i>
-                                            Sponsorer
+                                            <i data-lucide="book-open" class="gs-icon-14"></i>
+                                            Tävlingsregler
                                         </h3>
                                         <div class="gs-text-secondary">
-                                            <?= nl2br(h($event['sponsors'])) ?>
+                                            <?= nl2br(h($competitionRules)) ?>
+                                        </div>
+                                    </div>
+                                <?php endif; ?>
+                            </div>
+
+                            <!-- Right Column -->
+                            <div>
+                                <?php
+                                $insuranceInfo = getEventContent($event, 'insurance_info', 'insurance_use_global', $globalTextMap);
+                                if (!empty($insuranceInfo)): ?>
+                                    <div class="gs-mb-lg">
+                                        <h3 class="gs-h5 gs-mb-sm gs-text-primary">
+                                            <i data-lucide="shield-check" class="gs-icon-14"></i>
+                                            Försäkring
+                                        </h3>
+                                        <div class="gs-text-secondary">
+                                            <?= nl2br(h($insuranceInfo)) ?>
                                         </div>
                                     </div>
                                 <?php endif; ?>
 
-                                <?php if (!empty($event['website'])): ?>
-                                    <div>
-                                        <a href="<?= h($event['website']) ?>"
-                                           target="_blank"
-                                           rel="noopener noreferrer"
-                                           class="gs-btn gs-btn-outline gs-w-full">
-                                            <i data-lucide="globe" class="gs-icon-14"></i>
-                                            Event-webbplats
-                                        </a>
+                                <?php
+                                $equipmentInfo = getEventContent($event, 'equipment_info', 'equipment_use_global', $globalTextMap);
+                                if (!empty($equipmentInfo)): ?>
+                                    <div class="gs-mb-lg">
+                                        <h3 class="gs-h5 gs-mb-sm gs-text-primary">
+                                            <i data-lucide="hard-hat" class="gs-icon-14"></i>
+                                            Utrustning
+                                        </h3>
+                                        <div class="gs-text-secondary">
+                                            <?= nl2br(h($equipmentInfo)) ?>
+                                        </div>
+                                    </div>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 3: Kontakter & Övrig Information -->
+                <div class="gs-card gs-mb-xl">
+                    <div class="gs-card-header">
+                        <h2 class="gs-h3 gs-text-primary">
+                            <i data-lucide="phone"></i>
+                            Kontakter & Övrig Information
+                        </h2>
+                    </div>
+                    <div class="gs-card-content">
+                        <div class="gs-grid gs-grid-cols-1 gs-md-grid-cols-2 gs-gap-lg">
+                            <!-- Left Column -->
+                            <div>
+                                <?php if (!empty($event['entry_fees_detailed'])): ?>
+                                    <div class="gs-mb-lg">
+                                        <h3 class="gs-h5 gs-mb-sm gs-text-primary">
+                                            <i data-lucide="banknote" class="gs-icon-14"></i>
+                                            Startavgifter
+                                        </h3>
+                                        <div class="gs-text-secondary">
+                                            <?= nl2br(h($event['entry_fees_detailed'])) ?>
+                                        </div>
+                                    </div>
+                                <?php endif; ?>
+
+                                <?php
+                                $resultsInfo = getEventContent($event, 'results_info', 'results_use_global', $globalTextMap);
+                                if (!empty($resultsInfo)): ?>
+                                    <div class="gs-mb-lg">
+                                        <h3 class="gs-h5 gs-mb-sm gs-text-primary">
+                                            <i data-lucide="trophy" class="gs-icon-14"></i>
+                                            Resultatinformation
+                                        </h3>
+                                        <div class="gs-text-secondary">
+                                            <?= nl2br(h($resultsInfo)) ?>
+                                        </div>
+                                    </div>
+                                <?php endif; ?>
+
+                                <?php
+                                $medicalInfo = getEventContent($event, 'medical_info', 'medical_use_global', $globalTextMap);
+                                if (!empty($medicalInfo)): ?>
+                                    <div class="gs-mb-lg">
+                                        <h3 class="gs-h5 gs-mb-sm gs-text-primary">
+                                            <i data-lucide="heart-pulse" class="gs-icon-14"></i>
+                                            Sjukvård
+                                        </h3>
+                                        <div class="gs-text-secondary">
+                                            <?= nl2br(h($medicalInfo)) ?>
+                                        </div>
+                                    </div>
+                                <?php endif; ?>
+                            </div>
+
+                            <!-- Right Column -->
+                            <div>
+                                <?php if (!empty($event['media_production'])): ?>
+                                    <div class="gs-mb-lg">
+                                        <h3 class="gs-h5 gs-mb-sm gs-text-primary">
+                                            <i data-lucide="video" class="gs-icon-14"></i>
+                                            Media/Produktion
+                                        </h3>
+                                        <div class="gs-text-secondary">
+                                            <?= nl2br(h($event['media_production'])) ?>
+                                        </div>
+                                    </div>
+                                <?php endif; ?>
+
+                                <?php
+                                $contactsInfo = getEventContent($event, 'contacts_info', 'contacts_use_global', $globalTextMap);
+                                if (!empty($contactsInfo)): ?>
+                                    <div class="gs-mb-lg">
+                                        <h3 class="gs-h5 gs-mb-sm gs-text-primary">
+                                            <i data-lucide="contact" class="gs-icon-14"></i>
+                                            Kontaktpersoner
+                                        </h3>
+                                        <div class="gs-text-secondary">
+                                            <?= nl2br(h($contactsInfo)) ?>
+                                        </div>
+                                    </div>
+                                <?php endif; ?>
+
+                                <?php if (!empty($event['scf_representatives'])): ?>
+                                    <div class="gs-mb-lg">
+                                        <h3 class="gs-h5 gs-mb-sm gs-text-primary">
+                                            <i data-lucide="badge" class="gs-icon-14"></i>
+                                            SCF-representanter
+                                        </h3>
+                                        <div class="gs-text-secondary">
+                                            <?= nl2br(h($event['scf_representatives'])) ?>
+                                        </div>
                                     </div>
                                 <?php endif; ?>
                             </div>
