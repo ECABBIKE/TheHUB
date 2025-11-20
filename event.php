@@ -148,36 +148,130 @@ include __DIR__ . '/includes/layout-header.php';
                 </div>
             </div>
 
-            <!-- Tab Navigation -->
-            <div class="gs-tabs gs-mb-lg">
-                <a href="?id=<?= $eventId ?>&tab=info"
-                   class="gs-tab <?= $activeTab === 'info' ? 'active' : '' ?>">
-                    <i data-lucide="info"></i>
-                    Information
-                </a>
-                <a href="?id=<?= $eventId ?>&tab=anmalda"
-                   class="gs-tab <?= $activeTab === 'anmalda' ? 'active' : '' ?>">
-                    <i data-lucide="users"></i>
-                    Anmälda
-                    <span class="gs-badge gs-badge-secondary gs-badge-sm gs-ml-xs">
-                        <?= $totalRegistrations ?>
-                    </span>
-                </a>
-                <a href="?id=<?= $eventId ?>&tab=anmalan"
-                   class="gs-tab <?= $activeTab === 'anmalan' ? 'active' : '' ?>">
-                    <i data-lucide="user-plus"></i>
-                    Anmälan
-                </a>
-                <?php if (!empty($results)): ?>
+            <!-- Tab Navigation - Mobile Responsive -->
+            <style>
+            .event-tabs-wrapper {
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+                margin: 0 -1rem;
+                padding: 0 1rem;
+            }
+            .event-tabs {
+                display: flex;
+                gap: 0.25rem;
+                min-width: max-content;
+                padding-bottom: 0.5rem;
+            }
+            .event-tab {
+                display: flex;
+                align-items: center;
+                gap: 0.375rem;
+                padding: 0.625rem 0.875rem;
+                border-radius: 0.5rem;
+                font-size: 0.8125rem;
+                font-weight: 500;
+                text-decoration: none;
+                white-space: nowrap;
+                background: var(--gs-bg-secondary);
+                color: var(--gs-text-secondary);
+                border: 1px solid var(--gs-border);
+                transition: all 0.2s;
+            }
+            .event-tab:hover {
+                background: var(--gs-bg-tertiary);
+                color: var(--gs-text-primary);
+            }
+            .event-tab.active {
+                background: var(--gs-primary);
+                color: white;
+                border-color: var(--gs-primary);
+            }
+            .event-tab i {
+                width: 14px;
+                height: 14px;
+            }
+            @media (min-width: 768px) {
+                .event-tabs-wrapper {
+                    margin: 0;
+                    padding: 0;
+                    overflow-x: visible;
+                }
+                .event-tabs {
+                    flex-wrap: wrap;
+                }
+            }
+            </style>
+
+            <div class="event-tabs-wrapper gs-mb-lg">
+                <div class="event-tabs">
+                    <a href="?id=<?= $eventId ?>&tab=info"
+                       class="event-tab <?= $activeTab === 'info' ? 'active' : '' ?>">
+                        <i data-lucide="info"></i>
+                        Information
+                    </a>
+
+                    <?php if (!empty($event['pm_content']) || !empty($event['pm_use_global'])): ?>
+                    <a href="?id=<?= $eventId ?>&tab=pm"
+                       class="event-tab <?= $activeTab === 'pm' ? 'active' : '' ?>">
+                        <i data-lucide="clipboard-list"></i>
+                        PM
+                    </a>
+                    <?php endif; ?>
+
+                    <?php if (!empty($event['jury_communication']) || !empty($event['jury_use_global'])): ?>
+                    <a href="?id=<?= $eventId ?>&tab=jury"
+                       class="event-tab <?= $activeTab === 'jury' ? 'active' : '' ?>">
+                        <i data-lucide="gavel"></i>
+                        Jurykommuniké
+                    </a>
+                    <?php endif; ?>
+
+                    <?php if (!empty($event['competition_schedule']) || !empty($event['schedule_use_global'])): ?>
+                    <a href="?id=<?= $eventId ?>&tab=schema"
+                       class="event-tab <?= $activeTab === 'schema' ? 'active' : '' ?>">
+                        <i data-lucide="calendar-clock"></i>
+                        Tävlingsschema
+                    </a>
+                    <?php endif; ?>
+
+                    <?php if (!empty($event['start_times']) || !empty($event['start_times_use_global'])): ?>
+                    <a href="?id=<?= $eventId ?>&tab=starttider"
+                       class="event-tab <?= $activeTab === 'starttider' ? 'active' : '' ?>">
+                        <i data-lucide="clock"></i>
+                        Starttider
+                    </a>
+                    <?php endif; ?>
+
+                    <?php if (!empty($event['map_content']) || !empty($event['map_image_url']) || !empty($event['map_use_global'])): ?>
+                    <a href="?id=<?= $eventId ?>&tab=karta"
+                       class="event-tab <?= $activeTab === 'karta' ? 'active' : '' ?>">
+                        <i data-lucide="map"></i>
+                        Karta
+                    </a>
+                    <?php endif; ?>
+
+                    <?php if (!empty($results)): ?>
                     <a href="/event-results.php?id=<?= $eventId ?>"
-                       class="gs-tab">
+                       class="event-tab">
                         <i data-lucide="trophy"></i>
                         Resultat
-                        <span class="gs-badge gs-badge-accent gs-badge-sm gs-ml-xs">
-                            <?= count($results) ?>
-                        </span>
+                        <span class="gs-badge gs-badge-accent gs-badge-sm"><?= count($results) ?></span>
                     </a>
-                <?php endif; ?>
+                    <?php endif; ?>
+
+                    <a href="?id=<?= $eventId ?>&tab=anmalda"
+                       class="event-tab <?= $activeTab === 'anmalda' ? 'active' : '' ?>">
+                        <i data-lucide="users"></i>
+                        Anmälda
+                        <span class="gs-badge gs-badge-secondary gs-badge-sm"><?= $totalRegistrations ?></span>
+                    </a>
+
+                    <a href="?id=<?= $eventId ?>&tab=anmalan"
+                       class="event-tab <?= $activeTab === 'anmalan' ? 'active' : '' ?>">
+                        <i data-lucide="user-plus"></i>
+                        Anmälan
+                    </a>
+                </div>
             </div>
 
             <!-- Tab Content -->
@@ -412,6 +506,160 @@ include __DIR__ . '/includes/layout-header.php';
                                 <?php endif; ?>
                             </div>
                         </div>
+                    </div>
+                </div>
+
+            <?php elseif ($activeTab === 'pm'): ?>
+                <!-- PM TAB -->
+                <div class="gs-card gs-mb-xl">
+                    <div class="gs-card-header">
+                        <h2 class="gs-h3 gs-text-primary">
+                            <i data-lucide="clipboard-list"></i>
+                            PM (Promemoria)
+                        </h2>
+                    </div>
+                    <div class="gs-card-content">
+                        <?php
+                        $pmContent = $event['pm_content'] ?? '';
+                        if ($event['pm_use_global'] ?? false) {
+                            $globalPm = $db->getRow("SELECT content FROM global_texts WHERE field_key = 'pm_content'");
+                            $pmContent = $globalPm['content'] ?? $pmContent;
+                        }
+                        ?>
+                        <?php if ($pmContent): ?>
+                            <div class="gs-text-secondary">
+                                <?= nl2br(h($pmContent)) ?>
+                            </div>
+                        <?php else: ?>
+                            <p class="gs-text-secondary">Inget PM tillgängligt för detta event.</p>
+                        <?php endif; ?>
+                    </div>
+                </div>
+
+            <?php elseif ($activeTab === 'jury'): ?>
+                <!-- JURY COMMUNICATION TAB -->
+                <div class="gs-card gs-mb-xl">
+                    <div class="gs-card-header">
+                        <h2 class="gs-h3 gs-text-primary">
+                            <i data-lucide="gavel"></i>
+                            Jurykommuniké
+                        </h2>
+                    </div>
+                    <div class="gs-card-content">
+                        <?php
+                        $juryContent = $event['jury_communication'] ?? '';
+                        if ($event['jury_use_global'] ?? false) {
+                            $globalJury = $db->getRow("SELECT content FROM global_texts WHERE field_key = 'jury_communication'");
+                            $juryContent = $globalJury['content'] ?? $juryContent;
+                        }
+                        ?>
+                        <?php if ($juryContent): ?>
+                            <div class="gs-text-secondary">
+                                <?= nl2br(h($juryContent)) ?>
+                            </div>
+                        <?php else: ?>
+                            <p class="gs-text-secondary">Ingen jurykommuniké tillgänglig.</p>
+                        <?php endif; ?>
+                    </div>
+                </div>
+
+            <?php elseif ($activeTab === 'schema'): ?>
+                <!-- COMPETITION SCHEDULE TAB -->
+                <div class="gs-card gs-mb-xl">
+                    <div class="gs-card-header">
+                        <h2 class="gs-h3 gs-text-primary">
+                            <i data-lucide="calendar-clock"></i>
+                            Tävlingsschema
+                        </h2>
+                    </div>
+                    <div class="gs-card-content">
+                        <?php
+                        $scheduleContent = $event['competition_schedule'] ?? '';
+                        if ($event['schedule_use_global'] ?? false) {
+                            $globalSchedule = $db->getRow("SELECT content FROM global_texts WHERE field_key = 'competition_schedule'");
+                            $scheduleContent = $globalSchedule['content'] ?? $scheduleContent;
+                        }
+                        ?>
+                        <?php if ($scheduleContent): ?>
+                            <div class="gs-text-secondary">
+                                <?= nl2br(h($scheduleContent)) ?>
+                            </div>
+                        <?php else: ?>
+                            <p class="gs-text-secondary">Inget tävlingsschema tillgängligt.</p>
+                        <?php endif; ?>
+                    </div>
+                </div>
+
+            <?php elseif ($activeTab === 'starttider'): ?>
+                <!-- START TIMES TAB -->
+                <div class="gs-card gs-mb-xl">
+                    <div class="gs-card-header">
+                        <h2 class="gs-h3 gs-text-primary">
+                            <i data-lucide="clock"></i>
+                            Starttider
+                        </h2>
+                    </div>
+                    <div class="gs-card-content">
+                        <?php
+                        $startContent = $event['start_times'] ?? '';
+                        if ($event['start_times_use_global'] ?? false) {
+                            $globalStart = $db->getRow("SELECT content FROM global_texts WHERE field_key = 'start_times'");
+                            $startContent = $globalStart['content'] ?? $startContent;
+                        }
+                        ?>
+                        <?php if ($startContent): ?>
+                            <div class="gs-text-secondary">
+                                <?= nl2br(h($startContent)) ?>
+                            </div>
+                        <?php else: ?>
+                            <p class="gs-text-secondary">Inga starttider publicerade ännu.</p>
+                        <?php endif; ?>
+                    </div>
+                </div>
+
+            <?php elseif ($activeTab === 'karta'): ?>
+                <!-- MAP TAB -->
+                <div class="gs-card gs-mb-xl">
+                    <div class="gs-card-header">
+                        <h2 class="gs-h3 gs-text-primary">
+                            <i data-lucide="map"></i>
+                            Karta
+                        </h2>
+                    </div>
+                    <div class="gs-card-content">
+                        <?php if (!empty($event['map_image_url'])): ?>
+                            <div class="gs-mb-lg">
+                                <img src="<?= h($event['map_image_url']) ?>"
+                                     alt="Karta"
+                                     style="max-width: 100%; height: auto; border-radius: 0.5rem;">
+                            </div>
+                        <?php endif; ?>
+
+                        <?php
+                        $mapContent = $event['map_content'] ?? '';
+                        if ($event['map_use_global'] ?? false) {
+                            $globalMap = $db->getRow("SELECT content FROM global_texts WHERE field_key = 'map_content'");
+                            $mapContent = $globalMap['content'] ?? $mapContent;
+                        }
+                        ?>
+                        <?php if ($mapContent): ?>
+                            <div class="gs-text-secondary">
+                                <?= nl2br(h($mapContent)) ?>
+                            </div>
+                        <?php elseif (empty($event['map_image_url'])): ?>
+                            <p class="gs-text-secondary">Ingen karta tillgänglig.</p>
+                        <?php endif; ?>
+
+                        <?php if (!empty($event['venue_coordinates'])): ?>
+                            <div class="gs-mt-lg">
+                                <a href="https://www.google.com/maps?q=<?= urlencode($event['venue_coordinates']) ?>"
+                                   target="_blank"
+                                   class="gs-btn gs-btn-outline">
+                                    <i data-lucide="navigation"></i>
+                                    Öppna i Google Maps
+                                </a>
+                            </div>
+                        <?php endif; ?>
                     </div>
                 </div>
 
