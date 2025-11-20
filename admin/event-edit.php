@@ -47,20 +47,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'date' => $date,
             'location' => trim($_POST['location'] ?? ''),
             'venue_id' => !empty($_POST['venue_id']) ? intval($_POST['venue_id']) : null,
-            'type' => trim($_POST['type'] ?? ''),
             'discipline' => trim($_POST['discipline'] ?? ''),
             'event_format' => trim($_POST['event_format'] ?? 'ENDURO'),
             'series_id' => !empty($_POST['series_id']) ? intval($_POST['series_id']) : null,
             'distance' => !empty($_POST['distance']) ? floatval($_POST['distance']) : null,
             'elevation_gain' => !empty($_POST['elevation_gain']) ? intval($_POST['elevation_gain']) : null,
-            'status' => $_POST['status'] ?? 'upcoming',
-            'description' => trim($_POST['description'] ?? ''),
             'organizer' => trim($_POST['organizer'] ?? ''),
             'website' => trim($_POST['website'] ?? ''),
-            'registration_url' => trim($_POST['registration_url'] ?? ''),
             'registration_deadline' => !empty($_POST['registration_deadline']) ? trim($_POST['registration_deadline']) : null,
-            'max_participants' => !empty($_POST['max_participants']) ? intval($_POST['max_participants']) : null,
-            'entry_fee' => !empty($_POST['entry_fee']) ? floatval($_POST['entry_fee']) : null,
             'active' => isset($_POST['active']) ? 1 : 0,
             // Extended information fields
             'schedule' => trim($_POST['schedule'] ?? ''),
@@ -281,36 +275,20 @@ include __DIR__ . '/../includes/layout-header.php';
                         </div>
                     </div>
 
-                    <!-- Type, Discipline, Event Format, and Series -->
-                    <div class="gs-grid gs-grid-cols-2 gs-gap-md">
-                        <div>
-                            <label for="type" class="gs-label">
-                                <i data-lucide="flag"></i>
-                                Typ
-                            </label>
-                            <input
-                                type="text"
-                                id="type"
-                                name="type"
-                                class="gs-input"
-                                value="<?= htmlspecialchars($event['type'] ?? '') ?>"
-                                placeholder="T.ex. Enduro"
-                            >
-                        </div>
-                        <div>
-                            <label for="discipline" class="gs-label">
-                                <i data-lucide="bike"></i>
-                                Disciplin
-                            </label>
-                            <input
-                                type="text"
-                                id="discipline"
-                                name="discipline"
-                                class="gs-input"
-                                value="<?= htmlspecialchars($event['discipline'] ?? '') ?>"
-                                placeholder="T.ex. MTB"
-                            >
-                        </div>
+                    <!-- Discipline -->
+                    <div>
+                        <label for="discipline" class="gs-label">
+                            <i data-lucide="bike"></i>
+                            Disciplin
+                        </label>
+                        <input
+                            type="text"
+                            id="discipline"
+                            name="discipline"
+                            class="gs-input"
+                            value="<?= htmlspecialchars($event['discipline'] ?? '') ?>"
+                            placeholder="T.ex. MTB Enduro, Downhill"
+                        >
                     </div>
 
                     <div class="gs-grid gs-grid-cols-2 gs-gap-md">
@@ -388,19 +366,6 @@ include __DIR__ . '/../includes/layout-header.php';
                         </div>
                     </div>
 
-                    <!-- Status -->
-                    <div>
-                        <label for="status" class="gs-label">
-                            <i data-lucide="activity"></i>
-                            Status
-                        </label>
-                        <select id="status" name="status" class="gs-input">
-                            <option value="upcoming" <?= ($event['status'] === 'upcoming') ? 'selected' : '' ?>>Kommande</option>
-                            <option value="ongoing" <?= ($event['status'] === 'ongoing') ? 'selected' : '' ?>>Pågående</option>
-                            <option value="completed" <?= ($event['status'] === 'completed') ? 'selected' : '' ?>>Avslutad</option>
-                            <option value="cancelled" <?= ($event['status'] === 'cancelled') ? 'selected' : '' ?>>Inställd</option>
-                        </select>
-                    </div>
 
                     <!-- Organizer and Website -->
                     <div class="gs-grid gs-grid-cols-2 gs-gap-md">
@@ -434,84 +399,21 @@ include __DIR__ . '/../includes/layout-header.php';
                         </div>
                     </div>
 
-                    <!-- Registration Details -->
-                    <div class="gs-grid gs-grid-cols-3 gs-gap-md">
-                        <div>
-                            <label for="registration_url" class="gs-label">
-                                <i data-lucide="link"></i>
-                                Anmälningslänk
-                            </label>
-                            <input
-                                type="url"
-                                id="registration_url"
-                                name="registration_url"
-                                class="gs-input"
-                                value="<?= htmlspecialchars($event['registration_url'] ?? '') ?>"
-                                placeholder="https://..."
-                            >
-                        </div>
-                        <div>
-                            <label for="registration_deadline" class="gs-label">
-                                <i data-lucide="calendar-clock"></i>
-                                Anmälningsfrist
-                            </label>
-                            <input
-                                type="date"
-                                id="registration_deadline"
-                                name="registration_deadline"
-                                class="gs-input"
-                                value="<?= htmlspecialchars($event['registration_deadline'] ?? '') ?>"
-                            >
-                        </div>
-                        <div>
-                            <label for="max_participants" class="gs-label">
-                                <i data-lucide="users"></i>
-                                Max deltagare
-                            </label>
-                            <input
-                                type="number"
-                                id="max_participants"
-                                name="max_participants"
-                                class="gs-input"
-                                min="0"
-                                value="<?= htmlspecialchars($event['max_participants'] ?? '') ?>"
-                                placeholder="T.ex. 500"
-                            >
-                        </div>
-                    </div>
-
-                    <!-- Entry Fee -->
+                    <!-- Registration Deadline -->
                     <div>
-                        <label for="entry_fee" class="gs-label">
-                            <i data-lucide="dollar-sign"></i>
-                            Startavgift (kr)
+                        <label for="registration_deadline" class="gs-label">
+                            <i data-lucide="calendar-clock"></i>
+                            Anmälningsfrist
                         </label>
                         <input
-                            type="number"
-                            id="entry_fee"
-                            name="entry_fee"
+                            type="date"
+                            id="registration_deadline"
+                            name="registration_deadline"
                             class="gs-input"
-                            step="0.01"
-                            min="0"
-                            value="<?= htmlspecialchars($event['entry_fee'] ?? '') ?>"
-                            placeholder="T.ex. 350.00"
+                            value="<?= htmlspecialchars($event['registration_deadline'] ?? '') ?>"
                         >
                     </div>
 
-                    <!-- Description -->
-                    <div>
-                        <label for="description" class="gs-label">
-                            <i data-lucide="file-text"></i>
-                            Beskrivning
-                        </label>
-                        <textarea
-                            id="description"
-                            name="description"
-                            class="gs-input"
-                            rows="4"
-                            placeholder="Beskriv eventet..."
-                        ><?= htmlspecialchars($event['description'] ?? '') ?></textarea>
-                    </div>
 
                     <!-- EXTENDED INFORMATION FIELDS -->
                     <div class="gs-section-divider gs-mt-lg gs-mb-md">
