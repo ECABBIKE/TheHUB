@@ -41,7 +41,7 @@ $clubRiders = $db->getAll("
     LEFT JOIN results res ON r.id = res.cyclist_id
     WHERE r.club_id = ? AND r.active = 1
     GROUP BY r.id
-    ORDER BY total_points DESC NULLS LAST, r.lastname, r.firstname
+    ORDER BY total_points DESC, r.lastname, r.firstname
 ", [$clubId]);
 
 $currentYear = date('Y');
@@ -292,10 +292,14 @@ include __DIR__ . '/includes/layout-header.php';
 
                 <!-- Main Content -->
                 <div class="club-license-content">
-                    <!-- Club Name -->
-                    <div class="club-name">
-                        <i data-lucide="users" class="gs-inline-block gs-vertical-middle"></i>
-                        <?= h($club['name']) ?>
+                    <!-- Logo and Name -->
+                    <div class="gs-flex gs-items-center gs-gap-lg gs-mb-lg" style="justify-content: center;">
+                        <?php if (!empty($club['logo'])): ?>
+                            <img src="<?= h($club['logo']) ?>" alt="<?= h($club['name']) ?>" style="max-height: 80px; border-radius: 8px;">
+                        <?php endif; ?>
+                        <div class="club-name" style="<?= !empty($club['logo']) ? 'text-align: left;' : '' ?>">
+                            <?= h($club['name']) ?>
+                        </div>
                     </div>
 
                     <!-- Club Location -->
@@ -303,6 +307,16 @@ include __DIR__ . '/includes/layout-header.php';
                         <div class="club-location">
                             <i data-lucide="map-pin"></i>
                             <?= h($club['city']) ?>
+                            <?php if (!empty($club['region'])): ?>
+                                , <?= h($club['region']) ?>
+                            <?php endif; ?>
+                        </div>
+                    <?php endif; ?>
+
+                    <!-- Description -->
+                    <?php if (!empty($club['description'])): ?>
+                        <div class="gs-text-center gs-text-secondary gs-mb-lg" style="max-width: 600px; margin: 0 auto;">
+                            <?= nl2br(h($club['description'])) ?>
                         </div>
                     <?php endif; ?>
 
@@ -326,8 +340,56 @@ include __DIR__ . '/includes/layout-header.php';
                         </div>
                     </div>
 
+                    <!-- Contact Information -->
+                    <?php if (!empty($club['email']) || !empty($club['phone']) || !empty($club['website']) || !empty($club['facebook']) || !empty($club['instagram'])): ?>
+                    <div class="gs-mt-lg" style="background: #f8f9fa; padding: 1rem; border-radius: 8px;">
+                        <div class="gs-flex gs-gap-md gs-flex-wrap" style="justify-content: center;">
+                            <?php if (!empty($club['website'])): ?>
+                            <a href="<?= h($club['website']) ?>" target="_blank" rel="noopener" class="gs-flex gs-items-center gs-gap-xs gs-link">
+                                <i data-lucide="globe" class="gs-icon-sm"></i>
+                                Webbplats
+                            </a>
+                            <?php endif; ?>
+
+                            <?php if (!empty($club['email'])): ?>
+                            <a href="mailto:<?= h($club['email']) ?>" class="gs-flex gs-items-center gs-gap-xs gs-link">
+                                <i data-lucide="mail" class="gs-icon-sm"></i>
+                                <?= h($club['email']) ?>
+                            </a>
+                            <?php endif; ?>
+
+                            <?php if (!empty($club['phone'])): ?>
+                            <a href="tel:<?= h($club['phone']) ?>" class="gs-flex gs-items-center gs-gap-xs gs-link">
+                                <i data-lucide="phone" class="gs-icon-sm"></i>
+                                <?= h($club['phone']) ?>
+                            </a>
+                            <?php endif; ?>
+
+                            <?php if (!empty($club['facebook'])): ?>
+                            <a href="<?= h($club['facebook']) ?>" target="_blank" rel="noopener" class="gs-flex gs-items-center gs-gap-xs gs-link">
+                                <i data-lucide="facebook" class="gs-icon-sm"></i>
+                                Facebook
+                            </a>
+                            <?php endif; ?>
+
+                            <?php if (!empty($club['instagram'])): ?>
+                            <a href="<?= h($club['instagram']) ?>" target="_blank" rel="noopener" class="gs-flex gs-items-center gs-gap-xs gs-link">
+                                <i data-lucide="instagram" class="gs-icon-sm"></i>
+                                Instagram
+                            </a>
+                            <?php endif; ?>
+                        </div>
+
+                        <?php if (!empty($club['contact_person'])): ?>
+                        <div class="gs-text-center gs-mt-sm gs-text-sm gs-text-secondary">
+                            Kontaktperson: <?= h($club['contact_person']) ?>
+                        </div>
+                        <?php endif; ?>
+                    </div>
+                    <?php endif; ?>
+
                     <!-- Club Badge -->
-                    <div class="club-badge">
+                    <div class="club-badge gs-mt-lg">
                         <div class="club-badge-label">Registrerad Klubb</div>
                         <div class="club-badge-text">GravitySeries <?= $currentYear ?></div>
                     </div>
