@@ -94,7 +94,7 @@ try {
             echo "<p class='error'>❌ Table exists but has NO COLUMNS! This is impossible and indicates a serious issue.</p>";
         } else {
             echo "<p class='success'>✅ Found " . count($columns) . " columns:</p>";
-            echo "<table border='1' cellpadding='5' style='border-collapse:collapse;background:#fff;'>";
+            echo "<table class='gs-table'>";
             echo "<tr><th>Field</th><th>Type</th><th>Null</th><th>Key</th><th>Default</th><th>Extra</th></tr>";
             foreach ($columns as $col) {
                 echo "<tr>";
@@ -194,6 +194,6 @@ echo "<li>If INSERT test fails → Database class or permissions issue</li>";
 echo "<li>If INSERT works but original import doesn't save → Check import code logic</li>";
 echo "</ol>";
 
-echo "<p><a href='/admin/debug-database.php' style='background:#004a98;color:#fff;padding:10px 20px;text-decoration:none;border-radius:4px;display:inline-block;margin-top:10px;'>← Back to Debug Page</a></p>";
+echo "<p><a href='/admin/debug-database.php' class='gs-btn gs-btn-primary gs-mt-md'>← Back to Debug Page</a></p>";
 
 echo "</body></html>";

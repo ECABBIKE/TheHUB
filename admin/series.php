@@ -220,7 +220,7 @@ include __DIR__ . '/../includes/layout-header.php';
 
                     <!-- Active Filters Info -->
                     <?php if ($filterYear): ?>
-                        <div class="gs-mt-md" style="padding-top: var(--gs-space-md); border-top: 1px solid var(--gs-border);">
+                        <div class="gs-mt-md gs-filter-active">
                             <div class="gs-flex gs-items-center gs-gap-sm gs-flex-wrap">
                                 <span class="gs-text-sm gs-text-secondary">Visar:</span>
                                 <span class="gs-badge gs-badge-accent"><?= $filterYear ?></span>
@@ -235,9 +235,9 @@ include __DIR__ . '/../includes/layout-header.php';
             </div>
 
             <!-- Series Modal -->
-                <div id="seriesModal" class="gs-modal" style="display: none;">
+                <div id="seriesModal" class="gs-modal gs-hidden">
                     <div class="gs-modal-overlay" onclick="closeSeriesModal()"></div>
-                    <div class="gs-modal-content" style="max-width: 700px;">
+                    <div class="gs-modal-content gs-modal-md">
                         <div class="gs-modal-header">
                             <h2 class="gs-modal-title" id="modalTitle">
                                 <i data-lucide="trophy"></i>
@@ -388,9 +388,9 @@ include __DIR__ . '/../includes/layout-header.php';
                                         <small class="gs-text-secondary">
                                             Godkända format: JPG, PNG, GIF, WebP, SVG. Max 5MB.
                                         </small>
-                                        <div id="currentLogo" style="margin-top: 10px; display: none;">
+                                        <div id="currentLogo" class="gs-logo-preview">
                                             <strong>Nuvarande logotyp:</strong><br>
-                                            <img id="currentLogoImg" src="" alt="Logotyp" style="max-width: 200px; max-height: 100px; margin-top: 5px;">
+                                            <img id="currentLogoImg" src="" alt="Logotyp">
                                         </div>
                                     </div>
                                 </div>
@@ -411,31 +411,31 @@ include __DIR__ . '/../includes/layout-header.php';
 
             <!-- Stats -->
             <div class="gs-grid gs-grid-cols-2 gs-md-grid-cols-4 gs-gap-md gs-mb-md">
-                <div class="gs-stat-card" style="padding: var(--gs-space-md);">
-                    <i data-lucide="trophy" style="width: 32px; height: 32px; color: var(--gs-primary); margin-bottom: var(--gs-space-sm);"></i>
-                    <div class="gs-stat-number" style="font-size: 1.75rem;"><?= count($series) ?></div>
-                    <div class="gs-stat-label" style="font-size: 0.813rem;">Totalt serier</div>
+                <div class="gs-stat-card gs-stat-card-content">
+                    <i data-lucide="trophy" class="gs-stat-icon-primary"></i>
+                    <div class="gs-stat-number gs-stat-number-xl"><?= count($series) ?></div>
+                    <div class="gs-stat-label gs-stat-label-sm">Totalt serier</div>
                 </div>
-                <div class="gs-stat-card" style="padding: var(--gs-space-md);">
-                    <i data-lucide="check-circle" style="width: 32px; height: 32px; color: var(--gs-success); margin-bottom: var(--gs-space-sm);"></i>
-                    <div class="gs-stat-number" style="font-size: 1.75rem;">
+                <div class="gs-stat-card gs-stat-card-content">
+                    <i data-lucide="check-circle" class="gs-stat-icon-success"></i>
+                    <div class="gs-stat-number gs-stat-number-xl">
                         <?= count(array_filter($series, fn($s) => $s['status'] === 'active')) ?>
                     </div>
-                    <div class="gs-stat-label" style="font-size: 0.813rem;">Aktiva</div>
+                    <div class="gs-stat-label gs-stat-label-sm">Aktiva</div>
                 </div>
-                <div class="gs-stat-card" style="padding: var(--gs-space-md);">
-                    <i data-lucide="calendar" style="width: 32px; height: 32px; color: var(--gs-accent); margin-bottom: var(--gs-space-sm);"></i>
-                    <div class="gs-stat-number" style="font-size: 1.75rem;">
+                <div class="gs-stat-card gs-stat-card-content">
+                    <i data-lucide="calendar" class="gs-stat-icon-accent"></i>
+                    <div class="gs-stat-number gs-stat-number-xl">
                         <?= array_sum(array_column($series, 'events_count')) ?>
                     </div>
-                    <div class="gs-stat-label" style="font-size: 0.813rem;">Totalt events</div>
+                    <div class="gs-stat-label gs-stat-label-sm">Totalt events</div>
                 </div>
-                <div class="gs-stat-card" style="padding: var(--gs-space-md);">
-                    <i data-lucide="users" style="width: 32px; height: 32px; color: var(--gs-warning); margin-bottom: var(--gs-space-sm);"></i>
-                    <div class="gs-stat-number" style="font-size: 1.75rem;">
+                <div class="gs-stat-card gs-stat-card-content">
+                    <i data-lucide="users" class="gs-stat-icon-warning"></i>
+                    <div class="gs-stat-number gs-stat-number-xl">
                         <?= number_format($uniqueParticipants, 0, ',', ' ') ?>
                     </div>
-                    <div class="gs-stat-label" style="font-size: 0.813rem;">Unika deltagare</div>
+                    <div class="gs-stat-label gs-stat-label-sm">Unika deltagare</div>
                 </div>
             </div>
 
@@ -447,7 +447,7 @@ include __DIR__ . '/../includes/layout-header.php';
                             <p>Inga serier hittades.</p>
                         </div>
                     <?php else: ?>
-                        <div style="overflow-x: auto;">
+                        <div class="gs-table-scrollable">
                             <table class="gs-table">
                                 <thead>
                                     <tr>
@@ -459,7 +459,7 @@ include __DIR__ . '/../includes/layout-header.php';
                                         <th>Slutdatum</th>
                                         <th>Arrangör</th>
                                         <th>Events</th>
-                                        <th style="width: 100px;">Åtgärder</th>
+                                        <th class="gs-table-col-100">Åtgärder</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -478,7 +478,7 @@ include __DIR__ . '/../includes/layout-header.php';
                                             <td>
                                                 <div class="gs-flex gs-items-center gs-gap-xs">
                                                     <?php if ($isCompleted): ?>
-                                                        <i data-lucide="lock" style="width: 14px; height: 14px; color: var(--gs-primary);" title="Serie är låst/avslutad"></i>
+                                                        <i data-lucide="lock" class="gs-icon-primary-sm" title="Serie är låst/avslutad"></i>
                                                     <?php endif; ?>
                                                     <strong><?= h($serie['name']) ?></strong>
                                                 </div>
@@ -506,7 +506,7 @@ include __DIR__ . '/../includes/layout-header.php';
                                                         class="gs-btn gs-btn-sm gs-btn-primary"
                                                         title="Hantera events"
                                                     >
-                                                        <i data-lucide="calendar" style="width: 14px;"></i>
+                                                        <i data-lucide="calendar" class="gs-icon-14"></i>
                                                     </a>
                                                     <?php endif; ?>
                                                     <button
@@ -515,7 +515,7 @@ include __DIR__ . '/../includes/layout-header.php';
                                                         onclick="editSeries(<?= $serie['id'] ?>)"
                                                         title="Redigera"
                                                     >
-                                                        <i data-lucide="edit" style="width: 14px;"></i>
+                                                        <i data-lucide="edit" class="gs-icon-14"></i>
                                                     </button>
                                                     <button
                                                         type="button"
@@ -523,7 +523,7 @@ include __DIR__ . '/../includes/layout-header.php';
                                                         onclick="deleteSeries(<?= $serie['id'] ?>, '<?= addslashes(h($serie['name'])) ?>')"
                                                         title="Ta bort"
                                                     >
-                                                        <i data-lucide="trash-2" style="width: 14px;"></i>
+                                                        <i data-lucide="trash-2" class="gs-icon-14"></i>
                                                     </button>
                                                 </div>
                                             </td>

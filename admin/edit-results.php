@@ -199,42 +199,41 @@ include __DIR__ . '/../includes/layout-header.php';
                             </span>
                         </h3>
                     </div>
-                    <div class="gs-card-content" style="padding: 0; overflow-x: auto;">
-                        <table class="gs-table" style="font-size: 0.9rem;">
+                    <div class="gs-card-content gs-p-0 gs-table-scrollable">
+                        <table class="gs-table gs-table-sm">
                             <thead>
                                 <tr>
-                                    <th style="width: 60px; text-align: center;">Plac.</th>
+                                    <th class="gs-table-th-w60">Plac.</th>
                                     <th>Namn</th>
-                                    <th style="width: 150px;">Klubb</th>
-                                    <th style="width: 100px; text-align: center;">Startnr</th>
-                                    <th style="width: 120px; text-align: center;">Tid</th>
-                                    <th style="width: 80px; text-align: center;">Poäng</th>
-                                    <th style="width: 120px; text-align: center;">Status</th>
-                                    <th style="width: 120px; text-align: center;">Åtgärder</th>
+                                    <th class="gs-table-th-w150">Klubb</th>
+                                    <th class="gs-table-th-w100">Startnr</th>
+                                    <th class="gs-table-th-w120">Tid</th>
+                                    <th class="gs-table-th-w80">Poäng</th>
+                                    <th class="gs-table-th-w120">Status</th>
+                                    <th class="gs-table-th-w120">Åtgärder</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <?php foreach ($categoryResults as $result): ?>
                                     <tr id="result-row-<?= $result['id'] ?>">
-                                        <form method="POST" style="display: contents;" class="result-form">
+                                        <form method="POST" class="result-form gs-form-inline">
                                             <?= csrf_field() ?>
                                             <input type="hidden" name="result_id" value="<?= $result['id'] ?>">
                                             <input type="hidden" name="action" value="update">
 
                                             <!-- Position -->
-                                            <td style="text-align: center;">
+                                            <td class="gs-text-center">
                                                 <input type="number"
                                                        name="position"
                                                        value="<?= h($result['position']) ?>"
-                                                       class="gs-input"
-                                                       style="width: 60px; text-align: center; padding: 0.25rem;"
+                                                       class="gs-input gs-input-w60"
                                                        min="1">
                                             </td>
 
                                             <!-- Name (read-only) -->
                                             <td>
                                                 <strong><?= h($result['firstname']) ?> <?= h($result['lastname']) ?></strong>
-                                                <div style="font-size: 0.75rem; color: var(--gs-text-secondary);">
+                                                <div class="gs-rider-meta-text">
                                                     <?php if ($result['birth_year']): ?>
                                                         <?= calculateAge($result['birth_year']) ?> år
                                                     <?php endif; ?>
@@ -256,38 +255,35 @@ include __DIR__ . '/../includes/layout-header.php';
                                             </td>
 
                                             <!-- Bib Number -->
-                                            <td style="text-align: center;">
+                                            <td class="gs-text-center">
                                                 <input type="text"
                                                        name="bib_number"
                                                        value="<?= h($result['bib_number']) ?>"
-                                                       class="gs-input"
-                                                       style="width: 80px; text-align: center; padding: 0.25rem;">
+                                                       class="gs-input gs-input-w80">
                                             </td>
 
                                             <!-- Finish Time -->
-                                            <td style="text-align: center;">
+                                            <td class="gs-text-center">
                                                 <input type="text"
                                                        name="finish_time"
                                                        value="<?= h($result['finish_time']) ?>"
-                                                       class="gs-input"
-                                                       style="width: 100px; text-align: center; padding: 0.25rem; font-family: monospace;"
+                                                       class="gs-input gs-input-w100-mono"
                                                        placeholder="HH:MM:SS">
                                             </td>
 
                                             <!-- Points -->
-                                            <td style="text-align: center;">
+                                            <td class="gs-text-center">
                                                 <input type="number"
                                                        name="points"
                                                        value="<?= h($result['points']) ?>"
-                                                       class="gs-input"
-                                                       style="width: 70px; text-align: center; padding: 0.25rem;"
+                                                       class="gs-input gs-input-w70"
                                                        step="1"
                                                        min="0">
                                             </td>
 
                                             <!-- Status -->
-                                            <td style="text-align: center;">
-                                                <select name="status" class="gs-input" style="padding: 0.25rem;">
+                                            <td class="gs-text-center">
+                                                <select name="status" class="gs-input gs-input-xs">
                                                     <option value="finished" <?= $result['status'] === 'finished' ? 'selected' : '' ?>>Slutförd</option>
                                                     <option value="dnf" <?= $result['status'] === 'dnf' ? 'selected' : '' ?>>DNF</option>
                                                     <option value="dns" <?= $result['status'] === 'dns' ? 'selected' : '' ?>>DNS</option>
@@ -296,19 +292,19 @@ include __DIR__ . '/../includes/layout-header.php';
                                             </td>
 
                                             <!-- Actions -->
-                                            <td style="text-align: center;">
+                                            <td class="gs-text-center">
                                                 <div class="gs-flex gs-gap-xs gs-justify-center">
                                                     <button type="submit"
                                                             class="gs-btn gs-btn-primary gs-btn-sm"
                                                             title="Spara">
-                                                        <i data-lucide="save" style="width: 14px; height: 14px;"></i>
+                                                        <i data-lucide="save" class="gs-icon-14"></i>
                                                     </button>
                                                     <button type="button"
                                                             class="gs-btn gs-btn-danger gs-btn-sm delete-result"
                                                             data-result-id="<?= $result['id'] ?>"
                                                             data-rider-name="<?= h($result['firstname'] . ' ' . $result['lastname']) ?>"
                                                             title="Ta bort">
-                                                        <i data-lucide="trash-2" style="width: 14px; height: 14px;"></i>
+                                                        <i data-lucide="trash-2" class="gs-icon-14"></i>
                                                     </button>
                                                 </div>
                                             </td>

@@ -10,7 +10,7 @@ try {
     require_once '../config.php';
     echo "<p>Config laddad: ✅</p>";
 } catch (Exception $e) {
-    echo "<p style='color:red;'>Config ERROR: " . $e->getMessage() . "</p>";
+    echo "<p class='gs-text-error'>Config ERROR: " . $e->getMessage() . "</p>";
 }
 
 try {
@@ -18,7 +18,7 @@ try {
     require_once '../includes/helpers.php';
     echo "<p>Helpers laddad: ✅</p>";
 } catch (Exception $e) {
-    echo "<p style='color:red;'>Helpers ERROR: " . $e->getMessage() . "</p>";
+    echo "<p class='gs-text-error'>Helpers ERROR: " . $e->getMessage() . "</p>";
 }
 
 try {
@@ -26,7 +26,7 @@ try {
     require_admin();
     echo "<p>Admin check OK: ✅</p>";
 } catch (Exception $e) {
-    echo "<p style='color:red;'>Admin ERROR: " . $e->getMessage() . "</p>";
+    echo "<p class='gs-text-error'>Admin ERROR: " . $e->getMessage() . "</p>";
 }
 
 echo "<h2>Allt funkar! 🎉</h2>";

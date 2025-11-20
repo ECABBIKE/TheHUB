@@ -492,7 +492,7 @@ include __DIR__ . '/../includes/layout-header.php';
         <div class="gs-alert gs-alert-success gs-mb-lg">
             <i data-lucide="check-circle"></i>
             <strong>Superflexibel import!</strong>
-            <ul style="margin-top: 0.5rem; margin-left: 1.5rem;">
+            <ul class="gs-list-ml-1-5">
                 <li>✅ Kolumner kan vara i VILKEN ORDNING SOM HELST</li>
                 <li>✅ Okända kolumner IGNORERAS automatiskt</li>
                 <li>✅ Fungerar med CSV från Excel, Google Sheets, etc.</li>
@@ -626,12 +626,12 @@ include __DIR__ . '/../includes/layout-header.php';
 
                     <!-- Skipped Rows -->
                     <?php if (!empty($skippedRows)): ?>
-                        <div class="gs-mt-lg" style="padding-top: var(--gs-space-lg); border-top: 1px solid var(--gs-border);">
+                        <div class="gs-mt-lg gs-section-divider-top">
                             <h3 class="gs-h5 gs-text-warning gs-mb-md">
                                 <i data-lucide="alert-circle"></i>
                                 Överhoppade rader (<?= count($skippedRows) ?>)
                             </h3>
-                            <div style="max-height: 400px; overflow-y: auto;">
+                            <div class="gs-scroll-y-400-simple">
                                 <table class="gs-table gs-table-sm">
                                     <thead>
                                         <tr>
@@ -666,7 +666,7 @@ include __DIR__ . '/../includes/layout-header.php';
                 </h2>
             </div>
             <div class="gs-card-content">
-                <form method="POST" enctype="multipart/form-data" style="max-width: 600px;">
+                <form method="POST" enctype="multipart/form-data" class="gs-container-max-600">
                     <?= csrf_field() ?>
 
                     <div class="gs-form-group">
@@ -717,7 +717,7 @@ include __DIR__ . '/../includes/layout-header.php';
                 <div class="gs-grid gs-grid-cols-1 gs-md-grid-cols-3 gs-gap-md">
                     <div>
                         <h3 class="gs-h6 gs-mb-sm">Obligatoriska</h3>
-                        <ul class="gs-text-sm" style="line-height: 1.8;">
+                        <ul class="gs-text-sm gs-line-height-1-8">
                             <li><code>Förnamn</code> / <code>Firstname</code></li>
                             <li><code>Efternamn</code> / <code>Lastname</code></li>
                         </ul>
@@ -725,7 +725,7 @@ include __DIR__ . '/../includes/layout-header.php';
 
                     <div>
                         <h3 class="gs-h6 gs-mb-sm">Personuppgifter</h3>
-                        <ul class="gs-text-sm" style="line-height: 1.8;">
+                        <ul class="gs-text-sm gs-line-height-1-8">
                             <li><code>Födelsedatum</code> / <code>Personnummer</code></li>
                             <li><code>Födelseår</code> / <code>Birth Year</code></li>
                             <li><code>Kön</code> / <code>Gender</code></li>
@@ -736,7 +736,7 @@ include __DIR__ . '/../includes/layout-header.php';
 
                     <div>
                         <h3 class="gs-h6 gs-mb-sm">Adress</h3>
-                        <ul class="gs-text-sm" style="line-height: 1.8;">
+                        <ul class="gs-text-sm gs-line-height-1-8">
                             <li><code>Postadress</code> / <code>Address</code></li>
                             <li><code>Postnummer</code> / <code>Postal Code</code></li>
                             <li><code>Ort</code> / <code>City</code></li>
@@ -746,7 +746,7 @@ include __DIR__ . '/../includes/layout-header.php';
 
                     <div>
                         <h3 class="gs-h6 gs-mb-sm">Organisation</h3>
-                        <ul class="gs-text-sm" style="line-height: 1.8;">
+                        <ul class="gs-text-sm gs-line-height-1-8">
                             <li><code>Klubb</code> / <code>Club</code></li>
                             <li><code>Huvudförening</code></li>
                             <li><code>Team</code></li>
@@ -756,7 +756,7 @@ include __DIR__ . '/../includes/layout-header.php';
 
                     <div>
                         <h3 class="gs-h6 gs-mb-sm">Licens</h3>
-                        <ul class="gs-text-sm" style="line-height: 1.8;">
+                        <ul class="gs-text-sm gs-line-height-1-8">
                             <li><code>UCI Kod</code> / <code>UCI ID</code></li>
                             <li><code>Licenstyp</code> / <code>License Type</code></li>
                             <li><code>Kategori</code> / <code>Category</code></li>
@@ -766,7 +766,7 @@ include __DIR__ . '/../includes/layout-header.php';
 
                     <div>
                         <h3 class="gs-h6 gs-mb-sm">Grenar</h3>
-                        <ul class="gs-text-sm" style="line-height: 1.8;">
+                        <ul class="gs-text-sm gs-line-height-1-8">
                             <li><code>Road</code> / <code>Landsväg</code></li>
                             <li><code>MTB</code></li>
                             <li><code>Gravel</code></li>
@@ -782,7 +782,7 @@ include __DIR__ . '/../includes/layout-header.php';
                         <i data-lucide="lightbulb"></i>
                         Tips
                     </h3>
-                    <ul class="gs-text-sm" style="line-height: 1.8;">
+                    <ul class="gs-text-sm gs-line-height-1-8">
                         <li>Kolumnerna kan vara i VILKEN ORDNING SOM HELST</li>
                         <li>Mellanslag, bindestreck och understreck ignoreras (<code>First Name</code> = <code>FirstName</code> = <code>first_name</code>)</li>
                         <li>Svenska tecken normaliseras (å→a, ä→a, ö→o)</li>

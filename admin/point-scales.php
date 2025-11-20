@@ -111,7 +111,7 @@ include __DIR__ . '/../includes/layout-header.php';
 
         <!-- Point Scales Table -->
         <div class="gs-card">
-            <div class="gs-card-content gs-table-container" style="padding: 0; overflow-x: auto;">
+            <div class="gs-card-content gs-table-container gs-table-container-no-padding">
                 <table class="gs-table">
                     <thead>
                         <tr>
@@ -157,7 +157,7 @@ include __DIR__ . '/../includes/layout-header.php';
                                 </td>
                                 <td>
                                     <a href="/admin/point-scale-edit.php?id=<?= $scale['id'] ?>" class="gs-btn gs-btn-sm gs-btn-outline">
-                                        <i data-lucide="edit" style="width: 14px; height: 14px;"></i>
+                                        <i data-lucide="edit" class="gs-icon-14"></i>
                                         Redigera
                                     </a>
                                 </td>
@@ -171,19 +171,19 @@ include __DIR__ . '/../includes/layout-header.php';
 </main>
 
 <!-- Create Scale Modal -->
-<div id="createModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.5); z-index: 9999; align-items: center; justify-content: center;">
-    <div style="background: white; border-radius: 12px; width: 95%; max-width: 1200px; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);">
-        <div style="padding: 1.5rem; border-bottom: 1px solid var(--gs-border); display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; background: white; z-index: 10;">
-            <h3 class="gs-h4" style="margin: 0;">
+<div id="createModal" class="gs-modal-overlay-hidden">
+    <div class="gs-modal-content-lg">
+        <div class="gs-modal-header-sticky">
+            <h3 class="gs-h4 gs-margin-0">
                 <i data-lucide="plus"></i>
                 Skapa Ny Poängmall
             </h3>
-            <button type="button" onclick="closeCreateModal()" style="background: none; border: none; cursor: pointer; font-size: 24px; color: var(--gs-text-secondary);">
+            <button type="button" onclick="closeCreateModal()" class="gs-modal-close-btn">
                 ×
             </button>
         </div>
 
-        <form method="POST" action="" style="padding: 1.5rem;">
+        <form method="POST" action="" class="gs-modal-body-padded">
             <?= csrf_field() ?>
             <input type="hidden" name="action" value="create_scale">
 
@@ -219,14 +219,14 @@ include __DIR__ . '/../includes/layout-header.php';
 
             <div>
                 <label class="gs-label">Poängvärden</label>
-                <div style="overflow-x: auto;">
-                    <table class="gs-table" style="min-width: 600px;">
+                <div class="gs-table-wrapper-scroll">
+                    <table class="gs-table gs-table-min-width-600">
                         <thead>
                             <tr>
-                                <th style="width: 80px;">Position</th>
+                                <th class="gs-table-col-width-80">Position</th>
                                 <th class="standard-points-col">Poäng</th>
-                                <th class="dh-points-col" style="display: none;">Kval-Poäng</th>
-                                <th class="dh-points-col" style="display: none;">Final-Poäng</th>
+                                <th class="dh-points-col gs-hidden">Kval-Poäng</th>
+                                <th class="dh-points-col gs-hidden">Final-Poäng</th>
                             </tr>
                         </thead>
                         <tbody id="pointsTableBody">
@@ -238,10 +238,10 @@ include __DIR__ . '/../includes/layout-header.php';
                                     <td class="standard-points-col">
                                         <input type="number" name="points[]" step="0.01" class="gs-input gs-input-sm" placeholder="0">
                                     </td>
-                                    <td class="dh-points-col" style="display: none;">
+                                    <td class="dh-points-col gs-hidden">
                                         <input type="number" name="run_1_points[]" step="0.01" class="gs-input gs-input-sm" placeholder="0">
                                     </td>
-                                    <td class="dh-points-col" style="display: none;">
+                                    <td class="dh-points-col gs-hidden">
                                         <input type="number" name="run_2_points[]" step="0.01" class="gs-input gs-input-sm" placeholder="0">
                                     </td>
                                 </tr>
@@ -251,7 +251,7 @@ include __DIR__ . '/../includes/layout-header.php';
                 </div>
             </div>
 
-            <div style="display: flex; justify-content: flex-end; gap: 0.5rem; padding-top: 1rem; border-top: 1px solid var(--gs-border); margin-top: 1rem; position: sticky; bottom: 0; background: white;">
+            <div class="gs-modal-footer-sticky">
                 <button type="button" onclick="closeCreateModal()" class="gs-btn gs-btn-outline">
                     Avbryt
                 </button>

@@ -130,9 +130,9 @@ include __DIR__ . '/../includes/layout-header.php';
         <?php endif; ?>
 
         <!-- Venue Modal -->
-        <div id="venueModal" class="gs-modal" style="display: none;">
+        <div id="venueModal" class="gs-modal gs-display-none">
             <div class="gs-modal-overlay" onclick="closeVenueModal()"></div>
-            <div class="gs-modal-content" style="max-width: 700px;">
+            <div class="gs-modal-content gs-container-max-700">
                 <div class="gs-modal-header">
                     <h2 class="gs-modal-title" id="modalTitle">
                         <i data-lucide="map-pin"></i>
@@ -334,7 +334,7 @@ include __DIR__ . '/../includes/layout-header.php';
         <?php if (empty($venues)): ?>
             <div class="gs-card">
                 <div class="gs-card-content gs-text-center gs-py-xl">
-                    <i data-lucide="map-pin" style="width: 64px; height: 64px; color: var(--gs-text-secondary); margin-bottom: var(--gs-space-md);"></i>
+                    <i data-lucide="map-pin" class="gs-icon-64-secondary"></i>
                     <p class="gs-text-secondary">Inga venues hittades</p>
                     <button type="button" class="gs-btn gs-btn-primary gs-mt-md" onclick="openVenueModal()">
                         <i data-lucide="plus"></i>
@@ -360,7 +360,7 @@ include __DIR__ . '/../includes/layout-header.php';
                                     Events
                                 </th>
                                 <th>Status</th>
-                                <th style="width: 150px; text-align: right;">Åtgärder</th>
+                                <th class="gs-table-col-w-150-right">Åtgärder</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -369,7 +369,7 @@ include __DIR__ . '/../includes/layout-header.php';
                                     <td>
                                         <strong><?= h($venue['name']) ?></strong>
                                         <?php if (!empty($venue['description'])): ?>
-                                            <div class="gs-text-xs gs-text-secondary" style="margin-top: 4px;">
+                                            <div class="gs-text-xs gs-text-secondary gs-mt-4px">
                                                 <?= h(substr($venue['description'], 0, 80)) ?><?= strlen($venue['description']) > 80 ? '...' : '' ?>
                                             </div>
                                         <?php endif; ?>
@@ -388,7 +388,7 @@ include __DIR__ . '/../includes/layout-header.php';
                                                target="_blank"
                                                class="gs-link gs-text-xs"
                                                title="Öppna i Google Maps">
-                                                <i data-lucide="map" style="width: 12px; height: 12px;"></i>
+                                                <i data-lucide="map" class="gs-icon-12"></i>
                                                 Visa karta
                                             </a>
                                         <?php else: ?>
@@ -412,7 +412,7 @@ include __DIR__ . '/../includes/layout-header.php';
                                             <span class="gs-badge gs-badge-secondary">Inaktiv</span>
                                         <?php endif; ?>
                                     </td>
-                                    <td style="text-align: right;">
+                                    <td class="gs-text-right">
                                         <div class="gs-flex gs-gap-sm gs-justify-end">
                                             <?php if ($venue['event_count'] > 0): ?>
                                                 <a

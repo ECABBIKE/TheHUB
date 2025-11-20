@@ -207,10 +207,10 @@ include __DIR__ . '/../includes/layout-header.php';
                         Alla Klasser (<?= count($classes) ?>)
                     </h2>
                 </div>
-                <div class="gs-card-content" style="padding: 0;">
+                <div class="gs-card-content gs-padding-0">
                     <?php if (empty($classes)): ?>
-                        <div style="padding: 3rem; text-align: center;">
-                            <i data-lucide="inbox" style="width: 48px; height: 48px; margin: 0 auto 1rem; opacity: 0.3;"></i>
+                        <div class="gs-padding-3rem-center">
+                            <i data-lucide="inbox" class="gs-icon-48-empty"></i>
                             <p class="gs-text-secondary">
                                 <?php if ($search || $disciplineFilter): ?>
                                     Inga klasser hittades med valda filter
@@ -248,7 +248,7 @@ include __DIR__ . '/../includes/layout-header.php';
                                                         $disc = trim($disc);
                                                         if ($disc):
                                                     ?>
-                                                        <span class="gs-badge gs-badge-secondary" style="margin-right: 4px;">
+                                                        <span class="gs-badge gs-badge-secondary gs-mr-4px">
                                                             <?= h($disc) ?>
                                                         </span>
                                                     <?php
@@ -292,7 +292,7 @@ include __DIR__ . '/../includes/layout-header.php';
                                                     Redigera
                                                 </button>
                                                 <?php if ($class['result_count'] == 0): ?>
-                                                    <form method="POST" style="display: inline;" onsubmit="return confirm('Är du säker på att du vill ta bort denna klass?');">
+                                                    <form method="POST" class="gs-display-inline" onsubmit="return confirm('Är du säker på att du vill ta bort denna klass?');">
                                                         <?= csrf_field() ?>
                                                         <input type="hidden" name="action" value="delete">
                                                         <input type="hidden" name="id" value="<?= $class['id'] ?>">
@@ -321,9 +321,9 @@ include __DIR__ . '/../includes/layout-header.php';
             </div>
 
             <!-- Class Modal -->
-            <div id="classModal" class="gs-modal" style="display: none;">
+            <div id="classModal" class="gs-modal gs-display-none">
                 <div class="gs-modal-overlay" onclick="closeClassModal()"></div>
-                <div class="gs-modal-content" style="max-width: 700px;">
+                <div class="gs-modal-content gs-container-max-700">
                     <div class="gs-modal-header">
                         <h2 class="gs-modal-title" id="modalTitle">
                             <i data-lucide="layers"></i>

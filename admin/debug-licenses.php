@@ -84,7 +84,7 @@ include __DIR__ . '/../includes/layout-header.php';
                 <h2 class="gs-h4">checkLicense() Function Test</h2>
             </div>
             <div class="gs-card-content">
-                <pre style="background: #f5f5f5; padding: 1rem; border-radius: 4px; overflow-x: auto;"><?php
+                <pre class="gs-pre-gray"><?php
                 echo "Test 1 - Valid license:\n";
                 $test1 = [
                     'license_type' => 'Elite',

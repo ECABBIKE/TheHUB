@@ -191,8 +191,8 @@ include __DIR__ . '/../includes/layout-header.php';
                             <h3 class="gs-h4 gs-mb-sm">Data Summary:</h3>
                             <div class="gs-grid gs-grid-cols-5 gs-gap-md">
                                 <?php foreach ($dbStatus['record_counts'] as $table => $count): ?>
-                                    <div class="gs-text-center" style="padding: 1rem; background: var(--gs-background-secondary); border-radius: 8px;">
-                                        <div style="font-size: 2rem; font-weight: bold; color: var(--gs-primary);">
+                                    <div class="gs-text-center" class="gs-stat-display-lg">
+                                        <div class="gs-stat-display-number">
                                             <?= number_format($count) ?>
                                         </div>
                                         <div class="gs-text-sm gs-text-secondary"><?= h(ucfirst($table)) ?></div>
@@ -224,10 +224,10 @@ include __DIR__ . '/../includes/layout-header.php';
                     <input type="hidden" name="action" value="run_schema">
 
                     <div class="gs-alert gs-alert-info gs-mb-md">
-                        <p style="margin: 0;">
+                        <p class="gs-m-0">
                             <strong>ℹ️ This will:</strong>
                         </p>
-                        <ul style="margin: 0.5rem 0 0 1.5rem;">
+                        <ul class="gs-margin-list">
                             <li>Create all required tables (riders, clubs, events, series, results, etc.)</li>
                             <li>Add default categories (Elite, Junior, Veteran, etc.)</li>
                             <li>Create default admin user (username: <code>admin</code>, password: <code>changeme123</code>)</li>

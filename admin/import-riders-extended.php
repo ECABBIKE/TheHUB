@@ -28,7 +28,7 @@ register_shutdown_function(function() {
     $error = error_get_last();
     if ($error !== null && in_array($error['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR])) {
         echo "<h1>Fatal Error Detected:</h1>";
-        echo "<pre style='background:#fee;padding:20px;border:2px solid red;'>";
+        echo "<pre class='gs-error-display'>";
         echo "Type: " . $error['type'] . "\n";
         echo "Message: " . htmlspecialchars($error['message']) . "\n";
         echo "File: " . $error['file'] . "\n";
@@ -533,11 +533,11 @@ include __DIR__ . '/../includes/layout-header.php';
         </div>
 
         <!-- Privacy Warning -->
-        <div class="gs-alert gs-alert-warning gs-mb-lg" style="border-left: 4px solid var(--gs-danger);">
+        <div class="gs-alert gs-alert-warning gs-mb-lg gs-alert-border-danger">
             <i data-lucide="shield-alert"></i>
             <strong>SEKRETESS:</strong> Denna import hanterar känslig persondata (personnummer, adress, telefon, nödkontakt).
             Data får ENDAST användas för:
-            <ul style="margin-top: 0.5rem; margin-left: 1.5rem;">
+            <ul class="gs-list-ml-1-5">
                 <li>Skapa deltagarprofiler</li>
                 <li>Autofylla formulär vid bokning</li>
                 <li>Intern administration</li>
@@ -593,12 +593,12 @@ include __DIR__ . '/../includes/layout-header.php';
 
                     <!-- Skipped Rows Details -->
                     <?php if (!empty($skippedRows)): ?>
-                        <div class="gs-mt-lg" style="padding-top: var(--gs-space-lg); border-top: 1px solid var(--gs-border);">
+                        <div class="gs-mt-lg gs-section-divider-top">
                             <h3 class="gs-h5 gs-text-warning gs-mb-md">
                                 <i data-lucide="alert-circle"></i>
                                 Överhoppade rader (<?= count($skippedRows) ?>)
                             </h3>
-                            <div style="max-height: 400px; overflow-y: auto; background: var(--gs-background-secondary); padding: var(--gs-space-md); border-radius: var(--gs-border-radius);">
+                            <div class="gs-scroll-container-400">
                                 <table class="gs-table gs-table-sm">
                                     <thead>
                                         <tr>
@@ -645,7 +645,7 @@ include __DIR__ . '/../includes/layout-header.php';
                 </h2>
             </div>
             <div class="gs-card-content">
-                <form method="POST" enctype="multipart/form-data" id="uploadForm" style="max-width: 600px;">
+                <form method="POST" enctype="multipart/form-data" id="uploadForm" class="gs-form-max-width-600">
                     <?= csrf_field() ?>
 
                     <div class="gs-form-group">
@@ -698,7 +698,7 @@ include __DIR__ . '/../includes/layout-header.php';
                             </tr>
                         </thead>
                         <tbody>
-                            <tr style="background: rgba(255, 235, 59, 0.1);">
+                            <tr class="gs-table-section-yellow">
                                 <td colspan="4"><strong>Grunddata</strong></td>
                             </tr>
                             <tr>
@@ -720,7 +720,7 @@ include __DIR__ . '/../includes/layout-header.php';
                                 <td>Nordenson</td>
                             </tr>
 
-                            <tr style="background: rgba(244, 67, 54, 0.1);">
+                            <tr class="gs-table-section-red">
                                 <td colspan="4"><strong>Adress (PRIVAT)</strong></td>
                             </tr>
                             <tr>
@@ -748,7 +748,7 @@ include __DIR__ . '/../includes/layout-header.php';
                                 <td>Sverige</td>
                             </tr>
 
-                            <tr style="background: rgba(244, 67, 54, 0.1);">
+                            <tr class="gs-table-section-red">
                                 <td colspan="4"><strong>Kontakt (PRIVAT)</strong></td>
                             </tr>
                             <tr>
@@ -770,7 +770,7 @@ include __DIR__ . '/../includes/layout-header.php';
                                 <td>Helen Nordenson, +46709609560</td>
                             </tr>
 
-                            <tr style="background: rgba(33, 150, 243, 0.1);">
+                            <tr class="gs-table-section-blue">
                                 <td colspan="4"><strong>Organisation</strong></td>
                             </tr>
                             <tr>
@@ -792,7 +792,7 @@ include __DIR__ . '/../includes/layout-header.php';
                                 <td>Team GravitySeries</td>
                             </tr>
 
-                            <tr style="background: rgba(76, 175, 80, 0.1);">
+                            <tr class="gs-table-section-green">
                                 <td colspan="4"><strong>Grenar</strong></td>
                             </tr>
                             <tr>
@@ -802,7 +802,7 @@ include __DIR__ . '/../includes/layout-header.php';
                                 <td>Road, Gravel</td>
                             </tr>
 
-                            <tr style="background: rgba(156, 39, 176, 0.1);">
+                            <tr class="gs-table-section-purple">
                                 <td colspan="4"><strong>Licens</strong></td>
                             </tr>
                             <tr>
@@ -838,7 +838,7 @@ include __DIR__ . '/../includes/layout-header.php';
                         <i data-lucide="lightbulb"></i>
                         Tips
                     </h3>
-                    <ul class="gs-text-sm" style="margin-left: var(--gs-space-lg); line-height: 1.8;">
+                    <ul class="gs-text-sm gs-list-ml-lg-lh-1-8">
                         <li>Använd <strong>tabulator</strong>, semikolon (;) eller komma (,) som separator</li>
                         <li>UTF-8 encoding för svenska tecken</li>
                         <li>Personnummer används för att extrahera födelseår automatiskt</li>
@@ -852,7 +852,7 @@ include __DIR__ . '/../includes/layout-header.php';
                     <p class="gs-text-sm gs-text-secondary">
                         <strong>Exempel på CSV-rad (från din fil):</strong>
                     </p>
-                    <pre style="background: var(--gs-background-secondary); padding: var(--gs-space-md); border-radius: var(--gs-border-radius); overflow-x: auto; font-size: 11px; margin-top: var(--gs-space-sm);">Födelsedatum	Förnamn	Efternamn	Postadress	Postnummer	Ort	Land	Epostadress	Telefon	Emergency contact	Distrikt	Huvudförening	Road	Track	BMX	CX	Trial	Para	MTB	E-cycling	Gravel	Kategori	Licenstyp	LicensÅr	UCIKod	Team
+                    <pre class="gs-pre-format">Födelsedatum	Förnamn	Efternamn	Postadress	Postnummer	Ort	Land	Epostadress	Telefon	Emergency contact	Distrikt	Huvudförening	Road	Track	BMX	CX	Trial	Para	MTB	E-cycling	Gravel	Kategori	Licenstyp	LicensÅr	UCIKod	Team
 19400525-0651	Lars	Nordenson	När Andarve 358	62348	Stånga	Sverige	ernorde@gmail.com		Helen Nordenson, +46709609560	Smålands Cykelförbund	Ringmurens Cykelklubb	Road								Gravel	Men	Master Men	2025	101 637 581 11	</pre>
                 </div>
             </div>

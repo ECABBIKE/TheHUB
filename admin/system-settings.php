@@ -363,10 +363,10 @@ $tools = [
         <?php foreach ($tools as $categoryKey => $category): ?>
             <div class="category-card">
                 <div class="category-header color-<?= $category['color'] ?>">
-                    <i data-lucide="<?= $category['icon'] ?>" style="width: 24px; height: 24px;"></i>
-                    <h3 style="margin: 0; font-size: 1.25rem;">
+                    <i data-lucide="<?= $category['icon'] ?>" class="gs-icon-24"></i>
+                    <h3 class="gs-heading-m0-fs125">
                         <?= h($category['title']) ?>
-                        <span style="opacity: 0.8; font-size: 0.875rem; font-weight: normal;">
+                        <span class="gs-text-subdued">
                             (<?= count($category['items']) ?> verktyg)
                         </span>
                     </h3>
@@ -377,7 +377,7 @@ $tools = [
                             <?php $toolId = $categoryKey . '-' . $index; ?>
                             <div class="tool-item" id="tool-<?= $toolId ?>" data-tool-id="<?= $toolId ?>">
                                 <div class="tool-header">
-                                    <div style="flex: 1;">
+                                    <div class="gs-flex-1">
                                         <div class="tool-name"><?= h($tool['name']) ?></div>
                                         <div class="tool-description"><?= h($tool['description']) ?></div>
                                     </div>
@@ -391,9 +391,9 @@ $tools = [
                                         >
                                     </div>
                                 </div>
-                                <div style="display: flex; gap: 0.5rem; align-items: center;">
+                                <div class="gs-flex gs-gap-sm gs-items-center">
                                     <a href="<?= h($tool['url']) ?>" target="_blank" class="gs-btn gs-btn-sm gs-btn-primary">
-                                        <i data-lucide="external-link" style="width: 14px; height: 14px;"></i>
+                                        <i data-lucide="external-link" class="gs-icon-14"></i>
                                         Öppna verktyg
                                     </a>
                                     <?php if (isset($tool['status'])): ?>

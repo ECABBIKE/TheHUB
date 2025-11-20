@@ -115,7 +115,7 @@ include __DIR__ . '/../includes/layout-header.php';
 ?>
 
 <main class="gs-main-content">
-    <div class="gs-container" style="max-width: 1200px;">
+    <div class="gs-container gs-container-max-1200">
         <div class="gs-flex gs-justify-between gs-items-center gs-mb-lg">
             <h1 class="gs-h2">
                 <i data-lucide="edit"></i>
@@ -178,14 +178,14 @@ include __DIR__ . '/../includes/layout-header.php';
 
                 <div>
                     <label class="gs-label">Poängvärden</label>
-                    <div style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
-                        <table class="gs-table" style="min-width: 600px;">
+                    <div class="gs-scroll-x-touch">
+                        <table class="gs-table gs-table-min-w-600">
                             <thead>
                                 <tr>
-                                    <th style="width: 80px;">Position</th>
-                                    <th class="standard-points-col" style="<?= $isDHScale ? 'display: none;' : '' ?>">Poäng</th>
-                                    <th class="dh-points-col" style="<?= !$isDHScale ? 'display: none;' : '' ?>">Kval-Poäng</th>
-                                    <th class="dh-points-col" style="<?= !$isDHScale ? 'display: none;' : '' ?>">Final-Poäng</th>
+                                    <th class="gs-table-col-w-80">Position</th>
+                                    <th class="standard-points-col <?= $isDHScale ? 'gs-display-none' : '' ?>">Poäng</th>
+                                    <th class="dh-points-col <?= !$isDHScale ? 'gs-display-none' : '' ?>">Kval-Poäng</th>
+                                    <th class="dh-points-col <?= !$isDHScale ? 'gs-display-none' : '' ?>">Final-Poäng</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -201,13 +201,13 @@ include __DIR__ . '/../includes/layout-header.php';
                                         <td>
                                             <input type="number" name="positions[]" value="<?= $i ?>" class="gs-input gs-input-sm" readonly>
                                         </td>
-                                        <td class="standard-points-col" style="<?= $isDHScale ? 'display: none;' : '' ?>">
+                                        <td class="standard-points-col <?= $isDHScale ? 'gs-display-none' : '' ?>">
                                             <input type="number" name="points[]" step="0.01" class="gs-input gs-input-sm" value="<?= h($posValue['points']) ?>" placeholder="0">
                                         </td>
-                                        <td class="dh-points-col" style="<?= !$isDHScale ? 'display: none;' : '' ?>">
+                                        <td class="dh-points-col <?= !$isDHScale ? 'gs-display-none' : '' ?>">
                                             <input type="number" name="run_1_points[]" step="0.01" class="gs-input gs-input-sm" value="<?= h($posValue['run_1_points']) ?>" placeholder="0">
                                         </td>
-                                        <td class="dh-points-col" style="<?= !$isDHScale ? 'display: none;' : '' ?>">
+                                        <td class="dh-points-col <?= !$isDHScale ? 'gs-display-none' : '' ?>">
                                             <input type="number" name="run_2_points[]" step="0.01" class="gs-input gs-input-sm" value="<?= h($posValue['run_2_points']) ?>" placeholder="0">
                                         </td>
                                     </tr>
@@ -217,7 +217,7 @@ include __DIR__ . '/../includes/layout-header.php';
                     </div>
                 </div>
 
-                <div style="display: flex; justify-content: flex-end; gap: 0.5rem; padding-top: 1rem; border-top: 1px solid var(--gs-border); margin-top: 1rem;">
+                <div class="gs-form-footer-actions">
                     <a href="/admin/point-scales.php" class="gs-btn gs-btn-outline">
                         Avbryt
                     </a>

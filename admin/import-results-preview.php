@@ -386,15 +386,15 @@ include __DIR__ . '/../includes/layout-header.php';
                             <!-- Class Distribution -->
                             <?php if (!empty($eventData['class_distribution'])): ?>
                                 <?php $classDist = $eventData['class_distribution']; ?>
-                                <div class="gs-mt-lg" style="padding-top: 1rem; border-top: 1px solid var(--gs-border);">
+                                <div class="gs-mt-lg" class="gs-section-divider-top">
                                     <strong class="gs-text-sm">
-                                        <i data-lucide="users" style="width: 14px; height: 14px;"></i>
+                                        <i data-lucide="users" class="gs-icon-14"></i>
                                         Klassfördelning (förhandsvisning)
                                     </strong>
                                     <?php if (!empty($classDist['distribution'])): ?>
                                         <div class="gs-grid gs-grid-cols-2 gs-md-grid-cols-4 gs-gap-sm gs-mt-sm">
                                             <?php foreach ($classDist['distribution'] as $classData): ?>
-                                                <div class="gs-card" style="background: var(--gs-background-secondary); padding: 0.5rem;">
+                                                <div class="gs-card" class="gs-stat-display-lg">
                                                     <div class="gs-text-xs gs-text-secondary"><?= h($classData['class_name']) ?></div>
                                                     <div class="gs-h4 gs-text-primary"><?= $classData['count'] ?></div>
                                                 </div>
@@ -402,9 +402,9 @@ include __DIR__ . '/../includes/layout-header.php';
                                         </div>
                                     <?php endif; ?>
                                     <?php if ($classDist['unassigned'] > 0): ?>
-                                        <div class="gs-alert gs-alert-warning gs-mt-sm" style="padding: 0.5rem;">
+                                        <div class="gs-alert gs-alert-warning gs-mt-sm" class="gs-p-sm">
                                             <small>
-                                                <i data-lucide="alert-triangle" style="width: 14px; height: 14px;"></i>
+                                                <i data-lucide="alert-triangle" class="gs-icon-14"></i>
                                                 <?= $classDist['unassigned'] ?> deltagare saknar ålder/kön och kan inte tilldelas klass
                                             </small>
                                         </div>

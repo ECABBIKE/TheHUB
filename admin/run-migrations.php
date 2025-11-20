@@ -82,7 +82,7 @@ include __DIR__ . '/../includes/layout-header.php';
 ?>
 
 <main class="gs-main-content">
-    <div class="gs-container" style="max-width: 800px;">
+    <div class="gs-container" class="gs-max-w-800">
         <div class="gs-card">
             <div class="gs-card-header">
                 <h1 class="gs-h3 gs-text-primary">

@@ -1,0 +1,175 @@
+<?php
+require_once __DIR__ . '/config.php';
+
+$db = getDB();
+
+$eventId = isset($_GET['event_id']) ? (int)$_GET['event_id'] : 0;
+
+if (!$eventId) {
+    die("Event ID required");
+}
+
+// Get event info
+$event = $db->getRow(
+    "SELECT * FROM events WHERE id = ?",
+    [$eventId]
+);
+
+if (!$event) {
+    die("Event not found");
+}
+
+// Get results
+$results = $db->getAll(
+    "SELECT
+        r.position,
+        r.bib_number,
+        r.finish_time,
+        r.status,
+        CONCAT(c.firstname, ' ', c.lastname) as cyclist_name,
+        c.id as cyclist_id,
+        c.birth_year,
+        cl.name as club_name,
+        cat.name as category_name
+     FROM results r
+     JOIN riders c ON r.cyclist_id = c.id
+     LEFT JOIN clubs cl ON c.club_id = cl.id
+     LEFT JOIN categories cat ON r.category_id = cat.id
+     WHERE r.event_id = ?
+     ORDER BY r.position ASC, r.finish_time ASC",
+    [$eventId]
+);
+
+$pageTitle = $event['name'] . ' - Resultat';
+$pageType = 'public';
+include __DIR__ . '/includes/layout-header.php';
+?>
+
+    <main class="gs-main-content">
+        <div class="gs-container">
+            <!-- Header -->
+            <div class="gs-mb-xl">
+                <a href="/events.php" class="gs-btn gs-btn-sm gs-btn-outline gs-mb-md">
+                    <i data-lucide="arrow-left"></i>
+                    Tillbaka till kalender
+                </a>
+
+                <h1 class="gs-h2 gs-text-primary gs-mb-sm">
+                    <i data-lucide="trophy"></i>
+                    <?= h($event['name']) ?>
+                </h1>
+                <div class="gs-flex gs-gap-md gs-flex-wrap">
+                    <p class="gs-text-secondary">
+                        <i data-lucide="calendar" class="gs-icon-14"></i>
+                        <?= formatDate($event['event_date'], 'd M Y') ?>
+                    </p>
+                    <?php if ($event['location']): ?>
+                        <p class="gs-text-secondary">
+                            <i data-lucide="map-pin" class="gs-icon-14"></i>
+                            <?= h($event['location']) ?>
+                        </p>
+                    <?php endif; ?>
+                    <p class="gs-text-secondary">
+                        <i data-lucide="users" class="gs-icon-14"></i>
+                        <?= count($results) ?> deltagare
+                    </p>
+                </div>
+            </div>
+
+            <!-- Results Table -->
+            <?php if (empty($results)): ?>
+                <div class="gs-card gs-text-center gs-p-3xl">
+                    <i data-lucide="trophy" class="gs-empty-icon"></i>
+                    <h3 class="gs-h4 gs-mb-sm">Inga resultat ännu</h3>
+                    <p class="gs-text-secondary">
+                        Resultat har inte registrerats för denna tävling.
+                    </p>
+                </div>
+            <?php else: ?>
+                <div class="gs-card">
+                    <div class="gs-card-header">
+                        <h3 class="gs-h4">
+                            <i data-lucide="list"></i>
+                            Resultat
+                        </h3>
+                    </div>
+                    <div class="gs-card-content gs-p-0 gs-table-responsive">
+                        <table class="gs-table">
+                            <thead>
+                                <tr>
+                                    <th>Placering</th>
+                                    <th>Startnr</th>
+                                    <th>Namn</th>
+                                    <th>Klubb</th>
+                                    <th>Kategori</th>
+                                    <th>Tid</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($results as $result): ?>
+                                    <tr>
+                                        <td>
+                                            <?php if ($result['position'] == 1): ?>
+                                                <span class="gs-badge gs-badge-gold">
+                                                    🥇 <?= $result['position'] ?>
+                                                </span>
+                                            <?php elseif ($result['position'] == 2): ?>
+                                                <span class="gs-badge gs-badge-silver">
+                                                    🥈 <?= $result['position'] ?>
+                                                </span>
+                                            <?php elseif ($result['position'] == 3): ?>
+                                                <span class="gs-badge gs-badge-bronze">
+                                                    🥉 <?= $result['position'] ?>
+                                                </span>
+                                            <?php else: ?>
+                                                <span class="gs-font-bold"><?= $result['position'] ?></span>
+                                            <?php endif; ?>
+                                        </td>
+                                        <td class="gs-text-secondary"><?= h($result['bib_number']) ?></td>
+                                        <td>
+                                            <strong><?= h($result['cyclist_name']) ?></strong>
+                                            <?php if ($result['birth_year']): ?>
+                                                <span class="gs-text-sm gs-text-secondary">
+                                                    (<?= $result['birth_year'] ?>)
+                                                </span>
+                                            <?php endif; ?>
+                                        </td>
+                                        <td class="gs-text-secondary">
+                                            <?= h($result['club_name'] ?? '-') ?>
+                                        </td>
+                                        <td>
+                                            <?php if ($result['category_name']): ?>
+                                                <span class="gs-badge gs-badge-secondary gs-text-xs">
+                                                    <?= h($result['category_name']) ?>
+                                                </span>
+                                            <?php else: ?>
+                                                <span class="gs-text-secondary">-</span>
+                                            <?php endif; ?>
+                                        </td>
+                                        <td class="gs-font-mono">
+                                            <?= h($result['finish_time'] ?? '-') ?>
+                                        </td>
+                                        <td>
+                                            <?php
+                                            $status_class = 'gs-badge-success';
+                                            $status_text = $result['status'] ?? 'Finished';
+                                            if ($status_text == 'DNF') {
+                                                $status_class = 'gs-badge-danger';
+                                            } elseif ($status_text == 'DNS') {
+                                                $status_class = 'gs-badge-secondary';
+                                            }
+                                            ?>
+                                            <span class="gs-badge <?= $status_class ?> gs-text-xs">
+                                                <?= h($status_text) ?>
+                                            </span>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            <?php endif; ?>
+        </div>
+<?php include __DIR__ . '/includes/layout-footer.php'; ?>

@@ -62,7 +62,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['uci_file'])) {
                     updateImportHistory($db, $importId, $stats, $errors, $importStatus);
 
                     if ($stats['success'] > 0 || $stats['updated'] > 0) {
-                        $message = "Import klar! {$stats['success']} nya riders, {$stats['updated']} uppdaterade. <a href='/admin/import-history.php' style='text-decoration:underline'>Visa historik</a>";
+                        $message = "Import klar! {$stats['success']} nya riders, {$stats['updated']} uppdaterade. <a href='/admin/import-history.php' class='gs-text-underline'>Visa historik</a>";
                         $messageType = 'success';
                     } else {
                         $message = "Ingen data importerades. Kontrollera filformatet.";
@@ -420,12 +420,12 @@ include __DIR__ . '/../includes/layout-header.php';
                     <?php if ($stats): ?>
                         <div class="gs-mt-md">
                             <?php if (isset($stats['separator_name'])): ?>
-                                <p class="gs-text-sm gs-mb-sm" style="background: var(--gs-bg-secondary); padding: 0.5rem; border-radius: 4px;">
-                                    🔍 <strong>Detekterad separator:</strong> <code style="background: var(--gs-bg); padding: 0.25rem 0.5rem; border-radius: 3px;"><?= h($stats['separator_name']) ?></code>
+                                <p class="gs-text-sm gs-mb-sm gs-code-wrapper">
+                                    🔍 <strong>Detekterad separator:</strong> <code class="gs-code-inline"><?= h($stats['separator_name']) ?></code>
                                 </p>
                             <?php endif; ?>
                             <p>📊 <strong>Statistik:</strong></p>
-                            <ul style="margin-left: 1.5rem; margin-top: 0.5rem;">
+                            <ul class="gs-list-ml-1-5">
                                 <li>Totalt rader: <?= $stats['total'] ?></li>
                                 <li>✅ Nya riders: <?= $stats['success'] ?></li>
                                 <li>🔄 Uppdaterade: <?= $stats['updated'] ?></li>
@@ -437,8 +437,8 @@ include __DIR__ . '/../includes/layout-header.php';
 
                     <?php if (!empty($updated_riders)): ?>
                         <details class="gs-mt-md">
-                            <summary style="cursor: pointer;"><?= count($updated_riders) ?> uppdaterade riders</summary>
-                            <ul style="margin-left: 1.5rem; margin-top: 0.5rem;">
+                            <summary class="gs-cursor-pointer"><?= count($updated_riders) ?> uppdaterade riders</summary>
+                            <ul class="gs-list-ml-1-5">
                                 <?php foreach (array_slice($updated_riders, 0, 20) as $rider): ?>
                                     <li><?= h($rider) ?></li>
                                 <?php endforeach; ?>
@@ -451,8 +451,8 @@ include __DIR__ . '/../includes/layout-header.php';
 
                     <?php if (!empty($errors)): ?>
                         <details class="gs-mt-md">
-                            <summary style="cursor: pointer; color: var(--gs-danger);">⚠️ <?= count($errors) ?> fel</summary>
-                            <ul style="margin-left: 1.5rem; margin-top: 0.5rem;">
+                            <summary class="gs-cursor-pointer-danger">⚠️ <?= count($errors) ?> fel</summary>
+                            <ul class="gs-list-ml-1-5">
                                 <?php foreach (array_slice($errors, 0, 20) as $error): ?>
                                     <li><?= h($error) ?></li>
                                 <?php endforeach; ?>
@@ -477,7 +477,7 @@ include __DIR__ . '/../includes/layout-header.php';
                     <p class="gs-mb-md">Denna import hanterar CSV direkt från UCI Licensregister.</p>
 
                     <h4 class="gs-h5 gs-mb-sm gs-text-primary">📋 Kolumner (ingen header behövs):</h4>
-                    <ol style="margin-left: 1.5rem; line-height: 1.8;">
+                    <ol class="gs-list-ml-1-5 gs-list-ml-lg-lh-1-8">
                         <li><strong>Födelsedatum</strong> (YYYYMMDD-XXXX) → parsas till birth_year</li>
                         <li><strong>Förnamn</strong> → first_name</li>
                         <li><strong>Efternamn</strong> → last_name</li>
@@ -491,14 +491,14 @@ include __DIR__ . '/../includes/layout-header.php';
                         <li><strong>UCIKod</strong> → license_number (sparas exakt som det är, t.ex. "101 637 581 11")</li>
                     </ol>
 
-                    <div class="gs-mt-lg gs-p-md" style="background: var(--gs-bg-secondary); border-radius: 8px;">
+                    <div class="gs-mt-lg gs-p-md gs-bg-secondary-br8">
                         <p class="gs-text-secondary gs-text-sm gs-mb-sm"><strong>📄 Exempel på giltig rad:</strong></p>
-                        <code style="font-size: 0.9rem; display: block; word-wrap: break-word;">
+                        <code class="gs-code-sm">
                             19400525-0651,Lars,Nordensson,Sverige,ernst@email.com,Ringmurens Cykelklubb,MTB,Men,Master Men,2025,101 637 581 11
                         </code>
                     </div>
 
-                    <div class="gs-mt-md gs-p-md" style="background: var(--gs-success-bg); border-left: 4px solid var(--gs-success); border-radius: 4px;">
+                    <div class="gs-mt-md gs-p-md gs-bg-success">
                         <p class="gs-text-sm">
                             <strong>✨ Automatiska funktioner:</strong><br>
                             • Personnummer parsas automatiskt (både YYYYMMDD-XXXX och YYMMDD-XXXX format)<br>

@@ -9,7 +9,7 @@ register_shutdown_function(function() {
     $error = error_get_last();
     if ($error !== null && in_array($error['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR])) {
         echo "<h1>Fatal Error Detected:</h1>";
-        echo "<pre style='background:#fee;padding:20px;border:2px solid red;'>";
+        echo "<pre class='gs-pre-error'>";
         echo "Type: " . $error['type'] . "\n";
         echo "Message: " . htmlspecialchars($error['message']) . "\n";
         echo "File: " . $error['file'] . "\n";
@@ -526,15 +526,15 @@ include __DIR__ . '/../includes/layout-header.php';
 
                         <!-- Verification Section -->
                         <?php if (isset($stats['total_in_db'])): ?>
-                            <div class="gs-mt-lg" style="padding-top: var(--gs-space-lg); border-top: 1px solid var(--gs-border);">
+                            <div class="gs-mt-lg gs-section-divider">
                                 <h3 class="gs-h5 gs-text-primary gs-mb-md">
                                     <i data-lucide="database"></i>
                                     Verifiering
                                 </h3>
                                 <div class="gs-alert gs-alert-info">
-                                    <p style="margin: 0; font-size: 1.1rem;">
+                                    <p class="gs-text-stat">
                                         <strong>Totalt i databasen:</strong>
-                                        <span style="font-size: 1.3rem; font-weight: bold; color: var(--gs-primary);">
+                                        <span class="gs-text-stat-lg">
                                             <?= number_format($stats['total_in_db']) ?>
                                         </span>
                                         cyklister
@@ -555,12 +555,12 @@ include __DIR__ . '/../includes/layout-header.php';
 
                         <!-- Skipped Rows Details -->
                         <?php if (!empty($skippedRows)): ?>
-                            <div class="gs-mt-lg" style="padding-top: var(--gs-space-lg); border-top: 1px solid var(--gs-border);">
+                            <div class="gs-mt-lg gs-section-divider">
                                 <h3 class="gs-h5 gs-text-warning gs-mb-md">
                                     <i data-lucide="alert-circle"></i>
                                     Överhoppade rader (<?= count($skippedRows) ?>)
                                 </h3>
-                                <div style="max-height: 400px; overflow-y: auto; overflow-x: auto; -webkit-overflow-scrolling: touch; background: var(--gs-background-secondary); padding: var(--gs-space-md); border-radius: var(--gs-border-radius);">
+                                <div class="gs-scrollable-lg">
                                     <table class="gs-table gs-table-sm">
                                         <thead>
                                             <tr>
@@ -592,7 +592,7 @@ include __DIR__ . '/../includes/layout-header.php';
                                         </tbody>
                                     </table>
                                     <?php if (count($skippedRows) > 100): ?>
-                                        <div class="gs-text-sm gs-text-secondary gs-mt-sm" style="font-style: italic;">
+                                        <div class="gs-text-sm gs-text-secondary gs-mt-sm gs-text-italic">
                                             Visar första 100 av <?= count($skippedRows) ?> överhoppade rader
                                         </div>
                                     <?php endif; ?>
@@ -601,19 +601,19 @@ include __DIR__ . '/../includes/layout-header.php';
                         <?php endif; ?>
 
                         <?php if (!empty($errors)): ?>
-                            <div class="gs-mt-lg" style="padding-top: var(--gs-space-lg); border-top: 1px solid var(--gs-border);">
+                            <div class="gs-mt-lg gs-section-divider">
                                 <h3 class="gs-h5 gs-text-danger gs-mb-md">
                                     <i data-lucide="alert-triangle"></i>
                                     Fel och varningar (<?= count($errors) ?>)
                                 </h3>
-                                <div style="max-height: 300px; overflow-y: auto; background: var(--gs-background-secondary); padding: var(--gs-space-md); border-radius: var(--gs-border-radius);">
+                                <div class="gs-scrollable-md">
                                     <?php foreach (array_slice($errors, 0, 50) as $error): ?>
-                                        <div class="gs-text-sm gs-text-secondary" style="margin-bottom: 4px;">
+                                        <div class="gs-text-sm gs-text-secondary gs-mb-4px">
                                             • <?= h($error) ?>
                                         </div>
                                     <?php endforeach; ?>
                                     <?php if (count($errors) > 50): ?>
-                                        <div class="gs-text-sm gs-text-secondary gs-mt-sm" style="font-style: italic;">
+                                        <div class="gs-text-sm gs-text-secondary gs-mt-sm gs-text-italic">
                                             ... och <?= count($errors) - 50 ?> fler
                                         </div>
                                     <?php endif; ?>
@@ -633,7 +633,7 @@ include __DIR__ . '/../includes/layout-header.php';
                     </h2>
                 </div>
                 <div class="gs-card-content">
-                    <form method="POST" enctype="multipart/form-data" id="uploadForm" style="max-width: 600px;">
+                    <form method="POST" enctype="multipart/form-data" id="uploadForm" class="gs-form-max-width">
                         <?= csrf_field() ?>
 
                         <div class="gs-form-group">
@@ -661,13 +661,13 @@ include __DIR__ . '/../includes/layout-header.php';
                     </form>
 
                     <!-- Progress Bar (hidden initially) -->
-                    <div id="progressBar" style="display: none; margin-top: var(--gs-space-lg);">
+                    <div id="progressBar" class="gs-progress-container">
                         <div class="gs-flex gs-items-center gs-justify-between gs-mb-sm">
-                            <span class="gs-text-sm gs-text-primary" style="font-weight: 600;">Importerar...</span>
+                            <span class="gs-text-sm gs-text-primary gs-font-weight-600">Importerar...</span>
                             <span class="gs-text-sm gs-text-secondary" id="progressPercent">0%</span>
                         </div>
-                        <div style="width: 100%; height: 8px; background: var(--gs-background-secondary); border-radius: 4px; overflow: hidden;">
-                            <div id="progressFill" style="width: 0%; height: 100%; background: var(--gs-primary); transition: width 0.3s;"></div>
+                        <div class="gs-progress-bar-container">
+                            <div id="progressFill" class="gs-progress-bar-fill"></div>
                         </div>
                     </div>
                 </div>
@@ -755,12 +755,12 @@ include __DIR__ . '/../includes/layout-header.php';
                         </table>
                     </div>
 
-                    <div class="gs-mt-lg" style="padding: var(--gs-space-md); background: var(--gs-background-secondary); border-radius: var(--gs-border-radius); border-left: 4px solid var(--gs-primary);">
+                    <div class="gs-mt-lg gs-info-box-accent">
                         <h3 class="gs-h5 gs-text-primary gs-mb-sm">
                             <i data-lucide="lightbulb"></i>
                             Tips
                         </h3>
-                        <ul class="gs-text-secondary gs-text-sm" style="margin-left: var(--gs-space-lg); line-height: 1.8;">
+                        <ul class="gs-text-secondary gs-text-sm gs-list-indented">
                             <li>Använd komma (,) som separator</li>
                             <li>UTF-8 encoding för svenska tecken</li>
                             <li>Stöder både <code>first_name</code> och <code>firstname</code> format</li>
@@ -775,7 +775,7 @@ include __DIR__ . '/../includes/layout-header.php';
                         <p class="gs-text-sm gs-text-secondary">
                             <strong>Exempel på CSV-fil:</strong>
                         </p>
-                        <pre style="background: var(--gs-background-secondary); padding: var(--gs-space-md); border-radius: var(--gs-border-radius); overflow-x: auto; font-size: 12px; margin-top: var(--gs-space-sm);">firstname,lastname,birth_year,gender,club,license_number,email,phone,city
+                        <pre class="gs-code-block">firstname,lastname,birth_year,gender,club,license_number,email,phone,city
 Erik,Andersson,1995,M,Team GravitySeries,SWE-2025-1234,erik@example.com,070-1234567,Stockholm
 Anna,Karlsson,1998,F,CK Olympia,SWE-2025-2345,anna@example.com,070-2345678,Göteborg
 Johan,Svensson,1992,M,Uppsala CK,SWE-2025-3456,johan@example.com,070-3456789,Uppsala</pre>
