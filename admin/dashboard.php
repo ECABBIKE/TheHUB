@@ -29,7 +29,7 @@ include __DIR__ . '/../includes/layout-header.php';
         </h1>
 
         <!-- Stats Grid -->
-        <div class="gs-grid gs-grid-cols-1 gs-md-grid-cols-2 gs-lg-grid-cols-4 gs-gap-lg gs-mb-lg">
+        <div class="gs-grid gs-grid-cols-2 gs-md-grid-cols-4 gs-gap-md gs-mb-lg">
             
             <div class="gs-stat-card">
                 <i data-lucide="users" class="gs-icon-lg gs-text-primary gs-mb-md"></i>
