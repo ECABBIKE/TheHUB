@@ -41,7 +41,7 @@ $clubRiders = $db->getAll("
     LEFT JOIN results res ON r.id = res.cyclist_id
     WHERE r.club_id = ? AND r.active = 1
     GROUP BY r.id
-    ORDER BY total_points DESC NULLS LAST, r.lastname, r.firstname
+    ORDER BY total_points DESC, r.lastname, r.firstname
 ", [$clubId]);
 
 $currentYear = date('Y');
