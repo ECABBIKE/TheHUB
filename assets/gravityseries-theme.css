@@ -1321,6 +1321,11 @@ body.gs-landing-pure .gs-sidebar-overlay {
   .gs-h1 { font-size: 2rem; }
   .gs-h2 { font-size: 1.75rem; }
 
+  /* Keep 2-column grid on mobile */
+  .gs-grid-cols-2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
   /* Grid collapses to single column */
   .gs-grid-cols-3,
   .gs-grid-cols-4 {
@@ -1629,17 +1634,42 @@ body.gs-landing-pure .gs-sidebar-overlay {
   /* ===== STATS & CARDS ===== */
   .stat,
   .gs-stat-card {
-    padding: 1rem;
+    padding: 0.75rem;
   }
 
   .stat-number,
   .gs-stat-number {
-    font-size: 1.5rem !important;
+    font-size: 1.25rem !important;
+    margin-bottom: 0.25rem;
   }
 
   .stat-label,
   .gs-stat-label {
-    font-size: 0.75rem !important;
+    font-size: 0.625rem !important;
+    letter-spacing: 0.02em;
+  }
+
+  /* Smaller icons in stat cards */
+  .gs-stat-card .gs-icon-lg,
+  .gs-stat-card i[data-lucide] {
+    width: 20px !important;
+    height: 20px !important;
+    margin-bottom: 0.5rem !important;
+  }
+
+  /* Hide buttons in stat cards on mobile */
+  .gs-stat-card .gs-btn {
+    display: none;
+  }
+
+  /* Tighter grid gap on mobile */
+  .gs-grid.gs-gap-md {
+    gap: 0.5rem;
+  }
+
+  /* Keep 2-column grid on mobile portrait */
+  .gs-grid-cols-2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
   }
 
   /* Smaller cards on mobile */
