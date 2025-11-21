@@ -85,6 +85,42 @@ function generateEventAdventId($pdo, $year = null) {
     return sprintf('event-%s-%03d', $year, $nextNum);
 }
 
+/**
+ * Generate a unique SWE license number for riders without UCI ID
+ * Format: SWE25XXXXX (where 25 is year, XXXXX is 5-digit sequential number)
+ *
+ * @param object $db Database wrapper instance
+ * @param int|null $year Year for the ID (defaults to current year)
+ * @return string Generated license number
+ */
+function generateSweLicenseNumber($db, $year = null) {
+    if ($year === null) {
+        $year = date('y'); // 2-digit year
+    } else {
+        $year = substr($year, -2); // Get last 2 digits
+    }
+
+    $prefix = "SWE{$year}";
+
+    // Find the highest number used for this year prefix
+    $existing = $db->getRow("
+        SELECT license_number
+        FROM riders
+        WHERE license_number LIKE ?
+        ORDER BY license_number DESC
+        LIMIT 1
+    ", [$prefix . '%']);
+
+    if ($existing && preg_match('/SWE\d{2}(\d+)/', $existing['license_number'], $matches)) {
+        $nextNum = intval($matches[1]) + 1;
+    } else {
+        $nextNum = 1;
+    }
+
+    // Format with leading zeros (5 digits)
+    return sprintf('%s%05d', $prefix, $nextNum);
+}
+
 class DatabaseWrapper {
     private $pdo;
     

@@ -157,7 +157,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_import'])) {
         if ($classesFixed > 0 || $pointsCalculated > 0) {
             $recalcMsg = " Omräkning: {$classesFixed} klassplaceringar fixade, {$pointsCalculated} poäng beräknade.";
         }
-        set_flash('success', "Import klar! {$stats['success']} nya, {$stats['updated']} uppdaterade av {$stats['total']} resultat.{$recalcMsg}");
+
+        // Add info about riders updated with UCI IDs
+        $matchingInfo = "";
+        $ridersCreated = $stats['matching']['riders_created'] ?? 0;
+        $ridersUpdatedWithUci = $stats['matching']['riders_updated_with_uci'] ?? 0;
+        if ($ridersCreated > 0 || $ridersUpdatedWithUci > 0) {
+            $parts = [];
+            if ($ridersCreated > 0) {
+                $parts[] = "{$ridersCreated} nya förare (med SWE-ID)";
+            }
+            if ($ridersUpdatedWithUci > 0) {
+                $parts[] = "{$ridersUpdatedWithUci} förare fick UCI-ID";
+            }
+            $matchingInfo = " " . implode(", ", $parts) . ".";
+        }
+
+        set_flash('success', "Import klar! {$stats['success']} nya, {$stats['updated']} uppdaterade av {$stats['total']} resultat.{$matchingInfo}{$recalcMsg}");
         header('Location: /admin/event-edit.php?id=' . $selectedEventId . '&tab=results');
         exit;
 
