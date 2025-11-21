@@ -10,16 +10,10 @@ $db = getDB();
 $message = '';
 $messageType = 'info';
 
-// Handle merge action FIRST (before querying duplicates)
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['merge_riders'])) {
-    // Debug: Show what we received
-    $_SESSION['cleanup_message'] = "DEBUG: POST mottagen. keep_id=" . ($_POST['keep_id'] ?? 'SAKNAS') . ", merge_ids=" . ($_POST['merge_ids'] ?? 'SAKNAS');
-    $_SESSION['cleanup_message_type'] = 'info';
-
-    checkCsrf();
-
-    $keepId = (int)($_POST['keep_id'] ?? 0);
-    $mergeIdsRaw = $_POST['merge_ids'] ?? '';
+// Handle merge action via GET (POST doesn't work on InfinityFree)
+if (isset($_GET['action']) && $_GET['action'] === 'merge') {
+    $keepId = (int)($_GET['keep'] ?? 0);
+    $mergeIdsRaw = $_GET['remove'] ?? '';
 
     // Split and convert to integers
     $parts = explode(',', $mergeIdsRaw);
@@ -573,27 +567,36 @@ include __DIR__ . '/../includes/layout-header.php';
                 <p class="gs-text-secondary gs-mb-md">
                     Slå ihop två förare genom att ange deras ID-nummer. Förare 1 behålls, förare 2:s resultat flyttas dit.
                 </p>
-                <form method="POST" onsubmit="return confirm('Är du säker? Förare 2 kommer tas bort och alla resultat flyttas till Förare 1.');">
-                    <?= csrf_field() ?>
-                    <input type="hidden" name="merge_riders" value="1">
-                    <div class="gs-flex gs-gap-md gs-items-end">
-                        <div>
-                            <label class="gs-label">Behåll (ID)</label>
-                            <input type="number" name="keep_id" class="gs-input" placeholder="t.ex. 10624" required style="width: 120px;">
-                        </div>
-                        <div>
-                            <label class="gs-label">Ta bort (ID)</label>
-                            <input type="number" name="merge_ids" class="gs-input" placeholder="t.ex. 9460" required style="width: 120px;">
-                        </div>
-                        <button type="submit" class="gs-btn gs-btn-warning">
-                            <i data-lucide="git-merge"></i>
-                            Slå ihop
-                        </button>
+                <div class="gs-flex gs-gap-md gs-items-end">
+                    <div>
+                        <label class="gs-label">Behåll (ID)</label>
+                        <input type="number" id="manual_keep" class="gs-input" placeholder="t.ex. 10624" style="width: 120px;">
                     </div>
-                </form>
+                    <div>
+                        <label class="gs-label">Ta bort (ID)</label>
+                        <input type="number" id="manual_remove" class="gs-input" placeholder="t.ex. 9460" style="width: 120px;">
+                    </div>
+                    <button type="button" class="gs-btn gs-btn-warning" onclick="doManualMerge()">
+                        <i data-lucide="git-merge"></i>
+                        Slå ihop
+                    </button>
+                </div>
                 <p class="gs-text-xs gs-text-secondary gs-mt-sm">
                     Tips: Hitta ID i URL:en på förarsidan, t.ex. rider.php?id=<strong>10624</strong>
                 </p>
+                <script>
+                function doManualMerge() {
+                    var keep = document.getElementById('manual_keep').value;
+                    var remove = document.getElementById('manual_remove').value;
+                    if (!keep || !remove) {
+                        alert('Fyll i båda ID-fälten');
+                        return;
+                    }
+                    if (confirm('Slå ihop förare ' + remove + ' till ' + keep + '? Detta kan inte ångras.')) {
+                        window.location.href = '/admin/cleanup-duplicates.php?action=merge&keep=' + keep + '&remove=' + remove;
+                    }
+                }
+                </script>
             </div>
         </div>
 
