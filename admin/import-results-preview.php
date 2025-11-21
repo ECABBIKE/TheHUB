@@ -56,12 +56,62 @@ try {
     $messageType = 'error';
 }
 
+// Get all existing classes for mapping
+$existingClasses = $db->getAll("SELECT id, name, display_name, sort_order FROM classes WHERE active = 1 ORDER BY sort_order ASC, display_name ASC");
+
+// Analyze which CSV classes exist and which are new
+$classAnalysis = [];
+foreach ($matchingStats['classes'] as $csvClass) {
+    $match = null;
+    $csvClassNormalized = strtolower(trim($csvClass));
+
+    foreach ($existingClasses as $existing) {
+        if (strtolower($existing['display_name']) === $csvClassNormalized ||
+            strtolower($existing['name']) === $csvClassNormalized) {
+            $match = $existing;
+            break;
+        }
+    }
+
+    // Try partial match if no exact match
+    if (!$match) {
+        foreach ($existingClasses as $existing) {
+            if (strpos(strtolower($existing['display_name']), $csvClassNormalized) !== false ||
+                strpos($csvClassNormalized, strtolower($existing['display_name'])) !== false) {
+                $match = $existing;
+                break;
+            }
+        }
+    }
+
+    $classAnalysis[] = [
+        'csv_name' => $csvClass,
+        'matched' => $match,
+        'is_new' => $match === null
+    ];
+}
+
 // Handle confirmed import
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_import'])) {
     checkCsrf();
 
     try {
         require_once __DIR__ . '/import-results.php';
+
+        // Process class mappings from form
+        $classMappings = [];
+        if (isset($_POST['class_mapping']) && is_array($_POST['class_mapping'])) {
+            foreach ($_POST['class_mapping'] as $csvClass => $mappedClassId) {
+                if (!empty($mappedClassId) && $mappedClassId !== 'new') {
+                    $classMappings[$csvClass] = (int)$mappedClassId;
+                }
+                // If 'new', the import will create the class automatically
+            }
+        }
+
+        // Store class mappings in a global so import function can use them
+        global $IMPORT_CLASS_MAPPINGS;
+        $IMPORT_CLASS_MAPPINGS = $classMappings;
 
         // Create event mapping - all rows go to selected event
         $eventMapping = ['Välj event för alla resultat' => $selectedEventId];
@@ -397,14 +447,72 @@ include __DIR__ . '/../includes/layout-header.php';
                 <div class="gs-card-header">
                     <h3 class="gs-h5 gs-text-primary">
                         <i data-lucide="tag"></i>
-                        Klasser
+                        Klassmappning
                     </h3>
                 </div>
                 <div class="gs-card-content">
-                    <div class="gs-flex gs-flex-wrap gs-gap-sm">
-                        <?php foreach ($matchingStats['classes'] as $class): ?>
-                            <span class="gs-badge gs-badge-primary"><?= h($class) ?></span>
-                        <?php endforeach; ?>
+                    <?php
+                    $newClasses = array_filter($classAnalysis, fn($c) => $c['is_new']);
+                    if (count($newClasses) > 0):
+                    ?>
+                        <div class="gs-alert gs-alert-warning gs-mb-md">
+                            <i data-lucide="alert-triangle"></i>
+                            <strong><?= count($newClasses) ?> nya klasser</strong> hittades. Mappa dem till befintliga klasser eller skapa nya.
+                        </div>
+                    <?php endif; ?>
+
+                    <div class="gs-table-responsive" style="max-height: 300px; overflow: auto;">
+                        <table class="gs-table gs-table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Klass i CSV</th>
+                                    <th>Status</th>
+                                    <th>Mappa till</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($classAnalysis as $classInfo): ?>
+                                    <tr>
+                                        <td>
+                                            <strong><?= h($classInfo['csv_name']) ?></strong>
+                                        </td>
+                                        <td>
+                                            <?php if ($classInfo['matched']): ?>
+                                                <span class="gs-badge gs-badge-success gs-text-xs">
+                                                    <i data-lucide="check" style="width: 12px; height: 12px;"></i>
+                                                    Matchad
+                                                </span>
+                                            <?php else: ?>
+                                                <span class="gs-badge gs-badge-warning gs-text-xs">
+                                                    <i data-lucide="alert-circle" style="width: 12px; height: 12px;"></i>
+                                                    Ny
+                                                </span>
+                                            <?php endif; ?>
+                                        </td>
+                                        <td>
+                                            <select name="class_mapping[<?= h($classInfo['csv_name']) ?>]" class="gs-input gs-input-sm" style="min-width: 200px;">
+                                                <?php if ($classInfo['matched']): ?>
+                                                    <option value="<?= $classInfo['matched']['id'] ?>" selected>
+                                                        <?= h($classInfo['matched']['display_name']) ?>
+                                                    </option>
+                                                <?php else: ?>
+                                                    <option value="new" selected>-- Skapa ny klass --</option>
+                                                <?php endif; ?>
+                                                <option value="new">-- Skapa ny klass --</option>
+                                                <?php foreach ($existingClasses as $existing): ?>
+                                                    <?php if (!$classInfo['matched'] || $existing['id'] != $classInfo['matched']['id']): ?>
+                                                        <option value="<?= $existing['id'] ?>">
+                                                            <?= h($existing['display_name']) ?>
+                                                            <?php if ($existing['sort_order']): ?>(#<?= $existing['sort_order'] ?>)<?php endif; ?>
+                                                        </option>
+                                                    <?php endif; ?>
+                                                <?php endforeach; ?>
+                                            </select>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>

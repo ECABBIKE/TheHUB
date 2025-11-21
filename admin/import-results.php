@@ -641,31 +641,37 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
             $className = trim($data['class_name'] ?? '');
             if (!$classId && !empty($className)) {
                 if (!isset($classCache[$className])) {
-                    // Try exact match first (case-insensitive)
-                    $class = $db->getRow(
-                        "SELECT id FROM classes WHERE LOWER(display_name) = LOWER(?) OR LOWER(name) = LOWER(?)",
-                        [$className, $className]
-                    );
-
-                    // Try partial match if exact fails
-                    if (!$class) {
-                        $class = $db->getRow(
-                            "SELECT id FROM classes WHERE LOWER(display_name) LIKE LOWER(?) OR LOWER(name) LIKE LOWER(?)",
-                            ['%' . $className . '%', '%' . $className . '%']
-                        );
-                    }
-
-                    if (!$class) {
-                        // Create class
-                        $matching_stats['classes_created']++;
-                        $newClassId = $db->insert('classes', [
-                            'name' => strtolower(str_replace(' ', '_', $className)),
-                            'display_name' => $className,
-                            'active' => 1
-                        ]);
-                        $classCache[$className] = $newClassId;
+                    // Check if we have a mapping from the preview page
+                    global $IMPORT_CLASS_MAPPINGS;
+                    if (isset($IMPORT_CLASS_MAPPINGS[$className])) {
+                        $classCache[$className] = $IMPORT_CLASS_MAPPINGS[$className];
                     } else {
-                        $classCache[$className] = $class['id'];
+                        // Try exact match first (case-insensitive)
+                        $class = $db->getRow(
+                            "SELECT id FROM classes WHERE LOWER(display_name) = LOWER(?) OR LOWER(name) = LOWER(?)",
+                            [$className, $className]
+                        );
+
+                        // Try partial match if exact fails
+                        if (!$class) {
+                            $class = $db->getRow(
+                                "SELECT id FROM classes WHERE LOWER(display_name) LIKE LOWER(?) OR LOWER(name) LIKE LOWER(?)",
+                                ['%' . $className . '%', '%' . $className . '%']
+                            );
+                        }
+
+                        if (!$class) {
+                            // Create class
+                            $matching_stats['classes_created']++;
+                            $newClassId = $db->insert('classes', [
+                                'name' => strtolower(str_replace(' ', '_', $className)),
+                                'display_name' => $className,
+                                'active' => 1
+                            ]);
+                            $classCache[$className] = $newClassId;
+                        } else {
+                            $classCache[$className] = $class['id'];
+                        }
                     }
                 }
                 $classId = $classCache[$className];
