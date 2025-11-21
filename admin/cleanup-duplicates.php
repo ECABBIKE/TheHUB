@@ -244,6 +244,62 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['auto_merge_all'])) {
     exit;
 }
 
+// Handle normalize names action (proper case)
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['normalize_names'])) {
+    checkCsrf();
+
+    try {
+        // Get all riders with names that need normalization
+        $riders = $db->getAll("
+            SELECT id, firstname, lastname
+            FROM riders
+            WHERE firstname IS NOT NULL OR lastname IS NOT NULL
+        ");
+
+        $updated = 0;
+        foreach ($riders as $rider) {
+            $newFirstname = $rider['firstname'];
+            $newLastname = $rider['lastname'];
+            $needsUpdate = false;
+
+            // Normalize firstname
+            if ($rider['firstname']) {
+                $normalized = mb_convert_case(mb_strtolower($rider['firstname'], 'UTF-8'), MB_CASE_TITLE, 'UTF-8');
+                if ($normalized !== $rider['firstname']) {
+                    $newFirstname = $normalized;
+                    $needsUpdate = true;
+                }
+            }
+
+            // Normalize lastname
+            if ($rider['lastname']) {
+                $normalized = mb_convert_case(mb_strtolower($rider['lastname'], 'UTF-8'), MB_CASE_TITLE, 'UTF-8');
+                if ($normalized !== $rider['lastname']) {
+                    $newLastname = $normalized;
+                    $needsUpdate = true;
+                }
+            }
+
+            if ($needsUpdate) {
+                $db->update('riders', [
+                    'firstname' => $newFirstname,
+                    'lastname' => $newLastname
+                ], 'id = ?', [$rider['id']]);
+                $updated++;
+            }
+        }
+
+        $_SESSION['cleanup_message'] = "Normaliserade namn för $updated deltagare till versalgemener";
+        $_SESSION['cleanup_message_type'] = 'success';
+    } catch (Exception $e) {
+        $_SESSION['cleanup_message'] = "Fel vid normalisering av namn: " . $e->getMessage();
+        $_SESSION['cleanup_message_type'] = 'error';
+    }
+
+    header('Location: /admin/cleanup-duplicates.php');
+    exit;
+}
+
 // Check for message from redirect
 if (isset($_SESSION['cleanup_message'])) {
     $message = $_SESSION['cleanup_message'];
@@ -325,6 +381,29 @@ include __DIR__ . '/../includes/layout-header.php';
                 <?= h($message) ?>
             </div>
         <?php endif; ?>
+
+        <!-- Normalize Names -->
+        <div class="gs-card gs-mb-lg">
+            <div class="gs-card-header">
+                <h2 class="gs-h4 gs-text-primary">
+                    <i data-lucide="type"></i>
+                    Normalisera namn
+                </h2>
+            </div>
+            <div class="gs-card-content">
+                <p class="gs-text-secondary gs-mb-md">
+                    Konvertera alla namn till versalgemener (första bokstaven stor, resten små).
+                    <br><strong>Exempel:</strong> "JOHAN ANDERSSON" eller "johan andersson" blir "Johan Andersson"
+                </p>
+                <form method="POST" onsubmit="return confirm('Detta kommer ändra alla deltagarnamn till versalgemener. Fortsätt?');">
+                    <?= csrf_field() ?>
+                    <button type="submit" name="normalize_names" class="gs-btn gs-btn-primary">
+                        <i data-lucide="case-sensitive"></i>
+                        Normalisera alla namn
+                    </button>
+                </form>
+            </div>
+        </div>
 
         <!-- Normalize All UCI-IDs -->
         <div class="gs-card gs-mb-lg">
