@@ -531,6 +531,10 @@ include __DIR__ . '/../includes/layout-header.php';
             </div>
         <?php endif; ?>
 
+        <!-- Import Form - wraps all mappings and submit button -->
+        <form method="POST" id="importForm">
+            <?= csrf_field() ?>
+
         <!-- Matching Details -->
         <div class="gs-grid gs-grid-cols-1 gs-md-grid-cols-2 gs-gap-lg gs-mb-lg">
             <!-- Clubs -->
@@ -711,8 +715,6 @@ include __DIR__ . '/../includes/layout-header.php';
         </div>
 
         <!-- Import Button -->
-        <form method="POST">
-            <?= csrf_field() ?>
             <div class="gs-flex gs-gap-md gs-justify-end">
                 <a href="?cancel=1" class="gs-btn gs-btn-outline gs-btn-lg">
                     <i data-lucide="x"></i>
