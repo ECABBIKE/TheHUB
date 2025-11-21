@@ -68,6 +68,7 @@ $activeClasses = $db->getAll("
 
 // Build standings with per-event points
 $standings = [];
+$standingsByClass = []; // For "Alla klasser" view - group by class
 $showAllClasses = ($selectedClass === 'all');
 
 if ($showAllClasses) {
@@ -80,8 +81,10 @@ if ($showAllClasses) {
             riders.birth_year,
             riders.gender,
             c.name as club_name,
-            cls.display_name as class_name,
-            r.class_id
+            cls.id as class_id,
+            cls.name as class_name,
+            cls.display_name as class_display_name,
+            cls.sort_order as class_sort_order
         FROM riders
         LEFT JOIN clubs c ON riders.club_id = c.id
         JOIN results r ON riders.id = r.cyclist_id
@@ -102,7 +105,7 @@ if ($showAllClasses) {
             'birth_year' => $rider['birth_year'],
             'gender' => $rider['gender'],
             'club_name' => $rider['club_name'],
-            'class_name' => $rider['class_name'] ?? 'Okänd',
+            'class_name' => $rider['class_display_name'] ?? 'Okänd',
             'class_id' => $rider['class_id'],
             'event_points' => [],
             'total_points' => 0
@@ -124,13 +127,32 @@ if ($showAllClasses) {
 
         // Apply name search filter
         if ($searchName === '' || stripos($riderData['fullname'], $searchName) !== false) {
-            $standings[] = $riderData;
+            // Group by class for "Alla klasser" view
+            $classKey = $rider['class_id'] ?? 0;
+            if (!isset($standingsByClass[$classKey])) {
+                $standingsByClass[$classKey] = [
+                    'class_id' => $rider['class_id'],
+                    'class_name' => $rider['class_name'] ?? 'Oklassificerad',
+                    'class_display_name' => $rider['class_display_name'] ?? 'Oklassificerad',
+                    'class_sort_order' => $rider['class_sort_order'] ?? 999,
+                    'riders' => []
+                ];
+            }
+            $standingsByClass[$classKey]['riders'][] = $riderData;
         }
     }
 
-    // Sort by total points descending
-    usort($standings, function($a, $b) {
-        return $b['total_points'] - $a['total_points'];
+    // Sort riders within each class by total points
+    foreach ($standingsByClass as &$classData) {
+        usort($classData['riders'], function($a, $b) {
+            return $b['total_points'] - $a['total_points'];
+        });
+    }
+    unset($classData);
+
+    // Sort classes by sort_order
+    uasort($standingsByClass, function($a, $b) {
+        return $a['class_sort_order'] - $b['class_sort_order'];
     });
 } elseif ($selectedClass && is_numeric($selectedClass)) {
     // Get all riders in this specific class who have results in this series
@@ -383,21 +405,97 @@ include __DIR__ . '/includes/layout-header.php';
         <?php endif; ?>
 
         <!-- Standings Table with Event Points -->
-        <?php if (!empty($standings)): ?>
+        <?php if ($showAllClasses && !empty($standingsByClass)): ?>
+            <!-- All Classes View - Show each class separately -->
+            <?php if ($searchName): ?>
+                <div class="gs-alert gs-alert-info gs-mb-lg">
+                    <i data-lucide="search"></i>
+                    Visar resultat för: <strong><?= h($searchName) ?></strong>
+                </div>
+            <?php endif; ?>
+
+            <?php foreach ($standingsByClass as $classData): ?>
+                <div class="gs-card gs-mb-lg">
+                    <div class="gs-card-header">
+                        <h3 class="gs-h4">
+                            <i data-lucide="trophy"></i>
+                            <?= h($classData['class_display_name']) ?>
+                            <span class="gs-badge gs-badge-secondary gs-ml-sm"><?= count($classData['riders']) ?> deltagare</span>
+                        </h3>
+                    </div>
+                    <div class="gs-card-table-container">
+                        <table class="gs-table standings-table">
+                            <thead>
+                                <tr>
+                                    <th class="standings-sticky-th-rank">Plac.</th>
+                                    <th class="standings-sticky-th-name">Namn</th>
+                                    <th class="standings-sticky-th-club">Klubb</th>
+                                    <?php $eventNum = 1; ?>
+                                    <?php foreach ($seriesEvents as $event): ?>
+                                        <th class="event-col" title="<?= h($event['name']) ?> - <?= date('Y-m-d', strtotime($event['date'])) ?>">
+                                            #<?= $eventNum ?>
+                                        </th>
+                                        <?php $eventNum++; ?>
+                                    <?php endforeach; ?>
+                                    <th class="total-col gs-text-center">Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php $position = 1; ?>
+                                <?php foreach ($classData['riders'] as $rider): ?>
+                                    <tr>
+                                        <td class="standings-sticky-td-rank">
+                                            <?php if ($position == 1): ?>
+                                                <span class="gs-badge gs-badge-success gs-badge-xs">🥇 1</span>
+                                            <?php elseif ($position == 2): ?>
+                                                <span class="gs-badge gs-badge-secondary gs-badge-xs">🥈 2</span>
+                                            <?php elseif ($position == 3): ?>
+                                                <span class="gs-badge gs-badge-warning gs-badge-xs">🥉 3</span>
+                                            <?php else: ?>
+                                                <?= $position ?>
+                                            <?php endif; ?>
+                                        </td>
+                                        <td class="standings-sticky-td-name">
+                                            <a href="/rider.php?id=<?= $rider['rider_id'] ?>" class="gs-link">
+                                                <strong><?= h($rider['firstname']) ?> <?= h($rider['lastname']) ?></strong>
+                                            </a>
+                                        </td>
+                                        <td class="standings-sticky-td-club">
+                                            <?= h($rider['club_name']) ?: '–' ?>
+                                        </td>
+                                        <?php foreach ($seriesEvents as $event): ?>
+                                            <td class="event-col">
+                                                <?php
+                                                $points = $rider['event_points'][$event['id']] ?? 0;
+                                                if ($points > 0):
+                                                ?>
+                                                    <?= $points ?>
+                                                <?php else: ?>
+                                                    <span class="gs-text-muted">–</span>
+                                                <?php endif; ?>
+                                            </td>
+                                        <?php endforeach; ?>
+                                        <td class="total-col gs-text-center">
+                                            <strong class="gs-text-primary"><?= $rider['total_points'] ?></strong>
+                                        </td>
+                                    </tr>
+                                    <?php $position++; ?>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            <?php endforeach; ?>
+        <?php elseif (!empty($standings)): ?>
             <?php
-            // Get selected class name
+            // Get selected class name for single class view
             $selectedClassName = '';
             $selectedClassDisplay = '';
-            if ($showAllClasses) {
-                $selectedClassDisplay = 'Alla klasser';
-                $selectedClassName = '';
-            } else {
-                foreach ($activeClasses as $class) {
-                    if ($class['id'] == $selectedClass) {
-                        $selectedClassName = $class['name'];
-                        $selectedClassDisplay = $class['display_name'];
-                        break;
-                    }
+            foreach ($activeClasses as $class) {
+                if ($class['id'] == $selectedClass) {
+                    $selectedClassName = $class['name'];
+                    $selectedClassDisplay = $class['display_name'];
+                    break;
                 }
             }
             ?>
@@ -419,9 +517,6 @@ include __DIR__ . '/includes/layout-header.php';
                             <tr>
                                 <th class="standings-sticky-th-rank">Plac.</th>
                                 <th class="standings-sticky-th-name">Namn</th>
-                                <?php if ($showAllClasses): ?>
-                                    <th>Klass</th>
-                                <?php endif; ?>
                                 <th class="standings-sticky-th-club">Klubb</th>
                                 <?php $eventNum = 1; ?>
                                 <?php foreach ($seriesEvents as $event): ?>
@@ -453,11 +548,6 @@ include __DIR__ . '/includes/layout-header.php';
                                             <strong><?= h($rider['firstname']) ?> <?= h($rider['lastname']) ?></strong>
                                         </a>
                                     </td>
-                                    <?php if ($showAllClasses): ?>
-                                        <td class="gs-text-secondary">
-                                            <?= h($rider['class_name'] ?? '–') ?>
-                                        </td>
-                                    <?php endif; ?>
                                     <td class="standings-sticky-td-club">
                                         <?= h($rider['club_name']) ?: '–' ?>
                                     </td>
@@ -483,7 +573,7 @@ include __DIR__ . '/includes/layout-header.php';
                     </table>
                 </div>
             </div>
-        <?php elseif (empty($standings)): ?>
+        <?php elseif (empty($standings) && empty($standingsByClass)): ?>
             <div class="gs-card">
                 <div class="gs-card-content gs-empty-state">
                     <i data-lucide="inbox" class="gs-empty-icon"></i>

@@ -12,9 +12,15 @@ $current_admin = get_current_admin();
 
 // Get active tab
 $activeTab = $_GET['tab'] ?? 'info';
-$validTabs = ['info', 'debug', 'classes', 'point-templates', 'global-texts'];
+$validTabs = ['info', 'debug', 'classes', 'global-texts'];
 if (!in_array($activeTab, $validTabs)) {
     $activeTab = 'info';
+}
+
+// Redirect old point-templates tab to point-scales page
+if (isset($_GET['tab']) && $_GET['tab'] === 'point-templates') {
+    header('Location: /admin/point-scales.php');
+    exit;
 }
 
 // Initialize message variables
@@ -82,99 +88,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
         $activeTab = 'classes';
-    }
-
-    // Point Templates form handling
-    elseif ($formTab === 'point-templates') {
-        if ($action === 'create' || $action === 'update') {
-            $name = trim($_POST['name'] ?? '');
-            $description = trim($_POST['description'] ?? '');
-            $pointsData = $_POST['points'] ?? [];
-
-            if (empty($name)) {
-                $message = 'Namn är obligatoriskt';
-                $messageType = 'error';
-            } else {
-                $points = [];
-                foreach ($pointsData as $position => $pointValue) {
-                    if (!empty($pointValue) && is_numeric($pointValue)) {
-                        $points[$position] = (int)$pointValue;
-                    }
-                }
-
-                $templateData = [
-                    'name' => $name,
-                    'description' => $description,
-                    'points' => json_encode($points),
-                    'active' => 1
-                ];
-
-                try {
-                    if ($action === 'create') {
-                        $db->insert('qualification_point_templates', $templateData);
-                        $message = 'Poängmall skapad!';
-                    } else {
-                        $id = intval($_POST['id']);
-                        $db->update('qualification_point_templates', $templateData, 'id = ?', [$id]);
-                        $message = 'Poängmall uppdaterad!';
-                    }
-                    $messageType = 'success';
-                } catch (Exception $e) {
-                    $message = 'Ett fel uppstod: ' . $e->getMessage();
-                    $messageType = 'error';
-                }
-            }
-        } elseif ($action === 'delete') {
-            $id = intval($_POST['id']);
-            try {
-                $db->delete('qualification_point_templates', 'id = ?', [$id]);
-                $message = 'Poängmall borttagen!';
-                $messageType = 'success';
-            } catch (Exception $e) {
-                $message = 'Ett fel uppstod: ' . $e->getMessage();
-                $messageType = 'error';
-            }
-        } elseif ($action === 'import') {
-            $importData = trim($_POST['import_data'] ?? '');
-            if (empty($importData)) {
-                $message = 'Ingen data att importera';
-                $messageType = 'error';
-            } else {
-                try {
-                    $imported = json_decode($importData, true);
-                    if (json_last_error() !== JSON_ERROR_NONE) {
-                        $lines = explode("\n", $importData);
-                        $imported = ['points' => []];
-                        foreach ($lines as $line) {
-                            $line = trim($line);
-                            if (empty($line) || strpos($line, '#') === 0) continue;
-                            $parts = array_map('trim', explode(',', $line));
-                            if (count($parts) >= 2 && is_numeric($parts[0]) && is_numeric($parts[1])) {
-                                $imported['points'][$parts[0]] = (int)$parts[1];
-                            }
-                        }
-                    }
-                    if (!empty($imported['points'])) {
-                        $templateData = [
-                            'name' => $imported['name'] ?? 'Importerad mall ' . date('Y-m-d H:i'),
-                            'description' => $imported['description'] ?? 'Importerad poängmall',
-                            'points' => json_encode($imported['points']),
-                            'active' => 1
-                        ];
-                        $db->insert('qualification_point_templates', $templateData);
-                        $message = 'Poängmall importerad!';
-                        $messageType = 'success';
-                    } else {
-                        $message = 'Kunde inte hitta poäng i importerad data';
-                        $messageType = 'error';
-                    }
-                } catch (Exception $e) {
-                    $message = 'Import misslyckades: ' . $e->getMessage();
-                    $messageType = 'error';
-                }
-            }
-        }
-        $activeTab = 'point-templates';
     }
 
     // Global Texts form handling
@@ -261,9 +174,6 @@ $classes = $db->getAll("
 
 $classDisciplines = $db->getAll("SELECT DISTINCT discipline FROM classes WHERE discipline IS NOT NULL AND discipline != '' ORDER BY discipline");
 
-// Point Templates data
-$pointTemplates = $db->getAll("SELECT * FROM qualification_point_templates ORDER BY name");
-
 // Global Texts data
 $gtCategoryFilter = $_GET['gt_category'] ?? '';
 $gtWhere = [];
@@ -294,6 +204,16 @@ $categoryLabels = [
 
 // Debug tools
 $debugTools = [
+    'points' => [
+        'title' => 'Poäng & Resultat',
+        'icon' => 'award',
+        'items' => [
+            ['name' => 'Poängmallar', 'url' => '/admin/point-scales.php', 'desc' => 'Skapa och hantera poängmallar'],
+            ['name' => 'Omräkna Resultat', 'url' => '/admin/recalculate-results.php', 'desc' => 'Tilldela poängmall och omräkna poäng'],
+            ['name' => 'Rensa Eventresultat', 'url' => '/admin/clear-event-results.php', 'desc' => 'Ta bort resultat för specifikt event'],
+            ['name' => 'Rensa Dubbletter', 'url' => '/admin/cleanup-duplicates.php', 'desc' => 'Hantera dubbletter och sammanfoga deltagare'],
+        ]
+    ],
     'database' => [
         'title' => 'Databas & Migrationer',
         'icon' => 'database',
@@ -465,10 +385,6 @@ include __DIR__ . '/../includes/layout-header.php';
             <a href="?tab=classes" class="settings-tab <?= $activeTab === 'classes' ? 'active' : '' ?>">
                 <i data-lucide="layers"></i>
                 Klasser
-            </a>
-            <a href="?tab=point-templates" class="settings-tab <?= $activeTab === 'point-templates' ? 'active' : '' ?>">
-                <i data-lucide="target"></i>
-                Poängmallar
             </a>
             <a href="?tab=global-texts" class="settings-tab <?= $activeTab === 'global-texts' ? 'active' : '' ?>">
                 <i data-lucide="file-text"></i>
@@ -698,68 +614,6 @@ include __DIR__ . '/../includes/layout-header.php';
                 </div>
             </div>
 
-        <?php elseif ($activeTab === 'point-templates'): ?>
-            <!-- POINT TEMPLATES TAB -->
-            <div class="gs-flex gs-items-center gs-justify-between gs-mb-lg">
-                <div></div>
-                <div class="gs-flex gs-gap-sm">
-                    <button type="button" class="gs-btn gs-btn-outline" onclick="openImportModal()">
-                        <i data-lucide="upload"></i>
-                        Importera
-                    </button>
-                    <button type="button" class="gs-btn gs-btn-primary" onclick="openTemplateModal()">
-                        <i data-lucide="plus"></i>
-                        Ny Mall
-                    </button>
-                </div>
-            </div>
-
-            <div class="gs-card">
-                <div class="gs-card-content">
-                    <?php if (empty($pointTemplates)): ?>
-                        <div class="gs-alert gs-alert-warning">
-                            <p>Inga poängmallar hittades.</p>
-                        </div>
-                    <?php else: ?>
-                        <?php foreach ($pointTemplates as $template): ?>
-                            <?php $points = json_decode($template['points'], true); ?>
-                            <div class="gs-card gs-mb-md" style="background: var(--gs-bg-secondary);">
-                                <div class="gs-card-content">
-                                    <div class="gs-flex gs-items-start gs-justify-between gs-mb-sm">
-                                        <div>
-                                            <h3 class="gs-h5 gs-text-primary gs-mb-xs"><?= h($template['name']) ?></h3>
-                                            <?php if (!empty($template['description'])): ?>
-                                                <p class="gs-text-sm gs-text-secondary"><?= h($template['description']) ?></p>
-                                            <?php endif; ?>
-                                        </div>
-                                        <div class="gs-flex gs-gap-sm">
-                                            <button type="button" class="gs-btn gs-btn-sm gs-btn-outline" onclick="editTemplate(<?= $template['id'] ?>)">
-                                                <i data-lucide="edit"></i>
-                                            </button>
-                                            <button type="button" class="gs-btn gs-btn-sm gs-btn-outline gs-btn-danger" onclick="deleteTemplate(<?= $template['id'] ?>, '<?= addslashes(h($template['name'])) ?>')">
-                                                <i data-lucide="trash-2"></i>
-                                            </button>
-                                        </div>
-                                    </div>
-                                    <div class="gs-text-xs gs-text-secondary">
-                                        <strong>Poäng:</strong>
-                                        <?php if (empty($points)): ?>
-                                            <span>Ingen poängfördelning</span>
-                                        <?php else: ?>
-                                            <div class="gs-flex gs-gap-xs gs-flex-wrap gs-mt-xs">
-                                                <?php foreach ($points as $position => $pointValue): ?>
-                                                    <span class="gs-badge gs-badge-sm">#<?= $position ?>: <?= $pointValue ?>p</span>
-                                                <?php endforeach; ?>
-                                            </div>
-                                        <?php endif; ?>
-                                    </div>
-                                </div>
-                            </div>
-                        <?php endforeach; ?>
-                    <?php endif; ?>
-                </div>
-            </div>
-
         <?php elseif ($activeTab === 'global-texts'): ?>
             <!-- GLOBAL TEXTS TAB -->
             <div class="gs-flex gs-items-center gs-justify-between gs-mb-lg">
@@ -922,92 +776,6 @@ include __DIR__ . '/../includes/layout-header.php';
     </div>
 </div>
 
-<!-- Point Template Modal -->
-<div id="templateModal" class="gs-modal" style="display: none;">
-    <div class="gs-modal-overlay" onclick="closeTemplateModal()"></div>
-    <div class="gs-modal-content" style="max-width: 500px;">
-        <div class="gs-modal-header">
-            <h2 class="gs-modal-title">
-                <i data-lucide="target"></i>
-                <span id="templateModalTitle">Ny Poängmall</span>
-            </h2>
-            <button type="button" class="gs-modal-close" onclick="closeTemplateModal()">
-                <i data-lucide="x"></i>
-            </button>
-        </div>
-        <form method="POST" id="templateForm">
-            <?= csrf_field() ?>
-            <input type="hidden" name="form_tab" value="point-templates">
-            <input type="hidden" name="action" id="templateFormAction" value="create">
-            <input type="hidden" name="id" id="templateId" value="">
-
-            <div class="gs-modal-body">
-                <div class="gs-form-group">
-                    <label class="gs-label">Namn *</label>
-                    <input type="text" id="templateName" name="name" class="gs-input" required>
-                </div>
-                <div class="gs-form-group">
-                    <label class="gs-label">Beskrivning</label>
-                    <textarea id="templateDescription" name="description" class="gs-input" rows="2"></textarea>
-                </div>
-                <div class="gs-form-group">
-                    <div class="gs-flex gs-items-center gs-justify-between gs-mb-sm">
-                        <label class="gs-label gs-mb-0">Poäng per placering</label>
-                        <button type="button" class="gs-btn gs-btn-xs gs-btn-outline" onclick="addPointRow()">
-                            <i data-lucide="plus"></i>
-                        </button>
-                    </div>
-                    <div id="pointsContainer" style="max-height: 300px; overflow-y: auto;"></div>
-                </div>
-            </div>
-
-            <div class="gs-modal-footer">
-                <button type="button" class="gs-btn gs-btn-outline" onclick="closeTemplateModal()">Avbryt</button>
-                <button type="submit" class="gs-btn gs-btn-primary">
-                    <i data-lucide="save"></i>
-                    <span id="templateSubmitText">Skapa</span>
-                </button>
-            </div>
-        </form>
-    </div>
-</div>
-
-<!-- Import Modal -->
-<div id="importModal" class="gs-modal" style="display: none;">
-    <div class="gs-modal-overlay" onclick="closeImportModal()"></div>
-    <div class="gs-modal-content" style="max-width: 500px;">
-        <div class="gs-modal-header">
-            <h2 class="gs-modal-title">
-                <i data-lucide="upload"></i>
-                Importera Poängmall
-            </h2>
-            <button type="button" class="gs-modal-close" onclick="closeImportModal()">
-                <i data-lucide="x"></i>
-            </button>
-        </div>
-        <form method="POST">
-            <?= csrf_field() ?>
-            <input type="hidden" name="form_tab" value="point-templates">
-            <input type="hidden" name="action" value="import">
-
-            <div class="gs-modal-body">
-                <div class="gs-form-group">
-                    <label class="gs-label">JSON eller CSV data</label>
-                    <textarea name="import_data" class="gs-input" rows="10" placeholder="1,100&#10;2,80&#10;3,60"></textarea>
-                </div>
-            </div>
-
-            <div class="gs-modal-footer">
-                <button type="button" class="gs-btn gs-btn-outline" onclick="closeImportModal()">Avbryt</button>
-                <button type="submit" class="gs-btn gs-btn-primary">
-                    <i data-lucide="upload"></i>
-                    Importera
-                </button>
-            </div>
-        </form>
-    </div>
-</div>
-
 <!-- Add Global Text Modal -->
 <div id="addTextModal" class="gs-modal" style="display: none;">
     <div class="gs-modal-overlay" onclick="closeAddTextModal()"></div>
@@ -1106,91 +874,6 @@ function editClass(classData) {
     if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
-// Template Modal functions
-let pointRowCounter = 0;
-const templates = <?= json_encode($pointTemplates) ?>;
-
-function openTemplateModal() {
-    document.getElementById('templateModal').style.display = 'flex';
-    document.getElementById('templateForm').reset();
-    document.getElementById('templateFormAction').value = 'create';
-    document.getElementById('templateId').value = '';
-    document.getElementById('templateModalTitle').textContent = 'Ny Poängmall';
-    document.getElementById('templateSubmitText').textContent = 'Skapa';
-
-    document.getElementById('pointsContainer').innerHTML = '';
-    pointRowCounter = 0;
-    for (let i = 1; i <= 10; i++) addPointRow(i, '');
-    if (typeof lucide !== 'undefined') lucide.createIcons();
-}
-
-function closeTemplateModal() {
-    document.getElementById('templateModal').style.display = 'none';
-}
-
-function addPointRow(position = null, points = '') {
-    const container = document.getElementById('pointsContainer');
-    const nextPosition = position || (pointRowCounter + 1);
-    pointRowCounter = Math.max(pointRowCounter, nextPosition);
-
-    const row = document.createElement('div');
-    row.className = 'point-row-wrapper';
-    row.innerHTML = `
-        <div class="point-row-label">
-            <label class="gs-text-xs gs-text-secondary">#${nextPosition}</label>
-        </div>
-        <div class="point-row-input">
-            <input type="number" name="points[${nextPosition}]" class="gs-input gs-input-sm" value="${points}" min="0" placeholder="Poäng">
-        </div>
-        <button type="button" class="gs-btn gs-btn-xs gs-btn-outline gs-btn-danger" onclick="this.parentElement.remove()">
-            <i data-lucide="x"></i>
-        </button>
-    `;
-    container.appendChild(row);
-    if (typeof lucide !== 'undefined') lucide.createIcons();
-}
-
-function editTemplate(id) {
-    const template = templates.find(t => t.id == id);
-    if (!template) return;
-
-    document.getElementById('templateModal').style.display = 'flex';
-    document.getElementById('templateFormAction').value = 'update';
-    document.getElementById('templateId').value = template.id;
-    document.getElementById('templateName').value = template.name;
-    document.getElementById('templateDescription').value = template.description || '';
-    document.getElementById('templateModalTitle').textContent = 'Redigera Poängmall';
-    document.getElementById('templateSubmitText').textContent = 'Uppdatera';
-
-    document.getElementById('pointsContainer').innerHTML = '';
-    pointRowCounter = 0;
-
-    const editPoints = JSON.parse(template.points || '{}');
-    const positions = Object.keys(editPoints).map(Number).sort((a, b) => a - b);
-    positions.forEach(pos => addPointRow(pos, editPoints[pos]));
-    for (let i = 0; i < 3; i++) addPointRow();
-    if (typeof lucide !== 'undefined') lucide.createIcons();
-}
-
-function deleteTemplate(id, name) {
-    if (!confirm(`Ta bort "${name}"?`)) return;
-    const form = document.createElement('form');
-    form.method = 'POST';
-    form.innerHTML = `<?= csrf_field() ?><input type="hidden" name="form_tab" value="point-templates"><input type="hidden" name="action" value="delete"><input type="hidden" name="id" value="${id}">`;
-    document.body.appendChild(form);
-    form.submit();
-}
-
-// Import Modal
-function openImportModal() {
-    document.getElementById('importModal').style.display = 'flex';
-    if (typeof lucide !== 'undefined') lucide.createIcons();
-}
-
-function closeImportModal() {
-    document.getElementById('importModal').style.display = 'none';
-}
-
 // Global Text Modal
 function showAddTextModal() {
     document.getElementById('addTextModal').style.display = 'flex';
@@ -1214,8 +897,6 @@ function deleteGlobalText(id, name) {
 document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') {
         closeClassModal();
-        closeTemplateModal();
-        closeImportModal();
         closeAddTextModal();
     }
 });
