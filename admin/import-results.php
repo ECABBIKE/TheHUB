@@ -470,8 +470,8 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
                 $rider = null;
                 if (!empty($licenseNumber)) {
                     $rider = $db->getRow(
-                        "SELECT id FROM riders WHERE uci_id = ? OR swe_id = ?",
-                        [$licenseNumber, $licenseNumber]
+                        "SELECT id FROM riders WHERE license_number = ?",
+                        [$licenseNumber]
                     );
                     if ($rider) {
                         $matching_stats['riders_found']++;
@@ -506,7 +506,7 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
                     $riderId = $db->insert('riders', [
                         'first_name' => trim($data['firstname']),
                         'last_name' => trim($data['lastname']),
-                        'uci_id' => $licenseNumber ?: null,
+                        'license_number' => $licenseNumber ?: null,
                         'gender' => $gender
                     ]);
 
