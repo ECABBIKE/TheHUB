@@ -368,6 +368,81 @@ include __DIR__ . '/../includes/layout-header.php';
     </div>
 </div>
 
+<!-- Import Modal -->
+<div id="importModal" class="gs-modal-overlay-hidden" style="z-index: 10000;">
+    <div class="gs-modal-content-md">
+        <div class="gs-modal-header-sticky">
+            <h3 class="gs-h4 gs-text-primary">
+                <i data-lucide="upload"></i>
+                Importera Poängmall från CSV
+            </h3>
+            <button type="button" class="gs-modal-close-btn" onclick="closeImportModal()">
+                <i data-lucide="x"></i>
+            </button>
+        </div>
+        <form method="POST" enctype="multipart/form-data" class="gs-modal-body-padded">
+            <?= csrf_field() ?>
+            <input type="hidden" name="action" value="import_scale">
+
+            <div class="gs-mb-md">
+                <label class="gs-label">Mallnamn *</label>
+                <input type="text" name="import_name" class="gs-input" required placeholder="Ex: SweCup Enduro 2025">
+            </div>
+
+            <div class="gs-mb-md">
+                <label class="gs-label">Disciplin</label>
+                <select name="import_discipline" class="gs-input">
+                    <option value="ALL">Alla</option>
+                    <option value="ENDURO">Enduro</option>
+                    <option value="DH">Downhill</option>
+                    <option value="XCO">XCO</option>
+                    <option value="CX">Cyclocross</option>
+                </select>
+            </div>
+
+            <div class="gs-mb-md">
+                <label class="gs-checkbox">
+                    <input type="checkbox" name="import_is_dh" value="1">
+                    <span><strong>DH-mall</strong> (använd Kval/Final kolumner)</span>
+                </label>
+            </div>
+
+            <div class="gs-mb-md">
+                <label class="gs-label">CSV-fil *</label>
+                <input type="file" name="import_file" class="gs-input" accept=".csv,.txt" required>
+                <p class="gs-text-xs gs-text-secondary gs-mt-xs">
+                    Kolumner: Position;Poäng eller Position;Kval;Final (semikolon-separerad)
+                </p>
+            </div>
+
+            <div class="gs-alert gs-alert-info gs-mb-md">
+                <i data-lucide="info"></i>
+                <div>
+                    <strong>CSV-format:</strong><br>
+                    Position;Poäng<br>
+                    1;520<br>
+                    2;480<br>
+                    ...<br><br>
+                    <strong>DH-format:</strong><br>
+                    Position;Kval;Final<br>
+                    1;100;520<br>
+                    2;90;480
+                </div>
+            </div>
+
+            <div class="gs-modal-footer-sticky">
+                <button type="button" onclick="closeImportModal()" class="gs-btn gs-btn-outline">
+                    Avbryt
+                </button>
+                <button type="submit" class="gs-btn gs-btn-primary">
+                    <i data-lucide="upload"></i>
+                    Importera
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <script src="https://unpkg.com/lucide@latest"></script>
 <script>
     lucide.createIcons();
@@ -379,6 +454,15 @@ include __DIR__ . '/../includes/layout-header.php';
 
     function closeCreateModal() {
         document.getElementById('createModal').style.display = 'none';
+    }
+
+    function openImportModal() {
+        document.getElementById('importModal').style.display = 'flex';
+        lucide.createIcons();
+    }
+
+    function closeImportModal() {
+        document.getElementById('importModal').style.display = 'none';
     }
 
     function toggleDHColumns() {
