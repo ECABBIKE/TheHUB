@@ -17,10 +17,11 @@
             $versionInfo = getVersionInfo();
             ?>
             <p class="gs-footer-version">
-                TheHUB v<?= h($versionInfo['version']) ?> (<?= h($versionInfo['name']) ?>)
-                <?php if ($versionInfo['deployment'] > 0): ?>
-                    • Build #<?= $versionInfo['deployment'] ?>
+                TheHUB v<?= h($versionInfo['version']) ?>
+                <?php if (!empty($versionInfo['build'])): ?>
+                    <strong>[<?= h($versionInfo['build']) ?>]</strong>
                 <?php endif; ?>
+                • <?= h($versionInfo['name']) ?>
                 <?php if ($versionInfo['commit']): ?>
                     • <?= h($versionInfo['commit']) ?>
                 <?php endif; ?>

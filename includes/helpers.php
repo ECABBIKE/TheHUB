@@ -217,6 +217,7 @@ function getVersionInfo() {
     return [
         'version' => APP_VERSION,
         'name' => APP_VERSION_NAME,
+        'build' => defined('APP_BUILD') ? APP_BUILD : '',
         'deployment' => $totalDeployments,
         'commit' => $commitHash
     ];
