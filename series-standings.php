@@ -326,7 +326,11 @@ include __DIR__ . '/includes/layout-header.php';
                                         <td><span class="gs-badge gs-badge-primary gs-badge-sm">#<?= $eventNum ?></span></td>
                                         <td><?= date('Y-m-d', strtotime($event['date'])) ?></td>
                                         <td>
-                                            <strong>#<?= $eventNum ?> <?= h($event['name']) ?></strong>
+                                            <?php
+                                            // Strip leading "#X " from event name since we show it in first column
+                                            $displayName = preg_replace('/^#\d+\s+/', '', $event['name']);
+                                            ?>
+                                            <strong><?= h($displayName) ?></strong>
                                             <?php if ($event['venue_name']): ?>
                                                 <br><span class="gs-text-xs gs-text-secondary">
                                                     <?= h($event['venue_name']) ?>
