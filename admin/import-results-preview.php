@@ -98,7 +98,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_import'])) {
     checkCsrf();
 
     try {
-        require_once __DIR__ . '/import-results.php';
+        require_once __DIR__ . '/../includes/import-functions.php';
 
         // Process class mappings from form
         $classMappings = [];
