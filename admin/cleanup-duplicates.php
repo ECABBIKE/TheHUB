@@ -15,10 +15,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['merge_riders'])) {
     checkCsrf();
 
     $keepId = (int)$_POST['keep_id'];
-    $mergeIds = array_map('intval', explode(',', $_POST['merge_ids']));
+    $mergeIdsRaw = $_POST['merge_ids'] ?? '';
+    $mergeIds = array_map('intval', array_filter(explode(',', $mergeIdsRaw)));
 
-    // Remove the keep_id from merge list
-    $mergeIds = array_filter($mergeIds, fn($id) => $id !== $keepId);
+    // Remove the keep_id from merge list and re-index array
+    $mergeIds = array_values(array_filter($mergeIds, fn($id) => $id !== $keepId && $id > 0));
 
     if ($keepId && !empty($mergeIds)) {
         try {
@@ -59,7 +60,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['merge_riders'])) {
             $_SESSION['cleanup_message_type'] = 'error';
         }
     } else {
-        $_SESSION['cleanup_message'] = "Ogiltiga parametrar för sammanfogning (keep_id: $keepId, merge_ids: " . implode(',', $mergeIds) . ")";
+        $debugInfo = "keep_id: $keepId, merge_ids_raw: '$mergeIdsRaw', merge_ids_filtered: [" . implode(',', $mergeIds) . "]";
+        $_SESSION['cleanup_message'] = "Ogiltiga parametrar för sammanfogning. $debugInfo";
         $_SESSION['cleanup_message_type'] = 'error';
     }
 

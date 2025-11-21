@@ -41,6 +41,7 @@ $eventFormat = $event['event_format'] ?? 'ENDURO';
 $isDH = in_array($eventFormat, ['DH_STANDARD', 'DH_SWECUP']);
 
 // Fetch all results for this event with rider and class info
+// Order by finish_time within each class to calculate correct positions
 $results = $db->getAll("
     SELECT
         res.*,
@@ -61,8 +62,8 @@ $results = $db->getAll("
     ORDER BY
         cls.sort_order ASC,
         COALESCE(cls.name, 'Oklassificerad'),
-        CASE WHEN res.status = 'finished' THEN res.position ELSE 999 END,
-        res.finish_time
+        CASE WHEN res.status = 'finished' THEN 0 ELSE 1 END,
+        res.finish_time ASC
 ", [$eventId]);
 
 // Check if any results have bib numbers
@@ -85,7 +86,7 @@ foreach ($results as $result) {
     }
 }
 
-// Group results by class
+// Group results by class and calculate positions within each class
 $resultsByClass = [];
 $totalParticipants = count($results);
 $totalFinished = 0;
@@ -97,15 +98,21 @@ foreach ($results as $result) {
         $resultsByClass[$className] = [
             'display_name' => $result['class_display_name'] ?? $className,
             'sort_order' => $result['class_sort_order'] ?? 999,
-            'results' => []
+            'results' => [],
+            'position_counter' => 0
         ];
     }
 
-    $resultsByClass[$className]['results'][] = $result;
-
+    // Calculate position within this class
     if ($result['status'] === 'finished') {
+        $resultsByClass[$className]['position_counter']++;
+        $result['class_position'] = $resultsByClass[$className]['position_counter'];
         $totalFinished++;
+    } else {
+        $result['class_position'] = null;
     }
+
+    $resultsByClass[$className]['results'][] = $result;
 }
 
 // Sort classes by their sort_order
@@ -177,7 +184,7 @@ foreach ($resultsByClass as $className => &$classData) {
     $winnerSeconds = 0;
 
     foreach ($classData['results'] as $result) {
-        if ($result['position'] == 1 && !empty($result['finish_time']) && $result['status'] === 'finished') {
+        if ($result['class_position'] == 1 && !empty($result['finish_time']) && $result['status'] === 'finished') {
             $winnerTime = $result['finish_time'];
             $winnerSeconds = timeToSeconds($winnerTime);
             break;
@@ -185,7 +192,7 @@ foreach ($resultsByClass as $className => &$classData) {
     }
 
     foreach ($classData['results'] as &$result) {
-        if ($winnerSeconds > 0 && !empty($result['finish_time']) && $result['status'] === 'finished' && $result['position'] > 1) {
+        if ($winnerSeconds > 0 && !empty($result['finish_time']) && $result['status'] === 'finished' && $result['class_position'] > 1) {
             $riderSeconds = timeToSeconds($result['finish_time']);
             $diffSeconds = $riderSeconds - $winnerSeconds;
 
@@ -363,15 +370,15 @@ include __DIR__ . '/includes/layout-header.php';
                                 <?php foreach ($groupData['results'] as $result): ?>
                                     <tr class="result-row">
                                         <td class="gs-table-center gs-font-bold">
-                                            <?php if ($result['status'] === 'finished' && $result['position']): ?>
-                                                <?php if ($result['position'] == 1): ?>
+                                            <?php if ($result['status'] === 'finished' && $result['class_position']): ?>
+                                                <?php if ($result['class_position'] == 1): ?>
                                                     <span class="gs-medal">🥇</span>
-                                                <?php elseif ($result['position'] == 2): ?>
+                                                <?php elseif ($result['class_position'] == 2): ?>
                                                     <span class="gs-medal">🥈</span>
-                                                <?php elseif ($result['position'] == 3): ?>
+                                                <?php elseif ($result['class_position'] == 3): ?>
                                                     <span class="gs-medal">🥉</span>
                                                 <?php else: ?>
-                                                    <?= $result['position'] ?>
+                                                    <?= $result['class_position'] ?>
                                                 <?php endif; ?>
                                             <?php else: ?>
                                                 <span class="gs-text-secondary">-</span>
