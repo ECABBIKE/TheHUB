@@ -292,7 +292,7 @@ $pageTitle = $event['name'] . ' - Resultat';
                                             <?php endif; ?>
                                         </td>
                                         <td>
-                                            <a href="/public/cyclist.php?id=<?= $result['cyclist_id'] ?>" style="color: var(--gs-text-primary); text-decoration: none; font-weight: 500;">
+                                            <a href="/rider.php?id=<?= $result['cyclist_id'] ?>" style="color: var(--gs-text-primary); text-decoration: none; font-weight: 500;">
                                                 <?= h($result['cyclist_name']) ?>
                                             </a>
                                             <?php if ($result['birth_year']): ?>
