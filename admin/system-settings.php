@@ -730,9 +730,9 @@ include __DIR__ . '/../includes/layout-header.php';
 </main>
 
 <!-- Class Modal -->
-<div id="classModal" class="gs-modal" style="display: none; z-index: 9999;">
-    <div class="gs-modal-overlay" onclick="closeClassModal()"></div>
-    <div class="gs-modal-content" style="max-width: 600px;">
+<div id="classModal" class="gs-modal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 10000; align-items: flex-start; justify-content: center; padding-top: 5vh; overflow-y: auto;">
+    <div class="gs-modal-overlay" onclick="closeClassModal()" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: -1;"></div>
+    <div class="gs-modal-content" style="max-width: 600px; background: white; border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); position: relative;">
         <div class="gs-modal-header">
             <h2 class="gs-modal-title">
                 <i data-lucide="layers"></i>
@@ -834,9 +834,9 @@ include __DIR__ . '/../includes/layout-header.php';
 </div>
 
 <!-- Add Global Text Modal -->
-<div id="addTextModal" class="gs-modal" style="display: none; z-index: 9999;">
-    <div class="gs-modal-overlay" onclick="closeAddTextModal()"></div>
-    <div class="gs-modal-content" style="max-width: 500px;">
+<div id="addTextModal" class="gs-modal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 10000; align-items: flex-start; justify-content: center; padding-top: 5vh; overflow-y: auto;">
+    <div class="gs-modal-overlay" onclick="closeAddTextModal()" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: -1;"></div>
+    <div class="gs-modal-content" style="max-width: 500px; background: white; border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); position: relative;">
         <div class="gs-modal-header">
             <h2 class="gs-modal-title">
                 <i data-lucide="plus"></i>
