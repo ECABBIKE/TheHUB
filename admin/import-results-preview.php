@@ -155,9 +155,11 @@ function parseResultsCSVForPreview($filepath) {
             'firstname' => 'firstname',
             'first_name' => 'firstname',
             'förnamn' => 'firstname',
+            'fornamn' => 'firstname',
             'lastname' => 'lastname',
             'last_name' => 'lastname',
             'efternamn' => 'lastname',
+            // Category is the racing class (like "Damer Junior")
             'category' => 'category',
             'class' => 'category',
             'klass' => 'category',
@@ -165,12 +167,33 @@ function parseResultsCSVForPreview($filepath) {
             'clubname' => 'club_name',
             'club_name' => 'club_name',
             'team' => 'club_name',
+            'klubb' => 'club_name',
+            // Position mappings
             'position' => 'position',
             'placering' => 'position',
+            'placebycategory' => 'position',
+            'place' => 'position',
+            // Time mappings
             'time' => 'finish_time',
             'tid' => 'finish_time',
             'finish_time' => 'finish_time',
+            'nettime' => 'finish_time',
+            'nettid' => 'finish_time',
+            // License/UCI-ID
+            'uciid' => 'license_number',
+            'uci_id' => 'license_number',
+            'licensenumber' => 'license_number',
+            'licens' => 'license_number',
+            // Status
             'status' => 'status',
+            // Gender
+            'gender' => 'gender',
+            'kön' => 'gender',
+            'kon' => 'gender',
+            // Birth year
+            'birthyear' => 'birth_year',
+            'födelseår' => 'birth_year',
+            'fodelsear' => 'birth_year',
         ];
 
         return $mappings[$col] ?? $col;
@@ -198,7 +221,8 @@ function groupResultsByEvent($results) {
     $events = [];
 
     foreach ($results as $result) {
-        $eventKey = $result['event_name'] ?? 'Unknown Event';
+        // Use "Välj event" as key when no event_name column exists
+        $eventKey = !empty($result['event_name']) ? $result['event_name'] : 'Välj event för alla resultat';
 
         if (!isset($events[$eventKey])) {
             $events[$eventKey] = [
@@ -362,18 +386,41 @@ include __DIR__ . '/../includes/layout-header.php';
                         </h3>
                     </div>
                     <div class="gs-card-content gs-padding-0">
-                        <div class="gs-table-responsive" style="max-height: 400px; overflow-y: auto;">
+                        <?php
+                        // Get all column names from the first row
+                        $sampleRow = reset($previewData);
+                        $allColumns = $sampleRow ? array_keys($sampleRow) : [];
+                        // Filter out empty columns
+                        $allColumns = array_filter($allColumns, function($col) {
+                            return strpos($col, 'empty_') !== 0;
+                        });
+                        ?>
+                        <div class="gs-table-responsive" style="max-height: 500px; overflow: auto;">
                             <table class="gs-table gs-table-sm">
                                 <thead style="position: sticky; top: 0; background: var(--gs-bg-primary); z-index: 10;">
                                     <tr>
                                         <th>#</th>
-                                        <th>Event</th>
-                                        <th>Namn</th>
-                                        <th>Klubb</th>
-                                        <th>Klass</th>
-                                        <th>Plac.</th>
-                                        <th>Tid</th>
-                                        <th>Status</th>
+                                        <?php foreach ($allColumns as $col): ?>
+                                            <th class="gs-text-nowrap">
+                                                <?php
+                                                // Display friendly column names
+                                                $displayNames = [
+                                                    'category' => 'Klass',
+                                                    'position' => 'Plac',
+                                                    'firstname' => 'Förnamn',
+                                                    'lastname' => 'Efternamn',
+                                                    'club_name' => 'Klubb',
+                                                    'license_number' => 'UCI-ID',
+                                                    'finish_time' => 'Tid',
+                                                    'status' => 'Status',
+                                                    'event_name' => 'Event',
+                                                    'birth_year' => 'Föd.år',
+                                                    'gender' => 'Kön',
+                                                ];
+                                                echo h($displayNames[$col] ?? strtoupper($col));
+                                                ?>
+                                            </th>
+                                        <?php endforeach; ?>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -384,46 +431,33 @@ include __DIR__ . '/../includes/layout-header.php';
                                     ?>
                                     <tr>
                                         <td class="gs-text-secondary"><?= $rowNum ?></td>
-                                        <td>
-                                            <span class="gs-text-xs" title="<?= h($row['event_name'] ?? '') ?>">
-                                                <?= h(mb_substr($row['event_name'] ?? '–', 0, 25)) ?>
-                                                <?= strlen($row['event_name'] ?? '') > 25 ? '...' : '' ?>
-                                            </span>
-                                        </td>
-                                        <td>
-                                            <strong><?= h(($row['firstname'] ?? '') . ' ' . ($row['lastname'] ?? '')) ?></strong>
-                                        </td>
-                                        <td>
-                                            <span class="gs-text-xs"><?= h($row['club_name'] ?? '–') ?></span>
-                                        </td>
-                                        <td>
-                                            <?php if (!empty($row['category'])): ?>
-                                                <span class="gs-badge gs-badge-sm gs-badge-primary"><?= h($row['category']) ?></span>
-                                            <?php else: ?>
-                                                <span class="gs-text-secondary">Auto</span>
-                                            <?php endif; ?>
-                                        </td>
-                                        <td class="gs-text-center">
-                                            <?php if (!empty($row['position'])): ?>
-                                                <?php if ($row['position'] <= 3): ?>
-                                                    <strong class="gs-text-success"><?= h($row['position']) ?></strong>
-                                                <?php else: ?>
-                                                    <?= h($row['position']) ?>
-                                                <?php endif; ?>
-                                            <?php else: ?>
-                                                –
-                                            <?php endif; ?>
-                                        </td>
-                                        <td>
-                                            <span class="gs-text-xs"><?= h($row['finish_time'] ?? '–') ?></span>
-                                        </td>
-                                        <td>
-                                            <?php
-                                            $status = strtolower($row['status'] ?? 'finished');
-                                            $statusClass = $status === 'finished' || $status === 'fin' ? 'gs-badge-success' : 'gs-badge-warning';
-                                            ?>
-                                            <span class="gs-badge gs-badge-sm <?= $statusClass ?>"><?= h($status) ?></span>
-                                        </td>
+                                        <?php foreach ($allColumns as $col): ?>
+                                            <td>
+                                                <?php
+                                                $value = $row[$col] ?? '';
+
+                                                // Special formatting for certain columns
+                                                if ($col === 'category' && !empty($value)) {
+                                                    echo '<span class="gs-badge gs-badge-sm gs-badge-primary">' . h($value) . '</span>';
+                                                } elseif ($col === 'position' && !empty($value)) {
+                                                    if ($value <= 3) {
+                                                        echo '<strong class="gs-text-success">' . h($value) . '</strong>';
+                                                    } else {
+                                                        echo h($value);
+                                                    }
+                                                } elseif ($col === 'status' && !empty($value)) {
+                                                    $status = strtoupper($value);
+                                                    $statusClass = in_array($status, ['FIN', 'FINISHED', 'OK']) ? 'gs-badge-success' : 'gs-badge-warning';
+                                                    echo '<span class="gs-badge gs-badge-sm ' . $statusClass . '">' . h($status) . '</span>';
+                                                } elseif (strpos($col, 'ss') === 0 || $col === 'finish_time') {
+                                                    // Time columns - display shorter
+                                                    echo '<span class="gs-text-xs gs-text-nowrap">' . h($value ?: '–') . '</span>';
+                                                } else {
+                                                    echo '<span class="gs-text-xs">' . h($value ?: '–') . '</span>';
+                                                }
+                                                ?>
+                                            </td>
+                                        <?php endforeach; ?>
                                     </tr>
                                     <?php endforeach; ?>
                                 </tbody>

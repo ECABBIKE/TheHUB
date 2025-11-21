@@ -172,8 +172,9 @@ function importResultsFromCSV($filepath, $db, $importId = null) {
             'huvudförening' => 'club_name',
             'huvudforening' => 'club_name',
 
-            // Category (race category, not age/gender class)
-            'category' => 'category',
+            // Category is the racing class (like "Damer Junior", "Elite Herr")
+            // This maps to class_name for age/gender classification
+            'category' => 'class_name',
 
             // Class (age/gender class)
             'class' => 'class_name',
@@ -295,14 +296,7 @@ function importResultsFromCSV($filepath, $db, $importId = null) {
         }
     }
 
-    // If event data is in header (SweCup format), then "category" column actually means "class_name"
-    if ($hasEventInHeader) {
-        for ($i = 0; $i < count($header); $i++) {
-            if ($header[$i] === 'category') {
-                $header[$i] = 'class_name';
-            }
-        }
-    }
+    // Note: "category" is now always mapped directly to "class_name" in the mappings above
 
     // Cache for lookups
     $eventCache = [];
@@ -334,10 +328,19 @@ function importResultsFromCSV($filepath, $db, $importId = null) {
         $data = array_combine($header, $row);
 
         // Validate required fields
-        if (empty($data['event_name'])) {
+        // event_name can be missing if using event mapping from preview
+        global $IMPORT_EVENT_MAPPING;
+        $hasEventMapping = !empty($IMPORT_EVENT_MAPPING);
+
+        if (empty($data['event_name']) && !$hasEventMapping) {
             $stats['skipped']++;
-            $errors[] = "Rad {$lineNumber}: Saknar tävlingsnamn";
+            $errors[] = "Rad {$lineNumber}: Saknar tävlingsnamn och ingen event vald";
             continue;
+        }
+
+        // If no event_name but we have a mapping, use the same key as preview
+        if (empty($data['event_name']) && $hasEventMapping) {
+            $data['event_name'] = 'Välj event för alla resultat';
         }
 
         if (empty($data['firstname']) || empty($data['lastname'])) {
