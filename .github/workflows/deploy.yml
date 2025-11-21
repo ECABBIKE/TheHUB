@@ -21,5 +21,7 @@ jobs:
           server-dir: /public_html/
           exclude: |
             **/.git*
+            **/.git*/**
             **/.env
             **/node_modules/**
+            **/.github/**
