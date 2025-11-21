@@ -413,8 +413,8 @@ include __DIR__ . '/../includes/layout-header.php';
 </div>
 
 <!-- Import Modal -->
-<div id="importModal" class="gs-modal-overlay-hidden" style="z-index: 10000;">
-    <div class="gs-modal-content-md">
+<div id="importModal" class="gs-modal-overlay-hidden" style="z-index: 10000; background: rgba(0, 0, 0, 0.5);">
+    <div class="gs-modal-content-md" style="background: white; border-radius: 8px; max-height: 90vh; overflow-y: auto;">
         <div class="gs-modal-header-sticky">
             <h3 class="gs-h4 gs-text-primary">
                 <i data-lucide="upload"></i>
