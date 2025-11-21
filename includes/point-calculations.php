@@ -568,9 +568,13 @@ function recalculateDHEventResults($db, $event_id, $new_scale_id = null, $use_sw
  * @return array Stats (positions_updated, points_updated, errors)
  */
 function recalculateEventResults($db, $event_id, $new_scale_id = null) {
+    // Include class calculations for determineRiderClass
+    require_once __DIR__ . '/class-calculations.php';
+
     $stats = [
         'positions_updated' => 0,
         'points_updated' => 0,
+        'classes_fixed' => 0,
         'errors' => []
     ];
 
@@ -581,31 +585,61 @@ function recalculateEventResults($db, $event_id, $new_scale_id = null) {
             error_log("Updated point scale for event {$event_id} to scale {$new_scale_id}");
         }
 
-        // Get all results grouped by category
+        // Get event date for class calculation
+        $event = $db->getRow("SELECT date FROM events WHERE id = ?", [$event_id]);
+        $eventDate = $event['date'] ?? date('Y-m-d');
+
+        // STEP 1: Fix class_id for all results based on rider's gender and birth_year
+        $resultsToFix = $db->getAll("
+            SELECT res.id, res.cyclist_id, res.class_id,
+                   r.birth_year, r.gender
+            FROM results res
+            JOIN riders r ON res.cyclist_id = r.id
+            WHERE res.event_id = ?
+        ", [$event_id]);
+
+        foreach ($resultsToFix as $result) {
+            if ($result['birth_year'] && $result['gender']) {
+                $correctClassId = determineRiderClass($db, $result['birth_year'], $result['gender'], $eventDate);
+
+                if ($correctClassId && $correctClassId != $result['class_id']) {
+                    try {
+                        $db->update('results', [
+                            'class_id' => $correctClassId
+                        ], 'id = ?', [$result['id']]);
+                        $stats['classes_fixed']++;
+                    } catch (Exception $e) {
+                        $stats['errors'][] = "Failed to fix class for result {$result['id']}: " . $e->getMessage();
+                    }
+                }
+            }
+        }
+
+        // STEP 2: Get all results grouped by class_id (not category_id)
         $results = $db->getAll("
-            SELECT id, category_id, finish_time, status
+            SELECT id, class_id, finish_time, status
             FROM results
             WHERE event_id = ?
-            ORDER BY category_id,
+            ORDER BY class_id,
                      CASE WHEN status = 'finished' THEN 0 ELSE 1 END,
                      finish_time ASC
         ", [$event_id]);
 
-        // Group by category
-        $byCategory = [];
+        // Group by class_id
+        $byClass = [];
         foreach ($results as $result) {
-            $catId = $result['category_id'] ?? 0; // 0 for uncategorized
-            if (!isset($byCategory[$catId])) {
-                $byCategory[$catId] = [];
+            $classId = $result['class_id'] ?? 0;
+            if (!isset($byClass[$classId])) {
+                $byClass[$classId] = [];
             }
-            $byCategory[$catId][] = $result;
+            $byClass[$classId][] = $result;
         }
 
-        // Recalculate positions within each category
-        foreach ($byCategory as $categoryId => $categoryResults) {
+        // STEP 3: Recalculate positions within each class
+        foreach ($byClass as $classId => $classResults) {
             $position = 1;
 
-            foreach ($categoryResults as $result) {
+            foreach ($classResults as $result) {
                 $newPosition = null;
 
                 if ($result['status'] === 'finished' && !empty($result['finish_time'])) {
@@ -632,7 +666,7 @@ function recalculateEventResults($db, $event_id, $new_scale_id = null) {
             }
         }
 
-        error_log("✅ Recalculated event {$event_id}: {$stats['positions_updated']} positions, {$stats['points_updated']} points");
+        error_log("✅ Recalculated event {$event_id}: {$stats['classes_fixed']} classes fixed, {$stats['positions_updated']} positions, {$stats['points_updated']} points");
 
     } catch (Exception $e) {
         $stats['errors'][] = "Fatal error: " . $e->getMessage();

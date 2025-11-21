@@ -39,11 +39,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['event_id'])) {
             $eventType = ucfirst(strtolower($eventFormat));
         }
 
+        $classesFixed = $stats['classes_fixed'] ?? 0;
+        $classesMsg = $classesFixed > 0 ? ", {$classesFixed} klassplaceringar korrigerade" : "";
+
         if (!empty($stats['errors'])) {
-            $message = "Omräkning klar med fel ({$eventType}): {$stats['positions_updated']} placeringar uppdaterade, {$stats['points_updated']} poäng uppdaterade. " . count($stats['errors']) . " fel uppstod.";
+            $message = "Omräkning klar med fel ({$eventType}): {$stats['positions_updated']} placeringar uppdaterade, {$stats['points_updated']} poäng uppdaterade{$classesMsg}. " . count($stats['errors']) . " fel uppstod.";
             $messageType = 'warning';
         } else {
-            $message = "Omräkning klar ({$eventType})! {$stats['positions_updated']} placeringar och {$stats['points_updated']} poäng uppdaterade för '{$event['name']}'.";
+            $message = "Omräkning klar ({$eventType})! {$stats['positions_updated']} placeringar och {$stats['points_updated']} poäng uppdaterade{$classesMsg} för '{$event['name']}'.";
             $messageType = 'success';
         }
     }
@@ -142,12 +145,13 @@ include __DIR__ . '/../includes/layout-header.php';
                     <i data-lucide="alert-triangle"></i>
                     <strong>Varning!</strong> Detta kommer att:
                     <ul class="gs-margin-list">
+                        <li><strong>Korrigera klassplaceringar</strong> baserat på deltagarens kön och födelseår</li>
                         <?php if ($isDHEvent): ?>
                             <li>Räkna om placeringar för varje åk separat</li>
                             <li>Räkna om total placering baserat på snabbaste åket</li>
                             <li>Räkna om poäng (standard DH: snabbaste räknas, SweCUP DH: båda räknas)</li>
                         <?php else: ?>
-                            <li>Räkna om alla placeringar inom varje kategori baserat på tid</li>
+                            <li>Räkna om alla placeringar inom varje klass baserat på tid</li>
                             <li>Räkna om alla poäng baserat på nya placeringar</li>
                         <?php endif; ?>
                         <li>Kan ändra poängmall om du väljer en annan nedan</li>
