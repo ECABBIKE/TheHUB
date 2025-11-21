@@ -50,7 +50,7 @@ $seriesEvents = $db->getAll("
     LEFT JOIN results r ON e.id = r.event_id
     WHERE se.series_id = ?
     GROUP BY e.id
-    ORDER BY se.sort_order, e.date ASC
+    ORDER BY e.date ASC
 ", [$seriesId]);
 
 // Get all classes that have results in this series
@@ -311,6 +311,7 @@ include __DIR__ . '/includes/layout-header.php';
                         <table class="gs-table">
                             <thead>
                                 <tr>
+                                    <th>#</th>
                                     <th>Datum</th>
                                     <th>Tävling</th>
                                     <th>Plats</th>
@@ -319,11 +320,13 @@ include __DIR__ . '/includes/layout-header.php';
                                 </tr>
                             </thead>
                             <tbody>
+                                <?php $eventNum = 1; ?>
                                 <?php foreach ($seriesEvents as $event): ?>
                                     <tr>
+                                        <td><span class="gs-badge gs-badge-primary gs-badge-sm">#<?= $eventNum ?></span></td>
                                         <td><?= date('Y-m-d', strtotime($event['date'])) ?></td>
                                         <td>
-                                            <strong><?= h($event['name']) ?></strong>
+                                            <strong>#<?= $eventNum ?> <?= h($event['name']) ?></strong>
                                             <?php if ($event['venue_name']): ?>
                                                 <br><span class="gs-text-xs gs-text-secondary">
                                                     <?= h($event['venue_name']) ?>
@@ -347,6 +350,7 @@ include __DIR__ . '/includes/layout-header.php';
                                             </a>
                                         </td>
                                     </tr>
+                                    <?php $eventNum++; ?>
                                 <?php endforeach; ?>
                             </tbody>
                         </table>

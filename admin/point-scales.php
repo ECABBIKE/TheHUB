@@ -162,6 +162,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
     }
+
+    // Delete scale
+    if ($action === 'delete_scale') {
+        $scaleId = (int)($_POST['scale_id'] ?? 0);
+
+        if ($scaleId) {
+            try {
+                // Check if scale is in use by any events
+                $inUse = $db->getRow(
+                    "SELECT COUNT(*) as cnt FROM events WHERE point_scale_id = ?",
+                    [$scaleId]
+                );
+
+                if ($inUse && $inUse['cnt'] > 0) {
+                    $message = "Kan inte ta bort poängmallen - den används av {$inUse['cnt']} event";
+                    $messageType = 'error';
+                } else {
+                    // Delete scale values first
+                    $db->query("DELETE FROM point_scale_values WHERE scale_id = ?", [$scaleId]);
+                    // Then delete the scale
+                    $db->query("DELETE FROM point_scales WHERE id = ?", [$scaleId]);
+
+                    $message = 'Poängmall borttagen';
+                    $messageType = 'success';
+                }
+            } catch (Exception $e) {
+                $message = 'Fel vid borttagning: ' . $e->getMessage();
+                $messageType = 'error';
+            }
+        }
+    }
 }
 
 // Get all point scales with value counts
@@ -260,10 +291,23 @@ include __DIR__ . '/../includes/layout-header.php';
                                     <?php endif; ?>
                                 </td>
                                 <td>
-                                    <a href="/admin/point-scale-edit.php?id=<?= $scale['id'] ?>" class="gs-btn gs-btn-sm gs-btn-outline">
-                                        <i data-lucide="edit" class="gs-icon-14"></i>
-                                        Redigera
-                                    </a>
+                                    <div class="gs-flex gs-gap-xs">
+                                        <a href="/admin/point-scale-edit.php?id=<?= $scale['id'] ?>" class="gs-btn gs-btn-sm gs-btn-outline">
+                                            <i data-lucide="edit" class="gs-icon-14"></i>
+                                            Redigera
+                                        </a>
+                                        <?php if (!$scale['is_default']): ?>
+                                            <form method="POST" style="display: inline;"
+                                                  onsubmit="return confirm('Är du säker på att du vill ta bort poängmallen \'<?= h($scale['name']) ?>\'?');">
+                                                <?= csrf_field() ?>
+                                                <input type="hidden" name="action" value="delete_scale">
+                                                <input type="hidden" name="scale_id" value="<?= $scale['id'] ?>">
+                                                <button type="submit" class="gs-btn gs-btn-sm gs-btn-error">
+                                                    <i data-lucide="trash-2" class="gs-icon-14"></i>
+                                                </button>
+                                            </form>
+                                        <?php endif; ?>
+                                    </div>
                                 </td>
                             </tr>
                         <?php endforeach; ?>
