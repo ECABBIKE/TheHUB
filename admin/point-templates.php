@@ -73,6 +73,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $messageType = 'error';
         } else {
             try {
+                // Remove UTF-8 BOM if present
+                $importData = preg_replace('/^\xEF\xBB\xBF/', '', $importData);
+
                 // Try to parse as JSON first
                 $imported = json_decode($importData, true);
 
@@ -85,9 +88,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $line = trim($line);
                         if (empty($line) || strpos($line, '#') === 0) continue; // Skip empty and comments
 
-                        $parts = array_map('trim', explode(',', $line));
+                        // Try comma first, then semicolon (Swedish Excel uses semicolon)
+                        $delimiter = strpos($line, ';') !== false ? ';' : ',';
+                        $parts = array_map('trim', explode($delimiter, $line));
+
                         if (count($parts) >= 2 && is_numeric($parts[0]) && is_numeric($parts[1])) {
-                            $imported['points'][$parts[0]] = (int)$parts[1];
+                            $imported['points'][(int)$parts[0]] = (int)$parts[1];
                         }
                     }
                 }
