@@ -201,8 +201,8 @@ function parseAndAnalyzeCSV($filepath, $db) {
                 // Try license first
                 if (!empty($licenseNumber)) {
                     $rider = $db->getRow(
-                        "SELECT id FROM riders WHERE uci_id = ? OR swe_id = ?",
-                        [$licenseNumber, $licenseNumber]
+                        "SELECT id FROM riders WHERE license_number = ?",
+                        [$licenseNumber]
                     );
                 }
 
