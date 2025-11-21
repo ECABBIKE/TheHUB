@@ -12,6 +12,10 @@ $messageType = 'info';
 
 // Handle merge action FIRST (before querying duplicates)
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['merge_riders'])) {
+    // Debug: Show what we received
+    $_SESSION['cleanup_message'] = "DEBUG: POST mottagen. keep_id=" . ($_POST['keep_id'] ?? 'SAKNAS') . ", merge_ids=" . ($_POST['merge_ids'] ?? 'SAKNAS');
+    $_SESSION['cleanup_message_type'] = 'info';
+
     checkCsrf();
 
     $keepId = (int)($_POST['keep_id'] ?? 0);
