@@ -179,6 +179,82 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['assign_swe_ids'])) {
     exit;
 }
 
+// Handle auto merge by last name + birth year
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['auto_merge_by_lastname_year'])) {
+    checkCsrf();
+
+    try {
+        $db->pdo->beginTransaction();
+
+        // Find riders with same lastname + birth_year but different firstnames
+        $duplicates = $db->getAll("
+            SELECT
+                LOWER(lastname) as lastname_key,
+                birth_year,
+                GROUP_CONCAT(id ORDER BY
+                    (SELECT COUNT(*) FROM results WHERE cyclist_id = riders.id) DESC,
+                    CASE WHEN license_number IS NOT NULL AND license_number != '' THEN 0 ELSE 1 END,
+                    created_at ASC
+                ) as ids,
+                COUNT(*) as count
+            FROM riders
+            WHERE birth_year IS NOT NULL
+            GROUP BY lastname_key, birth_year
+            HAVING count > 1
+        ");
+
+        $totalMerged = 0;
+        $totalDeleted = 0;
+
+        foreach ($duplicates as $dup) {
+            $ids = array_map('intval', explode(',', $dup['ids']));
+            if (count($ids) < 2) continue;
+
+            $keepId = array_shift($ids); // First one (most results) to keep
+            $keepRider = $db->getRow("SELECT * FROM riders WHERE id = ?", [$keepId]);
+
+            if (!$keepRider) continue;
+
+            foreach ($ids as $oldId) {
+                // Move all results
+                $oldResults = $db->getAll("SELECT id, event_id FROM results WHERE cyclist_id = ?", [$oldId]);
+
+                foreach ($oldResults as $oldResult) {
+                    $existing = $db->getRow(
+                        "SELECT id FROM results WHERE cyclist_id = ? AND event_id = ?",
+                        [$keepId, $oldResult['event_id']]
+                    );
+
+                    if ($existing) {
+                        $db->delete('results', 'id = ?', [$oldResult['id']]);
+                    } else {
+                        $db->update('results', ['cyclist_id' => $keepId], 'id = ?', [$oldResult['id']]);
+                        $totalMerged++;
+                    }
+                }
+
+                // Delete the duplicate rider
+                $db->delete('riders', 'id = ?', [$oldId]);
+                $totalDeleted++;
+            }
+        }
+
+        $db->pdo->commit();
+
+        $_SESSION['cleanup_message'] = "Auto-sammanslagning klar! $totalMerged resultat flyttade, $totalDeleted dubbletter borttagna.";
+        $_SESSION['cleanup_message_type'] = 'success';
+    } catch (Exception $e) {
+        if ($db->pdo->inTransaction()) {
+            $db->pdo->rollBack();
+        }
+        $_SESSION['cleanup_message'] = "Fel vid auto-sammanslagning: " . $e->getMessage();
+        $_SESSION['cleanup_message_type'] = 'error';
+    }
+
+    header('Location: /admin/cleanup-duplicates.php');
+    exit;
+}
+
 // Handle auto merge ALL duplicates action
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['auto_merge_all'])) {
     checkCsrf();
@@ -546,11 +622,18 @@ include __DIR__ . '/../includes/layout-header.php';
                             Tilldela SWE-ID (<?= $ridersWithoutIdCount ?>)
                         </button>
                     </form>
-                    <form method="POST" onsubmit="return confirm('Detta kommer automatiskt sammanfoga ALLA dubbletter. Åkaren med flest resultat behålls. Fortsätt?');">
+                    <form method="POST" onsubmit="return confirm('Detta sammanfogar alla med samma EFTERNAMN + FÖDELSEÅR. Föraren med flest resultat behålls. Fortsätt?');">
+                        <?= csrf_field() ?>
+                        <button type="submit" name="auto_merge_by_lastname_year" class="gs-btn gs-btn-success">
+                            <i data-lucide="users"></i>
+                            Sammanfoga efternamn+år
+                        </button>
+                    </form>
+                    <form method="POST" onsubmit="return confirm('Detta kommer automatiskt sammanfoga ALLA dubbletter via UCI-ID. Åkaren med flest resultat behålls. Fortsätt?');">
                         <?= csrf_field() ?>
                         <button type="submit" name="auto_merge_all" class="gs-btn gs-btn-warning">
                             <i data-lucide="git-merge"></i>
-                            Sammanfoga alla automatiskt
+                            Sammanfoga UCI-ID
                         </button>
                     </form>
                 </div>
