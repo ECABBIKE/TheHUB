@@ -197,6 +197,7 @@ foreach ($resultsByClass as $className => &$classData) {
             $result['class_position'] = null;
         }
     }
+    unset($result); // Important: unset reference to avoid PHP reference issues
 }
 unset($classData);
 
@@ -321,6 +322,7 @@ foreach ($resultsByClass as $className => &$classData) {
             $result['time_behind_formatted'] = null;
         }
     }
+    unset($result); // Important: unset reference to avoid PHP reference issues
 }
 unset($classData);
 
