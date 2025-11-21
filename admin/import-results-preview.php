@@ -1,4 +1,9 @@
 <?php
+// Immediate test - if you see this, PHP is executing
+if (isset($_POST['confirm_import'])) {
+    die('DEBUG: Form submitted successfully - PHP is working');
+}
+
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
