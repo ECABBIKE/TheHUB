@@ -147,6 +147,103 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['normalize_all'])) {
     exit;
 }
 
+// Handle auto merge ALL duplicates action
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['auto_merge_all'])) {
+    checkCsrf();
+
+    try {
+        $db->pdo->beginTransaction();
+
+        // Find all duplicates by normalized UCI-ID
+        $duplicates = $db->getAll("
+            SELECT
+                REPLACE(REPLACE(license_number, ' ', ''), '-', '') as normalized_uci,
+                GROUP_CONCAT(id ORDER BY
+                    (SELECT COUNT(*) FROM results WHERE cyclist_id = riders.id) DESC,
+                    CASE WHEN club_id IS NOT NULL THEN 0 ELSE 1 END,
+                    CASE WHEN birth_year IS NOT NULL THEN 0 ELSE 1 END,
+                    created_at ASC
+                ) as ids
+            FROM riders
+            WHERE license_number IS NOT NULL
+            AND license_number != ''
+            GROUP BY normalized_uci
+            HAVING COUNT(*) > 1
+        ");
+
+        $totalMerged = 0;
+        $totalResultsMoved = 0;
+        $totalResultsDeleted = 0;
+        $ridersDeleted = 0;
+
+        foreach ($duplicates as $dup) {
+            $ids = array_map('intval', explode(',', $dup['ids']));
+            if (count($ids) < 2) continue;
+
+            $keepId = $ids[0]; // First ID has most results (ordered by COUNT DESC)
+            array_shift($ids); // Remove keep ID from list
+
+            foreach ($ids as $oldId) {
+                // Get results for duplicate rider
+                $oldResults = $db->getAll(
+                    "SELECT id, event_id FROM results WHERE cyclist_id = ?",
+                    [$oldId]
+                );
+
+                foreach ($oldResults as $oldResult) {
+                    // Check if kept rider already has result for this event
+                    $existing = $db->getRow(
+                        "SELECT id FROM results WHERE cyclist_id = ? AND event_id = ?",
+                        [$keepId, $oldResult['event_id']]
+                    );
+
+                    if ($existing) {
+                        // Delete duplicate result
+                        $db->query("DELETE FROM results WHERE id = ?", [$oldResult['id']]);
+                        $totalResultsDeleted++;
+                    } else {
+                        // Move result to kept rider
+                        $db->query(
+                            "UPDATE results SET cyclist_id = ? WHERE id = ?",
+                            [$keepId, $oldResult['id']]
+                        );
+                        $totalResultsMoved++;
+                    }
+                }
+
+                // Delete the duplicate rider
+                $db->query("DELETE FROM riders WHERE id = ?", [$oldId]);
+                $ridersDeleted++;
+            }
+
+            $totalMerged++;
+        }
+
+        $db->pdo->commit();
+
+        $msg = "Automatisk sammanslagning klar: ";
+        $msg .= "$totalMerged dubblettgrupper, ";
+        $msg .= "$ridersDeleted åkare borttagna, ";
+        $msg .= "$totalResultsMoved resultat flyttade";
+        if ($totalResultsDeleted > 0) {
+            $msg .= ", $totalResultsDeleted dubbletter borttagna";
+        }
+
+        $_SESSION['cleanup_message'] = $msg;
+        $_SESSION['cleanup_message_type'] = 'success';
+
+    } catch (Exception $e) {
+        if ($db->pdo->inTransaction()) {
+            $db->pdo->rollBack();
+        }
+        $_SESSION['cleanup_message'] = "Fel vid automatisk sammanslagning: " . $e->getMessage();
+        $_SESSION['cleanup_message_type'] = 'error';
+    }
+
+    header('Location: /admin/cleanup-duplicates.php');
+    exit;
+}
+
 // Check for message from redirect
 if (isset($_SESSION['cleanup_message'])) {
     $message = $_SESSION['cleanup_message'];
@@ -242,13 +339,22 @@ include __DIR__ . '/../includes/layout-header.php';
                     Ta bort alla mellanslag och bindestreck från UCI-ID:n för att förhindra framtida dubbletter.
                     <br><strong>Exempel:</strong> "101 089 432 09" blir "10108943209"
                 </p>
-                <form method="POST">
-                    <?= csrf_field() ?>
-                    <button type="submit" name="normalize_all" class="gs-btn gs-btn-primary">
-                        <i data-lucide="zap"></i>
-                        Normalisera alla UCI-ID
-                    </button>
-                </form>
+                <div class="gs-flex gs-gap-md">
+                    <form method="POST">
+                        <?= csrf_field() ?>
+                        <button type="submit" name="normalize_all" class="gs-btn gs-btn-primary">
+                            <i data-lucide="zap"></i>
+                            Normalisera alla UCI-ID
+                        </button>
+                    </form>
+                    <form method="POST" onsubmit="return confirm('Detta kommer automatiskt sammanfoga ALLA dubbletter. Åkaren med flest resultat behålls. Fortsätt?');">
+                        <?= csrf_field() ?>
+                        <button type="submit" name="auto_merge_all" class="gs-btn gs-btn-warning">
+                            <i data-lucide="git-merge"></i>
+                            Sammanfoga alla automatiskt
+                        </button>
+                    </form>
+                </div>
             </div>
         </div>
 
