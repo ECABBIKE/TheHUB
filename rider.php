@@ -61,7 +61,7 @@ if (!$rider) {
     die("Deltagare med ID {$riderId} finns inte i databasen. <a href='riders.php'>Gå tillbaka till deltagarlistan</a>");
 }
 
-// Fetch rider's results with event details
+// Fetch rider's results with event details and class position
 $results = $db->getAll("
     SELECT
         res.*,
@@ -71,16 +71,31 @@ $results = $db->getAll("
         e.series_id,
         s.name as series_name,
         v.name as venue_name,
-        v.city as venue_city
+        v.city as venue_city,
+        cls.name as class_name,
+        cls.display_name as class_display_name,
+        (
+            SELECT COUNT(*) + 1
+            FROM results r2
+            WHERE r2.event_id = res.event_id
+            AND r2.class_id = res.class_id
+            AND r2.status = 'finished'
+            AND r2.id != res.id
+            AND (
+                r2.finish_time < res.finish_time
+                OR (r2.finish_time = res.finish_time AND r2.id < res.id)
+            )
+        ) as class_position
     FROM results res
     INNER JOIN events e ON res.event_id = e.id
     LEFT JOIN series s ON e.series_id = s.id
     LEFT JOIN venues v ON e.venue_id = v.id
+    LEFT JOIN classes cls ON res.class_id = cls.id
     WHERE res.cyclist_id = ?
     ORDER BY e.date DESC
 ", [$riderId]);
 
-// Calculate statistics
+// Calculate statistics based on class position
 $totalRaces = count($results);
 $podiums = 0;
 $wins = 0;
@@ -89,11 +104,13 @@ $totalPoints = 0;
 $dnfCount = 0;
 
 foreach ($results as $result) {
-    if ($result['position']) {
-        if ($result['position'] == 1) $wins++;
-        if ($result['position'] <= 3) $podiums++;
-        if ($bestPosition === null || $result['position'] < $bestPosition) {
-            $bestPosition = $result['position'];
+    // Use class_position for statistics (position within rider's class)
+    $classPos = $result['class_position'] ?? null;
+    if ($result['status'] === 'finished' && $classPos) {
+        if ($classPos == 1) $wins++;
+        if ($classPos <= 3) $podiums++;
+        if ($bestPosition === null || $classPos < $bestPosition) {
+            $bestPosition = $classPos;
         }
     }
     $totalPoints += $result['points'] ?? 0;
@@ -130,10 +147,34 @@ if ($totalRaces > 0 && $rider['birth_year'] && $rider['gender']) {
                 ORDER BY s.year DESC, total_points DESC
             ", [$riderId]);
 
-            // Calculate class-based position for each series (simplified)
+            // Calculate class-based position for each series
             foreach ($riderSeriesData as $seriesData) {
-                $seriesData['position'] = '?';
-                $seriesData['class_total'] = 0;
+                // Get all riders in this series with the same class and their total points
+                $classStandings = $db->getAll("
+                    SELECT
+                        r.cyclist_id,
+                        SUM(r.points) as total_points
+                    FROM results r
+                    JOIN events e ON r.event_id = e.id
+                    JOIN series_events se ON e.id = se.event_id
+                    WHERE se.series_id = ?
+                    AND r.class_id = ?
+                    GROUP BY r.cyclist_id
+                    ORDER BY total_points DESC
+                ", [$seriesData['series_id'], $riderClassId]);
+
+                // Find this rider's position
+                $position = 1;
+                $classTotal = count($classStandings);
+                foreach ($classStandings as $standing) {
+                    if ($standing['cyclist_id'] == $riderId) {
+                        break;
+                    }
+                    $position++;
+                }
+
+                $seriesData['position'] = $position;
+                $seriesData['class_total'] = $classTotal;
                 $seriesData['class_name'] = $riderClass['display_name'] ?? '';
                 $seriesStandings[] = $seriesData;
             }
@@ -416,15 +457,18 @@ try {
                                                         <?php endif; ?>
                                                     </td>
                                                     <td class="gs-text-center">
-                                                        <?php if ($result['position']): ?>
-                                                            <?php if ($result['position'] == 1): ?>
+                                                        <?php
+                                                        $displayPos = ($result['status'] === 'finished') ? ($result['class_position'] ?? null) : null;
+                                                        ?>
+                                                        <?php if ($displayPos): ?>
+                                                            <?php if ($displayPos == 1): ?>
                                                                 <span class="gs-badge gs-badge-success">🥇 1</span>
-                                                            <?php elseif ($result['position'] == 2): ?>
+                                                            <?php elseif ($displayPos == 2): ?>
                                                                 <span class="gs-badge gs-badge-secondary">🥈 2</span>
-                                                            <?php elseif ($result['position'] == 3): ?>
+                                                            <?php elseif ($displayPos == 3): ?>
                                                                 <span class="gs-badge gs-badge-warning">🥉 3</span>
                                                             <?php else: ?>
-                                                                <span><?= $result['position'] ?></span>
+                                                                <span><?= $displayPos ?></span>
                                                             <?php endif; ?>
                                                         <?php else: ?>
                                                             -
