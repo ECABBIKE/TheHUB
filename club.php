@@ -98,7 +98,7 @@ include __DIR__ . '/includes/layout-header.php';
 
     .rider-stats {
         display: grid;
-        grid-template-columns: repeat(4, 1fr);
+        grid-template-columns: repeat(5, 1fr);
         gap: 0.5rem;
         margin-top: 0.75rem;
     }
@@ -126,22 +126,22 @@ include __DIR__ . '/includes/layout-header.php';
     /* Mobile Responsive */
     @media (max-width: 640px) {
         .rider-stats {
-            grid-template-columns: repeat(2, 1fr);
-            gap: 0.75rem;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.5rem;
         }
 
         .rider-stat-value {
-            font-size: 1.125rem;
+            font-size: 1rem;
         }
 
         .rider-stat-label {
-            font-size: 0.6875rem;
+            font-size: 0.625rem;
         }
     }
 
     @media (min-width: 641px) and (max-width: 1023px) {
         .rider-stats {
-            grid-template-columns: repeat(2, 1fr);
+            grid-template-columns: repeat(5, 1fr);
         }
     }
 </style>
@@ -289,17 +289,38 @@ include __DIR__ . '/includes/layout-header.php';
                     <div class="gs-grid gs-grid-cols-1 gs-md-grid-cols-2 gs-lg-grid-cols-3 gs-gap-md">
                         <?php foreach ($clubRiders as $rider): ?>
                             <?php
-                            // Calculate age and class
-                            $age = ($rider['birth_year'] && $rider['birth_year'] > 0)
-                                ? ($currentYear - $rider['birth_year'])
-                                : null;
-
+                            // Determine rider's class
                             $riderClass = null;
+                            $classId = null;
+                            $ranking = '-';
+
                             if ($rider['birth_year'] && $rider['gender']) {
                                 $classId = determineRiderClass($db, $rider['birth_year'], $rider['gender'], date('Y-m-d'));
                                 if ($classId) {
                                     $class = $db->getRow("SELECT name, display_name FROM classes WHERE id = ?", [$classId]);
                                     $riderClass = $class['display_name'] ?? null;
+
+                                    // Calculate ranking in class (position based on total points)
+                                    if ($rider['total_points'] > 0) {
+                                        $rankResult = $db->getRow("
+                                            SELECT COUNT(*) + 1 as ranking
+                                            FROM riders r
+                                            WHERE r.active = 1
+                                            AND r.id != ?
+                                            AND (
+                                                SELECT SUM(res.points)
+                                                FROM results res
+                                                WHERE res.cyclist_id = r.id
+                                            ) > ?
+                                            AND r.id IN (
+                                                SELECT DISTINCT res2.cyclist_id
+                                                FROM results res2
+                                                JOIN events e ON res2.event_id = e.id
+                                                WHERE res2.class_id = ?
+                                            )
+                                        ", [$rider['id'], $rider['total_points'], $classId]);
+                                        $ranking = $rankResult['ranking'] ?? '-';
+                                    }
                                 }
                             }
 
@@ -316,23 +337,18 @@ include __DIR__ . '/includes/layout-header.php';
                                     </div>
                                 <?php endif; ?>
 
-                                <?php if ($age !== null): ?>
-                                    <div class="gs-text-sm gs-text-secondary gs-mb-2">
-                                        <?= $age ?> år
-                                        <?php if ($rider['city']): ?>
-                                            • <?= h($rider['city']) ?>
-                                        <?php endif; ?>
-                                    </div>
-                                <?php endif; ?>
-
                                 <div class="rider-stats">
+                                    <div class="rider-stat">
+                                        <div class="rider-stat-value"><?= $rider['total_races'] ?: 0 ?></div>
+                                        <div class="rider-stat-label">Lopp</div>
+                                    </div>
                                     <div class="rider-stat">
                                         <div class="rider-stat-value"><?= $rider['total_points'] ?: 0 ?></div>
                                         <div class="rider-stat-label">Poäng</div>
                                     </div>
                                     <div class="rider-stat">
-                                        <div class="rider-stat-value"><?= $rider['total_races'] ?: 0 ?></div>
-                                        <div class="rider-stat-label">Lopp</div>
+                                        <div class="rider-stat-value"><?= $ranking ?></div>
+                                        <div class="rider-stat-label">Ranking</div>
                                     </div>
                                     <div class="rider-stat">
                                         <div class="rider-stat-value"><?= $rider['wins'] ?: 0 ?></div>
