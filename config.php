@@ -26,11 +26,11 @@ function env($key, $default = null) {
 define('ROOT_PATH', __DIR__);
 define('INCLUDES_PATH', __DIR__ . '/includes');
 define('UPLOADS_PATH', __DIR__ . '/uploads');
-define('SITE_URL', 'https://thehub.infinityfree.me');
-define('DB_HOST', env('DB_HOST', 'sql100.infinityfree.com'));
-define('DB_NAME', env('DB_NAME', 'if0_40400950_THEHUB'));
-define('DB_USER', env('DB_USER', 'if0_40400950'));
-define('DB_PASS', env('DB_PASS', ''));
+define('SITE_URL', 'https://gravityseries.se');
+define('DB_HOST', env('DB_HOST', 'auth-db1378.hstgr.io'));
+define('DB_NAME', env('DB_NAME', 'u994733455_thehub'));
+define('DB_USER', env('DB_USER', 'u994733455_rogerthat'));
+define('DB_PASS', env('DB_PASS', 'staggerMYnagger987!'));
 define('APP_NAME', 'TheHUB');
 define('DEFAULT_ADMIN_USERNAME', 'admin');
 define('DEFAULT_ADMIN_PASSWORD', 'admin');
