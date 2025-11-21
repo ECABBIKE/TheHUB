@@ -681,6 +681,41 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
                 $classId = $classCache[$className];
             }
 
+            // Validate class gender matches rider gender
+            // Get rider's actual gender from database
+            if ($classId) {
+                $riderInfo = $db->getRow("SELECT gender, birth_year FROM riders WHERE id = ?", [$riderId]);
+                if ($riderInfo && $riderInfo['gender']) {
+                    // Check if class name suggests wrong gender
+                    $classIsFemale = preg_match('/(dam|women|female|flickor|girls|^[FK][\d\-])/i', $className);
+                    $classIsMale = preg_match('/(herr|men|male|pojkar|boys|^[MP][\d\-])/i', $className);
+                    $riderIsFemale = in_array($riderInfo['gender'], ['F', 'K']);
+
+                    // Gender mismatch detected
+                    if (($classIsFemale && !$riderIsFemale) || ($classIsMale && $riderIsFemale)) {
+                        // Try to find correct class using determineRiderClass
+                        if ($riderInfo['birth_year']) {
+                            // Get event date for age calculation
+                            $eventInfo = $db->getRow("SELECT date, discipline FROM events WHERE id = ?", [$eventId]);
+                            if ($eventInfo) {
+                                $correctClassId = determineRiderClass(
+                                    $db,
+                                    $riderInfo['birth_year'],
+                                    $riderInfo['gender'],
+                                    $eventInfo['date'],
+                                    $eventInfo['discipline'] ?? 'ENDURO'
+                                );
+                                if ($correctClassId) {
+                                    $classId = $correctClassId;
+                                    // Log this correction
+                                    error_log("Import: Corrected class for {$data['firstname']} {$data['lastname']} from '$className' (gender mismatch)");
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
             // Parse time
             $finishTime = null;
             $timeStr = trim($data['finish_time'] ?? '');
