@@ -477,7 +477,7 @@ foreach ($duplicatesByNameRaw as $dup) {
 }
 
 // Find potential duplicates using fuzzy matching
-// Same last name + first name starts with same 3 characters
+// Matches names that share words regardless of which field they're in
 $potentialDuplicates = $db->getAll("
     SELECT
         r1.id as id1,
@@ -494,13 +494,22 @@ $potentialDuplicates = $db->getAll("
         (SELECT COUNT(*) FROM results WHERE cyclist_id = r2.id) as results2
     FROM riders r1
     JOIN riders r2 ON r1.id < r2.id
-    WHERE LOWER(r1.lastname) = LOWER(r2.lastname)
+    WHERE (
+        -- Same lastname OR lastname appears anywhere in other's full name
+        LOWER(r1.lastname) = LOWER(r2.lastname)
+        OR LOWER(CONCAT(r2.firstname, ' ', r2.lastname)) LIKE CONCAT('%', LOWER(r1.lastname), '%')
+        OR LOWER(CONCAT(r1.firstname, ' ', r1.lastname)) LIKE CONCAT('%', LOWER(r2.lastname), '%')
+        -- Or names swapped between fields
+        OR (LOWER(r1.firstname) = LOWER(r2.lastname) AND LOWER(r1.lastname) = LOWER(r2.firstname))
+    )
     AND (
-        -- First 3 chars of firstname match
+        -- And share firstname component
         LEFT(LOWER(r1.firstname), 3) = LEFT(LOWER(r2.firstname), 3)
-        -- Or one firstname contains the other (handles middle names)
         OR LOWER(r1.firstname) LIKE CONCAT('%', LOWER(r2.firstname), '%')
         OR LOWER(r2.firstname) LIKE CONCAT('%', LOWER(r1.firstname), '%')
+        -- Or firstname appears in other's full name
+        OR LOWER(CONCAT(r2.firstname, ' ', r2.lastname)) LIKE CONCAT('%', LOWER(r1.firstname), '%')
+        OR LOWER(CONCAT(r1.firstname, ' ', r1.lastname)) LIKE CONCAT('%', LOWER(r2.firstname), '%')
     )
     AND NOT (
         -- Exclude if both have different UCI-IDs (different people)
@@ -509,11 +518,11 @@ $potentialDuplicates = $db->getAll("
         AND REPLACE(REPLACE(r1.license_number, ' ', ''), '-', '') != REPLACE(REPLACE(r2.license_number, ' ', ''), '-', '')
     )
     AND NOT (
-        -- Exclude exact name matches (already in duplicatesByName)
-        LOWER(r1.firstname) = LOWER(r2.firstname)
+        -- Exclude exact full name matches (already in duplicatesByName)
+        LOWER(r1.firstname) = LOWER(r2.firstname) AND LOWER(r1.lastname) = LOWER(r2.lastname)
     )
     ORDER BY r1.lastname, r1.firstname
-    LIMIT 100
+    LIMIT 200
 ");
 
 // Handle search for riders
