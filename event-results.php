@@ -247,6 +247,48 @@ $pageType = 'public';
 include __DIR__ . '/includes/layout-header.php';
 ?>
 
+<style>
+/* Compact results table for desktop */
+.results-table {
+    font-size: 0.8rem;
+}
+
+.results-table th,
+.results-table td {
+    padding: 0.4rem 0.5rem;
+    white-space: nowrap;
+}
+
+.results-table .gs-medal {
+    font-size: 1rem;
+}
+
+/* Hide split times by default on desktop */
+.split-time-col {
+    display: none;
+}
+
+.split-times-visible .split-time-col {
+    display: table-cell;
+}
+
+/* Toggle button styling */
+.split-times-toggle {
+    cursor: pointer;
+    user-select: none;
+}
+
+@media (max-width: 768px) {
+    .results-table {
+        font-size: 0.75rem;
+    }
+    .results-table th,
+    .results-table td {
+        padding: 0.3rem 0.4rem;
+    }
+}
+</style>
+
 <main class="gs-main-content">
     <div class="gs-container">
 
@@ -351,7 +393,29 @@ include __DIR__ . '/includes/layout-header.php';
                             </span>
                         </h2>
                     </div>
+                    <?php
+                    // Check which SS columns this class has data for
+                    $classSplitCols = [];
+                    if ($hasSplitTimes && !$isDH) {
+                        for ($i = 1; $i <= 10; $i++) {
+                            foreach ($groupData['results'] as $r) {
+                                if (!empty($r['ss' . $i])) {
+                                    $classSplitCols[] = $i;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    ?>
                     <div class="gs-card-content gs-card-table-container">
+                        <?php if (!empty($classSplitCols)): ?>
+                        <div class="gs-mb-sm gs-text-right">
+                            <label class="gs-checkbox split-times-toggle">
+                                <input type="checkbox" onchange="toggleSplitTimes(this)">
+                                <span class="gs-text-sm">Visa sträcktider</span>
+                            </label>
+                        </div>
+                        <?php endif; ?>
                         <table class="gs-table results-table">
                             <thead>
                                 <tr>
@@ -367,25 +431,14 @@ include __DIR__ . '/includes/layout-header.php';
                                         <th class="gs-table-col-medium">Bästa</th>
                                     <?php else: ?>
                                         <th class="gs-table-col-medium">Tid</th>
-                                        <?php if ($hasSplitTimes): ?>
-                                            <?php for ($i = 1; $i <= 10; $i++): ?>
-                                                <?php
-                                                // Check if any result has this split time
-                                                $hasThisSplit = false;
-                                                foreach ($results as $r) {
-                                                    if (!empty($r['ss' . $i])) {
-                                                        $hasThisSplit = true;
-                                                        break;
-                                                    }
-                                                }
-                                                if ($hasThisSplit):
-                                                ?>
-                                                    <th class="gs-table-col-medium">SS<?= $i ?></th>
-                                                <?php endif; ?>
-                                            <?php endfor; ?>
-                                        <?php endif; ?>
+                                        <th class="gs-table-col-medium">+Tid</th>
+                                        <?php foreach ($classSplitCols as $ssNum): ?>
+                                            <th class="gs-table-col-medium split-time-col">SS<?= $ssNum ?></th>
+                                        <?php endforeach; ?>
                                     <?php endif; ?>
+                                    <?php if ($isDH): ?>
                                     <th class="gs-table-col-medium">+Tid</th>
+                                    <?php endif; ?>
                                 </tr>
                             </thead>
                             <tbody>
@@ -476,34 +529,27 @@ include __DIR__ . '/includes/layout-header.php';
                                                     <span class="gs-text-secondary">-</span>
                                                 <?php endif; ?>
                                             </td>
-                                            <?php if ($hasSplitTimes): ?>
-                                                <?php for ($i = 1; $i <= 10; $i++): ?>
-                                                    <?php
-                                                    // Check if any result has this split time
-                                                    $hasThisSplit = false;
-                                                    foreach ($results as $r) {
-                                                        if (!empty($r['ss' . $i])) {
-                                                            $hasThisSplit = true;
-                                                            break;
-                                                        }
-                                                    }
-                                                    if ($hasThisSplit):
-                                                    ?>
-                                                        <td class="gs-table-time-cell gs-text-secondary">
-                                                            <?php if (!empty($result['ss' . $i])): ?>
-                                                                <?= formatDisplayTime($result['ss' . $i]) ?>
-                                                            <?php else: ?>
-                                                                -
-                                                            <?php endif; ?>
-                                                        </td>
+                                            <!-- +Tid right after total time -->
+                                            <td class="gs-table-time-cell gs-text-secondary">
+                                                <?= $result['time_behind_formatted'] ?? '-' ?>
+                                            </td>
+                                            <!-- Split times (per class) -->
+                                            <?php foreach ($classSplitCols as $ssNum): ?>
+                                                <td class="gs-table-time-cell gs-text-secondary split-time-col">
+                                                    <?php if (!empty($result['ss' . $ssNum])): ?>
+                                                        <?= formatDisplayTime($result['ss' . $ssNum]) ?>
+                                                    <?php else: ?>
+                                                        -
                                                     <?php endif; ?>
-                                                <?php endfor; ?>
-                                            <?php endif; ?>
+                                                </td>
+                                            <?php endforeach; ?>
                                         <?php endif; ?>
-
-                                        <td class="gs-table-center gs-table-mono gs-text-secondary">
+                                        <?php if ($isDH): ?>
+                                        <!-- +Tid for DH -->
+                                        <td class="gs-table-time-cell gs-text-secondary">
                                             <?= $result['time_behind_formatted'] ?? '-' ?>
                                         </td>
+                                        <?php endif; ?>
                                     </tr>
                                 <?php endforeach; ?>
                             </tbody>
@@ -514,5 +560,22 @@ include __DIR__ . '/includes/layout-header.php';
         <?php endif; ?>
     </div>
 </main>
+
+<script>
+function toggleSplitTimes(checkbox) {
+    // Find the parent card content
+    const cardContent = checkbox.closest('.gs-card-content');
+    if (cardContent) {
+        const table = cardContent.querySelector('.results-table');
+        if (table) {
+            if (checkbox.checked) {
+                table.classList.add('split-times-visible');
+            } else {
+                table.classList.remove('split-times-visible');
+            }
+        }
+    }
+}
+</script>
 
 <?php include __DIR__ . '/includes/layout-footer.php'; ?>

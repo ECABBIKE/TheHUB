@@ -241,11 +241,19 @@ include __DIR__ . '/../includes/layout-header.php';
         const dhCols = document.querySelectorAll('.dh-points-col');
 
         standardCols.forEach(col => {
-            col.style.display = isDH ? 'none' : '';
+            if (isDH) {
+                col.classList.add('gs-hidden', 'gs-display-none');
+            } else {
+                col.classList.remove('gs-hidden', 'gs-display-none');
+            }
         });
 
         dhCols.forEach(col => {
-            col.style.display = isDH ? '' : 'none';
+            if (isDH) {
+                col.classList.remove('gs-hidden', 'gs-display-none');
+            } else {
+                col.classList.add('gs-hidden', 'gs-display-none');
+            }
         });
     }
 </script>
