@@ -462,15 +462,15 @@ include __DIR__ . '/../includes/layout-header.php';
             <div class="gs-alert gs-alert-info gs-mb-md">
                 <i data-lucide="info"></i>
                 <div>
-                    <strong>CSV-format:</strong><br>
-                    Position;Poäng<br>
-                    1;520<br>
-                    2;480<br>
-                    ...<br><br>
-                    <strong>DH-format:</strong><br>
-                    Position;Kval;Final<br>
-                    1;100;520<br>
-                    2;90;480
+                    <strong>Ladda ner exempelmallar:</strong><br>
+                    <a href="/templates/poangmall-standard.csv" download class="gs-link">
+                        <i data-lucide="download" class="gs-icon-14"></i>
+                        Standard poängmall (40 positioner)
+                    </a><br>
+                    <a href="/templates/poangmall-dh.csv" download class="gs-link">
+                        <i data-lucide="download" class="gs-icon-14"></i>
+                        DH poängmall med Kval/Final (40 positioner)
+                    </a>
                 </div>
             </div>
 
