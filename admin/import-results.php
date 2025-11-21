@@ -94,8 +94,8 @@ function importResultsFromCSV($filepath, $db, $importId = null) {
     rewind($handle);
     $delimiter = (substr_count($firstLine, ';') > substr_count($firstLine, ',')) ? ';' : ',';
 
-    // Read header row
-    $header = fgetcsv($handle, 1000, $delimiter);
+    // Read header row (0 = unlimited line length)
+    $header = fgetcsv($handle, 0, $delimiter);
 
     if (!$header) {
         fclose($handle);
@@ -327,7 +327,7 @@ function importResultsFromCSV($filepath, $db, $importId = null) {
 
     $lineNumber = 1;
 
-    while (($row = fgetcsv($handle, 1000, $delimiter)) !== false) {
+    while (($row = fgetcsv($handle, 0, $delimiter)) !== false) {
         $lineNumber++;
 
         // Skip empty rows (all columns empty or only whitespace)

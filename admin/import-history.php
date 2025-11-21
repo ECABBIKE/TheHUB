@@ -25,6 +25,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $message = $result['message'];
         $messageType = $result['success'] ? 'success' : 'error';
+    } elseif ($action === 'delete') {
+        $importId = intval($_POST['import_id']);
+        $result = deleteImportHistory($db, $importId);
+
+        $message = $result['message'];
+        $messageType = $result['success'] ? 'success' : 'error';
     }
 }
 
@@ -273,6 +279,14 @@ include __DIR__ . '/../includes/layout-header.php';
                                                         <i data-lucide="alert-circle"></i>
                                                     </button>
                                                 <?php endif; ?>
+                                                <button
+                                                    type="button"
+                                                    class="gs-btn gs-btn-sm gs-btn-outline gs-btn-danger"
+                                                    onclick="deleteImport(<?= $import['id'] ?>, '<?= addslashes(h($import['filename'])) ?>')"
+                                                    title="Radera från historik"
+                                                >
+                                                    <i data-lucide="trash-2"></i>
+                                                </button>
                                             </div>
                                         </td>
                                     </tr>
@@ -306,6 +320,24 @@ include __DIR__ . '/../includes/layout-header.php';
             // Show error details
             function showErrors(id, errorSummary) {
                 alert('Fel från import:\n\n' + errorSummary);
+            }
+
+            // Delete import from history
+            function deleteImport(id, filename) {
+                if (!confirm(`Vill du radera "${filename}" från importhistoriken?\n\nOBS: Detta raderar bara historikposten, inte de importerade posterna.`)) {
+                    return;
+                }
+
+                // Create form and submit
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.innerHTML = `
+                    <?= csrf_field() ?>
+                    <input type="hidden" name="action" value="delete">
+                    <input type="hidden" name="import_id" value="${id}">
+                `;
+                document.body.appendChild(form);
+                form.submit();
             }
         </script>
 

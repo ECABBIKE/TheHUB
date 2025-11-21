@@ -219,3 +219,35 @@ function getImportHistory($db, $limit = 50, $type = null) {
 function getImportRecords($db, $importId) {
     return $db->getAll("SELECT * FROM import_records WHERE import_id = ? ORDER BY id", [$importId]);
 }
+
+/**
+ * Delete import history entry (without rollback)
+ *
+ * @param object $db Database connection
+ * @param int $importId Import history ID
+ * @return array Result with success status and message
+ */
+function deleteImportHistory($db, $importId) {
+    try {
+        // Get import history
+        $import = $db->getRow("SELECT * FROM import_history WHERE id = ?", [$importId]);
+
+        if (!$import) {
+            return ['success' => false, 'message' => 'Import hittades inte'];
+        }
+
+        // Delete all import records first (foreign key)
+        $db->delete('import_records', 'import_id = ?', [$importId]);
+
+        // Delete import history
+        $db->delete('import_history', 'id = ?', [$importId]);
+
+        return [
+            'success' => true,
+            'message' => 'Importhistorik raderad'
+        ];
+
+    } catch (Exception $e) {
+        return ['success' => false, 'message' => 'Radering misslyckades: ' . $e->getMessage()];
+    }
+}
