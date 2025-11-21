@@ -101,8 +101,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_import'])) {
     error_reporting(E_ALL);
     ini_set('display_errors', 1);
 
+    // Debug: Check if we reach this point
+    file_put_contents('/tmp/import_debug.log', "Step 1: POST received\n", FILE_APPEND);
+
     try {
+        file_put_contents('/tmp/import_debug.log', "Step 2: Before require\n", FILE_APPEND);
         require_once __DIR__ . '/../includes/import-functions.php';
+        file_put_contents('/tmp/import_debug.log', "Step 3: After require\n", FILE_APPEND);
 
         // Process class mappings from form
         $classMappings = [];
@@ -122,6 +127,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_import'])) {
         // Create event mapping - all rows go to selected event
         $eventMapping = ['Välj event för alla resultat' => $selectedEventId];
 
+        file_put_contents('/tmp/import_debug.log', "Step 4: Before startImportHistory\n", FILE_APPEND);
+
         // Import with event mapping
         $importId = startImportHistory(
             $db,
@@ -131,6 +138,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_import'])) {
             $current_admin['username'] ?? 'admin'
         );
 
+        file_put_contents('/tmp/import_debug.log', "Step 5: Before importResultsFromCSVWithMapping\n", FILE_APPEND);
+
         $result = importResultsFromCSVWithMapping(
             $_SESSION['import_preview_file'],
             $db,
@@ -138,6 +147,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_import'])) {
             $eventMapping,
             null
         );
+
+        file_put_contents('/tmp/import_debug.log', "Step 6: After import, stats: " . json_encode($result['stats']) . "\n", FILE_APPEND);
 
         $stats = $result['stats'];
         $matching_stats = $result['matching'];
@@ -147,8 +158,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_import'])) {
         $importStatus = ($stats['success'] > 0) ? 'completed' : 'failed';
         updateImportHistory($db, $importId, $stats, $errors, $importStatus);
 
+        file_put_contents('/tmp/import_debug.log', "Step 7: Before recalculateEventResults\n", FILE_APPEND);
+
         // Recalculate results to fix class assignments and calculate correct points
         $recalcStats = recalculateEventResults($db, $selectedEventId);
+
+        file_put_contents('/tmp/import_debug.log', "Step 8: After recalculate\n", FILE_APPEND);
         $classesFixed = $recalcStats['classes_fixed'] ?? 0;
         $pointsCalculated = $recalcStats['points_updated'] ?? 0;
 
