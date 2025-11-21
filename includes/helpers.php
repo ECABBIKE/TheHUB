@@ -107,10 +107,11 @@ class DatabaseWrapper {
     public function insert($table, $data) {
         $fields = array_keys($data);
         $placeholders = array_fill(0, count($fields), '?');
-        
+
         $sql = "INSERT INTO " . $table . " (" . implode(', ', $fields) . ") VALUES (" . implode(', ', $placeholders) . ")";
         $stmt = $this->pdo->prepare($sql);
-        return $stmt->execute(array_values($data));
+        $stmt->execute(array_values($data));
+        return $this->pdo->lastInsertId();
     }
     
     public function update($table, $data, $where, $params = array()) {
