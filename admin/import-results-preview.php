@@ -157,7 +157,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_import'])) {
         if ($classesFixed > 0 || $pointsCalculated > 0) {
             $recalcMsg = " Omräkning: {$classesFixed} klassplaceringar fixade, {$pointsCalculated} poäng beräknade.";
         }
-        setFlash("Import klar! {$stats['success']} nya, {$stats['updated']} uppdaterade av {$stats['total']} resultat.{$recalcMsg}", 'success');
+        set_flash('success', "Import klar! {$stats['success']} nya, {$stats['updated']} uppdaterade av {$stats['total']} resultat.{$recalcMsg}");
         header('Location: /admin/event-edit.php?id=' . $selectedEventId . '&tab=results');
         exit;
 
