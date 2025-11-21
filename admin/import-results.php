@@ -9,19 +9,27 @@ $current_admin = get_current_admin();
 
 $message = '';
 $messageType = 'info';
-$stats = null;
-$matching_stats = null;
-$errors = [];
 
-// Handle CSV upload
+// Load existing events for dropdown
+$existingEvents = $db->getAll("
+    SELECT id, name, date, location
+    FROM events
+    ORDER BY date DESC
+    LIMIT 200
+");
+
+// Handle CSV upload - redirect to preview
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['import_file'])) {
-    // Validate CSRF token
     checkCsrf();
 
     $file = $_FILES['import_file'];
+    $selectedEventId = !empty($_POST['event_id']) ? (int)$_POST['event_id'] : null;
 
-    // Validate file
-    if ($file['error'] !== UPLOAD_ERR_OK) {
+    // Validate event selection
+    if (!$selectedEventId) {
+        $message = 'Du måste välja ett event först';
+        $messageType = 'error';
+    } elseif ($file['error'] !== UPLOAD_ERR_OK) {
         $message = 'Filuppladdning misslyckades';
         $messageType = 'error';
     } elseif ($file['size'] > MAX_UPLOAD_SIZE) {
@@ -43,10 +51,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['import_file'])) {
                 unset($_SESSION['import_preview_filename']);
                 unset($_SESSION['import_preview_data']);
                 unset($_SESSION['import_events_summary']);
+                unset($_SESSION['import_selected_event']);
 
                 // Store in session and redirect to preview
                 $_SESSION['import_preview_file'] = $uploaded;
                 $_SESSION['import_preview_filename'] = $file['name'];
+                $_SESSION['import_selected_event'] = $selectedEventId;
 
                 header('Location: /admin/import-results-preview.php');
                 exit;
@@ -58,10 +68,142 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['import_file'])) {
     }
 }
 
+$pageTitle = 'Importera Resultat';
+$pageType = 'admin';
+include __DIR__ . '/../includes/layout-header.php';
+?>
+
+<main class="gs-content-with-sidebar">
+    <div class="gs-container">
+        <!-- Header -->
+        <div class="gs-flex gs-items-center gs-justify-between gs-mb-xl">
+            <h1 class="gs-h1 gs-text-primary">
+                <i data-lucide="upload"></i>
+                Importera Resultat
+            </h1>
+            <a href="/admin/import-history.php" class="gs-btn gs-btn-outline">
+                <i data-lucide="history"></i>
+                Importhistorik
+            </a>
+        </div>
+
+        <!-- Messages -->
+        <?php if ($message): ?>
+            <div class="gs-alert gs-alert-<?= $messageType ?> gs-mb-lg">
+                <i data-lucide="<?= $messageType === 'success' ? 'check-circle' : ($messageType === 'error' ? 'alert-circle' : 'info') ?>"></i>
+                <?= h($message) ?>
+            </div>
+        <?php endif; ?>
+
+        <!-- Import Form -->
+        <div class="gs-card">
+            <div class="gs-card-header">
+                <h2 class="gs-h4 gs-text-primary">
+                    <i data-lucide="file-plus"></i>
+                    Importera resultat till event
+                </h2>
+            </div>
+            <div class="gs-card-content">
+                <form method="POST" enctype="multipart/form-data" class="gs-form">
+                    <?= csrf_field() ?>
+
+                    <!-- Step 1: Select Event -->
+                    <div class="gs-form-group gs-mb-lg">
+                        <label for="event_id" class="gs-label gs-label-lg">
+                            <span class="gs-badge gs-badge-primary gs-mr-sm">1</span>
+                            Välj event
+                        </label>
+                        <select id="event_id" name="event_id" class="gs-input gs-input-lg" required>
+                            <option value="">-- Välj ett event --</option>
+                            <?php foreach ($existingEvents as $event): ?>
+                                <option value="<?= $event['id'] ?>">
+                                    <?= h($event['name']) ?> (<?= date('Y-m-d', strtotime($event['date'])) ?>)
+                                    <?php if ($event['location']): ?>
+                                        - <?= h($event['location']) ?>
+                                    <?php endif; ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                        <p class="gs-text-sm gs-text-secondary gs-mt-sm">
+                            Alla resultat i filen kommer att importeras till det valda eventet.
+                        </p>
+                    </div>
+
+                    <!-- Step 2: Select File -->
+                    <div class="gs-form-group gs-mb-lg">
+                        <label for="import_file" class="gs-label gs-label-lg">
+                            <span class="gs-badge gs-badge-primary gs-mr-sm">2</span>
+                            Välj CSV-fil
+                        </label>
+                        <input type="file"
+                               id="import_file"
+                               name="import_file"
+                               class="gs-input gs-input-lg"
+                               accept=".csv"
+                               required>
+                        <p class="gs-text-sm gs-text-secondary gs-mt-sm">
+                            Max filstorlek: <?= MAX_UPLOAD_SIZE / 1024 / 1024 ?>MB. Stöder komma- och semikolon-separerade filer.
+                        </p>
+                    </div>
+
+                    <!-- Step 3: Preview Button -->
+                    <div class="gs-form-group">
+                        <button type="submit" class="gs-btn gs-btn-primary gs-btn-lg gs-w-full">
+                            <i data-lucide="eye"></i>
+                            <span class="gs-badge gs-badge-light gs-mr-sm">3</span>
+                            Förhandsgranska import
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- CSV Format Info -->
+        <div class="gs-card gs-mt-lg">
+            <div class="gs-card-header">
+                <h3 class="gs-h5 gs-text-primary">
+                    <i data-lucide="file-text"></i>
+                    CSV Format
+                </h3>
+            </div>
+            <div class="gs-card-content">
+                <p class="gs-text-sm gs-mb-md"><strong>Obligatoriska kolumner:</strong></p>
+                <code class="gs-code-block gs-mb-md">
+Category, PlaceByCategory, FirstName, LastName, Club, NetTime, Status
+                </code>
+
+                <p class="gs-text-sm gs-mb-md"><strong>Valfria kolumner:</strong></p>
+                <code class="gs-code-block gs-mb-md">
+UCI-ID, SS1, SS2, SS3, SS4, SS5, SS6, SS7, SS8, SS9, SS10
+                </code>
+
+                <details class="gs-details">
+                    <summary class="gs-text-sm gs-text-primary">
+                        Visa exempel CSV
+                    </summary>
+                    <pre class="gs-code-dark gs-mt-md">
+Category,PlaceByCategory,FirstName,LastName,Club,UCI-ID,NetTime,Status,SS1,SS2,SS3
+Damer Junior,1,Ella,MÅRTENSSON,Borås CA,10022510347,16:19.16,FIN,2:10.55,1:47.08,1:51.10
+Herrar Elite,1,Johan,ANDERSSON,Stockholm CK,10011223344,14:16.42,FIN,1:58.22,1:38.55,1:42.33
+Herrar Elite,2,Erik,SVENSSON,Göteborg MTB,,DNF,DNF,1:55.34,1:39.21,DNF</pre>
+                </details>
+
+                <div class="gs-alert gs-alert-info gs-mt-md">
+                    <i data-lucide="info"></i>
+                    <strong>Tips:</strong> Systemet stödjer också svenska kolumnnamn som Klass, Placering, Förnamn, Efternamn, Klubb, Tid.
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<?php include __DIR__ . '/../includes/layout-footer.php'; ?>
+
+<?php
 /**
- * Import results from CSV file
+ * Import results from CSV file with event mapping
  */
-function importResultsFromCSV($filepath, $db, $importId = null) {
+function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMapping = [], $forceClassId = null) {
     $stats = [
         'total' => 0,
         'success' => 0,
@@ -85,6 +227,10 @@ function importResultsFromCSV($filepath, $db, $importId = null) {
 
     $errors = [];
 
+    // Set global event mapping for use in import
+    global $IMPORT_EVENT_MAPPING;
+    $IMPORT_EVENT_MAPPING = $eventMapping;
+
     if (($handle = fopen($filepath, 'r')) === false) {
         throw new Exception('Kunde inte öppna filen');
     }
@@ -103,6 +249,7 @@ function importResultsFromCSV($filepath, $db, $importId = null) {
     }
 
     // Normalize header - accept multiple variants
+    $originalHeaders = $header;
     $header = array_map(function($col) {
         $col = mb_strtolower(trim($col), 'UTF-8');
 
@@ -130,11 +277,6 @@ function importResultsFromCSV($filepath, $db, $importId = null) {
             'location' => 'event_location',
             'plats' => 'event_location',
             'ort' => 'event_location',
-            'eventvenue' => 'event_venue',
-            'venue' => 'event_venue',
-            'bana' => 'event_venue',
-            'anläggning' => 'event_venue',
-            'anlaggning' => 'event_venue',
 
             // Rider fields
             'firstname' => 'firstname',
@@ -156,12 +298,6 @@ function importResultsFromCSV($filepath, $db, $importId = null) {
             'licens' => 'license_number',
             'uci_id' => 'license_number',
             'swe_id' => 'license_number',
-            'licensår' => 'license_year',
-            'licensar' => 'license_year',
-            'licenseyear' => 'license_year',
-            'license_year' => 'license_year',
-            'år' => 'license_year',
-            'ar' => 'license_year',
 
             // Club/Team
             'club' => 'club_name',
@@ -172,11 +308,8 @@ function importResultsFromCSV($filepath, $db, $importId = null) {
             'huvudförening' => 'club_name',
             'huvudforening' => 'club_name',
 
-            // Category is the racing class (like "Damer Junior", "Elite Herr")
-            // This maps to class_name for age/gender classification
+            // Category is the racing class
             'category' => 'class_name',
-
-            // Class (age/gender class)
             'class' => 'class_name',
             'klass' => 'class_name',
             'classname' => 'class_name',
@@ -184,80 +317,41 @@ function importResultsFromCSV($filepath, $db, $importId = null) {
             // PWR is used in some exports but we ignore it
             'pwr' => 'pwr',
 
-            // Discipline
-            'discipline' => 'discipline',
-            'disciplin' => 'discipline',
-            'gren' => 'discipline',
-
-            // Contact
-            'email' => 'email',
-            'epost' => 'email',
-            'e-post' => 'email',
-            'mail' => 'email',
-
-            'birthyear' => 'birth_year',
-            'födelseår' => 'birth_year',
-            'fodelsear' => 'birth_year',
-            'födelsedatum' => 'birth_year',
-            'fodelsedatum' => 'birth_year',
+            // Position
             'position' => 'position',
             'placering' => 'position',
             'placebycategory' => 'position',
-            'finishtime' => 'finish_time',
-            'sluttid' => 'finish_time',
-            'tid' => 'finish_time',
+            'place' => 'position',
+
+            // Time fields
             'time' => 'finish_time',
-            'finish_time' => 'finish_time',
+            'tid' => 'finish_time',
+            'finishtime' => 'finish_time',
             'nettime' => 'finish_time',
             'nettid' => 'finish_time',
-            'bibnumber' => 'bib_number',
-            'startnummer' => 'bib_number',
-            'bib' => 'bib_number',
+            'finish_time' => 'finish_time',
+            'totaltid' => 'finish_time',
+            'totaltime' => 'finish_time',
+
+            // Status
             'status' => 'status',
-            'points' => 'points',
-            'poäng' => 'points',
-            'poang' => 'points',
-            'notes' => 'notes',
-            'anteckningar' => 'notes',
+
+            // Gender
             'gender' => 'gender',
             'kön' => 'gender',
             'kon' => 'gender',
-            'kategori' => 'gender',
-            'sex' => 'gender',
 
-            // Split times for Enduro/DH
-            'ss1' => 'ss1',
-            'ss2' => 'ss2',
-            'ss3' => 'ss3',
-            'ss4' => 'ss4',
-            'ss5' => 'ss5',
-            'ss6' => 'ss6',
-            'ss7' => 'ss7',
-            'ss8' => 'ss8',
-            'ss9' => 'ss9',
-            'ss10' => 'ss10',
-            'ss11' => 'ss11',
-            'ss12' => 'ss12',
-            'ss13' => 'ss13',
-            'ss14' => 'ss14',
-            'ss15' => 'ss15',
-            'splittid1' => 'ss1',
-            'splittid2' => 'ss2',
-            'splittid3' => 'ss3',
-            'splittid4' => 'ss4',
-            'splittid5' => 'ss5',
-            'splittid6' => 'ss6',
-            'splittid7' => 'ss7',
-            'splittid8' => 'ss8',
-            'splittid9' => 'ss9',
-            'splittid10' => 'ss10',
-            'splittid11' => 'ss11',
-            'splittid12' => 'ss12',
-            'splittid13' => 'ss13',
-            'splittid14' => 'ss14',
-            'splittid15' => 'ss15',
+            // Birth year
+            'birthyear' => 'birth_year',
+            'födelseår' => 'birth_year',
+            'fodelsear' => 'birth_year',
 
-            // DH two-run times
+            // Stage times
+            'ss1' => 'ss1', 'ss2' => 'ss2', 'ss3' => 'ss3', 'ss4' => 'ss4',
+            'ss5' => 'ss5', 'ss6' => 'ss6', 'ss7' => 'ss7', 'ss8' => 'ss8',
+            'ss9' => 'ss9', 'ss10' => 'ss10',
+
+            // DH run times
             'run1time' => 'run_1_time',
             'run_1_time' => 'run_1_time',
             'run1' => 'run_1_time',
@@ -293,31 +387,6 @@ function importResultsFromCSV($filepath, $db, $importId = null) {
         return $mappings[$col] ?? $col;
     }, $header);
 
-    // Special handling for headers that contain actual event data
-    // Some export formats use the event name/date/discipline as column headers
-    $hasEventInHeader = false;
-    for ($i = 0; $i < count($header); $i++) {
-        $originalCol = mb_strtolower(trim($header[$i]), 'UTF-8');
-
-        // Detect date patterns (YYYY-MM-DD or YYYYMMDD)
-        if (preg_match('/^\d{4}-?\d{2}-?\d{2}$/', str_replace([' ', '-', '_'], '', $originalCol))) {
-            $header[$i] = 'event_date';
-            $hasEventInHeader = true;
-        }
-        // Detect discipline codes (END, DHI, XC, EDR, DS, etc.)
-        elseif (in_array(strtoupper(str_replace([' ', '-', '_'], '', $originalCol)), ['END', 'EDR', 'DHI', 'XC', 'DS', 'DH', 'CX', 'ROAD', 'MTB'])) {
-            $header[$i] = 'discipline';
-            $hasEventInHeader = true;
-        }
-        // Detect event name patterns (SweCup, GravitySeries, etc.)
-        elseif (preg_match('/(swecup|gravityseries|cup|enduro|dh|xc)/i', $originalCol)) {
-            $header[$i] = 'event_name';
-            $hasEventInHeader = true;
-        }
-    }
-
-    // Note: "category" is now always mapped directly to "class_name" in the mappings above
-
     // Cache for lookups
     $eventCache = [];
     $riderCache = [];
@@ -337,7 +406,7 @@ function importResultsFromCSV($filepath, $db, $importId = null) {
 
         $stats['total']++;
 
-        // Ensure row has same number of columns as header (pad with empty strings if needed)
+        // Ensure row has same number of columns as header
         if (count($row) < count($header)) {
             $row = array_pad($row, count($header), '');
         } elseif (count($row) > count($header)) {
@@ -348,8 +417,6 @@ function importResultsFromCSV($filepath, $db, $importId = null) {
         $data = array_combine($header, $row);
 
         // Validate required fields
-        // event_name can be missing if using event mapping from preview
-        global $IMPORT_EVENT_MAPPING;
         $hasEventMapping = !empty($IMPORT_EVENT_MAPPING);
 
         if (empty($data['event_name']) && !$hasEventMapping) {
@@ -370,713 +437,204 @@ function importResultsFromCSV($filepath, $db, $importId = null) {
         }
 
         try {
-            // Find event
-            $eventName = trim($data['event_name']);
+            // Find event - use mapping if available
+            $eventKey = $data['event_name'];
             $eventId = null;
 
-            if (isset($eventCache[$eventName])) {
-                $eventId = $eventCache[$eventName];
+            if (isset($eventMapping[$eventKey])) {
+                $eventId = $eventMapping[$eventKey];
             } else {
-                // Check if we have event mapping from preview
-                global $IMPORT_EVENT_MAPPING;
-                $useExistingEvent = false;
+                // Try to find event by name
+                if (!isset($eventCache[$eventKey])) {
+                    $event = $db->getRow(
+                        "SELECT id FROM events WHERE name LIKE ? ORDER BY date DESC LIMIT 1",
+                        ['%' . $eventKey . '%']
+                    );
+                    $eventCache[$eventKey] = $event ? $event['id'] : null;
+                }
+                $eventId = $eventCache[$eventKey];
+            }
 
-                if (!empty($IMPORT_EVENT_MAPPING) && isset($IMPORT_EVENT_MAPPING[$eventName])) {
-                    $mappedValue = $IMPORT_EVENT_MAPPING[$eventName];
+            if (!$eventId) {
+                $stats['skipped']++;
+                $errors[] = "Rad {$lineNumber}: Event '{$eventKey}' hittades inte";
+                continue;
+            }
 
-                    if ($mappedValue !== 'create' && is_numeric($mappedValue)) {
-                        // Use existing event from mapping
-                        $eventId = (int)$mappedValue;
-                        $eventCache[$eventName] = $eventId;
-                        $matching_stats['events_found']++;
-                        $useExistingEvent = true;
-                        error_log("Using mapped event ID {$eventId} for '{$eventName}'");
+            // Find or create rider
+            $riderName = trim($data['firstname']) . '|' . trim($data['lastname']);
+            $licenseNumber = $data['license_number'] ?? '';
+
+            if (!isset($riderCache[$riderName . '|' . $licenseNumber])) {
+                // Try to find rider by license number first
+                $rider = null;
+                if (!empty($licenseNumber)) {
+                    $rider = $db->getRow(
+                        "SELECT id FROM riders WHERE uci_id = ? OR swe_id = ?",
+                        [$licenseNumber, $licenseNumber]
+                    );
+                    if ($rider) {
+                        $matching_stats['riders_found']++;
                     }
-                    // else: mappedValue is 'create', proceed with auto-create below
                 }
 
-                if (!$useExistingEvent) {
-                    // Try exact match
-                    $event = $db->getRow(
-                        "SELECT id FROM events WHERE name = ? LIMIT 1",
-                        [$eventName]
+                // Try by name if no license match
+                if (!$rider) {
+                    $rider = $db->getRow(
+                        "SELECT id FROM riders WHERE first_name = ? AND last_name = ?",
+                        [trim($data['firstname']), trim($data['lastname'])]
                     );
+                    if ($rider) {
+                        $matching_stats['riders_found']++;
+                    }
+                }
 
-                    if (!$event) {
-                        // Try fuzzy match (LIKE)
-                        $event = $db->getRow(
-                            "SELECT id FROM events WHERE name LIKE ? LIMIT 1",
-                            ['%' . $eventName . '%']
-                        );
+                // Create new rider if not found
+                if (!$rider) {
+                    $matching_stats['riders_not_found']++;
+                    $matching_stats['riders_created']++;
+
+                    // Determine gender from class name if available
+                    $gender = 'unknown';
+                    $className = $data['class_name'] ?? '';
+                    if (preg_match('/(dam|women|female|flickor|girls)/i', $className)) {
+                        $gender = 'female';
+                    } elseif (preg_match('/(herr|men|male|pojkar|boys)/i', $className)) {
+                        $gender = 'male';
                     }
 
-                    if ($event) {
-                        $eventId = $event['id'];
-                        $eventCache[$eventName] = $eventId;
-                        $matching_stats['events_found']++;
-                    } else {
-                        // AUTO-CREATE: Event not found, create it
-                        $matching_stats['events_not_found']++;
+                    $riderId = $db->insert('riders', [
+                        'first_name' => trim($data['firstname']),
+                        'last_name' => trim($data['lastname']),
+                        'uci_id' => $licenseNumber ?: null,
+                        'gender' => $gender
+                    ]);
 
-                        // Get event data from CSV
-                        $eventDate = !empty($data['event_date']) ? trim($data['event_date']) : date('Y-m-d');
-                        $eventLocation = !empty($data['event_location']) ? trim($data['event_location']) : null;
-                        $eventVenueName = !empty($data['event_venue']) ? trim($data['event_venue']) : null;
-
-                        // Parse date if needed (handle various formats)
-                        if (!empty($data['event_date'])) {
-                            $dateParsed = strtotime($data['event_date']);
-                            if ($dateParsed) {
-                                $eventDate = date('Y-m-d', $dateParsed);
-                            }
-                        }
-
-                        // Auto-create venue if specified
-                        $venueId = null;
-                        if ($eventVenueName) {
-                            // Check if venue exists
-                            $venue = $db->getRow(
-                                "SELECT id FROM venues WHERE name LIKE ? LIMIT 1",
-                                ['%' . $eventVenueName . '%']
-                            );
-
-                            if ($venue) {
-                                $venueId = $venue['id'];
-                            } else {
-                                // Create new venue
-                                $venueData = [
-                                    'name' => $eventVenueName,
-                                    'city' => $eventLocation,
-                                    'active' => 1
-                                ];
-                                $venueId = $db->insert('venues', $venueData);
-                                $matching_stats['venues_created']++;
-                                error_log("Auto-created venue: {$eventVenueName}");
-
-                                // Track created venue
-                                if ($importId && $venueId) {
-                                    trackImportRecord($db, $importId, 'venue', $venueId, 'created');
-                                }
-                            }
-                        }
-
-                        // Create new event
-                        // Auto-generate advent_id for new event
-                        $event_year = date('Y', strtotime($eventDate));
-                        $advent_id = generateEventAdventId($pdo, $event_year);
-
-                        $newEventData = [
-                            'name' => $eventName,
-                            'advent_id' => $advent_id,
-                            'date' => $eventDate,
-                            'location' => $eventLocation,
-                            'venue_id' => $venueId,
-                            'status' => 'completed',
-                            'active' => 1
-                        ];
-
-                        $eventId = $db->insert('events', $newEventData);
-                        $eventCache[$eventName] = $eventId;
-                        $matching_stats['events_created']++;
-                        error_log("Auto-created event: {$eventName} on {$eventDate}");
-
-                        // Track created event
-                        if ($importId && $eventId) {
-                            trackImportRecord($db, $importId, 'event', $eventId, 'created');
-                        }
+                    // Track for rollback
+                    if ($importId) {
+                        trackImportRecord($db, $importId, 'rider', $riderId, 'created');
                     }
+
+                    $riderCache[$riderName . '|' . $licenseNumber] = $riderId;
+                } else {
+                    $riderCache[$riderName . '|' . $licenseNumber] = $rider['id'];
                 }
             }
+
+            $riderId = $riderCache[$riderName . '|' . $licenseNumber];
 
             // Find or create club
             $clubId = null;
-            if (!empty($data['club_name'])) {
-                $clubName = trim($data['club_name']);
-                $clubKey = strtolower($clubName); // Use lowercase for cache key
-
-                if (isset($clubCache[$clubKey])) {
-                    $clubId = $clubCache[$clubKey];
-                } else {
-                    // Fuzzy match with LIKE (case-insensitive)
+            $clubName = trim($data['club_name'] ?? '');
+            if (!empty($clubName)) {
+                if (!isset($clubCache[$clubName])) {
                     $club = $db->getRow(
-                        "SELECT id FROM clubs WHERE LOWER(name) LIKE LOWER(?) LIMIT 1",
+                        "SELECT id FROM clubs WHERE name LIKE ?",
                         ['%' . $clubName . '%']
                     );
-
-                    if ($club) {
-                        $clubId = $club['id'];
-                        $clubCache[$clubKey] = $clubId;
-                    } else {
-                        // Auto-create club
-                        $clubData = [
+                    if (!$club) {
+                        // Create club
+                        $matching_stats['clubs_created']++;
+                        $newClubId = $db->insert('clubs', [
                             'name' => $clubName,
                             'active' => 1
-                        ];
-                        $clubId = $db->insert('clubs', $clubData);
-                        $clubCache[$clubKey] = $clubId;
-                        $matching_stats['clubs_created']++;
-                        error_log("Auto-created club: {$clubName}");
-
-                        if ($importId && $clubId) {
-                            trackImportRecord($db, $importId, 'club', $clubId, 'created');
+                        ]);
+                        if ($importId) {
+                            trackImportRecord($db, $importId, 'club', $newClubId, 'created');
                         }
-                    }
-                }
-            }
-
-            // Find or create category
-            $categoryId = null;
-            if (!empty($data['category'])) {
-                $categoryName = trim($data['category']);
-                $categoryKey = strtolower($categoryName); // Use lowercase for cache key
-
-                if (isset($categoryCache[$categoryKey])) {
-                    $categoryId = $categoryCache[$categoryKey];
-                } else {
-                    // Case-insensitive match
-                    $category = $db->getRow(
-                        "SELECT id, name FROM categories WHERE LOWER(name) = LOWER(?) OR LOWER(short_name) = LOWER(?) LIMIT 1",
-                        [$categoryName, $categoryName]
-                    );
-
-                    if ($category) {
-                        $categoryId = $category['id'];
-                        $categoryCache[$categoryKey] = $categoryId;
+                        $clubCache[$clubName] = $newClubId;
                     } else {
-                        // Auto-create category
-                        $categoryData = [
-                            'name' => $categoryName,
-                            'short_name' => substr($categoryName, 0, 20),
-                            'active' => 1
-                        ];
-                        $categoryId = $db->insert('categories', $categoryData);
-                        $categoryCache[$categoryKey] = $categoryId;
-                        $matching_stats['categories_created']++;
-                        error_log("Auto-created category: {$categoryName}");
-
-                        if ($importId && $categoryId) {
-                            trackImportRecord($db, $importId, 'category', $categoryId, 'created');
-                        }
+                        $clubCache[$clubName] = $club['id'];
                     }
                 }
-            }
-
-            // Find rider
-            $firstname = trim($data['firstname']);
-            $lastname = trim($data['lastname']);
-            $licenseNumber = !empty($data['license_number']) ? trim($data['license_number']) : null;
-
-            // Extract birth year from various formats
-            $birthYear = null;
-            if (!empty($data['birth_year'])) {
-                $birthYearRaw = trim($data['birth_year']);
-                // Handle Swedish personnummer format: YYYYMMDD-XXXX or YYMMDD-XXXX
-                if (preg_match('/^(\d{4})\d{4}-?\d{4}$/', $birthYearRaw, $matches)) {
-                    $birthYear = (int)$matches[1]; // YYYYMMDD-XXXX → YYYY
-                } elseif (preg_match('/^(\d{2})\d{4}-?\d{4}$/', $birthYearRaw, $matches)) {
-                    // YYMMDD-XXXX → 19YY or 20YY
-                    $yy = (int)$matches[1];
-                    $birthYear = $yy < 30 ? 2000 + $yy : 1900 + $yy;
-                } else {
-                    $birthYear = (int)$birthYearRaw; // Just a year number
-                }
-            }
-
-            // Check for single-use license
-            $isSingleUseLicense = false;
-            if ($licenseNumber && stripos($licenseNumber, 'engångslicens') !== false) {
-                $isSingleUseLicense = true;
-                $licenseNumber = null; // Don't use "Engångslicens" as a license number for matching
-            }
-
-            $riderId = null;
-            $cacheKey = $licenseNumber ?: "{$firstname}|{$lastname}|{$birthYear}";
-
-            if (isset($riderCache[$cacheKey])) {
-                $riderId = $riderCache[$cacheKey];
-            } else {
-                // Try license number first (if not single-use license)
-                if ($licenseNumber && !$isSingleUseLicense) {
-                    $rider = $db->getRow(
-                        "SELECT id FROM riders WHERE license_number = ? LIMIT 1",
-                        [$licenseNumber]
-                    );
-                    if ($rider) {
-                        $riderId = $rider['id'];
-                        $riderCache[$cacheKey] = $riderId;
-                        $matching_stats['riders_found']++;
-
-                        // Normalize gender from CSV
-                        $genderToUpdate = null;
-                        if (!empty($data['gender'])) {
-                            $genderRaw = strtolower(trim($data['gender']));
-                            if (in_array($genderRaw, ['woman', 'women', 'female', 'kvinna', 'dam', 'f', 'k'])) {
-                                $genderToUpdate = 'F';
-                            } elseif (in_array($genderRaw, ['man', 'men', 'male', 'herr', 'm'])) {
-                                $genderToUpdate = 'M';
-                            }
-                        }
-
-                        // Update license_year and gender if provided in CSV
-                        $updateData = [];
-                        if (!empty($data['license_year'])) {
-                            $updateData['license_year'] = (int)$data['license_year'];
-                        }
-                        if ($genderToUpdate) {
-                            $updateData['gender'] = $genderToUpdate;
-                        }
-                        if (!empty($updateData)) {
-                            $db->update('riders', $updateData, 'id = ?', [$riderId]);
-                        }
-                    }
-                }
-
-                // Try name + birth year
-                if (!$riderId && $birthYear) {
-                    $rider = $db->getRow(
-                        "SELECT id FROM riders WHERE firstname = ? AND lastname = ? AND birth_year = ? LIMIT 1",
-                        [$firstname, $lastname, $birthYear]
-                    );
-                    if ($rider) {
-                        $riderId = $rider['id'];
-                        $riderCache[$cacheKey] = $riderId;
-                        $matching_stats['riders_found']++;
-
-                        // Normalize gender from CSV
-                        $genderToUpdate = null;
-                        if (!empty($data['gender'])) {
-                            $genderRaw = strtolower(trim($data['gender']));
-                            if (in_array($genderRaw, ['woman', 'women', 'female', 'kvinna', 'dam', 'f', 'k'])) {
-                                $genderToUpdate = 'F';
-                            } elseif (in_array($genderRaw, ['man', 'men', 'male', 'herr', 'm'])) {
-                                $genderToUpdate = 'M';
-                            }
-                        }
-
-                        // Update license_year and gender if provided in CSV
-                        $updateData = [];
-                        if (!empty($data['license_year'])) {
-                            $updateData['license_year'] = (int)$data['license_year'];
-                        }
-                        if ($genderToUpdate) {
-                            $updateData['gender'] = $genderToUpdate;
-                        }
-                        if (!empty($updateData)) {
-                            $db->update('riders', $updateData, 'id = ?', [$riderId]);
-                        }
-                    }
-                }
-
-                // Try name only (fuzzy)
-                if (!$riderId) {
-                    $rider = $db->getRow(
-                        "SELECT id FROM riders WHERE firstname LIKE ? AND lastname LIKE ? LIMIT 1",
-                        ['%' . $firstname . '%', '%' . $lastname . '%']
-                    );
-                    if ($rider) {
-                        $riderId = $rider['id'];
-                        $riderCache[$cacheKey] = $riderId;
-                        $matching_stats['riders_found']++;
-
-                        // Normalize gender from CSV
-                        $genderToUpdate = null;
-                        if (!empty($data['gender'])) {
-                            $genderRaw = strtolower(trim($data['gender']));
-                            if (in_array($genderRaw, ['woman', 'women', 'female', 'kvinna', 'dam', 'f', 'k'])) {
-                                $genderToUpdate = 'F';
-                            } elseif (in_array($genderRaw, ['man', 'men', 'male', 'herr', 'm'])) {
-                                $genderToUpdate = 'M';
-                            }
-                        }
-
-                        // Update license_year and gender if provided in CSV
-                        $updateData = [];
-                        if (!empty($data['license_year'])) {
-                            $updateData['license_year'] = (int)$data['license_year'];
-                        }
-                        if ($genderToUpdate) {
-                            $updateData['gender'] = $genderToUpdate;
-                        }
-                        if (!empty($updateData)) {
-                            $db->update('riders', $updateData, 'id = ?', [$riderId]);
-                        }
-                    } else {
-                        // AUTO-CREATE: Rider not found, create new rider with SWE-ID
-                        $matching_stats['riders_not_found']++;
-
-                        // Generate SWE-ID
-                        $sweId = generateSweId($db);
-
-                        // Get gender from data if available
-                        $gender = 'M'; // Default
-                        if (!empty($data['gender'])) {
-                            $genderRaw = strtolower(trim($data['gender']));
-                            if (in_array($genderRaw, ['woman', 'women', 'female', 'kvinna', 'dam', 'f', 'k'])) {
-                                $gender = 'F';
-                            } elseif (in_array($genderRaw, ['man', 'men', 'male', 'herr', 'm'])) {
-                                $gender = 'M';
-                            }
-                        }
-
-                        // Determine license type
-                        $licenseType = $isSingleUseLicense ? 'Engångslicens' : 'SWE-ID';
-
-                        // Get license year from data if available
-                        $licenseYear = null;
-                        if (!empty($data['license_year'])) {
-                            $licenseYear = (int)$data['license_year'];
-                        }
-
-                        // Create new rider with SWE-ID
-                        $newRiderData = [
-                            'firstname' => $firstname,
-                            'lastname' => $lastname,
-                            'birth_year' => $birthYear,
-                            'gender' => $gender,
-                            'license_number' => $sweId,
-                            'license_type' => $licenseType,
-                            'license_year' => $licenseYear,
-                            'club_id' => $clubId,
-                            'email' => !empty($data['email']) ? trim($data['email']) : null,
-                            'active' => 1
-                        ];
-
-                        $riderId = $db->insert('riders', $newRiderData);
-                        $riderCache[$cacheKey] = $riderId;
-                        $matching_stats['riders_created']++;
-
-                        $licenseTypeLabel = $isSingleUseLicense ? 'Engångslicens' : 'no license';
-                        error_log("Auto-created rider: {$firstname} {$lastname} with SWE-ID: {$sweId} ({$licenseTypeLabel})");
-
-                        // Track created rider
-                        if ($importId && $riderId) {
-                            trackImportRecord($db, $importId, 'rider', $riderId, 'created');
-                        }
-                    }
-                }
-            }
-
-            // Normalize finish time (handle formats like "16:19.16", "0:16:19.16", "1:16:19.164")
-            $finishTime = null;
-            if (!empty($data['finish_time'])) {
-                $rawTime = trim($data['finish_time']);
-                // Remove any newlines, carriage returns, or extra whitespace
-                $rawTime = preg_replace('/[\r\n\t]+/', '', $rawTime);
-                $rawTime = trim($rawTime);
-
-                // Format: h:mm:ss.cc or h:mm:ss.mmm (with decimal seconds)
-                if (preg_match('/^(\d{1,2}):(\d{2}):(\d{2})\.(\d{1,3})$/', $rawTime, $matches)) {
-                    $hours = str_pad($matches[1], 2, '0', STR_PAD_LEFT);
-                    $minutes = $matches[2];
-                    $seconds = $matches[3];
-                    $decimals = str_pad($matches[4], 2, '0', STR_PAD_RIGHT); // Pad to 2 digits (hundredths)
-                    $finishTime = "{$hours}:{$minutes}:{$seconds}.{$decimals}";
-                }
-                // Format: mm:ss.cc or mm:ss.mmm (no hours, with decimal seconds)
-                elseif (preg_match('/^(\d{1,2}):(\d{2})\.(\d{1,3})$/', $rawTime, $matches)) {
-                    $hours = '00';
-                    $minutes = str_pad($matches[1], 2, '0', STR_PAD_LEFT);
-                    $seconds = $matches[2];
-                    $decimals = str_pad($matches[3], 2, '0', STR_PAD_RIGHT); // Pad to 2 digits (hundredths)
-                    $finishTime = "{$hours}:{$minutes}:{$seconds}.{$decimals}";
-                }
-                // Format: h:mm:ss (no decimal seconds)
-                elseif (preg_match('/^(\d{1,2}):(\d{2}):(\d{2})$/', $rawTime, $matches)) {
-                    $hours = str_pad($matches[1], 2, '0', STR_PAD_LEFT);
-                    $minutes = $matches[2];
-                    $seconds = $matches[3];
-                    $finishTime = "{$hours}:{$minutes}:{$seconds}";
-                }
-                // Format: mm:ss (no hours, no decimal seconds)
-                elseif (preg_match('/^(\d{1,2}):(\d{2})$/', $rawTime, $matches)) {
-                    $hours = '00';
-                    $minutes = str_pad($matches[1], 2, '0', STR_PAD_LEFT);
-                    $seconds = $matches[2];
-                    $finishTime = "{$hours}:{$minutes}:{$seconds}";
-                }
-                elseif (!empty($rawTime)) {
-                    // Keep as-is if it's already in the right format
-                    $finishTime = $rawTime;
-                }
-            }
-
-            // Normalize run_1_time (DH format) - same logic as finish_time
-            $run1Time = null;
-            if (!empty($data['run_1_time'])) {
-                $rawTime = trim($data['run_1_time']);
-                $rawTime = preg_replace('/[\r\n\t]+/', '', $rawTime);
-                $rawTime = trim($rawTime);
-
-                // Format: h:mm:ss.cc or h:mm:ss.mmm (with decimal seconds)
-                if (preg_match('/^(\d{1,2}):(\d{2}):(\d{2})\.(\d{1,3})$/', $rawTime, $matches)) {
-                    $hours = str_pad($matches[1], 2, '0', STR_PAD_LEFT);
-                    $minutes = $matches[2];
-                    $seconds = $matches[3];
-                    $decimals = str_pad($matches[4], 2, '0', STR_PAD_RIGHT);
-                    $run1Time = "{$hours}:{$minutes}:{$seconds}.{$decimals}";
-                }
-                // Format: mm:ss.cc or mm:ss.mmm (no hours, with decimal seconds)
-                elseif (preg_match('/^(\d{1,2}):(\d{2})\.(\d{1,3})$/', $rawTime, $matches)) {
-                    $hours = '00';
-                    $minutes = str_pad($matches[1], 2, '0', STR_PAD_LEFT);
-                    $seconds = $matches[2];
-                    $decimals = str_pad($matches[3], 2, '0', STR_PAD_RIGHT);
-                    $run1Time = "{$hours}:{$minutes}:{$seconds}.{$decimals}";
-                }
-                // Format: h:mm:ss (no decimal seconds)
-                elseif (preg_match('/^(\d{1,2}):(\d{2}):(\d{2})$/', $rawTime, $matches)) {
-                    $hours = str_pad($matches[1], 2, '0', STR_PAD_LEFT);
-                    $minutes = $matches[2];
-                    $seconds = $matches[3];
-                    $run1Time = "{$hours}:{$minutes}:{$seconds}";
-                }
-                // Format: mm:ss (no hours, no decimal seconds)
-                elseif (preg_match('/^(\d{1,2}):(\d{2})$/', $rawTime, $matches)) {
-                    $hours = '00';
-                    $minutes = str_pad($matches[1], 2, '0', STR_PAD_LEFT);
-                    $seconds = $matches[2];
-                    $run1Time = "{$hours}:{$minutes}:{$seconds}";
-                }
-                elseif (!empty($rawTime)) {
-                    $run1Time = $rawTime;
-                }
-            }
-
-            // Normalize run_2_time (DH format) - same logic as finish_time
-            $run2Time = null;
-            if (!empty($data['run_2_time'])) {
-                $rawTime = trim($data['run_2_time']);
-                $rawTime = preg_replace('/[\r\n\t]+/', '', $rawTime);
-                $rawTime = trim($rawTime);
-
-                // Format: h:mm:ss.cc or h:mm:ss.mmm (with decimal seconds)
-                if (preg_match('/^(\d{1,2}):(\d{2}):(\d{2})\.(\d{1,3})$/', $rawTime, $matches)) {
-                    $hours = str_pad($matches[1], 2, '0', STR_PAD_LEFT);
-                    $minutes = $matches[2];
-                    $seconds = $matches[3];
-                    $decimals = str_pad($matches[4], 2, '0', STR_PAD_RIGHT);
-                    $run2Time = "{$hours}:{$minutes}:{$seconds}.{$decimals}";
-                }
-                // Format: mm:ss.cc or mm:ss.mmm (no hours, with decimal seconds)
-                elseif (preg_match('/^(\d{1,2}):(\d{2})\.(\d{1,3})$/', $rawTime, $matches)) {
-                    $hours = '00';
-                    $minutes = str_pad($matches[1], 2, '0', STR_PAD_LEFT);
-                    $seconds = $matches[2];
-                    $decimals = str_pad($matches[3], 2, '0', STR_PAD_RIGHT);
-                    $run2Time = "{$hours}:{$minutes}:{$seconds}.{$decimals}";
-                }
-                // Format: h:mm:ss (no decimal seconds)
-                elseif (preg_match('/^(\d{1,2}):(\d{2}):(\d{2})$/', $rawTime, $matches)) {
-                    $hours = str_pad($matches[1], 2, '0', STR_PAD_LEFT);
-                    $minutes = $matches[2];
-                    $seconds = $matches[3];
-                    $run2Time = "{$hours}:{$minutes}:{$seconds}";
-                }
-                // Format: mm:ss (no hours, no decimal seconds)
-                elseif (preg_match('/^(\d{1,2}):(\d{2})$/', $rawTime, $matches)) {
-                    $hours = '00';
-                    $minutes = str_pad($matches[1], 2, '0', STR_PAD_LEFT);
-                    $seconds = $matches[2];
-                    $run2Time = "{$hours}:{$minutes}:{$seconds}";
-                }
-                elseif (!empty($rawTime)) {
-                    $run2Time = $rawTime;
-                }
-            }
-
-            // Normalize status (FIN/DNS/DNF/DQ -> finished/dns/dnf/dq)
-            $status = 'finished';
-            if (!empty($data['status'])) {
-                $statusRaw = strtoupper(trim($data['status']));
-                if ($statusRaw === 'FIN' || $statusRaw === 'FINISHED' || $statusRaw === 'OK') {
-                    $status = 'finished';
-                } elseif ($statusRaw === 'DNF') {
-                    $status = 'dnf';
-                } elseif ($statusRaw === 'DNS') {
-                    $status = 'dns';
-                } elseif ($statusRaw === 'DQ' || $statusRaw === 'DSQ') {
-                    $status = 'dq';
-                } else {
-                    $status = strtolower($statusRaw);
-                }
+                $clubId = $clubCache[$clubName];
             }
 
             // Find or create class
-            $classId = null;
-            $classSource = 'none';
-
-            // Check if manual class override is set (from form)
-            global $IMPORT_FORCE_CLASS_ID;
-            if (isset($IMPORT_FORCE_CLASS_ID) && $IMPORT_FORCE_CLASS_ID > 0) {
-                $classId = (int)$IMPORT_FORCE_CLASS_ID;
-                $classSource = 'manual_override';
-                error_log("Using manual class override: class_id = {$classId}");
-            }
-            // PRIORITY 1: Check if class is specified in CSV (from Category column in SweCup format)
-            elseif (!empty($data['class_name'])) {
-                $className = trim($data['class_name']);
-                $classKey = strtolower($className);
-
-                if (isset($classCache[$classKey])) {
-                    $classId = $classCache[$classKey];
-                    $classSource = 'csv_cached';
-                } else {
-                    // Try to find existing class by name or display_name (case-insensitive)
+            $classId = $forceClassId;
+            $className = trim($data['class_name'] ?? '');
+            if (!$classId && !empty($className)) {
+                if (!isset($classCache[$className])) {
                     $class = $db->getRow(
-                        "SELECT id, name FROM classes WHERE LOWER(name) = LOWER(?) OR LOWER(display_name) = LOWER(?) LIMIT 1",
+                        "SELECT id FROM classes WHERE display_name = ? OR name = ?",
                         [$className, $className]
                     );
-
-                    if ($class) {
-                        $classId = $class['id'];
-                        $classCache[$classKey] = $classId;
-                        $classSource = 'csv_found';
-                        error_log("Row {$lineNumber}: Matched class '{$className}' to existing class '{$class['name']}' (ID: {$classId})");
-                    } else {
-                        // Auto-create class if it doesn't exist
-                        $classData = [
-                            'name' => $className,
-                            'display_name' => $className,
-                            'active' => 1,
-                            'sort_order' => 999 // Put new classes at the end
-                        ];
-                        $classId = $db->insert('classes', $classData);
-                        $classCache[$classKey] = $classId;
+                    if (!$class) {
+                        // Create class
                         $matching_stats['classes_created']++;
-                        $classSource = 'csv_created';
-                        error_log("Row {$lineNumber}: Auto-created class: '{$className}' (ID: {$classId})");
-
-                        if ($importId && $classId) {
-                            trackImportRecord($db, $importId, 'class', $classId, 'created');
-                        }
+                        $newClassId = $db->insert('classes', [
+                            'name' => strtolower(str_replace(' ', '_', $className)),
+                            'display_name' => $className,
+                            'active' => 1
+                        ]);
+                        $classCache[$className] = $newClassId;
+                    } else {
+                        $classCache[$className] = $class['id'];
                     }
                 }
+                $classId = $classCache[$className];
             }
 
-            // If no class specified in CSV, auto-assign based on rider's age and gender
-            if (!$classId) {
-                $event = $db->getRow("SELECT date, discipline FROM events WHERE id = ?", [$eventId]);
-                $rider = $db->getRow("SELECT birth_year, gender FROM riders WHERE id = ?", [$riderId]);
-
-                if ($event && $rider && !empty($rider['birth_year']) && !empty($rider['gender'])) {
-                    $eventDate = $event['date'] ?: date('Y-m-d');
-                    $discipline = $event['discipline'] ?: 'ROAD';
-
-                    $classId = determineRiderClass($db, $rider['birth_year'], $rider['gender'], $eventDate, $discipline);
-
-                    if ($classId) {
-                        error_log("Auto-assigned class ID {$classId} to rider {$riderId} for event {$eventId}");
-                    }
-                }
+            // Parse time
+            $finishTime = null;
+            $timeStr = trim($data['finish_time'] ?? '');
+            if (!empty($timeStr) && $timeStr !== 'DNF' && $timeStr !== 'DNS' && $timeStr !== 'DQ') {
+                $finishTime = $timeStr;
             }
 
-            // Normalize split times (handle same format as finish time)
-            $splitTimes = [];
-            for ($i = 1; $i <= 15; $i++) {
-                $splitKey = 'ss' . $i;
-                $splitTime = null;
-
-                if (!empty($data[$splitKey])) {
-                    $rawTime = trim($data[$splitKey]);
-                    $rawTime = preg_replace('/[\r\n\t]+/', '', $rawTime);
-                    $rawTime = trim($rawTime);
-
-                    // Format: h:mm:ss.cc or h:mm:ss.mmm (with decimal seconds)
-                    if (preg_match('/^(\d{1,2}):(\d{2}):(\d{2})\.(\d{1,3})$/', $rawTime, $matches)) {
-                        $hours = str_pad($matches[1], 2, '0', STR_PAD_LEFT);
-                        $minutes = $matches[2];
-                        $seconds = $matches[3];
-                        $decimals = str_pad($matches[4], 2, '0', STR_PAD_RIGHT);
-                        $splitTime = "{$hours}:{$minutes}:{$seconds}.{$decimals}";
-                    }
-                    // Format: mm:ss.cc or mm:ss.mmm (no hours, with decimal seconds)
-                    elseif (preg_match('/^(\d{1,2}):(\d{2})\.(\d{1,3})$/', $rawTime, $matches)) {
-                        $hours = '00';
-                        $minutes = str_pad($matches[1], 2, '0', STR_PAD_LEFT);
-                        $seconds = $matches[2];
-                        $decimals = str_pad($matches[3], 2, '0', STR_PAD_RIGHT);
-                        $splitTime = "{$hours}:{$minutes}:{$seconds}.{$decimals}";
-                    }
-                    // Format: h:mm:ss (no decimal seconds)
-                    elseif (preg_match('/^(\d{1,2}):(\d{2}):(\d{2})$/', $rawTime, $matches)) {
-                        $hours = str_pad($matches[1], 2, '0', STR_PAD_LEFT);
-                        $minutes = $matches[2];
-                        $seconds = $matches[3];
-                        $splitTime = "{$hours}:{$minutes}:{$seconds}";
-                    }
-                    // Format: mm:ss (no hours, no decimal seconds)
-                    elseif (preg_match('/^(\d{1,2}):(\d{2})$/', $rawTime, $matches)) {
-                        $hours = '00';
-                        $minutes = str_pad($matches[1], 2, '0', STR_PAD_LEFT);
-                        $seconds = $matches[2];
-                        $splitTime = "{$hours}:{$minutes}:{$seconds}";
-                    }
-                    elseif (!empty($rawTime)) {
-                        $splitTime = $rawTime;
-                    }
-                }
-
-                $splitTimes[$splitKey] = $splitTime;
+            // Determine status
+            $status = strtolower(trim($data['status'] ?? 'finished'));
+            if (in_array($status, ['fin', 'finished', 'ok', ''])) {
+                $status = 'finished';
+            } elseif (in_array($status, ['dnf', 'did not finish'])) {
+                $status = 'dnf';
+            } elseif (in_array($status, ['dns', 'did not start'])) {
+                $status = 'dns';
+            } elseif (in_array($status, ['dq', 'disqualified'])) {
+                $status = 'dq';
             }
-
-            // Prepare result data
-            $resultData = [
-                'event_id' => $eventId,
-                'cyclist_id' => $riderId,
-                'category_id' => $categoryId,
-                'class_id' => $classId,
-                'position' => !empty($data['position']) ? (int)$data['position'] : null,
-                'finish_time' => $finishTime,
-                'bib_number' => !empty($data['bib_number']) ? trim($data['bib_number']) : null,
-                'status' => $status,
-                'points' => !empty($data['points']) ? (int)$data['points'] : 0,
-                'notes' => !empty($data['notes']) ? trim($data['notes']) : null,
-                // DH two-run times
-                'run_1_time' => $run1Time,
-                'run_2_time' => $run2Time,
-                // Add all split times
-                'ss1' => $splitTimes['ss1'],
-                'ss2' => $splitTimes['ss2'],
-                'ss3' => $splitTimes['ss3'],
-                'ss4' => $splitTimes['ss4'],
-                'ss5' => $splitTimes['ss5'],
-                'ss6' => $splitTimes['ss6'],
-                'ss7' => $splitTimes['ss7'],
-                'ss8' => $splitTimes['ss8'],
-                'ss9' => $splitTimes['ss9'],
-                'ss10' => $splitTimes['ss10'],
-                'ss11' => $splitTimes['ss11'],
-                'ss12' => $splitTimes['ss12'],
-                'ss13' => $splitTimes['ss13'],
-                'ss14' => $splitTimes['ss14'],
-                'ss15' => $splitTimes['ss15']
-            ];
 
             // Check if result already exists
-            $existing = $db->getRow(
-                "SELECT id FROM results WHERE event_id = ? AND cyclist_id = ? LIMIT 1",
+            $existingResult = $db->getRow(
+                "SELECT id FROM results WHERE event_id = ? AND rider_id = ?",
                 [$eventId, $riderId]
             );
 
-            if ($existing) {
-                // Get old data for rollback
-                $oldData = $db->getRow("SELECT * FROM results WHERE id = ?", [$existing['id']]);
+            $resultData = [
+                'event_id' => $eventId,
+                'rider_id' => $riderId,
+                'club_id' => $clubId,
+                'class_id' => $classId,
+                'position' => !empty($data['position']) ? (int)$data['position'] : null,
+                'finish_time' => $finishTime,
+                'status' => $status,
+                'run_1_time' => $data['run_1_time'] ?? null,
+                'run_2_time' => $data['run_2_time'] ?? null,
+                'ss1' => $data['ss1'] ?? null,
+                'ss2' => $data['ss2'] ?? null,
+                'ss3' => $data['ss3'] ?? null,
+                'ss4' => $data['ss4'] ?? null,
+                'ss5' => $data['ss5'] ?? null,
+                'ss6' => $data['ss6'] ?? null,
+                'ss7' => $data['ss7'] ?? null,
+                'ss8' => $data['ss8'] ?? null,
+                'ss9' => $data['ss9'] ?? null,
+                'ss10' => $data['ss10'] ?? null,
+            ];
 
-                // Update existing result
-                $db->update('results', $resultData, 'id = ?', [$existing['id']]);
+            if ($existingResult) {
+                // Update existing
+                $oldData = $db->getRow("SELECT * FROM results WHERE id = ?", [$existingResult['id']]);
+                $db->update('results', $resultData, 'id = ?', [$existingResult['id']]);
                 $stats['updated']++;
-
-                // Track updated record
                 if ($importId) {
-                    trackImportRecord($db, $importId, 'result', $existing['id'], 'updated', $oldData);
+                    trackImportRecord($db, $importId, 'result', $existingResult['id'], 'updated', $oldData);
                 }
             } else {
-                // Insert new result
+                // Insert new
                 $resultId = $db->insert('results', $resultData);
                 $stats['success']++;
-
-                // Track created record
-                if ($importId && $resultId) {
+                if ($importId) {
                     trackImportRecord($db, $importId, 'result', $resultId, 'created');
                 }
             }
@@ -1095,441 +653,4 @@ function importResultsFromCSV($filepath, $db, $importId = null) {
         'errors' => $errors
     ];
 }
-
-/**
- * Import results from CSV with event mapping and optional class override
- * Same as importResultsFromCSV but uses provided event IDs instead of auto-creating
- */
-function importResultsFromCSVWithMapping($filepath, $db, $importId = null, $eventMapping = [], $forceClassId = null) {
-    // Store event mapping and class override in globals for use during import
-    global $IMPORT_EVENT_MAPPING, $IMPORT_FORCE_CLASS_ID;
-    $IMPORT_EVENT_MAPPING = $eventMapping;
-    $IMPORT_FORCE_CLASS_ID = $forceClassId;
-
-    return importResultsFromCSV($filepath, $db, $importId);
-}
-
-$pageTitle = 'Importera Resultat';
-$pageType = 'admin';
-include __DIR__ . '/../includes/layout-header.php';
-?>
-
-    <main class="gs-content-with-sidebar">
-        <div class="gs-container">
-            <!-- Header -->
-            <div class="gs-flex gs-items-center gs-justify-between gs-mb-xl">
-                <div>
-                    <h1 class="gs-h1 gs-text-primary">
-                        <i data-lucide="trophy"></i>
-                        Importera Resultat
-                    </h1>
-                    <p class="gs-text-secondary gs-mt-sm">
-                        Bulk-import av tävlingsresultat från CSV-fil
-                    </p>
-                </div>
-                <a href="/admin/results.php" class="gs-btn gs-btn-outline">
-                    <i data-lucide="arrow-left"></i>
-                    Tillbaka
-                </a>
-            </div>
-
-            <!-- Message -->
-            <?php if ($message): ?>
-                <div class="gs-alert gs-alert-<?= h($messageType) ?> gs-mb-lg">
-                    <i data-lucide="<?= $messageType === 'success' ? 'check-circle' : 'alert-circle' ?>"></i>
-                    <?= h($message) ?>
-                </div>
-            <?php endif; ?>
-
-            <!-- Statistics -->
-            <?php if ($stats): ?>
-                <div class="gs-card gs-mb-lg">
-                    <div class="gs-card-header">
-                        <h2 class="gs-h4 gs-text-primary">
-                            <i data-lucide="bar-chart"></i>
-                            Import-statistik
-                        </h2>
-                    </div>
-                    <div class="gs-card-content">
-                        <div class="gs-grid gs-grid-cols-1 gs-sm-grid-cols-2 gs-md-grid-cols-3 gs-lg-grid-cols-5 gs-gap-md gs-mb-lg">
-                            <div class="gs-stat-card">
-                                <i data-lucide="file-text" class="gs-icon-lg gs-text-primary gs-mb-sm"></i>
-                                <div class="gs-stat-number"><?= number_format($stats['total']) ?></div>
-                                <div class="gs-stat-label">Totalt rader</div>
-                            </div>
-                            <div class="gs-stat-card">
-                                <i data-lucide="check-circle" class="gs-icon-lg gs-text-success gs-mb-sm"></i>
-                                <div class="gs-stat-number"><?= number_format($stats['success']) ?></div>
-                                <div class="gs-stat-label">Nya resultat</div>
-                            </div>
-                            <div class="gs-stat-card">
-                                <i data-lucide="refresh-cw" class="gs-icon-lg gs-text-accent gs-mb-sm"></i>
-                                <div class="gs-stat-number"><?= number_format($stats['updated']) ?></div>
-                                <div class="gs-stat-label">Uppdaterade</div>
-                            </div>
-                            <div class="gs-stat-card">
-                                <i data-lucide="minus-circle" class="gs-icon-lg gs-text-secondary gs-mb-sm"></i>
-                                <div class="gs-stat-number"><?= number_format($stats['skipped']) ?></div>
-                                <div class="gs-stat-label">Överhoppade</div>
-                            </div>
-                            <div class="gs-stat-card">
-                                <i data-lucide="x-circle" class="gs-icon-lg gs-text-danger gs-mb-sm"></i>
-                                <div class="gs-stat-number"><?= number_format($stats['failed']) ?></div>
-                                <div class="gs-stat-label">Misslyckade</div>
-                            </div>
-                        </div>
-
-                        <?php if ($matching_stats): ?>
-                            <div class="gs-section-divider">
-                                <h3 class="gs-h5 gs-text-primary gs-mb-md">
-                                    <i data-lucide="search"></i>
-                                    Matchnings- och Auto-Create statistik
-                                </h3>
-                                <div class="gs-grid gs-grid-cols-2 gs-md-grid-cols-3 gs-gap-md gs-mb-md">
-                                    <div class="gs-stat-box">
-                                        <div class="gs-text-sm gs-text-secondary">Tävlingar hittade</div>
-                                        <div class="gs-h3 gs-text-success"><?= $matching_stats['events_found'] ?></div>
-                                    </div>
-                                    <div class="gs-stat-box">
-                                        <div class="gs-text-sm gs-text-secondary">Nya tävlingar skapade</div>
-                                        <div class="gs-h3 gs-text-accent"><?= $matching_stats['events_created'] ?? 0 ?></div>
-                                    </div>
-                                    <div class="gs-stat-box">
-                                        <div class="gs-text-sm gs-text-secondary">Nya banor skapade</div>
-                                        <div class="gs-h3 gs-text-primary"><?= $matching_stats['venues_created'] ?? 0 ?></div>
-                                    </div>
-                                </div>
-                                <div class="gs-grid gs-grid-cols-2 gs-md-grid-cols-3 gs-gap-md gs-mb-md">
-                                    <div class="gs-stat-box">
-                                        <div class="gs-text-sm gs-text-secondary">Deltagare hittade</div>
-                                        <div class="gs-h3 gs-text-success"><?= $matching_stats['riders_found'] ?></div>
-                                    </div>
-                                    <div class="gs-stat-box">
-                                        <div class="gs-text-sm gs-text-secondary">Nya deltagare skapade</div>
-                                        <div class="gs-h3 gs-text-accent"><?= $matching_stats['riders_created'] ?? 0 ?></div>
-                                    </div>
-                                    <div class="gs-stat-box">
-                                        <div class="gs-text-sm gs-text-secondary">SWE-ID tilldelat</div>
-                                        <div class="gs-h3 gs-text-warning"><?= $matching_stats['riders_created'] ?? 0 ?></div>
-                                    </div>
-                                </div>
-                                <div class="gs-grid gs-grid-cols-2 gs-md-grid-cols-3 gs-gap-md">
-                                    <div class="gs-stat-box">
-                                        <div class="gs-text-sm gs-text-secondary">Nya klubbar skapade</div>
-                                        <div class="gs-h3 gs-text-accent"><?= $matching_stats['clubs_created'] ?? 0 ?></div>
-                                    </div>
-                                    <div class="gs-stat-box">
-                                        <div class="gs-text-sm gs-text-secondary">Nya kategorier skapade</div>
-                                        <div class="gs-h3 gs-text-accent"><?= $matching_stats['categories_created'] ?? 0 ?></div>
-                                    </div>
-                                    <div class="gs-stat-box">
-                                        <div class="gs-text-sm gs-text-secondary">Nya klasser skapade</div>
-                                        <div class="gs-h3 gs-text-accent"><?= $matching_stats['classes_created'] ?? 0 ?></div>
-                                    </div>
-                                </div>
-                            </div>
-                        <?php endif; ?>
-
-                        <?php if (!empty($errors)): ?>
-                            <div class="gs-mt-lg gs-section-divider">
-                                <h3 class="gs-h5 gs-text-danger gs-mb-md">
-                                    <i data-lucide="alert-triangle"></i>
-                                    Fel och varningar (<?= count($errors) ?>)
-                                </h3>
-                                <div class="gs-error-list-container">
-                                    <?php foreach (array_slice($errors, 0, 50) as $error): ?>
-                                        <div class="gs-text-sm gs-text-secondary gs-error-list-item">
-                                            • <?= h($error) ?>
-                                        </div>
-                                    <?php endforeach; ?>
-                                    <?php if (count($errors) > 50): ?>
-                                        <div class="gs-text-sm gs-text-secondary gs-mt-sm gs-text-italic">
-                                            ... och <?= count($errors) - 50 ?> fler
-                                        </div>
-                                    <?php endif; ?>
-                                </div>
-                            </div>
-                        <?php endif; ?>
-                    </div>
-                </div>
-            <?php endif; ?>
-
-            <!-- Upload Form -->
-            <div class="gs-card gs-mb-xl">
-                <div class="gs-card-header">
-                    <div class="gs-flex gs-justify-between gs-items-center">
-                        <h2 class="gs-h4 gs-text-primary">
-                            <i data-lucide="upload"></i>
-                            Ladda upp CSV-fil
-                        </h2>
-                        <a href="/admin/import-results-preview.php" class="gs-btn gs-btn-outline gs-btn-sm">
-                            <i data-lucide="eye"></i>
-                            Förhandsgranska Import
-                        </a>
-                    </div>
-                </div>
-                <div class="gs-card-content">
-                    <div class="gs-alert gs-alert-info gs-mb-md">
-                        <i data-lucide="info"></i>
-                        <strong>Auto-Create:</strong> Tävlingar, banor och deltagare som inte hittas skapas automatiskt. Inkludera event_date, event_location och event_venue för bästa resultat.
-                        <br>
-                        <strong>Rekommendation:</strong> Använd <a href="/admin/import-results-preview.php" class="gs-link">"Förhandsgranska Import"</a> för att granska data innan import.
-                    </div>
-
-                    <form method="POST" enctype="multipart/form-data" id="uploadForm" class="gs-form-max-width">
-                        <?= csrf_field() ?>
-
-                        <div class="gs-form-group">
-                            <label for="import_file" class="gs-label">
-                                <i data-lucide="file"></i>
-                                Välj CSV-fil
-                            </label>
-                            <input
-                                type="file"
-                                id="import_file"
-                                name="import_file"
-                                class="gs-input"
-                                accept=".csv"
-                                required
-                            >
-                            <small class="gs-text-secondary gs-text-sm">
-                                Max storlek: <?= round(MAX_UPLOAD_SIZE / 1024 / 1024) ?>MB
-                            </small>
-                        </div>
-
-                        <button type="submit" class="gs-btn gs-btn-primary gs-btn-lg">
-                            <i data-lucide="upload"></i>
-                            Importera
-                        </button>
-                    </form>
-
-                    <!-- Progress Bar -->
-                    <div id="progressBar" class="gs-progress-container">
-                        <div class="gs-flex gs-items-center gs-justify-between gs-mb-sm">
-                            <span class="gs-text-sm gs-text-primary gs-font-weight-600">Importerar och matchar...</span>
-                            <span class="gs-text-sm gs-text-secondary" id="progressPercent">0%</span>
-                        </div>
-                        <div class="gs-progress-bar">
-                            <div id="progressFill" class="gs-progress-fill"></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- File Format Guide -->
-            <div class="gs-card">
-                <div class="gs-card-header">
-                    <h2 class="gs-h4 gs-text-primary">
-                        <i data-lucide="info"></i>
-                        CSV-filformat
-                    </h2>
-                </div>
-                <div class="gs-card-content">
-                    <p class="gs-text-secondary gs-mb-md">
-                        CSV-filen ska ha följande kolumner i första raden (header):
-                    </p>
-
-                    <div class="gs-table-responsive">
-                        <table class="gs-table">
-                            <thead>
-                                <tr>
-                                    <th>Kolumn</th>
-                                    <th>Obligatorisk</th>
-                                    <th>Beskrivning</th>
-                                    <th>Exempel</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><code>event_name</code></td>
-                                    <td><span class="gs-badge gs-badge-danger">Ja</span></td>
-                                    <td>Tävlingens namn (skapas automatiskt om den inte finns)</td>
-                                    <td>GravitySeries Järvsö XC</td>
-                                </tr>
-                                <tr>
-                                    <td><code>event_date</code></td>
-                                    <td><span class="gs-badge gs-badge-secondary">Nej</span></td>
-                                    <td>Tävlingsdatum (används vid auto-create)</td>
-                                    <td>2025-06-15</td>
-                                </tr>
-                                <tr>
-                                    <td><code>event_location</code></td>
-                                    <td><span class="gs-badge gs-badge-secondary">Nej</span></td>
-                                    <td>Plats/ort (används vid auto-create)</td>
-                                    <td>Järvsö</td>
-                                </tr>
-                                <tr>
-                                    <td><code>event_venue</code></td>
-                                    <td><span class="gs-badge gs-badge-secondary">Nej</span></td>
-                                    <td>Bana/anläggning (skapas automatiskt om den inte finns)</td>
-                                    <td>Järvsö Bergscykelpark</td>
-                                </tr>
-                                <tr>
-                                    <td><code>firstname</code></td>
-                                    <td><span class="gs-badge gs-badge-danger">Ja</span></td>
-                                    <td>Cyklistens förnamn</td>
-                                    <td>Erik</td>
-                                </tr>
-                                <tr>
-                                    <td><code>lastname</code></td>
-                                    <td><span class="gs-badge gs-badge-danger">Ja</span></td>
-                                    <td>Cyklistens efternamn</td>
-                                    <td>Andersson</td>
-                                </tr>
-                                <tr>
-                                    <td><code>position</code></td>
-                                    <td><span class="gs-badge gs-badge-secondary">Nej</span></td>
-                                    <td>Placering</td>
-                                    <td>1</td>
-                                </tr>
-                                <tr>
-                                    <td><code>finish_time</code></td>
-                                    <td><span class="gs-badge gs-badge-secondary">Nej</span></td>
-                                    <td>Sluttid (HH:MM:SS)</td>
-                                    <td>02:15:30</td>
-                                </tr>
-                                <tr>
-                                    <td><code>license_number</code></td>
-                                    <td><span class="gs-badge gs-badge-secondary">Nej</span></td>
-                                    <td>UCI/SCF licensnummer (används för matchning)</td>
-                                    <td>SWE-2025-1234</td>
-                                </tr>
-                                <tr>
-                                    <td><code>birth_year</code></td>
-                                    <td><span class="gs-badge gs-badge-secondary">Nej</span></td>
-                                    <td>Födelseår (används för matchning)</td>
-                                    <td>1995</td>
-                                </tr>
-                                <tr>
-                                    <td><code>bib_number</code></td>
-                                    <td><span class="gs-badge gs-badge-secondary">Nej</span></td>
-                                    <td>Startnummer</td>
-                                    <td>42</td>
-                                </tr>
-                                <tr>
-                                    <td><code>status</code></td>
-                                    <td><span class="gs-badge gs-badge-secondary">Nej</span></td>
-                                    <td>Status (finished/dnf/dns/dq)</td>
-                                    <td>finished</td>
-                                </tr>
-                                <tr>
-                                    <td><code>points</code></td>
-                                    <td><span class="gs-badge gs-badge-secondary">Nej</span></td>
-                                    <td>Poäng</td>
-                                    <td>100</td>
-                                </tr>
-                                <tr>
-                                    <td><code>class</code></td>
-                                    <td><span class="gs-badge gs-badge-secondary">Nej</span></td>
-                                    <td>Klass (t.ex. "Elite Herr", "Junior Dam"). Skapas automatiskt om den inte finns. Om inte angiven, beräknas automatiskt från ålder/kön.</td>
-                                    <td>Elite Herr</td>
-                                </tr>
-                                <tr>
-                                    <td><code>category</code></td>
-                                    <td><span class="gs-badge gs-badge-secondary">Nej</span></td>
-                                    <td>Kategori/heat (t.ex. "Final", "Kval 1")</td>
-                                    <td>Final</td>
-                                </tr>
-                                <tr>
-                                    <td><code>club_name</code></td>
-                                    <td><span class="gs-badge gs-badge-secondary">Nej</span></td>
-                                    <td>Klubb/team (skapas automatiskt om den inte finns)</td>
-                                    <td>Velodrom CC</td>
-                                </tr>
-                                <tr>
-                                    <td><code>notes</code></td>
-                                    <td><span class="gs-badge gs-badge-secondary">Nej</span></td>
-                                    <td>Anteckningar</td>
-                                    <td>-</td>
-                                </tr>
-                                <tr>
-                                    <td><code>run_1_time</code></td>
-                                    <td><span class="gs-badge gs-badge-secondary">Nej</span></td>
-                                    <td>DH första åk. Format: MM:SS.CC eller HH:MM:SS.CC</td>
-                                    <td>3:05.45</td>
-                                </tr>
-                                <tr>
-                                    <td><code>run_2_time</code></td>
-                                    <td><span class="gs-badge gs-badge-secondary">Nej</span></td>
-                                    <td>DH andra åk. Format: MM:SS.CC eller HH:MM:SS.CC</td>
-                                    <td>3:02.12</td>
-                                </tr>
-                                <tr>
-                                    <td><code>ss1</code> till <code>ss15</code></td>
-                                    <td><span class="gs-badge gs-badge-secondary">Nej</span></td>
-                                    <td>Splittider för Enduro (upp till 15 special stages). Format: HH:MM:SS eller MM:SS</td>
-                                    <td>00:05:23</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <div class="gs-mt-lg gs-info-box-accent">
-                        <h3 class="gs-h5 gs-text-primary gs-mb-sm">
-                            <i data-lucide="lightbulb"></i>
-                            Matchnings-logik
-                        </h3>
-                        <ul class="gs-text-secondary gs-text-sm gs-list-indented">
-                            <li><strong>Tävlingar:</strong> Matchas via exakt namn eller fuzzy match. Om inte hittad, skapas automatiskt med data från CSV.</li>
-                            <li><strong>Banor:</strong> Om event_venue anges och inte hittas, skapas automatiskt</li>
-                            <li><strong>Cyklister:</strong> Matchas i följande ordning:
-                                <ol class="gs-list-indented-nested">
-                                    <li>Licensnummer (exakt match)</li>
-                                    <li>Namn + födelseår (exakt match)</li>
-                                    <li>Namn (fuzzy match)</li>
-                                    <li>Om inte hittad: Skapas automatiskt med SWE-ID</li>
-                                </ol>
-                            </li>
-                            <li><strong>Klasser:</strong> Om "class" kolumn finns i CSV, används den klassen (skapas automatiskt om den inte finns). Om inte angiven, beräknas klass automatiskt från ålder/kön.</li>
-                            <li><strong>Klubbar & Kategorier:</strong> Skapas automatiskt om de inte finns</li>
-                            <li>Dubbletter upptäcks via event_id + cyclist_id</li>
-                            <li>Befintliga resultat uppdateras automatiskt</li>
-                        </ul>
-                    </div>
-
-                    <div class="gs-mt-md">
-                        <p class="gs-text-sm gs-text-secondary">
-                            <strong>Exempel på CSV-fil med auto-create:</strong>
-                        </p>
-                        <pre class="gs-code-block">event_name,event_date,event_location,event_venue,firstname,lastname,position,finish_time,license_number,birth_year,bib_number,status,points,gender
-GravitySeries Järvsö XC,2025-06-15,Järvsö,Järvsö Bergscykelpark,Erik,Andersson,1,02:15:30,SWE-2025-1234,1995,42,finished,100,M
-GravitySeries Järvsö XC,2025-06-15,Järvsö,Järvsö Bergscykelpark,Anna,Karlsson,2,02:18:45,SWE-2025-2345,1998,43,finished,80,F
-GravitySeries Järvsö XC,2025-06-15,Järvsö,Järvsö Bergscykelpark,Johan,Svensson,3,02:20:12,,1992,44,finished,60,M</pre>
-                        <p class="gs-text-sm gs-text-secondary gs-mt-sm">
-                            <strong>Obs:</strong> Om event, venue eller rider inte finns kommer de skapas automatiskt. Johan Svensson saknar licensnummer och får ett SWE-ID.
-                        </p>
-                    </div>
-                </div>
-            </div>
-        </div>
-<?php
-$additionalScripts = <<<'SCRIPT'
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // Show progress bar on form submit
-        const form = document.getElementById('uploadForm');
-        const progressBar = document.getElementById('progressBar');
-        const progressFill = document.getElementById('progressFill');
-        const progressPercent = document.getElementById('progressPercent');
-
-        form.addEventListener('submit', function() {
-            progressBar.style.display = 'block';
-
-            // Simulate progress
-            let progress = 0;
-            const interval = setInterval(function() {
-                progress += Math.random() * 15;
-                if (progress > 90) {
-                    progress = 90;
-                    clearInterval(interval);
-                }
-                progressFill.style.width = progress + '%';
-                progressPercent.textContent = Math.round(progress) + '%';
-            }, 200);
-        });
-    });
-</script>
-SCRIPT;
-
-include __DIR__ . '/../includes/layout-footer.php';
 ?>
