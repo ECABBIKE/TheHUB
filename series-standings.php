@@ -53,7 +53,7 @@ $seriesEvents = $db->getAll("
     ORDER BY e.date ASC
 ", [$seriesId]);
 
-// Get all classes that have results in this series
+// Get all classes that have results in this series (only series-eligible classes that award points)
 $activeClasses = $db->getAll("
     SELECT DISTINCT c.id, c.name, c.display_name, c.sort_order,
            COUNT(DISTINCT r.cyclist_id) as rider_count
@@ -62,6 +62,8 @@ $activeClasses = $db->getAll("
     JOIN events e ON r.event_id = e.id
     JOIN series_events se ON e.id = se.event_id
     WHERE se.series_id = ?
+      AND COALESCE(c.series_eligible, 1) = 1
+      AND COALESCE(c.awards_points, 1) = 1
     GROUP BY c.id
     ORDER BY c.sort_order ASC
 ", [$seriesId]);
@@ -72,7 +74,7 @@ $standingsByClass = []; // For "Alla klasser" view - group by class
 $showAllClasses = ($selectedClass === 'all');
 
 if ($showAllClasses) {
-    // Get all riders who have results in this series (all classes)
+    // Get all riders who have results in this series (only series-eligible classes that award points)
     $ridersInSeries = $db->getAll("
         SELECT DISTINCT
             riders.id,
@@ -92,6 +94,8 @@ if ($showAllClasses) {
         JOIN series_events se ON e.id = se.event_id
         LEFT JOIN classes cls ON r.class_id = cls.id
         WHERE se.series_id = ?
+          AND COALESCE(cls.series_eligible, 1) = 1
+          AND COALESCE(cls.awards_points, 1) = 1
         ORDER BY cls.sort_order ASC, riders.lastname, riders.firstname
     ", [$seriesId]);
 
