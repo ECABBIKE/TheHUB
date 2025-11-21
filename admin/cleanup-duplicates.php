@@ -1,0 +1,325 @@
+<?php
+/**
+ * Admin tool to find and merge duplicate riders
+ * Duplicates often occur due to UCI-ID format differences (spaces vs no spaces)
+ */
+require_once __DIR__ . '/../config.php';
+require_admin();
+
+$db = getDB();
+$message = '';
+$messageType = 'info';
+
+// Find duplicate riders by normalized UCI-ID
+$duplicatesByUci = $db->getAll("
+    SELECT
+        REPLACE(REPLACE(license_number, ' ', ''), '-', '') as normalized_uci,
+        GROUP_CONCAT(id ORDER BY
+            CASE WHEN club_id IS NOT NULL THEN 0 ELSE 1 END,
+            CASE WHEN birth_year IS NOT NULL THEN 0 ELSE 1 END,
+            created_at ASC
+        ) as ids,
+        GROUP_CONCAT(CONCAT(firstname, ' ', lastname) SEPARATOR ' | ') as names,
+        COUNT(*) as count
+    FROM riders
+    WHERE license_number IS NOT NULL AND license_number != ''
+    GROUP BY normalized_uci
+    HAVING count > 1
+    ORDER BY count DESC
+");
+
+// Find duplicate riders by name (exact match)
+$duplicatesByName = $db->getAll("
+    SELECT
+        CONCAT(LOWER(firstname), '|', LOWER(lastname)) as name_key,
+        GROUP_CONCAT(id ORDER BY
+            CASE WHEN license_number IS NOT NULL AND license_number != '' THEN 0 ELSE 1 END,
+            CASE WHEN club_id IS NOT NULL THEN 0 ELSE 1 END,
+            created_at ASC
+        ) as ids,
+        GROUP_CONCAT(COALESCE(license_number, 'ingen') SEPARATOR ' | ') as licenses,
+        MIN(firstname) as firstname,
+        MIN(lastname) as lastname,
+        COUNT(*) as count
+    FROM riders
+    GROUP BY name_key
+    HAVING count > 1
+    ORDER BY count DESC
+");
+
+// Handle merge action
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['merge_riders'])) {
+    checkCsrf();
+
+    $keepId = (int)$_POST['keep_id'];
+    $mergeIds = array_map('intval', explode(',', $_POST['merge_ids']));
+
+    // Remove the keep_id from merge list
+    $mergeIds = array_filter($mergeIds, fn($id) => $id !== $keepId);
+
+    if ($keepId && !empty($mergeIds)) {
+        try {
+            $db->pdo->beginTransaction();
+
+            // Get the rider to keep
+            $keepRider = $db->getRow("SELECT * FROM riders WHERE id = ?", [$keepId]);
+
+            if ($keepRider) {
+                // Update all results to point to the kept rider
+                foreach ($mergeIds as $oldId) {
+                    $db->query(
+                        "UPDATE results SET cyclist_id = ? WHERE cyclist_id = ?",
+                        [$keepId, $oldId]
+                    );
+                }
+
+                // Delete the duplicate riders
+                $placeholders = implode(',', array_fill(0, count($mergeIds), '?'));
+                $db->query("DELETE FROM riders WHERE id IN ($placeholders)", $mergeIds);
+
+                $db->pdo->commit();
+
+                $message = "Sammanfogade " . count($mergeIds) . " deltagare till " . $keepRider['firstname'] . " " . $keepRider['lastname'];
+                $messageType = 'success';
+            }
+        } catch (Exception $e) {
+            $db->pdo->rollBack();
+            $message = "Fel vid sammanfogning: " . $e->getMessage();
+            $messageType = 'error';
+        }
+    }
+
+    // Refresh duplicate lists
+    header('Location: /admin/cleanup-duplicates.php');
+    exit;
+}
+
+// Handle normalize UCI-IDs action
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['normalize_all'])) {
+    checkCsrf();
+
+    try {
+        // Normalize all UCI-IDs by removing spaces and dashes
+        $updated = $db->query("
+            UPDATE riders
+            SET license_number = REPLACE(REPLACE(license_number, ' ', ''), '-', '')
+            WHERE license_number IS NOT NULL
+            AND license_number != ''
+            AND (license_number LIKE '% %' OR license_number LIKE '%-%')
+        ");
+
+        $message = "Normaliserade UCI-ID format för alla deltagare";
+        $messageType = 'success';
+    } catch (Exception $e) {
+        $message = "Fel vid normalisering: " . $e->getMessage();
+        $messageType = 'error';
+    }
+}
+
+$pageTitle = 'Rensa dubbletter';
+$pageType = 'admin';
+include __DIR__ . '/../includes/layout-header.php';
+?>
+
+<main class="gs-content-with-sidebar">
+    <div class="gs-container">
+        <h1 class="gs-h1 gs-text-primary gs-mb-lg">
+            <i data-lucide="copy-x"></i>
+            Rensa dubbletter
+        </h1>
+
+        <?php if ($message): ?>
+            <div class="gs-alert gs-alert-<?= $messageType ?> gs-mb-lg">
+                <i data-lucide="<?= $messageType === 'success' ? 'check-circle' : 'alert-circle' ?>"></i>
+                <?= h($message) ?>
+            </div>
+        <?php endif; ?>
+
+        <!-- Normalize All UCI-IDs -->
+        <div class="gs-card gs-mb-lg">
+            <div class="gs-card-header">
+                <h2 class="gs-h4 gs-text-primary">
+                    <i data-lucide="wand-2"></i>
+                    Normalisera UCI-ID format
+                </h2>
+            </div>
+            <div class="gs-card-content">
+                <p class="gs-text-secondary gs-mb-md">
+                    Ta bort alla mellanslag och bindestreck från UCI-ID:n för att förhindra framtida dubbletter.
+                    <br><strong>Exempel:</strong> "101 089 432 09" blir "10108943209"
+                </p>
+                <form method="POST">
+                    <?= csrf_field() ?>
+                    <button type="submit" name="normalize_all" class="gs-btn gs-btn-primary">
+                        <i data-lucide="zap"></i>
+                        Normalisera alla UCI-ID
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Duplicates by UCI-ID -->
+        <div class="gs-card gs-mb-lg">
+            <div class="gs-card-header">
+                <h2 class="gs-h4 gs-text-primary">
+                    <i data-lucide="fingerprint"></i>
+                    Dubbletter via UCI-ID (<?= count($duplicatesByUci) ?>)
+                </h2>
+            </div>
+            <div class="gs-card-content">
+                <?php if (empty($duplicatesByUci)): ?>
+                    <div class="gs-alert gs-alert-success">
+                        <i data-lucide="check"></i>
+                        Inga dubbletter hittades baserat på UCI-ID
+                    </div>
+                <?php else: ?>
+                    <div class="gs-table-responsive" style="max-height: 400px; overflow: auto;">
+                        <table class="gs-table gs-table-sm">
+                            <thead>
+                                <tr>
+                                    <th>UCI-ID</th>
+                                    <th>Namn</th>
+                                    <th>Antal</th>
+                                    <th>Åtgärd</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($duplicatesByUci as $dup): ?>
+                                    <?php
+                                    $ids = explode(',', $dup['ids']);
+                                    $riders = $db->getAll(
+                                        "SELECT id, firstname, lastname, license_number, birth_year, club_id,
+                                         (SELECT name FROM clubs WHERE id = riders.club_id) as club_name,
+                                         (SELECT COUNT(*) FROM results WHERE cyclist_id = riders.id) as results_count
+                                         FROM riders WHERE id IN (" . implode(',', $ids) . ")
+                                         ORDER BY FIELD(id, " . implode(',', $ids) . ")"
+                                    );
+                                    ?>
+                                    <tr>
+                                        <td><code><?= h($dup['normalized_uci']) ?></code></td>
+                                        <td>
+                                            <?php foreach ($riders as $i => $rider): ?>
+                                                <div class="gs-mb-sm <?= $i === 0 ? 'gs-text-success' : 'gs-text-secondary' ?>">
+                                                    <strong><?= h($rider['firstname'] . ' ' . $rider['lastname']) ?></strong>
+                                                    <?php if ($rider['club_name']): ?>
+                                                        <span class="gs-text-xs">(<?= h($rider['club_name']) ?>)</span>
+                                                    <?php endif; ?>
+                                                    <span class="gs-badge gs-badge-sm <?= $i === 0 ? 'gs-badge-success' : 'gs-badge-secondary' ?>">
+                                                        <?= $rider['results_count'] ?> resultat
+                                                    </span>
+                                                </div>
+                                            <?php endforeach; ?>
+                                        </td>
+                                        <td><?= $dup['count'] ?></td>
+                                        <td>
+                                            <form method="POST" style="display: inline;" onsubmit="return confirm('Sammanfoga dessa deltagare? Alla resultat flyttas till den första.');">
+                                                <?= csrf_field() ?>
+                                                <input type="hidden" name="keep_id" value="<?= $ids[0] ?>">
+                                                <input type="hidden" name="merge_ids" value="<?= $dup['ids'] ?>">
+                                                <button type="submit" name="merge_riders" class="gs-btn gs-btn-sm gs-btn-warning">
+                                                    <i data-lucide="merge"></i>
+                                                    Sammanfoga
+                                                </button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                <?php endif; ?>
+            </div>
+        </div>
+
+        <!-- Duplicates by Name -->
+        <div class="gs-card">
+            <div class="gs-card-header">
+                <h2 class="gs-h4 gs-text-primary">
+                    <i data-lucide="users"></i>
+                    Dubbletter via namn (<?= count($duplicatesByName) ?>)
+                </h2>
+            </div>
+            <div class="gs-card-content">
+                <?php if (empty($duplicatesByName)): ?>
+                    <div class="gs-alert gs-alert-success">
+                        <i data-lucide="check"></i>
+                        Inga dubbletter hittades baserat på namn
+                    </div>
+                <?php else: ?>
+                    <p class="gs-text-sm gs-text-secondary gs-mb-md">
+                        <strong>Varning:</strong> Dubbletter via namn kan vara olika personer med samma namn.
+                        Kontrollera UCI-ID och klubb innan sammanfogning.
+                    </p>
+                    <div class="gs-table-responsive" style="max-height: 400px; overflow: auto;">
+                        <table class="gs-table gs-table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Namn</th>
+                                    <th>UCI-ID</th>
+                                    <th>Antal</th>
+                                    <th>Åtgärd</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach (array_slice($duplicatesByName, 0, 50) as $dup): ?>
+                                    <?php
+                                    $ids = explode(',', $dup['ids']);
+                                    $riders = $db->getAll(
+                                        "SELECT id, firstname, lastname, license_number, birth_year, club_id,
+                                         (SELECT name FROM clubs WHERE id = riders.club_id) as club_name,
+                                         (SELECT COUNT(*) FROM results WHERE cyclist_id = riders.id) as results_count
+                                         FROM riders WHERE id IN (" . implode(',', $ids) . ")
+                                         ORDER BY FIELD(id, " . implode(',', $ids) . ")"
+                                    );
+                                    ?>
+                                    <tr>
+                                        <td>
+                                            <strong><?= h($dup['firstname'] . ' ' . $dup['lastname']) ?></strong>
+                                        </td>
+                                        <td>
+                                            <?php foreach ($riders as $i => $rider): ?>
+                                                <div class="gs-text-xs <?= $i === 0 ? 'gs-text-success' : 'gs-text-secondary' ?>">
+                                                    <?= $rider['license_number'] ?: '<em>ingen</em>' ?>
+                                                    <?php if ($rider['club_name']): ?>
+                                                        (<?= h($rider['club_name']) ?>)
+                                                    <?php endif; ?>
+                                                    <span class="gs-badge gs-badge-xs"><?= $rider['results_count'] ?> res</span>
+                                                </div>
+                                            <?php endforeach; ?>
+                                        </td>
+                                        <td><?= $dup['count'] ?></td>
+                                        <td>
+                                            <form method="POST" style="display: inline;" onsubmit="return confirm('Sammanfoga dessa deltagare? Kontrollera att det verkligen är samma person!');">
+                                                <?= csrf_field() ?>
+                                                <input type="hidden" name="keep_id" value="<?= $ids[0] ?>">
+                                                <input type="hidden" name="merge_ids" value="<?= $dup['ids'] ?>">
+                                                <button type="submit" name="merge_riders" class="gs-btn gs-btn-sm gs-btn-outline">
+                                                    <i data-lucide="merge"></i>
+                                                    Sammanfoga
+                                                </button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                    <?php if (count($duplicatesByName) > 50): ?>
+                        <p class="gs-text-sm gs-text-secondary gs-mt-md">
+                            Visar 50 av <?= count($duplicatesByName) ?> dubbletter
+                        </p>
+                    <?php endif; ?>
+                <?php endif; ?>
+            </div>
+        </div>
+
+        <div class="gs-mt-lg">
+            <a href="/admin/import.php" class="gs-btn gs-btn-outline">
+                <i data-lucide="arrow-left"></i>
+                Tillbaka till import
+            </a>
+        </div>
+    </div>
+</main>
+
+<?php include __DIR__ . '/../includes/layout-footer.php'; ?>
