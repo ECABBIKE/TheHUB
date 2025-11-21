@@ -314,12 +314,37 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
 
                 // Try by name if no license match
                 if (!$rider) {
+                    // First try exact match
                     $rider = $db->getRow(
-                        "SELECT id FROM riders WHERE LOWER(firstname) = LOWER(?) AND LOWER(lastname) = LOWER(?)",
+                        "SELECT id, license_number FROM riders WHERE LOWER(firstname) = LOWER(?) AND LOWER(lastname) = LOWER(?)",
                         [trim($data['firstname']), trim($data['lastname'])]
                     );
+
+                    // If no exact match, try fuzzy match (first name starts with, handle middle names)
+                    if (!$rider) {
+                        $firstName = trim($data['firstname']);
+                        $lastName = trim($data['lastname']);
+
+                        // Try matching with first part of firstname (handle middle names)
+                        $firstNamePart = explode(' ', $firstName)[0];
+                        $rider = $db->getRow(
+                            "SELECT id, license_number FROM riders
+                             WHERE (LOWER(firstname) LIKE LOWER(?) OR LOWER(firstname) = LOWER(?))
+                             AND LOWER(lastname) = LOWER(?)",
+                            [$firstNamePart . '%', $firstNamePart, $lastName]
+                        );
+                    }
+
                     if ($rider) {
                         $matching_stats['riders_found']++;
+
+                        // If we found by name and import has UCI ID but rider doesn't - update rider
+                        if (!empty($licenseNumber) && empty($rider['license_number'])) {
+                            $db->update('riders', [
+                                'license_number' => $licenseNumber
+                            ], 'id = ?', [$rider['id']]);
+                            $matching_stats['riders_updated_with_uci'] = ($matching_stats['riders_updated_with_uci'] ?? 0) + 1;
+                        }
                     }
                 }
 
@@ -337,10 +362,13 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
                         $gender = 'M';
                     }
 
+                    // Generate SWE license number if no UCI ID provided
+                    $finalLicenseNumber = $licenseNumber ?: generateSweLicenseNumber($db);
+
                     $riderId = $db->insert('riders', [
                         'firstname' => trim($data['firstname']),
                         'lastname' => trim($data['lastname']),
-                        'license_number' => $licenseNumber ?: null,
+                        'license_number' => $finalLicenseNumber,
                         'gender' => $gender
                     ]);
 
