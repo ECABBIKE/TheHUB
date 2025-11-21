@@ -163,24 +163,41 @@ include __DIR__ . '/../includes/layout-header.php';
 
                         <details class="gs-details">
                             <summary>
-                                🏁 Resultat-kolumner (12 kolumner)
+                                🏁 Enduro Resultat-kolumner
                             </summary>
                             <ul class="gs-list-spaced">
-                                <li><strong>event_name:</strong> Tävlingsnamn (required, används för att matcha event)</li>
-                                <li><strong>event_date:</strong> Datum, format: YYYY-MM-DD (required)</li>
-                                <li><strong>discipline:</strong> Disciplin: EDR/DHI/DS/XC (required)</li>
-                                <li><strong>category:</strong> Kategori, ex: "Elite Men" (required)</li>
-                                <li><strong>position:</strong> Placering, nummer (required för finished)</li>
-                                <li><strong>first_name:</strong> Förnamn (required)</li>
-                                <li><strong>last_name:</strong> Efternamn (required)</li>
-                                <li><strong>club_name:</strong> Klubbnamn (optional)</li>
-                                <li><strong>uci_id:</strong> UCI-ID för matchning av cyklist (optional men rekommenderas)</li>
-                                <li><strong>swe_id:</strong> SWE-ID för matchning av cyklist (optional)</li>
-                                <li><strong>time</strong> eller <strong>finish_time:</strong> Total tid i format mm:ss.cc eller h:mm:ss.mmm, ex: 16:19.16 eller 1:16:19.164 (optional)</li>
-                                <li><strong>status:</strong> Status: finished/dnf/dns/dq (default: finished)</li>
+                                <li><strong>Category:</strong> Klass, ex: "Damer Junior", "Herrar Elite" (required)</li>
+                                <li><strong>PlaceByCategory:</strong> Placering inom klass (required för finished)</li>
+                                <li><strong>FirstName:</strong> Förnamn (required)</li>
+                                <li><strong>LastName:</strong> Efternamn (required)</li>
+                                <li><strong>Club:</strong> Klubbnamn (optional)</li>
+                                <li><strong>UCI-ID:</strong> UCI-ID för matchning (optional men rekommenderas)</li>
+                                <li><strong>NetTime:</strong> Total tid, format: h:mm:ss.cc eller mm:ss.cc (optional)</li>
+                                <li><strong>Status:</strong> FIN/DNF/DNS/DQ (default: FIN)</li>
+                                <li><strong>SS1, SS2... SS15:</strong> Stage-tider, format: mm:ss.cc (optional)</li>
                             </ul>
                             <div class="gs-alert-success">
-                                <strong>💡 Tips:</strong> Systemet matchar cyklister via UCI-ID eller namn. Events matchas via namn och datum. För DNF/DNS/DQ lämna position tom.
+                                <strong>💡 Tips:</strong> Event väljs i förhandsgranskningen. Systemet matchar cyklister via UCI-ID eller namn.
+                            </div>
+                        </details>
+
+                        <details class="gs-details">
+                            <summary>
+                                ⛷️ DH Resultat-kolumner
+                            </summary>
+                            <ul class="gs-list-spaced">
+                                <li><strong>Category:</strong> Klass, ex: "Damer Junior", "Herrar Elite" (required)</li>
+                                <li><strong>PlaceByCategory:</strong> Placering inom klass (required för finished)</li>
+                                <li><strong>FirstName:</strong> Förnamn (required)</li>
+                                <li><strong>LastName:</strong> Efternamn (required)</li>
+                                <li><strong>Club:</strong> Klubbnamn (optional)</li>
+                                <li><strong>UCI-ID:</strong> UCI-ID för matchning (optional men rekommenderas)</li>
+                                <li><strong>NetTime:</strong> Bästa tid, format: mm:ss.cc (optional)</li>
+                                <li><strong>Status:</strong> FIN/DNF/DNS/DQ (default: FIN)</li>
+                                <li><strong>Run1, Run2:</strong> Åktider, format: mm:ss.cc (optional)</li>
+                            </ul>
+                            <div class="gs-alert-success">
+                                <strong>💡 Tips:</strong> Bästa av två åk används som sluttid. Split-tider kan läggas i SS1-SS4 (Run 1) och SS5-SS8 (Run 2).
                             </div>
                         </details>
 
@@ -225,17 +242,17 @@ include __DIR__ . '/../includes/layout-header.php';
                 </div>
             </div>
 
-            <!-- Flexibel Enduro Resultat Import -->
+            <!-- Flexibel Resultat Import -->
             <div class="gs-card gs-featured-card-warning">
                 <div class="gs-card-header gs-featured-header-warning">
                     <h2 class="gs-h4 gs-featured-header-title">
                         <i data-lucide="zap"></i>
-                        Flexibel Enduro Resultat Import 🏁
+                        Flexibel Resultat Import 🏁
                     </h2>
                 </div>
                 <div class="gs-card-content">
                     <p class="gs-text-secondary gs-mb-md">
-                        <strong>NY!</strong> Importera Enduro-resultat med flexibelt antal stage-sektioner (SS1, SS2, SS3...)
+                        <strong>NY!</strong> Importera Enduro (SS1-SS15) eller Downhill (Run1, Run2) resultat
                     </p>
 
                     <div class="gs-info-box-bordered">
@@ -296,7 +313,7 @@ Herrar Elite,2,Erik,SVENSSON,Göteborg MTB,,DNF,DNF,1:55.34,1:39.21,DNF,DNF,DNF,
 
                     <a href="/admin/import-results.php" class="gs-btn gs-btn-warning gs-btn-lg gs-w-full gs-btn-warning-solid">
                         <i data-lucide="upload"></i>
-                        Importera Enduro Resultat
+                        Importera Resultat (Enduro/DH)
                     </a>
                 </div>
             </div>
