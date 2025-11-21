@@ -634,6 +634,8 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
                 'position' => !empty($data['position']) ? (int)$data['position'] : null,
                 'finish_time' => $finishTime,
                 'status' => $status,
+                'run_1_time' => $data['run_1_time'] ?? null,
+                'run_2_time' => $data['run_2_time'] ?? null,
                 'ss1' => $data['ss1'] ?? null,
                 'ss2' => $data['ss2'] ?? null,
                 'ss3' => $data['ss3'] ?? null,
