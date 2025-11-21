@@ -20,10 +20,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['merge_riders'])) {
     // Debug: Log incoming data
     error_log("Merge attempt: keep_id=$keepId, merge_ids_raw='$mergeIdsRaw'");
 
-    $mergeIds = array_map('intval', array_filter(explode(',', $mergeIdsRaw), fn($s) => $s !== ''));
+    // Split and convert to integers
+    $parts = explode(',', $mergeIdsRaw);
+    $mergeIds = [];
+    foreach ($parts as $part) {
+        $part = trim($part);
+        if ($part !== '') {
+            $mergeIds[] = intval($part);
+        }
+    }
 
-    // Remove the keep_id from merge list and re-index array
-    $mergeIds = array_values(array_filter($mergeIds, fn($id) => $id !== $keepId && $id > 0));
+    // Remove the keep_id from merge list
+    $filtered = [];
+    foreach ($mergeIds as $id) {
+        if ($id !== $keepId && $id > 0) {
+            $filtered[] = $id;
+        }
+    }
+    $mergeIds = $filtered;
 
     error_log("After filtering: mergeIds=" . json_encode($mergeIds));
 
