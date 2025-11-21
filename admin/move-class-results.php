@@ -10,6 +10,13 @@ $db = getDB();
 $message = '';
 $messageType = 'info';
 
+// Check for message from redirect
+if (isset($_SESSION['move_message'])) {
+    $message = $_SESSION['move_message'];
+    $messageType = $_SESSION['move_message_type'] ?? 'info';
+    unset($_SESSION['move_message'], $_SESSION['move_message_type']);
+}
+
 // Handle move action
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['move_results'])) {
     checkCsrf();
@@ -50,21 +57,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['move_results'])) {
             $db->pdo->commit();
 
             $eventText = $eventId ? " (för valt event)" : "";
-            $message = "Flyttade $count resultat från " . ($fromClass['display_name'] ?? "Klass $fromClassId") .
+            $_SESSION['move_message'] = "Flyttade $count resultat från " . ($fromClass['display_name'] ?? "Klass $fromClassId") .
                        " till " . ($toClass['display_name'] ?? "Klass $toClassId") . $eventText;
-            $messageType = 'success';
+            $_SESSION['move_message_type'] = 'success';
 
         } catch (Exception $e) {
             if ($db->pdo->inTransaction()) {
                 $db->pdo->rollBack();
             }
-            $message = "Fel vid flytt: " . $e->getMessage();
-            $messageType = 'error';
+            $_SESSION['move_message'] = "Fel vid flytt: " . $e->getMessage();
+            $_SESSION['move_message_type'] = 'error';
         }
     } else {
-        $message = "Välj två olika klasser";
-        $messageType = 'error';
+        $_SESSION['move_message'] = "Välj två olika klasser (from: $fromClassId, to: $toClassId)";
+        $_SESSION['move_message_type'] = 'error';
     }
+
+    header('Location: /admin/move-class-results.php');
+    exit;
 }
 
 // Handle delete class action
@@ -79,19 +89,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_class'])) {
             $resultCount = $db->getRow("SELECT COUNT(*) as c FROM results WHERE class_id = ?", [$classId])['c'];
 
             if ($resultCount > 0) {
-                $message = "Kan inte ta bort klass med $resultCount resultat. Flytta resultaten först.";
-                $messageType = 'error';
+                $_SESSION['move_message'] = "Kan inte ta bort klass med $resultCount resultat. Flytta resultaten först.";
+                $_SESSION['move_message_type'] = 'error';
             } else {
                 $className = $db->getRow("SELECT display_name FROM classes WHERE id = ?", [$classId]);
                 $db->query("DELETE FROM classes WHERE id = ?", [$classId]);
-                $message = "Tog bort klass: " . ($className['display_name'] ?? "ID $classId");
-                $messageType = 'success';
+                $_SESSION['move_message'] = "Tog bort klass: " . ($className['display_name'] ?? "ID $classId");
+                $_SESSION['move_message_type'] = 'success';
             }
         } catch (Exception $e) {
-            $message = "Fel vid borttagning: " . $e->getMessage();
-            $messageType = 'error';
+            $_SESSION['move_message'] = "Fel vid borttagning: " . $e->getMessage();
+            $_SESSION['move_message_type'] = 'error';
         }
     }
+
+    header('Location: /admin/move-class-results.php');
+    exit;
 }
 
 // Get all classes with result counts

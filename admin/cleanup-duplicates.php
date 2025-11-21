@@ -31,12 +31,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['merge_riders'])) {
             if ($keepRider) {
                 // Update all results to point to the kept rider
                 $resultsUpdated = 0;
+                $resultsDeleted = 0;
+
                 foreach ($mergeIds as $oldId) {
-                    $stmt = $db->query(
-                        "UPDATE results SET cyclist_id = ? WHERE cyclist_id = ?",
-                        [$keepId, $oldId]
+                    // Get results for this duplicate rider
+                    $oldResults = $db->getAll(
+                        "SELECT id, event_id FROM results WHERE cyclist_id = ?",
+                        [$oldId]
                     );
-                    $resultsUpdated += $stmt->rowCount();
+
+                    foreach ($oldResults as $oldResult) {
+                        // Check if kept rider already has result for this event
+                        $existing = $db->getRow(
+                            "SELECT id FROM results WHERE cyclist_id = ? AND event_id = ?",
+                            [$keepId, $oldResult['event_id']]
+                        );
+
+                        if ($existing) {
+                            // Delete the duplicate result (keep the one from the primary rider)
+                            $db->query("DELETE FROM results WHERE id = ?", [$oldResult['id']]);
+                            $resultsDeleted++;
+                        } else {
+                            // Move the result to the kept rider
+                            $db->query(
+                                "UPDATE results SET cyclist_id = ? WHERE id = ?",
+                                [$keepId, $oldResult['id']]
+                            );
+                            $resultsUpdated++;
+                        }
+                    }
                 }
 
                 // Delete the duplicate riders
@@ -45,7 +68,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['merge_riders'])) {
 
                 $db->pdo->commit();
 
-                $_SESSION['cleanup_message'] = "Sammanfogade " . count($mergeIds) . " deltagare till " . $keepRider['firstname'] . " " . $keepRider['lastname'] . " (" . $resultsUpdated . " resultat flyttade)";
+                $msg = "Sammanfogade " . count($mergeIds) . " deltagare till " . $keepRider['firstname'] . " " . $keepRider['lastname'];
+                $msg .= " ($resultsUpdated resultat flyttade";
+                if ($resultsDeleted > 0) {
+                    $msg .= ", $resultsDeleted dubbletter borttagna";
+                }
+                $msg .= ")";
+                $_SESSION['cleanup_message'] = $msg;
                 $_SESSION['cleanup_message_type'] = 'success';
             } else {
                 $db->pdo->rollBack();
