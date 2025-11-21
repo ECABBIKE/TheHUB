@@ -1,27 +1,33 @@
 name: Deploy to FTP
-
-on:
-  push:
-    branches:
-      - main
-
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Deploy to FTP
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.4
-        with:
-          server: ${{ secrets.FTP_SERVER }}
-          username: ${{ secrets.FTP_USERNAME }}
-          password: ${{ secrets.FTP_PASSWORD }}
-          server-dir: /public_html/
-          exclude: |
-            **/.git*
-            **/.git*/**
-            **/.env
-            **/node_modules/**
-            **/.github/**
+2on:
+3  push:
+4    branches:
+5      - main
+6
+7jobs:
+8  deploy:
+9    runs-on: ubuntu-latest
+10    steps:
+11      - name: Checkout code
+12        uses: actions/checkout@v4
+13      
+14      - name: Deploy to FTP
+15        uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+16        with:
+17          server: ${{ secrets.FTP_SERVER }}
+18          username: ${{ secrets.FTP_USERNAME }}
+19          password: ${{ secrets.FTP_PASSWORD }}
+20          server-dir: /public_html/thehub/
+21          local-dir: ./
+22          protocol: ftps
+23          port: 21
+24          dangerous-clean-slate: false
+25          exclude: |
+26            **/.git*
+27            **/.git*/**
+28            **/node_modules/**
+29            **/.github/**
+30            **/.env
+31            **/composer.lock
+32            **/.DS_Store
+33
