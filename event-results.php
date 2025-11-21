@@ -88,7 +88,8 @@ $results = $db->getAll("
         c.name as club_name,
         cls.name as class_name,
         cls.display_name as class_display_name,
-        cls.sort_order as class_sort_order
+        cls.sort_order as class_sort_order,
+        COALESCE(cls.ranking_type, 'time') as ranking_type
     FROM results res
     INNER JOIN riders r ON res.cyclist_id = r.id
     LEFT JOIN clubs c ON r.club_id = c.id
@@ -133,6 +134,7 @@ foreach ($results as $result) {
         $resultsByClass[$className] = [
             'display_name' => $result['class_display_name'] ?? $className,
             'sort_order' => $result['class_sort_order'] ?? 999,
+            'ranking_type' => $result['ranking_type'] ?? 'time',
             'results' => []
         ];
     }
@@ -144,28 +146,51 @@ foreach ($results as $result) {
     }
 }
 
-// Sort results within each class by finish_time (converted to seconds)
+// Sort results within each class based on ranking_type setting
 foreach ($resultsByClass as $className => &$classData) {
-    usort($classData['results'], function($a, $b) {
-        // DNF/DNS/DQ go last
-        if ($a['status'] !== 'finished' && $b['status'] === 'finished') return 1;
-        if ($a['status'] === 'finished' && $b['status'] !== 'finished') return -1;
-        if ($a['status'] !== 'finished' && $b['status'] !== 'finished') return 0;
+    $rankingType = $classData['ranking_type'] ?? 'time';
 
-        // Both finished - sort by time in seconds
-        $aSeconds = timeToSeconds($a['finish_time']);
-        $bSeconds = timeToSeconds($b['finish_time']);
+    usort($classData['results'], function($a, $b) use ($rankingType) {
+        // For time-based ranking, DNF/DNS/DQ go last
+        if ($rankingType === 'time') {
+            if ($a['status'] !== 'finished' && $b['status'] === 'finished') return 1;
+            if ($a['status'] === 'finished' && $b['status'] !== 'finished') return -1;
+            if ($a['status'] !== 'finished' && $b['status'] !== 'finished') return 0;
 
-        return $aSeconds <=> $bSeconds;
+            // Both finished - sort by time in seconds
+            $aSeconds = timeToSeconds($a['finish_time']);
+            $bSeconds = timeToSeconds($b['finish_time']);
+
+            return $aSeconds <=> $bSeconds;
+        } elseif ($rankingType === 'name') {
+            // Sort alphabetically by name
+            $aName = ($a['firstname'] ?? '') . ' ' . ($a['lastname'] ?? '');
+            $bName = ($b['firstname'] ?? '') . ' ' . ($b['lastname'] ?? '');
+            return strcasecmp($aName, $bName);
+        } elseif ($rankingType === 'bib') {
+            // Sort by bib number
+            $aBib = (int)($a['bib_number'] ?? 9999);
+            $bBib = (int)($b['bib_number'] ?? 9999);
+            return $aBib <=> $bBib;
+        }
+
+        return 0;
     });
 
     // Calculate positions after sorting
+    // For time-based ranking, only finished riders get positions
+    // For name/bib ranking, all riders get sequential numbers (not real positions)
     $position = 0;
     foreach ($classData['results'] as &$result) {
-        if ($result['status'] === 'finished') {
-            $position++;
-            $result['class_position'] = $position;
+        if ($rankingType === 'time') {
+            if ($result['status'] === 'finished') {
+                $position++;
+                $result['class_position'] = $position;
+            } else {
+                $result['class_position'] = null;
+            }
         } else {
+            // For name/bib ranking, no positions shown (it's just a list)
             $result['class_position'] = null;
         }
     }
@@ -243,8 +268,19 @@ function timeToSeconds($time) {
     return $decimal;
 }
 
-// Calculate time behind leader for each class
+// Calculate time behind leader for each class (only for time-based ranking)
 foreach ($resultsByClass as $className => &$classData) {
+    $rankingType = $classData['ranking_type'] ?? 'time';
+
+    // Skip time_behind calculation for non-time ranking types
+    if ($rankingType !== 'time') {
+        foreach ($classData['results'] as &$result) {
+            $result['time_behind_formatted'] = null;
+        }
+        unset($result);
+        continue;
+    }
+
     $winnerTime = null;
     $winnerSeconds = 0;
 
