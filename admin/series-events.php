@@ -90,15 +90,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// Get events in this series
+// Get events in this series - sorted by date (earliest first)
 $seriesEvents = $db->getAll("
     SELECT se.*, e.name as event_name, e.date as event_date, e.location, e.discipline,
-           qpt.name as template_name
+           ps.name as template_name
     FROM series_events se
     JOIN events e ON se.event_id = e.id
-    LEFT JOIN qualification_point_templates qpt ON se.template_id = qpt.id
+    LEFT JOIN point_scales ps ON se.template_id = ps.id
     WHERE se.series_id = ?
-    ORDER BY se.sort_order, e.date
+    ORDER BY e.date ASC
 ", [$seriesId]);
 
 // Get all events not in this series
@@ -112,8 +112,8 @@ $eventsNotInSeries = $db->getAll("
     ORDER BY e.date DESC
 ", [$seriesId]);
 
-// Get all point templates
-$templates = $db->getAll("SELECT id, name FROM qualification_point_templates WHERE active = 1 ORDER BY name");
+// Get all point scales (not old qualification_point_templates)
+$templates = $db->getAll("SELECT id, name FROM point_scales WHERE active = 1 ORDER BY name");
 
 $pageTitle = 'Hantera Events - ' . $series['name'];
 $pageType = 'admin';
@@ -198,12 +198,6 @@ include __DIR__ . '/../includes/layout-header.php';
                             </button>
                         </form>
 
-                        <div class="gs-mt-md gs-pt-md gs-border-top">
-                            <a href="/admin/point-templates.php" class="gs-text-sm gs-link">
-                                <i data-lucide="settings"></i>
-                                Hantera poängmallar
-                            </a>
-                        </div>
                     <?php endif; ?>
                 </div>
             </div>
@@ -227,7 +221,7 @@ include __DIR__ . '/../includes/layout-header.php';
                                 <table class="gs-table">
                                     <thead>
                                         <tr>
-                                            <th class="gs-table-col-w-50">Ordning</th>
+                                            <th class="gs-table-col-w-50">#</th>
                                             <th>Event</th>
                                             <th>Datum</th>
                                             <th>Plats</th>
@@ -236,13 +230,14 @@ include __DIR__ . '/../includes/layout-header.php';
                                         </tr>
                                     </thead>
                                     <tbody>
+                                        <?php $eventNumber = 1; ?>
                                         <?php foreach ($seriesEvents as $se): ?>
                                             <tr>
                                                 <td>
-                                                    <span class="gs-badge gs-badge-sm"><?= $se['sort_order'] ?></span>
+                                                    <span class="gs-badge gs-badge-primary gs-badge-sm">#<?= $eventNumber ?></span>
                                                 </td>
                                                 <td>
-                                                    <strong><?= h($se['event_name']) ?></strong>
+                                                    <strong>#<?= $eventNumber ?> <?= h($se['event_name']) ?></strong>
                                                     <?php if ($se['discipline']): ?>
                                                         <br><span class="gs-text-xs gs-text-secondary"><?= h($se['discipline']) ?></span>
                                                     <?php endif; ?>
@@ -278,6 +273,7 @@ include __DIR__ . '/../includes/layout-header.php';
                                                     </form>
                                                 </td>
                                             </tr>
+                                            <?php $eventNumber++; ?>
                                         <?php endforeach; ?>
                                     </tbody>
                                 </table>
