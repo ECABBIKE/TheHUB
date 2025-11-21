@@ -22,6 +22,11 @@ if (!isset($_SESSION['import_selected_event'])) {
 }
 
 $selectedEventId = $_SESSION['import_selected_event'];
+$importFormat = $_SESSION['import_format'] ?? 'enduro';
+$formatNames = [
+    'enduro' => 'Enduro',
+    'dh' => 'Downhill'
+];
 
 // Get selected event info
 $selectedEvent = $db->getRow("SELECT * FROM events WHERE id = ?", [$selectedEventId]);
@@ -311,19 +316,28 @@ include __DIR__ . '/../includes/layout-header.php';
             </div>
         <?php endif; ?>
 
-        <!-- Event Info -->
+        <!-- Event & Format Info -->
         <div class="gs-card gs-mb-lg">
             <div class="gs-card-content">
-                <div class="gs-flex gs-items-center gs-gap-md">
-                    <i data-lucide="calendar" class="gs-icon-lg gs-text-primary"></i>
-                    <div>
-                        <h3 class="gs-h4 gs-m-0"><?= h($selectedEvent['name']) ?></h3>
-                        <p class="gs-text-secondary gs-m-0">
-                            <?= date('Y-m-d', strtotime($selectedEvent['date'])) ?>
-                            <?php if ($selectedEvent['location']): ?>
-                                - <?= h($selectedEvent['location']) ?>
-                            <?php endif; ?>
-                        </p>
+                <div class="gs-flex gs-items-center gs-gap-lg">
+                    <div class="gs-flex gs-items-center gs-gap-md">
+                        <i data-lucide="calendar" class="gs-icon-lg gs-text-primary"></i>
+                        <div>
+                            <h3 class="gs-h4 gs-m-0"><?= h($selectedEvent['name']) ?></h3>
+                            <p class="gs-text-secondary gs-m-0">
+                                <?= date('Y-m-d', strtotime($selectedEvent['date'])) ?>
+                                <?php if ($selectedEvent['location']): ?>
+                                    - <?= h($selectedEvent['location']) ?>
+                                <?php endif; ?>
+                            </p>
+                        </div>
+                    </div>
+                    <div class="gs-flex gs-items-center gs-gap-md">
+                        <i data-lucide="<?= $importFormat === 'dh' ? 'arrow-down' : 'mountain' ?>" class="gs-icon-lg <?= $importFormat === 'dh' ? 'gs-text-warning' : 'gs-text-success' ?>"></i>
+                        <div>
+                            <h3 class="gs-h4 gs-m-0"><?= h($formatNames[$importFormat] ?? 'Okänt') ?></h3>
+                            <p class="gs-text-secondary gs-m-0">Format</p>
+                        </div>
                     </div>
                 </div>
             </div>

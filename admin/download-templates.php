@@ -96,105 +96,95 @@ if ($template === 'riders') {
 }
 
 if ($template === 'results') {
-    // CSV template for results
+    // CSV template for Enduro results
     header('Content-Type: text/csv; charset=utf-8');
-    header('Content-Disposition: attachment; filename="thehub_results_template.csv"');
+    header('Content-Disposition: attachment; filename="thehub_enduro_results_template.csv"');
 
     $output = fopen('php://output', 'w');
 
     // BOM for UTF-8
     fprintf($output, chr(0xEF).chr(0xBB).chr(0xBF));
 
-    // Headers
+    // Headers - Enduro format
     fputcsv($output, [
-        'event_name',
-        'event_date',
-        'discipline',
-        'category',
-        'position',
-        'first_name',
-        'last_name',
-        'club_name',
-        'uci_id',
-        'swe_id',
-        'finish_time',
-        'status'
+        'Category',
+        'PlaceByCategory',
+        'FirstName',
+        'LastName',
+        'Club',
+        'UCI-ID',
+        'NetTime',
+        'Status',
+        'SS1',
+        'SS2',
+        'SS3',
+        'SS4',
+        'SS5'
     ]);
 
     // Example rows
     fputcsv($output, [
-        'Järvsö DH Finals 2024',
-        '2024-09-15',
-        'DHI',
-        'Elite Men',
+        'Herrar Elite',
         '1',
         'Johan',
-        'Andersson',
+        'ANDERSSON',
         'Uppsala Cykelklubb',
-        'SWE19950101',
-        '',
-        '3:05.45',
-        'finished'
+        '10019950101',
+        '0:14:16.42',
+        'FIN',
+        '0:01:58.22',
+        '0:01:38.55',
+        '0:01:42.33',
+        '0:01:55.88',
+        '0:01:24.12'
     ]);
 
     fputcsv($output, [
-        'Järvsö DH Finals 2024',
-        '2024-09-15',
-        'DHI',
-        'Elite Women',
+        'Herrar Elite',
+        '2',
+        'Erik',
+        'NILSSON',
+        'Stockholm CK',
+        '10020031201',
+        '0:14:28.35',
+        'FIN',
+        '0:02:01.15',
+        '0:01:41.22',
+        '0:01:45.08',
+        '0:01:58.45',
+        '0:01:26.78'
+    ]);
+
+    fputcsv($output, [
+        'Damer Elite',
         '1',
         'Emma',
-        'Svensson',
+        'SVENSSON',
         'Göteborg MTB',
-        'SWE19980315',
-        '',
-        '3:15.78',
-        'finished'
+        '10019980315',
+        '0:15:45.78',
+        'FIN',
+        '0:02:12.45',
+        '0:01:52.33',
+        '0:01:58.66',
+        '0:02:08.12',
+        '0:01:35.45'
     ]);
 
     fputcsv($output, [
-        'Järvsö DH Finals 2024',
-        '2024-09-15',
-        'DHI',
-        'U21 Men',
-        '1',
-        'Erik',
-        'Nilsson',
-        'Stockholm CK',
-        '',
-        'SWE25001',
-        '3:09.23',
-        'finished'
-    ]);
-
-    fputcsv($output, [
-        'Järvsö DH Finals 2024',
-        '2024-09-15',
-        'DHI',
-        'Elite Men',
-        '2',
-        'Anders',
-        'Karlsson',
-        'Malmö CK',
-        'SWE19930812',
-        '',
-        '3:07.92',
-        'finished'
-    ]);
-
-    fputcsv($output, [
-        'Järvsö DH Finals 2024',
-        '2024-09-15',
-        'DHI',
-        'Elite Men',
+        'Herrar Elite',
         '',
         'Lars',
-        'Persson',
+        'PERSSON',
         'Umeå MTB',
-        'SWE19940205',
+        '10019940205',
+        '',
+        'DNF',
+        '0:02:05.12',
+        '0:01:45.33',
         '',
         '',
-        'dnf'
+        ''
     ]);
 
     fclose($output);
@@ -211,86 +201,71 @@ if ($template === 'results_dh') {
     // BOM for UTF-8
     fprintf($output, chr(0xEF).chr(0xBB).chr(0xBF));
 
-    // Headers
+    // Headers - DH format
     fputcsv($output, [
-        'event_name',
-        'event_date',
-        'discipline',
-        'class_name',
-        'position',
-        'first_name',
-        'last_name',
-        'club_name',
-        'uci_id',
-        'swe_id',
-        'run_1_time',
-        'run_2_time',
-        'status'
+        'Category',
+        'PlaceByCategory',
+        'FirstName',
+        'LastName',
+        'Club',
+        'UCI-ID',
+        'NetTime',
+        'Status',
+        'Run1',
+        'Run2'
     ]);
 
     // Example rows - Standard DH (both runs, fastest counts)
     fputcsv($output, [
-        'Järvsö DH 2024',
-        '2024-09-15',
-        'DHI',
-        'Elite Men',
+        'Herrar Elite',
         '1',
         'Johan',
-        'Andersson',
+        'ANDERSSON',
         'Uppsala Cykelklubb',
-        'SWE19950101',
-        '',
-        '3:07.45',   // Run 1
-        '3:05.12',   // Run 2 (fastest = position)
-        'finished'
+        '10019950101',
+        '0:03:05.12',
+        'FIN',
+        '0:03:07.45',
+        '0:03:05.12'
     ]);
 
     fputcsv($output, [
-        'Järvsö DH 2024',
-        '2024-09-15',
-        'DHI',
-        'Elite Men',
+        'Herrar Elite',
         '2',
         'Erik',
-        'Nilsson',
+        'NILSSON',
         'Stockholm CK',
-        'SWE20031201',
-        '',
-        '3:08.23',   // Run 1
-        '3:06.89',   // Run 2 (fastest)
-        'finished'
+        '10020031201',
+        '0:03:06.89',
+        'FIN',
+        '0:03:08.23',
+        '0:03:06.89'
     ]);
 
     fputcsv($output, [
-        'Järvsö DH 2024',
-        '2024-09-15',
-        'DHI',
-        'Elite Women',
+        'Damer Elite',
         '1',
         'Emma',
-        'Svensson',
+        'SVENSSON',
         'Göteborg MTB',
-        'SWE19980315',
-        '',
-        '3:18.45',   // Run 1
-        '3:15.78',   // Run 2 (fastest)
-        'finished'
+        '10019980315',
+        '0:03:15.78',
+        'FIN',
+        '0:03:18.45',
+        '0:03:15.78'
     ]);
 
     fputcsv($output, [
-        'Järvsö DH 2024',
-        '2024-09-15',
-        'DHI',
-        'Elite Men',
+        'Herrar Elite',
         '',
         'Lars',
-        'Persson',
+        'PERSSON',
         'Umeå MTB',
-        'SWE19940205',
+        '10019940205',
         '',
-        '3:12.45',   // Run 1 OK
-        '',          // Run 2 DNF
-        'dnf'
+        'DNF',
+        '0:03:12.45',
+        ''
     ]);
 
     fclose($output);
