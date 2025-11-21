@@ -194,6 +194,35 @@ function parseResultsCSVForPreview($filepath) {
             'birthyear' => 'birth_year',
             'födelseår' => 'birth_year',
             'fodelsear' => 'birth_year',
+            // DH run times
+            'run1time' => 'run_1_time',
+            'run_1_time' => 'run_1_time',
+            'run1' => 'run_1_time',
+            'åk1' => 'run_1_time',
+            'ak1' => 'run_1_time',
+            'run2time' => 'run_2_time',
+            'run_2_time' => 'run_2_time',
+            'run2' => 'run_2_time',
+            'åk2' => 'run_2_time',
+            'ak2' => 'run_2_time',
+            // DH split times for run 1 (stored in ss1-ss4)
+            'run1split1' => 'ss1',
+            'run1split2' => 'ss2',
+            'run1split3' => 'ss3',
+            'run1split4' => 'ss4',
+            'split11' => 'ss1',
+            'split12' => 'ss2',
+            'split13' => 'ss3',
+            'split14' => 'ss4',
+            // DH split times for run 2 (stored in ss5-ss8)
+            'run2split1' => 'ss5',
+            'run2split2' => 'ss6',
+            'run2split3' => 'ss7',
+            'run2split4' => 'ss8',
+            'split21' => 'ss5',
+            'split22' => 'ss6',
+            'split23' => 'ss7',
+            'split24' => 'ss8',
         ];
 
         return $mappings[$col] ?? $col;
@@ -416,6 +445,21 @@ include __DIR__ . '/../includes/layout-header.php';
                                                     'event_name' => 'Event',
                                                     'birth_year' => 'Föd.år',
                                                     'gender' => 'Kön',
+                                                    // DH columns
+                                                    'run_1_time' => 'Åk 1',
+                                                    'run_2_time' => 'Åk 2',
+                                                    // Split times
+                                                    'ss1' => 'Split 1',
+                                                    'ss2' => 'Split 2',
+                                                    'ss3' => 'Split 3',
+                                                    'ss4' => 'Split 4',
+                                                    'ss5' => 'Split 5',
+                                                    'ss6' => 'Split 6',
+                                                    'ss7' => 'Split 7',
+                                                    'ss8' => 'Split 8',
+                                                    'ss9' => 'SS9',
+                                                    'ss10' => 'SS10',
+                                                    'pwr' => 'PWR',
                                                 ];
                                                 echo h($displayNames[$col] ?? strtoupper($col));
                                                 ?>
@@ -449,7 +493,7 @@ include __DIR__ . '/../includes/layout-header.php';
                                                     $status = strtoupper($value);
                                                     $statusClass = in_array($status, ['FIN', 'FINISHED', 'OK']) ? 'gs-badge-success' : 'gs-badge-warning';
                                                     echo '<span class="gs-badge gs-badge-sm ' . $statusClass . '">' . h($status) . '</span>';
-                                                } elseif (strpos($col, 'ss') === 0 || $col === 'finish_time') {
+                                                } elseif (strpos($col, 'ss') === 0 || $col === 'finish_time' || $col === 'run_1_time' || $col === 'run_2_time' || $col === 'pwr') {
                                                     // Time columns - display shorter
                                                     echo '<span class="gs-text-xs gs-text-nowrap">' . h($value ?: '–') . '</span>';
                                                 } else {

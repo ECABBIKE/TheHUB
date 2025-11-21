@@ -268,6 +268,26 @@ function importResultsFromCSV($filepath, $db, $importId = null) {
             'run2' => 'run_2_time',
             'åk2' => 'run_2_time',
             'ak2' => 'run_2_time',
+
+            // DH split times for run 1 (stored in ss1-ss4)
+            'run1split1' => 'ss1',
+            'run1split2' => 'ss2',
+            'run1split3' => 'ss3',
+            'run1split4' => 'ss4',
+            'split11' => 'ss1',
+            'split12' => 'ss2',
+            'split13' => 'ss3',
+            'split14' => 'ss4',
+
+            // DH split times for run 2 (stored in ss5-ss8)
+            'run2split1' => 'ss5',
+            'run2split2' => 'ss6',
+            'run2split3' => 'ss7',
+            'run2split4' => 'ss8',
+            'split21' => 'ss5',
+            'split22' => 'ss6',
+            'split23' => 'ss7',
+            'split24' => 'ss8',
         ];
 
         return $mappings[$col] ?? $col;
