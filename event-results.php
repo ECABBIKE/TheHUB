@@ -154,17 +154,41 @@ foreach ($resultsByClass as $className => &$classData) {
     $rankingType = $classData['ranking_type'] ?? 'time';
 
     usort($classData['results'], function($a, $b) use ($rankingType) {
-        // For time-based ranking, DNF/DNS/DQ go last
+        // For time-based ranking
         if ($rankingType === 'time') {
-            if ($a['status'] !== 'finished' && $b['status'] === 'finished') return 1;
+            // Finished riders come first
             if ($a['status'] === 'finished' && $b['status'] !== 'finished') return -1;
-            if ($a['status'] !== 'finished' && $b['status'] !== 'finished') return 0;
+            if ($a['status'] !== 'finished' && $b['status'] === 'finished') return 1;
 
-            // Both finished - sort by time in seconds
-            $aSeconds = timeToSeconds($a['finish_time']);
-            $bSeconds = timeToSeconds($b['finish_time']);
+            // Both finished - sort by time
+            if ($a['status'] === 'finished' && $b['status'] === 'finished') {
+                $aSeconds = timeToSeconds($a['finish_time']);
+                $bSeconds = timeToSeconds($b['finish_time']);
+                return $aSeconds <=> $bSeconds;
+            }
 
-            return $aSeconds <=> $bSeconds;
+            // Both not finished - sort by status priority: DNF > DQ > DNS
+            $statusPriority = ['dnf' => 1, 'dq' => 2, 'dns' => 3];
+            $aPriority = $statusPriority[$a['status']] ?? 4;
+            $bPriority = $statusPriority[$b['status']] ?? 4;
+
+            if ($aPriority !== $bPriority) {
+                return $aPriority <=> $bPriority;
+            }
+
+            // Both DNF - sort by number of completed stages (more stages = higher)
+            if ($a['status'] === 'dnf' && $b['status'] === 'dnf') {
+                $aStages = 0;
+                $bStages = 0;
+                for ($i = 1; $i <= 10; $i++) {
+                    if (!empty($a['ss' . $i])) $aStages++;
+                    if (!empty($b['ss' . $i])) $bStages++;
+                }
+                // More stages = better position (lower in sort)
+                return $bStages <=> $aStages;
+            }
+
+            return 0;
         } elseif ($rankingType === 'name') {
             // Sort alphabetically by name
             $aName = ($a['firstname'] ?? '') . ' ' . ($a['lastname'] ?? '');
@@ -754,6 +778,12 @@ include __DIR__ . '/includes/layout-header.php';
                                                 if ($bestTime && $result['status'] === 'finished'):
                                                 ?>
                                                     <?= formatDisplayTime($bestTime) ?>
+                                                <?php elseif ($result['status'] === 'dnf'): ?>
+                                                    <span class="gs-text-warning">DNF</span>
+                                                <?php elseif ($result['status'] === 'dns'): ?>
+                                                    <span class="gs-text-secondary">DNS</span>
+                                                <?php elseif ($result['status'] === 'dq'): ?>
+                                                    <span class="gs-text-error">DQ</span>
                                                 <?php else: ?>
                                                     <span class="gs-text-secondary">-</span>
                                                 <?php endif; ?>
@@ -763,6 +793,12 @@ include __DIR__ . '/includes/layout-header.php';
                                             <td class="gs-table-time-cell">
                                                 <?php if ($result['finish_time'] && $result['status'] === 'finished'): ?>
                                                     <?= formatDisplayTime($result['finish_time']) ?>
+                                                <?php elseif ($result['status'] === 'dnf'): ?>
+                                                    <span class="gs-text-warning">DNF</span>
+                                                <?php elseif ($result['status'] === 'dns'): ?>
+                                                    <span class="gs-text-secondary">DNS</span>
+                                                <?php elseif ($result['status'] === 'dq'): ?>
+                                                    <span class="gs-text-error">DQ</span>
                                                 <?php else: ?>
                                                     <span class="gs-text-secondary">-</span>
                                                 <?php endif; ?>
