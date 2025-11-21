@@ -31,6 +31,19 @@ if (!$event) {
     exit;
 }
 
+// Fetch results count for this event FIRST (to determine redirect)
+$results = $db->getAll("
+    SELECT id
+    FROM results
+    WHERE event_id = ?
+", [$eventId]);
+
+// If results exist and no tab is explicitly requested, redirect to results page
+if (!empty($results) && !isset($_GET['tab'])) {
+    header('Location: /event-results.php?id=' . $eventId);
+    exit;
+}
+
 // Get active tab - default to 'anmalan' if registration deadline exists and hasn't passed
 $defaultTab = 'info';
 if (!isset($_GET['tab'])) {
@@ -61,13 +74,6 @@ $totalRegistrations = count($registrations);
 $confirmedRegistrations = count(array_filter($registrations, function($r) {
     return $r['status'] === 'confirmed';
 }));
-
-// Fetch results count for this event (for tab badge)
-$results = $db->getAll("
-    SELECT id
-    FROM results
-    WHERE event_id = ?
-", [$eventId]);
 
 // Fetch global texts for use_global functionality
 $globalTexts = $db->getAll("SELECT field_key, content FROM global_texts WHERE is_active = 1");
