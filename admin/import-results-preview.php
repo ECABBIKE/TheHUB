@@ -133,8 +133,8 @@ function parseResultsCSVForPreview($filepath) {
     rewind($handle);
     $delimiter = (substr_count($firstLine, ';') > substr_count($firstLine, ',')) ? ';' : ',';
 
-    // Read header
-    $header = fgetcsv($handle, 1000, $delimiter);
+    // Read header (0 = unlimited line length)
+    $header = fgetcsv($handle, 0, $delimiter);
     if (!$header) {
         fclose($handle);
         throw new Exception('Tom fil eller ogiltigt format');
@@ -228,9 +228,9 @@ function parseResultsCSVForPreview($filepath) {
         return $mappings[$col] ?? $col;
     }, $header);
 
-    // Read all rows
+    // Read all rows (0 = unlimited line length)
     $lineNumber = 1;
-    while (($row = fgetcsv($handle, 1000, $delimiter)) !== false) {
+    while (($row = fgetcsv($handle, 0, $delimiter)) !== false) {
         $lineNumber++;
         if (count($row) < 2) continue; // Skip empty rows
 
