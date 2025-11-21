@@ -73,7 +73,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['import_file'])) {
     }
 
     if ($message) {
-        setFlash($message, $messageType);
+        set_flash($messageType, $message);
         redirect('/admin/import.php');
     }
 }
