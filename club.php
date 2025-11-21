@@ -23,6 +23,7 @@ if (!$club) {
 }
 
 // Fetch all riders from this club with their total points
+// Use class position (not overall position) for best_position and wins
 $clubRiders = $db->getAll("
     SELECT
         r.id,
@@ -35,8 +36,28 @@ $clubRiders = $db->getAll("
         r.city,
         COUNT(DISTINCT res.id) as total_races,
         SUM(res.points) as total_points,
-        MIN(res.position) as best_position,
-        COUNT(CASE WHEN res.position = 1 THEN 1 END) as wins
+        MIN(
+            CASE WHEN res.status = 'finished' THEN
+                (SELECT COUNT(*) + 1
+                 FROM results r2
+                 WHERE r2.event_id = res.event_id
+                 AND r2.class_id = res.class_id
+                 AND r2.status = 'finished'
+                 AND r2.id != res.id
+                 AND (r2.finish_time < res.finish_time OR (r2.finish_time = res.finish_time AND r2.id < res.id)))
+            ELSE NULL END
+        ) as best_position,
+        SUM(
+            CASE WHEN res.status = 'finished' AND
+                (SELECT COUNT(*) + 1
+                 FROM results r2
+                 WHERE r2.event_id = res.event_id
+                 AND r2.class_id = res.class_id
+                 AND r2.status = 'finished'
+                 AND r2.id != res.id
+                 AND (r2.finish_time < res.finish_time OR (r2.finish_time = res.finish_time AND r2.id < res.id))) = 1
+            THEN 1 ELSE 0 END
+        ) as wins
     FROM riders r
     LEFT JOIN results res ON r.id = res.cyclist_id
     WHERE r.club_id = ? AND r.active = 1
