@@ -14,6 +14,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $action = $_POST['action'] ?? '';
 
+    // Debug: Show what action was received
+    if (empty($action)) {
+        $message = "POST mottagen men ingen action. POST-nycklar: " . implode(', ', array_keys($_POST));
+        $messageType = 'error';
+    }
+
     if ($action === 'create' || $action === 'update') {
         $name = trim($_POST['name'] ?? '');
         $description = trim($_POST['description'] ?? '');
@@ -124,6 +130,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $messageType = 'error';
             }
         }
+    }
+
+    // Debug: Show if unknown action
+    if (!empty($action) && empty($message) && !in_array($action, ['create', 'update', 'delete', 'import'])) {
+        $message = "Okänd action: '$action'. POST-nycklar: " . implode(', ', array_keys($_POST));
+        $messageType = 'error';
     }
 }
 
