@@ -24,9 +24,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['import_file'])) {
 
     $file = $_FILES['import_file'];
     $selectedEventId = !empty($_POST['event_id']) ? (int)$_POST['event_id'] : null;
+    $importFormat = !empty($_POST['import_format']) ? $_POST['import_format'] : null;
 
-    // Validate event selection
-    if (!$selectedEventId) {
+    // Validate format and event selection
+    if (!$importFormat || !in_array($importFormat, ['enduro', 'dh'])) {
+        $message = 'Du måste välja ett format (Enduro eller DH)';
+        $messageType = 'error';
+    } elseif (!$selectedEventId) {
         $message = 'Du måste välja ett event först';
         $messageType = 'error';
     } elseif ($file['error'] !== UPLOAD_ERR_OK) {
@@ -57,6 +61,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['import_file'])) {
                 $_SESSION['import_preview_file'] = $uploaded;
                 $_SESSION['import_preview_filename'] = $file['name'];
                 $_SESSION['import_selected_event'] = $selectedEventId;
+                $_SESSION['import_format'] = $importFormat;
 
                 header('Location: /admin/import-results-preview.php');
                 exit;
@@ -107,10 +112,26 @@ include __DIR__ . '/../includes/layout-header.php';
                 <form method="POST" enctype="multipart/form-data" class="gs-form">
                     <?= csrf_field() ?>
 
-                    <!-- Step 1: Select Event -->
+                    <!-- Step 1: Select Format -->
+                    <div class="gs-form-group gs-mb-lg">
+                        <label for="import_format" class="gs-label gs-label-lg">
+                            <span class="gs-badge gs-badge-primary gs-mr-sm">1</span>
+                            Välj format
+                        </label>
+                        <select id="import_format" name="import_format" class="gs-input gs-input-lg" required>
+                            <option value="">-- Välj format --</option>
+                            <option value="enduro">Enduro (SS1, SS2, SS3...)</option>
+                            <option value="dh">Downhill (Run 1, Run 2)</option>
+                        </select>
+                        <p class="gs-text-sm gs-text-secondary gs-mt-sm">
+                            Välj rätt format baserat på din CSV-fils struktur.
+                        </p>
+                    </div>
+
+                    <!-- Step 2: Select Event -->
                     <div class="gs-form-group gs-mb-lg">
                         <label for="event_id" class="gs-label gs-label-lg">
-                            <span class="gs-badge gs-badge-primary gs-mr-sm">1</span>
+                            <span class="gs-badge gs-badge-primary gs-mr-sm">2</span>
                             Välj event
                         </label>
                         <select id="event_id" name="event_id" class="gs-input gs-input-lg" required>
@@ -129,10 +150,10 @@ include __DIR__ . '/../includes/layout-header.php';
                         </p>
                     </div>
 
-                    <!-- Step 2: Select File -->
+                    <!-- Step 3: Select File -->
                     <div class="gs-form-group gs-mb-lg">
                         <label for="import_file" class="gs-label gs-label-lg">
-                            <span class="gs-badge gs-badge-primary gs-mr-sm">2</span>
+                            <span class="gs-badge gs-badge-primary gs-mr-sm">3</span>
                             Välj CSV-fil
                         </label>
                         <input type="file"
@@ -146,11 +167,11 @@ include __DIR__ . '/../includes/layout-header.php';
                         </p>
                     </div>
 
-                    <!-- Step 3: Preview Button -->
+                    <!-- Step 4: Preview Button -->
                     <div class="gs-form-group">
                         <button type="submit" class="gs-btn gs-btn-primary gs-btn-lg gs-w-full">
                             <i data-lucide="eye"></i>
-                            <span class="gs-badge gs-badge-light gs-mr-sm">3</span>
+                            <span class="gs-badge gs-badge-light gs-mr-sm">4</span>
                             Förhandsgranska import
                         </button>
                     </div>
@@ -167,15 +188,50 @@ include __DIR__ . '/../includes/layout-header.php';
                 </h3>
             </div>
             <div class="gs-card-content">
-                <p class="gs-text-sm gs-mb-md"><strong>Obligatoriska kolumner:</strong></p>
+                <p class="gs-text-sm gs-mb-md"><strong>Obligatoriska kolumner (alla format):</strong></p>
                 <code class="gs-code-block gs-mb-md">
 Category, PlaceByCategory, FirstName, LastName, Club, NetTime, Status
                 </code>
 
-                <p class="gs-text-sm gs-mb-md"><strong>Valfria kolumner:</strong></p>
-                <code class="gs-code-block gs-mb-md">
-UCI-ID, SS1, SS2, SS3, SS4, SS5, SS6, SS7, SS8, SS9, SS10
-                </code>
+                <div class="gs-grid gs-grid-cols-1 gs-md-grid-cols-2 gs-gap-lg gs-mt-lg">
+                    <!-- Enduro Format -->
+                    <div class="gs-card gs-card-bordered">
+                        <div class="gs-card-header gs-bg-primary-light">
+                            <h4 class="gs-h6 gs-text-primary gs-m-0">
+                                <i data-lucide="mountain"></i>
+                                Enduro Format
+                            </h4>
+                        </div>
+                        <div class="gs-card-content">
+                            <p class="gs-text-sm gs-mb-sm"><strong>Specifika kolumner:</strong></p>
+                            <code class="gs-code-block gs-text-xs">
+UCI-ID, SS1, SS2, SS3... SS15
+                            </code>
+                            <p class="gs-text-xs gs-text-secondary gs-mt-sm">
+                                Stages summeras till total tid
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- DH Format -->
+                    <div class="gs-card gs-card-bordered">
+                        <div class="gs-card-header gs-bg-warning-light">
+                            <h4 class="gs-h6 gs-text-warning gs-m-0">
+                                <i data-lucide="arrow-down"></i>
+                                Downhill Format
+                            </h4>
+                        </div>
+                        <div class="gs-card-content">
+                            <p class="gs-text-sm gs-mb-sm"><strong>Specifika kolumner:</strong></p>
+                            <code class="gs-code-block gs-text-xs">
+UCI-ID, Run1, Run2
+                            </code>
+                            <p class="gs-text-xs gs-text-secondary gs-mt-sm">
+                                Bästa tid av två åk vinner
+                            </p>
+                        </div>
+                    </div>
+                </div>
 
                 <details class="gs-details">
                     <summary class="gs-text-sm gs-text-primary">
