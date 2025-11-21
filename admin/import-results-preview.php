@@ -97,6 +97,10 @@ foreach ($matchingStats['classes'] as $csvClass) {
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_import'])) {
     checkCsrf();
 
+    // Enable error reporting for debugging
+    error_reporting(E_ALL);
+    ini_set('display_errors', 1);
+
     try {
         require_once __DIR__ . '/../includes/import-functions.php';
 
