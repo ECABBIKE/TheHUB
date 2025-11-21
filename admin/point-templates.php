@@ -107,10 +107,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     ];
 
                     $db->insert('qualification_point_templates', $templateData);
-                    $message = 'Poängmall importerad!';
+                    $message = 'Poängmall importerad! (' . count($imported['points']) . ' positioner)';
                     $messageType = 'success';
                 } else {
-                    $message = 'Kunde inte hitta poäng i importerad data';
+                    // Debug: show what was received
+                    $debugLines = count(explode("\n", $importData));
+                    $message = "Kunde inte hitta poäng i importerad data. Mottog {$debugLines} rader. Kontrollera formatet (position,poäng eller position;poäng)";
                     $messageType = 'error';
                 }
             } catch (Exception $e) {
