@@ -2,6 +2,11 @@
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
+// Debug: Check if POST is received
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    die('DEBUG: POST mottagen. Action: ' . ($_POST['action'] ?? 'SAKNAS') . ', POST-keys: ' . implode(', ', array_keys($_POST)));
+}
+
 require_once __DIR__ . '/../config.php';
 require_admin();
 
