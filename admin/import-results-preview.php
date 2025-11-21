@@ -44,7 +44,8 @@ $matchingStats = [
     'riders_new' => 0,
     'clubs_existing' => 0,
     'clubs_new' => 0,
-    'classes' => []
+    'classes' => [],
+    'potential_duplicates' => []
 ];
 
 try {
@@ -202,11 +203,13 @@ function parseAndAnalyzeCSV($filepath, $db) {
         'clubs_existing' => 0,
         'clubs_new' => 0,
         'clubs_list' => [],
-        'classes' => []
+        'classes' => [],
+        'potential_duplicates' => []
     ];
 
     $riderCache = [];
     $clubCache = [];
+    $duplicateCache = [];
 
     if (($handle = fopen($filepath, 'r')) === false) {
         throw new Exception('Kunde inte öppna filen');
@@ -269,31 +272,77 @@ function parseAndAnalyzeCSV($filepath, $db) {
         $data[] = $rowData;
         $stats['total_rows']++;
 
-        // Check rider matching
+        // Check rider matching and duplicates
         $firstName = trim($rowData['firstname'] ?? '');
         $lastName = trim($rowData['lastname'] ?? '');
         $licenseNumber = trim($rowData['license_number'] ?? '');
+        $normalizedLicense = preg_replace('/[^0-9]/', '', $licenseNumber);
 
         if (!empty($firstName) && !empty($lastName)) {
-            $riderKey = $firstName . '|' . $lastName . '|' . $licenseNumber;
+            $riderKey = $firstName . '|' . $lastName . '|' . $normalizedLicense;
 
             if (!isset($riderCache[$riderKey])) {
                 $rider = null;
+                $isDuplicate = false;
 
-                // Try license first
-                if (!empty($licenseNumber)) {
+                // Try normalized license first
+                if (!empty($normalizedLicense)) {
                     $rider = $db->getRow(
-                        "SELECT id FROM riders WHERE license_number = ?",
-                        [$licenseNumber]
+                        "SELECT id, firstname, lastname, license_number FROM riders WHERE REPLACE(REPLACE(license_number, ' ', ''), '-', '') = ?",
+                        [$normalizedLicense]
                     );
+
+                    // Check if it's a format duplicate (same UCI but different format)
+                    if ($rider && $rider['license_number'] !== $licenseNumber && !empty($rider['license_number'])) {
+                        $dupKey = $normalizedLicense;
+                        if (!isset($duplicateCache[$dupKey])) {
+                            $duplicateCache[$dupKey] = true;
+                            $stats['potential_duplicates'][] = [
+                                'csv_name' => $firstName . ' ' . $lastName,
+                                'csv_license' => $licenseNumber,
+                                'existing_id' => $rider['id'],
+                                'existing_name' => $rider['firstname'] . ' ' . $rider['lastname'],
+                                'existing_license' => $rider['license_number'],
+                                'type' => 'uci_format'
+                            ];
+                        }
+                    }
                 }
 
-                // Try name
+                // Try name match if no license match
                 if (!$rider) {
                     $rider = $db->getRow(
-                        "SELECT id FROM riders WHERE firstname = ? AND lastname = ?",
+                        "SELECT id, firstname, lastname, license_number FROM riders WHERE firstname = ? AND lastname = ?",
                         [$firstName, $lastName]
                     );
+
+                    // Only suggest duplicate if UCI-IDs don't conflict
+                    // Same name + no UCI = possible duplicate
+                    // Same name + same UCI = same person (not duplicate warning)
+                    // Same name + different UCI = different people (NO duplicate)
+                    if ($rider) {
+                        $existingLicense = preg_replace('/[^0-9]/', '', $rider['license_number'] ?? '');
+
+                        // Check if this is a potential duplicate (both have no UCI or one is missing)
+                        if (empty($normalizedLicense) && empty($existingLicense)) {
+                            // Both have no UCI - possible duplicate
+                            $dupKey = strtolower($firstName . '|' . $lastName);
+                            if (!isset($duplicateCache[$dupKey])) {
+                                $duplicateCache[$dupKey] = true;
+                                $stats['potential_duplicates'][] = [
+                                    'csv_name' => $firstName . ' ' . $lastName,
+                                    'csv_license' => $licenseNumber ?: '(ingen)',
+                                    'existing_id' => $rider['id'],
+                                    'existing_name' => $rider['firstname'] . ' ' . $rider['lastname'],
+                                    'existing_license' => $rider['license_number'] ?: '(ingen)',
+                                    'type' => 'name_no_uci'
+                                ];
+                            }
+                        } elseif (!empty($normalizedLicense) && !empty($existingLicense) && $normalizedLicense !== $existingLicense) {
+                            // Different UCI-IDs = different people, not a duplicate
+                            $rider = null; // Treat as new rider
+                        }
+                    }
                 }
 
                 $riderCache[$riderKey] = $rider ? true : false;
@@ -416,6 +465,61 @@ include __DIR__ . '/../includes/layout-header.php';
                 <div class="gs-stat-label">Klubbar</div>
             </div>
         </div>
+
+        <!-- Potential Duplicates Warning -->
+        <?php if (!empty($matchingStats['potential_duplicates'])): ?>
+            <div class="gs-card gs-mb-lg">
+                <div class="gs-card-header gs-bg-warning" style="background: var(--gs-warning-light, #fff3cd);">
+                    <h3 class="gs-h5 gs-text-warning">
+                        <i data-lucide="alert-triangle"></i>
+                        Potentiella dubletter (<?= count($matchingStats['potential_duplicates']) ?>)
+                    </h3>
+                </div>
+                <div class="gs-card-content">
+                    <p class="gs-text-sm gs-text-secondary gs-mb-md">
+                        Dessa deltagare i CSV:en matchar befintliga deltagare med samma UCI-ID (olika format) eller samma namn utan UCI-ID.
+                        <br><strong>Obs:</strong> Deltagare med samma namn men olika UCI-ID visas inte här - de är olika personer.
+                    </p>
+                    <div class="gs-table-responsive" style="max-height: 250px; overflow: auto;">
+                        <table class="gs-table gs-table-sm">
+                            <thead>
+                                <tr>
+                                    <th>I CSV</th>
+                                    <th>Befintlig deltagare</th>
+                                    <th>Typ</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($matchingStats['potential_duplicates'] as $dup): ?>
+                                    <tr>
+                                        <td>
+                                            <strong><?= h($dup['csv_name']) ?></strong>
+                                            <br><code class="gs-text-xs"><?= h($dup['csv_license']) ?></code>
+                                        </td>
+                                        <td>
+                                            <strong><?= h($dup['existing_name']) ?></strong>
+                                            <br><code class="gs-text-xs"><?= h($dup['existing_license']) ?></code>
+                                        </td>
+                                        <td>
+                                            <?php if ($dup['type'] === 'uci_format'): ?>
+                                                <span class="gs-badge gs-badge-sm gs-badge-info">UCI-format</span>
+                                            <?php else: ?>
+                                                <span class="gs-badge gs-badge-sm gs-badge-warning">Namn utan UCI</span>
+                                            <?php endif; ?>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="gs-alert gs-alert-info gs-mt-md">
+                        <i data-lucide="info"></i>
+                        <strong>Tips:</strong> Importera filen - systemet matchar automatiskt via normaliserat UCI-ID.
+                        <br>Du kan också <a href="/admin/cleanup-duplicates.php" class="gs-link">rensa dubletter</a> efteråt.
+                    </div>
+                </div>
+            </div>
+        <?php endif; ?>
 
         <!-- Matching Details -->
         <div class="gs-grid gs-grid-cols-1 gs-md-grid-cols-2 gs-gap-lg gs-mb-lg">

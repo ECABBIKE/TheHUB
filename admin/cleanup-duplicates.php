@@ -10,44 +10,7 @@ $db = getDB();
 $message = '';
 $messageType = 'info';
 
-// Find duplicate riders by normalized UCI-ID
-$duplicatesByUci = $db->getAll("
-    SELECT
-        REPLACE(REPLACE(license_number, ' ', ''), '-', '') as normalized_uci,
-        GROUP_CONCAT(id ORDER BY
-            CASE WHEN club_id IS NOT NULL THEN 0 ELSE 1 END,
-            CASE WHEN birth_year IS NOT NULL THEN 0 ELSE 1 END,
-            created_at ASC
-        ) as ids,
-        GROUP_CONCAT(CONCAT(firstname, ' ', lastname) SEPARATOR ' | ') as names,
-        COUNT(*) as count
-    FROM riders
-    WHERE license_number IS NOT NULL AND license_number != ''
-    GROUP BY normalized_uci
-    HAVING count > 1
-    ORDER BY count DESC
-");
-
-// Find duplicate riders by name (exact match)
-$duplicatesByName = $db->getAll("
-    SELECT
-        CONCAT(LOWER(firstname), '|', LOWER(lastname)) as name_key,
-        GROUP_CONCAT(id ORDER BY
-            CASE WHEN license_number IS NOT NULL AND license_number != '' THEN 0 ELSE 1 END,
-            CASE WHEN club_id IS NOT NULL THEN 0 ELSE 1 END,
-            created_at ASC
-        ) as ids,
-        GROUP_CONCAT(COALESCE(license_number, 'ingen') SEPARATOR ' | ') as licenses,
-        MIN(firstname) as firstname,
-        MIN(lastname) as lastname,
-        COUNT(*) as count
-    FROM riders
-    GROUP BY name_key
-    HAVING count > 1
-    ORDER BY count DESC
-");
-
-// Handle merge action
+// Handle merge action FIRST (before querying duplicates)
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['merge_riders'])) {
     checkCsrf();
 
@@ -108,13 +71,61 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['normalize_all'])) {
             AND (license_number LIKE '% %' OR license_number LIKE '%-%')
         ");
 
-        $message = "Normaliserade UCI-ID format för alla deltagare";
-        $messageType = 'success';
+        // Store message in session and redirect
+        $_SESSION['cleanup_message'] = "Normaliserade UCI-ID format för alla deltagare";
+        $_SESSION['cleanup_message_type'] = 'success';
     } catch (Exception $e) {
-        $message = "Fel vid normalisering: " . $e->getMessage();
-        $messageType = 'error';
+        $_SESSION['cleanup_message'] = "Fel vid normalisering: " . $e->getMessage();
+        $_SESSION['cleanup_message_type'] = 'error';
     }
+
+    header('Location: /admin/cleanup-duplicates.php');
+    exit;
 }
+
+// Check for message from redirect
+if (isset($_SESSION['cleanup_message'])) {
+    $message = $_SESSION['cleanup_message'];
+    $messageType = $_SESSION['cleanup_message_type'] ?? 'info';
+    unset($_SESSION['cleanup_message'], $_SESSION['cleanup_message_type']);
+}
+
+// Find duplicate riders by normalized UCI-ID
+$duplicatesByUci = $db->getAll("
+    SELECT
+        REPLACE(REPLACE(license_number, ' ', ''), '-', '') as normalized_uci,
+        GROUP_CONCAT(id ORDER BY
+            CASE WHEN club_id IS NOT NULL THEN 0 ELSE 1 END,
+            CASE WHEN birth_year IS NOT NULL THEN 0 ELSE 1 END,
+            created_at ASC
+        ) as ids,
+        GROUP_CONCAT(CONCAT(firstname, ' ', lastname) SEPARATOR ' | ') as names,
+        COUNT(*) as count
+    FROM riders
+    WHERE license_number IS NOT NULL AND license_number != ''
+    GROUP BY normalized_uci
+    HAVING count > 1
+    ORDER BY count DESC
+");
+
+// Find duplicate riders by name (exact match)
+$duplicatesByName = $db->getAll("
+    SELECT
+        CONCAT(LOWER(firstname), '|', LOWER(lastname)) as name_key,
+        GROUP_CONCAT(id ORDER BY
+            CASE WHEN license_number IS NOT NULL AND license_number != '' THEN 0 ELSE 1 END,
+            CASE WHEN club_id IS NOT NULL THEN 0 ELSE 1 END,
+            created_at ASC
+        ) as ids,
+        GROUP_CONCAT(COALESCE(license_number, 'ingen') SEPARATOR ' | ') as licenses,
+        MIN(firstname) as firstname,
+        MIN(lastname) as lastname,
+        COUNT(*) as count
+    FROM riders
+    GROUP BY name_key
+    HAVING count > 1
+    ORDER BY count DESC
+");
 
 $pageTitle = 'Rensa dubbletter';
 $pageType = 'admin';
