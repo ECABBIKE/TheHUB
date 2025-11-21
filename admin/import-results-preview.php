@@ -1,7 +1,4 @@
 <?php
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
-
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/../includes/import-history.php';
 require_once __DIR__ . '/../includes/class-calculations.php';
@@ -102,8 +99,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_import'])) {
     checkCsrf();
 
     try {
-        $_SESSION['import_debug'] = 'Step 1: Starting import';
-
         // Process class mappings from form
         $classMappings = [];
         if (isset($_POST['class_mapping']) && is_array($_POST['class_mapping'])) {
@@ -111,7 +106,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_import'])) {
                 if (!empty($mappedClassId) && $mappedClassId !== 'new') {
                     $classMappings[$csvClass] = (int)$mappedClassId;
                 }
-                // If 'new', the import will create the class automatically
             }
         }
 
@@ -122,8 +116,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_import'])) {
         // Create event mapping - all rows go to selected event
         $eventMapping = ['Välj event för alla resultat' => $selectedEventId];
 
-        $_SESSION['import_debug'] = 'Step 2: Before startImportHistory';
-
         // Import with event mapping
         $importId = startImportHistory(
             $db,
@@ -133,8 +125,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_import'])) {
             $current_admin['username'] ?? 'admin'
         );
 
-        $_SESSION['import_debug'] = 'Step 3: Before importResultsFromCSVWithMapping';
-
         $result = importResultsFromCSVWithMapping(
             $_SESSION['import_preview_file'],
             $db,
@@ -142,8 +132,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_import'])) {
             $eventMapping,
             null
         );
-
-        $_SESSION['import_debug'] = 'Step 4: After import - ' . json_encode($result['stats']);
 
         $stats = $result['stats'];
         $matching_stats = $result['matching'];
@@ -153,14 +141,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_import'])) {
         $importStatus = ($stats['success'] > 0) ? 'completed' : 'failed';
         updateImportHistory($db, $importId, $stats, $errors, $importStatus);
 
-        $_SESSION['import_debug'] = 'Step 5: Before recalculateEventResults';
-
         // Recalculate results to fix class assignments and calculate correct points
         $recalcStats = recalculateEventResults($db, $selectedEventId);
         $classesFixed = $recalcStats['classes_fixed'] ?? 0;
         $pointsCalculated = $recalcStats['points_updated'] ?? 0;
-
-        $_SESSION['import_debug'] = 'Step 6: Import complete';
 
         // Clean up
         @unlink($_SESSION['import_preview_file']);

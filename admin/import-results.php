@@ -12,13 +12,6 @@ $current_admin = get_current_admin();
 $message = '';
 $messageType = 'info';
 
-// Show debug info if available
-if (isset($_SESSION['import_debug'])) {
-    $message = 'DEBUG: ' . $_SESSION['import_debug'];
-    $messageType = 'info';
-    unset($_SESSION['import_debug']);
-}
-
 // Load existing events for dropdown
 $existingEvents = $db->getAll("
     SELECT id, name, date, location
