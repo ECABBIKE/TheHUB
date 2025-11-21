@@ -126,6 +126,20 @@ include __DIR__ . '/../includes/layout-header.php';
                             <i data-lucide="mountain"></i>
                             DH-resultat (CSV)
                         </a>
+
+                        <a href="/templates/poangmall-standard.csv"
+                           class="gs-btn gs-btn-secondary gs-btn-lg"
+                           download>
+                            <i data-lucide="award"></i>
+                            Poängmall Standard (CSV)
+                        </a>
+
+                        <a href="/templates/poangmall-dh.csv"
+                           class="gs-btn gs-btn-secondary gs-btn-lg"
+                           download>
+                            <i data-lucide="trophy"></i>
+                            Poängmall DH (CSV)
+                        </a>
                     </div>
 
                     <!-- Column Info -->
@@ -198,6 +212,26 @@ include __DIR__ . '/../includes/layout-header.php';
                             </ul>
                             <div class="gs-alert-success">
                                 <strong>💡 Tips:</strong> Bästa av två åk används som sluttid. Split-tider kan läggas i SS1-SS4 (Run 1) och SS5-SS8 (Run 2).
+                            </div>
+                        </details>
+
+                        <details class="gs-details">
+                            <summary>
+                                🏆 Poängmall-kolumner
+                            </summary>
+                            <p class="gs-text-sm gs-mb-sm"><strong>Standard poängmall (2 kolumner):</strong></p>
+                            <ul class="gs-list-spaced">
+                                <li><strong>Position:</strong> Placering (1, 2, 3...) (required)</li>
+                                <li><strong>Poäng:</strong> Poäng för denna placering (required)</li>
+                            </ul>
+                            <p class="gs-text-sm gs-mb-sm gs-mt-md"><strong>DH poängmall med Kval/Final (3 kolumner):</strong></p>
+                            <ul class="gs-list-spaced">
+                                <li><strong>Position:</strong> Placering (1, 2, 3...) (required)</li>
+                                <li><strong>Kval:</strong> Poäng för kvalificering (required)</li>
+                                <li><strong>Final:</strong> Poäng för final (required)</li>
+                            </ul>
+                            <div class="gs-alert-info">
+                                <strong>💡 Tips:</strong> Använd semikolon (;) som kolumnseparator. Importera via Admin → Poängmallar → Importera från CSV.
                             </div>
                         </details>
 
