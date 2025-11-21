@@ -109,7 +109,7 @@ include __DIR__ . '/../includes/layout-header.php';
             </div>
 
             <!-- Stats -->
-            <div class="gs-grid gs-grid-cols-1 gs-md-grid-cols-4 gs-gap-lg gs-mb-lg">
+            <div class="gs-grid gs-grid-cols-2 gs-md-grid-cols-4 gs-gap-lg gs-mb-lg">
                 <div class="gs-stat-card">
                     <i data-lucide="database" class="gs-icon-lg gs-text-primary gs-mb-md"></i>
                     <div class="gs-stat-number"><?= count($imports) ?></div>

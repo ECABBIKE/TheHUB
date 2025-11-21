@@ -245,52 +245,52 @@ include __DIR__ . '/../includes/layout-header.php';
                         </h4>
                         <p class="gs-text-sm gs-mb-sm"><strong>Obligatoriska kolumner:</strong></p>
                         <code class="gs-code-block">
-event_name, event_date, discipline, category, position, first_name, last_name, club_name, uci_id, time_seconds, status
+Category, PlaceByCategory, FirstName, LastName, Club, NetTime, Status
                         </code>
 
-                        <p class="gs-text-sm gs-mb-sm"><strong>Flexibla Stage-kolumner:</strong></p>
+                        <p class="gs-text-sm gs-mb-sm"><strong>Valfria kolumner:</strong></p>
                         <code class="gs-code-block">
-SS1, SS2, SS3, SS4, SS5, SS6, SS7, ... (valfritt antal)
+UCI-ID, SS1, SS2, SS3, SS4, SS5, SS6, SS7, SS8, SS9, SS10
                         </code>
 
                         <div class="gs-alert-info">
-                            <p class="gs-text-sm gs-m-0"><strong>💡 Tips:</strong> Systemet detekterar automatiskt antalet SS-kolumner i din CSV. Du kan ha 1, 5, 7, 10 eller vilket antal som helst!</p>
+                            <p class="gs-text-sm gs-m-0"><strong>💡 Tips:</strong> Systemet detekterar automatiskt kolumnnamn. Event väljs i förhandsgranskningen om det saknas i filen. Stödjer också svenska namn som Klass, Placering, Förnamn, Efternamn, Klubb, Tid.</p>
                         </div>
                     </div>
 
                     <details class="gs-mb-md gs-details-lg">
                         <summary>
-                            📋 Exempel CSV-format (SweCup Falun)
+                            📋 Exempel CSV-format (Enduro)
                         </summary>
                         <pre class="gs-code-dark">
-event_name,event_date,discipline,category,position,first_name,last_name,club_name,uci_id,time_seconds,status,SS1,SS2,SS3,SS4,SS5,SS6,SS7
-SweCup Enduro Falun 2025,2025-09-14,END,Damer Junior,1,Ella,MÅRTENSSON,Borås CA,10022510347,979.16,FIN,130.55,107.08,111.10,127.70,92.10,74.83,157.35
-SweCup Enduro Falun 2025,2025-09-14,END,Herrar Elite,1,Johan,ANDERSSON,Stockholm CK,10011223344,856.42,FIN,118.22,98.55,102.33,115.88,84.12,68.91,144.21
-SweCup Enduro Falun 2025,2025-09-14,END,Herrar Elite,2,Erik,SVENSSON,Göteborg MTB,,DNF,DNF,115.34,99.21,DNF,DNF,DNF,DNF,DNF</pre>
+Category,PlaceByCategory,FirstName,LastName,Club,UCI-ID,NetTime,Status,SS1,SS2,SS3,SS4,SS5,SS6,SS7
+Damer Junior,1,Ella,MÅRTENSSON,Borås CA,10022510347,16:19.16,FIN,2:10.55,1:47.08,1:51.10,2:07.70,1:32.10,1:14.83,2:37.35
+Herrar Elite,1,Johan,ANDERSSON,Stockholm CK,10011223344,14:16.42,FIN,1:58.22,1:38.55,1:42.33,1:55.88,1:24.12,1:08.91,2:24.21
+Herrar Elite,2,Erik,SVENSSON,Göteborg MTB,,DNF,DNF,1:55.34,1:39.21,DNF,DNF,DNF,DNF,DNF</pre>
                     </details>
 
                     <div class="gs-grid gs-grid-cols-2 gs-gap-md">
                         <div>
                             <h5 class="gs-text-sm gs-text-primary gs-heading-semibold">Kolumnbeskrivningar:</h5>
                             <ul class="gs-text-xs gs-list-compact">
-                                <li><code>event_name</code>: Tävlingsnamn</li>
-                                <li><code>event_date</code>: YYYY-MM-DD</li>
-                                <li><code>discipline</code>: END/EDR/DHI/XC</li>
-                                <li><code>category</code>: "Damer Junior", "Herrar Elite"</li>
-                                <li><code>position</code>: Placering (nummer)</li>
-                                <li><code>first_name</code>: Förnamn</li>
-                                <li><code>last_name</code>: Efternamn</li>
+                                <li><code>Category</code>: Klass (ex: "Damer Junior", "Herrar Elite")</li>
+                                <li><code>PlaceByCategory</code>: Placering (nummer)</li>
+                                <li><code>FirstName</code>: Förnamn</li>
+                                <li><code>LastName</code>: Efternamn</li>
+                                <li><code>Club</code>: Klubbnamn</li>
+                                <li><code>UCI-ID</code>: UCI-ID (optional)</li>
                             </ul>
                         </div>
                         <div>
                             <h5 class="gs-text-sm gs-text-primary gs-heading-semibold">Fler kolumner:</h5>
                             <ul class="gs-text-xs gs-list-compact">
-                                <li><code>club_name</code>: Klubbnamn</li>
-                                <li><code>uci_id</code>: UCI-ID (optional)</li>
-                                <li><code>time</code> eller <code>finish_time</code>: Total tid (format: mm:ss.cc eller h:mm:ss.mmm)</li>
-                                <li><code>status</code>: FIN/DNF/DNS/DQ</li>
-                                <li><code>SS1, SS2...</code>: Stage-tider (format: mm:ss.cc eller h:mm:ss.mmm)</li>
+                                <li><code>NetTime</code>: Total tid (format: mm:ss.cc)</li>
+                                <li><code>Status</code>: FIN/DNF/DNS/DQ</li>
+                                <li><code>SS1, SS2...</code>: Stage-tider (format: mm:ss.cc)</li>
                             </ul>
+                            <p class="gs-text-xs gs-text-secondary gs-mt-sm">
+                                Event väljs i förhandsgranskningen efter uppladdning.
+                            </p>
                         </div>
                     </div>
 

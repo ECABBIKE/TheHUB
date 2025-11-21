@@ -1728,6 +1728,7 @@ body.gs-landing-pure .gs-sidebar-overlay {
 
   /* Keep 2-column grid for stat cards on mobile */
   .gs-grid-cols-2:has(.gs-stat-card-compact),
+  .gs-grid-cols-2:has(.gs-stat-card),
   .gs-grid-cols-2:has(.gs-card-stat) {
     grid-template-columns: repeat(2, 1fr) !important;
   }
