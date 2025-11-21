@@ -247,6 +247,7 @@ $debugTools = [
             ['name' => 'Rensa Eventresultat', 'url' => '/admin/clear-event-results.php', 'desc' => 'Ta bort resultat för specifikt event'],
             ['name' => 'Rensa Dubbletter', 'url' => '/admin/cleanup-duplicates.php', 'desc' => 'Hantera dubbletter och sammanfoga deltagare'],
             ['name' => 'Flytta Klassresultat', 'url' => '/admin/move-class-results.php', 'desc' => 'Flytta resultat mellan klasser'],
+            ['name' => 'Omtilldela Klasser', 'url' => '/admin/reassign-classes.php', 'desc' => 'Korrigera felaktiga klassplaceringar baserat på kön/ålder'],
         ]
     ],
     'database' => [

@@ -272,6 +272,11 @@ include __DIR__ . '/includes/layout-header.php';
     display: table-cell;
 }
 
+/* Hide club column when split times are visible to save space */
+.split-times-visible .club-col {
+    display: none;
+}
+
 /* Toggle button styling */
 .split-times-toggle {
     cursor: pointer;
@@ -421,7 +426,7 @@ include __DIR__ . '/includes/layout-header.php';
                                 <tr>
                                     <th class="gs-table-col-narrow">Plac.</th>
                                     <th>Namn</th>
-                                    <th>Klubb</th>
+                                    <th class="club-col">Klubb</th>
                                     <?php if ($hasBibNumbers): ?>
                                         <th class="gs-table-col-medium">Startnr</th>
                                     <?php endif; ?>
@@ -466,7 +471,7 @@ include __DIR__ . '/includes/layout-header.php';
                                             </a>
                                         </td>
 
-                                        <td>
+                                        <td class="club-col">
                                             <?php if ($result['club_name']): ?>
                                                 <span class="gs-badge gs-badge-secondary gs-badge-sm">
                                                     <?= h($result['club_name']) ?>
