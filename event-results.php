@@ -61,9 +61,29 @@ $results = $db->getAll("
     ORDER BY
         cls.sort_order ASC,
         COALESCE(cls.name, 'Oklassificerad'),
-        CASE WHEN res.status = 'finished' THEN res.class_position ELSE 999 END,
+        CASE WHEN res.status = 'finished' THEN res.position ELSE 999 END,
         res.finish_time
 ", [$eventId]);
+
+// Check if any results have bib numbers
+$hasBibNumbers = false;
+foreach ($results as $result) {
+    if (!empty($result['bib_number'])) {
+        $hasBibNumbers = true;
+        break;
+    }
+}
+
+// Check if any results have split times
+$hasSplitTimes = false;
+foreach ($results as $result) {
+    for ($i = 1; $i <= 10; $i++) {
+        if (!empty($result['ss' . $i])) {
+            $hasSplitTimes = true;
+            break 2;
+        }
+    }
+}
 
 // Group results by class
 $resultsByClass = [];
@@ -93,31 +113,98 @@ uksort($resultsByClass, function($a, $b) use ($resultsByClass) {
     return $resultsByClass[$a]['sort_order'] - $resultsByClass[$b]['sort_order'];
 });
 
+/**
+ * Format time string: remove leading 00: but keep hundredths/tenths
+ * "00:04:17.54" -> "4:17.54"
+ * "01:23:45.12" -> "1:23:45.12"
+ */
+function formatDisplayTime($time) {
+    if (empty($time)) return null;
+
+    // Extract decimal part if present
+    $decimal = '';
+    if (preg_match('/(\.\d+)$/', $time, $matches)) {
+        $decimal = $matches[1];
+        $time = preg_replace('/\.\d+$/', '', $time);
+    }
+
+    // Parse time parts
+    $parts = explode(':', $time);
+    if (count($parts) === 3) {
+        $hours = (int)$parts[0];
+        $minutes = (int)$parts[1];
+        $seconds = (int)$parts[2];
+
+        if ($hours > 0) {
+            return sprintf('%d:%02d:%02d', $hours, $minutes, $seconds) . $decimal;
+        } else {
+            return sprintf('%d:%02d', $minutes, $seconds) . $decimal;
+        }
+    } elseif (count($parts) === 2) {
+        $minutes = (int)$parts[0];
+        $seconds = (int)$parts[1];
+        return sprintf('%d:%02d', $minutes, $seconds) . $decimal;
+    }
+
+    return $time . $decimal;
+}
+
+/**
+ * Convert time string to seconds for calculation (including decimals)
+ */
+function timeToSeconds($time) {
+    if (empty($time)) return 0;
+
+    // Extract decimal part if present
+    $decimal = 0;
+    if (preg_match('/\.(\d+)$/', $time, $matches)) {
+        $decimal = floatval('0.' . $matches[1]);
+        $time = preg_replace('/\.\d+$/', '', $time);
+    }
+
+    $parts = explode(':', $time);
+    if (count($parts) === 3) {
+        return (int)$parts[0] * 3600 + (int)$parts[1] * 60 + (int)$parts[2] + $decimal;
+    } elseif (count($parts) === 2) {
+        return (int)$parts[0] * 60 + (int)$parts[1] + $decimal;
+    }
+    return $decimal;
+}
+
 // Calculate time behind leader for each class
 foreach ($resultsByClass as $className => &$classData) {
     $winnerTime = null;
+    $winnerSeconds = 0;
 
     foreach ($classData['results'] as $result) {
-        if ($result['class_position'] == 1 && !empty($result['finish_time']) && $result['status'] === 'finished') {
+        if ($result['position'] == 1 && !empty($result['finish_time']) && $result['status'] === 'finished') {
             $winnerTime = $result['finish_time'];
+            $winnerSeconds = timeToSeconds($winnerTime);
             break;
         }
     }
 
     foreach ($classData['results'] as &$result) {
-        if ($winnerTime && !empty($result['finish_time']) && $result['status'] === 'finished' && $result['class_position'] > 1) {
-            $winnerSeconds = strtotime("1970-01-01 $winnerTime UTC");
-            $riderSeconds = strtotime("1970-01-01 {$result['finish_time']} UTC");
+        if ($winnerSeconds > 0 && !empty($result['finish_time']) && $result['status'] === 'finished' && $result['position'] > 1) {
+            $riderSeconds = timeToSeconds($result['finish_time']);
             $diffSeconds = $riderSeconds - $winnerSeconds;
 
-            $hours = floor($diffSeconds / 3600);
-            $minutes = floor(($diffSeconds % 3600) / 60);
-            $seconds = $diffSeconds % 60;
+            if ($diffSeconds > 0) {
+                $hours = floor($diffSeconds / 3600);
+                $minutes = floor(($diffSeconds % 3600) / 60);
+                $wholeSeconds = floor($diffSeconds) % 60;
+                $decimals = $diffSeconds - floor($diffSeconds);
 
-            if ($hours > 0) {
-                $result['time_behind_formatted'] = sprintf('+%d:%02d:%02d', $hours, $minutes, $seconds);
+                // Format decimal part (keep 2 decimal places)
+                $decimalStr = $decimals > 0 ? sprintf('.%02d', round($decimals * 100)) : '';
+
+                if ($hours > 0) {
+                    $result['time_behind_formatted'] = sprintf('+%d:%02d:%02d', $hours, $minutes, $wholeSeconds) . $decimalStr;
+                } else {
+                    $result['time_behind_formatted'] = sprintf('+%d:%02d', $minutes, $wholeSeconds) . $decimalStr;
+                }
             } else {
-                $result['time_behind_formatted'] = sprintf('+%d:%02d', $minutes, $seconds);
+                $result['time_behind_formatted'] = null;
             }
         } else {
             $result['time_behind_formatted'] = null;
@@ -242,32 +329,49 @@ include __DIR__ . '/includes/layout-header.php';
                                     <th class="gs-table-col-narrow">Plac.</th>
                                     <th>Namn</th>
                                     <th>Klubb</th>
-                                    <th class="gs-table-col-medium">Startnr</th>
+                                    <?php if ($hasBibNumbers): ?>
+                                        <th class="gs-table-col-medium">Startnr</th>
+                                    <?php endif; ?>
                                     <?php if ($isDH): ?>
                                         <th class="gs-table-col-medium">Åk 1</th>
                                         <th class="gs-table-col-medium">Åk 2</th>
                                         <th class="gs-table-col-medium">Bästa</th>
                                     <?php else: ?>
-                                        <th class="gs-table-col-wide">Tid</th>
+                                        <th class="gs-table-col-medium">Tid</th>
+                                        <?php if ($hasSplitTimes): ?>
+                                            <?php for ($i = 1; $i <= 10; $i++): ?>
+                                                <?php
+                                                // Check if any result has this split time
+                                                $hasThisSplit = false;
+                                                foreach ($results as $r) {
+                                                    if (!empty($r['ss' . $i])) {
+                                                        $hasThisSplit = true;
+                                                        break;
+                                                    }
+                                                }
+                                                if ($hasThisSplit):
+                                                ?>
+                                                    <th class="gs-table-col-medium">SS<?= $i ?></th>
+                                                <?php endif; ?>
+                                            <?php endfor; ?>
+                                        <?php endif; ?>
                                     <?php endif; ?>
                                     <th class="gs-table-col-medium">+Tid</th>
-                                    <th class="gs-table-col-narrow">Poäng</th>
-                                    <th class="gs-table-col-medium">Status</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <?php foreach ($groupData['results'] as $result): ?>
                                     <tr class="result-row">
                                         <td class="gs-table-center gs-font-bold">
-                                            <?php if ($result['status'] === 'finished' && $result['class_position']): ?>
-                                                <?php if ($result['class_position'] == 1): ?>
+                                            <?php if ($result['status'] === 'finished' && $result['position']): ?>
+                                                <?php if ($result['position'] == 1): ?>
                                                     <span class="gs-medal">🥇</span>
-                                                <?php elseif ($result['class_position'] == 2): ?>
+                                                <?php elseif ($result['position'] == 2): ?>
                                                     <span class="gs-medal">🥈</span>
-                                                <?php elseif ($result['class_position'] == 3): ?>
+                                                <?php elseif ($result['position'] == 3): ?>
                                                     <span class="gs-medal">🥉</span>
                                                 <?php else: ?>
-                                                    <?= $result['class_position'] ?>
+                                                    <?= $result['position'] ?>
                                                 <?php endif; ?>
                                             <?php else: ?>
                                                 <span class="gs-text-secondary">-</span>
@@ -278,14 +382,6 @@ include __DIR__ . '/includes/layout-header.php';
                                             <a href="/rider.php?id=<?= $result['cyclist_id'] ?>" class="gs-rider-link">
                                                 <?= h($result['firstname']) ?> <?= h($result['lastname']) ?>
                                             </a>
-                                            <div class="gs-rider-meta">
-                                                <?php if ($result['birth_year']): ?>
-                                                    <?= calculateAge($result['birth_year']) ?> år
-                                                <?php endif; ?>
-                                                <?php if ($result['gender']): ?>
-                                                    • <?= $result['gender'] == 'M' ? 'Herr' : ($result['gender'] == 'F' ? 'Dam' : '') ?>
-                                                <?php endif; ?>
-                                            </div>
                                         </td>
 
                                         <td>
@@ -298,22 +394,24 @@ include __DIR__ . '/includes/layout-header.php';
                                             <?php endif; ?>
                                         </td>
 
-                                        <td class="gs-table-center">
-                                            <?= $result['bib_number'] ? h($result['bib_number']) : '-' ?>
-                                        </td>
+                                        <?php if ($hasBibNumbers): ?>
+                                            <td class="gs-table-center">
+                                                <?= $result['bib_number'] ? h($result['bib_number']) : '-' ?>
+                                            </td>
+                                        <?php endif; ?>
 
                                         <?php if ($isDH): ?>
                                             <!-- DH: Show both run times -->
                                             <td class="gs-table-time-cell">
                                                 <?php if ($result['run_1_time']): ?>
-                                                    <?= h($result['run_1_time']) ?>
+                                                    <?= formatDisplayTime($result['run_1_time']) ?>
                                                 <?php else: ?>
                                                     <span class="gs-text-secondary">-</span>
                                                 <?php endif; ?>
                                             </td>
                                             <td class="gs-table-time-cell">
                                                 <?php if ($result['run_2_time']): ?>
-                                                    <?= h($result['run_2_time']) ?>
+                                                    <?= formatDisplayTime($result['run_2_time']) ?>
                                                 <?php else: ?>
                                                     <span class="gs-text-secondary">-</span>
                                                 <?php endif; ?>
@@ -323,10 +421,8 @@ include __DIR__ . '/includes/layout-header.php';
                                                 // Show fastest time (for standard DH) or run 2 (for SweCup)
                                                 $bestTime = null;
                                                 if ($eventFormat === 'DH_SWECUP') {
-                                                    // SweCup: Run 2 is the final
                                                     $bestTime = $result['run_2_time'];
                                                 } else {
-                                                    // Standard: Fastest of the two runs
                                                     if ($result['run_1_time'] && $result['run_2_time']) {
                                                         $bestTime = min($result['run_1_time'], $result['run_2_time']);
                                                     } elseif ($result['run_1_time']) {
@@ -337,7 +433,7 @@ include __DIR__ . '/includes/layout-header.php';
                                                 }
                                                 if ($bestTime && $result['status'] === 'finished'):
                                                 ?>
-                                                    <?= h($bestTime) ?>
+                                                    <?= formatDisplayTime($bestTime) ?>
                                                 <?php else: ?>
                                                     <span class="gs-text-secondary">-</span>
                                                 <?php endif; ?>
@@ -346,39 +442,38 @@ include __DIR__ . '/includes/layout-header.php';
                                             <!-- Enduro/Other: Show finish time -->
                                             <td class="gs-table-time-cell">
                                                 <?php if ($result['finish_time'] && $result['status'] === 'finished'): ?>
-                                                    <?= h($result['finish_time']) ?>
+                                                    <?= formatDisplayTime($result['finish_time']) ?>
                                                 <?php else: ?>
                                                     <span class="gs-text-secondary">-</span>
                                                 <?php endif; ?>
                                             </td>
+                                            <?php if ($hasSplitTimes): ?>
+                                                <?php for ($i = 1; $i <= 10; $i++): ?>
+                                                    <?php
+                                                    // Check if any result has this split time
+                                                    $hasThisSplit = false;
+                                                    foreach ($results as $r) {
+                                                        if (!empty($r['ss' . $i])) {
+                                                            $hasThisSplit = true;
+                                                            break;
+                                                        }
+                                                    }
+                                                    if ($hasThisSplit):
+                                                    ?>
+                                                        <td class="gs-table-time-cell gs-text-secondary">
+                                                            <?php if (!empty($result['ss' . $i])): ?>
+                                                                <?= formatDisplayTime($result['ss' . $i]) ?>
+                                                            <?php else: ?>
+                                                                -
+                                                            <?php endif; ?>
+                                                        </td>
+                                                    <?php endif; ?>
+                                                <?php endfor; ?>
+                                            <?php endif; ?>
                                         <?php endif; ?>
 
                                         <td class="gs-table-center gs-table-mono gs-text-secondary">
                                             <?= $result['time_behind_formatted'] ?? '-' ?>
-                                        </td>
-
-                                        <td class="gs-table-center gs-font-bold">
-                                            <?= $result['class_points'] ?? 0 ?>
-                                        </td>
-
-                                        <td class="gs-table-center">
-                                            <?php
-                                            $statusBadge = 'gs-badge-success';
-                                            $statusText = 'OK';
-                                            if ($result['status'] === 'dnf') {
-                                                $statusBadge = 'gs-badge-danger';
-                                                $statusText = 'DNF';
-                                            } elseif ($result['status'] === 'dns') {
-                                                $statusBadge = 'gs-badge-secondary';
-                                                $statusText = 'DNS';
-                                            } elseif ($result['status'] === 'dq') {
-                                                $statusBadge = 'gs-badge-danger';
-                                                $statusText = 'DQ';
-                                            }
-                                            ?>
-                                            <span class="gs-badge <?= $statusBadge ?> gs-badge-sm">
-                                                <?= $statusText ?>
-                                            </span>
                                         </td>
                                     </tr>
                                 <?php endforeach; ?>

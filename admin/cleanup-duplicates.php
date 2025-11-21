@@ -42,13 +42,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['merge_riders'])) {
 
                 $db->pdo->commit();
 
-                $message = "Sammanfogade " . count($mergeIds) . " deltagare till " . $keepRider['firstname'] . " " . $keepRider['lastname'];
-                $messageType = 'success';
+                $_SESSION['cleanup_message'] = "Sammanfogade " . count($mergeIds) . " deltagare till " . $keepRider['firstname'] . " " . $keepRider['lastname'];
+                $_SESSION['cleanup_message_type'] = 'success';
             }
         } catch (Exception $e) {
             $db->pdo->rollBack();
-            $message = "Fel vid sammanfogning: " . $e->getMessage();
-            $messageType = 'error';
+            $_SESSION['cleanup_message'] = "Fel vid sammanfogning: " . $e->getMessage();
+            $_SESSION['cleanup_message_type'] = 'error';
         }
     }
 
@@ -109,7 +109,9 @@ $duplicatesByUci = $db->getAll("
 ");
 
 // Find duplicate riders by name (exact match)
-$duplicatesByName = $db->getAll("
+// Only show duplicates where ALL have same normalized UCI-ID or ALL have no UCI-ID
+// Never show same name with different UCI-IDs (those are different people)
+$duplicatesByNameRaw = $db->getAll("
     SELECT
         CONCAT(LOWER(firstname), '|', LOWER(lastname)) as name_key,
         GROUP_CONCAT(id ORDER BY
@@ -117,7 +119,7 @@ $duplicatesByName = $db->getAll("
             CASE WHEN club_id IS NOT NULL THEN 0 ELSE 1 END,
             created_at ASC
         ) as ids,
-        GROUP_CONCAT(COALESCE(license_number, 'ingen') SEPARATOR ' | ') as licenses,
+        GROUP_CONCAT(COALESCE(REPLACE(REPLACE(license_number, ' ', ''), '-', ''), '') SEPARATOR '|') as normalized_licenses,
         MIN(firstname) as firstname,
         MIN(lastname) as lastname,
         COUNT(*) as count
@@ -126,6 +128,23 @@ $duplicatesByName = $db->getAll("
     HAVING count > 1
     ORDER BY count DESC
 ");
+
+// Filter out entries where people have different UCI-IDs (those are different people)
+$duplicatesByName = [];
+foreach ($duplicatesByNameRaw as $dup) {
+    $licenses = array_filter(explode('|', $dup['normalized_licenses']), fn($l) => $l !== '');
+
+    // If there are different UCI-IDs, these are different people - skip
+    if (count($licenses) > 1) {
+        $uniqueLicenses = array_unique($licenses);
+        if (count($uniqueLicenses) > 1) {
+            // Different UCI-IDs = different people, not duplicates
+            continue;
+        }
+    }
+
+    $duplicatesByName[] = $dup;
+}
 
 $pageTitle = 'Rensa dubbletter';
 $pageType = 'admin';

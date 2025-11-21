@@ -2,6 +2,7 @@
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/../includes/import-history.php';
 require_once __DIR__ . '/../includes/class-calculations.php';
+require_once __DIR__ . '/../includes/point-calculations.php';
 require_admin();
 
 $db = getDB();
@@ -719,14 +720,8 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
             }
 
             if ($status === 'finished' && $position && $awardsPoints) {
-                // Standard UCI-style point scale
-                $pointScale = [
-                    1 => 250, 2 => 200, 3 => 160, 4 => 130, 5 => 110,
-                    6 => 95, 7 => 80, 8 => 70, 9 => 60, 10 => 55,
-                    11 => 50, 12 => 45, 13 => 40, 14 => 35, 15 => 30,
-                    16 => 26, 17 => 22, 18 => 18, 19 => 14, 20 => 10
-                ];
-                $points = $pointScale[$position] ?? max(0, 21 - $position);
+                // Use the event's point scale from point_scales table
+                $points = calculatePoints($db, $eventId, $position, $status);
             }
 
             $resultData = [
