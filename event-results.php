@@ -128,18 +128,21 @@ $totalParticipants = count($results);
 $totalFinished = 0;
 
 foreach ($results as $result) {
+    // Use class_id as key to avoid grouping classes with same short name
+    $classKey = $result['class_id'] ?? 'no_class';
     $className = $result['class_name'] ?? 'Oklassificerad';
 
-    if (!isset($resultsByClass[$className])) {
-        $resultsByClass[$className] = [
+    if (!isset($resultsByClass[$classKey])) {
+        $resultsByClass[$classKey] = [
             'display_name' => $result['class_display_name'] ?? $className,
+            'class_name' => $className,
             'sort_order' => $result['class_sort_order'] ?? 999,
             'ranking_type' => $result['ranking_type'] ?? 'time',
             'results' => []
         ];
     }
 
-    $resultsByClass[$className]['results'][] = $result;
+    $resultsByClass[$classKey]['results'][] = $result;
 
     if ($result['status'] === 'finished') {
         $totalFinished++;
