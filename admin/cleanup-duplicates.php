@@ -10,21 +10,12 @@ $db = getDB();
 $message = '';
 $messageType = 'info';
 
-// Debug: Show if POST received but merge_riders not set
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_POST['merge_riders']) && !isset($_POST['normalize_all']) && !isset($_POST['auto_merge_all']) && !isset($_POST['normalize_names'])) {
-    $_SESSION['cleanup_message'] = "POST mottagen men ingen känd action. POST-nycklar: " . implode(', ', array_keys($_POST));
-    $_SESSION['cleanup_message_type'] = 'error';
-}
-
 // Handle merge action FIRST (before querying duplicates)
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['merge_riders'])) {
     checkCsrf();
 
     $keepId = (int)($_POST['keep_id'] ?? 0);
     $mergeIdsRaw = $_POST['merge_ids'] ?? '';
-
-    // Debug: Log incoming data
-    error_log("Merge attempt: keep_id=$keepId, merge_ids_raw='$mergeIdsRaw'");
 
     // Split and convert to integers
     $parts = explode(',', $mergeIdsRaw);
@@ -115,8 +106,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['merge_riders'])) {
             $_SESSION['cleanup_message_type'] = 'error';
         }
     } else {
-        $debugInfo = "keep_id: $keepId, merge_ids_raw: '$mergeIdsRaw', merge_ids_count: " . count($mergeIds) . ", merge_ids_filtered: [" . implode(',', $mergeIds) . "]";
-        $_SESSION['cleanup_message'] = "Sammanfogning kunde inte utföras. Debug: $debugInfo";
+        $_SESSION['cleanup_message'] = "Sammanfogning kunde inte utföras. Ingen giltig förare vald.";
         $_SESSION['cleanup_message_type'] = 'error';
     }
 

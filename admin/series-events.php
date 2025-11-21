@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/../config.php';
+require_once __DIR__ . '/../includes/point-calculations.php';
 require_admin();
 
 $db = getDB();
@@ -56,19 +57,51 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'sort_order' => $sortOrder
             ]);
 
-            $message = 'Event tillagt i serien!';
+            // If a template was specified, update event and recalculate points
+            if ($templateId) {
+                $db->update('events', [
+                    'point_scale_id' => $templateId
+                ], 'id = ?', [$eventId]);
+
+                $stats = recalculateEventPoints($db, $eventId);
+                $message = "Event tillagt i serien! {$stats['updated']} resultat omräknade.";
+            } else {
+                $message = 'Event tillagt i serien!';
+            }
             $messageType = 'success';
         }
     } elseif ($action === 'update_template') {
         $seriesEventId = intval($_POST['series_event_id']);
         $templateId = !empty($_POST['template_id']) ? intval($_POST['template_id']) : null;
 
-        $db->update('series_events', [
-            'template_id' => $templateId
-        ], 'id = ? AND series_id = ?', [$seriesEventId, $seriesId]);
+        // Get the event_id for this series_event
+        $seriesEvent = $db->getRow(
+            "SELECT event_id FROM series_events WHERE id = ? AND series_id = ?",
+            [$seriesEventId, $seriesId]
+        );
 
-        $message = 'Poängmall uppdaterad!';
-        $messageType = 'success';
+        if ($seriesEvent) {
+            $eventId = $seriesEvent['event_id'];
+
+            // Update series_events template
+            $db->update('series_events', [
+                'template_id' => $templateId
+            ], 'id = ? AND series_id = ?', [$seriesEventId, $seriesId]);
+
+            // Also update the event's point_scale_id so calculations use the right template
+            $db->update('events', [
+                'point_scale_id' => $templateId
+            ], 'id = ?', [$eventId]);
+
+            // Recalculate all points for this event
+            $stats = recalculateEventPoints($db, $eventId);
+
+            $message = "Poängmall uppdaterad! {$stats['updated']} resultat omräknade.";
+            $messageType = 'success';
+        } else {
+            $message = 'Kunde inte hitta eventet';
+            $messageType = 'error';
+        }
     } elseif ($action === 'remove_event') {
         $seriesEventId = intval($_POST['series_event_id']);
 

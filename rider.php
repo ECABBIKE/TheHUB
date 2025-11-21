@@ -131,7 +131,7 @@ if ($totalRaces > 0 && $rider['birth_year'] && $rider['gender']) {
         if ($riderClassId) {
             $riderClass = $db->getRow("SELECT name, display_name FROM classes WHERE id = ?", [$riderClassId]);
 
-            // Get series data for this rider
+            // Get series data for this rider (using series_events junction table)
             $riderSeriesData = $db->getAll("
                 SELECT
                     s.id as series_id,
@@ -141,7 +141,8 @@ if ($totalRaces > 0 && $rider['birth_year'] && $rider['gender']) {
                     COUNT(DISTINCT r.event_id) as events_count
                 FROM results r
                 JOIN events e ON r.event_id = e.id
-                JOIN series s ON e.series_id = s.id
+                JOIN series_events se ON e.id = se.event_id
+                JOIN series s ON se.series_id = s.id
                 WHERE r.cyclist_id = ? AND s.active = 1
                 GROUP BY s.id
                 ORDER BY s.year DESC, total_points DESC

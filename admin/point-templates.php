@@ -1,12 +1,4 @@
 <?php
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
-
-// Debug: Check if POST is received
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    die('DEBUG: POST mottagen. Action: ' . ($_POST['action'] ?? 'SAKNAS') . ', POST-keys: ' . implode(', ', array_keys($_POST)));
-}
-
 require_once __DIR__ . '/../config.php';
 require_admin();
 
@@ -21,12 +13,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     checkCsrf();
 
     $action = $_POST['action'] ?? '';
-
-    // Debug: Show what action was received
-    if (empty($action)) {
-        $message = "POST mottagen men ingen action. POST-nycklar: " . implode(', ', array_keys($_POST));
-        $messageType = 'error';
-    }
 
     if ($action === 'create' || $action === 'update') {
         $name = trim($_POST['name'] ?? '');
@@ -82,12 +68,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif ($action === 'import') {
         $importData = trim($_POST['import_data'] ?? '');
 
-        // Debug: Show first 100 chars of received data
-        $debugPreview = substr($importData, 0, 100);
-        $debugPreview = str_replace(["\r", "\n"], ['\\r', '\\n'], $debugPreview);
-
         if (empty($importData)) {
-            $message = "Ingen data att importera. (Debug: import_data var tom)";
+            $message = "Ingen data att importera.";
             $messageType = 'error';
         } else {
             try {
@@ -128,9 +110,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $message = 'Poängmall importerad! (' . count($imported['points']) . ' positioner)';
                     $messageType = 'success';
                 } else {
-                    // Debug: show what was received
-                    $debugLines = count(explode("\n", $importData));
-                    $message = "Kunde inte hitta poäng i importerad data. Mottog {$debugLines} rader. Data: '{$debugPreview}'. Kontrollera formatet (position,poäng eller position;poäng)";
+                    $message = "Kunde inte tolka importerad data. Kontrollera formatet (position,poäng eller position;poäng per rad).";
                     $messageType = 'error';
                 }
             } catch (Exception $e) {
@@ -138,12 +118,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $messageType = 'error';
             }
         }
-    }
-
-    // Debug: Show if unknown action
-    if (!empty($action) && empty($message) && !in_array($action, ['create', 'update', 'delete', 'import'])) {
-        $message = "Okänd action: '$action'. POST-nycklar: " . implode(', ', array_keys($_POST));
-        $messageType = 'error';
     }
 }
 
