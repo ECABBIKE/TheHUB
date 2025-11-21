@@ -114,15 +114,19 @@ uksort($resultsByClass, function($a, $b) use ($resultsByClass) {
 });
 
 /**
- * Format time string: remove leading 00: and hundredths/tenths
- * "00:04:17.54" -> "4:17"
- * "01:23:45.12" -> "1:23:45"
+ * Format time string: remove leading 00: but keep hundredths/tenths
+ * "00:04:17.54" -> "4:17.54"
+ * "01:23:45.12" -> "1:23:45.12"
  */
 function formatDisplayTime($time) {
     if (empty($time)) return null;
 
-    // Remove hundredths/tenths (everything after the dot)
-    $time = preg_replace('/\.\d+$/', '', $time);
+    // Extract decimal part if present
+    $decimal = '';
+    if (preg_match('/(\.\d+)$/', $time, $matches)) {
+        $decimal = $matches[1];
+        $time = preg_replace('/\.\d+$/', '', $time);
+    }
 
     // Parse time parts
     $parts = explode(':', $time);
@@ -132,35 +136,39 @@ function formatDisplayTime($time) {
         $seconds = (int)$parts[2];
 
         if ($hours > 0) {
-            return sprintf('%d:%02d:%02d', $hours, $minutes, $seconds);
+            return sprintf('%d:%02d:%02d', $hours, $minutes, $seconds) . $decimal;
         } else {
-            return sprintf('%d:%02d', $minutes, $seconds);
+            return sprintf('%d:%02d', $minutes, $seconds) . $decimal;
         }
     } elseif (count($parts) === 2) {
         $minutes = (int)$parts[0];
         $seconds = (int)$parts[1];
-        return sprintf('%d:%02d', $minutes, $seconds);
+        return sprintf('%d:%02d', $minutes, $seconds) . $decimal;
     }
 
-    return $time;
+    return $time . $decimal;
 }
 
 /**
- * Convert time string to seconds for calculation
+ * Convert time string to seconds for calculation (including decimals)
  */
 function timeToSeconds($time) {
     if (empty($time)) return 0;
 
-    // Remove hundredths/tenths
-    $time = preg_replace('/\.\d+$/', '', $time);
+    // Extract decimal part if present
+    $decimal = 0;
+    if (preg_match('/\.(\d+)$/', $time, $matches)) {
+        $decimal = floatval('0.' . $matches[1]);
+        $time = preg_replace('/\.\d+$/', '', $time);
+    }
 
     $parts = explode(':', $time);
     if (count($parts) === 3) {
-        return (int)$parts[0] * 3600 + (int)$parts[1] * 60 + (int)$parts[2];
+        return (int)$parts[0] * 3600 + (int)$parts[1] * 60 + (int)$parts[2] + $decimal;
     } elseif (count($parts) === 2) {
-        return (int)$parts[0] * 60 + (int)$parts[1];
+        return (int)$parts[0] * 60 + (int)$parts[1] + $decimal;
     }
-    return 0;
+    return $decimal;
 }
 
 // Calculate time behind leader for each class
@@ -184,12 +192,16 @@ foreach ($resultsByClass as $className => &$classData) {
             if ($diffSeconds > 0) {
                 $hours = floor($diffSeconds / 3600);
                 $minutes = floor(($diffSeconds % 3600) / 60);
-                $seconds = $diffSeconds % 60;
+                $wholeSeconds = floor($diffSeconds) % 60;
+                $decimals = $diffSeconds - floor($diffSeconds);
+
+                // Format decimal part (keep 2 decimal places)
+                $decimalStr = $decimals > 0 ? sprintf('.%02d', round($decimals * 100)) : '';
 
                 if ($hours > 0) {
-                    $result['time_behind_formatted'] = sprintf('+%d:%02d:%02d', $hours, $minutes, $seconds);
+                    $result['time_behind_formatted'] = sprintf('+%d:%02d:%02d', $hours, $minutes, $wholeSeconds) . $decimalStr;
                 } else {
-                    $result['time_behind_formatted'] = sprintf('+%d:%02d', $minutes, $seconds);
+                    $result['time_behind_formatted'] = sprintf('+%d:%02d', $minutes, $wholeSeconds) . $decimalStr;
                 }
             } else {
                 $result['time_behind_formatted'] = null;
