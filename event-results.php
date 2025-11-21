@@ -717,6 +717,12 @@ include __DIR__ . '/includes/layout-header.php';
                                                 <?php else: ?>
                                                     <?= $result['class_position'] ?>
                                                 <?php endif; ?>
+                                            <?php elseif ($result['status'] === 'dnf'): ?>
+                                                <span class="gs-text-warning">DNF</span>
+                                            <?php elseif ($result['status'] === 'dns'): ?>
+                                                <span class="gs-text-secondary">DNS</span>
+                                            <?php elseif ($result['status'] === 'dq'): ?>
+                                                <span class="gs-text-error">DQ</span>
                                             <?php else: ?>
                                                 <span class="gs-text-secondary">-</span>
                                             <?php endif; ?>
@@ -778,12 +784,6 @@ include __DIR__ . '/includes/layout-header.php';
                                                 if ($bestTime && $result['status'] === 'finished'):
                                                 ?>
                                                     <?= formatDisplayTime($bestTime) ?>
-                                                <?php elseif ($result['status'] === 'dnf'): ?>
-                                                    <span class="gs-text-warning">DNF</span>
-                                                <?php elseif ($result['status'] === 'dns'): ?>
-                                                    <span class="gs-text-secondary">DNS</span>
-                                                <?php elseif ($result['status'] === 'dq'): ?>
-                                                    <span class="gs-text-error">DQ</span>
                                                 <?php else: ?>
                                                     <span class="gs-text-secondary">-</span>
                                                 <?php endif; ?>
@@ -793,12 +793,6 @@ include __DIR__ . '/includes/layout-header.php';
                                             <td class="gs-table-time-cell">
                                                 <?php if ($result['finish_time'] && $result['status'] === 'finished'): ?>
                                                     <?= formatDisplayTime($result['finish_time']) ?>
-                                                <?php elseif ($result['status'] === 'dnf'): ?>
-                                                    <span class="gs-text-warning">DNF</span>
-                                                <?php elseif ($result['status'] === 'dns'): ?>
-                                                    <span class="gs-text-secondary">DNS</span>
-                                                <?php elseif ($result['status'] === 'dq'): ?>
-                                                    <span class="gs-text-error">DQ</span>
                                                 <?php else: ?>
                                                     <span class="gs-text-secondary">-</span>
                                                 <?php endif; ?>
