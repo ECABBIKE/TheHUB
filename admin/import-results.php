@@ -702,10 +702,20 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
                 [$eventId, $riderId]
             );
 
-            // Calculate points based on position
+            // Calculate points based on position (only if class awards points)
             $position = !empty($data['position']) ? (int)$data['position'] : null;
             $points = 0;
-            if ($status === 'finished' && $position) {
+
+            // Check if class awards points
+            $awardsPoints = true;
+            if ($classId) {
+                $classSettings = $db->getRow("SELECT awards_points FROM classes WHERE id = ?", [$classId]);
+                if ($classSettings && isset($classSettings['awards_points'])) {
+                    $awardsPoints = (bool)$classSettings['awards_points'];
+                }
+            }
+
+            if ($status === 'finished' && $position && $awardsPoints) {
                 // Standard UCI-style point scale
                 $pointScale = [
                     1 => 250, 2 => 200, 3 => 160, 4 => 130, 5 => 110,

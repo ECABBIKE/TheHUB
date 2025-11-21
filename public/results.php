@@ -56,7 +56,7 @@ function formatSecondsAsTime($seconds) {
     return sprintf('%d:%05.2f', $minutes, $secs);
 }
 
-// Get results with split times and class info
+// Get results with split times and class info (including class settings)
 $results = $db->getAll(
     "SELECT
         r.position,
@@ -71,7 +71,11 @@ $results = $db->getAll(
         c.id as cyclist_id,
         c.birth_year,
         cl.name as club_name,
-        COALESCE(cls.display_name, cat.name, 'Okänd') as class_name
+        COALESCE(cls.display_name, cat.name, 'Okänd') as class_name,
+        COALESCE(cls.awards_points, 1) as awards_points,
+        COALESCE(cls.ranking_type, 'time') as ranking_type,
+        COALESCE(cls.series_eligible, 1) as series_eligible,
+        COALESCE(cls.sort_order, 999) as class_sort_order
      FROM results r
      JOIN riders c ON r.cyclist_id = c.id
      LEFT JOIN clubs cl ON c.club_id = cl.id
@@ -79,6 +83,7 @@ $results = $db->getAll(
      LEFT JOIN categories cat ON r.category_id = cat.id
      WHERE r.event_id = ?
      ORDER BY
+        COALESCE(cls.sort_order, 999) ASC,
         COALESCE(cls.display_name, cat.name, 'ZZZ') ASC,
         CASE WHEN r.status = 'finished' THEN 0 ELSE 1 END ASC,
         r.position ASC,
@@ -89,13 +94,19 @@ $results = $db->getAll(
 // Calculate gap times and group by class
 $resultsByClass = [];
 $classTimes = [];
+$classSettings = [];
 
 foreach ($results as &$result) {
     $className = $result['class_name'] ?? 'Okänd klass';
 
-    // Initialize class array
+    // Initialize class array and settings
     if (!isset($resultsByClass[$className])) {
         $resultsByClass[$className] = [];
+        $classSettings[$className] = [
+            'awards_points' => $result['awards_points'],
+            'ranking_type' => $result['ranking_type'],
+            'series_eligible' => $result['series_eligible']
+        ];
     }
 
     // Track winner time per class and calculate gap
@@ -117,6 +128,25 @@ foreach ($results as &$result) {
     $resultsByClass[$className][] = $result;
 }
 unset($result);
+
+// Sort each class according to its ranking_type
+foreach ($resultsByClass as $className => &$classResults) {
+    $rankingType = $classSettings[$className]['ranking_type'] ?? 'time';
+
+    if ($rankingType === 'name') {
+        // Sort by name alphabetically
+        usort($classResults, function($a, $b) {
+            return strcasecmp($a['cyclist_name'], $b['cyclist_name']);
+        });
+    } elseif ($rankingType === 'bib') {
+        // Sort by bib number
+        usort($classResults, function($a, $b) {
+            return ((int)$a['bib_number'] ?: 9999) - ((int)$b['bib_number'] ?: 9999);
+        });
+    }
+    // 'time' is already sorted by the SQL query
+}
+unset($classResults);
 
 // Check if we have split times to show
 $hasSplitTimes = false;

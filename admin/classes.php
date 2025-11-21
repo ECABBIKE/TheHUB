@@ -41,6 +41,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'max_age' => !empty($_POST['max_age']) ? (int)$_POST['max_age'] : null,
                 'sort_order' => !empty($_POST['sort_order']) ? (int)$_POST['sort_order'] : 999,
                 'active' => isset($_POST['active']) ? 1 : 0,
+                'awards_points' => isset($_POST['awards_points']) ? 1 : 0,
+                'ranking_type' => in_array($_POST['ranking_type'] ?? 'time', ['time', 'name', 'bib']) ? $_POST['ranking_type'] : 'time',
+                'series_eligible' => isset($_POST['series_eligible']) ? 1 : 0,
             ];
 
             try {
@@ -114,6 +117,9 @@ $sql = "SELECT
             c.max_age,
             c.sort_order,
             c.active,
+            c.awards_points,
+            c.ranking_type,
+            c.series_eligible,
             COUNT(DISTINCT r.id) as result_count
         FROM classes c
         LEFT JOIN results r ON c.id = r.class_id
@@ -228,7 +234,8 @@ include __DIR__ . '/../includes/layout-header.php';
                                         <th>Namn</th>
                                         <th>Disciplin</th>
                                         <th>Kön</th>
-                                        <th>Åldersintervall</th>
+                                        <th>Ålder</th>
+                                        <th>Inställningar</th>
                                         <th>Sortering</th>
                                         <th>Resultat</th>
                                         <th>Status</th>
@@ -273,6 +280,22 @@ include __DIR__ . '/../includes/layout-header.php';
                                                     <?= $class['min_age'] ?? '∞' ?> - <?= $class['max_age'] ?? '∞' ?>
                                                 <?php else: ?>
                                                     <span class="gs-text-secondary">–</span>
+                                                <?php endif; ?>
+                                            </td>
+                                            <td>
+                                                <?php if (!$class['awards_points']): ?>
+                                                    <span class="gs-badge gs-badge-warning gs-badge-sm" title="Ger inga seriepoäng">Ingen poäng</span>
+                                                <?php endif; ?>
+                                                <?php if ($class['ranking_type'] !== 'time'): ?>
+                                                    <span class="gs-badge gs-badge-info gs-badge-sm" title="Rankas efter <?= $class['ranking_type'] === 'name' ? 'namn' : 'startnummer' ?>">
+                                                        <?= $class['ranking_type'] === 'name' ? 'Namn' : 'Startnr' ?>
+                                                    </span>
+                                                <?php endif; ?>
+                                                <?php if (!$class['series_eligible']): ?>
+                                                    <span class="gs-badge gs-badge-secondary gs-badge-sm" title="Räknas inte i serien">Ej serie</span>
+                                                <?php endif; ?>
+                                                <?php if ($class['awards_points'] && $class['ranking_type'] === 'time' && $class['series_eligible']): ?>
+                                                    <span class="gs-text-secondary">Standard</span>
                                                 <?php endif; ?>
                                             </td>
                                             <td><?= $class['sort_order'] ?></td>
@@ -455,6 +478,46 @@ include __DIR__ . '/../includes/layout-header.php';
                                     </label>
                                     <small class="gs-text-secondary">Inaktiva klasser visas inte i dropdown-listor</small>
                                 </div>
+
+                                <!-- Class Settings Section -->
+                                <div class="gs-form-group" style="border-top: 1px solid var(--gs-border); padding-top: var(--gs-space-md); margin-top: var(--gs-space-md);">
+                                    <h4 class="gs-h5 gs-mb-md">Klassinställningar</h4>
+
+                                    <!-- Awards Points -->
+                                    <div class="gs-mb-md">
+                                        <label class="gs-checkbox-label">
+                                            <input type="checkbox"
+                                                   name="awards_points"
+                                                   id="awardsPoints"
+                                                   checked>
+                                            <span>Ger seriepoäng</span>
+                                        </label>
+                                        <small class="gs-text-secondary gs-display-block gs-ml-lg">Avmarkera för klasser som inte ska ge poäng (t.ex. barn/nybörjare)</small>
+                                    </div>
+
+                                    <!-- Ranking Type -->
+                                    <div class="gs-mb-md">
+                                        <label class="gs-label">Sortering i resultat</label>
+                                        <select name="ranking_type" id="rankingType" class="gs-input">
+                                            <option value="time">Tid (snabbast först)</option>
+                                            <option value="name">Namn (alfabetiskt)</option>
+                                            <option value="bib">Startnummer (lägst först)</option>
+                                        </select>
+                                        <small class="gs-text-secondary">Hur deltagarna ska sorteras i resultatlistan</small>
+                                    </div>
+
+                                    <!-- Series Eligible -->
+                                    <div class="gs-mb-md">
+                                        <label class="gs-checkbox-label">
+                                            <input type="checkbox"
+                                                   name="series_eligible"
+                                                   id="seriesEligible"
+                                                   checked>
+                                            <span>Räknas i serien</span>
+                                        </label>
+                                        <small class="gs-text-secondary gs-display-block gs-ml-lg">Avmarkera för klasser som inte ska räknas i serieställningen (t.ex. motion)</small>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
@@ -483,6 +546,11 @@ function openClassModal() {
     document.getElementById('classId').value = '';
     document.getElementById('active').checked = true;
 
+    // Reset class settings to defaults
+    document.getElementById('awardsPoints').checked = true;
+    document.getElementById('rankingType').value = 'time';
+    document.getElementById('seriesEligible').checked = true;
+
     // Uncheck all discipline checkboxes
     document.querySelectorAll('.discipline-checkbox').forEach(cb => cb.checked = false);
 }
@@ -504,6 +572,11 @@ function editClass(classData) {
     document.getElementById('maxAge').value = classData.max_age || '';
     document.getElementById('sortOrder').value = classData.sort_order || 999;
     document.getElementById('active').checked = classData.active == 1;
+
+    // Set class settings
+    document.getElementById('awardsPoints').checked = classData.awards_points == 1 || classData.awards_points === null;
+    document.getElementById('rankingType').value = classData.ranking_type || 'time';
+    document.getElementById('seriesEligible').checked = classData.series_eligible == 1 || classData.series_eligible === null;
 
     // Uncheck all disciplines first
     document.querySelectorAll('.discipline-checkbox').forEach(cb => cb.checked = false);
