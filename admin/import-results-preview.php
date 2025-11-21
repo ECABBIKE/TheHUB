@@ -2,6 +2,7 @@
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/../includes/import-history.php';
 require_once __DIR__ . '/../includes/class-calculations.php';
+require_once __DIR__ . '/../includes/point-calculations.php';
 require_admin();
 
 $db = getDB();
@@ -142,6 +143,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_import'])) {
         $importStatus = ($stats['success'] > 0) ? 'completed' : 'failed';
         updateImportHistory($db, $importId, $stats, $errors, $importStatus);
 
+        // Recalculate results to fix class assignments and calculate correct points
+        $recalcStats = recalculateEventResults($db, $selectedEventId);
+        $classesFixed = $recalcStats['classes_fixed'] ?? 0;
+        $pointsCalculated = $recalcStats['points_updated'] ?? 0;
+
         // Clean up
         @unlink($_SESSION['import_preview_file']);
         unset($_SESSION['import_preview_file']);
@@ -149,7 +155,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_import'])) {
         unset($_SESSION['import_selected_event']);
 
         // Redirect to event page with success message
-        setFlash("Import klar! {$stats['success']} nya, {$stats['updated']} uppdaterade av {$stats['total']} resultat.", 'success');
+        $recalcMsg = "";
+        if ($classesFixed > 0 || $pointsCalculated > 0) {
+            $recalcMsg = " Omräkning: {$classesFixed} klassplaceringar fixade, {$pointsCalculated} poäng beräknade.";
+        }
+        setFlash("Import klar! {$stats['success']} nya, {$stats['updated']} uppdaterade av {$stats['total']} resultat.{$recalcMsg}", 'success');
         header('Location: /admin/event-edit.php?id=' . $selectedEventId . '&tab=results');
         exit;
 

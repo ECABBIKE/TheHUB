@@ -193,6 +193,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
     }
+
+    // Set scale as default
+    if ($action === 'set_default') {
+        $scaleId = (int)($_POST['scale_id'] ?? 0);
+
+        if ($scaleId) {
+            try {
+                // Remove default from all scales
+                $db->update('point_scales', ['is_default' => 0], '1 = 1', []);
+                // Set new default
+                $db->update('point_scales', ['is_default' => 1], 'id = ?', [$scaleId]);
+
+                $message = 'Standard poängmall uppdaterad';
+                $messageType = 'success';
+            } catch (Exception $e) {
+                $message = 'Fel vid uppdatering: ' . $e->getMessage();
+                $messageType = 'error';
+            }
+        }
+    }
 }
 
 // Get all point scales with value counts
@@ -291,22 +311,30 @@ include __DIR__ . '/../includes/layout-header.php';
                                     <?php endif; ?>
                                 </td>
                                 <td>
-                                    <div class="gs-flex gs-gap-xs">
+                                    <div class="gs-flex gs-gap-xs gs-flex-wrap">
                                         <a href="/admin/point-scale-edit.php?id=<?= $scale['id'] ?>" class="gs-btn gs-btn-sm gs-btn-outline">
                                             <i data-lucide="edit" class="gs-icon-14"></i>
                                             Redigera
                                         </a>
                                         <?php if (!$scale['is_default']): ?>
-                                            <form method="POST" style="display: inline;"
-                                                  onsubmit="return confirm('Är du säker på att du vill ta bort poängmallen \'<?= h($scale['name']) ?>\'?');">
+                                            <form method="POST" style="display: inline;">
                                                 <?= csrf_field() ?>
-                                                <input type="hidden" name="action" value="delete_scale">
+                                                <input type="hidden" name="action" value="set_default">
                                                 <input type="hidden" name="scale_id" value="<?= $scale['id'] ?>">
-                                                <button type="submit" class="gs-btn gs-btn-sm gs-btn-error">
-                                                    <i data-lucide="trash-2" class="gs-icon-14"></i>
+                                                <button type="submit" class="gs-btn gs-btn-sm gs-btn-secondary">
+                                                    <i data-lucide="star" class="gs-icon-14"></i>
                                                 </button>
                                             </form>
                                         <?php endif; ?>
+                                        <form method="POST" style="display: inline;"
+                                              onsubmit="return confirm('Är du säker på att du vill ta bort poängmallen \'<?= h($scale['name']) ?>\'?');">
+                                            <?= csrf_field() ?>
+                                            <input type="hidden" name="action" value="delete_scale">
+                                            <input type="hidden" name="scale_id" value="<?= $scale['id'] ?>">
+                                            <button type="submit" class="gs-btn gs-btn-sm gs-btn-error">
+                                                <i data-lucide="trash-2" class="gs-icon-14"></i>
+                                            </button>
+                                        </form>
                                     </div>
                                 </td>
                             </tr>
@@ -413,8 +441,8 @@ include __DIR__ . '/../includes/layout-header.php';
 </div>
 
 <!-- Import Modal -->
-<div id="importModal" class="gs-modal-overlay-hidden" style="z-index: 10000;">
-    <div class="gs-modal-content-md">
+<div id="importModal" class="gs-modal-overlay-hidden" style="z-index: 10000; background: rgba(0, 0, 0, 0.5);">
+    <div class="gs-modal-content-md" style="background: white; border-radius: 8px; max-height: 90vh; overflow-y: auto;">
         <div class="gs-modal-header-sticky">
             <h3 class="gs-h4 gs-text-primary">
                 <i data-lucide="upload"></i>

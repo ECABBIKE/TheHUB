@@ -71,22 +71,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['merge_riders'])) {
 
                         if ($existing) {
                             // Delete the duplicate result (keep the one from the primary rider)
-                            $db->query("DELETE FROM results WHERE id = ?", [$oldResult['id']]);
+                            $db->delete('results', 'id = ?', [$oldResult['id']]);
                             $resultsDeleted++;
                         } else {
                             // Move the result to the kept rider
-                            $db->query(
-                                "UPDATE results SET cyclist_id = ? WHERE id = ?",
-                                [$keepId, $oldResult['id']]
-                            );
+                            $db->update('results', ['cyclist_id' => $keepId], 'id = ?', [$oldResult['id']]);
                             $resultsUpdated++;
                         }
                     }
                 }
 
                 // Delete the duplicate riders
-                $placeholders = implode(',', array_fill(0, count($mergeIds), '?'));
-                $db->query("DELETE FROM riders WHERE id IN ($placeholders)", $mergeIds);
+                foreach ($mergeIds as $mergeId) {
+                    $db->delete('riders', 'id = ?', [$mergeId]);
+                }
 
                 $db->pdo->commit();
 
@@ -127,16 +125,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['normalize_all'])) {
 
     try {
         // Normalize all UCI-IDs by removing spaces and dashes
-        $updated = $db->query("
-            UPDATE riders
-            SET license_number = REPLACE(REPLACE(license_number, ' ', ''), '-', '')
+        $ridersToNormalize = $db->getAll("
+            SELECT id, license_number
+            FROM riders
             WHERE license_number IS NOT NULL
             AND license_number != ''
             AND (license_number LIKE '% %' OR license_number LIKE '%-%')
         ");
 
+        $updated = 0;
+        foreach ($ridersToNormalize as $rider) {
+            $normalized = str_replace([' ', '-'], '', $rider['license_number']);
+            $db->update('riders', ['license_number' => $normalized], 'id = ?', [$rider['id']]);
+            $updated++;
+        }
+
         // Store message in session and redirect
-        $_SESSION['cleanup_message'] = "Normaliserade UCI-ID format för alla deltagare";
+        $_SESSION['cleanup_message'] = "Normaliserade UCI-ID format för $updated deltagare";
         $_SESSION['cleanup_message_type'] = 'success';
     } catch (Exception $e) {
         $_SESSION['cleanup_message'] = "Fel vid normalisering: " . $e->getMessage();
@@ -199,20 +204,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['auto_merge_all'])) {
 
                     if ($existing) {
                         // Delete duplicate result
-                        $db->query("DELETE FROM results WHERE id = ?", [$oldResult['id']]);
+                        $db->delete('results', 'id = ?', [$oldResult['id']]);
                         $totalResultsDeleted++;
                     } else {
                         // Move result to kept rider
-                        $db->query(
-                            "UPDATE results SET cyclist_id = ? WHERE id = ?",
-                            [$keepId, $oldResult['id']]
-                        );
+                        $db->update('results', ['cyclist_id' => $keepId], 'id = ?', [$oldResult['id']]);
                         $totalResultsMoved++;
                     }
                 }
 
                 // Delete the duplicate rider
-                $db->query("DELETE FROM riders WHERE id = ?", [$oldId]);
+                $db->delete('riders', 'id = ?', [$oldId]);
                 $ridersDeleted++;
             }
 

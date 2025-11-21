@@ -166,10 +166,10 @@ include __DIR__ . '/includes/layout-header.php';
             <!-- Events Grid - 2 columns on desktop -->
             <div class="gs-grid gs-grid-cols-1 gs-md-grid-cols-2 gs-gap-md">
                 <?php foreach ($events as $event): ?>
-                    <div class="gs-card gs-card-hover">
+                    <a href="/event-results.php?id=<?= $event['id'] ?>" class="gs-card gs-card-hover gs-card-link">
                         <div class="gs-card-content gs-p-md">
-                            <!-- Header: Logo + Title + Actions -->
-                            <div class="gs-flex gs-justify-between gs-items-start gs-gap-sm gs-mb-sm">
+                            <!-- Header: Logo + Title -->
+                            <div class="gs-flex gs-items-start gs-gap-sm gs-mb-sm">
                                 <div class="gs-flex gs-items-center gs-gap-sm gs-flex-1">
                                     <?php if ($event['series_logo']): ?>
                                         <img src="<?= h($event['series_logo']) ?>"
@@ -188,11 +188,7 @@ include __DIR__ . '/includes/layout-header.php';
                                         <?php endif; ?>
                                     </div>
                                 </div>
-                                <a href="/event-results.php?id=<?= $event['id'] ?>"
-                                   class="gs-btn gs-btn-primary gs-btn-sm"
-                                   title="Visa resultat">
-                                    <i data-lucide="trophy" class="gs-icon-14"></i>
-                                </a>
+                                <i data-lucide="trophy" class="gs-icon-md gs-text-primary"></i>
                             </div>
 
                             <!-- Meta: Date, Location -->
@@ -221,7 +217,7 @@ include __DIR__ . '/includes/layout-header.php';
                                 <?php endif; ?>
                             </div>
                         </div>
-                    </div>
+                    </a>
                 <?php endforeach; ?>
             </div>
         <?php endif; ?>

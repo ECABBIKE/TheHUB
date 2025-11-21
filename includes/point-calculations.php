@@ -568,9 +568,6 @@ function recalculateDHEventResults($db, $event_id, $new_scale_id = null, $use_sw
  * @return array Stats (positions_updated, points_updated, errors)
  */
 function recalculateEventResults($db, $event_id, $new_scale_id = null) {
-    // Include class calculations for determineRiderClass
-    require_once __DIR__ . '/class-calculations.php';
-
     $stats = [
         'positions_updated' => 0,
         'points_updated' => 0,
@@ -585,37 +582,11 @@ function recalculateEventResults($db, $event_id, $new_scale_id = null) {
             error_log("Updated point scale for event {$event_id} to scale {$new_scale_id}");
         }
 
-        // Get event date for class calculation
-        $event = $db->getRow("SELECT date FROM events WHERE id = ?", [$event_id]);
-        $eventDate = $event['date'] ?? date('Y-m-d');
+        // NOTE: We no longer auto-fix class_id here as it was causing data corruption
+        // Class assignments should be preserved from import
+        // If you need to reassign classes, use assignClassesToEvent() with correct discipline
 
-        // STEP 1: Fix class_id for all results based on rider's gender and birth_year
-        $resultsToFix = $db->getAll("
-            SELECT res.id, res.cyclist_id, res.class_id,
-                   r.birth_year, r.gender
-            FROM results res
-            JOIN riders r ON res.cyclist_id = r.id
-            WHERE res.event_id = ?
-        ", [$event_id]);
-
-        foreach ($resultsToFix as $result) {
-            if ($result['birth_year'] && $result['gender']) {
-                $correctClassId = determineRiderClass($db, $result['birth_year'], $result['gender'], $eventDate);
-
-                if ($correctClassId && $correctClassId != $result['class_id']) {
-                    try {
-                        $db->update('results', [
-                            'class_id' => $correctClassId
-                        ], 'id = ?', [$result['id']]);
-                        $stats['classes_fixed']++;
-                    } catch (Exception $e) {
-                        $stats['errors'][] = "Failed to fix class for result {$result['id']}: " . $e->getMessage();
-                    }
-                }
-            }
-        }
-
-        // STEP 2: Get all results grouped by class_id (not category_id)
+        // Get all results grouped by class_id
         $results = $db->getAll("
             SELECT id, class_id, finish_time, status
             FROM results
