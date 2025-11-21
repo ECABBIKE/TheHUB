@@ -114,6 +114,28 @@ if (isset($_GET['cancel'])) {
 }
 
 /**
+ * Check if a row appears to be a field mapping/description row
+ * These rows contain field names like "class", "position", "club_name" instead of actual data
+ */
+function isFieldMappingRowPreview($row) {
+    if (!is_array($row)) return false;
+
+    // Known field mapping keywords that appear in description rows
+    $fieldKeywords = ['class', 'position', 'club_name', 'license_number', 'finish_time', 'status', 'firstname', 'lastname'];
+
+    $matchCount = 0;
+    foreach ($row as $value) {
+        $cleanValue = strtolower(trim($value));
+        if (in_array($cleanValue, $fieldKeywords)) {
+            $matchCount++;
+        }
+    }
+
+    // If 3 or more values match field keywords, it's likely a mapping row
+    return $matchCount >= 3;
+}
+
+/**
  * Parse CSV and analyze matching statistics
  */
 function parseAndAnalyzeCSV($filepath, $db) {
@@ -175,6 +197,11 @@ function parseAndAnalyzeCSV($filepath, $db) {
     // Read all rows
     while (($row = fgetcsv($handle, 0, $delimiter)) !== false) {
         if (count($row) < 2) continue;
+
+        // Skip field mapping/description rows (contain field names like "class", "position", etc.)
+        if (isFieldMappingRowPreview($row)) {
+            continue;
+        }
 
         // Pad or trim row to match header
         if (count($row) < count($header)) {
