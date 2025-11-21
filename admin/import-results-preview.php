@@ -209,7 +209,7 @@ function parseAndAnalyzeCSV($filepath, $db) {
                 // Try name
                 if (!$rider) {
                     $rider = $db->getRow(
-                        "SELECT id FROM riders WHERE first_name = ? AND last_name = ?",
+                        "SELECT id FROM riders WHERE firstname = ? AND lastname = ?",
                         [$firstName, $lastName]
                     );
                 }

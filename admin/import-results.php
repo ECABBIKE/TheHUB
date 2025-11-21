@@ -481,7 +481,7 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
                 // Try by name if no license match
                 if (!$rider) {
                     $rider = $db->getRow(
-                        "SELECT id FROM riders WHERE first_name = ? AND last_name = ?",
+                        "SELECT id FROM riders WHERE firstname = ? AND lastname = ?",
                         [trim($data['firstname']), trim($data['lastname'])]
                     );
                     if ($rider) {
@@ -504,8 +504,8 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
                     }
 
                     $riderId = $db->insert('riders', [
-                        'first_name' => trim($data['firstname']),
-                        'last_name' => trim($data['lastname']),
+                        'firstname' => trim($data['firstname']),
+                        'lastname' => trim($data['lastname']),
                         'license_number' => $licenseNumber ?: null,
                         'gender' => $gender
                     ]);
