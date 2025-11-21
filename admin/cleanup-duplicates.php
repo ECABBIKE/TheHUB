@@ -29,11 +29,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['merge_riders'])) {
 
             if ($keepRider) {
                 // Update all results to point to the kept rider
+                $resultsUpdated = 0;
                 foreach ($mergeIds as $oldId) {
-                    $db->query(
+                    $stmt = $db->query(
                         "UPDATE results SET cyclist_id = ? WHERE cyclist_id = ?",
                         [$keepId, $oldId]
                     );
+                    $resultsUpdated += $stmt->rowCount();
                 }
 
                 // Delete the duplicate riders
@@ -42,14 +44,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['merge_riders'])) {
 
                 $db->pdo->commit();
 
-                $_SESSION['cleanup_message'] = "Sammanfogade " . count($mergeIds) . " deltagare till " . $keepRider['firstname'] . " " . $keepRider['lastname'];
+                $_SESSION['cleanup_message'] = "Sammanfogade " . count($mergeIds) . " deltagare till " . $keepRider['firstname'] . " " . $keepRider['lastname'] . " (" . $resultsUpdated . " resultat flyttade)";
                 $_SESSION['cleanup_message_type'] = 'success';
+            } else {
+                $db->pdo->rollBack();
+                $_SESSION['cleanup_message'] = "Kunde inte hitta deltagare med ID: " . $keepId;
+                $_SESSION['cleanup_message_type'] = 'error';
             }
         } catch (Exception $e) {
-            $db->pdo->rollBack();
+            if ($db->pdo->inTransaction()) {
+                $db->pdo->rollBack();
+            }
             $_SESSION['cleanup_message'] = "Fel vid sammanfogning: " . $e->getMessage();
             $_SESSION['cleanup_message_type'] = 'error';
         }
+    } else {
+        $_SESSION['cleanup_message'] = "Ogiltiga parametrar för sammanfogning (keep_id: $keepId, merge_ids: " . implode(',', $mergeIds) . ")";
+        $_SESSION['cleanup_message_type'] = 'error';
     }
 
     // Refresh duplicate lists

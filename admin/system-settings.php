@@ -59,6 +59,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'max_age' => !empty($_POST['max_age']) ? (int)$_POST['max_age'] : null,
                     'sort_order' => !empty($_POST['sort_order']) ? (int)$_POST['sort_order'] : 999,
                     'active' => isset($_POST['active']) ? 1 : 0,
+                    'awards_points' => isset($_POST['awards_points']) ? 1 : 0,
+                    'series_eligible' => isset($_POST['series_eligible']) ? 1 : 0,
+                    'ranking_type' => in_array($_POST['ranking_type'] ?? '', ['time', 'name', 'bib']) ? $_POST['ranking_type'] : 'time',
                 ];
 
                 try {
@@ -164,7 +167,9 @@ if ($classDisciplineFilter) {
 $classWhereClause = $classWhere ? 'WHERE ' . implode(' AND ', $classWhere) : '';
 
 $classes = $db->getAll("
-    SELECT c.*, COUNT(DISTINCT r.id) as result_count
+    SELECT c.id, c.name, c.display_name, c.discipline, c.gender, c.min_age, c.max_age,
+           c.sort_order, c.active, c.awards_points, c.series_eligible, c.ranking_type,
+           COUNT(DISTINCT r.id) as result_count
     FROM classes c
     LEFT JOIN results r ON c.id = r.class_id
     $classWhereClause
@@ -212,6 +217,7 @@ $debugTools = [
             ['name' => 'Omräkna Resultat', 'url' => '/admin/recalculate-results.php', 'desc' => 'Tilldela poängmall och omräkna poäng'],
             ['name' => 'Rensa Eventresultat', 'url' => '/admin/clear-event-results.php', 'desc' => 'Ta bort resultat för specifikt event'],
             ['name' => 'Rensa Dubbletter', 'url' => '/admin/cleanup-duplicates.php', 'desc' => 'Hantera dubbletter och sammanfoga deltagare'],
+            ['name' => 'Flytta Klassresultat', 'url' => '/admin/move-class-results.php', 'desc' => 'Flytta resultat mellan klasser'],
         ]
     ],
     'database' => [
@@ -695,7 +701,7 @@ include __DIR__ . '/../includes/layout-header.php';
 </main>
 
 <!-- Class Modal -->
-<div id="classModal" class="gs-modal" style="display: none;">
+<div id="classModal" class="gs-modal" style="display: none; z-index: 9999;">
     <div class="gs-modal-overlay" onclick="closeClassModal()"></div>
     <div class="gs-modal-content" style="max-width: 600px;">
         <div class="gs-modal-header">
@@ -755,10 +761,32 @@ include __DIR__ . '/../includes/layout-header.php';
                             <label class="gs-label">Sortering</label>
                             <input type="number" name="sort_order" id="classSortOrder" class="gs-input" value="999">
                         </div>
+                        <div class="gs-form-group">
+                            <label class="gs-label">Rankning</label>
+                            <select name="ranking_type" id="classRankingType" class="gs-input">
+                                <option value="time">Tid (snabbast först)</option>
+                                <option value="name">Namn (alfabetisk)</option>
+                                <option value="bib">Startnummer</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="gs-grid gs-grid-cols-3 gs-gap-md gs-mt-md">
                         <div class="gs-form-group gs-flex gs-items-end">
                             <label class="gs-checkbox-label">
                                 <input type="checkbox" name="active" id="classActive" checked>
                                 Aktiv
+                            </label>
+                        </div>
+                        <div class="gs-form-group gs-flex gs-items-end">
+                            <label class="gs-checkbox-label">
+                                <input type="checkbox" name="awards_points" id="classAwardsPoints" checked>
+                                Ger poäng
+                            </label>
+                        </div>
+                        <div class="gs-form-group gs-flex gs-items-end">
+                            <label class="gs-checkbox-label">
+                                <input type="checkbox" name="series_eligible" id="classSeriesEligible" checked>
+                                Räknas i serie
                             </label>
                         </div>
                     </div>
@@ -777,7 +805,7 @@ include __DIR__ . '/../includes/layout-header.php';
 </div>
 
 <!-- Add Global Text Modal -->
-<div id="addTextModal" class="gs-modal" style="display: none;">
+<div id="addTextModal" class="gs-modal" style="display: none; z-index: 9999;">
     <div class="gs-modal-overlay" onclick="closeAddTextModal()"></div>
     <div class="gs-modal-content" style="max-width: 500px;">
         <div class="gs-modal-header">
@@ -842,6 +870,9 @@ function openClassModal() {
     document.getElementById('classForm').reset();
     document.getElementById('classId').value = '';
     document.getElementById('classActive').checked = true;
+    document.getElementById('classAwardsPoints').checked = true;
+    document.getElementById('classSeriesEligible').checked = true;
+    document.getElementById('classRankingType').value = 'time';
     document.querySelectorAll('.discipline-cb').forEach(cb => cb.checked = false);
     if (typeof lucide !== 'undefined') lucide.createIcons();
 }
@@ -863,6 +894,9 @@ function editClass(classData) {
     document.getElementById('classMaxAge').value = classData.max_age || '';
     document.getElementById('classSortOrder').value = classData.sort_order || 999;
     document.getElementById('classActive').checked = classData.active == 1;
+    document.getElementById('classAwardsPoints').checked = classData.awards_points == 1 || classData.awards_points === null;
+    document.getElementById('classSeriesEligible').checked = classData.series_eligible == 1 || classData.series_eligible === null;
+    document.getElementById('classRankingType').value = classData.ranking_type || 'time';
 
     document.querySelectorAll('.discipline-cb').forEach(cb => cb.checked = false);
     if (classData.discipline) {
