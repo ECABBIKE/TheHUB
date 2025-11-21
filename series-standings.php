@@ -30,7 +30,7 @@ if (!$series) {
 
 // Get view mode (overall or class)
 $viewMode = isset($_GET['view']) ? $_GET['view'] : 'class';
-$selectedClass = isset($_GET['class']) ? (int)$_GET['class'] : null;
+$selectedClass = isset($_GET['class']) ? $_GET['class'] : 'all';
 $searchName = isset($_GET['search']) ? trim($_GET['search']) : '';
 
 // Get all events in this series (using series_events junction table)
@@ -66,15 +66,74 @@ $activeClasses = $db->getAll("
     ORDER BY c.sort_order ASC
 ", [$seriesId]);
 
-// Set default class if not selected
-if (!$selectedClass && !empty($activeClasses)) {
-    $selectedClass = $activeClasses[0]['id'];
-}
-
 // Build standings with per-event points
 $standings = [];
-if ($selectedClass) {
-    // Get all riders in this class who have results in this series
+$showAllClasses = ($selectedClass === 'all');
+
+if ($showAllClasses) {
+    // Get all riders who have results in this series (all classes)
+    $ridersInSeries = $db->getAll("
+        SELECT DISTINCT
+            riders.id,
+            riders.firstname,
+            riders.lastname,
+            riders.birth_year,
+            riders.gender,
+            c.name as club_name,
+            cls.display_name as class_name,
+            r.class_id
+        FROM riders
+        LEFT JOIN clubs c ON riders.club_id = c.id
+        JOIN results r ON riders.id = r.cyclist_id
+        JOIN events e ON r.event_id = e.id
+        JOIN series_events se ON e.id = se.event_id
+        LEFT JOIN classes cls ON r.class_id = cls.id
+        WHERE se.series_id = ?
+        ORDER BY cls.sort_order ASC, riders.lastname, riders.firstname
+    ", [$seriesId]);
+
+    // For each rider, get their points from each event
+    foreach ($ridersInSeries as $rider) {
+        $riderData = [
+            'rider_id' => $rider['id'],
+            'firstname' => $rider['firstname'],
+            'lastname' => $rider['lastname'],
+            'fullname' => $rider['firstname'] . ' ' . $rider['lastname'],
+            'birth_year' => $rider['birth_year'],
+            'gender' => $rider['gender'],
+            'club_name' => $rider['club_name'],
+            'class_name' => $rider['class_name'] ?? 'Okänd',
+            'class_id' => $rider['class_id'],
+            'event_points' => [],
+            'total_points' => 0
+        ];
+
+        // Get points for each event (using rider's class)
+        foreach ($seriesEvents as $event) {
+            $result = $db->getRow("
+                SELECT points
+                FROM results
+                WHERE cyclist_id = ? AND event_id = ? AND class_id = ?
+                LIMIT 1
+            ", [$rider['id'], $event['id'], $rider['class_id']]);
+
+            $points = $result ? (int)$result['points'] : 0;
+            $riderData['event_points'][$event['id']] = $points;
+            $riderData['total_points'] += $points;
+        }
+
+        // Apply name search filter
+        if ($searchName === '' || stripos($riderData['fullname'], $searchName) !== false) {
+            $standings[] = $riderData;
+        }
+    }
+
+    // Sort by total points descending
+    usort($standings, function($a, $b) {
+        return $b['total_points'] - $a['total_points'];
+    });
+} elseif ($selectedClass && is_numeric($selectedClass)) {
+    // Get all riders in this specific class who have results in this series
     $ridersInClass = $db->getAll("
         SELECT DISTINCT
             riders.id,
@@ -290,6 +349,9 @@ include __DIR__ . '/includes/layout-header.php';
                         <div>
                             <label class="gs-label">Välj klass</label>
                             <select class="gs-input" id="classSelector" onchange="window.location.href='?id=<?= $seriesId ?>&class=' + this.value + '&search=<?= urlencode($searchName) ?>'">
+                                <option value="all" <?= $selectedClass === 'all' ? 'selected' : '' ?>>
+                                    Alla klasser
+                                </option>
                                 <?php foreach ($activeClasses as $class): ?>
                                     <option value="<?= $class['id'] ?>" <?= $selectedClass == $class['id'] ? 'selected' : '' ?>>
                                         <?= h($class['display_name']) ?> - <?= h($class['name']) ?> (<?= $class['rider_count'] ?> deltagare)
@@ -321,16 +383,21 @@ include __DIR__ . '/includes/layout-header.php';
         <?php endif; ?>
 
         <!-- Standings Table with Event Points -->
-        <?php if ($selectedClass && !empty($standings)): ?>
+        <?php if (!empty($standings)): ?>
             <?php
             // Get selected class name
             $selectedClassName = '';
             $selectedClassDisplay = '';
-            foreach ($activeClasses as $class) {
-                if ($class['id'] == $selectedClass) {
-                    $selectedClassName = $class['name'];
-                    $selectedClassDisplay = $class['display_name'];
-                    break;
+            if ($showAllClasses) {
+                $selectedClassDisplay = 'Alla klasser';
+                $selectedClassName = '';
+            } else {
+                foreach ($activeClasses as $class) {
+                    if ($class['id'] == $selectedClass) {
+                        $selectedClassName = $class['name'];
+                        $selectedClassDisplay = $class['display_name'];
+                        break;
+                    }
                 }
             }
             ?>
@@ -338,7 +405,7 @@ include __DIR__ . '/includes/layout-header.php';
                 <div class="gs-card-header">
                     <h3 class="gs-h4">
                         <i data-lucide="trophy"></i>
-                        Kvalpoängställning: <?= h($selectedClassDisplay) ?> - <?= h($selectedClassName) ?>
+                        Kvalpoängställning: <?= h($selectedClassDisplay) ?><?= $selectedClassName ? ' - ' . h($selectedClassName) : '' ?>
                     </h3>
                     <?php if ($searchName): ?>
                         <p class="gs-text-sm gs-text-secondary">
@@ -352,6 +419,9 @@ include __DIR__ . '/includes/layout-header.php';
                             <tr>
                                 <th class="standings-sticky-th-rank">Plac.</th>
                                 <th class="standings-sticky-th-name">Namn</th>
+                                <?php if ($showAllClasses): ?>
+                                    <th>Klass</th>
+                                <?php endif; ?>
                                 <th class="standings-sticky-th-club">Klubb</th>
                                 <?php $eventNum = 1; ?>
                                 <?php foreach ($seriesEvents as $event): ?>
@@ -383,6 +453,11 @@ include __DIR__ . '/includes/layout-header.php';
                                             <strong><?= h($rider['firstname']) ?> <?= h($rider['lastname']) ?></strong>
                                         </a>
                                     </td>
+                                    <?php if ($showAllClasses): ?>
+                                        <td class="gs-text-secondary">
+                                            <?= h($rider['class_name'] ?? '–') ?>
+                                        </td>
+                                    <?php endif; ?>
                                     <td class="standings-sticky-td-club">
                                         <?= h($rider['club_name']) ?: '–' ?>
                                     </td>
@@ -408,7 +483,7 @@ include __DIR__ . '/includes/layout-header.php';
                     </table>
                 </div>
             </div>
-        <?php elseif ($selectedClass && empty($standings)): ?>
+        <?php elseif (empty($standings)): ?>
             <div class="gs-card">
                 <div class="gs-card-content gs-empty-state">
                     <i data-lucide="inbox" class="gs-empty-icon"></i>
@@ -416,7 +491,7 @@ include __DIR__ . '/includes/layout-header.php';
                         <?php if ($searchName): ?>
                             Inga resultat hittades för "<?= h($searchName) ?>"
                         <?php else: ?>
-                            Inga resultat för denna klass
+                            Inga resultat ännu
                         <?php endif; ?>
                     </p>
                 </div>

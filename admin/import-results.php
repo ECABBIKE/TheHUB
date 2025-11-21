@@ -668,6 +668,9 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
                                 'display_name' => $className,
                                 'active' => 1
                             ]);
+                            if ($importId) {
+                                trackImportRecord($db, $importId, 'class', $newClassId, 'created');
+                            }
                             $classCache[$className] = $newClassId;
                         } else {
                             $classCache[$className] = $class['id'];

@@ -169,7 +169,8 @@ function getTableName($recordType) {
         'rider' => 'riders',
         'result' => 'results',
         'event' => 'events',
-        'club' => 'clubs'
+        'club' => 'clubs',
+        'class' => 'classes'
     ];
 
     return $map[$recordType] ?? $recordType . 's';
