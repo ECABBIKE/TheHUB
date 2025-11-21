@@ -201,6 +201,28 @@ Herrar Elite,2,Erik,SVENSSON,Göteborg MTB,,DNF,DNF,1:55.34,1:39.21,DNF</pre>
 
 <?php
 /**
+ * Check if a row appears to be a field mapping/description row
+ * These rows contain field names like "class", "position", "club_name" instead of actual data
+ */
+function isFieldMappingRow($row) {
+    if (!is_array($row)) return false;
+
+    // Known field mapping keywords that appear in description rows
+    $fieldKeywords = ['class', 'position', 'club_name', 'license_number', 'finish_time', 'status', 'firstname', 'lastname'];
+
+    $matchCount = 0;
+    foreach ($row as $value) {
+        $cleanValue = strtolower(trim($value));
+        if (in_array($cleanValue, $fieldKeywords)) {
+            $matchCount++;
+        }
+    }
+
+    // If 3 or more values match field keywords, it's likely a mapping row
+    return $matchCount >= 3;
+}
+
+/**
  * Import results from CSV file with event mapping
  */
 function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMapping = [], $forceClassId = null) {
@@ -401,6 +423,11 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
 
         // Skip empty rows (all columns empty or only whitespace)
         if (empty(array_filter($row, function($val) { return !empty(trim($val)); }))) {
+            continue;
+        }
+
+        // Skip field mapping/description rows (contain field names like "class", "position", etc.)
+        if (isFieldMappingRow($row)) {
             continue;
         }
 
