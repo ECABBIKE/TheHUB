@@ -579,15 +579,20 @@ include __DIR__ . '/includes/layout-header.php';
                 </p>
             </div>
         <?php else: ?>
+            <?php if ($hasSplitTimes && !$isDH): ?>
+            <div class="gs-mb-md gs-text-right">
+                <label class="gs-checkbox split-times-toggle">
+                    <input type="checkbox" id="globalSplitToggle" onchange="toggleAllSplitTimes(this.checked)">
+                    <span class="gs-text-sm">Visa sträcktider</span>
+                </label>
+            </div>
+            <?php endif; ?>
             <?php foreach ($resultsByClass as $groupName => $groupData): ?>
                 <div class="gs-card gs-mb-xl class-section" data-group="<?= h($groupName) ?>">
                     <div class="gs-card-header">
                         <h2 class="gs-h4 gs-text-primary">
                             <i data-lucide="users" class="gs-icon-md"></i>
                             <?= h($groupData['display_name']) ?>
-                            <span class="gs-badge gs-badge-primary gs-badge-sm gs-ml-xs">
-                                <?= h($groupName) ?>
-                            </span>
                             <span class="gs-badge gs-badge-secondary gs-ml-sm">
                                 <?= count($groupData['results']) ?> deltagare
                             </span>
@@ -608,14 +613,6 @@ include __DIR__ . '/includes/layout-header.php';
                     }
                     ?>
                     <div class="gs-card-content gs-card-table-container">
-                        <?php if (!empty($classSplitCols)): ?>
-                        <div class="gs-mb-sm gs-text-right">
-                            <label class="gs-checkbox split-times-toggle">
-                                <input type="checkbox" onchange="toggleSplitTimes(this)">
-                                <span class="gs-text-sm">Visa sträcktider</span>
-                            </label>
-                        </div>
-                        <?php endif; ?>
                         <table class="gs-table results-table">
                             <thead>
                                 <tr>
@@ -1144,19 +1141,16 @@ include __DIR__ . '/includes/layout-header.php';
 </main>
 
 <script>
-function toggleSplitTimes(checkbox) {
-    // Find the parent card content
-    const cardContent = checkbox.closest('.gs-card-content');
-    if (cardContent) {
-        const table = cardContent.querySelector('.results-table');
-        if (table) {
-            if (checkbox.checked) {
-                table.classList.add('split-times-visible');
-            } else {
-                table.classList.remove('split-times-visible');
-            }
+function toggleAllSplitTimes(show) {
+    // Toggle split times visibility for ALL result tables
+    const tables = document.querySelectorAll('.results-table');
+    tables.forEach(table => {
+        if (show) {
+            table.classList.add('split-times-visible');
+        } else {
+            table.classList.remove('split-times-visible');
         }
-    }
+    });
 }
 </script>
 

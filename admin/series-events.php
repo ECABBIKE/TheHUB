@@ -87,10 +87,44 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $message = 'Ordning uppdaterad!';
         $messageType = 'success';
+    } elseif ($action === 'move_up' || $action === 'move_down') {
+        $seriesEventId = intval($_POST['series_event_id']);
+
+        // Get current event and all events sorted
+        $allEvents = $db->getAll("
+            SELECT id, sort_order FROM series_events
+            WHERE series_id = ?
+            ORDER BY sort_order ASC
+        ", [$seriesId]);
+
+        // Find current position
+        $currentIndex = -1;
+        foreach ($allEvents as $index => $event) {
+            if ($event['id'] == $seriesEventId) {
+                $currentIndex = $index;
+                break;
+            }
+        }
+
+        if ($currentIndex >= 0) {
+            $swapIndex = $action === 'move_up' ? $currentIndex - 1 : $currentIndex + 1;
+
+            if ($swapIndex >= 0 && $swapIndex < count($allEvents)) {
+                // Swap sort_order values
+                $currentOrder = $allEvents[$currentIndex]['sort_order'];
+                $swapOrder = $allEvents[$swapIndex]['sort_order'];
+
+                $db->update('series_events', ['sort_order' => $swapOrder], 'id = ?', [$seriesEventId]);
+                $db->update('series_events', ['sort_order' => $currentOrder], 'id = ?', [$allEvents[$swapIndex]['id']]);
+
+                $message = 'Ordning uppdaterad!';
+                $messageType = 'success';
+            }
+        }
     }
 }
 
-// Get events in this series - sorted by date (earliest first)
+// Get events in this series - sorted by sort_order (user-defined order)
 $seriesEvents = $db->getAll("
     SELECT se.*, e.name as event_name, e.date as event_date, e.location, e.discipline,
            ps.name as template_name
@@ -98,7 +132,7 @@ $seriesEvents = $db->getAll("
     JOIN events e ON se.event_id = e.id
     LEFT JOIN point_scales ps ON se.template_id = ps.id
     WHERE se.series_id = ?
-    ORDER BY e.date ASC
+    ORDER BY se.sort_order ASC
 ", [$seriesId]);
 
 // Get all events not in this series
@@ -221,7 +255,7 @@ include __DIR__ . '/../includes/layout-header.php';
                                 <table class="gs-table">
                                     <thead>
                                         <tr>
-                                            <th class="gs-table-col-w-50">#</th>
+                                            <th class="gs-table-col-w-80">Ordning</th>
                                             <th>Event</th>
                                             <th>Datum</th>
                                             <th>Plats</th>
@@ -230,14 +264,38 @@ include __DIR__ . '/../includes/layout-header.php';
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        <?php $eventNumber = 1; ?>
+                                        <?php $eventNumber = 1; $totalEvents = count($seriesEvents); ?>
                                         <?php foreach ($seriesEvents as $se): ?>
                                             <tr>
                                                 <td>
-                                                    <span class="gs-badge gs-badge-primary gs-badge-sm">#<?= $eventNumber ?></span>
+                                                    <div class="gs-flex gs-items-center gs-gap-xs">
+                                                        <span class="gs-badge gs-badge-primary gs-badge-sm">#<?= $eventNumber ?></span>
+                                                        <div class="gs-flex gs-flex-col gs-gap-xxs">
+                                                            <?php if ($eventNumber > 1): ?>
+                                                            <form method="POST" class="gs-display-inline">
+                                                                <?= csrf_field() ?>
+                                                                <input type="hidden" name="action" value="move_up">
+                                                                <input type="hidden" name="series_event_id" value="<?= $se['id'] ?>">
+                                                                <button type="submit" class="gs-btn gs-btn-xs gs-btn-outline" title="Flytta upp">
+                                                                    <i data-lucide="chevron-up" class="gs-icon-12"></i>
+                                                                </button>
+                                                            </form>
+                                                            <?php endif; ?>
+                                                            <?php if ($eventNumber < $totalEvents): ?>
+                                                            <form method="POST" class="gs-display-inline">
+                                                                <?= csrf_field() ?>
+                                                                <input type="hidden" name="action" value="move_down">
+                                                                <input type="hidden" name="series_event_id" value="<?= $se['id'] ?>">
+                                                                <button type="submit" class="gs-btn gs-btn-xs gs-btn-outline" title="Flytta ner">
+                                                                    <i data-lucide="chevron-down" class="gs-icon-12"></i>
+                                                                </button>
+                                                            </form>
+                                                            <?php endif; ?>
+                                                        </div>
+                                                    </div>
                                                 </td>
                                                 <td>
-                                                    <strong>#<?= $eventNumber ?> <?= h($se['event_name']) ?></strong>
+                                                    <strong><?= h($se['event_name']) ?></strong>
                                                     <?php if ($se['discipline']): ?>
                                                         <br><span class="gs-text-xs gs-text-secondary"><?= h($se['discipline']) ?></span>
                                                     <?php endif; ?>
