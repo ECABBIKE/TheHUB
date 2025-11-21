@@ -68,8 +68,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif ($action === 'import') {
         $importData = trim($_POST['import_data'] ?? '');
 
+        // Debug: Show first 100 chars of received data
+        $debugPreview = substr($importData, 0, 100);
+        $debugPreview = str_replace(["\r", "\n"], ['\\r', '\\n'], $debugPreview);
+
         if (empty($importData)) {
-            $message = 'Ingen data att importera';
+            $message = "Ingen data att importera. (Debug: import_data var tom)";
             $messageType = 'error';
         } else {
             try {
@@ -112,7 +116,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 } else {
                     // Debug: show what was received
                     $debugLines = count(explode("\n", $importData));
-                    $message = "Kunde inte hitta poäng i importerad data. Mottog {$debugLines} rader. Kontrollera formatet (position,poäng eller position;poäng)";
+                    $message = "Kunde inte hitta poäng i importerad data. Mottog {$debugLines} rader. Data: '{$debugPreview}'. Kontrollera formatet (position,poäng eller position;poäng)";
                     $messageType = 'error';
                 }
             } catch (Exception $e) {
