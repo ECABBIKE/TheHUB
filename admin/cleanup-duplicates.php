@@ -14,12 +14,18 @@ $messageType = 'info';
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['merge_riders'])) {
     checkCsrf();
 
-    $keepId = (int)$_POST['keep_id'];
+    $keepId = (int)($_POST['keep_id'] ?? 0);
     $mergeIdsRaw = $_POST['merge_ids'] ?? '';
-    $mergeIds = array_map('intval', array_filter(explode(',', $mergeIdsRaw)));
+
+    // Debug: Log incoming data
+    error_log("Merge attempt: keep_id=$keepId, merge_ids_raw='$mergeIdsRaw'");
+
+    $mergeIds = array_map('intval', array_filter(explode(',', $mergeIdsRaw), fn($s) => $s !== ''));
 
     // Remove the keep_id from merge list and re-index array
     $mergeIds = array_values(array_filter($mergeIds, fn($id) => $id !== $keepId && $id > 0));
+
+    error_log("After filtering: mergeIds=" . json_encode($mergeIds));
 
     if ($keepId && !empty($mergeIds)) {
         try {
@@ -27,6 +33,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['merge_riders'])) {
 
             // Get the rider to keep
             $keepRider = $db->getRow("SELECT * FROM riders WHERE id = ?", [$keepId]);
+
+            error_log("Keep rider: " . ($keepRider ? $keepRider['firstname'] . ' ' . $keepRider['lastname'] : 'NOT FOUND'));
 
             if ($keepRider) {
                 // Update all results to point to the kept rider

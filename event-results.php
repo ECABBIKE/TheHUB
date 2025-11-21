@@ -86,7 +86,7 @@ foreach ($results as $result) {
     }
 }
 
-// Group results by class and calculate positions within each class
+// Group results by class
 $resultsByClass = [];
 $totalParticipants = count($results);
 $totalFinished = 0;
@@ -98,22 +98,44 @@ foreach ($results as $result) {
         $resultsByClass[$className] = [
             'display_name' => $result['class_display_name'] ?? $className,
             'sort_order' => $result['class_sort_order'] ?? 999,
-            'results' => [],
-            'position_counter' => 0
+            'results' => []
         ];
     }
 
-    // Calculate position within this class
-    if ($result['status'] === 'finished') {
-        $resultsByClass[$className]['position_counter']++;
-        $result['class_position'] = $resultsByClass[$className]['position_counter'];
-        $totalFinished++;
-    } else {
-        $result['class_position'] = null;
-    }
-
     $resultsByClass[$className]['results'][] = $result;
+
+    if ($result['status'] === 'finished') {
+        $totalFinished++;
+    }
 }
+
+// Sort results within each class by finish_time (converted to seconds)
+foreach ($resultsByClass as $className => &$classData) {
+    usort($classData['results'], function($a, $b) {
+        // DNF/DNS/DQ go last
+        if ($a['status'] !== 'finished' && $b['status'] === 'finished') return 1;
+        if ($a['status'] === 'finished' && $b['status'] !== 'finished') return -1;
+        if ($a['status'] !== 'finished' && $b['status'] !== 'finished') return 0;
+
+        // Both finished - sort by time in seconds
+        $aSeconds = timeToSeconds($a['finish_time']);
+        $bSeconds = timeToSeconds($b['finish_time']);
+
+        return $aSeconds <=> $bSeconds;
+    });
+
+    // Calculate positions after sorting
+    $position = 0;
+    foreach ($classData['results'] as &$result) {
+        if ($result['status'] === 'finished') {
+            $position++;
+            $result['class_position'] = $position;
+        } else {
+            $result['class_position'] = null;
+        }
+    }
+}
+unset($classData);
 
 // Sort classes by their sort_order
 uksort($resultsByClass, function($a, $b) use ($resultsByClass) {
