@@ -546,14 +546,17 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
 
             // Find or create rider
             $riderName = trim($data['firstname']) . '|' . trim($data['lastname']);
-            $licenseNumber = $data['license_number'] ?? '';
+            $rawLicenseNumber = $data['license_number'] ?? '';
+            // Normalize UCI-ID: remove all spaces and non-digit characters
+            $licenseNumber = preg_replace('/[^0-9]/', '', $rawLicenseNumber);
 
             if (!isset($riderCache[$riderName . '|' . $licenseNumber])) {
-                // Try to find rider by license number first
+                // Try to find rider by license number first (normalized)
                 $rider = null;
                 if (!empty($licenseNumber)) {
+                    // Try exact match with normalized number
                     $rider = $db->getRow(
-                        "SELECT id FROM riders WHERE license_number = ?",
+                        "SELECT id FROM riders WHERE REPLACE(REPLACE(license_number, ' ', ''), '-', '') = ?",
                         [$licenseNumber]
                     );
                     if ($rider) {
@@ -564,7 +567,7 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
                 // Try by name if no license match
                 if (!$rider) {
                     $rider = $db->getRow(
-                        "SELECT id FROM riders WHERE firstname = ? AND lastname = ?",
+                        "SELECT id FROM riders WHERE LOWER(firstname) = LOWER(?) AND LOWER(lastname) = LOWER(?)",
                         [trim($data['firstname']), trim($data['lastname'])]
                     );
                     if ($rider) {
@@ -578,12 +581,12 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
                     $matching_stats['riders_created']++;
 
                     // Determine gender from class name if available
-                    $gender = 'unknown';
+                    $gender = 'M';
                     $className = $data['class_name'] ?? '';
                     if (preg_match('/(dam|women|female|flickor|girls)/i', $className)) {
-                        $gender = 'female';
+                        $gender = 'F';
                     } elseif (preg_match('/(herr|men|male|pojkar|boys)/i', $className)) {
-                        $gender = 'male';
+                        $gender = 'M';
                     }
 
                     $riderId = $db->insert('riders', [
@@ -638,10 +641,20 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
             $className = trim($data['class_name'] ?? '');
             if (!$classId && !empty($className)) {
                 if (!isset($classCache[$className])) {
+                    // Try exact match first (case-insensitive)
                     $class = $db->getRow(
-                        "SELECT id FROM classes WHERE display_name = ? OR name = ?",
+                        "SELECT id FROM classes WHERE LOWER(display_name) = LOWER(?) OR LOWER(name) = LOWER(?)",
                         [$className, $className]
                     );
+
+                    // Try partial match if exact fails
+                    if (!$class) {
+                        $class = $db->getRow(
+                            "SELECT id FROM classes WHERE LOWER(display_name) LIKE LOWER(?) OR LOWER(name) LIKE LOWER(?)",
+                            ['%' . $className . '%', '%' . $className . '%']
+                        );
+                    }
+
                     if (!$class) {
                         // Create class
                         $matching_stats['classes_created']++;
@@ -683,13 +696,28 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
                 [$eventId, $riderId]
             );
 
+            // Calculate points based on position
+            $position = !empty($data['position']) ? (int)$data['position'] : null;
+            $points = 0;
+            if ($status === 'finished' && $position) {
+                // Standard UCI-style point scale
+                $pointScale = [
+                    1 => 250, 2 => 200, 3 => 160, 4 => 130, 5 => 110,
+                    6 => 95, 7 => 80, 8 => 70, 9 => 60, 10 => 55,
+                    11 => 50, 12 => 45, 13 => 40, 14 => 35, 15 => 30,
+                    16 => 26, 17 => 22, 18 => 18, 19 => 14, 20 => 10
+                ];
+                $points = $pointScale[$position] ?? max(0, 21 - $position);
+            }
+
             $resultData = [
                 'event_id' => $eventId,
                 'cyclist_id' => $riderId,
                 'class_id' => $classId,
-                'position' => !empty($data['position']) ? (int)$data['position'] : null,
+                'position' => $position,
                 'finish_time' => $finishTime,
                 'status' => $status,
+                'points' => $points,
                 'run_1_time' => $data['run_1_time'] ?? null,
                 'run_2_time' => $data['run_2_time'] ?? null,
                 'ss1' => $data['ss1'] ?? null,
