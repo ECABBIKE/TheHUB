@@ -172,8 +172,9 @@ function importResultsFromCSV($filepath, $db, $importId = null) {
             'huvudförening' => 'club_name',
             'huvudforening' => 'club_name',
 
-            // Category (race category, not age/gender class)
-            'category' => 'category',
+            // Category is the racing class (like "Damer Junior", "Elite Herr")
+            // This maps to class_name for age/gender classification
+            'category' => 'class_name',
 
             // Class (age/gender class)
             'class' => 'class_name',
@@ -267,6 +268,26 @@ function importResultsFromCSV($filepath, $db, $importId = null) {
             'run2' => 'run_2_time',
             'åk2' => 'run_2_time',
             'ak2' => 'run_2_time',
+
+            // DH split times for run 1 (stored in ss1-ss4)
+            'run1split1' => 'ss1',
+            'run1split2' => 'ss2',
+            'run1split3' => 'ss3',
+            'run1split4' => 'ss4',
+            'split11' => 'ss1',
+            'split12' => 'ss2',
+            'split13' => 'ss3',
+            'split14' => 'ss4',
+
+            // DH split times for run 2 (stored in ss5-ss8)
+            'run2split1' => 'ss5',
+            'run2split2' => 'ss6',
+            'run2split3' => 'ss7',
+            'run2split4' => 'ss8',
+            'split21' => 'ss5',
+            'split22' => 'ss6',
+            'split23' => 'ss7',
+            'split24' => 'ss8',
         ];
 
         return $mappings[$col] ?? $col;
@@ -295,14 +316,7 @@ function importResultsFromCSV($filepath, $db, $importId = null) {
         }
     }
 
-    // If event data is in header (SweCup format), then "category" column actually means "class_name"
-    if ($hasEventInHeader) {
-        for ($i = 0; $i < count($header); $i++) {
-            if ($header[$i] === 'category') {
-                $header[$i] = 'class_name';
-            }
-        }
-    }
+    // Note: "category" is now always mapped directly to "class_name" in the mappings above
 
     // Cache for lookups
     $eventCache = [];
@@ -334,10 +348,19 @@ function importResultsFromCSV($filepath, $db, $importId = null) {
         $data = array_combine($header, $row);
 
         // Validate required fields
-        if (empty($data['event_name'])) {
+        // event_name can be missing if using event mapping from preview
+        global $IMPORT_EVENT_MAPPING;
+        $hasEventMapping = !empty($IMPORT_EVENT_MAPPING);
+
+        if (empty($data['event_name']) && !$hasEventMapping) {
             $stats['skipped']++;
-            $errors[] = "Rad {$lineNumber}: Saknar tävlingsnamn";
+            $errors[] = "Rad {$lineNumber}: Saknar tävlingsnamn och ingen event vald";
             continue;
+        }
+
+        // If no event_name but we have a mapping, use the same key as preview
+        if (empty($data['event_name']) && $hasEventMapping) {
+            $data['event_name'] = 'Välj event för alla resultat';
         }
 
         if (empty($data['firstname']) || empty($data['lastname'])) {

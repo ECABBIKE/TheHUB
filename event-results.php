@@ -243,7 +243,13 @@ include __DIR__ . '/includes/layout-header.php';
                                     <th>Namn</th>
                                     <th>Klubb</th>
                                     <th class="gs-table-col-medium">Startnr</th>
-                                    <th class="gs-table-col-wide">Tid</th>
+                                    <?php if ($isDH): ?>
+                                        <th class="gs-table-col-medium">Åk 1</th>
+                                        <th class="gs-table-col-medium">Åk 2</th>
+                                        <th class="gs-table-col-medium">Bästa</th>
+                                    <?php else: ?>
+                                        <th class="gs-table-col-wide">Tid</th>
+                                    <?php endif; ?>
                                     <th class="gs-table-col-medium">+Tid</th>
                                     <th class="gs-table-col-narrow">Poäng</th>
                                     <th class="gs-table-col-medium">Status</th>
@@ -296,13 +302,56 @@ include __DIR__ . '/includes/layout-header.php';
                                             <?= $result['bib_number'] ? h($result['bib_number']) : '-' ?>
                                         </td>
 
-                                        <td class="gs-table-time-cell">
-                                            <?php if ($result['finish_time'] && $result['status'] === 'finished'): ?>
-                                                <?= h($result['finish_time']) ?>
-                                            <?php else: ?>
-                                                <span class="gs-text-secondary">-</span>
-                                            <?php endif; ?>
-                                        </td>
+                                        <?php if ($isDH): ?>
+                                            <!-- DH: Show both run times -->
+                                            <td class="gs-table-time-cell">
+                                                <?php if ($result['run_1_time']): ?>
+                                                    <?= h($result['run_1_time']) ?>
+                                                <?php else: ?>
+                                                    <span class="gs-text-secondary">-</span>
+                                                <?php endif; ?>
+                                            </td>
+                                            <td class="gs-table-time-cell">
+                                                <?php if ($result['run_2_time']): ?>
+                                                    <?= h($result['run_2_time']) ?>
+                                                <?php else: ?>
+                                                    <span class="gs-text-secondary">-</span>
+                                                <?php endif; ?>
+                                            </td>
+                                            <td class="gs-table-time-cell gs-font-bold">
+                                                <?php
+                                                // Show fastest time (for standard DH) or run 2 (for SweCup)
+                                                $bestTime = null;
+                                                if ($eventFormat === 'DH_SWECUP') {
+                                                    // SweCup: Run 2 is the final
+                                                    $bestTime = $result['run_2_time'];
+                                                } else {
+                                                    // Standard: Fastest of the two runs
+                                                    if ($result['run_1_time'] && $result['run_2_time']) {
+                                                        $bestTime = min($result['run_1_time'], $result['run_2_time']);
+                                                    } elseif ($result['run_1_time']) {
+                                                        $bestTime = $result['run_1_time'];
+                                                    } else {
+                                                        $bestTime = $result['run_2_time'];
+                                                    }
+                                                }
+                                                if ($bestTime && $result['status'] === 'finished'):
+                                                ?>
+                                                    <?= h($bestTime) ?>
+                                                <?php else: ?>
+                                                    <span class="gs-text-secondary">-</span>
+                                                <?php endif; ?>
+                                            </td>
+                                        <?php else: ?>
+                                            <!-- Enduro/Other: Show finish time -->
+                                            <td class="gs-table-time-cell">
+                                                <?php if ($result['finish_time'] && $result['status'] === 'finished'): ?>
+                                                    <?= h($result['finish_time']) ?>
+                                                <?php else: ?>
+                                                    <span class="gs-text-secondary">-</span>
+                                                <?php endif; ?>
+                                            </td>
+                                        <?php endif; ?>
 
                                         <td class="gs-table-center gs-table-mono gs-text-secondary">
                                             <?= $result['time_behind_formatted'] ?? '-' ?>

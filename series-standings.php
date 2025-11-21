@@ -33,7 +33,7 @@ $viewMode = isset($_GET['view']) ? $_GET['view'] : 'class';
 $selectedClass = isset($_GET['class']) ? (int)$_GET['class'] : null;
 $searchName = isset($_GET['search']) ? trim($_GET['search']) : '';
 
-// Get all events in this series (chronological order)
+// Get all events in this series (using series_events junction table)
 $seriesEvents = $db->getAll("
     SELECT
         e.id,
@@ -44,12 +44,13 @@ $seriesEvents = $db->getAll("
         v.name as venue_name,
         v.city as venue_city,
         COUNT(DISTINCT r.id) as result_count
-    FROM events e
+    FROM series_events se
+    JOIN events e ON se.event_id = e.id
     LEFT JOIN venues v ON e.venue_id = v.id
     LEFT JOIN results r ON e.id = r.event_id
-    WHERE e.series_id = ?
+    WHERE se.series_id = ?
     GROUP BY e.id
-    ORDER BY e.date ASC
+    ORDER BY se.sort_order, e.date ASC
 ", [$seriesId]);
 
 // Get all classes that have results in this series
@@ -59,7 +60,8 @@ $activeClasses = $db->getAll("
     FROM classes c
     JOIN results r ON c.id = r.class_id
     JOIN events e ON r.event_id = e.id
-    WHERE e.series_id = ?
+    JOIN series_events se ON e.id = se.event_id
+    WHERE se.series_id = ?
     GROUP BY c.id
     ORDER BY c.sort_order ASC
 ", [$seriesId]);
@@ -85,7 +87,8 @@ if ($selectedClass) {
         LEFT JOIN clubs c ON riders.club_id = c.id
         JOIN results r ON riders.id = r.cyclist_id
         JOIN events e ON r.event_id = e.id
-        WHERE e.series_id = ?
+        JOIN series_events se ON e.id = se.event_id
+        WHERE se.series_id = ?
           AND r.class_id = ?
         ORDER BY riders.lastname, riders.firstname
     ", [$seriesId, $selectedClass]);
