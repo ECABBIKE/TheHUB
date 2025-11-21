@@ -41,7 +41,7 @@ define('EVENTS_PER_PAGE', 20);
 // Version info
 define('APP_VERSION', '2.2.0');
 define('APP_VERSION_NAME', 'Import Fixes & UI Updates');
-define('APP_BUILD', '2025-11-21-013');
+define('APP_BUILD', '2025-11-21-015');
 define('DEPLOYMENT_OFFSET', 119); // Deployments before git repo
 
 try {

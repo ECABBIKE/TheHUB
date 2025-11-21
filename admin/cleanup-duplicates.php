@@ -477,7 +477,7 @@ foreach ($duplicatesByNameRaw as $dup) {
 }
 
 // Find potential duplicates using fuzzy matching
-// Same last name + first name starts with same 3 characters
+// Matches names that share words regardless of which field they're in
 $potentialDuplicates = $db->getAll("
     SELECT
         r1.id as id1,
@@ -494,13 +494,22 @@ $potentialDuplicates = $db->getAll("
         (SELECT COUNT(*) FROM results WHERE cyclist_id = r2.id) as results2
     FROM riders r1
     JOIN riders r2 ON r1.id < r2.id
-    WHERE LOWER(r1.lastname) = LOWER(r2.lastname)
+    WHERE (
+        -- Same lastname OR lastname appears anywhere in other's full name
+        LOWER(r1.lastname) = LOWER(r2.lastname)
+        OR LOWER(CONCAT(r2.firstname, ' ', r2.lastname)) LIKE CONCAT('%', LOWER(r1.lastname), '%')
+        OR LOWER(CONCAT(r1.firstname, ' ', r1.lastname)) LIKE CONCAT('%', LOWER(r2.lastname), '%')
+        -- Or names swapped between fields
+        OR (LOWER(r1.firstname) = LOWER(r2.lastname) AND LOWER(r1.lastname) = LOWER(r2.firstname))
+    )
     AND (
-        -- First 3 chars of firstname match
+        -- And share firstname component
         LEFT(LOWER(r1.firstname), 3) = LEFT(LOWER(r2.firstname), 3)
-        -- Or one firstname contains the other (handles middle names)
         OR LOWER(r1.firstname) LIKE CONCAT('%', LOWER(r2.firstname), '%')
         OR LOWER(r2.firstname) LIKE CONCAT('%', LOWER(r1.firstname), '%')
+        -- Or firstname appears in other's full name
+        OR LOWER(CONCAT(r2.firstname, ' ', r2.lastname)) LIKE CONCAT('%', LOWER(r1.firstname), '%')
+        OR LOWER(CONCAT(r1.firstname, ' ', r1.lastname)) LIKE CONCAT('%', LOWER(r2.firstname), '%')
     )
     AND NOT (
         -- Exclude if both have different UCI-IDs (different people)
@@ -509,12 +518,29 @@ $potentialDuplicates = $db->getAll("
         AND REPLACE(REPLACE(r1.license_number, ' ', ''), '-', '') != REPLACE(REPLACE(r2.license_number, ' ', ''), '-', '')
     )
     AND NOT (
-        -- Exclude exact name matches (already in duplicatesByName)
-        LOWER(r1.firstname) = LOWER(r2.firstname)
+        -- Exclude exact full name matches (already in duplicatesByName)
+        LOWER(r1.firstname) = LOWER(r2.firstname) AND LOWER(r1.lastname) = LOWER(r2.lastname)
     )
     ORDER BY r1.lastname, r1.firstname
-    LIMIT 100
+    LIMIT 200
 ");
+
+// Handle search for riders
+$searchQuery = $_GET['search'] ?? '';
+$searchResults = [];
+if (!empty($searchQuery)) {
+    $searchTerm = '%' . $searchQuery . '%';
+    $searchResults = $db->getAll("
+        SELECT id, firstname, lastname, license_number, birth_year,
+               (SELECT COUNT(*) FROM results WHERE cyclist_id = riders.id) as result_count
+        FROM riders
+        WHERE firstname LIKE ? OR lastname LIKE ?
+           OR CONCAT(firstname, ' ', lastname) LIKE ?
+           OR CONCAT(lastname, ' ', firstname) LIKE ?
+        ORDER BY lastname, firstname
+        LIMIT 50
+    ", [$searchTerm, $searchTerm, $searchTerm, $searchTerm]);
+}
 
 $pageTitle = 'Rensa dubbletter';
 $pageType = 'admin';
@@ -568,6 +594,116 @@ include __DIR__ . '/../includes/layout-header.php';
                 <p class="gs-text-xs gs-text-secondary gs-mt-sm">
                     Tips: Hitta ID i URL:en på förarsidan, t.ex. rider.php?id=<strong>10624</strong>
                 </p>
+            </div>
+        </div>
+
+        <!-- Search and Merge -->
+        <div class="gs-card gs-mb-lg">
+            <div class="gs-card-header">
+                <h2 class="gs-h4 gs-text-primary">
+                    <i data-lucide="search"></i>
+                    Sök och slå ihop
+                </h2>
+            </div>
+            <div class="gs-card-content">
+                <form method="GET" class="gs-mb-md">
+                    <div class="gs-flex gs-gap-md gs-items-end">
+                        <div class="gs-flex-1">
+                            <label class="gs-label">Sök på namn</label>
+                            <input type="text" name="search" class="gs-input" placeholder="t.ex. Andersson" value="<?= h($searchQuery) ?>">
+                        </div>
+                        <button type="submit" class="gs-btn gs-btn-primary">
+                            <i data-lucide="search"></i>
+                            Sök
+                        </button>
+                    </div>
+                </form>
+
+                <?php if (!empty($searchQuery)): ?>
+                    <?php if (empty($searchResults)): ?>
+                        <div class="gs-alert gs-alert-info">
+                            Inga förare hittades för "<?= h($searchQuery) ?>"
+                        </div>
+                    <?php else: ?>
+                        <form method="POST" onsubmit="return confirmMerge()">
+                            <?= csrf_field() ?>
+                            <input type="hidden" name="merge_riders" value="1">
+
+                            <div class="gs-overflow-x-auto gs-mb-md">
+                                <table class="gs-table gs-table-compact">
+                                    <thead>
+                                        <tr>
+                                            <th style="width: 60px;">Behåll</th>
+                                            <th style="width: 60px;">Ta bort</th>
+                                            <th>Namn</th>
+                                            <th>ID</th>
+                                            <th>Licens</th>
+                                            <th>År</th>
+                                            <th>Res.</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <?php foreach ($searchResults as $rider): ?>
+                                            <tr>
+                                                <td>
+                                                    <input type="radio" name="keep_id" value="<?= $rider['id'] ?>">
+                                                </td>
+                                                <td>
+                                                    <input type="checkbox" name="merge_list[]" value="<?= $rider['id'] ?>">
+                                                </td>
+                                                <td>
+                                                    <a href="/rider.php?id=<?= $rider['id'] ?>" target="_blank">
+                                                        <?= h($rider['firstname'] . ' ' . $rider['lastname']) ?>
+                                                    </a>
+                                                </td>
+                                                <td class="gs-text-xs"><?= $rider['id'] ?></td>
+                                                <td class="gs-text-xs"><?= h($rider['license_number'] ?: '-') ?></td>
+                                                <td><?= $rider['birth_year'] ?: '-' ?></td>
+                                                <td><?= $rider['result_count'] ?></td>
+                                            </tr>
+                                        <?php endforeach; ?>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <button type="submit" class="gs-btn gs-btn-warning">
+                                <i data-lucide="git-merge"></i>
+                                Slå ihop valda
+                            </button>
+                            <p class="gs-text-xs gs-text-secondary gs-mt-sm">
+                                Välj EN förare att behålla (radio) och markera de som ska tas bort (checkbox)
+                            </p>
+                        </form>
+
+                        <script>
+                        function confirmMerge() {
+                            const keepId = document.querySelector('input[name="keep_id"]:checked');
+                            const mergeList = document.querySelectorAll('input[name="merge_list[]"]:checked');
+
+                            if (!keepId) {
+                                alert('Välj en förare att behålla (radio-knapp)');
+                                return false;
+                            }
+                            if (mergeList.length === 0) {
+                                alert('Välj minst en förare att ta bort (checkbox)');
+                                return false;
+                            }
+
+                            // Build merge_ids string
+                            const mergeIds = Array.from(mergeList).map(cb => cb.value).join(',');
+
+                            // Add hidden field with merge_ids
+                            const input = document.createElement('input');
+                            input.type = 'hidden';
+                            input.name = 'merge_ids';
+                            input.value = mergeIds;
+                            keepId.form.appendChild(input);
+
+                            return confirm('Slå ihop ' + mergeList.length + ' förare till den valda? Detta kan inte ångras.');
+                        }
+                        </script>
+                    <?php endif; ?>
+                <?php endif; ?>
             </div>
         </div>
 
