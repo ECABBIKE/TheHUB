@@ -400,6 +400,46 @@ foreach ($duplicatesByNameRaw as $dup) {
     $duplicatesByName[] = $dup;
 }
 
+// Find potential duplicates using fuzzy matching
+// Same last name + first name starts with same 3 characters
+$potentialDuplicates = $db->getAll("
+    SELECT
+        r1.id as id1,
+        r1.firstname as firstname1,
+        r1.lastname as lastname1,
+        r1.license_number as license1,
+        r1.birth_year as birth_year1,
+        r2.id as id2,
+        r2.firstname as firstname2,
+        r2.lastname as lastname2,
+        r2.license_number as license2,
+        r2.birth_year as birth_year2,
+        (SELECT COUNT(*) FROM results WHERE cyclist_id = r1.id) as results1,
+        (SELECT COUNT(*) FROM results WHERE cyclist_id = r2.id) as results2
+    FROM riders r1
+    JOIN riders r2 ON r1.id < r2.id
+    WHERE LOWER(r1.lastname) = LOWER(r2.lastname)
+    AND (
+        -- First 3 chars of firstname match
+        LEFT(LOWER(r1.firstname), 3) = LEFT(LOWER(r2.firstname), 3)
+        -- Or one firstname contains the other (handles middle names)
+        OR LOWER(r1.firstname) LIKE CONCAT('%', LOWER(r2.firstname), '%')
+        OR LOWER(r2.firstname) LIKE CONCAT('%', LOWER(r1.firstname), '%')
+    )
+    AND NOT (
+        -- Exclude if both have different UCI-IDs (different people)
+        r1.license_number IS NOT NULL AND r1.license_number != ''
+        AND r2.license_number IS NOT NULL AND r2.license_number != ''
+        AND REPLACE(REPLACE(r1.license_number, ' ', ''), '-', '') != REPLACE(REPLACE(r2.license_number, ' ', ''), '-', '')
+    )
+    AND NOT (
+        -- Exclude exact name matches (already in duplicatesByName)
+        LOWER(r1.firstname) = LOWER(r2.firstname)
+    )
+    ORDER BY r1.lastname, r1.firstname
+    LIMIT 100
+");
+
 $pageTitle = 'Rensa dubbletter';
 $pageType = 'admin';
 include __DIR__ . '/../includes/layout-header.php';
@@ -630,6 +670,92 @@ include __DIR__ . '/../includes/layout-header.php';
                     <?php if (count($duplicatesByName) > 50): ?>
                         <p class="gs-text-sm gs-text-secondary gs-mt-md">
                             Visar 50 av <?= count($duplicatesByName) ?> dubbletter
+                        </p>
+                    <?php endif; ?>
+                <?php endif; ?>
+            </div>
+        </div>
+
+        <!-- Potential Duplicates (Fuzzy Matching) -->
+        <div class="gs-card gs-mb-lg">
+            <div class="gs-card-header">
+                <h2 class="gs-h4 gs-text-warning">
+                    <i data-lucide="search"></i>
+                    Potentiella dubbletter (<?= count($potentialDuplicates) ?>)
+                </h2>
+            </div>
+            <div class="gs-card-content">
+                <p class="gs-text-secondary gs-mb-md">
+                    <i data-lucide="alert-triangle" class="gs-icon-inline"></i>
+                    Dessa har liknande namn men inte exakt matchning. Granska manuellt innan sammanslagning.
+                </p>
+                <?php if (empty($potentialDuplicates)): ?>
+                    <div class="gs-alert gs-alert-success">
+                        <i data-lucide="check"></i>
+                        Inga potentiella dubbletter hittades med fuzzy-matchning!
+                    </div>
+                <?php else: ?>
+                    <div class="gs-overflow-x-auto">
+                        <table class="gs-table gs-table-compact">
+                            <thead>
+                                <tr>
+                                    <th>Förare 1</th>
+                                    <th>ID/År</th>
+                                    <th>Res.</th>
+                                    <th>Förare 2</th>
+                                    <th>ID/År</th>
+                                    <th>Res.</th>
+                                    <th>Åtgärd</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($potentialDuplicates as $dup): ?>
+                                    <tr>
+                                        <td>
+                                            <a href="/rider.php?id=<?= $dup['id1'] ?>" target="_blank">
+                                                <?= h($dup['firstname1'] . ' ' . $dup['lastname1']) ?>
+                                            </a>
+                                        </td>
+                                        <td class="gs-text-xs gs-text-secondary">
+                                            <?= h($dup['license1'] ?: '-') ?><br>
+                                            <?= $dup['birth_year1'] ?: '-' ?>
+                                        </td>
+                                        <td><?= $dup['results1'] ?></td>
+                                        <td>
+                                            <a href="/rider.php?id=<?= $dup['id2'] ?>" target="_blank">
+                                                <?= h($dup['firstname2'] . ' ' . $dup['lastname2']) ?>
+                                            </a>
+                                        </td>
+                                        <td class="gs-text-xs gs-text-secondary">
+                                            <?= h($dup['license2'] ?: '-') ?><br>
+                                            <?= $dup['birth_year2'] ?: '-' ?>
+                                        </td>
+                                        <td><?= $dup['results2'] ?></td>
+                                        <td>
+                                            <?php
+                                            // Determine which rider to keep (more results wins)
+                                            $keepId = $dup['results1'] >= $dup['results2'] ? $dup['id1'] : $dup['id2'];
+                                            $mergeId = $dup['results1'] >= $dup['results2'] ? $dup['id2'] : $dup['id1'];
+                                            ?>
+                                            <form method="POST" class="gs-inline" onsubmit="return confirm('Sammanfoga dessa förare? Föraren med flest resultat behålls.');">
+                                                <?= csrf_field() ?>
+                                                <input type="hidden" name="merge_riders" value="1">
+                                                <input type="hidden" name="keep_id" value="<?= $keepId ?>">
+                                                <input type="hidden" name="merge_ids" value="<?= $mergeId ?>">
+                                                <button type="submit" class="gs-btn gs-btn-xs gs-btn-warning">
+                                                    <i data-lucide="git-merge"></i>
+                                                    Slå ihop
+                                                </button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                    <?php if (count($potentialDuplicates) >= 100): ?>
+                        <p class="gs-text-sm gs-text-secondary gs-mt-md">
+                            Visar max 100 potentiella dubbletter
                         </p>
                     <?php endif; ?>
                 <?php endif; ?>
