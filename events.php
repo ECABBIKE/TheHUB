@@ -41,11 +41,10 @@ $where_sql = !empty($where_clauses) ? 'AND ' . implode(' AND ', $where_clauses) 
 $upcomingEvents = $db->getAll(
     "SELECT e.id, e.name, e.advent_id, e.date as event_date, e.location, e.organizer, e.type as event_type, e.status,
             s.name as series_name, s.id as series_id, s.logo as series_logo,
-            COUNT(r.id) as participant_count,
-            COUNT(DISTINCT res.category_id) as category_count
+            COUNT(DISTINCT r.id) as participant_count,
+            COUNT(DISTINCT r.class_id) as category_count
      FROM events e
      LEFT JOIN results r ON e.id = r.event_id
-     LEFT JOIN results res ON e.id = res.event_id
      LEFT JOIN series s ON e.series_id = s.id
      WHERE e.date >= CURDATE() $where_sql
      GROUP BY e.id
@@ -57,11 +56,10 @@ $upcomingEvents = $db->getAll(
 $completedEvents = $db->getAll(
     "SELECT e.id, e.name, e.advent_id, e.date as event_date, e.location, e.organizer, e.type as event_type, e.status,
             s.name as series_name, s.id as series_id, s.logo as series_logo,
-            COUNT(r.id) as participant_count,
-            COUNT(DISTINCT res.category_id) as category_count
+            COUNT(DISTINCT r.id) as participant_count,
+            COUNT(DISTINCT r.class_id) as category_count
      FROM events e
      LEFT JOIN results r ON e.id = r.event_id
-     LEFT JOIN results res ON e.id = res.event_id
      LEFT JOIN series s ON e.series_id = s.id
      WHERE e.date < CURDATE() $where_sql
      GROUP BY e.id

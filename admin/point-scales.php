@@ -64,6 +64,104 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
     }
+
+    // Import from CSV
+    if ($action === 'import_scale') {
+        $name = trim($_POST['import_name'] ?? '');
+        $discipline = $_POST['import_discipline'] ?? 'ALL';
+        $isDHScale = isset($_POST['import_is_dh']) && $_POST['import_is_dh'] == '1';
+
+        if (empty($name)) {
+            $message = 'Namn är obligatoriskt';
+            $messageType = 'error';
+        } elseif (!isset($_FILES['import_file']) || $_FILES['import_file']['error'] !== UPLOAD_ERR_OK) {
+            $message = 'Ingen fil uppladdad';
+            $messageType = 'error';
+        } else {
+            try {
+                $file = $_FILES['import_file']['tmp_name'];
+                $handle = fopen($file, 'r');
+
+                if (!$handle) {
+                    throw new Exception('Kunde inte öppna filen');
+                }
+
+                // Read header row
+                $header = fgetcsv($handle, 0, ';');
+                if (!$header) {
+                    $header = [];
+                }
+
+                // Normalize header names
+                $headerMap = [];
+                foreach ($header as $idx => $col) {
+                    $col = strtolower(trim($col));
+                    $col = str_replace(['å', 'ä', 'ö'], ['a', 'a', 'o'], $col);
+                    if (in_array($col, ['position', 'plac', 'placering', 'pos'])) {
+                        $headerMap['position'] = $idx;
+                    } elseif (in_array($col, ['poang', 'points', 'p'])) {
+                        $headerMap['points'] = $idx;
+                    } elseif (in_array($col, ['kval', 'run1', 'run_1', 'kval-poang', 'kvalpoang'])) {
+                        $headerMap['run_1'] = $idx;
+                    } elseif (in_array($col, ['final', 'run2', 'run_2', 'final-poang', 'finalpoang'])) {
+                        $headerMap['run_2'] = $idx;
+                    }
+                }
+
+                // Create scale
+                $db->insert('point_scales', [
+                    'name' => $name,
+                    'description' => 'Importerad från CSV',
+                    'discipline' => $discipline,
+                    'active' => 1,
+                    'is_default' => 0
+                ]);
+                $scaleId = $db->lastInsertId();
+
+                // Read data rows
+                $rowCount = 0;
+                $rowNum = 1;
+                while (($row = fgetcsv($handle, 0, ';')) !== false) {
+                    $rowNum++;
+
+                    // Get position (required)
+                    $position = isset($headerMap['position']) ? intval($row[$headerMap['position']] ?? 0) : $rowNum - 1;
+
+                    if ($position <= 0) {
+                        continue;
+                    }
+
+                    // Get points
+                    $points = isset($headerMap['points']) ? floatval(str_replace(',', '.', $row[$headerMap['points']] ?? 0)) : 0;
+                    $run1 = isset($headerMap['run_1']) ? floatval(str_replace(',', '.', $row[$headerMap['run_1']] ?? 0)) : 0;
+                    $run2 = isset($headerMap['run_2']) ? floatval(str_replace(',', '.', $row[$headerMap['run_2']] ?? 0)) : 0;
+
+                    // Skip empty rows
+                    if ($points == 0 && $run1 == 0 && $run2 == 0) {
+                        continue;
+                    }
+
+                    $db->insert('point_scale_values', [
+                        'scale_id' => $scaleId,
+                        'position' => $position,
+                        'points' => $isDHScale ? 0 : $points,
+                        'run_1_points' => $isDHScale ? $run1 : 0,
+                        'run_2_points' => $isDHScale ? $run2 : 0
+                    ]);
+                    $rowCount++;
+                }
+
+                fclose($handle);
+
+                $message = "Importerade poängmall '$name' med $rowCount positioner";
+                $messageType = 'success';
+
+            } catch (Exception $e) {
+                $message = 'Importfel: ' . $e->getMessage();
+                $messageType = 'error';
+            }
+        }
+    }
 }
 
 // Get all point scales with value counts
@@ -91,10 +189,16 @@ include __DIR__ . '/../includes/layout-header.php';
                 <i data-lucide="award"></i>
                 Poängmallar
             </h1>
-            <button type="button" class="gs-btn gs-btn-primary" onclick="openCreateModal()">
-                <i data-lucide="plus"></i>
-                Ny Poängmall
-            </button>
+            <div class="gs-flex gs-gap-sm">
+                <button type="button" class="gs-btn gs-btn-outline" onclick="openImportModal()">
+                    <i data-lucide="upload"></i>
+                    Importera CSV
+                </button>
+                <button type="button" class="gs-btn gs-btn-primary" onclick="openCreateModal()">
+                    <i data-lucide="plus"></i>
+                    Ny Poängmall
+                </button>
+            </div>
         </div>
 
         <?php if ($message): ?>
