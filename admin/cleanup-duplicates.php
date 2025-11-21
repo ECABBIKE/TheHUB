@@ -148,6 +148,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['normalize_all'])) {
     exit;
 }
 
+// Handle assign SWE-IDs to riders without license numbers
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['assign_swe_ids'])) {
+    checkCsrf();
+
+    try {
+        // Find all riders without license numbers
+        $ridersWithoutId = $db->getAll("
+            SELECT id, firstname, lastname
+            FROM riders
+            WHERE license_number IS NULL OR license_number = ''
+            ORDER BY id ASC
+        ");
+
+        $updated = 0;
+        foreach ($ridersWithoutId as $rider) {
+            $sweId = generateSweLicenseNumber($db);
+            $db->update('riders', ['license_number' => $sweId], 'id = ?', [$rider['id']]);
+            $updated++;
+        }
+
+        $_SESSION['cleanup_message'] = "Tilldelade SWE-ID till $updated förare som saknade licensnummer";
+        $_SESSION['cleanup_message_type'] = 'success';
+    } catch (Exception $e) {
+        $_SESSION['cleanup_message'] = "Fel vid tilldelning av SWE-ID: " . $e->getMessage();
+        $_SESSION['cleanup_message_type'] = 'error';
+    }
+
+    header('Location: /admin/cleanup-duplicates.php');
+    exit;
+}
+
 // Handle auto merge ALL duplicates action
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['auto_merge_all'])) {
     checkCsrf();
@@ -305,6 +336,14 @@ if (isset($_SESSION['cleanup_message'])) {
     unset($_SESSION['cleanup_message'], $_SESSION['cleanup_message_type']);
 }
 
+// Count riders without license numbers
+$ridersWithoutId = $db->getRow("
+    SELECT COUNT(*) as count
+    FROM riders
+    WHERE license_number IS NULL OR license_number = ''
+");
+$ridersWithoutIdCount = $ridersWithoutId['count'] ?? 0;
+
 // Find duplicate riders by normalized UCI-ID
 $duplicatesByUci = $db->getAll("
     SELECT
@@ -422,6 +461,13 @@ include __DIR__ . '/../includes/layout-header.php';
                         <button type="submit" name="normalize_all" class="gs-btn gs-btn-primary">
                             <i data-lucide="zap"></i>
                             Normalisera alla UCI-ID
+                        </button>
+                    </form>
+                    <form method="POST" onsubmit="return confirm('Detta tilldelar SWE-ID till <?= $ridersWithoutIdCount ?> förare som saknar licensnummer. Fortsätt?');">
+                        <?= csrf_field() ?>
+                        <button type="submit" name="assign_swe_ids" class="gs-btn gs-btn-success" <?= $ridersWithoutIdCount === 0 ? 'disabled' : '' ?>>
+                            <i data-lucide="id-card"></i>
+                            Tilldela SWE-ID (<?= $ridersWithoutIdCount ?>)
                         </button>
                     </form>
                     <form method="POST" onsubmit="return confirm('Detta kommer automatiskt sammanfoga ALLA dubbletter. Åkaren med flest resultat behålls. Fortsätt?');">
