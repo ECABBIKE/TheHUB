@@ -1,9 +1,25 @@
 <?php
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+
+file_put_contents('/tmp/import_debug.log', "=== Start: " . date('Y-m-d H:i:s') . " ===\n", FILE_APPEND);
+file_put_contents('/tmp/import_debug.log', "REQUEST_METHOD: " . $_SERVER['REQUEST_METHOD'] . "\n", FILE_APPEND);
+file_put_contents('/tmp/import_debug.log', "POST keys: " . implode(', ', array_keys($_POST)) . "\n", FILE_APPEND);
+
 require_once __DIR__ . '/../config.php';
+file_put_contents('/tmp/import_debug.log', "After config.php\n", FILE_APPEND);
+
 require_once __DIR__ . '/../includes/import-history.php';
+file_put_contents('/tmp/import_debug.log', "After import-history.php\n", FILE_APPEND);
+
 require_once __DIR__ . '/../includes/class-calculations.php';
+file_put_contents('/tmp/import_debug.log', "After class-calculations.php\n", FILE_APPEND);
+
 require_once __DIR__ . '/../includes/point-calculations.php';
+file_put_contents('/tmp/import_debug.log', "After point-calculations.php\n", FILE_APPEND);
+
 require_admin();
+file_put_contents('/tmp/import_debug.log', "After require_admin\n", FILE_APPEND);
 
 $db = getDB();
 $current_admin = get_current_admin();
