@@ -45,59 +45,55 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['merge_riders'])) {
             // Get the rider to keep
             $keepRider = $db->getRow("SELECT * FROM riders WHERE id = ?", [$keepId]);
 
-            error_log("Keep rider: " . ($keepRider ? $keepRider['firstname'] . ' ' . $keepRider['lastname'] : 'NOT FOUND'));
+            if (!$keepRider) {
+                throw new Exception("Förare med ID $keepId hittades inte i databasen");
+            }
 
-            if ($keepRider) {
-                // Update all results to point to the kept rider
-                $resultsUpdated = 0;
-                $resultsDeleted = 0;
+            // Update all results to point to the kept rider
+            $resultsUpdated = 0;
+            $resultsDeleted = 0;
 
-                foreach ($mergeIds as $oldId) {
-                    // Get results for this duplicate rider
-                    $oldResults = $db->getAll(
-                        "SELECT id, event_id FROM results WHERE cyclist_id = ?",
-                        [$oldId]
+            foreach ($mergeIds as $oldId) {
+                // Get results for this duplicate rider
+                $oldResults = $db->getAll(
+                    "SELECT id, event_id FROM results WHERE cyclist_id = ?",
+                    [$oldId]
+                );
+
+                foreach ($oldResults as $oldResult) {
+                    // Check if kept rider already has result for this event
+                    $existing = $db->getRow(
+                        "SELECT id FROM results WHERE cyclist_id = ? AND event_id = ?",
+                        [$keepId, $oldResult['event_id']]
                     );
 
-                    foreach ($oldResults as $oldResult) {
-                        // Check if kept rider already has result for this event
-                        $existing = $db->getRow(
-                            "SELECT id FROM results WHERE cyclist_id = ? AND event_id = ?",
-                            [$keepId, $oldResult['event_id']]
-                        );
-
-                        if ($existing) {
-                            // Delete the duplicate result (keep the one from the primary rider)
-                            $db->delete('results', 'id = ?', [$oldResult['id']]);
-                            $resultsDeleted++;
-                        } else {
-                            // Move the result to the kept rider
-                            $db->update('results', ['cyclist_id' => $keepId], 'id = ?', [$oldResult['id']]);
-                            $resultsUpdated++;
-                        }
+                    if ($existing) {
+                        // Delete the duplicate result (keep the one from the primary rider)
+                        $db->delete('results', 'id = ?', [$oldResult['id']]);
+                        $resultsDeleted++;
+                    } else {
+                        // Move the result to the kept rider
+                        $db->update('results', ['cyclist_id' => $keepId], 'id = ?', [$oldResult['id']]);
+                        $resultsUpdated++;
                     }
                 }
-
-                // Delete the duplicate riders
-                foreach ($mergeIds as $mergeId) {
-                    $db->delete('riders', 'id = ?', [$mergeId]);
-                }
-
-                $db->pdo->commit();
-
-                $msg = "Sammanfogade " . count($mergeIds) . " deltagare till " . $keepRider['firstname'] . " " . $keepRider['lastname'];
-                $msg .= " ($resultsUpdated resultat flyttade";
-                if ($resultsDeleted > 0) {
-                    $msg .= ", $resultsDeleted dubbletter borttagna";
-                }
-                $msg .= ")";
-                $_SESSION['cleanup_message'] = $msg;
-                $_SESSION['cleanup_message_type'] = 'success';
-            } else {
-                $db->pdo->rollBack();
-                $_SESSION['cleanup_message'] = "Kunde inte hitta deltagare med ID: " . $keepId;
-                $_SESSION['cleanup_message_type'] = 'error';
             }
+
+            // Delete the duplicate riders
+            foreach ($mergeIds as $mergeId) {
+                $db->delete('riders', 'id = ?', [$mergeId]);
+            }
+
+            $db->pdo->commit();
+
+            $msg = "Sammanfogade " . count($mergeIds) . " deltagare till " . $keepRider['firstname'] . " " . $keepRider['lastname'];
+            $msg .= " ($resultsUpdated resultat flyttade";
+            if ($resultsDeleted > 0) {
+                $msg .= ", $resultsDeleted dubbletter borttagna";
+            }
+            $msg .= ")";
+            $_SESSION['cleanup_message'] = $msg;
+            $_SESSION['cleanup_message_type'] = 'success';
         } catch (Exception $e) {
             if ($db->pdo->inTransaction()) {
                 $db->pdo->rollBack();
@@ -106,7 +102,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['merge_riders'])) {
             $_SESSION['cleanup_message_type'] = 'error';
         }
     } else {
-        $_SESSION['cleanup_message'] = "Sammanfogning kunde inte utföras. Ingen giltig förare vald.";
+        $_SESSION['cleanup_message'] = "Sammanfogning kunde inte utföras. keep_id=$keepId, merge_ids_raw='$mergeIdsRaw', merge_ids_filtered=" . json_encode($mergeIds);
         $_SESSION['cleanup_message_type'] = 'error';
     }
 
