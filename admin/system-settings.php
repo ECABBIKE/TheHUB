@@ -59,10 +59,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'max_age' => !empty($_POST['max_age']) ? (int)$_POST['max_age'] : null,
                     'sort_order' => !empty($_POST['sort_order']) ? (int)$_POST['sort_order'] : 999,
                     'active' => isset($_POST['active']) ? 1 : 0,
-                    'awards_points' => isset($_POST['awards_points']) ? 1 : 0,
-                    'series_eligible' => isset($_POST['series_eligible']) ? 1 : 0,
-                    'ranking_type' => in_array($_POST['ranking_type'] ?? '', ['time', 'name', 'bib']) ? $_POST['ranking_type'] : 'time',
                 ];
+
+                // Add new fields only if migration 015 has been run
+                try {
+                    $db->getRow("SELECT awards_points FROM classes LIMIT 1");
+                    $classData['awards_points'] = isset($_POST['awards_points']) ? 1 : 0;
+                    $classData['series_eligible'] = isset($_POST['series_eligible']) ? 1 : 0;
+                    $classData['ranking_type'] = in_array($_POST['ranking_type'] ?? '', ['time', 'name', 'bib']) ? $_POST['ranking_type'] : 'time';
+                } catch (Exception $e) {
+                    // Columns don't exist yet - skip these fields
+                }
 
                 try {
                     if ($action === 'create') {
@@ -166,16 +173,38 @@ if ($classDisciplineFilter) {
 
 $classWhereClause = $classWhere ? 'WHERE ' . implode(' AND ', $classWhere) : '';
 
-$classes = $db->getAll("
-    SELECT c.id, c.name, c.display_name, c.discipline, c.gender, c.min_age, c.max_age,
-           c.sort_order, c.active, c.awards_points, c.series_eligible, c.ranking_type,
-           COUNT(DISTINCT r.id) as result_count
-    FROM classes c
-    LEFT JOIN results r ON c.id = r.class_id
-    $classWhereClause
-    GROUP BY c.id
-    ORDER BY c.sort_order ASC, c.name ASC
-", $classParams);
+// Check if new class columns exist (migration 015)
+$hasClassSettings = false;
+try {
+    $db->getRow("SELECT awards_points FROM classes LIMIT 1");
+    $hasClassSettings = true;
+} catch (Exception $e) {
+    // Columns don't exist yet
+}
+
+if ($hasClassSettings) {
+    $classes = $db->getAll("
+        SELECT c.id, c.name, c.display_name, c.discipline, c.gender, c.min_age, c.max_age,
+               c.sort_order, c.active, c.awards_points, c.series_eligible, c.ranking_type,
+               COUNT(DISTINCT r.id) as result_count
+        FROM classes c
+        LEFT JOIN results r ON c.id = r.class_id
+        $classWhereClause
+        GROUP BY c.id
+        ORDER BY c.sort_order ASC, c.name ASC
+    ", $classParams);
+} else {
+    $classes = $db->getAll("
+        SELECT c.id, c.name, c.display_name, c.discipline, c.gender, c.min_age, c.max_age,
+               c.sort_order, c.active, 1 as awards_points, 1 as series_eligible, 'time' as ranking_type,
+               COUNT(DISTINCT r.id) as result_count
+        FROM classes c
+        LEFT JOIN results r ON c.id = r.class_id
+        $classWhereClause
+        GROUP BY c.id
+        ORDER BY c.sort_order ASC, c.name ASC
+    ", $classParams);
+}
 
 $classDisciplines = $db->getAll("SELECT DISTINCT discipline FROM classes WHERE discipline IS NOT NULL AND discipline != '' ORDER BY discipline");
 
