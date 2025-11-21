@@ -1,8 +1,6 @@
 <?php
-// Immediate test - if you see this, PHP is executing
-if (isset($_POST['confirm_import'])) {
-    die('DEBUG: Form submitted successfully - PHP is working');
-}
+// Unconditional test - should always show on ANY request
+die('DEBUG: File is being executed - REQUEST_METHOD=' . $_SERVER['REQUEST_METHOD'] . ', POST=' . json_encode($_POST));
 
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
