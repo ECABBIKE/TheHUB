@@ -1,56 +1,27 @@
-name: Deploy to InfinityFree
+name: Deploy to FTP
 
 on:
   push:
-    branches: [ main, master ]
-  workflow_dispatch:
+    branches:
+      - main
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    name: Deploy TheHUB to InfinityFree
-
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Create .env file
-      run: |
-        cat > .env << 'EOF'
-        APP_ENV=production
-        APP_DEBUG=false
-        ADMIN_USERNAME=admin
-        ADMIN_PASSWORD=changeme_immediately!
-        DB_HOST=sql100.infinityfree.com
-        DB_NAME=if0_40400950_THEHUB
-        DB_USER=if0_40400950
-        DB_PASS=qv19oAyv44J2xX
-        DB_CHARSET=utf8mb4
-        SESSION_NAME=thehub_session
-        SESSION_LIFETIME=86400
-        MAX_UPLOAD_SIZE=10485760
-        ALLOWED_EXTENSIONS=xlsx,xls,csv
-        FORCE_HTTPS=false
-        DISPLAY_ERRORS=false
-        EOF
-
-    - name: Deploy via FTP
-      uses: SamKirkland/FTP-Deploy-Action@v4.3.5
-      with:
-        server: ftpupload.net
-        username: ${{ secrets.FTP_USERNAME }}
-        password: ${{ secrets.FTP_PASSWORD }}
-        server-dir: /htdocs/
-        exclude: |
-          **/.git*
-          **/.git*/**
-          **/node_modules/**
-          **/vendor/**
-          **/.DS_Store
-          **/Thumbs.db
-          **/*.backup
-          **/backup/**
-          **/AUDIT_REPORT.md
-          **/SECURITY.md
-          **/README.md
-          **/SESSION_SUMMARY.md
+      - name: Deploy to FTP
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          server-dir: /public_html/
+          exclude: |
+            **/.git*
+            **/.git*/**
+            **/.env
+            **/node_modules/**
+            **/.github/**
