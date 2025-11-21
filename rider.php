@@ -4,6 +4,7 @@ error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
 require_once __DIR__ . '/config.php';
+require_once __DIR__ . '/includes/class-calculations.php';
 
 $db = getDB();
 
@@ -155,12 +156,6 @@ foreach ($results as $result) {
 krsort($resultsByYear); // Sort by year descending
 
 // Calculate age and determine current class
-try {
-    require_once __DIR__ . '/includes/class-calculations.php';
-} catch (Exception $e) {
-    error_log("Error loading class-calculations.php: " . $e->getMessage());
-}
-
 $currentYear = date('Y');
 $age = ($rider['birth_year'] && $rider['birth_year'] > 0)
     ? ($currentYear - $rider['birth_year'])

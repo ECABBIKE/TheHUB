@@ -163,88 +163,62 @@ include __DIR__ . '/includes/layout-header.php';
                 </div>
             </div>
         <?php else: ?>
-            <!-- Events Grid -->
-            <div class="gs-grid gs-grid-cols-1 gs-gap-md">
+            <!-- Events Grid - 2 columns on desktop -->
+            <div class="gs-grid gs-grid-cols-1 gs-md-grid-cols-2 gs-gap-md">
                 <?php foreach ($events as $event): ?>
                     <div class="gs-card gs-card-hover">
-                        <div class="gs-card-content">
-                            <div class="gs-flex gs-justify-between gs-items-start gs-gap-md">
-                                <!-- Event Info -->
-                                <div class="gs-flex-1">
-                                    <!-- Series Logo and Title -->
-                                    <div class="gs-flex gs-items-center gs-gap-md gs-mb-sm">
-                                        <?php if ($event['series_logo']): ?>
-                                            <img src="<?= h($event['series_logo']) ?>"
-                                                 alt="<?= h($event['series_name']) ?>"
-                                                 class="gs-series-logo-sm">
-                                        <?php endif; ?>
-                                        <div>
-                                            <h3 class="gs-h4 gs-text-primary gs-mb-xs">
-                                                <?= h($event['name']) ?>
-                                            </h3>
-                                            <?php if ($event['series_name']): ?>
-                                                <div class="gs-text-sm gs-text-secondary">
-                                                    <?= h($event['series_name']) ?>
-                                                </div>
-                                            <?php endif; ?>
-                                        </div>
-                                    </div>
-
-                                    <!-- Event Meta -->
-                                    <div class="gs-flex gs-gap-md gs-text-sm gs-text-secondary gs-mb-md gs-flex-wrap">
-                                        <span>
-                                            <i data-lucide="calendar" class="gs-icon-14"></i>
-                                            <?= date('d M Y', strtotime($event['date'])) ?>
-                                        </span>
-                                        <?php if ($event['location']): ?>
-                                            <span>
-                                                <i data-lucide="map-pin" class="gs-icon-14"></i>
-                                                <?= h($event['location']) ?>
-                                            </span>
-                                        <?php endif; ?>
-                                    </div>
-
-                                    <!-- Result Statistics -->
-                                    <div class="gs-flex gs-gap-md gs-flex-wrap">
-                                        <div class="gs-flex gs-items-center gs-gap-xs">
-                                            <i data-lucide="users" class="gs-icon-md gs-icon-primary"></i>
-                                            <strong><?= $event['result_count'] ?></strong>
-                                            <span class="gs-text-secondary gs-text-sm">deltagare</span>
-                                        </div>
-
-                                        <?php if ($event['category_count'] > 0): ?>
-                                            <div class="gs-flex gs-items-center gs-gap-xs">
-                                                <i data-lucide="layers" class="gs-icon-md gs-icon-accent"></i>
-                                                <strong><?= $event['category_count'] ?></strong>
-                                                <span class="gs-text-secondary gs-text-sm"><?= $event['category_count'] == 1 ? 'kategori' : 'kategorier' ?></span>
-                                            </div>
-                                        <?php endif; ?>
-
-                                        <?php if ($event['finished_count'] > 0): ?>
-                                            <div class="gs-flex gs-items-center gs-gap-xs">
-                                                <i data-lucide="check-circle" class="gs-icon-md gs-icon-success"></i>
-                                                <strong><?= $event['finished_count'] ?></strong>
-                                                <span class="gs-text-secondary gs-text-sm">slutförda</span>
+                        <div class="gs-card-content gs-p-md">
+                            <!-- Header: Logo + Title + Actions -->
+                            <div class="gs-flex gs-justify-between gs-items-start gs-gap-sm gs-mb-sm">
+                                <div class="gs-flex gs-items-center gs-gap-sm gs-flex-1">
+                                    <?php if ($event['series_logo']): ?>
+                                        <img src="<?= h($event['series_logo']) ?>"
+                                             alt="<?= h($event['series_name']) ?>"
+                                             class="gs-series-logo-sm"
+                                             style="width: 32px; height: 32px;">
+                                    <?php endif; ?>
+                                    <div class="gs-flex-1">
+                                        <h3 class="gs-text-sm gs-text-primary gs-mb-0" style="font-weight: 600; line-height: 1.3;">
+                                            <?= h($event['name']) ?>
+                                        </h3>
+                                        <?php if ($event['series_name']): ?>
+                                            <div class="gs-text-xs gs-text-secondary">
+                                                <?= h($event['series_name']) ?>
                                             </div>
                                         <?php endif; ?>
                                     </div>
                                 </div>
+                                <a href="/event-results.php?id=<?= $event['id'] ?>"
+                                   class="gs-btn gs-btn-primary gs-btn-sm"
+                                   title="Visa resultat">
+                                    <i data-lucide="trophy" class="gs-icon-14"></i>
+                                </a>
+                            </div>
 
-                                <!-- Actions -->
-                                <div class="gs-flex gs-gap-sm gs-flex-col">
-                                    <a href="/event-results.php?id=<?= $event['id'] ?>"
-                                       class="gs-btn gs-btn-primary gs-btn-sm"
-                                       title="Visa resultat">
-                                        <i data-lucide="trophy" class="gs-icon-14"></i>
-                                        Visa resultat
-                                    </a>
-                                    <a href="/event.php?id=<?= $event['id'] ?>"
-                                       class="gs-btn gs-btn-outline gs-btn-sm"
-                                       title="Event-info">
-                                        <i data-lucide="info" class="gs-icon-14"></i>
-                                        Info
-                                    </a>
-                                </div>
+                            <!-- Meta: Date, Location -->
+                            <div class="gs-flex gs-gap-md gs-text-xs gs-text-secondary gs-mb-sm">
+                                <span>
+                                    <i data-lucide="calendar" class="gs-icon-12"></i>
+                                    <?= date('d M Y', strtotime($event['date'])) ?>
+                                </span>
+                                <?php if ($event['location']): ?>
+                                    <span>
+                                        <i data-lucide="map-pin" class="gs-icon-12"></i>
+                                        <?= h($event['location']) ?>
+                                    </span>
+                                <?php endif; ?>
+                            </div>
+
+                            <!-- Stats Row -->
+                            <div class="gs-flex gs-gap-md gs-text-xs">
+                                <span>
+                                    <strong><?= $event['result_count'] ?></strong> deltagare
+                                </span>
+                                <?php if ($event['category_count'] > 0): ?>
+                                    <span>
+                                        <strong><?= $event['category_count'] ?></strong> <?= $event['category_count'] == 1 ? 'klass' : 'klasser' ?>
+                                    </span>
+                                <?php endif; ?>
                             </div>
                         </div>
                     </div>

@@ -281,28 +281,28 @@ include __DIR__ . '/../includes/layout-header.php';
             <!-- Search -->
             <div class="gs-card gs-mb-lg">
                 <div class="gs-card-content">
-                    <form method="GET" class="gs-flex gs-gap-md">
+                    <form method="GET" id="searchForm" class="gs-flex gs-gap-md gs-items-center">
                         <div class="gs-flex-1">
                             <div class="gs-input-group">
                                 <i data-lucide="search"></i>
                                 <input
                                     type="text"
                                     name="search"
+                                    id="searchInput"
                                     class="gs-input"
                                     placeholder="Sök efter klubbnamn..."
                                     value="<?= h($search) ?>"
+                                    autocomplete="off"
                                 >
                             </div>
                         </div>
-                        <button type="submit" class="gs-btn gs-btn-primary">
-                            <i data-lucide="search"></i>
-                            Sök
-                        </button>
                         <?php if ($search): ?>
-                            <a href="/admin/clubs.php" class="gs-btn gs-btn-outline">
+                            <a href="/admin/clubs.php" class="gs-btn gs-btn-outline gs-btn-sm">
+                                <i data-lucide="x"></i>
                                 Rensa
                             </a>
                         <?php endif; ?>
+                        <span id="searchStatus" class="gs-text-xs gs-text-secondary" style="display: none;">Söker...</span>
                     </form>
                 </div>
             </div>
@@ -317,7 +317,13 @@ include __DIR__ . '/../includes/layout-header.php';
                 <div class="gs-stat-card">
                     <i data-lucide="check-circle" class="gs-icon-lg gs-text-success gs-mb-md"></i>
                     <div class="gs-stat-number">
-                        <?= count(array_filter($clubs, fn($c) => $c['active'] == 1)) ?>
+                        <?php
+                        $activeCount = 0;
+                        foreach ($clubs as $c) {
+                            if ($c['active'] == 1) $activeCount++;
+                        }
+                        echo $activeCount;
+                        ?>
                     </div>
                     <div class="gs-stat-label">Aktiva</div>
                 </div>
@@ -513,6 +519,49 @@ include __DIR__ . '/../includes/layout-header.php';
                     closeClubModal();
                 }
             });
+
+            // Live search with debouncing
+            (function() {
+                const searchInput = document.getElementById('searchInput');
+                const searchForm = document.getElementById('searchForm');
+                const searchStatus = document.getElementById('searchStatus');
+                let debounceTimer;
+                let lastSearch = searchInput.value;
+
+                searchInput.addEventListener('input', function() {
+                    const query = this.value.trim();
+
+                    // Clear previous timer
+                    clearTimeout(debounceTimer);
+
+                    // Don't search if query hasn't changed
+                    if (query === lastSearch) return;
+
+                    // Show status indicator
+                    if (query.length >= 2 || query.length === 0) {
+                        searchStatus.style.display = 'inline';
+                    }
+
+                    // Debounce: wait 300ms after user stops typing
+                    debounceTimer = setTimeout(function() {
+                        // Only search if at least 2 characters or empty (to clear)
+                        if (query.length >= 2 || query.length === 0) {
+                            lastSearch = query;
+                            searchForm.submit();
+                        } else {
+                            searchStatus.style.display = 'none';
+                        }
+                    }, 300);
+                });
+
+                // Also handle Enter key
+                searchInput.addEventListener('keydown', function(e) {
+                    if (e.key === 'Enter') {
+                        clearTimeout(debounceTimer);
+                        searchForm.submit();
+                    }
+                });
+            })();
         </script>
 
 <?php include __DIR__ . '/../includes/layout-footer.php'; ?>
