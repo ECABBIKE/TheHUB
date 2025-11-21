@@ -623,20 +623,17 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
 
             // Check if result already exists
             $existingResult = $db->getRow(
-                "SELECT id FROM results WHERE event_id = ? AND rider_id = ?",
+                "SELECT id FROM results WHERE event_id = ? AND cyclist_id = ?",
                 [$eventId, $riderId]
             );
 
             $resultData = [
                 'event_id' => $eventId,
-                'rider_id' => $riderId,
-                'club_id' => $clubId,
+                'cyclist_id' => $riderId,
                 'class_id' => $classId,
                 'position' => !empty($data['position']) ? (int)$data['position'] : null,
                 'finish_time' => $finishTime,
                 'status' => $status,
-                'run_1_time' => $data['run_1_time'] ?? null,
-                'run_2_time' => $data['run_2_time'] ?? null,
                 'ss1' => $data['ss1'] ?? null,
                 'ss2' => $data['ss2'] ?? null,
                 'ss3' => $data['ss3'] ?? null,
