@@ -180,9 +180,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $messageType = 'error';
                 } else {
                     // Delete scale values first
-                    $db->query("DELETE FROM point_scale_values WHERE scale_id = ?", [$scaleId]);
+                    $db->delete('point_scale_values', 'scale_id = ?', [$scaleId]);
                     // Then delete the scale
-                    $db->query("DELETE FROM point_scales WHERE id = ?", [$scaleId]);
+                    $db->delete('point_scales', 'id = ?', [$scaleId]);
 
                     $message = 'Poängmall borttagen';
                     $messageType = 'success';
