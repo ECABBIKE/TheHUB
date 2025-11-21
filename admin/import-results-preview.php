@@ -1,4 +1,7 @@
 <?php
+// Write to log file immediately
+file_put_contents(__DIR__ . '/../import_debug.txt', date('Y-m-d H:i:s') . " - File accessed, METHOD=" . $_SERVER['REQUEST_METHOD'] . "\n", FILE_APPEND);
+
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
