@@ -44,23 +44,50 @@ if ($rider['birth_year']) {
 $licenseStatus = checkLicense($rider);
 
 // Get rider's series standings (individual points)
+// Support both old (events.series_id) and new (series_events) connections
 $seriesStats = $db->getAll("
     SELECT
-        s.id as series_id,
-        s.name as series_name,
-        s.year,
-        SUM(r.points) as total_points,
-        COUNT(DISTINCT r.event_id) as events_count
-    FROM results r
-    JOIN events e ON r.event_id = e.id
-    JOIN series_events se ON e.id = se.event_id
-    JOIN series s ON se.series_id = s.id
-    WHERE r.cyclist_id = ?
-    AND r.status = 'finished'
-    AND r.points > 0
-    GROUP BY s.id
-    ORDER BY s.year DESC, total_points DESC
-", [$rider['id']]);
+        series_id,
+        series_name,
+        year,
+        SUM(points) as total_points,
+        COUNT(DISTINCT event_id) as events_count
+    FROM (
+        -- Via series_events junction table
+        SELECT
+            s.id as series_id,
+            s.name as series_name,
+            s.year,
+            r.points,
+            r.event_id
+        FROM results r
+        JOIN events e ON r.event_id = e.id
+        JOIN series_events se ON e.id = se.event_id
+        JOIN series s ON se.series_id = s.id
+        WHERE r.cyclist_id = ?
+        AND r.status = 'finished'
+        AND r.points > 0
+
+        UNION
+
+        -- Via direct events.series_id
+        SELECT
+            s.id as series_id,
+            s.name as series_name,
+            s.year,
+            r.points,
+            r.event_id
+        FROM results r
+        JOIN events e ON r.event_id = e.id
+        JOIN series s ON e.series_id = s.id
+        WHERE r.cyclist_id = ?
+        AND r.status = 'finished'
+        AND r.points > 0
+        AND e.series_id IS NOT NULL
+    ) combined
+    GROUP BY series_id
+    ORDER BY year DESC, total_points DESC
+", [$rider['id'], $rider['id']]);
 
 // Get rider's club points contribution
 $clubPointsStats = [];
