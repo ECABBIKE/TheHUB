@@ -4,6 +4,7 @@ require_once __DIR__ . '/../includes/import-history.php';
 require_once __DIR__ . '/../includes/class-calculations.php';
 require_once __DIR__ . '/../includes/point-calculations.php';
 require_once __DIR__ . '/../includes/import-functions.php';
+require_once __DIR__ . '/../includes/club-points-system.php';
 require_admin();
 
 $db = getDB();
@@ -153,6 +154,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_import'])) {
         $classesFixed = $recalcStats['classes_fixed'] ?? 0;
         $pointsCalculated = $recalcStats['points_updated'] ?? 0;
 
+        // Calculate club points for this event and refresh series cache
+        $clubPointsInfo = "";
+        if (clubPointsTablesExist($db)) {
+            $clubStats = calculateClubPointsForEvent($db, $selectedEventId);
+            if ($clubStats['clubs_processed'] > 0) {
+                // Get series ID for this event and refresh cache
+                $eventForCache = $db->getRow("SELECT series_id FROM events WHERE id = ?", [$selectedEventId]);
+                if ($eventForCache && $eventForCache['series_id']) {
+                    refreshClubStandingsCache($db, $eventForCache['series_id']);
+                }
+                $clubPointsInfo = " Klubbpoäng: {$clubStats['clubs_processed']} klubbar.";
+            }
+        }
+
         // Clean up
         @unlink($_SESSION['import_preview_file']);
         unset($_SESSION['import_preview_file']);
@@ -209,7 +224,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_import'])) {
             $unchangedInfo = " ({$stats['skipped']} oförändrade)";
         }
 
-        set_flash('success', "Import klar! {$stats['success']} nya, {$stats['updated']} uppdaterade{$unchangedInfo} av {$stats['total']} resultat.{$matchingInfo}{$changelogInfo}{$recalcMsg}");
+        set_flash('success', "Import klar! {$stats['success']} nya, {$stats['updated']} uppdaterade{$unchangedInfo} av {$stats['total']} resultat.{$matchingInfo}{$changelogInfo}{$recalcMsg}{$clubPointsInfo}");
         header('Location: /admin/event-edit.php?id=' . $selectedEventId . '&tab=results');
         exit;
 

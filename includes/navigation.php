@@ -51,6 +51,9 @@ $is_admin = isLoggedIn();
             <li><a href="/admin/clubs.php" class="<?= $current_page == 'clubs.php' ? 'active' : '' ?>">
                 <i data-lucide="building"></i> Klubbar
             </a></li>
+            <li><a href="/admin/club-points.php" class="<?= $current_page == 'club-points.php' || $current_page == 'club-points-detail.php' ? 'active' : '' ?>">
+                <i data-lucide="trophy"></i> Klubbpoäng
+            </a></li>
             <li><a href="/admin/venues.php" class="<?= $current_page == 'venues.php' ? 'active' : '' ?>">
                 <i data-lucide="mountain"></i> Venues
             </a></li>
