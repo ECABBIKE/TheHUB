@@ -468,23 +468,32 @@ include __DIR__ . '/includes/layout-header.php';
     user-select: none;
 }
 
-/* Split time color coding */
-.split-fastest {
-    background: #dcfce7 !important;
-    color: #166534 !important;
-    font-weight: 600;
-}
-.split-fast {
-    background: #fef9c3 !important;
-    color: #854d0e !important;
-}
-.split-slow {
-    background: #fed7aa !important;
-    color: #9a3412 !important;
-}
-.split-slowest {
-    background: #fecaca !important;
-    color: #991b1b !important;
+/* Split time color coding - 10 level gradient green to red */
+.split-1 { background: #15803d !important; color: #fff !important; font-weight: 600; }
+.split-2 { background: #22c55e !important; color: #fff !important; }
+.split-3 { background: #86efac !important; color: #166534 !important; }
+.split-4 { background: #d9f99d !important; color: #3f6212 !important; }
+.split-5 { background: #fef08a !important; color: #854d0e !important; }
+.split-6 { background: #fde047 !important; color: #854d0e !important; }
+.split-7 { background: #fdba74 !important; color: #9a3412 !important; }
+.split-8 { background: #fb923c !important; color: #fff !important; }
+.split-9 { background: #f87171 !important; color: #fff !important; }
+.split-10 { background: #dc2626 !important; color: #fff !important; }
+
+/* Hide colors when disabled */
+.no-split-colors .split-1,
+.no-split-colors .split-2,
+.no-split-colors .split-3,
+.no-split-colors .split-4,
+.no-split-colors .split-5,
+.no-split-colors .split-6,
+.no-split-colors .split-7,
+.no-split-colors .split-8,
+.no-split-colors .split-9,
+.no-split-colors .split-10 {
+    background: transparent !important;
+    color: inherit !important;
+    font-weight: normal !important;
 }
 
 /* Sortable column headers */
@@ -872,22 +881,19 @@ include __DIR__ . '/includes/layout-header.php';
                                             <?php foreach ($classSplitCols as $ssNum):
                                                 $splitClass = '';
                                                 $splitTime = $result['ss' . $ssNum] ?? '';
+                                                // Only apply colors to finished riders
                                                 if (!empty($splitTime) && $result['status'] === 'finished' && isset($groupData['split_stats'][$ssNum])) {
                                                     $stats = $groupData['split_stats'][$ssNum];
                                                     $timeSeconds = timeToSeconds($splitTime);
                                                     if ($stats['range'] > 0) {
+                                                        // Calculate position in range (0 = fastest, 1 = slowest)
                                                         $position = ($timeSeconds - $stats['min']) / $stats['range'];
-                                                        if ($position <= 0.1) {
-                                                            $splitClass = 'split-fastest';
-                                                        } elseif ($position <= 0.35) {
-                                                            $splitClass = 'split-fast';
-                                                        } elseif ($position >= 0.9) {
-                                                            $splitClass = 'split-slowest';
-                                                        } elseif ($position >= 0.65) {
-                                                            $splitClass = 'split-slow';
-                                                        }
+                                                        // Map to 10 levels: split-1 (fastest) to split-10 (slowest)
+                                                        $level = min(10, max(1, ceil($position * 10)));
+                                                        if ($level == 0) $level = 1; // Ensure minimum level 1
+                                                        $splitClass = 'split-' . $level;
                                                     } elseif ($timeSeconds == $stats['min']) {
-                                                        $splitClass = 'split-fastest';
+                                                        $splitClass = 'split-1'; // Fastest
                                                     }
                                                 }
                                             ?>
@@ -1313,15 +1319,13 @@ function toggleAllSplitTimes(show) {
 }
 
 function toggleSplitColors(show) {
-    // Toggle color coding on split time cells
-    const cells = document.querySelectorAll('.split-fastest, .split-fast, .split-slow, .split-slowest');
-    cells.forEach(cell => {
+    // Toggle color coding by adding/removing no-split-colors class on tables
+    const tables = document.querySelectorAll('.results-table');
+    tables.forEach(table => {
         if (show) {
-            cell.style.removeProperty('background');
-            cell.style.removeProperty('color');
+            table.classList.remove('no-split-colors');
         } else {
-            cell.style.background = 'transparent';
-            cell.style.color = 'inherit';
+            table.classList.add('no-split-colors');
         }
     });
 }
