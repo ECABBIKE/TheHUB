@@ -205,14 +205,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     continue;
                 }
 
-                // Generate external_id if empty
+                // Generate advent_id if empty
                 if (empty($externalId)) {
                     $externalId = 'EVT-' . date('Ymd', $parsedDate) . '-' . substr(md5($name . $date), 0, 6);
                 }
 
-                // Check if event already exists (by external_id or name+date)
+                // Check if event already exists (by advent_id or name+date)
                 $existing = $db->getRow(
-                    "SELECT id FROM events WHERE external_id = ? OR (name = ? AND date = ?)",
+                    "SELECT id FROM events WHERE advent_id = ? OR (name = ? AND date = ?)",
                     [$externalId, $name, date('Y-m-d', $parsedDate)]
                 );
 
@@ -243,7 +243,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 try {
                     $db->insert('events', [
                         'name' => $name,
-                        'external_id' => $externalId,
+                        'advent_id' => $externalId,
                         'date' => date('Y-m-d', $parsedDate),
                         'location' => $location ?: null,
                         'venue_id' => $venueId,
