@@ -246,6 +246,7 @@ $debugTools = [
             ['name' => 'Omräkna Resultat', 'url' => '/admin/recalculate-results.php', 'desc' => 'Tilldela poängmall och omräkna poäng'],
             ['name' => 'Rensa Eventresultat', 'url' => '/admin/clear-event-results.php', 'desc' => 'Ta bort resultat för specifikt event'],
             ['name' => 'Rensa Dubbletter', 'url' => '/admin/cleanup-duplicates.php', 'desc' => 'Hantera dubbletter och sammanfoga deltagare'],
+            ['name' => 'Rensa Klubbdubbletter', 'url' => '/admin/cleanup-clubs.php', 'desc' => 'Slå samman dubblettklubbar från import'],
             ['name' => 'Sök License Number', 'url' => '/admin/search-uci-id.php', 'desc' => 'Slå upp license numbers för åkare innan import'],
             ['name' => 'Berika CSV med License', 'url' => '/admin/enrich-uci-id.php', 'desc' => 'Berika CSV med license numbers innan import'],
             ['name' => 'Flytta Klassresultat', 'url' => '/admin/move-class-results.php', 'desc' => 'Flytta resultat mellan klasser'],
