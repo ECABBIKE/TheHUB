@@ -11,12 +11,6 @@ $is_admin = isLoggedIn();
     <div class="gs-menu-section gs-main-menu">
         <h3 class="gs-menu-title">TheHUB</h3>
         <ul class="gs-menu">
-            <li><a href="/index.php" class="<?= $current_page == 'index.php' ? 'active' : '' ?>">
-                <i data-lucide="home"></i> Hem
-            </a></li>
-            <li><a href="/riders.php" class="<?= $current_page == 'riders.php' && strpos($_SERVER['PHP_SELF'], '/admin/') === false ? 'active' : '' ?>">
-                <i data-lucide="users"></i> Deltagare
-            </a></li>
             <li><a href="/events.php" class="<?= $current_page == 'events.php' && strpos($_SERVER['PHP_SELF'], '/admin/') === false ? 'active' : '' ?>">
                 <i data-lucide="calendar"></i> Kalender
             </a></li>
@@ -25,6 +19,12 @@ $is_admin = isLoggedIn();
             </a></li>
             <li><a href="/series.php" class="<?= $current_page == 'series.php' && strpos($_SERVER['PHP_SELF'], '/admin/') === false ? 'active' : '' ?>">
                 <i data-lucide="award"></i> Serier
+            </a></li>
+            <li><a href="/riders.php" class="<?= $current_page == 'riders.php' && strpos($_SERVER['PHP_SELF'], '/admin/') === false ? 'active' : '' ?>">
+                <i data-lucide="users"></i> Deltagare
+            </a></li>
+            <li><a href="/club.php" class="<?= $current_page == 'club.php' ? 'active' : '' ?>">
+                <i data-lucide="building"></i> Klubbar
             </a></li>
         </ul>
     </div>
