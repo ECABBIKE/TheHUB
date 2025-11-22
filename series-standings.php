@@ -291,11 +291,14 @@ include __DIR__ . '/includes/layout-header.php';
     .gs-card-table-container {
         overflow-x: auto;
         -webkit-overflow-scrolling: touch;
+        max-width: 100%;
     }
 
     .standings-table {
         font-size: 0.8125rem;
         border-collapse: collapse;
+        width: max-content;
+        min-width: 100%;
     }
 
     .standings-table th,
@@ -305,7 +308,7 @@ include __DIR__ . '/includes/layout-header.php';
     }
 
     .event-col {
-        min-width: 40px;
+        min-width: 38px;
         text-align: center !important;
     }
 
@@ -315,27 +318,54 @@ include __DIR__ . '/includes/layout-header.php';
         text-align: center !important;
     }
 
+    .mobile-toggle {
+        display: none;
+    }
+
     @media (max-width: 768px) {
+        .mobile-toggle {
+            display: inline-flex;
+        }
+
         .standings-table {
-            font-size: 0.75rem;
+            font-size: 0.6875rem;
         }
 
         .standings-table th,
         .standings-table td {
-            padding: 0.25rem 0.375rem;
+            padding: 0.2rem 0.25rem;
         }
 
         .event-col {
-            min-width: 32px;
+            min-width: 28px;
         }
 
-        /* Hide club on mobile */
+        /* Hide columns on mobile by default */
         .standings-sticky-th-club,
-        .standings-sticky-td-club {
+        .standings-sticky-td-club,
+        .event-col {
             display: none;
+        }
+
+        /* When expanded, show event columns */
+        .standings-expanded .event-col {
+            display: table-cell;
+        }
+
+        .standings-expanded .standings-table {
+            width: max-content;
         }
     }
 </style>
+
+<script>
+function toggleStandingsDetails(btn) {
+    const card = btn.closest('.gs-card');
+    card.classList.toggle('standings-expanded');
+    const isExpanded = card.classList.contains('standings-expanded');
+    btn.textContent = isExpanded ? 'Dölj poäng' : 'Visa poäng';
+}
+</script>
 
 <main class="gs-main-content">
     <div class="gs-container">
@@ -500,12 +530,12 @@ include __DIR__ . '/includes/layout-header.php';
 
             <?php foreach ($standingsByClass as $classData): ?>
                 <div class="gs-card gs-mb-lg">
-                    <div class="gs-card-header">
-                        <h3 class="gs-h4">
-                            <i data-lucide="trophy"></i>
+                    <div class="gs-card-header gs-flex gs-justify-between gs-items-center">
+                        <h3 class="gs-h4 gs-mb-0">
                             <?= h($classData['class_display_name']) ?>
-                            <span class="gs-badge gs-badge-secondary gs-ml-sm"><?= count($classData['riders']) ?> deltagare</span>
+                            <span class="gs-badge gs-badge-secondary gs-badge-sm"><?= count($classData['riders']) ?></span>
                         </h3>
+                        <button type="button" class="gs-btn gs-btn-xs gs-btn-outline mobile-toggle" onclick="toggleStandingsDetails(this)">Visa poäng</button>
                     </div>
                     <div class="gs-card-table-container">
                         <table class="gs-table standings-table">
@@ -589,17 +619,17 @@ include __DIR__ . '/includes/layout-header.php';
             }
             ?>
             <div class="gs-card">
-                <div class="gs-card-header">
-                    <h3 class="gs-h4">
-                        <i data-lucide="trophy"></i>
+                <div class="gs-card-header gs-flex gs-justify-between gs-items-center">
+                    <h3 class="gs-h4 gs-mb-0">
                         <?= h($selectedClassDisplay) ?><?= $selectedClassName ? ' - ' . h($selectedClassName) : '' ?>
                     </h3>
-                    <?php if ($searchName): ?>
-                        <p class="gs-text-sm gs-text-secondary">
-                            Sök: <strong><?= h($searchName) ?></strong>
-                        </p>
-                    <?php endif; ?>
+                    <button type="button" class="gs-btn gs-btn-xs gs-btn-outline mobile-toggle" onclick="toggleStandingsDetails(this)">Visa poäng</button>
                 </div>
+                <?php if ($searchName): ?>
+                    <p class="gs-text-sm gs-text-secondary gs-px-md">
+                        Sök: <strong><?= h($searchName) ?></strong>
+                    </p>
+                <?php endif; ?>
                 <div class="gs-card-table-container">
                     <table class="gs-table standings-table">
                         <thead>
