@@ -4,11 +4,12 @@
  * Adds event_format and DH columns
  */
 
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
-
-// Load config to get correct database credentials
+// Load config and require admin authentication
 require_once __DIR__ . '/../config.php';
+require_admin();
+
+error_reporting(E_ALL);
+ini_set('display_errors', 0); // Don't display errors in production
 
 $pdo = null;
 try {

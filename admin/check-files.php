@@ -2,8 +2,11 @@
 /**
  * Check which files exist on the server
  */
+require_once __DIR__ . '/../config.php';
+require_admin();
+
 error_reporting(E_ALL);
-ini_set('display_errors', 1);
+ini_set('display_errors', 0); // Don't display errors in production
 
 echo "<h1>File Existence Check</h1>";
 echo "<p>Checking which files are present on the server...</p>";

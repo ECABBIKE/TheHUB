@@ -807,13 +807,15 @@ include __DIR__ . '/../includes/layout-header.php';
                             <tbody>
                                 <?php foreach ($duplicatesByUci as $dup): ?>
                                     <?php
-                                    $ids = explode(',', $dup['ids']);
+                                    $ids = array_map('intval', explode(',', $dup['ids']));
+                                    $placeholders = implode(',', array_fill(0, count($ids), '?'));
                                     $riders = $db->getAll(
                                         "SELECT id, firstname, lastname, license_number, birth_year, club_id,
                                          (SELECT name FROM clubs WHERE id = riders.club_id) as club_name,
                                          (SELECT COUNT(*) FROM results WHERE cyclist_id = riders.id) as results_count
-                                         FROM riders WHERE id IN (" . implode(',', $ids) . ")
-                                         ORDER BY FIELD(id, " . implode(',', $ids) . ")"
+                                         FROM riders WHERE id IN ($placeholders)
+                                         ORDER BY FIELD(id, $placeholders)",
+                                        array_merge($ids, $ids)
                                     );
                                     ?>
                                     <tr>
@@ -884,13 +886,15 @@ include __DIR__ . '/../includes/layout-header.php';
                             <tbody>
                                 <?php foreach (array_slice($duplicatesByName, 0, 50) as $dup): ?>
                                     <?php
-                                    $ids = explode(',', $dup['ids']);
+                                    $ids = array_map('intval', explode(',', $dup['ids']));
+                                    $placeholders = implode(',', array_fill(0, count($ids), '?'));
                                     $riders = $db->getAll(
                                         "SELECT id, firstname, lastname, license_number, birth_year, club_id,
                                          (SELECT name FROM clubs WHERE id = riders.club_id) as club_name,
                                          (SELECT COUNT(*) FROM results WHERE cyclist_id = riders.id) as results_count
-                                         FROM riders WHERE id IN (" . implode(',', $ids) . ")
-                                         ORDER BY FIELD(id, " . implode(',', $ids) . ")"
+                                         FROM riders WHERE id IN ($placeholders)
+                                         ORDER BY FIELD(id, $placeholders)",
+                                        array_merge($ids, $ids)
                                     );
                                     ?>
                                     <tr>

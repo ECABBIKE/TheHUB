@@ -78,15 +78,9 @@ try {
         }
 
         echo "<p class='success'>✓ Column 'format' verified in series table</p>";
-        echo "<pre>";
-        print_r($verifyColumns);
-        echo "</pre>";
 
     } else {
         echo "<p class='info'>ℹ Column 'format' already exists in series table</p>";
-        echo "<pre>";
-        print_r($columns);
-        echo "</pre>";
     }
 
     echo "<hr>";
