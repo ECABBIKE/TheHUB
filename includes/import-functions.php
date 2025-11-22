@@ -28,8 +28,9 @@ function isFieldMappingRow($row) {
 
 /**
  * Import results from CSV file with event mapping
+ * Returns stage names mapping for automatic configuration
  */
-function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMapping = [], $forceClassId = null, $stageNames = []) {
+function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMapping = [], $forceClassId = null) {
     $stats = [
         'total' => 0,
         'success' => 0,
@@ -52,6 +53,8 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
     ];
 
     $errors = [];
+    $stageNamesMapping = []; // Will store original header names for split times
+    $changelog = []; // Track what changed during updates
 
     // Set global event mapping for use in import
     global $IMPORT_EVENT_MAPPING;
@@ -76,12 +79,41 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
 
     // Normalize header - accept multiple variants
     $originalHeaders = $header;
-    $header = array_map(function($col) use ($stageNames) {
+
+    // First pass: identify split time columns (SS1, SS2, SS3, SS3-1, etc.) and map them in order
+    $splitTimeColumns = [];
+    $splitTimeIndex = 1;
+
+    foreach ($header as $index => $col) {
+        $originalCol = trim($col);
+        $normalizedCol = mb_strtolower($originalCol, 'UTF-8');
+        $normalizedCol = str_replace([' ', '-', '_'], '', $normalizedCol);
+
+        // Check if this looks like a split time column (ss followed by numbers)
+        if (preg_match('/^ss\d+/', $normalizedCol)) {
+            $splitTimeColumns[$index] = [
+                'original' => $originalCol,
+                'mapped' => 'ss' . $splitTimeIndex
+            ];
+            $stageNamesMapping[$splitTimeIndex] = $originalCol;
+            $splitTimeIndex++;
+        }
+    }
+
+    $header = array_map(function($col) use ($splitTimeColumns, &$stageNamesMapping) {
+        static $colIndex = 0;
+        $currentIndex = $colIndex++;
+
         $col = mb_strtolower(trim($col), 'UTF-8');
 
         // Skip empty columns (give them unique names to avoid conflicts)
         if (empty($col)) {
             return 'empty_' . uniqid();
+        }
+
+        // Check if this is a split time column we already mapped
+        if (isset($splitTimeColumns[$currentIndex])) {
+            return $splitTimeColumns[$currentIndex]['mapped'];
         }
 
         // Remove spaces, hyphens, underscores for comparison
@@ -211,24 +243,8 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
             'split24' => 'ss8',
         ];
 
-        // Check static mappings first
-        if (isset($mappings[$col])) {
-            return $mappings[$col];
-        }
-
-        // Check custom stage name mappings (e.g., "ss31" from "SS3-1" -> ss4)
-        // stageNames format: {"4":"SS3-1"} means column 4 displays as "SS3-1"
-        // We need reverse: "ss31" -> "ss4"
-        if (!empty($stageNames)) {
-            foreach ($stageNames as $num => $name) {
-                $normalizedName = strtolower(str_replace([' ', '-', '_'], '', $name));
-                if ($col === $normalizedName) {
-                    return 'ss' . $num;
-                }
-            }
-        }
-
-        return $col;
+        // Check static mappings
+        return $mappings[$col] ?? $col;
     }, $header);
 
     // Cache for lookups
@@ -434,6 +450,18 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
             $classId = $forceClassId;
             $className = trim($data['class_name'] ?? '');
             if (!$classId && !empty($className)) {
+                // Normalize class names for common variants
+                $classNameMappings = [
+                    'tävling damer' => 'Damer Elit',
+                    'tävling herrar' => 'Herrar Elit',
+                    'tavling damer' => 'Damer Elit',
+                    'tavling herrar' => 'Herrar Elit',
+                ];
+                $normalizedClassName = strtolower($className);
+                if (isset($classNameMappings[$normalizedClassName])) {
+                    $className = $classNameMappings[$normalizedClassName];
+                }
+
                 if (!isset($classCache[$className])) {
                     // Check if we have a mapping from the preview page
                     global $IMPORT_CLASS_MAPPINGS;
@@ -582,10 +610,32 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
             if ($existingResult) {
                 // Update existing
                 $oldData = $db->getRow("SELECT * FROM results WHERE id = ?", [$existingResult['id']]);
-                $db->update('results', $resultData, 'id = ?', [$existingResult['id']]);
-                $stats['updated']++;
-                if ($importId) {
-                    trackImportRecord($db, $importId, 'result', $existingResult['id'], 'updated', $oldData);
+
+                // Track what changed
+                $changes = [];
+                foreach ($resultData as $field => $newValue) {
+                    $oldValue = $oldData[$field] ?? null;
+                    // Normalize for comparison (treat empty string as null)
+                    $oldNorm = ($oldValue === '' || $oldValue === null) ? null : $oldValue;
+                    $newNorm = ($newValue === '' || $newValue === null) ? null : $newValue;
+                    if ($oldNorm !== $newNorm) {
+                        $changes[$field] = ['old' => $oldValue, 'new' => $newValue];
+                    }
+                }
+
+                if (!empty($changes)) {
+                    $db->update('results', $resultData, 'id = ?', [$existingResult['id']]);
+                    $stats['updated']++;
+                    $changelog[] = [
+                        'rider' => $data['firstname'] . ' ' . $data['lastname'],
+                        'changes' => $changes
+                    ];
+                    if ($importId) {
+                        trackImportRecord($db, $importId, 'result', $existingResult['id'], 'updated', $oldData);
+                    }
+                } else {
+                    // No changes, count as skipped
+                    $stats['skipped']++;
                 }
             } else {
                 // Insert new
@@ -607,6 +657,8 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
     return [
         'stats' => $stats,
         'matching' => $matching_stats,
-        'errors' => $errors
+        'errors' => $errors,
+        'stage_names' => $stageNamesMapping,
+        'changelog' => $changelog
     ];
 }

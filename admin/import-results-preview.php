@@ -116,13 +116,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_import'])) {
         // Create event mapping - all rows go to selected event
         $eventMapping = ['Välj event för alla resultat' => $selectedEventId];
 
-        // Get event's custom stage names for column mapping
-        $eventData = $db->getRow("SELECT stage_names FROM events WHERE id = ?", [$selectedEventId]);
-        $stageNames = [];
-        if (!empty($eventData['stage_names'])) {
-            $stageNames = json_decode($eventData['stage_names'], true) ?: [];
-        }
-
         // Import with event mapping
         $importId = startImportHistory(
             $db,
@@ -137,13 +130,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_import'])) {
             $db,
             $importId,
             $eventMapping,
-            null,
-            $stageNames
+            null
         );
 
         $stats = $result['stats'];
         $matching_stats = $result['matching'];
         $errors = $result['errors'];
+
+        // Auto-save stage names from import headers to event
+        if (!empty($result['stage_names'])) {
+            $db->update('events', [
+                'stage_names' => json_encode($result['stage_names'])
+            ], 'id = ?', [$selectedEventId]);
+        }
 
         // Update import history
         $importStatus = ($stats['success'] > 0) ? 'completed' : 'failed';
@@ -168,8 +167,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_import'])) {
 
         // Add info about riders updated with UCI IDs
         $matchingInfo = "";
-        $ridersCreated = $stats['matching']['riders_created'] ?? 0;
-        $ridersUpdatedWithUci = $stats['matching']['riders_updated_with_uci'] ?? 0;
+        $ridersCreated = $matching_stats['riders_created'] ?? 0;
+        $ridersUpdatedWithUci = $matching_stats['riders_updated_with_uci'] ?? 0;
         if ($ridersCreated > 0 || $ridersUpdatedWithUci > 0) {
             $parts = [];
             if ($ridersCreated > 0) {
@@ -181,7 +180,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_import'])) {
             $matchingInfo = " " . implode(", ", $parts) . ".";
         }
 
-        set_flash('success', "Import klar! {$stats['success']} nya, {$stats['updated']} uppdaterade av {$stats['total']} resultat.{$matchingInfo}{$recalcMsg}");
+        // Summarize changelog for updates
+        $changelogInfo = "";
+        $changelog = $result['changelog'] ?? [];
+        if (!empty($changelog)) {
+            // Count changed fields
+            $fieldCounts = [];
+            foreach ($changelog as $change) {
+                foreach ($change['changes'] as $field => $values) {
+                    $fieldCounts[$field] = ($fieldCounts[$field] ?? 0) + 1;
+                }
+            }
+            // Show top 3 most changed fields
+            arsort($fieldCounts);
+            $topFields = array_slice($fieldCounts, 0, 3, true);
+            $fieldParts = [];
+            foreach ($topFields as $field => $count) {
+                $fieldParts[] = "{$field}: {$count}";
+            }
+            if (!empty($fieldParts)) {
+                $changelogInfo = " Ändrade fält: " . implode(", ", $fieldParts) . ".";
+            }
+        }
+
+        // Show skipped as unchanged
+        $unchangedInfo = "";
+        if ($stats['skipped'] > 0) {
+            $unchangedInfo = " ({$stats['skipped']} oförändrade)";
+        }
+
+        set_flash('success', "Import klar! {$stats['success']} nya, {$stats['updated']} uppdaterade{$unchangedInfo} av {$stats['total']} resultat.{$matchingInfo}{$changelogInfo}{$recalcMsg}");
         header('Location: /admin/event-edit.php?id=' . $selectedEventId . '&tab=results');
         exit;
 
