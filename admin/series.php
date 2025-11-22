@@ -510,14 +510,18 @@ include __DIR__ . '/../includes/layout-header.php';
                                                     >
                                                         <i data-lucide="edit" class="gs-icon-14"></i>
                                                     </a>
-                                                    <button
-                                                        type="button"
-                                                        class="gs-btn gs-btn-sm gs-btn-outline gs-btn-danger"
-                                                        onclick="deleteSeries(<?= $serie['id'] ?>, '<?= addslashes(h($serie['name'])) ?>')"
-                                                        title="Ta bort"
-                                                    >
-                                                        <i data-lucide="trash-2" class="gs-icon-14"></i>
-                                                    </button>
+                                                    <form method="POST" style="display: inline;" onsubmit="return confirm('Är du säker på att du vill ta bort &quot;<?= addslashes(h($serie['name'])) ?>&quot;?');">
+                                                        <?= csrf_field() ?>
+                                                        <input type="hidden" name="action" value="delete">
+                                                        <input type="hidden" name="id" value="<?= $serie['id'] ?>">
+                                                        <button
+                                                            type="submit"
+                                                            class="gs-btn gs-btn-sm gs-btn-outline gs-btn-danger"
+                                                            title="Ta bort"
+                                                        >
+                                                            <i data-lucide="trash-2" class="gs-icon-14"></i>
+                                                        </button>
+                                                    </form>
                                                 </div>
                                             </td>
                                         </tr>
