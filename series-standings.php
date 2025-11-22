@@ -288,8 +288,17 @@ include __DIR__ . '/includes/layout-header.php';
 ?>
 
 <style>
+    /* Table container for horizontal scroll */
+    .gs-card-table-container {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        width: 100%;
+    }
+
     .standings-table {
         font-size: 0.875rem;
+        min-width: 100%;
+        width: max-content;
     }
 
     .standings-table th,
@@ -311,20 +320,46 @@ include __DIR__ . '/includes/layout-header.php';
 
     @media (max-width: 768px) {
         .standings-table {
-            font-size: 0.8125rem;
+            font-size: 0.75rem;
         }
 
         .standings-table th,
         .standings-table td {
-            padding: 0.375rem 0.5rem;
+            padding: 0.25rem 0.375rem;
         }
 
         .event-col {
-            min-width: 45px;
+            min-width: 40px;
         }
 
         .total-col {
-            min-width: 60px;
+            min-width: 50px;
+        }
+
+        /* Ensure sticky columns work on mobile */
+        .standings-sticky-th-rank,
+        .standings-sticky-td-rank {
+            position: sticky;
+            left: 0;
+            background: var(--gs-bg-primary, #fff);
+            z-index: 2;
+        }
+
+        .standings-sticky-th-name,
+        .standings-sticky-td-name {
+            position: sticky;
+            left: 35px;
+            background: var(--gs-bg-primary, #fff);
+            z-index: 2;
+            max-width: 100px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* Hide club column on mobile to save space */
+        .standings-sticky-th-club,
+        .standings-sticky-td-club {
+            display: none;
         }
     }
 </style>
