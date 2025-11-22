@@ -1,93 +1,176 @@
 <?php
 /**
  * Rider Lookup Tool
- * Paste CSV with firstname, lastname, club to find UCI IDs
+ * Upload CSV to find and fill in UCI IDs
  */
 require_once __DIR__ . '/../config.php';
 require_admin();
 
 $db = getDB();
 $results = [];
-$csvInput = '';
+$headers = [];
 $matchStats = ['exact' => 0, 'fuzzy' => 0, 'partial' => 0, 'not_found' => 0];
+$message = '';
+$messageType = '';
 
-// Handle form submission
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+// Column mapping defaults
+$colMapping = [
+    'firstname' => $_POST['col_firstname'] ?? 0,
+    'lastname' => $_POST['col_lastname'] ?? 1,
+    'club' => $_POST['col_club'] ?? 2,
+    'uci_id' => $_POST['col_uci_id'] ?? 3
+];
+
+// Handle CSV export
+if (isset($_GET['export']) && isset($_SESSION['lookup_results'])) {
+    $exportData = $_SESSION['lookup_results'];
+    $exportHeaders = $_SESSION['lookup_headers'];
+
+    header('Content-Type: text/csv; charset=utf-8');
+    header('Content-Disposition: attachment; filename="riders_with_uci_id.csv"');
+
+    $output = fopen('php://output', 'w');
+    fprintf($output, chr(0xEF).chr(0xBB).chr(0xBF)); // UTF-8 BOM
+
+    // Write header
+    fputcsv($output, $exportHeaders, ';');
+
+    // Write data
+    foreach ($exportData as $row) {
+        fputcsv($output, $row, ';');
+    }
+
+    fclose($output);
+    exit;
+}
+
+// Handle file upload
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['csv_file'])) {
     checkCsrf();
-    $csvInput = $_POST['csv_data'] ?? '';
 
-    if (!empty($csvInput)) {
-        $lines = explode("\n", trim($csvInput));
+    $file = $_FILES['csv_file'];
 
-        foreach ($lines as $lineNum => $line) {
-            $line = trim($line);
+    if ($file['error'] !== UPLOAD_ERR_OK) {
+        $message = 'Filuppladdning misslyckades';
+        $messageType = 'error';
+    } else {
+        $content = file_get_contents($file['tmp_name']);
+
+        // Detect encoding and convert to UTF-8
+        $encoding = mb_detect_encoding($content, ['UTF-8', 'ISO-8859-1', 'Windows-1252'], true);
+        if ($encoding && $encoding !== 'UTF-8') {
+            $content = mb_convert_encoding($content, 'UTF-8', $encoding);
+        }
+
+        // Remove BOM if present
+        $content = preg_replace('/^\xEF\xBB\xBF/', '', $content);
+
+        $lines = explode("\n", $content);
+
+        // Detect separator
+        $firstLine = $lines[0] ?? '';
+        $separator = ';';
+        if (substr_count($firstLine, ',') > substr_count($firstLine, ';')) {
+            $separator = ',';
+        } elseif (substr_count($firstLine, "\t") > substr_count($firstLine, ';')) {
+            $separator = "\t";
+        }
+
+        // Parse header
+        $headers = str_getcsv(trim($lines[0]), $separator);
+        $headers = array_map('trim', $headers);
+
+        // Get column indices from POST or auto-detect
+        $colMapping['firstname'] = (int)($_POST['col_firstname'] ?? findColumn($headers, ['förnamn', 'firstname', 'first_name', 'first name']));
+        $colMapping['lastname'] = (int)($_POST['col_lastname'] ?? findColumn($headers, ['efternamn', 'lastname', 'last_name', 'last name', 'name']));
+        $colMapping['club'] = (int)($_POST['col_club'] ?? findColumn($headers, ['klubb', 'club', 'team', 'förening']));
+        $colMapping['uci_id'] = (int)($_POST['col_uci_id'] ?? findColumn($headers, ['uci_id', 'uci id', 'uciid', 'license', 'licens']));
+
+        // Process data rows
+        $exportData = [];
+
+        for ($i = 1; $i < count($lines); $i++) {
+            $line = trim($lines[$i]);
             if (empty($line)) continue;
 
-            // Parse CSV line
-            $parts = str_getcsv($line, ';');
-            if (count($parts) < 2) {
-                $parts = str_getcsv($line, ',');
-            }
-            if (count($parts) < 2) {
-                $parts = str_getcsv($line, "\t");
-            }
+            $parts = str_getcsv($line, $separator);
 
-            $firstname = trim($parts[0] ?? '');
-            $lastname = trim($parts[1] ?? '');
-            $club = trim($parts[2] ?? '');
-            $inputClass = trim($parts[3] ?? '');
+            $firstname = trim($parts[$colMapping['firstname']] ?? '');
+            $lastname = trim($parts[$colMapping['lastname']] ?? '');
+            $club = trim($parts[$colMapping['club']] ?? '');
+            $existingUciId = trim($parts[$colMapping['uci_id']] ?? '');
 
-            if (empty($firstname) || empty($lastname)) {
-                $results[] = [
-                    'input' => $line,
-                    'firstname' => $firstname,
-                    'lastname' => $lastname,
-                    'club' => $club,
-                    'input_class' => $inputClass,
-                    'match_type' => 'invalid',
-                    'uci_id' => '',
-                    'found_name' => '',
-                    'found_club' => '',
-                    'found_class' => '',
-                    'confidence' => 0
-                ];
+            if (empty($firstname) && empty($lastname)) {
                 continue;
             }
 
-            // Search for rider
-            $match = findRider($db, $firstname, $lastname, $club);
+            // Search for rider if no UCI ID exists
+            $match = null;
+            $uciId = $existingUciId;
 
+            if (empty($existingUciId) || strpos($existingUciId, 'SWE25') === 0) {
+                $match = findRider($db, $firstname, $lastname, $club);
+                if ($match && !empty($match['uci_id'])) {
+                    $uciId = $match['uci_id'];
+                }
+            }
+
+            // Update stats
             if ($match) {
                 $matchStats[$match['match_type']]++;
-            } else {
+            } elseif (empty($existingUciId)) {
                 $matchStats['not_found']++;
             }
 
+            // Fill in UCI ID in the row
+            while (count($parts) <= $colMapping['uci_id']) {
+                $parts[] = '';
+            }
+            $parts[$colMapping['uci_id']] = $uciId;
+
+            $exportData[] = $parts;
+
             $results[] = [
-                'input' => $line,
                 'firstname' => $firstname,
                 'lastname' => $lastname,
                 'club' => $club,
-                'input_class' => $inputClass,
-                'match_type' => $match ? $match['match_type'] : 'not_found',
-                'uci_id' => $match ? $match['uci_id'] : '',
+                'original_uci_id' => $existingUciId,
+                'uci_id' => $uciId,
+                'match_type' => $match ? $match['match_type'] : ($existingUciId ? 'existing' : 'not_found'),
                 'found_name' => $match ? $match['firstname'] . ' ' . $match['lastname'] : '',
                 'found_club' => $match ? $match['club_name'] : '',
-                'found_class' => $match ? $match['class_name'] : '',
-                'birth_year' => $match ? $match['birth_year'] : '',
-                'gender' => $match ? $match['gender'] : '',
-                'confidence' => $match ? $match['confidence'] : 0,
-                'rider_id' => $match ? $match['id'] : null
+                'confidence' => $match ? $match['confidence'] : 0
             ];
         }
+
+        // Store for export
+        $_SESSION['lookup_results'] = $exportData;
+        $_SESSION['lookup_headers'] = $headers;
+
+        $message = 'CSV bearbetad: ' . count($results) . ' rader';
+        $messageType = 'success';
     }
+}
+
+/**
+ * Find column index by name
+ */
+function findColumn($headers, $names) {
+    foreach ($headers as $i => $header) {
+        $normalized = strtolower(trim($header));
+        foreach ($names as $name) {
+            if ($normalized === strtolower($name)) {
+                return $i;
+            }
+        }
+    }
+    return 0;
 }
 
 /**
  * Find rider in database using multiple strategies
  */
 function findRider($db, $firstname, $lastname, $club) {
-    // Normalize names for matching
     $normFirstname = normalizeString($firstname);
     $normLastname = normalizeString($lastname);
     $normClub = normalizeString($club);
@@ -153,11 +236,9 @@ function findRider($db, $firstname, $lastname, $club) {
         $riderNormFirst = normalizeString($rider['firstname']);
         $riderNormLast = normalizeString($rider['lastname']);
 
-        // Check normalized match
         if ($riderNormFirst === $normFirstname && $riderNormLast === $normLastname) {
             $score = 85;
 
-            // Boost score if club matches
             if (!empty($normClub) && !empty($rider['club_name'])) {
                 $riderNormClub = normalizeString($rider['club_name']);
                 if (strpos($riderNormClub, $normClub) !== false || strpos($normClub, $riderNormClub) !== false) {
@@ -171,13 +252,12 @@ function findRider($db, $firstname, $lastname, $club) {
             }
         }
 
-        // Check partial match (first 3 chars of each name)
+        // Partial match
         if (strlen($normFirstname) >= 3 && strlen($normLastname) >= 3) {
             if (substr($riderNormFirst, 0, 3) === substr($normFirstname, 0, 3) &&
                 substr($riderNormLast, 0, 3) === substr($normLastname, 0, 3)) {
                 $score = 60;
 
-                // Require club match for partial matches
                 if (!empty($normClub) && !empty($rider['club_name'])) {
                     $riderNormClub = normalizeString($rider['club_name']);
                     if (strpos($riderNormClub, $normClub) !== false || strpos($normClub, $riderNormClub) !== false) {
@@ -200,9 +280,7 @@ function findRider($db, $firstname, $lastname, $club) {
  */
 function normalizeString($str) {
     $str = mb_strtolower($str, 'UTF-8');
-    // Remove accents
     $str = iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $str);
-    // Remove non-alphanumeric
     $str = preg_replace('/[^a-z0-9]/', '', $str);
     return $str;
 }
@@ -223,44 +301,60 @@ include __DIR__ . '/../includes/layout-header.php';
                     Sök UCI-ID
                 </h1>
                 <p class="gs-text-secondary">
-                    Klistra in CSV med förnamn, efternamn, klubb för att hitta UCI-ID
+                    Ladda upp CSV för att hitta och fylla i UCI-ID
                 </p>
             </div>
         </div>
 
-        <!-- Input Form -->
+        <?php if ($message): ?>
+            <div class="gs-alert gs-alert-<?= h($messageType) ?> gs-mb-lg">
+                <i data-lucide="<?= $messageType === 'success' ? 'check-circle' : 'alert-circle' ?>"></i>
+                <?= h($message) ?>
+            </div>
+        <?php endif; ?>
+
+        <!-- Upload Form -->
         <div class="gs-card gs-mb-lg">
             <div class="gs-card-header">
                 <h2 class="gs-h3">
-                    <i data-lucide="clipboard-paste"></i>
-                    Klistra in data
+                    <i data-lucide="upload"></i>
+                    Ladda upp CSV
                 </h2>
             </div>
             <div class="gs-card-content">
-                <form method="POST">
+                <form method="POST" enctype="multipart/form-data">
                     <?= csrf_field() ?>
 
                     <div class="gs-form-group gs-mb-md">
-                        <label class="gs-label">
-                            CSV-data (förnamn;efternamn;klubb;klass)
-                        </label>
-                        <textarea
-                            name="csv_data"
-                            class="gs-input"
-                            rows="10"
-                            placeholder="Erik;Johansson;CK Örn;Herrar
-Anna;Svensson;IK Hakarpspojkarna;Damer
-Johan;Karlsson;Team 42;;
-..."
-                        ><?= h($csvInput) ?></textarea>
+                        <label class="gs-label">CSV-fil</label>
+                        <input type="file" name="csv_file" accept=".csv,.txt" class="gs-input" required>
                         <small class="gs-text-secondary">
-                            Format: förnamn;efternamn;klubb;klass (klass är valfritt). Separera med semikolon (;), komma (,) eller tab.
+                            CSV med kolumner för förnamn, efternamn, klubb och UCI-ID
                         </small>
+                    </div>
+
+                    <div class="gs-grid gs-grid-cols-2 gs-md-grid-cols-4 gs-gap-md gs-mb-md">
+                        <div class="gs-form-group">
+                            <label class="gs-label">Förnamn (kolumn)</label>
+                            <input type="number" name="col_firstname" value="0" min="0" class="gs-input">
+                        </div>
+                        <div class="gs-form-group">
+                            <label class="gs-label">Efternamn (kolumn)</label>
+                            <input type="number" name="col_lastname" value="1" min="0" class="gs-input">
+                        </div>
+                        <div class="gs-form-group">
+                            <label class="gs-label">Klubb (kolumn)</label>
+                            <input type="number" name="col_club" value="2" min="0" class="gs-input">
+                        </div>
+                        <div class="gs-form-group">
+                            <label class="gs-label">UCI-ID (kolumn)</label>
+                            <input type="number" name="col_uci_id" value="3" min="0" class="gs-input">
+                        </div>
                     </div>
 
                     <button type="submit" class="gs-btn gs-btn-primary">
                         <i data-lucide="search"></i>
-                        Sök UCI-ID
+                        Sök och fyll i UCI-ID
                     </button>
                 </form>
             </div>
@@ -295,8 +389,18 @@ Johan;Karlsson;Team 42;;
                 </div>
             </div>
 
-            <!-- Results Table -->
+            <!-- Export Button -->
             <div class="gs-card gs-mb-lg">
+                <div class="gs-card-content">
+                    <a href="?export=1" class="gs-btn gs-btn-success">
+                        <i data-lucide="download"></i>
+                        Ladda ner CSV med UCI-ID ifyllda
+                    </a>
+                </div>
+            </div>
+
+            <!-- Results Table -->
+            <div class="gs-card">
                 <div class="gs-card-header">
                     <h2 class="gs-h3">
                         <i data-lucide="list"></i>
@@ -308,11 +412,10 @@ Johan;Karlsson;Team 42;;
                         <table class="gs-table">
                             <thead>
                                 <tr>
-                                    <th>Indata</th>
-                                    <th>Hittad åkare</th>
+                                    <th>Namn</th>
                                     <th>Klubb</th>
-                                    <th>Klass</th>
-                                    <th>UCI-ID</th>
+                                    <th>Original UCI-ID</th>
+                                    <th>Hittad UCI-ID</th>
                                     <th>Match</th>
                                 </tr>
                             </thead>
@@ -321,40 +424,28 @@ Johan;Karlsson;Team 42;;
                                     <tr class="<?= $result['match_type'] === 'not_found' ? 'gs-bg-danger-light' : '' ?>">
                                         <td>
                                             <strong><?= h($result['firstname'] . ' ' . $result['lastname']) ?></strong>
-                                            <?php if ($result['club']): ?>
-                                                <br><small class="gs-text-secondary"><?= h($result['club']) ?></small>
-                                            <?php endif; ?>
-                                            <?php if (!empty($result['input_class'])): ?>
-                                                <br><small class="gs-text-info"><?= h($result['input_class']) ?></small>
+                                            <?php if ($result['found_name'] && $result['found_name'] !== $result['firstname'] . ' ' . $result['lastname']): ?>
+                                                <br><small class="gs-text-secondary">→ <?= h($result['found_name']) ?></small>
                                             <?php endif; ?>
                                         </td>
                                         <td>
-                                            <?php if ($result['found_name']): ?>
-                                                <?= h($result['found_name']) ?>
-                                                <?php if (!empty($result['birth_year'])): ?>
-                                                    <br><small class="gs-text-secondary"><?= h($result['birth_year']) ?> • <?= h($result['gender'] ?? '?') ?></small>
-                                                <?php endif; ?>
-                                            <?php else: ?>
-                                                <span class="gs-text-danger">-</span>
+                                            <?= h($result['club']) ?>
+                                            <?php if ($result['found_club'] && $result['found_club'] !== $result['club']): ?>
+                                                <br><small class="gs-text-secondary">→ <?= h($result['found_club']) ?></small>
                                             <?php endif; ?>
                                         </td>
                                         <td>
-                                            <?php if ($result['found_club']): ?>
-                                                <?= h($result['found_club']) ?>
+                                            <?php if ($result['original_uci_id']): ?>
+                                                <code><?= h($result['original_uci_id']) ?></code>
                                             <?php else: ?>
                                                 <span class="gs-text-secondary">-</span>
                                             <?php endif; ?>
                                         </td>
                                         <td>
-                                            <?php if (!empty($result['found_class'])): ?>
-                                                <span class="gs-badge gs-badge-secondary"><?= h($result['found_class']) ?></span>
-                                            <?php else: ?>
-                                                <span class="gs-text-secondary">-</span>
-                                            <?php endif; ?>
-                                        </td>
-                                        <td>
-                                            <?php if ($result['uci_id']): ?>
+                                            <?php if ($result['uci_id'] && $result['uci_id'] !== $result['original_uci_id']): ?>
                                                 <code class="gs-text-success"><?= h($result['uci_id']) ?></code>
+                                            <?php elseif ($result['uci_id']): ?>
+                                                <code><?= h($result['uci_id']) ?></code>
                                             <?php else: ?>
                                                 <span class="gs-text-danger">-</span>
                                             <?php endif; ?>
@@ -365,13 +456,14 @@ Johan;Karlsson;Team 42;;
                                                 'exact' => 'gs-badge-success',
                                                 'fuzzy' => 'gs-badge-warning',
                                                 'partial' => 'gs-badge-info',
+                                                'existing' => 'gs-badge-secondary',
                                                 default => 'gs-badge-danger'
                                             };
                                             $matchLabel = match($result['match_type']) {
                                                 'exact' => 'Exakt',
                                                 'fuzzy' => 'Fuzzy',
                                                 'partial' => 'Delvis',
-                                                'invalid' => 'Ogiltig',
+                                                'existing' => 'Befintlig',
                                                 default => 'Ej hittad'
                                             };
                                             ?>
@@ -389,69 +481,9 @@ Johan;Karlsson;Team 42;;
                     </div>
                 </div>
             </div>
-
-            <!-- Export CSV -->
-            <div class="gs-card">
-                <div class="gs-card-header">
-                    <h2 class="gs-h3">
-                        <i data-lucide="download"></i>
-                        Exportera resultat
-                    </h2>
-                </div>
-                <div class="gs-card-content">
-                    <p class="gs-text-secondary gs-mb-md">
-                        Kopiera CSV-data nedan och klistra in i din resultatfil:
-                    </p>
-                    <textarea
-                        id="exportCsv"
-                        class="gs-input"
-                        rows="10"
-                        readonly
-                        onclick="this.select()"
-                    ><?php
-                        echo "Förnamn;Efternamn;Klubb;Klass;UCI-ID;Födelsear;Kön;Match\n";
-                        foreach ($results as $result) {
-                            echo h($result['firstname']) . ';';
-                            echo h($result['lastname']) . ';';
-                            echo h($result['club']) . ';';
-                            echo h($result['found_class'] ?? $result['input_class'] ?? '') . ';';
-                            echo h($result['uci_id']) . ';';
-                            echo h($result['birth_year'] ?? '') . ';';
-                            echo h($result['gender'] ?? '') . ';';
-                            echo h($result['match_type']) . "\n";
-                        }
-                    ?></textarea>
-                    <button type="button" class="gs-btn gs-btn-outline gs-mt-sm" onclick="copyExport()">
-                        <i data-lucide="copy"></i>
-                        Kopiera till urklipp
-                    </button>
-                </div>
-            </div>
         <?php endif; ?>
 
     </div>
 </main>
-
-<script>
-function copyExport() {
-    const textarea = document.getElementById('exportCsv');
-    textarea.select();
-    document.execCommand('copy');
-
-    // Show feedback
-    const btn = event.target.closest('button');
-    const originalText = btn.innerHTML;
-    btn.innerHTML = '<i data-lucide="check"></i> Kopierat!';
-    btn.classList.add('gs-btn-success');
-    btn.classList.remove('gs-btn-outline');
-
-    setTimeout(() => {
-        btn.innerHTML = originalText;
-        btn.classList.remove('gs-btn-success');
-        btn.classList.add('gs-btn-outline');
-        lucide.createIcons();
-    }, 2000);
-}
-</script>
 
 <?php include __DIR__ . '/../includes/layout-footer.php'; ?>
