@@ -21,6 +21,19 @@ $allSeries = $db->getAll("SELECT id, name FROM series ORDER BY name");
 // Get all disciplines for filter dropdown
 $allDisciplines = $db->getAll("SELECT DISTINCT discipline FROM events WHERE discipline IS NOT NULL AND discipline != '' ORDER BY discipline");
 
+// Discipline display names
+$disciplineNames = [
+    'ENDURO' => 'Enduro',
+    'DH' => 'Downhill',
+    'XC' => 'XC',
+    'XCO' => 'XCO',
+    'XCM' => 'XCM',
+    'DUAL_SLALOM' => 'Dual Slalom',
+    'PUMPTRACK' => 'Pumptrack',
+    'GRAVEL' => 'Gravel',
+    'E-MTB' => 'E-MTB'
+];
+
 // Build WHERE clause for both queries
 $where_clauses = [];
 $params = [];
@@ -110,7 +123,7 @@ include __DIR__ . '/includes/layout-header.php';
                             <option value="">Alla format</option>
                             <?php foreach ($allDisciplines as $d): ?>
                                 <option value="<?= h($d['discipline']) ?>" <?= $discipline == $d['discipline'] ? 'selected' : '' ?>>
-                                    <?= h($d['discipline']) ?>
+                                    <?= h($disciplineNames[$d['discipline']] ?? $d['discipline']) ?>
                                 </option>
                             <?php endforeach; ?>
                         </select>

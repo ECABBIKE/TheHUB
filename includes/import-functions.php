@@ -336,17 +336,19 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
             // Find or create rider
             $riderName = trim($data['firstname']) . '|' . trim($data['lastname']);
             $rawLicenseNumber = $data['license_number'] ?? '';
-            // Normalize UCI-ID: remove all spaces and non-digit characters
-            $licenseNumber = preg_replace('/[^0-9]/', '', $rawLicenseNumber);
+            // Normalize UCI-ID to standard format: XXX XXX XXX XX
+            $licenseNumber = normalizeUciId($rawLicenseNumber);
+            // For database comparison, strip spaces
+            $licenseNumberDigits = preg_replace('/[^0-9]/', '', $licenseNumber);
 
             if (!isset($riderCache[$riderName . '|' . $licenseNumber])) {
                 // Try to find rider by license number first (normalized)
                 $rider = null;
-                if (!empty($licenseNumber)) {
-                    // Try exact match with normalized number
+                if (!empty($licenseNumberDigits)) {
+                    // Try exact match with normalized number (compare digits only)
                     $rider = $db->getRow(
                         "SELECT id FROM riders WHERE REPLACE(REPLACE(license_number, ' ', ''), '-', '') = ?",
-                        [$licenseNumber]
+                        [$licenseNumberDigits]
                     );
                     if ($rider) {
                         $matching_stats['riders_found']++;
