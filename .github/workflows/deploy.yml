@@ -1,4 +1,4 @@
-name: Deploy to FTP
+name: Deploy Everything to FTP
 
 on:
   push:
@@ -10,18 +10,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
-      - name: Deploy TheHUB to FTP
+
+      - name: Deploy ALL files to FTP
         uses: SamKirkland/FTP-Deploy-Action@v4.3.4
         with:
           server: ${{ secrets.FTP_SERVER }}
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
-          local-dir: ./public/
+          local-dir: ./
           server-dir: /
-          dangerous-clean-slate: true
           exclude: |
             **/.git*
             **/.env*
             **/node_modules/**
-            **/.github/**
+            **/.DS_Store
+          dangerous-clean-slate: false
