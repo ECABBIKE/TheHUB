@@ -122,20 +122,11 @@ function calculatePoints($db, $event_id, $position, $status = 'finished') {
     );
 
     if (!$event || !$event['point_scale_id']) {
-        // No scale assigned - use default
-        $scale = $db->getRow(
-            "SELECT id FROM point_scales WHERE is_default = 1 LIMIT 1"
-        );
-
-        if (!$scale) {
-            error_log("⚠️  No point scale found for event {$event_id}");
-            return 0;
-        }
-
-        $scale_id = $scale['id'];
-    } else {
-        $scale_id = $event['point_scale_id'];
+        // No scale assigned - no points (user explicitly chose "ingen mall")
+        return 0;
     }
+
+    $scale_id = $event['point_scale_id'];
 
     // Get points for this position
     $value = $db->getRow(

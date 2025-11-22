@@ -43,6 +43,7 @@ $seriesEvents = $db->getAll("
         e.organizer,
         v.name as venue_name,
         v.city as venue_city,
+        se.template_id,
         COUNT(DISTINCT r.id) as result_count
     FROM series_events se
     JOIN events e ON se.event_id = e.id
@@ -52,6 +53,11 @@ $seriesEvents = $db->getAll("
     GROUP BY e.id
     ORDER BY e.date ASC
 ", [$seriesId]);
+
+// Filter events that have templates (these will show in standings columns)
+$eventsWithPoints = array_filter($seriesEvents, function($e) {
+    return !empty($e['template_id']);
+});
 
 // Get all classes that have results in this series (only series-eligible classes that award points)
 $activeClasses = $db->getAll("
@@ -501,7 +507,7 @@ include __DIR__ . '/includes/layout-header.php';
                                     <th class="standings-sticky-th-name">Namn</th>
                                     <th class="standings-sticky-th-club">Klubb</th>
                                     <?php $eventNum = 1; ?>
-                                    <?php foreach ($seriesEvents as $event): ?>
+                                    <?php foreach ($eventsWithPoints as $event): ?>
                                         <th class="event-col" title="<?= h($event['name']) ?> - <?= date('Y-m-d', strtotime($event['date'])) ?>">
                                             #<?= $eventNum ?>
                                         </th>
@@ -533,7 +539,7 @@ include __DIR__ . '/includes/layout-header.php';
                                         <td class="standings-sticky-td-club">
                                             <?= h($rider['club_name']) ?: '–' ?>
                                         </td>
-                                        <?php foreach ($seriesEvents as $event): ?>
+                                        <?php foreach ($eventsWithPoints as $event): ?>
                                             <td class="event-col">
                                                 <?php
                                                 $points = $rider['event_points'][$event['id']] ?? 0;
@@ -594,7 +600,7 @@ include __DIR__ . '/includes/layout-header.php';
                                 <th class="standings-sticky-th-name">Namn</th>
                                 <th class="standings-sticky-th-club">Klubb</th>
                                 <?php $eventNum = 1; ?>
-                                <?php foreach ($seriesEvents as $event): ?>
+                                <?php foreach ($eventsWithPoints as $event): ?>
                                     <th class="event-col" title="<?= h($event['name']) ?> - <?= date('Y-m-d', strtotime($event['date'])) ?>">
                                         #<?= $eventNum ?>
                                     </th>
@@ -626,7 +632,7 @@ include __DIR__ . '/includes/layout-header.php';
                                     <td class="standings-sticky-td-club">
                                         <?= h($rider['club_name']) ?: '–' ?>
                                     </td>
-                                    <?php foreach ($seriesEvents as $event): ?>
+                                    <?php foreach ($eventsWithPoints as $event): ?>
                                         <td class="event-col">
                                             <?php
                                             $points = $rider['event_points'][$event['id']] ?? 0;
