@@ -17,7 +17,7 @@ $messageType = '';
 
 // Ensure migrations table exists
 try {
-    $db->query("
+    $db->getAll("
         CREATE TABLE IF NOT EXISTS migrations (
             id INT AUTO_INCREMENT PRIMARY KEY,
             filename VARCHAR(255) NOT NULL UNIQUE,
@@ -77,7 +77,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['run_migration'])) {
             }
 
             try {
-                $db->query($statement);
+                $db->getAll($statement);
                 $successCount++;
             } catch (Exception $e) {
                 $errorMsg = $e->getMessage();
@@ -165,7 +165,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['run_all_pending'])) {
             }
 
             try {
-                $db->query($statement);
+                $db->getAll($statement);
                 $successCount++;
             } catch (Exception $e) {
                 $errorMsg = $e->getMessage();
