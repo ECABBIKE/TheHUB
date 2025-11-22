@@ -356,6 +356,39 @@ include __DIR__ . '/includes/layout-header.php';
             width: max-content;
         }
     }
+
+    /* Event range selector */
+    .event-range-selector {
+        display: flex;
+        gap: 0.5rem;
+        margin-bottom: 1rem;
+    }
+
+    .event-range-btn {
+        padding: 0.375rem 0.75rem;
+        border: 1px solid #e5e7eb;
+        background: white;
+        border-radius: 0.375rem;
+        font-size: 0.75rem;
+        cursor: pointer;
+        transition: all 0.15s ease;
+    }
+
+    .event-range-btn:hover {
+        background: #f3f4f6;
+    }
+
+    .event-range-btn.active {
+        background: var(--gs-primary, #2563eb);
+        color: white;
+        border-color: var(--gs-primary, #2563eb);
+    }
+
+    /* Hide event columns based on range */
+    .show-first-half .event-col.second-half,
+    .show-second-half .event-col.first-half {
+        display: none;
+    }
 </style>
 
 <script>
@@ -364,6 +397,22 @@ function toggleStandingsDetails(btn) {
     card.classList.toggle('standings-expanded');
     const isExpanded = card.classList.contains('standings-expanded');
     btn.textContent = isExpanded ? 'Dölj poäng' : 'Visa poäng';
+}
+
+function setEventRange(btn, range) {
+    const container = btn.closest('.gs-card-table-container') || btn.closest('.gs-card');
+
+    // Update button states
+    const buttons = btn.parentElement.querySelectorAll('.event-range-btn');
+    buttons.forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+
+    // Update table display
+    const table = container.querySelector('.standings-table');
+    if (table) {
+        table.classList.remove('show-first-half', 'show-second-half', 'show-all');
+        table.classList.add('show-' + range);
+    }
 }
 </script>
 
@@ -538,7 +587,25 @@ function toggleStandingsDetails(btn) {
                         <button type="button" class="gs-btn gs-btn-xs gs-btn-outline mobile-toggle" onclick="toggleStandingsDetails(this)">Visa poäng</button>
                     </div>
                     <div class="gs-card-table-container">
-                        <table class="gs-table standings-table">
+                        <?php
+                        $eventCount = count($eventsWithPoints);
+                        $showEventSelector = $eventCount > 10;
+                        $midPoint = ceil($eventCount / 2);
+                        ?>
+                        <?php if ($showEventSelector): ?>
+                            <div class="event-range-selector">
+                                <button type="button" class="event-range-btn active" onclick="setEventRange(this, 'first-half')">
+                                    Event 1-<?= $midPoint ?>
+                                </button>
+                                <button type="button" class="event-range-btn" onclick="setEventRange(this, 'second-half')">
+                                    Event <?= $midPoint + 1 ?>-<?= $eventCount ?>
+                                </button>
+                                <button type="button" class="event-range-btn" onclick="setEventRange(this, 'all')">
+                                    Alla
+                                </button>
+                            </div>
+                        <?php endif; ?>
+                        <table class="gs-table standings-table <?= $showEventSelector ? 'show-first-half' : '' ?>">
                             <thead>
                                 <tr>
                                     <th class="standings-sticky-th-rank">Plac.</th>
@@ -546,7 +613,8 @@ function toggleStandingsDetails(btn) {
                                     <th class="standings-sticky-th-club">Klubb</th>
                                     <?php $eventNum = 1; ?>
                                     <?php foreach ($eventsWithPoints as $event): ?>
-                                        <th class="event-col" title="<?= h($event['name']) ?> - <?= date('Y-m-d', strtotime($event['date'])) ?>">
+                                        <?php $halfClass = $eventNum <= $midPoint ? 'first-half' : 'second-half'; ?>
+                                        <th class="event-col <?= $halfClass ?>" title="<?= h($event['name']) ?> - <?= date('Y-m-d', strtotime($event['date'])) ?>">
                                             #<?= $eventNum ?>
                                         </th>
                                         <?php $eventNum++; ?>
@@ -577,8 +645,10 @@ function toggleStandingsDetails(btn) {
                                         <td class="standings-sticky-td-club">
                                             <?= h($rider['club_name']) ?: '–' ?>
                                         </td>
+                                        <?php $eventIdx = 1; ?>
                                         <?php foreach ($eventsWithPoints as $event): ?>
-                                            <td class="event-col">
+                                            <?php $halfClass = $eventIdx <= $midPoint ? 'first-half' : 'second-half'; ?>
+                                            <td class="event-col <?= $halfClass ?>">
                                                 <?php
                                                 $points = $rider['event_points'][$event['id']] ?? 0;
                                                 $isExcluded = isset($rider['excluded_events'][$event['id']]);
@@ -593,6 +663,7 @@ function toggleStandingsDetails(btn) {
                                                     <span class="gs-text-muted">–</span>
                                                 <?php endif; ?>
                                             </td>
+                                            <?php $eventIdx++; ?>
                                         <?php endforeach; ?>
                                         <td class="total-col gs-text-center">
                                             <strong class="gs-text-primary"><?= $rider['total_points'] ?></strong>
@@ -631,7 +702,25 @@ function toggleStandingsDetails(btn) {
                     </p>
                 <?php endif; ?>
                 <div class="gs-card-table-container">
-                    <table class="gs-table standings-table">
+                    <?php
+                    $eventCount = count($eventsWithPoints);
+                    $showEventSelector = $eventCount > 10;
+                    $midPoint = ceil($eventCount / 2);
+                    ?>
+                    <?php if ($showEventSelector): ?>
+                        <div class="event-range-selector">
+                            <button type="button" class="event-range-btn active" onclick="setEventRange(this, 'first-half')">
+                                Event 1-<?= $midPoint ?>
+                            </button>
+                            <button type="button" class="event-range-btn" onclick="setEventRange(this, 'second-half')">
+                                Event <?= $midPoint + 1 ?>-<?= $eventCount ?>
+                            </button>
+                            <button type="button" class="event-range-btn" onclick="setEventRange(this, 'all')">
+                                Alla
+                            </button>
+                        </div>
+                    <?php endif; ?>
+                    <table class="gs-table standings-table <?= $showEventSelector ? 'show-first-half' : '' ?>">
                         <thead>
                             <tr>
                                 <th class="standings-sticky-th-rank">Plac.</th>
@@ -639,7 +728,8 @@ function toggleStandingsDetails(btn) {
                                 <th class="standings-sticky-th-club">Klubb</th>
                                 <?php $eventNum = 1; ?>
                                 <?php foreach ($eventsWithPoints as $event): ?>
-                                    <th class="event-col" title="<?= h($event['name']) ?> - <?= date('Y-m-d', strtotime($event['date'])) ?>">
+                                    <?php $halfClass = $eventNum <= $midPoint ? 'first-half' : 'second-half'; ?>
+                                    <th class="event-col <?= $halfClass ?>" title="<?= h($event['name']) ?> - <?= date('Y-m-d', strtotime($event['date'])) ?>">
                                         #<?= $eventNum ?>
                                     </th>
                                     <?php $eventNum++; ?>
@@ -670,8 +760,10 @@ function toggleStandingsDetails(btn) {
                                     <td class="standings-sticky-td-club">
                                         <?= h($rider['club_name']) ?: '–' ?>
                                     </td>
+                                    <?php $eventIdx = 1; ?>
                                     <?php foreach ($eventsWithPoints as $event): ?>
-                                        <td class="event-col">
+                                        <?php $halfClass = $eventIdx <= $midPoint ? 'first-half' : 'second-half'; ?>
+                                        <td class="event-col <?= $halfClass ?>">
                                             <?php
                                             $points = $rider['event_points'][$event['id']] ?? 0;
                                             $isExcluded = isset($rider['excluded_events'][$event['id']]);
@@ -686,6 +778,7 @@ function toggleStandingsDetails(btn) {
                                                 <span class="gs-text-muted">–</span>
                                             <?php endif; ?>
                                         </td>
+                                        <?php $eventIdx++; ?>
                                     <?php endforeach; ?>
                                     <td class="total-col gs-text-center">
                                         <strong class="gs-text-primary"><?= $rider['total_points'] ?></strong>
