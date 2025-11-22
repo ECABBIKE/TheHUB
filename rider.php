@@ -83,8 +83,25 @@ $results = $db->getAll("
             AND r2.status = 'finished'
             AND r2.id != res.id
             AND (
-                r2.finish_time < res.finish_time
-                OR (r2.finish_time = res.finish_time AND r2.id < res.id)
+                CASE
+                    WHEN r2.finish_time LIKE '%:%:%' THEN
+                        CAST(SUBSTRING_INDEX(r2.finish_time, ':', 1) AS DECIMAL(10,2)) * 3600 +
+                        CAST(SUBSTRING_INDEX(SUBSTRING_INDEX(r2.finish_time, ':', 2), ':', -1) AS DECIMAL(10,2)) * 60 +
+                        CAST(SUBSTRING_INDEX(r2.finish_time, ':', -1) AS DECIMAL(10,2))
+                    ELSE
+                        CAST(SUBSTRING_INDEX(r2.finish_time, ':', 1) AS DECIMAL(10,2)) * 60 +
+                        CAST(SUBSTRING_INDEX(r2.finish_time, ':', -1) AS DECIMAL(10,2))
+                END
+                <
+                CASE
+                    WHEN res.finish_time LIKE '%:%:%' THEN
+                        CAST(SUBSTRING_INDEX(res.finish_time, ':', 1) AS DECIMAL(10,2)) * 3600 +
+                        CAST(SUBSTRING_INDEX(SUBSTRING_INDEX(res.finish_time, ':', 2), ':', -1) AS DECIMAL(10,2)) * 60 +
+                        CAST(SUBSTRING_INDEX(res.finish_time, ':', -1) AS DECIMAL(10,2))
+                    ELSE
+                        CAST(SUBSTRING_INDEX(res.finish_time, ':', 1) AS DECIMAL(10,2)) * 60 +
+                        CAST(SUBSTRING_INDEX(res.finish_time, ':', -1) AS DECIMAL(10,2))
+                END
             )
         ) as class_position
     FROM results res
