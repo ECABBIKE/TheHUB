@@ -2,41 +2,28 @@
 /**
  * Club Points System for TheHUB
  *
- * Calculates and caches club standings in series based on rider results.
+ * Calculates and caches club standings for series with format='Team'.
+ * Uses events linked to the series via series_id.
  *
  * Point Rules:
  * - Best rider from each club per class/event: 100% of earned points
  * - Second best rider from same club/class/event: 50% of earned points
  * - All other riders from same club/class/event: 0% (not counted)
- *
- * Performance optimized with cache tables for O(1) lookups.
  */
 
 /**
- * Calculate club points for a single event
- *
- * @param Database $db Database instance
- * @param int $eventId Event ID to calculate points for
- * @return array Statistics about the calculation
+ * Calculate club points for a specific event in a series
  */
-function calculateClubPointsForEvent($db, $eventId) {
+function calculateEventClubPoints($db, $eventId, $seriesId) {
     $stats = [
         'clubs_processed' => 0,
         'riders_processed' => 0,
         'total_points' => 0
     ];
 
-    // Get event info including series
-    $event = $db->getRow("SELECT id, series_id FROM events WHERE id = ?", [$eventId]);
-    if (!$event || !$event['series_id']) {
-        return $stats;
-    }
-
-    $seriesId = $event['series_id'];
-
-    // Clear existing points for this event
-    $db->delete('club_rider_points', 'event_id = ?', [$eventId]);
-    $db->delete('club_event_points', 'event_id = ?', [$eventId]);
+    // Clear existing points for this event/series
+    $db->delete('club_rider_points', 'event_id = ? AND series_id = ?', [$eventId, $seriesId]);
+    $db->delete('club_event_points', 'event_id = ? AND series_id = ?', [$eventId, $seriesId]);
 
     // Get all results for this event grouped by club and class
     // Only include riders with clubs and finished status
@@ -86,28 +73,25 @@ function calculateClubPointsForEvent($db, $eventId) {
             ];
         }
 
-        // Sort by points (highest first) - already sorted in query
         $rank = 1;
         foreach ($riders as $rider) {
-            $originalPoints = (int)$rider['class_points'];
+            $originalPoints = (float)$rider['class_points'];
             $clubPoints = 0;
             $percentage = 0;
 
             if ($rank === 1) {
-                // Best rider gets 100%
                 $clubPoints = $originalPoints;
                 $percentage = 100;
             } elseif ($rank === 2) {
-                // Second best gets 50%
-                $clubPoints = (int)round($originalPoints * 0.5);
+                $clubPoints = round($originalPoints * 0.5, 2);
                 $percentage = 50;
             }
-            // Rank 3+ gets 0%
 
             // Insert rider points record
             $db->insert('club_rider_points', [
                 'club_id' => $clubId,
                 'event_id' => $eventId,
+                'series_id' => $seriesId,
                 'rider_id' => $rider['cyclist_id'],
                 'class_id' => $classId,
                 'original_points' => $originalPoints,
@@ -116,7 +100,6 @@ function calculateClubPointsForEvent($db, $eventId) {
                 'percentage_applied' => $percentage
             ]);
 
-            // Update club totals
             $clubEventPoints[$clubId]['total_points'] += $clubPoints;
             $clubEventPoints[$clubId]['participants_count']++;
             if ($clubPoints > 0) {
@@ -146,79 +129,88 @@ function calculateClubPointsForEvent($db, $eventId) {
 }
 
 /**
- * Refresh the club standings cache for a series
- *
- * @param Database $db Database instance
- * @param int $seriesId Series ID to refresh cache for
- * @return array Statistics about the refresh
+ * Recalculate all club points for a series
  */
-function refreshClubStandingsCache($db, $seriesId = null) {
+function recalculateSeriesClubPoints($db, $seriesId) {
     $stats = [
-        'series_processed' => 0,
-        'clubs_updated' => 0
+        'events_processed' => 0,
+        'total_clubs' => 0,
+        'total_points' => 0
     ];
 
-    // Get series to process
-    if ($seriesId) {
-        $seriesList = [$db->getRow("SELECT id FROM series WHERE id = ?", [$seriesId])];
-    } else {
-        // Process all active series
-        $seriesList = $db->getAll("SELECT id FROM series WHERE active = 1");
+    // Get all events in this series
+    $events = $db->getAll("
+        SELECT id, name, date
+        FROM events
+        WHERE series_id = ?
+        ORDER BY date ASC
+    ", [$seriesId]);
+
+    // Calculate points for each event
+    foreach ($events as $event) {
+        $eventStats = calculateEventClubPoints($db, $event['id'], $seriesId);
+        $stats['events_processed']++;
+        $stats['total_points'] += $eventStats['total_points'];
     }
 
-    foreach ($seriesList as $series) {
-        if (!$series) continue;
+    // Refresh the standings cache
+    $cacheStats = refreshSeriesStandingsCache($db, $seriesId);
+    $stats['total_clubs'] = $cacheStats['clubs_updated'];
 
-        $sid = $series['id'];
+    return $stats;
+}
 
-        // Clear existing cache for this series
-        $db->delete('club_standings_cache', 'series_id = ?', [$sid]);
+/**
+ * Refresh the standings cache for a series
+ */
+function refreshSeriesStandingsCache($db, $seriesId) {
+    $stats = ['clubs_updated' => 0];
 
-        // Aggregate club points from club_event_points
-        $clubStats = $db->getAll("
-            SELECT
-                club_id,
-                SUM(total_points) as total_points,
-                SUM(participants_count) as total_participants,
-                COUNT(event_id) as events_count,
-                MAX(total_points) as best_event_points
-            FROM club_event_points
-            WHERE series_id = ?
-            GROUP BY club_id
-            HAVING total_points > 0
-            ORDER BY total_points DESC
-        ", [$sid]);
+    // Clear existing cache
+    $db->delete('club_standings_cache', 'series_id = ?', [$seriesId]);
 
-        // Insert with rankings
-        $rank = 1;
-        $prevPoints = null;
-        $prevRank = 1;
+    // Aggregate club points
+    $clubStats = $db->getAll("
+        SELECT
+            club_id,
+            SUM(total_points) as total_points,
+            SUM(participants_count) as total_participants,
+            COUNT(event_id) as events_count,
+            MAX(total_points) as best_event_points
+        FROM club_event_points
+        WHERE series_id = ?
+        GROUP BY club_id
+        HAVING total_points > 0
+        ORDER BY total_points DESC
+    ", [$seriesId]);
 
-        foreach ($clubStats as $index => $club) {
-            // Handle ties - same points = same rank
-            if ($prevPoints !== null && $club['total_points'] == $prevPoints) {
-                $currentRank = $prevRank;
-            } else {
-                $currentRank = $rank;
-                $prevRank = $rank;
-            }
-            $prevPoints = $club['total_points'];
+    // Insert with rankings
+    $rank = 1;
+    $prevPoints = null;
+    $prevRank = 1;
 
-            $db->insert('club_standings_cache', [
-                'club_id' => $club['club_id'],
-                'series_id' => $sid,
-                'total_points' => $club['total_points'],
-                'total_participants' => $club['total_participants'],
-                'events_count' => $club['events_count'],
-                'best_event_points' => $club['best_event_points'],
-                'ranking' => $currentRank
-            ]);
-
-            $stats['clubs_updated']++;
-            $rank++;
+    foreach ($clubStats as $club) {
+        // Handle ties
+        if ($prevPoints !== null && $club['total_points'] == $prevPoints) {
+            $currentRank = $prevRank;
+        } else {
+            $currentRank = $rank;
+            $prevRank = $rank;
         }
+        $prevPoints = $club['total_points'];
 
-        $stats['series_processed']++;
+        $db->insert('club_standings_cache', [
+            'club_id' => $club['club_id'],
+            'series_id' => $seriesId,
+            'total_points' => $club['total_points'],
+            'total_participants' => $club['total_participants'],
+            'events_count' => $club['events_count'],
+            'best_event_points' => $club['best_event_points'],
+            'ranking' => $currentRank
+        ]);
+
+        $stats['clubs_updated']++;
+        $rank++;
     }
 
     return $stats;
@@ -226,11 +218,6 @@ function refreshClubStandingsCache($db, $seriesId = null) {
 
 /**
  * Get club standings for a series
- *
- * @param Database $db Database instance
- * @param int $seriesId Series ID
- * @param int $limit Optional limit (0 = no limit)
- * @return array Club standings with club info
  */
 function getClubStandings($db, $seriesId, $limit = 0) {
     $sql = "
@@ -260,12 +247,7 @@ function getClubStandings($db, $seriesId, $limit = 0) {
 }
 
 /**
- * Get detailed club breakdown for a specific club in a series
- *
- * @param Database $db Database instance
- * @param int $clubId Club ID
- * @param int $seriesId Series ID
- * @return array Detailed breakdown including per-event and per-rider data
+ * Get detailed club breakdown for a series
  */
 function getClubPointsDetail($db, $clubId, $seriesId) {
     // Get club info
@@ -313,9 +295,9 @@ function getClubPointsDetail($db, $clubId, $seriesId) {
             FROM club_rider_points crp
             JOIN riders r ON crp.rider_id = r.id
             LEFT JOIN classes cls ON crp.class_id = cls.id
-            WHERE crp.club_id = ? AND crp.event_id = ?
+            WHERE crp.club_id = ? AND crp.event_id = ? AND crp.series_id = ?
             ORDER BY crp.club_points DESC, crp.original_points DESC
-        ", [$clubId, $event['event_id']]);
+        ", [$clubId, $event['event_id'], $seriesId]);
 
         $riderDetails[$event['event_id']] = $riders;
     }
@@ -329,72 +311,43 @@ function getClubPointsDetail($db, $clubId, $seriesId) {
 }
 
 /**
- * Recalculate all club points for a series
- * Useful after bulk imports or corrections
- *
- * @param Database $db Database instance
- * @param int $seriesId Series ID
- * @return array Statistics
+ * Get all series with format='Team' (club point series)
  */
-function recalculateSeriesClubPoints($db, $seriesId) {
-    $stats = [
-        'events_processed' => 0,
-        'total_clubs' => 0,
-        'total_points' => 0
-    ];
-
-    // Get all events in series
-    $events = $db->getAll("
-        SELECT id FROM events
-        WHERE series_id = ? AND status = 'completed'
-        ORDER BY date ASC
-    ", [$seriesId]);
-
-    // Calculate points for each event
-    foreach ($events as $event) {
-        $eventStats = calculateClubPointsForEvent($db, $event['id']);
-        $stats['events_processed']++;
-        $stats['total_points'] += $eventStats['total_points'];
-    }
-
-    // Refresh the cache
-    $cacheStats = refreshClubStandingsCache($db, $seriesId);
-    $stats['total_clubs'] = $cacheStats['clubs_updated'];
-
-    return $stats;
+function getTeamSeries($db) {
+    return $db->getAll("
+        SELECT
+            s.*,
+            COUNT(e.id) as event_count
+        FROM series s
+        LEFT JOIN events e ON s.id = e.series_id
+        WHERE s.format = 'Team'
+        GROUP BY s.id
+        ORDER BY s.year DESC, s.name ASC
+    ");
 }
 
 /**
- * Get top clubs across all series (for homepage display)
- *
- * @param Database $db Database instance
- * @param int $limit Number of clubs to return
- * @return array Top clubs with their best series performance
+ * Get series info with event count
  */
-function getTopClubsOverall($db, $limit = 10) {
-    return $db->getAll("
-        SELECT
-            c.id as club_id,
-            c.name as club_name,
-            c.short_name,
-            c.city,
-            c.logo,
-            SUM(csc.total_points) as overall_points,
-            COUNT(DISTINCT csc.series_id) as series_count,
-            MIN(csc.ranking) as best_ranking
-        FROM clubs c
-        JOIN club_standings_cache csc ON c.id = csc.club_id
-        GROUP BY c.id
-        ORDER BY overall_points DESC
-        LIMIT ?
-    ", [$limit]);
+function getSeriesWithEvents($db, $seriesId) {
+    $series = $db->getRow("SELECT * FROM series WHERE id = ?", [$seriesId]);
+    if (!$series) {
+        return null;
+    }
+
+    $events = $db->getAll("
+        SELECT id, name, date, location
+        FROM events
+        WHERE series_id = ?
+        ORDER BY date ASC
+    ", [$seriesId]);
+
+    $series['events'] = $events;
+    return $series;
 }
 
 /**
  * Check if club points tables exist
- *
- * @param Database $db Database instance
- * @return bool True if tables exist
  */
 function clubPointsTablesExist($db) {
     $conn = $db->getConnection();
