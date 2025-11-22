@@ -578,13 +578,24 @@ function recalculateEventResults($db, $event_id, $new_scale_id = null) {
         // If you need to reassign classes, use assignClassesToEvent() with correct discipline
 
         // Get all results grouped by class_id
+        // Convert finish_time to seconds for proper sorting (handles M:SS.mm and H:MM:SS.mm formats)
         $results = $db->getAll("
-            SELECT id, class_id, finish_time, status
+            SELECT id, class_id, finish_time, status,
+                   CASE
+                       WHEN finish_time IS NULL OR finish_time = '' THEN 999999
+                       WHEN finish_time LIKE '%:%:%' THEN
+                           CAST(SUBSTRING_INDEX(finish_time, ':', 1) AS DECIMAL(10,2)) * 3600 +
+                           CAST(SUBSTRING_INDEX(SUBSTRING_INDEX(finish_time, ':', 2), ':', -1) AS DECIMAL(10,2)) * 60 +
+                           CAST(SUBSTRING_INDEX(finish_time, ':', -1) AS DECIMAL(10,2))
+                       ELSE
+                           CAST(SUBSTRING_INDEX(finish_time, ':', 1) AS DECIMAL(10,2)) * 60 +
+                           CAST(SUBSTRING_INDEX(finish_time, ':', -1) AS DECIMAL(10,2))
+                   END as time_seconds
             FROM results
             WHERE event_id = ?
             ORDER BY class_id,
                      CASE WHEN status = 'finished' THEN 0 ELSE 1 END,
-                     finish_time ASC
+                     time_seconds ASC
         ", [$event_id]);
 
         // Group by class_id
