@@ -18,11 +18,12 @@ $colMapping = [
     'firstname' => $_POST['col_firstname'] ?? 0,
     'lastname' => $_POST['col_lastname'] ?? 1,
     'club' => $_POST['col_club'] ?? 2,
-    'uci_id' => $_POST['col_uci_id'] ?? 3
+    'class' => $_POST['col_class'] ?? 3,
+    'uci_id' => $_POST['col_uci_id'] ?? 4
 ];
 
 // Handle CSV export
-if (isset($_GET['export']) && isset($_SESSION['lookup_results'])) {
+if (isset($_GET['export']) && !empty($_SESSION['lookup_results'])) {
     $exportData = $_SESSION['lookup_results'];
     $exportHeaders = $_SESSION['lookup_headers'];
 
@@ -84,6 +85,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['csv_file'])) {
         $colMapping['firstname'] = (int)($_POST['col_firstname'] ?? findColumn($headers, ['förnamn', 'firstname', 'first_name', 'first name']));
         $colMapping['lastname'] = (int)($_POST['col_lastname'] ?? findColumn($headers, ['efternamn', 'lastname', 'last_name', 'last name', 'name']));
         $colMapping['club'] = (int)($_POST['col_club'] ?? findColumn($headers, ['klubb', 'club', 'team', 'förening']));
+        $colMapping['class'] = (int)($_POST['col_class'] ?? findColumn($headers, ['klass', 'class', 'kategori', 'category']));
         $colMapping['uci_id'] = (int)($_POST['col_uci_id'] ?? findColumn($headers, ['uci_id', 'uci id', 'uciid', 'license', 'licens']));
 
         // Process data rows
@@ -98,6 +100,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['csv_file'])) {
             $firstname = trim($parts[$colMapping['firstname']] ?? '');
             $lastname = trim($parts[$colMapping['lastname']] ?? '');
             $club = trim($parts[$colMapping['club']] ?? '');
+            $inputClass = trim($parts[$colMapping['class']] ?? '');
             $existingUciId = trim($parts[$colMapping['uci_id']] ?? '');
 
             if (empty($firstname) && empty($lastname)) {
@@ -134,6 +137,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['csv_file'])) {
                 'firstname' => $firstname,
                 'lastname' => $lastname,
                 'club' => $club,
+                'class' => $inputClass,
                 'original_uci_id' => $existingUciId,
                 'uci_id' => $uciId,
                 'match_type' => $match ? $match['match_type'] : ($existingUciId ? 'existing' : 'not_found'),
@@ -333,22 +337,27 @@ include __DIR__ . '/../includes/layout-header.php';
                         </small>
                     </div>
 
-                    <div class="gs-grid gs-grid-cols-2 gs-md-grid-cols-4 gs-gap-md gs-mb-md">
+                    <p class="gs-text-secondary gs-mb-sm">Kolumnnummer (0 = första kolumnen):</p>
+                    <div class="gs-grid gs-grid-cols-2 gs-md-grid-cols-5 gs-gap-md gs-mb-md">
                         <div class="gs-form-group">
-                            <label class="gs-label">Förnamn (kolumn)</label>
+                            <label class="gs-label">Förnamn</label>
                             <input type="number" name="col_firstname" value="0" min="0" class="gs-input">
                         </div>
                         <div class="gs-form-group">
-                            <label class="gs-label">Efternamn (kolumn)</label>
+                            <label class="gs-label">Efternamn</label>
                             <input type="number" name="col_lastname" value="1" min="0" class="gs-input">
                         </div>
                         <div class="gs-form-group">
-                            <label class="gs-label">Klubb (kolumn)</label>
+                            <label class="gs-label">Klubb</label>
                             <input type="number" name="col_club" value="2" min="0" class="gs-input">
                         </div>
                         <div class="gs-form-group">
-                            <label class="gs-label">UCI-ID (kolumn)</label>
-                            <input type="number" name="col_uci_id" value="3" min="0" class="gs-input">
+                            <label class="gs-label">Klass</label>
+                            <input type="number" name="col_class" value="3" min="0" class="gs-input">
+                        </div>
+                        <div class="gs-form-group">
+                            <label class="gs-label">UCI-ID</label>
+                            <input type="number" name="col_uci_id" value="4" min="0" class="gs-input">
                         </div>
                     </div>
 
