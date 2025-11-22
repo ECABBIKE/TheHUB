@@ -124,19 +124,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $countBest = $_POST['count_best_results'];
         $countBestValue = ($countBest === '' || $countBest === 'null') ? null : intval($countBest);
 
-        $db->update('series', [
-            'count_best_results' => $countBestValue
-        ], 'id = ?', [$seriesId]);
+        try {
+            $db->update('series', [
+                'count_best_results' => $countBestValue
+            ], 'id = ?', [$seriesId]);
 
-        // Refresh series data
-        $series = $db->getRow("SELECT * FROM series WHERE id = ?", [$seriesId]);
+            // Refresh series data
+            $series = $db->getRow("SELECT * FROM series WHERE id = ?", [$seriesId]);
 
-        if ($countBestValue === null) {
-            $message = 'Alla resultat räknas nu';
-        } else {
-            $message = "Räknar nu de {$countBestValue} bästa resultaten";
+            if ($countBestValue === null) {
+                $message = 'Alla resultat räknas nu';
+            } else {
+                $message = "Räknar nu de {$countBestValue} bästa resultaten";
+            }
+            $messageType = 'success';
+        } catch (Exception $e) {
+            // Column might not exist - need to run migration 007
+            $message = 'Kunde inte uppdatera inställningen. Kör migration 007_series_point_scales.sql först.';
+            $messageType = 'error';
         }
-        $messageType = 'success';
     } elseif ($action === 'move_up' || $action === 'move_down') {
         $seriesEventId = intval($_POST['series_event_id']);
 
