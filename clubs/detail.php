@@ -163,6 +163,13 @@ include __DIR__ . '/../includes/layout-header.php';
         align-items: center;
         padding: 0.75rem 1rem;
         border-bottom: 1px solid #f3f4f6;
+        text-decoration: none;
+        color: inherit;
+        transition: background-color 0.2s;
+    }
+
+    .scorer-item:hover {
+        background-color: #f9fafb;
     }
 
     .scorer-item:last-child {
@@ -301,7 +308,7 @@ include __DIR__ . '/../includes/layout-header.php';
             <?php else: ?>
                 <div class="scorer-list">
                     <?php $rank = 1; foreach ($topScorers as $riderId => $scorer): ?>
-                        <div class="scorer-item">
+                        <a href="/rider.php?id=<?= $riderId ?>" class="scorer-item">
                             <div class="scorer-rank"><?= $rank ?></div>
                             <div class="scorer-info">
                                 <div class="scorer-name"><?= h($scorer['name']) ?></div>
@@ -311,7 +318,7 @@ include __DIR__ . '/../includes/layout-header.php';
                                 <div class="scorer-points-value"><?= number_format($scorer['total_points']) ?></div>
                                 <div class="scorer-points-label">poäng</div>
                             </div>
-                        </div>
+                        </a>
                     <?php $rank++; endforeach; ?>
                 </div>
             <?php endif; ?>
