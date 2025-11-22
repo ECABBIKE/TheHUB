@@ -165,9 +165,7 @@ include __DIR__ . '/../includes/layout-header.php';
                                     <th>Namn</th>
                                     <th>Serie</th>
                                     <th>Plats</th>
-                                    <th>Venue</th>
-                                    <th>Disciplin</th>
-                                    <th>Status</th>
+                                    <th>Tävlingsformat</th>
                                     <th class="gs-table-col-actions">Åtgärder</th>
                                 </tr>
                             </thead>
@@ -180,22 +178,19 @@ include __DIR__ . '/../includes/layout-header.php';
                                         </td>
                                         <td><?= htmlspecialchars($event['series_name'] ?? '-') ?></td>
                                         <td><?= htmlspecialchars($event['location'] ?? '-') ?></td>
-                                        <td><?= htmlspecialchars($event['venue_name'] ?? '-') ?></td>
                                         <td>
-                                            <?php if ($event['discipline']): ?>
-                                                <span class="gs-badge"><?= htmlspecialchars($event['discipline']) ?></span>
-                                            <?php else: ?>
-                                                -
-                                            <?php endif; ?>
-                                        </td>
-                                        <td>
-                                            <?php if ($event['status'] === 'published'): ?>
-                                                <span class="gs-badge gs-badge-success">Publicerad</span>
-                                            <?php elseif ($event['status'] === 'draft'): ?>
-                                                <span class="gs-badge gs-badge-warning">Utkast</span>
-                                            <?php else: ?>
-                                                <span class="gs-badge gs-badge-secondary">Okänd</span>
-                                            <?php endif; ?>
+                                            <select class="gs-input gs-input-sm" style="min-width: 120px;" onchange="updateDiscipline(<?= $event['id'] ?>, this.value)">
+                                                <option value="">-</option>
+                                                <option value="ENDURO" <?= ($event['discipline'] ?? '') === 'ENDURO' ? 'selected' : '' ?>>Enduro</option>
+                                                <option value="DH" <?= ($event['discipline'] ?? '') === 'DH' ? 'selected' : '' ?>>DH</option>
+                                                <option value="XC" <?= ($event['discipline'] ?? '') === 'XC' ? 'selected' : '' ?>>XC</option>
+                                                <option value="XCO" <?= ($event['discipline'] ?? '') === 'XCO' ? 'selected' : '' ?>>XCO</option>
+                                                <option value="XCM" <?= ($event['discipline'] ?? '') === 'XCM' ? 'selected' : '' ?>>XCM</option>
+                                                <option value="DUAL_SLALOM" <?= ($event['discipline'] ?? '') === 'DUAL_SLALOM' ? 'selected' : '' ?>>Dual Slalom</option>
+                                                <option value="PUMPTRACK" <?= ($event['discipline'] ?? '') === 'PUMPTRACK' ? 'selected' : '' ?>>Pumptrack</option>
+                                                <option value="GRAVEL" <?= ($event['discipline'] ?? '') === 'GRAVEL' ? 'selected' : '' ?>>Gravel</option>
+                                                <option value="E-MTB" <?= ($event['discipline'] ?? '') === 'E-MTB' ? 'selected' : '' ?>>E-MTB</option>
+                                            </select>
                                         </td>
                                         <td>
                                             <div class="gs-flex gs-gap-sm">
@@ -237,6 +232,30 @@ include __DIR__ . '/../includes/layout-header.php';
                         '<input type="hidden" name="csrf_token" value="' + csrfToken + '">';
         document.body.appendChild(form);
         form.submit();
+    }
+
+    async function updateDiscipline(eventId, discipline) {
+        try {
+            const response = await fetch('/admin/api/update-event-discipline.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    event_id: eventId,
+                    discipline: discipline,
+                    csrf_token: csrfToken
+                })
+            });
+
+            const result = await response.json();
+            if (!result.success) {
+                alert('Fel: ' + (result.error || 'Kunde inte uppdatera'));
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert('Fel vid uppdatering av tävlingsformat');
+        }
     }
 </script>
 
