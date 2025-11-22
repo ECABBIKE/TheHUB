@@ -1,252 +1,377 @@
 <?php
 /**
  * Migration Runner
- * Requires admin login for security
+ * Reads and executes SQL migration files from database/migrations folder
  */
 
-// Load config and require admin authentication
 require_once __DIR__ . '/../config.php';
 require_admin();
 
-error_reporting(E_ALL);
-ini_set('display_errors', 0); // Don't display errors in production
+$db = getDB();
+$message = '';
+$messageType = '';
 
-$pdo = null;
+// Ensure migrations table exists
 try {
-    $pdo = new PDO(
-        "mysql:host=" . DB_HOST . ";dbname=" . DB_NAME . ";charset=utf8mb4",
-        DB_USER,
-        DB_PASS,
-        [
-            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC
-        ]
-    );
-} catch (PDOException $e) {
-    die("Database connection failed: " . $e->getMessage());
+    $db->query("
+        CREATE TABLE IF NOT EXISTS migrations (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            filename VARCHAR(255) NOT NULL UNIQUE,
+            executed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            success TINYINT(1) DEFAULT 1,
+            error_message TEXT
+        )
+    ");
+} catch (Exception $e) {
+    // Table might already exist
 }
 
-$success = [];
-$errors = [];
+// Get migrations directory
+$migrationsDir = __DIR__ . '/../database/migrations';
+$migrationFiles = [];
 
-// Migration steps
-$migrations = [
-    "ALTER TABLE riders ADD COLUMN personnummer VARCHAR(15) AFTER birth_year" => "Add personnummer field",
-    "ALTER TABLE riders ADD COLUMN address VARCHAR(255) AFTER city" => "Add address field",
-    "ALTER TABLE riders ADD COLUMN postal_code VARCHAR(10) AFTER address" => "Add postal_code field",
-    "ALTER TABLE riders ADD COLUMN country VARCHAR(100) DEFAULT 'Sverige' AFTER postal_code" => "Add country field",
-    "ALTER TABLE riders ADD COLUMN emergency_contact VARCHAR(255) AFTER phone" => "Add emergency_contact field",
-    "ALTER TABLE riders ADD COLUMN district VARCHAR(100) AFTER country" => "Add district field",
-    "ALTER TABLE riders ADD COLUMN team VARCHAR(255) AFTER club_id" => "Add team field",
-    "ALTER TABLE riders ADD COLUMN disciplines JSON AFTER discipline" => "Add disciplines JSON field",
-    "ALTER TABLE riders ADD COLUMN license_year INT AFTER license_valid_until" => "Add license_year field",
-];
-
-// Run migrations
-foreach ($migrations as $sql => $description) {
-    try {
-        $pdo->exec($sql);
-        $success[] = $description;
-    } catch (PDOException $e) {
-        if ($e->getCode() == '42S21' || strpos($e->getMessage(), 'Duplicate column') !== false) {
-            $success[] = $description . " (already exists)";
-        } else {
-            $errors[] = $description . ": " . $e->getMessage();
+if (is_dir($migrationsDir)) {
+    $files = scandir($migrationsDir);
+    foreach ($files as $file) {
+        if (pathinfo($file, PATHINFO_EXTENSION) === 'sql') {
+            $migrationFiles[] = $file;
         }
+    }
+    sort($migrationFiles);
+}
+
+// Get executed migrations
+$executedMigrations = [];
+try {
+    $rows = $db->getAll("SELECT filename, executed_at, success, error_message FROM migrations");
+    foreach ($rows as $row) {
+        $executedMigrations[$row['filename']] = $row;
+    }
+} catch (Exception $e) {
+    // Table might not exist yet
+}
+
+// Handle run migration
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['run_migration'])) {
+    checkCsrf();
+
+    $filename = basename($_POST['run_migration']); // Security: only basename
+    $filepath = $migrationsDir . '/' . $filename;
+
+    if (file_exists($filepath) && pathinfo($filename, PATHINFO_EXTENSION) === 'sql') {
+        $sql = file_get_contents($filepath);
+
+        // Split by semicolons (simple approach - doesn't handle semicolons in strings)
+        $statements = array_filter(array_map('trim', explode(';', $sql)));
+
+        $errors = [];
+        $successCount = 0;
+
+        foreach ($statements as $statement) {
+            if (empty($statement) || strpos($statement, '--') === 0) {
+                continue;
+            }
+
+            try {
+                $db->query($statement);
+                $successCount++;
+            } catch (Exception $e) {
+                $errorMsg = $e->getMessage();
+                // Ignore "already exists" errors
+                if (strpos($errorMsg, 'Duplicate column') === false &&
+                    strpos($errorMsg, 'Duplicate key') === false &&
+                    strpos($errorMsg, 'already exists') === false) {
+                    $errors[] = $errorMsg;
+                } else {
+                    $successCount++;
+                }
+            }
+        }
+
+        // Record migration
+        $success = empty($errors);
+        $errorMessage = implode('; ', $errors);
+
+        try {
+            // Check if already recorded
+            $existing = $db->getRow("SELECT id FROM migrations WHERE filename = ?", [$filename]);
+            if ($existing) {
+                $db->update('migrations', [
+                    'executed_at' => date('Y-m-d H:i:s'),
+                    'success' => $success ? 1 : 0,
+                    'error_message' => $errorMessage ?: null
+                ], 'filename = ?', [$filename]);
+            } else {
+                $db->insert('migrations', [
+                    'filename' => $filename,
+                    'success' => $success ? 1 : 0,
+                    'error_message' => $errorMessage ?: null
+                ]);
+            }
+        } catch (Exception $e) {
+            // Ignore tracking errors
+        }
+
+        if ($success) {
+            $message = "Migration '$filename' kördes framgångsrikt ($successCount statements)";
+            $messageType = 'success';
+        } else {
+            $message = "Migration '$filename' kördes med fel: " . $errorMessage;
+            $messageType = 'error';
+        }
+
+        // Refresh executed migrations
+        try {
+            $rows = $db->getAll("SELECT filename, executed_at, success, error_message FROM migrations");
+            $executedMigrations = [];
+            foreach ($rows as $row) {
+                $executedMigrations[$row['filename']] = $row;
+            }
+        } catch (Exception $e) {
+            // Ignore
+        }
+    } else {
+        $message = 'Ogiltig migrationsfil';
+        $messageType = 'error';
     }
 }
 
-// Add indexes
-$indexes = [
-    "ALTER TABLE riders ADD INDEX idx_personnummer (personnummer)" => "Add personnummer index",
-    "ALTER TABLE riders ADD INDEX idx_postal_code (postal_code)" => "Add postal_code index",
-    "ALTER TABLE riders ADD INDEX idx_district (district)" => "Add district index",
-];
+// Handle run all pending
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['run_all_pending'])) {
+    checkCsrf();
 
-foreach ($indexes as $sql => $description) {
-    try {
-        $pdo->exec($sql);
-        $success[] = $description;
-    } catch (PDOException $e) {
-        if ($e->getCode() == '42000' || strpos($e->getMessage(), 'Duplicate key') !== false) {
-            $success[] = $description . " (already exists)";
+    $ranCount = 0;
+    $errorCount = 0;
+
+    foreach ($migrationFiles as $filename) {
+        if (isset($executedMigrations[$filename]) && $executedMigrations[$filename]['success']) {
+            continue; // Skip already successful
+        }
+
+        $filepath = $migrationsDir . '/' . $filename;
+        $sql = file_get_contents($filepath);
+        $statements = array_filter(array_map('trim', explode(';', $sql)));
+
+        $errors = [];
+        $successCount = 0;
+
+        foreach ($statements as $statement) {
+            if (empty($statement) || strpos($statement, '--') === 0) {
+                continue;
+            }
+
+            try {
+                $db->query($statement);
+                $successCount++;
+            } catch (Exception $e) {
+                $errorMsg = $e->getMessage();
+                if (strpos($errorMsg, 'Duplicate column') === false &&
+                    strpos($errorMsg, 'Duplicate key') === false &&
+                    strpos($errorMsg, 'already exists') === false) {
+                    $errors[] = $errorMsg;
+                } else {
+                    $successCount++;
+                }
+            }
+        }
+
+        $success = empty($errors);
+        $errorMessage = implode('; ', $errors);
+
+        try {
+            $existing = $db->getRow("SELECT id FROM migrations WHERE filename = ?", [$filename]);
+            if ($existing) {
+                $db->update('migrations', [
+                    'executed_at' => date('Y-m-d H:i:s'),
+                    'success' => $success ? 1 : 0,
+                    'error_message' => $errorMessage ?: null
+                ], 'filename = ?', [$filename]);
+            } else {
+                $db->insert('migrations', [
+                    'filename' => $filename,
+                    'success' => $success ? 1 : 0,
+                    'error_message' => $errorMessage ?: null
+                ]);
+            }
+        } catch (Exception $e) {
+            // Ignore
+        }
+
+        if ($success) {
+            $ranCount++;
         } else {
-            $errors[] = $description . ": " . $e->getMessage();
+            $errorCount++;
         }
     }
+
+    if ($errorCount > 0) {
+        $message = "Körde $ranCount migrationer, $errorCount misslyckades";
+        $messageType = 'warning';
+    } else {
+        $message = "Körde $ranCount nya migrationer framgångsrikt";
+        $messageType = 'success';
+    }
+
+    // Refresh
+    try {
+        $rows = $db->getAll("SELECT filename, executed_at, success, error_message FROM migrations");
+        $executedMigrations = [];
+        foreach ($rows as $row) {
+            $executedMigrations[$row['filename']] = $row;
+        }
+    } catch (Exception $e) {
+        // Ignore
+    }
 }
+
+$pageTitle = 'Kör Migrationer';
+$pageType = 'admin';
+include __DIR__ . '/../includes/layout-header.php';
 ?>
-<!DOCTYPE html>
-<html lang="sv">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Migration Results</title>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 40px 20px;
-        }
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-            overflow: hidden;
-        }
-        .header {
-            background: linear-gradient(135deg, #2d3748 0%, #1a202c 100%);
-            color: white;
-            padding: 30px;
-            text-align: center;
-        }
-        .header h1 {
-            font-size: 28px;
-            margin-bottom: 10px;
-        }
-        .content {
-            padding: 30px;
-        }
-        .section {
-            margin-bottom: 30px;
-        }
-        .section h2 {
-            font-size: 18px;
-            margin-bottom: 15px;
-            color: #2d3748;
-        }
-        .success-box {
-            background: #d1fae5;
-            border-left: 4px solid #10b981;
-            padding: 20px;
-            border-radius: 6px;
-            margin-bottom: 20px;
-        }
-        .error-box {
-            background: #fee;
-            border-left: 4px solid #ef4444;
-            padding: 20px;
-            border-radius: 6px;
-            margin-bottom: 20px;
-        }
-        .item {
-            padding: 10px;
-            border-bottom: 1px solid #e5e7eb;
-            font-size: 14px;
-        }
-        .item:last-child {
-            border-bottom: none;
-        }
-        .stats {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 15px;
-            margin-bottom: 30px;
-        }
-        .stat {
-            background: #f3f4f6;
-            padding: 20px;
-            border-radius: 8px;
-            text-align: center;
-        }
-        .stat-number {
-            font-size: 32px;
-            font-weight: bold;
-            color: #667eea;
-        }
-        .stat-label {
-            font-size: 12px;
-            color: #6b7280;
-            text-transform: uppercase;
-            margin-top: 5px;
-        }
-        .btn {
-            display: inline-block;
-            background: #667eea;
-            color: white;
-            padding: 12px 24px;
-            border-radius: 6px;
-            text-decoration: none;
-            font-weight: 600;
-            transition: background 0.2s;
-        }
-        .btn:hover {
-            background: #5568d3;
-        }
-        .footer {
-            background: #f9fafb;
-            padding: 20px 30px;
-            text-align: center;
-            font-size: 14px;
-            color: #6b7280;
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="header">
-            <h1>🚀 Migration Results</h1>
-            <p>Extended Rider Fields Migration</p>
+
+<main class="gs-main-content">
+    <div class="gs-container">
+        <!-- Header -->
+        <div class="gs-flex gs-items-center gs-justify-between gs-mb-lg">
+            <div>
+                <h1 class="gs-h1">
+                    <i data-lucide="database"></i>
+                    Kör Migrationer
+                </h1>
+                <p class="gs-text-secondary">
+                    Kör databasmigrationer från /database/migrations
+                </p>
+            </div>
+            <a href="/admin/system-settings.php?tab=debug" class="gs-btn gs-btn-outline">
+                <i data-lucide="arrow-left"></i>
+                Tillbaka
+            </a>
         </div>
 
-        <div class="content">
-            <div class="stats">
-                <div class="stat">
-                    <div class="stat-number"><?= count($success) ?></div>
-                    <div class="stat-label">Successful</div>
-                </div>
-                <div class="stat">
-                    <div class="stat-number"><?= count($errors) ?></div>
-                    <div class="stat-label">Errors</div>
-                </div>
-                <div class="stat">
-                    <div class="stat-number"><?= count($migrations) + count($indexes) ?></div>
-                    <div class="stat-label">Total Steps</div>
+        <?php if ($message): ?>
+            <div class="gs-alert gs-alert-<?= h($messageType) ?> gs-mb-lg">
+                <i data-lucide="<?= $messageType === 'success' ? 'check-circle' : ($messageType === 'error' ? 'alert-circle' : 'alert-triangle') ?>"></i>
+                <?= h($message) ?>
+            </div>
+        <?php endif; ?>
+
+        <!-- Stats -->
+        <div class="gs-grid gs-grid-cols-3 gs-gap-md gs-mb-lg">
+            <div class="gs-card">
+                <div class="gs-card-content gs-text-center">
+                    <div class="gs-text-2xl gs-text-primary"><?= count($migrationFiles) ?></div>
+                    <div class="gs-text-sm gs-text-secondary">Totalt filer</div>
                 </div>
             </div>
-
-            <?php if (!empty($success)): ?>
-                <div class="section">
-                    <h2>✅ Successful Operations</h2>
-                    <div class="success-box">
-                        <?php foreach ($success as $item): ?>
-                            <div class="item">✓ <?= htmlspecialchars($item) ?></div>
-                        <?php endforeach; ?>
-                    </div>
+            <div class="gs-card">
+                <div class="gs-card-content gs-text-center">
+                    <?php
+                    $successCount = count(array_filter($executedMigrations, fn($m) => $m['success']));
+                    ?>
+                    <div class="gs-text-2xl gs-text-success"><?= $successCount ?></div>
+                    <div class="gs-text-sm gs-text-secondary">Körda</div>
                 </div>
-            <?php endif; ?>
-
-            <?php if (!empty($errors)): ?>
-                <div class="section">
-                    <h2>❌ Errors</h2>
-                    <div class="error-box">
-                        <?php foreach ($errors as $error): ?>
-                            <div class="item">✗ <?= htmlspecialchars($error) ?></div>
-                        <?php endforeach; ?>
-                    </div>
+            </div>
+            <div class="gs-card">
+                <div class="gs-card-content gs-text-center">
+                    <?php
+                    $pendingCount = count($migrationFiles) - $successCount;
+                    ?>
+                    <div class="gs-text-2xl gs-text-warning"><?= $pendingCount ?></div>
+                    <div class="gs-text-sm gs-text-secondary">Väntande</div>
                 </div>
-            <?php endif; ?>
-
-            <?php if (count($errors) === 0): ?>
-                <div class="gs-center-p20">
-                    <h3 class="gs-text-success gs-mb-md">🎉 Migration Complete!</h3>
-                    <p class="gs-text-secondary gs-mb-lg">
-                        All database fields have been added successfully.
-                    </p>
-                    <a href="/admin/import-riders-extended.php" class="btn">
-                        Go to Extended Import
-                    </a>
-                </div>
-            <?php endif; ?>
+            </div>
         </div>
 
-        <div class="footer">
-            Migration completed at <?= date('Y-m-d H:i:s') ?>
+        <?php if ($pendingCount > 0): ?>
+            <div class="gs-card gs-mb-lg">
+                <div class="gs-card-content">
+                    <form method="POST">
+                        <?= csrf_field() ?>
+                        <button type="submit" name="run_all_pending" value="1" class="gs-btn gs-btn-primary"
+                                onclick="return confirm('Kör alla <?= $pendingCount ?> väntande migrationer?')">
+                            <i data-lucide="play"></i>
+                            Kör alla väntande migrationer
+                        </button>
+                    </form>
+                </div>
+            </div>
+        <?php endif; ?>
+
+        <!-- Migration List -->
+        <div class="gs-card">
+            <div class="gs-card-header">
+                <h2 class="gs-h3">
+                    <i data-lucide="list"></i>
+                    Migrationer (<?= count($migrationFiles) ?>)
+                </h2>
+            </div>
+            <div class="gs-card-content gs-p-0">
+                <?php if (empty($migrationFiles)): ?>
+                    <div class="gs-p-lg gs-text-center">
+                        <i data-lucide="inbox" class="gs-text-secondary" style="width: 48px; height: 48px;"></i>
+                        <p class="gs-text-secondary gs-mt-md">Inga migrationsfiler hittades i /database/migrations</p>
+                    </div>
+                <?php else: ?>
+                    <div class="gs-table-responsive">
+                        <table class="gs-table">
+                            <thead>
+                                <tr>
+                                    <th>Fil</th>
+                                    <th>Status</th>
+                                    <th>Körd</th>
+                                    <th class="gs-text-right">Åtgärd</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($migrationFiles as $file):
+                                    $executed = $executedMigrations[$file] ?? null;
+                                    $isSuccess = $executed && $executed['success'];
+                                    $isFailed = $executed && !$executed['success'];
+                                ?>
+                                    <tr>
+                                        <td>
+                                            <strong><?= h($file) ?></strong>
+                                            <?php if ($isFailed && $executed['error_message']): ?>
+                                                <br><small class="gs-text-danger"><?= h($executed['error_message']) ?></small>
+                                            <?php endif; ?>
+                                        </td>
+                                        <td>
+                                            <?php if ($isSuccess): ?>
+                                                <span class="gs-badge gs-badge-success">Körd</span>
+                                            <?php elseif ($isFailed): ?>
+                                                <span class="gs-badge gs-badge-danger">Misslyckad</span>
+                                            <?php else: ?>
+                                                <span class="gs-badge gs-badge-warning">Väntande</span>
+                                            <?php endif; ?>
+                                        </td>
+                                        <td>
+                                            <?php if ($executed): ?>
+                                                <?= date('Y-m-d H:i', strtotime($executed['executed_at'])) ?>
+                                            <?php else: ?>
+                                                -
+                                            <?php endif; ?>
+                                        </td>
+                                        <td class="gs-text-right">
+                                            <form method="POST" style="display: inline;">
+                                                <?= csrf_field() ?>
+                                                <button type="submit" name="run_migration" value="<?= h($file) ?>"
+                                                        class="gs-btn gs-btn-sm <?= $isSuccess ? 'gs-btn-outline' : 'gs-btn-primary' ?>"
+                                                        onclick="return confirm('Kör migration <?= h($file) ?>?')">
+                                                    <i data-lucide="play"></i>
+                                                    <?= $isSuccess ? 'Kör igen' : 'Kör' ?>
+                                                </button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                <?php endif; ?>
+            </div>
         </div>
     </div>
-</body>
-</html>
+</main>
+
+<?php include __DIR__ . '/../includes/layout-footer.php'; ?>
