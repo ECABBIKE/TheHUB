@@ -175,6 +175,7 @@ if ($totalRaces > 0 && $rider['birth_year'] && $rider['gender']) {
                         JOIN events e ON r.event_id = e.id
                         JOIN series_events se ON e.id = se.event_id
                         WHERE se.series_id = ? AND r.cyclist_id = ?
+                        AND r.status = 'finished' AND r.points > 0
 
                         UNION
 
@@ -182,6 +183,7 @@ if ($totalRaces > 0 && $rider['birth_year'] && $rider['gender']) {
                         FROM results r
                         JOIN events e ON r.event_id = e.id
                         WHERE e.series_id = ? AND r.cyclist_id = ?
+                        AND r.status = 'finished' AND r.points > 0
                     ) combined
                 ", [$totalSeries['id'], $riderId, $totalSeries['id'], $riderId]);
 
@@ -194,6 +196,7 @@ if ($totalRaces > 0 && $rider['birth_year'] && $rider['gender']) {
                         JOIN events e ON r.event_id = e.id
                         JOIN series_events se ON e.id = se.event_id
                         WHERE se.series_id = ? AND r.class_id = ?
+                        AND r.status = 'finished' AND r.points > 0
 
                         UNION ALL
 
@@ -201,6 +204,7 @@ if ($totalRaces > 0 && $rider['birth_year'] && $rider['gender']) {
                         FROM results r
                         JOIN events e ON r.event_id = e.id
                         WHERE e.series_id = ? AND r.class_id = ?
+                        AND r.status = 'finished' AND r.points > 0
                     ) combined
                     GROUP BY cyclist_id
                     ORDER BY total_points DESC
@@ -217,20 +221,15 @@ if ($totalRaces > 0 && $rider['birth_year'] && $rider['gender']) {
                 }
             }
 
-            // Find GravitySeries Team (club points)
-            $teamSeries = $db->getRow("
-                SELECT id, name FROM series
-                WHERE format = 'Team' AND active = 1
-                ORDER BY year DESC LIMIT 1
-            ");
-
-            if ($teamSeries && $rider['club_id']) {
-                // Get rider's club points contribution
+            // Get GravitySeries Team stats (club points from the same Total series)
+            // Club points are stored with the main series_id, not a separate "Team" series
+            if ($totalSeries && $rider['club_id']) {
+                // Get rider's club points contribution in GravitySeries Total
                 $gravityTeamStats = $db->getRow("
                     SELECT SUM(club_points) as total_points, COUNT(DISTINCT event_id) as events_count
                     FROM club_rider_points
                     WHERE rider_id = ? AND club_id = ? AND series_id = ?
-                ", [$riderId, $rider['club_id'], $teamSeries['id']]);
+                ", [$riderId, $rider['club_id'], $totalSeries['id']]);
             }
         }
     } catch (Exception $e) {
