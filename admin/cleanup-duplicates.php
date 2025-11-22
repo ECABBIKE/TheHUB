@@ -162,24 +162,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['normalize_all'])) {
     checkCsrf();
 
     try {
-        // Normalize all UCI-IDs by removing spaces and dashes
+        // Get all riders with UCI-IDs that need normalization
         $ridersToNormalize = $db->getAll("
             SELECT id, license_number
             FROM riders
             WHERE license_number IS NOT NULL
             AND license_number != ''
-            AND (license_number LIKE '% %' OR license_number LIKE '%-%')
+            AND license_number NOT LIKE 'SWE%'
         ");
 
         $updated = 0;
         foreach ($ridersToNormalize as $rider) {
-            $normalized = str_replace([' ', '-'], '', $rider['license_number']);
-            $db->update('riders', ['license_number' => $normalized], 'id = ?', [$rider['id']]);
-            $updated++;
+            $normalized = normalizeUciId($rider['license_number']);
+            if ($normalized !== $rider['license_number']) {
+                $db->update('riders', ['license_number' => $normalized], 'id = ?', [$rider['id']]);
+                $updated++;
+            }
         }
 
         // Store message in session and redirect
-        $_SESSION['cleanup_message'] = "Normaliserade UCI-ID format för $updated deltagare";
+        $_SESSION['cleanup_message'] = "Normaliserade UCI-ID format för $updated deltagare till XXX XXX XXX XX";
         $_SESSION['cleanup_message_type'] = 'success';
     } catch (Exception $e) {
         $_SESSION['cleanup_message'] = "Fel vid normalisering: " . $e->getMessage();
@@ -846,8 +848,8 @@ include __DIR__ . '/../includes/layout-header.php';
             </div>
             <div class="gs-card-content">
                 <p class="gs-text-secondary gs-mb-md">
-                    Ta bort alla mellanslag och bindestreck från UCI-ID:n för att förhindra framtida dubbletter.
-                    <br><strong>Exempel:</strong> "101 089 432 09" blir "10108943209"
+                    Formatera alla UCI-ID till standardformat för bättre läsbarhet och förhindra dubbletter.
+                    <br><strong>Exempel:</strong> "10108943209" eller "101-089-432-09" blir "101 089 432 09"
                 </p>
                 <div class="gs-flex gs-gap-md">
                     <form method="POST">
