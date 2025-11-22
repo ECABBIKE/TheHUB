@@ -189,7 +189,7 @@ include __DIR__ . '/../includes/layout-header.php';
                                 </tr>
                             </thead>
                             <tbody>
-                                <?php for ($i = 1; $i <= 50; $i++): ?>
+                                <?php for ($i = 1; $i <= 150; $i++): ?>
                                     <?php
                                     $posValue = isset($valuesByPosition[$i]) ? $valuesByPosition[$i] : [
                                         'points' => '',
