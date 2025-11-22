@@ -35,7 +35,7 @@ function calculateEventClubPoints($db, $eventId, $seriesId) {
             r.id as result_id,
             r.cyclist_id,
             r.class_id,
-            r.class_points,
+            r.points,
             rd.club_id,
             rd.firstname,
             rd.lastname
@@ -44,8 +44,8 @@ function calculateEventClubPoints($db, $eventId, $seriesId) {
         WHERE r.event_id = ?
         AND r.status = 'finished'
         AND rd.club_id IS NOT NULL
-        AND r.class_points > 0
-        ORDER BY rd.club_id, r.class_id, r.class_points DESC
+        AND r.points > 0
+        ORDER BY rd.club_id, r.class_id, r.points DESC
     ", [$eventId]);
 
     if (empty($results)) {
@@ -78,7 +78,7 @@ function calculateEventClubPoints($db, $eventId, $seriesId) {
 
         $rank = 1;
         foreach ($riders as $rider) {
-            $originalPoints = (float)$rider['class_points'];
+            $originalPoints = (float)$rider['points'];
             $clubPoints = 0;
             $percentage = 0;
 
