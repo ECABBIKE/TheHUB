@@ -36,6 +36,7 @@ try {
             r.license_valid_until,
             r.city,
             r.active,
+            r.gravity_id,
             c.name as club_name,
             c.city as club_city
         FROM riders r
@@ -305,6 +306,14 @@ try {
                                             <?= $isActive ? '✓ Aktiv ' . $currentYear : '✗ ' . $rider['license_year'] ?>
                                         </span>
                                     <?php endif; ?>
+                                </div>
+                            <?php endif; ?>
+
+                            <!-- Gravity ID Badge -->
+                            <?php if (!empty($rider['gravity_id'])): ?>
+                                <div class="gravity-id-badge">
+                                    <span class="gravity-id-icon">★</span>
+                                    <span class="gravity-id-text">Gravity ID: <?= h($rider['gravity_id']) ?></span>
                                 </div>
                             <?php endif; ?>
 

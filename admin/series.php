@@ -472,16 +472,10 @@ include __DIR__ . '/../includes/layout-header.php';
                                             'cancelled' => ['badge' => 'secondary', 'text' => 'Inställd']
                                         ];
                                         $statusInfo = $statusMap[$serie['status']] ?? ['badge' => 'secondary', 'text' => ucfirst($serie['status'])];
-                                        $isCompleted = $serie['status'] === 'completed';
                                         ?>
                                         <tr>
                                             <td>
-                                                <div class="gs-flex gs-items-center gs-gap-xs">
-                                                    <?php if ($isCompleted): ?>
-                                                        <i data-lucide="lock" class="gs-icon-primary-sm" title="Serie är låst/avslutad"></i>
-                                                    <?php endif; ?>
-                                                    <strong><?= h($serie['name']) ?></strong>
-                                                </div>
+                                                <strong><?= h($serie['name']) ?></strong>
                                             </td>
                                             <td><?= h($serie['type'] ?? '-') ?></td>
                                             <td>

@@ -198,6 +198,31 @@ include __DIR__ . '/../includes/layout-header.php';
                     </div>
                 </div>
             </div>
+
+            <!-- Gravity ID -->
+            <div class="gs-card" style="border-left: 4px solid #764ba2;">
+                <div class="gs-card-header">
+                    <h2 class="gs-h6">
+                        <i data-lucide="id-card"></i>
+                        Gravity ID
+                    </h2>
+                </div>
+                <div class="gs-card-content">
+                    <p class="gs-text-sm gs-text-secondary gs-mb-md">
+                        Tilldela Gravity ID för medlemsrabatter vid eventanmälan.
+                    </p>
+                    <div class="gs-flex gs-gap-sm">
+                        <a href="/admin/import-gravity-id.php?template=1" class="gs-btn gs-btn-outline gs-btn-sm">
+                            <i data-lucide="download"></i>
+                            Mall
+                        </a>
+                        <a href="/admin/import-gravity-id.php" class="gs-btn gs-btn-sm gs-flex-1" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+                            <i data-lucide="upload"></i>
+                            Importera
+                        </a>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <!-- Format Guide -->
