@@ -353,12 +353,9 @@ function getSeriesWithEvents($db, $seriesId) {
  * Check if club points tables exist
  */
 function clubPointsTablesExist($db) {
-    $conn = $db->getConnection();
-    if (!$conn) return false;
-
     try {
-        $result = $conn->query("SHOW TABLES LIKE 'club_standings_cache'");
-        return $result && $result->rowCount() > 0;
+        $tables = $db->getAll("SHOW TABLES LIKE 'club_standings_cache'");
+        return !empty($tables);
     } catch (Exception $e) {
         return false;
     }
