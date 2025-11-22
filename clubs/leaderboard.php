@@ -90,6 +90,7 @@ include __DIR__ . '/../includes/layout-header.php';
         align-items: center;
         gap: 1rem;
         transition: transform 0.2s;
+        cursor: pointer;
     }
 
     .club-card:hover {
@@ -338,7 +339,7 @@ include __DIR__ . '/../includes/layout-header.php';
                     elseif ($club['ranking'] == 2) $rankClass = 'rank-2';
                     elseif ($club['ranking'] == 3) $rankClass = 'rank-3';
                     ?>
-                    <div class="club-card <?= $rankClass ?>">
+                    <a href="/clubs/detail.php?club_id=<?= $club['club_id'] ?>&series_id=<?= $selectedSeriesId ?>" class="club-card <?= $rankClass ?>" style="text-decoration: none; color: inherit;">
                         <div class="rank-badge">
                             <?php if ($club['ranking'] <= 3): ?>
                                 <span class="trophy-icon"></span>
@@ -364,7 +365,7 @@ include __DIR__ . '/../includes/layout-header.php';
                             <div class="club-points-label">poäng</div>
                             <div class="club-participants"><?= $club['total_participants'] ?> åkare</div>
                         </div>
-                    </div>
+                    </a>
                 <?php endforeach; ?>
 
                 <!-- Info -->
