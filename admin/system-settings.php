@@ -236,35 +236,49 @@ $categoryLabels = [
     'general' => 'Allmänt'
 ];
 
-// Debug tools
+// Admin tools organized by workflow
 $debugTools = [
+    'import' => [
+        'title' => '1. Import & License',
+        'icon' => 'upload',
+        'items' => [
+            ['name' => 'Berika CSV med License', 'url' => '/admin/enrich-uci-id.php', 'desc' => 'Fyll i saknade license numbers innan import'],
+            ['name' => 'Sök License Number', 'url' => '/admin/search-uci-id.php', 'desc' => 'Slå upp enskilda license numbers'],
+        ]
+    ],
+    'duplicates' => [
+        'title' => '2. Dublettrensning',
+        'icon' => 'git-merge',
+        'items' => [
+            ['name' => 'Auto-slå ihop UCI/SWE', 'url' => '/admin/auto-merge-uci-swe.php', 'desc' => 'Automatisk sammanslagning av UCI-ID och SWE-ID'],
+            ['name' => 'Auto-slå ihop klubbar', 'url' => '/admin/auto-merge-clubs.php', 'desc' => 'Automatisk sammanslagning av klubbdubbletter'],
+            ['name' => 'Manuell dublettrensning', 'url' => '/admin/cleanup-duplicates.php', 'desc' => 'Hantera ryttardubbletter manuellt'],
+            ['name' => 'Manuell klubbrensning', 'url' => '/admin/cleanup-clubs.php', 'desc' => 'Hantera klubbdubbletter manuellt'],
+        ]
+    ],
     'points' => [
-        'title' => 'Poäng & Resultat',
+        'title' => '3. Poäng & Resultat',
         'icon' => 'award',
         'items' => [
             ['name' => 'Poängmallar', 'url' => '/admin/point-scales.php', 'desc' => 'Skapa och hantera poängmallar'],
             ['name' => 'Omräkna Resultat', 'url' => '/admin/recalculate-results.php', 'desc' => 'Tilldela poängmall och omräkna poäng'],
             ['name' => 'Rensa Eventresultat', 'url' => '/admin/clear-event-results.php', 'desc' => 'Ta bort resultat för specifikt event'],
-            ['name' => 'Rensa Dubbletter', 'url' => '/admin/cleanup-duplicates.php', 'desc' => 'Hantera dubbletter och sammanfoga deltagare'],
-            ['name' => 'Rensa Klubbdubbletter', 'url' => '/admin/cleanup-clubs.php', 'desc' => 'Slå samman dubblettklubbar från import'],
-            ['name' => 'Sök License Number', 'url' => '/admin/search-uci-id.php', 'desc' => 'Slå upp license numbers för åkare innan import'],
-            ['name' => 'Berika CSV med License', 'url' => '/admin/enrich-uci-id.php', 'desc' => 'Berika CSV med license numbers innan import'],
             ['name' => 'Flytta Klassresultat', 'url' => '/admin/move-class-results.php', 'desc' => 'Flytta resultat mellan klasser'],
-            ['name' => 'Omtilldela Klasser', 'url' => '/admin/reassign-classes.php', 'desc' => 'Korrigera felaktiga klassplaceringar baserat på kön/ålder'],
+            ['name' => 'Omtilldela Klasser', 'url' => '/admin/reassign-classes.php', 'desc' => 'Korrigera klassplaceringar baserat på kön/ålder'],
         ]
     ],
     'database' => [
-        'title' => 'Databas & Migrationer',
+        'title' => '4. Databas',
         'icon' => 'database',
         'items' => [
-            ['name' => 'Kör Migrationer', 'url' => '/admin/migrate.php', 'desc' => 'Kör databas migrationer'],
+            ['name' => 'Kör Migrationer', 'url' => '/admin/migrate.php', 'desc' => 'Kör databasmigrationer'],
         ]
     ],
     'system' => [
-        'title' => 'System',
+        'title' => '5. System',
         'icon' => 'settings',
         'items' => [
-            ['name' => 'Check Files', 'url' => '/admin/check-files.php', 'desc' => 'Kontrollera filer'],
+            ['name' => 'Kontrollera filer', 'url' => '/admin/check-files.php', 'desc' => 'Verifiera att systemfiler finns'],
         ]
     ]
 ];

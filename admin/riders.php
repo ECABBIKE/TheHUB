@@ -9,6 +9,7 @@ $db = getDB();
 $search = $_GET['search'] ?? '';
 $club_id = isset($_GET['club_id']) && is_numeric($_GET['club_id']) ? intval($_GET['club_id']) : null;
 $onlyWithResults = isset($_GET['with_results']) && $_GET['with_results'] == '1';
+$onlySweId = isset($_GET['swe_only']) && $_GET['swe_only'] == '1';
 
 // Handle sorting
 $sortBy = $_GET['sort'] ?? 'name';
@@ -45,6 +46,10 @@ if ($club_id) {
 
 if ($onlyWithResults) {
     $where[] = "EXISTS (SELECT 1 FROM results r WHERE r.cyclist_id = c.id)";
+}
+
+if ($onlySweId) {
+    $where[] = "c.license_number LIKE 'SWE%'";
 }
 
 $whereClause = $where ? 'WHERE ' . implode(' AND ', $where) : '';
@@ -122,7 +127,11 @@ include __DIR__ . '/../includes/layout-header.php';
                         <input type="checkbox" name="with_results" value="1" <?= $onlyWithResults ? 'checked' : '' ?> onchange="this.form.submit()">
                         <span class="gs-text-sm">Endast med resultat</span>
                     </label>
-                    <?php if ($search || $onlyWithResults): ?>
+                    <label class="gs-checkbox gs-flex gs-items-center gs-gap-xs">
+                        <input type="checkbox" name="swe_only" value="1" <?= $onlySweId ? 'checked' : '' ?> onchange="this.form.submit()">
+                        <span class="gs-text-sm">Endast SWE-ID</span>
+                    </label>
+                    <?php if ($search || $onlyWithResults || $onlySweId): ?>
                         <a href="/admin/riders.php<?= $club_id ? '?club_id=' . $club_id : '' ?>" class="gs-btn gs-btn-outline gs-btn-sm">
                             <i data-lucide="x"></i>
                             Rensa
@@ -145,7 +154,7 @@ include __DIR__ . '/../includes/layout-header.php';
                             <thead>
                                 <tr>
                                     <th>
-                                        <a href="?sort=name&order=<?= $sortBy === 'name' && $sortOrder === 'asc' ? 'desc' : 'asc' ?><?= $search ? '&search=' . urlencode($search) : '' ?><?= $club_id ? '&club_id=' . $club_id : '' ?><?= $onlyWithResults ? '&with_results=1' : '' ?>"
+                                        <a href="?sort=name&order=<?= $sortBy === 'name' && $sortOrder === 'asc' ? 'desc' : 'asc' ?><?= $search ? '&search=' . urlencode($search) : '' ?><?= $club_id ? '&club_id=' . $club_id : '' ?><?= $onlyWithResults ? '&with_results=1' : '' ?><?= $onlySweId ? '&swe_only=1' : '' ?>"
                                            class="gs-link gs-sortable-header">
                                             Namn
                                             <?php if ($sortBy === 'name'): ?>
@@ -154,7 +163,7 @@ include __DIR__ . '/../includes/layout-header.php';
                                         </a>
                                     </th>
                                     <th>
-                                        <a href="?sort=year&order=<?= $sortBy === 'year' && $sortOrder === 'asc' ? 'desc' : 'asc' ?><?= $search ? '&search=' . urlencode($search) : '' ?><?= $club_id ? '&club_id=' . $club_id : '' ?><?= $onlyWithResults ? '&with_results=1' : '' ?>"
+                                        <a href="?sort=year&order=<?= $sortBy === 'year' && $sortOrder === 'asc' ? 'desc' : 'asc' ?><?= $search ? '&search=' . urlencode($search) : '' ?><?= $club_id ? '&club_id=' . $club_id : '' ?><?= $onlyWithResults ? '&with_results=1' : '' ?><?= $onlySweId ? '&swe_only=1' : '' ?>"
                                            class="gs-link gs-sortable-header">
                                             År
                                             <?php if ($sortBy === 'year'): ?>
