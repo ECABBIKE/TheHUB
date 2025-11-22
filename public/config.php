@@ -26,7 +26,7 @@ function env($key, $default = null) {
 define('ROOT_PATH', __DIR__);
 define('INCLUDES_PATH', __DIR__ . '/includes');
 define('UPLOADS_PATH', __DIR__ . '/uploads');
-define('SITE_URL', 'https://gravityseries.se');
+define('SITE_URL', 'https://thehub.gravityseries.se');
 define('DB_HOST', env('DB_HOST', 'localhost'));
 define('DB_NAME', env('DB_NAME', 'u994733455_thehub'));
 define('DB_USER', env('DB_USER', 'u994733455_rogerthat'));
