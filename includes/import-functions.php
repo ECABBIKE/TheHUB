@@ -572,8 +572,20 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
             );
 
             // Calculate points based on position (only if class awards points)
-            $position = !empty($data['position']) ? (int)$data['position'] : null;
+            $positionRaw = trim($data['position'] ?? '');
+            $isEBike = false;
+            $position = null;
             $points = 0;
+
+            // Check for E-BIKE in position field (case-insensitive)
+            // E-BIKE participants are sorted by time but don't receive points or count in series
+            if (stripos($positionRaw, 'e-bike') !== false || stripos($positionRaw, 'ebike') !== false) {
+                $isEBike = true;
+                $position = null; // No numeric position for E-BIKE
+                $points = 0; // No points for E-BIKE
+            } elseif (!empty($positionRaw) && is_numeric($positionRaw)) {
+                $position = (int)$positionRaw;
+            }
 
             // Check if class awards points
             $awardsPoints = true;
@@ -584,7 +596,8 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
                 }
             }
 
-            if ($status === 'finished' && $position && $awardsPoints) {
+            // Only calculate points if not E-BIKE and class awards points
+            if (!$isEBike && $status === 'finished' && $position && $awardsPoints) {
                 // Use the event's point scale from point_scales table
                 $points = calculatePoints($db, $eventId, $position, $status);
             }
