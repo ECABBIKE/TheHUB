@@ -125,12 +125,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['csv_file'])) {
 
             // Search for rider if no UCI ID exists
             $match = null;
-            $uciId = $existingUciId;
+            $uciId = normalizeUciId($existingUciId);
 
             if (empty($existingUciId) || strpos($existingUciId, 'SWE25') === 0) {
                 $match = findRider($db, $firstname, $lastname, $club);
                 if ($match && !empty($match['license_number'])) {
-                    $uciId = $match['license_number'];
+                    $uciId = normalizeUciId($match['license_number']);
                 }
             }
 

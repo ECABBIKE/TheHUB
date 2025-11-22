@@ -6,6 +6,28 @@ function h($str) {
 }
 
 /**
+ * Normalize UCI-ID to standard format: XXX XXX XXX XX
+ * Example: "10108943209" or "101-089-432-09" becomes "101 089 432 09"
+ */
+function normalizeUciId($uciId) {
+    if (empty($uciId)) return '';
+
+    // Strip all non-digits
+    $digits = preg_replace('/[^0-9]/', '', $uciId);
+
+    // If we have 11 digits, format as XXX XXX XXX XX
+    if (strlen($digits) === 11) {
+        return substr($digits, 0, 3) . ' ' .
+               substr($digits, 3, 3) . ' ' .
+               substr($digits, 6, 3) . ' ' .
+               substr($digits, 9, 2);
+    }
+
+    // Otherwise return cleaned version (just digits)
+    return $digits;
+}
+
+/**
  * Safe output for JavaScript contexts
  * Use this instead of addslashes() for JavaScript strings
  */
