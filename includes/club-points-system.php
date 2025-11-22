@@ -178,17 +178,16 @@ function refreshSeriesStandingsCache($db, $seriesId) {
         SELECT
             cep.club_id,
             SUM(cep.total_points) as total_points,
-            COUNT(DISTINCT crp.rider_id) as total_participants,
-            COUNT(DISTINCT cep.event_id) as events_count,
+            (SELECT COUNT(DISTINCT rider_id) FROM club_rider_points
+             WHERE club_id = cep.club_id AND series_id = ?) as total_participants,
+            COUNT(cep.event_id) as events_count,
             MAX(cep.total_points) as best_event_points
         FROM club_event_points cep
-        LEFT JOIN club_rider_points crp ON cep.club_id = crp.club_id
-            AND cep.series_id = crp.series_id
         WHERE cep.series_id = ?
         GROUP BY cep.club_id
         HAVING SUM(cep.total_points) > 0
         ORDER BY SUM(cep.total_points) DESC
-    ", [$seriesId]);
+    ", [$seriesId, $seriesId]);
 
     // Insert with rankings
     $rank = 1;
