@@ -11,7 +11,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
-      - name: Deploy to FTP
+      - name: Deploy TheHUB to FTP
         uses: SamKirkland/FTP-Deploy-Action@v4.3.4
         with:
           server: ${{ secrets.FTP_SERVER }}
@@ -21,7 +21,6 @@ jobs:
           server-dir: /
           exclude: |
             **/.git*
-            **/.git*/**
-            **/.env
+            **/.env*
             **/node_modules/**
             **/.github/**
