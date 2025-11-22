@@ -161,11 +161,13 @@ if ($totalRaces > 0 && $rider['birth_year'] && $rider['gender']) {
             // Find GravitySeries Total series (id=8, or by name patterns)
             $totalSeries = $db->getRow("
                 SELECT id, name FROM series
-                WHERE active = 1
-                AND (
-                    id = 8
-                    OR name LIKE '%Total%'
-                    OR (name LIKE '%GravitySeries%' AND name NOT LIKE '%Capital%' AND name NOT LIKE '%Götaland%' AND name NOT LIKE '%Jämtland%')
+                WHERE id = 8
+                OR (
+                    active = 1
+                    AND (
+                        name LIKE '%Total%'
+                        OR (name LIKE '%GravitySeries%' AND name NOT LIKE '%Capital%' AND name NOT LIKE '%Götaland%' AND name NOT LIKE '%Jämtland%')
+                    )
                 )
                 ORDER BY (id = 8) DESC, year DESC LIMIT 1
             ");
