@@ -29,7 +29,7 @@ function isFieldMappingRow($row) {
 /**
  * Import results from CSV file with event mapping
  */
-function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMapping = [], $forceClassId = null) {
+function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMapping = [], $forceClassId = null, $stageNames = []) {
     $stats = [
         'total' => 0,
         'success' => 0,
@@ -76,7 +76,7 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
 
     // Normalize header - accept multiple variants
     $originalHeaders = $header;
-    $header = array_map(function($col) {
+    $header = array_map(function($col) use ($stageNames) {
         $col = mb_strtolower(trim($col), 'UTF-8');
 
         // Skip empty columns (give them unique names to avoid conflicts)
@@ -175,7 +175,8 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
             // Stage times
             'ss1' => 'ss1', 'ss2' => 'ss2', 'ss3' => 'ss3', 'ss4' => 'ss4',
             'ss5' => 'ss5', 'ss6' => 'ss6', 'ss7' => 'ss7', 'ss8' => 'ss8',
-            'ss9' => 'ss9', 'ss10' => 'ss10',
+            'ss9' => 'ss9', 'ss10' => 'ss10', 'ss11' => 'ss11', 'ss12' => 'ss12',
+            'ss13' => 'ss13', 'ss14' => 'ss14', 'ss15' => 'ss15',
 
             // DH run times
             'run1time' => 'run_1_time',
@@ -210,7 +211,24 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
             'split24' => 'ss8',
         ];
 
-        return $mappings[$col] ?? $col;
+        // Check static mappings first
+        if (isset($mappings[$col])) {
+            return $mappings[$col];
+        }
+
+        // Check custom stage name mappings (e.g., "ss31" from "SS3-1" -> ss4)
+        // stageNames format: {"4":"SS3-1"} means column 4 displays as "SS3-1"
+        // We need reverse: "ss31" -> "ss4"
+        if (!empty($stageNames)) {
+            foreach ($stageNames as $num => $name) {
+                $normalizedName = strtolower(str_replace([' ', '-', '_'], '', $name));
+                if ($col === $normalizedName) {
+                    return 'ss' . $num;
+                }
+            }
+        }
+
+        return $col;
     }, $header);
 
     // Cache for lookups
@@ -554,6 +572,11 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
                 'ss8' => $data['ss8'] ?? null,
                 'ss9' => $data['ss9'] ?? null,
                 'ss10' => $data['ss10'] ?? null,
+                'ss11' => $data['ss11'] ?? null,
+                'ss12' => $data['ss12'] ?? null,
+                'ss13' => $data['ss13'] ?? null,
+                'ss14' => $data['ss14'] ?? null,
+                'ss15' => $data['ss15'] ?? null,
             ];
 
             if ($existingResult) {

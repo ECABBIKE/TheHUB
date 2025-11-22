@@ -482,17 +482,17 @@ include __DIR__ . '/includes/layout-header.php';
     user-select: none;
 }
 
-/* Split time color coding - 10 level gradient green to red */
-.split-1 { background: #15803d !important; color: #fff !important; font-weight: 600; }
-.split-2 { background: #22c55e !important; color: #fff !important; }
-.split-3 { background: #86efac !important; color: #166534 !important; }
-.split-4 { background: #d9f99d !important; color: #3f6212 !important; }
-.split-5 { background: #fef08a !important; color: #854d0e !important; }
-.split-6 { background: #fde047 !important; color: #854d0e !important; }
-.split-7 { background: #fdba74 !important; color: #9a3412 !important; }
-.split-8 { background: #fb923c !important; color: #fff !important; }
+/* Split time color coding - 10 level gradient green to red (muted) */
+.split-1 { background: #a7f3d0 !important; color: #065f46 !important; font-weight: 600; }
+.split-2 { background: #bbf7d0 !important; color: #166534 !important; }
+.split-3 { background: #d9f99d !important; color: #3f6212 !important; }
+.split-4 { background: #fef9c3 !important; color: #713f12 !important; }
+.split-5 { background: #fef3c7 !important; color: #92400e !important; }
+.split-6 { background: #fed7aa !important; color: #9a3412 !important; }
+.split-7 { background: #fecaca !important; color: #991b1b !important; }
+.split-8 { background: #fca5a5 !important; color: #991b1b !important; }
 .split-9 { background: #f87171 !important; color: #fff !important; }
-.split-10 { background: #dc2626 !important; color: #fff !important; }
+.split-10 { background: #ef4444 !important; color: #fff !important; }
 
 /* Hide colors when disabled */
 .no-split-colors .split-1,
@@ -899,16 +899,16 @@ include __DIR__ . '/includes/layout-header.php';
                                                 if (!empty($splitTime) && isset($groupData['split_stats'][$ssNum])) {
                                                     $stats = $groupData['split_stats'][$ssNum];
                                                     $timeSeconds = timeToSeconds($splitTime);
-                                                    if ($stats['range'] > 0) {
+                                                    // Only color if there's meaningful range (> 0.5 seconds)
+                                                    if ($stats['range'] > 0.5) {
                                                         // Calculate position in range (0 = fastest, 1 = slowest)
                                                         $position = ($timeSeconds - $stats['min']) / $stats['range'];
                                                         // Map to 10 levels: split-1 (fastest) to split-10 (slowest)
-                                                        $level = min(10, max(1, ceil($position * 10)));
-                                                        if ($level == 0) $level = 1; // Ensure minimum level 1
+                                                        // Use floor to better distribute (0-10% = 1, 10-20% = 2, etc.)
+                                                        $level = min(10, max(1, floor($position * 9) + 1));
                                                         $splitClass = 'split-' . $level;
-                                                    } elseif ($timeSeconds == $stats['min']) {
-                                                        $splitClass = 'split-1'; // Fastest
                                                     }
+                                                    // If range is 0 or very small, no color (all essentially tied)
                                                 }
                                             ?>
                                                 <td class="gs-table-time-cell split-time-col <?= $splitClass ?>">
