@@ -881,8 +881,8 @@ include __DIR__ . '/includes/layout-header.php';
                                             <?php foreach ($classSplitCols as $ssNum):
                                                 $splitClass = '';
                                                 $splitTime = $result['ss' . $ssNum] ?? '';
-                                                // Only apply colors to finished riders
-                                                if (!empty($splitTime) && $result['status'] === 'finished' && isset($groupData['split_stats'][$ssNum])) {
+                                                // Apply colors to any rider with split time data (including DNF)
+                                                if (!empty($splitTime) && isset($groupData['split_stats'][$ssNum])) {
                                                     $stats = $groupData['split_stats'][$ssNum];
                                                     $timeSeconds = timeToSeconds($splitTime);
                                                     if ($stats['range'] > 0) {
