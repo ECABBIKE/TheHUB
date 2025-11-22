@@ -199,6 +199,56 @@ function findRider($db, $firstname, $lastname, $club) {
         return array_merge($rider, ['match_type' => 'exact', 'confidence' => $confidence]);
     }
 
+    // Strategy 2b: Handle double last names (e.g., "Svensson Lindberg")
+    // Search where DB lastname contains the search lastname or vice versa
+    $rider = $db->getRow("
+        SELECT r.id, r.firstname, r.lastname, r.license_number,
+               r.birth_year, r.gender, c.name as club_name
+        FROM riders r
+        LEFT JOIN clubs c ON r.club_id = c.id
+        WHERE LOWER(r.firstname) = LOWER(?)
+          AND (LOWER(r.lastname) LIKE LOWER(?) OR LOWER(?) LIKE CONCAT('%', LOWER(r.lastname), '%'))
+          AND r.license_number IS NOT NULL
+          AND r.license_number != ''
+        ORDER BY r.license_year DESC
+        LIMIT 1
+    ", [$firstname, '%' . $lastname . '%', $lastname]);
+
+    if ($rider) {
+        $confidence = 85;
+        if (!empty($club) && stripos($rider['club_name'] ?? '', $club) !== false) {
+            $confidence = 90;
+        }
+        return array_merge($rider, ['match_type' => 'exact', 'confidence' => $confidence]);
+    }
+
+    // Strategy 2c: If lastname has space, try matching last part only
+    if (strpos($lastname, ' ') !== false) {
+        $lastnameParts = explode(' ', $lastname);
+        $lastPart = end($lastnameParts);
+
+        $rider = $db->getRow("
+            SELECT r.id, r.firstname, r.lastname, r.license_number,
+                   r.birth_year, r.gender, c.name as club_name
+            FROM riders r
+            LEFT JOIN clubs c ON r.club_id = c.id
+            WHERE LOWER(r.firstname) = LOWER(?)
+              AND LOWER(r.lastname) LIKE LOWER(?)
+              AND r.license_number IS NOT NULL
+              AND r.license_number != ''
+            ORDER BY r.license_year DESC
+            LIMIT 1
+        ", [$firstname, '%' . $lastPart]);
+
+        if ($rider) {
+            $confidence = 80;
+            if (!empty($club) && stripos($rider['club_name'] ?? '', $club) !== false) {
+                $confidence = 85;
+            }
+            return array_merge($rider, ['match_type' => 'fuzzy', 'confidence' => $confidence]);
+        }
+    }
+
     // Strategy 3: Fuzzy match (normalized names)
     $normFirstname = normalizeString($firstname);
     $normLastname = normalizeString($lastname);
@@ -490,7 +540,7 @@ include __DIR__ . '/../includes/layout-header.php';
 </main>
 
 <div class="gs-container gs-py-sm">
-    <small class="gs-text-secondary">Search UCI-ID v1.0.0 [2025-11-22-001]</small>
+    <small class="gs-text-secondary">Search UCI-ID v1.1.0 [2025-11-22-002]</small>
 </div>
 
 <?php include __DIR__ . '/../includes/layout-footer.php'; ?>
