@@ -2,18 +2,22 @@
 /**
  * Rider Lookup Tool
  * Upload CSV to find and fill in UCI IDs
- * Version: 1.0.1
  */
-define('LOOKUP_VERSION', '1.0.1');
 
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
+echo "<!-- DEBUG 1: Start -->";
+
 require_once __DIR__ . '/../config.php';
+echo "<!-- DEBUG 2: Config loaded -->";
+
 require_admin();
+echo "<!-- DEBUG 3: Auth passed -->";
 
 $db = getDB();
+echo "<!-- DEBUG 4: DB connected -->";
 $results = [];
 $headers = [];
 $matchStats = ['exact' => 0, 'fuzzy' => 0, 'partial' => 0, 'not_found' => 0];
@@ -503,7 +507,7 @@ include __DIR__ . '/../includes/layout-header.php';
 </main>
 
 <div class="gs-container gs-py-sm">
-    <small class="gs-text-secondary">Version: <?= LOOKUP_VERSION ?></small>
+    <small class="gs-text-secondary">Lookup v1.0.2 [2025-11-22-004]</small>
 </div>
 
 <?php include __DIR__ . '/../includes/layout-footer.php'; ?>
