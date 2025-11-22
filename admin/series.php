@@ -503,14 +503,13 @@ include __DIR__ . '/../includes/layout-header.php';
                                                         <i data-lucide="calendar" class="gs-icon-14"></i>
                                                     </a>
                                                     <?php endif; ?>
-                                                    <button
-                                                        type="button"
+                                                    <a
+                                                        href="?edit=<?= $serie['id'] ?>"
                                                         class="gs-btn gs-btn-sm gs-btn-outline"
-                                                        onclick="editSeries(<?= $serie['id'] ?>)"
                                                         title="Redigera"
                                                     >
                                                         <i data-lucide="edit" class="gs-icon-14"></i>
-                                                    </button>
+                                                    </a>
                                                     <button
                                                         type="button"
                                                         class="gs-btn gs-btn-sm gs-btn-outline gs-btn-danger"
