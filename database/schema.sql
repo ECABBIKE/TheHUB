@@ -212,6 +212,7 @@ CREATE TABLE IF NOT EXISTS results (
     points INT DEFAULT 0,
     bib_number VARCHAR(20),
     status ENUM('finished', 'dnf', 'dns', 'dq') DEFAULT 'finished',
+    is_ebike TINYINT(1) DEFAULT 0, -- E-BIKE participant (no points/position)
     time_behind TIME, -- time behind winner
     average_speed DECIMAL(5,2), -- km/h
     notes TEXT,
