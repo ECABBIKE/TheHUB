@@ -9,8 +9,11 @@ $is_admin = isLoggedIn();
 ?>
 <nav class="gs-sidebar">
     <div class="gs-menu-section gs-main-menu">
-        <h3 class="gs-menu-title">TheHUB</h3>
+        <h3 class="gs-menu-title"><a href="/index.php" style="color: inherit; text-decoration: none;">TheHUB</a></h3>
         <ul class="gs-menu">
+            <li><a href="/index.php" class="<?= $current_page == 'index.php' ? 'active' : '' ?>">
+                <i data-lucide="home"></i> Hem
+            </a></li>
             <li><a href="/events.php" class="<?= $current_page == 'events.php' && strpos($_SERVER['PHP_SELF'], '/admin/') === false ? 'active' : '' ?>">
                 <i data-lucide="calendar"></i> Kalender
             </a></li>
