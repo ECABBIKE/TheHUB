@@ -154,38 +154,75 @@ if ($totalRaces > 0 && $rider['birth_year'] && $rider['gender']) {
         if ($riderClassId) {
             $riderClass = $db->getRow("SELECT name, display_name FROM classes WHERE id = ?", [$riderClassId]);
 
-            // Get series data for this rider (using series_events junction table)
+            // Get series data for this rider (supports both connection methods)
             $riderSeriesData = $db->getAll("
                 SELECT
-                    s.id as series_id,
-                    s.name as series_name,
-                    s.year,
-                    SUM(r.points) as total_points,
-                    COUNT(DISTINCT r.event_id) as events_count
-                FROM results r
-                JOIN events e ON r.event_id = e.id
-                JOIN series_events se ON e.id = se.event_id
-                JOIN series s ON se.series_id = s.id
-                WHERE r.cyclist_id = ? AND s.active = 1
-                GROUP BY s.id
-                ORDER BY s.year DESC, total_points DESC
-            ", [$riderId]);
+                    series_id,
+                    series_name,
+                    year,
+                    SUM(points) as total_points,
+                    COUNT(DISTINCT event_id) as events_count
+                FROM (
+                    -- Via series_events junction table
+                    SELECT
+                        s.id as series_id,
+                        s.name as series_name,
+                        s.year,
+                        r.points,
+                        r.event_id
+                    FROM results r
+                    JOIN events e ON r.event_id = e.id
+                    JOIN series_events se ON e.id = se.event_id
+                    JOIN series s ON se.series_id = s.id
+                    WHERE r.cyclist_id = ? AND s.active = 1
+
+                    UNION
+
+                    -- Via direct events.series_id
+                    SELECT
+                        s.id as series_id,
+                        s.name as series_name,
+                        s.year,
+                        r.points,
+                        r.event_id
+                    FROM results r
+                    JOIN events e ON r.event_id = e.id
+                    JOIN series s ON e.series_id = s.id
+                    WHERE r.cyclist_id = ? AND s.active = 1
+                    AND e.series_id IS NOT NULL
+                ) combined
+                GROUP BY series_id
+                ORDER BY year DESC, total_points DESC
+            ", [$riderId, $riderId]);
 
             // Calculate class-based position for each series
             foreach ($riderSeriesData as $seriesData) {
                 // Get all riders in this series with the same class and their total points
                 $classStandings = $db->getAll("
                     SELECT
-                        r.cyclist_id,
-                        SUM(r.points) as total_points
-                    FROM results r
-                    JOIN events e ON r.event_id = e.id
-                    JOIN series_events se ON e.id = se.event_id
-                    WHERE se.series_id = ?
-                    AND r.class_id = ?
-                    GROUP BY r.cyclist_id
+                        cyclist_id,
+                        SUM(points) as total_points
+                    FROM (
+                        -- Via series_events junction table
+                        SELECT r.cyclist_id, r.points
+                        FROM results r
+                        JOIN events e ON r.event_id = e.id
+                        JOIN series_events se ON e.id = se.event_id
+                        WHERE se.series_id = ?
+                        AND r.class_id = ?
+
+                        UNION ALL
+
+                        -- Via direct events.series_id
+                        SELECT r.cyclist_id, r.points
+                        FROM results r
+                        JOIN events e ON r.event_id = e.id
+                        WHERE e.series_id = ?
+                        AND r.class_id = ?
+                    ) combined
+                    GROUP BY cyclist_id
                     ORDER BY total_points DESC
-                ", [$seriesData['series_id'], $riderClassId]);
+                ", [$seriesData['series_id'], $riderClassId, $seriesData['series_id'], $riderClassId]);
 
                 // Find this rider's position
                 $position = 1;
@@ -391,23 +428,8 @@ try {
                     <div class="gs-stat-label-compact">Bästa placering</div>
                 </div>
                 <div class="gs-card gs-stat-card-compact">
-                    <div class="series-standings-list">
-                        <?php if (!empty($seriesStandings)): ?>
-                            <?php foreach ($seriesStandings as $standing): ?>
-                                <div class="series-standing-item">
-                                    <strong><?= h($standing['series_name']) ?>:</strong>
-                                    #<?= $standing['position'] ?? '?' ?> (<?= $standing['total_points'] ?>p)
-                                    <br>
-                                    <span class="series-standing-meta">
-                                        <?= h($standing['class_name']) ?> (<?= $standing['class_total'] ?> deltagare)
-                                    </span>
-                                </div>
-                            <?php endforeach; ?>
-                        <?php else: ?>
-                            <div class="gs-stat-number-compact gs-text-primary">0</div>
-                        <?php endif; ?>
-                    </div>
-                    <div class="gs-stat-label-compact">Points</div>
+                    <div class="gs-stat-number-compact gs-text-primary"><?= number_format($totalPoints) ?></div>
+                    <div class="gs-stat-label-compact">Poäng</div>
                 </div>
             </div>
 
