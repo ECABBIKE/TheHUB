@@ -406,7 +406,7 @@ include __DIR__ . '/../includes/layout-header.php';
                             </tr>
                         </thead>
                         <tbody id="pointsTableBody">
-                            <?php for ($i = 1; $i <= 50; $i++): ?>
+                            <?php for ($i = 1; $i <= 150; $i++): ?>
                                 <tr>
                                     <td>
                                         <input type="number" name="positions[]" value="<?= $i ?>" class="gs-input gs-input-sm" readonly>
@@ -493,7 +493,7 @@ include __DIR__ . '/../includes/layout-header.php';
                     <strong>Ladda ner exempelmallar:</strong><br>
                     <a href="/templates/poangmall-standard.csv" download class="gs-link">
                         <i data-lucide="download" class="gs-icon-14"></i>
-                        Standard poängmall (40 positioner)
+                        Standard poängmall (150 positioner)
                     </a><br>
                     <a href="/templates/poangmall-dh.csv" download class="gs-link">
                         <i data-lucide="download" class="gs-icon-14"></i>
