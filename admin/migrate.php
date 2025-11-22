@@ -72,7 +72,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['run_migration'])) {
         $successCount = 0;
 
         foreach ($statements as $statement) {
-            if (empty($statement) || strpos($statement, '--') === 0) {
+            // Remove SQL comments (lines starting with --)
+            $lines = explode("\n", $statement);
+            $cleanLines = [];
+            foreach ($lines as $line) {
+                $trimmedLine = trim($line);
+                if (strpos($trimmedLine, '--') !== 0 && !empty($trimmedLine)) {
+                    $cleanLines[] = $line;
+                }
+            }
+            $statement = trim(implode("\n", $cleanLines));
+
+            if (empty($statement)) {
                 continue;
             }
 
@@ -160,7 +171,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['run_all_pending'])) {
         $successCount = 0;
 
         foreach ($statements as $statement) {
-            if (empty($statement) || strpos($statement, '--') === 0) {
+            // Remove SQL comments (lines starting with --)
+            $lines = explode("\n", $statement);
+            $cleanLines = [];
+            foreach ($lines as $line) {
+                $trimmedLine = trim($line);
+                if (strpos($trimmedLine, '--') !== 0 && !empty($trimmedLine)) {
+                    $cleanLines[] = $line;
+                }
+            }
+            $statement = trim(implode("\n", $cleanLines));
+
+            if (empty($statement)) {
                 continue;
             }
 
