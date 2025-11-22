@@ -4,9 +4,7 @@ config/config.php
 .deployed
 # NOTE: config/database.php is now safe to commit (it's just a loader, not credentials)
 
-# Uploaded files
-uploads/*
-!uploads/.gitkeep
+# Uploaded files are now tracked for deployment
 
 # Import data files
 imports/*

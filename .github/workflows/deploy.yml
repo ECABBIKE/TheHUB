@@ -1,4 +1,4 @@
-name: Deploy Everything to FTP
+name: Deploy to FTP
 
 on:
   push:
@@ -11,7 +11,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Deploy ALL files to FTP
+      - name: Deploy changed files to FTP
         uses: SamKirkland/FTP-Deploy-Action@v4.3.4
         with:
           server: ${{ secrets.FTP_SERVER }}
@@ -24,4 +24,3 @@ jobs:
             **/.env*
             **/node_modules/**
             **/.DS_Store
-          dangerous-clean-slate: false

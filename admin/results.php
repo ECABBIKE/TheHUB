@@ -166,136 +166,66 @@ include __DIR__ . '/../includes/layout-header.php';
                 </div>
             </div>
         <?php else: ?>
-            <!-- Events Grid -->
-            <div class="gs-grid gs-grid-cols-1 gs-gap-md">
-                <?php foreach ($events as $event): ?>
-                    <div class="gs-card">
-                        <div class="gs-card-content">
-                            <div class="gs-flex gs-justify-between gs-items-start">
-                                <!-- Event Info -->
-                                <div class="gs-flex-1">
-                                    <div class="gs-flex gs-items-center gs-gap-md gs-mb-sm">
-                                        <h3 class="gs-h4 gs-text-primary">
-                                            <?= h($event['name']) ?>
-                                        </h3>
-                                        <?php
-                                        $status_class = 'gs-badge-secondary';
-                                        $status_text = $event['status'];
-                                        if ($event['status'] == 'upcoming' || strtotime($event['date']) > time()) {
-                                            $status_class = 'gs-badge-warning';
-                                            $status_text = 'Kommande';
-                                        } elseif ($event['status'] == 'completed' || strtotime($event['date']) < time()) {
-                                            $status_class = 'gs-badge-success';
-                                            $status_text = 'Avklarad';
-                                        }
-                                        ?>
-                                        <span class="gs-badge <?= $status_class ?>">
-                                            <?= h($status_text) ?>
-                                        </span>
-                                    </div>
-
-                                    <div class="gs-flex gs-gap-md gs-text-sm gs-text-secondary gs-mb-md">
-                                        <span>
-                                            <i data-lucide="calendar" class="gs-icon-14"></i>
-                                            <?= date('Y-m-d', strtotime($event['date'])) ?>
-                                        </span>
-                                        <?php if ($event['location']): ?>
-                                            <span>
-                                                <i data-lucide="map-pin" class="gs-icon-14"></i>
-                                                <?= h($event['location']) ?>
-                                            </span>
-                                        <?php endif; ?>
-                                        <?php if ($event['series_name']): ?>
-                                            <span>
-                                                <i data-lucide="award" class="gs-icon-14"></i>
-                                                <?= h($event['series_name']) ?>
-                                            </span>
-                                        <?php endif; ?>
+            <!-- Compact Events Table -->
+            <div class="gs-card">
+                <div class="gs-table-responsive">
+                    <table class="gs-table">
+                        <thead>
+                            <tr>
+                                <th>Datum</th>
+                                <th>Event</th>
+                                <th>Plats</th>
+                                <th>Serie</th>
+                                <th class="gs-text-center">Deltagare</th>
+                                <th class="gs-text-right">Åtgärder</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($events as $event): ?>
+                                <tr>
+                                    <td class="gs-text-nowrap">
+                                        <?= date('Y-m-d', strtotime($event['date'])) ?>
+                                    </td>
+                                    <td>
+                                        <strong><?= h($event['name']) ?></strong>
                                         <?php if ($event['advent_id']): ?>
-                                            <span>
-                                                <i data-lucide="hash" class="gs-icon-14"></i>
-                                                <?= h($event['advent_id']) ?>
+                                            <span class="gs-text-secondary gs-text-sm">#<?= h($event['advent_id']) ?></span>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td><?= h($event['location'] ?? '-') ?></td>
+                                    <td><?= h($event['series_name'] ?? '-') ?></td>
+                                    <td class="gs-text-center">
+                                        <span class="gs-badge gs-badge-<?= $event['result_count'] > 0 ? 'success' : 'secondary' ?>">
+                                            <?= $event['result_count'] ?>
+                                        </span>
+                                        <?php if ($event['dnf_count'] > 0 || $event['dns_count'] > 0): ?>
+                                            <span class="gs-text-secondary gs-text-xs">
+                                                (<?= $event['dnf_count'] ?>/<?= $event['dns_count'] ?>)
                                             </span>
                                         <?php endif; ?>
-                                    </div>
-
-                                    <!-- Result Statistics -->
-                                    <div class="gs-flex gs-gap-md gs-flex-wrap">
-                                        <div class="gs-flex gs-items-center gs-gap-xs">
-                                            <i data-lucide="users" class="gs-icon-md"></i>
-                                            <strong><?= $event['result_count'] ?></strong>
-                                            <span class="gs-text-secondary gs-text-sm">deltagare</span>
-                                        </div>
-
-                                        <?php if ($event['category_count'] > 0): ?>
-                                            <div class="gs-flex gs-items-center gs-gap-xs">
-                                                <i data-lucide="layers" class="gs-icon-md"></i>
-                                                <strong><?= $event['category_count'] ?></strong>
-                                                <span class="gs-text-secondary gs-text-sm"><?= $event['category_count'] == 1 ? 'kategori' : 'kategorier' ?></span>
-                                            </div>
-                                        <?php endif; ?>
-
-                                        <?php if ($event['finished_count'] > 0): ?>
-                                            <div class="gs-flex gs-items-center gs-gap-xs">
-                                                <i data-lucide="check-circle" class="gs-icon-md gs-icon-success"></i>
-                                                <strong><?= $event['finished_count'] ?></strong>
-                                                <span class="gs-text-secondary gs-text-sm">slutförda</span>
-                                            </div>
-                                        <?php endif; ?>
-
-                                        <?php if ($event['dnf_count'] > 0): ?>
-                                            <div class="gs-flex gs-items-center gs-gap-xs">
-                                                <i data-lucide="x-circle" class="gs-icon-md gs-icon-danger"></i>
-                                                <strong><?= $event['dnf_count'] ?></strong>
-                                                <span class="gs-text-secondary gs-text-sm">DNF</span>
-                                            </div>
-                                        <?php endif; ?>
-
-                                        <?php if ($event['dns_count'] > 0): ?>
-                                            <div class="gs-flex gs-items-center gs-gap-xs">
-                                                <i data-lucide="minus-circle" class="gs-icon-md gs-icon-warning"></i>
-                                                <strong><?= $event['dns_count'] ?></strong>
-                                                <span class="gs-text-secondary gs-text-sm">DNS</span>
-                                            </div>
-                                        <?php endif; ?>
-                                    </div>
-                                </div>
-
-                                <!-- Actions -->
-                                <div class="gs-flex gs-gap-sm gs-flex-wrap">
-                                    <a href="/event.php?id=<?= $event['id'] ?>"
-                                       class="gs-btn gs-btn-outline gs-btn-sm"
-                                       title="Visa resultat">
-                                        <i data-lucide="eye" class="gs-icon-14"></i>
-                                        Visa
-                                    </a>
-
-                                    <?php if ($event['result_count'] > 0): ?>
-                                        <a href="/admin/edit-results.php?event_id=<?= $event['id'] ?>"
-                                           class="gs-btn gs-btn-primary gs-btn-sm"
-                                           title="Editera resultat">
-                                            <i data-lucide="edit" class="gs-icon-14"></i>
-                                            Editera
+                                    </td>
+                                    <td class="gs-text-right gs-text-nowrap">
+                                        <a href="/event.php?id=<?= $event['id'] ?>" class="gs-btn gs-btn-outline gs-btn-xs" title="Visa">
+                                            <i data-lucide="eye" class="gs-icon-12"></i>
                                         </a>
-                                        <a href="/admin/recalculate-results.php?event_id=<?= $event['id'] ?>"
-                                           class="gs-btn gs-btn-secondary gs-btn-sm"
-                                           title="Räkna om placeringar och poäng">
-                                            <i data-lucide="refresh-cw" class="gs-icon-14"></i>
-                                            Räkna om
-                                        </a>
-                                    <?php else: ?>
-                                        <a href="/admin/import-results.php"
-                                           class="gs-btn gs-btn-secondary gs-btn-sm"
-                                           title="Importera resultat">
-                                            <i data-lucide="upload" class="gs-icon-14"></i>
-                                            Importera
-                                        </a>
-                                    <?php endif; ?>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                <?php endforeach; ?>
+                                        <?php if ($event['result_count'] > 0): ?>
+                                            <a href="/admin/edit-results.php?event_id=<?= $event['id'] ?>" class="gs-btn gs-btn-primary gs-btn-xs" title="Editera">
+                                                <i data-lucide="edit" class="gs-icon-12"></i>
+                                            </a>
+                                            <a href="/admin/recalculate-results.php?event_id=<?= $event['id'] ?>" class="gs-btn gs-btn-secondary gs-btn-xs" title="Räkna om">
+                                                <i data-lucide="refresh-cw" class="gs-icon-12"></i>
+                                            </a>
+                                        <?php else: ?>
+                                            <a href="/admin/import-results.php" class="gs-btn gs-btn-secondary gs-btn-xs" title="Importera">
+                                                <i data-lucide="upload" class="gs-icon-12"></i>
+                                            </a>
+                                        <?php endif; ?>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
             </div>
         <?php endif; ?>
     </div>
