@@ -264,9 +264,9 @@ include __DIR__ . '/../includes/layout-header.php';
                             <option value="">Välj format...</option>
                             <option value="ENDURO" <?= ($_POST['discipline'] ?? '') === 'ENDURO' ? 'selected' : '' ?>>Enduro</option>
                             <option value="DH" <?= ($_POST['discipline'] ?? '') === 'DH' ? 'selected' : '' ?>>Downhill</option>
-                            <option value="XC" <?= ($_POST['discipline'] ?? '') === 'XC' ? 'selected' : '' ?>>Cross Country</option>
-                            <option value="XCO" <?= ($_POST['discipline'] ?? '') === 'XCO' ? 'selected' : '' ?>>XC Olympic</option>
-                            <option value="XCM" <?= ($_POST['discipline'] ?? '') === 'XCM' ? 'selected' : '' ?>>XC Marathon</option>
+                            <option value="XC" <?= ($_POST['discipline'] ?? '') === 'XC' ? 'selected' : '' ?>>XC</option>
+                            <option value="XCO" <?= ($_POST['discipline'] ?? '') === 'XCO' ? 'selected' : '' ?>>XCO</option>
+                            <option value="XCM" <?= ($_POST['discipline'] ?? '') === 'XCM' ? 'selected' : '' ?>>XCM</option>
                             <option value="DUAL_SLALOM" <?= ($_POST['discipline'] ?? '') === 'DUAL_SLALOM' ? 'selected' : '' ?>>Dual Slalom</option>
                             <option value="PUMPTRACK" <?= ($_POST['discipline'] ?? '') === 'PUMPTRACK' ? 'selected' : '' ?>>Pumptrack</option>
                             <option value="GRAVEL" <?= ($_POST['discipline'] ?? '') === 'GRAVEL' ? 'selected' : '' ?>>Gravel</option>

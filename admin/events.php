@@ -182,7 +182,7 @@ include __DIR__ . '/../includes/layout-header.php';
                                             <select class="gs-input gs-input-sm" style="min-width: 120px;" onchange="updateDiscipline(<?= $event['id'] ?>, this.value)">
                                                 <option value="">-</option>
                                                 <option value="ENDURO" <?= ($event['discipline'] ?? '') === 'ENDURO' ? 'selected' : '' ?>>Enduro</option>
-                                                <option value="DH" <?= ($event['discipline'] ?? '') === 'DH' ? 'selected' : '' ?>>DH</option>
+                                                <option value="DH" <?= ($event['discipline'] ?? '') === 'DH' ? 'selected' : '' ?>>Downhill</option>
                                                 <option value="XC" <?= ($event['discipline'] ?? '') === 'XC' ? 'selected' : '' ?>>XC</option>
                                                 <option value="XCO" <?= ($event['discipline'] ?? '') === 'XCO' ? 'selected' : '' ?>>XCO</option>
                                                 <option value="XCM" <?= ($event['discipline'] ?? '') === 'XCM' ? 'selected' : '' ?>>XCM</option>
