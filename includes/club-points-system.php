@@ -141,12 +141,13 @@ function recalculateSeriesClubPoints($db, $seriesId) {
         'total_points' => 0
     ];
 
-    // Get all events in this series
+    // Get all events in this series via junction table
     $events = $db->getAll("
-        SELECT id, name, date
-        FROM events
-        WHERE series_id = ?
-        ORDER BY date ASC
+        SELECT e.id, e.name, e.date
+        FROM series_events se
+        JOIN events e ON se.event_id = e.id
+        WHERE se.series_id = ?
+        ORDER BY se.sort_order ASC, e.date ASC
     ", [$seriesId]);
 
     // Calculate points for each event
@@ -320,9 +321,9 @@ function getTeamSeries($db) {
     return $db->getAll("
         SELECT
             s.*,
-            COUNT(e.id) as event_count
+            COUNT(se.event_id) as event_count
         FROM series s
-        LEFT JOIN events e ON s.id = e.series_id
+        LEFT JOIN series_events se ON s.id = se.series_id
         WHERE s.format = 'Team'
         GROUP BY s.id
         ORDER BY s.year DESC, s.name ASC
@@ -339,10 +340,11 @@ function getSeriesWithEvents($db, $seriesId) {
     }
 
     $events = $db->getAll("
-        SELECT id, name, date, location
-        FROM events
-        WHERE series_id = ?
-        ORDER BY date ASC
+        SELECT e.id, e.name, e.date, e.location
+        FROM series_events se
+        JOIN events e ON se.event_id = e.id
+        WHERE se.series_id = ?
+        ORDER BY se.sort_order ASC, e.date ASC
     ", [$seriesId]);
 
     $series['events'] = $events;
