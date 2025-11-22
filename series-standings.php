@@ -288,17 +288,14 @@ include __DIR__ . '/includes/layout-header.php';
 ?>
 
 <style>
-    /* Table container for horizontal scroll */
     .gs-card-table-container {
         overflow-x: auto;
         -webkit-overflow-scrolling: touch;
-        width: 100%;
     }
 
     .standings-table {
         font-size: 0.875rem;
-        min-width: 100%;
-        width: max-content;
+        width: 100%;
     }
 
     .standings-table th,
@@ -308,61 +305,69 @@ include __DIR__ . '/includes/layout-header.php';
     }
 
     .event-col {
-        min-width: 50px;
+        min-width: 45px;
         text-align: center !important;
     }
 
     .total-col {
         background: #f0fdf4;
         font-weight: bold;
-        min-width: 70px;
+        text-align: center !important;
+    }
+
+    .mobile-toggle {
+        display: none;
     }
 
     @media (max-width: 768px) {
+        .mobile-toggle {
+            display: inline-flex;
+            margin-bottom: 0.5rem;
+        }
+
         .standings-table {
-            font-size: 0.75rem;
+            font-size: 0.8125rem;
         }
 
         .standings-table th,
         .standings-table td {
-            padding: 0.25rem 0.375rem;
+            padding: 0.375rem 0.5rem;
         }
 
-        .event-col {
-            min-width: 40px;
-        }
-
-        .total-col {
-            min-width: 50px;
-        }
-
-        /* Ensure sticky columns work on mobile */
+        /* Hide columns on mobile by default */
         .standings-sticky-th-rank,
-        .standings-sticky-td-rank {
-            position: sticky;
-            left: 0;
-            background: var(--gs-bg-primary, #fff);
-            z-index: 2;
-        }
-
-        .standings-sticky-th-name,
-        .standings-sticky-td-name {
-            position: sticky;
-            left: 35px;
-            background: var(--gs-bg-primary, #fff);
-            z-index: 2;
-            max-width: 100px;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        /* Hide club column on mobile to save space */
+        .standings-sticky-td-rank,
         .standings-sticky-th-club,
-        .standings-sticky-td-club {
+        .standings-sticky-td-club,
+        .event-col {
             display: none;
+        }
+
+        /* Show events when expanded */
+        .standings-expanded .event-col {
+            display: table-cell;
+            min-width: 32px;
+            padding: 0.25rem;
+            font-size: 0.75rem;
+        }
+
+        .standings-expanded .standings-table {
+            width: max-content;
         }
     }
 </style>
+
+<script>
+function toggleStandingsDetails(btn) {
+    const card = btn.closest('.gs-card');
+    card.classList.toggle('standings-expanded');
+    const isExpanded = card.classList.contains('standings-expanded');
+    btn.innerHTML = isExpanded
+        ? '<i data-lucide="eye-off"></i> Dölj'
+        : '<i data-lucide="eye"></i> Poäng';
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+</script>
 
 <main class="gs-main-content">
     <div class="gs-container">
@@ -527,12 +532,15 @@ include __DIR__ . '/includes/layout-header.php';
 
             <?php foreach ($standingsByClass as $classData): ?>
                 <div class="gs-card gs-mb-lg">
-                    <div class="gs-card-header">
+                    <div class="gs-card-header gs-flex gs-justify-between gs-items-center">
                         <h3 class="gs-h4">
                             <i data-lucide="trophy"></i>
                             <?= h($classData['class_display_name']) ?>
-                            <span class="gs-badge gs-badge-secondary gs-ml-sm"><?= count($classData['riders']) ?> deltagare</span>
+                            <span class="gs-badge gs-badge-secondary gs-ml-sm"><?= count($classData['riders']) ?></span>
                         </h3>
+                        <button type="button" class="gs-btn gs-btn-sm gs-btn-outline mobile-toggle" onclick="toggleStandingsDetails(this)">
+                            <i data-lucide="eye"></i> Poäng
+                        </button>
                     </div>
                     <div class="gs-card-table-container">
                         <table class="gs-table standings-table">
@@ -616,16 +624,21 @@ include __DIR__ . '/includes/layout-header.php';
             }
             ?>
             <div class="gs-card">
-                <div class="gs-card-header">
-                    <h3 class="gs-h4">
-                        <i data-lucide="trophy"></i>
-                        Kvalpoängställning: <?= h($selectedClassDisplay) ?><?= $selectedClassName ? ' - ' . h($selectedClassName) : '' ?>
-                    </h3>
-                    <?php if ($searchName): ?>
-                        <p class="gs-text-sm gs-text-secondary">
-                            Visar resultat för: <strong><?= h($searchName) ?></strong>
-                        </p>
-                    <?php endif; ?>
+                <div class="gs-card-header gs-flex gs-justify-between gs-items-center">
+                    <div>
+                        <h3 class="gs-h4">
+                            <i data-lucide="trophy"></i>
+                            <?= h($selectedClassDisplay) ?><?= $selectedClassName ? ' - ' . h($selectedClassName) : '' ?>
+                        </h3>
+                        <?php if ($searchName): ?>
+                            <p class="gs-text-sm gs-text-secondary">
+                                Sök: <strong><?= h($searchName) ?></strong>
+                            </p>
+                        <?php endif; ?>
+                    </div>
+                    <button type="button" class="gs-btn gs-btn-sm gs-btn-outline mobile-toggle" onclick="toggleStandingsDetails(this)">
+                        <i data-lucide="eye"></i> Poäng
+                    </button>
                 </div>
                 <div class="gs-card-table-container">
                     <table class="gs-table standings-table">
