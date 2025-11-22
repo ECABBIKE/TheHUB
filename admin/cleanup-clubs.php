@@ -2,7 +2,7 @@
 /**
  * Club Duplicate Cleanup Tool
  * Find and merge duplicate clubs created during import
- * Version: v1.0.0 [2025-11-22-001]
+ * Version: v1.0.1 [2025-11-22-002]
  */
 require_once __DIR__ . '/../config.php';
 require_admin();
@@ -20,16 +20,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['merge'])) {
 
     if ($keepId && !empty($mergeIds)) {
         try {
-            // Move all riders from merge clubs to keep club
-            $placeholders = implode(',', array_fill(0, count($mergeIds), '?'));
-            $db->query("UPDATE riders SET club_id = ? WHERE club_id IN ($placeholders)",
-                array_merge([$keepId], $mergeIds));
+            $movedCount = 0;
+            $deletedCount = 0;
 
-            $movedCount = $db->getRow("SELECT ROW_COUNT() as cnt")['cnt'] ?? 0;
+            // Move all riders from each merge club to keep club
+            foreach ($mergeIds as $mergeId) {
+                // Count riders to move
+                $count = $db->getRow("SELECT COUNT(*) as cnt FROM riders WHERE club_id = ?", [$mergeId])['cnt'] ?? 0;
+                $movedCount += $count;
 
-            // Delete empty clubs
-            $db->query("DELETE FROM clubs WHERE id IN ($placeholders)", $mergeIds);
-            $deletedCount = count($mergeIds);
+                // Update riders
+                if ($count > 0) {
+                    $db->update('riders', ['club_id' => $keepId], 'club_id = ?', [$mergeId]);
+                }
+
+                // Delete the empty club
+                $db->delete('clubs', 'id = ?', [$mergeId]);
+                $deletedCount++;
+            }
 
             $message = "Flyttade $movedCount deltagare och tog bort $deletedCount dubblettklubbar";
             $messageType = 'success';
@@ -51,7 +59,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_club'])) {
 
     if ($riderCount == 0) {
         try {
-            $db->query("DELETE FROM clubs WHERE id = ?", [$deleteId]);
+            $db->delete('clubs', 'id = ?', [$deleteId]);
             $message = 'Klubb borttagen';
             $messageType = 'success';
         } catch (Exception $e) {
@@ -342,7 +350,7 @@ include __DIR__ . '/../includes/layout-header.php';
 </main>
 
 <div class="gs-container gs-py-sm">
-    <small class="gs-text-secondary">Cleanup Clubs v1.0.0 [2025-11-22-001]</small>
+    <small class="gs-text-secondary">Cleanup Clubs v1.0.1 [2025-11-22-002]</small>
 </div>
 
 <?php include __DIR__ . '/../includes/layout-footer.php'; ?>
