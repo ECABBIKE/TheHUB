@@ -86,8 +86,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     throw new Exception('Kunde inte öppna filen');
                 }
 
+                // Auto-detect delimiter by reading first line
+                $firstLine = fgets($handle);
+                rewind($handle);
+                $delimiter = (substr_count($firstLine, ';') > substr_count($firstLine, ',')) ? ';' : ',';
+
                 // Read header row
-                $header = fgetcsv($handle, 0, ';');
+                $header = fgetcsv($handle, 0, $delimiter);
                 if (!$header) {
                     $header = [];
                 }
@@ -120,7 +125,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 // Read data rows
                 $rowCount = 0;
                 $rowNum = 1;
-                while (($row = fgetcsv($handle, 0, ';')) !== false) {
+                while (($row = fgetcsv($handle, 0, $delimiter)) !== false) {
                     $rowNum++;
 
                     // Get position (required)
