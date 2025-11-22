@@ -26,8 +26,8 @@ $is_admin = isLoggedIn();
             <li><a href="/riders.php" class="<?= $current_page == 'riders.php' && strpos($_SERVER['PHP_SELF'], '/admin/') === false ? 'active' : '' ?>">
                 <i data-lucide="users"></i> Deltagare
             </a></li>
-            <li><a href="/club.php" class="<?= $current_page == 'club.php' ? 'active' : '' ?>">
-                <i data-lucide="building"></i> Klubbar
+            <li><a href="/clubs/leaderboard.php" class="<?= $current_page == 'leaderboard.php' ? 'active' : '' ?>">
+                <i data-lucide="trophy"></i> Klubbar
             </a></li>
         </ul>
     </div>
