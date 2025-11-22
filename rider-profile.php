@@ -43,6 +43,45 @@ if ($rider['birth_year']) {
 // Check license status
 $licenseStatus = checkLicense($rider);
 
+// Get rider's series standings (individual points)
+$seriesStats = $db->getAll("
+    SELECT
+        s.id as series_id,
+        s.name as series_name,
+        s.year,
+        SUM(r.points) as total_points,
+        COUNT(DISTINCT r.event_id) as events_count
+    FROM results r
+    JOIN events e ON r.event_id = e.id
+    JOIN series_events se ON e.id = se.event_id
+    JOIN series s ON se.series_id = s.id
+    WHERE r.cyclist_id = ?
+    AND r.status = 'finished'
+    AND r.points > 0
+    GROUP BY s.id
+    ORDER BY s.year DESC, total_points DESC
+", [$rider['id']]);
+
+// Get rider's club points contribution
+$clubPointsStats = [];
+if ($rider['club_id']) {
+    $clubPointsStats = $db->getAll("
+        SELECT
+            s.id as series_id,
+            s.name as series_name,
+            s.year,
+            SUM(crp.club_points) as total_club_points,
+            COUNT(DISTINCT crp.event_id) as events_count
+        FROM club_rider_points crp
+        JOIN series s ON crp.series_id = s.id
+        WHERE crp.rider_id = ?
+        AND crp.club_id = ?
+        AND crp.club_points > 0
+        GROUP BY s.id
+        ORDER BY s.year DESC, total_club_points DESC
+    ", [$rider['id'], $rider['club_id']]);
+}
+
 $pageTitle = 'Min profil';
 $pageType = 'public';
 include __DIR__ . '/includes/layout-header.php';
@@ -138,6 +177,59 @@ include __DIR__ . '/includes/layout-header.php';
                         </div>
                     </div>
                 </div>
+
+                <!-- Series Points -->
+                <?php if (!empty($seriesStats) || !empty($clubPointsStats)): ?>
+                <div class="gs-card gs-mb-lg">
+                    <div class="gs-card-header">
+                        <h2 class="gs-h4 gs-text-primary">
+                            <i data-lucide="bar-chart-3"></i>
+                            Seriepoäng
+                        </h2>
+                    </div>
+                    <div class="gs-card-content">
+                        <?php if (!empty($seriesStats)): ?>
+                        <div class="gs-mb-md">
+                            <h3 class="gs-text-sm gs-font-semibold gs-text-secondary gs-mb-sm">Individuella poäng</h3>
+                            <?php foreach ($seriesStats as $stat): ?>
+                            <div class="gs-flex gs-justify-between gs-items-center gs-py-xs gs-border-b">
+                                <div>
+                                    <a href="/series-standings.php?id=<?= $stat['series_id'] ?>" class="gs-link gs-font-semibold">
+                                        <?= h($stat['series_name']) ?>
+                                    </a>
+                                    <span class="gs-text-xs gs-text-secondary">(<?= $stat['events_count'] ?> events)</span>
+                                </div>
+                                <div class="gs-text-lg gs-font-bold gs-text-primary">
+                                    <?= number_format($stat['total_points']) ?> p
+                                </div>
+                            </div>
+                            <?php endforeach; ?>
+                        </div>
+                        <?php endif; ?>
+
+                        <?php if (!empty($clubPointsStats)): ?>
+                        <div>
+                            <h3 class="gs-text-sm gs-font-semibold gs-text-secondary gs-mb-sm">
+                                Klubbpoäng (<?= h($rider['club_name']) ?>)
+                            </h3>
+                            <?php foreach ($clubPointsStats as $stat): ?>
+                            <div class="gs-flex gs-justify-between gs-items-center gs-py-xs gs-border-b">
+                                <div>
+                                    <a href="/clubs/leaderboard.php?series_id=<?= $stat['series_id'] ?>" class="gs-link gs-font-semibold">
+                                        <?= h($stat['series_name']) ?>
+                                    </a>
+                                    <span class="gs-text-xs gs-text-secondary">(<?= $stat['events_count'] ?> events)</span>
+                                </div>
+                                <div class="gs-text-lg gs-font-bold" style="color: #f59e0b;">
+                                    <?= number_format($stat['total_club_points'], 1) ?> p
+                                </div>
+                            </div>
+                            <?php endforeach; ?>
+                        </div>
+                        <?php endif; ?>
+                    </div>
+                </div>
+                <?php endif; ?>
 
                 <!-- Results History -->
                 <div class="gs-card">
