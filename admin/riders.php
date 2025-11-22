@@ -16,7 +16,7 @@ $sortBy = $_GET['sort'] ?? 'name';
 $sortOrder = $_GET['order'] ?? 'asc';
 
 // Validate sort parameters
-$allowedSorts = ['name', 'year', 'club', 'license'];
+$allowedSorts = ['name', 'year', 'club', 'license', 'results'];
 $allowedOrders = ['asc', 'desc'];
 if (!in_array($sortBy, $allowedSorts)) $sortBy = 'name';
 if (!in_array($sortOrder, $allowedOrders)) $sortOrder = 'asc';
@@ -31,6 +31,8 @@ if ($sortBy === 'name') {
     $orderBy = $sortOrder === 'asc' ? 'cl.name ASC, c.lastname ASC' : 'cl.name DESC, c.lastname ASC';
 } elseif ($sortBy === 'license') {
     $orderBy = $sortOrder === 'asc' ? 'c.license_number ASC' : 'c.license_number DESC';
+} elseif ($sortBy === 'results') {
+    $orderBy = $sortOrder === 'asc' ? 'result_count ASC, c.lastname ASC' : 'result_count DESC, c.lastname ASC';
 }
 
 // Build query filters
@@ -61,7 +63,8 @@ $whereClause = $where ? 'WHERE ' . implode(' AND ', $where) : '';
 $sql = "SELECT
     c.id, c.firstname, c.lastname, c.birth_year, c.gender,
     c.license_number, c.license_type, c.license_category, c.license_valid_until, c.discipline, c.active,
-    cl.name as club_name, cl.id as club_id
+    cl.name as club_name, cl.id as club_id,
+    (SELECT COUNT(*) FROM results r WHERE r.cyclist_id = c.id) as result_count
 FROM riders c
 LEFT JOIN clubs cl ON c.club_id = cl.id
 $whereClause
@@ -193,6 +196,15 @@ include __DIR__ . '/../includes/layout-header.php';
                                             <?php endif; ?>
                                         </a>
                                     </th>
+                                    <th>
+                                        <a href="?sort=results&order=<?= $sortBy === 'results' && $sortOrder === 'asc' ? 'desc' : 'asc' ?><?= $search ? '&search=' . urlencode($search) : '' ?><?= $club_id ? '&club_id=' . $club_id : '' ?><?= $onlyWithResults ? '&with_results=1' : '' ?><?= $onlySweId ? '&swe_only=1' : '' ?>"
+                                           class="gs-link gs-sortable-header">
+                                            Resultat
+                                            <?php if ($sortBy === 'results'): ?>
+                                                <i data-lucide="<?= $sortOrder === 'asc' ? 'arrow-up' : 'arrow-down' ?>" class="gs-icon-14"></i>
+                                            <?php endif; ?>
+                                        </a>
+                                    </th>
                                     <th>Licensstatus</th>
                                     <th>Disciplin</th>
                                     <th class="gs-table-col-actions">Åtgärder</th>
@@ -235,6 +247,13 @@ include __DIR__ . '/../includes/layout-header.php';
                                                 </span>
                                             <?php else: ?>
                                                 -
+                                            <?php endif; ?>
+                                        </td>
+                                        <td>
+                                            <?php if ($rider['result_count'] > 0): ?>
+                                                <span class="gs-badge gs-badge-sm gs-badge-info"><?= $rider['result_count'] ?></span>
+                                            <?php else: ?>
+                                                <span class="gs-text-secondary">0</span>
                                             <?php endif; ?>
                                         </td>
                                         <td>
