@@ -129,8 +129,8 @@ if ($showAllClasses) {
             $riderData['total_points'] += $points;
         }
 
-        // Apply name search filter
-        if ($searchName === '' || stripos($riderData['fullname'], $searchName) !== false) {
+        // Apply name search filter and skip 0-point riders
+        if ($riderData['total_points'] > 0 && ($searchName === '' || stripos($riderData['fullname'], $searchName) !== false)) {
             // Group by class for "Alla klasser" view
             $classKey = $rider['class_id'] ?? 0;
             if (!isset($standingsByClass[$classKey])) {
@@ -206,8 +206,8 @@ if ($showAllClasses) {
             $riderData['total_points'] += $points;
         }
 
-        // Apply name search filter
-        if ($searchName === '' || stripos($riderData['fullname'], $searchName) !== false) {
+        // Apply name search filter and skip 0-point riders
+        if ($riderData['total_points'] > 0 && ($searchName === '' || stripos($riderData['fullname'], $searchName) !== false)) {
             $standings[] = $riderData;
         }
     }
@@ -218,7 +218,7 @@ if ($showAllClasses) {
     });
 }
 
-$pageTitle = $series['name'] . ' - Kvalpoäng & Ställning';
+$pageTitle = $series['name'] . ' - Kvalpoäng';
 $pageType = 'public';
 include __DIR__ . '/includes/layout-header.php';
 ?>
@@ -279,7 +279,7 @@ include __DIR__ . '/includes/layout-header.php';
         <div class="gs-mb-xl">
             <h1 class="gs-h2 gs-text-primary gs-mb-sm">
                 <i data-lucide="trophy"></i>
-                <?= h($series['name']) ?> - Kvalpoäng & Ställning
+                <?= h($series['name']) ?> - Kvalpoäng
             </h1>
             <?php if ($series['description']): ?>
                 <p class="gs-text-secondary">
