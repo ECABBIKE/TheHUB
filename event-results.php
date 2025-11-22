@@ -225,6 +225,31 @@ foreach ($resultsByClass as $className => &$classData) {
 }
 unset($classData);
 
+// Calculate split time statistics for color coding
+foreach ($resultsByClass as $classKey => &$classData) {
+    $classData['split_stats'] = [];
+
+    // For each split (ss1 to ss10)
+    for ($ss = 1; $ss <= 10; $ss++) {
+        $times = [];
+        foreach ($classData['results'] as $result) {
+            if (!empty($result['ss' . $ss]) && $result['status'] === 'finished') {
+                $times[] = timeToSeconds($result['ss' . $ss]);
+            }
+        }
+
+        if (count($times) >= 2) {
+            sort($times);
+            $classData['split_stats'][$ss] = [
+                'min' => $times[0],
+                'max' => $times[count($times) - 1],
+                'range' => $times[count($times) - 1] - $times[0]
+            ];
+        }
+    }
+}
+unset($classData);
+
 // Sort classes by their sort_order
 uksort($resultsByClass, function($a, $b) use ($resultsByClass) {
     return $resultsByClass[$a]['sort_order'] - $resultsByClass[$b]['sort_order'];
@@ -443,6 +468,42 @@ include __DIR__ . '/includes/layout-header.php';
     user-select: none;
 }
 
+/* Split time color coding */
+.split-fastest {
+    background: #dcfce7 !important;
+    color: #166534 !important;
+    font-weight: 600;
+}
+.split-fast {
+    background: #fef9c3 !important;
+    color: #854d0e !important;
+}
+.split-slow {
+    background: #fed7aa !important;
+    color: #9a3412 !important;
+}
+.split-slowest {
+    background: #fecaca !important;
+    color: #991b1b !important;
+}
+
+/* Sortable column headers */
+.sortable-header {
+    cursor: pointer;
+    user-select: none;
+}
+.sortable-header:hover {
+    background: var(--gs-bg-secondary, #f3f4f6);
+}
+.sort-asc::after {
+    content: ' ▲';
+    font-size: 0.7em;
+}
+.sort-desc::after {
+    content: ' ▼';
+    font-size: 0.7em;
+}
+
 @media (max-width: 768px) {
     .results-table {
         font-size: 0.75rem;
@@ -645,10 +706,14 @@ include __DIR__ . '/includes/layout-header.php';
             </div>
         <?php else: ?>
             <?php if ($hasSplitTimes && !$isDH): ?>
-            <div class="gs-mb-md gs-text-right">
+            <div class="gs-mb-md gs-flex gs-justify-end gs-gap-md">
                 <label class="gs-checkbox split-times-toggle">
                     <input type="checkbox" id="globalSplitToggle" onchange="toggleAllSplitTimes(this.checked)">
                     <span class="gs-text-sm">Visa sträcktider</span>
+                </label>
+                <label class="gs-checkbox">
+                    <input type="checkbox" id="colorToggle" checked onchange="toggleSplitColors(this.checked)">
+                    <span class="gs-text-sm">Färgkodning</span>
                 </label>
             </div>
             <?php endif; ?>
@@ -692,10 +757,12 @@ include __DIR__ . '/includes/layout-header.php';
                                         <th class="gs-table-col-medium">Åk 2</th>
                                         <th class="gs-table-col-medium">Bästa</th>
                                     <?php else: ?>
-                                        <th class="gs-table-col-medium">Tid</th>
+                                        <?php $colIndex = 3 + ($hasBibNumbers ? 1 : 0); ?>
+                                        <th class="gs-table-col-medium sortable-header" onclick="sortTable(this, <?= $colIndex++ ?>)">Tid</th>
                                         <th class="gs-table-col-medium">+Tid</th>
+                                        <?php $colIndex++; ?>
                                         <?php foreach ($classSplitCols as $ssNum): ?>
-                                            <th class="gs-table-col-medium split-time-col">SS<?= $ssNum ?></th>
+                                            <th class="gs-table-col-medium split-time-col sortable-header" onclick="sortTable(this, <?= $colIndex++ ?>)">SS<?= $ssNum ?></th>
                                         <?php endforeach; ?>
                                     <?php endif; ?>
                                     <?php if ($isDH): ?>
@@ -801,11 +868,32 @@ include __DIR__ . '/includes/layout-header.php';
                                             <td class="gs-table-time-cell gs-text-secondary">
                                                 <?= $result['time_behind_formatted'] ?? '-' ?>
                                             </td>
-                                            <!-- Split times (per class) -->
-                                            <?php foreach ($classSplitCols as $ssNum): ?>
-                                                <td class="gs-table-time-cell gs-text-secondary split-time-col">
-                                                    <?php if (!empty($result['ss' . $ssNum])): ?>
-                                                        <?= formatDisplayTime($result['ss' . $ssNum]) ?>
+                                            <!-- Split times (per class) with color coding -->
+                                            <?php foreach ($classSplitCols as $ssNum):
+                                                $splitClass = '';
+                                                $splitTime = $result['ss' . $ssNum] ?? '';
+                                                if (!empty($splitTime) && $result['status'] === 'finished' && isset($groupData['split_stats'][$ssNum])) {
+                                                    $stats = $groupData['split_stats'][$ssNum];
+                                                    $timeSeconds = timeToSeconds($splitTime);
+                                                    if ($stats['range'] > 0) {
+                                                        $position = ($timeSeconds - $stats['min']) / $stats['range'];
+                                                        if ($position <= 0.1) {
+                                                            $splitClass = 'split-fastest';
+                                                        } elseif ($position <= 0.35) {
+                                                            $splitClass = 'split-fast';
+                                                        } elseif ($position >= 0.9) {
+                                                            $splitClass = 'split-slowest';
+                                                        } elseif ($position >= 0.65) {
+                                                            $splitClass = 'split-slow';
+                                                        }
+                                                    } elseif ($timeSeconds == $stats['min']) {
+                                                        $splitClass = 'split-fastest';
+                                                    }
+                                                }
+                                            ?>
+                                                <td class="gs-table-time-cell split-time-col <?= $splitClass ?>">
+                                                    <?php if (!empty($splitTime)): ?>
+                                                        <?= formatDisplayTime($splitTime) ?>
                                                     <?php else: ?>
                                                         -
                                                     <?php endif; ?>
@@ -1222,6 +1310,81 @@ function toggleAllSplitTimes(show) {
             table.classList.remove('split-times-visible');
         }
     });
+}
+
+function toggleSplitColors(show) {
+    // Toggle color coding on split time cells
+    const cells = document.querySelectorAll('.split-fastest, .split-fast, .split-slow, .split-slowest');
+    cells.forEach(cell => {
+        if (show) {
+            cell.style.removeProperty('background');
+            cell.style.removeProperty('color');
+        } else {
+            cell.style.background = 'transparent';
+            cell.style.color = 'inherit';
+        }
+    });
+}
+
+// Table sorting functionality
+function sortTable(header, columnIndex) {
+    const table = header.closest('table');
+    const tbody = table.querySelector('tbody');
+    const rows = Array.from(tbody.querySelectorAll('tr'));
+
+    // Determine sort direction
+    const isAsc = header.classList.contains('sort-asc');
+
+    // Remove sort classes from all headers in this table
+    table.querySelectorAll('th').forEach(th => {
+        th.classList.remove('sort-asc', 'sort-desc');
+    });
+
+    // Set new sort direction
+    header.classList.add(isAsc ? 'sort-desc' : 'sort-asc');
+
+    // Sort rows
+    rows.sort((a, b) => {
+        const aCell = a.cells[columnIndex];
+        const bCell = b.cells[columnIndex];
+        const aText = aCell.textContent.trim();
+        const bText = bCell.textContent.trim();
+
+        // Convert time format to seconds for comparison
+        const aVal = timeToSeconds(aText);
+        const bVal = timeToSeconds(bText);
+
+        if (aVal === 0 && bVal === 0) {
+            return aText.localeCompare(bText);
+        }
+        if (aVal === 0) return 1;
+        if (bVal === 0) return -1;
+
+        return isAsc ? bVal - aVal : aVal - bVal;
+    });
+
+    // Reorder rows
+    rows.forEach(row => tbody.appendChild(row));
+}
+
+function timeToSeconds(timeStr) {
+    if (!timeStr || timeStr === '-') return 0;
+
+    // Handle decimal part
+    let decimal = 0;
+    const decMatch = timeStr.match(/\.(\d+)$/);
+    if (decMatch) {
+        decimal = parseFloat('0.' + decMatch[1]);
+        timeStr = timeStr.replace(/\.\d+$/, '');
+    }
+
+    const parts = timeStr.split(':').map(Number);
+    if (parts.length === 3) {
+        return parts[0] * 3600 + parts[1] * 60 + parts[2] + decimal;
+    } else if (parts.length === 2) {
+        return parts[0] * 60 + parts[1] + decimal;
+    }
+    return decimal;
 }
 </script>
 
