@@ -116,6 +116,7 @@ if ($showAllClasses) {
         ];
 
         // Get points for each event (using rider's class)
+        $allPoints = [];
         foreach ($seriesEvents as $event) {
             $result = $db->getRow("
                 SELECT points
@@ -126,7 +127,35 @@ if ($showAllClasses) {
 
             $points = $result ? (int)$result['points'] : 0;
             $riderData['event_points'][$event['id']] = $points;
-            $riderData['total_points'] += $points;
+            if ($points > 0) {
+                $allPoints[] = ['event_id' => $event['id'], 'points' => $points];
+            }
+        }
+
+        // Apply count_best_results rule
+        $countBest = $series['count_best_results'] ?? null;
+        $riderData['excluded_events'] = [];
+
+        if ($countBest && count($allPoints) > $countBest) {
+            // Sort by points descending
+            usort($allPoints, function($a, $b) {
+                return $b['points'] - $a['points'];
+            });
+
+            // Mark events beyond the best X as excluded
+            for ($i = $countBest; $i < count($allPoints); $i++) {
+                $riderData['excluded_events'][$allPoints[$i]['event_id']] = true;
+            }
+
+            // Sum only the best results
+            for ($i = 0; $i < $countBest; $i++) {
+                $riderData['total_points'] += $allPoints[$i]['points'];
+            }
+        } else {
+            // Sum all points
+            foreach ($allPoints as $p) {
+                $riderData['total_points'] += $p['points'];
+            }
         }
 
         // Apply name search filter and skip 0-point riders
@@ -193,6 +222,7 @@ if ($showAllClasses) {
         ];
 
         // Get points for each event
+        $allPoints = [];
         foreach ($seriesEvents as $event) {
             $result = $db->getRow("
                 SELECT points
@@ -203,7 +233,35 @@ if ($showAllClasses) {
 
             $points = $result ? (int)$result['points'] : 0;
             $riderData['event_points'][$event['id']] = $points;
-            $riderData['total_points'] += $points;
+            if ($points > 0) {
+                $allPoints[] = ['event_id' => $event['id'], 'points' => $points];
+            }
+        }
+
+        // Apply count_best_results rule
+        $countBest = $series['count_best_results'] ?? null;
+        $riderData['excluded_events'] = [];
+
+        if ($countBest && count($allPoints) > $countBest) {
+            // Sort by points descending
+            usort($allPoints, function($a, $b) {
+                return $b['points'] - $a['points'];
+            });
+
+            // Mark events beyond the best X as excluded
+            for ($i = $countBest; $i < count($allPoints); $i++) {
+                $riderData['excluded_events'][$allPoints[$i]['event_id']] = true;
+            }
+
+            // Sum only the best results
+            for ($i = 0; $i < $countBest; $i++) {
+                $riderData['total_points'] += $allPoints[$i]['points'];
+            }
+        } else {
+            // Sum all points
+            foreach ($allPoints as $p) {
+                $riderData['total_points'] += $p['points'];
+            }
         }
 
         // Apply name search filter and skip 0-point riders
@@ -479,9 +537,14 @@ include __DIR__ . '/includes/layout-header.php';
                                             <td class="event-col">
                                                 <?php
                                                 $points = $rider['event_points'][$event['id']] ?? 0;
+                                                $isExcluded = isset($rider['excluded_events'][$event['id']]);
                                                 if ($points > 0):
+                                                    if ($isExcluded):
                                                 ?>
+                                                    <span class="gs-text-muted" style="text-decoration: line-through;" title="Räknas ej"><?= $points ?></span>
+                                                <?php else: ?>
                                                     <?= $points ?>
+                                                <?php endif; ?>
                                                 <?php else: ?>
                                                     <span class="gs-text-muted">–</span>
                                                 <?php endif; ?>
@@ -567,9 +630,14 @@ include __DIR__ . '/includes/layout-header.php';
                                         <td class="event-col">
                                             <?php
                                             $points = $rider['event_points'][$event['id']] ?? 0;
+                                            $isExcluded = isset($rider['excluded_events'][$event['id']]);
                                             if ($points > 0):
+                                                if ($isExcluded):
                                             ?>
+                                                <span class="gs-text-muted" style="text-decoration: line-through;" title="Räknas ej"><?= $points ?></span>
+                                            <?php else: ?>
                                                 <?= $points ?>
+                                            <?php endif; ?>
                                             <?php else: ?>
                                                 <span class="gs-text-muted">–</span>
                                             <?php endif; ?>

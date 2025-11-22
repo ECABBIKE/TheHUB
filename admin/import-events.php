@@ -1,4 +1,12 @@
 <?php
+/**
+ * Import Events from CSV
+ * Version 2.0.0
+ *
+ * Imports basic event data from CSV file with preview.
+ * Series and point templates can be assigned after import.
+ */
+
 require_once __DIR__ . '/../config.php';
 require_admin();
 
@@ -7,298 +15,249 @@ $current_admin = get_current_admin();
 
 $message = '';
 $messageType = 'info';
-$stats = null;
-$errors = [];
+$previewData = [];
 
-// Handle CSV import
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['csv_file'])) {
-    checkCsrf();
-
-    $file = $_FILES['csv_file'];
-
-    if ($file['error'] === UPLOAD_ERR_OK) {
-        $result = importEventsFromCSV($file['tmp_name'], $db);
-        $stats = $result['stats'];
-        $errors = $result['errors'];
-
-        if ($stats['failed'] === 0) {
-            $message = "Import klar! {$stats['success']} events importerade.";
-            $messageType = 'success';
-        } else {
-            $message = "Import klar med fel. {$stats['success']} lyckades, {$stats['failed']} misslyckades.";
-            $messageType = 'warning';
-        }
-    } else {
-        $message = 'Fel vid uppladdning av fil.';
-        $messageType = 'error';
-    }
+// Get venues for matching
+$venues = $db->getAll("SELECT id, name FROM venues ORDER BY name");
+$venueMap = [];
+foreach ($venues as $v) {
+    $venueMap[mb_strtolower(trim($v['name']), 'UTF-8')] = $v['id'];
 }
 
-/**
- * Import events from CSV file
- */
-function importEventsFromCSV($filePath, $db) {
-    $stats = [
-        'total' => 0,
-        'success' => 0,
-        'updated' => 0,
-        'failed' => 0,
-        'skipped' => 0
-    ];
-    $errors = [];
+// Handle form submissions
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    checkCsrf();
 
-    $handle = fopen($filePath, 'r');
-    if (!$handle) {
-        return ['stats' => $stats, 'errors' => ['Kunde inte öppna filen']];
-    }
+    $action = $_POST['action'] ?? '';
 
-    // Auto-detect delimiter (comma or semicolon)
-    $firstLine = fgets($handle);
-    rewind($handle);
-    $delimiter = (substr_count($firstLine, ';') > substr_count($firstLine, ',')) ? ';' : ',';
+    if ($action === 'preview' && isset($_FILES['csv_file'])) {
+        $file = $_FILES['csv_file'];
 
-    // Read header with detected delimiter
-    $header = fgetcsv($handle, 0, $delimiter);
-    if (!$header) {
-        fclose($handle);
-        return ['stats' => $stats, 'errors' => ['Ogiltig CSV-fil']];
-    }
+        if ($file['error'] !== UPLOAD_ERR_OK) {
+            $message = 'Fel vid uppladdning av fil';
+            $messageType = 'error';
+        } else {
+            $content = file_get_contents($file['tmp_name']);
 
-    // Normalize header - accept multiple variants of column names
-    $header = array_map(function($col) {
-        $col = strtolower(trim($col));
-        $col = str_replace([' ', '-', '_'], '', $col); // Remove spaces, hyphens, underscores
-
-        // Map various column name variants to standard names
-        $mappings = [
-            'namn' => 'name',
-            'name' => 'name',
-            'eventnamn' => 'name',
-            'eventname' => 'name',
-            'tävling' => 'name',
-            'tavling' => 'name',
-            'title' => 'name',
-
-            'datum' => 'date',
-            'date' => 'date',
-            'eventdatum' => 'date',
-            'eventdate' => 'date',
-            'tävlingsdatum' => 'date',
-            'tavlingsdatum' => 'date',
-
-            'plats' => 'location',
-            'location' => 'location',
-            'ort' => 'location',
-            'stad' => 'location',
-            'place' => 'location',
-
-            'bana' => 'venue',
-            'venue' => 'venue',
-            'anläggning' => 'venue',
-            'anlaggning' => 'venue',
-            'park' => 'venue',
-            'bikepark' => 'venue',
-
-            'typ' => 'type',
-            'type' => 'type',
-            'eventtyp' => 'type',
-
-            'gren' => 'discipline',
-            'discipline' => 'discipline',
-            'sport' => 'discipline',
-
-            'serie' => 'series',
-            'series' => 'series',
-            'seriename' => 'series',
-            'serienamn' => 'series',
-
-            'distans' => 'distance',
-            'distance' => 'distance',
-            'längd' => 'distance',
-            'langd' => 'distance',
-            'sträcka' => 'distance',
-            'stracka' => 'distance',
-
-            'höjdmeter' => 'elevationgain',
-            'hojdmeter' => 'elevationgain',
-            'elevationgain' => 'elevationgain',
-            'climbing' => 'elevationgain',
-            'elevation' => 'elevationgain',
-
-            'status' => 'status',
-            'state' => 'status',
-
-            'beskrivning' => 'description',
-            'description' => 'description',
-            'info' => 'description',
-
-            'arrangör' => 'organizer',
-            'arrangor' => 'organizer',
-            'organizer' => 'organizer',
-            'organisatör' => 'organizer',
-            'organisator' => 'organizer',
-
-            'webbplats' => 'website',
-            'website' => 'website',
-            'url' => 'website',
-            'hemsida' => 'website',
-
-            'anmälningslänk' => 'registrationurl',
-            'anmalningslank' => 'registrationurl',
-            'registrationurl' => 'registrationurl',
-            'regurl' => 'registrationurl',
-            'registration' => 'registrationurl',
-
-            'anmälningssista' => 'registrationdeadline',
-            'anmalningssista' => 'registrationdeadline',
-            'registrationdeadline' => 'registrationdeadline',
-            'sista' => 'registrationdeadline',
-            'deadline' => 'registrationdeadline',
-
-            'maxdeltagare' => 'maxparticipants',
-            'maxparticipants' => 'maxparticipants',
-            'max' => 'maxparticipants',
-            'platser' => 'maxparticipants',
-
-            'startavgift' => 'entryfee',
-            'entryfee' => 'entryfee',
-            'avgift' => 'entryfee',
-            'pris' => 'entryfee',
-            'fee' => 'entryfee',
-            'price' => 'entryfee',
-        ];
-
-        return $mappings[$col] ?? $col;
-    }, $header);
-
-    $lineNumber = 1;
-
-    while (($row = fgetcsv($handle, 0, $delimiter)) !== false) {
-        $lineNumber++;
-        $stats['total']++;
-
-        if (count($row) !== count($header)) {
-            $stats['skipped']++;
-            continue;
-        }
-
-        $data = array_combine($header, $row);
-
-        try {
-            // Required fields
-            if (empty($data['name']) || empty($data['date'])) {
-                $stats['skipped']++;
-                continue;
+            // Detect encoding
+            $encoding = mb_detect_encoding($content, ['UTF-8', 'ISO-8859-1', 'Windows-1252'], true);
+            if ($encoding && $encoding !== 'UTF-8') {
+                $content = mb_convert_encoding($content, 'UTF-8', $encoding);
             }
 
-            // Prepare event data
-            // Auto-generate advent_id if not provided
-            $advent_id = trim($data['advent_id'] ?? $data['adventid'] ?? '');
-            if (empty($advent_id)) {
-                $event_year = date('Y', strtotime(trim($data['date'])));
-                $advent_id = generateEventAdventId($pdo, $event_year);
-            }
+            // Remove BOM if present
+            $content = preg_replace('/^\xEF\xBB\xBF/', '', $content);
 
-            $eventData = [
-                'name' => trim($data['name']),
-                'advent_id' => $advent_id,
-                'date' => trim($data['date']),
-                'location' => trim($data['location'] ?? ''),
-                'type' => trim($data['type'] ?? 'competition'),
-                'discipline' => trim($data['discipline'] ?? ''),
-                'distance' => !empty($data['distance']) ? floatval($data['distance']) : null,
-                'elevation_gain' => !empty($data['elevationgain']) ? intval($data['elevationgain']) : null,
-                'status' => trim($data['status'] ?? 'upcoming'),
-                'description' => trim($data['description'] ?? ''),
-                'organizer' => trim($data['organizer'] ?? ''),
-                'website' => trim($data['website'] ?? ''),
-                'registration_url' => trim($data['registrationurl'] ?? ''),
-                'registration_deadline' => !empty($data['registrationdeadline']) ? trim($data['registrationdeadline']) : null,
-                'max_participants' => !empty($data['maxparticipants']) ? intval($data['maxparticipants']) : null,
-                'entry_fee' => !empty($data['entryfee']) ? floatval($data['entryfee']) : null,
-                'active' => 1
-            ];
+            // Parse CSV
+            $lines = explode("\n", $content);
+            $header = null;
+            $rows = [];
 
-            // Handle series (auto-create if name provided)
-            if (!empty($data['series'])) {
-                $seriesName = trim($data['series']);
-                $series = $db->getRow("SELECT id FROM series WHERE name = ? LIMIT 1", [$seriesName]);
+            foreach ($lines as $lineNum => $line) {
+                $line = trim($line);
+                if (empty($line)) continue;
 
-                if (!$series) {
-                    // Auto-create series
-                    $seriesId = $db->insert('series', [
-                        'name' => $seriesName,
-                        'type' => 'championship',
-                        'discipline' => $eventData['discipline'],
-                        'year' => date('Y', strtotime($eventData['date'])),
-                        'status' => 'active',
-                        'active' => 1
-                    ]);
-                    $eventData['series_id'] = $seriesId;
-                    error_log("Auto-created series: {$seriesName} (ID: {$seriesId})");
-                } else {
-                    $eventData['series_id'] = $series['id'];
+                // Detect delimiter
+                $delimiter = (strpos($line, ';') !== false) ? ';' : ',';
+                $fields = str_getcsv($line, $delimiter);
+
+                if ($header === null) {
+                    $header = array_map(function($h) {
+                        return mb_strtolower(trim($h), 'UTF-8');
+                    }, $fields);
+                    continue;
                 }
-            }
 
-            // Handle venue (auto-create if name provided)
-            if (!empty($data['venue'])) {
-                $venueName = trim($data['venue']);
-                $venue = $db->getRow("SELECT id FROM venues WHERE name = ? LIMIT 1", [$venueName]);
+                if (count($fields) < 2) continue;
 
-                if (!$venue) {
-                    // Auto-create venue
-                    $venueId = $db->insert('venues', [
-                        'name' => $venueName,
-                        'city' => $eventData['location'],
-                        'country' => 'Sverige',
-                        'active' => 1
-                    ]);
-                    $eventData['venue_id'] = $venueId;
-                    error_log("Auto-created venue: {$venueName} (ID: {$venueId})");
-                } else {
-                    $eventData['venue_id'] = $venue['id'];
+                $row = [];
+                foreach ($header as $i => $col) {
+                    $row[$col] = isset($fields[$i]) ? trim($fields[$i]) : '';
                 }
+                $rows[] = $row;
             }
 
-            // Check if event exists (by name and date)
-            $existing = $db->getRow(
-                "SELECT id FROM events WHERE name = ? AND date = ? LIMIT 1",
-                [$eventData['name'], $eventData['date']]
-            );
-
-            if ($existing) {
-                // Update existing event
-                $db->update('events', $eventData, 'id = ?', [$existing['id']]);
-                $stats['updated']++;
-                error_log("Updated event: {$eventData['name']} on {$eventData['date']}");
+            if (empty($rows)) {
+                $message = 'Ingen data hittades i CSV-filen';
+                $messageType = 'error';
             } else {
-                // Insert new event
-                $newId = $db->insert('events', $eventData);
-                $stats['success']++;
-                error_log("Inserted event: {$eventData['name']} on {$eventData['date']} (ID: {$newId})");
+                // Store in session for import
+                $_SESSION['import_events_data'] = $rows;
+                $_SESSION['import_events_header'] = $header;
+
+                // Build preview
+                foreach ($rows as $row) {
+                    $preview = [
+                        'name' => $row['namn'] ?? $row['name'] ?? '',
+                        'external_id' => $row['advent id'] ?? $row['external_id'] ?? $row['externt id'] ?? '',
+                        'date' => $row['datum'] ?? $row['date'] ?? '',
+                        'location' => $row['plats'] ?? $row['location'] ?? '',
+                        'venue' => $row['bana'] ?? $row['anläggning'] ?? $row['venue'] ?? $row['bana/anläggning'] ?? '',
+                        'discipline' => $row['disciplin'] ?? $row['discipline'] ?? '',
+                        'distance_km' => $row['distans'] ?? $row['distans (km)'] ?? $row['distance_km'] ?? '',
+                        'elevation_m' => $row['höjdmeter'] ?? $row['höjdmeter (m)'] ?? $row['elevation_m'] ?? '',
+                        'organizer' => $row['arrangör'] ?? $row['organizer'] ?? '',
+                        'website' => $row['webbplats'] ?? $row['website'] ?? '',
+                        'registration_deadline' => $row['anmälningsfrist'] ?? $row['registration_deadline'] ?? '',
+                        'contact_email' => $row['kontakt e-post'] ?? $row['contact_email'] ?? $row['e-post'] ?? '',
+                        'contact_phone' => $row['kontakt telefon'] ?? $row['contact_phone'] ?? $row['telefon'] ?? '',
+                        'status' => 'ready',
+                        'venue_id' => null
+                    ];
+
+                    // Try to match venue
+                    if ($preview['venue']) {
+                        $venueLower = mb_strtolower(trim($preview['venue']), 'UTF-8');
+                        if (isset($venueMap[$venueLower])) {
+                            $preview['venue_id'] = $venueMap[$venueLower];
+                        }
+                    }
+
+                    // Validate required fields
+                    if (empty($preview['name'])) {
+                        $preview['status'] = 'error';
+                        $preview['error'] = 'Namn saknas';
+                    } elseif (empty($preview['date'])) {
+                        $preview['status'] = 'error';
+                        $preview['error'] = 'Datum saknas';
+                    } else {
+                        // Parse date
+                        $parsedDate = strtotime($preview['date']);
+                        if ($parsedDate === false) {
+                            $preview['status'] = 'error';
+                            $preview['error'] = 'Ogiltigt datumformat';
+                        } else {
+                            $preview['parsed_date'] = date('Y-m-d', $parsedDate);
+                        }
+                    }
+
+                    $previewData[] = $preview;
+                }
+
+                $message = count($previewData) . ' events hittades i filen';
+                $messageType = 'success';
+            }
+        }
+    } elseif ($action === 'import') {
+        $rows = $_SESSION['import_events_data'] ?? [];
+
+        if (empty($rows)) {
+            $message = 'Ingen data att importera. Ladda upp CSV-filen igen.';
+            $messageType = 'error';
+        } else {
+            $imported = 0;
+            $skipped = 0;
+            $errors = [];
+
+            foreach ($rows as $row) {
+                $name = $row['namn'] ?? $row['name'] ?? '';
+                $externalId = $row['advent id'] ?? $row['external_id'] ?? $row['externt id'] ?? '';
+                $date = $row['datum'] ?? $row['date'] ?? '';
+                $location = $row['plats'] ?? $row['location'] ?? '';
+                $venue = $row['bana'] ?? $row['anläggning'] ?? $row['venue'] ?? $row['bana/anläggning'] ?? '';
+                $discipline = $row['disciplin'] ?? $row['discipline'] ?? '';
+                $distanceKm = $row['distans'] ?? $row['distans (km)'] ?? $row['distance_km'] ?? '';
+                $elevationM = $row['höjdmeter'] ?? $row['höjdmeter (m)'] ?? $row['elevation_m'] ?? '';
+                $organizer = $row['arrangör'] ?? $row['organizer'] ?? '';
+                $website = $row['webbplats'] ?? $row['website'] ?? '';
+                $registrationDeadline = $row['anmälningsfrist'] ?? $row['registration_deadline'] ?? '';
+                $contactEmail = $row['kontakt e-post'] ?? $row['contact_email'] ?? $row['e-post'] ?? '';
+                $contactPhone = $row['kontakt telefon'] ?? $row['contact_phone'] ?? $row['telefon'] ?? '';
+
+                // Validate required fields
+                if (empty($name) || empty($date)) {
+                    $skipped++;
+                    continue;
+                }
+
+                // Parse date
+                $parsedDate = strtotime($date);
+                if ($parsedDate === false) {
+                    $errors[] = "Ogiltigt datum för '{$name}'";
+                    $skipped++;
+                    continue;
+                }
+
+                // Generate external_id if empty
+                if (empty($externalId)) {
+                    $externalId = 'EVT-' . date('Ymd', $parsedDate) . '-' . substr(md5($name . $date), 0, 6);
+                }
+
+                // Check if event already exists (by external_id or name+date)
+                $existing = $db->getRow(
+                    "SELECT id FROM events WHERE external_id = ? OR (name = ? AND date = ?)",
+                    [$externalId, $name, date('Y-m-d', $parsedDate)]
+                );
+
+                if ($existing) {
+                    $skipped++;
+                    continue;
+                }
+
+                // Find venue_id
+                $venueId = null;
+                if ($venue) {
+                    $venueLower = mb_strtolower(trim($venue), 'UTF-8');
+                    if (isset($venueMap[$venueLower])) {
+                        $venueId = $venueMap[$venueLower];
+                    }
+                }
+
+                // Parse registration deadline
+                $deadlineDate = null;
+                if ($registrationDeadline) {
+                    $parsedDeadline = strtotime($registrationDeadline);
+                    if ($parsedDeadline !== false) {
+                        $deadlineDate = date('Y-m-d', $parsedDeadline);
+                    }
+                }
+
+                // Insert event
+                try {
+                    $db->insert('events', [
+                        'name' => $name,
+                        'external_id' => $externalId,
+                        'date' => date('Y-m-d', $parsedDate),
+                        'location' => $location ?: null,
+                        'venue_id' => $venueId,
+                        'discipline' => $discipline ?: null,
+                        'distance_km' => $distanceKm ? floatval($distanceKm) : null,
+                        'elevation_m' => $elevationM ? intval($elevationM) : null,
+                        'organizer' => $organizer ?: null,
+                        'website' => $website ?: null,
+                        'registration_deadline' => $deadlineDate,
+                        'contact_email' => $contactEmail ?: null,
+                        'contact_phone' => $contactPhone ?: null,
+                        'active' => 1,
+                        'created_at' => date('Y-m-d H:i:s')
+                    ]);
+                    $imported++;
+                } catch (Exception $e) {
+                    $errors[] = "Fel vid import av '{$name}': " . $e->getMessage();
+                    $skipped++;
+                }
             }
 
-        } catch (Exception $e) {
-            $stats['failed']++;
-            $errors[] = "Rad {$lineNumber}: " . $e->getMessage();
-            error_log("Import error on line {$lineNumber}: " . $e->getMessage());
+            // Clear session data
+            unset($_SESSION['import_events_data']);
+            unset($_SESSION['import_events_header']);
+
+            if ($imported > 0) {
+                $message = "{$imported} events importerades!";
+                if ($skipped > 0) {
+                    $message .= " ({$skipped} hoppades över)";
+                }
+                $messageType = 'success';
+            } else {
+                $message = "Inga events importerades. {$skipped} hoppades över.";
+                $messageType = 'warning';
+            }
+
+            if (!empty($errors)) {
+                $message .= '<br><br>Fel:<br>' . implode('<br>', array_slice($errors, 0, 5));
+            }
         }
     }
-
-    fclose($handle);
-
-    // Verification
-    $verifyCount = $db->getRow("SELECT COUNT(*) as count FROM events");
-    $totalInDb = $verifyCount['count'] ?? 0;
-    error_log("Event import complete: {$stats['success']} new, {$stats['updated']} updated, {$stats['failed']} failed. Total events in DB: {$totalInDb}");
-
-    $stats['total_in_db'] = $totalInDb;
-
-    return [
-        'stats' => $stats,
-        'errors' => $errors
-    ];
 }
 
 $pageTitle = 'Importera Events';
@@ -308,219 +267,172 @@ include __DIR__ . '/../includes/layout-header.php';
 
 <main class="gs-content-with-sidebar">
     <div class="gs-container">
-        <h1 class="gs-h2 gs-mb-lg">
-            <i data-lucide="calendar"></i>
-            Importera Events
-        </h1>
-
-        <div class="gs-breadcrumb gs-mb-lg">
-            <a href="/admin/dashboard.php">Dashboard</a>
-            <span>/</span>
-            <a href="/admin/events.php">Events</a>
-            <span>/</span>
-            <span>Import</span>
+        <!-- Header -->
+        <div class="gs-flex gs-items-center gs-justify-between gs-mb-lg">
+            <div>
+                <h1 class="gs-h2">
+                    <i data-lucide="calendar-plus"></i>
+                    Importera Events
+                </h1>
+                <p class="gs-text-secondary">Importera flera events från CSV-fil</p>
+            </div>
+            <a href="/admin/events.php" class="gs-btn gs-btn-outline">
+                <i data-lucide="arrow-left"></i>
+                Tillbaka
+            </a>
         </div>
 
+        <!-- Messages -->
         <?php if ($message): ?>
-            <div class="gs-alert gs-alert-<?= h($messageType) ?> gs-mb-lg">
-                <i data-lucide="<?= $messageType === 'success' ? 'check-circle' : 'alert-circle' ?>"></i>
-                <?= h($message) ?>
+            <div class="gs-alert gs-alert-<?= $messageType ?> gs-mb-lg">
+                <i data-lucide="<?= $messageType === 'success' ? 'check-circle' : ($messageType === 'error' ? 'alert-circle' : 'info') ?>"></i>
+                <?= $message ?>
             </div>
         <?php endif; ?>
 
-        <?php if (!empty($errors)): ?>
-            <div class="gs-alert gs-alert-error gs-mb-lg">
-                <strong>Fel under import:</strong>
-                <ul class="gs-mt-sm">
-                    <?php foreach ($errors as $error): ?>
-                        <li><?= h($error) ?></li>
-                    <?php endforeach; ?>
-                </ul>
-            </div>
-        <?php endif; ?>
-
-        <?php if ($stats): ?>
-            <div class="gs-card gs-mb-lg">
-                <div class="gs-card-header">
-                    <h2 class="gs-h3">Import-statistik</h2>
-                </div>
-                <div class="gs-card-content">
-                    <div class="gs-grid gs-grid-cols-5 gs-gap-md">
-                        <div class="gs-stat-card">
-                            <div class="gs-stat-value"><?= $stats['total'] ?></div>
-                            <div class="gs-stat-label">Totalt rader</div>
-                        </div>
-                        <div class="gs-stat-card">
-                            <div class="gs-stat-value gs-text-success"><?= $stats['success'] ?></div>
-                            <div class="gs-stat-label">Nya</div>
-                        </div>
-                        <div class="gs-stat-card">
-                            <div class="gs-stat-value gs-text-info"><?= $stats['updated'] ?></div>
-                            <div class="gs-stat-label">Uppdaterade</div>
-                        </div>
-                        <div class="gs-stat-card">
-                            <div class="gs-stat-value gs-text-secondary"><?= $stats['skipped'] ?></div>
-                            <div class="gs-stat-label">Överhoppade</div>
-                        </div>
-                        <div class="gs-stat-card">
-                            <div class="gs-stat-value gs-text-danger"><?= $stats['failed'] ?></div>
-                            <div class="gs-stat-label">Misslyckade</div>
-                        </div>
+        <div class="gs-grid gs-grid-cols-1 gs-lg-grid-cols-3 gs-gap-lg">
+            <!-- Upload Card -->
+            <div>
+                <div class="gs-card">
+                    <div class="gs-card-header">
+                        <h2 class="gs-h5">
+                            <i data-lucide="upload"></i>
+                            Ladda upp CSV
+                        </h2>
                     </div>
+                    <div class="gs-card-content">
+                        <form method="POST" enctype="multipart/form-data">
+                            <?= csrf_field() ?>
+                            <input type="hidden" name="action" value="preview">
 
-                    <div class="gs-mt-lg">
-                        <h3 class="gs-h4 gs-mb-sm">Verifiering</h3>
-                        <p class="gs-text-lg"><strong>Totalt i databasen:</strong> <?= $stats['total_in_db'] ?> events</p>
+                            <div class="gs-form-group">
+                                <label for="csv_file" class="gs-label">CSV-fil</label>
+                                <input type="file" name="csv_file" id="csv_file" class="gs-input" accept=".csv,.txt" required>
+                                <small class="gs-text-xs gs-text-secondary">
+                                    Stöder UTF-8, ISO-8859-1, Windows-1252
+                                </small>
+                            </div>
+
+                            <button type="submit" class="gs-btn gs-btn-primary gs-w-full">
+                                <i data-lucide="eye"></i>
+                                Förhandsgranska
+                            </button>
+                        </form>
                     </div>
                 </div>
-            </div>
-        <?php endif; ?>
 
-        <!-- Upload Form -->
-        <div class="gs-card gs-mb-lg">
-            <div class="gs-card-header">
-                <h2 class="gs-h3">Bulk-import av events från CSV-fil</h2>
-            </div>
-            <div class="gs-card-content">
-                <form method="POST" enctype="multipart/form-data" class="gs-form">
-                    <?= csrf_field() ?>
-
-                    <div class="gs-alert gs-alert-info gs-mb-md">
-                        <i data-lucide="info"></i>
-                        <strong>CSV-format:</strong> Första raden ska innehålla kolumnnamn.
-                        <br>
-                        <strong>Auto-skapande:</strong> Om series eller venue inte finns skapas de automatiskt.
+                <!-- Format Info -->
+                <div class="gs-card gs-mt-lg">
+                    <div class="gs-card-header">
+                        <h2 class="gs-h5">
+                            <i data-lucide="info"></i>
+                            CSV-format
+                        </h2>
                     </div>
+                    <div class="gs-card-content">
+                        <p class="gs-text-sm gs-mb-md">Obligatoriska kolumner:</p>
+                        <ul class="gs-text-sm gs-mb-md" style="list-style: disc; padding-left: 1.5rem;">
+                            <li><strong>Namn</strong> (eller name)</li>
+                            <li><strong>Datum</strong> (eller date)</li>
+                        </ul>
 
-                    <div class="gs-form-group">
-                        <label class="gs-label">
-                            <i data-lucide="upload"></i>
-                            Välj CSV-fil
-                        </label>
-                        <input
-                            type="file"
-                            name="csv_file"
-                            accept=".csv"
-                            required
-                            class="gs-input"
-                        >
-                        <small class="gs-text-secondary">Max 10 MB. Format: CSV (komma-separerad)</small>
+                        <p class="gs-text-sm gs-mb-md">Valfria kolumner:</p>
+                        <ul class="gs-text-sm" style="list-style: disc; padding-left: 1.5rem;">
+                            <li>Advent ID / External_id</li>
+                            <li>Plats / Location</li>
+                            <li>Bana / Anläggning / Venue</li>
+                            <li>Disciplin</li>
+                            <li>Distans (km)</li>
+                            <li>Höjdmeter (m)</li>
+                            <li>Arrangör</li>
+                            <li>Webbplats</li>
+                            <li>Anmälningsfrist</li>
+                            <li>Kontakt e-post</li>
+                            <li>Kontakt telefon</li>
+                        </ul>
                     </div>
+                </div>
+            </div>
 
-                    <div class="gs-flex gs-gap-md">
-                        <button type="submit" class="gs-btn gs-btn-primary">
-                            <i data-lucide="upload"></i>
-                            Importera Events
-                        </button>
-                        <a href="/admin/events.php" class="gs-btn gs-btn-outline">
-                            <i data-lucide="arrow-left"></i>
-                            Tillbaka
-                        </a>
-                        <a href="/templates/import-events-template.csv" class="gs-btn gs-btn-outline" download>
-                            <i data-lucide="download"></i>
-                            Ladda ner mall
-                        </a>
+            <!-- Preview / Results -->
+            <div class="gs-lg-col-span-2">
+                <?php if (!empty($previewData)): ?>
+                    <div class="gs-card">
+                        <div class="gs-card-header gs-flex gs-justify-between gs-items-center">
+                            <h2 class="gs-h5">
+                                <i data-lucide="list"></i>
+                                Förhandsgranskning (<?= count($previewData) ?> events)
+                            </h2>
+                            <form method="POST" class="gs-display-inline">
+                                <?= csrf_field() ?>
+                                <input type="hidden" name="action" value="import">
+                                <button type="submit" class="gs-btn gs-btn-success">
+                                    <i data-lucide="download"></i>
+                                    Importera alla
+                                </button>
+                            </form>
+                        </div>
+                        <div class="gs-card-content">
+                            <div class="gs-table-responsive">
+                                <table class="gs-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Status</th>
+                                            <th>Namn</th>
+                                            <th>Datum</th>
+                                            <th>Plats</th>
+                                            <th>Bana</th>
+                                            <th>Disciplin</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <?php foreach ($previewData as $preview): ?>
+                                            <tr>
+                                                <td>
+                                                    <?php if ($preview['status'] === 'ready'): ?>
+                                                        <span class="gs-badge gs-badge-success gs-badge-sm">OK</span>
+                                                    <?php else: ?>
+                                                        <span class="gs-badge gs-badge-danger gs-badge-sm" title="<?= h($preview['error'] ?? '') ?>">Fel</span>
+                                                    <?php endif; ?>
+                                                </td>
+                                                <td><strong><?= h($preview['name']) ?></strong></td>
+                                                <td>
+                                                    <?php if (isset($preview['parsed_date'])): ?>
+                                                        <?= $preview['parsed_date'] ?>
+                                                    <?php else: ?>
+                                                        <span class="gs-text-danger"><?= h($preview['date']) ?></span>
+                                                    <?php endif; ?>
+                                                </td>
+                                                <td><?= h($preview['location']) ?: '-' ?></td>
+                                                <td>
+                                                    <?php if ($preview['venue']): ?>
+                                                        <?= h($preview['venue']) ?>
+                                                        <?php if ($preview['venue_id']): ?>
+                                                            <span class="gs-badge gs-badge-success gs-badge-xs">Matchad</span>
+                                                        <?php endif; ?>
+                                                    <?php else: ?>
+                                                        -
+                                                    <?php endif; ?>
+                                                </td>
+                                                <td><?= h($preview['discipline']) ?: '-' ?></td>
+                                            </tr>
+                                        <?php endforeach; ?>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
                     </div>
-                </form>
-            </div>
-        </div>
-
-        <!-- CSV Format Info -->
-        <div class="gs-card">
-            <div class="gs-card-header">
-                <h2 class="gs-h3">CSV-kolumner</h2>
-            </div>
-            <div class="gs-card-content">
-                <table class="gs-table">
-                    <thead>
-                        <tr>
-                            <th>Kolumn</th>
-                            <th>Beskrivning</th>
-                            <th>Obligatorisk</th>
-                            <th>Exempel</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td><code>name</code></td>
-                            <td>Event-namn</td>
-                            <td>✅ Ja</td>
-                            <td>Åre Bike Festival - Enduro</td>
-                        </tr>
-                        <tr>
-                            <td><code>date</code></td>
-                            <td>Datum (YYYY-MM-DD)</td>
-                            <td>✅ Ja</td>
-                            <td>2025-07-15</td>
-                        </tr>
-                        <tr>
-                            <td><code>location</code></td>
-                            <td>Plats/ort</td>
-                            <td>Nej</td>
-                            <td>Åre</td>
-                        </tr>
-                        <tr>
-                            <td><code>venue</code></td>
-                            <td>Anläggning (auto-skapas)</td>
-                            <td>Nej</td>
-                            <td>Åre Bike Park</td>
-                        </tr>
-                        <tr>
-                            <td><code>type</code></td>
-                            <td>Typ (competition/training)</td>
-                            <td>Nej</td>
-                            <td>competition</td>
-                        </tr>
-                        <tr>
-                            <td><code>discipline</code></td>
-                            <td>Disciplin</td>
-                            <td>Nej</td>
-                            <td>Enduro</td>
-                        </tr>
-                        <tr>
-                            <td><code>series</code></td>
-                            <td>Serie-namn (auto-skapas)</td>
-                            <td>Nej</td>
-                            <td>Enduro Series</td>
-                        </tr>
-                        <tr>
-                            <td><code>distance</code></td>
-                            <td>Distans (km)</td>
-                            <td>Nej</td>
-                            <td>25.5</td>
-                        </tr>
-                        <tr>
-                            <td><code>elevation_gain</code></td>
-                            <td>Höjdmeter</td>
-                            <td>Nej</td>
-                            <td>1200</td>
-                        </tr>
-                        <tr>
-                            <td><code>status</code></td>
-                            <td>Status (upcoming/ongoing/completed)</td>
-                            <td>Nej</td>
-                            <td>upcoming</td>
-                        </tr>
-                        <tr>
-                            <td><code>organizer</code></td>
-                            <td>Arrangör</td>
-                            <td>Nej</td>
-                            <td>Åre Bike Park</td>
-                        </tr>
-                        <tr>
-                            <td><code>website</code></td>
-                            <td>Hemsida</td>
-                            <td>Nej</td>
-                            <td>https://arebikefestival.se</td>
-                        </tr>
-                        <tr>
-                            <td><code>entry_fee</code></td>
-                            <td>Startavgift (SEK)</td>
-                            <td>Nej</td>
-                            <td>500</td>
-                        </tr>
-                    </tbody>
-                </table>
+                <?php else: ?>
+                    <div class="gs-card">
+                        <div class="gs-card-content gs-empty-state">
+                            <i data-lucide="calendar" class="gs-empty-icon"></i>
+                            <h3 class="gs-h4 gs-mb-sm">Ladda upp CSV-fil</h3>
+                            <p class="gs-text-secondary">
+                                Välj en CSV-fil med event-data för att förhandsgranska och importera.
+                            </p>
+                        </div>
+                    </div>
+                <?php endif; ?>
             </div>
         </div>
     </div>

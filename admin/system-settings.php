@@ -252,7 +252,7 @@ $debugTools = [
         'items' => [
             ['name' => 'Auto-slå ihop UCI/SWE', 'url' => '/admin/auto-merge-uci-swe.php', 'desc' => 'Automatisk sammanslagning av UCI-ID och SWE-ID'],
             ['name' => 'Auto-slå ihop klubbar', 'url' => '/admin/auto-merge-clubs.php', 'desc' => 'Automatisk sammanslagning av klubbdubbletter'],
-            ['name' => 'Manuell dublettrensning', 'url' => '/admin/cleanup-duplicates.php', 'desc' => 'Hantera ryttardubbletter manuellt'],
+            ['name' => 'Manuell dublettrensning', 'url' => '/admin/cleanup-duplicates.php', 'desc' => 'Hantera ryttardubbletter manuellt + normalisera namn'],
             ['name' => 'Manuell klubbrensning', 'url' => '/admin/cleanup-clubs.php', 'desc' => 'Hantera klubbdubbletter manuellt'],
         ]
     ],

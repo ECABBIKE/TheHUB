@@ -2,7 +2,7 @@
 /**
  * Club Duplicate Cleanup Tool
  * Find and merge duplicate clubs created during import
- * Version: v1.0.1 [2025-11-22-002]
+ * Version: v1.0.2 [2025-11-22-003]
  */
 require_once __DIR__ . '/../config.php';
 require_admin();
@@ -69,6 +69,42 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_club'])) {
     } else {
         $message = "Kan inte ta bort klubb med $riderCount deltagare";
         $messageType = 'error';
+    }
+}
+
+// Handle delete all empty clubs action
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_all_empty'])) {
+    checkCsrf();
+
+    $clubIds = array_map('intval', $_POST['merge_clubs'] ?? []);
+    $deletedCount = 0;
+    $skippedCount = 0;
+
+    if (!empty($clubIds)) {
+        try {
+            foreach ($clubIds as $clubId) {
+                // Verify club is actually empty
+                $riderCount = $db->getRow("SELECT COUNT(*) as cnt FROM riders WHERE club_id = ?", [$clubId])['cnt'] ?? 0;
+
+                if ($riderCount == 0) {
+                    $db->delete('clubs', 'id = ?', [$clubId]);
+                    $deletedCount++;
+                } else {
+                    $skippedCount++;
+                }
+            }
+
+            if ($skippedCount > 0) {
+                $message = "Tog bort $deletedCount tomma klubbar, hoppade över $skippedCount klubbar med deltagare";
+                $messageType = 'warning';
+            } else {
+                $message = "Tog bort $deletedCount tomma klubbar";
+                $messageType = 'success';
+            }
+        } catch (Exception $e) {
+            $message = 'Fel vid borttagning: ' . $e->getMessage();
+            $messageType = 'error';
+        }
     }
 }
 
@@ -350,7 +386,7 @@ include __DIR__ . '/../includes/layout-header.php';
 </main>
 
 <div class="gs-container gs-py-sm">
-    <small class="gs-text-secondary">Cleanup Clubs v1.0.1 [2025-11-22-002]</small>
+    <small class="gs-text-secondary">Cleanup Clubs v1.0.2 [2025-11-22-003]</small>
 </div>
 
 <?php include __DIR__ . '/../includes/layout-footer.php'; ?>

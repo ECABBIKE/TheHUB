@@ -352,5 +352,30 @@ Herrar Elite,2,Erik,SVENSSON,Göteborg MTB,,DNF,DNF,1:55.34,1:39.21,DNF,DNF,DNF,
                     </a>
                 </div>
             </div>
+
+            <!-- Event Import -->
+            <div class="gs-card gs-featured-card-info">
+                <div class="gs-card-header gs-featured-header-info">
+                    <h2 class="gs-h4 gs-featured-header-title">
+                        <i data-lucide="calendar-plus"></i>
+                        Importera Events
+                    </h2>
+                </div>
+                <div class="gs-card-content">
+                    <p class="gs-text-secondary gs-mb-md">
+                        Importera flera events från CSV-fil. Serie och poängmallar knyts efter import.
+                    </p>
+                    <ul class="gs-text-sm gs-text-secondary gs-mb-md gs-list-lg">
+                        <li><strong>Obligatoriskt:</strong> Namn, Datum</li>
+                        <li>Plats, Bana, Disciplin, Distans, Höjdmeter</li>
+                        <li>Arrangör, Webbplats, Kontaktinfo</li>
+                        <li>Förhandsgranska innan import</li>
+                    </ul>
+                    <a href="/admin/import-events.php" class="gs-btn gs-btn-info gs-btn-lg gs-w-full">
+                        <i data-lucide="calendar-plus"></i>
+                        Importera Events
+                    </a>
+                </div>
+            </div>
         </div>
 <?php include __DIR__ . '/../includes/layout-footer.php'; ?>
