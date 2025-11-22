@@ -1,3 +1,4 @@
-# Uploaded files should not be committed to git
-*
-!.gitignore
+# Track uploaded files for deployment
+# Only ignore system files
+.DS_Store
+Thumbs.db
