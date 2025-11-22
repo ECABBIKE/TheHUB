@@ -2,6 +2,13 @@
 -- Creates tables for tracking club standings in series with Team format
 -- Points are calculated per event, with top 2 riders per club/class scoring
 
+-- Drop old tables if they exist (to update from competition_id to series_id)
+DROP TABLE IF EXISTS club_rider_points;
+DROP TABLE IF EXISTS club_event_points;
+DROP TABLE IF EXISTS club_standings_cache;
+DROP TABLE IF EXISTS club_competition_events;
+DROP TABLE IF EXISTS club_competitions;
+
 -- ============================================================================
 -- CLUB STANDINGS CACHE TABLE
 -- Stores aggregated club points per series for fast lookup
