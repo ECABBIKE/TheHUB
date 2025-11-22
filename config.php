@@ -39,9 +39,9 @@ define('MAX_UPLOAD_SIZE', 10 * 1024 * 1024); // 10MB
 define('EVENTS_PER_PAGE', 20);
 
 // Version info
-define('APP_VERSION', '2.2.0');
-define('APP_VERSION_NAME', 'Import Fixes & UI Updates');
-define('APP_BUILD', '2025-11-22-003');
+define('APP_VERSION', '2.3.0');
+define('APP_VERSION_NAME', 'Club Points System');
+define('APP_BUILD', '2025-11-22-004');
 define('DEPLOYMENT_OFFSET', 119); // Deployments before git repo
 
 try {
