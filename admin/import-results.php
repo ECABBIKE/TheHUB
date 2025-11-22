@@ -12,6 +12,55 @@ $current_admin = get_current_admin();
 $message = '';
 $messageType = 'info';
 
+// Handle template download
+if (isset($_GET['template'])) {
+    $format = $_GET['template'];
+    header('Content-Type: text/csv; charset=utf-8');
+
+    if ($format === 'enduro') {
+        header('Content-Disposition: attachment; filename="resultat_enduro_mall.csv"');
+        $output = fopen('php://output', 'w');
+        fprintf($output, chr(0xEF).chr(0xBB).chr(0xBF));
+
+        fputcsv($output, [
+            'Category', 'PlaceByCategory', 'Bib no', 'FirstName', 'LastName', 'Club', 'UCI-ID',
+            'NetTime', 'Status', 'SS1', 'SS2', 'SS3', 'SS4', 'SS5', 'SS6'
+        ], ';');
+
+        fputcsv($output, [
+            'Herrar Elit', '1', '101', 'Erik', 'Svensson', 'Stockholm MTB', '10012345678',
+            '15:42.33', 'FIN', '2:15.44', '1:52.11', '2:33.55', '2:18.22', '3:01.88', '3:21.13'
+        ], ';');
+
+        fputcsv($output, [
+            'Damer Elit', '1', '201', 'Anna', 'Johansson', 'Göteborg CK', '10087654321',
+            '17:05.67', 'FIN', '2:45.22', '2:08.33', '2:55.11', '2:42.55', '3:22.33', '3:12.13'
+        ], ';');
+    } else {
+        header('Content-Disposition: attachment; filename="resultat_dh_mall.csv"');
+        $output = fopen('php://output', 'w');
+        fprintf($output, chr(0xEF).chr(0xBB).chr(0xBF));
+
+        fputcsv($output, [
+            'Category', 'PlaceByCategory', 'Bib no', 'FirstName', 'LastName', 'Club', 'UCI-ID',
+            'Run1', 'Run2', 'NetTime', 'Status'
+        ], ';');
+
+        fputcsv($output, [
+            'Herrar Elit', '1', '101', 'Erik', 'Svensson', 'Stockholm MTB', '10012345678',
+            '2:15.44', '2:12.33', '2:12.33', 'FIN'
+        ], ';');
+
+        fputcsv($output, [
+            'Damer Elit', '1', '201', 'Anna', 'Johansson', 'Göteborg CK', '10087654321',
+            '2:45.22', '2:42.11', '2:42.11', 'FIN'
+        ], ';');
+    }
+
+    fclose($output);
+    exit;
+}
+
 // Load existing events for dropdown
 $existingEvents = $db->getAll("
     SELECT id, name, date, location
@@ -113,6 +162,21 @@ include __DIR__ . '/../includes/layout-header.php';
             <div class="gs-card-content">
                 <form method="POST" enctype="multipart/form-data" class="gs-form">
                     <?= csrf_field() ?>
+
+                    <!-- Download Templates -->
+                    <div class="gs-form-group gs-mb-lg">
+                        <label class="gs-label">Ladda ner mall</label>
+                        <div class="gs-flex gs-gap-sm">
+                            <a href="?template=enduro" class="gs-btn gs-btn-outline gs-btn-sm">
+                                <i data-lucide="download"></i>
+                                Enduro mall
+                            </a>
+                            <a href="?template=dh" class="gs-btn gs-btn-outline gs-btn-sm">
+                                <i data-lucide="download"></i>
+                                DH mall
+                            </a>
+                        </div>
+                    </div>
 
                     <!-- Step 1: Select Format -->
                     <div class="gs-form-group gs-mb-lg">

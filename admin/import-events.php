@@ -24,6 +24,33 @@ foreach ($venues as $v) {
     $venueMap[mb_strtolower(trim($v['name']), 'UTF-8')] = $v['id'];
 }
 
+// Handle template download
+if (isset($_GET['template'])) {
+    header('Content-Type: text/csv; charset=utf-8');
+    header('Content-Disposition: attachment; filename="event_import_mall.csv"');
+
+    $output = fopen('php://output', 'w');
+    // UTF-8 BOM for Excel compatibility
+    fprintf($output, chr(0xEF).chr(0xBB).chr(0xBF));
+
+    // Header row
+    fputcsv($output, [
+        'Namn', 'Datum', 'Advent ID', 'Plats', 'Bana', 'Disciplin',
+        'Distans (km)', 'Höjdmeter (m)', 'Arrangör', 'Webbplats',
+        'Anmälningsfrist', 'Kontakt e-post', 'Kontakt telefon'
+    ], ';');
+
+    // Example row
+    fputcsv($output, [
+        'Exempel Enduro', '2025-06-15', 'EVT-001', 'Stockholm', 'Hammarby Backe',
+        'ENDURO', '25', '800', 'Stockholm MTB', 'https://example.com',
+        '2025-06-01', 'info@example.com', '070-1234567'
+    ], ';');
+
+    fclose($output);
+    exit;
+}
+
 // Handle form submissions
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     checkCsrf();
@@ -269,14 +296,11 @@ include __DIR__ . '/../includes/layout-header.php';
     <div class="gs-container">
         <!-- Header -->
         <div class="gs-flex gs-items-center gs-justify-between gs-mb-lg">
-            <div>
-                <h1 class="gs-h2">
-                    <i data-lucide="calendar-plus"></i>
-                    Importera Events
-                </h1>
-                <p class="gs-text-secondary">Importera flera events från CSV-fil</p>
-            </div>
-            <a href="/admin/events.php" class="gs-btn gs-btn-outline">
+            <h1 class="gs-h3">
+                <i data-lucide="calendar-plus"></i>
+                Importera Events
+            </h1>
+            <a href="/admin/events.php" class="gs-btn gs-btn-outline gs-btn-sm">
                 <i data-lucide="arrow-left"></i>
                 Tillbaka
             </a>
@@ -284,100 +308,75 @@ include __DIR__ . '/../includes/layout-header.php';
 
         <!-- Messages -->
         <?php if ($message): ?>
-            <div class="gs-alert gs-alert-<?= $messageType ?> gs-mb-lg">
-                <i data-lucide="<?= $messageType === 'success' ? 'check-circle' : ($messageType === 'error' ? 'alert-circle' : 'info') ?>"></i>
+            <div class="gs-alert gs-alert-<?= $messageType ?> gs-mb-md">
                 <?= $message ?>
             </div>
         <?php endif; ?>
 
-        <div class="gs-grid gs-grid-cols-1 gs-lg-grid-cols-3 gs-gap-lg">
+        <div class="gs-grid gs-grid-cols-1 gs-lg-grid-cols-4 gs-gap-md">
             <!-- Upload Card -->
             <div>
                 <div class="gs-card">
                     <div class="gs-card-header">
-                        <h2 class="gs-h5">
-                            <i data-lucide="upload"></i>
-                            Ladda upp CSV
-                        </h2>
+                        <h2 class="gs-h6">Ladda upp CSV</h2>
                     </div>
                     <div class="gs-card-content">
+                        <a href="?template=1" class="gs-btn gs-btn-outline gs-btn-sm gs-w-full gs-mb-md">
+                            <i data-lucide="download"></i>
+                            Ladda ner mall
+                        </a>
+
                         <form method="POST" enctype="multipart/form-data">
                             <?= csrf_field() ?>
                             <input type="hidden" name="action" value="preview">
 
-                            <div class="gs-form-group">
-                                <label for="csv_file" class="gs-label">CSV-fil</label>
-                                <input type="file" name="csv_file" id="csv_file" class="gs-input" accept=".csv,.txt" required>
-                                <small class="gs-text-xs gs-text-secondary">
-                                    Stöder UTF-8, ISO-8859-1, Windows-1252
-                                </small>
+                            <div class="gs-form-group gs-mb-md">
+                                <input type="file" name="csv_file" id="csv_file" class="gs-input gs-input-sm" accept=".csv,.txt" required>
                             </div>
 
-                            <button type="submit" class="gs-btn gs-btn-primary gs-w-full">
+                            <button type="submit" class="gs-btn gs-btn-primary gs-btn-sm gs-w-full">
                                 <i data-lucide="eye"></i>
                                 Förhandsgranska
                             </button>
                         </form>
-                    </div>
-                </div>
 
-                <!-- Format Info -->
-                <div class="gs-card gs-mt-lg">
-                    <div class="gs-card-header">
-                        <h2 class="gs-h5">
-                            <i data-lucide="info"></i>
-                            CSV-format
-                        </h2>
-                    </div>
-                    <div class="gs-card-content">
-                        <p class="gs-text-sm gs-mb-md">Obligatoriska kolumner:</p>
-                        <ul class="gs-text-sm gs-mb-md" style="list-style: disc; padding-left: 1.5rem;">
-                            <li><strong>Namn</strong> (eller name)</li>
-                            <li><strong>Datum</strong> (eller date)</li>
-                        </ul>
+                        <hr class="gs-my-md">
 
-                        <p class="gs-text-sm gs-mb-md">Valfria kolumner:</p>
-                        <ul class="gs-text-sm" style="list-style: disc; padding-left: 1.5rem;">
-                            <li>Advent ID / External_id</li>
-                            <li>Plats / Location</li>
-                            <li>Bana / Anläggning / Venue</li>
-                            <li>Disciplin</li>
-                            <li>Distans (km)</li>
-                            <li>Höjdmeter (m)</li>
-                            <li>Arrangör</li>
-                            <li>Webbplats</li>
-                            <li>Anmälningsfrist</li>
-                            <li>Kontakt e-post</li>
-                            <li>Kontakt telefon</li>
-                        </ul>
+                        <p class="gs-text-xs gs-text-secondary gs-mb-sm"><strong>Obligatoriskt:</strong></p>
+                        <p class="gs-text-xs gs-text-secondary gs-mb-sm">Namn, Datum</p>
+
+                        <p class="gs-text-xs gs-text-secondary gs-mb-sm"><strong>Valfritt:</strong></p>
+                        <p class="gs-text-xs gs-text-secondary">
+                            Advent ID, Plats, Bana, Disciplin, Distans, Höjdmeter, Arrangör, Webbplats, Anmälningsfrist, E-post, Telefon
+                        </p>
                     </div>
                 </div>
             </div>
 
             <!-- Preview / Results -->
-            <div class="gs-lg-col-span-2">
+            <div class="gs-lg-col-span-3">
                 <?php if (!empty($previewData)): ?>
                     <div class="gs-card">
                         <div class="gs-card-header gs-flex gs-justify-between gs-items-center">
-                            <h2 class="gs-h5">
-                                <i data-lucide="list"></i>
-                                Förhandsgranskning (<?= count($previewData) ?> events)
+                            <h2 class="gs-h6">
+                                Förhandsgranskning
+                                <span class="gs-badge gs-badge-secondary gs-badge-sm gs-ml-sm"><?= count($previewData) ?></span>
                             </h2>
-                            <form method="POST" class="gs-display-inline">
+                            <form method="POST" style="display: inline;">
                                 <?= csrf_field() ?>
                                 <input type="hidden" name="action" value="import">
-                                <button type="submit" class="gs-btn gs-btn-success">
+                                <button type="submit" class="gs-btn gs-btn-success gs-btn-sm">
                                     <i data-lucide="download"></i>
-                                    Importera alla
+                                    Importera
                                 </button>
                             </form>
                         </div>
-                        <div class="gs-card-content">
+                        <div class="gs-card-content gs-p-0">
                             <div class="gs-table-responsive">
-                                <table class="gs-table">
+                                <table class="gs-table gs-table-sm">
                                     <thead>
                                         <tr>
-                                            <th>Status</th>
+                                            <th style="width: 50px;"></th>
                                             <th>Namn</th>
                                             <th>Datum</th>
                                             <th>Plats</th>
@@ -388,11 +387,11 @@ include __DIR__ . '/../includes/layout-header.php';
                                     <tbody>
                                         <?php foreach ($previewData as $preview): ?>
                                             <tr>
-                                                <td>
+                                                <td class="gs-text-center">
                                                     <?php if ($preview['status'] === 'ready'): ?>
-                                                        <span class="gs-badge gs-badge-success gs-badge-sm">OK</span>
+                                                        <span class="gs-text-success">✓</span>
                                                     <?php else: ?>
-                                                        <span class="gs-badge gs-badge-danger gs-badge-sm" title="<?= h($preview['error'] ?? '') ?>">Fel</span>
+                                                        <span class="gs-text-danger" title="<?= h($preview['error'] ?? '') ?>">✗</span>
                                                     <?php endif; ?>
                                                 </td>
                                                 <td><strong><?= h($preview['name']) ?></strong></td>
@@ -405,13 +404,9 @@ include __DIR__ . '/../includes/layout-header.php';
                                                 </td>
                                                 <td><?= h($preview['location']) ?: '-' ?></td>
                                                 <td>
-                                                    <?php if ($preview['venue']): ?>
-                                                        <?= h($preview['venue']) ?>
-                                                        <?php if ($preview['venue_id']): ?>
-                                                            <span class="gs-badge gs-badge-success gs-badge-xs">Matchad</span>
-                                                        <?php endif; ?>
-                                                    <?php else: ?>
-                                                        -
+                                                    <?= h($preview['venue']) ?: '-' ?>
+                                                    <?php if ($preview['venue_id']): ?>
+                                                        <span class="gs-text-success gs-text-xs">✓</span>
                                                     <?php endif; ?>
                                                 </td>
                                                 <td><?= h($preview['discipline']) ?: '-' ?></td>
@@ -424,11 +419,10 @@ include __DIR__ . '/../includes/layout-header.php';
                     </div>
                 <?php else: ?>
                     <div class="gs-card">
-                        <div class="gs-card-content gs-empty-state">
-                            <i data-lucide="calendar" class="gs-empty-icon"></i>
-                            <h3 class="gs-h4 gs-mb-sm">Ladda upp CSV-fil</h3>
-                            <p class="gs-text-secondary">
-                                Välj en CSV-fil med event-data för att förhandsgranska och importera.
+                        <div class="gs-card-content gs-text-center gs-py-xl">
+                            <i data-lucide="calendar" style="width: 48px; height: 48px; opacity: 0.3;"></i>
+                            <p class="gs-text-secondary gs-mt-md">
+                                Ladda upp en CSV-fil för att förhandsgranska events
                             </p>
                         </div>
                     </div>

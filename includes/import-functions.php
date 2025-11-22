@@ -181,6 +181,13 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
             'placebycategory' => 'position',
             'place' => 'position',
 
+            // Bib number
+            'bibno' => 'bib_number',
+            'bib' => 'bib_number',
+            'startnummer' => 'bib_number',
+            'startnr' => 'bib_number',
+            'nummerlapp' => 'bib_number',
+
             // Time fields
             'time' => 'finish_time',
             'tid' => 'finish_time',
@@ -584,6 +591,7 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
                 'event_id' => $eventId,
                 'cyclist_id' => $riderId,
                 'class_id' => $classId,
+                'bib_number' => $data['bib_number'] ?? null,
                 'position' => $position,
                 'finish_time' => $finishTime,
                 'status' => $status,
