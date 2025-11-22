@@ -6,12 +6,6 @@ require_once __DIR__ . '/../includes/point-calculations.php';
 require_once __DIR__ . '/../includes/import-functions.php';
 require_admin();
 
-// Club points system - temporarily disabled for debugging
-$clubPointsSystemAvailable = false;
-// Uncomment below to enable club points after running migration:
-// require_once __DIR__ . '/../includes/club-points-system.php';
-// $clubPointsSystemAvailable = true;
-
 $db = getDB();
 $current_admin = get_current_admin();
 
@@ -159,27 +153,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_import'])) {
         $classesFixed = $recalcStats['classes_fixed'] ?? 0;
         $pointsCalculated = $recalcStats['points_updated'] ?? 0;
 
-        // Calculate club points for this event and refresh series cache
-        $clubPointsInfo = "";
-        if ($clubPointsSystemAvailable) {
-            try {
-                if (function_exists('clubPointsTablesExist') && clubPointsTablesExist($db)) {
-                    $clubStats = calculateClubPointsForEvent($db, $selectedEventId);
-                    if ($clubStats['clubs_processed'] > 0) {
-                        // Get series ID for this event and refresh cache
-                        $eventForCache = $db->getRow("SELECT series_id FROM events WHERE id = ?", [$selectedEventId]);
-                        if ($eventForCache && $eventForCache['series_id']) {
-                            refreshClubStandingsCache($db, $eventForCache['series_id']);
-                        }
-                        $clubPointsInfo = " Klubbpoäng: {$clubStats['clubs_processed']} klubbar.";
-                    }
-                }
-            } catch (Exception $e) {
-                // Don't break import if club points calculation fails
-                error_log("Club points calculation failed: " . $e->getMessage());
-            }
-        }
-
         // Clean up
         @unlink($_SESSION['import_preview_file']);
         unset($_SESSION['import_preview_file']);
@@ -236,7 +209,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_import'])) {
             $unchangedInfo = " ({$stats['skipped']} oförändrade)";
         }
 
-        set_flash('success', "Import klar! {$stats['success']} nya, {$stats['updated']} uppdaterade{$unchangedInfo} av {$stats['total']} resultat.{$matchingInfo}{$changelogInfo}{$recalcMsg}{$clubPointsInfo}");
+        set_flash('success', "Import klar! {$stats['success']} nya, {$stats['updated']} uppdaterade{$unchangedInfo} av {$stats['total']} resultat.{$matchingInfo}{$changelogInfo}{$recalcMsg}");
         header('Location: /admin/event-edit.php?id=' . $selectedEventId . '&tab=results');
         exit;
 
