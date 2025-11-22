@@ -1,0 +1,304 @@
+================================================================================
+                    TheHUB - PROJEKTSTRUKTUR SAMMANFATTNING
+                    Genererad: 2025-11-22
+================================================================================
+
+=== DATABASKLASS ===
+--------------------------------------------------------------------------------
+
+Det finns TVÅ databas-wrappers i projektet:
+
+1. DatabaseWrapper (i helpers.php)
+   - Klassnamn: DatabaseWrapper
+   - Fil: includes/helpers.php:132-180
+   - Metoder:
+     * getAll($sql, $params = [])     - Hämta alla rader
+     * getRow($sql, $params = [])     - Hämta en rad
+     * insert($table, $data)          - Insert, returnerar lastInsertId()
+     * update($table, $data, $where, $params = [])
+     * delete($table, $where, $params = [])
+   - Instansieras via: getDB() funktion (rad 182-191)
+
+2. Database (i db.php) - SINGLETON
+   - Klassnamn: Database
+   - Fil: includes/db.php:25-205
+   - Metoder:
+     * getInstance()                  - Singleton pattern
+     * getConnection()                - Returnerar PDO-objektet
+     * query($sql, $params = [])      - Kör query, returnerar PDOStatement
+     * getAll($sql, $params = [])
+     * getRow($sql, $params = [])
+     * insert($table, $data)
+     * update($table, $data, $where, $whereParams = [])
+     * delete($table, $where, $params = [])
+     * beginTransaction()
+     * commit()
+     * rollback()
+   - Har demo-mode om DB inte är tillgänglig
+
+VIKTIG SKILLNAD:
+- helpers.php getDB() returnerar DatabaseWrapper med global $pdo
+- db.php getDB() returnerar Database singleton
+- config.php inkluderar helpers.php, så DatabaseWrapper är aktivt
+
+=== CONFIG.PHP ===
+--------------------------------------------------------------------------------
+Fil: config.php (71 rader)
+
+Konstanter:
+- ROOT_PATH:       __DIR__
+- INCLUDES_PATH:   __DIR__ . '/includes'
+- UPLOADS_PATH:    __DIR__ . '/uploads'
+- SITE_URL:        'https://thehub.gravityseries.se'
+- MAX_UPLOAD_SIZE: 10 * 1024 * 1024  (10MB)
+- EVENTS_PER_PAGE: 20
+- CSRF_TOKEN_NAME: 'csrf_token'
+- APP_VERSION:     '2.2.0'
+- APP_BUILD:       '2025-11-22-003'
+
+Databas (från .env):
+- DB_HOST, DB_NAME, DB_USER, DB_PASS
+
+PDO-inställningar:
+- ERRMODE_EXCEPTION
+- FETCH_ASSOC
+- Charset utf8mb4
+
+Sessioner startas automatiskt.
+Timezone: Europe/Stockholm
+
+=== KEY FUNCTIONS ===
+--------------------------------------------------------------------------------
+
+require_admin() - includes/auth.php:249
+  - Alias för requireLogin()
+  - Kräver inloggning, redirectar till /admin/login.php om ej inloggad
+  - Timeout efter 30 min inaktivitet
+  - Sätter no-cache headers
+
+csrf_field() - includes/auth.php:326
+  - Genererar <input type="hidden" name="csrf_token" value="...">
+  - Token: bin2hex(random_bytes(32))
+  - Sparas i $_SESSION['csrf_token']
+
+checkCsrf() / check_csrf() - includes/auth.php:315
+  - Verifierar $_POST['csrf_token'] mot session
+  - die() om token är ogiltig
+  - Använder hash_equals() för timing-safe jämförelse
+
+h($str) - includes/helpers.php:4
+  - return htmlspecialchars($str ?? '', ENT_QUOTES, 'UTF-8');
+  - XSS-skydd för output
+
+js($str) - includes/helpers.php:12
+  - json_encode med HEX-flags för säker JavaScript-output
+
+get_current_admin() / get_admin_user() - includes/auth.php:277
+  - Returnerar array med: id, username, role, name
+  - Eller null om ej inloggad
+
+getDB() - includes/helpers.php:182
+  - Returnerar DatabaseWrapper-instans (singleton pattern med static $db)
+  - Använder global $pdo
+
+redirect($url) - includes/helpers.php:16
+  - header("Location: " . $url); exit;
+  - Lägger till leading / om saknas
+
+=== RIDERS TABELL STRUKTUR ===
+--------------------------------------------------------------------------------
+Fil: database/schema.sql:33-93
+
+CREATE TABLE riders (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    firstname VARCHAR(100) NOT NULL,
+    lastname VARCHAR(100) NOT NULL,
+    birth_year INT,
+    personnummer VARCHAR(15),                    -- [PRIVATE]
+    gender ENUM('M', 'F', 'K', 'Other') DEFAULT 'M',
+
+    -- Club and Team
+    club_id INT,
+    team VARCHAR(255),
+
+    -- License Information
+    license_number VARCHAR(50),                  -- UNIQUE KEY
+    license_type VARCHAR(50),
+    license_category VARCHAR(100),
+    discipline VARCHAR(100),
+    disciplines JSON,
+    license_valid_until DATE,
+    license_year INT,
+
+    -- Authentication
+    email VARCHAR(255),
+    password VARCHAR(255),
+    password_reset_token VARCHAR(255),
+    password_reset_expires DATETIME,
+    last_login DATETIME,
+
+    -- Contact [PRIVATE]
+    phone VARCHAR(20),
+    emergency_contact VARCHAR(255),
+
+    -- Address [PRIVATE]
+    city VARCHAR(100),
+    address VARCHAR(255),
+    postal_code VARCHAR(10),
+    country VARCHAR(100) DEFAULT 'Sverige',
+    district VARCHAR(100),
+
+    -- Status
+    active BOOLEAN DEFAULT 1,
+    notes TEXT,
+    created_at TIMESTAMP,
+    updated_at TIMESTAMP,
+
+    FOREIGN KEY (club_id) REFERENCES clubs(id) ON DELETE SET NULL
+);
+
+Index: idx_name, idx_club, idx_license, idx_active, idx_email,
+       idx_reset_token, idx_personnummer, idx_postal_code, idx_district
+
+=== CLUBS TABELL STRUKTUR ===
+--------------------------------------------------------------------------------
+Fil: database/schema.sql:12-26
+
+CREATE TABLE clubs (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    short_name VARCHAR(50),
+    region VARCHAR(100),
+    city VARCHAR(100),
+    country VARCHAR(100) DEFAULT 'Sverige',
+    website VARCHAR(255),
+    active BOOLEAN DEFAULT 1,
+    created_at TIMESTAMP,
+    updated_at TIMESTAMP
+);
+
+Index: idx_name, idx_city, idx_active
+
+=== EVENTS TABELL STRUKTUR ===
+--------------------------------------------------------------------------------
+Fil: database/schema.sql:167-200
+
+CREATE TABLE events (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    advent_id VARCHAR(50),                      -- External ID för imports
+    date DATE NOT NULL,
+    location VARCHAR(255),
+    venue_id INT,
+    type VARCHAR(100),
+    discipline VARCHAR(100),
+    series_id INT,
+    distance DECIMAL(6,2),                      -- km
+    elevation_gain INT,                         -- meter
+    status ENUM('upcoming', 'ongoing', 'completed', 'cancelled'),
+    description TEXT,
+    organizer VARCHAR(255),
+    website VARCHAR(255),
+    registration_url VARCHAR(255),
+    registration_deadline DATE,
+    max_participants INT,
+    entry_fee DECIMAL(10,2),
+    active BOOLEAN DEFAULT 1,
+    created_at TIMESTAMP,
+    updated_at TIMESTAMP,
+
+    FOREIGN KEY (series_id) REFERENCES series(id),
+    FOREIGN KEY (venue_id) REFERENCES venues(id)
+);
+
+Index: idx_date, idx_status, idx_type, idx_discipline, idx_series,
+       idx_venue, idx_active, idx_advent_id
+
+=== RESULTS TABELL STRUKTUR ===
+--------------------------------------------------------------------------------
+Fil: database/schema.sql:205-228
+
+CREATE TABLE results (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    event_id INT NOT NULL,
+    cyclist_id INT NOT NULL,
+    category_id INT,
+    position INT,
+    finish_time TIME,
+    points INT DEFAULT 0,
+    bib_number VARCHAR(20),
+    status ENUM('finished', 'dnf', 'dns', 'dq'),
+    time_behind TIME,
+    average_speed DECIMAL(5,2),
+    notes TEXT,
+    created_at TIMESTAMP,
+    updated_at TIMESTAMP,
+
+    FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE CASCADE,
+    FOREIGN KEY (cyclist_id) REFERENCES riders(id) ON DELETE CASCADE,
+    UNIQUE KEY unique_event_cyclist (event_id, cyclist_id)
+);
+
+=== IMPORT-VERKTYG (admin/import-results.php) ===
+--------------------------------------------------------------------------------
+Fil: admin/import-results.php (259 rader)
+
+Flöde:
+1. Välj format (enduro/dh)
+2. Välj event från dropdown
+3. Ladda upp CSV-fil
+4. Sparas till UPLOADS_PATH med timestamp
+5. Redirectar till import-results-preview.php
+
+Session-variabler:
+- $_SESSION['import_preview_file']     - Sökväg till uppladdad fil
+- $_SESSION['import_preview_filename'] - Originalfilnamn
+- $_SESSION['import_selected_event']   - Event ID
+- $_SESSION['import_format']           - 'enduro' eller 'dh'
+
+Inkluderade filer:
+- includes/import-history.php
+- includes/class-calculations.php
+- includes/point-calculations.php
+- includes/import-functions.php
+
+CSV-format:
+Obligatoriska: Category, PlaceByCategory, FirstName, LastName, Club, NetTime, Status
+Enduro: UCI-ID, SS1-SS15
+DH: UCI-ID, Run1, Run2
+
+Svenska alternativ: Klass, Placering, Förnamn, Efternamn, Klubb, Tid
+
+=== ALLA IMPORT-FILER ===
+--------------------------------------------------------------------------------
+admin/import.php              - Huvudimport
+admin/import2.php             - Alternativ import
+admin/import-clubs.php        - Importera klubbar
+admin/import-events.php       - Importera events
+admin/import-riders.php       - Importera ryttare (basic)
+admin/import-riders-extended.php   - Utökad ryttarimport
+admin/import-riders-flexible.php   - Flexibel ryttarimport
+admin/import-results.php      - Importera resultat
+admin/import-results-preview.php  - Förhandsgranska resultat
+admin/import-uci.php          - Importera UCI-data
+admin/import-uci-preview.php  - Förhandsgranska UCI
+admin/import-uci-simple.php   - Enkel UCI-import
+admin/import-with-uci-matching.php - Import med UCI-matchning
+admin/import-classes.php      - Importera klasser
+admin/import-series.php       - Importera serier
+admin/import-venues.php       - Importera venues
+admin/import-history.php      - Visa importhistorik
+
+=== SÄKERHET ===
+--------------------------------------------------------------------------------
+- CSRF-skydd via tokens
+- Rate limiting för login (5 försök/15 min)
+- Session timeout (30 min)
+- Password hashing med bcrypt
+- Prepared statements (PDO)
+- XSS-skydd via h() funktion
+- Secure session cookies (httponly, samesite)
+
+================================================================================
+                              SLUT PÅ SAMMANFATTNING
+================================================================================
