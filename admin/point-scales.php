@@ -109,14 +109,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
 
                 // Create scale
-                $db->insert('point_scales', [
+                $scaleId = $db->insert('point_scales', [
                     'name' => $name,
                     'description' => 'Importerad från CSV',
                     'discipline' => $discipline,
                     'active' => 1,
                     'is_default' => 0
                 ]);
-                $scaleId = $db->lastInsertId();
 
                 // Read data rows
                 $rowCount = 0;
