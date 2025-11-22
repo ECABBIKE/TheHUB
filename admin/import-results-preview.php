@@ -156,16 +156,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_import'])) {
 
         // Calculate club points for this event and refresh series cache
         $clubPointsInfo = "";
-        if (clubPointsTablesExist($db)) {
-            $clubStats = calculateClubPointsForEvent($db, $selectedEventId);
-            if ($clubStats['clubs_processed'] > 0) {
-                // Get series ID for this event and refresh cache
-                $eventForCache = $db->getRow("SELECT series_id FROM events WHERE id = ?", [$selectedEventId]);
-                if ($eventForCache && $eventForCache['series_id']) {
-                    refreshClubStandingsCache($db, $eventForCache['series_id']);
+        try {
+            if (clubPointsTablesExist($db)) {
+                $clubStats = calculateClubPointsForEvent($db, $selectedEventId);
+                if ($clubStats['clubs_processed'] > 0) {
+                    // Get series ID for this event and refresh cache
+                    $eventForCache = $db->getRow("SELECT series_id FROM events WHERE id = ?", [$selectedEventId]);
+                    if ($eventForCache && $eventForCache['series_id']) {
+                        refreshClubStandingsCache($db, $eventForCache['series_id']);
+                    }
+                    $clubPointsInfo = " Klubbpoäng: {$clubStats['clubs_processed']} klubbar.";
                 }
-                $clubPointsInfo = " Klubbpoäng: {$clubStats['clubs_processed']} klubbar.";
             }
+        } catch (Exception $e) {
+            // Don't break import if club points calculation fails
+            error_log("Club points calculation failed: " . $e->getMessage());
         }
 
         // Clean up
