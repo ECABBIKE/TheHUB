@@ -506,8 +506,8 @@ include __DIR__ . '/includes/layout-header.php';
 .split-6 { background: #fed7aa !important; color: #9a3412 !important; }
 .split-7 { background: #fecaca !important; color: #991b1b !important; }
 .split-8 { background: #fca5a5 !important; color: #991b1b !important; }
-.split-9 { background: #f87171 !important; color: #fff !important; }
-.split-10 { background: #ef4444 !important; color: #fff !important; }
+.split-9 { background: #f9a8a8 !important; color: #7f1d1d !important; }
+.split-10 { background: #f5b0b0 !important; color: #7f1d1d !important; }
 
 /* Hide colors when disabled */
 .no-split-colors .split-1,
