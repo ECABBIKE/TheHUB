@@ -173,19 +173,21 @@ function refreshSeriesStandingsCache($db, $seriesId) {
     // Clear existing cache
     $db->delete('club_standings_cache', 'series_id = ?', [$seriesId]);
 
-    // Aggregate club points
+    // Aggregate club points with unique rider count
     $clubStats = $db->getAll("
         SELECT
-            club_id,
-            SUM(total_points) as total_points,
-            SUM(participants_count) as total_participants,
-            COUNT(event_id) as events_count,
-            MAX(total_points) as best_event_points
-        FROM club_event_points
-        WHERE series_id = ?
-        GROUP BY club_id
-        HAVING total_points > 0
-        ORDER BY total_points DESC
+            cep.club_id,
+            SUM(cep.total_points) as total_points,
+            COUNT(DISTINCT crp.rider_id) as total_participants,
+            COUNT(DISTINCT cep.event_id) as events_count,
+            MAX(cep.total_points) as best_event_points
+        FROM club_event_points cep
+        LEFT JOIN club_rider_points crp ON cep.club_id = crp.club_id
+            AND cep.series_id = crp.series_id
+        WHERE cep.series_id = ?
+        GROUP BY cep.club_id
+        HAVING SUM(cep.total_points) > 0
+        ORDER BY SUM(cep.total_points) DESC
     ", [$seriesId]);
 
     // Insert with rankings
