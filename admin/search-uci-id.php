@@ -26,10 +26,20 @@ $colMapping = [
     'uci_id' => $_POST['col_uci_id'] ?? 4
 ];
 
+// Handle selection updates via AJAX
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'update_selection') {
+    header('Content-Type: application/json');
+    $selected = json_decode($_POST['selected'] ?? '[]', true);
+    $_SESSION['lookup_selected'] = $selected;
+    echo json_encode(['success' => true]);
+    exit;
+}
+
 // Handle CSV export
 if (isset($_GET['export']) && !empty($_SESSION['lookup_results'])) {
     $exportData = $_SESSION['lookup_results'];
     $exportHeaders = $_SESSION['lookup_headers'];
+    $selected = $_SESSION['lookup_selected'] ?? array_keys($exportData);
 
     header('Content-Type: text/csv; charset=utf-8');
     header('Content-Disposition: attachment; filename="riders_with_license.csv"');
@@ -40,9 +50,11 @@ if (isset($_GET['export']) && !empty($_SESSION['lookup_results'])) {
     // Write header
     fputcsv($output, $exportHeaders, ';');
 
-    // Write data
-    foreach ($exportData as $row) {
-        fputcsv($output, $row, ';');
+    // Write only selected data
+    foreach ($exportData as $index => $row) {
+        if (in_array($index, $selected)) {
+            fputcsv($output, $row, ';');
+        }
     }
 
     fclose($output);
@@ -154,11 +166,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['csv_file'])) {
         // Store for export
         $_SESSION['lookup_results'] = $exportData;
         $_SESSION['lookup_headers'] = $headers;
+        // Initialize all rows as selected
+        $_SESSION['lookup_selected'] = array_keys($exportData);
 
         $message = 'CSV bearbetad: ' . count($results) . ' rader';
         $messageType = 'success';
     }
 }
+
+// Get current selection state
+$selectedRows = $_SESSION['lookup_selected'] ?? [];
 
 /**
  * Find column index by name
@@ -481,13 +498,39 @@ include __DIR__ . '/../includes/layout-header.php';
                 </div>
             </div>
 
-            <!-- Export Button -->
+            <!-- Selection Controls & Export -->
             <div class="gs-card gs-mb-lg">
                 <div class="gs-card-content">
-                    <a href="?export=1" class="gs-btn gs-btn-success">
-                        <i data-lucide="download"></i>
-                        Ladda ner CSV med License Numbers ifyllda
-                    </a>
+                    <div class="gs-flex gs-flex-wrap gs-gap-md gs-items-center gs-mb-md">
+                        <span class="gs-text-sm gs-text-secondary">Välj matchningar:</span>
+                        <button type="button" onclick="selectByType('all')" class="gs-btn gs-btn-outline gs-btn-sm">
+                            Alla
+                        </button>
+                        <button type="button" onclick="selectByType('none')" class="gs-btn gs-btn-outline gs-btn-sm">
+                            Inga
+                        </button>
+                        <button type="button" onclick="selectByType('exact')" class="gs-btn gs-btn-success gs-btn-sm">
+                            Exakta
+                        </button>
+                        <button type="button" onclick="selectByType('fuzzy')" class="gs-btn gs-btn-warning gs-btn-sm">
+                            Fuzzy
+                        </button>
+                        <button type="button" onclick="selectByType('partial')" class="gs-btn gs-btn-info gs-btn-sm">
+                            Delvisa
+                        </button>
+                        <button type="button" onclick="selectByType('existing')" class="gs-btn gs-btn-secondary gs-btn-sm">
+                            Befintliga
+                        </button>
+                    </div>
+                    <div class="gs-flex gs-gap-md gs-items-center">
+                        <a href="?export=1" class="gs-btn gs-btn-success">
+                            <i data-lucide="download"></i>
+                            Ladda ner valda (<span id="selectedCount"><?= count($selectedRows) ?></span> rader)
+                        </a>
+                        <span class="gs-text-sm gs-text-secondary">
+                            Avmarkera rader du vill skippa i exporten
+                        </span>
+                    </div>
                 </div>
             </div>
 
@@ -504,6 +547,9 @@ include __DIR__ . '/../includes/layout-header.php';
                         <table class="gs-table">
                             <thead>
                                 <tr>
+                                    <th style="width: 40px;">
+                                        <input type="checkbox" id="selectAll" checked onchange="toggleAll(this.checked)">
+                                    </th>
                                     <th>Namn</th>
                                     <th>Klubb</th>
                                     <th>Original License</th>
@@ -539,7 +585,15 @@ include __DIR__ . '/../includes/layout-header.php';
                                         $matchLabel = 'Ej hittad';
                                     }
                                     ?>
-                                    <tr class="<?= $rowClass ?>">
+                                    <?php $rowIndex = array_search($result, $results); ?>
+                                    <tr class="<?= $rowClass ?>" data-match-type="<?= h($result['match_type']) ?>">
+                                        <td>
+                                            <input type="checkbox"
+                                                   class="row-select"
+                                                   data-index="<?= $rowIndex ?>"
+                                                   <?= in_array($rowIndex, $selectedRows) ? 'checked' : '' ?>
+                                                   onchange="updateSelection()">
+                                        </td>
                                         <td>
                                             <strong><?= h($result['firstname'] . ' ' . $result['lastname']) ?></strong>
                                             <?php if ($result['found_name'] && $result['found_name'] !== $result['firstname'] . ' ' . $result['lastname']): ?>
@@ -588,8 +642,61 @@ include __DIR__ . '/../includes/layout-header.php';
     </div>
 </main>
 
+<?php if (!empty($results)): ?>
+<script>
+const csrfToken = '<?= htmlspecialchars(generate_csrf_token()) ?>';
+
+function updateSelection() {
+    const checkboxes = document.querySelectorAll('.row-select');
+    const selected = [];
+
+    checkboxes.forEach(cb => {
+        if (cb.checked) {
+            selected.push(parseInt(cb.dataset.index));
+        }
+    });
+
+    // Update count display
+    document.getElementById('selectedCount').textContent = selected.length;
+
+    // Save to server
+    fetch(window.location.pathname, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        body: 'action=update_selection&selected=' + encodeURIComponent(JSON.stringify(selected))
+    });
+}
+
+function toggleAll(checked) {
+    document.querySelectorAll('.row-select').forEach(cb => {
+        cb.checked = checked;
+    });
+    updateSelection();
+}
+
+function selectByType(type) {
+    const checkboxes = document.querySelectorAll('.row-select');
+
+    checkboxes.forEach(cb => {
+        const row = cb.closest('tr');
+        const matchType = row.dataset.matchType;
+
+        if (type === 'all') {
+            cb.checked = true;
+        } else if (type === 'none') {
+            cb.checked = false;
+        } else {
+            cb.checked = (matchType === type);
+        }
+    });
+
+    updateSelection();
+}
+</script>
+<?php endif; ?>
+
 <div class="gs-container gs-py-sm">
-    <small class="gs-text-secondary">Search UCI-ID v1.2.0 [2025-11-22-003]</small>
+    <small class="gs-text-secondary">Search UCI-ID v1.3.0 [2025-11-22-004]</small>
 </div>
 
 <?php include __DIR__ . '/../includes/layout-footer.php'; ?>
