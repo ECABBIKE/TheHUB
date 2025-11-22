@@ -13,13 +13,13 @@ $db = getDB();
 
 // Get filters
 $series_id = isset($_GET['series']) ? (int)$_GET['series'] : null;
-$event_type = isset($_GET['format']) ? trim($_GET['format']) : null;
+$discipline = isset($_GET['format']) ? trim($_GET['format']) : null;
 
 // Get all series for filter dropdown
 $allSeries = $db->getAll("SELECT id, name FROM series ORDER BY name");
 
-// Get all event types for filter dropdown
-$allEventTypes = $db->getAll("SELECT DISTINCT type FROM events WHERE type IS NOT NULL AND type != '' ORDER BY type");
+// Get all disciplines for filter dropdown
+$allDisciplines = $db->getAll("SELECT DISTINCT discipline FROM events WHERE discipline IS NOT NULL AND discipline != '' ORDER BY discipline");
 
 // Build WHERE clause for both queries
 $where_clauses = [];
@@ -30,9 +30,9 @@ if ($series_id) {
     $params[] = $series_id;
 }
 
-if ($event_type) {
-    $where_clauses[] = "e.type = ?";
-    $params[] = $event_type;
+if ($discipline) {
+    $where_clauses[] = "e.discipline = ?";
+    $params[] = $discipline;
 }
 
 $where_sql = !empty($where_clauses) ? 'AND ' . implode(' AND ', $where_clauses) : '';
@@ -103,14 +103,14 @@ include __DIR__ . '/includes/layout-header.php';
                         </select>
                     </div>
 
-                    <!-- Event Type Filter -->
+                    <!-- Discipline Filter -->
                     <div>
                         <label class="gs-label">Tävlingsformat</label>
                         <select name="format" class="gs-input" onchange="document.getElementById('filterForm').submit()">
                             <option value="">Alla format</option>
-                            <?php foreach ($allEventTypes as $type): ?>
-                                <option value="<?= h($type['type']) ?>" <?= $event_type == $type['type'] ? 'selected' : '' ?>>
-                                    <?= h(str_replace('_', ' ', $type['type'])) ?>
+                            <?php foreach ($allDisciplines as $d): ?>
+                                <option value="<?= h($d['discipline']) ?>" <?= $discipline == $d['discipline'] ? 'selected' : '' ?>>
+                                    <?= h($d['discipline']) ?>
                                 </option>
                             <?php endforeach; ?>
                         </select>

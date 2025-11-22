@@ -268,16 +268,20 @@ include __DIR__ . '/../includes/layout-header.php';
                     <div>
                         <label for="discipline" class="gs-label">
                             <i data-lucide="bike"></i>
-                            Disciplin
+                            Tävlingsformat
                         </label>
-                        <input
-                            type="text"
-                            id="discipline"
-                            name="discipline"
-                            class="gs-input"
-                            value="<?= htmlspecialchars($event['discipline'] ?? '') ?>"
-                            placeholder="T.ex. MTB Enduro, Downhill"
-                        >
+                        <select id="discipline" name="discipline" class="gs-input">
+                            <option value="">Välj format...</option>
+                            <option value="ENDURO" <?= ($event['discipline'] ?? '') === 'ENDURO' ? 'selected' : '' ?>>Enduro</option>
+                            <option value="DH" <?= ($event['discipline'] ?? '') === 'DH' ? 'selected' : '' ?>>Downhill</option>
+                            <option value="XC" <?= ($event['discipline'] ?? '') === 'XC' ? 'selected' : '' ?>>Cross Country</option>
+                            <option value="XCO" <?= ($event['discipline'] ?? '') === 'XCO' ? 'selected' : '' ?>>XC Olympic</option>
+                            <option value="XCM" <?= ($event['discipline'] ?? '') === 'XCM' ? 'selected' : '' ?>>XC Marathon</option>
+                            <option value="DUAL_SLALOM" <?= ($event['discipline'] ?? '') === 'DUAL_SLALOM' ? 'selected' : '' ?>>Dual Slalom</option>
+                            <option value="PUMPTRACK" <?= ($event['discipline'] ?? '') === 'PUMPTRACK' ? 'selected' : '' ?>>Pumptrack</option>
+                            <option value="GRAVEL" <?= ($event['discipline'] ?? '') === 'GRAVEL' ? 'selected' : '' ?>>Gravel</option>
+                            <option value="E-MTB" <?= ($event['discipline'] ?? '') === 'E-MTB' ? 'selected' : '' ?>>E-MTB</option>
+                        </select>
                     </div>
 
                     <div class="gs-grid gs-grid-cols-2 gs-gap-md">
