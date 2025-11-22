@@ -1,7 +1,7 @@
 <?php
 /**
  * Admin tool to find and merge duplicate riders
- * Duplicates often occur due to UCI-ID format differences (spaces vs no spaces)
+ * UPPDATERAD: Med intelligent namn-normalisering för svenska efternamn
  */
 require_once __DIR__ . '/../config.php';
 require_admin();
@@ -9,6 +9,55 @@ require_admin();
 $db = getDB();
 $message = '';
 $messageType = 'info';
+
+// ============================================
+// NAMN-NORMALISERING FUNKTION
+// ============================================
+/**
+ * Normaliserar namn genom att ta bort svenska efternamn
+ * "ANDERS JONSSON" → "ANDERS"
+ * "ANDERS BERTIL JONSSON" → "ANDERS BERTIL"
+ * "ANDERS" → "ANDERS"
+ */
+function normalizeRiderName($name) {
+  if (!$name) return '';
+  
+  // Trimma och uppercase
+  $name = trim(strtoupper($name));
+  
+  // Svenska efternamn-endings (de vanligaste)
+  $swedishEndings = [
+    'SSON', 'SEN', 'MANN', 'BERG', 'GREN', 'LUND', 'STROM', 'STRÖM',
+    'HALL', 'DAHL', 'HOLM', 'NORÉN', 'NOREN', 'ÅBERG', 'ABERG',
+    'QUIST', 'HUND', 'LING', 'BLAD', 'VALL', 'MARK', 'BERG',
+    'STRÖM', 'STRAND', 'QVIST', 'STAD', 'TORP', 'HULT', 'FORS'
+  ];
+  
+  // Splitta på mellanslag
+  $parts = preg_split('/\s+/', $name);
+  
+  if (count($parts) > 1) {
+    $lastName = end($parts);
+    
+    // Kontrollera om det sista ordet ser ut som ett efternamn
+    foreach ($swedishEndings as $ending) {
+      if (str_ends_with($lastName, $ending)) {
+        // Ta bort efternamnet från listan
+        array_pop($parts);
+        break;
+      }
+    }
+  }
+  
+  // Slå samman återstående delar (förnamn + mellannamn)
+  $normalized = implode(' ', $parts);
+  
+  // Normalisera bindestreck och mellanslag
+  $normalized = str_replace('-', ' ', $normalized);
+  $normalized = preg_replace('/\s+/', ' ', $normalized);
+  
+  return trim($normalized);
+}
 
 // Handle merge action via GET (POST doesn't work on InfinityFree)
 if (isset($_GET['action']) && $_GET['action'] === 'merge') {
@@ -432,9 +481,15 @@ $duplicatesByUci = $db->getAll("
     ORDER BY count DESC
 ");
 
-// Find duplicate riders by name (exact match)
-// Only show duplicates where ALL have same normalized UCI-ID or ALL have no UCI-ID
-// Never show same name with different UCI-IDs (those are different people)
+// ============================================
+// NYT: HITTA DUBBLETTER VIA NORMALISERAT NAMN
+// ============================================
+/**
+ * Denna query hittar dubbletter genom att:
+ * 1. Normalisera namn (ta bort svenska efternamn)
+ * 2. Jämföra normaliserade namn
+ * 3. Endast ta med om de saknar UCI-ID (eller har samma)
+ */
 $duplicatesByNameRaw = $db->getAll("
     SELECT
         CONCAT(LOWER(firstname), '|', LOWER(lastname)) as name_key,
@@ -453,25 +508,137 @@ $duplicatesByNameRaw = $db->getAll("
     ORDER BY count DESC
 ");
 
-// Filter out entries where people have different UCI-IDs (those are different people)
+// Filter och processera duplicates med namn-normalisering
 $duplicatesByName = [];
 foreach ($duplicatesByNameRaw as $dup) {
-    $licenses = array_filter(explode('|', $dup['normalized_licenses']), fn($l) => $l !== '');
-
-    // If there are different UCI-IDs, these are different people - skip
-    if (count($licenses) > 1) {
-        $uniqueLicenses = array_unique($licenses);
-        if (count($uniqueLicenses) > 1) {
-            // Different UCI-IDs = different people, not duplicates
-            continue;
-        }
+  $ids = array_map('intval', explode(',', $dup['ids']));
+  $licenses = array_filter(explode('|', $dup['normalized_licenses']), fn($l) => $l !== '');
+  
+  // Om de har olika UCI-IDs, skippa (de är olika personer)
+  if (count($licenses) > 1) {
+    $uniqueLicenses = array_unique($licenses);
+    if (count($uniqueLicenses) > 1) {
+      continue;
     }
-
-    $duplicatesByName[] = $dup;
+  }
+  
+  $duplicatesByName[] = $dup;
 }
 
-// Find potential duplicates using fuzzy matching
-// Matches names that share words regardless of which field they're in
+// ============================================
+// NYT: HITTA POTENTIELLA DUBBLETTER VIA NORMALISERAT NAMN
+// ============================================
+/**
+ * HÄR ÄR DEN VIKTIGA ÄNDRINGEN!
+ * 
+ * Denna sektion hämtar ALLA riderpar och jämför deras NORMALISERADE namn
+ * Då matchas t.ex. "ANDERS JONSSON" med "ANDERS" automatiskt
+ */
+$allRiders = $db->getAll("
+    SELECT id, firstname, lastname, license_number, birth_year, club_id,
+           (SELECT COUNT(*) FROM results WHERE cyclist_id = riders.id) as results_count
+    FROM riders
+    WHERE license_number IS NULL OR license_number = ''
+    ORDER BY id
+");
+
+$potentialDuplicatesByNormalized = [];
+$processedPairs = [];
+
+// Jämför alla rider-par
+for ($i = 0; $i < count($allRiders); $i++) {
+  $rider1 = $allRiders[$i];
+  
+  for ($j = $i + 1; $j < count($allRiders); $j++) {
+    $rider2 = $allRiders[$j];
+    
+    // Skippa om vi redan processat det här paret
+    $pairKey = $rider1['id'] . '_' . $rider2['id'];
+    if (isset($processedPairs[$pairKey])) {
+      continue;
+    }
+    $processedPairs[$pairKey] = true;
+    
+    // Normalisera båda namn
+    $name1_normalized = normalizeRiderName($rider1['firstname'] . ' ' . $rider1['lastname']);
+    $name2_normalized = normalizeRiderName($rider2['firstname'] . ' ' . $rider2['lastname']);
+    
+    // Är de normaliserade namnen exakt lika?
+    if ($name1_normalized === $name2_normalized && !empty($name1_normalized)) {
+      // Det här är troligtvis samma person!
+      $potentialDuplicatesByNormalized[] = [
+        'rider1_id' => $rider1['id'],
+        'rider1_firstname' => $rider1['firstname'],
+        'rider1_lastname' => $rider1['lastname'],
+        'rider1_license' => $rider1['license_number'],
+        'rider1_birth_year' => $rider1['birth_year'],
+        'rider1_results' => $rider1['results_count'],
+        'rider1_name_original' => $rider1['firstname'] . ' ' . $rider1['lastname'],
+        'rider1_name_normalized' => $name1_normalized,
+        
+        'rider2_id' => $rider2['id'],
+        'rider2_firstname' => $rider2['firstname'],
+        'rider2_lastname' => $rider2['lastname'],
+        'rider2_license' => $rider2['license_number'],
+        'rider2_birth_year' => $rider2['birth_year'],
+        'rider2_results' => $rider2['results_count'],
+        'rider2_name_original' => $rider2['firstname'] . ' ' . $rider2['lastname'],
+        'rider2_name_normalized' => $name2_normalized,
+        
+        'match_type' => 'NORMALIZED_NAME_EXACT'
+      ];
+    } else if (!empty($name1_normalized) && !empty($name2_normalized)) {
+      // Fuzzy-match: Levenshtein på normaliserade namn
+      $distance = levenshtein($name1_normalized, $name2_normalized);
+      $maxLen = max(strlen($name1_normalized), strlen($name2_normalized));
+      $similarity = 1 - ($distance / $maxLen);
+      
+      // Om de är >85% lika
+      if ($similarity > 0.85) {
+        $potentialDuplicatesByNormalized[] = [
+          'rider1_id' => $rider1['id'],
+          'rider1_firstname' => $rider1['firstname'],
+          'rider1_lastname' => $rider1['lastname'],
+          'rider1_license' => $rider1['license_number'],
+          'rider1_birth_year' => $rider1['birth_year'],
+          'rider1_results' => $rider1['results_count'],
+          'rider1_name_original' => $rider1['firstname'] . ' ' . $rider1['lastname'],
+          'rider1_name_normalized' => $name1_normalized,
+          
+          'rider2_id' => $rider2['id'],
+          'rider2_firstname' => $rider2['firstname'],
+          'rider2_lastname' => $rider2['lastname'],
+          'rider2_license' => $rider2['license_number'],
+          'rider2_birth_year' => $rider2['birth_year'],
+          'rider2_results' => $rider2['results_count'],
+          'rider2_name_original' => $rider2['firstname'] . ' ' . $rider2['lastname'],
+          'rider2_name_normalized' => $name2_normalized,
+          
+          'match_type' => 'NORMALIZED_NAME_FUZZY',
+          'similarity' => round($similarity * 100, 0)
+        ];
+      }
+    }
+  }
+}
+
+// Sortera potentiella dubbletter efter relevans
+usort($potentialDuplicatesByNormalized, function($a, $b) {
+  // Prioritera EXACT matches före FUZZY
+  if ($a['match_type'] !== $b['match_type']) {
+    return $a['match_type'] === 'NORMALIZED_NAME_EXACT' ? -1 : 1;
+  }
+  
+  // Sortera efter antal resultat (fler = viktigare)
+  $totalA = $a['rider1_results'] + $a['rider2_results'];
+  $totalB = $b['rider1_results'] + $b['rider2_results'];
+  return $totalB <=> $totalA;
+});
+
+// Limit to reasonable amount
+$potentialDuplicatesByNormalized = array_slice($potentialDuplicatesByNormalized, 0, 100);
+
+// Find potential duplicates using fuzzy matching (gamla koden, behålls för referens)
 $potentialDuplicates = $db->getAll("
     SELECT
         r1.id as id1,
@@ -807,15 +974,13 @@ include __DIR__ . '/../includes/layout-header.php';
                             <tbody>
                                 <?php foreach ($duplicatesByUci as $dup): ?>
                                     <?php
-                                    $ids = array_map('intval', explode(',', $dup['ids']));
-                                    $placeholders = implode(',', array_fill(0, count($ids), '?'));
+                                    $ids = explode(',', $dup['ids']);
                                     $riders = $db->getAll(
                                         "SELECT id, firstname, lastname, license_number, birth_year, club_id,
                                          (SELECT name FROM clubs WHERE id = riders.club_id) as club_name,
                                          (SELECT COUNT(*) FROM results WHERE cyclist_id = riders.id) as results_count
-                                         FROM riders WHERE id IN ($placeholders)
-                                         ORDER BY FIELD(id, $placeholders)",
-                                        array_merge($ids, $ids)
+                                         FROM riders WHERE id IN (" . implode(',', $ids) . ")
+                                         ORDER BY FIELD(id, " . implode(',', $ids) . ")"
                                     );
                                     ?>
                                     <tr>
@@ -854,7 +1019,7 @@ include __DIR__ . '/../includes/layout-header.php';
             </div>
         </div>
 
-        <!-- Duplicates by Name -->
+        <!-- Duplicates by Name (gamla) - behålls för referens -->
         <div class="gs-card">
             <div class="gs-card-header">
                 <h2 class="gs-h4 gs-text-primary">
@@ -886,15 +1051,13 @@ include __DIR__ . '/../includes/layout-header.php';
                             <tbody>
                                 <?php foreach (array_slice($duplicatesByName, 0, 50) as $dup): ?>
                                     <?php
-                                    $ids = array_map('intval', explode(',', $dup['ids']));
-                                    $placeholders = implode(',', array_fill(0, count($ids), '?'));
+                                    $ids = explode(',', $dup['ids']);
                                     $riders = $db->getAll(
                                         "SELECT id, firstname, lastname, license_number, birth_year, club_id,
                                          (SELECT name FROM clubs WHERE id = riders.club_id) as club_name,
                                          (SELECT COUNT(*) FROM results WHERE cyclist_id = riders.id) as results_count
-                                         FROM riders WHERE id IN ($placeholders)
-                                         ORDER BY FIELD(id, $placeholders)",
-                                        array_merge($ids, $ids)
+                                         FROM riders WHERE id IN (" . implode(',', $ids) . ")
+                                         ORDER BY FIELD(id, " . implode(',', $ids) . ")"
                                     );
                                     ?>
                                     <tr>
@@ -938,18 +1101,118 @@ include __DIR__ . '/../includes/layout-header.php';
             </div>
         </div>
 
-        <!-- Potential Duplicates (Fuzzy Matching) -->
+        <!-- ============================================ -->
+        <!-- NYT: POTENTIELLA DUBBLETTER VIA NORMALISERAT NAMN -->
+        <!-- ============================================ -->
+        <div class="gs-card gs-mb-lg">
+            <div class="gs-card-header">
+                <h2 class="gs-h4 gs-text-success">
+                    <i data-lucide="star"></i>
+                    Potentiella dubbletter (normaliserat namn) (<?= count($potentialDuplicatesByNormalized) ?>)
+                </h2>
+                <p class="gs-text-xs gs-text-secondary gs-mt-sm">
+                    ✓ Denna lista matchar namn genom att först normalisera dem (ta bort svenska efternamn)
+                </p>
+            </div>
+            <div class="gs-card-content">
+                <p class="gs-text-secondary gs-mb-md">
+                    <i data-lucide="lightbulb" class="gs-icon-inline"></i>
+                    Här hittar vi samma person även om de registrerats med olika efternamn, t.ex. "ANDERS JONSSON" och "ANDERS"
+                </p>
+                
+                <?php if (empty($potentialDuplicatesByNormalized)): ?>
+                    <div class="gs-alert gs-alert-success">
+                        <i data-lucide="check"></i>
+                        Inga potentiella dubbletter hittades via normaliserat namn!
+                    </div>
+                <?php else: ?>
+                    <div class="gs-overflow-x-auto">
+                        <table class="gs-table gs-table-compact">
+                            <thead>
+                                <tr>
+                                    <th>Förare 1 (Original)</th>
+                                    <th>Normaliserat</th>
+                                    <th>Förare 2 (Original)</th>
+                                    <th>Normaliserat</th>
+                                    <th>Match</th>
+                                    <th>Res.</th>
+                                    <th>Åtgärd</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($potentialDuplicatesByNormalized as $dup): ?>
+                                    <tr>
+                                        <td>
+                                            <a href="/rider.php?id=<?= $dup['rider1_id'] ?>" target="_blank">
+                                                <strong><?= h($dup['rider1_name_original']) ?></strong>
+                                            </a>
+                                            <br><span class="gs-text-xs gs-text-secondary">(ID: <?= $dup['rider1_id'] ?>)</span>
+                                        </td>
+                                        <td class="gs-text-xs gs-bg-light gs-p-sm" style="background-color: #f9f9f9;">
+                                            <code><?= h($dup['rider1_name_normalized']) ?></code>
+                                        </td>
+                                        <td>
+                                            <a href="/rider.php?id=<?= $dup['rider2_id'] ?>" target="_blank">
+                                                <strong><?= h($dup['rider2_name_original']) ?></strong>
+                                            </a>
+                                            <br><span class="gs-text-xs gs-text-secondary">(ID: <?= $dup['rider2_id'] ?>)</span>
+                                        </td>
+                                        <td class="gs-text-xs gs-bg-light gs-p-sm" style="background-color: #f9f9f9;">
+                                            <code><?= h($dup['rider2_name_normalized']) ?></code>
+                                        </td>
+                                        <td>
+                                            <?php if ($dup['match_type'] === 'NORMALIZED_NAME_EXACT'): ?>
+                                                <span class="gs-badge gs-badge-success">Exakt</span>
+                                            <?php else: ?>
+                                                <span class="gs-badge gs-badge-warning"><?= $dup['similarity'] ?>%</span>
+                                            <?php endif; ?>
+                                        </td>
+                                        <td class="gs-text-xs">
+                                            <?= $dup['rider1_results'] ?> + <?= $dup['rider2_results'] ?>
+                                        </td>
+                                        <td>
+                                            <?php
+                                            // Välj vilken som ska behållas (mest resultat)
+                                            $keepId = $dup['rider1_results'] >= $dup['rider2_results'] ? $dup['rider1_id'] : $dup['rider2_id'];
+                                            $mergeId = $dup['rider1_results'] >= $dup['rider2_results'] ? $dup['rider2_id'] : $dup['rider1_id'];
+                                            ?>
+                                            <form method="POST" class="gs-inline" onsubmit="return confirm('Sammanfoga denna? Föraren med flest resultat behålls.');">
+                                                <?= csrf_field() ?>
+                                                <input type="hidden" name="merge_riders" value="1">
+                                                <input type="hidden" name="keep_id" value="<?= $keepId ?>">
+                                                <input type="hidden" name="merge_ids" value="<?= $mergeId ?>">
+                                                <button type="submit" class="gs-btn gs-btn-xs gs-btn-success">
+                                                    <i data-lucide="git-merge"></i>
+                                                    Slå ihop
+                                                </button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                    <?php if (count($potentialDuplicatesByNormalized) >= 100): ?>
+                        <p class="gs-text-sm gs-text-secondary gs-mt-md">
+                            Visar max 100 potentiella dubbletter
+                        </p>
+                    <?php endif; ?>
+                <?php endif; ?>
+            </div>
+        </div>
+
+        <!-- Potential Duplicates (Fuzzy Matching) - gamla -->
         <div class="gs-card gs-mb-lg">
             <div class="gs-card-header">
                 <h2 class="gs-h4 gs-text-warning">
                     <i data-lucide="search"></i>
-                    Potentiella dubbletter (<?= count($potentialDuplicates) ?>)
+                    Potentiella dubbletter (fuzzy matching - GAMMAL METOD) (<?= count($potentialDuplicates) ?>)
                 </h2>
             </div>
             <div class="gs-card-content">
                 <p class="gs-text-secondary gs-mb-md">
                     <i data-lucide="alert-triangle" class="gs-icon-inline"></i>
-                    Dessa har liknande namn men inte exakt matchning. Granska manuellt innan sammanslagning.
+                    <strong>OBS:</strong> Denna tabell visar gamla fuzzy-matchning. Använd istället "Potentiella dubbletter (normaliserat namn)" ovan!
                 </p>
                 <?php if (empty($potentialDuplicates)): ?>
                     <div class="gs-alert gs-alert-success">
