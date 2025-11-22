@@ -139,8 +139,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             $messageType = 'success';
         } catch (Exception $e) {
-            // Column might not exist - need to run migration 007
-            $message = 'Kunde inte uppdatera inställningen. Kör migration 007_series_point_scales.sql först.';
+            // Show actual error for debugging
+            $message = 'Fel: ' . $e->getMessage() . ' - Kör migration 018_add_count_best_results.sql';
             $messageType = 'error';
         }
     } elseif ($action === 'move_up' || $action === 'move_down') {
