@@ -1,187 +1,367 @@
 <?php
+// Enable error reporting for debugging
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+
+// Load config first
+if (!file_exists(__DIR__ . '/config.php')) {
+    die('ERROR: config.php not found! Current directory: ' . __DIR__);
+}
 require_once __DIR__ . '/config.php';
 
 $db = getDB();
 
-// Get year filter
-$year = isset($_GET['year']) ? (int)$_GET['year'] : date('Y');
+// Get filters
+$series_id = isset($_GET['series']) ? (int)$_GET['series'] : null;
+$event_type = isset($_GET['format']) ? trim($_GET['format']) : null;
 
-// Get all available years
-$years = $db->getAll("SELECT DISTINCT YEAR(event_date) as year FROM events ORDER BY year DESC");
+// Get all series for filter dropdown
+$allSeries = $db->getAll("SELECT id, name FROM series ORDER BY name");
 
-// Pagination
-$page = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1;
-$perPage = EVENTS_PER_PAGE;
-$offset = ($page - 1) * $perPage;
+// Get all event types for filter dropdown
+$allEventTypes = $db->getAll("SELECT DISTINCT type FROM events WHERE type IS NOT NULL AND type != '' ORDER BY type");
 
-// Get total count
-$totalCount = $db->getRow(
-    "SELECT COUNT(*) as count FROM events WHERE YEAR(event_date) = ?",
-    [$year]
-)['count'] ?? 0;
+// Build WHERE clause for both queries
+$where_clauses = [];
+$params = [];
 
-$pagination = paginate($totalCount, $perPage, $page);
+if ($series_id) {
+    $where_clauses[] = "e.series_id = ?";
+    $params[] = $series_id;
+}
 
-// Get events
-$events = $db->getAll(
-    "SELECT e.id, e.name, e.event_date, e.location, e.event_type, e.status,
-            COUNT(r.id) as participant_count
+if ($event_type) {
+    $where_clauses[] = "e.type = ?";
+    $params[] = $event_type;
+}
+
+$where_sql = !empty($where_clauses) ? 'AND ' . implode(' AND ', $where_clauses) : '';
+
+// Get UPCOMING events (date >= today, nearest first)
+$upcomingEvents = $db->getAll(
+    "SELECT e.id, e.name, e.advent_id, e.date as event_date, e.location, e.organizer, e.type as event_type, e.status,
+            s.name as series_name, s.id as series_id, s.logo as series_logo,
+            COUNT(DISTINCT r.id) as participant_count,
+            COUNT(DISTINCT r.class_id) as category_count
      FROM events e
      LEFT JOIN results r ON e.id = r.event_id
-     WHERE YEAR(e.event_date) = ?
+     LEFT JOIN series s ON e.series_id = s.id
+     WHERE e.date >= CURDATE() $where_sql
      GROUP BY e.id
-     ORDER BY e.event_date DESC
-     LIMIT ? OFFSET ?",
-    [$year, $perPage, $offset]
+     ORDER BY e.date ASC",
+    $params
 );
 
+// Get COMPLETED events (date < today, newest first)
+$completedEvents = $db->getAll(
+    "SELECT e.id, e.name, e.advent_id, e.date as event_date, e.location, e.organizer, e.type as event_type, e.status,
+            s.name as series_name, s.id as series_id, s.logo as series_logo,
+            COUNT(DISTINCT r.id) as participant_count,
+            COUNT(DISTINCT r.class_id) as category_count
+     FROM events e
+     LEFT JOIN results r ON e.id = r.event_id
+     LEFT JOIN series s ON e.series_id = s.id
+     WHERE e.date < CURDATE() $where_sql
+     GROUP BY e.id
+     ORDER BY e.date DESC",
+    $params
+);
+
+$totalCount = count($upcomingEvents) + count($completedEvents);
+
 $pageTitle = 'Tävlingar';
+$pageType = 'public';
+include __DIR__ . '/includes/layout-header.php';
 ?>
-<!DOCTYPE html>
-<html lang="sv">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?= h($pageTitle) ?> - TheHUB</title>
-    <link rel="stylesheet" href="/assets/gravityseries-theme.css">
-</head>
-<body>
-    <!-- Navigation -->
-    <nav class="gs-nav">
+
+    <main class="gs-main-content">
         <div class="gs-container">
-            <ul class="gs-nav-list">
-                <li><a href="/public/index.php" class="gs-nav-link">
-                    <i data-lucide="home"></i> Hem
-                </a></li>
-                <li><a href="/public/events.php" class="gs-nav-link active">
-                    <i data-lucide="calendar"></i> Tävlingar
-                </a></li>
-                <li><a href="/public/results.php" class="gs-nav-link">
-                    <i data-lucide="trophy"></i> Resultat
-                </a></li>
-                <li style="margin-left: auto;"><a href="/admin/login.php" class="gs-btn gs-btn-sm gs-btn-primary">
-                    <i data-lucide="log-in"></i> Admin
-                </a></li>
-            </ul>
-        </div>
-    </nav>
-
-    <main class="gs-container gs-py-xl">
-        <h1 class="gs-h1 gs-text-primary gs-mb-lg">Tävlingar</h1>
-
-        <!-- Filters -->
-        <div class="gs-card gs-mb-lg">
-            <div class="gs-card-content">
-                <div class="gs-flex gs-items-center gs-gap-md">
-                    <i data-lucide="filter"></i>
-                    <label for="year" class="gs-label" style="margin-bottom: 0;">År:</label>
-                    <select id="year" class="gs-input" style="max-width: 200px;" onchange="window.location.href='?year=' + this.value">
-                        <?php foreach ($years as $y): ?>
-                            <option value="<?= $y['year'] ?>" <?= $y['year'] == $year ? 'selected' : '' ?>>
-                                <?= $y['year'] ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                    <span class="gs-text-secondary gs-text-sm">
-                        <i data-lucide="list"></i>
-                        Totalt: <?= $totalCount ?> tävlingar
-                    </span>
-                </div>
+            <!-- Header -->
+            <div class="gs-mb-xl">
+                <h1 class="gs-h2 gs-text-primary gs-mb-sm">
+                    <i data-lucide="calendar"></i>
+                    Tävlingskalender
+                </h1>
+                <p class="gs-text-secondary">
+                    <?= $totalCount ?> tävlingar (<?= count($upcomingEvents) ?> kommande, <?= count($completedEvents) ?> avklarade)
+                </p>
             </div>
-        </div>
 
-        <?php if (empty($events)): ?>
-            <div class="gs-card">
-                <div class="gs-card-content gs-text-center gs-py-xl">
-                    <p class="gs-text-secondary">Inga tävlingar hittades för <?= $year ?></p>
-                </div>
-            </div>
-        <?php else: ?>
-            <!-- Events Grid -->
-            <div class="gs-grid gs-grid-cols-1 gs-md-grid-cols-2 gs-lg-grid-cols-3 gs-xl-grid-cols-4 gs-gap-lg gs-mb-lg">
-                <?php foreach ($events as $event): ?>
-                    <div class="gs-event-card">
-                        <div class="gs-event-header">
-                            <div class="gs-event-date" style="background-color: <?= $event['status'] === 'completed' ? 'var(--gs-success)' : 'var(--gs-primary)' ?>;">
-                                <div class="gs-event-date-day"><?= formatDate($event['event_date'], 'd') ?></div>
-                                <div class="gs-event-date-month"><?= formatDate($event['event_date'], 'M Y') ?></div>
-                            </div>
-                            <span class="gs-badge gs-badge-<?= $event['status'] === 'completed' ? 'success' : ($event['status'] === 'upcoming' ? 'warning' : 'primary') ?>">
-                                <i data-lucide="<?= $event['status'] === 'completed' ? 'check-circle' : 'clock' ?>"></i>
-                                <?= h($event['status']) ?>
-                            </span>
-                        </div>
-                        <div class="gs-event-content">
-                            <h3 class="gs-event-title">
-                                <a href="/public/event.php?id=<?= $event['id'] ?>"><?= h($event['name']) ?></a>
-                            </h3>
-                            <p class="gs-event-icon">
-                                <i data-lucide="map-pin"></i>
-                                <?= h($event['location']) ?>
-                            </p>
-                            <p class="gs-event-icon">
-                                <i data-lucide="flag"></i>
-                                <?= h(str_replace('_', ' ', $event['event_type'])) ?>
-                            </p>
-                            <?php if ($event['participant_count'] > 0): ?>
-                                <p class="gs-event-icon gs-text-primary" style="margin-top: var(--gs-space-sm);">
-                                    <i data-lucide="users"></i>
-                                    <?= $event['participant_count'] ?> deltagare
-                                </p>
-                            <?php endif; ?>
-                            <a href="/public/results.php?event_id=<?= $event['id'] ?>" class="gs-btn gs-btn-sm gs-btn-primary gs-w-full gs-mt-lg">
-                                <i data-lucide="eye"></i>
-                                Visa resultat
-                            </a>
-                        </div>
+            <!-- Filter Controls -->
+            <div class="gs-card gs-mb-lg gs-p-md">
+                <form method="GET" action="" id="filterForm" class="gs-grid gs-grid-cols-1 gs-md-grid-cols-2 gs-gap-md">
+                    <!-- Series Filter -->
+                    <div>
+                        <label class="gs-label">Serie</label>
+                        <select name="series" class="gs-input" onchange="document.getElementById('filterForm').submit()">
+                            <option value="">Alla serier</option>
+                            <?php foreach ($allSeries as $series): ?>
+                                <option value="<?= $series['id'] ?>" <?= $series_id == $series['id'] ? 'selected' : '' ?>>
+                                    <?= h($series['name']) ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
                     </div>
-                <?php endforeach; ?>
+
+                    <!-- Event Type Filter -->
+                    <div>
+                        <label class="gs-label">Tävlingsformat</label>
+                        <select name="format" class="gs-input" onchange="document.getElementById('filterForm').submit()">
+                            <option value="">Alla format</option>
+                            <?php foreach ($allEventTypes as $type): ?>
+                                <option value="<?= h($type['type']) ?>" <?= $event_type == $type['type'] ? 'selected' : '' ?>>
+                                    <?= h(str_replace('_', ' ', $type['type'])) ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+
+                    <!-- Reset Button -->
+                    <div>
+                        <a href="/events.php" class="gs-btn gs-btn-outline">
+                            <i data-lucide="x"></i>
+                            Rensa filter
+                        </a>
+                    </div>
+                </form>
             </div>
 
-            <!-- Pagination -->
-            <?php if ($pagination['total_pages'] > 1): ?>
-                <div class="gs-flex gs-items-center gs-justify-between gs-gap-md">
-                    <?php if ($pagination['has_prev']): ?>
-                        <a href="?year=<?= $year ?>&page=<?= $page - 1 ?>" class="gs-btn gs-btn-outline">
-                            <i data-lucide="chevron-left"></i>
-                            Föregående
-                        </a>
-                    <?php else: ?>
-                        <span></span>
-                    <?php endif; ?>
+            <!-- 2-Column Layout: Upcoming (Left) and Completed (Right) -->
+            <?php if (empty($upcomingEvents) && empty($completedEvents)): ?>
+                <div class="gs-card gs-text-center gs-p-3xl">
+                    <i data-lucide="calendar-x" class="gs-empty-icon"></i>
+                    <h3 class="gs-h4 gs-mb-sm">Inga tävlingar hittades</h3>
+                    <p class="gs-text-secondary">
+                        Inga tävlingar matchade dina filter.
+                    </p>
+                </div>
+            <?php else: ?>
+                <style>
+                    .events-two-column {
+                        display: grid;
+                        grid-template-columns: 1fr;
+                        gap: 2rem;
+                    }
+                    @media (min-width: 768px) {
+                        .events-two-column {
+                            grid-template-columns: 1fr 1fr;
+                        }
+                    }
+                    .event-column-header {
+                        font-size: 1.25rem;
+                        font-weight: 700;
+                        color: #1a202c;
+                        margin-bottom: 1rem;
+                        padding-bottom: 0.5rem;
+                        border-bottom: 2px solid #e2e8f0;
+                    }
+                    .event-list {
+                        display: flex;
+                        flex-direction: column;
+                        gap: 1rem;
+                    }
+                    .event-card-horizontal {
+                        display: grid;
+                        grid-template-columns: 120px 1fr;
+                        gap: 1rem;
+                        padding: 1rem;
+                        min-height: 100px;
+                    }
+                    .event-logo-container {
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        background: #f8f9fa;
+                        border-radius: 6px;
+                        padding: 0.5rem;
+                    }
+                    .event-logo-container img {
+                        max-width: 100%;
+                        max-height: 70px;
+                        object-fit: contain;
+                    }
+                    .event-info-right {
+                        display: flex;
+                        flex-direction: column;
+                        gap: 0.5rem;
+                    }
+                    .event-date-box {
+                        display: inline-flex;
+                        align-items: center;
+                        gap: 0.5rem;
+                        padding: 0.25rem 0.5rem;
+                        background: #667eea;
+                        color: white;
+                        border-radius: 4px;
+                        font-size: 0.875rem;
+                        font-weight: 600;
+                        width: fit-content;
+                    }
+                    .event-date-box.completed {
+                        background: #48bb78;
+                    }
+                    .event-title {
+                        font-size: 1.125rem;
+                        font-weight: 700;
+                        color: #1a202c;
+                        line-height: 1.3;
+                    }
+                    .event-meta {
+                        display: flex;
+                        flex-direction: column;
+                        gap: 0.25rem;
+                        font-size: 0.875rem;
+                        color: #718096;
+                    }
+                    @media (max-width: 640px) {
+                        .event-card-horizontal {
+                            grid-template-columns: 80px 1fr;
+                            gap: 0.75rem;
+                            padding: 0.75rem;
+                        }
+                        .event-logo-container img {
+                            max-height: 50px;
+                        }
+                        .event-title {
+                            font-size: 1rem;
+                        }
+                    }
+                </style>
 
-                    <span class="gs-text-secondary">Sida <?= $page ?> av <?= $pagination['total_pages'] ?></span>
+                <div class="events-two-column">
+                    <!-- LEFT COLUMN: Upcoming Events -->
+                    <div>
+                        <div class="event-column-header">
+                            <i data-lucide="clock"></i>
+                            Kommande tävlingar (<?= count($upcomingEvents) ?>)
+                        </div>
 
-                    <?php if ($pagination['has_next']): ?>
-                        <a href="?year=<?= $year ?>&page=<?= $page + 1 ?>" class="gs-btn gs-btn-outline">
-                            Nästa
-                            <i data-lucide="chevron-right"></i>
-                        </a>
-                    <?php else: ?>
-                        <span></span>
-                    <?php endif; ?>
+                        <?php if (empty($upcomingEvents)): ?>
+                            <div class="gs-card gs-text-center gs-p-2xl">
+                                <i data-lucide="calendar-x" class="gs-empty-icon-md"></i>
+                                <p class="gs-text-secondary">Inga kommande tävlingar</p>
+                            </div>
+                        <?php else: ?>
+                            <div class="event-list">
+                                <?php foreach ($upcomingEvents as $event): ?>
+                                    <a href="/event.php?id=<?= $event['id'] ?>" class="gs-event-card-link">
+                                        <div class="gs-card gs-card-hover event-card-horizontal gs-event-card-transition">
+                                            <!-- Logo Left -->
+                                            <div class="event-logo-container">
+                                                <?php if ($event['series_logo']): ?>
+                                                    <img src="<?= h($event['series_logo']) ?>"
+                                                         alt="<?= h($event['series_name']) ?>">
+                                                <?php else: ?>
+                                                    <div class="gs-event-no-logo">
+                                                        <?= h($event['series_name'] ?? 'Event') ?>
+                                                    </div>
+                                                <?php endif; ?>
+                                            </div>
+
+                                            <!-- Info Right -->
+                                            <div class="event-info-right">
+                                                <div class="event-date-box">
+                                                    <i data-lucide="calendar" class="gs-icon-sm"></i>
+                                                    <?= date('d M Y', strtotime($event['event_date'])) ?>
+                                                </div>
+
+                                                <div class="event-title">
+                                                    <?= h($event['name']) ?>
+                                                </div>
+
+                                                <div class="event-meta">
+                                                    <?php if ($event['location']): ?>
+                                                        <div>
+                                                            <i data-lucide="map-pin" class="gs-icon-sm"></i>
+                                                            <?= h($event['location']) ?>
+                                                        </div>
+                                                    <?php endif; ?>
+                                                    <?php if ($event['organizer']): ?>
+                                                        <div>
+                                                            <i data-lucide="user" class="gs-icon-sm"></i>
+                                                            <?= h($event['organizer']) ?>
+                                                        </div>
+                                                    <?php endif; ?>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </a>
+                                <?php endforeach; ?>
+                            </div>
+                        <?php endif; ?>
+                    </div>
+
+                    <!-- RIGHT COLUMN: Completed Events -->
+                    <div>
+                        <div class="event-column-header">
+                            <i data-lucide="check-circle"></i>
+                            Avklarade tävlingar (<?= count($completedEvents) ?>)
+                        </div>
+
+                        <?php if (empty($completedEvents)): ?>
+                            <div class="gs-card gs-text-center gs-p-2xl">
+                                <i data-lucide="calendar-x" class="gs-empty-icon-md"></i>
+                                <p class="gs-text-secondary">Inga avklarade tävlingar</p>
+                            </div>
+                        <?php else: ?>
+                            <div class="event-list">
+                                <?php foreach ($completedEvents as $event): ?>
+                                    <a href="/event.php?id=<?= $event['id'] ?>" class="gs-event-card-link">
+                                        <div class="gs-card gs-card-hover event-card-horizontal gs-event-card-transition">
+                                            <!-- Logo Left -->
+                                            <div class="event-logo-container">
+                                                <?php if ($event['series_logo']): ?>
+                                                    <img src="<?= h($event['series_logo']) ?>"
+                                                         alt="<?= h($event['series_name']) ?>">
+                                                <?php else: ?>
+                                                    <div class="gs-event-no-logo">
+                                                        <?= h($event['series_name'] ?? 'Event') ?>
+                                                    </div>
+                                                <?php endif; ?>
+                                            </div>
+
+                                            <!-- Info Right -->
+                                            <div class="event-info-right">
+                                                <div class="event-date-box completed">
+                                                    <i data-lucide="check-circle" class="gs-icon-sm"></i>
+                                                    <?= date('d M Y', strtotime($event['event_date'])) ?>
+                                                </div>
+
+                                                <div class="event-title">
+                                                    <?= h($event['name']) ?>
+                                                </div>
+
+                                                <div class="event-meta">
+                                                    <?php if ($event['location']): ?>
+                                                        <div>
+                                                            <i data-lucide="map-pin" class="gs-icon-sm"></i>
+                                                            <?= h($event['location']) ?>
+                                                        </div>
+                                                    <?php endif; ?>
+                                                    <?php if ($event['organizer']): ?>
+                                                        <div>
+                                                            <i data-lucide="user" class="gs-icon-sm"></i>
+                                                            <?= h($event['organizer']) ?>
+                                                        </div>
+                                                    <?php endif; ?>
+                                                    <?php if ($event['participant_count'] > 0): ?>
+                                                        <div class="gs-event-participant-info">
+                                                            <i data-lucide="trophy" class="gs-icon-sm"></i>
+                                                            <?= $event['participant_count'] ?> deltagare •
+                                                            <?= $event['category_count'] ?> <?= $event['category_count'] == 1 ? 'klass' : 'klasser' ?>
+                                                        </div>
+                                                    <?php endif; ?>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </a>
+                                <?php endforeach; ?>
+                            </div>
+                        <?php endif; ?>
+                    </div>
                 </div>
             <?php endif; ?>
-        <?php endif; ?>
+        </div>
     </main>
 
-    <!-- Footer -->
-    <footer class="gs-bg-dark gs-text-white gs-py-xl gs-text-center">
-        <div class="gs-container">
-            <p>&copy; <?= date('Y') ?> TheHUB - Sveriges plattform för cykeltävlingar</p>
-            <p class="gs-text-sm gs-text-secondary" style="margin-top: var(--gs-space-sm);">
-                <i data-lucide="palette"></i>
-                GravitySeries Design System + Lucide Icons
-            </p>
-        </div>
-    </footer>
-
-    <!-- Lucide Icons -->
-    <script src="https://unpkg.com/lucide@latest"></script>
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            lucide.createIcons();
-        });
-    </script>
-</body>
-</html>
+<?php include __DIR__ . '/includes/layout-footer.php'; ?>

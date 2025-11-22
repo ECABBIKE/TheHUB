@@ -3,364 +3,298 @@ require_once __DIR__ . '/config.php';
 
 $db = getDB();
 
-$eventId = isset($_GET['event_id']) ? (int)$_GET['event_id'] : 0;
+// Get filter parameters
+$filterSeries = isset($_GET['series_id']) && is_numeric($_GET['series_id']) ? intval($_GET['series_id']) : null;
+$filterYear = isset($_GET['year']) && is_numeric($_GET['year']) ? intval($_GET['year']) : null;
 
-if (!$eventId) {
-    die("Event ID required");
+// Build WHERE clause
+$where = [];
+$params = [];
+
+if ($filterSeries) {
+    $where[] = "e.series_id = ?";
+    $params[] = $filterSeries;
 }
 
-// Get event info
-$event = $db->getRow(
-    "SELECT * FROM events WHERE id = ?",
-    [$eventId]
-);
-
-if (!$event) {
-    die("Event not found");
+if ($filterYear) {
+    $where[] = "YEAR(e.date) = ?";
+    $params[] = $filterYear;
 }
 
-// Helper function to convert time string to seconds
-function timeToSeconds($timeStr) {
-    if (empty($timeStr)) return 0;
+$whereClause = !empty($where) ? 'WHERE ' . implode(' AND ', $where) : '';
 
-    // Handle formats like "0:14:16.42" or "14:16.42" or "1:42.33"
-    $parts = explode(':', $timeStr);
-    $seconds = 0;
+// Get all events with result counts
+$sql = "SELECT
+    e.id, e.name, e.advent_id, e.date, e.location, e.status,
+    s.name as series_name,
+    s.id as series_id,
+    s.logo as series_logo,
+    COUNT(DISTINCT r.id) as result_count,
+    COUNT(DISTINCT r.category_id) as category_count,
+    COUNT(DISTINCT CASE WHEN r.status = 'finished' THEN r.id END) as finished_count
+FROM events e
+LEFT JOIN results r ON e.id = r.event_id
+LEFT JOIN series s ON e.series_id = s.id
+{$whereClause}
+GROUP BY e.id
+HAVING result_count > 0
+ORDER BY e.date DESC";
 
-    if (count($parts) === 3) {
-        // h:mm:ss.cc
-        $seconds = (int)$parts[0] * 3600 + (int)$parts[1] * 60 + (float)$parts[2];
-    } elseif (count($parts) === 2) {
-        // mm:ss.cc
-        $seconds = (int)$parts[0] * 60 + (float)$parts[1];
-    } else {
-        $seconds = (float)$timeStr;
-    }
-
-    return $seconds;
+try {
+    $events = $db->getAll($sql, $params);
+} catch (Exception $e) {
+    $events = [];
+    $error = $e->getMessage();
 }
 
-// Helper function to format seconds back to time
-function formatSecondsAsTime($seconds) {
-    if ($seconds <= 0) return '';
+// Get all series for filter buttons (only series with results)
+$allSeries = $db->getAll("
+    SELECT DISTINCT s.id, s.name
+    FROM series s
+    INNER JOIN events e ON s.id = e.series_id
+    INNER JOIN results r ON e.id = r.event_id
+    WHERE s.active = 1
+    ORDER BY s.name
+");
 
-    $minutes = floor($seconds / 60);
-    $secs = $seconds - ($minutes * 60);
+// Get all years from events with results
+$allYears = $db->getAll("
+    SELECT DISTINCT YEAR(e.date) as year
+    FROM events e
+    INNER JOIN results r ON e.id = r.event_id
+    WHERE e.date IS NOT NULL
+    ORDER BY year DESC
+");
 
-    if ($minutes >= 60) {
-        $hours = floor($minutes / 60);
-        $minutes = $minutes % 60;
-        return sprintf('%d:%02d:%05.2f', $hours, $minutes, $secs);
-    }
-
-    return sprintf('%d:%05.2f', $minutes, $secs);
-}
-
-// Get results with split times and class info (including class settings)
-$results = $db->getAll(
-    "SELECT
-        r.position,
-        r.bib_number,
-        r.finish_time,
-        r.status,
-        r.points,
-        r.time_behind,
-        r.ss1, r.ss2, r.ss3, r.ss4, r.ss5, r.ss6, r.ss7, r.ss8, r.ss9, r.ss10,
-        r.run_1_time, r.run_2_time,
-        CONCAT(c.firstname, ' ', c.lastname) as cyclist_name,
-        c.id as cyclist_id,
-        c.birth_year,
-        cl.name as club_name,
-        COALESCE(cls.display_name, cat.name, 'Okänd') as class_name,
-        COALESCE(cls.awards_points, 1) as awards_points,
-        COALESCE(cls.ranking_type, 'time') as ranking_type,
-        COALESCE(cls.series_eligible, 1) as series_eligible,
-        COALESCE(cls.sort_order, 999) as class_sort_order
-     FROM results r
-     JOIN riders c ON r.cyclist_id = c.id
-     LEFT JOIN clubs cl ON c.club_id = cl.id
-     LEFT JOIN classes cls ON r.class_id = cls.id
-     LEFT JOIN categories cat ON r.category_id = cat.id
-     WHERE r.event_id = ?
-     ORDER BY
-        COALESCE(cls.sort_order, 999) ASC,
-        COALESCE(cls.display_name, cat.name, 'ZZZ') ASC,
-        CASE WHEN r.status = 'finished' THEN 0 ELSE 1 END ASC,
-        r.position ASC,
-        r.finish_time ASC",
-    [$eventId]
-);
-
-// Calculate gap times and group by class
-$resultsByClass = [];
-$classTimes = [];
-$classSettings = [];
-
-foreach ($results as &$result) {
-    $className = $result['class_name'] ?? 'Okänd klass';
-
-    // Initialize class array and settings
-    if (!isset($resultsByClass[$className])) {
-        $resultsByClass[$className] = [];
-        $classSettings[$className] = [
-            'awards_points' => $result['awards_points'],
-            'ranking_type' => $result['ranking_type'],
-            'series_eligible' => $result['series_eligible']
-        ];
-    }
-
-    // Track winner time per class and calculate gap
-    if ($result['status'] === 'finished' && $result['finish_time']) {
-        if (!isset($classTimes[$className])) {
-            $classTimes[$className] = $result['finish_time'];
-            $result['calculated_gap'] = '';
-        } else {
-            // Calculate gap
-            $winnerTime = timeToSeconds($classTimes[$className]);
-            $currentTime = timeToSeconds($result['finish_time']);
-            $gap = $currentTime - $winnerTime;
-            $result['calculated_gap'] = $gap > 0 ? '+' . formatSecondsAsTime($gap) : '';
-        }
-    } else {
-        $result['calculated_gap'] = '';
-    }
-
-    $resultsByClass[$className][] = $result;
-}
-unset($result);
-
-// Sort each class according to its ranking_type
-foreach ($resultsByClass as $className => &$classResults) {
-    $rankingType = $classSettings[$className]['ranking_type'] ?? 'time';
-
-    if ($rankingType === 'name') {
-        // Sort by name alphabetically
-        usort($classResults, function($a, $b) {
-            return strcasecmp($a['cyclist_name'], $b['cyclist_name']);
-        });
-    } elseif ($rankingType === 'bib') {
-        // Sort by bib number
-        usort($classResults, function($a, $b) {
-            return ((int)$a['bib_number'] ?: 9999) - ((int)$b['bib_number'] ?: 9999);
-        });
-    }
-    // 'time' is already sorted by the SQL query
-}
-unset($classResults);
-
-// Check if we have split times to show
-$hasSplitTimes = false;
-$hasRunTimes = false;
-$maxSplits = 0;
-foreach ($results as $result) {
-    for ($i = 1; $i <= 10; $i++) {
-        if (!empty($result['ss' . $i])) {
-            $hasSplitTimes = true;
-            $maxSplits = max($maxSplits, $i);
-        }
-    }
-    if (!empty($result['run_1_time']) || !empty($result['run_2_time'])) {
-        $hasRunTimes = true;
-    }
-}
-
-$pageTitle = $event['name'] . ' - Resultat';
+$pageTitle = 'Resultat';
+$pageType = 'public';
+include __DIR__ . '/includes/layout-header.php';
 ?>
-<!DOCTYPE html>
-<html lang="sv">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?= h($pageTitle) ?> - TheHUB</title>
-    <link rel="stylesheet" href="/assets/gravityseries-theme.css">
-    <style>
-        .gs-gap-time { color: var(--gs-text-secondary); font-size: 0.85em; }
-        .gs-split-times { font-size: 0.85em; color: var(--gs-text-secondary); }
-        .gs-class-header { background: var(--gs-primary); color: white; padding: var(--gs-space-md); margin-top: var(--gs-space-lg); }
-        .gs-class-header:first-child { margin-top: 0; }
-    </style>
-</head>
-<body>
-    <!-- Navigation -->
-    <nav class="gs-nav">
-        <div class="gs-container">
-            <ul class="gs-nav-list">
-                <li><a href="/public/index.php" class="gs-nav-link">
-                    <i data-lucide="home"></i> Hem
-                </a></li>
-                <li><a href="/public/events.php" class="gs-nav-link">
-                    <i data-lucide="calendar"></i> Tävlingar
-                </a></li>
-                <li><a href="/public/results.php" class="gs-nav-link active">
-                    <i data-lucide="trophy"></i> Resultat
-                </a></li>
-                <li style="margin-left: auto;"><a href="/admin/login.php" class="gs-btn gs-btn-sm gs-btn-primary">
-                    <i data-lucide="log-in"></i> Admin
-                </a></li>
-            </ul>
-        </div>
-    </nav>
 
-    <main class="gs-container gs-py-xl">
-        <!-- Event Header -->
+<main class="gs-main-content">
+    <div class="gs-container">
+        <div class="gs-mb-xl">
+            <h1 class="gs-h2 gs-text-primary gs-mb-sm">
+                <i data-lucide="trophy"></i>
+                Resultat
+            </h1>
+            <p class="gs-text-secondary">
+                <?= count($events) ?> tävlingar med resultat
+            </p>
+        </div>
+
+        <?php if (isset($error)): ?>
+            <div class="gs-alert gs-alert-danger gs-mb-lg">
+                <strong>Fel:</strong> <?= htmlspecialchars($error) ?>
+            </div>
+        <?php endif; ?>
+
+        <!-- Filter Section -->
         <div class="gs-card gs-mb-lg">
             <div class="gs-card-content">
-                <h1 class="gs-h2 gs-text-primary gs-mb-md">
-                    <i data-lucide="trophy"></i>
-                    <?= h($event['name']) ?>
-                </h1>
-                <div class="gs-flex gs-flex-col gs-gap-sm gs-text-secondary gs-text-sm">
+                <form method="GET" class="gs-grid gs-grid-cols-1 gs-md-grid-cols-2 gs-gap-md">
+                    <!-- Year Filter -->
                     <div>
-                        <i data-lucide="calendar"></i>
-                        <span class="gs-text-primary" style="font-weight: 600;">Datum:</span>
-                        <?= date('d M Y', strtotime($event['date'])) ?>
+                        <label for="year-filter" class="gs-label">
+                            <i data-lucide="calendar"></i>
+                            År
+                        </label>
+                        <select id="year-filter" name="year" class="gs-input" onchange="this.form.submit()">
+                            <option value="">Alla år</option>
+                            <?php foreach ($allYears as $yearRow): ?>
+                                <option value="<?= $yearRow['year'] ?>" <?= $filterYear == $yearRow['year'] ? 'selected' : '' ?>>
+                                    <?= $yearRow['year'] ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
                     </div>
+
+                    <!-- Series Filter -->
                     <div>
-                        <i data-lucide="map-pin"></i>
-                        <span class="gs-text-primary" style="font-weight: 600;">Plats:</span>
-                        <?= h($event['location']) ?>
+                        <label for="series-filter" class="gs-label">
+                            <i data-lucide="trophy"></i>
+                            Serie<?= $filterYear ? ' (' . $filterYear . ')' : '' ?>
+                        </label>
+                        <select id="series-filter" name="series_id" class="gs-input" onchange="this.form.submit()">
+                            <option value="">Alla serier</option>
+                            <?php foreach ($allSeries as $series): ?>
+                                <option value="<?= $series['id'] ?>" <?= $filterSeries == $series['id'] ? 'selected' : '' ?>>
+                                    <?= htmlspecialchars($series['name']) ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
                     </div>
-                    <?php if (!empty($event['distance'])): ?>
-                        <div>
-                            <i data-lucide="route"></i>
-                            <span class="gs-text-primary" style="font-weight: 600;">Distans:</span>
-                            <?= $event['distance'] ?> km
+                </form>
+
+                <!-- Active Filters Info -->
+                <?php if ($filterSeries || $filterYear): ?>
+                    <div class="gs-mt-md gs-section-divider">
+                        <div class="gs-flex gs-items-center gs-gap-sm gs-flex-wrap">
+                            <span class="gs-text-sm gs-text-secondary">Visar:</span>
+                            <?php if ($filterSeries): ?>
+                                <span class="gs-badge gs-badge-primary">
+                                    <?php
+                                    $seriesName = array_filter($allSeries, function($s) use ($filterSeries) {
+                                        return $s['id'] == $filterSeries;
+                                    });
+                                    echo $seriesName ? htmlspecialchars(reset($seriesName)['name']) : 'Serie #' . $filterSeries;
+                                    ?>
+                                </span>
+                            <?php endif; ?>
+                            <?php if ($filterYear): ?>
+                                <span class="gs-badge gs-badge-accent"><?= $filterYear ?></span>
+                            <?php endif; ?>
+                            <a href="/results.php" class="gs-btn gs-btn-sm gs-btn-outline">
+                                <i data-lucide="x"></i>
+                                Visa alla
+                            </a>
                         </div>
-                    <?php endif; ?>
-                    <div>
-                        <i data-lucide="flag"></i>
-                        <span class="gs-text-primary" style="font-weight: 600;">Typ:</span>
-                        <?= h(str_replace('_', ' ', $event['type'] ?? '')) ?>
                     </div>
-                </div>
+                <?php endif; ?>
             </div>
         </div>
 
-        <h2 class="gs-h3 gs-text-primary gs-mb-lg">
-            <i data-lucide="list"></i>
-            Resultat (<?= count($results) ?> deltagare)
-        </h2>
-
-        <?php if (empty($results)): ?>
+        <?php if (empty($events)): ?>
             <div class="gs-card">
-                <div class="gs-card-content gs-text-center gs-py-xl">
-                    <p class="gs-text-secondary">Inga resultat ännu</p>
+                <div class="gs-card-content">
+                    <div class="gs-alert gs-alert-warning">
+                        <p>Inga resultat hittades. Skapa ett event först eller importera resultat.</p>
+                    </div>
                 </div>
             </div>
         <?php else: ?>
-            <!-- Results by Class -->
-            <?php foreach ($resultsByClass as $className => $classResults): ?>
-                <div class="gs-card gs-mb-lg">
-                    <div class="gs-class-header">
-                        <h3 class="gs-h4 gs-m-0"><?= h($className) ?> (<?= count($classResults) ?>)</h3>
-                    </div>
-                    <div class="gs-table-responsive">
-                        <table class="gs-table">
-                            <thead>
-                                <tr>
-                                    <th style="width: 60px;">Plac</th>
-                                    <th>Namn</th>
-                                    <th>Klubb</th>
-                                    <th style="width: 100px;">Tid</th>
-                                    <th style="width: 100px;">+Tid</th>
-                                    <?php if ($hasSplitTimes): ?>
-                                        <?php for ($i = 1; $i <= $maxSplits; $i++): ?>
-                                            <th style="width: 80px;">SS<?= $i ?></th>
-                                        <?php endfor; ?>
+            <style>
+                .result-card-horizontal {
+                    display: grid;
+                    grid-template-columns: 120px 1fr;
+                    gap: 1rem;
+                    padding: 1rem;
+                    min-height: 100px;
+                }
+                .result-logo-container {
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    background: #f8f9fa;
+                    border-radius: 6px;
+                    padding: 0.5rem;
+                }
+                .result-logo-container img {
+                    max-width: 100%;
+                    max-height: 70px;
+                    object-fit: contain;
+                }
+                .result-info-right {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 0.5rem;
+                }
+                .result-date-box {
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 0.5rem;
+                    padding: 0.25rem 0.5rem;
+                    background: #48bb78;
+                    color: white;
+                    border-radius: 4px;
+                    font-size: 0.875rem;
+                    font-weight: 600;
+                    width: fit-content;
+                }
+                .result-title {
+                    font-size: 1.125rem;
+                    font-weight: 700;
+                    color: #1a202c;
+                    line-height: 1.3;
+                }
+                .result-meta {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 0.25rem;
+                    font-size: 0.875rem;
+                    color: #718096;
+                }
+                .result-stats {
+                    display: flex;
+                    gap: 1rem;
+                    font-size: 0.875rem;
+                    color: #4a5568;
+                }
+                @media (max-width: 640px) {
+                    .result-card-horizontal {
+                        grid-template-columns: 80px 1fr;
+                        gap: 0.75rem;
+                        padding: 0.75rem;
+                    }
+                    .result-logo-container img {
+                        max-height: 50px;
+                    }
+                    .result-title {
+                        font-size: 1rem;
+                    }
+                }
+            </style>
+
+            <!-- Events Grid - 2 columns on desktop -->
+            <div class="gs-grid gs-grid-cols-1 gs-md-grid-cols-2 gs-gap-md">
+                <?php foreach ($events as $event): ?>
+                    <a href="/event-results.php?id=<?= $event['id'] ?>" class="gs-event-card-link">
+                        <div class="gs-card gs-card-hover result-card-horizontal gs-event-card-transition">
+                            <!-- Logo Left -->
+                            <div class="result-logo-container">
+                                <?php if ($event['series_logo']): ?>
+                                    <img src="<?= h($event['series_logo']) ?>"
+                                         alt="<?= h($event['series_name']) ?>">
+                                <?php else: ?>
+                                    <div class="gs-event-no-logo">
+                                        <?= h($event['series_name'] ?? 'Event') ?>
+                                    </div>
+                                <?php endif; ?>
+                            </div>
+
+                            <!-- Info Right -->
+                            <div class="result-info-right">
+                                <div class="result-date-box">
+                                    <i data-lucide="calendar" class="gs-icon-sm"></i>
+                                    <?= date('d M Y', strtotime($event['date'])) ?>
+                                </div>
+
+                                <div class="result-title">
+                                    <?= h($event['name']) ?>
+                                </div>
+
+                                <div class="result-meta">
+                                    <?php if ($event['series_name']): ?>
+                                        <span>
+                                            <i data-lucide="trophy" class="gs-icon-12"></i>
+                                            <?= h($event['series_name']) ?>
+                                        </span>
                                     <?php endif; ?>
-                                    <?php if ($hasRunTimes): ?>
-                                        <th style="width: 80px;">Run 1</th>
-                                        <th style="width: 80px;">Run 2</th>
+                                    <?php if ($event['location']): ?>
+                                        <span>
+                                            <i data-lucide="map-pin" class="gs-icon-12"></i>
+                                            <?= h($event['location']) ?>
+                                        </span>
                                     <?php endif; ?>
-                                    <th style="width: 60px;">Poäng</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php foreach ($classResults as $result): ?>
-                                    <tr class="<?= $result['position'] >= 1 && $result['position'] <= 3 ? 'gs-podium-' . $result['position'] : '' ?>">
-                                        <td style="font-weight: 700; color: var(--gs-primary);">
-                                            <?php if ($result['status'] === 'finished' && $result['position']): ?>
-                                                <?= $result['position'] ?>
-                                            <?php elseif ($result['status'] === 'dnf'): ?>
-                                                DNF
-                                            <?php elseif ($result['status'] === 'dns'): ?>
-                                                DNS
-                                            <?php elseif ($result['status'] === 'dq'): ?>
-                                                DQ
-                                            <?php else: ?>
-                                                -
-                                            <?php endif; ?>
-                                        </td>
-                                        <td>
-                                            <a href="/rider.php?id=<?= $result['cyclist_id'] ?>" style="color: var(--gs-text-primary); text-decoration: none; font-weight: 500;">
-                                                <?= h($result['cyclist_name']) ?>
-                                            </a>
-                                            <?php if ($result['birth_year']): ?>
-                                                <span class="gs-text-secondary gs-text-xs" style="margin-left: var(--gs-space-xs);">
-                                                    (<?= $result['birth_year'] ?>)
-                                                </span>
-                                            <?php endif; ?>
-                                        </td>
-                                        <td class="gs-text-secondary"><?= h($result['club_name']) ?></td>
-                                        <td style="font-family: monospace;">
-                                            <?= $result['finish_time'] ? h($result['finish_time']) : '-' ?>
-                                        </td>
-                                        <td class="gs-gap-time" style="font-family: monospace;">
-                                            <?= h($result['calculated_gap']) ?>
-                                        </td>
-                                        <?php if ($hasSplitTimes): ?>
-                                            <?php for ($i = 1; $i <= $maxSplits; $i++): ?>
-                                                <td class="gs-split-times" style="font-family: monospace;">
-                                                    <?= !empty($result['ss' . $i]) ? h($result['ss' . $i]) : '-' ?>
-                                                </td>
-                                            <?php endfor; ?>
-                                        <?php endif; ?>
-                                        <?php if ($hasRunTimes): ?>
-                                            <td class="gs-split-times" style="font-family: monospace;">
-                                                <?= !empty($result['run_1_time']) ? h($result['run_1_time']) : '-' ?>
-                                            </td>
-                                            <td class="gs-split-times" style="font-family: monospace;">
-                                                <?= !empty($result['run_2_time']) ? h($result['run_2_time']) : '-' ?>
-                                            </td>
-                                        <?php endif; ?>
-                                        <td class="gs-text-secondary">
-                                            <?= (int)$result['points'] ?>
-                                        </td>
-                                    </tr>
-                                <?php endforeach; ?>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            <?php endforeach; ?>
+                                </div>
+
+                                <div class="result-stats">
+                                    <span>
+                                        <strong><?= $event['result_count'] ?></strong> deltagare
+                                    </span>
+                                    <?php if ($event['category_count'] > 0): ?>
+                                        <span>
+                                            <strong><?= $event['category_count'] ?></strong> <?= $event['category_count'] == 1 ? 'klass' : 'klasser' ?>
+                                        </span>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+                        </div>
+                    </a>
+                <?php endforeach; ?>
+            </div>
         <?php endif; ?>
+    </div>
+</main>
 
-        <!-- Back Button -->
-        <div class="gs-mt-lg">
-            <a href="/public/events.php" class="gs-btn gs-btn-outline">
-                <i data-lucide="arrow-left"></i>
-                Tillbaka till tävlingar
-            </a>
-        </div>
-    </main>
-
-    <!-- Footer -->
-    <footer class="gs-bg-dark gs-text-white gs-py-xl gs-text-center">
-        <div class="gs-container">
-            <p>&copy; <?= date('Y') ?> TheHUB - Sveriges plattform för cykeltävlingar</p>
-            <p class="gs-text-sm gs-text-secondary" style="margin-top: var(--gs-space-sm);">
-                <i data-lucide="palette"></i>
-                GravitySeries Design System + Lucide Icons
-            </p>
-        </div>
-    </footer>
-
-    <!-- Lucide Icons -->
-    <script src="https://unpkg.com/lucide@latest"></script>
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            lucide.createIcons();
-        });
-    </script>
-</body>
-</html>
+<?php include __DIR__ . '/includes/layout-footer.php'; ?>
