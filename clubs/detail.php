@@ -33,10 +33,15 @@ $riderDetails = $detail['rider_details'];
 // Get series info
 $series = $db->getRow("SELECT * FROM series WHERE id = ?", [$seriesId]);
 
-// Calculate top scorers across all events
+// Calculate top scorers across all events (only riders with points)
 $riderTotals = [];
 foreach ($riderDetails as $eventId => $riders) {
     foreach ($riders as $rider) {
+        // Skip riders with 0 points
+        if ($rider['club_points'] <= 0) {
+            continue;
+        }
+
         $riderId = $rider['rider_id'];
         if (!isset($riderTotals[$riderId])) {
             $riderTotals[$riderId] = [
@@ -47,9 +52,7 @@ foreach ($riderDetails as $eventId => $riders) {
             ];
         }
         $riderTotals[$riderId]['total_points'] += $rider['club_points'];
-        if ($rider['club_points'] > 0) {
-            $riderTotals[$riderId]['events']++;
-        }
+        $riderTotals[$riderId]['events']++;
     }
 }
 

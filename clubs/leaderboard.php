@@ -46,16 +46,23 @@ include __DIR__ . '/../includes/layout-header.php';
 
     .series-selector {
         display: flex;
+        flex-wrap: wrap;
         gap: 0.5rem;
         padding: 0.5rem;
         margin: -0.5rem -0.5rem 1.5rem -0.5rem;
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
-        scrollbar-width: none;
     }
 
-    .series-selector::-webkit-scrollbar {
-        display: none;
+    @media (max-width: 640px) {
+        .series-selector {
+            flex-wrap: nowrap;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+        }
+
+        .series-selector::-webkit-scrollbar {
+            display: none;
+        }
     }
 
     .series-btn {
