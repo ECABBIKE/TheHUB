@@ -45,11 +45,39 @@ include __DIR__ . '/../includes/layout-header.php';
     }
 
     .series-selector {
-        background: white;
-        border-radius: 8px;
-        padding: 1rem;
+        display: flex;
+        gap: 0.5rem;
+        padding: 0;
         margin-bottom: 1.5rem;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+    }
+
+    .series-selector::-webkit-scrollbar {
+        display: none;
+    }
+
+    .series-btn {
+        flex-shrink: 0;
+        padding: 0.5rem 1rem;
+        border: 2px solid #e5e7eb;
+        background: white;
+        border-radius: 999px;
+        cursor: pointer;
+        transition: all 0.2s;
+        font-weight: 600;
+        font-size: 0.875rem;
+        color: #6b7280;
+        text-decoration: none;
+        white-space: nowrap;
+    }
+
+    .series-btn:hover,
+    .series-btn.active {
+        background: var(--gs-primary);
+        color: white;
+        border-color: var(--gs-primary);
     }
 
     .club-card {
@@ -264,13 +292,12 @@ include __DIR__ . '/../includes/layout-header.php';
             <!-- Series Selector -->
             <?php if (count($seriesList) > 1): ?>
             <div class="series-selector">
-                <select class="gs-input" onchange="window.location.href='?series_id=' + this.value">
-                    <?php foreach ($seriesList as $series): ?>
-                        <option value="<?= $series['id'] ?>" <?= $series['id'] == $selectedSeriesId ? 'selected' : '' ?>>
-                            <?= h($series['name']) ?> (<?= $series['year'] ?>)
-                        </option>
-                    <?php endforeach; ?>
-                </select>
+                <?php foreach ($seriesList as $series): ?>
+                    <a href="?series_id=<?= $series['id'] ?>"
+                       class="series-btn <?= $series['id'] == $selectedSeriesId ? 'active' : '' ?>">
+                        <?= h($series['name']) ?>
+                    </a>
+                <?php endforeach; ?>
             </div>
             <?php endif; ?>
 
