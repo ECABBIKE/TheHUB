@@ -96,7 +96,7 @@ $results = $db->getAll("
 ", [$riderId]);
 
 // Calculate statistics based on class position
-$totalRaces = count($results);
+$totalRaces = 0;
 $podiums = 0;
 $wins = 0;
 $bestPosition = null;
@@ -104,6 +104,11 @@ $totalPoints = 0;
 $dnfCount = 0;
 
 foreach ($results as $result) {
+    // Skip DNS in statistics - they didn't actually race
+    if ($result['status'] === 'dns') continue;
+
+    $totalRaces++;
+
     // Use class_position for statistics (position within rider's class)
     $classPos = $result['class_position'] ?? null;
     if ($result['status'] === 'finished' && $classPos) {
@@ -186,9 +191,12 @@ if ($totalRaces > 0 && $rider['birth_year'] && $rider['gender']) {
     }
 }
 
-// Get results by year
+// Get results by year (exclude DNS - Did Not Start)
 $resultsByYear = [];
 foreach ($results as $result) {
+    // Skip DNS results - they shouldn't be shown at all
+    if ($result['status'] === 'dns') continue;
+
     $year = date('Y', strtotime($result['event_date']));
     if (!isset($resultsByYear[$year])) {
         $resultsByYear[$year] = [];
@@ -418,6 +426,10 @@ try {
                                         </thead>
                                         <tbody>
                                             <?php foreach ($yearResults as $result): ?>
+                                                <?php
+                                                // Skip DNS (Did Not Start) - don't show these events
+                                                if ($result['status'] === 'dns') continue;
+                                                ?>
                                                 <tr>
                                                     <td><?= date('Y-m-d', strtotime($result['event_date'])) ?></td>
                                                     <td>
@@ -461,7 +473,9 @@ try {
                                                         <?php
                                                         $displayPos = ($result['status'] === 'finished') ? ($result['class_position'] ?? null) : null;
                                                         ?>
-                                                        <?php if ($displayPos): ?>
+                                                        <?php if ($result['status'] === 'dnf'): ?>
+                                                            <span class="gs-badge gs-badge-danger">DNF</span>
+                                                        <?php elseif ($displayPos): ?>
                                                             <?php if ($displayPos == 1): ?>
                                                                 <span class="gs-badge gs-badge-success">🥇 1</span>
                                                             <?php elseif ($displayPos == 2): ?>
