@@ -120,6 +120,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $message = 'Ordning uppdaterad!';
         $messageType = 'success';
+    } elseif ($action === 'update_count_best') {
+        $countBest = $_POST['count_best_results'];
+        $countBestValue = ($countBest === '' || $countBest === 'null') ? null : intval($countBest);
+
+        $db->update('series', [
+            'count_best_results' => $countBestValue
+        ], 'id = ?', [$seriesId]);
+
+        // Refresh series data
+        $series = $db->getRow("SELECT * FROM series WHERE id = ?", [$seriesId]);
+
+        if ($countBestValue === null) {
+            $message = 'Alla resultat räknas nu';
+        } else {
+            $message = "Räknar nu de {$countBestValue} bästa resultaten";
+        }
+        $messageType = 'success';
     } elseif ($action === 'move_up' || $action === 'move_down') {
         $seriesEventId = intval($_POST['series_event_id']);
 
@@ -213,14 +230,47 @@ include __DIR__ . '/../includes/layout-header.php';
         <?php endif; ?>
 
         <div class="gs-grid gs-grid-cols-1 gs-lg-grid-cols-3 gs-gap-lg">
-            <!-- Add Event Card -->
-            <div class="gs-card gs-gradient-brand">
-                <div class="gs-card-header">
-                    <h2 class="gs-h5">
-                        <i data-lucide="plus"></i>
-                        Lägg till Event
-                    </h2>
+            <!-- Settings Column -->
+            <div>
+                <!-- Count Best Results Card -->
+                <div class="gs-card gs-mb-lg">
+                    <div class="gs-card-header">
+                        <h2 class="gs-h5">
+                            <i data-lucide="calculator"></i>
+                            Poängräkning
+                        </h2>
+                    </div>
+                    <div class="gs-card-content">
+                        <form method="POST">
+                            <?= csrf_field() ?>
+                            <input type="hidden" name="action" value="update_count_best">
+
+                            <div class="gs-form-group">
+                                <label for="count_best_results" class="gs-label">Räkna bästa resultat</label>
+                                <select name="count_best_results" id="count_best_results" class="gs-input" onchange="this.form.submit()">
+                                    <option value="null" <?= $series['count_best_results'] === null ? 'selected' : '' ?>>Alla resultat</option>
+                                    <?php for ($i = 1; $i <= 10; $i++): ?>
+                                        <option value="<?= $i ?>" <?= $series['count_best_results'] == $i ? 'selected' : '' ?>>
+                                            Bästa <?= $i ?> av <?= count($seriesEvents) ?>
+                                        </option>
+                                    <?php endfor; ?>
+                                </select>
+                                <small class="gs-text-xs gs-text-secondary">
+                                    Övriga resultat visas med överstrykning och räknas inte i totalen
+                                </small>
+                            </div>
+                        </form>
+                    </div>
                 </div>
+
+                <!-- Add Event Card -->
+                <div class="gs-card gs-gradient-brand">
+                    <div class="gs-card-header">
+                        <h2 class="gs-h5">
+                            <i data-lucide="plus"></i>
+                            Lägg till Event
+                        </h2>
+                    </div>
                 <div class="gs-card-content">
                     <?php if (empty($eventsNotInSeries)): ?>
                         <p class="gs-text-sm gs-text-secondary">Alla events är redan tillagda i serien.</p>
@@ -268,6 +318,7 @@ include __DIR__ . '/../includes/layout-header.php';
                     <?php endif; ?>
                 </div>
             </div>
+            </div> <!-- Close Settings Column -->
 
             <!-- Events List -->
             <div class="gs-lg-col-span-2">
