@@ -16,7 +16,7 @@ $sortBy = $_GET['sort'] ?? 'name';
 $sortOrder = $_GET['order'] ?? 'asc';
 
 // Validate sort parameters
-$allowedSorts = ['name', 'year'];
+$allowedSorts = ['name', 'year', 'club', 'license'];
 $allowedOrders = ['asc', 'desc'];
 if (!in_array($sortBy, $allowedSorts)) $sortBy = 'name';
 if (!in_array($sortOrder, $allowedOrders)) $sortOrder = 'asc';
@@ -27,6 +27,10 @@ if ($sortBy === 'name') {
     $orderBy = $sortOrder === 'asc' ? 'c.lastname ASC, c.firstname ASC' : 'c.lastname DESC, c.firstname DESC';
 } elseif ($sortBy === 'year') {
     $orderBy = $sortOrder === 'asc' ? 'c.birth_year ASC' : 'c.birth_year DESC';
+} elseif ($sortBy === 'club') {
+    $orderBy = $sortOrder === 'asc' ? 'cl.name ASC, c.lastname ASC' : 'cl.name DESC, c.lastname ASC';
+} elseif ($sortBy === 'license') {
+    $orderBy = $sortOrder === 'asc' ? 'c.license_number ASC' : 'c.license_number DESC';
 }
 
 // Build query filters
@@ -171,8 +175,24 @@ include __DIR__ . '/../includes/layout-header.php';
                                             <?php endif; ?>
                                         </a>
                                     </th>
-                                    <th>Klubb</th>
-                                    <th>Licensnummer</th>
+                                    <th>
+                                        <a href="?sort=club&order=<?= $sortBy === 'club' && $sortOrder === 'asc' ? 'desc' : 'asc' ?><?= $search ? '&search=' . urlencode($search) : '' ?><?= $club_id ? '&club_id=' . $club_id : '' ?><?= $onlyWithResults ? '&with_results=1' : '' ?><?= $onlySweId ? '&swe_only=1' : '' ?>"
+                                           class="gs-link gs-sortable-header">
+                                            Klubb
+                                            <?php if ($sortBy === 'club'): ?>
+                                                <i data-lucide="<?= $sortOrder === 'asc' ? 'arrow-up' : 'arrow-down' ?>" class="gs-icon-14"></i>
+                                            <?php endif; ?>
+                                        </a>
+                                    </th>
+                                    <th>
+                                        <a href="?sort=license&order=<?= $sortBy === 'license' && $sortOrder === 'asc' ? 'desc' : 'asc' ?><?= $search ? '&search=' . urlencode($search) : '' ?><?= $club_id ? '&club_id=' . $club_id : '' ?><?= $onlyWithResults ? '&with_results=1' : '' ?><?= $onlySweId ? '&swe_only=1' : '' ?>"
+                                           class="gs-link gs-sortable-header">
+                                            Licensnummer
+                                            <?php if ($sortBy === 'license'): ?>
+                                                <i data-lucide="<?= $sortOrder === 'asc' ? 'arrow-up' : 'arrow-down' ?>" class="gs-icon-14"></i>
+                                            <?php endif; ?>
+                                        </a>
+                                    </th>
                                     <th>Licensstatus</th>
                                     <th>Disciplin</th>
                                     <th class="gs-table-col-actions">Åtgärder</th>
@@ -323,20 +343,20 @@ include __DIR__ . '/../includes/layout-header.php';
             if (query === lastSearch) return;
 
             // Show status indicator
-            if (query.length >= 2 || query.length === 0) {
+            if (query.length >= 3 || query.length === 0) {
                 searchStatus.style.display = 'inline';
             }
 
-            // Debounce: wait 300ms after user stops typing
+            // Debounce: wait 600ms after user stops typing
             debounceTimer = setTimeout(function() {
-                // Only search if at least 2 characters or empty (to clear)
-                if (query.length >= 2 || query.length === 0) {
+                // Only search if at least 3 characters or empty (to clear)
+                if (query.length >= 3 || query.length === 0) {
                     lastSearch = query;
                     searchForm.submit();
                 } else {
                     searchStatus.style.display = 'none';
                 }
-            }, 300);
+            }, 600);
         });
 
         // Also handle Enter key
@@ -346,6 +366,13 @@ include __DIR__ . '/../includes/layout-header.php';
                 searchForm.submit();
             }
         });
+
+        // Auto-focus search field if there's a search query
+        if (searchInput.value) {
+            searchInput.focus();
+            // Move cursor to end of text
+            searchInput.setSelectionRange(searchInput.value.length, searchInput.value.length);
+        }
     })();
 </script>
 
