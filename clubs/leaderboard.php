@@ -49,7 +49,17 @@ include __DIR__ . '/../includes/layout-header.php';
         flex-wrap: wrap;
         gap: 0.5rem;
         padding: 0.5rem;
-        margin: -0.5rem -0.5rem 1.5rem -0.5rem;
+        margin: -0.5rem -0.5rem 0.75rem -0.5rem;
+        justify-content: center;
+    }
+
+    .series-selector-main {
+        margin-bottom: 0.5rem;
+    }
+
+    .series-btn-main {
+        font-size: 1rem;
+        padding: 0.625rem 1.25rem;
     }
 
     @media (max-width: 640px) {
@@ -299,14 +309,38 @@ include __DIR__ . '/../includes/layout-header.php';
 
             <!-- Series Selector -->
             <?php if (count($seriesList) > 1): ?>
+            <?php
+            // Separate Total series from regional/discipline series
+            $totalSeries = [];
+            $otherSeries = [];
+            foreach ($seriesList as $series) {
+                if (stripos($series['name'], 'Total') !== false) {
+                    $totalSeries[] = $series;
+                } else {
+                    $otherSeries[] = $series;
+                }
+            }
+            ?>
+            <?php if (!empty($totalSeries)): ?>
+            <div class="series-selector series-selector-main">
+                <?php foreach ($totalSeries as $series): ?>
+                    <a href="?series_id=<?= $series['id'] ?>"
+                       class="series-btn series-btn-main <?= $series['id'] == $selectedSeriesId ? 'active' : '' ?>">
+                        <?= h($series['name']) ?>
+                    </a>
+                <?php endforeach; ?>
+            </div>
+            <?php endif; ?>
+            <?php if (!empty($otherSeries)): ?>
             <div class="series-selector">
-                <?php foreach ($seriesList as $series): ?>
+                <?php foreach ($otherSeries as $series): ?>
                     <a href="?series_id=<?= $series['id'] ?>"
                        class="series-btn <?= $series['id'] == $selectedSeriesId ? 'active' : '' ?>">
                         <?= h($series['name']) ?>
                     </a>
                 <?php endforeach; ?>
             </div>
+            <?php endif; ?>
             <?php endif; ?>
 
             <?php if (!$tablesExist): ?>
