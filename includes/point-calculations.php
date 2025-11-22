@@ -414,7 +414,7 @@ function recalculateDHEventResults($db, $event_id, $new_scale_id = null, $use_sw
 
         // Get all results grouped by category/class
         $results = $db->getAll("
-            SELECT id, category_id, class_id, run_1_time, run_2_time, status
+            SELECT id, category_id, class_id, run_1_time, run_2_time, status, COALESCE(is_ebike, 0) as is_ebike
             FROM results
             WHERE event_id = ?
             ORDER BY category_id, class_id
@@ -502,23 +502,29 @@ function recalculateDHEventResults($db, $event_id, $new_scale_id = null, $use_sw
             $pos = 1;
             foreach ($overallResults as $result) {
                 $overallPosition = null;
-                if ($result['status'] === 'finished' && (!empty($result['run_1_time']) || !empty($result['run_2_time']))) {
+                $pointsData = ['run_1_points' => 0, 'run_2_points' => 0, 'total_points' => 0];
+
+                // E-BIKE participants don't get position or points
+                if ($result['is_ebike']) {
+                    $overallPosition = null;
+                    // Points already set to 0 above
+                } elseif ($result['status'] === 'finished' && (!empty($result['run_1_time']) || !empty($result['run_2_time']))) {
                     $overallPosition = $pos++;
+
+                    // Calculate DH points
+                    $run1Pos = $run1Positions[$result['id']];
+                    $run2Pos = $run2Positions[$result['id']];
+
+                    $pointsData = calculateDHPoints(
+                        $db,
+                        $event_id,
+                        $overallPosition,
+                        $run1Pos,
+                        $run2Pos,
+                        $result['status'],
+                        $use_swecup_dh
+                    );
                 }
-
-                // Calculate DH points
-                $run1Pos = $run1Positions[$result['id']];
-                $run2Pos = $run2Positions[$result['id']];
-
-                $pointsData = calculateDHPoints(
-                    $db,
-                    $event_id,
-                    $overallPosition,
-                    $run1Pos,
-                    $run2Pos,
-                    $result['status'],
-                    $use_swecup_dh
-                );
 
                 // Update result with positions and points
                 try {
@@ -580,7 +586,7 @@ function recalculateEventResults($db, $event_id, $new_scale_id = null) {
         // Get all results grouped by class_id
         // Convert finish_time to seconds for proper sorting (handles M:SS.mm and H:MM:SS.mm formats)
         $results = $db->getAll("
-            SELECT id, class_id, finish_time, status,
+            SELECT id, class_id, finish_time, status, COALESCE(is_ebike, 0) as is_ebike,
                    CASE
                        WHEN finish_time IS NULL OR finish_time = '' THEN 999999
                        WHEN finish_time LIKE '%:%:%' THEN
@@ -614,14 +620,18 @@ function recalculateEventResults($db, $event_id, $new_scale_id = null) {
 
             foreach ($classResults as $result) {
                 $newPosition = null;
+                $newPoints = 0;
 
-                if ($result['status'] === 'finished' && !empty($result['finish_time'])) {
+                // E-BIKE participants don't get position or points
+                if ($result['is_ebike']) {
+                    $newPosition = null;
+                    $newPoints = 0;
+                } elseif ($result['status'] === 'finished' && !empty($result['finish_time'])) {
                     $newPosition = $position;
                     $position++;
+                    // Calculate points based on new position
+                    $newPoints = calculatePoints($db, $event_id, $newPosition, $result['status']);
                 }
-
-                // Calculate points based on new position
-                $newPoints = calculatePoints($db, $event_id, $newPosition, $result['status']);
 
                 // Update result
                 try {
