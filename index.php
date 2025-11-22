@@ -13,13 +13,10 @@ include __DIR__ . '/includes/layout-header.php';
         <div class="gs-hero gs-text-center">
             <img src="http://gravityseries.se/wp-content/uploads/2024/03/Gravity-Series-White.png"
                  alt="Gravity Series"
-                 style="max-width: 300px; margin-bottom: 1rem;">
+                 style="width: 100%; max-width: 600px; margin-bottom: 1rem;">
             <h1 class="gs-h1 gs-hero-title-white">
                 TheHUB
             </h1>
-            <p class="gs-hero-subtitle">
-                Din kompletta plattform för cykeltävlingar i Sverige
-            </p>
         </div>
 
         <!-- About TheHUB -->
