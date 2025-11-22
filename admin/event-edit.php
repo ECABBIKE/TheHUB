@@ -49,6 +49,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'venue_id' => !empty($_POST['venue_id']) ? intval($_POST['venue_id']) : null,
             'discipline' => trim($_POST['discipline'] ?? ''),
             'event_format' => trim($_POST['event_format'] ?? 'ENDURO'),
+            'stage_names' => !empty($_POST['stage_names']) ? trim($_POST['stage_names']) : null,
             'series_id' => !empty($_POST['series_id']) ? intval($_POST['series_id']) : null,
             'distance' => !empty($_POST['distance']) ? floatval($_POST['distance']) : null,
             'elevation_gain' => !empty($_POST['elevation_gain']) ? intval($_POST['elevation_gain']) : null,
@@ -317,6 +318,25 @@ include __DIR__ . '/../includes/layout-header.php';
                                 <?php endforeach; ?>
                             </select>
                         </div>
+                    </div>
+
+                    <!-- Stage Names Configuration -->
+                    <div>
+                        <label for="stage_names" class="gs-label">
+                            <i data-lucide="list-ordered"></i>
+                            Sträcknamn (JSON)
+                        </label>
+                        <textarea
+                            id="stage_names"
+                            name="stage_names"
+                            class="gs-input"
+                            rows="3"
+                            placeholder='{"1":"SS1","2":"SS2","3":"SS3","4":"SS3-1","5":"SS4"}'
+                        ><?= htmlspecialchars($event['stage_names'] ?? '') ?></textarea>
+                        <small class="gs-text-muted">
+                            JSON-format för anpassade sträcknamn. Lämna tomt för standard (SS1, SS2, etc).
+                            Exempel för E-bike med dubbla körningar: {"1":"SS1","2":"SS2","3":"SS3","4":"SS3-1","5":"SS4","6":"SS5","7":"SS6","8":"SS6-1"}
+                        </small>
                     </div>
 
                     <!-- Distance and Elevation -->

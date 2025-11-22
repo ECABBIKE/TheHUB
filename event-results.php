@@ -114,12 +114,26 @@ foreach ($results as $result) {
 // Check if any results have split times
 $hasSplitTimes = false;
 foreach ($results as $result) {
-    for ($i = 1; $i <= 10; $i++) {
+    for ($i = 1; $i <= 15; $i++) {
         if (!empty($result['ss' . $i])) {
             $hasSplitTimes = true;
             break 2;
         }
     }
+}
+
+// Parse stage names configuration
+$stageNames = [];
+if (!empty($event['stage_names'])) {
+    $stageNames = json_decode($event['stage_names'], true) ?: [];
+}
+
+// Helper function to get stage display name
+function getStageName($stageNum, $stageNames) {
+    if (isset($stageNames[$stageNum])) {
+        return $stageNames[$stageNum];
+    }
+    return 'SS' . $stageNum;
 }
 
 // Group results by class
@@ -229,8 +243,8 @@ unset($classData);
 foreach ($resultsByClass as $classKey => &$classData) {
     $classData['split_stats'] = [];
 
-    // For each split (ss1 to ss10)
-    for ($ss = 1; $ss <= 10; $ss++) {
+    // For each split (ss1 to ss15)
+    for ($ss = 1; $ss <= 15; $ss++) {
         $times = [];
         foreach ($classData['results'] as $result) {
             if (!empty($result['ss' . $ss]) && $result['status'] === 'finished') {
@@ -738,10 +752,10 @@ include __DIR__ . '/includes/layout-header.php';
                         </h2>
                     </div>
                     <?php
-                    // Check which SS columns this class has data for
+                    // Check which SS columns this class has data for (ss1-ss15)
                     $classSplitCols = [];
                     if ($hasSplitTimes && !$isDH) {
-                        for ($i = 1; $i <= 10; $i++) {
+                        for ($i = 1; $i <= 15; $i++) {
                             foreach ($groupData['results'] as $r) {
                                 if (!empty($r['ss' . $i])) {
                                     $classSplitCols[] = $i;
@@ -771,7 +785,7 @@ include __DIR__ . '/includes/layout-header.php';
                                         <th class="gs-table-col-medium">+Tid</th>
                                         <?php $colIndex++; ?>
                                         <?php foreach ($classSplitCols as $ssNum): ?>
-                                            <th class="gs-table-col-medium split-time-col sortable-header" onclick="sortTable(this, <?= $colIndex++ ?>)">SS<?= $ssNum ?></th>
+                                            <th class="gs-table-col-medium split-time-col sortable-header" onclick="sortTable(this, <?= $colIndex++ ?>)"><?= h(getStageName($ssNum, $stageNames)) ?></th>
                                         <?php endforeach; ?>
                                     <?php endif; ?>
                                     <?php if ($isDH): ?>
