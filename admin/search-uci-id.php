@@ -2,8 +2,10 @@
 /**
  * Search UCI-ID Tool
  * Upload CSV to find and fill in License Numbers
- * Version: v1.0.0 [2025-11-22-001]
+ * Version: v1.2.0 [2025-11-22-003]
  */
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
 
 require_once __DIR__ . '/../config.php';
 require_admin();
@@ -17,11 +19,11 @@ $messageType = '';
 
 // Column mapping defaults
 $colMapping = [
-    'firstname' => 0,
-    'lastname' => 1,
-    'club' => 2,
-    'class' => 3,
-    'license' => 4
+    'firstname' => $_POST['col_firstname'] ?? 0,
+    'lastname' => $_POST['col_lastname'] ?? 1,
+    'club' => $_POST['col_club'] ?? 2,
+    'class' => $_POST['col_class'] ?? 3,
+    'uci_id' => $_POST['col_uci_id'] ?? 4
 ];
 
 // Handle CSV export
@@ -83,12 +85,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['csv_file'])) {
         $headers = str_getcsv(trim($lines[0]), $separator);
         $headers = array_map('trim', $headers);
 
-        // Get column indices from POST
-        $colMapping['firstname'] = (int)($_POST['col_firstname'] ?? 0);
-        $colMapping['lastname'] = (int)($_POST['col_lastname'] ?? 1);
-        $colMapping['club'] = (int)($_POST['col_club'] ?? 2);
-        $colMapping['class'] = (int)($_POST['col_class'] ?? 3);
-        $colMapping['license'] = (int)($_POST['col_license'] ?? 4);
+        // Get column indices from POST or auto-detect
+        $colMapping['firstname'] = (int)($_POST['col_firstname'] ?? findColumn($headers, ['förnamn', 'firstname', 'first_name', 'first name']));
+        $colMapping['lastname'] = (int)($_POST['col_lastname'] ?? findColumn($headers, ['efternamn', 'lastname', 'last_name', 'last name', 'name']));
+        $colMapping['club'] = (int)($_POST['col_club'] ?? findColumn($headers, ['klubb', 'club', 'team', 'förening']));
+        $colMapping['class'] = (int)($_POST['col_class'] ?? findColumn($headers, ['klass', 'class', 'kategori', 'category']));
+        $colMapping['uci_id'] = (int)($_POST['col_uci_id'] ?? findColumn($headers, ['uci_id', 'uci id', 'uciid', 'license', 'licens', 'license_number']));
 
         // Process data rows
         $exportData = [];
@@ -103,35 +105,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['csv_file'])) {
             $lastname = trim($parts[$colMapping['lastname']] ?? '');
             $club = trim($parts[$colMapping['club']] ?? '');
             $inputClass = trim($parts[$colMapping['class']] ?? '');
-            $existingLicense = trim($parts[$colMapping['license']] ?? '');
+            $existingUciId = trim($parts[$colMapping['uci_id']] ?? '');
 
             if (empty($firstname) && empty($lastname)) {
                 continue;
             }
 
-            // Search for rider if no license exists or has temp ID
+            // Search for rider if no UCI ID exists
             $match = null;
-            $license = $existingLicense;
+            $uciId = $existingUciId;
 
-            if (empty($existingLicense) || strpos($existingLicense, 'SWE25') === 0) {
+            if (empty($existingUciId) || strpos($existingUciId, 'SWE25') === 0) {
                 $match = findRider($db, $firstname, $lastname, $club);
                 if ($match && !empty($match['license_number'])) {
-                    $license = $match['license_number'];
+                    $uciId = $match['license_number'];
                 }
             }
 
             // Update stats
             if ($match) {
                 $matchStats[$match['match_type']]++;
-            } elseif (empty($existingLicense)) {
+            } elseif (empty($existingUciId)) {
                 $matchStats['not_found']++;
             }
 
-            // Fill in license in the row
-            while (count($parts) <= $colMapping['license']) {
+            // Fill in UCI ID in the row
+            while (count($parts) <= $colMapping['uci_id']) {
                 $parts[] = '';
             }
-            $parts[$colMapping['license']] = $license;
+            $parts[$colMapping['uci_id']] = $uciId;
 
             $exportData[] = $parts;
 
@@ -140,9 +142,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['csv_file'])) {
                 'lastname' => $lastname,
                 'club' => $club,
                 'class' => $inputClass,
-                'original_license' => $existingLicense,
-                'license' => $license,
-                'match_type' => $match ? $match['match_type'] : ($existingLicense ? 'existing' : 'not_found'),
+                'original_uci_id' => $existingUciId,
+                'uci_id' => $uciId,
+                'match_type' => $match ? $match['match_type'] : ($existingUciId ? 'existing' : 'not_found'),
                 'found_name' => $match ? $match['firstname'] . ' ' . $match['lastname'] : '',
                 'found_club' => $match ? $match['club_name'] : '',
                 'confidence' => $match ? $match['confidence'] : 0
@@ -159,161 +161,210 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['csv_file'])) {
 }
 
 /**
+ * Find column index by name
+ */
+function findColumn($headers, $names) {
+    foreach ($headers as $i => $header) {
+        $normalized = strtolower(trim($header));
+        foreach ($names as $name) {
+            if ($normalized === strtolower($name)) {
+                return $i;
+            }
+        }
+    }
+    return 0;
+}
+
+/**
  * Find rider in database using multiple strategies
+ * Uses license_number field (TheHUB structure)
  */
 function findRider($db, $firstname, $lastname, $club) {
-    // Strategy 1: Exact match with club
-    if (!empty($club)) {
-        $rider = $db->getRow("
-            SELECT r.id, r.firstname, r.lastname, r.license_number,
-                   r.birth_year, r.gender, c.name as club_name
-            FROM riders r
-            LEFT JOIN clubs c ON r.club_id = c.id
-            WHERE LOWER(r.firstname) = LOWER(?)
-              AND LOWER(r.lastname) = LOWER(?)
-              AND LOWER(c.name) LIKE LOWER(?)
-            LIMIT 1
-        ", [$firstname, $lastname, '%' . $club . '%']);
-
-        if ($rider && !empty($rider['license_number'])) {
-            return array_merge($rider, ['match_type' => 'exact', 'confidence' => 100]);
-        }
-    }
-
-    // Strategy 2: Exact name match (any club)
-    $rider = $db->getRow("
-        SELECT r.id, r.firstname, r.lastname, r.license_number,
-               r.birth_year, r.gender, c.name as club_name
-        FROM riders r
-        LEFT JOIN clubs c ON r.club_id = c.id
-        WHERE LOWER(r.firstname) = LOWER(?)
-          AND LOWER(r.lastname) = LOWER(?)
-          AND r.license_number IS NOT NULL
-          AND r.license_number != ''
-        ORDER BY r.license_year DESC
-        LIMIT 1
-    ", [$firstname, $lastname]);
-
-    if ($rider) {
-        $confidence = empty($club) ? 90 : (stripos($rider['club_name'] ?? '', $club) !== false ? 95 : 80);
-        return array_merge($rider, ['match_type' => 'exact', 'confidence' => $confidence]);
-    }
-
-    // Strategy 2b: Handle double last names (e.g., "Svensson Lindberg")
-    // Search where DB lastname contains the search lastname or vice versa
-    $rider = $db->getRow("
-        SELECT r.id, r.firstname, r.lastname, r.license_number,
-               r.birth_year, r.gender, c.name as club_name
-        FROM riders r
-        LEFT JOIN clubs c ON r.club_id = c.id
-        WHERE LOWER(r.firstname) = LOWER(?)
-          AND (LOWER(r.lastname) LIKE LOWER(?) OR LOWER(?) LIKE CONCAT('%', LOWER(r.lastname), '%'))
-          AND r.license_number IS NOT NULL
-          AND r.license_number != ''
-        ORDER BY r.license_year DESC
-        LIMIT 1
-    ", [$firstname, '%' . $lastname . '%', $lastname]);
-
-    if ($rider) {
-        $confidence = 85;
-        if (!empty($club) && stripos($rider['club_name'] ?? '', $club) !== false) {
-            $confidence = 90;
-        }
-        return array_merge($rider, ['match_type' => 'exact', 'confidence' => $confidence]);
-    }
-
-    // Strategy 2c: If lastname has space, try matching last part only
-    if (strpos($lastname, ' ') !== false) {
-        $lastnameParts = explode(' ', $lastname);
-        $lastPart = end($lastnameParts);
-
-        $rider = $db->getRow("
-            SELECT r.id, r.firstname, r.lastname, r.license_number,
-                   r.birth_year, r.gender, c.name as club_name
-            FROM riders r
-            LEFT JOIN clubs c ON r.club_id = c.id
-            WHERE LOWER(r.firstname) = LOWER(?)
-              AND LOWER(r.lastname) LIKE LOWER(?)
-              AND r.license_number IS NOT NULL
-              AND r.license_number != ''
-            ORDER BY r.license_year DESC
-            LIMIT 1
-        ", [$firstname, '%' . $lastPart]);
-
-        if ($rider) {
-            $confidence = 80;
-            if (!empty($club) && stripos($rider['club_name'] ?? '', $club) !== false) {
-                $confidence = 85;
-            }
-            return array_merge($rider, ['match_type' => 'fuzzy', 'confidence' => $confidence]);
-        }
-    }
-
-    // Strategy 3: Fuzzy match (normalized names)
     $normFirstname = normalizeString($firstname);
     $normLastname = normalizeString($lastname);
     $normClub = normalizeString($club);
 
-    $riders = $db->getAll("
-        SELECT r.id, r.firstname, r.lastname, r.license_number,
-               r.birth_year, r.gender, c.name as club_name
-        FROM riders r
-        LEFT JOIN clubs c ON r.club_id = c.id
-        WHERE r.license_number IS NOT NULL
-          AND r.license_number != ''
-        ORDER BY r.license_year DESC
-    ");
+    // Strategy 1: Exact match with club
+    if (!empty($club)) {
+        try {
+            $riders = $db->getAll("
+                SELECT r.id, r.firstname, r.lastname, r.license_number,
+                       r.birth_year, r.gender, c.name as club_name
+                FROM riders r
+                LEFT JOIN clubs c ON r.club_id = c.id
+                WHERE LOWER(r.firstname) = ?
+                  AND LOWER(r.lastname) = ?
+                  AND LOWER(c.name) LIKE ?
+                  AND r.license_number IS NOT NULL
+                  AND r.license_number != ''
+                ORDER BY r.license_year DESC
+                LIMIT 1
+            ", [strtolower($firstname), strtolower($lastname), '%' . strtolower($club) . '%']);
 
-    $bestMatch = null;
-    $bestScore = 0;
-
-    foreach ($riders as $rider) {
-        $riderNormFirst = normalizeString($rider['firstname']);
-        $riderNormLast = normalizeString($rider['lastname']);
-
-        if ($riderNormFirst === $normFirstname && $riderNormLast === $normLastname) {
-            $score = 85;
-
-            if (!empty($normClub) && !empty($rider['club_name'])) {
-                $riderNormClub = normalizeString($rider['club_name']);
-                if (strpos($riderNormClub, $normClub) !== false || strpos($normClub, $riderNormClub) !== false) {
-                    $score = 90;
-                }
+            if (!empty($riders)) {
+                $rider = $riders[0];
+                return array_merge($rider, ['match_type' => 'exact', 'confidence' => 100]);
             }
-
-            if ($score > $bestScore) {
-                $bestScore = $score;
-                $bestMatch = array_merge($rider, ['match_type' => 'fuzzy', 'confidence' => $score]);
-            }
+        } catch (Exception $e) {
+            // Fallthrough to next strategy
         }
+    }
 
-        // Partial match (first 3 chars)
-        if (strlen($normFirstname) >= 3 && strlen($normLastname) >= 3) {
-            if (substr($riderNormFirst, 0, 3) === substr($normFirstname, 0, 3) &&
-                substr($riderNormLast, 0, 3) === substr($normLastname, 0, 3)) {
+    // Strategy 2: Exact name match (any club)
+    try {
+        $riders = $db->getAll("
+            SELECT r.id, r.firstname, r.lastname, r.license_number,
+                   r.birth_year, r.gender, c.name as club_name
+            FROM riders r
+            LEFT JOIN clubs c ON r.club_id = c.id
+            WHERE LOWER(r.firstname) = ?
+              AND LOWER(r.lastname) = ?
+              AND r.license_number IS NOT NULL
+              AND r.license_number != ''
+            ORDER BY r.license_year DESC
+            LIMIT 1
+        ", [strtolower($firstname), strtolower($lastname)]);
+
+        if (!empty($riders)) {
+            $rider = $riders[0];
+            $confidence = empty($club) ? 90 : (stripos($rider['club_name'] ?? '', $club) !== false ? 95 : 80);
+            return array_merge($rider, ['match_type' => 'exact', 'confidence' => $confidence]);
+        }
+    } catch (Exception $e) {
+        // Fallthrough to next strategy
+    }
+
+    // Strategy 2b: Handle double last names (e.g., "Svensson Lindberg")
+    try {
+        $riders = $db->getAll("
+            SELECT r.id, r.firstname, r.lastname, r.license_number,
+                   r.birth_year, r.gender, c.name as club_name
+            FROM riders r
+            LEFT JOIN clubs c ON r.club_id = c.id
+            WHERE LOWER(r.firstname) = ?
+              AND (LOWER(r.lastname) LIKE ? OR ? LIKE CONCAT('%', LOWER(r.lastname), '%'))
+              AND r.license_number IS NOT NULL
+              AND r.license_number != ''
+            ORDER BY r.license_year DESC
+            LIMIT 1
+        ", [strtolower($firstname), '%' . strtolower($lastname) . '%', strtolower($lastname)]);
+
+        if (!empty($riders)) {
+            $rider = $riders[0];
+            $confidence = 85;
+            if (!empty($club) && stripos($rider['club_name'] ?? '', $club) !== false) {
+                $confidence = 90;
+            }
+            return array_merge($rider, ['match_type' => 'exact', 'confidence' => $confidence]);
+        }
+    } catch (Exception $e) {
+        // Fallthrough to next strategy
+    }
+
+    // Strategy 2c: If lastname has space, try matching last part only
+    if (strpos($lastname, ' ') !== false) {
+        try {
+            $lastnameParts = explode(' ', $lastname);
+            $lastPart = end($lastnameParts);
+
+            $riders = $db->getAll("
+                SELECT r.id, r.firstname, r.lastname, r.license_number,
+                       r.birth_year, r.gender, c.name as club_name
+                FROM riders r
+                LEFT JOIN clubs c ON r.club_id = c.id
+                WHERE LOWER(r.firstname) = ?
+                  AND LOWER(r.lastname) LIKE ?
+                  AND r.license_number IS NOT NULL
+                  AND r.license_number != ''
+                ORDER BY r.license_year DESC
+                LIMIT 1
+            ", [strtolower($firstname), '%' . strtolower($lastPart)]);
+
+            if (!empty($riders)) {
+                $rider = $riders[0];
+                $confidence = 80;
+                if (!empty($club) && stripos($rider['club_name'] ?? '', $club) !== false) {
+                    $confidence = 85;
+                }
+                return array_merge($rider, ['match_type' => 'fuzzy', 'confidence' => $confidence]);
+            }
+        } catch (Exception $e) {
+            // Fallthrough to next strategy
+        }
+    }
+
+    // Strategy 3: Fuzzy match (normalized names) - no LIMIT to search all riders
+    try {
+        $riders = $db->getAll("
+            SELECT r.id, r.firstname, r.lastname, r.license_number,
+                   r.birth_year, r.gender, c.name as club_name
+            FROM riders r
+            LEFT JOIN clubs c ON r.club_id = c.id
+            WHERE r.license_number IS NOT NULL
+              AND r.license_number != ''
+            ORDER BY r.license_year DESC
+        ", []);
+
+        $bestMatch = null;
+        $bestScore = 0;
+
+        foreach ($riders as $rider) {
+            $riderNormFirst = normalizeString($rider['firstname']);
+            $riderNormLast = normalizeString($rider['lastname']);
+
+            if ($riderNormFirst === $normFirstname && $riderNormLast === $normLastname) {
+                $score = 85;
 
                 if (!empty($normClub) && !empty($rider['club_name'])) {
                     $riderNormClub = normalizeString($rider['club_name']);
                     if (strpos($riderNormClub, $normClub) !== false || strpos($normClub, $riderNormClub) !== false) {
-                        $score = 70;
-                        if ($score > $bestScore) {
-                            $bestScore = $score;
-                            $bestMatch = array_merge($rider, ['match_type' => 'partial', 'confidence' => $score]);
+                        $score = 90;
+                    }
+                }
+
+                if ($score > $bestScore) {
+                    $bestScore = $score;
+                    $bestMatch = array_merge($rider, ['match_type' => 'fuzzy', 'confidence' => $score]);
+                }
+            }
+
+            // Partial match (first 3 chars)
+            if (strlen($normFirstname) >= 3 && strlen($normLastname) >= 3) {
+                if (substr($riderNormFirst, 0, 3) === substr($normFirstname, 0, 3) &&
+                    substr($riderNormLast, 0, 3) === substr($normLastname, 0, 3)) {
+                    $score = 60;
+
+                    if (!empty($normClub) && !empty($rider['club_name'])) {
+                        $riderNormClub = normalizeString($rider['club_name']);
+                        if (strpos($riderNormClub, $normClub) !== false || strpos($normClub, $riderNormClub) !== false) {
+                            $score = 70;
                         }
+                    }
+
+                    if ($score > $bestScore) {
+                        $bestScore = $score;
+                        $bestMatch = array_merge($rider, ['match_type' => 'partial', 'confidence' => $score]);
                     }
                 }
             }
         }
+
+        if ($bestMatch) {
+            return $bestMatch;
+        }
+    } catch (Exception $e) {
+        // No matches found
     }
 
-    return $bestMatch;
+    return null;
 }
 
 /**
- * Normalize string for comparison
+ * Normalize string for comparison (without iconv for compatibility)
  */
 function normalizeString($str) {
-    $str = mb_strtolower($str, 'UTF-8');
+    $str = mb_strtolower(trim($str), 'UTF-8');
+    // Replace Swedish characters
     $str = preg_replace('/[åä]/u', 'a', $str);
     $str = preg_replace('/[ö]/u', 'o', $str);
     $str = preg_replace('/[é]/u', 'e', $str);
@@ -321,7 +372,7 @@ function normalizeString($str) {
     return $str;
 }
 
-$pageTitle = 'Sök License Number';
+$pageTitle = 'Sök License Number (UCI-ID)';
 $pageType = 'admin';
 include __DIR__ . '/../includes/layout-header.php';
 ?>
@@ -334,7 +385,7 @@ include __DIR__ . '/../includes/layout-header.php';
             <div>
                 <h1 class="gs-h1">
                     <i data-lucide="search"></i>
-                    Sök License Number
+                    Sök License Number (UCI-ID)
                 </h1>
                 <p class="gs-text-secondary">
                     Ladda upp CSV för att hitta och fylla i license numbers
@@ -365,7 +416,7 @@ include __DIR__ . '/../includes/layout-header.php';
                         <label class="gs-label">CSV-fil</label>
                         <input type="file" name="csv_file" accept=".csv,.txt" class="gs-input" required>
                         <small class="gs-text-secondary">
-                            CSV med kolumner för förnamn, efternamn, klubb, klass och license number
+                            CSV med kolumner för förnamn, efternamn, klubb och license number
                         </small>
                     </div>
 
@@ -389,7 +440,7 @@ include __DIR__ . '/../includes/layout-header.php';
                         </div>
                         <div class="gs-form-group">
                             <label class="gs-label">License</label>
-                            <input type="number" name="col_license" value="4" min="0" class="gs-input">
+                            <input type="number" name="col_uci_id" value="4" min="0" class="gs-input">
                         </div>
                     </div>
 
@@ -455,7 +506,6 @@ include __DIR__ . '/../includes/layout-header.php';
                                 <tr>
                                     <th>Namn</th>
                                     <th>Klubb</th>
-                                    <th>Klass</th>
                                     <th>Original License</th>
                                     <th>Hittad License</th>
                                     <th>Match</th>
@@ -502,19 +552,18 @@ include __DIR__ . '/../includes/layout-header.php';
                                                 <br><small class="gs-text-secondary">&rarr; <?= h($result['found_club']) ?></small>
                                             <?php endif; ?>
                                         </td>
-                                        <td><?= h($result['class']) ?></td>
                                         <td>
-                                            <?php if ($result['original_license']): ?>
-                                                <code><?= h($result['original_license']) ?></code>
+                                            <?php if ($result['original_uci_id']): ?>
+                                                <code><?= h($result['original_uci_id']) ?></code>
                                             <?php else: ?>
                                                 <span class="gs-text-secondary">-</span>
                                             <?php endif; ?>
                                         </td>
                                         <td>
-                                            <?php if ($result['license'] && $result['license'] !== $result['original_license']): ?>
-                                                <code class="gs-text-success"><?= h($result['license']) ?></code>
-                                            <?php elseif ($result['license']): ?>
-                                                <code><?= h($result['license']) ?></code>
+                                            <?php if ($result['uci_id'] && $result['uci_id'] !== $result['original_uci_id']): ?>
+                                                <code class="gs-text-success"><?= h($result['uci_id']) ?></code>
+                                            <?php elseif ($result['uci_id']): ?>
+                                                <code><?= h($result['uci_id']) ?></code>
                                             <?php else: ?>
                                                 <span class="gs-text-danger">-</span>
                                             <?php endif; ?>
@@ -540,7 +589,7 @@ include __DIR__ . '/../includes/layout-header.php';
 </main>
 
 <div class="gs-container gs-py-sm">
-    <small class="gs-text-secondary">Search UCI-ID v1.1.0 [2025-11-22-002]</small>
+    <small class="gs-text-secondary">Search UCI-ID v1.2.0 [2025-11-22-003]</small>
 </div>
 
 <?php include __DIR__ . '/../includes/layout-footer.php'; ?>
