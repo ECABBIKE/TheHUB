@@ -1,27 +1,23 @@
 name: Deploy to FTP
-
 on:
   push:
     branches:
       - main
-
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       
-      - name: Deploy to FTP
+      - name: Deploy public folder to FTP
         uses: SamKirkland/FTP-Deploy-Action@v4.3.4
         with:
           server: ${{ secrets.FTP_SERVER }}
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
-          local-dir: ./
-          server-dir: /public_html/
+          local-dir: ./public/
+          server-dir: /public_html/public/
           exclude: |
             **/.git*
-            **/.git*/**
             **/.env
             **/node_modules/**
-            **/.github/**
