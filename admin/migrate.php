@@ -256,6 +256,13 @@ include __DIR__ . '/../includes/layout-header.php';
         <?php endif; ?>
 
         <!-- Stats -->
+        <?php
+        $successCount = 0;
+        foreach ($executedMigrations as $m) {
+            if ($m['success']) $successCount++;
+        }
+        $pendingCount = count($migrationFiles) - $successCount;
+        ?>
         <div class="gs-grid gs-grid-cols-3 gs-gap-md gs-mb-lg">
             <div class="gs-card">
                 <div class="gs-card-content gs-text-center">
@@ -265,18 +272,12 @@ include __DIR__ . '/../includes/layout-header.php';
             </div>
             <div class="gs-card">
                 <div class="gs-card-content gs-text-center">
-                    <?php
-                    $successCount = count(array_filter($executedMigrations, fn($m) => $m['success']));
-                    ?>
                     <div class="gs-text-2xl gs-text-success"><?= $successCount ?></div>
                     <div class="gs-text-sm gs-text-secondary">Körda</div>
                 </div>
             </div>
             <div class="gs-card">
                 <div class="gs-card-content gs-text-center">
-                    <?php
-                    $pendingCount = count($migrationFiles) - $successCount;
-                    ?>
                     <div class="gs-text-2xl gs-text-warning"><?= $pendingCount ?></div>
                     <div class="gs-text-sm gs-text-secondary">Väntande</div>
                 </div>
