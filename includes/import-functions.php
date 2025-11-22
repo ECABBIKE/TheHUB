@@ -611,6 +611,7 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
                 'finish_time' => $finishTime,
                 'status' => $status,
                 'points' => $points,
+                'is_ebike' => $isEBike ? 1 : 0,
                 'run_1_time' => $data['run_1_time'] ?? null,
                 'run_2_time' => $data['run_2_time'] ?? null,
                 'ss1' => $data['ss1'] ?? null,
