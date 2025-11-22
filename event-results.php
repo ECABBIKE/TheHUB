@@ -254,10 +254,25 @@ foreach ($resultsByClass as $classKey => &$classData) {
 
         if (count($times) >= 2) {
             sort($times);
+            $min = $times[0];
+            $max = $times[count($times) - 1];
+
+            // Handle outliers: if max is way behind, use 90th percentile as effective max
+            // This prevents one slow time from making everyone else green
+            if (count($times) >= 3) {
+                $p90Index = (int) floor(count($times) * 0.9);
+                $p90 = $times[$p90Index];
+
+                // If max is more than 30% above 90th percentile, it's an outlier
+                if ($max > $p90 * 1.3) {
+                    $max = $p90;
+                }
+            }
+
             $classData['split_stats'][$ss] = [
-                'min' => $times[0],
-                'max' => $times[count($times) - 1],
-                'range' => $times[count($times) - 1] - $times[0]
+                'min' => $min,
+                'max' => $max,
+                'range' => $max - $min
             ];
         }
     }

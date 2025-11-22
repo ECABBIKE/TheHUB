@@ -54,6 +54,7 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
 
     $errors = [];
     $stageNamesMapping = []; // Will store original header names for split times
+    $changelog = []; // Track what changed during updates
 
     // Set global event mapping for use in import
     global $IMPORT_EVENT_MAPPING;
@@ -449,6 +450,18 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
             $classId = $forceClassId;
             $className = trim($data['class_name'] ?? '');
             if (!$classId && !empty($className)) {
+                // Normalize class names for common variants
+                $classNameMappings = [
+                    'tävling damer' => 'Damer Elit',
+                    'tävling herrar' => 'Herrar Elit',
+                    'tavling damer' => 'Damer Elit',
+                    'tavling herrar' => 'Herrar Elit',
+                ];
+                $normalizedClassName = strtolower($className);
+                if (isset($classNameMappings[$normalizedClassName])) {
+                    $className = $classNameMappings[$normalizedClassName];
+                }
+
                 if (!isset($classCache[$className])) {
                     // Check if we have a mapping from the preview page
                     global $IMPORT_CLASS_MAPPINGS;
@@ -597,10 +610,32 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
             if ($existingResult) {
                 // Update existing
                 $oldData = $db->getRow("SELECT * FROM results WHERE id = ?", [$existingResult['id']]);
-                $db->update('results', $resultData, 'id = ?', [$existingResult['id']]);
-                $stats['updated']++;
-                if ($importId) {
-                    trackImportRecord($db, $importId, 'result', $existingResult['id'], 'updated', $oldData);
+
+                // Track what changed
+                $changes = [];
+                foreach ($resultData as $field => $newValue) {
+                    $oldValue = $oldData[$field] ?? null;
+                    // Normalize for comparison (treat empty string as null)
+                    $oldNorm = ($oldValue === '' || $oldValue === null) ? null : $oldValue;
+                    $newNorm = ($newValue === '' || $newValue === null) ? null : $newValue;
+                    if ($oldNorm !== $newNorm) {
+                        $changes[$field] = ['old' => $oldValue, 'new' => $newValue];
+                    }
+                }
+
+                if (!empty($changes)) {
+                    $db->update('results', $resultData, 'id = ?', [$existingResult['id']]);
+                    $stats['updated']++;
+                    $changelog[] = [
+                        'rider' => $data['firstname'] . ' ' . $data['lastname'],
+                        'changes' => $changes
+                    ];
+                    if ($importId) {
+                        trackImportRecord($db, $importId, 'result', $existingResult['id'], 'updated', $oldData);
+                    }
+                } else {
+                    // No changes, count as skipped
+                    $stats['skipped']++;
                 }
             } else {
                 // Insert new
@@ -623,6 +658,7 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
         'stats' => $stats,
         'matching' => $matching_stats,
         'errors' => $errors,
-        'stage_names' => $stageNamesMapping
+        'stage_names' => $stageNamesMapping,
+        'changelog' => $changelog
     ];
 }

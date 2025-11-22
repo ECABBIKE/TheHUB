@@ -167,8 +167,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_import'])) {
 
         // Add info about riders updated with UCI IDs
         $matchingInfo = "";
-        $ridersCreated = $stats['matching']['riders_created'] ?? 0;
-        $ridersUpdatedWithUci = $stats['matching']['riders_updated_with_uci'] ?? 0;
+        $ridersCreated = $matching_stats['riders_created'] ?? 0;
+        $ridersUpdatedWithUci = $matching_stats['riders_updated_with_uci'] ?? 0;
         if ($ridersCreated > 0 || $ridersUpdatedWithUci > 0) {
             $parts = [];
             if ($ridersCreated > 0) {
@@ -180,7 +180,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_import'])) {
             $matchingInfo = " " . implode(", ", $parts) . ".";
         }
 
-        set_flash('success', "Import klar! {$stats['success']} nya, {$stats['updated']} uppdaterade av {$stats['total']} resultat.{$matchingInfo}{$recalcMsg}");
+        // Summarize changelog for updates
+        $changelogInfo = "";
+        $changelog = $result['changelog'] ?? [];
+        if (!empty($changelog)) {
+            // Count changed fields
+            $fieldCounts = [];
+            foreach ($changelog as $change) {
+                foreach ($change['changes'] as $field => $values) {
+                    $fieldCounts[$field] = ($fieldCounts[$field] ?? 0) + 1;
+                }
+            }
+            // Show top 3 most changed fields
+            arsort($fieldCounts);
+            $topFields = array_slice($fieldCounts, 0, 3, true);
+            $fieldParts = [];
+            foreach ($topFields as $field => $count) {
+                $fieldParts[] = "{$field}: {$count}";
+            }
+            if (!empty($fieldParts)) {
+                $changelogInfo = " Ändrade fält: " . implode(", ", $fieldParts) . ".";
+            }
+        }
+
+        // Show skipped as unchanged
+        $unchangedInfo = "";
+        if ($stats['skipped'] > 0) {
+            $unchangedInfo = " ({$stats['skipped']} oförändrade)";
+        }
+
+        set_flash('success', "Import klar! {$stats['success']} nya, {$stats['updated']} uppdaterade{$unchangedInfo} av {$stats['total']} resultat.{$matchingInfo}{$changelogInfo}{$recalcMsg}");
         header('Location: /admin/event-edit.php?id=' . $selectedEventId . '&tab=results');
         exit;
 
