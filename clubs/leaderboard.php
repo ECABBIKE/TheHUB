@@ -47,8 +47,8 @@ include __DIR__ . '/../includes/layout-header.php';
     .series-selector {
         display: flex;
         gap: 0.5rem;
-        padding: 0;
-        margin-bottom: 1.5rem;
+        padding: 0.5rem;
+        margin: -0.5rem -0.5rem 1.5rem -0.5rem;
         overflow-x: auto;
         -webkit-overflow-scrolling: touch;
         scrollbar-width: none;
