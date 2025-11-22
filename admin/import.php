@@ -8,10 +8,11 @@ $messageType = 'success';
 
 // Handle file upload
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['import_file'])) {
+    checkCsrf();
     $importType = $_POST['import_type'] ?? '';
     $file = $_FILES['import_file'];
 
-    $validation = validateUpload($file);
+    $validation = validateFileUpload($file, ['text/csv', 'text/plain', 'application/csv', 'application/vnd.ms-excel']);
 
     if (!$validation['valid']) {
         $message = $validation['error'];

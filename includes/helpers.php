@@ -5,6 +5,14 @@ function h($str) {
     return htmlspecialchars($str ?? '', ENT_QUOTES, 'UTF-8');
 }
 
+/**
+ * Safe output for JavaScript contexts
+ * Use this instead of addslashes() for JavaScript strings
+ */
+function js($str) {
+    return json_encode($str ?? '', JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP);
+}
+
 function redirect($url) {
     if (strpos($url, '/') !== 0) {
         $url = '/' . $url;

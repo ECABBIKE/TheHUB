@@ -31,6 +31,11 @@ header("Permissions-Policy: geolocation=(), microphone=(), camera=()");
 // XSS Protection (for older browsers)
 header("X-XSS-Protection: 1; mode=block");
 
+// Strict Transport Security (HSTS) - only when using HTTPS
+if (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') {
+    header("Strict-Transport-Security: max-age=31536000; includeSubDomains");
+}
+
 // Content Security Policy (allow self + unpkg.com for Lucide icons)
 $csp = implode('; ', [
     "default-src 'self'",

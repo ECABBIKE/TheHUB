@@ -8,11 +8,20 @@ if (is_admin()) {
 
 // Handle login
 $error = '';
+
+// Check for session timeout message
+if (isset($_GET['timeout'])) {
+    $error = 'Din session har gått ut. Vänligen logga in igen.';
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $username = $_POST['username'] ?? '';
     $password = $_POST['password'] ?? '';
 
-    if (login_admin($username, $password)) {
+    // Check rate limiting before attempting login
+    if (isLoginRateLimited($username)) {
+        $error = 'För många inloggningsförsök. Vänta 15 minuter och försök igen.';
+    } elseif (login_admin($username, $password)) {
         redirect('/admin/dashboard.php');
     } else {
         $error = 'Felaktigt användarnamn eller lösenord';

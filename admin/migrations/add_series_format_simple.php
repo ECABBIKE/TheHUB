@@ -88,9 +88,6 @@ try {
 
         if (!empty($verify)) {
             echo "<p class='success'>✓ Column 'format' verified!</p>";
-            echo "<pre>";
-            print_r($verify);
-            echo "</pre>";
         } else {
             throw new Exception("Column was not added!");
         }
@@ -98,9 +95,6 @@ try {
 
     } else {
         echo "<p class='info'>Column 'format' already exists!</p>";
-        echo "<pre>";
-        print_r($columns);
-        echo "</pre>";
         echo "</div>";
     }
 

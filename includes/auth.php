@@ -50,18 +50,78 @@ function requireLogin() {
     if (!isLoggedIn()) {
         redirect('/admin/login.php');
     }
+
+    // Session activity timeout (30 minutes)
+    $timeout = defined('SESSION_ACTIVITY_TIMEOUT') ? SESSION_ACTIVITY_TIMEOUT : 1800;
+    if (isset($_SESSION['last_activity']) && (time() - $_SESSION['last_activity'] > $timeout)) {
+        logout();
+        redirect('/admin/login.php?timeout=1');
+    }
+    $_SESSION['last_activity'] = time();
+}
+
+/**
+ * Check if login attempts are rate limited
+ */
+function isLoginRateLimited($username) {
+    $key = 'login_attempts_' . md5($username . $_SERVER['REMOTE_ADDR']);
+
+    if (!isset($_SESSION[$key])) {
+        $_SESSION[$key] = ['count' => 0, 'first_attempt' => time()];
+    }
+
+    $attempts = &$_SESSION[$key];
+
+    // Reset after 15 minutes
+    if (time() - $attempts['first_attempt'] > 900) {
+        $attempts = ['count' => 0, 'first_attempt' => time()];
+    }
+
+    // Allow max 5 attempts per 15 minutes
+    return $attempts['count'] >= 5;
+}
+
+/**
+ * Record a failed login attempt
+ */
+function recordFailedLogin($username) {
+    $key = 'login_attempts_' . md5($username . $_SERVER['REMOTE_ADDR']);
+
+    if (!isset($_SESSION[$key])) {
+        $_SESSION[$key] = ['count' => 0, 'first_attempt' => time()];
+    }
+
+    $_SESSION[$key]['count']++;
+}
+
+/**
+ * Clear login attempts after successful login
+ */
+function clearLoginAttempts($username) {
+    $key = 'login_attempts_' . md5($username . $_SERVER['REMOTE_ADDR']);
+    unset($_SESSION[$key]);
 }
 
 /**
  * Login user
  */
 function login($username, $password) {
+    // Check for rate limiting
+    if (isLoginRateLimited($username)) {
+        return false;
+    }
+
     // Check default admin credentials from config
     // WARNING: Change these in .env file for production!
     $defaultUsername = defined('DEFAULT_ADMIN_USERNAME') ? DEFAULT_ADMIN_USERNAME : 'admin';
     $defaultPassword = defined('DEFAULT_ADMIN_PASSWORD') ? DEFAULT_ADMIN_PASSWORD : 'admin';
 
-    if ($username === $defaultUsername && $password === $defaultPassword) {
+    // Use constant-time comparison and hashed password for default admin
+    $defaultPasswordHash = defined('DEFAULT_ADMIN_PASSWORD_HASH')
+        ? DEFAULT_ADMIN_PASSWORD_HASH
+        : password_hash($defaultPassword, PASSWORD_DEFAULT);
+
+    if ($username === $defaultUsername && password_verify($password, $defaultPasswordHash)) {
         // Regenerate session ID to prevent session fixation
         session_regenerate_id(true);
 
@@ -71,6 +131,8 @@ function login($username, $password) {
         $_SESSION['admin_role'] = 'super_admin';
         $_SESSION['admin_name'] = 'Administrator';
         $_SESSION['session_regenerated'] = true;
+        $_SESSION['last_activity'] = time();
+        clearLoginAttempts($username);
         return true;
     }
 
@@ -92,10 +154,12 @@ function login($username, $password) {
         $user = $stmt->fetch();
 
         if (!$user) {
+            recordFailedLogin($username);
             return false;
         }
 
         if (!password_verify($password, $user['password_hash'])) {
+            recordFailedLogin($username);
             return false;
         }
 
@@ -109,14 +173,17 @@ function login($username, $password) {
         $_SESSION['admin_role'] = $user['role'];
         $_SESSION['admin_name'] = $user['full_name'] ?? $user['username'];
         $_SESSION['session_regenerated'] = true;
+        $_SESSION['last_activity'] = time();
 
         // Update last login
         $stmt = $pdo->prepare("UPDATE admin_users SET last_login = NOW() WHERE id = ?");
         $stmt->execute([$user['id']]);
 
+        clearLoginAttempts($username);
         return true;
     } catch (PDOException $e) {
         error_log("Login error: " . $e->getMessage());
+        recordFailedLogin($username);
         return false;
     }
 }

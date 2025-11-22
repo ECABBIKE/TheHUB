@@ -464,9 +464,9 @@ include __DIR__ . '/../includes/layout-header.php';
 
         <!-- Messages -->
         <?php if ($message): ?>
-            <div class="gs-alert gs-alert-<?= $messageType ?> gs-mb-lg">
+            <div class="gs-alert gs-alert-<?= h($messageType) ?> gs-mb-lg">
                 <i data-lucide="<?= $messageType === 'success' ? 'check-circle' : ($messageType === 'error' ? 'alert-circle' : 'info') ?>"></i>
-                <?= $message ?>
+                <?= h($message) ?>
             </div>
         <?php endif; ?>
 

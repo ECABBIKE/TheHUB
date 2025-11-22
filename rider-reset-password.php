@@ -75,7 +75,7 @@ include __DIR__ . '/includes/layout-header.php';
                 <?php if ($message): ?>
                     <div class="gs-alert gs-alert-<?= h($messageType) ?> gs-mb-lg">
                         <i data-lucide="<?= $messageType === 'success' ? 'check-circle' : 'alert-circle' ?>"></i>
-                        <?= $message ?>
+                        <?= h($message) ?>
                     </div>
                 <?php endif; ?>
 

@@ -60,13 +60,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['csv_file'])) {
                 // Parse CSV
                 $row = str_getcsv($line, $separator);
 
-                // Debug first 3 rows
-                if ($line_number <= 3) {
-                    error_log("=== ROW $line_number ===");
-                    error_log("Columns found: " . count($row));
-                    error_log("Raw data: " . print_r($row, true));
-                }
-
                 // Ensure minimum columns
                 if (count($row) < 11) {
                     error_log("Row $line_number: Only " . count($row) . " columns, expected 11");

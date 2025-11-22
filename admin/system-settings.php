@@ -255,25 +255,13 @@ $debugTools = [
         'icon' => 'database',
         'items' => [
             ['name' => 'Kör Migrationer', 'url' => '/admin/migrate.php', 'desc' => 'Kör databas migrationer'],
-            ['name' => 'Test DB', 'url' => '/admin/test-database-connection.php', 'desc' => 'Testa databasanslutning'],
-            ['name' => 'Debug Database', 'url' => '/admin/debug-database.php', 'desc' => 'Visa databasinformation'],
         ]
     ],
     'system' => [
-        'title' => 'System & Session',
+        'title' => 'System',
         'icon' => 'settings',
         'items' => [
-            ['name' => 'Debug Session', 'url' => '/admin/debug-session.php', 'desc' => 'Testa sessionshantering'],
             ['name' => 'Check Files', 'url' => '/admin/check-files.php', 'desc' => 'Kontrollera filer'],
-            ['name' => 'Debug General', 'url' => '/admin/debug.php', 'desc' => 'Allmän debug'],
-        ]
-    ],
-    'import' => [
-        'title' => 'Import & CSV',
-        'icon' => 'upload',
-        'items' => [
-            ['name' => 'Test Import', 'url' => '/admin/test-import.php', 'desc' => 'Testa import'],
-            ['name' => 'Debug CSV', 'url' => '/admin/debug-csv-mapping.php', 'desc' => 'Debug CSV mapping'],
         ]
     ]
 ];
