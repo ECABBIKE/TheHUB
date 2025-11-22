@@ -116,13 +116,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_import'])) {
         // Create event mapping - all rows go to selected event
         $eventMapping = ['Välj event för alla resultat' => $selectedEventId];
 
-        // Get event's custom stage names for column mapping
-        $eventData = $db->getRow("SELECT stage_names FROM events WHERE id = ?", [$selectedEventId]);
-        $stageNames = [];
-        if (!empty($eventData['stage_names'])) {
-            $stageNames = json_decode($eventData['stage_names'], true) ?: [];
-        }
-
         // Import with event mapping
         $importId = startImportHistory(
             $db,
@@ -137,13 +130,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_import'])) {
             $db,
             $importId,
             $eventMapping,
-            null,
-            $stageNames
+            null
         );
 
         $stats = $result['stats'];
         $matching_stats = $result['matching'];
         $errors = $result['errors'];
+
+        // Auto-save stage names from import headers to event
+        if (!empty($result['stage_names'])) {
+            $db->update('events', [
+                'stage_names' => json_encode($result['stage_names'])
+            ], 'id = ?', [$selectedEventId]);
+        }
 
         // Update import history
         $importStatus = ($stats['success'] > 0) ? 'completed' : 'failed';
