@@ -965,6 +965,8 @@ details.gs-details-lg summary {
   display: flex;
   gap: 0.25rem;
   border-bottom: 2px solid var(--gs-border);
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .gs-tab {
@@ -977,6 +979,8 @@ details.gs-details-lg summary {
   border-bottom: 2px solid transparent;
   margin-bottom: -2px;
   transition: all 0.2s;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .gs-tab:hover {
