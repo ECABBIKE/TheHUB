@@ -147,6 +147,7 @@ $recentResults = array_slice($results, 0, 5);
 $gravityTotalStats = null;
 $gravityTotalPosition = null;
 $gravityTotalClassTotal = 0;
+$currentClassName = null;
 
 // Get GravitySeries Team stats (club points)
 $gravityTeamStats = null;
@@ -198,6 +199,10 @@ if ($totalRaces > 0) {
                 }
 
                 if ($riderClassId) {
+                    // Get class name
+                    $classInfo = $db->getRow("SELECT name, display_name FROM classes WHERE id = ?", [$riderClassId]);
+                    $currentClassName = $classInfo['display_name'] ?? $classInfo['name'] ?? null;
+
                     $classStandings = $db->getAll("
                         SELECT r.cyclist_id, SUM(r.points) as total_points
                         FROM results r
@@ -592,7 +597,7 @@ try {
                     }
                 }
             </style>
-            <div style="background: #ffc; padding: 5px; margin-bottom: 10px; font-size: 10px;">BUILD 050 - rider_id: <?= $riderId ?>, club_id: <?= $rider['club_id'] ?? 'null' ?></div>
+            <div style="background: #ffc; padding: 5px; margin-bottom: 10px; font-size: 10px;">BUILD 051 - rider_id: <?= $riderId ?>, club_id: <?= $rider['club_id'] ?? 'null' ?></div>
             <div class="rider-stats-top">
                 <div class="gs-card gs-stat-card-compact">
                     <div class="gs-stat-number-compact gs-text-primary"><?= $totalRaces ?></div>
@@ -613,9 +618,16 @@ try {
                         <?= $gravityTotalStats ? number_format($gravityTotalStats['total_points'] ?? 0) : '0' ?>
                     </div>
                     <div class="gs-stat-label-compact">GravitySeries Total</div>
-                    <?php if ($gravityTotalPosition): ?>
+                    <?php if ($currentClassName || $gravityTotalPosition): ?>
                         <div class="gs-text-xs gs-text-secondary gs-mt-xs">
-                            #<?= $gravityTotalPosition ?> av <?= $gravityTotalClassTotal ?>
+                            <?php if ($currentClassName): ?>
+                                <?= h($currentClassName) ?>
+                                <?php if ($gravityTotalPosition): ?>
+                                    • #<?= $gravityTotalPosition ?>/<?= $gravityTotalClassTotal ?>
+                                <?php endif; ?>
+                            <?php elseif ($gravityTotalPosition): ?>
+                                #<?= $gravityTotalPosition ?> av <?= $gravityTotalClassTotal ?>
+                            <?php endif; ?>
                         </div>
                     <?php endif; ?>
                 </div>
