@@ -147,9 +147,12 @@ $recentResults = array_slice($results, 0, 5);
 $gravityTotalStats = null;
 $gravityTotalPosition = null;
 $gravityTotalClassTotal = 0;
+$currentClassName = null;
 
 // Get GravitySeries Team stats (club points)
 $gravityTeamStats = null;
+$gravityTeamPosition = null;
+$gravityTeamClassTotal = 0;
 $debugCrp = [];
 $debugSeries8Events = [];
 $debugError = null;
@@ -196,6 +199,10 @@ if ($totalRaces > 0) {
                 }
 
                 if ($riderClassId) {
+                    // Get class name
+                    $classInfo = $db->getRow("SELECT name, display_name FROM classes WHERE id = ?", [$riderClassId]);
+                    $currentClassName = $classInfo['display_name'] ?? $classInfo['name'] ?? null;
+
                     $classStandings = $db->getAll("
                         SELECT r.cyclist_id, SUM(r.points) as total_points
                         FROM results r
@@ -227,6 +234,27 @@ if ($totalRaces > 0) {
                     FROM club_rider_points
                     WHERE rider_id = ? AND club_id = ? AND series_id = ?
                 ", [$riderId, $rider['club_id'], $totalSeries['id']]);
+
+                // Get rider's position within the club for this series
+                if ($gravityTeamStats && $gravityTeamStats['total_points'] > 0) {
+                    $clubStandings = $db->getAll("
+                        SELECT rider_id, SUM(club_points) as total_points
+                        FROM club_rider_points
+                        WHERE club_id = ? AND series_id = ?
+                        GROUP BY rider_id
+                        ORDER BY total_points DESC
+                    ", [$rider['club_id'], $totalSeries['id']]);
+
+                    $gravityTeamClassTotal = count($clubStandings);
+                    $position = 1;
+                    foreach ($clubStandings as $standing) {
+                        if ($standing['rider_id'] == $riderId) {
+                            $gravityTeamPosition = $position;
+                            break;
+                        }
+                        $position++;
+                    }
+                }
             }
 
             // Debug data
@@ -569,7 +597,7 @@ try {
                     }
                 }
             </style>
-            <div style="background: #ffc; padding: 5px; margin-bottom: 10px; font-size: 10px;">BUILD 049 - rider_id: <?= $riderId ?>, club_id: <?= $rider['club_id'] ?? 'null' ?></div>
+            <div style="background: #ffc; padding: 5px; margin-bottom: 10px; font-size: 10px;">BUILD 051 - rider_id: <?= $riderId ?>, club_id: <?= $rider['club_id'] ?? 'null' ?></div>
             <div class="rider-stats-top">
                 <div class="gs-card gs-stat-card-compact">
                     <div class="gs-stat-number-compact gs-text-primary"><?= $totalRaces ?></div>
@@ -590,9 +618,16 @@ try {
                         <?= $gravityTotalStats ? number_format($gravityTotalStats['total_points'] ?? 0) : '0' ?>
                     </div>
                     <div class="gs-stat-label-compact">GravitySeries Total</div>
-                    <?php if ($gravityTotalPosition): ?>
+                    <?php if ($currentClassName || $gravityTotalPosition): ?>
                         <div class="gs-text-xs gs-text-secondary gs-mt-xs">
-                            #<?= $gravityTotalPosition ?> av <?= $gravityTotalClassTotal ?>
+                            <?php if ($currentClassName): ?>
+                                <?= h($currentClassName) ?>
+                                <?php if ($gravityTotalPosition): ?>
+                                    • #<?= $gravityTotalPosition ?>/<?= $gravityTotalClassTotal ?>
+                                <?php endif; ?>
+                            <?php elseif ($gravityTotalPosition): ?>
+                                #<?= $gravityTotalPosition ?> av <?= $gravityTotalClassTotal ?>
+                            <?php endif; ?>
                         </div>
                     <?php endif; ?>
                 </div>
@@ -601,9 +636,9 @@ try {
                         <?= $gravityTeamStats ? number_format($gravityTeamStats['total_points'] ?? 0, 1) : '0' ?>
                     </div>
                     <div class="gs-stat-label-compact">GravitySeries Team</div>
-                    <?php if ($gravityTeamStats && $gravityTeamStats['events_count'] > 0): ?>
+                    <?php if ($gravityTeamPosition): ?>
                         <div class="gs-text-xs gs-text-secondary gs-mt-xs">
-                            <?= $gravityTeamStats['events_count'] ?> events
+                            #<?= $gravityTeamPosition ?> av <?= $gravityTeamClassTotal ?> i klubben
                         </div>
                     <?php endif; ?>
                 </div>
