@@ -1622,6 +1622,60 @@ include __DIR__ . '/includes/layout-header.php';
                                         <input type="hidden" id="selected-rider-id" value="">
                                         <input type="hidden" id="has-gravity-id" value="0">
                                     </div>
+
+                                    <!-- New Rider Form (for engångslicens) -->
+                                    <div id="new-rider-form" class="gs-mt-md" style="display: none;">
+                                        <div class="gs-alert gs-alert-info gs-mb-md">
+                                            <strong>Ny deltagare</strong><br>
+                                            <span class="gs-text-sm">Fyll i uppgifterna nedan för att registrera dig med engångslicens (SWE-ID).</span>
+                                        </div>
+
+                                        <div class="gs-grid gs-grid-cols-1 gs-md-grid-cols-2 gs-gap-md">
+                                            <div class="gs-form-group">
+                                                <label class="gs-label">Förnamn *</label>
+                                                <input type="text" id="new-rider-firstname" class="gs-input" required>
+                                            </div>
+                                            <div class="gs-form-group">
+                                                <label class="gs-label">Efternamn *</label>
+                                                <input type="text" id="new-rider-lastname" class="gs-input" required>
+                                            </div>
+                                            <div class="gs-form-group">
+                                                <label class="gs-label">Födelseår *</label>
+                                                <input type="number" id="new-rider-birthyear" class="gs-input"
+                                                       min="1930" max="<?= date('Y') ?>" placeholder="T.ex. 1990" required>
+                                            </div>
+                                            <div class="gs-form-group">
+                                                <label class="gs-label">Kön *</label>
+                                                <select id="new-rider-gender" class="gs-input" required>
+                                                    <option value="">Välj...</option>
+                                                    <option value="M">Man</option>
+                                                    <option value="F">Kvinna</option>
+                                                </select>
+                                            </div>
+                                            <div class="gs-form-group">
+                                                <label class="gs-label">E-post</label>
+                                                <input type="email" id="new-rider-email" class="gs-input"
+                                                       placeholder="din@email.se">
+                                            </div>
+                                            <div class="gs-form-group">
+                                                <label class="gs-label">Telefon</label>
+                                                <input type="tel" id="new-rider-phone" class="gs-input"
+                                                       placeholder="070-123 45 67">
+                                            </div>
+                                        </div>
+
+                                        <div class="gs-mt-md gs-flex gs-gap-sm">
+                                            <button type="button" onclick="createNewRider()" class="gs-btn gs-btn-primary">
+                                                <i data-lucide="user-plus"></i>
+                                                Registrera deltagare
+                                            </button>
+                                            <button type="button" onclick="hideNewRiderForm()" class="gs-btn gs-btn-outline">
+                                                Avbryt
+                                            </button>
+                                        </div>
+
+                                        <div id="new-rider-error" class="gs-alert gs-alert-danger gs-mt-md" style="display: none;"></div>
+                                    </div>
                                 </div>
                             </div>
 
@@ -1865,7 +1919,78 @@ include __DIR__ . '/includes/layout-header.php';
                         }
 
                         function showNewRiderForm() {
-                            alert('Funktionen för att registrera ny deltagare med engångslicens kommer snart.');
+                            document.getElementById('rider-results').style.display = 'none';
+                            document.getElementById('selected-rider').style.display = 'none';
+                            document.getElementById('new-rider-form').style.display = 'block';
+                            document.getElementById('new-rider-error').style.display = 'none';
+                        }
+
+                        function hideNewRiderForm() {
+                            document.getElementById('new-rider-form').style.display = 'none';
+                            document.getElementById('rider-search').value = '';
+                        }
+
+                        async function createNewRider() {
+                            const firstname = document.getElementById('new-rider-firstname').value.trim();
+                            const lastname = document.getElementById('new-rider-lastname').value.trim();
+                            const birthYear = document.getElementById('new-rider-birthyear').value;
+                            const gender = document.getElementById('new-rider-gender').value;
+                            const email = document.getElementById('new-rider-email').value.trim();
+                            const phone = document.getElementById('new-rider-phone').value.trim();
+
+                            // Validate
+                            if (!firstname || !lastname || !birthYear || !gender) {
+                                document.getElementById('new-rider-error').textContent = 'Fyll i alla obligatoriska fält';
+                                document.getElementById('new-rider-error').style.display = 'block';
+                                return;
+                            }
+
+                            try {
+                                const response = await fetch('/api/create-rider.php', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({
+                                        firstname: firstname,
+                                        lastname: lastname,
+                                        birth_year: parseInt(birthYear),
+                                        gender: gender,
+                                        email: email,
+                                        phone: phone
+                                    })
+                                });
+
+                                const data = await response.json();
+
+                                if (data.error) {
+                                    document.getElementById('new-rider-error').textContent = data.error;
+                                    document.getElementById('new-rider-error').style.display = 'block';
+                                    return;
+                                }
+
+                                if (data.success) {
+                                    // Hide form and select the rider
+                                    document.getElementById('new-rider-form').style.display = 'none';
+
+                                    // Select the newly created rider
+                                    selectRider({
+                                        id: data.rider.id,
+                                        name: data.rider.name,
+                                        club: '',
+                                        uciId: data.rider.sweId || '',
+                                        hasGravityId: 0,
+                                        licenseType: data.rider.licenseType || 'Engångslicens',
+                                        birthYear: data.rider.birthYear,
+                                        gender: data.rider.gender
+                                    });
+
+                                    if (data.existing) {
+                                        alert(data.rider.message);
+                                    }
+                                }
+                            } catch (err) {
+                                document.getElementById('new-rider-error').textContent = 'Något gick fel. Försök igen.';
+                                document.getElementById('new-rider-error').style.display = 'block';
+                            }
                         }
 
                         function updatePrice() {
