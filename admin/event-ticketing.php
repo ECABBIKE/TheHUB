@@ -1,7 +1,4 @@
 <?php
-ini_set('display_errors', 1);
-error_reporting(E_ALL);
-
 /**
  * Event Ticketing Management
  * Configure ticketing settings for a specific event
@@ -38,39 +35,19 @@ $messageType = 'info';
 
 // Handle POST actions
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    echo "DEBUG: POST received<br>";
-    echo "DEBUG: Event ID = $eventId<br>";
-
-    try {
-        checkCsrf();
-        echo "DEBUG: CSRF OK<br>";
-    } catch (Exception $e) {
-        die("CSRF ERROR: " . $e->getMessage());
-    }
-
+    checkCsrf();
     $action = $_POST['action'] ?? '';
-    echo "DEBUG: Action = $action<br>";
 
     if ($action === 'save_settings') {
         $enabled = isset($_POST['ticketing_enabled']) ? 1 : 0;
         $deadlineDays = intval($_POST['ticket_deadline_days'] ?? 7);
         $wooProductId = trim($_POST['woo_product_id'] ?? '');
 
-        echo "DEBUG: enabled=$enabled, days=$deadlineDays, woo=$wooProductId<br>";
-
-        $sql = "UPDATE events SET ticketing_enabled = ?, ticket_deadline_days = ?, woo_product_id = ? WHERE id = ?";
-        $params = [$enabled, $deadlineDays, $wooProductId ?: null, $eventId];
-        echo "DEBUG: SQL = $sql<br>";
-        echo "DEBUG: Params = " . print_r($params, true) . "<br>";
-
-        try {
-            $result = $db->execute($sql, $params);
-            echo "DEBUG: Update result = " . var_export($result, true) . "<br>";
-        } catch (Exception $e) {
-            die("DB ERROR: " . $e->getMessage());
-        } catch (Error $e) {
-            die("PHP ERROR: " . $e->getMessage());
-        }
+        $db->update('events', [
+            'ticketing_enabled' => $enabled,
+            'ticket_deadline_days' => $deadlineDays,
+            'woo_product_id' => $wooProductId ?: null
+        ], 'id = ?', [$eventId]);
 
         $event = $db->getRow("SELECT * FROM events WHERE id = ?", [$eventId]);
         $message = 'Inställningar sparade!';
