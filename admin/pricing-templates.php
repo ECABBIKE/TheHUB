@@ -32,14 +32,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $db->query("UPDATE pricing_templates SET is_default = 0");
             }
 
-            $db->insert('pricing_templates', [
+            $newId = $db->insert('pricing_templates', [
                 'name' => $name,
                 'description' => $description,
                 'is_default' => $isDefault
             ]);
-            $newId = $db->lastInsertId();
-            $message = "Prismall '$name' skapad!";
-            $messageType = 'success';
 
             // Redirect to edit the new template
             header("Location: /admin/pricing-templates.php?edit=$newId");
@@ -253,45 +250,71 @@ include __DIR__ . '/../includes/layout-header.php';
                                 <tr>
                                     <th>Klass</th>
                                     <th>Ordinarie (kr)</th>
-                                    <th>Early Bird %</th>
-                                    <th>Dagar före</th>
-                                    <th>Efteranm. %</th>
-                                    <th>Dagar före</th>
+                                    <th>Early Bird -% / dagar</th>
+                                    <th>Efteranm. +% / dagar</th>
+                                    <th>Beräknade priser</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <?php foreach ($classes as $class):
                                     $rule = $templateRules[$class['id']] ?? null;
                                 ?>
-                                    <tr>
+                                    <tr data-row="<?= $class['id'] ?>">
                                         <td>
                                             <input type="hidden" name="class_id[]" value="<?= $class['id'] ?>">
                                             <strong><?= htmlspecialchars($class['display_name'] ?: $class['name']) ?></strong>
                                         </td>
                                         <td>
-                                            <input type="number" name="base_price[]" class="gs-input"
+                                            <input type="number" name="base_price[]" class="gs-input price-input"
+                                                   data-class="<?= $class['id'] ?>" data-field="base"
                                                    value="<?= $rule['base_price'] ?? '' ?>"
-                                                   min="0" step="1" style="width: 90px;">
+                                                   min="0" step="1" style="width: 100px;"
+                                                   oninput="calculatePrices(<?= $class['id'] ?>)">
                                         </td>
                                         <td>
-                                            <input type="number" name="early_bird_percent[]" class="gs-input"
-                                                   value="<?= $rule['early_bird_percent'] ?? '15' ?>"
-                                                   min="0" max="100" step="1" style="width: 70px;">
+                                            <div class="gs-flex gs-gap-xs gs-items-center">
+                                                <input type="number" name="early_bird_percent[]" class="gs-input price-input"
+                                                       data-class="<?= $class['id'] ?>" data-field="eb_percent"
+                                                       value="<?= $rule['early_bird_percent'] ?? '15' ?>"
+                                                       min="0" max="100" step="1" style="width: 60px;"
+                                                       oninput="calculatePrices(<?= $class['id'] ?>)">
+                                                <span class="gs-text-secondary">/</span>
+                                                <input type="number" name="early_bird_days[]" class="gs-input"
+                                                       value="<?= $rule['early_bird_days_before'] ?? '21' ?>"
+                                                       min="0" max="90" step="1" style="width: 50px;">
+                                                <span class="gs-text-xs gs-text-secondary">d</span>
+                                            </div>
                                         </td>
                                         <td>
-                                            <input type="number" name="early_bird_days[]" class="gs-input"
-                                                   value="<?= $rule['early_bird_days_before'] ?? '21' ?>"
-                                                   min="0" max="90" step="1" style="width: 70px;">
+                                            <div class="gs-flex gs-gap-xs gs-items-center">
+                                                <input type="number" name="late_fee_percent[]" class="gs-input price-input"
+                                                       data-class="<?= $class['id'] ?>" data-field="late_percent"
+                                                       value="<?= $rule['late_fee_percent'] ?? '25' ?>"
+                                                       min="0" max="100" step="1" style="width: 60px;"
+                                                       oninput="calculatePrices(<?= $class['id'] ?>)">
+                                                <span class="gs-text-secondary">/</span>
+                                                <input type="number" name="late_fee_days[]" class="gs-input"
+                                                       value="<?= $rule['late_fee_days_before'] ?? '3' ?>"
+                                                       min="0" max="30" step="1" style="width: 50px;">
+                                                <span class="gs-text-xs gs-text-secondary">d</span>
+                                            </div>
                                         </td>
                                         <td>
-                                            <input type="number" name="late_fee_percent[]" class="gs-input"
-                                                   value="<?= $rule['late_fee_percent'] ?? '25' ?>"
-                                                   min="0" max="100" step="1" style="width: 70px;">
-                                        </td>
-                                        <td>
-                                            <input type="number" name="late_fee_days[]" class="gs-input"
-                                                   value="<?= $rule['late_fee_days_before'] ?? '3' ?>"
-                                                   min="0" max="30" step="1" style="width: 70px;">
+                                            <div id="calc-<?= $class['id'] ?>" class="gs-text-sm">
+                                                <?php if (!empty($rule['base_price'])):
+                                                    $base = $rule['base_price'];
+                                                    $ebPercent = $rule['early_bird_percent'] ?? 15;
+                                                    $latePercent = $rule['late_fee_percent'] ?? 25;
+                                                    $ebPrice = $base * (1 - $ebPercent / 100);
+                                                    $latePrice = $base * (1 + $latePercent / 100);
+                                                ?>
+                                                    <span class="gs-text-success"><?= number_format($ebPrice, 0) ?> kr</span>
+                                                    <span class="gs-text-secondary">|</span>
+                                                    <span class="gs-text-warning"><?= number_format($latePrice, 0) ?> kr</span>
+                                                <?php else: ?>
+                                                    <span class="gs-text-secondary">-</span>
+                                                <?php endif; ?>
+                                            </div>
                                         </td>
                                     </tr>
                                 <?php endforeach; ?>
@@ -470,5 +493,35 @@ include __DIR__ . '/../includes/layout-header.php';
         <?php endif; ?>
     </div>
 </main>
+
+<script>
+function calculatePrices(classId) {
+    const row = document.querySelector(`tr[data-row="${classId}"]`);
+    if (!row) return;
+
+    const baseInput = row.querySelector('input[data-field="base"]');
+    const ebPercentInput = row.querySelector('input[data-field="eb_percent"]');
+    const latePercentInput = row.querySelector('input[data-field="late_percent"]');
+    const calcDiv = document.getElementById(`calc-${classId}`);
+
+    if (!baseInput || !calcDiv) return;
+
+    const base = parseFloat(baseInput.value) || 0;
+    const ebPercent = parseFloat(ebPercentInput?.value) || 0;
+    const latePercent = parseFloat(latePercentInput?.value) || 0;
+
+    if (base > 0) {
+        const ebPrice = Math.round(base * (1 - ebPercent / 100));
+        const latePrice = Math.round(base * (1 + latePercent / 100));
+        calcDiv.innerHTML = `
+            <span class="gs-text-success">${ebPrice} kr</span>
+            <span class="gs-text-secondary">|</span>
+            <span class="gs-text-warning">${latePrice} kr</span>
+        `;
+    } else {
+        calcDiv.innerHTML = '<span class="gs-text-secondary">-</span>';
+    }
+}
+</script>
 
 <?php include __DIR__ . '/../includes/layout-footer.php'; ?>

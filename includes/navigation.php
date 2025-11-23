@@ -45,6 +45,9 @@ $is_admin = isLoggedIn();
             <li><a href="/admin/ticketing.php" class="<?= in_array($current_page, ['ticketing.php', 'event-pricing.php', 'event-tickets.php', 'refund-requests.php']) ? 'active' : '' ?>">
                 <i data-lucide="ticket"></i> Ticketing
             </a></li>
+            <li><a href="/admin/pricing-templates.php" class="<?= $current_page == 'pricing-templates.php' ? 'active' : '' ?>">
+                <i data-lucide="credit-card"></i> Prismallar
+            </a></li>
             <li><a href="/admin/series.php" class="<?= $current_page == 'series.php' && strpos($_SERVER['PHP_SELF'], '/admin/') !== false ? 'active' : '' ?>">
                 <i data-lucide="award"></i> Serier
             </a></li>
