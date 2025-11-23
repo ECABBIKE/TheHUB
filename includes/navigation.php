@@ -63,11 +63,8 @@ $is_admin = isLoggedIn();
             <li><a href="/admin/results.php" class="<?= $current_page == 'results.php' && strpos($_SERVER['PHP_SELF'], '/admin/') !== false ? 'active' : '' ?>">
                 <i data-lucide="trophy"></i> Resultat
             </a></li>
-            <li><a href="/admin/import.php" class="<?= $current_page == 'import.php' ? 'active' : '' ?>">
+            <li><a href="/admin/import.php" class="<?= in_array($current_page, ['import.php', 'import-history.php']) ? 'active' : '' ?>">
                 <i data-lucide="upload"></i> Import
-            </a></li>
-            <li><a href="/admin/import-history.php" class="<?= $current_page == 'import-history.php' ? 'active' : '' ?>">
-                <i data-lucide="history"></i> Import History
             </a></li>
             <li><a href="/admin/public-settings.php" class="<?= $current_page == 'public-settings.php' ? 'active' : '' ?>">
                 <i data-lucide="settings"></i> Publika Inställningar

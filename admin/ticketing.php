@@ -13,8 +13,42 @@ $db = getDB();
 $message = '';
 $messageType = 'info';
 
+// Check if ticketing columns exist in events table
+$ticketingColumnsExist = false;
+try {
+    $columns = $db->getAll("SHOW COLUMNS FROM events WHERE Field IN ('ticketing_enabled', 'woo_product_id', 'ticket_deadline_days')");
+    $ticketingColumnsExist = count($columns) >= 3;
+} catch (Exception $e) {
+    // Columns don't exist
+}
+
+// Check if ticketing tables exist
+$ticketingTablesExist = false;
+try {
+    $tables = $db->getAll("SHOW TABLES LIKE 'event_tickets'");
+    $ticketingTablesExist = !empty($tables);
+} catch (Exception $e) {
+    // Table doesn't exist
+}
+
+$pricingTablesExist = false;
+try {
+    $tables = $db->getAll("SHOW TABLES LIKE 'event_pricing_rules'");
+    $pricingTablesExist = !empty($tables);
+} catch (Exception $e) {
+    // Table doesn't exist
+}
+
+$refundTablesExist = false;
+try {
+    $tables = $db->getAll("SHOW TABLES LIKE 'event_refund_requests'");
+    $refundTablesExist = !empty($tables);
+} catch (Exception $e) {
+    // Table doesn't exist
+}
+
 // Handle quick actions
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && $ticketingColumnsExist) {
     checkCsrf();
 
     $action = $_POST['action'] ?? '';
@@ -33,6 +67,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
+// Build dynamic query based on available columns/tables
+$ticketingSelect = $ticketingColumnsExist
+    ? "e.ticketing_enabled, e.woo_product_id, e.ticket_deadline_days"
+    : "0 as ticketing_enabled, NULL as woo_product_id, 7 as ticket_deadline_days";
+
+$pricingSubquery = $pricingTablesExist
+    ? "(SELECT COUNT(*) FROM event_pricing_rules WHERE event_id = e.id)"
+    : "0";
+
+$ticketsSubqueries = $ticketingTablesExist
+    ? "(SELECT COUNT(*) FROM event_tickets WHERE event_id = e.id) as total_tickets,
+       (SELECT COUNT(*) FROM event_tickets WHERE event_id = e.id AND status = 'available') as available_tickets,
+       (SELECT COUNT(*) FROM event_tickets WHERE event_id = e.id AND status = 'sold') as sold_tickets,
+       (SELECT SUM(paid_price) FROM event_tickets WHERE event_id = e.id AND status = 'sold') as total_revenue"
+    : "0 as total_tickets, 0 as available_tickets, 0 as sold_tickets, 0 as total_revenue";
+
 // Fetch all events with ticketing status
 $events = $db->getAll("
     SELECT
@@ -40,15 +90,10 @@ $events = $db->getAll("
         e.name,
         e.date,
         e.location,
-        e.ticketing_enabled,
-        e.woo_product_id,
-        e.ticket_deadline_days,
+        {$ticketingSelect},
         s.name as series_name,
-        (SELECT COUNT(*) FROM event_pricing_rules WHERE event_id = e.id) as pricing_rules_count,
-        (SELECT COUNT(*) FROM event_tickets WHERE event_id = e.id) as total_tickets,
-        (SELECT COUNT(*) FROM event_tickets WHERE event_id = e.id AND status = 'available') as available_tickets,
-        (SELECT COUNT(*) FROM event_tickets WHERE event_id = e.id AND status = 'sold') as sold_tickets,
-        (SELECT SUM(paid_price) FROM event_tickets WHERE event_id = e.id AND status = 'sold') as total_revenue
+        {$pricingSubquery} as pricing_rules_count,
+        {$ticketsSubqueries}
     FROM events e
     LEFT JOIN series s ON e.series_id = s.id
     WHERE e.date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
@@ -69,18 +114,24 @@ foreach ($events as $event) {
 }
 
 // Get pending refund requests count
-$pendingRefunds = $db->getValue("
-    SELECT COUNT(*) FROM event_refund_requests WHERE status = 'pending'
-");
+$pendingRefunds = 0;
+if ($refundTablesExist) {
+    $pendingRefunds = $db->getValue("
+        SELECT COUNT(*) FROM event_refund_requests WHERE status = 'pending'
+    ") ?: 0;
+}
 
 // Calculate overall stats
-$totalStats = $db->getRow("
-    SELECT
-        COUNT(DISTINCT event_id) as events_with_tickets,
-        SUM(CASE WHEN status = 'sold' THEN 1 ELSE 0 END) as total_sold,
-        SUM(CASE WHEN status = 'sold' THEN paid_price ELSE 0 END) as total_revenue
-    FROM event_tickets
-");
+$totalStats = ['events_with_tickets' => 0, 'total_sold' => 0, 'total_revenue' => 0];
+if ($ticketingTablesExist) {
+    $totalStats = $db->getRow("
+        SELECT
+            COUNT(DISTINCT event_id) as events_with_tickets,
+            SUM(CASE WHEN status = 'sold' THEN 1 ELSE 0 END) as total_sold,
+            SUM(CASE WHEN status = 'sold' THEN paid_price ELSE 0 END) as total_revenue
+        FROM event_tickets
+    ") ?: $totalStats;
+}
 
 $pageTitle = 'Ticketing';
 $pageType = 'admin';
@@ -115,6 +166,14 @@ include __DIR__ . '/../includes/layout-header.php';
         <?php if ($message): ?>
             <div class="gs-alert gs-alert-<?= $messageType ?> gs-mb-lg">
                 <?= h($message) ?>
+            </div>
+        <?php endif; ?>
+
+        <?php if (!$ticketingColumnsExist || !$ticketingTablesExist): ?>
+            <div class="gs-alert gs-alert-warning gs-mb-lg">
+                <i data-lucide="alert-triangle" class="gs-icon-sm"></i>
+                <strong>Ticketing-systemet är inte konfigurerat.</strong>
+                Kör databasmigreringarna för att aktivera biljettfunktioner (ticketing_enabled, woo_product_id, event_tickets, etc).
             </div>
         <?php endif; ?>
 
@@ -165,6 +224,7 @@ include __DIR__ . '/../includes/layout-header.php';
                                     <th>Event</th>
                                     <th>Datum</th>
                                     <th>Status</th>
+                                    <th>Woo ID</th>
                                     <th>Priser</th>
                                     <th>Biljetter</th>
                                     <th>Sålda</th>
@@ -198,6 +258,13 @@ include __DIR__ . '/../includes/layout-header.php';
                                                 <span class="gs-badge gs-badge-success gs-badge-sm">Aktiv</span>
                                             <?php else: ?>
                                                 <span class="gs-badge gs-badge-secondary gs-badge-sm">Inaktiv</span>
+                                            <?php endif; ?>
+                                        </td>
+                                        <td>
+                                            <?php if ($hasWooProduct): ?>
+                                                <code class="gs-text-xs"><?= h($event['woo_product_id']) ?></code>
+                                            <?php else: ?>
+                                                <span class="gs-text-secondary gs-text-sm">-</span>
                                             <?php endif; ?>
                                         </td>
                                         <td>
