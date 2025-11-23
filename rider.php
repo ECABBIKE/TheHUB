@@ -181,45 +181,41 @@ if ($totalRaces > 0) {
                 AND r.status = 'finished' AND r.points > 0
             ", [$totalSeries['id'], $riderId]);
 
-            // Try to get position in class (only if we can determine class)
-            if ($rider['birth_year'] && $rider['gender']) {
-                $discipline = $rider['discipline'] ?? 'ENDURO';
-                $riderClassId = determineRiderClass($db, $rider['birth_year'], $rider['gender'], date('Y-m-d'), $discipline);
-                if (!$riderClassId && $discipline !== 'ENDURO') {
-                    $riderClassId = determineRiderClass($db, $rider['birth_year'], $rider['gender'], date('Y-m-d'), 'ENDURO');
-                }
-                if (!$riderClassId) {
-                    $riderClassId = determineRiderClass($db, $rider['birth_year'], $rider['gender'], date('Y-m-d'), 'DH');
-                }
-                if (!$riderClassId) {
-                    $riderClassId = determineRiderClass($db, $rider['birth_year'], $rider['gender'], date('Y-m-d'), 'XC');
-                }
+            // Get rider's actual class from their results in this series
+            $riderResultClass = $db->getRow("
+                SELECT r.class_id, c.name, c.display_name
+                FROM results r
+                JOIN events e ON r.event_id = e.id
+                JOIN series_events se ON e.id = se.event_id
+                LEFT JOIN classes c ON r.class_id = c.id
+                WHERE se.series_id = ? AND r.cyclist_id = ?
+                AND r.status = 'finished' AND r.class_id IS NOT NULL
+                LIMIT 1
+            ", [$totalSeries['id'], $riderId]);
 
-                if ($riderClassId) {
-                    // Get class name
-                    $classInfo = $db->getRow("SELECT name, display_name FROM classes WHERE id = ?", [$riderClassId]);
-                    $currentClassName = $classInfo['display_name'] ?? $classInfo['name'] ?? null;
+            if ($riderResultClass && $riderResultClass['class_id']) {
+                $riderClassId = $riderResultClass['class_id'];
+                $currentClassName = $riderResultClass['display_name'] ?? $riderResultClass['name'] ?? null;
 
-                    $classStandings = $db->getAll("
-                        SELECT r.cyclist_id, SUM(r.points) as total_points
-                        FROM results r
-                        JOIN events e ON r.event_id = e.id
-                        JOIN series_events se ON e.id = se.event_id
-                        WHERE se.series_id = ? AND r.class_id = ?
-                        AND r.status = 'finished' AND r.points > 0
-                        GROUP BY r.cyclist_id
-                        ORDER BY total_points DESC
-                    ", [$totalSeries['id'], $riderClassId]);
+                $classStandings = $db->getAll("
+                    SELECT r.cyclist_id, SUM(r.points) as total_points
+                    FROM results r
+                    JOIN events e ON r.event_id = e.id
+                    JOIN series_events se ON e.id = se.event_id
+                    WHERE se.series_id = ? AND r.class_id = ?
+                    AND r.status = 'finished' AND r.points > 0
+                    GROUP BY r.cyclist_id
+                    ORDER BY total_points DESC
+                ", [$totalSeries['id'], $riderClassId]);
 
-                    $gravityTotalClassTotal = count($classStandings);
-                    $position = 1;
-                    foreach ($classStandings as $standing) {
-                        if ($standing['cyclist_id'] == $riderId) {
-                            $gravityTotalPosition = $position;
-                            break;
-                        }
-                        $position++;
+                $gravityTotalClassTotal = count($classStandings);
+                $position = 1;
+                foreach ($classStandings as $standing) {
+                    if ($standing['cyclist_id'] == $riderId) {
+                        $gravityTotalPosition = $position;
+                        break;
                     }
+                    $position++;
                 }
             }
 
