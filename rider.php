@@ -233,6 +233,16 @@ if ($totalRaces > 0) {
                         WHERE rider_id = ? AND club_id = ?
                     ", [$riderId, $rider['club_id']]);
                 }
+
+                // If still no results, check without club_id filter (debug)
+                if (!$gravityTeamStats || !$gravityTeamStats['total_points']) {
+                    $debugClubPoints = $db->getRow("
+                        SELECT COUNT(*) as count, SUM(club_points) as total
+                        FROM club_rider_points
+                        WHERE rider_id = ?
+                    ", [$riderId]);
+                    error_log("DEBUG: club_rider_points for rider $riderId (any club): " . json_encode($debugClubPoints));
+                }
             }
         }
     } catch (Exception $e) {
@@ -609,10 +619,7 @@ try {
             <div style="background: #fee; padding: 10px; margin-bottom: 10px; font-size: 12px;">
                 <strong>DEBUG:</strong><br>
                 riderId: <?= $riderId ?><br>
-                rider discipline: <?= $rider['discipline'] ?? 'null' ?><br>
-                birth_year: <?= $rider['birth_year'] ?? 'null' ?><br>
-                gender: <?= $rider['gender'] ?? 'null' ?><br>
-                riderClassId: <?= $riderClassId ?? 'null' ?><br>
+                club_id: <?= $rider['club_id'] ?? 'null' ?><br>
                 totalSeries: <?= isset($totalSeries) ? json_encode($totalSeries) : 'not set' ?><br>
                 gravityTotalStats: <?= isset($gravityTotalStats) ? json_encode($gravityTotalStats) : 'not set' ?><br>
                 gravityTeamStats: <?= isset($gravityTeamStats) ? json_encode($gravityTeamStats) : 'not set' ?>
