@@ -229,21 +229,31 @@ if ($totalRaces > 0) {
                 WHERE rider_id = ?
             ", [$totalSeries['id'], $riderId]);
 
-            // Inline debug - will show immediately
-            echo "<!-- DEBUG041: debugCount=" . json_encode($debugCount) . " -->";
+            // Get all club_rider_points for this rider to debug
+            $allCrp = $db->getAll("
+                SELECT event_id, series_id, club_id, club_points
+                FROM club_rider_points
+                WHERE rider_id = ?
+            ", [$riderId]);
+
+            // Get events in series 8
+            $series8Events = $db->getAll("
+                SELECT event_id FROM series_events WHERE series_id = ?
+            ", [$totalSeries['id']]);
 
             if ($rider['club_id']) {
                 // Get club points via series_events (events linked to series 8)
-                // club_rider_points stores regional series_id, so we need to find events through series_events
                 $gravityTeamStats = $db->getRow("
                     SELECT SUM(crp.club_points) as total_points, COUNT(DISTINCT crp.event_id) as events_count
                     FROM club_rider_points crp
                     JOIN series_events se ON crp.event_id = se.event_id
                     WHERE crp.rider_id = ? AND crp.club_id = ? AND se.series_id = ?
                 ", [$riderId, $rider['club_id'], $totalSeries['id']]);
-
-                echo "<!-- DEBUG042: gravityTeamStats=" . json_encode($gravityTeamStats) . " -->";
             }
+
+            // Store debug data for display
+            $debugCrp = $allCrp;
+            $debugSeries8Events = $series8Events;
         }
     } catch (Exception $e) {
         error_log("Error getting GravitySeries stats for rider {$riderId}: " . $e->getMessage());
@@ -576,7 +586,7 @@ try {
                     }
                 }
             </style>
-            <div style="background: #ffc; padding: 5px; margin-bottom: 10px; font-size: 10px;">BUILD 042 - rider_id: <?= $riderId ?>, club_id: <?= $rider['club_id'] ?? 'null' ?></div>
+            <div style="background: #ffc; padding: 5px; margin-bottom: 10px; font-size: 10px;">BUILD 043 - rider_id: <?= $riderId ?>, club_id: <?= $rider['club_id'] ?? 'null' ?></div>
             <div class="rider-stats-top">
                 <div class="gs-card gs-stat-card-compact">
                     <div class="gs-stat-number-compact gs-text-primary"><?= $totalRaces ?></div>
@@ -619,10 +629,16 @@ try {
             <!-- Debug -->
             <div style="background: #fee; padding: 10px; margin-bottom: 10px; font-size: 11px;">
                 rider_id: <?= $riderId ?>, club_id: <?= $rider['club_id'] ?? 'null' ?>, series_id: <?= $totalSeries['id'] ?? 'null' ?><br>
-                totalRaces: <?= $totalRaces ?>, gravityTotalStats: <?= json_encode($gravityTotalStats) ?><br>
                 gravityTeamStats: <?= json_encode($gravityTeamStats) ?><br>
-                <?php if (isset($debugCount)): ?>
-                club_rider_points rows: <?= $debugCount['total_rows'] ?? 0 ?>, series8 rows: <?= $debugCount['series8_rows'] ?? 0 ?>, all points: <?= $debugCount['all_club_points'] ?? 0 ?>
+                <?php if (isset($debugCrp)): ?>
+                <strong>club_rider_points för denna rider:</strong><br>
+                <?php foreach ($debugCrp as $row): ?>
+                    event_id=<?= $row['event_id'] ?>, series_id=<?= $row['series_id'] ?>, club_id=<?= $row['club_id'] ?>, points=<?= $row['club_points'] ?><br>
+                <?php endforeach; ?>
+                <?php if (empty($debugCrp)): ?>Inga rader<br><?php endif; ?>
+                <?php endif; ?>
+                <?php if (isset($debugSeries8Events)): ?>
+                <strong>Events i series 8:</strong> <?= implode(', ', array_column($debugSeries8Events, 'event_id')) ?><br>
                 <?php endif; ?>
             </div>
 
