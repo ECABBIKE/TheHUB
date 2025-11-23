@@ -181,42 +181,44 @@ if ($totalRaces > 0) {
                 AND r.status = 'finished' AND r.points > 0
             ", [$totalSeries['id'], $riderId]);
 
-            // Get rider's actual class from their results in this series
+            // Get rider's most common class from their results in this series (for display)
             $riderResultClass = $db->getRow("
-                SELECT r.class_id, c.name, c.display_name
+                SELECT r.class_id, c.name, c.display_name, COUNT(*) as cnt
                 FROM results r
                 JOIN events e ON r.event_id = e.id
                 JOIN series_events se ON e.id = se.event_id
                 LEFT JOIN classes c ON r.class_id = c.id
                 WHERE se.series_id = ? AND r.cyclist_id = ?
                 AND r.status = 'finished' AND r.class_id IS NOT NULL
+                GROUP BY r.class_id
+                ORDER BY cnt DESC
                 LIMIT 1
             ", [$totalSeries['id'], $riderId]);
 
-            if ($riderResultClass && $riderResultClass['class_id']) {
-                $riderClassId = $riderResultClass['class_id'];
+            if ($riderResultClass) {
                 $currentClassName = $riderResultClass['display_name'] ?? $riderResultClass['name'] ?? null;
+            }
 
-                $classStandings = $db->getAll("
-                    SELECT r.cyclist_id, SUM(r.points) as total_points
-                    FROM results r
-                    JOIN events e ON r.event_id = e.id
-                    JOIN series_events se ON e.id = se.event_id
-                    WHERE se.series_id = ? AND r.class_id = ?
-                    AND r.status = 'finished' AND r.points > 0
-                    GROUP BY r.cyclist_id
-                    ORDER BY total_points DESC
-                ", [$totalSeries['id'], $riderClassId]);
+            // Get overall position in series (all classes combined)
+            $seriesStandingsAll = $db->getAll("
+                SELECT r.cyclist_id, SUM(r.points) as total_points
+                FROM results r
+                JOIN events e ON r.event_id = e.id
+                JOIN series_events se ON e.id = se.event_id
+                WHERE se.series_id = ?
+                AND r.status = 'finished' AND r.points > 0
+                GROUP BY r.cyclist_id
+                ORDER BY total_points DESC
+            ", [$totalSeries['id']]);
 
-                $gravityTotalClassTotal = count($classStandings);
-                $position = 1;
-                foreach ($classStandings as $standing) {
-                    if ($standing['cyclist_id'] == $riderId) {
-                        $gravityTotalPosition = $position;
-                        break;
-                    }
-                    $position++;
+            $gravityTotalClassTotal = count($seriesStandingsAll);
+            $position = 1;
+            foreach ($seriesStandingsAll as $standing) {
+                if ($standing['cyclist_id'] == $riderId) {
+                    $gravityTotalPosition = $position;
+                    break;
                 }
+                $position++;
             }
 
             // Get GravitySeries Team stats (club points for this series)
