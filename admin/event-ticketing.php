@@ -1,4 +1,7 @@
 <?php
+ini_set('display_errors', 1);
+error_reporting(E_ALL);
+
 /**
  * Event Ticketing Management
  * Configure ticketing settings for a specific event
