@@ -1536,6 +1536,40 @@ include __DIR__ . '/includes/layout-header.php';
                         <h3 class="gs-h5 gs-mb-sm">Anmälan stängd</h3>
                         <p>Anmälan stängde <?= date('d M Y', strtotime($event['registration_deadline'])) ?>.</p>
                     </div>
+                <?php elseif (!empty($event['ticketing_enabled']) && !empty($event['woo_product_id'])): ?>
+                    <div class="gs-alert gs-alert-success gs-mb-lg">
+                        <h3 class="gs-h5 gs-mb-sm">
+                            <i data-lucide="ticket" class="gs-icon-14"></i>
+                            Köp biljett
+                        </h3>
+                        <p class="gs-mb-md">
+                            Anmälan sker genom att köpa biljett via vår webshop.
+                        </p>
+                        <?php
+                        // Calculate deadline
+                        $deadlineDays = $event['ticket_deadline_days'] ?? 7;
+                        $eventDate = new DateTime($event['date']);
+                        $deadline = clone $eventDate;
+                        $deadline->modify("-{$deadlineDays} days");
+                        $now = new DateTime();
+
+                        if ($now > $deadline): ?>
+                            <div class="gs-alert gs-alert-warning gs-mb-md">
+                                <strong>Sista anmälningsdag har passerat</strong> (<?= $deadline->format('d M Y') ?>)
+                            </div>
+                        <?php else: ?>
+                            <p class="gs-text-sm gs-text-secondary gs-mb-md">
+                                Sista anmälningsdag: <strong><?= $deadline->format('d M Y') ?></strong>
+                            </p>
+                        <?php endif; ?>
+
+                        <a href="https://gravityseries.se/?add-to-cart=<?= h($event['woo_product_id']) ?>"
+                           class="gs-btn gs-btn-primary gs-btn-lg"
+                           target="_blank">
+                            <i data-lucide="shopping-cart" class="gs-icon-14"></i>
+                            Köp biljett
+                        </a>
+                    </div>
                 <?php elseif (!empty($event['registration_url'])): ?>
                     <div class="gs-alert gs-alert-primary gs-mb-lg">
                         <h3 class="gs-h5 gs-mb-sm">
