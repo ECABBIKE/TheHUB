@@ -1,63 +1,180 @@
 <?php
-ini_set('display_errors', 1);
-error_reporting(E_ALL);
-
-echo "STEG 1: Start<br>";
+/**
+ * Event Ticketing Management
+ * Configure ticketing settings for a specific event
+ */
 
 require_once __DIR__ . '/../config.php';
-echo "STEG 2: Config loaded<br>";
-
 require_admin();
-echo "STEG 3: Admin checked<br>";
 
 $db = getDB();
-echo "STEG 4: DB connected<br>";
 
 // Get event ID
 $eventId = isset($_GET['id']) ? intval($_GET['id']) : 0;
-echo "STEG 5: Event ID = $eventId<br>";
 
 if ($eventId <= 0) {
-    die("ERROR: No event ID");
+    $_SESSION['flash_message'] = 'Välj ett event från ticketing-dashboarden';
+    $_SESSION['flash_type'] = 'warning';
+    header('Location: /admin/ticketing.php');
+    exit;
 }
 
 // Fetch event
 $event = $db->getRow("SELECT * FROM events WHERE id = ?", [$eventId]);
-echo "STEG 6: Event fetched - " . ($event ? $event['name'] : 'NOT FOUND') . "<br>";
 
 if (!$event) {
-    die("ERROR: Event not found");
+    $_SESSION['flash_message'] = 'Event hittades inte';
+    $_SESSION['flash_type'] = 'error';
+    header('Location: /admin/ticketing.php');
+    exit;
 }
 
-// Get classes
-$classes = $db->getAll("SELECT id, name FROM classes ORDER BY sort_order ASC");
-echo "STEG 7: Classes fetched - " . count($classes) . " classes<br>";
+// Initialize message
+$message = '';
+$messageType = 'info';
 
-echo "STEG 8: Before header<br>";
+// Handle POST actions
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    checkCsrf();
+    $action = $_POST['action'] ?? '';
+
+    if ($action === 'save_settings') {
+        $enabled = isset($_POST['ticketing_enabled']) ? 1 : 0;
+        $deadlineDays = intval($_POST['ticket_deadline_days'] ?? 7);
+        $wooProductId = trim($_POST['woo_product_id'] ?? '');
+
+        $db->execute("
+            UPDATE events
+            SET ticketing_enabled = ?, ticket_deadline_days = ?, woo_product_id = ?
+            WHERE id = ?
+        ", [$enabled, $deadlineDays, $wooProductId ?: null, $eventId]);
+
+        $event = $db->getRow("SELECT * FROM events WHERE id = ?", [$eventId]);
+        $message = 'Inställningar sparade!';
+        $messageType = 'success';
+    }
+}
+
+// Get classes for pricing
+$classes = $db->getAll("SELECT id, name, display_name FROM classes ORDER BY sort_order ASC");
 
 $pageTitle = 'Ticketing - ' . $event['name'];
 $pageType = 'admin';
 include __DIR__ . '/../includes/layout-header.php';
-
-echo "STEG 9: After header<br>";
 ?>
 
 <main class="gs-content-with-sidebar">
     <div class="gs-container">
-        <h1>Event Ticketing - v2.4.2-072</h1>
-        <p>Event: <?= htmlspecialchars($event['name']) ?></p>
-        <p>Classes: <?= count($classes) ?></p>
-        <p>Ticketing enabled: <?= $event['ticketing_enabled'] ?? 'N/A' ?></p>
-        <p>Woo Product ID: <?= $event['woo_product_id'] ?? 'N/A' ?></p>
+        <!-- Header -->
+        <div class="gs-card gs-mb-lg">
+            <div class="gs-card-content">
+                <div class="gs-flex gs-justify-between gs-items-center">
+                    <div>
+                        <h1 class="gs-h3">
+                            <i data-lucide="ticket"></i>
+                            <?= htmlspecialchars($event['name']) ?>
+                        </h1>
+                        <p class="gs-text-secondary gs-text-sm">
+                            <?= date('d M Y', strtotime($event['date'])) ?> - <?= htmlspecialchars($event['location'] ?? '') ?>
+                        </p>
+                    </div>
+                    <a href="/admin/ticketing.php" class="gs-btn gs-btn-outline">
+                        <i data-lucide="arrow-left"></i>
+                        Tillbaka
+                    </a>
+                </div>
+            </div>
+        </div>
 
-        <a href="/admin/ticketing.php" class="gs-btn gs-btn-outline">
-            &larr; Tillbaka till Ticketing Dashboard
-        </a>
+        <?php if ($message): ?>
+            <div class="gs-alert gs-alert-<?= $messageType ?> gs-mb-lg">
+                <?= htmlspecialchars($message) ?>
+            </div>
+        <?php endif; ?>
+
+        <!-- Settings Form -->
+        <div class="gs-card">
+            <div class="gs-card-header">
+                <h2 class="gs-h5">
+                    <i data-lucide="settings"></i>
+                    Ticketing-inställningar
+                </h2>
+            </div>
+            <div class="gs-card-content">
+                <form method="POST">
+                    <?= csrf_field() ?>
+                    <input type="hidden" name="action" value="save_settings">
+
+                    <div class="gs-grid gs-grid-cols-1 gs-md-grid-cols-2 gs-gap-md">
+                        <!-- Enable Ticketing -->
+                        <div class="gs-form-group">
+                            <label class="gs-checkbox-label">
+                                <input type="checkbox" name="ticketing_enabled" value="1"
+                                    <?= ($event['ticketing_enabled'] ?? 0) ? 'checked' : '' ?>>
+                                <span>Aktivera ticketing för detta event</span>
+                            </label>
+                        </div>
+
+                        <!-- Deadline Days -->
+                        <div class="gs-form-group">
+                            <label class="gs-label">Anmälningsfrist (dagar före)</label>
+                            <input type="number" name="ticket_deadline_days" class="gs-input"
+                                value="<?= $event['ticket_deadline_days'] ?? 7 ?>" min="0" max="90">
+                            <small class="gs-text-secondary">Antal dagar före event då anmälan stänger</small>
+                        </div>
+
+                        <!-- WooCommerce Product ID -->
+                        <div class="gs-form-group gs-col-span-2">
+                            <label class="gs-label">WooCommerce Product ID</label>
+                            <input type="text" name="woo_product_id" class="gs-input"
+                                value="<?= htmlspecialchars($event['woo_product_id'] ?? '') ?>"
+                                placeholder="T.ex. 12345">
+                            <small class="gs-text-secondary">
+                                Product ID från WooCommerce för köp-knappen på eventsidan
+                            </small>
+                        </div>
+                    </div>
+
+                    <div class="gs-mt-lg">
+                        <button type="submit" class="gs-btn gs-btn-primary">
+                            <i data-lucide="save"></i>
+                            Spara inställningar
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Current Status -->
+        <div class="gs-card gs-mt-lg">
+            <div class="gs-card-header">
+                <h2 class="gs-h5">
+                    <i data-lucide="info"></i>
+                    Nuvarande status
+                </h2>
+            </div>
+            <div class="gs-card-content">
+                <div class="gs-grid gs-grid-cols-1 gs-md-grid-cols-3 gs-gap-md">
+                    <div>
+                        <strong>Ticketing:</strong><br>
+                        <?php if ($event['ticketing_enabled'] ?? 0): ?>
+                            <span class="gs-badge gs-badge-success">Aktiverat</span>
+                        <?php else: ?>
+                            <span class="gs-badge gs-badge-secondary">Inaktiverat</span>
+                        <?php endif; ?>
+                    </div>
+                    <div>
+                        <strong>Anmälningsfrist:</strong><br>
+                        <?= $event['ticket_deadline_days'] ?? 7 ?> dagar före event
+                    </div>
+                    <div>
+                        <strong>WooCommerce ID:</strong><br>
+                        <?= $event['woo_product_id'] ? htmlspecialchars($event['woo_product_id']) : '<span class="gs-text-secondary">Ej satt</span>' ?>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 </main>
 
-<?php
-echo "STEG 10: Before footer<br>";
-include __DIR__ . '/../includes/layout-footer.php';
-echo "STEG 11: Done<br>";
-?>
+<?php include __DIR__ . '/../includes/layout-footer.php'; ?>
