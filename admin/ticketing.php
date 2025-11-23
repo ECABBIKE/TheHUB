@@ -224,6 +224,7 @@ include __DIR__ . '/../includes/layout-header.php';
                                     <th>Event</th>
                                     <th>Datum</th>
                                     <th>Status</th>
+                                    <th>Woo ID</th>
                                     <th>Priser</th>
                                     <th>Biljetter</th>
                                     <th>Sålda</th>
@@ -257,6 +258,13 @@ include __DIR__ . '/../includes/layout-header.php';
                                                 <span class="gs-badge gs-badge-success gs-badge-sm">Aktiv</span>
                                             <?php else: ?>
                                                 <span class="gs-badge gs-badge-secondary gs-badge-sm">Inaktiv</span>
+                                            <?php endif; ?>
+                                        </td>
+                                        <td>
+                                            <?php if ($hasWooProduct): ?>
+                                                <code class="gs-text-xs"><?= h($event['woo_product_id']) ?></code>
+                                            <?php else: ?>
+                                                <span class="gs-text-secondary gs-text-sm">-</span>
                                             <?php endif; ?>
                                         </td>
                                         <td>
