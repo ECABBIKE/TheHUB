@@ -220,43 +220,22 @@ if ($totalRaces > 0) {
             }
 
             // Get GravitySeries Team stats (club points for this series)
-            // Cast rider_id to int to avoid any type issues
-            $riderIdInt = (int)$riderId;
-            $seriesIdInt = (int)$totalSeries['id'];
-
-            // Get all club_rider_points for this rider to debug
-            $allCrp = $db->getAll("
-                SELECT event_id, series_id, club_id, club_points
-                FROM club_rider_points
-                WHERE rider_id = $riderIdInt
-            ");
-
-            // Get events in series 8
-            $series8Events = $db->getAll("
-                SELECT event_id FROM series_events WHERE series_id = $seriesIdInt
-            ");
-
+            // Simple direct query - club_rider_points already has series_id
             if ($rider['club_id']) {
-                $clubIdInt = (int)$rider['club_id'];
-                $eventIds = array_column($series8Events, 'event_id');
-
-                if (!empty($eventIds)) {
-                    // Embed integer values directly to avoid collation issues
-                    $eventIds = array_map('intval', $eventIds);
-                    $eventIdsStr = implode(',', $eventIds);
-
-                    $gravityTeamStats = $db->getRow("
-                        SELECT SUM(club_points) as total_points, COUNT(DISTINCT event_id) as events_count
-                        FROM club_rider_points
-                        WHERE rider_id = $riderIdInt AND club_id = $clubIdInt
-                        AND event_id IN ($eventIdsStr)
-                    ");
-                }
+                $gravityTeamStats = $db->getRow("
+                    SELECT SUM(club_points) as total_points, COUNT(DISTINCT event_id) as events_count
+                    FROM club_rider_points
+                    WHERE rider_id = ? AND club_id = ? AND series_id = ?
+                ", [$riderId, $rider['club_id'], $totalSeries['id']]);
             }
 
-            // Store debug data for display
-            $debugCrp = $allCrp;
-            $debugSeries8Events = $series8Events;
+            // Debug data
+            $debugCrp = $db->getAll("
+                SELECT event_id, series_id, club_id, club_points
+                FROM club_rider_points
+                WHERE rider_id = ?
+            ", [$riderId]);
+            $debugSeries8Events = [];
         }
     } catch (Exception $e) {
         $debugError = $e->getMessage();
@@ -590,7 +569,7 @@ try {
                     }
                 }
             </style>
-            <div style="background: #ffc; padding: 5px; margin-bottom: 10px; font-size: 10px;">BUILD 047 - rider_id: <?= $riderId ?>, club_id: <?= $rider['club_id'] ?? 'null' ?></div>
+            <div style="background: #ffc; padding: 5px; margin-bottom: 10px; font-size: 10px;">BUILD 048 - rider_id: <?= $riderId ?>, club_id: <?= $rider['club_id'] ?? 'null' ?></div>
             <div class="rider-stats-top">
                 <div class="gs-card gs-stat-card-compact">
                     <div class="gs-stat-number-compact gs-text-primary"><?= $totalRaces ?></div>
