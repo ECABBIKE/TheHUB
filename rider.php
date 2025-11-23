@@ -233,13 +233,16 @@ if ($totalRaces > 0) {
             echo "<!-- DEBUG041: debugCount=" . json_encode($debugCount) . " -->";
 
             if ($rider['club_id']) {
+                // Get club points via series_events (events linked to series 8)
+                // club_rider_points stores regional series_id, so we need to find events through series_events
                 $gravityTeamStats = $db->getRow("
-                    SELECT SUM(club_points) as total_points, COUNT(DISTINCT event_id) as events_count
-                    FROM club_rider_points
-                    WHERE rider_id = ? AND club_id = ? AND series_id = ?
+                    SELECT SUM(crp.club_points) as total_points, COUNT(DISTINCT crp.event_id) as events_count
+                    FROM club_rider_points crp
+                    JOIN series_events se ON crp.event_id = se.event_id
+                    WHERE crp.rider_id = ? AND crp.club_id = ? AND se.series_id = ?
                 ", [$riderId, $rider['club_id'], $totalSeries['id']]);
 
-                echo "<!-- DEBUG041: gravityTeamStats=" . json_encode($gravityTeamStats) . " -->";
+                echo "<!-- DEBUG042: gravityTeamStats=" . json_encode($gravityTeamStats) . " -->";
             }
         }
     } catch (Exception $e) {
@@ -573,7 +576,7 @@ try {
                     }
                 }
             </style>
-            <div style="background: #ffc; padding: 5px; margin-bottom: 10px; font-size: 10px;">BUILD 041 - rider_id: <?= $riderId ?>, club_id: <?= $rider['club_id'] ?? 'null' ?></div>
+            <div style="background: #ffc; padding: 5px; margin-bottom: 10px; font-size: 10px;">BUILD 042 - rider_id: <?= $riderId ?>, club_id: <?= $rider['club_id'] ?? 'null' ?></div>
             <div class="rider-stats-top">
                 <div class="gs-card gs-stat-card-compact">
                     <div class="gs-stat-number-compact gs-text-primary"><?= $totalRaces ?></div>
