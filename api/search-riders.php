@@ -28,6 +28,9 @@ $riders = $db->getAll("
         r.uci_id,
         r.email,
         r.gravity_id,
+        r.license_type,
+        r.birth_year,
+        r.gender,
         c.name as club_name
     FROM riders r
     LEFT JOIN clubs c ON r.club_id = c.id

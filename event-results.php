@@ -42,16 +42,30 @@ if (!$event) {
     exit;
 }
 
-// Fetch pricing rules for registration form
+// Fetch pricing rules for registration form (from series)
 $pricingRules = [];
-if (!empty($event['ticketing_enabled'])) {
+$classRulesMap = [];
+if (!empty($event['ticketing_enabled']) && !empty($event['series_id'])) {
+    // Get pricing from series
     $pricingRules = $db->getAll("
         SELECT pr.*, c.name as class_name, c.display_name as class_display_name
-        FROM event_pricing_rules pr
+        FROM series_pricing_rules pr
         JOIN classes c ON pr.class_id = c.id
-        WHERE pr.event_id = ?
+        WHERE pr.series_id = ?
         ORDER BY c.sort_order ASC
-    ", [$eventId]);
+    ", [$event['series_id']]);
+
+    // Get class rules (license restrictions) from series
+    $classRules = $db->getAll("
+        SELECT *
+        FROM series_class_rules
+        WHERE series_id = ? AND is_active = 1
+    ", [$event['series_id']]);
+
+    // Convert class rules to map for easy lookup
+    foreach ($classRules as $rule) {
+        $classRulesMap[$rule['class_id']] = $rule;
+    }
 }
 
 // Fetch global texts for use_global functionality
