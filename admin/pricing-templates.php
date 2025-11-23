@@ -49,6 +49,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $name = trim($_POST['name'] ?? '');
         $description = trim($_POST['description'] ?? '');
         $isDefault = isset($_POST['is_default']) ? 1 : 0;
+        $earlyBirdPercent = floatval($_POST['early_bird_percent'] ?? 15);
+        $earlyBirdDays = intval($_POST['early_bird_days'] ?? 21);
+        $lateFeePercent = floatval($_POST['late_fee_percent'] ?? 25);
+        $lateFeeDays = intval($_POST['late_fee_days'] ?? 3);
 
         if (empty($name)) {
             $message = 'Namn är obligatoriskt';
@@ -62,7 +66,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $db->update('pricing_templates', [
                 'name' => $name,
                 'description' => $description,
-                'is_default' => $isDefault
+                'is_default' => $isDefault,
+                'early_bird_percent' => $earlyBirdPercent,
+                'early_bird_days_before' => $earlyBirdDays,
+                'late_fee_percent' => $lateFeePercent,
+                'late_fee_days_before' => $lateFeeDays
             ], 'id = ?', [$id]);
             $message = "Prismall uppdaterad!";
             $messageType = 'success';
@@ -82,29 +90,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $templateId = intval($_POST['template_id']);
         $classIds = $_POST['class_id'] ?? [];
         $basePrices = $_POST['base_price'] ?? [];
-        $earlyBirdPercents = $_POST['early_bird_percent'] ?? [];
-        $earlyBirdDays = $_POST['early_bird_days'] ?? [];
-        $lateFeePercents = $_POST['late_fee_percent'] ?? [];
-        $lateFeeDays = $_POST['late_fee_days'] ?? [];
 
         $saved = 0;
         foreach ($classIds as $index => $classId) {
             $basePrice = floatval($basePrices[$index] ?? 0);
-            $earlyBirdPercent = floatval($earlyBirdPercents[$index] ?? 0);
-            $earlyBirdDaysBefore = intval($earlyBirdDays[$index] ?? 21);
-            $lateFeePercent = floatval($lateFeePercents[$index] ?? 0);
-            $lateFeeDaysBefore = intval($lateFeeDays[$index] ?? 3);
 
             if ($basePrice > 0) {
                 // Check if exists
                 $existing = $db->getRow("SELECT id FROM pricing_template_rules WHERE template_id = ? AND class_id = ?", [$templateId, $classId]);
 
                 $data = [
-                    'base_price' => $basePrice,
-                    'early_bird_percent' => $earlyBirdPercent,
-                    'early_bird_days_before' => $earlyBirdDaysBefore,
-                    'late_fee_percent' => $lateFeePercent,
-                    'late_fee_days_before' => $lateFeeDaysBefore
+                    'base_price' => $basePrice
                 ];
 
                 if ($existing) {
@@ -158,6 +154,18 @@ $pageType = 'admin';
 include __DIR__ . '/../includes/layout-header.php';
 ?>
 
+<style>
+/* Remove spinners from number inputs */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+input[type="number"] {
+    -moz-appearance: textfield;
+}
+</style>
+
 <main class="gs-content-with-sidebar">
     <div class="gs-container">
         <?php if ($editTemplate): ?>
@@ -188,7 +196,7 @@ include __DIR__ . '/../includes/layout-header.php';
             </div>
         <?php endif; ?>
 
-        <!-- Template Info -->
+        <!-- Template Settings -->
         <div class="gs-card gs-mb-lg">
             <div class="gs-card-header">
                 <h2 class="gs-h5">
@@ -220,6 +228,39 @@ include __DIR__ . '/../includes/layout-header.php';
                         </label>
                     </div>
 
+                    <!-- Pricing Settings -->
+                    <div class="gs-mt-lg">
+                        <h3 class="gs-h6 gs-mb-md">Prisregler</h3>
+                        <div class="gs-grid gs-grid-cols-1 gs-md-grid-cols-2 gs-gap-md">
+                            <div class="gs-card gs-p-md" style="background: var(--gs-success-bg);">
+                                <label class="gs-label gs-text-success">Early Bird (rabatt)</label>
+                                <div class="gs-flex gs-gap-sm gs-items-center gs-mt-sm">
+                                    <input type="number" name="early_bird_percent" class="gs-input"
+                                           value="<?= $editTemplate['early_bird_percent'] ?? 15 ?>"
+                                           min="0" max="100" style="width: 80px;">
+                                    <span>% rabatt,</span>
+                                    <input type="number" name="early_bird_days" class="gs-input"
+                                           value="<?= $editTemplate['early_bird_days_before'] ?? 21 ?>"
+                                           min="0" max="90" style="width: 80px;">
+                                    <span>dagar före event</span>
+                                </div>
+                            </div>
+                            <div class="gs-card gs-p-md" style="background: var(--gs-warning-bg);">
+                                <label class="gs-label gs-text-warning">Efteranmälan (tillägg)</label>
+                                <div class="gs-flex gs-gap-sm gs-items-center gs-mt-sm">
+                                    <input type="number" name="late_fee_percent" class="gs-input"
+                                           value="<?= $editTemplate['late_fee_percent'] ?? 25 ?>"
+                                           min="0" max="100" style="width: 80px;">
+                                    <span>% tillägg,</span>
+                                    <input type="number" name="late_fee_days" class="gs-input"
+                                           value="<?= $editTemplate['late_fee_days_before'] ?? 3 ?>"
+                                           min="0" max="30" style="width: 80px;">
+                                    <span>dagar före event</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="gs-mt-md">
                         <button type="submit" class="gs-btn gs-btn-primary">
                             <i data-lucide="save"></i>
@@ -230,12 +271,12 @@ include __DIR__ . '/../includes/layout-header.php';
             </div>
         </div>
 
-        <!-- Pricing Rules -->
+        <!-- Pricing Rules per Class -->
         <div class="gs-card">
             <div class="gs-card-header">
                 <h2 class="gs-h5">
                     <i data-lucide="credit-card"></i>
-                    Priser per klass
+                    Grundpriser per klass
                 </h2>
             </div>
             <div class="gs-card-content">
@@ -244,20 +285,28 @@ include __DIR__ . '/../includes/layout-header.php';
                     <input type="hidden" name="action" value="save_prices">
                     <input type="hidden" name="template_id" value="<?= $editTemplate['id'] ?>">
 
+                    <?php
+                    // Get template pricing settings for calculations
+                    $ebPercent = $editTemplate['early_bird_percent'] ?? 15;
+                    $latePercent = $editTemplate['late_fee_percent'] ?? 25;
+                    ?>
+
                     <div class="gs-table-responsive">
                         <table class="gs-table">
                             <thead>
                                 <tr>
                                     <th>Klass</th>
-                                    <th>Ordinarie (kr)</th>
-                                    <th>Early Bird -% / dagar</th>
-                                    <th>Efteranm. +% / dagar</th>
-                                    <th>Beräknade priser</th>
+                                    <th>Ordinarie pris</th>
+                                    <th>Early Bird (-<?= $ebPercent ?>%)</th>
+                                    <th>Efteranmälan (+<?= $latePercent ?>%)</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <?php foreach ($classes as $class):
                                     $rule = $templateRules[$class['id']] ?? null;
+                                    $basePrice = $rule['base_price'] ?? 0;
+                                    $ebPrice = $basePrice * (1 - $ebPercent / 100);
+                                    $latePrice = $basePrice * (1 + $latePercent / 100);
                                 ?>
                                     <tr data-row="<?= $class['id'] ?>">
                                         <td>
@@ -265,73 +314,29 @@ include __DIR__ . '/../includes/layout-header.php';
                                             <strong><?= htmlspecialchars($class['display_name'] ?: $class['name']) ?></strong>
                                         </td>
                                         <td>
-                                            <input type="number" name="base_price[]" class="gs-input price-input"
-                                                   data-class="<?= $class['id'] ?>" data-field="base"
-                                                   value="<?= $rule['base_price'] ?? '' ?>"
-                                                   min="0" step="1" style="width: 100px;"
-                                                   oninput="calculatePrices(<?= $class['id'] ?>)">
-                                        </td>
-                                        <td>
-                                            <div class="gs-flex gs-gap-xs gs-items-center">
-                                                <input type="number" name="early_bird_percent[]" class="gs-input price-input"
-                                                       data-class="<?= $class['id'] ?>" data-field="eb_percent"
-                                                       value="<?= $rule['early_bird_percent'] ?? '15' ?>"
-                                                       min="0" max="100" step="1" style="width: 60px;"
-                                                       oninput="calculatePrices(<?= $class['id'] ?>)">
-                                                <span class="gs-text-secondary">/</span>
-                                                <input type="number" name="early_bird_days[]" class="gs-input"
-                                                       value="<?= $rule['early_bird_days_before'] ?? '21' ?>"
-                                                       min="0" max="90" step="1" style="width: 50px;">
-                                                <span class="gs-text-xs gs-text-secondary">d</span>
+                                            <div class="gs-flex gs-items-center gs-gap-xs">
+                                                <input type="number" name="base_price[]" class="gs-input"
+                                                       data-class="<?= $class['id'] ?>"
+                                                       value="<?= $basePrice ?: '' ?>"
+                                                       min="0" step="1" style="width: 100px;"
+                                                       oninput="calculatePrices(<?= $class['id'] ?>, <?= $ebPercent ?>, <?= $latePercent ?>)">
+                                                <span class="gs-text-secondary">kr</span>
                                             </div>
                                         </td>
                                         <td>
-                                            <div class="gs-flex gs-gap-xs gs-items-center">
-                                                <input type="number" name="late_fee_percent[]" class="gs-input price-input"
-                                                       data-class="<?= $class['id'] ?>" data-field="late_percent"
-                                                       value="<?= $rule['late_fee_percent'] ?? '25' ?>"
-                                                       min="0" max="100" step="1" style="width: 60px;"
-                                                       oninput="calculatePrices(<?= $class['id'] ?>)">
-                                                <span class="gs-text-secondary">/</span>
-                                                <input type="number" name="late_fee_days[]" class="gs-input"
-                                                       value="<?= $rule['late_fee_days_before'] ?? '3' ?>"
-                                                       min="0" max="30" step="1" style="width: 50px;">
-                                                <span class="gs-text-xs gs-text-secondary">d</span>
-                                            </div>
+                                            <span id="eb-<?= $class['id'] ?>" class="gs-text-success gs-font-bold">
+                                                <?= $basePrice > 0 ? number_format($ebPrice, 0) . ' kr' : '-' ?>
+                                            </span>
                                         </td>
                                         <td>
-                                            <div id="calc-<?= $class['id'] ?>" class="gs-text-sm">
-                                                <?php if (!empty($rule['base_price'])):
-                                                    $base = $rule['base_price'];
-                                                    $ebPercent = $rule['early_bird_percent'] ?? 15;
-                                                    $latePercent = $rule['late_fee_percent'] ?? 25;
-                                                    $ebPrice = $base * (1 - $ebPercent / 100);
-                                                    $latePrice = $base * (1 + $latePercent / 100);
-                                                ?>
-                                                    <span class="gs-text-success"><?= number_format($ebPrice, 0) ?> kr</span>
-                                                    <span class="gs-text-secondary">|</span>
-                                                    <span class="gs-text-warning"><?= number_format($latePrice, 0) ?> kr</span>
-                                                <?php else: ?>
-                                                    <span class="gs-text-secondary">-</span>
-                                                <?php endif; ?>
-                                            </div>
+                                            <span id="late-<?= $class['id'] ?>" class="gs-text-warning gs-font-bold">
+                                                <?= $basePrice > 0 ? number_format($latePrice, 0) . ' kr' : '-' ?>
+                                            </span>
                                         </td>
                                     </tr>
                                 <?php endforeach; ?>
                             </tbody>
                         </table>
-                    </div>
-
-                    <div class="gs-alert gs-alert-info gs-mt-md">
-                        <i data-lucide="info"></i>
-                        <div>
-                            <strong>Prisberäkning:</strong>
-                            <ul class="gs-mt-sm gs-ml-lg">
-                                <li><strong>Early Bird:</strong> Ordinarie - X% (t.ex. 500 kr - 15% = 425 kr)</li>
-                                <li><strong>Ordinarie:</strong> Grundpriset</li>
-                                <li><strong>Efteranmälan:</strong> Ordinarie + X% (t.ex. 500 kr + 25% = 625 kr)</li>
-                            </ul>
-                        </div>
                     </div>
 
                     <div class="gs-mt-lg">
@@ -495,31 +500,26 @@ include __DIR__ . '/../includes/layout-header.php';
 </main>
 
 <script>
-function calculatePrices(classId) {
+function calculatePrices(classId, ebPercent, latePercent) {
     const row = document.querySelector(`tr[data-row="${classId}"]`);
     if (!row) return;
 
-    const baseInput = row.querySelector('input[data-field="base"]');
-    const ebPercentInput = row.querySelector('input[data-field="eb_percent"]');
-    const latePercentInput = row.querySelector('input[data-field="late_percent"]');
-    const calcDiv = document.getElementById(`calc-${classId}`);
+    const baseInput = row.querySelector('input[data-class="' + classId + '"]');
+    const ebSpan = document.getElementById(`eb-${classId}`);
+    const lateSpan = document.getElementById(`late-${classId}`);
 
-    if (!baseInput || !calcDiv) return;
+    if (!baseInput || !ebSpan || !lateSpan) return;
 
     const base = parseFloat(baseInput.value) || 0;
-    const ebPercent = parseFloat(ebPercentInput?.value) || 0;
-    const latePercent = parseFloat(latePercentInput?.value) || 0;
 
     if (base > 0) {
         const ebPrice = Math.round(base * (1 - ebPercent / 100));
         const latePrice = Math.round(base * (1 + latePercent / 100));
-        calcDiv.innerHTML = `
-            <span class="gs-text-success">${ebPrice} kr</span>
-            <span class="gs-text-secondary">|</span>
-            <span class="gs-text-warning">${latePrice} kr</span>
-        `;
+        ebSpan.textContent = ebPrice + ' kr';
+        lateSpan.textContent = latePrice + ' kr';
     } else {
-        calcDiv.innerHTML = '<span class="gs-text-secondary">-</span>';
+        ebSpan.textContent = '-';
+        lateSpan.textContent = '-';
     }
 }
 </script>
