@@ -593,6 +593,11 @@ button, input, select, textarea {
   margin: 0.75rem 0;
 }
 
+.gs-card-table-container {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
 .gs-table {
   width: 100%;
   border-collapse: collapse;
@@ -1304,6 +1309,30 @@ button, input, select, textarea {
   color: var(--gs-gray-600);
 }
 
+/* Desktop improvements for result cards */
+@media (min-width: 768px) {
+  .gs-result-card {
+    grid-template-columns: 100px 1fr;
+    gap: 1rem;
+    padding: 1rem;
+  }
+
+  .gs-result-logo img {
+    max-height: 70px;
+  }
+
+  .gs-result-meta {
+    flex-direction: row;
+    gap: 1rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .gs-result-card {
+    grid-template-columns: 120px 1fr;
+  }
+}
+
 /* =======================================================
    22c. RIDER CARDS (Club page)
 ======================================================= */
@@ -1428,8 +1457,54 @@ button, input, select, textarea {
 }
 
 /* =======================================================
-   22e. EVENT TABS & RESULTS (Event results page)
+   22e. EVENT HEADER & TABS (Event results page)
 ======================================================= */
+
+/* Event Header Layout */
+.event-header-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.event-logo {
+  flex-shrink: 0;
+  width: 80px;
+  height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.event-logo img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.event-info {
+  flex: 1;
+}
+
+@media (min-width: 640px) {
+  .event-header-layout {
+    flex-direction: row;
+    gap: 1.5rem;
+    align-items: flex-start;
+  }
+
+  .event-logo {
+    width: 100px;
+    height: 100px;
+  }
+}
+
+@media (min-width: 768px) {
+  .event-logo {
+    width: 120px;
+    height: 120px;
+  }
+}
 
 /* Tab Navigation */
 .gs-event-tabs-wrapper {

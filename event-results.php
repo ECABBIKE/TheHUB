@@ -580,8 +580,8 @@ include __DIR__ . '/includes/layout-header.php';
         </div>
 
         <!-- Tab Navigation -->
-        <div class="gs-gs-gs-event-tabs-wrapper gs-mb-lg">
-            <div class="gs-gs-event-tabs">
+        <div class="gs-event-tabs-wrapper gs-mb-lg">
+            <div class="gs-event-tabs">
                 <?php if ($hasResults): ?>
                 <a href="?id=<?= $eventId ?>&tab=resultat"
                    class="gs-event-tab <?= $activeTab === 'resultat' ? 'active' : '' ?>">
