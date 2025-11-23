@@ -606,12 +606,14 @@ try {
             </div>
 
             <!-- Debug -->
-            <?php if (isset($debugCount)): ?>
             <div style="background: #fee; padding: 10px; margin-bottom: 10px; font-size: 11px;">
-                rider_id: <?= $riderId ?>, club_id: <?= $rider['club_id'] ?>, series_id: <?= $totalSeries['id'] ?? 'null' ?><br>
+                rider_id: <?= $riderId ?>, club_id: <?= $rider['club_id'] ?? 'null' ?>, series_id: <?= $totalSeries['id'] ?? 'null' ?><br>
+                totalRaces: <?= $totalRaces ?>, gravityTotalStats: <?= json_encode($gravityTotalStats) ?><br>
+                gravityTeamStats: <?= json_encode($gravityTeamStats) ?><br>
+                <?php if (isset($debugCount)): ?>
                 club_rider_points rows: <?= $debugCount['total_rows'] ?? 0 ?>, series8 rows: <?= $debugCount['series8_rows'] ?? 0 ?>, all points: <?= $debugCount['all_club_points'] ?? 0 ?>
+                <?php endif; ?>
             </div>
-            <?php endif; ?>
 
             <?php if (empty($results)): ?>
                 <!-- No Results -->
