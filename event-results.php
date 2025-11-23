@@ -42,20 +42,85 @@ if (!$event) {
     exit;
 }
 
-// Fetch pricing rules for registration form (from series)
+// Fetch pricing rules for registration form (from pricing template)
 $pricingRules = [];
 $classRulesMap = [];
-if (!empty($event['ticketing_enabled']) && !empty($event['series_id'])) {
-    // Get pricing from series
-    $pricingRules = $db->getAll("
-        SELECT pr.*, c.name as class_name, c.display_name as class_display_name
-        FROM series_pricing_rules pr
-        JOIN classes c ON pr.class_id = c.id
-        WHERE pr.series_id = ?
-        ORDER BY c.sort_order ASC
-    ", [$event['series_id']]);
+$activePriceTier = 'regular'; // 'early_bird', 'regular', or 'late_fee'
+$priceTierInfo = [];
 
-    // Get class rules (license restrictions) from series
+if (!empty($event['ticketing_enabled']) && !empty($event['pricing_template_id'])) {
+    // Get pricing from template
+    $pricingRules = $db->getAll("
+        SELECT ptr.*, c.name as class_name, c.display_name as class_display_name
+        FROM pricing_template_rules ptr
+        JOIN classes c ON ptr.class_id = c.id
+        WHERE ptr.template_id = ?
+        ORDER BY c.sort_order ASC
+    ", [$event['pricing_template_id']]);
+
+    // Calculate which price tier is active based on event date
+    $eventDate = new DateTime($event['date']);
+    $now = new DateTime();
+    $daysUntilEvent = (int)$now->diff($eventDate)->format('%r%a');
+
+    // Get sample rule for tier calculation (use first rule's settings)
+    if (!empty($pricingRules)) {
+        $sampleRule = $pricingRules[0];
+        $earlyBirdDays = $sampleRule['early_bird_days_before'] ?? 21;
+        $lateFeeDays = $sampleRule['late_fee_days_before'] ?? 3;
+
+        if ($daysUntilEvent >= $earlyBirdDays) {
+            $activePriceTier = 'early_bird';
+            $earlyBirdEndDate = clone $eventDate;
+            $earlyBirdEndDate->modify("-{$earlyBirdDays} days");
+            $priceTierInfo = [
+                'tier' => 'early_bird',
+                'label' => 'Early Bird',
+                'end_date' => $earlyBirdEndDate->format('Y-m-d'),
+                'discount_percent' => $sampleRule['early_bird_percent'] ?? 0
+            ];
+        } elseif ($daysUntilEvent <= $lateFeeDays && $daysUntilEvent >= 0) {
+            $activePriceTier = 'late_fee';
+            $lateFeeStartDate = clone $eventDate;
+            $lateFeeStartDate->modify("-{$lateFeeDays} days");
+            $priceTierInfo = [
+                'tier' => 'late_fee',
+                'label' => 'Efteranmälan',
+                'start_date' => $lateFeeStartDate->format('Y-m-d'),
+                'fee_percent' => $sampleRule['late_fee_percent'] ?? 0
+            ];
+        } else {
+            $activePriceTier = 'regular';
+            $priceTierInfo = [
+                'tier' => 'regular',
+                'label' => 'Ordinarie'
+            ];
+        }
+    }
+
+    // Calculate prices for each rule
+    foreach ($pricingRules as &$rule) {
+        $basePrice = $rule['base_price'];
+        $earlyBirdPercent = $rule['early_bird_percent'] ?? 0;
+        $lateFeePercent = $rule['late_fee_percent'] ?? 0;
+
+        $rule['early_bird_price'] = $basePrice * (1 - $earlyBirdPercent / 100);
+        $rule['late_fee_price'] = $basePrice * (1 + $lateFeePercent / 100);
+
+        // Set the active price based on current tier
+        if ($activePriceTier === 'early_bird') {
+            $rule['active_price'] = $rule['early_bird_price'];
+        } elseif ($activePriceTier === 'late_fee') {
+            $rule['active_price'] = $rule['late_fee_price'];
+        } else {
+            $rule['active_price'] = $basePrice;
+        }
+    }
+    unset($rule);
+}
+
+// Get class rules (license restrictions) from series if available
+if (!empty($event['series_id'])) {
     $classRules = $db->getAll("
         SELECT *
         FROM series_class_rules
@@ -1572,14 +1637,6 @@ include __DIR__ . '/includes/layout-header.php';
                     $now = new DateTime();
                     $deadlinePassed = $now > $deadline;
 
-                    // Check for early bird
-                    $isEarlyBird = false;
-                    foreach ($pricingRules as $rule) {
-                        if (!empty($rule['early_bird_end_date']) && strtotime($rule['early_bird_end_date']) >= time()) {
-                            $isEarlyBird = true;
-                            break;
-                        }
-                    }
                     ?>
 
                     <?php if ($deadlinePassed): ?>
@@ -1591,8 +1648,10 @@ include __DIR__ . '/includes/layout-header.php';
                         <div id="registration-form">
                             <p class="gs-text-secondary gs-mb-md">
                                 Sista anmälningsdag: <strong><?= $deadline->format('d M Y') ?></strong>
-                                <?php if ($isEarlyBird): ?>
+                                <?php if ($activePriceTier === 'early_bird'): ?>
                                     <span class="gs-badge gs-badge-success gs-ml-sm">Early Bird aktivt!</span>
+                                <?php elseif ($activePriceTier === 'late_fee'): ?>
+                                    <span class="gs-badge gs-badge-warning gs-ml-sm">Efteranmälan</span>
                                 <?php endif; ?>
                             </p>
 
@@ -1691,27 +1750,55 @@ include __DIR__ . '/includes/layout-header.php';
                                     <?php if (empty($pricingRules)): ?>
                                         <p class="gs-text-secondary">Inga klasser har konfigurerats för detta event ännu.</p>
                                     <?php else: ?>
+                                        <!-- Price Tier Indicator -->
+                                        <?php if (!empty($priceTierInfo)): ?>
+                                            <div class="gs-alert gs-mb-md <?php
+                                                if ($priceTierInfo['tier'] === 'early_bird') echo 'gs-alert-success';
+                                                elseif ($priceTierInfo['tier'] === 'late_fee') echo 'gs-alert-warning';
+                                                else echo 'gs-alert-info';
+                                            ?>">
+                                                <div class="gs-flex gs-justify-between gs-items-center">
+                                                    <div>
+                                                        <strong>
+                                                            <?php if ($priceTierInfo['tier'] === 'early_bird'): ?>
+                                                                EARLY BIRD PRIS
+                                                            <?php elseif ($priceTierInfo['tier'] === 'late_fee'): ?>
+                                                                EFTERANMÄLAN
+                                                            <?php else: ?>
+                                                                ORDINARIE PRIS
+                                                            <?php endif; ?>
+                                                        </strong>
+                                                        <?php if ($priceTierInfo['tier'] === 'early_bird' && !empty($priceTierInfo['end_date'])): ?>
+                                                            <br><span class="gs-text-sm">Gäller t.o.m. <?= date('j M', strtotime($priceTierInfo['end_date'])) ?> (-<?= $priceTierInfo['discount_percent'] ?>%)</span>
+                                                        <?php elseif ($priceTierInfo['tier'] === 'late_fee' && !empty($priceTierInfo['fee_percent'])): ?>
+                                                            <br><span class="gs-text-sm">+<?= $priceTierInfo['fee_percent'] ?>% tillägg</span>
+                                                        <?php endif; ?>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        <?php endif; ?>
+
                                         <div class="gs-grid gs-grid-cols-1 gs-gap-sm">
-                                            <?php foreach ($pricingRules as $rule):
-                                                $earlyBirdActive = !empty($rule['early_bird_end_date']) && strtotime($rule['early_bird_end_date']) >= time();
-                                                $earlyBirdPrice = $earlyBirdActive ? $rule['base_price'] * (1 - $rule['early_bird_discount_percent'] / 100) : $rule['base_price'];
-                                            ?>
+                                            <?php foreach ($pricingRules as $rule): ?>
                                                 <label class="gs-card gs-p-md" style="cursor: pointer; border: 2px solid var(--gs-border);">
                                                     <div class="gs-flex gs-justify-between gs-items-center">
                                                         <div class="gs-flex gs-items-center gs-gap-md">
                                                             <input type="radio" name="class_id" value="<?= $rule['class_id'] ?>"
+                                                                   data-active-price="<?= $rule['active_price'] ?>"
                                                                    data-base-price="<?= $rule['base_price'] ?>"
-                                                                   data-early-bird-price="<?= $earlyBirdPrice ?>"
-                                                                   data-early-bird-active="<?= $earlyBirdActive ? '1' : '0' ?>"
+                                                                   data-price-tier="<?= $activePriceTier ?>"
                                                                    onchange="updatePrice()">
                                                             <div>
                                                                 <strong><?= h($rule['class_display_name'] ?: $rule['class_name']) ?></strong>
                                                             </div>
                                                         </div>
                                                         <div class="gs-text-right">
-                                                            <?php if ($earlyBirdActive): ?>
-                                                                <span class="gs-text-success gs-font-bold"><?= number_format($earlyBirdPrice, 0) ?> kr</span>
+                                                            <?php if ($activePriceTier === 'early_bird'): ?>
+                                                                <span class="gs-text-success gs-font-bold"><?= number_format($rule['active_price'], 0) ?> kr</span>
                                                                 <br><span class="gs-text-xs gs-text-secondary"><s><?= number_format($rule['base_price'], 0) ?> kr</s></span>
+                                                            <?php elseif ($activePriceTier === 'late_fee'): ?>
+                                                                <span class="gs-text-warning gs-font-bold"><?= number_format($rule['active_price'], 0) ?> kr</span>
+                                                                <br><span class="gs-text-xs gs-text-secondary">(ord. <?= number_format($rule['base_price'], 0) ?> kr)</span>
                                                             <?php else: ?>
                                                                 <span class="gs-font-bold"><?= number_format($rule['base_price'], 0) ?> kr</span>
                                                             <?php endif; ?>
@@ -2005,14 +2092,11 @@ include __DIR__ . '/includes/layout-header.php';
                             }
 
                             const hasGravityId = document.getElementById('has-gravity-id').value === '1';
-                            const earlyBirdActive = classRadio.dataset.earlyBirdActive === '1';
-                            const basePrice = earlyBirdActive ?
-                                parseFloat(classRadio.dataset.earlyBirdPrice) :
-                                parseFloat(classRadio.dataset.basePrice);
+                            const activePrice = parseFloat(classRadio.dataset.activePrice || classRadio.dataset.basePrice);
 
-                            let total = basePrice;
+                            let total = activePrice;
 
-                            document.getElementById('base-price-display').textContent = basePrice + ' kr';
+                            document.getElementById('base-price-display').textContent = activePrice + ' kr';
 
                             if (hasGravityId) {
                                 document.getElementById('gravity-discount-row').style.display = 'flex';
