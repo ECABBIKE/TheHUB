@@ -71,6 +71,41 @@ $confirmedRegistrations = count(array_filter($registrations, function($r) {
     return $r['status'] === 'confirmed';
 }));
 
+// Fetch ticketing data if ticketing is enabled
+$ticketingEnabled = !empty($event['ticketing_enabled']);
+$ticketData = null;
+$ticketPricing = [];
+
+if ($ticketingEnabled) {
+    // Get ticket statistics
+    $ticketData = $db->getRow("
+        SELECT
+            COUNT(*) as total_tickets,
+            SUM(CASE WHEN status = 'available' THEN 1 ELSE 0 END) as available_tickets,
+            SUM(CASE WHEN status = 'sold' THEN 1 ELSE 0 END) as sold_tickets
+        FROM event_tickets
+        WHERE event_id = ?
+    ", [$eventId]);
+
+    // Get pricing rules for this event
+    $ticketPricing = $db->getAll("
+        SELECT
+            epr.*,
+            c.display_name as class_name
+        FROM event_pricing_rules epr
+        JOIN classes c ON epr.class_id = c.id
+        WHERE epr.event_id = ?
+        ORDER BY c.sort_order ASC
+    ", [$eventId]);
+
+    // Check ticket deadline
+    $ticketDeadlineDays = $event['ticket_deadline_days'] ?? 7;
+    $eventDate = new DateTime($event['date']);
+    $ticketDeadline = clone $eventDate;
+    $ticketDeadline->modify("-{$ticketDeadlineDays} days");
+    $ticketSalesOpen = new DateTime() <= $ticketDeadline;
+}
+
 // Check event format to determine display mode
 $eventFormat = $event['event_format'] ?? 'ENDURO';
 $isDH = in_array($eventFormat, ['DH_STANDARD', 'DH_SWECUP']);
@@ -721,6 +756,17 @@ include __DIR__ . '/includes/layout-header.php';
                     <span class="gs-badge gs-badge-secondary gs-badge-sm"><?= $totalRegistrations ?></span>
                 </a>
 
+                <?php if ($ticketingEnabled && !empty($ticketPricing)): ?>
+                <a href="?id=<?= $eventId ?>&tab=biljetter"
+                   class="event-tab <?= $activeTab === 'biljetter' ? 'active' : '' ?>">
+                    <i data-lucide="ticket"></i>
+                    Biljetter
+                    <?php if ($ticketData && $ticketData['available_tickets'] > 0): ?>
+                    <span class="gs-badge gs-badge-success gs-badge-sm"><?= $ticketData['available_tickets'] ?></span>
+                    <?php endif; ?>
+                </a>
+                <?php endif; ?>
+
                 <?php if ($registrationOpen): ?>
                 <a href="?id=<?= $eventId ?>&tab=anmalan"
                    class="event-tab <?= $activeTab === 'anmalan' ? 'active' : '' ?>">
@@ -1214,6 +1260,157 @@ include __DIR__ . '/includes/layout-header.php';
                             Öppna i Google Maps
                         </a>
                     </div>
+                <?php endif; ?>
+            </div>
+        </div>
+
+        <?php elseif ($activeTab === 'biljetter'): ?>
+        <!-- TICKETS TAB -->
+        <div class="gs-card gs-mb-xl">
+            <div class="gs-card-header">
+                <h2 class="gs-h3 gs-text-primary">
+                    <i data-lucide="ticket"></i>
+                    Köp biljett
+                </h2>
+            </div>
+            <div class="gs-card-content">
+                <?php if (!$ticketingEnabled): ?>
+                    <div class="gs-alert gs-alert-info">
+                        <p>Biljettförsäljning är inte aktiverad för detta event.</p>
+                    </div>
+                <?php elseif (!$ticketSalesOpen): ?>
+                    <div class="gs-alert gs-alert-warning">
+                        <i data-lucide="alert-circle" class="gs-icon-md"></i>
+                        <div>
+                            <strong>Biljettförsäljningen har stängt</strong>
+                            <p class="gs-text-sm gs-mt-xs">Försäljningen stängde <?= $ticketDeadline->format('d M Y') ?>.</p>
+                        </div>
+                    </div>
+                <?php elseif (empty($ticketPricing)): ?>
+                    <div class="gs-alert gs-alert-info">
+                        <p>Prissättning för detta event är ännu inte konfigurerad.</p>
+                    </div>
+                <?php else: ?>
+                    <!-- Ticket Availability -->
+                    <?php if ($ticketData): ?>
+                    <div class="gs-mb-lg">
+                        <h3 class="gs-h5 gs-mb-sm">
+                            <i data-lucide="bar-chart-2" class="gs-icon-14"></i>
+                            Tillgänglighet
+                        </h3>
+                        <?php
+                        $totalTickets = (int)$ticketData['total_tickets'];
+                        $available = (int)$ticketData['available_tickets'];
+                        $sold = (int)$ticketData['sold_tickets'];
+                        $fillPercent = $totalTickets > 0 ? round(($sold / $totalTickets) * 100) : 0;
+                        ?>
+                        <?php if ($available > 0): ?>
+                            <div class="gs-flex gs-items-center gs-gap-md gs-mb-sm">
+                                <span class="gs-badge gs-badge-success">
+                                    <?= $available ?> biljetter tillgängliga
+                                </span>
+                                <span class="gs-text-secondary gs-text-sm">
+                                    (<?= $sold ?>/<?= $totalTickets ?> sålda)
+                                </span>
+                            </div>
+                            <!-- Progress bar -->
+                            <div class="gs-progress gs-mb-sm" style="height: 8px; background: var(--gs-bg-tertiary); border-radius: 4px; overflow: hidden;">
+                                <div style="width: <?= $fillPercent ?>%; height: 100%; background: var(--gs-primary); transition: width 0.3s;"></div>
+                            </div>
+                        <?php else: ?>
+                            <div class="gs-badge gs-badge-error gs-badge-lg">
+                                <i data-lucide="x-circle" class="gs-icon-sm"></i>
+                                SLUTSÅLT
+                            </div>
+                        <?php endif; ?>
+                    </div>
+                    <?php endif; ?>
+
+                    <!-- Pricing Table -->
+                    <div class="gs-mb-lg">
+                        <h3 class="gs-h5 gs-mb-sm">
+                            <i data-lucide="credit-card" class="gs-icon-14"></i>
+                            Priser
+                        </h3>
+                        <div class="gs-table-responsive">
+                            <table class="gs-table">
+                                <thead>
+                                    <tr>
+                                        <th>Klass</th>
+                                        <th>Ordinarie pris</th>
+                                        <th>Early-bird</th>
+                                        <th>Pris nu</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php foreach ($ticketPricing as $pricing): ?>
+                                        <?php
+                                        $basePrice = (float)$pricing['base_price'];
+                                        $earlyBirdDiscount = (float)$pricing['early_bird_discount_percent'];
+                                        $earlyBirdEnd = $pricing['early_bird_end_date'];
+                                        $isEarlyBird = $earlyBirdEnd && date('Y-m-d') <= $earlyBirdEnd;
+                                        $currentPrice = $isEarlyBird
+                                            ? $basePrice * (1 - $earlyBirdDiscount / 100)
+                                            : $basePrice;
+                                        ?>
+                                        <tr>
+                                            <td>
+                                                <strong><?= h($pricing['class_name']) ?></strong>
+                                            </td>
+                                            <td class="gs-text-secondary">
+                                                <?= number_format($basePrice, 0) ?> kr
+                                            </td>
+                                            <td>
+                                                <?php if ($isEarlyBird && $earlyBirdDiscount > 0): ?>
+                                                    <span class="gs-badge gs-badge-success gs-badge-sm">
+                                                        -<?= $earlyBirdDiscount ?>%
+                                                    </span>
+                                                    <span class="gs-text-xs gs-text-secondary gs-ml-xs">
+                                                        t.o.m. <?= date('d/m', strtotime($earlyBirdEnd)) ?>
+                                                    </span>
+                                                <?php elseif ($earlyBirdEnd): ?>
+                                                    <span class="gs-text-secondary gs-text-sm">Avslutat</span>
+                                                <?php else: ?>
+                                                    <span class="gs-text-secondary">-</span>
+                                                <?php endif; ?>
+                                            </td>
+                                            <td>
+                                                <strong class="gs-text-primary">
+                                                    <?= number_format($currentPrice, 0) ?> kr
+                                                </strong>
+                                                <?php if ($isEarlyBird && $earlyBirdDiscount > 0): ?>
+                                                    <span class="gs-text-success gs-text-sm">
+                                                        (spara <?= number_format($basePrice - $currentPrice, 0) ?> kr)
+                                                    </span>
+                                                <?php endif; ?>
+                                            </td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Buy Button -->
+                    <?php if ($ticketData && $ticketData['available_tickets'] > 0): ?>
+                        <div class="gs-mt-lg">
+                            <?php if (!empty($event['woo_product_id'])): ?>
+                                <a href="https://shop.gravityseries.se/?add-to-cart=<?= $event['woo_product_id'] ?>"
+                                   class="gs-btn gs-btn-primary gs-btn-lg"
+                                   target="_blank">
+                                    <i data-lucide="shopping-cart" class="gs-icon-md"></i>
+                                    Köp biljett
+                                </a>
+                                <p class="gs-text-secondary gs-text-sm gs-mt-sm">
+                                    Du kommer att skickas till vår butik för att slutföra köpet.
+                                </p>
+                            <?php else: ?>
+                                <div class="gs-alert gs-alert-info">
+                                    <p>Biljettförsäljning online är inte konfigurerad ännu. Kontakta arrangören.</p>
+                                </div>
+                            <?php endif; ?>
+                        </div>
+                    <?php endif; ?>
                 <?php endif; ?>
             </div>
         </div>
