@@ -1,5 +1,4 @@
 <?php
-die('TICKETING LOADED - v2.4.2-057');
 /**
  * Ticketing Dashboard
  * Main hub for managing event ticketing, pricing, and sales
@@ -13,6 +12,7 @@ require_once __DIR__ . '/../config.php';
 require_admin();
 
 $db = getDB();
+die('AFTER getDB - v2.4.2-058');
 
 // Initialize message
 $message = '';
