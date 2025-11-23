@@ -1715,6 +1715,12 @@ include __DIR__ . '/includes/layout-header.php';
                         const wooProductId = '<?= h($event['woo_product_id']) ?>';
                         const gravityIdDiscount = 50;
 
+                        // Class rules for license validation
+                        const classRules = <?= json_encode($classRulesMap) ?>;
+
+                        // Current rider data for validation
+                        let currentRiderData = null;
+
                         // Rider search
                         document.getElementById('rider-search').addEventListener('input', function() {
                             clearTimeout(searchTimeout);
@@ -1731,12 +1737,22 @@ include __DIR__ . '/includes/layout-header.php';
                                     .then(data => {
                                         const container = document.getElementById('rider-results');
                                         if (data.length === 0) {
-                                            container.innerHTML = '<p class="gs-text-secondary">Ingen deltagare hittades</p>';
+                                            container.innerHTML = '<p class="gs-text-secondary">Ingen deltagare hittades. <a href="#" onclick="showNewRiderForm(); return false;">Registrera ny deltagare</a></p>';
                                         } else {
                                             container.innerHTML = data.map(r => `
                                                 <div class="gs-card gs-p-sm gs-mb-sm" style="cursor: pointer;"
-                                                     onclick="selectRider(${r.id}, '${r.firstname} ${r.lastname}', '${r.club_name || ''}', '${r.uci_id || ''}', ${r.gravity_id ? 1 : 0})">
+                                                     onclick='selectRider(${JSON.stringify({
+                                                         id: r.id,
+                                                         name: r.firstname + " " + r.lastname,
+                                                         club: r.club_name || "",
+                                                         uciId: r.uci_id || "",
+                                                         hasGravityId: r.gravity_id ? 1 : 0,
+                                                         licenseType: r.license_type || "",
+                                                         birthYear: r.birth_year || null,
+                                                         gender: r.gender || ""
+                                                     })})'>
                                                     <strong>${r.firstname} ${r.lastname}</strong>
+                                                    ${r.license_type ? '<span class="gs-badge gs-badge-secondary gs-badge-sm gs-ml-sm">' + r.license_type + '</span>' : ''}
                                                     ${r.club_name ? '<br><span class="gs-text-sm gs-text-secondary">' + r.club_name + '</span>' : ''}
                                                     ${r.gravity_id ? '<span class="gs-badge gs-badge-primary gs-badge-sm gs-ml-sm">GID</span>' : ''}
                                                 </div>
@@ -1747,16 +1763,109 @@ include __DIR__ . '/includes/layout-header.php';
                             }, 300);
                         });
 
-                        function selectRider(id, name, club, uciId, hasGravityId) {
-                            document.getElementById('selected-rider-id').value = id;
-                            document.getElementById('has-gravity-id').value = hasGravityId;
-                            document.getElementById('rider-name').textContent = name;
-                            document.getElementById('rider-details').textContent = club + (uciId ? ' | UCI: ' + uciId : '');
-                            document.getElementById('gravity-id-badge').style.display = hasGravityId ? 'inline' : 'none';
+                        function selectRider(riderData) {
+                            currentRiderData = riderData;
+
+                            document.getElementById('selected-rider-id').value = riderData.id;
+                            document.getElementById('has-gravity-id').value = riderData.hasGravityId;
+                            document.getElementById('rider-name').textContent = riderData.name;
+
+                            let details = riderData.club;
+                            if (riderData.uciId) details += ' | UCI: ' + riderData.uciId;
+                            if (riderData.licenseType) details += ' | Licens: ' + riderData.licenseType;
+
+                            document.getElementById('rider-details').textContent = details;
+                            document.getElementById('gravity-id-badge').style.display = riderData.hasGravityId ? 'inline' : 'none';
                             document.getElementById('selected-rider').style.display = 'block';
                             document.getElementById('rider-results').style.display = 'none';
-                            document.getElementById('rider-search').value = name;
+                            document.getElementById('rider-search').value = riderData.name;
+
+                            // Filter classes based on rider's license/age/gender
+                            filterClasses();
                             updatePrice();
+                        }
+
+                        function filterClasses() {
+                            if (!currentRiderData) return;
+
+                            const classOptions = document.querySelectorAll('input[name="class_id"]');
+
+                            classOptions.forEach(radio => {
+                                const classId = radio.value;
+                                const rules = classRules[classId];
+                                const container = radio.closest('label');
+                                let allowed = true;
+                                let reason = '';
+
+                                if (rules) {
+                                    // Check license type
+                                    if (rules.allowed_license_types) {
+                                        const allowedTypes = JSON.parse(rules.allowed_license_types);
+                                        if (allowedTypes.length > 0 && currentRiderData.licenseType) {
+                                            if (!allowedTypes.includes(currentRiderData.licenseType)) {
+                                                allowed = false;
+                                                reason = 'Kräver licens: ' + allowedTypes.join(', ');
+                                            }
+                                        }
+                                    }
+
+                                    // Check birth year (age restrictions)
+                                    if (allowed && currentRiderData.birthYear) {
+                                        if (rules.min_birth_year && currentRiderData.birthYear < rules.min_birth_year) {
+                                            allowed = false;
+                                            reason = 'Födelseår måste vara ' + rules.min_birth_year + ' eller senare';
+                                        }
+                                        if (rules.max_birth_year && currentRiderData.birthYear > rules.max_birth_year) {
+                                            allowed = false;
+                                            reason = 'Födelseår måste vara ' + rules.max_birth_year + ' eller tidigare';
+                                        }
+                                    }
+
+                                    // Check gender
+                                    if (allowed && rules.allowed_genders && currentRiderData.gender) {
+                                        const allowedGenders = JSON.parse(rules.allowed_genders);
+                                        if (allowedGenders.length > 0 && !allowedGenders.includes(currentRiderData.gender)) {
+                                            allowed = false;
+                                            reason = 'Endast för kön: ' + allowedGenders.join(', ');
+                                        }
+                                    }
+
+                                    // Check license requirement
+                                    if (allowed && rules.requires_license && !currentRiderData.licenseType) {
+                                        allowed = false;
+                                        reason = 'Kräver tävlingslicens';
+                                    }
+                                }
+
+                                // Update UI
+                                radio.disabled = !allowed;
+
+                                // Remove existing reason message
+                                const existingReason = container.querySelector('.class-restriction-reason');
+                                if (existingReason) existingReason.remove();
+
+                                if (!allowed) {
+                                    container.style.opacity = '0.5';
+                                    container.style.cursor = 'not-allowed';
+                                    if (radio.checked) {
+                                        radio.checked = false;
+                                        updatePrice();
+                                    }
+
+                                    // Add reason
+                                    const reasonEl = document.createElement('div');
+                                    reasonEl.className = 'class-restriction-reason gs-text-xs gs-text-error gs-mt-xs';
+                                    reasonEl.textContent = reason;
+                                    container.querySelector('div').appendChild(reasonEl);
+                                } else {
+                                    container.style.opacity = '1';
+                                    container.style.cursor = 'pointer';
+                                }
+                            });
+                        }
+
+                        function showNewRiderForm() {
+                            alert('Funktionen för att registrera ny deltagare med engångslicens kommer snart.');
                         }
 
                         function updatePrice() {
