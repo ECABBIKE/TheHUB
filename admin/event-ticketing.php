@@ -58,15 +58,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         echo "DEBUG: enabled=$enabled, days=$deadlineDays, woo=$wooProductId<br>";
 
+        $sql = "UPDATE events SET ticketing_enabled = ?, ticket_deadline_days = ?, woo_product_id = ? WHERE id = ?";
+        $params = [$enabled, $deadlineDays, $wooProductId ?: null, $eventId];
+        echo "DEBUG: SQL = $sql<br>";
+        echo "DEBUG: Params = " . print_r($params, true) . "<br>";
+
         try {
-            $db->execute("
-                UPDATE events
-                SET ticketing_enabled = ?, ticket_deadline_days = ?, woo_product_id = ?
-                WHERE id = ?
-            ", [$enabled, $deadlineDays, $wooProductId ?: null, $eventId]);
-            echo "DEBUG: Update OK<br>";
+            $result = $db->execute($sql, $params);
+            echo "DEBUG: Update result = " . var_export($result, true) . "<br>";
         } catch (Exception $e) {
             die("DB ERROR: " . $e->getMessage());
+        } catch (Error $e) {
+            die("PHP ERROR: " . $e->getMessage());
         }
 
         $event = $db->getRow("SELECT * FROM events WHERE id = ?", [$eventId]);
