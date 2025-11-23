@@ -217,22 +217,27 @@ if ($totalRaces > 0) {
             }
 
             // Get GravitySeries Team stats (club points for this series)
+            // Debug: Always query club_rider_points, not just when rider has club_id
+            $debugClubId = $rider['club_id'] ?? null;
+            error_log("DEBUG: Entering club points section. rider_id=$riderId, club_id=$debugClubId, series_id={$totalSeries['id']}");
+
+            // First, check if there are ANY rows for this rider in club_rider_points
+            $debugCount = $db->getRow("
+                SELECT COUNT(*) as total_rows,
+                       SUM(CASE WHEN series_id = ? THEN 1 ELSE 0 END) as series8_rows,
+                       SUM(club_points) as all_club_points
+                FROM club_rider_points
+                WHERE rider_id = ?
+            ", [$totalSeries['id'], $riderId]);
+            error_log("DEBUG club_rider_points for rider $riderId: " . json_encode($debugCount));
+
             if ($rider['club_id']) {
                 $gravityTeamStats = $db->getRow("
                     SELECT SUM(club_points) as total_points, COUNT(DISTINCT event_id) as events_count
                     FROM club_rider_points
                     WHERE rider_id = ? AND club_id = ? AND series_id = ?
                 ", [$riderId, $rider['club_id'], $totalSeries['id']]);
-
-                // Debug: check how many rows exist for this rider in club_rider_points
-                $debugCount = $db->getRow("
-                    SELECT COUNT(*) as total_rows,
-                           SUM(CASE WHEN series_id = ? THEN 1 ELSE 0 END) as series8_rows,
-                           SUM(club_points) as all_club_points
-                    FROM club_rider_points
-                    WHERE rider_id = ?
-                ", [$totalSeries['id'], $riderId]);
-                error_log("DEBUG club_rider_points for rider $riderId, club_id={$rider['club_id']}, series_id={$totalSeries['id']}: " . json_encode($debugCount));
+                error_log("DEBUG gravityTeamStats: " . json_encode($gravityTeamStats));
             }
         }
     } catch (Exception $e) {
