@@ -476,150 +476,6 @@ $pageType = 'public';
 include __DIR__ . '/includes/layout-header.php';
 ?>
 
-<style>
-/* Tab Navigation - Mobile Responsive */
-.event-tabs-wrapper {
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    margin: 0 -1rem;
-    padding: 0 1rem;
-}
-.event-tabs {
-    display: flex;
-    gap: 0.25rem;
-    min-width: max-content;
-    padding-bottom: 0.5rem;
-}
-.event-tab {
-    display: flex;
-    align-items: center;
-    gap: 0.375rem;
-    padding: 0.625rem 0.875rem;
-    border-radius: 0.5rem;
-    font-size: 0.8125rem;
-    font-weight: 500;
-    text-decoration: none;
-    white-space: nowrap;
-    background: var(--gs-bg-secondary);
-    color: var(--gs-text-secondary);
-    border: 1px solid var(--gs-border);
-    transition: all 0.2s;
-}
-.event-tab:hover {
-    background: var(--gs-bg-tertiary);
-    color: var(--gs-text-primary);
-}
-.event-tab.active {
-    background: var(--gs-primary);
-    color: white;
-    border-color: var(--gs-primary);
-}
-.event-tab i {
-    width: 14px;
-    height: 14px;
-}
-@media (min-width: 768px) {
-    .event-tabs-wrapper {
-        margin: 0;
-        padding: 0;
-        overflow-x: visible;
-    }
-    .event-tabs {
-        flex-wrap: wrap;
-    }
-}
-
-/* Compact results table for desktop */
-.results-table {
-    font-size: 0.8rem;
-}
-
-.results-table th,
-.results-table td {
-    padding: 0.4rem 0.5rem;
-    white-space: nowrap;
-}
-
-.results-table .gs-medal {
-    font-size: 1rem;
-}
-
-/* Hide split times by default on desktop */
-.split-time-col {
-    display: none;
-}
-
-.split-times-visible .split-time-col {
-    display: table-cell;
-}
-
-/* Hide club column when split times are visible to save space */
-.split-times-visible .club-col {
-    display: none;
-}
-
-/* Toggle button styling */
-.split-times-toggle {
-    cursor: pointer;
-    user-select: none;
-}
-
-/* Split time color coding - 10 level gradient green to red (muted) */
-.split-1 { background: #a7f3d0 !important; color: #065f46 !important; font-weight: 600; }
-.split-2 { background: #bbf7d0 !important; color: #166534 !important; }
-.split-3 { background: #d9f99d !important; color: #3f6212 !important; }
-.split-4 { background: #fef9c3 !important; color: #713f12 !important; }
-.split-5 { background: #fef3c7 !important; color: #92400e !important; }
-.split-6 { background: #fed7aa !important; color: #9a3412 !important; }
-.split-7 { background: #fecaca !important; color: #991b1b !important; }
-.split-8 { background: #fca5a5 !important; color: #991b1b !important; }
-.split-9 { background: #f9a8a8 !important; color: #7f1d1d !important; }
-.split-10 { background: #f5b0b0 !important; color: #7f1d1d !important; }
-
-/* Hide colors when disabled */
-.no-split-colors .split-1,
-.no-split-colors .split-2,
-.no-split-colors .split-3,
-.no-split-colors .split-4,
-.no-split-colors .split-5,
-.no-split-colors .split-6,
-.no-split-colors .split-7,
-.no-split-colors .split-8,
-.no-split-colors .split-9,
-.no-split-colors .split-10 {
-    background: transparent !important;
-    color: inherit !important;
-    font-weight: normal !important;
-}
-
-/* Sortable column headers */
-.sortable-header {
-    cursor: pointer;
-    user-select: none;
-}
-.sortable-header:hover {
-    background: var(--gs-bg-secondary, #f3f4f6);
-}
-.sort-asc::after {
-    content: ' ▲';
-    font-size: 0.7em;
-}
-.sort-desc::after {
-    content: ' ▼';
-    font-size: 0.7em;
-}
-
-@media (max-width: 768px) {
-    .results-table {
-        font-size: 0.75rem;
-    }
-    .results-table th,
-    .results-table td {
-        padding: 0.3rem 0.4rem;
-    }
-}
-</style>
-
 <main class="gs-main-content">
     <div class="gs-container">
 
@@ -724,11 +580,11 @@ include __DIR__ . '/includes/layout-header.php';
         </div>
 
         <!-- Tab Navigation -->
-        <div class="event-tabs-wrapper gs-mb-lg">
-            <div class="event-tabs">
+        <div class="gs-gs-gs-event-tabs-wrapper gs-mb-lg">
+            <div class="gs-gs-event-tabs">
                 <?php if ($hasResults): ?>
                 <a href="?id=<?= $eventId ?>&tab=resultat"
-                   class="event-tab <?= $activeTab === 'resultat' ? 'active' : '' ?>">
+                   class="gs-event-tab <?= $activeTab === 'resultat' ? 'active' : '' ?>">
                     <i data-lucide="trophy"></i>
                     Resultat
                     <span class="gs-badge gs-badge-accent gs-badge-sm"><?= $totalParticipants ?></span>
@@ -736,14 +592,14 @@ include __DIR__ . '/includes/layout-header.php';
                 <?php endif; ?>
 
                 <a href="?id=<?= $eventId ?>&tab=info"
-                   class="event-tab <?= $activeTab === 'info' ? 'active' : '' ?>">
+                   class="gs-event-tab <?= $activeTab === 'info' ? 'active' : '' ?>">
                     <i data-lucide="info"></i>
                     Information
                 </a>
 
                 <?php if (!empty($event['pm_content']) || !empty($event['pm_use_global'])): ?>
                 <a href="?id=<?= $eventId ?>&tab=pm"
-                   class="event-tab <?= $activeTab === 'pm' ? 'active' : '' ?>">
+                   class="gs-event-tab <?= $activeTab === 'pm' ? 'active' : '' ?>">
                     <i data-lucide="clipboard-list"></i>
                     PM
                 </a>
@@ -751,7 +607,7 @@ include __DIR__ . '/includes/layout-header.php';
 
                 <?php if (!empty($event['jury_communication']) || !empty($event['jury_use_global'])): ?>
                 <a href="?id=<?= $eventId ?>&tab=jury"
-                   class="event-tab <?= $activeTab === 'jury' ? 'active' : '' ?>">
+                   class="gs-event-tab <?= $activeTab === 'jury' ? 'active' : '' ?>">
                     <i data-lucide="gavel"></i>
                     Jurykommuniké
                 </a>
@@ -759,7 +615,7 @@ include __DIR__ . '/includes/layout-header.php';
 
                 <?php if (!empty($event['competition_schedule']) || !empty($event['schedule_use_global'])): ?>
                 <a href="?id=<?= $eventId ?>&tab=schema"
-                   class="event-tab <?= $activeTab === 'schema' ? 'active' : '' ?>">
+                   class="gs-event-tab <?= $activeTab === 'schema' ? 'active' : '' ?>">
                     <i data-lucide="calendar-clock"></i>
                     Tävlingsschema
                 </a>
@@ -767,7 +623,7 @@ include __DIR__ . '/includes/layout-header.php';
 
                 <?php if (!empty($event['start_times']) || !empty($event['start_times_use_global'])): ?>
                 <a href="?id=<?= $eventId ?>&tab=starttider"
-                   class="event-tab <?= $activeTab === 'starttider' ? 'active' : '' ?>">
+                   class="gs-event-tab <?= $activeTab === 'starttider' ? 'active' : '' ?>">
                     <i data-lucide="clock"></i>
                     Starttider
                 </a>
@@ -775,14 +631,14 @@ include __DIR__ . '/includes/layout-header.php';
 
                 <?php if (!empty($event['map_content']) || !empty($event['map_image_url']) || !empty($event['map_use_global'])): ?>
                 <a href="?id=<?= $eventId ?>&tab=karta"
-                   class="event-tab <?= $activeTab === 'karta' ? 'active' : '' ?>">
+                   class="gs-event-tab <?= $activeTab === 'karta' ? 'active' : '' ?>">
                     <i data-lucide="map"></i>
                     Karta
                 </a>
                 <?php endif; ?>
 
                 <a href="?id=<?= $eventId ?>&tab=anmalda"
-                   class="event-tab <?= $activeTab === 'anmalda' ? 'active' : '' ?>">
+                   class="gs-event-tab <?= $activeTab === 'anmalda' ? 'active' : '' ?>">
                     <i data-lucide="users"></i>
                     Anmälda
                     <span class="gs-badge gs-badge-secondary gs-badge-sm"><?= $totalRegistrations ?></span>
@@ -790,7 +646,7 @@ include __DIR__ . '/includes/layout-header.php';
 
                 <?php if ($ticketingEnabled && !empty($ticketPricing)): ?>
                 <a href="?id=<?= $eventId ?>&tab=biljetter"
-                   class="event-tab <?= $activeTab === 'biljetter' ? 'active' : '' ?>">
+                   class="gs-event-tab <?= $activeTab === 'biljetter' ? 'active' : '' ?>">
                     <i data-lucide="ticket"></i>
                     Biljetter
                     <?php if ($ticketData && $ticketData['available_tickets'] > 0): ?>
@@ -801,7 +657,7 @@ include __DIR__ . '/includes/layout-header.php';
 
                 <?php if ($registrationOpen): ?>
                 <a href="?id=<?= $eventId ?>&tab=anmalan"
-                   class="event-tab <?= $activeTab === 'anmalan' ? 'active' : '' ?>">
+                   class="gs-event-tab <?= $activeTab === 'anmalan' ? 'active' : '' ?>">
                     <i data-lucide="user-plus"></i>
                     Anmälan
                 </a>
@@ -823,7 +679,7 @@ include __DIR__ . '/includes/layout-header.php';
         <?php else: ?>
             <?php if ($hasSplitTimes && !$isDH): ?>
             <div class="gs-mb-md gs-flex gs-justify-end gs-gap-md">
-                <label class="gs-checkbox split-times-toggle">
+                <label class="gs-checkbox gs-split-times-toggle">
                     <input type="checkbox" id="globalSplitToggle" onchange="toggleAllSplitTimes(this.checked)">
                     <span class="gs-text-sm">Visa sträcktider</span>
                 </label>
@@ -859,12 +715,12 @@ include __DIR__ . '/includes/layout-header.php';
                     }
                     ?>
                     <div class="gs-card-content gs-card-table-container">
-                        <table class="gs-table results-table">
+                        <table class="gs-table gs-results-table">
                             <thead>
                                 <tr>
                                     <th class="gs-table-col-narrow">Plac.</th>
                                     <th>Namn</th>
-                                    <th class="club-col">Klubb</th>
+                                    <th class="gs-club-col">Klubb</th>
                                     <?php if ($hasBibNumbers): ?>
                                         <th class="gs-table-col-medium">Startnr</th>
                                     <?php endif; ?>
@@ -874,11 +730,11 @@ include __DIR__ . '/includes/layout-header.php';
                                         <th class="gs-table-col-medium">Bästa</th>
                                     <?php else: ?>
                                         <?php $colIndex = 3 + ($hasBibNumbers ? 1 : 0); ?>
-                                        <th class="gs-table-col-medium sortable-header" onclick="sortTable(this, <?= $colIndex++ ?>)">Tid</th>
+                                        <th class="gs-table-col-medium gs-sortable-header" onclick="sortTable(this, <?= $colIndex++ ?>)">Tid</th>
                                         <th class="gs-table-col-medium">+Tid</th>
                                         <?php $colIndex++; ?>
                                         <?php foreach ($classSplitCols as $ssNum): ?>
-                                            <th class="gs-table-col-medium split-time-col sortable-header" onclick="sortTable(this, <?= $colIndex++ ?>)"><?= h(getStageName($ssNum, $stageNames)) ?></th>
+                                            <th class="gs-table-col-medium gs-split-time-col gs-sortable-header" onclick="sortTable(this, <?= $colIndex++ ?>)"><?= h(getStageName($ssNum, $stageNames)) ?></th>
                                         <?php endforeach; ?>
                                     <?php endif; ?>
                                     <?php if ($isDH): ?>
@@ -917,7 +773,7 @@ include __DIR__ . '/includes/layout-header.php';
                                             </a>
                                         </td>
 
-                                        <td class="club-col">
+                                        <td class="gs-club-col">
                                             <?php if ($result['club_name']): ?>
                                                 <span class="gs-badge gs-badge-secondary gs-badge-sm">
                                                     <?= h($result['club_name']) ?>
@@ -999,12 +855,12 @@ include __DIR__ . '/includes/layout-header.php';
                                                         // Map to 10 levels: split-1 (fastest) to split-10 (slowest)
                                                         // Use floor to better distribute (0-10% = 1, 10-20% = 2, etc.)
                                                         $level = min(10, max(1, floor($position * 9) + 1));
-                                                        $splitClass = 'split-' . $level;
+                                                        $splitClass = 'gs-split-' . $level;
                                                     }
                                                     // If range is 0 or very small, no color (all essentially tied)
                                                 }
                                             ?>
-                                                <td class="gs-table-time-cell split-time-col <?= $splitClass ?>">
+                                                <td class="gs-table-time-cell gs-split-time-col <?= $splitClass ?>">
                                                     <?php if (!empty($splitTime)): ?>
                                                         <?= formatDisplayTime($splitTime) ?>
                                                     <?php else: ?>
@@ -2075,24 +1931,24 @@ include __DIR__ . '/includes/layout-header.php';
 <script>
 function toggleAllSplitTimes(show) {
     // Toggle split times visibility for ALL result tables
-    const tables = document.querySelectorAll('.results-table');
+    const tables = document.querySelectorAll('.gs-results-table');
     tables.forEach(table => {
         if (show) {
-            table.classList.add('split-times-visible');
+            table.classList.add('gs-split-times-visible');
         } else {
-            table.classList.remove('split-times-visible');
+            table.classList.remove('gs-split-times-visible');
         }
     });
 }
 
 function toggleSplitColors(show) {
-    // Toggle color coding by adding/removing no-split-colors class on tables
-    const tables = document.querySelectorAll('.results-table');
+    // Toggle color coding by adding/removing gs-no-split-colors class on tables
+    const tables = document.querySelectorAll('.gs-results-table');
     tables.forEach(table => {
         if (show) {
-            table.classList.remove('no-split-colors');
+            table.classList.remove('gs-no-split-colors');
         } else {
-            table.classList.add('no-split-colors');
+            table.classList.add('gs-no-split-colors');
         }
     });
 }
@@ -2104,15 +1960,15 @@ function sortTable(header, columnIndex) {
     const rows = Array.from(tbody.querySelectorAll('tr'));
 
     // Determine sort direction
-    const isAsc = header.classList.contains('sort-asc');
+    const isAsc = header.classList.contains('gs-sort-asc');
 
     // Remove sort classes from all headers in this table
     table.querySelectorAll('th').forEach(th => {
-        th.classList.remove('sort-asc', 'sort-desc');
+        th.classList.remove('gs-sort-asc', 'gs-sort-desc');
     });
 
     // Set new sort direction
-    header.classList.add(isAsc ? 'sort-desc' : 'sort-asc');
+    header.classList.add(isAsc ? 'gs-sort-desc' : 'gs-sort-asc');
 
     // Sort rows
     rows.sort((a, b) => {
