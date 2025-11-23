@@ -153,7 +153,14 @@ $gravityTeamStats = null;
 
 if ($totalRaces > 0 && $rider['birth_year'] && $rider['gender']) {
     try {
-        $riderClassId = determineRiderClass($db, $rider['birth_year'], $rider['gender'], date('Y-m-d'));
+        // Try ENDURO first (most common for GravitySeries), then fallback to other disciplines
+        $riderClassId = determineRiderClass($db, $rider['birth_year'], $rider['gender'], date('Y-m-d'), 'ENDURO');
+        if (!$riderClassId) {
+            $riderClassId = determineRiderClass($db, $rider['birth_year'], $rider['gender'], date('Y-m-d'), 'DH');
+        }
+        if (!$riderClassId) {
+            $riderClassId = determineRiderClass($db, $rider['birth_year'], $rider['gender'], date('Y-m-d'), 'XC');
+        }
 
         if ($riderClassId) {
             $riderClass = $db->getRow("SELECT name, display_name FROM classes WHERE id = ?", [$riderClassId]);
@@ -232,7 +239,14 @@ $seriesStandings = [];
 
 if ($totalRaces > 0 && $rider['birth_year'] && $rider['gender']) {
     try {
-        $riderClassId = determineRiderClass($db, $rider['birth_year'], $rider['gender'], date('Y-m-d'));
+        // Try ENDURO first (most common for GravitySeries), then fallback to other disciplines
+        $riderClassId = determineRiderClass($db, $rider['birth_year'], $rider['gender'], date('Y-m-d'), 'ENDURO');
+        if (!$riderClassId) {
+            $riderClassId = determineRiderClass($db, $rider['birth_year'], $rider['gender'], date('Y-m-d'), 'DH');
+        }
+        if (!$riderClassId) {
+            $riderClassId = determineRiderClass($db, $rider['birth_year'], $rider['gender'], date('Y-m-d'), 'XC');
+        }
 
         if ($riderClassId) {
             $riderClass = $db->getRow("SELECT name, display_name FROM classes WHERE id = ?", [$riderClassId]);
@@ -353,7 +367,14 @@ $currentClassName = null;
 
 if ($rider['birth_year'] && $rider['gender'] && function_exists('determineRiderClass')) {
     try {
-        $classId = determineRiderClass($db, $rider['birth_year'], $rider['gender'], date('Y-m-d'));
+        // Try ENDURO first (most common for GravitySeries), then fallback
+        $classId = determineRiderClass($db, $rider['birth_year'], $rider['gender'], date('Y-m-d'), 'ENDURO');
+        if (!$classId) {
+            $classId = determineRiderClass($db, $rider['birth_year'], $rider['gender'], date('Y-m-d'), 'DH');
+        }
+        if (!$classId) {
+            $classId = determineRiderClass($db, $rider['birth_year'], $rider['gender'], date('Y-m-d'), 'XC');
+        }
         if ($classId) {
             $class = $db->getRow("SELECT name, display_name FROM classes WHERE id = ?", [$classId]);
             $currentClass = $class['name'] ?? null;
