@@ -348,30 +348,5 @@ include __DIR__ . '/../includes/layout-header.php';
     </div>
 </main>
 
-<style>
-.gs-tabs {
-    display: flex;
-    gap: 0.25rem;
-    border-bottom: 2px solid var(--gs-border);
-}
-.gs-tab {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.75rem 1rem;
-    color: var(--gs-text-secondary);
-    text-decoration: none;
-    border-bottom: 2px solid transparent;
-    margin-bottom: -2px;
-    transition: all 0.2s;
-}
-.gs-tab:hover {
-    color: var(--gs-text-primary);
-}
-.gs-tab.active {
-    color: var(--gs-primary);
-    border-bottom-color: var(--gs-primary);
-}
-</style>
 
 <?php include __DIR__ . '/../includes/layout-footer.php'; ?>

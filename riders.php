@@ -101,128 +101,6 @@ $pageType = 'public';
 include __DIR__ . '/includes/layout-header.php';
 ?>
 
-<style>
-    /* VERY COMPACT CARD DESIGN - Half height */
-    .license-card-compact {
-        background: white;
-        border-radius: 8px;
-        overflow: hidden;
-        transition: transform 0.15s, box-shadow 0.15s;
-        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
-        text-decoration: none;
-        color: inherit;
-        display: block;
-        border-left: 3px solid #667eea;
-    }
-
-    .license-card-compact:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
-    }
-
-    /* Thin stripe */
-    .uci-stripe {
-        height: 3px;
-        background: linear-gradient(90deg,
-            #c8161b 0% 20%,
-            #8a9859 20% 40%,
-            #fcce05 40% 60%,
-            #207fc0 60% 80%,
-            #ee7622 80% 100%
-        );
-    }
-
-    /* Compact content - much less padding */
-    .license-card-content {
-        padding: 10px 12px;
-    }
-
-    .rider-name-line {
-        font-size: 14px;
-        font-weight: 700;
-        color: #1a202c;
-        margin-bottom: 2px;
-        text-transform: uppercase;
-        letter-spacing: -0.1px;
-        line-height: 1.2;
-    }
-
-    .license-id {
-        font-size: 10px;
-        color: #718096;
-        margin-bottom: 8px;
-        font-weight: 500;
-    }
-
-    /* Simplified grid - only show essential info */
-    .license-info-compact {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 6px;
-    }
-
-    .info-field-compact {
-        background: #f8f9fa;
-        padding: 4px 8px;
-        border-radius: 4px;
-    }
-
-    .info-label-compact {
-        font-size: 8px;
-        color: #718096;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.2px;
-        margin-bottom: 1px;
-    }
-
-    .info-value-compact {
-        font-size: 12px;
-        color: #1a202c;
-        font-weight: 600;
-    }
-
-    .club-field-wide {
-        grid-column: span 2;
-        background: #f8f9fa;
-        padding: 4px 8px;
-        border-radius: 4px;
-    }
-
-    /* Mobile: Simple list view */
-    @media (max-width: 768px) {
-        .license-card-compact {
-            border-radius: 6px;
-            margin-bottom: 8px;
-        }
-
-        .license-card-content {
-            padding: 8px 10px;
-        }
-
-        .rider-name-line {
-            font-size: 13px;
-        }
-
-        .license-id {
-            font-size: 9px;
-            margin-bottom: 6px;
-        }
-
-        .license-info-compact {
-            gap: 4px;
-        }
-
-        .info-field-compact, .club-field-wide {
-            padding: 3px 6px;
-        }
-
-        .info-value-compact {
-            font-size: 11px;
-        }
-    }
-</style>
-
     <main class="gs-main-content">
         <div class="gs-container">
 
@@ -290,16 +168,16 @@ include __DIR__ . '/includes/layout-header.php';
                         $isLicenseActive = $isUciLicense && !empty($rider['license_type']) && $rider['license_type'] !== 'None' && $licenseCheck['valid'];
                     ?>
                         <a href="/rider.php?id=<?= $rider['id'] ?>"
-                           class="license-card-compact"
+                           class="gs-license-card-compact"
                            data-search="<?= strtolower(h($rider['firstname'] . ' ' . $rider['lastname'] . ' ' . ($rider['club_name'] ?? '') . ' ' . ($rider['license_number'] ?? ''))) ?>">
 
                             <!-- UCI Color Stripe -->
                             <div class="uci-stripe"></div>
 
                             <!-- Card Content -->
-                            <div class="license-card-content">
+                            <div class="gs-license-card-content">
                                 <!-- Name -->
-                                <div class="rider-name-line">
+                                <div class="gs-rider-name-line">
                                     <?= h($rider['firstname']) ?> <?= h($rider['lastname']) ?>
                                 </div>
 
@@ -313,17 +191,17 @@ include __DIR__ . '/includes/layout-header.php';
                                 </div>
 
                                 <!-- Essential Info Grid -->
-                                <div class="license-info-compact">
-                                    <div class="info-field-compact">
-                                        <div class="info-label-compact">Ålder</div>
-                                        <div class="info-value-compact">
+                                <div class="gs-license-info-compact">
+                                    <div class="gs-info-field-compact">
+                                        <div class="gs-info-label-compact">Ålder</div>
+                                        <div class="gs-info-value-compact">
                                             <?= $age !== null ? $age : '–' ?>
                                         </div>
                                     </div>
 
-                                    <div class="info-field-compact">
-                                        <div class="info-label-compact">Kön</div>
-                                        <div class="info-value-compact">
+                                    <div class="gs-info-field-compact">
+                                        <div class="gs-info-label-compact">Kön</div>
+                                        <div class="gs-info-value-compact">
                                             <?php
                                             if ($rider['gender'] === 'M') {
                                                 echo 'Man';
@@ -337,9 +215,9 @@ include __DIR__ . '/includes/layout-header.php';
                                     </div>
 
                                     <!-- Club -->
-                                    <div class="club-field-wide">
-                                        <div class="info-label-compact">Klubb</div>
-                                        <div class="info-value-compact gs-text-11">
+                                    <div class="gs-club-field-wide">
+                                        <div class="gs-info-label-compact">Klubb</div>
+                                        <div class="gs-info-value-compact gs-text-11">
                                             <?= $rider['club_name'] ? h($rider['club_name']) : '–' ?>
                                         </div>
                                     </div>
@@ -375,7 +253,7 @@ $additionalScripts = "
     if (searchInput && ridersGrid) {
         searchInput.addEventListener('input', function(e) {
             const search = e.target.value.toLowerCase().trim();
-            const cards = ridersGrid.querySelectorAll('.license-card-compact');
+            const cards = ridersGrid.querySelectorAll('.gs-license-card-compact');
 
             // Require at least 2 characters for search
             if (search.length < 2) {

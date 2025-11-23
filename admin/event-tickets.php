@@ -333,23 +333,5 @@ include __DIR__ . '/../includes/layout-header.php';
     </div>
 </main>
 
-<style>
-.gs-stat-card {
-    text-align: center;
-    padding: 1rem;
-    background: var(--gs-bg-secondary);
-    border-radius: 0.5rem;
-}
-.gs-stat-value {
-    font-size: 2rem;
-    font-weight: 700;
-    line-height: 1;
-}
-.gs-stat-label {
-    font-size: 0.75rem;
-    color: var(--gs-text-secondary);
-    margin-top: 0.5rem;
-}
-</style>
 
 <?php include __DIR__ . '/../includes/layout-footer.php'; ?>

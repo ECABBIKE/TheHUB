@@ -36,42 +36,8 @@ $pageTitle = 'Logga in';
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= $pageTitle ?> - TheHUB</title>
-    <link rel="stylesheet" href="/assets/gravityseries-theme.css">
-    <style>
-        /* Mobile responsive login */
-        .gs-login-container {
-            padding: 1rem;
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .gs-login-card {
-            width: 100%;
-            max-width: 400px;
-            padding: 2rem;
-        }
-
-        @media (max-width: 640px) {
-            .gs-login-card {
-                padding: 1.5rem;
-            }
-
-            .gs-login-header h1 {
-                font-size: 1.5rem;
-            }
-
-            .gs-login-header p {
-                font-size: 0.875rem;
-            }
-
-            .gs-btn-lg {
-                padding: 0.75rem 1rem;
-                font-size: 1rem;
-            }
-        }
-    </style>
+    <link rel="stylesheet" href="/public/css/gravityseries-main.css">
+    <link rel="stylesheet" href="/public/css/gravityseries-admin.css">
 </head>
 <body class="gs-login-page">
 
