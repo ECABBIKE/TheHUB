@@ -128,15 +128,15 @@ $upcomingEvents = [];
 $pastEvents = [];
 $today = date('Y-m-d');
 
+die('BEFORE FOREACH - v2.4.2-063 - Events: ' . print_r($events, true));
+
 foreach ($events as $event) {
-    if ($event['date'] >= $today) {
+    if (isset($event['date']) && $event['date'] >= $today) {
         $upcomingEvents[] = $event;
     } else {
         $pastEvents[] = $event;
     }
 }
-
-die('AFTER FOREACH - v2.4.2-062');
 
 // Get pending refund requests count
 $pendingRefunds = 0;
