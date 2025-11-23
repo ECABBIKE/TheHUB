@@ -321,10 +321,10 @@ INSERT IGNORE INTO categories (name, short_name, age_min, age_max, gender) VALUE
 ('Dam Motion', 'DM', 19, 99, 'F');
 
 -- ============================================================================
--- DEFAULT ADMIN USER (username: admin, password: changeme123)
+-- DEFAULT ADMIN USER
 -- ============================================================================
 INSERT IGNORE INTO admin_users (username, password_hash, email, full_name, role) VALUES
-('admin', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'admin@thehub.se', 'System Administrator', 'super_admin');
+('roger', '$2y$12$Chd19PIKV6soorPEpY9WAOnCW3HiIRb3KBZTw0Wf.mEPyThZcnvwe', 'Roger@ecab.bike', 'Roger', 'super_admin');
 
 -- ============================================================================
 -- VIEWS FOR COMMON QUERIES

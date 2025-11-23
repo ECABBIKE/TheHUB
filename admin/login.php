@@ -120,9 +120,6 @@ $pageTitle = 'Logga in';
         </form>
 
         <div class="gs-login-footer">
-            <p class="gs-text-sm gs-text-secondary">
-                Standard login: <strong>admin / admin</strong>
-            </p>
         </div>
     </div>
 </div>
