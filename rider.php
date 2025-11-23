@@ -566,6 +566,7 @@ try {
                     }
                 }
             </style>
+            <div style="background: #ffc; padding: 5px; margin-bottom: 10px; font-size: 10px;">BUILD 039 - rider_id: <?= $riderId ?>, club_id: <?= $rider['club_id'] ?? 'null' ?></div>
             <div class="rider-stats-top">
                 <div class="gs-card gs-stat-card-compact">
                     <div class="gs-stat-number-compact gs-text-primary"><?= $totalRaces ?></div>
