@@ -41,7 +41,7 @@ define('EVENTS_PER_PAGE', 20);
 // Version info
 define('APP_VERSION', '2.3.0');
 define('APP_VERSION_NAME', 'Club Points System');
-define('APP_BUILD', '2025-11-23-051');
+define('APP_BUILD', '2025-11-23-052');
 define('DEPLOYMENT_OFFSET', 119); // Deployments before git repo
 
 try {
