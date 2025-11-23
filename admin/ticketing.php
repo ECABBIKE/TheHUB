@@ -4,10 +4,6 @@
  * Main hub for managing event ticketing, pricing, and sales
  */
 
-// Debug - show errors temporarily
-ini_set('display_errors', 1);
-error_reporting(E_ALL);
-
 require_once __DIR__ . '/../config.php';
 require_admin();
 
@@ -128,8 +124,6 @@ $upcomingEvents = [];
 $pastEvents = [];
 $today = date('Y-m-d');
 
-die('BEFORE FOREACH - v2.4.2-063 - Events: ' . print_r($events, true));
-
 foreach ($events as $event) {
     if (isset($event['date']) && $event['date'] >= $today) {
         $upcomingEvents[] = $event;
@@ -160,7 +154,6 @@ if ($ticketingTablesExist) {
 
 $pageTitle = 'Ticketing';
 $pageType = 'admin';
-die('BEFORE HEADER - v2.4.2-061');
 include __DIR__ . '/../includes/layout-header.php';
 ?>
 
