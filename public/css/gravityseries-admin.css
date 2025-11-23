@@ -956,3 +956,139 @@ details.gs-details-lg summary {
   overflow-y: auto;
   margin-top: 0.5rem;
 }
+
+/* =======================================================
+   16. TABS (Admin navigation tabs)
+======================================================= */
+
+.gs-tabs {
+  display: flex;
+  gap: 0.25rem;
+  border-bottom: 2px solid var(--gs-border);
+}
+
+.gs-tab {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  color: var(--gs-text-secondary);
+  text-decoration: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  transition: all 0.2s;
+}
+
+.gs-tab:hover {
+  color: var(--gs-text-primary);
+}
+
+.gs-tab.active {
+  color: var(--gs-primary);
+  border-bottom-color: var(--gs-primary);
+}
+
+.gs-tab i,
+.gs-tab svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* =======================================================
+   17. MOBILE FORM OVERRIDES
+======================================================= */
+
+@media (max-width: 768px) {
+  /* Larger inputs for touch */
+  .gs-table input[type="text"],
+  .gs-table input[type="number"] {
+    padding: 0.5rem !important;
+    font-size: 16px !important;
+  }
+}
+
+/* =======================================================
+   18. RADIO CARDS
+======================================================= */
+
+.gs-radio-card {
+  border: 2px solid var(--gs-border);
+  border-radius: var(--gs-radius-md);
+  padding: var(--gs-space-md);
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  gap: var(--gs-space-md);
+}
+
+.gs-radio-card:hover {
+  border-color: var(--gs-primary);
+  background: var(--gs-light);
+}
+
+.gs-radio-card.active {
+  border-color: var(--gs-primary);
+  background: rgba(102, 126, 234, 0.05);
+}
+
+.gs-radio-card-content {
+  flex: 1;
+}
+
+.gs-radio-card-title {
+  font-weight: 600;
+  margin-bottom: var(--gs-space-xs);
+  display: flex;
+  align-items: center;
+  gap: var(--gs-space-xs);
+}
+
+.gs-radio-card-description {
+  font-size: 0.875rem;
+  color: var(--gs-text-secondary);
+}
+
+/* =======================================================
+   19. CATEGORY TABS (Button style)
+======================================================= */
+
+.gs-category-tabs {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.5rem;
+}
+
+.gs-category-tab {
+  padding: 0.5rem 1rem;
+  border-radius: var(--gs-radius-md);
+  font-size: 0.875rem;
+  text-decoration: none;
+  background: var(--gs-light);
+  color: var(--gs-text-secondary);
+  border: 1px solid var(--gs-border);
+  transition: all 0.2s;
+}
+
+.gs-category-tab:hover {
+  background: var(--gs-gray-200);
+}
+
+.gs-category-tab.active {
+  background: var(--gs-primary);
+  color: white;
+  border-color: var(--gs-primary);
+}
+
+@media (max-width: 640px) {
+  .gs-category-tabs {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    padding-bottom: 0.5rem;
+  }
+
+  .gs-category-tab {
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+}

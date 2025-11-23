@@ -96,73 +96,6 @@ $pageType = 'admin';
 include __DIR__ . '/../includes/layout-header.php';
 ?>
 
-<style>
-/* Mobile-first styles */
-.global-text-card {
-    margin-bottom: 1rem;
-}
-
-.global-text-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    gap: 0.5rem;
-    flex-wrap: wrap;
-}
-
-.global-text-meta {
-    display: flex;
-    gap: 0.5rem;
-    flex-wrap: wrap;
-}
-
-.global-text-content {
-    margin-top: 1rem;
-}
-
-.global-text-textarea {
-    width: 100%;
-    min-height: 120px;
-    font-family: inherit;
-    resize: vertical;
-}
-
-.category-tabs {
-    display: flex;
-    gap: 0.5rem;
-    flex-wrap: wrap;
-    margin-bottom: 1.5rem;
-}
-
-.category-tab {
-    padding: 0.5rem 1rem;
-    border-radius: 0.375rem;
-    font-size: 0.875rem;
-    text-decoration: none;
-    background: var(--gs-bg-secondary);
-    color: var(--gs-text-secondary);
-    border: 1px solid var(--gs-border);
-}
-
-.category-tab.active {
-    background: var(--gs-primary);
-    color: white;
-    border-color: var(--gs-primary);
-}
-
-@media (max-width: 640px) {
-    .category-tabs {
-        overflow-x: auto;
-        flex-wrap: nowrap;
-        padding-bottom: 0.5rem;
-    }
-
-    .category-tab {
-        white-space: nowrap;
-        flex-shrink: 0;
-    }
-}
-</style>
 
 <main class="gs-main-content">
     <div class="gs-container">
@@ -196,13 +129,13 @@ include __DIR__ . '/../includes/layout-header.php';
         <?php endif; ?>
 
         <!-- Category Filter -->
-        <div class="category-tabs">
-            <a href="?category=" class="category-tab <?= !$categoryFilter ? 'active' : '' ?>">
+        <div class="gs-gs-category-tabs">
+            <a href="?category=" class="gs-category-tab <?= !$categoryFilter ? 'active' : '' ?>">
                 Alla
             </a>
             <?php foreach ($categories as $cat): ?>
                 <a href="?category=<?= h($cat['field_category']) ?>"
-                   class="category-tab <?= $categoryFilter === $cat['field_category'] ? 'active' : '' ?>">
+                   class="gs-category-tab <?= $categoryFilter === $cat['field_category'] ? 'active' : '' ?>">
                     <?= h($categoryLabels[$cat['field_category']] ?? ucfirst($cat['field_category'])) ?>
                 </a>
             <?php endforeach; ?>

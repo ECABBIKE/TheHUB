@@ -259,48 +259,6 @@ include __DIR__ . '/../includes/layout-header.php';
     </div>
 </main>
 
-<style>
-.gs-radio-card {
-    border: 2px solid var(--gs-border);
-    border-radius: var(--gs-border-radius);
-    padding: var(--gs-space-md);
-    cursor: pointer;
-    transition: all 0.2s;
-    display: flex;
-    gap: var(--gs-space-md);
-}
-
-.gs-radio-card:hover {
-    border-color: var(--gs-primary);
-    background: var(--gs-background-secondary);
-}
-
-.gs-radio-card.active {
-    border-color: var(--gs-primary);
-    background: rgba(var(--gs-primary-rgb), 0.05);
-}
-
-.gs-radio-card-content {
-    flex: 1;
-}
-
-.gs-radio-card-title {
-    font-weight: 600;
-    margin-bottom: var(--gs-space-xs);
-    display: flex;
-    align-items: center;
-    gap: var(--gs-space-xs);
-}
-
-.gs-radio-card-description {
-    font-size: 0.875rem;
-    color: var(--gs-text-secondary);
-}
-
-.gs-radio {
-    margin-top: 4px;
-}
-</style>
 
 <script>
 // Show/hide minimum results section based on selected display mode
