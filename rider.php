@@ -218,11 +218,21 @@ if ($totalRaces > 0) {
 
             // Get GravitySeries Team stats (club points for this series)
             if ($rider['club_id']) {
+                // Try with specific series first
                 $gravityTeamStats = $db->getRow("
                     SELECT SUM(club_points) as total_points, COUNT(DISTINCT event_id) as events_count
                     FROM club_rider_points
                     WHERE rider_id = ? AND club_id = ? AND series_id = ?
                 ", [$riderId, $rider['club_id'], $totalSeries['id']]);
+
+                // If no results, get club points from all series
+                if (!$gravityTeamStats || !$gravityTeamStats['total_points']) {
+                    $gravityTeamStats = $db->getRow("
+                        SELECT SUM(club_points) as total_points, COUNT(DISTINCT event_id) as events_count
+                        FROM club_rider_points
+                        WHERE rider_id = ? AND club_id = ?
+                    ", [$riderId, $rider['club_id']]);
+                }
             }
         }
     } catch (Exception $e) {
