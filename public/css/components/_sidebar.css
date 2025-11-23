@@ -1,0 +1,265 @@
+/* ========================================
+   _sidebar.css - Sidebar Navigation
+   GravitySeries HUB v3.0
+   ======================================== */
+
+/* BASE: Sidebar structure (applies to all screen sizes) */
+.gs-sidebar {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 280px;
+  height: 100vh;
+  background-color: var(--gs-white);
+  border-right: 1px solid var(--gs-border);
+  padding: var(--gs-space-xl);
+  overflow-y: auto;
+  box-shadow: 4px 0 20px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+}
+
+.gs-menu-section {
+  margin-bottom: var(--gs-space-xl);
+}
+
+.gs-menu-section:last-child {
+  margin-top: auto;
+}
+
+.gs-menu-title {
+  color: var(--gs-primary);
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: var(--gs-space-lg);
+  padding-bottom: var(--gs-space-md);
+  border-bottom: 2px solid var(--gs-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.gs-menu {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.gs-menu li {
+  margin-bottom: var(--gs-space-xs);
+}
+
+.gs-menu a {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  color: var(--gs-text-secondary);
+  text-decoration: none;
+  border-radius: var(--gs-radius-md);
+  transition: all var(--gs-transition-fast);
+  font-size: 0.95rem;
+  font-weight: 500;
+}
+
+.gs-menu a svg {
+  width: 18px;
+  height: 18px;
+  color: var(--gs-text-secondary);
+  flex-shrink: 0;
+}
+
+.gs-menu a:hover {
+  background-color: var(--gs-primary-light);
+  color: var(--gs-primary);
+  transform: translateX(4px);
+}
+
+.gs-menu a:hover svg {
+  color: var(--gs-primary);
+}
+
+.gs-menu a.active {
+  background-color: var(--gs-primary);
+  color: var(--gs-white);
+}
+
+.gs-menu a.active svg {
+  color: var(--gs-white);
+}
+
+.gs-menu-footer {
+  margin-top: var(--gs-space-lg);
+  padding-top: var(--gs-space-lg);
+  border-top: 1px solid var(--gs-border);
+}
+
+.gs-menu-footer .gs-btn-outline {
+  border-color: var(--gs-primary);
+  color: var(--gs-primary);
+}
+
+.gs-menu-footer .gs-btn-outline:hover {
+  background-color: var(--gs-primary);
+  color: var(--gs-white);
+}
+
+/* Content with Sidebar */
+.gs-content-with-sidebar {
+  margin-left: 0;
+  padding: var(--gs-space-lg);
+  min-height: 100vh;
+  background-color: var(--gs-light);
+}
+
+/* Sidebar Overlay */
+.gs-sidebar-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 1050;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s ease, visibility 0.3s ease;
+  pointer-events: none;
+  display: none;
+  cursor: pointer;
+}
+
+.gs-sidebar-overlay.active {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+/* Mobile Menu Toggle */
+.gs-mobile-menu-toggle {
+  position: fixed;
+  top: 1.5rem;
+  left: 1.5rem;
+  z-index: 1200;
+  width: 48px;
+  height: 48px;
+  border: none;
+  border-radius: 8px;
+  background-color: var(--gs-white);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  cursor: pointer;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.gs-mobile-menu-toggle:hover {
+  background-color: var(--gs-primary);
+  transform: scale(1.05);
+}
+
+.gs-mobile-menu-toggle:active {
+  transform: scale(0.95);
+}
+
+.gs-mobile-menu-toggle svg,
+.gs-mobile-menu-toggle i {
+  width: 24px;
+  height: 24px;
+  color: var(--gs-primary);
+  transition: color 0.2s ease;
+}
+
+.gs-mobile-menu-toggle:hover svg,
+.gs-mobile-menu-toggle:hover i {
+  color: var(--gs-white);
+}
+
+/* Main Content */
+.gs-main-content {
+  min-height: 100vh;
+  padding: 2rem;
+  background-color: var(--gs-light);
+}
+
+/* ========================================
+   PAGE TYPES
+   ======================================== */
+
+/* Landing Page - No sidebar at all */
+.gs-landing-page .gs-sidebar,
+.gs-landing-page .gs-mobile-menu-toggle,
+.gs-landing-page .gs-sidebar-overlay {
+  display: none !important;
+}
+
+.gs-landing-page .gs-main-content {
+  margin-left: 0 !important;
+  width: 100% !important;
+}
+
+/* Pure Landing Page - No navigation */
+body.gs-landing-pure .gs-mobile-menu-toggle {
+  display: none !important;
+}
+
+body.gs-landing-pure .gs-sidebar {
+  display: none !important;
+}
+
+body.gs-landing-pure .gs-sidebar-overlay {
+  display: none !important;
+}
+
+/* ========================================
+   ADMIN SIDEBAR
+   ======================================== */
+
+.gs-admin-login-section {
+  order: 0;
+}
+
+.gs-main-menu {
+  order: 0;
+}
+
+.gs-admin-sidebar-header {
+  padding: 0 var(--gs-space-lg) var(--gs-space-lg);
+  border-bottom: 1px solid var(--gs-gray);
+  margin-bottom: var(--gs-space-lg);
+}
+
+.gs-admin-sidebar-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--gs-accent);
+  margin-bottom: var(--gs-space-xs);
+}
+
+.gs-admin-sidebar-nav {
+  list-style: none;
+}
+
+.gs-admin-sidebar-link {
+  display: flex;
+  align-items: center;
+  gap: var(--gs-space-sm);
+  padding: var(--gs-space-md) var(--gs-space-lg);
+  color: var(--gs-text-light);
+  text-decoration: none;
+  transition: all var(--gs-transition-fast);
+  border-left: 3px solid transparent;
+}
+
+.gs-admin-sidebar-link svg {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+.gs-admin-sidebar-link:hover,
+.gs-admin-sidebar-link.active {
+  background-color: var(--gs-gray);
+  border-left-color: var(--gs-accent);
+  color: var(--gs-white);
+}
