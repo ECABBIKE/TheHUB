@@ -112,16 +112,11 @@ function login($username, $password) {
     }
 
     // Check default admin credentials from config
-    // WARNING: Change these in .env file for production!
     $defaultUsername = defined('DEFAULT_ADMIN_USERNAME') ? DEFAULT_ADMIN_USERNAME : 'admin';
-    $defaultPassword = defined('DEFAULT_ADMIN_PASSWORD') ? DEFAULT_ADMIN_PASSWORD : 'admin';
+    $defaultPasswordHash = defined('DEFAULT_ADMIN_PASSWORD_HASH') ? DEFAULT_ADMIN_PASSWORD_HASH : null;
 
-    // Use constant-time comparison and hashed password for default admin
-    $defaultPasswordHash = defined('DEFAULT_ADMIN_PASSWORD_HASH')
-        ? DEFAULT_ADMIN_PASSWORD_HASH
-        : password_hash($defaultPassword, PASSWORD_DEFAULT);
-
-    if ($username === $defaultUsername && password_verify($password, $defaultPasswordHash)) {
+    // Only allow default admin login if password hash is configured in .env
+    if ($defaultPasswordHash && $username === $defaultUsername && password_verify($password, $defaultPasswordHash)) {
         // Regenerate session ID to prevent session fixation
         session_regenerate_id(true);
 
