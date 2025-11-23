@@ -150,6 +150,9 @@ $gravityTotalClassTotal = 0;
 
 // Get GravitySeries Team stats (club points)
 $gravityTeamStats = null;
+$debugCrp = [];
+$debugSeries8Events = [];
+$debugError = null;
 
 if ($totalRaces > 0) {
     try {
@@ -256,6 +259,7 @@ if ($totalRaces > 0) {
             $debugSeries8Events = $series8Events;
         }
     } catch (Exception $e) {
+        $debugError = $e->getMessage();
         error_log("Error getting GravitySeries stats for rider {$riderId}: " . $e->getMessage());
     }
 }
@@ -586,7 +590,7 @@ try {
                     }
                 }
             </style>
-            <div style="background: #ffc; padding: 5px; margin-bottom: 10px; font-size: 10px;">BUILD 043 - rider_id: <?= $riderId ?>, club_id: <?= $rider['club_id'] ?? 'null' ?></div>
+            <div style="background: #ffc; padding: 5px; margin-bottom: 10px; font-size: 10px;">BUILD 044 - rider_id: <?= $riderId ?>, club_id: <?= $rider['club_id'] ?? 'null' ?></div>
             <div class="rider-stats-top">
                 <div class="gs-card gs-stat-card-compact">
                     <div class="gs-stat-number-compact gs-text-primary"><?= $totalRaces ?></div>
@@ -630,16 +634,15 @@ try {
             <div style="background: #fee; padding: 10px; margin-bottom: 10px; font-size: 11px;">
                 rider_id: <?= $riderId ?>, club_id: <?= $rider['club_id'] ?? 'null' ?>, series_id: <?= $totalSeries['id'] ?? 'null' ?><br>
                 gravityTeamStats: <?= json_encode($gravityTeamStats) ?><br>
-                <?php if (isset($debugCrp)): ?>
+                <?php if ($debugError): ?>
+                <strong style="color: red;">ERROR: <?= htmlspecialchars($debugError) ?></strong><br>
+                <?php endif; ?>
                 <strong>club_rider_points för denna rider:</strong><br>
                 <?php foreach ($debugCrp as $row): ?>
                     event_id=<?= $row['event_id'] ?>, series_id=<?= $row['series_id'] ?>, club_id=<?= $row['club_id'] ?>, points=<?= $row['club_points'] ?><br>
                 <?php endforeach; ?>
                 <?php if (empty($debugCrp)): ?>Inga rader<br><?php endif; ?>
-                <?php endif; ?>
-                <?php if (isset($debugSeries8Events)): ?>
                 <strong>Events i series 8:</strong> <?= implode(', ', array_column($debugSeries8Events, 'event_id')) ?><br>
-                <?php endif; ?>
             </div>
 
             <?php if (empty($results)): ?>
