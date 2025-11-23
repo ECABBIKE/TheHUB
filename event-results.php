@@ -49,25 +49,29 @@ $activePriceTier = 'regular'; // 'early_bird', 'regular', or 'late_fee'
 $priceTierInfo = [];
 
 if (!empty($event['ticketing_enabled']) && !empty($event['pricing_template_id'])) {
-    // Get pricing from template
-    $pricingRules = $db->getAll("
-        SELECT ptr.*, c.name as class_name, c.display_name as class_display_name
-        FROM pricing_template_rules ptr
-        JOIN classes c ON ptr.class_id = c.id
-        WHERE ptr.template_id = ?
-        ORDER BY c.sort_order ASC
-    ", [$event['pricing_template_id']]);
+    // Get template with pricing settings
+    $template = $db->getRow("SELECT * FROM pricing_templates WHERE id = ?", [$event['pricing_template_id']]);
 
-    // Calculate which price tier is active based on event date
-    $eventDate = new DateTime($event['date']);
-    $now = new DateTime();
-    $daysUntilEvent = (int)$now->diff($eventDate)->format('%r%a');
+    if ($template) {
+        // Get pricing rules from template (only base_price per class)
+        $pricingRules = $db->getAll("
+            SELECT ptr.*, c.name as class_name, c.display_name as class_display_name
+            FROM pricing_template_rules ptr
+            JOIN classes c ON ptr.class_id = c.id
+            WHERE ptr.template_id = ?
+            ORDER BY c.sort_order ASC
+        ", [$event['pricing_template_id']]);
 
-    // Get sample rule for tier calculation (use first rule's settings)
-    if (!empty($pricingRules)) {
-        $sampleRule = $pricingRules[0];
-        $earlyBirdDays = $sampleRule['early_bird_days_before'] ?? 21;
-        $lateFeeDays = $sampleRule['late_fee_days_before'] ?? 3;
+        // Get percentage settings from template
+        $earlyBirdPercent = $template['early_bird_percent'] ?? 15;
+        $earlyBirdDays = $template['early_bird_days_before'] ?? 21;
+        $lateFeePercent = $template['late_fee_percent'] ?? 25;
+        $lateFeeDays = $template['late_fee_days_before'] ?? 3;
+
+        // Calculate which price tier is active based on event date
+        $eventDate = new DateTime($event['date']);
+        $now = new DateTime();
+        $daysUntilEvent = (int)$now->diff($eventDate)->format('%r%a');
 
         if ($daysUntilEvent >= $earlyBirdDays) {
             $activePriceTier = 'early_bird';
@@ -77,7 +81,7 @@ if (!empty($event['ticketing_enabled']) && !empty($event['pricing_template_id'])
                 'tier' => 'early_bird',
                 'label' => 'Early Bird',
                 'end_date' => $earlyBirdEndDate->format('Y-m-d'),
-                'discount_percent' => $sampleRule['early_bird_percent'] ?? 0
+                'discount_percent' => $earlyBirdPercent
             ];
         } elseif ($daysUntilEvent <= $lateFeeDays && $daysUntilEvent >= 0) {
             $activePriceTier = 'late_fee';
@@ -87,7 +91,7 @@ if (!empty($event['ticketing_enabled']) && !empty($event['pricing_template_id'])
                 'tier' => 'late_fee',
                 'label' => 'Efteranmälan',
                 'start_date' => $lateFeeStartDate->format('Y-m-d'),
-                'fee_percent' => $sampleRule['late_fee_percent'] ?? 0
+                'fee_percent' => $lateFeePercent
             ];
         } else {
             $activePriceTier = 'regular';
@@ -96,27 +100,25 @@ if (!empty($event['ticketing_enabled']) && !empty($event['pricing_template_id'])
                 'label' => 'Ordinarie'
             ];
         }
-    }
 
-    // Calculate prices for each rule
-    foreach ($pricingRules as &$rule) {
-        $basePrice = $rule['base_price'];
-        $earlyBirdPercent = $rule['early_bird_percent'] ?? 0;
-        $lateFeePercent = $rule['late_fee_percent'] ?? 0;
+        // Calculate prices for each rule using template percentages
+        foreach ($pricingRules as &$rule) {
+            $basePrice = $rule['base_price'];
 
-        $rule['early_bird_price'] = $basePrice * (1 - $earlyBirdPercent / 100);
-        $rule['late_fee_price'] = $basePrice * (1 + $lateFeePercent / 100);
+            $rule['early_bird_price'] = $basePrice * (1 - $earlyBirdPercent / 100);
+            $rule['late_fee_price'] = $basePrice * (1 + $lateFeePercent / 100);
 
-        // Set the active price based on current tier
-        if ($activePriceTier === 'early_bird') {
-            $rule['active_price'] = $rule['early_bird_price'];
-        } elseif ($activePriceTier === 'late_fee') {
-            $rule['active_price'] = $rule['late_fee_price'];
-        } else {
-            $rule['active_price'] = $basePrice;
+            // Set the active price based on current tier
+            if ($activePriceTier === 'early_bird') {
+                $rule['active_price'] = $rule['early_bird_price'];
+            } elseif ($activePriceTier === 'late_fee') {
+                $rule['active_price'] = $rule['late_fee_price'];
+            } else {
+                $rule['active_price'] = $basePrice;
+            }
         }
+        unset($rule);
     }
-    unset($rule);
 }
 
 // Get class rules (license restrictions) from series if available
