@@ -235,21 +235,13 @@ include __DIR__ . '/../includes/layout-header.php';
                                         </td>
                                         <td>
                                             <div class="gs-flex gs-gap-xs gs-flex-wrap">
-                                                <!-- Step 1: Pricing -->
-                                                <a href="/admin/event-pricing.php?id=<?= $event['id'] ?>"
-                                                   class="gs-btn gs-btn-sm <?= $hasPricing ? 'gs-btn-outline' : 'gs-btn-primary' ?>"
-                                                   title="Sätt priser">
-                                                    <i data-lucide="tag" class="gs-icon-xs"></i>
+                                                <!-- Configure ticketing -->
+                                                <a href="/admin/event-ticketing.php?id=<?= $event['id'] ?>"
+                                                   class="gs-btn gs-btn-sm <?= !$hasPricing ? 'gs-btn-primary' : 'gs-btn-outline' ?>"
+                                                   title="Konfigurera ticketing">
+                                                    <i data-lucide="settings" class="gs-icon-xs"></i>
+                                                    Konfigurera
                                                 </a>
-
-                                                <!-- Step 2: Generate tickets -->
-                                                <?php if ($hasPricing): ?>
-                                                    <a href="/admin/event-tickets.php?id=<?= $event['id'] ?>"
-                                                       class="gs-btn gs-btn-sm <?= $hasTickets ? 'gs-btn-outline' : 'gs-btn-primary' ?>"
-                                                       title="Generera biljetter">
-                                                        <i data-lucide="plus-circle" class="gs-icon-xs"></i>
-                                                    </a>
-                                                <?php endif; ?>
 
                                                 <!-- Toggle ticketing -->
                                                 <?php if ($hasPricing && $hasTickets): ?>
