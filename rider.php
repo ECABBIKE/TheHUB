@@ -220,33 +220,37 @@ if ($totalRaces > 0) {
             }
 
             // Get GravitySeries Team stats (club points for this series)
+            // Cast rider_id to int to avoid any type issues
+            $riderIdInt = (int)$riderId;
+            $seriesIdInt = (int)$totalSeries['id'];
+
             // Get all club_rider_points for this rider to debug
             $allCrp = $db->getAll("
                 SELECT event_id, series_id, club_id, club_points
                 FROM club_rider_points
-                WHERE rider_id = ?
-            ", [$riderId]);
+                WHERE rider_id = $riderIdInt
+            ");
 
             // Get events in series 8
             $series8Events = $db->getAll("
-                SELECT event_id FROM series_events WHERE series_id = ?
-            ", [$totalSeries['id']]);
+                SELECT event_id FROM series_events WHERE series_id = $seriesIdInt
+            ");
 
             if ($rider['club_id']) {
-                // Two-step approach to avoid SQL collation issues
+                $clubIdInt = (int)$rider['club_id'];
                 $eventIds = array_column($series8Events, 'event_id');
 
                 if (!empty($eventIds)) {
-                    // Build placeholders for IN clause with values from PHP
-                    $placeholders = implode(',', array_fill(0, count($eventIds), '?'));
-                    $params = array_merge([$riderId, $rider['club_id']], $eventIds);
+                    // Embed integer values directly to avoid collation issues
+                    $eventIds = array_map('intval', $eventIds);
+                    $eventIdsStr = implode(',', $eventIds);
 
                     $gravityTeamStats = $db->getRow("
                         SELECT SUM(club_points) as total_points, COUNT(DISTINCT event_id) as events_count
                         FROM club_rider_points
-                        WHERE rider_id = ? AND club_id = ?
-                        AND event_id IN ($placeholders)
-                    ", $params);
+                        WHERE rider_id = $riderIdInt AND club_id = $clubIdInt
+                        AND event_id IN ($eventIdsStr)
+                    ");
                 }
             }
 
@@ -586,7 +590,7 @@ try {
                     }
                 }
             </style>
-            <div style="background: #ffc; padding: 5px; margin-bottom: 10px; font-size: 10px;">BUILD 046 - rider_id: <?= $riderId ?>, club_id: <?= $rider['club_id'] ?? 'null' ?></div>
+            <div style="background: #ffc; padding: 5px; margin-bottom: 10px; font-size: 10px;">BUILD 047 - rider_id: <?= $riderId ?>, club_id: <?= $rider['club_id'] ?? 'null' ?></div>
             <div class="rider-stats-top">
                 <div class="gs-card gs-stat-card-compact">
                     <div class="gs-stat-number-compact gs-text-primary"><?= $totalRaces ?></div>
