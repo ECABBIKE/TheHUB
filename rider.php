@@ -151,85 +151,78 @@ $gravityTotalClassTotal = 0;
 // Get GravitySeries Team stats (club points)
 $gravityTeamStats = null;
 
-if ($totalRaces > 0 && $rider['birth_year'] && $rider['gender']) {
+if ($totalRaces > 0) {
     try {
-        // Use rider's discipline if set, otherwise try common ones
-        $discipline = $rider['discipline'] ?? 'ENDURO';
-        $riderClassId = determineRiderClass($db, $rider['birth_year'], $rider['gender'], date('Y-m-d'), $discipline);
-        if (!$riderClassId && $discipline !== 'ENDURO') {
-            $riderClassId = determineRiderClass($db, $rider['birth_year'], $rider['gender'], date('Y-m-d'), 'ENDURO');
-        }
-        if (!$riderClassId) {
-            $riderClassId = determineRiderClass($db, $rider['birth_year'], $rider['gender'], date('Y-m-d'), 'DH');
-        }
-        if (!$riderClassId) {
-            $riderClassId = determineRiderClass($db, $rider['birth_year'], $rider['gender'], date('Y-m-d'), 'XC');
-        }
-
-        if ($riderClassId) {
-            $riderClass = $db->getRow("SELECT name, display_name FROM classes WHERE id = ?", [$riderClassId]);
-
-            // Find GravitySeries Total series (id=8, or by name patterns)
-            $totalSeries = $db->getRow("
-                SELECT id, name FROM series
-                WHERE id = 8
-                OR (
-                    active = 1
-                    AND (
-                        name LIKE '%Total%'
-                        OR (name LIKE '%GravitySeries%' AND name NOT LIKE '%Capital%' AND name NOT LIKE '%Götaland%' AND name NOT LIKE '%Jämtland%')
-                    )
+        // Find GravitySeries Total series (id=8, or by name patterns)
+        $totalSeries = $db->getRow("
+            SELECT id, name FROM series
+            WHERE id = 8
+            OR (
+                active = 1
+                AND (
+                    name LIKE '%Total%'
+                    OR (name LIKE '%GravitySeries%' AND name NOT LIKE '%Capital%' AND name NOT LIKE '%Götaland%' AND name NOT LIKE '%Jämtland%')
                 )
-                ORDER BY (id = 8) DESC, year DESC LIMIT 1
-            ");
+            )
+            ORDER BY (id = 8) DESC, year DESC LIMIT 1
+        ");
 
-            // Debug: Log what we found
-            error_log("DEBUG rider.php: totalSeries=" . json_encode($totalSeries) . ", riderId=$riderId, riderClassId=$riderClassId");
+        if ($totalSeries) {
+            // Get rider's points in GravitySeries Total (via series_events)
+            $gravityTotalStats = $db->getRow("
+                SELECT SUM(r.points) as total_points, COUNT(DISTINCT r.event_id) as events_count
+                FROM results r
+                JOIN events e ON r.event_id = e.id
+                JOIN series_events se ON e.id = se.event_id
+                WHERE se.series_id = ? AND r.cyclist_id = ?
+                AND r.status = 'finished' AND r.points > 0
+            ", [$totalSeries['id'], $riderId]);
 
-            if ($totalSeries) {
-                // Get rider's points in GravitySeries Total (via series_events)
-                $gravityTotalStats = $db->getRow("
-                    SELECT SUM(r.points) as total_points, COUNT(DISTINCT r.event_id) as events_count
-                    FROM results r
-                    JOIN events e ON r.event_id = e.id
-                    JOIN series_events se ON e.id = se.event_id
-                    WHERE se.series_id = ? AND r.cyclist_id = ?
-                    AND r.status = 'finished' AND r.points > 0
-                ", [$totalSeries['id'], $riderId]);
+            // Try to get position in class (only if we can determine class)
+            if ($rider['birth_year'] && $rider['gender']) {
+                $discipline = $rider['discipline'] ?? 'ENDURO';
+                $riderClassId = determineRiderClass($db, $rider['birth_year'], $rider['gender'], date('Y-m-d'), $discipline);
+                if (!$riderClassId && $discipline !== 'ENDURO') {
+                    $riderClassId = determineRiderClass($db, $rider['birth_year'], $rider['gender'], date('Y-m-d'), 'ENDURO');
+                }
+                if (!$riderClassId) {
+                    $riderClassId = determineRiderClass($db, $rider['birth_year'], $rider['gender'], date('Y-m-d'), 'DH');
+                }
+                if (!$riderClassId) {
+                    $riderClassId = determineRiderClass($db, $rider['birth_year'], $rider['gender'], date('Y-m-d'), 'XC');
+                }
 
-                // Debug: Log stats
-                error_log("DEBUG rider.php: gravityTotalStats=" . json_encode($gravityTotalStats));
+                if ($riderClassId) {
+                    $classStandings = $db->getAll("
+                        SELECT r.cyclist_id, SUM(r.points) as total_points
+                        FROM results r
+                        JOIN events e ON r.event_id = e.id
+                        JOIN series_events se ON e.id = se.event_id
+                        WHERE se.series_id = ? AND r.class_id = ?
+                        AND r.status = 'finished' AND r.points > 0
+                        GROUP BY r.cyclist_id
+                        ORDER BY total_points DESC
+                    ", [$totalSeries['id'], $riderClassId]);
 
-                // Get position in class for GravitySeries Total
-                $classStandings = $db->getAll("
-                    SELECT r.cyclist_id, SUM(r.points) as total_points
-                    FROM results r
-                    JOIN events e ON r.event_id = e.id
-                    JOIN series_events se ON e.id = se.event_id
-                    WHERE se.series_id = ? AND r.class_id = ?
-                    AND r.status = 'finished' AND r.points > 0
-                    GROUP BY r.cyclist_id
-                    ORDER BY total_points DESC
-                ", [$totalSeries['id'], $riderClassId]);
-
-                $gravityTotalClassTotal = count($classStandings);
-                $position = 1;
-                foreach ($classStandings as $standing) {
-                    if ($standing['cyclist_id'] == $riderId) {
-                        $gravityTotalPosition = $position;
-                        break;
+                    $gravityTotalClassTotal = count($classStandings);
+                    $position = 1;
+                    foreach ($classStandings as $standing) {
+                        if ($standing['cyclist_id'] == $riderId) {
+                            $gravityTotalPosition = $position;
+                            break;
+                        }
+                        $position++;
                     }
-                    $position++;
                 }
+            }
 
-                // Get GravitySeries Team stats (club points for this series)
-                if ($rider['club_id']) {
-                    $gravityTeamStats = $db->getRow("
-                        SELECT SUM(club_points) as total_points, COUNT(DISTINCT event_id) as events_count
-                        FROM club_rider_points
-                        WHERE rider_id = ? AND club_id = ? AND series_id = ?
-                    ", [$riderId, $rider['club_id'], $totalSeries['id']]);
-                }
+            // Get GravitySeries Team stats (club points for this series)
+            if ($rider['club_id']) {
+                $gravityTeamStats = $db->getRow("
+                    SELECT SUM(club_points) as total_points, COUNT(DISTINCT event_id) as events_count
+                    FROM club_rider_points
+                    WHERE rider_id = ? AND club_id = ? AND series_id = ?
+                ", [$riderId, $rider['club_id'], $totalSeries['id']]);
             }
         }
     } catch (Exception $e) {
