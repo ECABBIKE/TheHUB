@@ -153,8 +153,12 @@ $gravityTeamStats = null;
 
 if ($totalRaces > 0 && $rider['birth_year'] && $rider['gender']) {
     try {
-        // Try ENDURO first (most common for GravitySeries), then fallback to other disciplines
-        $riderClassId = determineRiderClass($db, $rider['birth_year'], $rider['gender'], date('Y-m-d'), 'ENDURO');
+        // Use rider's discipline if set, otherwise try common ones
+        $discipline = $rider['discipline'] ?? 'ENDURO';
+        $riderClassId = determineRiderClass($db, $rider['birth_year'], $rider['gender'], date('Y-m-d'), $discipline);
+        if (!$riderClassId && $discipline !== 'ENDURO') {
+            $riderClassId = determineRiderClass($db, $rider['birth_year'], $rider['gender'], date('Y-m-d'), 'ENDURO');
+        }
         if (!$riderClassId) {
             $riderClassId = determineRiderClass($db, $rider['birth_year'], $rider['gender'], date('Y-m-d'), 'DH');
         }
@@ -602,6 +606,9 @@ try {
             <div style="background: #fee; padding: 10px; margin-bottom: 10px; font-size: 12px;">
                 <strong>DEBUG:</strong><br>
                 riderId: <?= $riderId ?><br>
+                rider discipline: <?= $rider['discipline'] ?? 'null' ?><br>
+                birth_year: <?= $rider['birth_year'] ?? 'null' ?><br>
+                gender: <?= $rider['gender'] ?? 'null' ?><br>
                 riderClassId: <?= $riderClassId ?? 'null' ?><br>
                 totalSeries: <?= isset($totalSeries) ? json_encode($totalSeries) : 'not set' ?><br>
                 gravityTotalStats: <?= isset($gravityTotalStats) ? json_encode($gravityTotalStats) : 'not set' ?><br>
