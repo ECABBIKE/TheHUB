@@ -223,6 +223,16 @@ if ($totalRaces > 0) {
                     FROM club_rider_points
                     WHERE rider_id = ? AND club_id = ? AND series_id = ?
                 ", [$riderId, $rider['club_id'], $totalSeries['id']]);
+
+                // Debug: check how many rows exist for this rider in club_rider_points
+                $debugCount = $db->getRow("
+                    SELECT COUNT(*) as total_rows,
+                           SUM(CASE WHEN series_id = ? THEN 1 ELSE 0 END) as series8_rows,
+                           SUM(club_points) as all_club_points
+                    FROM club_rider_points
+                    WHERE rider_id = ?
+                ", [$totalSeries['id'], $riderId]);
+                error_log("DEBUG club_rider_points for rider $riderId, club_id={$rider['club_id']}, series_id={$totalSeries['id']}: " . json_encode($debugCount));
             }
         }
     } catch (Exception $e) {
@@ -594,6 +604,14 @@ try {
                     <?php endif; ?>
                 </div>
             </div>
+
+            <!-- Debug -->
+            <?php if (isset($debugCount)): ?>
+            <div style="background: #fee; padding: 10px; margin-bottom: 10px; font-size: 11px;">
+                rider_id: <?= $riderId ?>, club_id: <?= $rider['club_id'] ?>, series_id: <?= $totalSeries['id'] ?? 'null' ?><br>
+                club_rider_points rows: <?= $debugCount['total_rows'] ?? 0 ?>, series8 rows: <?= $debugCount['series8_rows'] ?? 0 ?>, all points: <?= $debugCount['all_club_points'] ?? 0 ?>
+            </div>
+            <?php endif; ?>
 
             <?php if (empty($results)): ?>
                 <!-- No Results -->
