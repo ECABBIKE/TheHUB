@@ -288,112 +288,6 @@ $pageType = 'admin';
 include __DIR__ . '/../includes/layout-header.php';
 ?>
 
-<style>
-/* Tab Navigation */
-.settings-tabs {
-    display: flex;
-    gap: 0.25rem;
-    margin-bottom: 1.5rem;
-    border-bottom: 2px solid var(--gs-border);
-    padding-bottom: 0;
-    overflow-x: auto;
-}
-.settings-tab {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.75rem 1rem;
-    text-decoration: none;
-    color: var(--gs-text-secondary);
-    font-weight: 500;
-    border-bottom: 2px solid transparent;
-    margin-bottom: -2px;
-    white-space: nowrap;
-}
-.settings-tab:hover {
-    color: var(--gs-text-primary);
-    background: var(--gs-bg-secondary);
-}
-.settings-tab.active {
-    color: var(--gs-primary);
-    border-bottom-color: var(--gs-primary);
-}
-.settings-tab i {
-    width: 16px;
-    height: 16px;
-}
-
-/* Point row styling */
-.point-row-wrapper {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    margin-bottom: 0.25rem;
-}
-.point-row-label {
-    width: 80px;
-    flex-shrink: 0;
-}
-.point-row-input {
-    flex: 1;
-}
-
-/* Global text styling */
-.global-text-card {
-    margin-bottom: 1rem;
-}
-.global-text-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    gap: 0.5rem;
-    flex-wrap: wrap;
-}
-.global-text-textarea {
-    width: 100%;
-    min-height: 120px;
-    font-family: inherit;
-    resize: vertical;
-}
-
-/* Debug tool styling */
-.debug-tool-item {
-    padding: 0.75rem;
-    background: var(--gs-bg-secondary);
-    border-radius: 0.5rem;
-    margin-bottom: 0.5rem;
-}
-.debug-tool-item:hover {
-    background: var(--gs-bg-tertiary);
-}
-
-/* System info card */
-.info-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 1rem;
-}
-@media (min-width: 768px) {
-    .info-grid {
-        grid-template-columns: repeat(4, 1fr);
-    }
-}
-.info-item {
-    padding: 1rem;
-    background: var(--gs-bg-secondary);
-    border-radius: 0.5rem;
-}
-.info-label {
-    font-size: 0.75rem;
-    color: var(--gs-text-secondary);
-    text-transform: uppercase;
-    margin-bottom: 0.25rem;
-}
-.info-value {
-    font-weight: 600;
-    color: var(--gs-text-primary);
-}
-</style>
 
 <main class="gs-main-content">
     <div class="gs-container">
@@ -414,20 +308,20 @@ include __DIR__ . '/../includes/layout-header.php';
         <?php endif; ?>
 
         <!-- Tab Navigation -->
-        <div class="settings-tabs">
-            <a href="?tab=info" class="settings-tab <?= $activeTab === 'info' ? 'active' : '' ?>">
+        <div class="gs-tabs">
+            <a href="?tab=info" class="gs-tab <?= $activeTab === 'info' ? 'active' : '' ?>">
                 <i data-lucide="info"></i>
                 Systeminformation
             </a>
-            <a href="?tab=debug" class="settings-tab <?= $activeTab === 'debug' ? 'active' : '' ?>">
+            <a href="?tab=debug" class="gs-tab <?= $activeTab === 'debug' ? 'active' : '' ?>">
                 <i data-lucide="bug"></i>
                 Debug
             </a>
-            <a href="?tab=classes" class="settings-tab <?= $activeTab === 'classes' ? 'active' : '' ?>">
+            <a href="?tab=classes" class="gs-tab <?= $activeTab === 'classes' ? 'active' : '' ?>">
                 <i data-lucide="layers"></i>
                 Klasser
             </a>
-            <a href="?tab=global-texts" class="settings-tab <?= $activeTab === 'global-texts' ? 'active' : '' ?>">
+            <a href="?tab=global-texts" class="gs-tab <?= $activeTab === 'global-texts' ? 'active' : '' ?>">
                 <i data-lucide="file-text"></i>
                 Globala Texter
             </a>
@@ -444,27 +338,27 @@ include __DIR__ . '/../includes/layout-header.php';
                     </h2>
                 </div>
                 <div class="gs-card-content">
-                    <div class="info-grid">
-                        <div class="info-item">
-                            <div class="info-label">PHP Version</div>
-                            <div class="info-value"><?= h($systemInfo['php_version']) ?></div>
+                    <div class="gs-info-grid">
+                        <div class="gs-info-item">
+                            <div class="gs-info-label">PHP Version</div>
+                            <div class="gs-info-value"><?= h($systemInfo['php_version']) ?></div>
                         </div>
-                        <div class="info-item">
-                            <div class="info-label">MySQL Version</div>
-                            <div class="info-value"><?= h($systemInfo['mysql_version']) ?></div>
+                        <div class="gs-info-item">
+                            <div class="gs-info-label">MySQL Version</div>
+                            <div class="gs-info-value"><?= h($systemInfo['mysql_version']) ?></div>
                         </div>
-                        <div class="info-item">
-                            <div class="info-label">Server</div>
-                            <div class="info-value"><?= h($systemInfo['server_software']) ?></div>
+                        <div class="gs-info-item">
+                            <div class="gs-info-label">Server</div>
+                            <div class="gs-info-value"><?= h($systemInfo['server_software']) ?></div>
                         </div>
-                        <div class="info-item">
-                            <div class="info-label">Document Root</div>
-                            <div class="info-value" style="font-size: 0.75rem; word-break: break-all;"><?= h($systemInfo['document_root']) ?></div>
+                        <div class="gs-info-item">
+                            <div class="gs-info-label">Document Root</div>
+                            <div class="gs-info-value gs-info-value-sm"><?= h($systemInfo['document_root']) ?></div>
                         </div>
                     </div>
 
                     <h3 class="gs-h5 gs-mt-lg gs-mb-md">Databas Statistik</h3>
-                    <div class="info-grid">
+                    <div class="gs-info-grid">
                         <?php
                         $stats = [
                             ['Deltagare', $db->getRow("SELECT COUNT(*) as c FROM riders")['c']],
@@ -476,9 +370,9 @@ include __DIR__ . '/../includes/layout-header.php';
                         ];
                         foreach ($stats as $stat):
                         ?>
-                        <div class="info-item">
-                            <div class="info-label"><?= $stat[0] ?></div>
-                            <div class="info-value"><?= number_format($stat[1]) ?></div>
+                        <div class="gs-info-item">
+                            <div class="gs-info-label"><?= $stat[0] ?></div>
+                            <div class="gs-info-value"><?= number_format($stat[1]) ?></div>
                         </div>
                         <?php endforeach; ?>
                     </div>
@@ -502,7 +396,7 @@ include __DIR__ . '/../includes/layout-header.php';
                 </div>
                 <div class="gs-card-content">
                     <?php foreach ($category['items'] as $tool): ?>
-                    <div class="debug-tool-item gs-flex gs-items-center gs-justify-between">
+                    <div class="gs-debug-tool-item gs-flex gs-items-center gs-justify-between">
                         <div>
                             <strong><?= h($tool['name']) ?></strong>
                             <div class="gs-text-sm gs-text-secondary"><?= h($tool['desc']) ?></div>
@@ -699,7 +593,7 @@ include __DIR__ . '/../includes/layout-header.php';
                     </h2>
                 <?php endif; ?>
 
-                <div class="gs-card global-text-card">
+                <div class="gs-card gs-global-text-card">
                     <div class="gs-card-content">
                         <form method="POST">
                             <?= csrf_field() ?>
@@ -707,7 +601,7 @@ include __DIR__ . '/../includes/layout-header.php';
                             <input type="hidden" name="action" value="update">
                             <input type="hidden" name="id" value="<?= $text['id'] ?>">
 
-                            <div class="global-text-header">
+                            <div class="gs-global-text-header">
                                 <div>
                                     <h3 class="gs-h5 gs-mb-xs"><?= h($text['field_name']) ?></h3>
                                     <span class="gs-badge gs-badge-secondary gs-badge-sm"><?= h($text['field_key']) ?></span>
@@ -724,7 +618,7 @@ include __DIR__ . '/../includes/layout-header.php';
                             </div>
 
                             <div class="gs-mt-md">
-                                <textarea name="content" class="gs-input global-text-textarea" placeholder="Ange standardtext..."><?= h($text['content']) ?></textarea>
+                                <textarea name="content" class="gs-input gs-global-text-textarea" placeholder="Ange standardtext..."><?= h($text['content']) ?></textarea>
                             </div>
                         </form>
                     </div>
