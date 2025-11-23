@@ -5,8 +5,14 @@
  */
 
 require_once __DIR__ . '/config.php';
+require_once __DIR__ . '/includes/rider-auth.php';
 
 $db = getDB();
+
+// Get current rider if logged in
+$currentRider = get_current_rider();
+$hasGravityId = $currentRider && !empty($currentRider['gravity_id']);
+$chipDiscount = 50; // Chip rental included in price, deducted for Gravity-ID holders
 
 // Get event ID from URL
 $eventId = isset($_GET['id']) ? (int)$_GET['id'] : 0;
@@ -1332,6 +1338,17 @@ include __DIR__ . '/includes/layout-header.php';
                             <i data-lucide="credit-card" class="gs-icon-14"></i>
                             Priser
                         </h3>
+
+                        <?php if ($hasGravityId): ?>
+                            <div class="gs-alert gs-alert-success gs-mb-md">
+                                <i data-lucide="star" class="gs-icon-sm"></i>
+                                <div>
+                                    <strong>Gravity-ID rabatt!</strong>
+                                    <p class="gs-text-sm gs-mt-xs">Du får <?= $chipDiscount ?> kr rabatt på chiphyra.</p>
+                                </div>
+                            </div>
+                        <?php endif; ?>
+
                         <div class="gs-table-responsive">
                             <table class="gs-table">
                                 <thead>
@@ -1339,6 +1356,9 @@ include __DIR__ . '/includes/layout-header.php';
                                         <th>Klass</th>
                                         <th>Ordinarie pris</th>
                                         <th>Early-bird</th>
+                                        <?php if ($hasGravityId): ?>
+                                            <th>Gravity-ID</th>
+                                        <?php endif; ?>
                                         <th>Pris nu</th>
                                     </tr>
                                 </thead>
@@ -1349,9 +1369,13 @@ include __DIR__ . '/includes/layout-header.php';
                                         $earlyBirdDiscount = (float)$pricing['early_bird_discount_percent'];
                                         $earlyBirdEnd = $pricing['early_bird_end_date'];
                                         $isEarlyBird = $earlyBirdEnd && date('Y-m-d') <= $earlyBirdEnd;
-                                        $currentPrice = $isEarlyBird
+                                        $priceAfterEarlyBird = $isEarlyBird
                                             ? $basePrice * (1 - $earlyBirdDiscount / 100)
                                             : $basePrice;
+                                        $finalPrice = $hasGravityId
+                                            ? $priceAfterEarlyBird - $chipDiscount
+                                            : $priceAfterEarlyBird;
+                                        $totalSavings = $basePrice - $finalPrice;
                                         ?>
                                         <tr>
                                             <td>
@@ -1374,13 +1398,20 @@ include __DIR__ . '/includes/layout-header.php';
                                                     <span class="gs-text-secondary">-</span>
                                                 <?php endif; ?>
                                             </td>
+                                            <?php if ($hasGravityId): ?>
+                                            <td>
+                                                <span class="gs-badge gs-badge-primary gs-badge-sm">
+                                                    -<?= $chipDiscount ?> kr
+                                                </span>
+                                            </td>
+                                            <?php endif; ?>
                                             <td>
                                                 <strong class="gs-text-primary">
-                                                    <?= number_format($currentPrice, 0) ?> kr
+                                                    <?= number_format($finalPrice, 0) ?> kr
                                                 </strong>
-                                                <?php if ($isEarlyBird && $earlyBirdDiscount > 0): ?>
+                                                <?php if ($totalSavings > 0): ?>
                                                     <span class="gs-text-success gs-text-sm">
-                                                        (spara <?= number_format($basePrice - $currentPrice, 0) ?> kr)
+                                                        (spara <?= number_format($totalSavings, 0) ?> kr)
                                                     </span>
                                                 <?php endif; ?>
                                             </td>
@@ -1389,6 +1420,10 @@ include __DIR__ . '/includes/layout-header.php';
                                 </tbody>
                             </table>
                         </div>
+
+                        <p class="gs-text-xs gs-text-secondary gs-mt-sm">
+                            * I priset ingår <?= $chipDiscount ?> kr för chiphyra. Deltagare med Gravity-ID får avdrag för detta.
+                        </p>
                     </div>
 
                     <!-- Buy Button -->
