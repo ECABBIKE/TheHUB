@@ -42,6 +42,32 @@ if (!$event) {
     exit;
 }
 
+// Fetch pricing rules for registration form (from series)
+$pricingRules = [];
+$classRulesMap = [];
+if (!empty($event['ticketing_enabled']) && !empty($event['series_id'])) {
+    // Get pricing from series
+    $pricingRules = $db->getAll("
+        SELECT pr.*, c.name as class_name, c.display_name as class_display_name
+        FROM series_pricing_rules pr
+        JOIN classes c ON pr.class_id = c.id
+        WHERE pr.series_id = ?
+        ORDER BY c.sort_order ASC
+    ", [$event['series_id']]);
+
+    // Get class rules (license restrictions) from series
+    $classRules = $db->getAll("
+        SELECT *
+        FROM series_class_rules
+        WHERE series_id = ? AND is_active = 1
+    ", [$event['series_id']]);
+
+    // Convert class rules to map for easy lookup
+    foreach ($classRules as $rule) {
+        $classRulesMap[$rule['class_id']] = $rule;
+    }
+}
+
 // Fetch global texts for use_global functionality
 $globalTexts = $db->getAll("SELECT field_key, content FROM global_texts WHERE is_active = 1");
 $globalTextMap = [];
@@ -1536,6 +1562,486 @@ include __DIR__ . '/includes/layout-header.php';
                         <h3 class="gs-h5 gs-mb-sm">Anmälan stängd</h3>
                         <p>Anmälan stängde <?= date('d M Y', strtotime($event['registration_deadline'])) ?>.</p>
                     </div>
+                <?php elseif (!empty($event['ticketing_enabled']) && !empty($event['woo_product_id'])): ?>
+                    <?php
+                    // Calculate deadline
+                    $deadlineDays = $event['ticket_deadline_days'] ?? 7;
+                    $eventDate = new DateTime($event['date']);
+                    $deadline = clone $eventDate;
+                    $deadline->modify("-{$deadlineDays} days");
+                    $now = new DateTime();
+                    $deadlinePassed = $now > $deadline;
+
+                    // Check for early bird
+                    $isEarlyBird = false;
+                    foreach ($pricingRules as $rule) {
+                        if (!empty($rule['early_bird_end_date']) && strtotime($rule['early_bird_end_date']) >= time()) {
+                            $isEarlyBird = true;
+                            break;
+                        }
+                    }
+                    ?>
+
+                    <?php if ($deadlinePassed): ?>
+                        <div class="gs-alert gs-alert-warning gs-mb-lg">
+                            <strong>Sista anmälningsdag har passerat</strong> (<?= $deadline->format('d M Y') ?>)
+                        </div>
+                    <?php else: ?>
+                        <!-- Registration Form -->
+                        <div id="registration-form">
+                            <p class="gs-text-secondary gs-mb-md">
+                                Sista anmälningsdag: <strong><?= $deadline->format('d M Y') ?></strong>
+                                <?php if ($isEarlyBird): ?>
+                                    <span class="gs-badge gs-badge-success gs-ml-sm">Early Bird aktivt!</span>
+                                <?php endif; ?>
+                            </p>
+
+                            <!-- Step 1: Find Rider -->
+                            <div class="gs-card gs-mb-md">
+                                <div class="gs-card-header">
+                                    <h3 class="gs-h5">
+                                        <i data-lucide="search"></i>
+                                        1. Hitta deltagare
+                                    </h3>
+                                </div>
+                                <div class="gs-card-content">
+                                    <div class="gs-form-group">
+                                        <label class="gs-label">Sök på namn, UCI-ID eller email</label>
+                                        <input type="text" id="rider-search" class="gs-input"
+                                               placeholder="T.ex. Anna Andersson eller UCI-ID">
+                                    </div>
+                                    <div id="rider-results" class="gs-mt-md" style="display: none;"></div>
+                                    <div id="selected-rider" class="gs-mt-md" style="display: none;">
+                                        <div class="gs-alert gs-alert-success">
+                                            <strong id="rider-name"></strong><br>
+                                            <span class="gs-text-sm" id="rider-details"></span>
+                                            <span id="gravity-id-badge" style="display: none;">
+                                                <br><span class="gs-badge gs-badge-primary gs-mt-sm">Gravity-ID medlem</span>
+                                            </span>
+                                        </div>
+                                        <input type="hidden" id="selected-rider-id" value="">
+                                        <input type="hidden" id="has-gravity-id" value="0">
+                                    </div>
+
+                                    <!-- New Rider Form (for engångslicens) -->
+                                    <div id="new-rider-form" class="gs-mt-md" style="display: none;">
+                                        <div class="gs-alert gs-alert-info gs-mb-md">
+                                            <strong>Ny deltagare</strong><br>
+                                            <span class="gs-text-sm">Fyll i uppgifterna nedan för att registrera dig med engångslicens (SWE-ID).</span>
+                                        </div>
+
+                                        <div class="gs-grid gs-grid-cols-1 gs-md-grid-cols-2 gs-gap-md">
+                                            <div class="gs-form-group">
+                                                <label class="gs-label">Förnamn *</label>
+                                                <input type="text" id="new-rider-firstname" class="gs-input" required>
+                                            </div>
+                                            <div class="gs-form-group">
+                                                <label class="gs-label">Efternamn *</label>
+                                                <input type="text" id="new-rider-lastname" class="gs-input" required>
+                                            </div>
+                                            <div class="gs-form-group">
+                                                <label class="gs-label">Födelseår *</label>
+                                                <input type="number" id="new-rider-birthyear" class="gs-input"
+                                                       min="1930" max="<?= date('Y') ?>" placeholder="T.ex. 1990" required>
+                                            </div>
+                                            <div class="gs-form-group">
+                                                <label class="gs-label">Kön *</label>
+                                                <select id="new-rider-gender" class="gs-input" required>
+                                                    <option value="">Välj...</option>
+                                                    <option value="M">Man</option>
+                                                    <option value="F">Kvinna</option>
+                                                </select>
+                                            </div>
+                                            <div class="gs-form-group">
+                                                <label class="gs-label">E-post</label>
+                                                <input type="email" id="new-rider-email" class="gs-input"
+                                                       placeholder="din@email.se">
+                                            </div>
+                                            <div class="gs-form-group">
+                                                <label class="gs-label">Telefon</label>
+                                                <input type="tel" id="new-rider-phone" class="gs-input"
+                                                       placeholder="070-123 45 67">
+                                            </div>
+                                        </div>
+
+                                        <div class="gs-mt-md gs-flex gs-gap-sm">
+                                            <button type="button" onclick="createNewRider()" class="gs-btn gs-btn-primary">
+                                                <i data-lucide="user-plus"></i>
+                                                Registrera deltagare
+                                            </button>
+                                            <button type="button" onclick="hideNewRiderForm()" class="gs-btn gs-btn-outline">
+                                                Avbryt
+                                            </button>
+                                        </div>
+
+                                        <div id="new-rider-error" class="gs-alert gs-alert-danger gs-mt-md" style="display: none;"></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Step 2: Select Class -->
+                            <div class="gs-card gs-mb-md">
+                                <div class="gs-card-header">
+                                    <h3 class="gs-h5">
+                                        <i data-lucide="users"></i>
+                                        2. Välj klass
+                                    </h3>
+                                </div>
+                                <div class="gs-card-content">
+                                    <?php if (empty($pricingRules)): ?>
+                                        <p class="gs-text-secondary">Inga klasser har konfigurerats för detta event ännu.</p>
+                                    <?php else: ?>
+                                        <div class="gs-grid gs-grid-cols-1 gs-gap-sm">
+                                            <?php foreach ($pricingRules as $rule):
+                                                $earlyBirdActive = !empty($rule['early_bird_end_date']) && strtotime($rule['early_bird_end_date']) >= time();
+                                                $earlyBirdPrice = $earlyBirdActive ? $rule['base_price'] * (1 - $rule['early_bird_discount_percent'] / 100) : $rule['base_price'];
+                                            ?>
+                                                <label class="gs-card gs-p-md" style="cursor: pointer; border: 2px solid var(--gs-border);">
+                                                    <div class="gs-flex gs-justify-between gs-items-center">
+                                                        <div class="gs-flex gs-items-center gs-gap-md">
+                                                            <input type="radio" name="class_id" value="<?= $rule['class_id'] ?>"
+                                                                   data-base-price="<?= $rule['base_price'] ?>"
+                                                                   data-early-bird-price="<?= $earlyBirdPrice ?>"
+                                                                   data-early-bird-active="<?= $earlyBirdActive ? '1' : '0' ?>"
+                                                                   onchange="updatePrice()">
+                                                            <div>
+                                                                <strong><?= h($rule['class_display_name'] ?: $rule['class_name']) ?></strong>
+                                                            </div>
+                                                        </div>
+                                                        <div class="gs-text-right">
+                                                            <?php if ($earlyBirdActive): ?>
+                                                                <span class="gs-text-success gs-font-bold"><?= number_format($earlyBirdPrice, 0) ?> kr</span>
+                                                                <br><span class="gs-text-xs gs-text-secondary"><s><?= number_format($rule['base_price'], 0) ?> kr</s></span>
+                                                            <?php else: ?>
+                                                                <span class="gs-font-bold"><?= number_format($rule['base_price'], 0) ?> kr</span>
+                                                            <?php endif; ?>
+                                                        </div>
+                                                    </div>
+                                                </label>
+                                            <?php endforeach; ?>
+                                        </div>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+
+                            <!-- Step 3: Price Summary & Payment -->
+                            <div class="gs-card">
+                                <div class="gs-card-header">
+                                    <h3 class="gs-h5">
+                                        <i data-lucide="credit-card"></i>
+                                        3. Sammanfattning & Betalning
+                                    </h3>
+                                </div>
+                                <div class="gs-card-content">
+                                    <div id="price-summary" style="display: none;">
+                                        <div class="gs-flex gs-justify-between gs-mb-sm">
+                                            <span>Startavgift:</span>
+                                            <span id="base-price-display">0 kr</span>
+                                        </div>
+                                        <div id="gravity-discount-row" class="gs-flex gs-justify-between gs-mb-sm gs-text-success" style="display: none;">
+                                            <span>Gravity-ID rabatt (chip ingår):</span>
+                                            <span>-50 kr</span>
+                                        </div>
+                                        <hr class="gs-my-md">
+                                        <div class="gs-flex gs-justify-between gs-font-bold gs-text-lg">
+                                            <span>Totalt:</span>
+                                            <span id="total-price-display">0 kr</span>
+                                        </div>
+                                    </div>
+
+                                    <div id="payment-button" class="gs-mt-lg" style="display: none;">
+                                        <button type="button" onclick="proceedToPayment()" class="gs-btn gs-btn-primary gs-btn-lg gs-w-full">
+                                            <i data-lucide="shopping-cart"></i>
+                                            Fortsätt till betalning
+                                        </button>
+                                    </div>
+
+                                    <div id="form-incomplete" class="gs-alert gs-alert-info">
+                                        Välj deltagare och klass för att fortsätta.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <script>
+                        let searchTimeout;
+                        const eventId = <?= $eventId ?>;
+                        const wooProductId = '<?= h($event['woo_product_id']) ?>';
+                        const gravityIdDiscount = 50;
+
+                        // Class rules for license validation
+                        const classRules = <?= json_encode($classRulesMap) ?>;
+
+                        // Current rider data for validation
+                        let currentRiderData = null;
+
+                        // Rider search
+                        document.getElementById('rider-search').addEventListener('input', function() {
+                            clearTimeout(searchTimeout);
+                            const query = this.value.trim();
+
+                            if (query.length < 2) {
+                                document.getElementById('rider-results').style.display = 'none';
+                                return;
+                            }
+
+                            searchTimeout = setTimeout(() => {
+                                fetch('/api/search-riders.php?q=' + encodeURIComponent(query))
+                                    .then(r => r.json())
+                                    .then(data => {
+                                        const container = document.getElementById('rider-results');
+                                        if (data.length === 0) {
+                                            container.innerHTML = '<p class="gs-text-secondary">Ingen deltagare hittades. <a href="#" onclick="showNewRiderForm(); return false;">Registrera ny deltagare</a></p>';
+                                        } else {
+                                            container.innerHTML = data.map(r => `
+                                                <div class="gs-card gs-p-sm gs-mb-sm" style="cursor: pointer;"
+                                                     onclick='selectRider(${JSON.stringify({
+                                                         id: r.id,
+                                                         name: r.firstname + " " + r.lastname,
+                                                         club: r.club_name || "",
+                                                         uciId: r.uci_id || "",
+                                                         hasGravityId: r.gravity_id ? 1 : 0,
+                                                         licenseType: r.license_type || "",
+                                                         birthYear: r.birth_year || null,
+                                                         gender: r.gender || ""
+                                                     })})'>
+                                                    <strong>${r.firstname} ${r.lastname}</strong>
+                                                    ${r.license_type ? '<span class="gs-badge gs-badge-secondary gs-badge-sm gs-ml-sm">' + r.license_type + '</span>' : ''}
+                                                    ${r.club_name ? '<br><span class="gs-text-sm gs-text-secondary">' + r.club_name + '</span>' : ''}
+                                                    ${r.gravity_id ? '<span class="gs-badge gs-badge-primary gs-badge-sm gs-ml-sm">GID</span>' : ''}
+                                                </div>
+                                            `).join('');
+                                        }
+                                        container.style.display = 'block';
+                                    });
+                            }, 300);
+                        });
+
+                        function selectRider(riderData) {
+                            currentRiderData = riderData;
+
+                            document.getElementById('selected-rider-id').value = riderData.id;
+                            document.getElementById('has-gravity-id').value = riderData.hasGravityId;
+                            document.getElementById('rider-name').textContent = riderData.name;
+
+                            let details = riderData.club;
+                            if (riderData.uciId) details += ' | UCI: ' + riderData.uciId;
+                            if (riderData.licenseType) details += ' | Licens: ' + riderData.licenseType;
+
+                            document.getElementById('rider-details').textContent = details;
+                            document.getElementById('gravity-id-badge').style.display = riderData.hasGravityId ? 'inline' : 'none';
+                            document.getElementById('selected-rider').style.display = 'block';
+                            document.getElementById('rider-results').style.display = 'none';
+                            document.getElementById('rider-search').value = riderData.name;
+
+                            // Filter classes based on rider's license/age/gender
+                            filterClasses();
+                            updatePrice();
+                        }
+
+                        function filterClasses() {
+                            if (!currentRiderData) return;
+
+                            const classOptions = document.querySelectorAll('input[name="class_id"]');
+
+                            classOptions.forEach(radio => {
+                                const classId = radio.value;
+                                const rules = classRules[classId];
+                                const container = radio.closest('label');
+                                let allowed = true;
+                                let reason = '';
+
+                                if (rules) {
+                                    // Check license type
+                                    if (rules.allowed_license_types) {
+                                        const allowedTypes = JSON.parse(rules.allowed_license_types);
+                                        if (allowedTypes.length > 0 && currentRiderData.licenseType) {
+                                            if (!allowedTypes.includes(currentRiderData.licenseType)) {
+                                                allowed = false;
+                                                reason = 'Kräver licens: ' + allowedTypes.join(', ');
+                                            }
+                                        }
+                                    }
+
+                                    // Check birth year (age restrictions)
+                                    if (allowed && currentRiderData.birthYear) {
+                                        if (rules.min_birth_year && currentRiderData.birthYear < rules.min_birth_year) {
+                                            allowed = false;
+                                            reason = 'Födelseår måste vara ' + rules.min_birth_year + ' eller senare';
+                                        }
+                                        if (rules.max_birth_year && currentRiderData.birthYear > rules.max_birth_year) {
+                                            allowed = false;
+                                            reason = 'Födelseår måste vara ' + rules.max_birth_year + ' eller tidigare';
+                                        }
+                                    }
+
+                                    // Check gender
+                                    if (allowed && rules.allowed_genders && currentRiderData.gender) {
+                                        const allowedGenders = JSON.parse(rules.allowed_genders);
+                                        if (allowedGenders.length > 0 && !allowedGenders.includes(currentRiderData.gender)) {
+                                            allowed = false;
+                                            reason = 'Endast för kön: ' + allowedGenders.join(', ');
+                                        }
+                                    }
+
+                                    // Check license requirement
+                                    if (allowed && rules.requires_license && !currentRiderData.licenseType) {
+                                        allowed = false;
+                                        reason = 'Kräver tävlingslicens';
+                                    }
+                                }
+
+                                // Update UI
+                                radio.disabled = !allowed;
+
+                                // Remove existing reason message
+                                const existingReason = container.querySelector('.class-restriction-reason');
+                                if (existingReason) existingReason.remove();
+
+                                if (!allowed) {
+                                    container.style.opacity = '0.5';
+                                    container.style.cursor = 'not-allowed';
+                                    if (radio.checked) {
+                                        radio.checked = false;
+                                        updatePrice();
+                                    }
+
+                                    // Add reason
+                                    const reasonEl = document.createElement('div');
+                                    reasonEl.className = 'class-restriction-reason gs-text-xs gs-text-error gs-mt-xs';
+                                    reasonEl.textContent = reason;
+                                    container.querySelector('div').appendChild(reasonEl);
+                                } else {
+                                    container.style.opacity = '1';
+                                    container.style.cursor = 'pointer';
+                                }
+                            });
+                        }
+
+                        function showNewRiderForm() {
+                            document.getElementById('rider-results').style.display = 'none';
+                            document.getElementById('selected-rider').style.display = 'none';
+                            document.getElementById('new-rider-form').style.display = 'block';
+                            document.getElementById('new-rider-error').style.display = 'none';
+                        }
+
+                        function hideNewRiderForm() {
+                            document.getElementById('new-rider-form').style.display = 'none';
+                            document.getElementById('rider-search').value = '';
+                        }
+
+                        async function createNewRider() {
+                            const firstname = document.getElementById('new-rider-firstname').value.trim();
+                            const lastname = document.getElementById('new-rider-lastname').value.trim();
+                            const birthYear = document.getElementById('new-rider-birthyear').value;
+                            const gender = document.getElementById('new-rider-gender').value;
+                            const email = document.getElementById('new-rider-email').value.trim();
+                            const phone = document.getElementById('new-rider-phone').value.trim();
+
+                            // Validate
+                            if (!firstname || !lastname || !birthYear || !gender) {
+                                document.getElementById('new-rider-error').textContent = 'Fyll i alla obligatoriska fält';
+                                document.getElementById('new-rider-error').style.display = 'block';
+                                return;
+                            }
+
+                            try {
+                                const response = await fetch('/api/create-rider.php', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({
+                                        firstname: firstname,
+                                        lastname: lastname,
+                                        birth_year: parseInt(birthYear),
+                                        gender: gender,
+                                        email: email,
+                                        phone: phone
+                                    })
+                                });
+
+                                const data = await response.json();
+
+                                if (data.error) {
+                                    document.getElementById('new-rider-error').textContent = data.error;
+                                    document.getElementById('new-rider-error').style.display = 'block';
+                                    return;
+                                }
+
+                                if (data.success) {
+                                    // Hide form and select the rider
+                                    document.getElementById('new-rider-form').style.display = 'none';
+
+                                    // Select the newly created rider
+                                    selectRider({
+                                        id: data.rider.id,
+                                        name: data.rider.name,
+                                        club: '',
+                                        uciId: data.rider.sweId || '',
+                                        hasGravityId: 0,
+                                        licenseType: data.rider.licenseType || 'Engångslicens',
+                                        birthYear: data.rider.birthYear,
+                                        gender: data.rider.gender
+                                    });
+
+                                    if (data.existing) {
+                                        alert(data.rider.message);
+                                    }
+                                }
+                            } catch (err) {
+                                document.getElementById('new-rider-error').textContent = 'Något gick fel. Försök igen.';
+                                document.getElementById('new-rider-error').style.display = 'block';
+                            }
+                        }
+
+                        function updatePrice() {
+                            const riderId = document.getElementById('selected-rider-id').value;
+                            const classRadio = document.querySelector('input[name="class_id"]:checked');
+
+                            if (!riderId || !classRadio) {
+                                document.getElementById('price-summary').style.display = 'none';
+                                document.getElementById('payment-button').style.display = 'none';
+                                document.getElementById('form-incomplete').style.display = 'block';
+                                return;
+                            }
+
+                            const hasGravityId = document.getElementById('has-gravity-id').value === '1';
+                            const earlyBirdActive = classRadio.dataset.earlyBirdActive === '1';
+                            const basePrice = earlyBirdActive ?
+                                parseFloat(classRadio.dataset.earlyBirdPrice) :
+                                parseFloat(classRadio.dataset.basePrice);
+
+                            let total = basePrice;
+
+                            document.getElementById('base-price-display').textContent = basePrice + ' kr';
+
+                            if (hasGravityId) {
+                                document.getElementById('gravity-discount-row').style.display = 'flex';
+                                total -= gravityIdDiscount;
+                            } else {
+                                document.getElementById('gravity-discount-row').style.display = 'none';
+                            }
+
+                            document.getElementById('total-price-display').textContent = Math.max(0, total) + ' kr';
+                            document.getElementById('price-summary').style.display = 'block';
+                            document.getElementById('payment-button').style.display = 'block';
+                            document.getElementById('form-incomplete').style.display = 'none';
+                        }
+
+                        function proceedToPayment() {
+                            const riderId = document.getElementById('selected-rider-id').value;
+                            const classRadio = document.querySelector('input[name="class_id"]:checked');
+
+                            if (!riderId || !classRadio) {
+                                alert('Välj deltagare och klass först');
+                                return;
+                            }
+
+                            // Redirect to WooCommerce with product
+                            const url = 'https://gravityseries.se/?add-to-cart=' + wooProductId;
+                            window.open(url, '_blank');
+                        }
+                        </script>
+                    <?php endif; ?>
                 <?php elseif (!empty($event['registration_url'])): ?>
                     <div class="gs-alert gs-alert-primary gs-mb-lg">
                         <h3 class="gs-h5 gs-mb-sm">
