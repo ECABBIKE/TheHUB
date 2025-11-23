@@ -216,33 +216,17 @@ if ($totalRaces > 0) {
                 }
             }
 
-            // Get GravitySeries Team stats (club points for this series)
+            // Get GravitySeries Team stats (club points for events in this series)
             if ($rider['club_id']) {
-                // Try with specific series first
+                // Get club points for events that are in GravitySeries Total (via series_events)
                 $gravityTeamStats = $db->getRow("
-                    SELECT SUM(club_points) as total_points, COUNT(DISTINCT event_id) as events_count
-                    FROM club_rider_points
-                    WHERE rider_id = ? AND club_id = ? AND series_id = ?
+                    SELECT SUM(crp.club_points) as total_points, COUNT(DISTINCT crp.event_id) as events_count
+                    FROM club_rider_points crp
+                    WHERE crp.rider_id = ? AND crp.club_id = ?
+                    AND crp.event_id IN (
+                        SELECT se.event_id FROM series_events se WHERE se.series_id = ?
+                    )
                 ", [$riderId, $rider['club_id'], $totalSeries['id']]);
-
-                // If no results, get club points from all series
-                if (!$gravityTeamStats || !$gravityTeamStats['total_points']) {
-                    $gravityTeamStats = $db->getRow("
-                        SELECT SUM(club_points) as total_points, COUNT(DISTINCT event_id) as events_count
-                        FROM club_rider_points
-                        WHERE rider_id = ? AND club_id = ?
-                    ", [$riderId, $rider['club_id']]);
-                }
-
-                // If still no results, check without club_id filter (debug)
-                if (!$gravityTeamStats || !$gravityTeamStats['total_points']) {
-                    $debugClubPoints = $db->getRow("
-                        SELECT COUNT(*) as count, SUM(club_points) as total
-                        FROM club_rider_points
-                        WHERE rider_id = ?
-                    ", [$riderId]);
-                    error_log("DEBUG: club_rider_points for rider $riderId (any club): " . json_encode($debugClubPoints));
-                }
             }
         }
     } catch (Exception $e) {
