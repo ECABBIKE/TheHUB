@@ -136,6 +136,8 @@ foreach ($events as $event) {
     }
 }
 
+die('AFTER FOREACH - v2.4.2-062');
+
 // Get pending refund requests count
 $pendingRefunds = 0;
 if ($refundTablesExist) {
