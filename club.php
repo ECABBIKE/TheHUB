@@ -72,79 +72,6 @@ $pageType = 'public';
 include __DIR__ . '/includes/layout-header.php';
 ?>
 
-<style>
-    .rider-card {
-        background: white;
-        border-radius: 8px;
-        padding: 1rem;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-        transition: transform 0.2s, box-shadow 0.2s;
-        text-decoration: none;
-        color: inherit;
-        display: block;
-    }
-
-    .rider-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    }
-
-    .rider-name {
-        font-size: 1.125rem;
-        font-weight: 700;
-        color: #1a202c;
-        margin-bottom: 0.5rem;
-    }
-
-    .rider-stats {
-        display: grid;
-        grid-template-columns: repeat(5, 1fr);
-        gap: 0.5rem;
-        margin-top: 0.75rem;
-    }
-
-    .rider-stat {
-        text-align: center;
-    }
-
-    .rider-stat-value {
-        font-size: 1.25rem;
-        font-weight: 700;
-        color: #667eea;
-    }
-
-    .rider-stat-label {
-        font-size: 0.75rem;
-        color: #718096;
-        text-transform: uppercase;
-    }
-
-    .no-points {
-        opacity: 0.6;
-    }
-
-    /* Mobile Responsive */
-    @media (max-width: 640px) {
-        .rider-stats {
-            grid-template-columns: repeat(3, 1fr);
-            gap: 0.5rem;
-        }
-
-        .rider-stat-value {
-            font-size: 1rem;
-        }
-
-        .rider-stat-label {
-            font-size: 0.625rem;
-        }
-    }
-
-    @media (min-width: 641px) and (max-width: 1023px) {
-        .rider-stats {
-            grid-template-columns: repeat(5, 1fr);
-        }
-    }
-</style>
 
 <main class="gs-main-content">
     <div class="gs-container">
@@ -326,8 +253,8 @@ include __DIR__ . '/includes/layout-header.php';
 
                             $hasPoints = $rider['total_points'] > 0;
                             ?>
-                            <a href="/rider.php?id=<?= $rider['id'] ?>" class="rider-card <?= !$hasPoints ? 'no-points' : '' ?>">
-                                <div class="rider-name">
+                            <a href="/rider.php?id=<?= $rider['id'] ?>" class="gs-rider-card <?= !$hasPoints ? 'gs-no-points' : '' ?>">
+                                <div class="gs-rider-card-name">
                                     <?= h($rider['firstname']) ?> <?= h($rider['lastname']) ?>
                                 </div>
 
@@ -337,26 +264,26 @@ include __DIR__ . '/includes/layout-header.php';
                                     </div>
                                 <?php endif; ?>
 
-                                <div class="rider-stats">
-                                    <div class="rider-stat">
-                                        <div class="rider-stat-value"><?= $rider['total_races'] ?: 0 ?></div>
-                                        <div class="rider-stat-label">Lopp</div>
+                                <div class="gs-rider-stats">
+                                    <div class="gs-rider-stat">
+                                        <div class="gs-rider-stat-value"><?= $rider['total_races'] ?: 0 ?></div>
+                                        <div class="gs-rider-stat-label">Lopp</div>
                                     </div>
-                                    <div class="rider-stat">
-                                        <div class="rider-stat-value"><?= $rider['total_points'] ?: 0 ?></div>
-                                        <div class="rider-stat-label">Poäng</div>
+                                    <div class="gs-rider-stat">
+                                        <div class="gs-rider-stat-value"><?= $rider['total_points'] ?: 0 ?></div>
+                                        <div class="gs-rider-stat-label">Poäng</div>
                                     </div>
-                                    <div class="rider-stat">
-                                        <div class="rider-stat-value"><?= $ranking ?></div>
-                                        <div class="rider-stat-label">Ranking</div>
+                                    <div class="gs-rider-stat">
+                                        <div class="gs-rider-stat-value"><?= $ranking ?></div>
+                                        <div class="gs-rider-stat-label">Ranking</div>
                                     </div>
-                                    <div class="rider-stat">
-                                        <div class="rider-stat-value"><?= $rider['wins'] ?: 0 ?></div>
-                                        <div class="rider-stat-label">Segrar</div>
+                                    <div class="gs-rider-stat">
+                                        <div class="gs-rider-stat-value"><?= $rider['wins'] ?: 0 ?></div>
+                                        <div class="gs-rider-stat-label">Segrar</div>
                                     </div>
-                                    <div class="rider-stat">
-                                        <div class="rider-stat-value"><?= $rider['best_position'] ?: '-' ?></div>
-                                        <div class="rider-stat-label">Bäst</div>
+                                    <div class="gs-rider-stat">
+                                        <div class="gs-rider-stat-value"><?= $rider['best_position'] ?: '-' ?></div>
+                                        <div class="gs-rider-stat-label">Bäst</div>
                                     </div>
                                 </div>
                             </a>

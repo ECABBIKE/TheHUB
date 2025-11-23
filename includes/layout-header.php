@@ -137,8 +137,11 @@ $bodyClass = isset($bodyClass) ? $defaultBodyClass . ' ' . $bodyClass : $default
         }
     </style>
 
-    <!-- Main CSS with cache busting -->
-    <link rel="stylesheet" href="/assets/gravityseries-theme.css?v=<?= filemtime(__DIR__ . '/../assets/gravityseries-theme.css') ?>">
+    <!-- GravitySeries v4.0 CSS -->
+    <link rel="stylesheet" href="/public/css/gravityseries-main.css?v=<?= filemtime(__DIR__ . '/../public/css/gravityseries-main.css') ?>">
+    <?php if (isset($pageType) && $pageType === 'admin'): ?>
+    <link rel="stylesheet" href="/public/css/gravityseries-admin.css?v=<?= filemtime(__DIR__ . '/../public/css/gravityseries-admin.css') ?>">
+    <?php endif; ?>
 </head>
 <body class="<?= $bodyClass ?>">
     <!-- Hamburger (hidden on desktop via inline CSS) -->
