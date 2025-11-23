@@ -233,13 +233,21 @@ if ($totalRaces > 0) {
             ", [$totalSeries['id']]);
 
             if ($rider['club_id']) {
-                // Get club points using subquery to avoid collation issues
-                $gravityTeamStats = $db->getRow("
-                    SELECT SUM(club_points) as total_points, COUNT(DISTINCT event_id) as events_count
-                    FROM club_rider_points
-                    WHERE rider_id = ? AND club_id = ?
-                    AND event_id IN (SELECT event_id FROM series_events WHERE series_id = ?)
-                ", [$riderId, $rider['club_id'], $totalSeries['id']]);
+                // Two-step approach to avoid SQL collation issues
+                $eventIds = array_column($series8Events, 'event_id');
+
+                if (!empty($eventIds)) {
+                    // Build placeholders for IN clause with values from PHP
+                    $placeholders = implode(',', array_fill(0, count($eventIds), '?'));
+                    $params = array_merge([$riderId, $rider['club_id']], $eventIds);
+
+                    $gravityTeamStats = $db->getRow("
+                        SELECT SUM(club_points) as total_points, COUNT(DISTINCT event_id) as events_count
+                        FROM club_rider_points
+                        WHERE rider_id = ? AND club_id = ?
+                        AND event_id IN ($placeholders)
+                    ", $params);
+                }
             }
 
             // Store debug data for display
@@ -578,7 +586,7 @@ try {
                     }
                 }
             </style>
-            <div style="background: #ffc; padding: 5px; margin-bottom: 10px; font-size: 10px;">BUILD 045 - rider_id: <?= $riderId ?>, club_id: <?= $rider['club_id'] ?? 'null' ?></div>
+            <div style="background: #ffc; padding: 5px; margin-bottom: 10px; font-size: 10px;">BUILD 046 - rider_id: <?= $riderId ?>, club_id: <?= $rider['club_id'] ?? 'null' ?></div>
             <div class="rider-stats-top">
                 <div class="gs-card gs-stat-card-compact">
                     <div class="gs-stat-number-compact gs-text-primary"><?= $totalRaces ?></div>
