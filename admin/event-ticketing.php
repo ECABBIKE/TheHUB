@@ -38,19 +38,36 @@ $messageType = 'info';
 
 // Handle POST actions
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    checkCsrf();
+    echo "DEBUG: POST received<br>";
+    echo "DEBUG: Event ID = $eventId<br>";
+
+    try {
+        checkCsrf();
+        echo "DEBUG: CSRF OK<br>";
+    } catch (Exception $e) {
+        die("CSRF ERROR: " . $e->getMessage());
+    }
+
     $action = $_POST['action'] ?? '';
+    echo "DEBUG: Action = $action<br>";
 
     if ($action === 'save_settings') {
         $enabled = isset($_POST['ticketing_enabled']) ? 1 : 0;
         $deadlineDays = intval($_POST['ticket_deadline_days'] ?? 7);
         $wooProductId = trim($_POST['woo_product_id'] ?? '');
 
-        $db->execute("
-            UPDATE events
-            SET ticketing_enabled = ?, ticket_deadline_days = ?, woo_product_id = ?
-            WHERE id = ?
-        ", [$enabled, $deadlineDays, $wooProductId ?: null, $eventId]);
+        echo "DEBUG: enabled=$enabled, days=$deadlineDays, woo=$wooProductId<br>";
+
+        try {
+            $db->execute("
+                UPDATE events
+                SET ticketing_enabled = ?, ticket_deadline_days = ?, woo_product_id = ?
+                WHERE id = ?
+            ", [$enabled, $deadlineDays, $wooProductId ?: null, $eventId]);
+            echo "DEBUG: Update OK<br>";
+        } catch (Exception $e) {
+            die("DB ERROR: " . $e->getMessage());
+        }
 
         $event = $db->getRow("SELECT * FROM events WHERE id = ?", [$eventId]);
         $message = 'Inställningar sparade!';
