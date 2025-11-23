@@ -219,7 +219,6 @@ if ($totalRaces > 0) {
             // Get GravitySeries Team stats (club points for this series)
             // Debug: Always query club_rider_points, not just when rider has club_id
             $debugClubId = $rider['club_id'] ?? null;
-            error_log("DEBUG: Entering club points section. rider_id=$riderId, club_id=$debugClubId, series_id={$totalSeries['id']}");
 
             // First, check if there are ANY rows for this rider in club_rider_points
             $debugCount = $db->getRow("
@@ -229,7 +228,9 @@ if ($totalRaces > 0) {
                 FROM club_rider_points
                 WHERE rider_id = ?
             ", [$totalSeries['id'], $riderId]);
-            error_log("DEBUG club_rider_points for rider $riderId: " . json_encode($debugCount));
+
+            // Inline debug - will show immediately
+            echo "<!-- DEBUG041: debugCount=" . json_encode($debugCount) . " -->";
 
             if ($rider['club_id']) {
                 $gravityTeamStats = $db->getRow("
@@ -237,7 +238,8 @@ if ($totalRaces > 0) {
                     FROM club_rider_points
                     WHERE rider_id = ? AND club_id = ? AND series_id = ?
                 ", [$riderId, $rider['club_id'], $totalSeries['id']]);
-                error_log("DEBUG gravityTeamStats: " . json_encode($gravityTeamStats));
+
+                echo "<!-- DEBUG041: gravityTeamStats=" . json_encode($gravityTeamStats) . " -->";
             }
         }
     } catch (Exception $e) {
@@ -571,7 +573,7 @@ try {
                     }
                 }
             </style>
-            <div style="background: #ffc; padding: 5px; margin-bottom: 10px; font-size: 10px;">BUILD 040 - rider_id: <?= $riderId ?>, club_id: <?= $rider['club_id'] ?? 'null' ?></div>
+            <div style="background: #ffc; padding: 5px; margin-bottom: 10px; font-size: 10px;">BUILD 041 - rider_id: <?= $riderId ?>, club_id: <?= $rider['club_id'] ?? 'null' ?></div>
             <div class="rider-stats-top">
                 <div class="gs-card gs-stat-card-compact">
                     <div class="gs-stat-number-compact gs-text-primary"><?= $totalRaces ?></div>
