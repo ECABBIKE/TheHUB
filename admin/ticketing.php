@@ -4,6 +4,10 @@
  * Main hub for managing event ticketing, pricing, and sales
  */
 
+// Debug - show errors temporarily
+ini_set('display_errors', 1);
+error_reporting(E_ALL);
+
 require_once __DIR__ . '/../config.php';
 require_admin();
 
