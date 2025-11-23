@@ -123,8 +123,6 @@ try {
     $messageType = 'error';
 }
 
-die('AFTER QUERY - v2.4.2-059 - Events: ' . count($events));
-
 // Separate upcoming and past events
 $upcomingEvents = [];
 $pastEvents = [];
@@ -161,6 +159,7 @@ if ($ticketingTablesExist) {
 $pageTitle = 'Ticketing';
 $pageType = 'admin';
 include __DIR__ . '/../includes/layout-header.php';
+die('AFTER HEADER - v2.4.2-060');
 ?>
 
 <main class="gs-main-content">
