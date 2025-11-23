@@ -615,16 +615,6 @@ try {
                 </div>
             </div>
 
-            <!-- Debug info (temporary) -->
-            <div style="background: #fee; padding: 10px; margin-bottom: 10px; font-size: 12px;">
-                <strong>DEBUG:</strong><br>
-                riderId: <?= $riderId ?><br>
-                club_id: <?= $rider['club_id'] ?? 'null' ?><br>
-                totalSeries: <?= isset($totalSeries) ? json_encode($totalSeries) : 'not set' ?><br>
-                gravityTotalStats: <?= isset($gravityTotalStats) ? json_encode($gravityTotalStats) : 'not set' ?><br>
-                gravityTeamStats: <?= isset($gravityTeamStats) ? json_encode($gravityTeamStats) : 'not set' ?>
-            </div>
-
             <?php if (empty($results)): ?>
                 <!-- No Results -->
                 <div class="gs-card gs-empty-state">
