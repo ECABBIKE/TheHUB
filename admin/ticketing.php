@@ -158,8 +158,8 @@ if ($ticketingTablesExist) {
 
 $pageTitle = 'Ticketing';
 $pageType = 'admin';
+die('BEFORE HEADER - v2.4.2-061');
 include __DIR__ . '/../includes/layout-header.php';
-die('AFTER HEADER - v2.4.2-060');
 ?>
 
 <main class="gs-main-content">
