@@ -32,14 +32,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $db->query("UPDATE pricing_templates SET is_default = 0");
             }
 
-            $db->insert('pricing_templates', [
+            $newId = $db->insert('pricing_templates', [
                 'name' => $name,
                 'description' => $description,
                 'is_default' => $isDefault
             ]);
-            $newId = $db->lastInsertId();
-            $message = "Prismall '$name' skapad!";
-            $messageType = 'success';
 
             // Redirect to edit the new template
             header("Location: /admin/pricing-templates.php?edit=$newId");
