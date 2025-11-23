@@ -3,9 +3,9 @@
 
 -- Series pricing rules (replaces event_pricing_rules concept)
 CREATE TABLE IF NOT EXISTS series_pricing_rules (
-    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    series_id INT UNSIGNED NOT NULL,
-    class_id INT UNSIGNED NOT NULL,
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    series_id INT NOT NULL,
+    class_id INT NOT NULL,
     base_price DECIMAL(10,2) NOT NULL DEFAULT 0,
     early_bird_discount_percent DECIMAL(5,2) DEFAULT 0,
     early_bird_days_before INT DEFAULT 20,
@@ -17,9 +17,9 @@ CREATE TABLE IF NOT EXISTS series_pricing_rules (
 
 -- Series class rules (license restrictions per class)
 CREATE TABLE IF NOT EXISTS series_class_rules (
-    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    series_id INT UNSIGNED NOT NULL,
-    class_id INT UNSIGNED NOT NULL,
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    series_id INT NOT NULL,
+    class_id INT NOT NULL,
     allowed_license_types JSON NULL COMMENT 'Array of allowed license types, e.g. ["Elite", "Junior"]',
     min_birth_year INT NULL COMMENT 'Minimum birth year (oldest allowed)',
     max_birth_year INT NULL COMMENT 'Maximum birth year (youngest allowed)',
