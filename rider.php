@@ -172,6 +172,9 @@ if ($totalRaces > 0 && $rider['birth_year'] && $rider['gender']) {
                 ORDER BY (id = 8) DESC, year DESC LIMIT 1
             ");
 
+            // Debug: Log what we found
+            error_log("DEBUG rider.php: totalSeries=" . json_encode($totalSeries) . ", riderId=$riderId, riderClassId=$riderClassId");
+
             if ($totalSeries) {
                 // Get rider's points in GravitySeries Total (via series_events)
                 $gravityTotalStats = $db->getRow("
@@ -182,6 +185,9 @@ if ($totalRaces > 0 && $rider['birth_year'] && $rider['gender']) {
                     WHERE se.series_id = ? AND r.cyclist_id = ?
                     AND r.status = 'finished' AND r.points > 0
                 ", [$totalSeries['id'], $riderId]);
+
+                // Debug: Log stats
+                error_log("DEBUG rider.php: gravityTotalStats=" . json_encode($gravityTotalStats));
 
                 // Get position in class for GravitySeries Total
                 $classStandings = $db->getAll("
@@ -569,6 +575,16 @@ try {
                         </div>
                     <?php endif; ?>
                 </div>
+            </div>
+
+            <!-- Debug info (temporary) -->
+            <div style="background: #fee; padding: 10px; margin-bottom: 10px; font-size: 12px;">
+                <strong>DEBUG:</strong><br>
+                riderId: <?= $riderId ?><br>
+                riderClassId: <?= $riderClassId ?? 'null' ?><br>
+                totalSeries: <?= isset($totalSeries) ? json_encode($totalSeries) : 'not set' ?><br>
+                gravityTotalStats: <?= isset($gravityTotalStats) ? json_encode($gravityTotalStats) : 'not set' ?><br>
+                gravityTeamStats: <?= isset($gravityTeamStats) ? json_encode($gravityTeamStats) : 'not set' ?>
             </div>
 
             <?php if (empty($results)): ?>
