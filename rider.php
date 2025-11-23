@@ -227,6 +227,15 @@ if ($totalRaces > 0) {
                         SELECT se.event_id FROM series_events se WHERE se.series_id = ?
                     )
                 ", [$riderId, $rider['club_id'], $totalSeries['id']]);
+
+                // Fallback: get all club points if none found for specific series
+                if (!$gravityTeamStats || !$gravityTeamStats['total_points']) {
+                    $gravityTeamStats = $db->getRow("
+                        SELECT SUM(club_points) as total_points, COUNT(DISTINCT event_id) as events_count
+                        FROM club_rider_points
+                        WHERE rider_id = ? AND club_id = ?
+                    ", [$riderId, $rider['club_id']]);
+                }
             }
         }
     } catch (Exception $e) {
