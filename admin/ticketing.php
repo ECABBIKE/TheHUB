@@ -83,22 +83,41 @@ $ticketsSubqueries = $ticketingTablesExist
        (SELECT SUM(paid_price) FROM event_tickets WHERE event_id = e.id AND status = 'sold') as total_revenue"
     : "0 as total_tickets, 0 as available_tickets, 0 as sold_tickets, 0 as total_revenue";
 
+// Check if series table exists
+$seriesTableExists = false;
+try {
+    $tables = $db->getAll("SHOW TABLES LIKE 'series'");
+    $seriesTableExists = !empty($tables);
+} catch (Exception $e) {
+    // Table doesn't exist
+}
+
+$seriesJoin = $seriesTableExists ? "LEFT JOIN series s ON e.series_id = s.id" : "";
+$seriesSelect = $seriesTableExists ? "s.name as series_name," : "NULL as series_name,";
+
 // Fetch all events with ticketing status
-$events = $db->getAll("
-    SELECT
-        e.id,
-        e.name,
-        e.date,
-        e.location,
-        {$ticketingSelect},
-        s.name as series_name,
-        {$pricingSubquery} as pricing_rules_count,
-        {$ticketsSubqueries}
-    FROM events e
-    LEFT JOIN series s ON e.series_id = s.id
-    WHERE e.date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
-    ORDER BY e.date ASC
-");
+$events = [];
+try {
+    $events = $db->getAll("
+        SELECT
+            e.id,
+            e.name,
+            e.date,
+            e.location,
+            {$ticketingSelect},
+            {$seriesSelect}
+            {$pricingSubquery} as pricing_rules_count,
+            {$ticketsSubqueries}
+        FROM events e
+        {$seriesJoin}
+        WHERE e.date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+        ORDER BY e.date ASC
+    ");
+} catch (Exception $e) {
+    // Query failed, show error in development
+    $message = 'Databasfel: ' . $e->getMessage();
+    $messageType = 'error';
+}
 
 // Separate upcoming and past events
 $upcomingEvents = [];
