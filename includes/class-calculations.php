@@ -60,7 +60,7 @@ function determineRiderClass($db, $birthYear, $gender, $eventDate, $discipline =
               OR gender = 'ALL'
               OR gender IS NULL
               OR gender = ''
-              OR (? IN ('F', 'K') AND gender IN ('F', 'K'))
+              OR (? COLLATE utf8mb4_unicode_ci IN ('F', 'K') AND gender IN ('F', 'K'))
           )
           AND (
               discipline IS NULL
