@@ -12,7 +12,6 @@ require_once __DIR__ . '/../config.php';
 require_admin();
 
 $db = getDB();
-die('AFTER getDB - v2.4.2-058');
 
 // Initialize message
 $message = '';
@@ -123,6 +122,8 @@ try {
     $message = 'Databasfel: ' . $e->getMessage();
     $messageType = 'error';
 }
+
+die('AFTER QUERY - v2.4.2-059 - Events: ' . count($events));
 
 // Separate upcoming and past events
 $upcomingEvents = [];
