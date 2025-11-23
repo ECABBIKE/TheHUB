@@ -1,0 +1,71 @@
+/* ========================================
+   _alerts.css - Alert Components
+   GravitySeries HUB v3.0
+   ======================================== */
+
+.gs-alert {
+  display: flex;
+  align-items: center;
+  gap: var(--gs-space-sm);
+  padding: var(--gs-space-md);
+  border-radius: var(--gs-radius-lg);
+  margin-bottom: var(--gs-space-lg);
+}
+
+.gs-alert svg {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+/* Alert variants */
+.gs-alert-success {
+  background-color: var(--gs-success-light);
+  color: var(--gs-text-primary);
+  border-left: 4px solid var(--gs-success);
+}
+
+.gs-alert-warning {
+  background-color: var(--gs-warning-light);
+  color: var(--gs-text-primary);
+  border-left: 4px solid var(--gs-warning);
+}
+
+.gs-alert-error {
+  background-color: var(--gs-danger-light);
+  color: var(--gs-text-primary);
+  border-left: 4px solid var(--gs-danger);
+}
+
+.gs-alert-info {
+  background: #eff6ff;
+  padding: 1rem;
+  border-left: 3px solid #3b82f6;
+  border-radius: 4px;
+  margin-top: 1rem;
+}
+
+.gs-alert-primary {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: rgba(0, 74, 152, 0.05);
+  border-radius: var(--gs-radius-sm);
+}
+
+.gs-alert-accent {
+  margin-top: 0.75rem;
+  padding: 0.75rem;
+  background: rgba(239, 118, 31, 0.1);
+  border-left: 3px solid var(--gs-accent);
+  border-radius: var(--gs-radius-sm);
+}
+
+/* Alert utilities */
+.gs-alert-border-danger {
+  border-left: 4px solid var(--gs-danger);
+}
+
+.gs-alert-text-bold {
+  margin: 0;
+  font-weight: bold;
+}

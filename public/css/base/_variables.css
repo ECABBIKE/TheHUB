@@ -1,0 +1,86 @@
+/* ========================================
+   _variables.css - CSS Custom Properties
+   GravitySeries HUB v3.0
+   ======================================== */
+
+:root {
+  /* Colors - Primary */
+  --gs-primary: #004a98;
+  --gs-primary-dark: #003366;
+  --gs-primary-light: rgba(0, 74, 152, 0.1);
+
+  /* Colors - Accent */
+  --gs-accent: #EF761F;
+  --gs-accent-light: rgba(239, 118, 31, 0.1);
+
+  /* Colors - Status */
+  --gs-success: #437264;
+  --gs-success-light: rgba(67, 114, 100, 0.1);
+  --gs-success-bg: #DCFCE7;
+  --gs-warning: #FFE009;
+  --gs-warning-light: rgba(255, 224, 9, 0.1);
+  --gs-danger: #dc2626;
+  --gs-danger-light: rgba(220, 38, 38, 0.1);
+
+  /* Colors - Neutrals */
+  --gs-dark: #171717;
+  --gs-gray: #323539;
+  --gs-light: #F9F9F9;
+  --gs-white: #FFFFFF;
+
+  /* Colors - Text */
+  --gs-text-primary: #171717;
+  --gs-text-secondary: #323539;
+  --gs-text-light: #F9F9F9;
+  --gs-text-accent: #FFE009;
+  --gs-text: #171717;
+
+  /* Colors - Backgrounds */
+  --gs-background: #FFFFFF;
+  --gs-background-secondary: #F3F4F6;
+
+  /* Colors - Borders */
+  --gs-border: #E5E7EB;
+  --gs-border-dark: #323539;
+
+  /* Spacing */
+  --gs-space-xs: 0.25rem;
+  --gs-space-sm: 0.5rem;
+  --gs-space-md: 1rem;
+  --gs-space-lg: 1.5rem;
+  --gs-space-xl: 2rem;
+  --gs-space-2xl: 3rem;
+  --gs-space-3xl: 4rem;
+
+  /* Border Radius */
+  --gs-radius-sm: 0.375rem;
+  --gs-radius-md: 0.5rem;
+  --gs-radius-lg: 0.75rem;
+  --gs-radius-xl: 1rem;
+  --gs-radius-2xl: 1.5rem;
+  --gs-radius-full: 9999px;
+  --gs-border-radius: 0.5rem;
+
+  /* Shadows */
+  --gs-shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --gs-shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  --gs-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  --gs-shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+  --gs-shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+
+  /* Transitions */
+  --gs-transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --gs-transition-base: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+  --gs-transition-slow: 500ms cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* Typography */
+  --gs-font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --gs-font-mono: 'Courier New', monospace;
+
+  /* Viewport-based padding */
+  --gs-mobile-portrait-padding: 1rem;
+  --gs-mobile-landscape-padding: 1.5rem;
+  --gs-tablet-padding: 1.5rem;
+  --gs-desktop-padding: 2rem;
+  --gs-content-padding: 2rem;
+}

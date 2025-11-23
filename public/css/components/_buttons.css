@@ -1,0 +1,91 @@
+/* ========================================
+   _buttons.css - Button Components
+   GravitySeries HUB v3.0
+   ======================================== */
+
+.gs-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--gs-space-sm);
+  padding: var(--gs-space-sm) var(--gs-space-lg);
+  font-size: 0.875rem;
+  font-weight: 600;
+  border: none;
+  border-radius: var(--gs-radius-lg);
+  cursor: pointer;
+  transition: all var(--gs-transition-fast);
+  text-decoration: none;
+}
+
+.gs-btn svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+/* Primary Button */
+.gs-btn-primary {
+  background: linear-gradient(to right, var(--gs-primary), var(--gs-success));
+  color: var(--gs-white);
+  box-shadow: var(--gs-shadow-md);
+}
+
+.gs-btn-primary:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+/* Accent Button */
+.gs-btn-accent {
+  background-color: var(--gs-accent);
+  color: var(--gs-white);
+}
+
+/* Outline Button */
+.gs-btn-outline {
+  background: transparent;
+  border: 2px solid var(--gs-primary);
+  color: var(--gs-primary);
+}
+
+/* Warning Button */
+.gs-btn-warning {
+  background-color: var(--gs-warning);
+  color: var(--gs-text-primary);
+}
+
+.gs-btn-warning-solid {
+  margin-top: 1rem;
+  background: #f59e0b;
+  color: white;
+}
+
+/* Large Button */
+.gs-btn-lg {
+  padding: var(--gs-space-md) var(--gs-space-xl);
+  font-size: 1rem;
+}
+
+.gs-btn-lg svg {
+  width: 20px;
+  height: 20px;
+}
+
+/* Small Button */
+.gs-btn-sm {
+  padding: var(--gs-space-xs) var(--gs-space-md);
+  font-size: 0.75rem;
+}
+
+.gs-btn-sm svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* SweCup Button */
+.gs-btn-swecup {
+  background: #005aa7;
+  color: white;
+  width: 100%;
+}

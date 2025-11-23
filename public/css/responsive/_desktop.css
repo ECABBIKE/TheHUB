@@ -1,0 +1,202 @@
+/* ========================================
+   _desktop.css - Desktop Styles
+   GravitySeries HUB v3.0
+   @media (min-width: 1024px)
+   ======================================== */
+
+@media (min-width: 1024px) {
+  /* ===== SIDEBAR (ALWAYS VISIBLE) ===== */
+  .gs-sidebar {
+    transform: translateX(0) !important;
+    z-index: 100;
+    transition: none;
+  }
+
+  .gs-sidebar.open {
+    transform: translateX(0);
+  }
+
+  /* ===== HIDE MOBILE ELEMENTS ===== */
+  .gs-mobile-menu-toggle {
+    display: none !important;
+  }
+
+  .gs-sidebar-overlay {
+    display: none !important;
+  }
+
+  /* ===== MAIN CONTENT (WITH SIDEBAR OFFSET) ===== */
+  .gs-main-content {
+    margin-left: 280px;
+    width: calc(100% - 280px);
+    padding: 2rem;
+    transition: margin-left 0.3s ease;
+  }
+
+  body {
+    overflow: auto !important;
+  }
+
+  /* ===== TYPOGRAPHY ===== */
+  .gs-h1 { font-size: 3rem; }
+  .gs-h2 { font-size: 2.25rem; }
+  .gs-h3 { font-size: 1.875rem; }
+
+  /* ===== LAYOUT ===== */
+  .gs-grid-cols-4 {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .gs-grid-cols-3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .gs-grid-cols-2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  /* Stat cards: 4 per rad */
+  .gs-grid-cols-2:has(.gs-stat-card) {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  /* ===== BUTTONS ===== */
+  .gs-btn {
+    padding: var(--gs-space-sm) var(--gs-space-lg);
+    font-size: 0.875rem;
+  }
+
+  .gs-btn-lg {
+    padding: var(--gs-space-md) var(--gs-space-xl);
+    font-size: 1rem;
+  }
+
+  /* ===== TABLES ===== */
+  .gs-table {
+    font-size: 0.875rem;
+  }
+
+  .gs-table th,
+  .gs-table td {
+    padding: var(--gs-space-md);
+  }
+
+  /* ===== CARDS ===== */
+  .gs-card {
+    border-radius: var(--gs-radius-xl);
+  }
+
+  .gs-card-header,
+  .gs-card-content {
+    padding: var(--gs-space-lg);
+  }
+
+  /* ===== HERO ===== */
+  .gs-hero {
+    padding: var(--gs-space-3xl);
+    margin-bottom: var(--gs-space-2xl);
+  }
+
+  .gs-hero::before {
+    width: 24rem;
+    height: 24rem;
+  }
+
+  .gs-hero-logo {
+    max-width: 400px;
+  }
+
+  /* ===== ADMIN LAYOUT ===== */
+  .gs-admin-layout {
+    flex-direction: row;
+  }
+
+  .gs-admin-sidebar {
+    width: 250px;
+  }
+
+  .gs-admin-content {
+    flex: 1;
+    padding: var(--gs-space-2xl);
+  }
+
+  /* Admin pages with permanent sidebar on desktop */
+  .gs-admin-page .gs-content-with-sidebar {
+    padding: 2rem;
+  }
+
+  /* ===== LICENSE CARDS ===== */
+  .license-content {
+    grid-template-columns: 180px 1fr;
+    gap: 32px;
+    padding: 24px;
+  }
+
+  .license-photo {
+    width: 180px;
+    height: 240px;
+  }
+
+  .photo-placeholder {
+    font-size: 4rem;
+  }
+
+  .rider-name {
+    font-size: 28px;
+  }
+
+  .license-id {
+    font-size: 14px;
+  }
+
+  .info-grid-compact {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  /* ===== STAT CARDS ===== */
+  .gs-stat-card-compact {
+    padding: 1rem;
+    min-height: 90px;
+  }
+
+  .gs-stat-number-compact {
+    font-size: 2.25rem;
+  }
+
+  .gs-stat-label-compact {
+    font-size: 0.875rem;
+  }
+
+  /* ===== ICON SIZES ===== */
+  .gs-icon-wrapper {
+    width: 80px;
+    height: 80px;
+  }
+
+  .gs-icon-wrapper svg {
+    width: 40px;
+    height: 40px;
+  }
+
+  /* ===== SPACING ===== */
+  .gs-gap-lg {
+    gap: var(--gs-space-lg);
+  }
+
+  .gs-gap-md {
+    gap: var(--gs-space-md);
+  }
+
+  /* ===== MODALS ===== */
+  .gs-modal-content-lg {
+    max-width: 1200px;
+  }
+
+  .gs-modal-content-md {
+    max-width: 900px;
+  }
+
+  .gs-modal-content-sm {
+    max-width: 700px;
+  }
+}
