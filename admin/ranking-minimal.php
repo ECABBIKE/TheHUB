@@ -47,20 +47,15 @@ try {
         flush();
 
         try {
-            $startTime = microtime(true);
-            $calcStats = calculateAllRankingPoints($db, true); // Enable debug mode
-            $endTime = microtime(true);
-            $duration = round($endTime - $startTime, 2);
-
-            echo "<p>✅ Calculation done in {$duration}s!</p>";
-            echo "<pre>" . print_r($calcStats, true) . "</pre>";
+            echo "<p>Starting lightweight ranking calculation...</p>";
             flush();
 
-            echo "<p>Creating snapshots...</p>";
-            flush();
-            $snapshotStats = createRankingSnapshot($db);
-            echo "<p>✅ Snapshots created!</p>";
-            echo "<pre>" . print_r($snapshotStats, true) . "</pre>";
+            $stats = runFullRankingUpdate($db, true); // Enable debug mode
+
+            echo "<p>✅ All ranking calculations complete!</p>";
+            echo "<p><strong>Results:</strong></p>";
+            echo "<pre>" . print_r($stats, true) . "</pre>";
+            echo "<p><strong>Total time:</strong> {$stats['total_time']}s</p>";
             flush();
         } catch (Exception $e) {
             echo "<p>❌ Error during calculation:</p>";
