@@ -30,6 +30,7 @@ function calculateEventClubPoints($db, $eventId, $seriesId) {
 
     // Get all results for this event grouped by club and class
     // Only include riders with clubs and finished status
+    // IMPORTANT: Only include classes that are series-eligible and award points
     $results = $db->getAll("
         SELECT
             r.id as result_id,
@@ -41,10 +42,13 @@ function calculateEventClubPoints($db, $eventId, $seriesId) {
             rd.lastname
         FROM results r
         JOIN riders rd ON r.cyclist_id = rd.id
+        JOIN classes c ON r.class_id = c.id
         WHERE r.event_id = ?
         AND r.status = 'finished'
         AND rd.club_id IS NOT NULL
         AND r.points > 0
+        AND COALESCE(c.series_eligible, 1) = 1
+        AND COALESCE(c.awards_points, 1) = 1
         ORDER BY rd.club_id, r.class_id, r.points DESC
     ", [$eventId]);
 
