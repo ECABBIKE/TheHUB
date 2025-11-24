@@ -4,10 +4,27 @@
  * Mobile-first responsive ranking display with Enduro/Downhill/Gravity tabs
  * Includes both rider and club rankings
  */
-require_once __DIR__ . '/../config.php';
-require_once __DIR__ . '/../includes/ranking_functions.php';
 
-$db = getDB();
+// Enable error reporting
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+
+try {
+    require_once __DIR__ . '/../config.php';
+    require_once __DIR__ . '/../includes/ranking_functions.php';
+
+    $db = getDB();
+} catch (Exception $e) {
+    echo "<h1>Initialization Error</h1>";
+    echo "<pre>";
+    echo "Message: " . htmlspecialchars($e->getMessage()) . "\n\n";
+    echo "File: " . htmlspecialchars($e->getFile()) . "\n";
+    echo "Line: " . $e->getLine() . "\n\n";
+    echo "Stack trace:\n" . htmlspecialchars($e->getTraceAsString());
+    echo "</pre>";
+    exit;
+}
 
 // Check if tables exist
 $tablesExist = rankingTablesExist($db);
