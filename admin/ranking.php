@@ -3,12 +3,32 @@
  * Admin Ranking Settings
  * Manage the 24-month rolling ranking system for Enduro, Downhill, and Gravity
  */
-require_once __DIR__ . '/../config.php';
-require_once __DIR__ . '/../includes/ranking_functions.php';
-require_admin();
 
-$db = getDB();
-$current_admin = get_current_admin();
+// Enable error reporting to catch any issues
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+
+// Wrap everything in try-catch to catch early failures
+try {
+    require_once __DIR__ . '/../config.php';
+    require_once __DIR__ . '/../includes/ranking_functions.php';
+    require_admin();
+
+    $db = getDB();
+    $current_admin = get_current_admin();
+} catch (Exception $e) {
+    // Show error if something fails during initialization
+    echo "<h1>Initialization Error</h1>";
+    echo "<pre>";
+    echo "Message: " . htmlspecialchars($e->getMessage()) . "\n\n";
+    echo "File: " . htmlspecialchars($e->getFile()) . "\n";
+    echo "Line: " . $e->getLine() . "\n\n";
+    echo "Stack trace:\n" . htmlspecialchars($e->getTraceAsString());
+    echo "</pre>";
+    echo "<p><a href='/admin/check-ranking-tables.php'>Check Database Tables</a> | <a href='/admin/'>Back to Admin</a></p>";
+    exit;
+}
 
 $message = '';
 $messageType = 'info';
@@ -103,18 +123,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// Get current settings
-$multipliers = getRankingFieldMultipliers($db);
-$timeDecay = getRankingTimeDecay($db);
-$eventLevelMultipliers = getEventLevelMultipliers($db);
-$lastCalc = getLastRankingCalculation($db);
+// Get current settings - wrap in try-catch to handle missing tables
+try {
+    $multipliers = getRankingFieldMultipliers($db);
+    $timeDecay = getRankingTimeDecay($db);
+    $eventLevelMultipliers = getEventLevelMultipliers($db);
+    $lastCalc = getLastRankingCalculation($db);
 
-// Get statistics per discipline
-$disciplineStats = getRankingStats($db);
+    // Get statistics per discipline
+    $disciplineStats = getRankingStats($db);
 
-// Get last snapshot date
-$latestSnapshot = $db->getRow("SELECT MAX(snapshot_date) as snapshot_date FROM ranking_snapshots");
-$lastSnapshotDate = $latestSnapshot ? $latestSnapshot['snapshot_date'] : null;
+    // Get last snapshot date
+    $latestSnapshot = $db->getRow("SELECT MAX(snapshot_date) as snapshot_date FROM ranking_snapshots");
+    $lastSnapshotDate = $latestSnapshot ? $latestSnapshot['snapshot_date'] : null;
+} catch (Exception $e) {
+    // If settings can't be loaded, show clear error
+    echo "<h1>Database Error</h1>";
+    echo "<p>Could not load ranking settings. The ranking tables may not exist yet.</p>";
+    echo "<pre>";
+    echo "Error: " . htmlspecialchars($e->getMessage()) . "\n\n";
+    echo "File: " . htmlspecialchars($e->getFile()) . "\n";
+    echo "Line: " . $e->getLine() . "\n\n";
+    echo "Stack trace:\n" . htmlspecialchars($e->getTraceAsString());
+    echo "</pre>";
+    echo "<p><strong>Solution:</strong></p>";
+    echo "<ul>";
+    echo "<li><a href='/admin/check-ranking-tables.php'>Check Database Tables</a> - Diagnose what's missing</li>";
+    echo "<li><a href='/admin/migrate.php'>Run Migrations</a> - Create the ranking tables</li>";
+    echo "<li><a href='/admin/'>Back to Admin</a></li>";
+    echo "</ul>";
+    exit;
+}
 
 $pageTitle = 'Ranking';
 $pageType = 'admin';
