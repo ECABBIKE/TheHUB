@@ -197,13 +197,21 @@ function getRankingEligibleResults($db, $cutoffDate = null) {
     }
 
     // Get results from ENDURO and DH events
+    // For DH SweCUP events, points may be stored in run_1_points + run_2_points
     $results = $db->getAll("
         SELECT
             r.id as result_id,
             r.cyclist_id as rider_id,
             r.event_id,
             r.class_id,
-            r.points as original_points,
+            COALESCE(
+                CASE
+                    WHEN COALESCE(r.run_1_points, 0) > 0 OR COALESCE(r.run_2_points, 0) > 0
+                    THEN COALESCE(r.run_1_points, 0) + COALESCE(r.run_2_points, 0)
+                    ELSE r.points
+                END,
+                r.points
+            ) as original_points,
             e.date as event_date,
             e.name as event_name,
             e.discipline,
@@ -216,12 +224,12 @@ function getRankingEligibleResults($db, $cutoffDate = null) {
         JOIN riders rd ON r.cyclist_id = rd.id
         JOIN classes c ON r.class_id = c.id
         WHERE r.status = 'finished'
-        AND r.points > 0
+        AND (r.points > 0 OR COALESCE(r.run_1_points, 0) > 0 OR COALESCE(r.run_2_points, 0) > 0)
         AND e.date >= ?
         AND e.discipline IN ('ENDURO', 'DH')
         AND COALESCE(c.series_eligible, 1) = 1
         AND COALESCE(c.awards_points, 1) = 1
-        ORDER BY e.date DESC, r.event_id, r.class_id, r.points DESC
+        ORDER BY e.date DESC, r.event_id, r.class_id, original_points DESC
     ", [$cutoffDate]);
 
     return $results;
@@ -686,6 +694,7 @@ function cleanupOldRankingData($db, $monthsToKeep = 26) {
     // Delete old snapshots (keep more history for trends)
     $snapshotCutoff = date('Y-m-d', strtotime('-36 months'));
     $db->query("DELETE FROM ranking_snapshots WHERE snapshot_date < ?", [$snapshotCutoff]);
+    $db->query("DELETE FROM club_ranking_snapshots WHERE snapshot_date < ?", [$snapshotCutoff]);
 
     // Delete old history (keep 36 months)
     $db->query("DELETE FROM ranking_history WHERE month_date < ?", [$snapshotCutoff]);
@@ -708,9 +717,9 @@ function getDisciplineDisplayName($discipline) {
  */
 function getRankingStats($db) {
     $stats = [
-        'ENDURO' => ['riders' => 0, 'events' => 0],
-        'DH' => ['riders' => 0, 'events' => 0],
-        'GRAVITY' => ['riders' => 0, 'events' => 0]
+        'ENDURO' => ['riders' => 0, 'events' => 0, 'clubs' => 0],
+        'DH' => ['riders' => 0, 'events' => 0, 'clubs' => 0],
+        'GRAVITY' => ['riders' => 0, 'events' => 0, 'clubs' => 0]
     ];
 
     // Get latest snapshot date
@@ -728,6 +737,13 @@ function getRankingStats($db) {
             [$discipline, $snapshotDate]
         );
         $stats[$discipline]['riders'] = $count ? $count['count'] : 0;
+
+        // Get club counts
+        $clubCount = $db->getRow(
+            "SELECT COUNT(*) as count FROM club_ranking_snapshots WHERE discipline = ? AND snapshot_date = ?",
+            [$discipline, $snapshotDate]
+        );
+        $stats[$discipline]['clubs'] = $clubCount ? $clubCount['count'] : 0;
     }
 
     // Get event counts
@@ -739,4 +755,209 @@ function getRankingStats($db) {
     $stats['GRAVITY']['events'] = $stats['ENDURO']['events'] + $stats['DH']['events'];
 
     return $stats;
+}
+
+/**
+ * Create club ranking snapshots for all disciplines
+ * Clubs are ranked based on their riders' combined ranking points
+ */
+function createClubRankingSnapshot($db, $snapshotDate = null) {
+    if (!$snapshotDate) {
+        $snapshotDate = date('Y-m-01');
+    }
+
+    $stats = [
+        'clubs_ranked' => 0,
+        'enduro' => 0,
+        'dh' => 0,
+        'gravity' => 0
+    ];
+
+    // Create snapshots for each discipline
+    $stats['enduro'] = createClubDisciplineSnapshot($db, 'ENDURO', $snapshotDate);
+    $stats['dh'] = createClubDisciplineSnapshot($db, 'DH', $snapshotDate);
+    $stats['gravity'] = createClubDisciplineSnapshot($db, 'GRAVITY', $snapshotDate);
+
+    $stats['clubs_ranked'] = $stats['enduro'] + $stats['dh'] + $stats['gravity'];
+
+    return $stats;
+}
+
+/**
+ * Create a club ranking snapshot for a specific discipline
+ * Aggregates rider ranking points by club
+ */
+function createClubDisciplineSnapshot($db, $discipline, $snapshotDate) {
+    $timeDecay = getRankingTimeDecay($db);
+
+    // Calculate date boundaries
+    $month12Cutoff = date('Y-m-d', strtotime("$snapshotDate -12 months"));
+    $month24Cutoff = date('Y-m-d', strtotime("$snapshotDate -24 months"));
+
+    // Get previous snapshot for position comparison
+    $previousSnapshotDate = date('Y-m-01', strtotime("$snapshotDate -1 month"));
+    $previousRankings = [];
+    $previousData = $db->getAll(
+        "SELECT club_id, ranking_position FROM club_ranking_snapshots WHERE discipline = ? AND snapshot_date = ?",
+        [$discipline, $previousSnapshotDate]
+    );
+    foreach ($previousData as $row) {
+        $previousRankings[$row['club_id']] = $row['ranking_position'];
+    }
+
+    // Clear existing snapshot for this discipline and date
+    $db->query(
+        "DELETE FROM club_ranking_snapshots WHERE discipline = ? AND snapshot_date = ?",
+        [$discipline, $snapshotDate]
+    );
+
+    // Build discipline filter for query
+    if ($discipline === 'GRAVITY') {
+        $disciplineCondition = "rp.discipline IN ('ENDURO', 'DH')";
+        $params = [$month12Cutoff, $month12Cutoff, $month24Cutoff, $month24Cutoff,
+                   $month12Cutoff, $timeDecay['months_1_12'],
+                   $month12Cutoff, $month24Cutoff, $timeDecay['months_13_24']];
+    } else {
+        $disciplineCondition = "rp.discipline = ?";
+        $params = [$discipline, $month12Cutoff, $month12Cutoff, $month24Cutoff, $month24Cutoff,
+                   $discipline, $month12Cutoff, $timeDecay['months_1_12'],
+                   $month12Cutoff, $month24Cutoff, $timeDecay['months_13_24']];
+    }
+
+    // Calculate club ranking points by aggregating rider points
+    if ($discipline === 'GRAVITY') {
+        $clubPoints = $db->getAll("
+            SELECT
+                r.club_id,
+                SUM(CASE WHEN rp.event_date >= ? THEN rp.ranking_points ELSE 0 END) as points_12,
+                SUM(CASE WHEN rp.event_date < ? AND rp.event_date >= ? THEN rp.ranking_points ELSE 0 END) as points_13_24,
+                COUNT(DISTINCT rp.rider_id) as riders_count,
+                COUNT(DISTINCT rp.event_id) as events_count
+            FROM ranking_points rp
+            JOIN riders r ON rp.rider_id = r.id
+            WHERE rp.discipline IN ('ENDURO', 'DH')
+            AND rp.event_date >= ?
+            AND r.club_id IS NOT NULL
+            GROUP BY r.club_id
+            HAVING SUM(rp.ranking_points) > 0
+            ORDER BY (SUM(CASE WHEN rp.event_date >= ? THEN rp.ranking_points ELSE 0 END) * ? +
+                      SUM(CASE WHEN rp.event_date < ? AND rp.event_date >= ? THEN rp.ranking_points ELSE 0 END) * ?) DESC
+        ", $params);
+    } else {
+        $clubPoints = $db->getAll("
+            SELECT
+                r.club_id,
+                SUM(CASE WHEN rp.event_date >= ? THEN rp.ranking_points ELSE 0 END) as points_12,
+                SUM(CASE WHEN rp.event_date < ? AND rp.event_date >= ? THEN rp.ranking_points ELSE 0 END) as points_13_24,
+                COUNT(DISTINCT rp.rider_id) as riders_count,
+                COUNT(DISTINCT rp.event_id) as events_count
+            FROM ranking_points rp
+            JOIN riders r ON rp.rider_id = r.id
+            WHERE rp.discipline = ?
+            AND rp.event_date >= ?
+            AND r.club_id IS NOT NULL
+            GROUP BY r.club_id
+            HAVING SUM(rp.ranking_points) > 0
+            ORDER BY (SUM(CASE WHEN rp.event_date >= ? THEN rp.ranking_points ELSE 0 END) * ? +
+                      SUM(CASE WHEN rp.event_date < ? AND rp.event_date >= ? THEN rp.ranking_points ELSE 0 END) * ?) DESC
+        ", [$month12Cutoff, $month12Cutoff, $month24Cutoff, $discipline, $month24Cutoff,
+            $month12Cutoff, $timeDecay['months_1_12'], $month12Cutoff, $month24Cutoff, $timeDecay['months_13_24']]);
+    }
+
+    // Insert snapshots with rankings
+    $rank = 1;
+    $prevPoints = null;
+    $prevRank = 1;
+    $clubsRanked = 0;
+
+    foreach ($clubPoints as $club) {
+        $totalPoints = ($club['points_12'] * $timeDecay['months_1_12']) +
+                       ($club['points_13_24'] * $timeDecay['months_13_24']);
+
+        // Handle ties
+        if ($prevPoints !== null && $totalPoints == $prevPoints) {
+            $currentRank = $prevRank;
+        } else {
+            $currentRank = $rank;
+            $prevRank = $rank;
+        }
+        $prevPoints = $totalPoints;
+
+        // Calculate position change
+        $previousPosition = $previousRankings[$club['club_id']] ?? null;
+        $positionChange = null;
+        if ($previousPosition !== null) {
+            $positionChange = $previousPosition - $currentRank;
+        }
+
+        $db->insert('club_ranking_snapshots', [
+            'club_id' => $club['club_id'],
+            'discipline' => $discipline,
+            'snapshot_date' => $snapshotDate,
+            'total_ranking_points' => round($totalPoints, 2),
+            'points_last_12_months' => round($club['points_12'], 2),
+            'points_months_13_24' => round($club['points_13_24'], 2),
+            'riders_count' => $club['riders_count'],
+            'events_count' => $club['events_count'],
+            'ranking_position' => $currentRank,
+            'previous_position' => $previousPosition,
+            'position_change' => $positionChange
+        ]);
+
+        $clubsRanked++;
+        $rank++;
+    }
+
+    return $clubsRanked;
+}
+
+/**
+ * Get current club ranking for a specific discipline
+ */
+function getCurrentClubRanking($db, $discipline = 'GRAVITY', $limit = 50, $offset = 0) {
+    // Get the most recent snapshot date for this discipline
+    $latestSnapshot = $db->getRow("
+        SELECT MAX(snapshot_date) as snapshot_date FROM club_ranking_snapshots WHERE discipline = ?
+    ", [$discipline]);
+
+    if (!$latestSnapshot || !$latestSnapshot['snapshot_date']) {
+        return ['clubs' => [], 'total' => 0, 'snapshot_date' => null, 'discipline' => $discipline];
+    }
+
+    $snapshotDate = $latestSnapshot['snapshot_date'];
+
+    // Get total count
+    $totalCount = $db->getRow("
+        SELECT COUNT(*) as total FROM club_ranking_snapshots WHERE discipline = ? AND snapshot_date = ?
+    ", [$discipline, $snapshotDate]);
+
+    // Get rankings with club info
+    $clubs = $db->getAll("
+        SELECT
+            crs.ranking_position,
+            crs.total_ranking_points,
+            crs.points_last_12_months,
+            crs.points_months_13_24,
+            crs.riders_count,
+            crs.events_count,
+            crs.previous_position,
+            crs.position_change,
+            c.id as club_id,
+            c.name as club_name,
+            c.short_name,
+            c.city,
+            c.region
+        FROM club_ranking_snapshots crs
+        JOIN clubs c ON crs.club_id = c.id
+        WHERE crs.discipline = ? AND crs.snapshot_date = ?
+        ORDER BY crs.ranking_position ASC
+        LIMIT ? OFFSET ?
+    ", [$discipline, $snapshotDate, $limit, $offset]);
+
+    return [
+        'clubs' => $clubs,
+        'total' => (int)$totalCount['total'],
+        'snapshot_date' => $snapshotDate,
+        'discipline' => $discipline
+    ];
 }
