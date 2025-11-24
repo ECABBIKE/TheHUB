@@ -257,17 +257,38 @@ function calculateAllRankingPoints($db, $debug = false) {
 
     // Clear existing ranking points first
     if ($debug) {
-        echo "<p>🗑️ Clearing old ranking points...</p>";
+        echo "<p>🗑️ Checking if clearing is needed...</p>";
         flush();
     }
 
-    // Use TRUNCATE instead of DELETE for much better performance
-    // TRUNCATE is instant and doesn't have the hanging issues that DELETE has
-    $db->query("TRUNCATE TABLE ranking_points");
+    // Check if table has any rows first
+    $existingCount = $db->getRow("SELECT COUNT(*) as cnt FROM ranking_points");
 
     if ($debug) {
-        echo "<p>✅ Old points cleared (TRUNCATE)</p>";
+        echo "<p>Current rows in table: {$existingCount['cnt']}</p>";
         flush();
+    }
+
+    if ($existingCount['cnt'] > 0) {
+        if ($debug) {
+            echo "<p>🗑️ Clearing {$existingCount['cnt']} existing rows...</p>";
+            flush();
+        }
+
+        // Disable foreign key checks temporarily for faster truncate
+        $db->query("SET FOREIGN_KEY_CHECKS = 0");
+        $db->query("TRUNCATE TABLE ranking_points");
+        $db->query("SET FOREIGN_KEY_CHECKS = 1");
+
+        if ($debug) {
+            echo "<p>✅ Table cleared</p>";
+            flush();
+        }
+    } else {
+        if ($debug) {
+            echo "<p>✅ Table already empty, no clearing needed</p>";
+            flush();
+        }
     }
 
     // Get count of results to process
