@@ -413,6 +413,11 @@ function calculateAllRankingPoints($db, $debug = false) {
 
         // Execute bulk insert for this batch
         if (!empty($insertValues)) {
+            if ($debug) {
+                echo "<p>🔧 Inserting batch of " . count($insertValues) . " rows...</p>";
+                flush();
+            }
+
             $valuesStr = implode(', ', $insertValues);
             $db->query("
                 INSERT IGNORE INTO ranking_points (
@@ -421,6 +426,11 @@ function calculateAllRankingPoints($db, $debug = false) {
                     event_level_multiplier, ranking_points, event_date
                 ) VALUES {$valuesStr}
             ", $insertParams);
+
+            if ($debug) {
+                echo "<p>✅ Batch inserted</p>";
+                flush();
+            }
         }
 
         $offset += $batchSize;
