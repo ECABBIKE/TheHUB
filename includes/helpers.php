@@ -153,11 +153,20 @@ function generateSweLicenseNumber($db, $year = null) {
 
 class DatabaseWrapper {
     private $pdo;
-    
+
     public function __construct($pdo) {
         $this->pdo = $pdo;
     }
-    
+
+    /**
+     * Get the underlying PDO instance
+     *
+     * @return PDO
+     */
+    public function getPdo() {
+        return $this->pdo;
+    }
+
     public function getAll($sql, $params = array()) {
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute($params);

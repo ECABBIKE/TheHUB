@@ -48,6 +48,9 @@ $is_admin = isLoggedIn();
             <li><a href="/admin/series.php" class="<?= $current_page == 'series.php' && strpos($_SERVER['PHP_SELF'], '/admin/') !== false ? 'active' : '' ?>">
                 <i data-lucide="award"></i> Serier
             </a></li>
+            <li><a href="/admin/registration-rules.php" class="<?= $current_page == 'registration-rules.php' ? 'active' : '' ?>">
+                <i data-lucide="shield-check"></i> Registreringsregler
+            </a></li>
             <li><a href="/admin/riders.php" class="<?= $current_page == 'riders.php' && strpos($_SERVER['PHP_SELF'], '/admin/') !== false ? 'active' : '' ?>">
                 <i data-lucide="user-circle"></i> Deltagare
             </a></li>
