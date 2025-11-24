@@ -255,40 +255,10 @@ function calculateAllRankingPoints($db, $debug = false) {
     $fieldMultipliers = getRankingFieldMultipliers($db);
     $eventLevelMultipliers = getEventLevelMultipliers($db);
 
-    // Clear existing ranking points first
+    // Skip clearing - we'll use REPLACE INTO which automatically handles updates
     if ($debug) {
-        echo "<p>🗑️ Checking if clearing is needed...</p>";
+        echo "<p>ℹ️ Using REPLACE INTO - no clearing needed</p>";
         flush();
-    }
-
-    // Check if table has any rows first
-    $existingCount = $db->getRow("SELECT COUNT(*) as cnt FROM ranking_points");
-
-    if ($debug) {
-        echo "<p>Current rows in table: {$existingCount['cnt']}</p>";
-        flush();
-    }
-
-    if ($existingCount['cnt'] > 0) {
-        if ($debug) {
-            echo "<p>🗑️ Clearing {$existingCount['cnt']} existing rows...</p>";
-            flush();
-        }
-
-        // Disable foreign key checks temporarily for faster truncate
-        $db->query("SET FOREIGN_KEY_CHECKS = 0");
-        $db->query("TRUNCATE TABLE ranking_points");
-        $db->query("SET FOREIGN_KEY_CHECKS = 1");
-
-        if ($debug) {
-            echo "<p>✅ Table cleared</p>";
-            flush();
-        }
-    } else {
-        if ($debug) {
-            echo "<p>✅ Table already empty, no clearing needed</p>";
-            flush();
-        }
     }
 
     // Get count of results to process
@@ -420,17 +390,32 @@ function calculateAllRankingPoints($db, $debug = false) {
             $eventLevelMult = getEventLevelMultiplier($eventLevel, $eventLevelMultipliers);
             $rankingPoints = round($result['original_points'] * $fieldMult * $eventLevelMult, 2);
 
-            $db->insert('ranking_points', [
-                'rider_id' => $result['rider_id'],
-                'event_id' => $result['event_id'],
-                'class_id' => $result['class_id'],
-                'discipline' => $discipline,
-                'original_points' => $result['original_points'],
-                'field_size' => $fieldSize,
-                'field_multiplier' => $fieldMult,
-                'event_level_multiplier' => $eventLevelMult,
-                'ranking_points' => $rankingPoints,
-                'event_date' => $result['event_date']
+            // Use INSERT ... ON DUPLICATE KEY UPDATE to handle existing records
+            $db->query("
+                INSERT INTO ranking_points (
+                    rider_id, event_id, class_id, discipline,
+                    original_points, field_size, field_multiplier,
+                    event_level_multiplier, ranking_points, event_date
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON DUPLICATE KEY UPDATE
+                    discipline = VALUES(discipline),
+                    original_points = VALUES(original_points),
+                    field_size = VALUES(field_size),
+                    field_multiplier = VALUES(field_multiplier),
+                    event_level_multiplier = VALUES(event_level_multiplier),
+                    ranking_points = VALUES(ranking_points),
+                    event_date = VALUES(event_date)
+            ", [
+                $result['rider_id'],
+                $result['event_id'],
+                $result['class_id'],
+                $discipline,
+                $result['original_points'],
+                $fieldSize,
+                $fieldMult,
+                $eventLevelMult,
+                $rankingPoints,
+                $result['event_date']
             ]);
 
             $stats['riders_processed']++;
