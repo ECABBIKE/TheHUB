@@ -3,8 +3,6 @@
  * Debug Migration - Test database operations step by step
  */
 
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
 
 echo "<!DOCTYPE html><html><head><meta charset='UTF-8'><title>Debug Migration</title>";
 echo "<style>body{font-family:monospace;padding:20px;background:#f5f5f5;} .success{color:green;} .error{color:red;} .info{color:blue;}</style>";

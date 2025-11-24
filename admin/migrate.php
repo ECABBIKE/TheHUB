@@ -8,8 +8,6 @@ require_once __DIR__ . '/../config.php';
 require_admin();
 
 // Enable error display for debugging
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
 
 $db = getDB();
 $message = '';

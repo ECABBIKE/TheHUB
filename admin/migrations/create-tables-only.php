@@ -3,8 +3,6 @@
  * Create Tables Only - Skip ALTER TABLE (InfinityFree limitation)
  */
 
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
 @ini_set('max_execution_time', 300);
 
 echo "<!DOCTYPE html><html><head><meta charset='UTF-8'><title>Create Tables</title>";

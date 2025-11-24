@@ -13,8 +13,6 @@
  * IMPORTANT: These fields contain PRIVATE data and must NOT be exposed publicly
  */
 
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
 
 // Start output buffering to catch any early errors
 ob_start();
