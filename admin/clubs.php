@@ -346,7 +346,7 @@ include __DIR__ . '/../includes/layout-header.php';
                 </div>
             <?php else: ?>
                 <div class="gs-card">
-                    <div class="gs-table-responsive">
+                    <div class="gs-table-scrollable">
                         <table class="gs-table">
                             <thead>
                                 <tr>
@@ -354,20 +354,20 @@ include __DIR__ . '/../includes/layout-header.php';
                                         <i data-lucide="building"></i>
                                         Namn
                                     </th>
-                                    <th>Förkortning</th>
-                                    <th>
+                                    <th class="gs-col-tablet">Förkortning</th>
+                                    <th class="gs-col-tablet">
                                         <i data-lucide="map-pin"></i>
                                         Stad
                                     </th>
-                                    <th>
+                                    <th class="gs-col-desktop">
                                         <i data-lucide="globe"></i>
                                         Land
                                     </th>
-                                    <th>
+                                    <th class="gs-col-landscape">
                                         <i data-lucide="users"></i>
                                         Medlemmar
                                     </th>
-                                    <th class="gs-table-col-actions-lg">Åtgärder</th>
+                                    <th class="gs-actions-col">Åtgärder</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -376,21 +376,21 @@ include __DIR__ . '/../includes/layout-header.php';
                                         <td>
                                             <strong><?= h($club['name']) ?></strong>
                                         </td>
-                                        <td>
+                                        <td class="gs-col-tablet">
                                             <span class="gs-badge gs-badge-primary">
                                                 <?= h($club['short_name'] ?? substr($club['name'], 0, 3)) ?>
                                             </span>
                                         </td>
-                                        <td class="gs-text-secondary"><?= h($club['city'] ?? '-') ?></td>
-                                        <td>
+                                        <td class="gs-text-secondary gs-col-tablet"><?= h($club['city'] ?? '-') ?></td>
+                                        <td class="gs-col-desktop">
                                             <span class="gs-text-secondary">
                                                 <?= h($club['country'] ?? 'Sverige') ?>
                                             </span>
                                         </td>
-                                        <td class="gs-text-center">
+                                        <td class="gs-text-center gs-col-landscape">
                                             <strong class="gs-text-primary"><?= $club['rider_count'] ?></strong>
                                         </td>
-                                        <td class="gs-text-right">
+                                        <td class="gs-actions-col gs-text-right">
                                                 <div class="gs-flex gs-gap-sm gs-justify-end">
                                                     <a
                                                         href="/admin/riders.php?club_id=<?= $club['id'] ?>"

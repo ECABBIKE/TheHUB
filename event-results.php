@@ -720,25 +720,25 @@ include __DIR__ . '/includes/layout-header.php';
                                 <tr>
                                     <th class="gs-table-col-narrow">Plac.</th>
                                     <th>Namn</th>
-                                    <th class="gs-club-col">Klubb</th>
+                                    <th class="gs-club-col gs-col-landscape">Klubb</th>
                                     <?php if ($hasBibNumbers): ?>
-                                        <th class="gs-table-col-medium">Startnr</th>
+                                        <th class="gs-table-col-medium gs-col-tablet">Startnr</th>
                                     <?php endif; ?>
                                     <?php if ($isDH): ?>
-                                        <th class="gs-table-col-medium">Åk 1</th>
-                                        <th class="gs-table-col-medium">Åk 2</th>
+                                        <th class="gs-table-col-medium gs-col-tablet">Åk 1</th>
+                                        <th class="gs-table-col-medium gs-col-tablet">Åk 2</th>
                                         <th class="gs-table-col-medium">Bästa</th>
                                     <?php else: ?>
                                         <?php $colIndex = 3 + ($hasBibNumbers ? 1 : 0); ?>
                                         <th class="gs-table-col-medium gs-sortable-header" onclick="sortTable(this, <?= $colIndex++ ?>)">Tid</th>
-                                        <th class="gs-table-col-medium">+Tid</th>
+                                        <th class="gs-table-col-medium gs-col-landscape">+Tid</th>
                                         <?php $colIndex++; ?>
                                         <?php foreach ($classSplitCols as $ssNum): ?>
                                             <th class="gs-table-col-medium gs-split-time-col gs-sortable-header" onclick="sortTable(this, <?= $colIndex++ ?>)"><?= h(getStageName($ssNum, $stageNames)) ?></th>
                                         <?php endforeach; ?>
                                     <?php endif; ?>
                                     <?php if ($isDH): ?>
-                                    <th class="gs-table-col-medium">+Tid</th>
+                                    <th class="gs-table-col-medium gs-col-landscape">+Tid</th>
                                     <?php endif; ?>
                                 </tr>
                             </thead>
@@ -773,7 +773,7 @@ include __DIR__ . '/includes/layout-header.php';
                                             </a>
                                         </td>
 
-                                        <td class="gs-club-col">
+                                        <td class="gs-club-col gs-col-landscape">
                                             <?php if ($result['club_name']): ?>
                                                 <span class="gs-badge gs-badge-secondary gs-badge-sm">
                                                     <?= h($result['club_name']) ?>
@@ -784,21 +784,21 @@ include __DIR__ . '/includes/layout-header.php';
                                         </td>
 
                                         <?php if ($hasBibNumbers): ?>
-                                            <td class="gs-table-center">
+                                            <td class="gs-table-center gs-col-tablet">
                                                 <?= $result['bib_number'] ? h($result['bib_number']) : '-' ?>
                                             </td>
                                         <?php endif; ?>
 
                                         <?php if ($isDH): ?>
                                             <!-- DH: Show both run times -->
-                                            <td class="gs-table-time-cell">
+                                            <td class="gs-table-time-cell gs-col-tablet">
                                                 <?php if ($result['run_1_time']): ?>
                                                     <?= formatDisplayTime($result['run_1_time']) ?>
                                                 <?php else: ?>
                                                     <span class="gs-text-secondary">-</span>
                                                 <?php endif; ?>
                                             </td>
-                                            <td class="gs-table-time-cell">
+                                            <td class="gs-table-time-cell gs-col-tablet">
                                                 <?php if ($result['run_2_time']): ?>
                                                     <?= formatDisplayTime($result['run_2_time']) ?>
                                                 <?php else: ?>
@@ -837,7 +837,7 @@ include __DIR__ . '/includes/layout-header.php';
                                                 <?php endif; ?>
                                             </td>
                                             <!-- +Tid right after total time -->
-                                            <td class="gs-table-time-cell gs-text-secondary">
+                                            <td class="gs-table-time-cell gs-text-secondary gs-col-landscape">
                                                 <?= $result['time_behind_formatted'] ?? '-' ?>
                                             </td>
                                             <!-- Split times (per class) with color coding -->
@@ -871,7 +871,7 @@ include __DIR__ . '/includes/layout-header.php';
                                         <?php endif; ?>
                                         <?php if ($isDH): ?>
                                         <!-- +Tid for DH -->
-                                        <td class="gs-table-time-cell gs-text-secondary">
+                                        <td class="gs-table-time-cell gs-text-secondary gs-col-landscape">
                                             <?= $result['time_behind_formatted'] ?? '-' ?>
                                         </td>
                                         <?php endif; ?>

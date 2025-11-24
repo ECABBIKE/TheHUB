@@ -507,7 +507,7 @@ function setEventRange(btn, range) {
                                 <tr>
                                     <th class="standings-sticky-th-rank">Plac.</th>
                                     <th class="standings-sticky-th-name">Namn</th>
-                                    <th class="standings-sticky-th-club">Klubb</th>
+                                    <th class="standings-sticky-th-club gs-col-landscape">Klubb</th>
                                     <?php $eventNum = 1; ?>
                                     <?php foreach ($eventsWithPoints as $event): ?>
                                         <?php $halfClass = $eventNum <= $midPoint ? 'first-half' : 'second-half'; ?>
@@ -539,7 +539,7 @@ function setEventRange(btn, range) {
                                                 <strong><?= h($rider['firstname']) ?> <?= h($rider['lastname']) ?></strong>
                                             </a>
                                         </td>
-                                        <td class="standings-sticky-td-club">
+                                        <td class="standings-sticky-td-club gs-col-landscape">
                                             <?= h($rider['club_name']) ?: '–' ?>
                                         </td>
                                         <?php $eventIdx = 1; ?>
@@ -622,7 +622,7 @@ function setEventRange(btn, range) {
                             <tr>
                                 <th class="standings-sticky-th-rank">Plac.</th>
                                 <th class="standings-sticky-th-name">Namn</th>
-                                <th class="standings-sticky-th-club">Klubb</th>
+                                <th class="standings-sticky-th-club gs-col-landscape">Klubb</th>
                                 <?php $eventNum = 1; ?>
                                 <?php foreach ($eventsWithPoints as $event): ?>
                                     <?php $halfClass = $eventNum <= $midPoint ? 'first-half' : 'second-half'; ?>
@@ -654,7 +654,7 @@ function setEventRange(btn, range) {
                                             <strong><?= h($rider['firstname']) ?> <?= h($rider['lastname']) ?></strong>
                                         </a>
                                     </td>
-                                    <td class="standings-sticky-td-club">
+                                    <td class="standings-sticky-td-club gs-col-landscape">
                                         <?= h($rider['club_name']) ?: '–' ?>
                                     </td>
                                     <?php $eventIdx = 1; ?>
