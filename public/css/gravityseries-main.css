@@ -2302,8 +2302,33 @@ button, input, select, textarea {
   }
 }
 
-/* Compact action buttons on mobile */
+/* Mobile table optimizations */
 @media (max-width: 767px) {
+  .gs-table {
+    min-width: 0;
+    table-layout: fixed;
+    font-size: 0.8125rem;
+  }
+
+  .gs-table th,
+  .gs-table td {
+    padding: 0.5rem 0.375rem;
+  }
+
+  /* Narrow position column */
+  .gs-table th:first-child,
+  .gs-table td:first-child {
+    width: 2.5rem;
+    text-align: center;
+  }
+
+  /* Time column - fixed width */
+  .gs-table-time-cell {
+    width: 4rem;
+    white-space: nowrap;
+  }
+
+  /* Compact action buttons on mobile */
   .gs-table .gs-actions-col {
     white-space: nowrap;
   }
