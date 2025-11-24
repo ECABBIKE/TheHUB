@@ -157,7 +157,16 @@ try {
 
 $pageTitle = 'Ranking';
 $pageType = 'admin';
+
+// DEBUG: Output before header
+echo "<!-- DEBUG: About to include header -->\n";
+flush();
+
 include __DIR__ . '/../includes/layout-header.php';
+
+// DEBUG: Output after header
+echo "<!-- DEBUG: Header included, starting main content -->\n";
+flush();
 ?>
 
 <main class="gs-content-with-sidebar">
@@ -473,4 +482,10 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 
-<?php include __DIR__ . '/../includes/layout-footer.php'; ?>
+<!-- DEBUG: About to include footer -->
+<?php
+echo "<!-- DEBUG: Including footer now -->\n";
+flush();
+include __DIR__ . '/../includes/layout-footer.php';
+echo "<!-- DEBUG: Footer included, page complete -->\n";
+?>
