@@ -255,131 +255,177 @@ function calculateAllRankingPoints($db, $debug = false) {
     $fieldMultipliers = getRankingFieldMultipliers($db);
     $eventLevelMultipliers = getEventLevelMultipliers($db);
 
-    if ($debug) {
-        echo "<p>📊 Getting eligible results...</p>";
-        flush();
-    }
-
-    // Get all eligible results
-    $results = getRankingEligibleResults($db, $cutoffDate);
-
-    if ($debug) {
-        echo "<p>✅ Found " . count($results) . " eligible results</p>";
-        flush();
-    }
-
-    if (empty($results)) {
-        return $stats;
-    }
-
-    // Group by event and class to calculate field sizes
-    if ($debug) {
-        echo "<p>🔄 Grouping by event and class...</p>";
-        flush();
-    }
-
-    $eventClasses = [];
-    foreach ($results as $result) {
-        $key = $result['event_id'] . '_' . $result['class_id'];
-        if (!isset($eventClasses[$key])) {
-            $eventClasses[$key] = [
-                'event_id' => $result['event_id'],
-                'class_id' => $result['class_id'],
-                'discipline' => normalizeDiscipline($result['discipline']),
-                'event_level' => $result['event_level'],
-                'riders' => []
-            ];
-        }
-        $eventClasses[$key]['riders'][] = $result;
-    }
-
-    if ($debug) {
-        echo "<p>✅ Grouped into " . count($eventClasses) . " event-class combinations</p>";
-        flush();
-    }
-
-    // Clear existing ranking points
+    // Clear existing ranking points first
     if ($debug) {
         echo "<p>🗑️ Clearing old ranking points...</p>";
         flush();
     }
-
     $db->query("DELETE FROM ranking_points WHERE event_date >= ?", [$cutoffDate]);
 
+    // Get count of results to process
     if ($debug) {
-        echo "<p>✅ Old points cleared</p>";
-        echo "<p>💾 Inserting new ranking points...</p>";
+        echo "<p>📊 Counting results...</p>";
         flush();
     }
 
+    $countResult = $db->getRow("
+        SELECT COUNT(*) as total
+        FROM results r
+        JOIN events e ON r.event_id = e.id
+        JOIN classes c ON r.class_id = c.id
+        WHERE r.status = 'finished'
+        AND (r.points > 0 OR COALESCE(r.run_1_points, 0) > 0 OR COALESCE(r.run_2_points, 0) > 0)
+        AND e.date >= ?
+        AND e.discipline IN ('ENDURO', 'DH')
+        AND COALESCE(c.series_eligible, 1) = 1
+        AND COALESCE(c.awards_points, 1) = 1
+    ", [$cutoffDate]);
+    $totalResults = $countResult['total'];
+
+    if ($debug) {
+        echo "<p>✅ Found {$totalResults} results to process</p>";
+        flush();
+    }
+
+    if ($totalResults == 0) {
+        return $stats;
+    }
+
+    // Step 1: Calculate field sizes (lightweight query)
+    if ($debug) {
+        echo "<p>🔄 Calculating field sizes...</p>";
+        flush();
+    }
+
+    $fieldSizes = $db->getAll("
+        SELECT
+            r.event_id,
+            r.class_id,
+            COUNT(*) as field_size,
+            e.discipline,
+            COALESCE(e.event_level, 'national') as event_level
+        FROM results r
+        JOIN events e ON r.event_id = e.id
+        JOIN classes c ON r.class_id = c.id
+        WHERE r.status = 'finished'
+        AND (r.points > 0 OR COALESCE(r.run_1_points, 0) > 0 OR COALESCE(r.run_2_points, 0) > 0)
+        AND e.date >= ?
+        AND e.discipline IN ('ENDURO', 'DH')
+        AND COALESCE(c.series_eligible, 1) = 1
+        AND COALESCE(c.awards_points, 1) = 1
+        GROUP BY r.event_id, r.class_id, e.discipline, e.event_level
+    ", [$cutoffDate]);
+
+    // Build small lookup map
+    $fieldSizeMap = [];
+    foreach ($fieldSizes as $fs) {
+        $key = $fs['event_id'] . '_' . $fs['class_id'];
+        $fieldSizeMap[$key] = [
+            'size' => (int)$fs['field_size'],
+            'discipline' => normalizeDiscipline($fs['discipline']),
+            'event_level' => $fs['event_level']
+        ];
+    }
+    unset($fieldSizes); // Free memory
+
+    if ($debug) {
+        echo "<p>✅ Field sizes calculated (" . count($fieldSizeMap) . " combinations)</p>";
+        echo "<p>💾 Processing results in batches...</p>";
+        flush();
+    }
+
+    // Step 2: Process in small batches
+    $batchSize = 50;
+    $offset = 0;
     $processedEvents = [];
-    $batchSize = 100;
-    $batch = [];
 
-    // Calculate and insert ranking points
-    foreach ($eventClasses as $key => $data) {
-        $fieldSize = count($data['riders']);
-        $eventId = $data['event_id'];
-        $discipline = $data['discipline'];
-        $eventLevel = $data['event_level'];
+    while ($offset < $totalResults) {
+        $results = $db->getAll("
+            SELECT
+                r.cyclist_id as rider_id,
+                r.event_id,
+                r.class_id,
+                COALESCE(
+                    CASE
+                        WHEN COALESCE(r.run_1_points, 0) > 0 OR COALESCE(r.run_2_points, 0) > 0
+                        THEN COALESCE(r.run_1_points, 0) + COALESCE(r.run_2_points, 0)
+                        ELSE r.points
+                    END,
+                    r.points
+                ) as original_points,
+                e.date as event_date
+            FROM results r
+            JOIN events e ON r.event_id = e.id
+            JOIN classes c ON r.class_id = c.id
+            WHERE r.status = 'finished'
+            AND (r.points > 0 OR COALESCE(r.run_1_points, 0) > 0 OR COALESCE(r.run_2_points, 0) > 0)
+            AND e.date >= ?
+            AND e.discipline IN ('ENDURO', 'DH')
+            AND COALESCE(c.series_eligible, 1) = 1
+            AND COALESCE(c.awards_points, 1) = 1
+            LIMIT ? OFFSET ?
+        ", [$cutoffDate, $batchSize, $offset]);
 
-        if (!isset($processedEvents[$eventId])) {
-            $processedEvents[$eventId] = true;
-            $stats['events_processed']++;
+        if (empty($results)) {
+            break;
         }
 
-        $fieldMult = getFieldMultiplier($fieldSize, $fieldMultipliers);
-        $eventLevelMult = getEventLevelMultiplier($eventLevel, $eventLevelMultipliers);
+        foreach ($results as $result) {
+            $key = $result['event_id'] . '_' . $result['class_id'];
 
-        foreach ($data['riders'] as $rider) {
-            $rankingPoints = round($rider['original_points'] * $fieldMult * $eventLevelMult, 2);
+            if (!isset($fieldSizeMap[$key])) {
+                continue;
+            }
 
-            $batch[] = [
-                'rider_id' => $rider['rider_id'],
-                'event_id' => $rider['event_id'],
-                'class_id' => $rider['class_id'],
+            $fieldData = $fieldSizeMap[$key];
+            $fieldSize = $fieldData['size'];
+            $discipline = $fieldData['discipline'];
+            $eventLevel = $fieldData['event_level'];
+
+            if (!isset($processedEvents[$result['event_id']])) {
+                $processedEvents[$result['event_id']] = true;
+                $stats['events_processed']++;
+            }
+
+            $fieldMult = getFieldMultiplier($fieldSize, $fieldMultipliers);
+            $eventLevelMult = getEventLevelMultiplier($eventLevel, $eventLevelMultipliers);
+            $rankingPoints = round($result['original_points'] * $fieldMult * $eventLevelMult, 2);
+
+            $db->insert('ranking_points', [
+                'rider_id' => $result['rider_id'],
+                'event_id' => $result['event_id'],
+                'class_id' => $result['class_id'],
                 'discipline' => $discipline,
-                'original_points' => $rider['original_points'],
+                'original_points' => $result['original_points'],
                 'field_size' => $fieldSize,
                 'field_multiplier' => $fieldMult,
                 'event_level_multiplier' => $eventLevelMult,
                 'ranking_points' => $rankingPoints,
-                'event_date' => $rider['event_date']
-            ];
+                'event_date' => $result['event_date']
+            ]);
 
             $stats['riders_processed']++;
             $stats['total_points'] += $rankingPoints;
-
-            // Insert in batches for better performance
-            if (count($batch) >= $batchSize) {
-                foreach ($batch as $record) {
-                    $db->insert('ranking_points', $record);
-                }
-
-                if ($debug) {
-                    echo "<p>💾 Processed {$stats['riders_processed']} / " . count($results) . " results...</p>";
-                    flush();
-                }
-
-                $batch = [];
-            }
         }
-    }
 
-    // Insert remaining batch
-    if (!empty($batch)) {
-        foreach ($batch as $record) {
-            $db->insert('ranking_points', $record);
+        $offset += $batchSize;
+
+        if ($debug && $offset % 100 == 0) {
+            $progress = min(100, round(($offset / $totalResults) * 100));
+            echo "<p>💾 {$offset}/{$totalResults} ({$progress}%)</p>";
+            flush();
         }
+
+        unset($results);
+        gc_collect_cycles();
     }
 
     if ($debug) {
         echo "<p>✅ All ranking points inserted</p>";
-        echo "<p>📝 Updating last calculation timestamp...</p>";
+        echo "<p>📝 Updating timestamp...</p>";
         flush();
     }
 
-    // Update last calculation timestamp
     $db->query("
         UPDATE ranking_settings
         SET setting_value = ?
@@ -391,7 +437,7 @@ function calculateAllRankingPoints($db, $debug = false) {
     ])]);
 
     if ($debug) {
-        echo "<p>✅ Calculation complete!</p>";
+        echo "<p>✅ Complete!</p>";
         flush();
     }
 
