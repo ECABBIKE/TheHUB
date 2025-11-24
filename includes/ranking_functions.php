@@ -238,7 +238,7 @@ function getRankingEligibleResults($db, $cutoffDate = null) {
 /**
  * Calculate and save all ranking points
  */
-function calculateAllRankingPoints($db) {
+function calculateAllRankingPoints($db, $debug = false) {
     $stats = [
         'events_processed' => 0,
         'riders_processed' => 0,
@@ -246,17 +246,38 @@ function calculateAllRankingPoints($db) {
     ];
 
     $cutoffDate = date('Y-m-d', strtotime('-24 months'));
+
+    if ($debug) {
+        echo "<p>📅 Cutoff date: {$cutoffDate}</p>";
+        flush();
+    }
+
     $fieldMultipliers = getRankingFieldMultipliers($db);
     $eventLevelMultipliers = getEventLevelMultipliers($db);
 
+    if ($debug) {
+        echo "<p>📊 Getting eligible results...</p>";
+        flush();
+    }
+
     // Get all eligible results
     $results = getRankingEligibleResults($db, $cutoffDate);
+
+    if ($debug) {
+        echo "<p>✅ Found " . count($results) . " eligible results</p>";
+        flush();
+    }
 
     if (empty($results)) {
         return $stats;
     }
 
     // Group by event and class to calculate field sizes
+    if ($debug) {
+        echo "<p>🔄 Grouping by event and class...</p>";
+        flush();
+    }
+
     $eventClasses = [];
     foreach ($results as $result) {
         $key = $result['event_id'] . '_' . $result['class_id'];
@@ -272,10 +293,28 @@ function calculateAllRankingPoints($db) {
         $eventClasses[$key]['riders'][] = $result;
     }
 
+    if ($debug) {
+        echo "<p>✅ Grouped into " . count($eventClasses) . " event-class combinations</p>";
+        flush();
+    }
+
     // Clear existing ranking points
+    if ($debug) {
+        echo "<p>🗑️ Clearing old ranking points...</p>";
+        flush();
+    }
+
     $db->query("DELETE FROM ranking_points WHERE event_date >= ?", [$cutoffDate]);
 
+    if ($debug) {
+        echo "<p>✅ Old points cleared</p>";
+        echo "<p>💾 Inserting new ranking points...</p>";
+        flush();
+    }
+
     $processedEvents = [];
+    $batchSize = 100;
+    $batch = [];
 
     // Calculate and insert ranking points
     foreach ($eventClasses as $key => $data) {
@@ -295,7 +334,7 @@ function calculateAllRankingPoints($db) {
         foreach ($data['riders'] as $rider) {
             $rankingPoints = round($rider['original_points'] * $fieldMult * $eventLevelMult, 2);
 
-            $db->insert('ranking_points', [
+            $batch[] = [
                 'rider_id' => $rider['rider_id'],
                 'event_id' => $rider['event_id'],
                 'class_id' => $rider['class_id'],
@@ -306,11 +345,38 @@ function calculateAllRankingPoints($db) {
                 'event_level_multiplier' => $eventLevelMult,
                 'ranking_points' => $rankingPoints,
                 'event_date' => $rider['event_date']
-            ]);
+            ];
 
             $stats['riders_processed']++;
             $stats['total_points'] += $rankingPoints;
+
+            // Insert in batches for better performance
+            if (count($batch) >= $batchSize) {
+                foreach ($batch as $record) {
+                    $db->insert('ranking_points', $record);
+                }
+
+                if ($debug) {
+                    echo "<p>💾 Processed {$stats['riders_processed']} / " . count($results) . " results...</p>";
+                    flush();
+                }
+
+                $batch = [];
+            }
         }
+    }
+
+    // Insert remaining batch
+    if (!empty($batch)) {
+        foreach ($batch as $record) {
+            $db->insert('ranking_points', $record);
+        }
+    }
+
+    if ($debug) {
+        echo "<p>✅ All ranking points inserted</p>";
+        echo "<p>📝 Updating last calculation timestamp...</p>";
+        flush();
     }
 
     // Update last calculation timestamp
@@ -323,6 +389,11 @@ function calculateAllRankingPoints($db) {
         'riders_processed' => $stats['riders_processed'],
         'events_processed' => $stats['events_processed']
     ])]);
+
+    if ($debug) {
+        echo "<p>✅ Calculation complete!</p>";
+        flush();
+    }
 
     return $stats;
 }

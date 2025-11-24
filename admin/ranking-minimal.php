@@ -48,7 +48,7 @@ try {
 
         try {
             $startTime = microtime(true);
-            $calcStats = calculateAllRankingPoints($db);
+            $calcStats = calculateAllRankingPoints($db, true); // Enable debug mode
             $endTime = microtime(true);
             $duration = round($endTime - $startTime, 2);
 
