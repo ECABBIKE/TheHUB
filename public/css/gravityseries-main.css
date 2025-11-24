@@ -2306,7 +2306,6 @@ button, input, select, textarea {
 @media (max-width: 767px) {
   .gs-table {
     min-width: 0;
-    table-layout: fixed;
     font-size: 0.8125rem;
   }
 
@@ -2315,16 +2314,19 @@ button, input, select, textarea {
     padding: 0.5rem 0.375rem;
   }
 
-  /* Narrow position column */
+  /* Position column - compact */
   .gs-table th:first-child,
   .gs-table td:first-child {
-    width: 2.5rem;
+    width: 1%;
+    white-space: nowrap;
     text-align: center;
+    padding-left: 0.25rem;
+    padding-right: 0.25rem;
   }
 
-  /* Time column - fixed width */
+  /* Time cells - no wrap */
   .gs-table-time-cell {
-    width: 4rem;
+    width: 1%;
     white-space: nowrap;
   }
 
