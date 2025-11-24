@@ -801,7 +801,7 @@ include __DIR__ . '/includes/layout-header.php';
                                         <th class="gs-table-col-medium gs-col-landscape">+Tid</th>
                                         <?php $colIndex++; ?>
                                         <?php foreach ($classSplitCols as $ssNum): ?>
-                                            <th class="gs-table-col-medium gs-split-time-col gs-sortable-header" onclick="sortTable(this, <?= $colIndex++ ?>)"><?= h(getStageName($ssNum, $stageNames)) ?></th>
+                                            <th class="gs-table-col-medium gs-split-time-col gs-col-desktop gs-sortable-header" onclick="sortTable(this, <?= $colIndex++ ?>)"><?= h(getStageName($ssNum, $stageNames)) ?></th>
                                         <?php endforeach; ?>
                                     <?php endif; ?>
                                     <?php if ($isDH): ?>
@@ -927,7 +927,7 @@ include __DIR__ . '/includes/layout-header.php';
                                                     // If range is 0 or very small, no color (all essentially tied)
                                                 }
                                             ?>
-                                                <td class="gs-table-time-cell gs-split-time-col <?= $splitClass ?>">
+                                                <td class="gs-table-time-cell gs-split-time-col gs-col-desktop <?= $splitClass ?>">
                                                     <?php if (!empty($splitTime)): ?>
                                                         <?= formatDisplayTime($splitTime) ?>
                                                     <?php else: ?>
