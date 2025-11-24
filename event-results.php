@@ -1527,6 +1527,12 @@ include __DIR__ . '/includes/layout-header.php';
                                         <input type="text" id="rider-search" class="gs-input"
                                                placeholder="T.ex. Anna Andersson eller UCI-ID">
                                     </div>
+                                    <div class="gs-mt-sm">
+                                        <button type="button" onclick="showNewRiderForm()" class="gs-btn gs-btn-sm gs-btn-outline">
+                                            <i data-lucide="user-plus"></i>
+                                            Inte i registret? Registrera ny deltagare
+                                        </button>
+                                    </div>
                                     <div id="rider-results" class="gs-mt-md" style="display: none;"></div>
                                     <div id="selected-rider" class="gs-mt-md" style="display: none;">
                                         <div class="gs-alert gs-alert-success">

@@ -25,7 +25,7 @@ $riders = $db->getAll("
         r.id,
         r.firstname,
         r.lastname,
-        r.uci_id,
+        r.license_number as uci_id,
         r.email,
         r.gravity_id,
         r.license_type,
@@ -37,7 +37,7 @@ $riders = $db->getAll("
     WHERE r.firstname LIKE ?
        OR r.lastname LIKE ?
        OR CONCAT(r.firstname, ' ', r.lastname) LIKE ?
-       OR r.uci_id LIKE ?
+       OR r.license_number LIKE ?
        OR r.email LIKE ?
     ORDER BY r.lastname, r.firstname
     LIMIT 10

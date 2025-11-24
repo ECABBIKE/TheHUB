@@ -504,9 +504,9 @@ include __DIR__ . '/../includes/layout-header.php';
                                                     </a>
                                                     <?php endif; ?>
                                                     <a
-                                                        href="/admin/pricing-templates.php"
-                                                        class="gs-btn gs-btn-sm gs-btn-outline"
-                                                        title="Prismallar"
+                                                        href="/admin/series-pricing.php?series_id=<?= $serie['id'] ?>"
+                                                        class="gs-btn gs-btn-sm gs-btn-accent"
+                                                        title="Priser & Klassregler"
                                                     >
                                                         <i data-lucide="credit-card" class="gs-icon-14"></i>
                                                     </a>
