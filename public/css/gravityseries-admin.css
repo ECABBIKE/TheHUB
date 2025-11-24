@@ -1258,3 +1258,76 @@ details.gs-details-lg summary {
     font-size: 0.875rem;
   }
 }
+
+/* =======================================================
+   25. RESPONSIVE TABLE COLUMNS (Orientation aware)
+======================================================= */
+
+/* Default: hide columns that should only show on larger screens */
+.gs-col-landscape,
+.gs-col-tablet,
+.gs-col-desktop {
+  display: none;
+}
+
+/* Landscape orientation on mobile - show landscape columns */
+@media (orientation: landscape) and (max-width: 896px) {
+  .gs-col-landscape {
+    display: table-cell;
+  }
+}
+
+/* Tablet and up (768px+) - show landscape and tablet columns */
+@media (min-width: 768px) {
+  .gs-col-landscape,
+  .gs-col-tablet {
+    display: table-cell;
+  }
+}
+
+/* Desktop (1024px+) - show all columns */
+@media (min-width: 1024px) {
+  .gs-col-desktop {
+    display: table-cell;
+  }
+}
+
+/* Compact action buttons on mobile */
+@media (max-width: 767px) {
+  .gs-table .gs-actions-col {
+    white-space: nowrap;
+  }
+
+  .gs-table .gs-actions-col .gs-flex {
+    flex-wrap: nowrap;
+    gap: 0.25rem;
+  }
+
+  .gs-table .gs-actions-col .gs-btn-sm {
+    padding: 0.375rem;
+  }
+}
+
+/* Table scroll indicator */
+.gs-table-scrollable {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  position: relative;
+}
+
+.gs-table-scrollable::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 20px;
+  background: linear-gradient(to left, rgba(255,255,255,0.8), transparent);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.gs-table-scrollable.has-scroll::after {
+  opacity: 1;
+}
