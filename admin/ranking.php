@@ -24,25 +24,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     checkCsrf();
 
     if (isset($_POST['calculate'])) {
-        // Run full calculation
-        $calcStats = calculateAllRankingPoints($db);
-        $snapshotStats = createRankingSnapshot($db);
-
-        // Try to create club rankings (will skip if table doesn't exist)
-        $clubSnapshotStats = ['enduro' => 0, 'dh' => 0, 'gravity' => 0, 'clubs_ranked' => 0];
+        // Run full calculation with error handling
         try {
-            $clubSnapshotStats = createClubRankingSnapshot($db);
-        } catch (Exception $e) {
-            // Club ranking table doesn't exist yet - skip silently
-            error_log("Club ranking skipped: " . $e->getMessage());
-        }
+            $calcStats = calculateAllRankingPoints($db);
+            $snapshotStats = createRankingSnapshot($db);
 
-        $message = "Beräkning klar! {$calcStats['events_processed']} events, {$calcStats['riders_processed']} resultat. ";
-        $message .= "Rankade åkare: Enduro {$snapshotStats['enduro']}, DH {$snapshotStats['dh']}, Gravity {$snapshotStats['gravity']}. ";
-        if ($clubSnapshotStats['clubs_ranked'] > 0) {
-            $message .= "Rankade klubbar: Enduro {$clubSnapshotStats['enduro']}, DH {$clubSnapshotStats['dh']}, Gravity {$clubSnapshotStats['gravity']}.";
+            // Try to create club rankings (will skip if table doesn't exist)
+            $clubSnapshotStats = ['enduro' => 0, 'dh' => 0, 'gravity' => 0, 'clubs_ranked' => 0];
+            try {
+                $clubSnapshotStats = createClubRankingSnapshot($db);
+            } catch (Exception $e) {
+                // Club ranking table doesn't exist yet - skip silently
+                error_log("Club ranking skipped: " . $e->getMessage());
+            }
+
+            $message = "Beräkning klar! {$calcStats['events_processed']} events, {$calcStats['riders_processed']} resultat. ";
+            $message .= "Rankade åkare: Enduro {$snapshotStats['enduro']}, DH {$snapshotStats['dh']}, Gravity {$snapshotStats['gravity']}. ";
+            if ($clubSnapshotStats['clubs_ranked'] > 0) {
+                $message .= "Rankade klubbar: Enduro {$clubSnapshotStats['enduro']}, DH {$clubSnapshotStats['dh']}, Gravity {$clubSnapshotStats['gravity']}.";
+            }
+            $messageType = 'success';
+        } catch (Exception $e) {
+            $message = "FEL vid beräkning: " . $e->getMessage() . "\n\nStack trace:\n" . $e->getTraceAsString();
+            $messageType = 'error';
+            error_log("Ranking calculation error: " . $e->getMessage());
+            error_log($e->getTraceAsString());
         }
-        $messageType = 'success';
 
     } elseif (isset($_POST['save_multipliers'])) {
         // Save field multipliers
@@ -132,7 +139,11 @@ include __DIR__ . '/../includes/layout-header.php';
         <?php if ($message): ?>
             <div class="gs-alert gs-alert-<?= $messageType ?> gs-mb-lg">
                 <i data-lucide="<?= $messageType === 'success' ? 'check-circle' : ($messageType === 'error' ? 'alert-circle' : 'info') ?>"></i>
-                <?= h($message) ?>
+                <?php if ($messageType === 'error'): ?>
+                    <pre style="white-space: pre-wrap; font-size: 0.875rem; margin-top: 0.5rem; overflow-x: auto;"><?= h($message) ?></pre>
+                <?php else: ?>
+                    <?= h($message) ?>
+                <?php endif; ?>
             </div>
         <?php endif; ?>
 
