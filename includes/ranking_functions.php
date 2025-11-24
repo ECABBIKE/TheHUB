@@ -390,13 +390,21 @@ function calculateAllRankingPoints($db, $debug = false) {
             $eventLevelMult = getEventLevelMultiplier($eventLevel, $eventLevelMultipliers);
             $rankingPoints = round($result['original_points'] * $fieldMult * $eventLevelMult, 2);
 
-            // Use REPLACE INTO instead of INSERT to automatically update existing records
+            // Use INSERT ... ON DUPLICATE KEY UPDATE to handle existing records
             $db->query("
-                REPLACE INTO ranking_points (
+                INSERT INTO ranking_points (
                     rider_id, event_id, class_id, discipline,
                     original_points, field_size, field_multiplier,
                     event_level_multiplier, ranking_points, event_date
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON DUPLICATE KEY UPDATE
+                    discipline = VALUES(discipline),
+                    original_points = VALUES(original_points),
+                    field_size = VALUES(field_size),
+                    field_multiplier = VALUES(field_multiplier),
+                    event_level_multiplier = VALUES(event_level_multiplier),
+                    ranking_points = VALUES(ranking_points),
+                    event_date = VALUES(event_date)
             ", [
                 $result['rider_id'],
                 $result['event_id'],
