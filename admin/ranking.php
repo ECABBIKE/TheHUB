@@ -27,9 +27,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Run full calculation
         $calcStats = calculateAllRankingPoints($db);
         $snapshotStats = createRankingSnapshot($db);
+        $clubSnapshotStats = createClubRankingSnapshot($db);
 
         $message = "Beräkning klar! {$calcStats['events_processed']} events, {$calcStats['riders_processed']} resultat. ";
-        $message .= "Rankade: Enduro {$snapshotStats['enduro']}, DH {$snapshotStats['dh']}, Gravity {$snapshotStats['gravity']}.";
+        $message .= "Rankade åkare: Enduro {$snapshotStats['enduro']}, DH {$snapshotStats['dh']}, Gravity {$snapshotStats['gravity']}. ";
+        $message .= "Rankade klubbar: Enduro {$clubSnapshotStats['enduro']}, DH {$clubSnapshotStats['dh']}, Gravity {$clubSnapshotStats['gravity']}.";
         $messageType = 'success';
 
     } elseif (isset($_POST['save_multipliers'])) {
@@ -131,7 +133,8 @@ include __DIR__ . '/../includes/layout-header.php';
                 <div class="gs-card-content gs-text-center">
                     <h3 class="gs-text-sm gs-text-secondary gs-mb-sm">Enduro</h3>
                     <div class="gs-text-2xl gs-font-bold gs-text-primary"><?= $disciplineStats['ENDURO']['riders'] ?></div>
-                    <div class="gs-text-xs gs-text-secondary">åkare • <?= $disciplineStats['ENDURO']['events'] ?> events</div>
+                    <div class="gs-text-xs gs-text-secondary">åkare • <?= $disciplineStats['ENDURO']['clubs'] ?> klubbar</div>
+                    <div class="gs-text-xs gs-text-secondary"><?= $disciplineStats['ENDURO']['events'] ?> events</div>
                 </div>
             </div>
             <!-- Downhill -->
@@ -139,7 +142,8 @@ include __DIR__ . '/../includes/layout-header.php';
                 <div class="gs-card-content gs-text-center">
                     <h3 class="gs-text-sm gs-text-secondary gs-mb-sm">Downhill</h3>
                     <div class="gs-text-2xl gs-font-bold gs-text-primary"><?= $disciplineStats['DH']['riders'] ?></div>
-                    <div class="gs-text-xs gs-text-secondary">åkare • <?= $disciplineStats['DH']['events'] ?> events</div>
+                    <div class="gs-text-xs gs-text-secondary">åkare • <?= $disciplineStats['DH']['clubs'] ?> klubbar</div>
+                    <div class="gs-text-xs gs-text-secondary"><?= $disciplineStats['DH']['events'] ?> events</div>
                 </div>
             </div>
             <!-- Gravity -->
@@ -147,7 +151,8 @@ include __DIR__ . '/../includes/layout-header.php';
                 <div class="gs-card-content gs-text-center">
                     <h3 class="gs-text-sm gs-text-secondary gs-mb-sm">Gravity</h3>
                     <div class="gs-text-2xl gs-font-bold gs-text-primary"><?= $disciplineStats['GRAVITY']['riders'] ?></div>
-                    <div class="gs-text-xs gs-text-secondary">åkare • <?= $disciplineStats['GRAVITY']['events'] ?> events</div>
+                    <div class="gs-text-xs gs-text-secondary">åkare • <?= $disciplineStats['GRAVITY']['clubs'] ?> klubbar</div>
+                    <div class="gs-text-xs gs-text-secondary"><?= $disciplineStats['GRAVITY']['events'] ?> events</div>
                 </div>
             </div>
         </div>

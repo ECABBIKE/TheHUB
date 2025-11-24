@@ -42,13 +42,18 @@ try {
     $calcStats = calculateAllRankingPoints($db);
     echo "[$logDate] Processed {$calcStats['events_processed']} events, {$calcStats['riders_processed']} results\n";
 
-    // Step 2: Create snapshot for current month
+    // Step 2: Create rider snapshot for current month
     $snapshotDate = date('Y-m-01'); // First of current month
-    echo "[$logDate] Creating snapshot for $snapshotDate...\n";
+    echo "[$logDate] Creating rider snapshot for $snapshotDate...\n";
     $snapshotStats = createRankingSnapshot($db, $snapshotDate);
     echo "[$logDate] Ranked riders - Enduro: {$snapshotStats['enduro']}, DH: {$snapshotStats['dh']}, Gravity: {$snapshotStats['gravity']}\n";
 
-    // Step 3: Cleanup old data (older than 26 months)
+    // Step 3: Create club snapshot for current month
+    echo "[$logDate] Creating club snapshot for $snapshotDate...\n";
+    $clubSnapshotStats = createClubRankingSnapshot($db, $snapshotDate);
+    echo "[$logDate] Ranked clubs - Enduro: {$clubSnapshotStats['enduro']}, DH: {$clubSnapshotStats['dh']}, Gravity: {$clubSnapshotStats['gravity']}\n";
+
+    // Step 4: Cleanup old data (older than 26 months)
     echo "[$logDate] Cleaning up old data...\n";
     cleanupOldRankingData($db, 26);
     echo "[$logDate] Cleanup complete\n";
@@ -58,7 +63,7 @@ try {
     $duration = round($endTime - $startTime, 2);
 
     echo "[$logDate] Ranking update completed successfully in {$duration}s\n";
-    echo "[$logDate] Summary: {$calcStats['events_processed']} events, {$calcStats['riders_processed']} results, {$snapshotStats['riders_ranked']} riders ranked\n";
+    echo "[$logDate] Summary: {$calcStats['events_processed']} events, {$calcStats['riders_processed']} results, {$snapshotStats['riders_ranked']} riders ranked, {$clubSnapshotStats['clubs_ranked']} clubs ranked\n";
 
 } catch (Exception $e) {
     echo "[$logDate] ERROR: " . $e->getMessage() . "\n";

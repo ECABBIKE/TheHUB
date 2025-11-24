@@ -2,6 +2,7 @@
 /**
  * Public Ranking Page
  * Mobile-first responsive ranking display with Enduro/Downhill/Gravity tabs
+ * Includes both rider and club rankings
  */
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/../includes/ranking_functions.php';
@@ -17,15 +18,28 @@ if (!in_array($discipline, ['ENDURO', 'DH', 'GRAVITY'])) {
     $discipline = 'GRAVITY';
 }
 
+// Get selected view (riders or clubs)
+$view = isset($_GET['view']) ? $_GET['view'] : 'riders';
+if (!in_array($view, ['riders', 'clubs'])) {
+    $view = 'riders';
+}
+
 // Pagination
 $page = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1;
 $perPage = 50;
 $offset = ($page - 1) * $perPage;
 
-// Get current ranking
-$ranking = ['riders' => [], 'total' => 0, 'snapshot_date' => null, 'discipline' => $discipline];
-if ($tablesExist) {
-    $ranking = getCurrentRanking($db, $discipline, $perPage, $offset);
+// Get current ranking based on view
+if ($view === 'clubs') {
+    $ranking = ['clubs' => [], 'total' => 0, 'snapshot_date' => null, 'discipline' => $discipline];
+    if ($tablesExist) {
+        $ranking = getCurrentClubRanking($db, $discipline, $perPage, $offset);
+    }
+} else {
+    $ranking = ['riders' => [], 'total' => 0, 'snapshot_date' => null, 'discipline' => $discipline];
+    if ($tablesExist) {
+        $ranking = getCurrentRanking($db, $discipline, $perPage, $offset);
+    }
 }
 
 $totalPages = ceil($ranking['total'] / $perPage);
@@ -52,15 +66,27 @@ include __DIR__ . '/../includes/layout-header.php';
             </div>
 
             <!-- Discipline Tabs -->
-            <div class="gs-discipline-tabs gs-mb-lg">
-                <a href="?discipline=GRAVITY" class="gs-discipline-tab <?= $discipline === 'GRAVITY' ? 'active' : '' ?>">
+            <div class="gs-discipline-tabs gs-mb-md">
+                <a href="?discipline=GRAVITY&view=<?= $view ?>" class="gs-discipline-tab <?= $discipline === 'GRAVITY' ? 'active' : '' ?>">
                     Gravity
                 </a>
-                <a href="?discipline=ENDURO" class="gs-discipline-tab <?= $discipline === 'ENDURO' ? 'active' : '' ?>">
+                <a href="?discipline=ENDURO&view=<?= $view ?>" class="gs-discipline-tab <?= $discipline === 'ENDURO' ? 'active' : '' ?>">
                     Enduro
                 </a>
-                <a href="?discipline=DH" class="gs-discipline-tab <?= $discipline === 'DH' ? 'active' : '' ?>">
+                <a href="?discipline=DH&view=<?= $view ?>" class="gs-discipline-tab <?= $discipline === 'DH' ? 'active' : '' ?>">
                     Downhill
+                </a>
+            </div>
+
+            <!-- View Toggle (Riders/Clubs) -->
+            <div class="gs-view-toggle gs-mb-lg">
+                <a href="?discipline=<?= $discipline ?>&view=riders" class="gs-view-btn <?= $view === 'riders' ? 'active' : '' ?>">
+                    <i data-lucide="users"></i>
+                    Åkare
+                </a>
+                <a href="?discipline=<?= $discipline ?>&view=clubs" class="gs-view-btn <?= $view === 'clubs' ? 'active' : '' ?>">
+                    <i data-lucide="shield"></i>
+                    Klubbar
                 </a>
             </div>
 
@@ -78,7 +104,7 @@ include __DIR__ . '/../includes/layout-header.php';
                     <h3 class="gs-h4 gs-mb-sm">Systemet är inte konfigurerat</h3>
                     <p class="gs-text-secondary">Rankingsystemet behöver konfigureras av en administratör.</p>
                 </div>
-            <?php elseif (empty($ranking['riders'])): ?>
+            <?php elseif (($view === 'riders' && empty($ranking['riders'])) || ($view === 'clubs' && empty($ranking['clubs']))): ?>
                 <div class="gs-card gs-text-center gs-empty-state-container">
                     <div class="gs-empty-state-icon">
                         <i data-lucide="trophy" style="width: 48px; height: 48px;"></i>
@@ -91,7 +117,7 @@ include __DIR__ . '/../includes/layout-header.php';
                 <div class="gs-stats-grid gs-mb-lg">
                     <div class="gs-stat-card">
                         <div class="gs-stat-value"><?= $ranking['total'] ?></div>
-                        <div class="gs-stat-label">Rankade</div>
+                        <div class="gs-stat-label"><?= $view === 'clubs' ? 'Klubbar' : 'Åkare' ?></div>
                     </div>
                     <div class="gs-stat-card">
                         <div class="gs-stat-value">24</div>
@@ -99,6 +125,8 @@ include __DIR__ . '/../includes/layout-header.php';
                     </div>
                 </div>
 
+                <?php if ($view === 'riders'): ?>
+                <!-- RIDERS VIEW -->
                 <!-- Ranking Cards (Mobile) -->
                 <div class="gs-ranking-cards">
                     <?php foreach ($ranking['riders'] as $rider): ?>
@@ -225,7 +253,7 @@ include __DIR__ . '/../includes/layout-header.php';
                 <?php if ($totalPages > 1): ?>
                     <div class="gs-pagination">
                         <?php if ($page > 1): ?>
-                            <a href="?discipline=<?= $discipline ?>&page=<?= $page - 1 ?>" class="gs-btn gs-btn-outline gs-btn-sm">
+                            <a href="?discipline=<?= $discipline ?>&view=<?= $view ?>&page=<?= $page - 1 ?>" class="gs-btn gs-btn-outline gs-btn-sm">
                                 <i data-lucide="chevron-left"></i> Föregående
                             </a>
                         <?php endif; ?>
@@ -235,17 +263,173 @@ include __DIR__ . '/../includes/layout-header.php';
                         </span>
 
                         <?php if ($page < $totalPages): ?>
-                            <a href="?discipline=<?= $discipline ?>&page=<?= $page + 1 ?>" class="gs-btn gs-btn-outline gs-btn-sm">
+                            <a href="?discipline=<?= $discipline ?>&view=<?= $view ?>&page=<?= $page + 1 ?>" class="gs-btn gs-btn-outline gs-btn-sm">
                                 Nästa <i data-lucide="chevron-right"></i>
                             </a>
                         <?php endif; ?>
                     </div>
                 <?php endif; ?>
 
+                <?php else: ?>
+                <!-- CLUBS VIEW -->
+                <!-- Club Cards (Mobile) -->
+                <div class="gs-ranking-cards">
+                    <?php foreach ($ranking['clubs'] as $club): ?>
+                        <?php
+                        $rankClass = '';
+                        if ($club['ranking_position'] == 1) $rankClass = 'rank-1';
+                        elseif ($club['ranking_position'] == 2) $rankClass = 'rank-2';
+                        elseif ($club['ranking_position'] == 3) $rankClass = 'rank-3';
+                        ?>
+                        <div class="gs-ranking-card <?= $rankClass ?>">
+                            <div class="gs-rank-badge">
+                                <?php if ($club['ranking_position'] <= 3): ?>
+                                    <span class="gs-medal"><?php
+                                        if ($club['ranking_position'] == 1) echo '🥇';
+                                        elseif ($club['ranking_position'] == 2) echo '🥈';
+                                        else echo '🥉';
+                                    ?></span>
+                                <?php else: ?>
+                                    <?= $club['ranking_position'] ?>
+                                <?php endif; ?>
+                            </div>
+
+                            <div class="gs-rider-info">
+                                <div class="gs-rider-name"><?= h($club['club_name']) ?></div>
+                                <div class="gs-rider-meta">
+                                    <?php if ($club['city']): ?>
+                                        <?= h($club['city']) ?>
+                                    <?php endif; ?>
+                                    <?php if ($club['events_count']): ?>
+                                        • <?= $club['events_count'] ?> events
+                                    <?php endif; ?>
+                                    <?php if ($club['riders_count']): ?>
+                                        • <?= $club['riders_count'] ?> åkare
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+
+                            <div class="gs-rider-stats">
+                                <div class="gs-rider-points"><?= number_format($club['total_ranking_points'], 1) ?></div>
+                                <div class="gs-rider-points-label">poäng</div>
+                                <?php if ($club['position_change'] !== null): ?>
+                                    <div class="gs-position-change <?= $club['position_change'] > 0 ? 'up' : ($club['position_change'] < 0 ? 'down' : 'same') ?>">
+                                        <?php if ($club['position_change'] > 0): ?>
+                                            <i data-lucide="chevron-up"></i> <?= $club['position_change'] ?>
+                                        <?php elseif ($club['position_change'] < 0): ?>
+                                            <i data-lucide="chevron-down"></i> <?= abs($club['position_change']) ?>
+                                        <?php else: ?>
+                                            <i data-lucide="minus"></i>
+                                        <?php endif; ?>
+                                    </div>
+                                <?php elseif ($club['previous_position'] === null): ?>
+                                    <div class="gs-position-change new">NY</div>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+
+                <!-- Club Table (Desktop) -->
+                <div class="gs-ranking-table-wrapper gs-mb-lg">
+                    <table class="gs-ranking-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 60px;">Pos</th>
+                                <th>Klubb</th>
+                                <th>Ort</th>
+                                <th class="gs-text-center">Åkare</th>
+                                <th class="gs-text-center">Events</th>
+                                <th class="gs-text-center">Förändring</th>
+                                <th class="gs-text-right">Poäng</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($ranking['clubs'] as $club): ?>
+                                <tr>
+                                    <td>
+                                        <?php if ($club['ranking_position'] <= 3): ?>
+                                            <span class="gs-medal-badge gs-medal-<?= $club['ranking_position'] ?>">
+                                                <?php
+                                                    if ($club['ranking_position'] == 1) echo '🥇';
+                                                    elseif ($club['ranking_position'] == 2) echo '🥈';
+                                                    else echo '🥉';
+                                                ?>
+                                            </span>
+                                        <?php else: ?>
+                                            <?= $club['ranking_position'] ?>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td>
+                                        <strong><?= h($club['club_name']) ?></strong>
+                                    </td>
+                                    <td class="gs-text-secondary"><?= h($club['city'] ?? '-') ?></td>
+                                    <td class="gs-text-center"><?= $club['riders_count'] ?></td>
+                                    <td class="gs-text-center"><?= $club['events_count'] ?></td>
+                                    <td class="gs-text-center">
+                                        <?php if ($club['position_change'] !== null): ?>
+                                            <?php if ($club['position_change'] > 0): ?>
+                                                <span class="gs-change-up">
+                                                    <i data-lucide="chevron-up"></i> <?= $club['position_change'] ?>
+                                                </span>
+                                            <?php elseif ($club['position_change'] < 0): ?>
+                                                <span class="gs-change-down">
+                                                    <i data-lucide="chevron-down"></i> <?= abs($club['position_change']) ?>
+                                                </span>
+                                            <?php else: ?>
+                                                <span class="gs-change-same">
+                                                    <i data-lucide="minus"></i>
+                                                </span>
+                                            <?php endif; ?>
+                                        <?php elseif ($club['previous_position'] === null): ?>
+                                            <span class="gs-badge gs-badge-accent">NY</span>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td class="gs-text-right">
+                                        <div class="gs-points-breakdown">
+                                            <strong><?= number_format($club['total_ranking_points'], 1) ?></strong>
+                                            <small class="gs-text-secondary gs-text-xs">
+                                                (<?= number_format($club['points_last_12_months'], 1) ?> + <?= number_format($club['points_months_13_24'] * 0.5, 1) ?>)
+                                            </small>
+                                        </div>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Pagination -->
+                <?php if ($totalPages > 1): ?>
+                    <div class="gs-pagination">
+                        <?php if ($page > 1): ?>
+                            <a href="?discipline=<?= $discipline ?>&view=<?= $view ?>&page=<?= $page - 1 ?>" class="gs-btn gs-btn-outline gs-btn-sm">
+                                <i data-lucide="chevron-left"></i> Föregående
+                            </a>
+                        <?php endif; ?>
+
+                        <span class="gs-pagination-info">
+                            Sida <?= $page ?> av <?= $totalPages ?>
+                        </span>
+
+                        <?php if ($page < $totalPages): ?>
+                            <a href="?discipline=<?= $discipline ?>&view=<?= $view ?>&page=<?= $page + 1 ?>" class="gs-btn gs-btn-outline gs-btn-sm">
+                                Nästa <i data-lucide="chevron-right"></i>
+                            </a>
+                        <?php endif; ?>
+                    </div>
+                <?php endif; ?>
+                <?php endif; ?>
+
                 <!-- Info Footer -->
                 <div class="gs-text-center gs-mt-lg gs-text-xs gs-text-secondary">
-                    <p>Poäng = Originalpoäng × Fältstorlek × Eventtyp × Tidsvikt</p>
-                    <p class="gs-mt-xs">Månad 1-12: 100% • Månad 13-24: 50%</p>
+                    <?php if ($view === 'clubs'): ?>
+                        <p>Klubbar rankas baserat på sammantagna rankingpoäng från alla sina åkare</p>
+                        <p class="gs-mt-xs">Poäng = Summa av åkarnas rankingpoäng (viktade efter fältstorlek, eventtyp och tid)</p>
+                    <?php else: ?>
+                        <p>Poäng = Originalpoäng × Fältstorlek × Eventtyp × Tidsvikt</p>
+                        <p class="gs-mt-xs">Månad 1-12: 100% • Månad 13-24: 50%</p>
+                    <?php endif; ?>
                 </div>
             <?php endif; ?>
         </div>
@@ -287,6 +471,45 @@ include __DIR__ . '/../includes/layout-header.php';
 .gs-discipline-tab.active {
     background: var(--gs-primary);
     color: var(--gs-white);
+    box-shadow: var(--gs-shadow-sm);
+}
+
+/* View toggle (Riders/Clubs) */
+.gs-view-toggle {
+    display: flex;
+    justify-content: center;
+    gap: var(--gs-space-xs);
+}
+
+.gs-view-btn {
+    padding: var(--gs-space-sm) var(--gs-space-lg);
+    border-radius: var(--gs-radius-md);
+    font-weight: 500;
+    font-size: 0.875rem;
+    color: var(--gs-text-secondary);
+    text-decoration: none;
+    transition: all 0.2s;
+    background: var(--gs-white);
+    border: 1px solid var(--gs-border);
+    display: flex;
+    align-items: center;
+    gap: var(--gs-space-xs);
+}
+
+.gs-view-btn i {
+    width: 16px;
+    height: 16px;
+}
+
+.gs-view-btn:hover {
+    color: var(--gs-primary);
+    border-color: var(--gs-primary);
+}
+
+.gs-view-btn.active {
+    background: var(--gs-primary);
+    color: var(--gs-white);
+    border-color: var(--gs-primary);
     box-shadow: var(--gs-shadow-sm);
 }
 
