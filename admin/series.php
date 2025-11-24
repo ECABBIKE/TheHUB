@@ -452,14 +452,14 @@ include __DIR__ . '/../includes/layout-header.php';
                                 <thead>
                                     <tr>
                                         <th>Namn</th>
-                                        <th>Typ</th>
-                                        <th>Format</th>
-                                        <th>Status</th>
-                                        <th>Startdatum</th>
-                                        <th>Slutdatum</th>
-                                        <th>Arrangör</th>
-                                        <th>Events</th>
-                                        <th class="gs-table-col-100">Åtgärder</th>
+                                        <th class="gs-col-tablet">Typ</th>
+                                        <th class="gs-col-desktop">Format</th>
+                                        <th class="gs-col-landscape">Status</th>
+                                        <th class="gs-col-tablet">Startdatum</th>
+                                        <th class="gs-col-desktop">Slutdatum</th>
+                                        <th class="gs-col-desktop">Arrangör</th>
+                                        <th class="gs-col-landscape">Events</th>
+                                        <th class="gs-actions-col">Åtgärder</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -477,22 +477,22 @@ include __DIR__ . '/../includes/layout-header.php';
                                             <td>
                                                 <strong><?= h($serie['name']) ?></strong>
                                             </td>
-                                            <td><?= h($serie['type'] ?? '-') ?></td>
-                                            <td>
+                                            <td class="gs-col-tablet"><?= h($serie['type'] ?? '-') ?></td>
+                                            <td class="gs-col-desktop">
                                                 <span class="gs-badge"><?= h($serie['format'] ?? 'Championship') ?></span>
                                             </td>
-                                            <td>
+                                            <td class="gs-col-landscape">
                                                 <span class="gs-badge gs-badge-<?= $statusInfo['badge'] ?>">
                                                     <?= $statusInfo['text'] ?>
                                                 </span>
                                             </td>
-                                            <td><?= $serie['start_date'] ? date('d M Y', strtotime($serie['start_date'])) : '-' ?></td>
-                                            <td><?= $serie['end_date'] ? date('d M Y', strtotime($serie['end_date'])) : '-' ?></td>
-                                            <td><?= h($serie['organizer'] ?? '-') ?></td>
-                                            <td>
+                                            <td class="gs-col-tablet"><?= $serie['start_date'] ? date('d M Y', strtotime($serie['start_date'])) : '-' ?></td>
+                                            <td class="gs-col-desktop"><?= $serie['end_date'] ? date('d M Y', strtotime($serie['end_date'])) : '-' ?></td>
+                                            <td class="gs-col-desktop"><?= h($serie['organizer'] ?? '-') ?></td>
+                                            <td class="gs-col-landscape">
                                                 <span class="gs-text-sm"><?= $serie['events_count'] ?></span>
                                             </td>
-                                            <td>
+                                            <td class="gs-actions-col">
                                                 <div class="gs-flex gs-gap-sm">
                                                     <?php if ($seriesEventsTableExists): ?>
                                                     <a

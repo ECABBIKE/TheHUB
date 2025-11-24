@@ -79,26 +79,26 @@ include __DIR__ . '/../includes/layout-header.php';
                 <?php if (empty($upcomingEvents)): ?>
                     <p class="gs-text-secondary">Inga kommande events</p>
                 <?php else: ?>
-                    <div class="gs-table-responsive">
+                    <div class="gs-table-scrollable">
                         <table class="gs-table">
                             <thead>
                                 <tr>
                                     <th>Event</th>
-                                    <th>Datum</th>
-                                    <th>Plats</th>
-                                    <th>Åtgärder</th>
+                                    <th class="gs-col-landscape">Datum</th>
+                                    <th class="gs-col-tablet">Plats</th>
+                                    <th class="gs-actions-col">Åtgärder</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <?php foreach ($upcomingEvents as $event): ?>
                                     <tr>
                                         <td><strong><?= htmlspecialchars($event['name']) ?></strong></td>
-                                        <td><?= date('d M Y', strtotime($event['date'])) ?></td>
-                                        <td><?= htmlspecialchars($event['location'] ?? '-') ?></td>
-                                        <td>
+                                        <td class="gs-col-landscape"><?= date('d M Y', strtotime($event['date'])) ?></td>
+                                        <td class="gs-col-tablet"><?= htmlspecialchars($event['location'] ?? '-') ?></td>
+                                        <td class="gs-actions-col">
                                             <a href="/admin/event-ticketing.php?id=<?= $event['id'] ?>" class="gs-btn gs-btn-sm gs-btn-primary">
                                                 <i data-lucide="settings"></i>
-                                                Konfigurera
+                                                <span class="gs-col-landscape">Konfigurera</span>
                                             </a>
                                         </td>
                                     </tr>
@@ -120,21 +120,21 @@ include __DIR__ . '/../includes/layout-header.php';
                 </h2>
             </div>
             <div class="gs-card-content">
-                <div class="gs-table-responsive">
+                <div class="gs-table-scrollable">
                     <table class="gs-table">
                         <thead>
                             <tr>
                                 <th>Event</th>
-                                <th>Datum</th>
-                                <th>Plats</th>
+                                <th class="gs-col-landscape">Datum</th>
+                                <th class="gs-col-tablet">Plats</th>
                             </tr>
                         </thead>
                         <tbody>
                             <?php foreach ($pastEvents as $event): ?>
                                 <tr>
                                     <td><?= htmlspecialchars($event['name']) ?></td>
-                                    <td><?= date('d M Y', strtotime($event['date'])) ?></td>
-                                    <td><?= htmlspecialchars($event['location'] ?? '-') ?></td>
+                                    <td class="gs-col-landscape"><?= date('d M Y', strtotime($event['date'])) ?></td>
+                                    <td class="gs-col-tablet"><?= htmlspecialchars($event['location'] ?? '-') ?></td>
                                 </tr>
                             <?php endforeach; ?>
                         </tbody>

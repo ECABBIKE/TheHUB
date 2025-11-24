@@ -157,28 +157,28 @@ include __DIR__ . '/../includes/layout-header.php';
                         <p>Inga events hittades.</p>
                     </div>
                 <?php else: ?>
-                    <div class="gs-table-responsive">
+                    <div class="gs-table-scrollable">
                         <table class="gs-table">
                             <thead>
                                 <tr>
-                                    <th>Datum</th>
+                                    <th class="gs-col-landscape">Datum</th>
                                     <th>Namn</th>
-                                    <th>Serie</th>
-                                    <th>Plats</th>
-                                    <th>Tävlingsformat</th>
-                                    <th class="gs-table-col-actions">Åtgärder</th>
+                                    <th class="gs-col-landscape">Serie</th>
+                                    <th class="gs-col-tablet">Plats</th>
+                                    <th class="gs-col-desktop">Tävlingsformat</th>
+                                    <th class="gs-actions-col">Åtgärder</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <?php foreach ($events as $event): ?>
                                     <tr>
-                                        <td><?= htmlspecialchars($event['date'] ?? '-') ?></td>
+                                        <td class="gs-col-landscape"><?= htmlspecialchars($event['date'] ?? '-') ?></td>
                                         <td>
                                             <strong><?= htmlspecialchars($event['name']) ?></strong>
                                         </td>
-                                        <td><?= htmlspecialchars($event['series_name'] ?? '-') ?></td>
-                                        <td><?= htmlspecialchars($event['location'] ?? '-') ?></td>
-                                        <td>
+                                        <td class="gs-col-landscape"><?= htmlspecialchars($event['series_name'] ?? '-') ?></td>
+                                        <td class="gs-col-tablet"><?= htmlspecialchars($event['location'] ?? '-') ?></td>
+                                        <td class="gs-col-desktop">
                                             <select class="gs-input gs-input-sm" style="min-width: 120px;" onchange="updateDiscipline(<?= $event['id'] ?>, this.value)">
                                                 <option value="">-</option>
                                                 <option value="ENDURO" <?= ($event['discipline'] ?? '') === 'ENDURO' ? 'selected' : '' ?>>Enduro</option>
