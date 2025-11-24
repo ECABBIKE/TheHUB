@@ -75,6 +75,8 @@ $results = $db->getAll("
         v.city as venue_city,
         cls.name as class_name,
         cls.display_name as class_display_name,
+        COALESCE(cls.awards_points, 1) as awards_points,
+        COALESCE(cls.series_eligible, 1) as series_eligible,
         (
             SELECT COUNT(*) + 1
             FROM results r2
@@ -127,16 +129,24 @@ foreach ($results as $result) {
 
     $totalRaces++;
 
+    // Only count competitive stats for classes that award points
+    $awardsPoints = $result['awards_points'] ?? 1;
+
     // Use class_position for statistics (position within rider's class)
     $classPos = $result['class_position'] ?? null;
-    if ($result['status'] === 'finished' && $classPos) {
+    if ($result['status'] === 'finished' && $classPos && $awardsPoints) {
         if ($classPos == 1) $wins++;
         if ($classPos <= 3) $podiums++;
         if ($bestPosition === null || $classPos < $bestPosition) {
             $bestPosition = $classPos;
         }
     }
-    $totalPoints += $result['points'] ?? 0;
+
+    // Only count points if class awards points
+    if ($awardsPoints) {
+        $totalPoints += $result['points'] ?? 0;
+    }
+
     if ($result['status'] === 'dnf') $dnfCount++;
 }
 
@@ -715,7 +725,8 @@ try {
                                                     </td>
                                                     <td class="gs-text-center">
                                                         <?php
-                                                        $displayPos = ($result['status'] === 'finished') ? ($result['class_position'] ?? null) : null;
+                                                        $awardsPoints = $result['awards_points'] ?? 1;
+                                                        $displayPos = ($result['status'] === 'finished' && $awardsPoints) ? ($result['class_position'] ?? null) : null;
                                                         ?>
                                                         <?php if ($result['status'] === 'dnf'): ?>
                                                             <span class="gs-badge gs-badge-danger">DNF</span>
@@ -729,6 +740,8 @@ try {
                                                             <?php else: ?>
                                                                 <span><?= $displayPos ?></span>
                                                             <?php endif; ?>
+                                                        <?php elseif ($result['status'] === 'finished' && !$awardsPoints): ?>
+                                                            <span class="gs-text-secondary" style="font-size: 0.75rem;">Ej tävling</span>
                                                         <?php else: ?>
                                                             -
                                                         <?php endif; ?>
@@ -750,7 +763,11 @@ try {
                                                         ?>
                                                     </td>
                                                     <td class="gs-text-center">
-                                                        <?= $result['points'] ?? 0 ?>
+                                                        <?php if ($awardsPoints): ?>
+                                                            <?= $result['points'] ?? 0 ?>
+                                                        <?php else: ?>
+                                                            <span class="gs-text-secondary">-</span>
+                                                        <?php endif; ?>
                                                     </td>
                                                 </tr>
                                             <?php endforeach; ?>

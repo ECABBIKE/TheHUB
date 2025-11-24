@@ -340,7 +340,53 @@ include __DIR__ . '/../includes/layout-header.php';
                         <p class="gs-text-secondary gs-mt-md">Inga migrationsfiler hittades i /database/migrations</p>
                     </div>
                 <?php else: ?>
-                    <div class="gs-table-responsive">
+                    <!-- Mobile View: Cards -->
+                    <div class="migration-cards gs-p-sm">
+                        <?php foreach ($migrationFiles as $file):
+                            $executed = $executedMigrations[$file] ?? null;
+                            $isSuccess = $executed && $executed['success'];
+                            $isFailed = $executed && !$executed['success'];
+                        ?>
+                            <div class="migration-card <?= $isSuccess ? 'success' : ($isFailed ? 'failed' : 'pending') ?>">
+                                <div class="migration-card-header">
+                                    <div class="migration-filename"><?= h($file) ?></div>
+                                    <div class="migration-status">
+                                        <?php if ($isSuccess): ?>
+                                            <span class="gs-badge gs-badge-success">✓ Körd</span>
+                                        <?php elseif ($isFailed): ?>
+                                            <span class="gs-badge gs-badge-danger">✗ Misslyckad</span>
+                                        <?php else: ?>
+                                            <span class="gs-badge gs-badge-warning">⏳ Väntande</span>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+                                <?php if ($executed): ?>
+                                    <div class="migration-date">
+                                        Körd: <?= date('Y-m-d H:i', strtotime($executed['executed_at'])) ?>
+                                    </div>
+                                <?php endif; ?>
+                                <?php if ($isFailed && $executed['error_message']): ?>
+                                    <div class="migration-error">
+                                        <?= h($executed['error_message']) ?>
+                                    </div>
+                                <?php endif; ?>
+                                <div class="migration-action">
+                                    <form method="POST">
+                                        <?= csrf_field() ?>
+                                        <button type="submit" name="run_migration" value="<?= h($file) ?>"
+                                                class="gs-btn gs-btn-block <?= $isSuccess ? 'gs-btn-outline' : 'gs-btn-primary' ?>"
+                                                onclick="return confirm('Kör migration <?= h($file) ?>?')">
+                                            <i data-lucide="play"></i>
+                                            <?= $isSuccess ? 'Kör igen' : 'Kör migration' ?>
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+
+                    <!-- Desktop View: Table -->
+                    <div class="migration-table">
                         <table class="gs-table">
                             <thead>
                                 <tr>
@@ -400,5 +446,107 @@ include __DIR__ . '/../includes/layout-header.php';
         </div>
     </div>
 </main>
+
+<style>
+/* Mobile-first migration styles */
+.migration-cards {
+    display: flex;
+    flex-direction: column;
+    gap: var(--gs-space-sm);
+}
+
+.migration-table {
+    display: none;
+}
+
+.migration-card {
+    background: var(--gs-white);
+    border: 1px solid var(--gs-border);
+    border-radius: var(--gs-radius-md);
+    padding: var(--gs-space-md);
+    transition: all 0.2s;
+}
+
+.migration-card:hover {
+    box-shadow: var(--gs-shadow-sm);
+}
+
+.migration-card.success {
+    border-left: 4px solid var(--gs-success);
+}
+
+.migration-card.failed {
+    border-left: 4px solid var(--gs-danger);
+}
+
+.migration-card.pending {
+    border-left: 4px solid var(--gs-warning);
+}
+
+.migration-card-header {
+    display: flex;
+    flex-direction: column;
+    gap: var(--gs-space-sm);
+    margin-bottom: var(--gs-space-sm);
+}
+
+.migration-filename {
+    font-weight: 600;
+    font-size: 0.875rem;
+    word-break: break-all;
+    line-height: 1.4;
+}
+
+.migration-status {
+    display: flex;
+    align-items: center;
+}
+
+.migration-date {
+    font-size: 0.75rem;
+    color: var(--gs-text-secondary);
+    margin-bottom: var(--gs-space-sm);
+}
+
+.migration-error {
+    background: #fee;
+    border: 1px solid #fcc;
+    border-radius: var(--gs-radius-sm);
+    padding: var(--gs-space-xs);
+    font-size: 0.75rem;
+    color: var(--gs-danger);
+    margin-bottom: var(--gs-space-sm);
+    word-break: break-word;
+}
+
+.migration-action {
+    margin-top: var(--gs-space-sm);
+}
+
+/* Desktop view: Show table, hide cards */
+@media (min-width: 768px) {
+    .migration-cards {
+        display: none;
+    }
+
+    .migration-table {
+        display: block;
+    }
+}
+
+/* Improve button spacing on mobile */
+.gs-btn-block {
+    width: 100%;
+    justify-content: center;
+}
+
+/* Better touch targets on mobile */
+@media (max-width: 767px) {
+    .gs-btn {
+        padding: 0.75rem 1rem;
+        font-size: 1rem;
+    }
+}
+</style>
 
 <?php include __DIR__ . '/../includes/layout-footer.php'; ?>
