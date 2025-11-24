@@ -260,10 +260,13 @@ function calculateAllRankingPoints($db, $debug = false) {
         echo "<p>🗑️ Clearing old ranking points...</p>";
         flush();
     }
-    $db->query("DELETE FROM ranking_points WHERE event_date >= ?", [$cutoffDate]);
+
+    // Use TRUNCATE instead of DELETE for much better performance
+    // TRUNCATE is instant and doesn't have the hanging issues that DELETE has
+    $db->query("TRUNCATE TABLE ranking_points");
 
     if ($debug) {
-        echo "<p>✅ Old points cleared</p>";
+        echo "<p>✅ Old points cleared (TRUNCATE)</p>";
         flush();
     }
 
