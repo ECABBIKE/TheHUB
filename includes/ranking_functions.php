@@ -738,12 +738,16 @@ function getRankingStats($db) {
         );
         $stats[$discipline]['riders'] = $count ? $count['count'] : 0;
 
-        // Get club counts
-        $clubCount = $db->getRow(
-            "SELECT COUNT(*) as count FROM club_ranking_snapshots WHERE discipline = ? AND snapshot_date = ?",
-            [$discipline, $snapshotDate]
-        );
-        $stats[$discipline]['clubs'] = $clubCount ? $clubCount['count'] : 0;
+        // Get club counts (if table exists)
+        try {
+            $clubCount = $db->getRow(
+                "SELECT COUNT(*) as count FROM club_ranking_snapshots WHERE discipline = ? AND snapshot_date = ?",
+                [$discipline, $snapshotDate]
+            );
+            $stats[$discipline]['clubs'] = $clubCount ? $clubCount['count'] : 0;
+        } catch (Exception $e) {
+            $stats[$discipline]['clubs'] = 0;
+        }
     }
 
     // Get event counts

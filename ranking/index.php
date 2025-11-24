@@ -33,7 +33,12 @@ $offset = ($page - 1) * $perPage;
 if ($view === 'clubs') {
     $ranking = ['clubs' => [], 'total' => 0, 'snapshot_date' => null, 'discipline' => $discipline];
     if ($tablesExist) {
-        $ranking = getCurrentClubRanking($db, $discipline, $perPage, $offset);
+        try {
+            $ranking = getCurrentClubRanking($db, $discipline, $perPage, $offset);
+        } catch (Exception $e) {
+            // Club ranking table doesn't exist yet
+            $ranking = ['clubs' => [], 'total' => 0, 'snapshot_date' => null, 'discipline' => $discipline];
+        }
     }
 } else {
     $ranking = ['riders' => [], 'total' => 0, 'snapshot_date' => null, 'discipline' => $discipline];

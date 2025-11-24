@@ -27,11 +27,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Run full calculation
         $calcStats = calculateAllRankingPoints($db);
         $snapshotStats = createRankingSnapshot($db);
-        $clubSnapshotStats = createClubRankingSnapshot($db);
+
+        // Try to create club rankings (will skip if table doesn't exist)
+        $clubSnapshotStats = ['enduro' => 0, 'dh' => 0, 'gravity' => 0, 'clubs_ranked' => 0];
+        try {
+            $clubSnapshotStats = createClubRankingSnapshot($db);
+        } catch (Exception $e) {
+            // Club ranking table doesn't exist yet - skip silently
+            error_log("Club ranking skipped: " . $e->getMessage());
+        }
 
         $message = "Beräkning klar! {$calcStats['events_processed']} events, {$calcStats['riders_processed']} resultat. ";
         $message .= "Rankade åkare: Enduro {$snapshotStats['enduro']}, DH {$snapshotStats['dh']}, Gravity {$snapshotStats['gravity']}. ";
-        $message .= "Rankade klubbar: Enduro {$clubSnapshotStats['enduro']}, DH {$clubSnapshotStats['dh']}, Gravity {$clubSnapshotStats['gravity']}.";
+        if ($clubSnapshotStats['clubs_ranked'] > 0) {
+            $message .= "Rankade klubbar: Enduro {$clubSnapshotStats['enduro']}, DH {$clubSnapshotStats['dh']}, Gravity {$clubSnapshotStats['gravity']}.";
+        }
         $messageType = 'success';
 
     } elseif (isset($_POST['save_multipliers'])) {
