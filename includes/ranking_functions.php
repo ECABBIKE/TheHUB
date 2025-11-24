@@ -369,6 +369,10 @@ function calculateAllRankingPoints($db, $debug = false) {
             break;
         }
 
+        // Collect all values for bulk insert
+        $insertValues = [];
+        $insertParams = [];
+
         foreach ($results as $result) {
             $key = $result['event_id'] . '_' . $result['class_id'];
 
@@ -390,28 +394,33 @@ function calculateAllRankingPoints($db, $debug = false) {
             $eventLevelMult = getEventLevelMultiplier($eventLevel, $eventLevelMultipliers);
             $rankingPoints = round($result['original_points'] * $fieldMult * $eventLevelMult, 2);
 
-            // Use INSERT IGNORE to skip duplicates silently (faster and simpler)
+            // Add to bulk insert
+            $insertValues[] = "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            $insertParams[] = $result['rider_id'];
+            $insertParams[] = $result['event_id'];
+            $insertParams[] = $result['class_id'];
+            $insertParams[] = $discipline;
+            $insertParams[] = $result['original_points'];
+            $insertParams[] = $fieldSize;
+            $insertParams[] = $fieldMult;
+            $insertParams[] = $eventLevelMult;
+            $insertParams[] = $rankingPoints;
+            $insertParams[] = $result['event_date'];
+
+            $stats['riders_processed']++;
+            $stats['total_points'] += $rankingPoints;
+        }
+
+        // Execute bulk insert for this batch
+        if (!empty($insertValues)) {
+            $valuesStr = implode(', ', $insertValues);
             $db->query("
                 INSERT IGNORE INTO ranking_points (
                     rider_id, event_id, class_id, discipline,
                     original_points, field_size, field_multiplier,
                     event_level_multiplier, ranking_points, event_date
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ", [
-                $result['rider_id'],
-                $result['event_id'],
-                $result['class_id'],
-                $discipline,
-                $result['original_points'],
-                $fieldSize,
-                $fieldMult,
-                $eventLevelMult,
-                $rankingPoints,
-                $result['event_date']
-            ]);
-
-            $stats['riders_processed']++;
-            $stats['total_points'] += $rankingPoints;
+                ) VALUES {$valuesStr}
+            ", $insertParams);
         }
 
         $offset += $batchSize;
