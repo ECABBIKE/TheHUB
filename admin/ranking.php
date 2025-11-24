@@ -1,7 +1,7 @@
 <?php
 /**
  * Admin Ranking Settings
- * Manage the 24-month rolling ranking system for GravitySeries riders
+ * Manage the 24-month rolling ranking system for Enduro, Downhill, and Gravity
  */
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/../includes/ranking_functions.php';
@@ -28,7 +28,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $calcStats = calculateAllRankingPoints($db);
         $snapshotStats = createRankingSnapshot($db);
 
-        $message = "Beräkning klar! {$calcStats['events_processed']} events, {$calcStats['riders_processed']} resultat, {$snapshotStats['riders_ranked']} åkare rankade.";
+        $message = "Beräkning klar! {$calcStats['events_processed']} events, {$calcStats['riders_processed']} resultat. ";
+        $message .= "Rankade: Enduro {$snapshotStats['enduro']}, DH {$snapshotStats['dh']}, Gravity {$snapshotStats['gravity']}.";
         $messageType = 'success';
 
     } elseif (isset($_POST['save_multipliers'])) {
@@ -62,10 +63,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $message = 'Tidsviktning sparad.';
         $messageType = 'success';
 
+    } elseif (isset($_POST['save_event_level'])) {
+        // Save event level multipliers
+        $eventLevel = [
+            'national' => max(0, min(1, (float)$_POST['level_national'])),
+            'sportmotion' => max(0, min(1, (float)$_POST['level_sportmotion']))
+        ];
+
+        saveEventLevelMultipliers($db, $eventLevel);
+        $message = 'Eventtypsviktning sparad.';
+        $messageType = 'success';
+
     } elseif (isset($_POST['reset_defaults'])) {
         // Reset to defaults
         saveFieldMultipliers($db, getDefaultFieldMultipliers());
         saveTimeDecay($db, getDefaultTimeDecay());
+        saveEventLevelMultipliers($db, getDefaultEventLevelMultipliers());
         $message = 'Inställningar återställda till standardvärden.';
         $messageType = 'success';
     }
@@ -74,34 +87,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // Get current settings
 $multipliers = getRankingFieldMultipliers($db);
 $timeDecay = getRankingTimeDecay($db);
+$eventLevelMultipliers = getEventLevelMultipliers($db);
 $lastCalc = getLastRankingCalculation($db);
 
-// Get statistics
-$stats = [
-    'riders_ranked' => 0,
-    'total_results' => 0,
-    'last_snapshot' => null,
-    'total_events' => 0
-];
+// Get statistics per discipline
+$disciplineStats = getRankingStats($db);
 
-if (rankingTablesExist($db)) {
-    $latestSnapshot = $db->getRow("SELECT MAX(snapshot_date) as snapshot_date FROM ranking_snapshots");
-    $stats['last_snapshot'] = $latestSnapshot ? $latestSnapshot['snapshot_date'] : null;
-
-    if ($stats['last_snapshot']) {
-        $ridersRanked = $db->getRow(
-            "SELECT COUNT(*) as count FROM ranking_snapshots WHERE snapshot_date = ?",
-            [$stats['last_snapshot']]
-        );
-        $stats['riders_ranked'] = $ridersRanked ? $ridersRanked['count'] : 0;
-    }
-
-    $totalResults = $db->getRow("SELECT COUNT(*) as count FROM ranking_points");
-    $stats['total_results'] = $totalResults ? $totalResults['count'] : 0;
-
-    $totalEvents = $db->getRow("SELECT COUNT(DISTINCT event_id) as count FROM ranking_points");
-    $stats['total_events'] = $totalEvents ? $totalEvents['count'] : 0;
-}
+// Get last snapshot date
+$latestSnapshot = $db->getRow("SELECT MAX(snapshot_date) as snapshot_date FROM ranking_snapshots");
+$lastSnapshotDate = $latestSnapshot ? $latestSnapshot['snapshot_date'] : null;
 
 $pageTitle = 'Ranking';
 $pageType = 'admin';
@@ -130,32 +124,30 @@ include __DIR__ . '/../includes/layout-header.php';
             </div>
         <?php endif; ?>
 
-        <!-- Statistics Cards -->
-        <div class="gs-grid gs-grid-cols-4 gs-gap-md gs-mb-lg">
-            <div class="gs-card gs-text-center">
-                <div class="gs-card-content">
-                    <div class="gs-text-3xl gs-font-bold gs-text-primary"><?= $stats['riders_ranked'] ?></div>
-                    <div class="gs-text-sm gs-text-secondary">Rankade åkare</div>
+        <!-- Statistics Cards per Discipline -->
+        <div class="gs-grid gs-grid-cols-3 gs-gap-md gs-mb-lg">
+            <!-- Enduro -->
+            <div class="gs-card">
+                <div class="gs-card-content gs-text-center">
+                    <h3 class="gs-text-sm gs-text-secondary gs-mb-sm">Enduro</h3>
+                    <div class="gs-text-2xl gs-font-bold gs-text-primary"><?= $disciplineStats['ENDURO']['riders'] ?></div>
+                    <div class="gs-text-xs gs-text-secondary">åkare • <?= $disciplineStats['ENDURO']['events'] ?> events</div>
                 </div>
             </div>
-            <div class="gs-card gs-text-center">
-                <div class="gs-card-content">
-                    <div class="gs-text-3xl gs-font-bold gs-text-primary"><?= $stats['total_results'] ?></div>
-                    <div class="gs-text-sm gs-text-secondary">Resultat</div>
+            <!-- Downhill -->
+            <div class="gs-card">
+                <div class="gs-card-content gs-text-center">
+                    <h3 class="gs-text-sm gs-text-secondary gs-mb-sm">Downhill</h3>
+                    <div class="gs-text-2xl gs-font-bold gs-text-primary"><?= $disciplineStats['DH']['riders'] ?></div>
+                    <div class="gs-text-xs gs-text-secondary">åkare • <?= $disciplineStats['DH']['events'] ?> events</div>
                 </div>
             </div>
-            <div class="gs-card gs-text-center">
-                <div class="gs-card-content">
-                    <div class="gs-text-3xl gs-font-bold gs-text-primary"><?= $stats['total_events'] ?></div>
-                    <div class="gs-text-sm gs-text-secondary">Events</div>
-                </div>
-            </div>
-            <div class="gs-card gs-text-center">
-                <div class="gs-card-content">
-                    <div class="gs-text-sm gs-font-bold gs-text-primary">
-                        <?= $stats['last_snapshot'] ? date('Y-m-d', strtotime($stats['last_snapshot'])) : 'Aldrig' ?>
-                    </div>
-                    <div class="gs-text-sm gs-text-secondary">Senaste snapshot</div>
+            <!-- Gravity -->
+            <div class="gs-card">
+                <div class="gs-card-content gs-text-center">
+                    <h3 class="gs-text-sm gs-text-secondary gs-mb-sm">Gravity</h3>
+                    <div class="gs-text-2xl gs-font-bold gs-text-primary"><?= $disciplineStats['GRAVITY']['riders'] ?></div>
+                    <div class="gs-text-xs gs-text-secondary">åkare • <?= $disciplineStats['GRAVITY']['events'] ?> events</div>
                 </div>
             </div>
         </div>
@@ -172,11 +164,12 @@ include __DIR__ . '/../includes/layout-header.php';
                 </div>
                 <div class="gs-card-content">
                     <ul class="gs-text-sm" style="margin: 0; padding-left: 1.5rem; line-height: 1.8;">
-                        <li>24 månaders rullande ranking för GravitySeries Total</li>
+                        <li>Tre rankingar: <strong>Enduro</strong>, <strong>Downhill</strong>, <strong>Gravity</strong> (kombinerad)</li>
+                        <li>24 månaders rullande fönster</li>
                         <li>Poäng viktas efter fältstorlek (antal deltagare i klassen)</li>
+                        <li>Nationella event: 100%, Sportmotion: 50% (justerbart)</li>
                         <li>Senaste 12 månader: 100% av poängen</li>
                         <li>Månad 13-24: 50% av poängen</li>
-                        <li>Äldre än 24 månader: förfaller helt</li>
                         <li>Uppdateras automatiskt 1:e varje månad</li>
                     </ul>
                 </div>
@@ -198,6 +191,9 @@ include __DIR__ . '/../includes/layout-header.php';
                             <br>
                             <?= $lastCalc['events_processed'] ?> events, <?= $lastCalc['riders_processed'] ?> resultat
                         <?php endif; ?>
+                        <br><br>
+                        Senaste snapshot:
+                        <strong><?= $lastSnapshotDate ? date('Y-m-d', strtotime($lastSnapshotDate)) : 'Aldrig' ?></strong>
                     </p>
 
                     <form method="POST">
@@ -209,6 +205,51 @@ include __DIR__ . '/../includes/layout-header.php';
                         </button>
                     </form>
                 </div>
+            </div>
+        </div>
+
+        <!-- Event Level Multipliers -->
+        <div class="gs-card gs-mb-lg">
+            <div class="gs-card-header">
+                <h2 class="gs-h4 gs-text-primary">
+                    <i data-lucide="trophy"></i>
+                    Eventtypsviktning
+                </h2>
+            </div>
+            <div class="gs-card-content">
+                <p class="gs-text-sm gs-text-secondary gs-mb-lg">
+                    Nationella tävlingar ger fulla poäng. Sportmotion-event kan viktas ned för att spegla lägre tävlingsnivå.
+                </p>
+
+                <form method="POST">
+                    <?= csrf_field() ?>
+
+                    <div class="gs-grid gs-grid-cols-2 gs-gap-lg">
+                        <div class="gs-form-group">
+                            <label for="level_national" class="gs-label">Nationell tävling</label>
+                            <input type="number" id="level_national" name="level_national"
+                                   value="<?= number_format($eventLevelMultipliers['national'], 2) ?>"
+                                   min="0" max="1" step="0.01"
+                                   class="gs-input">
+                            <small class="gs-text-secondary">Officiella tävlingar (standard 100%)</small>
+                        </div>
+                        <div class="gs-form-group">
+                            <label for="level_sportmotion" class="gs-label">Sportmotion</label>
+                            <input type="number" id="level_sportmotion" name="level_sportmotion"
+                                   value="<?= number_format($eventLevelMultipliers['sportmotion'], 2) ?>"
+                                   min="0" max="1" step="0.01"
+                                   class="gs-input">
+                            <small class="gs-text-secondary">Breddtävlingar (standard 50%)</small>
+                        </div>
+                    </div>
+
+                    <div class="gs-flex gs-gap-sm gs-mt-lg">
+                        <button type="submit" name="save_event_level" class="gs-btn gs-btn-primary">
+                            <i data-lucide="save"></i>
+                            Spara eventtypsviktning
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
 

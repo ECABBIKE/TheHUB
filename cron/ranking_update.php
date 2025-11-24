@@ -46,7 +46,7 @@ try {
     $snapshotDate = date('Y-m-01'); // First of current month
     echo "[$logDate] Creating snapshot for $snapshotDate...\n";
     $snapshotStats = createRankingSnapshot($db, $snapshotDate);
-    echo "[$logDate] Ranked {$snapshotStats['riders_ranked']} riders\n";
+    echo "[$logDate] Ranked riders - Enduro: {$snapshotStats['enduro']}, DH: {$snapshotStats['dh']}, Gravity: {$snapshotStats['gravity']}\n";
 
     // Step 3: Cleanup old data (older than 26 months)
     echo "[$logDate] Cleaning up old data...\n";

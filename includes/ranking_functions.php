@@ -2,11 +2,14 @@
 /**
  * Ranking System Functions for TheHUB
  *
- * Calculates and manages the 24-month rolling ranking system for GravitySeries riders.
- * Points are weighted based on field size and time decay.
+ * Calculates and manages the 24-month rolling ranking system with separate
+ * Enduro, Downhill, and Gravity (combined) rankings.
  *
- * Formula: Ranking Points = Original Points × Field Multiplier × Time Multiplier
+ * Formula: Ranking Points = Original Points × Field Multiplier × Event Level Multiplier × Time Multiplier
  */
+
+// Valid disciplines for ranking
+define('RANKING_DISCIPLINES', ['ENDURO', 'DH', 'GRAVITY']);
 
 /**
  * Get default field size multipliers
@@ -34,6 +37,16 @@ function getDefaultTimeDecay() {
 }
 
 /**
+ * Get default event level multipliers
+ */
+function getDefaultEventLevelMultipliers() {
+    return [
+        'national' => 1.00,
+        'sportmotion' => 0.50
+    ];
+}
+
+/**
  * Get field multipliers from database settings
  */
 function getRankingFieldMultipliers($db) {
@@ -44,7 +57,6 @@ function getRankingFieldMultipliers($db) {
     if ($result && $result['setting_value']) {
         $decoded = json_decode($result['setting_value'], true);
         if ($decoded) {
-            // Convert string keys to integers
             $multipliers = [];
             foreach ($decoded as $key => $value) {
                 $multipliers[(int)$key] = (float)$value;
@@ -75,11 +87,11 @@ function getRankingTimeDecay($db) {
 }
 
 /**
- * Get series filter from database
+ * Get event level multipliers from database
  */
-function getRankingSeriesFilter($db) {
+function getEventLevelMultipliers($db) {
     $result = $db->getRow(
-        "SELECT setting_value FROM ranking_settings WHERE setting_key = 'series_filter'"
+        "SELECT setting_value FROM ranking_settings WHERE setting_key = 'event_level_multipliers'"
     );
 
     if ($result && $result['setting_value']) {
@@ -89,7 +101,7 @@ function getRankingSeriesFilter($db) {
         }
     }
 
-    return ['GravitySeries Total'];
+    return getDefaultEventLevelMultipliers();
 }
 
 /**
@@ -115,7 +127,6 @@ function getTimeDecayMultiplier($eventDate, $referenceDate, $timeDecay) {
     $interval = $eventDateTime->diff($referenceDateTime);
     $monthsDiff = ($interval->y * 12) + $interval->m;
 
-    // Event is in the future or same month
     if ($eventDateTime > $referenceDateTime) {
         return $timeDecay['months_1_12'];
     }
@@ -127,6 +138,14 @@ function getTimeDecayMultiplier($eventDate, $referenceDate, $timeDecay) {
     } else {
         return $timeDecay['months_25_plus'];
     }
+}
+
+/**
+ * Get event level multiplier
+ */
+function getEventLevelMultiplier($eventLevel, $multipliers) {
+    $eventLevel = $eventLevel ?: 'national';
+    return $multipliers[$eventLevel] ?? 1.00;
 }
 
 /**
@@ -143,26 +162,41 @@ function getClassFieldSize($db, $eventId, $classId) {
 }
 
 /**
- * Calculate ranking points from original points and field size
+ * Normalize discipline name for consistency
  */
-function calculateRankingPoints($originalPoints, $fieldSize, $multipliers) {
-    $fieldMultiplier = getFieldMultiplier($fieldSize, $multipliers);
-    return round($originalPoints * $fieldMultiplier, 2);
+function normalizeDiscipline($discipline) {
+    $discipline = strtoupper(trim($discipline));
+
+    // Map variations to standard names
+    $mapping = [
+        'ENDURO' => 'ENDURO',
+        'DH' => 'DH',
+        'DOWNHILL' => 'DH',
+        'XC' => 'XC',
+        'XCO' => 'XC',
+        'XCM' => 'XC',
+    ];
+
+    return $mapping[$discipline] ?? $discipline;
 }
 
 /**
- * Get ranking-eligible results from the past 24 months
+ * Check if a discipline is valid for ranking
+ */
+function isRankingDiscipline($discipline) {
+    $normalized = normalizeDiscipline($discipline);
+    return in_array($normalized, ['ENDURO', 'DH']);
+}
+
+/**
+ * Get all ranking-eligible results from the past 24 months
  */
 function getRankingEligibleResults($db, $cutoffDate = null) {
     if (!$cutoffDate) {
         $cutoffDate = date('Y-m-d', strtotime('-24 months'));
     }
 
-    $seriesFilter = getRankingSeriesFilter($db);
-
-    // Build placeholders for IN clause
-    $placeholders = implode(',', array_fill(0, count($seriesFilter), '?'));
-
+    // Get results from ENDURO and DH events
     $results = $db->getAll("
         SELECT
             r.id as result_id,
@@ -172,24 +206,23 @@ function getRankingEligibleResults($db, $cutoffDate = null) {
             r.points as original_points,
             e.date as event_date,
             e.name as event_name,
-            s.name as series_name,
+            e.discipline,
+            COALESCE(e.event_level, 'national') as event_level,
             rd.firstname,
             rd.lastname,
             c.name as class_name
         FROM results r
         JOIN events e ON r.event_id = e.id
-        JOIN series_events se ON e.id = se.event_id
-        JOIN series s ON se.series_id = s.id
         JOIN riders rd ON r.cyclist_id = rd.id
         JOIN classes c ON r.class_id = c.id
         WHERE r.status = 'finished'
         AND r.points > 0
         AND e.date >= ?
-        AND s.name IN ($placeholders)
+        AND e.discipline IN ('ENDURO', 'DH')
         AND COALESCE(c.series_eligible, 1) = 1
         AND COALESCE(c.awards_points, 1) = 1
         ORDER BY e.date DESC, r.event_id, r.class_id, r.points DESC
-    ", array_merge([$cutoffDate], $seriesFilter));
+    ", [$cutoffDate]);
 
     return $results;
 }
@@ -205,7 +238,8 @@ function calculateAllRankingPoints($db) {
     ];
 
     $cutoffDate = date('Y-m-d', strtotime('-24 months'));
-    $multipliers = getRankingFieldMultipliers($db);
+    $fieldMultipliers = getRankingFieldMultipliers($db);
+    $eventLevelMultipliers = getEventLevelMultipliers($db);
 
     // Get all eligible results
     $results = getRankingEligibleResults($db, $cutoffDate);
@@ -222,6 +256,8 @@ function calculateAllRankingPoints($db) {
             $eventClasses[$key] = [
                 'event_id' => $result['event_id'],
                 'class_id' => $result['class_id'],
+                'discipline' => normalizeDiscipline($result['discipline']),
+                'event_level' => $result['event_level'],
                 'riders' => []
             ];
         }
@@ -237,26 +273,29 @@ function calculateAllRankingPoints($db) {
     foreach ($eventClasses as $key => $data) {
         $fieldSize = count($data['riders']);
         $eventId = $data['event_id'];
+        $discipline = $data['discipline'];
+        $eventLevel = $data['event_level'];
 
         if (!isset($processedEvents[$eventId])) {
             $processedEvents[$eventId] = true;
             $stats['events_processed']++;
         }
 
+        $fieldMult = getFieldMultiplier($fieldSize, $fieldMultipliers);
+        $eventLevelMult = getEventLevelMultiplier($eventLevel, $eventLevelMultipliers);
+
         foreach ($data['riders'] as $rider) {
-            $rankingPoints = calculateRankingPoints(
-                $rider['original_points'],
-                $fieldSize,
-                $multipliers
-            );
+            $rankingPoints = round($rider['original_points'] * $fieldMult * $eventLevelMult, 2);
 
             $db->insert('ranking_points', [
                 'rider_id' => $rider['rider_id'],
                 'event_id' => $rider['event_id'],
                 'class_id' => $rider['class_id'],
+                'discipline' => $discipline,
                 'original_points' => $rider['original_points'],
                 'field_size' => $fieldSize,
-                'field_multiplier' => getFieldMultiplier($fieldSize, $multipliers),
+                'field_multiplier' => $fieldMult,
+                'event_level_multiplier' => $eventLevelMult,
                 'ranking_points' => $rankingPoints,
                 'event_date' => $rider['event_date']
             ]);
@@ -281,17 +320,34 @@ function calculateAllRankingPoints($db) {
 }
 
 /**
- * Create a ranking snapshot for a specific date
+ * Create ranking snapshots for all disciplines
  */
 function createRankingSnapshot($db, $snapshotDate = null) {
     if (!$snapshotDate) {
-        $snapshotDate = date('Y-m-01'); // First of current month
+        $snapshotDate = date('Y-m-01');
     }
 
     $stats = [
-        'riders_ranked' => 0
+        'riders_ranked' => 0,
+        'enduro' => 0,
+        'dh' => 0,
+        'gravity' => 0
     ];
 
+    // Create snapshots for each discipline
+    $stats['enduro'] = createDisciplineSnapshot($db, 'ENDURO', $snapshotDate);
+    $stats['dh'] = createDisciplineSnapshot($db, 'DH', $snapshotDate);
+    $stats['gravity'] = createDisciplineSnapshot($db, 'GRAVITY', $snapshotDate);
+
+    $stats['riders_ranked'] = $stats['enduro'] + $stats['dh'] + $stats['gravity'];
+
+    return $stats;
+}
+
+/**
+ * Create a ranking snapshot for a specific discipline
+ */
+function createDisciplineSnapshot($db, $discipline, $snapshotDate) {
     $timeDecay = getRankingTimeDecay($db);
 
     // Calculate date boundaries
@@ -302,41 +358,71 @@ function createRankingSnapshot($db, $snapshotDate = null) {
     $previousSnapshotDate = date('Y-m-01', strtotime("$snapshotDate -1 month"));
     $previousRankings = [];
     $previousData = $db->getAll(
-        "SELECT rider_id, ranking_position FROM ranking_snapshots WHERE snapshot_date = ?",
-        [$previousSnapshotDate]
+        "SELECT rider_id, ranking_position FROM ranking_snapshots WHERE discipline = ? AND snapshot_date = ?",
+        [$discipline, $previousSnapshotDate]
     );
     foreach ($previousData as $row) {
         $previousRankings[$row['rider_id']] = $row['ranking_position'];
     }
 
-    // Clear existing snapshot for this date
-    $db->delete('ranking_snapshots', 'snapshot_date = ?', [$snapshotDate]);
+    // Clear existing snapshot for this discipline and date
+    $db->query(
+        "DELETE FROM ranking_snapshots WHERE discipline = ? AND snapshot_date = ?",
+        [$discipline, $snapshotDate]
+    );
+
+    // Build discipline filter for query
+    if ($discipline === 'GRAVITY') {
+        $disciplineCondition = "rp.discipline IN ('ENDURO', 'DH')";
+        $params = [$month12Cutoff, $month12Cutoff, $month24Cutoff, $month24Cutoff,
+                   $month12Cutoff, $timeDecay['months_1_12'],
+                   $month12Cutoff, $month24Cutoff, $timeDecay['months_13_24']];
+    } else {
+        $disciplineCondition = "rp.discipline = ?";
+        $params = [$discipline, $month12Cutoff, $month12Cutoff, $month24Cutoff, $month24Cutoff,
+                   $discipline, $month12Cutoff, $timeDecay['months_1_12'],
+                   $month12Cutoff, $month24Cutoff, $timeDecay['months_13_24']];
+    }
 
     // Calculate ranking points with time decay for each rider
-    $riderPoints = $db->getAll("
-        SELECT
-            rp.rider_id,
-            SUM(CASE WHEN rp.event_date >= ? THEN rp.ranking_points ELSE 0 END) as points_12,
-            SUM(CASE WHEN rp.event_date < ? AND rp.event_date >= ? THEN rp.ranking_points ELSE 0 END) as points_13_24,
-            COUNT(DISTINCT rp.event_id) as events_count
-        FROM ranking_points rp
-        WHERE rp.event_date >= ?
-        GROUP BY rp.rider_id
-        HAVING SUM(rp.ranking_points) > 0
-        ORDER BY (SUM(CASE WHEN rp.event_date >= ? THEN rp.ranking_points ELSE 0 END) * ? +
-                  SUM(CASE WHEN rp.event_date < ? AND rp.event_date >= ? THEN rp.ranking_points ELSE 0 END) * ?) DESC
-    ", [
-        $month12Cutoff, // points_12 condition
-        $month12Cutoff, $month24Cutoff, // points_13_24 conditions
-        $month24Cutoff, // WHERE condition
-        $month12Cutoff, $timeDecay['months_1_12'], // ORDER BY part 1
-        $month12Cutoff, $month24Cutoff, $timeDecay['months_13_24'] // ORDER BY part 2
-    ]);
+    if ($discipline === 'GRAVITY') {
+        $riderPoints = $db->getAll("
+            SELECT
+                rp.rider_id,
+                SUM(CASE WHEN rp.event_date >= ? THEN rp.ranking_points ELSE 0 END) as points_12,
+                SUM(CASE WHEN rp.event_date < ? AND rp.event_date >= ? THEN rp.ranking_points ELSE 0 END) as points_13_24,
+                COUNT(DISTINCT rp.event_id) as events_count
+            FROM ranking_points rp
+            WHERE rp.discipline IN ('ENDURO', 'DH')
+            AND rp.event_date >= ?
+            GROUP BY rp.rider_id
+            HAVING SUM(rp.ranking_points) > 0
+            ORDER BY (SUM(CASE WHEN rp.event_date >= ? THEN rp.ranking_points ELSE 0 END) * ? +
+                      SUM(CASE WHEN rp.event_date < ? AND rp.event_date >= ? THEN rp.ranking_points ELSE 0 END) * ?) DESC
+        ", $params);
+    } else {
+        $riderPoints = $db->getAll("
+            SELECT
+                rp.rider_id,
+                SUM(CASE WHEN rp.event_date >= ? THEN rp.ranking_points ELSE 0 END) as points_12,
+                SUM(CASE WHEN rp.event_date < ? AND rp.event_date >= ? THEN rp.ranking_points ELSE 0 END) as points_13_24,
+                COUNT(DISTINCT rp.event_id) as events_count
+            FROM ranking_points rp
+            WHERE rp.discipline = ?
+            AND rp.event_date >= ?
+            GROUP BY rp.rider_id
+            HAVING SUM(rp.ranking_points) > 0
+            ORDER BY (SUM(CASE WHEN rp.event_date >= ? THEN rp.ranking_points ELSE 0 END) * ? +
+                      SUM(CASE WHEN rp.event_date < ? AND rp.event_date >= ? THEN rp.ranking_points ELSE 0 END) * ?) DESC
+        ", [$month12Cutoff, $month12Cutoff, $month24Cutoff, $discipline, $month24Cutoff,
+            $month12Cutoff, $timeDecay['months_1_12'], $month12Cutoff, $month24Cutoff, $timeDecay['months_13_24']]);
+    }
 
     // Insert snapshots with rankings
     $rank = 1;
     $prevPoints = null;
     $prevRank = 1;
+    $ridersRanked = 0;
 
     foreach ($riderPoints as $rider) {
         $totalPoints = ($rider['points_12'] * $timeDecay['months_1_12']) +
@@ -360,6 +446,7 @@ function createRankingSnapshot($db, $snapshotDate = null) {
 
         $db->insert('ranking_snapshots', [
             'rider_id' => $rider['rider_id'],
+            'discipline' => $discipline,
             'snapshot_date' => $snapshotDate,
             'total_ranking_points' => round($totalPoints, 2),
             'points_last_12_months' => round($rider['points_12'], 2),
@@ -372,37 +459,37 @@ function createRankingSnapshot($db, $snapshotDate = null) {
 
         // Also save to history table
         $db->query("
-            INSERT INTO ranking_history (rider_id, month_date, ranking_position, total_points)
-            VALUES (?, ?, ?, ?)
+            INSERT INTO ranking_history (rider_id, discipline, month_date, ranking_position, total_points)
+            VALUES (?, ?, ?, ?, ?)
             ON DUPLICATE KEY UPDATE ranking_position = VALUES(ranking_position), total_points = VALUES(total_points)
-        ", [$rider['rider_id'], $snapshotDate, $currentRank, round($totalPoints, 2)]);
+        ", [$rider['rider_id'], $discipline, $snapshotDate, $currentRank, round($totalPoints, 2)]);
 
-        $stats['riders_ranked']++;
+        $ridersRanked++;
         $rank++;
     }
 
-    return $stats;
+    return $ridersRanked;
 }
 
 /**
- * Get current ranking with rider info
+ * Get current ranking for a specific discipline
  */
-function getCurrentRanking($db, $limit = 50, $offset = 0) {
-    // Get the most recent snapshot date
+function getCurrentRanking($db, $discipline = 'GRAVITY', $limit = 50, $offset = 0) {
+    // Get the most recent snapshot date for this discipline
     $latestSnapshot = $db->getRow("
-        SELECT MAX(snapshot_date) as snapshot_date FROM ranking_snapshots
-    ");
+        SELECT MAX(snapshot_date) as snapshot_date FROM ranking_snapshots WHERE discipline = ?
+    ", [$discipline]);
 
     if (!$latestSnapshot || !$latestSnapshot['snapshot_date']) {
-        return ['riders' => [], 'total' => 0, 'snapshot_date' => null];
+        return ['riders' => [], 'total' => 0, 'snapshot_date' => null, 'discipline' => $discipline];
     }
 
     $snapshotDate = $latestSnapshot['snapshot_date'];
 
     // Get total count
     $totalCount = $db->getRow("
-        SELECT COUNT(*) as total FROM ranking_snapshots WHERE snapshot_date = ?
-    ", [$snapshotDate]);
+        SELECT COUNT(*) as total FROM ranking_snapshots WHERE discipline = ? AND snapshot_date = ?
+    ", [$discipline, $snapshotDate]);
 
     // Get rankings with rider info
     $riders = $db->getAll("
@@ -423,38 +510,39 @@ function getCurrentRanking($db, $limit = 50, $offset = 0) {
         FROM ranking_snapshots rs
         JOIN riders r ON rs.rider_id = r.id
         LEFT JOIN clubs c ON r.club_id = c.id
-        WHERE rs.snapshot_date = ?
+        WHERE rs.discipline = ? AND rs.snapshot_date = ?
         ORDER BY rs.ranking_position ASC
         LIMIT ? OFFSET ?
-    ", [$snapshotDate, $limit, $offset]);
+    ", [$discipline, $snapshotDate, $limit, $offset]);
 
     return [
         'riders' => $riders,
         'total' => (int)$totalCount['total'],
-        'snapshot_date' => $snapshotDate
+        'snapshot_date' => $snapshotDate,
+        'discipline' => $discipline
     ];
 }
 
 /**
- * Get ranking history for a specific rider
+ * Get ranking history for a specific rider and discipline
  */
-function getRiderRankingHistory($db, $riderId, $months = 12) {
+function getRiderRankingHistory($db, $riderId, $discipline = 'GRAVITY', $months = 12) {
     return $db->getAll("
         SELECT
             month_date,
             ranking_position,
             total_points
         FROM ranking_history
-        WHERE rider_id = ?
+        WHERE rider_id = ? AND discipline = ?
         ORDER BY month_date DESC
         LIMIT ?
-    ", [$riderId, $months]);
+    ", [$riderId, $discipline, $months]);
 }
 
 /**
  * Get detailed ranking breakdown for a rider
  */
-function getRiderRankingDetails($db, $riderId) {
+function getRiderRankingDetails($db, $riderId, $discipline = 'GRAVITY') {
     // Get rider info
     $rider = $db->getRow("
         SELECT r.*, c.name as club_name
@@ -469,41 +557,54 @@ function getRiderRankingDetails($db, $riderId) {
 
     // Get current snapshot info
     $latestSnapshot = $db->getRow("
-        SELECT MAX(snapshot_date) as snapshot_date FROM ranking_snapshots
-    ");
+        SELECT MAX(snapshot_date) as snapshot_date FROM ranking_snapshots WHERE discipline = ?
+    ", [$discipline]);
 
     $snapshotDate = $latestSnapshot ? $latestSnapshot['snapshot_date'] : date('Y-m-01');
 
     $ranking = $db->getRow("
         SELECT * FROM ranking_snapshots
-        WHERE rider_id = ? AND snapshot_date = ?
-    ", [$riderId, $snapshotDate]);
+        WHERE rider_id = ? AND discipline = ? AND snapshot_date = ?
+    ", [$riderId, $discipline, $snapshotDate]);
+
+    // Build discipline filter
+    if ($discipline === 'GRAVITY') {
+        $disciplineCondition = "rp.discipline IN ('ENDURO', 'DH')";
+        $params = [$riderId];
+    } else {
+        $disciplineCondition = "rp.discipline = ?";
+        $params = [$riderId, $discipline];
+    }
 
     // Get event breakdown
     $events = $db->getAll("
         SELECT
             rp.event_id,
             rp.class_id,
+            rp.discipline,
             rp.original_points,
             rp.field_size,
             rp.field_multiplier,
+            rp.event_level_multiplier,
             rp.ranking_points,
             rp.event_date,
             e.name as event_name,
             e.location,
+            e.event_level,
             cl.name as class_name,
             cl.display_name as class_display_name
         FROM ranking_points rp
         JOIN events e ON rp.event_id = e.id
         JOIN classes cl ON rp.class_id = cl.id
-        WHERE rp.rider_id = ?
+        WHERE rp.rider_id = ? AND $disciplineCondition
         ORDER BY rp.event_date DESC
-    ", [$riderId]);
+    ", $params);
 
     return [
         'rider' => $rider,
         'ranking' => $ranking,
-        'events' => $events
+        'events' => $events,
+        'discipline' => $discipline
     ];
 }
 
@@ -529,6 +630,19 @@ function saveTimeDecay($db, $timeDecay) {
     return $db->query("
         INSERT INTO ranking_settings (setting_key, setting_value, description)
         VALUES ('time_decay', ?, 'Time decay multipliers by period')
+        ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value), updated_at = NOW()
+    ", [$json]);
+}
+
+/**
+ * Save event level multipliers to database
+ */
+function saveEventLevelMultipliers($db, $multipliers) {
+    $json = json_encode($multipliers);
+
+    return $db->query("
+        INSERT INTO ranking_settings (setting_key, setting_value, description)
+        VALUES ('event_level_multipliers', ?, 'Multipliers for event level (national vs sportmotion)')
         ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value), updated_at = NOW()
     ", [$json]);
 }
@@ -575,4 +689,54 @@ function cleanupOldRankingData($db, $monthsToKeep = 26) {
 
     // Delete old history (keep 36 months)
     $db->query("DELETE FROM ranking_history WHERE month_date < ?", [$snapshotCutoff]);
+}
+
+/**
+ * Get discipline display name
+ */
+function getDisciplineDisplayName($discipline) {
+    $names = [
+        'ENDURO' => 'Enduro',
+        'DH' => 'Downhill',
+        'GRAVITY' => 'Gravity'
+    ];
+    return $names[$discipline] ?? $discipline;
+}
+
+/**
+ * Get ranking statistics per discipline
+ */
+function getRankingStats($db) {
+    $stats = [
+        'ENDURO' => ['riders' => 0, 'events' => 0],
+        'DH' => ['riders' => 0, 'events' => 0],
+        'GRAVITY' => ['riders' => 0, 'events' => 0]
+    ];
+
+    // Get latest snapshot date
+    $latestSnapshot = $db->getRow("SELECT MAX(snapshot_date) as snapshot_date FROM ranking_snapshots");
+    if (!$latestSnapshot || !$latestSnapshot['snapshot_date']) {
+        return $stats;
+    }
+
+    $snapshotDate = $latestSnapshot['snapshot_date'];
+
+    // Get counts per discipline
+    foreach (['ENDURO', 'DH', 'GRAVITY'] as $discipline) {
+        $count = $db->getRow(
+            "SELECT COUNT(*) as count FROM ranking_snapshots WHERE discipline = ? AND snapshot_date = ?",
+            [$discipline, $snapshotDate]
+        );
+        $stats[$discipline]['riders'] = $count ? $count['count'] : 0;
+    }
+
+    // Get event counts
+    $enduroEvents = $db->getRow("SELECT COUNT(DISTINCT event_id) as count FROM ranking_points WHERE discipline = 'ENDURO'");
+    $dhEvents = $db->getRow("SELECT COUNT(DISTINCT event_id) as count FROM ranking_points WHERE discipline = 'DH'");
+
+    $stats['ENDURO']['events'] = $enduroEvents ? $enduroEvents['count'] : 0;
+    $stats['DH']['events'] = $dhEvents ? $dhEvents['count'] : 0;
+    $stats['GRAVITY']['events'] = $stats['ENDURO']['events'] + $stats['DH']['events'];
+
+    return $stats;
 }
