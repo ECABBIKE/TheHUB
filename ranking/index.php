@@ -1,7 +1,7 @@
 <?php
 /**
  * Public Ranking Page
- * Mobile-first responsive ranking display with gold/silver/bronze medals
+ * Mobile-first responsive ranking display with Enduro/Downhill/Gravity tabs
  */
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/../includes/ranking_functions.php';
@@ -11,20 +11,26 @@ $db = getDB();
 // Check if tables exist
 $tablesExist = rankingTablesExist($db);
 
+// Get selected discipline
+$discipline = isset($_GET['discipline']) ? strtoupper($_GET['discipline']) : 'GRAVITY';
+if (!in_array($discipline, ['ENDURO', 'DH', 'GRAVITY'])) {
+    $discipline = 'GRAVITY';
+}
+
 // Pagination
 $page = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1;
 $perPage = 50;
 $offset = ($page - 1) * $perPage;
 
 // Get current ranking
-$ranking = ['riders' => [], 'total' => 0, 'snapshot_date' => null];
+$ranking = ['riders' => [], 'total' => 0, 'snapshot_date' => null, 'discipline' => $discipline];
 if ($tablesExist) {
-    $ranking = getCurrentRanking($db, $perPage, $offset);
+    $ranking = getCurrentRanking($db, $discipline, $perPage, $offset);
 }
 
 $totalPages = ceil($ranking['total'] / $perPage);
 
-$pageTitle = 'GravitySeries Ranking';
+$pageTitle = getDisciplineDisplayName($discipline) . ' Ranking';
 $pageType = 'public';
 include __DIR__ . '/../includes/layout-header.php';
 ?>
@@ -45,10 +51,23 @@ include __DIR__ . '/../includes/layout-header.php';
                 <?php endif; ?>
             </div>
 
+            <!-- Discipline Tabs -->
+            <div class="gs-discipline-tabs gs-mb-lg">
+                <a href="?discipline=GRAVITY" class="gs-discipline-tab <?= $discipline === 'GRAVITY' ? 'active' : '' ?>">
+                    Gravity
+                </a>
+                <a href="?discipline=ENDURO" class="gs-discipline-tab <?= $discipline === 'ENDURO' ? 'active' : '' ?>">
+                    Enduro
+                </a>
+                <a href="?discipline=DH" class="gs-discipline-tab <?= $discipline === 'DH' ? 'active' : '' ?>">
+                    Downhill
+                </a>
+            </div>
+
             <!-- Info Banner -->
             <div class="gs-ranking-info-banner gs-mb-lg">
                 <i data-lucide="info" class="gs-text-primary"></i>
-                <span>24 månaders rullande ranking baserad på resultat i GravitySeries Total. Poäng viktas efter fältstorlek och ålder.</span>
+                <span>24 månaders rullande ranking. Poäng viktas efter fältstorlek och eventtyp (nationell/sportmotion).</span>
             </div>
 
             <?php if (!$tablesExist): ?>
@@ -64,7 +83,7 @@ include __DIR__ . '/../includes/layout-header.php';
                     <div class="gs-empty-state-icon">
                         <i data-lucide="trophy" style="width: 48px; height: 48px;"></i>
                     </div>
-                    <h3 class="gs-h4 gs-mb-sm">Ingen ranking ännu</h3>
+                    <h3 class="gs-h4 gs-mb-sm">Ingen <?= getDisciplineDisplayName($discipline) ?>-ranking ännu</h3>
                     <p class="gs-text-secondary">Rankingen uppdateras efter att resultat har registrerats och beräknats.</p>
                 </div>
             <?php else: ?>
@@ -206,7 +225,7 @@ include __DIR__ . '/../includes/layout-header.php';
                 <?php if ($totalPages > 1): ?>
                     <div class="gs-pagination">
                         <?php if ($page > 1): ?>
-                            <a href="?page=<?= $page - 1 ?>" class="gs-btn gs-btn-outline gs-btn-sm">
+                            <a href="?discipline=<?= $discipline ?>&page=<?= $page - 1 ?>" class="gs-btn gs-btn-outline gs-btn-sm">
                                 <i data-lucide="chevron-left"></i> Föregående
                             </a>
                         <?php endif; ?>
@@ -216,7 +235,7 @@ include __DIR__ . '/../includes/layout-header.php';
                         </span>
 
                         <?php if ($page < $totalPages): ?>
-                            <a href="?page=<?= $page + 1 ?>" class="gs-btn gs-btn-outline gs-btn-sm">
+                            <a href="?discipline=<?= $discipline ?>&page=<?= $page + 1 ?>" class="gs-btn gs-btn-outline gs-btn-sm">
                                 Nästa <i data-lucide="chevron-right"></i>
                             </a>
                         <?php endif; ?>
@@ -225,7 +244,7 @@ include __DIR__ . '/../includes/layout-header.php';
 
                 <!-- Info Footer -->
                 <div class="gs-text-center gs-mt-lg gs-text-xs gs-text-secondary">
-                    <p>Poäng = Originalpoäng × Fältstorlek × Tidsvikt</p>
+                    <p>Poäng = Originalpoäng × Fältstorlek × Eventtyp × Tidsvikt</p>
                     <p class="gs-mt-xs">Månad 1-12: 100% • Månad 13-24: 50%</p>
                 </div>
             <?php endif; ?>
@@ -238,6 +257,37 @@ include __DIR__ . '/../includes/layout-header.php';
 .gs-ranking-container {
     max-width: 900px;
     margin: 0 auto;
+}
+
+/* Discipline tabs */
+.gs-discipline-tabs {
+    display: flex;
+    justify-content: center;
+    gap: var(--gs-space-xs);
+    background: var(--gs-light);
+    padding: var(--gs-space-xs);
+    border-radius: var(--gs-radius-lg);
+}
+
+.gs-discipline-tab {
+    padding: var(--gs-space-sm) var(--gs-space-lg);
+    border-radius: var(--gs-radius-md);
+    font-weight: 500;
+    font-size: 0.875rem;
+    color: var(--gs-text-secondary);
+    text-decoration: none;
+    transition: all 0.2s;
+}
+
+.gs-discipline-tab:hover {
+    color: var(--gs-primary);
+    background: var(--gs-white);
+}
+
+.gs-discipline-tab.active {
+    background: var(--gs-primary);
+    color: var(--gs-white);
+    box-shadow: var(--gs-shadow-sm);
 }
 
 .gs-ranking-info-banner {
