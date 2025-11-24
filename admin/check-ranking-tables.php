@@ -79,13 +79,22 @@ try {
     // Check migrations table
     echo "8. Checking which migrations have been run...\n";
     try {
-        $migrations = $db->getAll("SELECT migration_file, executed_at FROM migrations ORDER BY id DESC LIMIT 10");
-        echo "   Recent migrations:\n";
-        foreach ($migrations as $m) {
-            echo "   - {$m['migration_file']} at {$m['executed_at']}\n";
+        // Try different possible column names
+        $migrations = $db->getAll("SELECT * FROM migrations ORDER BY id DESC LIMIT 10");
+        if (!empty($migrations)) {
+            echo "   Recent migrations:\n";
+            foreach ($migrations as $m) {
+                // Handle different column name formats
+                $fileName = $m['migration_file'] ?? $m['file'] ?? $m['name'] ?? 'Unknown';
+                $execTime = $m['executed_at'] ?? $m['created_at'] ?? $m['run_at'] ?? 'Unknown';
+                echo "   - {$fileName} at {$execTime}\n";
+            }
+        } else {
+            echo "   ℹ️  No migrations recorded yet\n";
         }
     } catch (Exception $e) {
-        echo "   ❌ Could not read migrations table: " . $e->getMessage() . "\n";
+        echo "   ℹ️  Could not read migrations table: " . $e->getMessage() . "\n";
+        echo "   (This is not critical - migrations may use a different tracking system)\n";
     }
     echo "\n";
 
