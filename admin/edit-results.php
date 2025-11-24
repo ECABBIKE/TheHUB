@@ -112,55 +112,6 @@ $pageType = 'admin';
 include __DIR__ . '/../includes/layout-header.php';
 ?>
 
-<style>
-/* Mobile Responsive for Edit Results Table */
-@media (max-width: 768px) {
-    /* Increase input field sizes for better touch interaction */
-    .gs-table input[name="position"] {
-        width: 70px !important;
-        padding: 0.5rem !important;
-        font-size: 16px !important;
-    }
-
-    .gs-table input[name="bib_number"] {
-        width: 90px !important;
-        padding: 0.5rem !important;
-        font-size: 16px !important;
-    }
-
-    .gs-table input[name="finish_time"] {
-        width: 110px !important;
-        padding: 0.5rem !important;
-        font-size: 16px !important;
-    }
-
-    .gs-table input[name="points"] {
-        width: 80px !important;
-        padding: 0.5rem !important;
-        font-size: 16px !important;
-    }
-
-    .gs-table select[name="status"] {
-        padding: 0.5rem !important;
-        font-size: 16px !important;
-    }
-
-    /* Make table scrollable with better touch handling */
-    .gs-card-content:has(table) {
-        -webkit-overflow-scrolling: touch;
-    }
-
-    /* Adjust button sizes for touch */
-    .gs-btn-sm {
-        padding: 0.5rem !important;
-    }
-
-    /* Make table font slightly larger */
-    .gs-table {
-        font-size: 0.875rem !important;
-    }
-}
-</style>
 
 <main class="gs-main-content">
     <div class="gs-container">

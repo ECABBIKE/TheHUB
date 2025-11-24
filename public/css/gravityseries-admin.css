@@ -1,0 +1,1260 @@
+/* =======================================================
+   GRAVITY SERIES — SWEDISH DOWNHILL & ENDURO
+   Theme: GravitySeries HUB - Admin Styles
+   Version: 4.0 — Mobile First & Orientation Aware
+   Date: 2025-11-23
+======================================================= */
+
+/* =======================================================
+   1. ADMIN LAYOUT
+======================================================= */
+
+.gs-admin-layout {
+  display: flex;
+  min-height: 100vh;
+  flex-direction: column;
+}
+
+.gs-admin-sidebar {
+  width: 100%;
+  background-color: var(--gs-dark);
+  color: var(--gs-white);
+  padding: var(--gs-space-md) 0;
+}
+
+.gs-admin-sidebar-header {
+  padding: 0 var(--gs-space-lg) var(--gs-space-md);
+  border-bottom: 1px solid var(--gs-gray);
+  margin-bottom: var(--gs-space-md);
+}
+
+.gs-admin-sidebar-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--gs-accent);
+  margin-bottom: var(--gs-space-xs);
+}
+
+.gs-admin-sidebar-nav {
+  list-style: none;
+}
+
+.gs-admin-sidebar-link {
+  display: flex;
+  align-items: center;
+  gap: var(--gs-space-sm);
+  padding: var(--gs-space-sm) var(--gs-space-lg);
+  color: var(--gs-text-light);
+  text-decoration: none;
+  transition: all var(--gs-transition-fast);
+  border-left: 3px solid transparent;
+  font-size: 0.875rem;
+}
+
+.gs-admin-sidebar-link svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+.gs-admin-sidebar-link:hover,
+.gs-admin-sidebar-link.active {
+  background-color: var(--gs-gray);
+  border-left-color: var(--gs-accent);
+  color: var(--gs-white);
+}
+
+.gs-admin-content {
+  flex: 1;
+  padding: var(--gs-space-md);
+}
+
+@media (min-width: 768px) {
+  .gs-admin-layout {
+    flex-direction: row;
+  }
+
+  .gs-admin-sidebar {
+    width: 200px;
+  }
+
+  .gs-admin-content {
+    padding: var(--gs-space-lg);
+  }
+}
+
+@media (min-width: 1024px) {
+  .gs-admin-sidebar {
+    width: 250px;
+    padding: var(--gs-space-xl) 0;
+  }
+
+  .gs-admin-content {
+    padding: var(--gs-space-2xl);
+  }
+
+  .gs-admin-sidebar-title {
+    font-size: 1.5rem;
+  }
+
+  .gs-admin-sidebar-link {
+    padding: var(--gs-space-md) var(--gs-space-lg);
+  }
+
+  .gs-admin-sidebar-link svg {
+    width: 18px;
+    height: 18px;
+  }
+}
+
+/* =======================================================
+   2. LOGIN PAGE
+======================================================= */
+
+.gs-login-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, var(--gs-primary) 0%, var(--gs-success) 100%);
+  padding: 1rem;
+}
+
+.gs-login-card {
+  width: 100%;
+  max-width: 400px;
+  background-color: var(--gs-white);
+  border-radius: var(--gs-radius-xl);
+  box-shadow: var(--gs-shadow-2xl);
+  padding: var(--gs-space-lg);
+}
+
+.gs-login-header {
+  text-align: center;
+  margin-bottom: var(--gs-space-lg);
+}
+
+.gs-login-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--gs-primary);
+  margin-bottom: var(--gs-space-xs);
+}
+
+.gs-login-subtitle {
+  color: var(--gs-text-secondary);
+  font-size: 0.875rem;
+}
+
+@media (min-width: 768px) {
+  .gs-login-card {
+    padding: var(--gs-space-2xl);
+  }
+
+  .gs-login-title {
+    font-size: 2rem;
+  }
+}
+
+/* =======================================================
+   3. MODAL SYSTEM
+======================================================= */
+
+.gs-modal-overlay-hidden {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 9999;
+  align-items: center;
+  justify-content: center;
+}
+
+.gs-modal-content-lg,
+.gs-modal-content-md,
+.gs-modal-content-sm {
+  background: white;
+  border-radius: 0;
+  width: 100%;
+  max-width: 100%;
+  max-height: 100vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+.gs-modal-content-lg { max-width: 100%; }
+.gs-modal-content-md { max-width: 100%; }
+.gs-modal-content-sm { max-width: 100%; }
+
+.gs-modal-header-sticky {
+  padding: 1rem;
+  border-bottom: 1px solid var(--gs-border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: sticky;
+  top: 0;
+  background: white;
+  z-index: 10;
+}
+
+.gs-modal-body-padded {
+  padding: 1rem;
+}
+
+.gs-modal-footer-sticky {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--gs-border);
+  margin-top: 1rem;
+  position: sticky;
+  bottom: 0;
+  background: white;
+}
+
+.gs-modal-close-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 24px;
+  color: var(--gs-text-secondary);
+}
+
+.gs-modal-close-btn:hover {
+  color: var(--gs-text);
+}
+
+@media (min-width: 768px) {
+  .gs-modal-content-lg,
+  .gs-modal-content-md,
+  .gs-modal-content-sm {
+    border-radius: 12px;
+    width: 95%;
+  }
+
+  .gs-modal-content-lg { max-width: 1200px; }
+  .gs-modal-content-md { max-width: 900px; }
+  .gs-modal-content-sm { max-width: 700px; }
+
+  .gs-modal-header-sticky,
+  .gs-modal-body-padded {
+    padding: 1.5rem;
+  }
+}
+
+/* =======================================================
+   4. LOADING STATES
+======================================================= */
+
+@keyframes gs-spin {
+  to { transform: rotate(360deg); }
+}
+
+.gs-spinner {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: var(--gs-white);
+  animation: gs-spin 0.6s linear infinite;
+}
+
+.gs-spinner-lg {
+  width: 48px;
+  height: 48px;
+  border-width: 4px;
+}
+
+.gs-spinner-primary {
+  border-color: rgba(0, 74, 152, 0.3);
+  border-top-color: var(--gs-primary);
+}
+
+.gs-loading {
+  position: relative;
+  pointer-events: none;
+  opacity: 0.6;
+}
+
+.gs-loading::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 20px;
+  height: 20px;
+  border: 2px solid rgba(0, 74, 152, 0.3);
+  border-radius: 50%;
+  border-top-color: var(--gs-primary);
+  animation: gs-spin 0.6s linear infinite;
+}
+
+/* =======================================================
+   5. STAT CARDS - COLORED VARIANTS
+======================================================= */
+
+.gs-stat-card-success {
+  background: #d1fae5;
+  padding: 0.75rem;
+  border-radius: 8px;
+}
+
+.gs-stat-card-info {
+  background: #dbeafe;
+  padding: 0.75rem;
+  border-radius: 8px;
+}
+
+.gs-stat-card-warning {
+  background: #fef3c7;
+  padding: 0.75rem;
+  border-radius: 8px;
+}
+
+.gs-stat-card-error {
+  background: #fee2e2;
+  padding: 0.75rem;
+  border-radius: 8px;
+}
+
+.gs-stat-number-success { font-size: 1.5rem; font-weight: bold; color: #065f46; }
+.gs-stat-number-info { font-size: 1.5rem; font-weight: bold; color: #1e40af; }
+.gs-stat-number-warning { font-size: 1.5rem; font-weight: bold; color: #92400e; }
+.gs-stat-number-error { font-size: 1.5rem; font-weight: bold; color: #991b1b; }
+
+.gs-stat-label-success { color: #047857; }
+.gs-stat-label-info { color: #1d4ed8; }
+.gs-stat-label-warning { color: #b45309; }
+.gs-stat-label-error { color: #dc2626; }
+
+@media (min-width: 768px) {
+  .gs-stat-card-success,
+  .gs-stat-card-info,
+  .gs-stat-card-warning,
+  .gs-stat-card-error {
+    padding: 1rem;
+  }
+
+  .gs-stat-number-success,
+  .gs-stat-number-info,
+  .gs-stat-number-warning,
+  .gs-stat-number-error {
+    font-size: 2rem;
+  }
+}
+
+/* =======================================================
+   6. TABLE UTILITIES
+======================================================= */
+
+.gs-table-sm { font-size: 0.9rem; }
+
+.gs-table-container-no-padding {
+  padding: 0;
+  overflow-x: auto;
+}
+
+.gs-table-min-width-600 { min-width: 600px; }
+.gs-table-wrapper-scroll { overflow-x: auto; }
+
+/* Table column widths */
+.gs-table-th-w60 { width: 60px; text-align: center; }
+.gs-table-th-w80 { width: 80px; text-align: center; }
+.gs-table-th-w100 { width: 100px; text-align: center; }
+.gs-table-th-w120 { width: 120px; text-align: center; }
+.gs-table-th-w150 { width: 150px; }
+
+.gs-table-col-actions { width: 120px; }
+.gs-table-col-actions-lg { width: 150px; text-align: right; }
+
+/* Row backgrounds */
+.gs-table-row-bg-error { background: #fee2e2; }
+.gs-table-row-bg-warning { background: #fef3c7; }
+.gs-table-row-bg-info { background: #dbeafe; }
+
+/* Section headers */
+.gs-table-section-yellow { background: rgba(255, 235, 59, 0.1); }
+.gs-table-section-red { background: rgba(244, 67, 54, 0.1); }
+.gs-table-section-blue { background: rgba(33, 150, 243, 0.1); }
+.gs-table-section-green { background: rgba(76, 175, 80, 0.1); }
+.gs-table-section-purple { background: rgba(156, 39, 176, 0.1); }
+
+/* Sortable header */
+.gs-sortable-header {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+}
+
+/* =======================================================
+   7. FORM UTILITIES
+======================================================= */
+
+.gs-form-container {
+  max-width: 500px;
+  margin: 1rem auto;
+  padding: 0 1rem;
+}
+
+.gs-form-container-md {
+  max-width: 600px;
+  margin: 1rem auto;
+  padding: 0 1rem;
+}
+
+.gs-form-max-width { max-width: 600px; }
+.gs-form-max-width-600 { max-width: 600px; }
+.gs-form-flex-1 { flex: 1; }
+
+.gs-form-footer-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--gs-border);
+  margin-top: 1rem;
+}
+
+/* Input widths */
+.gs-input-xs { padding: 0.25rem; }
+.gs-input-w60 { width: 60px; text-align: center; padding: 0.25rem; }
+.gs-input-w70 { width: 70px; text-align: center; padding: 0.25rem; }
+.gs-input-w80 { width: 80px; text-align: center; padding: 0.25rem; }
+.gs-input-w100 { width: 100px; text-align: center; padding: 0.25rem; }
+.gs-input-w100-mono { width: 100px; text-align: center; padding: 0.25rem; font-family: monospace; }
+
+@media (min-width: 768px) {
+  .gs-form-container,
+  .gs-form-container-md {
+    margin: 3rem auto;
+  }
+}
+
+/* =======================================================
+   8. SCROLLABLE CONTAINERS
+======================================================= */
+
+.gs-scroll-x-touch {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.gs-scroll-y-300 {
+  max-height: 300px;
+  overflow-y: auto;
+  background: var(--gs-background-secondary);
+  padding: var(--gs-space-md);
+  border-radius: var(--gs-radius-md);
+}
+
+.gs-scroll-y-400 {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.gs-scrollable-lg {
+  max-height: 400px;
+  overflow-y: auto;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  background: var(--gs-background-secondary);
+  padding: var(--gs-space-md);
+  border-radius: var(--gs-radius-md);
+}
+
+.gs-scrollable-md {
+  max-height: 300px;
+  overflow-y: auto;
+  background: var(--gs-background-secondary);
+  padding: var(--gs-space-md);
+  border-radius: var(--gs-radius-md);
+}
+
+/* =======================================================
+   9. CODE & PRE BLOCKS
+======================================================= */
+
+.gs-code-xs { font-size: 0.75rem; }
+.gs-code-sm { font-size: 0.9rem; display: block; word-wrap: break-word; }
+
+.gs-code-wrapper {
+  background: var(--gs-background-secondary);
+  padding: 0.5rem;
+  border-radius: 4px;
+}
+
+.gs-code-inline {
+  background: var(--gs-background);
+  padding: 0.25rem 0.5rem;
+  border-radius: 3px;
+}
+
+.gs-code-block {
+  display: block;
+  background: var(--gs-background-secondary);
+  padding: var(--gs-space-md);
+  border-radius: var(--gs-radius-md);
+  overflow-x: auto;
+  font-size: 12px;
+  margin-top: var(--gs-space-sm);
+}
+
+.gs-pre-format {
+  background: var(--gs-background-secondary);
+  padding: var(--gs-space-md);
+  border-radius: var(--gs-radius-md);
+  overflow-x: auto;
+  font-size: 11px;
+  margin-top: var(--gs-space-sm);
+}
+
+.gs-pre-gray {
+  background: #f5f5f5;
+  padding: 1rem;
+  border-radius: 4px;
+  overflow-x: auto;
+}
+
+.gs-pre-error {
+  background: #fee;
+  padding: 1rem;
+  border: 2px solid #dc2626;
+  border-radius: 4px;
+  overflow-x: auto;
+}
+
+/* =======================================================
+   10. INFO & STAT BOXES
+======================================================= */
+
+.gs-info-box {
+  background: var(--gs-white);
+  padding: 1rem;
+  border-radius: var(--gs-radius-md);
+  border: 1px solid var(--gs-border);
+}
+
+.gs-info-box-bordered {
+  background: white;
+  padding: 1rem;
+  border-radius: var(--gs-radius-md);
+  border: 1px solid #fbbf24;
+  margin-bottom: 1rem;
+}
+
+.gs-info-box-accent {
+  padding: var(--gs-space-md);
+  background: var(--gs-background-secondary);
+  border-radius: var(--gs-radius-md);
+  border-left: 4px solid var(--gs-primary);
+}
+
+.gs-stat-box {
+  padding: var(--gs-space-md);
+  background: var(--gs-background-secondary);
+  border-radius: var(--gs-radius-md);
+}
+
+.gs-stat-box-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--gs-space-md);
+}
+
+.gs-stat-display-lg {
+  padding: 1rem;
+  background: var(--gs-background-secondary);
+  border-radius: 8px;
+}
+
+.gs-stat-display-number {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: var(--gs-primary);
+}
+
+.gs-stat-text { margin: 0; font-size: 1rem; }
+.gs-stat-text-md { font-size: 1rem; margin-bottom: 0.75rem; }
+.gs-stat-value-primary { color: var(--gs-primary); font-weight: bold; }
+.gs-stat-value-success { color: var(--gs-success); }
+
+@media (min-width: 768px) {
+  .gs-stat-box-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .gs-stat-display-number {
+    font-size: 2rem;
+  }
+
+  .gs-stat-text {
+    font-size: 1.1rem;
+  }
+
+  .gs-stat-text-md {
+    font-size: 1.1rem;
+    margin-bottom: 1rem;
+  }
+}
+
+/* =======================================================
+   11. ERROR & SUCCESS DISPLAYS
+======================================================= */
+
+.gs-error-list-container {
+  max-height: 300px;
+  overflow-y: auto;
+  background: var(--gs-background-secondary);
+  padding: var(--gs-space-md);
+  border-radius: var(--gs-radius-md);
+}
+
+.gs-error-list-item {
+  margin-bottom: 4px;
+}
+
+.gs-error-display {
+  background: #fee;
+  padding: 1rem;
+  border: 2px solid red;
+}
+
+.gs-error-box-danger {
+  color: #dc3545;
+  background: #f8d7da;
+  padding: 1rem;
+  border-radius: 5px;
+  margin: 10px 0;
+}
+
+.gs-success-icon-lg {
+  font-size: 3rem;
+  margin-bottom: 0.75rem;
+}
+
+.gs-success-icon-center {
+  width: 48px;
+  height: 48px;
+  margin: 0 auto 1rem;
+  color: var(--gs-success);
+}
+
+@media (min-width: 768px) {
+  .gs-success-icon-lg {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+  }
+
+  .gs-success-icon-center {
+    width: 64px;
+    height: 64px;
+  }
+}
+
+/* =======================================================
+   12. PROGRESS BAR
+======================================================= */
+
+.gs-progress-container {
+  display: none;
+  margin-top: var(--gs-space-lg);
+}
+
+.gs-progress-bar {
+  width: 100%;
+  height: 8px;
+  background: var(--gs-background-secondary);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.gs-progress-fill {
+  width: 0%;
+  height: 100%;
+  background: var(--gs-primary);
+  transition: width 0.3s;
+}
+
+.gs-progress-bar-container {
+  width: 100%;
+  height: 8px;
+  background: var(--gs-background-secondary);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.gs-progress-bar-fill {
+  width: 0%;
+  height: 100%;
+  background: var(--gs-primary);
+  transition: width 0.3s;
+}
+
+/* =======================================================
+   13. LIST UTILITIES
+======================================================= */
+
+.gs-list-reset { list-style: none; padding: 0; }
+.gs-list-decimal { list-style: decimal; margin-left: 1.5rem; }
+.gs-list-indented { margin-left: var(--gs-space-lg); line-height: 1.8; }
+.gs-list-indented-nested { margin-left: var(--gs-space-lg); margin-top: 4px; }
+.gs-list-spaced { margin-top: 0.75rem; margin-left: 1.5rem; line-height: 1.8; }
+.gs-list-compact { line-height: 1.7; margin-left: 1.25rem; }
+.gs-list-ml-1-5 { margin-left: 1.5rem; margin-top: 0.5rem; }
+
+/* =======================================================
+   14. SECTION DIVIDERS
+======================================================= */
+
+.gs-section-divider {
+  padding-top: var(--gs-space-md);
+  border-top: 1px solid var(--gs-border);
+}
+
+.gs-section-divider-top {
+  padding-top: var(--gs-space-lg);
+  border-top: 1px solid var(--gs-border);
+}
+
+/* =======================================================
+   15. ADDITIONAL UTILITIES
+======================================================= */
+
+/* Spacing */
+.gs-mt-2 { margin-top: 0.5rem; }
+.gs-mt-4 { margin-top: 1rem; }
+.gs-mt-8 { margin-top: 2rem; }
+.gs-mb-2 { margin-bottom: 0.5rem; }
+.gs-mb-4px { margin-bottom: 4px; }
+.gs-mr-4px { margin-right: 4px; }
+.gs-my-4 { margin-top: 1rem; margin-bottom: 1rem; }
+
+.gs-p-3 { padding: 0.75rem 1rem; }
+.gs-padding-3rem-center { padding: 3rem; text-align: center; }
+
+/* Margins */
+.gs-margin-0 { margin: 0; }
+.gs-margin-list { margin: 0.5rem 0 0 1.5rem; }
+
+/* Max widths */
+.gs-max-w-sm { max-width: 500px; margin-left: auto; margin-right: auto; }
+.gs-max-w-md { max-width: 600px; margin-left: auto; margin-right: auto; }
+.gs-max-w-200 { max-width: 200px; }
+.gs-max-w-800 { max-width: 800px; }
+.gs-max-w-900 { max-width: 900px; }
+
+/* Container widths */
+.gs-container-max-1200 { max-width: 1200px; }
+.gs-container-max-800-center { max-width: 800px; margin: 2rem auto; }
+.gs-container-max-700 { max-width: 700px; }
+.gs-container-max-600 { max-width: 600px; }
+
+/* Backgrounds */
+.gs-bg-info-box {
+  padding: 1rem;
+  background: var(--gs-background-secondary);
+  border-radius: var(--gs-radius-md);
+}
+
+.gs-bg-info-box-primary {
+  padding: var(--gs-space-md);
+  background: var(--gs-background-secondary);
+  border-radius: var(--gs-radius-md);
+  border-left: 4px solid var(--gs-primary);
+}
+
+.gs-bg-success {
+  background: var(--gs-success-bg);
+  border-left: 4px solid var(--gs-success);
+  border-radius: 4px;
+}
+
+.gs-bg-secondary-br8 {
+  background: var(--gs-background-secondary);
+  border-radius: 8px;
+}
+
+.gs-gradient-brand {
+  background: linear-gradient(135deg, rgba(0, 74, 152, 0.05) 0%, rgba(239, 118, 31, 0.05) 100%);
+}
+
+/* Text */
+.gs-text-italic { font-style: italic; }
+.gs-text-underline { text-decoration: underline; }
+
+.gs-heading-m0-fs125 {
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+.gs-text-subdued {
+  opacity: 0.8;
+  font-size: 0.875rem;
+  font-weight: normal;
+}
+
+/* Borders */
+.gs-border-top { border-top: 1px solid var(--gs-border); }
+.gs-border-w-3 { border-width: 3px; }
+
+/* Display */
+.gs-display-inline { display: inline; }
+.gs-display-inline-block { display: inline-block; }
+.gs-block-mt-qtr { display: block; margin-top: 0.25rem; }
+
+/* Line height */
+.gs-line-height-1-8 { line-height: 1.8; }
+
+/* Center */
+.gs-center-p20 { text-align: center; padding: 20px; }
+
+/* Cursor */
+.gs-cursor-pointer-danger { cursor: pointer; color: var(--gs-danger); }
+.gs-summary-pointer { cursor: pointer; font-weight: 600; }
+
+/* Point row utilities */
+.gs-point-row-label-wrapper { width: 80px; }
+.gs-point-row-input-wrapper { flex: 1; }
+
+/* Icons */
+.gs-icon-12 { width: 12px; height: 12px; }
+.gs-icon-14 { width: 14px; height: 14px; }
+.gs-icon-24 { width: 24px; height: 24px; }
+.gs-icon-48 { width: 48px; height: 48px; }
+
+.gs-icon-48-empty {
+  width: 48px;
+  height: 48px;
+  margin: 0 auto 1rem;
+  opacity: 0.3;
+}
+
+.gs-icon-64-secondary {
+  width: 64px;
+  height: 64px;
+  color: var(--gs-text-secondary);
+  margin-bottom: var(--gs-space-md);
+}
+
+/* Featured cards */
+.gs-featured-card-primary {
+  background: linear-gradient(135deg, rgba(0, 74, 152, 0.05) 0%, rgba(239, 118, 31, 0.05) 100%);
+  border: 2px solid var(--gs-primary);
+}
+
+.gs-featured-card-success {
+  border: 2px solid #86efac;
+  background: #f0fdf4;
+  margin-bottom: var(--gs-space-xl);
+}
+
+.gs-featured-card-warning {
+  border: 2px solid #fbbf24;
+  background: #fffbeb;
+  margin-bottom: var(--gs-space-xl);
+}
+
+.gs-featured-header-primary { background-color: var(--gs-primary); color: var(--gs-white); }
+.gs-featured-header-success { background: #10b981; }
+.gs-featured-header-warning { background: #f59e0b; }
+.gs-featured-header-title { color: white; margin: 0; }
+
+/* Button variants */
+.gs-btn-warning-solid {
+  margin-top: 1rem;
+  background: #f59e0b;
+  color: white;
+}
+
+.gs-btn-swecup {
+  background: #005aa7;
+  color: white;
+  width: 100%;
+}
+
+/* Alert utilities */
+.gs-alert-accent {
+  margin-top: 0.75rem;
+  padding: 0.75rem;
+  background: rgba(239, 118, 31, 0.1);
+  border-left: 3px solid var(--gs-accent);
+  border-radius: var(--gs-radius-sm);
+}
+
+.gs-alert-primary {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: rgba(0, 74, 152, 0.05);
+  border-radius: var(--gs-radius-sm);
+}
+
+.gs-alert-border-danger {
+  border-left: 4px solid var(--gs-danger);
+}
+
+/* Logo preview */
+.gs-logo-preview {
+  margin-top: 10px;
+  display: none;
+}
+
+.gs-logo-preview img {
+  max-width: 200px;
+  max-height: 100px;
+  margin-top: 5px;
+}
+
+/* Filter section */
+.gs-filter-active {
+  padding-top: var(--gs-space-md);
+  border-top: 1px solid var(--gs-border);
+}
+
+/* Details/Summary */
+details.gs-details { cursor: pointer; }
+
+details.gs-details summary {
+  cursor: pointer;
+  font-weight: 600;
+  padding: 0.5rem;
+  background: var(--gs-light);
+  border-radius: var(--gs-radius-sm);
+}
+
+details.gs-details-lg summary {
+  cursor: pointer;
+  font-weight: 600;
+  padding: 0.75rem;
+  background: var(--gs-light);
+  border-radius: var(--gs-radius-sm);
+  margin-bottom: 0.5rem;
+}
+
+/* Rider metadata */
+.gs-rider-meta { font-size: 0.75rem; color: var(--gs-text-secondary); margin-top: 2px; }
+.gs-rider-meta-text { font-size: 0.75rem; color: var(--gs-text-secondary); }
+
+/* Grid column */
+.gs-col-span-2 { grid-column: span 2; }
+
+/* Multi-column */
+.gs-cols-2 { columns: 2; column-gap: 2rem; }
+
+/* Scroll list */
+.gs-scroll-list-300 {
+  max-height: 300px;
+  overflow-y: auto;
+  margin-top: 0.5rem;
+}
+
+/* =======================================================
+   16. TABS (Admin navigation tabs)
+======================================================= */
+
+.gs-tabs {
+  display: flex;
+  gap: 0.25rem;
+  border-bottom: 2px solid var(--gs-border);
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.gs-tab {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  color: var(--gs-text-secondary);
+  text-decoration: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  transition: all 0.2s;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.gs-tab:hover {
+  color: var(--gs-text-primary);
+}
+
+.gs-tab.active {
+  color: var(--gs-primary);
+  border-bottom-color: var(--gs-primary);
+}
+
+.gs-tab i,
+.gs-tab svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* =======================================================
+   17. MOBILE FORM OVERRIDES
+======================================================= */
+
+@media (max-width: 768px) {
+  /* Larger inputs for touch */
+  .gs-table input[type="text"],
+  .gs-table input[type="number"] {
+    padding: 0.5rem !important;
+    font-size: 16px !important;
+  }
+}
+
+/* =======================================================
+   18. RADIO CARDS
+======================================================= */
+
+.gs-radio-card {
+  border: 2px solid var(--gs-border);
+  border-radius: var(--gs-radius-md);
+  padding: var(--gs-space-md);
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  gap: var(--gs-space-md);
+}
+
+.gs-radio-card:hover {
+  border-color: var(--gs-primary);
+  background: var(--gs-light);
+}
+
+.gs-radio-card.active {
+  border-color: var(--gs-primary);
+  background: rgba(102, 126, 234, 0.05);
+}
+
+.gs-radio-card-content {
+  flex: 1;
+}
+
+.gs-radio-card-title {
+  font-weight: 600;
+  margin-bottom: var(--gs-space-xs);
+  display: flex;
+  align-items: center;
+  gap: var(--gs-space-xs);
+}
+
+.gs-radio-card-description {
+  font-size: 0.875rem;
+  color: var(--gs-text-secondary);
+}
+
+/* =======================================================
+   19. CATEGORY TABS (Button style)
+======================================================= */
+
+.gs-category-tabs {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.5rem;
+}
+
+.gs-category-tab {
+  padding: 0.5rem 1rem;
+  border-radius: var(--gs-radius-md);
+  font-size: 0.875rem;
+  text-decoration: none;
+  background: var(--gs-light);
+  color: var(--gs-text-secondary);
+  border: 1px solid var(--gs-border);
+  transition: all 0.2s;
+}
+
+.gs-category-tab:hover {
+  background: var(--gs-gray-200);
+}
+
+.gs-category-tab.active {
+  background: var(--gs-primary);
+  color: white;
+  border-color: var(--gs-primary);
+}
+
+@media (max-width: 640px) {
+  .gs-category-tabs {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    padding-bottom: 0.5rem;
+  }
+
+  .gs-category-tab {
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+}
+
+/* =======================================================
+   20. INFO GRID (System Info Display)
+======================================================= */
+
+.gs-info-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+}
+
+@media (min-width: 768px) {
+  .gs-info-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+.gs-info-item {
+  padding: 1rem;
+  background: var(--gs-bg-secondary);
+  border-radius: var(--gs-radius-md);
+}
+
+.gs-info-label {
+  font-size: 0.75rem;
+  color: var(--gs-text-secondary);
+  text-transform: uppercase;
+  margin-bottom: 0.25rem;
+}
+
+.gs-info-value {
+  font-weight: 600;
+  color: var(--gs-text-primary);
+}
+
+.gs-info-value-sm {
+  font-size: 0.75rem;
+  word-break: break-all;
+}
+
+/* =======================================================
+   21. DEBUG TOOL ITEMS
+======================================================= */
+
+.gs-debug-tool-item {
+  padding: 0.75rem;
+  background: var(--gs-bg-secondary);
+  border-radius: var(--gs-radius-md);
+  margin-bottom: 0.5rem;
+  transition: background 0.2s;
+}
+
+.gs-debug-tool-item:hover {
+  background: var(--gs-bg-tertiary);
+}
+
+/* =======================================================
+   22. GLOBAL TEXT CARD
+======================================================= */
+
+.gs-global-text-card {
+  margin-bottom: 1rem;
+}
+
+.gs-global-text-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.gs-global-text-textarea {
+  width: 100%;
+  min-height: 120px;
+  font-family: inherit;
+  resize: vertical;
+}
+
+/* =======================================================
+   23. EDIT RESULTS MOBILE OVERRIDES
+======================================================= */
+
+@media (max-width: 768px) {
+  .gs-table input[name="position"],
+  .gs-table input[name="bib_number"],
+  .gs-table input[name="finish_time"],
+  .gs-table input[name="points"],
+  .gs-table select[name="status"] {
+    padding: 0.5rem !important;
+    font-size: 16px !important;
+  }
+
+  .gs-table input[name="position"] {
+    width: 70px !important;
+  }
+
+  .gs-table input[name="bib_number"] {
+    width: 90px !important;
+  }
+
+  .gs-table input[name="finish_time"] {
+    width: 110px !important;
+  }
+
+  .gs-table input[name="points"] {
+    width: 80px !important;
+  }
+}
+
+/* =======================================================
+   24. LOGIN PAGE
+======================================================= */
+
+.gs-login-page {
+  background: var(--gs-bg-secondary);
+}
+
+.gs-login-container {
+  padding: 1rem;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.gs-login-card {
+  width: 100%;
+  max-width: 400px;
+  padding: 2rem;
+  background: var(--gs-white);
+  border-radius: var(--gs-radius-lg);
+  box-shadow: var(--gs-shadow-lg);
+}
+
+.gs-login-header {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.gs-login-form .gs-form-group {
+  margin-bottom: 1rem;
+}
+
+.gs-login-footer {
+  margin-top: 1.5rem;
+  text-align: center;
+}
+
+@media (max-width: 640px) {
+  .gs-login-card {
+    padding: 1.5rem;
+  }
+
+  .gs-login-header h1 {
+    font-size: 1.5rem;
+  }
+
+  .gs-login-header p {
+    font-size: 0.875rem;
+  }
+}

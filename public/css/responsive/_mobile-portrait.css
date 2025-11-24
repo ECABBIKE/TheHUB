@@ -1,0 +1,497 @@
+/* ========================================
+   _mobile-portrait.css - Mobile Portrait Styles
+   GravitySeries HUB v3.0
+   @media (max-width: 900px) and (orientation: portrait)
+   ======================================== */
+
+@media (max-width: 900px) and (orientation: portrait) {
+  /* ===== VIEWPORT VARIABLER ===== */
+  :root {
+    --gs-content-padding: 1rem;
+  }
+
+  /* ===== BODY & MAIN CONTENT ===== */
+  .gs-main-content {
+    margin-left: 0 !important;
+    width: 100% !important;
+    padding: 1rem !important;
+    padding-top: 4.5rem !important;
+  }
+
+  /* ===== SIDEBAR (ALWAYS HIDDEN on portrait mobile) ===== */
+  .gs-sidebar {
+    transform: translateX(-100%) !important;
+    z-index: 1100;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    width: 80vw;
+    max-width: 320px;
+  }
+
+  .gs-sidebar.open {
+    transform: translateX(0) !important;
+  }
+
+  .gs-sidebar-overlay {
+    display: block !important;
+  }
+
+  .gs-sidebar-overlay.active {
+    z-index: 1050;
+  }
+
+  /* ===== MOBILE MENU TOGGLE (ALWAYS VISIBLE) ===== */
+  .gs-mobile-menu-toggle {
+    display: flex !important;
+    z-index: 1200;
+    top: 1rem;
+    left: 1rem;
+  }
+
+  /* ===== TYPOGRAPHY ===== */
+  .gs-h1 { font-size: 1.8rem; line-height: 1.2; }
+  .gs-h2 { font-size: 1.5rem; line-height: 1.3; }
+  .gs-h3 { font-size: 1.25rem; line-height: 1.4; }
+  .gs-h4 { font-size: 1.125rem; }
+  .gs-text-2xl { font-size: 1.25rem; }
+  .gs-text-lg { font-size: 1rem; }
+  .gs-text-base { font-size: 0.95rem; }
+  .gs-text-sm { font-size: 0.85rem; }
+
+  /* ===== LAYOUT ===== */
+  .gs-grid-cols-2,
+  .gs-grid-cols-3,
+  .gs-grid-cols-4 {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* EXCEPTION: Stat cards behåller 2 kolumn för kompakthet */
+  .gs-grid-cols-2:has(.gs-stat-card),
+  .gs-grid-cols-2:has(.gs-stat-card-compact),
+  .gs-grid-cols-2:has(.gs-card-stat) {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .gs-grid.gs-gap-md {
+    gap: 0.5rem;
+  }
+
+  /* ===== CARDS ===== */
+  .gs-card {
+    border-radius: var(--gs-radius-md);
+  }
+
+  .gs-card-header,
+  .gs-card-content {
+    padding: 1rem;
+  }
+
+  .gs-event-card {
+    margin-bottom: 0.5rem;
+  }
+
+  .gs-landing-card {
+    margin-bottom: var(--gs-space-md);
+  }
+
+  /* ===== HERO ===== */
+  .gs-hero {
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .gs-hero::before {
+    width: 12rem;
+    height: 12rem;
+  }
+
+  .gs-hero-logo {
+    max-width: 240px;
+  }
+
+  .gs-hero-title-white {
+    font-size: 1.8rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .gs-hero-subtitle {
+    font-size: 1.1rem;
+    max-width: 100%;
+  }
+
+  /* ===== BUTTONS ===== */
+  .gs-btn {
+    padding: 0.625rem 1rem;
+    font-size: 0.875rem;
+    min-height: 44px;
+    white-space: nowrap;
+  }
+
+  .gs-btn svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  .gs-btn-lg {
+    width: 100%;
+    padding: 0.875rem 1.25rem;
+    min-height: 48px;
+  }
+
+  .gs-btn-sm {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.8125rem;
+  }
+
+  /* ===== FORMS (iOS optimization) ===== */
+  .gs-input,
+  .gs-input-sm,
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="tel"],
+  input[type="number"],
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+
+  .gs-form-container,
+  .gs-form-container-md {
+    margin: 1rem auto;
+    padding: 0 1rem;
+  }
+
+  .gs-form-group {
+    margin-bottom: 1rem;
+  }
+
+  /* ===== TABLES ===== */
+  .gs-table {
+    font-size: 0.875rem;
+    min-width: 500px;
+  }
+
+  .gs-table th,
+  .gs-table td {
+    padding: 0.5rem 0.75rem;
+    white-space: nowrap;
+  }
+
+  .gs-table th {
+    font-size: 0.8125rem;
+  }
+
+  .gs-table-responsive {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    margin: 0.75rem 0;
+  }
+
+  .gs-table-container,
+  .gs-card-content:has(.gs-table) {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* ===== ALERTS ===== */
+  .gs-alert {
+    padding: 0.75rem 1rem;
+    font-size: 0.875rem;
+    gap: 0.5rem;
+  }
+
+  .gs-alert svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  /* ===== BADGES ===== */
+  .gs-badge {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+  }
+
+  /* ===== NAVIGATION ===== */
+  .gs-nav {
+    margin-bottom: 1rem;
+    padding: 0.75rem 0;
+  }
+
+  .gs-nav-list {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  /* ===== MODALS ===== */
+  .gs-modal-content-lg,
+  .gs-modal-content-md,
+  .gs-modal-content-sm {
+    width: 100% !important;
+    max-width: 100% !important;
+    max-height: 100vh;
+    border-radius: 0;
+  }
+
+  .gs-modal-header-sticky,
+  .gs-modal-body-padded {
+    padding: 1rem !important;
+  }
+
+  .gs-modal-title,
+  .gs-h4 {
+    font-size: 1.125rem;
+  }
+
+  /* ===== LICENSE CARDS ===== */
+  .license-card-container {
+    margin-bottom: 1rem;
+  }
+
+  .license-content {
+    grid-template-columns: 60px 1fr;
+    gap: 10px;
+    padding: 8px;
+  }
+
+  .license-photo {
+    width: 60px;
+    height: 75px;
+  }
+
+  .photo-placeholder {
+    font-size: 2rem;
+  }
+
+  .rider-name {
+    font-size: 14px;
+  }
+
+  .license-id {
+    font-size: 9px;
+  }
+
+  .info-grid-compact {
+    grid-template-columns: repeat(auto-fit, minmax(70px, 1fr));
+  }
+
+  .info-box {
+    padding: 3px 6px;
+  }
+
+  .info-box-label {
+    font-size: 7px;
+  }
+
+  .info-box-value {
+    font-size: 10px;
+  }
+
+  /* ===== ADMIN LAYOUT ===== */
+  .gs-admin-layout {
+    flex-direction: column;
+  }
+
+  .gs-admin-sidebar {
+    width: 100%;
+    padding: 1rem 0;
+  }
+
+  .gs-admin-content {
+    padding: 1rem;
+  }
+
+  /* ===== STAT CARDS ===== */
+  .gs-stat-card {
+    padding: 0.75rem;
+    border-radius: var(--gs-radius-md);
+  }
+
+  .gs-stat-number {
+    font-size: 1.25rem !important;
+    margin-bottom: 0.25rem;
+  }
+
+  .gs-stat-label {
+    font-size: 0.625rem !important;
+    letter-spacing: 0.02em;
+  }
+
+  .gs-stat-card-compact {
+    padding: 0.5rem;
+    min-height: 60px;
+  }
+
+  .gs-stat-number-compact {
+    font-size: 1.5rem;
+  }
+
+  .gs-stat-label-compact {
+    font-size: 0.6875rem;
+  }
+
+  /* Hide buttons in stat cards on mobile */
+  .gs-stat-card .gs-btn {
+    display: none;
+  }
+
+  /* Smaller icons in stat cards */
+  .gs-stat-card .gs-icon-lg,
+  .gs-stat-card i[data-lucide] {
+    width: 20px !important;
+    height: 20px !important;
+    margin-bottom: 0.5rem !important;
+  }
+
+  /* ===== ICONS ===== */
+  .gs-icon-wrapper {
+    width: 64px;
+    height: 64px;
+  }
+
+  .gs-icon-wrapper svg {
+    width: 32px;
+    height: 32px;
+  }
+
+  .gs-icon-lg {
+    width: 32px;
+    height: 32px;
+  }
+
+  /* ===== SPACING ===== */
+  .gs-container {
+    padding: 0 1rem;
+  }
+
+  .gs-gap-md {
+    gap: 0.75rem;
+  }
+
+  .gs-mb-lg {
+    margin-bottom: 1rem;
+  }
+
+  .gs-mt-lg {
+    margin-top: 1rem;
+  }
+
+  /* ===== FLEX STACKING ===== */
+  .gs-flex.gs-justify-between {
+    flex-direction: column;
+    gap: 0.75rem;
+    align-items: flex-start !important;
+  }
+
+  .gs-flex.gs-justify-between > .gs-btn,
+  .gs-flex.gs-justify-between > div:has(.gs-btn) {
+    width: 100%;
+  }
+
+  .gs-flex.gs-justify-between .gs-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  /* ===== EVENT HEADER ===== */
+  .event-header-content {
+    padding: 1rem !important;
+  }
+
+  .event-header-layout {
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .event-logo {
+    text-align: center;
+  }
+
+  .event-logo img {
+    width: 80px !important;
+    max-width: 80px !important;
+  }
+
+  .event-info {
+    width: 100%;
+  }
+
+  .event-title {
+    font-size: 1.5rem !important;
+    text-align: center;
+  }
+
+  .event-meta {
+    font-size: 0.875rem;
+    gap: 0.5rem !important;
+    justify-content: center;
+  }
+
+  .event-stats {
+    gap: 0.5rem;
+  }
+
+  .event-stats > div {
+    padding: 0.5rem 0.75rem !important;
+    font-size: 0.875rem !important;
+  }
+
+  .event-stats .gs-text-sm {
+    font-size: 0.75rem !important;
+  }
+
+  /* ===== FOOTER ===== */
+  .gs-footer {
+    padding: 1rem 0;
+    margin-top: 2rem;
+  }
+
+  .gs-footer-version {
+    font-size: 0.7rem;
+  }
+
+  /* ===== LANDING PAGE ===== */
+  .gs-series-card-content {
+    padding: 1.5rem 1rem;
+  }
+
+  .gs-series-icon {
+    width: 48px;
+    height: 48px;
+    margin-bottom: 1rem;
+  }
+
+  .gs-series-heading-white,
+  .gs-series-heading-dark {
+    font-size: 1.25rem;
+  }
+
+  .gs-series-text {
+    font-size: 0.95rem;
+    margin-bottom: 1rem;
+  }
+
+  .gs-quicklink-content {
+    padding: 1.5rem 1rem;
+  }
+
+  .gs-quicklink-icon {
+    width: 40px;
+    height: 40px;
+  }
+
+  .gs-series-logo-sm {
+    max-width: 40px;
+    max-height: 40px;
+  }
+
+  /* ===== SUCCESS ICON ===== */
+  .gs-success-icon-lg {
+    font-size: 3rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .gs-section-divider {
+    padding-top: var(--gs-space-md);
+  }
+}

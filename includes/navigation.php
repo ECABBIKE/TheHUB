@@ -42,7 +42,7 @@ $is_admin = isLoggedIn();
             <li><a href="/admin/events.php" class="<?= $current_page == 'events.php' && strpos($_SERVER['PHP_SELF'], '/admin/') !== false ? 'active' : '' ?>">
                 <i data-lucide="calendar-check"></i> Events
             </a></li>
-            <li><a href="/admin/ticketing.php" class="<?= in_array($current_page, ['ticketing.php', 'event-pricing.php', 'event-tickets.php', 'refund-requests.php']) ? 'active' : '' ?>">
+            <li><a href="/admin/ticketing.php" class="<?= in_array($current_page, ['ticketing.php', 'event-pricing.php', 'event-tickets.php', 'refund-requests.php', 'pricing-templates.php']) ? 'active' : '' ?>">
                 <i data-lucide="ticket"></i> Ticketing
             </a></li>
             <li><a href="/admin/series.php" class="<?= $current_page == 'series.php' && strpos($_SERVER['PHP_SELF'], '/admin/') !== false ? 'active' : '' ?>">

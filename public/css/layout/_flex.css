@@ -1,0 +1,21 @@
+/* ========================================
+   _flex.css - Flexbox Utilities
+   GravitySeries HUB v3.0
+   ======================================== */
+
+.gs-flex { display: flex; }
+.gs-flex-col { flex-direction: column; }
+.gs-flex-1 { flex: 1; }
+.gs-flex-wrap { flex-wrap: wrap; }
+.gs-items-center { align-items: center; }
+.gs-justify-between { justify-content: space-between; }
+.gs-justify-end { justify-content: flex-end; }
+
+/* Gap utilities */
+.gs-gap-sm { gap: var(--gs-space-sm); }
+.gs-gap-md { gap: var(--gs-space-md); }
+.gs-gap-lg { gap: var(--gs-space-lg); }
+.gs-gap-xl { gap: 2rem; }
+
+/* Width utilities */
+.gs-w-full { width: 100%; }

@@ -32,8 +32,8 @@ define('DB_NAME', env('DB_NAME', 'u994733455_thehub'));
 define('DB_USER', env('DB_USER', 'u994733455_rogerthat'));
 define('DB_PASS', env('DB_PASS', 'staggerMYnagger987!'));
 define('APP_NAME', 'TheHUB');
-define('DEFAULT_ADMIN_USERNAME', 'admin');
-define('DEFAULT_ADMIN_PASSWORD', 'admin');
+define('DEFAULT_ADMIN_USERNAME', 'roger');
+define('DEFAULT_ADMIN_PASSWORD', 'Jallemannen75!!!');
 define('CSRF_TOKEN_NAME', 'csrf_token');
 define('MAX_UPLOAD_SIZE', 10 * 1024 * 1024); // 10MB
 define('EVENTS_PER_PAGE', 20);

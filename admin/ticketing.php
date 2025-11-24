@@ -44,13 +44,21 @@ include __DIR__ . '/../includes/layout-header.php';
         <!-- Header -->
         <div class="gs-card gs-mb-lg">
             <div class="gs-card-content">
-                <h1 class="gs-h2 gs-text-primary gs-mb-sm">
-                    <i data-lucide="ticket" class="gs-icon-lg"></i>
-                    Ticketing Dashboard
-                </h1>
-                <p class="gs-text-secondary">
-                    Hantera biljetter, priser och försäljning för alla events
-                </p>
+                <div class="gs-flex gs-justify-between gs-items-start">
+                    <div>
+                        <h1 class="gs-h2 gs-text-primary gs-mb-sm">
+                            <i data-lucide="ticket" class="gs-icon-lg"></i>
+                            Ticketing Dashboard
+                        </h1>
+                        <p class="gs-text-secondary">
+                            Hantera biljetter, priser och försäljning för alla events
+                        </p>
+                    </div>
+                    <a href="/admin/pricing-templates.php" class="gs-btn gs-btn-primary">
+                        <i data-lucide="credit-card"></i>
+                        Prismallar
+                    </a>
+                </div>
             </div>
         </div>
 

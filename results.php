@@ -163,85 +163,13 @@ include __DIR__ . '/includes/layout-header.php';
                 </div>
             </div>
         <?php else: ?>
-            <style>
-                .result-card-horizontal {
-                    display: grid;
-                    grid-template-columns: 120px 1fr;
-                    gap: 1rem;
-                    padding: 1rem;
-                    min-height: 100px;
-                }
-                .result-logo-container {
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    background: #f8f9fa;
-                    border-radius: 6px;
-                    padding: 0.5rem;
-                }
-                .result-logo-container img {
-                    max-width: 100%;
-                    max-height: 70px;
-                    object-fit: contain;
-                }
-                .result-info-right {
-                    display: flex;
-                    flex-direction: column;
-                    gap: 0.5rem;
-                }
-                .result-date-box {
-                    display: inline-flex;
-                    align-items: center;
-                    gap: 0.5rem;
-                    padding: 0.25rem 0.5rem;
-                    background: #48bb78;
-                    color: white;
-                    border-radius: 4px;
-                    font-size: 0.875rem;
-                    font-weight: 600;
-                    width: fit-content;
-                }
-                .result-title {
-                    font-size: 1.125rem;
-                    font-weight: 700;
-                    color: #1a202c;
-                    line-height: 1.3;
-                }
-                .result-meta {
-                    display: flex;
-                    flex-direction: column;
-                    gap: 0.25rem;
-                    font-size: 0.875rem;
-                    color: #718096;
-                }
-                .result-stats {
-                    display: flex;
-                    gap: 1rem;
-                    font-size: 0.875rem;
-                    color: #4a5568;
-                }
-                @media (max-width: 640px) {
-                    .result-card-horizontal {
-                        grid-template-columns: 80px 1fr;
-                        gap: 0.75rem;
-                        padding: 0.75rem;
-                    }
-                    .result-logo-container img {
-                        max-height: 50px;
-                    }
-                    .result-title {
-                        font-size: 1rem;
-                    }
-                }
-            </style>
-
             <!-- Events Grid - 2 columns on desktop -->
             <div class="gs-grid gs-grid-cols-1 gs-md-grid-cols-2 gs-gap-md">
                 <?php foreach ($events as $event): ?>
                     <a href="/event-results.php?id=<?= $event['id'] ?>" class="gs-event-card-link">
-                        <div class="gs-card gs-card-hover result-card-horizontal gs-event-card-transition">
+                        <div class="gs-card gs-card-hover gs-result-card gs-event-card-transition">
                             <!-- Logo Left -->
-                            <div class="result-logo-container">
+                            <div class="gs-result-logo">
                                 <?php if ($event['series_logo']): ?>
                                     <img src="<?= h($event['series_logo']) ?>"
                                          alt="<?= h($event['series_name']) ?>">
@@ -253,17 +181,17 @@ include __DIR__ . '/includes/layout-header.php';
                             </div>
 
                             <!-- Info Right -->
-                            <div class="result-info-right">
-                                <div class="result-date-box">
+                            <div class="gs-result-info">
+                                <div class="gs-result-date">
                                     <i data-lucide="calendar" class="gs-icon-sm"></i>
                                     <?= date('d M Y', strtotime($event['date'])) ?>
                                 </div>
 
-                                <div class="result-title">
+                                <div class="gs-result-title">
                                     <?= h($event['name']) ?>
                                 </div>
 
-                                <div class="result-meta">
+                                <div class="gs-result-meta">
                                     <?php if ($event['series_name']): ?>
                                         <span>
                                             <i data-lucide="trophy" class="gs-icon-12"></i>
@@ -278,7 +206,7 @@ include __DIR__ . '/includes/layout-header.php';
                                     <?php endif; ?>
                                 </div>
 
-                                <div class="result-stats">
+                                <div class="gs-result-stats">
                                     <span>
                                         <strong><?= $event['result_count'] ?></strong> deltagare
                                     </span>

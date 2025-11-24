@@ -1,0 +1,72 @@
+/* ========================================
+   _hero.css - Hero Section Styles
+   GravitySeries HUB v3.0
+   ======================================== */
+
+.gs-hero {
+  position: relative;
+  overflow: hidden;
+  padding: var(--gs-space-3xl);
+  border-radius: var(--gs-radius-2xl);
+  background: linear-gradient(135deg, var(--gs-primary) 0%, var(--gs-success) 100%);
+  box-shadow: var(--gs-shadow-2xl);
+  margin-bottom: var(--gs-space-2xl);
+  animation: fadeIn 0.6s ease-in;
+}
+
+.gs-hero::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 24rem;
+  height: 24rem;
+  background-color: rgba(255, 255, 255, 0.1);
+  border-radius: 50%;
+  transform: translate(50%, -50%);
+  filter: blur(60px);
+}
+
+.gs-hero-content {
+  position: relative;
+  z-index: 1;
+}
+
+.gs-hero-logo {
+  max-width: 400px;
+  height: auto;
+  margin: 0 auto;
+  display: block;
+  filter: brightness(1.1) drop-shadow(0 4px 20px rgba(0, 0, 0, 0.3));
+}
+
+.gs-hero-title-white {
+  color: white !important;
+  font-size: 3rem;
+  margin-bottom: 1rem;
+}
+
+.gs-hero-subtitle {
+  font-size: 1.5rem;
+  opacity: 0.95;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+/* Animation */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* List with Indentation */
+.gs-list-styled {
+  margin-left: 2rem;
+  margin-top: 1rem;
+}

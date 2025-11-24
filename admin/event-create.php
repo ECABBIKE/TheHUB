@@ -41,6 +41,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'discipline' => trim($_POST['discipline'] ?? ''),
             'event_format' => trim($_POST['event_format'] ?? 'ENDURO'),
             'series_id' => !empty($_POST['series_id']) ? intval($_POST['series_id']) : null,
+            'pricing_template_id' => !empty($_POST['pricing_template_id']) ? intval($_POST['pricing_template_id']) : null,
             'distance' => !empty($_POST['distance']) ? floatval($_POST['distance']) : null,
             'elevation_gain' => !empty($_POST['elevation_gain']) ? intval($_POST['elevation_gain']) : null,
             'organizer' => trim($_POST['organizer'] ?? ''),
@@ -128,6 +129,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // Fetch series and venues for dropdowns
 $series = $db->getAll("SELECT id, name FROM series WHERE status = 'active' ORDER BY name");
 $venues = $db->getAll("SELECT id, name, city FROM venues WHERE active = 1 ORDER BY name");
+$pricingTemplates = $db->getAll("SELECT id, name, is_default FROM pricing_templates ORDER BY is_default DESC, name ASC");
+$defaultTemplate = array_filter($pricingTemplates, fn($t) => $t['is_default']);
+$defaultTemplateId = $defaultTemplate ? reset($defaultTemplate)['id'] : null;
 
 // Fetch global texts for "use global" functionality
 $globalTexts = $db->getAll("SELECT field_key, content FROM global_texts WHERE is_active = 1");
@@ -312,6 +316,24 @@ include __DIR__ . '/../includes/layout-header.php';
                                 <?php endforeach; ?>
                             </select>
                         </div>
+                    </div>
+
+                    <!-- Pricing Template -->
+                    <div>
+                        <label for="pricing_template_id" class="gs-label">
+                            <i data-lucide="credit-card"></i>
+                            Prismall
+                        </label>
+                        <select id="pricing_template_id" name="pricing_template_id" class="gs-input">
+                            <option value="">Ingen prismall</option>
+                            <?php foreach ($pricingTemplates as $template): ?>
+                                <option value="<?= $template['id'] ?>" <?= ($_POST['pricing_template_id'] ?? $defaultTemplateId) == $template['id'] ? 'selected' : '' ?>>
+                                    <?= htmlspecialchars($template['name']) ?>
+                                    <?php if ($template['is_default']): ?>(Standard)<?php endif; ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                        <small class="gs-text-muted">Välj prismall för detta event. <a href="/admin/pricing-templates.php">Hantera prismallar</a></small>
                     </div>
 
                     <!-- Distance and Elevation -->

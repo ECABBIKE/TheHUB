@@ -1,0 +1,237 @@
+/* ========================================
+   _admin.css - Admin Layout & Components
+   GravitySeries HUB v3.0
+   ======================================== */
+
+/* ========================================
+   ADMIN LAYOUT
+   ======================================== */
+
+.gs-admin-layout {
+  display: flex;
+  min-height: 100vh;
+}
+
+.gs-admin-sidebar {
+  width: 250px;
+  background-color: var(--gs-dark);
+  color: var(--gs-white);
+  padding: var(--gs-space-xl) 0;
+}
+
+.gs-admin-content {
+  flex: 1;
+  padding: var(--gs-space-2xl);
+}
+
+/* ========================================
+   LOGIN PAGE
+   ======================================== */
+
+.gs-login-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, var(--gs-primary) 0%, var(--gs-success) 100%);
+}
+
+.gs-login-card {
+  width: 100%;
+  max-width: 400px;
+  background-color: var(--gs-white);
+  border-radius: var(--gs-radius-2xl);
+  box-shadow: var(--gs-shadow-2xl);
+  padding: var(--gs-space-2xl);
+}
+
+.gs-login-header {
+  text-align: center;
+  margin-bottom: var(--gs-space-xl);
+}
+
+.gs-login-title {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--gs-primary);
+  margin-bottom: var(--gs-space-xs);
+}
+
+.gs-login-subtitle {
+  color: var(--gs-text-secondary);
+  font-size: 0.875rem;
+}
+
+/* ========================================
+   MODAL SYSTEM
+   ======================================== */
+
+.gs-modal-overlay-hidden {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 9999;
+  align-items: center;
+  justify-content: center;
+}
+
+.gs-modal-content-lg {
+  background: white;
+  border-radius: 12px;
+  width: 95%;
+  max-width: 1200px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+.gs-modal-content-md {
+  max-width: 900px;
+}
+
+.gs-modal-content-sm {
+  max-width: 700px;
+}
+
+.gs-modal-header-sticky {
+  padding: 1.5rem;
+  border-bottom: 1px solid var(--gs-border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: sticky;
+  top: 0;
+  background: white;
+  z-index: 10;
+}
+
+.gs-modal-body-padded {
+  padding: 1.5rem;
+}
+
+.gs-modal-footer-sticky {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--gs-border);
+  margin-top: 1rem;
+  position: sticky;
+  bottom: 0;
+  background: white;
+}
+
+.gs-modal-close-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 24px;
+  color: var(--gs-text-secondary);
+}
+
+.gs-modal-close-btn:hover {
+  color: var(--gs-text);
+}
+
+.gs-modal-md {
+  max-width: 700px;
+}
+
+.gs-modal-hidden {
+  display: none;
+}
+
+/* ========================================
+   LOADING STATES
+   ======================================== */
+
+@keyframes gs-spin {
+  to { transform: rotate(360deg); }
+}
+
+.gs-spinner {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: var(--gs-white);
+  animation: gs-spin 0.6s linear infinite;
+}
+
+.gs-spinner-lg {
+  width: 48px;
+  height: 48px;
+  border-width: 4px;
+}
+
+.gs-spinner-primary {
+  border-color: rgba(0, 74, 152, 0.3);
+  border-top-color: var(--gs-primary);
+}
+
+.gs-loading {
+  position: relative;
+  pointer-events: none;
+  opacity: 0.6;
+}
+
+.gs-loading::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 20px;
+  height: 20px;
+  border: 2px solid rgba(0, 74, 152, 0.3);
+  border-radius: 50%;
+  border-top-color: var(--gs-primary);
+  animation: gs-spin 0.6s linear infinite;
+}
+
+/* ========================================
+   LISTS
+   ======================================== */
+
+.gs-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.gs-list-item {
+  padding: var(--gs-space-md);
+  border-bottom: 1px solid var(--gs-border);
+  transition: background-color var(--gs-transition-fast);
+}
+
+.gs-list-item:last-child {
+  border-bottom: none;
+}
+
+.gs-list-item:hover {
+  background-color: var(--gs-light);
+}
+
+/* Filter section border */
+.gs-filter-active {
+  padding-top: var(--gs-space-md);
+  border-top: 1px solid var(--gs-border);
+}
+
+/* Logo preview utilities */
+.gs-logo-preview {
+  margin-top: 10px;
+  display: none;
+}
+
+.gs-logo-preview img {
+  max-width: 200px;
+  max-height: 100px;
+  margin-top: 5px;
+}
