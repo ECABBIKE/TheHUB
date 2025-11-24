@@ -38,264 +38,9 @@ $pageType = 'public';
 include __DIR__ . '/../includes/layout-header.php';
 ?>
 
-<style>
-    .leaderboard-container {
-        max-width: 800px;
-        margin: 0 auto;
-    }
-
-    .series-selector {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.5rem;
-        padding: 0.5rem;
-        margin: -0.5rem -0.5rem 0.75rem -0.5rem;
-        justify-content: center;
-    }
-
-    .series-selector-main {
-        margin-bottom: 0.5rem;
-    }
-
-    .series-btn-main {
-        font-size: 1rem;
-        padding: 0.625rem 1.25rem;
-    }
-
-    @media (max-width: 640px) {
-        .series-selector {
-            flex-wrap: nowrap;
-            overflow-x: auto;
-            -webkit-overflow-scrolling: touch;
-            scrollbar-width: none;
-        }
-
-        .series-selector::-webkit-scrollbar {
-            display: none;
-        }
-    }
-
-    .series-btn {
-        flex-shrink: 0;
-        padding: 0.5rem 1rem;
-        border: 2px solid #e5e7eb;
-        background: white;
-        border-radius: 999px;
-        cursor: pointer;
-        transition: all 0.2s;
-        font-weight: 600;
-        font-size: 0.875rem;
-        color: #6b7280;
-        text-decoration: none;
-        white-space: nowrap;
-    }
-
-    .series-btn:hover,
-    .series-btn.active {
-        background: var(--gs-primary);
-        color: white;
-        border-color: var(--gs-primary);
-    }
-
-    .club-card {
-        background: white;
-        border-radius: 12px;
-        padding: 1rem;
-        margin-bottom: 0.75rem;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-        display: flex;
-        align-items: center;
-        gap: 1rem;
-        transition: transform 0.2s;
-        cursor: pointer;
-    }
-
-    .club-card:hover {
-        transform: translateY(-2px);
-    }
-
-    /* Podium styling */
-    .club-card.rank-1 {
-        background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-        border: 2px solid #f59e0b;
-    }
-
-    .club-card.rank-2 {
-        background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
-        border: 2px solid #9ca3af;
-    }
-
-    .club-card.rank-3 {
-        background: linear-gradient(135deg, #fed7aa 0%, #fdba74 100%);
-        border: 2px solid #f97316;
-    }
-
-    .rank-badge {
-        width: 48px;
-        height: 48px;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-weight: 700;
-        font-size: 1.25rem;
-        flex-shrink: 0;
-    }
-
-    .rank-1 .rank-badge {
-        background: #f59e0b;
-        color: white;
-    }
-
-    .rank-2 .rank-badge {
-        background: #9ca3af;
-        color: white;
-    }
-
-    .rank-3 .rank-badge {
-        background: #f97316;
-        color: white;
-    }
-
-    .rank-other .rank-badge {
-        background: #e5e7eb;
-        color: #6b7280;
-    }
-
-    .club-info {
-        flex: 1;
-        min-width: 0;
-    }
-
-    .club-name {
-        font-weight: 700;
-        font-size: 1rem;
-        color: #1f2937;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-
-    .club-meta {
-        font-size: 0.75rem;
-        color: #6b7280;
-        margin-top: 0.25rem;
-    }
-
-    .club-stats {
-        text-align: right;
-        flex-shrink: 0;
-    }
-
-    .club-points {
-        font-weight: 700;
-        font-size: 1.5rem;
-        color: var(--gs-primary);
-        line-height: 1;
-    }
-
-    .club-points-label {
-        font-size: 0.625rem;
-        color: #9ca3af;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-    }
-
-    .club-participants {
-        font-size: 0.75rem;
-        color: #6b7280;
-        margin-top: 0.25rem;
-    }
-
-    /* Trophy icons for top 3 */
-    .trophy-icon {
-        font-size: 1.5rem;
-        margin-bottom: 0.25rem;
-    }
-
-    .rank-1 .trophy-icon::before { content: '🥇'; }
-    .rank-2 .trophy-icon::before { content: '🥈'; }
-    .rank-3 .trophy-icon::before { content: '🥉'; }
-
-    /* Summary stats */
-    .stats-grid {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 0.75rem;
-        margin-bottom: 1.5rem;
-    }
-
-    .stat-card {
-        background: white;
-        border-radius: 8px;
-        padding: 1rem;
-        text-align: center;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    }
-
-    .stat-value {
-        font-size: 1.5rem;
-        font-weight: 700;
-        color: var(--gs-primary);
-    }
-
-    .stat-label {
-        font-size: 0.75rem;
-        color: #6b7280;
-        text-transform: uppercase;
-    }
-
-    /* Mobile optimizations */
-    @media (max-width: 640px) {
-        .club-card {
-            padding: 0.875rem;
-        }
-
-        .rank-badge {
-            width: 40px;
-            height: 40px;
-            font-size: 1rem;
-        }
-
-        .club-name {
-            font-size: 0.875rem;
-        }
-
-        .club-points {
-            font-size: 1.25rem;
-        }
-
-        .stats-grid {
-            grid-template-columns: repeat(3, 1fr);
-        }
-
-        .stat-value {
-            font-size: 1.25rem;
-        }
-
-        .stat-label {
-            font-size: 0.625rem;
-        }
-    }
-
-    /* Empty state */
-    .empty-state {
-        text-align: center;
-        padding: 3rem 1rem;
-        background: white;
-        border-radius: 12px;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    }
-
-    .empty-state-icon {
-        font-size: 3rem;
-        margin-bottom: 1rem;
-    }
-</style>
-
 <main class="gs-main-content">
     <div class="gs-container">
-        <div class="leaderboard-container">
+        <div class="gs-leaderboard-container">
             <!-- Header -->
             <div class="gs-text-center gs-mb-lg">
                 <h1 class="gs-h2 gs-text-primary gs-mb-xs">
@@ -322,20 +67,20 @@ include __DIR__ . '/../includes/layout-header.php';
             }
             ?>
             <?php if (!empty($totalSeries)): ?>
-            <div class="series-selector series-selector-main">
+            <div class="gs-series-selector gs-series-selector-main">
                 <?php foreach ($totalSeries as $series): ?>
                     <a href="?series_id=<?= $series['id'] ?>"
-                       class="series-btn series-btn-main <?= $series['id'] == $selectedSeriesId ? 'active' : '' ?>">
+                       class="gs-series-btn gs-series-btn-main <?= $series['id'] == $selectedSeriesId ? 'active' : '' ?>">
                         <?= h($series['name']) ?>
                     </a>
                 <?php endforeach; ?>
             </div>
             <?php endif; ?>
             <?php if (!empty($otherSeries)): ?>
-            <div class="series-selector">
+            <div class="gs-series-selector">
                 <?php foreach ($otherSeries as $series): ?>
                     <a href="?series_id=<?= $series['id'] ?>"
-                       class="series-btn <?= $series['id'] == $selectedSeriesId ? 'active' : '' ?>">
+                       class="gs-series-btn <?= $series['id'] == $selectedSeriesId ? 'active' : '' ?>">
                         <?= h($series['name']) ?>
                     </a>
                 <?php endforeach; ?>
@@ -344,54 +89,58 @@ include __DIR__ . '/../includes/layout-header.php';
             <?php endif; ?>
 
             <?php if (!$tablesExist): ?>
-                <div class="empty-state">
-                    <div class="empty-state-icon">⚙️</div>
+                <div class="gs-card gs-text-center gs-empty-state-container">
+                    <div class="gs-empty-state-icon">⚙️</div>
                     <h3 class="gs-h4 gs-mb-sm">Systemet är inte konfigurerat</h3>
                     <p class="gs-text-secondary">Klubbpoängsystemet behöver konfigureras av en administratör.</p>
                 </div>
             <?php elseif (empty($standings)): ?>
-                <div class="empty-state">
-                    <div class="empty-state-icon">🏆</div>
+                <div class="gs-card gs-text-center gs-empty-state-container">
+                    <div class="gs-empty-state-icon">🏆</div>
                     <h3 class="gs-h4 gs-mb-sm">Inga klubbpoäng ännu</h3>
                     <p class="gs-text-secondary">Poängen uppdateras efter att resultat har registrerats.</p>
                 </div>
             <?php else: ?>
                 <!-- Summary Stats -->
-                <div class="stats-grid">
-                    <div class="stat-card">
-                        <div class="stat-value"><?= count($standings) ?></div>
-                        <div class="stat-label">Klubbar</div>
+                <div class="gs-stats-grid">
+                    <div class="gs-stat-card">
+                        <div class="gs-stat-value"><?= count($standings) ?></div>
+                        <div class="gs-stat-label">Klubbar</div>
                     </div>
-                    <div class="stat-card">
-                        <div class="stat-value"><?= number_format(array_sum(array_column($standings, 'total_points'))) ?></div>
-                        <div class="stat-label">Poäng</div>
+                    <div class="gs-stat-card">
+                        <div class="gs-stat-value"><?= number_format(array_sum(array_column($standings, 'total_points'))) ?></div>
+                        <div class="gs-stat-label">Poäng</div>
                     </div>
-                    <div class="stat-card">
-                        <div class="stat-value"><?= array_sum(array_column($standings, 'total_participants')) ?></div>
-                        <div class="stat-label">Deltagare</div>
+                    <div class="gs-stat-card">
+                        <div class="gs-stat-value"><?= array_sum(array_column($standings, 'total_participants')) ?></div>
+                        <div class="gs-stat-label">Deltagare</div>
                     </div>
                 </div>
 
                 <!-- Club Cards -->
                 <?php foreach ($standings as $club): ?>
                     <?php
-                    $rankClass = 'rank-other';
+                    $rankClass = '';
                     if ($club['ranking'] == 1) $rankClass = 'rank-1';
                     elseif ($club['ranking'] == 2) $rankClass = 'rank-2';
                     elseif ($club['ranking'] == 3) $rankClass = 'rank-3';
                     ?>
-                    <a href="/clubs/detail.php?club_id=<?= $club['club_id'] ?>&series_id=<?= $selectedSeriesId ?>" class="club-card <?= $rankClass ?>" style="text-decoration: none; color: inherit;">
-                        <div class="rank-badge">
+                    <a href="/clubs/detail.php?club_id=<?= $club['club_id'] ?>&series_id=<?= $selectedSeriesId ?>" class="gs-club-card <?= $rankClass ?>">
+                        <div class="gs-rank-badge">
                             <?php if ($club['ranking'] <= 3): ?>
-                                <span class="trophy-icon"></span>
+                                <span class="gs-trophy-icon"><?php
+                                    if ($club['ranking'] == 1) echo '🥇';
+                                    elseif ($club['ranking'] == 2) echo '🥈';
+                                    else echo '🥉';
+                                ?></span>
                             <?php else: ?>
                                 <?= $club['ranking'] ?>
                             <?php endif; ?>
                         </div>
 
-                        <div class="club-info">
-                            <div class="club-name"><?= h($club['club_name']) ?></div>
-                            <div class="club-meta">
+                        <div class="gs-club-info">
+                            <div class="gs-club-name"><?= h($club['club_name']) ?></div>
+                            <div class="gs-club-meta">
                                 <?php if ($club['city']): ?>
                                     <?= h($club['city']) ?>
                                 <?php endif; ?>
@@ -401,10 +150,10 @@ include __DIR__ . '/../includes/layout-header.php';
                             </div>
                         </div>
 
-                        <div class="club-stats">
-                            <div class="club-points"><?= number_format($club['total_points']) ?></div>
-                            <div class="club-points-label">poäng</div>
-                            <div class="club-participants"><?= $club['total_participants'] ?> åkare</div>
+                        <div class="gs-club-stats">
+                            <div class="gs-club-points"><?= number_format($club['total_points']) ?></div>
+                            <div class="gs-club-points-label">poäng</div>
+                            <div class="gs-club-participants"><?= $club['total_participants'] ?> åkare</div>
                         </div>
                     </a>
                 <?php endforeach; ?>
