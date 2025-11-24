@@ -29,6 +29,9 @@ $is_admin = isLoggedIn();
             <li><a href="/clubs/leaderboard.php" class="<?= $current_page == 'leaderboard.php' ? 'active' : '' ?>">
                 <i data-lucide="trophy"></i> Klubbar
             </a></li>
+            <li><a href="/ranking/" class="<?= strpos($_SERVER['PHP_SELF'], '/ranking/') !== false ? 'active' : '' ?>">
+                <i data-lucide="trending-up"></i> Ranking
+            </a></li>
         </ul>
     </div>
 
@@ -59,6 +62,9 @@ $is_admin = isLoggedIn();
             </a></li>
             <li><a href="/admin/club-points.php" class="<?= $current_page == 'club-points.php' || $current_page == 'club-points-detail.php' ? 'active' : '' ?>">
                 <i data-lucide="trophy"></i> Klubbpoäng
+            </a></li>
+            <li><a href="/admin/ranking.php" class="<?= $current_page == 'ranking.php' && strpos($_SERVER['PHP_SELF'], '/admin/') !== false ? 'active' : '' ?>">
+                <i data-lucide="trending-up"></i> Ranking
             </a></li>
             <li><a href="/admin/venues.php" class="<?= $current_page == 'venues.php' ? 'active' : '' ?>">
                 <i data-lucide="mountain"></i> Venues
