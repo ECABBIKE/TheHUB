@@ -48,6 +48,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'location' => trim($_POST['location'] ?? ''),
             'venue_id' => !empty($_POST['venue_id']) ? intval($_POST['venue_id']) : null,
             'discipline' => trim($_POST['discipline'] ?? ''),
+            'event_level' => in_array($_POST['event_level'] ?? '', ['national', 'sportmotion']) ? $_POST['event_level'] : 'national',
             'event_format' => trim($_POST['event_format'] ?? 'ENDURO'),
             'stage_names' => !empty($_POST['stage_names']) ? trim($_POST['stage_names']) : null,
             'series_id' => !empty($_POST['series_id']) ? intval($_POST['series_id']) : null,
@@ -284,6 +285,20 @@ include __DIR__ . '/../includes/layout-header.php';
                             <option value="GRAVEL" <?= ($event['discipline'] ?? '') === 'GRAVEL' ? 'selected' : '' ?>>Gravel</option>
                             <option value="E-MTB" <?= ($event['discipline'] ?? '') === 'E-MTB' ? 'selected' : '' ?>>E-MTB</option>
                         </select>
+                    </div>
+
+                    <!-- Event Level (National/Sportmotion) -->
+                    <div>
+                        <label for="event_level" class="gs-label">
+                            <i data-lucide="trophy"></i>
+                            Tävlingsnivå
+                            <span class="gs-text-secondary gs-text-xs">(påverkar rankingpoäng)</span>
+                        </label>
+                        <select id="event_level" name="event_level" class="gs-input">
+                            <option value="national" <?= ($event['event_level'] ?? 'national') === 'national' ? 'selected' : '' ?>>Nationell tävling (100% poäng)</option>
+                            <option value="sportmotion" <?= ($event['event_level'] ?? 'national') === 'sportmotion' ? 'selected' : '' ?>>Sportmotion (50% poäng)</option>
+                        </select>
+                        <small class="gs-text-secondary">Nationella tävlingar ger fulla rankingpoäng, Sportmotion-event ger 50% av poängen</small>
                     </div>
 
                     <div class="gs-grid gs-grid-cols-2 gs-gap-md">
