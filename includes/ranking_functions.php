@@ -262,6 +262,11 @@ function calculateAllRankingPoints($db, $debug = false) {
     }
     $db->query("DELETE FROM ranking_points WHERE event_date >= ?", [$cutoffDate]);
 
+    if ($debug) {
+        echo "<p>✅ Old points cleared</p>";
+        flush();
+    }
+
     // Get count of results to process
     if ($debug) {
         echo "<p>📊 Counting results...</p>";
