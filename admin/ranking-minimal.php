@@ -36,13 +36,41 @@ try {
 
     if (isset($_POST['calculate'])) {
         echo "<h3>Running calculation...</h3>";
-        $calcStats = calculateAllRankingPoints($db);
-        echo "<p>✅ Calculation done!</p>";
-        echo "<pre>" . print_r($calcStats, true) . "</pre>";
+        flush();
 
-        $snapshotStats = createRankingSnapshot($db);
-        echo "<p>✅ Snapshots created!</p>";
-        echo "<pre>" . print_r($snapshotStats, true) . "</pre>";
+        // Increase time limit
+        set_time_limit(300); // 5 minutes
+        ini_set('memory_limit', '512M');
+
+        echo "<p>Memory limit: " . ini_get('memory_limit') . "</p>";
+        echo "<p>Time limit: " . ini_get('max_execution_time') . "s</p>";
+        flush();
+
+        try {
+            $startTime = microtime(true);
+            $calcStats = calculateAllRankingPoints($db);
+            $endTime = microtime(true);
+            $duration = round($endTime - $startTime, 2);
+
+            echo "<p>✅ Calculation done in {$duration}s!</p>";
+            echo "<pre>" . print_r($calcStats, true) . "</pre>";
+            flush();
+
+            echo "<p>Creating snapshots...</p>";
+            flush();
+            $snapshotStats = createRankingSnapshot($db);
+            echo "<p>✅ Snapshots created!</p>";
+            echo "<pre>" . print_r($snapshotStats, true) . "</pre>";
+            flush();
+        } catch (Exception $e) {
+            echo "<p>❌ Error during calculation:</p>";
+            echo "<pre>";
+            echo "Message: " . htmlspecialchars($e->getMessage()) . "\n\n";
+            echo "File: " . htmlspecialchars($e->getFile()) . "\n";
+            echo "Line: " . $e->getLine() . "\n\n";
+            echo "Stack trace:\n" . htmlspecialchars($e->getTraceAsString());
+            echo "</pre>";
+        }
     }
 
 } catch (Exception $e) {
