@@ -640,14 +640,34 @@ function runFullRankingUpdate($db, $debug = false) {
     }
 
     // Update last calculation timestamp
-    $db->query("
-        INSERT INTO ranking_settings (setting_key, setting_value, description)
-        VALUES ('last_calculation', ?, 'Timestamp of last ranking calculation')
-        ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value), updated_at = NOW()
-    ", [json_encode([
-        'date' => date('Y-m-d H:i:s'),
-        'stats' => $stats
-    ])]);
+    if ($debug) {
+        echo "<p>💾 Saving calculation metadata...</p>";
+        flush();
+    }
+
+    try {
+        $calcData = json_encode([
+            'date' => date('Y-m-d H:i:s'),
+            'stats' => $stats
+        ]);
+
+        $db->query("
+            INSERT INTO ranking_settings (setting_key, setting_value, description)
+            VALUES ('last_calculation', ?, 'Timestamp of last ranking calculation')
+            ON DUPLICATE KEY UPDATE setting_value = ?, updated_at = NOW()
+        ", [$calcData, $calcData]);
+
+        if ($debug) {
+            echo "<p>✅ Calculation metadata saved successfully</p>";
+            flush();
+        }
+    } catch (Exception $e) {
+        if ($debug) {
+            echo "<p style='color: orange;'>⚠️ Could not save calculation metadata: " . htmlspecialchars($e->getMessage()) . "</p>";
+            flush();
+        }
+        error_log("Failed to save last_calculation: " . $e->getMessage());
+    }
 
     $stats['total_time'] = round(microtime(true) - $startTime, 2);
 
