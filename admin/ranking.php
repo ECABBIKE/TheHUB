@@ -75,21 +75,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     } elseif (isset($_POST['save_multipliers'])) {
         // Save field multipliers
-        $multipliers = [];
-        for ($i = 1; $i <= 15; $i++) {
-            $key = "mult_$i";
-            if (isset($_POST[$key])) {
-                $multipliers[$i] = max(0, min(1, (float)$_POST[$key]));
+        try {
+            $multipliers = [];
+            for ($i = 1; $i <= 15; $i++) {
+                $key = "mult_$i";
+                if (isset($_POST[$key])) {
+                    $multipliers[$i] = max(0, min(1, (float)$_POST[$key]));
+                }
             }
-        }
 
-        if (count($multipliers) === 15) {
-            saveFieldMultipliers($db, $multipliers);
-            $message = 'Fältstorleksmultiplikatorer sparade.';
-            $messageType = 'success';
-        } else {
-            $message = 'Alla 15 multiplikatorer måste anges.';
+            if (count($multipliers) === 15) {
+                saveFieldMultipliers($db, $multipliers);
+                $message = 'Fältstorleksmultiplikatorer sparade.';
+                $messageType = 'success';
+            } else {
+                $message = 'Alla 15 multiplikatorer måste anges. Hittade bara ' . count($multipliers) . ' st.';
+                $messageType = 'error';
+            }
+        } catch (Exception $e) {
+            $message = 'Fel vid sparande: ' . $e->getMessage();
             $messageType = 'error';
+            error_log("Save multipliers error: " . $e->getMessage());
         }
 
     } elseif (isset($_POST['save_decay'])) {
@@ -117,11 +123,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     } elseif (isset($_POST['reset_defaults'])) {
         // Reset to defaults
-        saveFieldMultipliers($db, getDefaultFieldMultipliers());
-        saveTimeDecay($db, getDefaultTimeDecay());
-        saveEventLevelMultipliers($db, getDefaultEventLevelMultipliers());
-        $message = 'Inställningar återställda till standardvärden.';
-        $messageType = 'success';
+        try {
+            saveFieldMultipliers($db, getDefaultFieldMultipliers());
+            saveTimeDecay($db, getDefaultTimeDecay());
+            saveEventLevelMultipliers($db, getDefaultEventLevelMultipliers());
+            $message = 'Inställningar återställda till standardvärden.';
+            $messageType = 'success';
+        } catch (Exception $e) {
+            $message = 'Fel vid återställning: ' . $e->getMessage();
+            $messageType = 'error';
+            error_log("Reset defaults error: " . $e->getMessage());
+        }
     }
 }
 
