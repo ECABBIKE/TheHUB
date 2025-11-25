@@ -1154,7 +1154,7 @@ try {
                                                             <tr>
                                                                 <th class="gs-text-center">Placering</th>
                                                                 <th>Event</th>
-                                                                <th class="gs-text-right">Poäng</th>
+                                                                <th class="gs-text-right" style="display: table-cell !important;">Poäng</th>
                                                                 <th class="gs-text-right show-mobile-landscape" style="display: none;">Beräkning</th>
                                                                 <th class="hide-mobile-portrait">Datum</th>
                                                                 <th class="gs-text-center hide-mobile-portrait">Klass</th>
@@ -1186,7 +1186,7 @@ try {
                                                                             × Time: <?= number_format($raceDetail['time_multiplier'], 2) ?>
                                                                         </div>
                                                                     </td>
-                                                                    <td class="gs-text-right gs-text-primary gs-font-bold" style="font-size: 0.75rem;">
+                                                                    <td class="gs-text-right gs-text-primary gs-font-bold" style="font-size: 0.75rem; display: table-cell !important;">
                                                                         <?php if ($riderId == 7726): ?>
                                                                             <span style="background: yellow; color: red; padding: 2px;">
                                                                                 [<?= $raceDetail['ranking_points'] ?? 'NULL' ?>]
