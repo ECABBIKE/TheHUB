@@ -410,7 +410,7 @@ try {
         ", [$riderId, $discipline]);
 
         // Get detailed ranking points per race from ranking_points table
-        // These points are already weighted with field size and event level multipliers
+        // If empty, fall back to calculating from results table
         $disciplineFilter = '';
         $params = [$riderId];
 
@@ -443,6 +443,49 @@ try {
             {$disciplineFilter}
             ORDER BY e.date DESC
         ", $params);
+
+        // If ranking_points table is empty, calculate from results as fallback
+        if (empty($rankingRaceDetails[$discipline])) {
+            $rawResults = $db->getAll("
+                SELECT
+                    r.event_id,
+                    r.class_id,
+                    r.position,
+                    r.points as original_points,
+                    e.name as event_name,
+                    e.date as event_date,
+                    e.location as event_location,
+                    e.discipline,
+                    cls.display_name as class_name
+                FROM results r
+                JOIN events e ON r.event_id = e.id
+                LEFT JOIN classes cls ON r.class_id = cls.id
+                WHERE r.cyclist_id = ?
+                AND r.status = 'finished'
+                AND r.points > 0
+                AND e.date >= DATE_SUB(NOW(), INTERVAL 24 MONTH)
+                {$disciplineFilter}
+                ORDER BY e.date DESC
+            ", $params);
+
+            // Convert to expected format with points from results
+            foreach ($rawResults as $result) {
+                $rankingRaceDetails[$discipline][] = [
+                    'ranking_points' => $result['original_points'], // Use event points as placeholder
+                    'original_points' => $result['original_points'],
+                    'field_size' => 0,
+                    'field_multiplier' => 1.0,
+                    'event_level_multiplier' => 1.0,
+                    'time_multiplier' => 1.0,
+                    'position' => $result['position'],
+                    'event_name' => $result['event_name'],
+                    'event_date' => $result['event_date'],
+                    'event_location' => $result['event_location'],
+                    'discipline' => $result['discipline'],
+                    'class_name' => $result['class_name']
+                ];
+            }
+        }
     }
 
     // Determine default discipline based on priority: GRAVITY > ENDURO > DH
