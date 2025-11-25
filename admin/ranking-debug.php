@@ -1,220 +1,347 @@
 <?php
 /**
- * Ranking System Diagnostic Tool
- * Checks what data exists and identifies issues
+ * Ranking Debug Tool
+ * Shows detailed calculation breakdown for ranking points
  */
+
 require_once __DIR__ . '/../config.php';
+require_once __DIR__ . '/../includes/ranking_functions.php';
 require_admin();
 
 $db = getDB();
 
-// Get the cutoff date for 24 months
-$cutoffDate = date('Y-m-d', strtotime('-24 months'));
+// Get parameters
+$riderId = isset($_GET['rider_id']) ? (int)$_GET['rider_id'] : null;
+$eventId = isset($_GET['event_id']) ? (int)$_GET['event_id'] : null;
+$discipline = isset($_GET['discipline']) ? strtoupper($_GET['discipline']) : 'GRAVITY';
 
-echo "<h1>Ranking System Diagnostics</h1>";
-echo "<p>Checking data from the last 24 months (since $cutoffDate)</p>";
+$pageTitle = 'Ranking Debug';
+$pageType = 'admin';
 
-echo "<hr>";
-
-// 1. Check events table
-echo "<h2>1. Events with Enduro/DH discipline</h2>";
-$events = $db->getAll("
-    SELECT
-        id,
-        name,
-        date,
-        discipline,
-        event_level,
-        point_scale_id
-    FROM events
-    WHERE date >= ?
-    AND discipline IN ('ENDURO', 'DH')
-    ORDER BY date DESC
-", [$cutoffDate]);
-
-if (empty($events)) {
-    echo "<p style='color: red;'><strong>❌ PROBLEM: No events found with discipline 'ENDURO' or 'DH' in the last 24 months!</strong></p>";
-    echo "<p>You need to set the discipline field for your events. Go to Admin > Events and set the discipline.</p>";
-} else {
-    echo "<p style='color: green;'>✅ Found " . count($events) . " events with ENDURO/DH discipline</p>";
-    echo "<table border='1' cellpadding='5'>";
-    echo "<tr><th>ID</th><th>Name</th><th>Date</th><th>Discipline</th><th>Event Level</th><th>Point Scale ID</th></tr>";
-    foreach ($events as $event) {
-        $hasScale = $event['point_scale_id'] ? '✅' : '❌ Missing!';
-        echo "<tr>";
-        echo "<td>{$event['id']}</td>";
-        echo "<td>{$event['name']}</td>";
-        echo "<td>{$event['date']}</td>";
-        echo "<td>{$event['discipline']}</td>";
-        echo "<td>{$event['event_level']}</td>";
-        echo "<td>{$hasScale} {$event['point_scale_id']}</td>";
-        echo "</tr>";
-    }
-    echo "</table>";
-}
-
-echo "<hr>";
-
-// 2. Check results with points
-echo "<h2>2. Results with points from ENDURO/DH events</h2>";
-$resultsWithPoints = $db->getRow("
-    SELECT
-        COUNT(*) as total_results,
-        COUNT(CASE WHEN r.points > 0 OR COALESCE(r.run_1_points, 0) > 0 OR COALESCE(r.run_2_points, 0) > 0 THEN 1 END) as results_with_points
-    FROM results r
-    JOIN events e ON r.event_id = e.id
-    WHERE e.date >= ?
-    AND e.discipline IN ('ENDURO', 'DH')
-    AND r.status = 'finished'
-", [$cutoffDate]);
-
-echo "<p>Total finished results: {$resultsWithPoints['total_results']}</p>";
-echo "<p>Results with points: {$resultsWithPoints['results_with_points']}</p>";
-
-if ($resultsWithPoints['results_with_points'] == 0 && $resultsWithPoints['total_results'] > 0) {
-    echo "<p style='color: red;'><strong>❌ PROBLEM: Results exist but no points are assigned!</strong></p>";
-    echo "<p>Events need to have a point_scale_id assigned. Check the table above.</p>";
-}
-
-echo "<hr>";
-
-// 3. Check classes that should be eligible
-echo "<h2>3. Classes eligible for ranking</h2>";
-$classes = $db->getAll("
-    SELECT
-        id,
-        name,
-        display_name,
-        discipline,
-        COALESCE(series_eligible, 1) as series_eligible,
-        COALESCE(awards_points, 1) as awards_points
-    FROM classes
-    WHERE discipline IN ('ENDURO', 'DH', 'GRAVITY')
-    ORDER BY name
-");
-
-echo "<table border='1' cellpadding='5'>";
-echo "<tr><th>ID</th><th>Name</th><th>Display Name</th><th>Discipline</th><th>Series Eligible</th><th>Awards Points</th></tr>";
-foreach ($classes as $class) {
-    $eligible = $class['series_eligible'] && $class['awards_points'] ? '✅' : '❌';
-    echo "<tr>";
-    echo "<td>{$class['id']}</td>";
-    echo "<td>{$class['name']}</td>";
-    echo "<td>{$class['display_name']}</td>";
-    echo "<td>{$class['discipline']}</td>";
-    echo "<td>{$eligible} {$class['series_eligible']}</td>";
-    echo "<td>{$eligible} {$class['awards_points']}</td>";
-    echo "</tr>";
-}
-echo "</table>";
-
-echo "<hr>";
-
-// 4. Check ranking_points table
-echo "<h2>4. Ranking Points Calculated</h2>";
-$rankingPoints = $db->getRow("
-    SELECT
-        COUNT(*) as total,
-        COUNT(DISTINCT rider_id) as unique_riders,
-        COUNT(DISTINCT event_id) as unique_events,
-        SUM(CASE WHEN discipline = 'ENDURO' THEN 1 ELSE 0 END) as enduro_count,
-        SUM(CASE WHEN discipline = 'DH' THEN 1 ELSE 0 END) as dh_count
-    FROM ranking_points
-");
-
-if ($rankingPoints['total'] == 0) {
-    echo "<p style='color: red;'><strong>❌ No ranking points calculated yet!</strong></p>";
-    echo "<p>Go to Admin > Ranking and click 'Kör beräkning' to calculate ranking points.</p>";
-} else {
-    echo "<p style='color: green;'>✅ Ranking points exist:</p>";
-    echo "<ul>";
-    echo "<li>Total entries: {$rankingPoints['total']}</li>";
-    echo "<li>Unique riders: {$rankingPoints['unique_riders']}</li>";
-    echo "<li>Unique events: {$rankingPoints['unique_events']}</li>";
-    echo "<li>Enduro results: {$rankingPoints['enduro_count']}</li>";
-    echo "<li>DH results: {$rankingPoints['dh_count']}</li>";
-    echo "</ul>";
-}
-
-echo "<hr>";
-
-// 5. Check ranking_snapshots table
-echo "<h2>5. Ranking Snapshots Created</h2>";
-$snapshots = $db->getAll("
-    SELECT
-        discipline,
-        snapshot_date,
-        COUNT(*) as rider_count
-    FROM ranking_snapshots
-    GROUP BY discipline, snapshot_date
-    ORDER BY snapshot_date DESC, discipline
-    LIMIT 10
-");
-
-if (empty($snapshots)) {
-    echo "<p style='color: red;'><strong>❌ No ranking snapshots created yet!</strong></p>";
-    echo "<p>After calculating ranking points, snapshots need to be created.</p>";
-} else {
-    echo "<p style='color: green;'>✅ Ranking snapshots exist:</p>";
-    echo "<table border='1' cellpadding='5'>";
-    echo "<tr><th>Discipline</th><th>Snapshot Date</th><th>Rider Count</th></tr>";
-    foreach ($snapshots as $snapshot) {
-        echo "<tr>";
-        echo "<td>{$snapshot['discipline']}</td>";
-        echo "<td>{$snapshot['snapshot_date']}</td>";
-        echo "<td>{$snapshot['rider_count']}</td>";
-        echo "</tr>";
-    }
-    echo "</table>";
-}
-
-echo "<hr>";
-
-// 6. Summary and recommendations
-echo "<h2>6. Summary and Recommendations</h2>";
-
-$issues = [];
-$recommendations = [];
-
-if (empty($events)) {
-    $issues[] = "No events have discipline set to ENDURO or DH";
-    $recommendations[] = "Go to Admin > Events and set the discipline for your events";
-}
-
-if ($resultsWithPoints['results_with_points'] == 0 && $resultsWithPoints['total_results'] > 0) {
-    $issues[] = "Results exist but have no points";
-    $recommendations[] = "Assign point scales to events (events need point_scale_id)";
-}
-
-if ($rankingPoints['total'] == 0) {
-    $issues[] = "No ranking points have been calculated";
-    $recommendations[] = "Go to Admin > Ranking and click 'Kör beräkning'";
-}
-
-if (empty($snapshots)) {
-    $issues[] = "No ranking snapshots have been created";
-    $recommendations[] = "Run the ranking calculation to create snapshots";
-}
-
-if (empty($issues)) {
-    echo "<p style='color: green; font-size: 18px;'><strong>✅ Everything looks good!</strong></p>";
-    echo "<p>If ranking still doesn't show, check the public ranking page at /ranking/</p>";
-} else {
-    echo "<p style='color: red; font-size: 18px;'><strong>❌ Issues found:</strong></p>";
-    echo "<ol>";
-    foreach ($issues as $issue) {
-        echo "<li>{$issue}</li>";
-    }
-    echo "</ol>";
-
-    echo "<p style='font-size: 18px;'><strong>Recommendations:</strong></p>";
-    echo "<ol>";
-    foreach ($recommendations as $rec) {
-        echo "<li>{$rec}</li>";
-    }
-    echo "</ol>";
-}
-
-echo "<hr>";
-echo "<p><a href='/admin/ranking.php'>Go to Ranking Admin</a> | <a href='/admin/events.php'>Go to Events Admin</a></p>";
+include __DIR__ . '/../includes/layout-header.php';
 ?>
+
+<main class="gs-content-with-sidebar">
+    <div class="gs-container">
+        <div class="gs-flex gs-items-center gs-justify-between gs-mb-xl">
+            <h1 class="gs-h1 gs-text-primary">
+                <i data-lucide="bug"></i>
+                Ranking Debug
+            </h1>
+            <a href="/admin/ranking.php" class="gs-btn gs-btn-outline">
+                <i data-lucide="arrow-left"></i>
+                Tillbaka
+            </a>
+        </div>
+
+        <!-- Filter Form -->
+        <div class="gs-card gs-mb-lg">
+            <div class="gs-card-header">
+                <h2 class="gs-h4 gs-text-primary">Filter</h2>
+            </div>
+            <div class="gs-card-content">
+                <form method="GET" class="gs-form">
+                    <div class="gs-grid gs-grid-cols-3 gs-gap-md">
+                        <div class="gs-form-group">
+                            <label for="rider_id" class="gs-label">Rider ID (valfritt)</label>
+                            <input type="number" id="rider_id" name="rider_id"
+                                   value="<?= $riderId ?? '' ?>"
+                                   class="gs-input"
+                                   placeholder="T.ex. 7476">
+                        </div>
+                        <div class="gs-form-group">
+                            <label for="event_id" class="gs-label">Event ID (valfritt)</label>
+                            <input type="number" id="event_id" name="event_id"
+                                   value="<?= $eventId ?? '' ?>"
+                                   class="gs-input"
+                                   placeholder="T.ex. 123">
+                        </div>
+                        <div class="gs-form-group">
+                            <label for="discipline" class="gs-label">Disciplin</label>
+                            <select id="discipline" name="discipline" class="gs-input">
+                                <option value="GRAVITY" <?= $discipline === 'GRAVITY' ? 'selected' : '' ?>>Gravity</option>
+                                <option value="ENDURO" <?= $discipline === 'ENDURO' ? 'selected' : '' ?>>Enduro</option>
+                                <option value="DH" <?= $discipline === 'DH' ? 'selected' : '' ?>>Downhill</option>
+                            </select>
+                        </div>
+                    </div>
+                    <button type="submit" class="gs-btn gs-btn-primary gs-mt-md">
+                        <i data-lucide="search"></i>
+                        Visa beräkning
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <?php if ($riderId || $eventId): ?>
+            <?php
+            // Get settings
+            $fieldMultipliers = getRankingFieldMultipliers($db);
+            $eventLevelMultipliers = getEventLevelMultipliers($db);
+            $timeDecay = getRankingTimeDecay($db);
+
+            $cutoffDate = date('Y-m-d', strtotime('-24 months'));
+            $month12Cutoff = date('Y-m-d', strtotime('-12 months'));
+
+            // Build query filters
+            $disciplineFilter = '';
+            $params = [$cutoffDate];
+
+            if ($discipline !== 'GRAVITY') {
+                $disciplineFilter = 'AND e.discipline = ?';
+                $params[] = $discipline;
+            } else {
+                $disciplineFilter = "AND e.discipline IN ('ENDURO', 'DH')";
+            }
+
+            // Add rider/event filters
+            $extraFilter = '';
+            if ($riderId) {
+                $extraFilter .= ' AND r.cyclist_id = ?';
+                $params[] = $riderId;
+            }
+            if ($eventId) {
+                $extraFilter .= ' AND r.event_id = ?';
+                $params[] = $eventId;
+            }
+
+            // Get results with detailed info
+            $results = $db->getAll("
+                SELECT
+                    r.cyclist_id as rider_id,
+                    r.event_id,
+                    r.class_id,
+                    COALESCE(
+                        CASE
+                            WHEN COALESCE(r.run_1_points, 0) > 0 OR COALESCE(r.run_2_points, 0) > 0
+                            THEN COALESCE(r.run_1_points, 0) + COALESCE(r.run_2_points, 0)
+                            ELSE r.points
+                        END,
+                        r.points
+                    ) as original_points,
+                    e.date as event_date,
+                    e.name as event_name,
+                    e.discipline,
+                    COALESCE(e.event_level, 'national') as event_level,
+                    cl.name as class_name,
+                    rider.firstname,
+                    rider.lastname
+                FROM results r
+                STRAIGHT_JOIN events e ON r.event_id = e.id
+                STRAIGHT_JOIN classes cl ON r.class_id = cl.id
+                LEFT JOIN riders rider ON r.cyclist_id = rider.id
+                WHERE r.status = 'finished'
+                AND (r.points > 0 OR COALESCE(r.run_1_points, 0) > 0 OR COALESCE(r.run_2_points, 0) > 0)
+                AND e.date >= ?
+                {$disciplineFilter}
+                {$extraFilter}
+                AND COALESCE(cl.series_eligible, 1) = 1
+                AND COALESCE(cl.awards_points, 1) = 1
+                ORDER BY e.date DESC, r.cyclist_id
+            ", $params);
+
+            // Calculate field sizes
+            $fieldSizes = [];
+            foreach ($results as $result) {
+                $key = $result['event_id'] . '_' . $result['class_id'];
+                if (!isset($fieldSizes[$key])) {
+                    $fieldSizes[$key] = 0;
+                }
+                $fieldSizes[$key]++;
+            }
+            ?>
+
+            <!-- Settings Info -->
+            <div class="gs-card gs-mb-lg">
+                <div class="gs-card-header">
+                    <h2 class="gs-h4 gs-text-primary">
+                        <i data-lucide="settings"></i>
+                        Aktuella inställningar
+                    </h2>
+                </div>
+                <div class="gs-card-content">
+                    <div class="gs-grid gs-grid-cols-2 gs-gap-lg">
+                        <div>
+                            <h3 class="gs-h5 gs-mb-sm">Eventnivå-multiplikatorer</h3>
+                            <ul>
+                                <li><strong>National:</strong> <?= number_format($eventLevelMultipliers['national'], 2) ?> (<?= $eventLevelMultipliers['national'] * 100 ?>%)</li>
+                                <li><strong>Sportmotion:</strong> <?= number_format($eventLevelMultipliers['sportmotion'], 2) ?> (<?= $eventLevelMultipliers['sportmotion'] * 100 ?>%)</li>
+                            </ul>
+                        </div>
+                        <div>
+                            <h3 class="gs-h5 gs-mb-sm">Tidsviktning</h3>
+                            <ul>
+                                <li><strong>Månad 1-12:</strong> <?= number_format($timeDecay['months_1_12'], 2) ?> (<?= $timeDecay['months_1_12'] * 100 ?>%)</li>
+                                <li><strong>Månad 13-24:</strong> <?= number_format($timeDecay['months_13_24'], 2) ?> (<?= $timeDecay['months_13_24'] * 100 ?>%)</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Results Table -->
+            <div class="gs-card">
+                <div class="gs-card-header">
+                    <h2 class="gs-h4 gs-text-primary">
+                        <i data-lucide="calculator"></i>
+                        Beräkningsdetaljer (<?= count($results) ?> resultat)
+                    </h2>
+                </div>
+                <div class="gs-card-content">
+                    <div style="overflow-x: auto;">
+                        <table class="gs-table">
+                            <thead>
+                                <tr>
+                                    <th>Rider</th>
+                                    <th>Event</th>
+                                    <th>Datum</th>
+                                    <th>Klass</th>
+                                    <th>Fält</th>
+                                    <th>Event Nivå</th>
+                                    <th>Original p</th>
+                                    <th>Fält mult</th>
+                                    <th>Event mult</th>
+                                    <th>Tid mult</th>
+                                    <th style="background: #fef3c7;">Ranking p</th>
+                                    <th style="background: #dcfce7;">Viktade p</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($results as $result): ?>
+                                    <?php
+                                    $key = $result['event_id'] . '_' . $result['class_id'];
+                                    $fieldSize = $fieldSizes[$key] ?? 1;
+
+                                    $fieldMult = getFieldMultiplier($fieldSize, $fieldMultipliers);
+                                    $eventLevelMult = $eventLevelMultipliers[$result['event_level']] ?? 1.00;
+
+                                    // Calculate time decay
+                                    $eventDate = new DateTime($result['event_date']);
+                                    $today = new DateTime();
+                                    $monthsDiff = $eventDate->diff($today)->m + ($eventDate->diff($today)->y * 12);
+
+                                    $timeMult = 0;
+                                    $timeLabel = '';
+                                    if ($monthsDiff < 12) {
+                                        $timeMult = $timeDecay['months_1_12'];
+                                        $timeLabel = '1-12 mån';
+                                    } elseif ($monthsDiff < 24) {
+                                        $timeMult = $timeDecay['months_13_24'];
+                                        $timeLabel = '13-24 mån';
+                                    } else {
+                                        $timeMult = $timeDecay['months_25_plus'];
+                                        $timeLabel = '25+ mån';
+                                    }
+
+                                    $rankingPoints = $result['original_points'] * $fieldMult * $eventLevelMult;
+                                    $weightedPoints = $rankingPoints * $timeMult;
+                                    ?>
+                                    <tr>
+                                        <td><?= h($result['firstname'] . ' ' . $result['lastname']) ?></td>
+                                        <td><?= h($result['event_name']) ?></td>
+                                        <td><?= date('Y-m-d', strtotime($result['event_date'])) ?></td>
+                                        <td><?= h($result['class_name']) ?></td>
+                                        <td><?= $fieldSize ?> åkare</td>
+                                        <td>
+                                            <span style="padding: 2px 8px; border-radius: 4px; font-size: 0.75rem;
+                                                        <?= $result['event_level'] === 'sportmotion' ? 'background: #fef3c7; color: #92400e;' : 'background: #dbeafe; color: #1e40af;' ?>">
+                                                <?= ucfirst($result['event_level']) ?>
+                                            </span>
+                                        </td>
+                                        <td><?= number_format($result['original_points'], 1) ?></td>
+                                        <td><?= number_format($fieldMult, 2) ?> <small>(<?= $fieldMult * 100 ?>%)</small></td>
+                                        <td><?= number_format($eventLevelMult, 2) ?> <small>(<?= $eventLevelMult * 100 ?>%)</small></td>
+                                        <td><?= number_format($timeMult, 2) ?> <small>(<?= $timeLabel ?>)</small></td>
+                                        <td style="background: #fef3c7; font-weight: 600;"><?= number_format($rankingPoints, 1) ?></td>
+                                        <td style="background: #dcfce7; font-weight: 600;"><?= number_format($weightedPoints, 1) ?></td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <?php if (empty($results)): ?>
+                        <p class="gs-text-secondary gs-text-center gs-py-xl">
+                            Inga resultat hittades för de valda filtren.
+                        </p>
+                    <?php endif; ?>
+                </div>
+            </div>
+
+            <!-- Calculation Explanation -->
+            <div class="gs-card gs-mt-lg">
+                <div class="gs-card-header">
+                    <h2 class="gs-h4 gs-text-primary">
+                        <i data-lucide="info"></i>
+                        Förklaring
+                    </h2>
+                </div>
+                <div class="gs-card-content">
+                    <h3 class="gs-h5 gs-mb-sm">Beräkningsformel:</h3>
+                    <div class="gs-bg-light gs-p-md gs-rounded gs-mb-md" style="font-family: monospace;">
+                        <strong>Ranking Points</strong> = Original Points × Fält Mult × Event Mult<br>
+                        <strong>Viktade Points</strong> = Ranking Points × Tid Mult
+                    </div>
+
+                    <h3 class="gs-h5 gs-mb-sm">Exempel (Marie's Capital Enduro #4):</h3>
+                    <div class="gs-bg-light gs-p-md gs-rounded">
+                        <strong>Om Sportmotion med 2 åkare:</strong><br>
+                        Ranking Points = 500 × 0.77 (2 åkare) × 0.50 (sportmotion) = <strong>192.5p</strong><br>
+                        <br>
+                        <strong>Om National med 2 åkare:</strong><br>
+                        Ranking Points = 500 × 0.77 (2 åkare) × 1.00 (national) = <strong>385p</strong><br>
+                        <br>
+                        <strong>Om event är från senaste 12 mån:</strong><br>
+                        Viktade Points = Ranking Points × 1.00 = samma som Ranking Points
+                    </div>
+                </div>
+            </div>
+
+        <?php else: ?>
+            <div class="gs-card">
+                <div class="gs-card-content">
+                    <p class="gs-text-secondary gs-text-center gs-py-xl">
+                        Välj Rider ID eller Event ID ovan för att se beräkningsdetaljer.
+                    </p>
+                </div>
+            </div>
+        <?php endif; ?>
+
+    </div>
+</main>
+
+<style>
+.gs-table {
+    width: 100%;
+    font-size: 0.875rem;
+}
+
+.gs-table th {
+    background: var(--gs-gray-100);
+    padding: 0.75rem 0.5rem;
+    text-align: left;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.gs-table td {
+    padding: 0.75rem 0.5rem;
+    border-bottom: 1px solid var(--gs-gray-200);
+}
+
+.gs-table tbody tr:hover {
+    background: var(--gs-gray-50);
+}
+
+@media (max-width: 767px) {
+    .gs-grid.gs-grid-cols-3 {
+        grid-template-columns: 1fr !important;
+    }
+
+    .gs-grid.gs-grid-cols-2 {
+        grid-template-columns: 1fr !important;
+    }
+}
+</style>
+
+<?php include __DIR__ . '/../includes/layout-footer.php'; ?>
