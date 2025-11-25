@@ -702,6 +702,10 @@ function runFullRankingUpdate($db, $debug = false) {
     $startTime = microtime(true);
 
     if ($debug) {
+        echo "<p style='background: #e3f2fd; padding: 10px; border-left: 4px solid #2196f3;'>";
+        echo "<strong>🔄 Version: 2025-11-24-086</strong><br>";
+        echo "Lightweight Ranking System - Debug Mode Active";
+        echo "</p>";
         echo "<h3>Creating Ranking Snapshots</h3>";
         flush();
     }
