@@ -184,29 +184,58 @@ if ($totalRaces > 0) {
         ");
 
         if ($totalSeries) {
-            // Get rider's points in GravitySeries Total (via series_events)
+            // Get rider's points in GravitySeries Total (supports both connection methods)
             $gravityTotalStats = $db->getRow("
-                SELECT SUM(r.points) as total_points, COUNT(DISTINCT r.event_id) as events_count
-                FROM results r
-                JOIN events e ON r.event_id = e.id
-                JOIN series_events se ON e.id = se.event_id
-                WHERE se.series_id = ? AND r.cyclist_id = ?
-                AND r.status = 'finished' AND r.points > 0
-            ", [$totalSeries['id'], $riderId]);
+                SELECT SUM(points) as total_points, COUNT(DISTINCT event_id) as events_count
+                FROM (
+                    -- Via series_events junction table
+                    SELECT r.points, r.event_id
+                    FROM results r
+                    JOIN events e ON r.event_id = e.id
+                    JOIN series_events se ON e.id = se.event_id
+                    WHERE se.series_id = ? AND r.cyclist_id = ?
+                    AND r.status = 'finished' AND r.points > 0
+
+                    UNION
+
+                    -- Via direct events.series_id
+                    SELECT r.points, r.event_id
+                    FROM results r
+                    JOIN events e ON r.event_id = e.id
+                    WHERE e.series_id = ? AND r.cyclist_id = ?
+                    AND e.series_id IS NOT NULL
+                    AND r.status = 'finished' AND r.points > 0
+                ) combined
+            ", [$totalSeries['id'], $riderId, $totalSeries['id'], $riderId]);
 
             // Get rider's most common class from their results in this series (for display)
             $riderResultClass = $db->getRow("
-                SELECT r.class_id, c.name, c.display_name, COUNT(*) as cnt
-                FROM results r
-                JOIN events e ON r.event_id = e.id
-                JOIN series_events se ON e.id = se.event_id
-                LEFT JOIN classes c ON r.class_id = c.id
-                WHERE se.series_id = ? AND r.cyclist_id = ?
-                AND r.status = 'finished' AND r.class_id IS NOT NULL
-                GROUP BY r.class_id
+                SELECT class_id, name, display_name, COUNT(*) as cnt
+                FROM (
+                    -- Via series_events junction table
+                    SELECT r.class_id, c.name, c.display_name
+                    FROM results r
+                    JOIN events e ON r.event_id = e.id
+                    JOIN series_events se ON e.id = se.event_id
+                    LEFT JOIN classes c ON r.class_id = c.id
+                    WHERE se.series_id = ? AND r.cyclist_id = ?
+                    AND r.status = 'finished' AND r.class_id IS NOT NULL
+
+                    UNION ALL
+
+                    -- Via direct events.series_id
+                    SELECT r.class_id, c.name, c.display_name
+                    FROM results r
+                    JOIN events e ON r.event_id = e.id
+                    LEFT JOIN classes c ON r.class_id = c.id
+                    WHERE e.series_id = ? AND r.cyclist_id = ?
+                    AND e.series_id IS NOT NULL
+                    AND r.status = 'finished' AND r.class_id IS NOT NULL
+                ) combined
+                GROUP BY class_id
                 ORDER BY cnt DESC
                 LIMIT 1
-            ", [$totalSeries['id'], $riderId]);
+            ", [$totalSeries['id'], $riderId, $totalSeries['id'], $riderId]);
 
             if ($riderResultClass) {
                 $currentClassName = $riderResultClass['display_name'] ?? $riderResultClass['name'] ?? null;
@@ -214,15 +243,29 @@ if ($totalRaces > 0) {
 
             // Get overall position in series (all classes combined)
             $seriesStandingsAll = $db->getAll("
-                SELECT r.cyclist_id, SUM(r.points) as total_points
-                FROM results r
-                JOIN events e ON r.event_id = e.id
-                JOIN series_events se ON e.id = se.event_id
-                WHERE se.series_id = ?
-                AND r.status = 'finished' AND r.points > 0
-                GROUP BY r.cyclist_id
+                SELECT cyclist_id, SUM(points) as total_points
+                FROM (
+                    -- Via series_events junction table
+                    SELECT r.cyclist_id, r.points
+                    FROM results r
+                    JOIN events e ON r.event_id = e.id
+                    JOIN series_events se ON e.id = se.event_id
+                    WHERE se.series_id = ?
+                    AND r.status = 'finished' AND r.points > 0
+
+                    UNION ALL
+
+                    -- Via direct events.series_id
+                    SELECT r.cyclist_id, r.points
+                    FROM results r
+                    JOIN events e ON r.event_id = e.id
+                    WHERE e.series_id = ?
+                    AND e.series_id IS NOT NULL
+                    AND r.status = 'finished' AND r.points > 0
+                ) combined
+                GROUP BY cyclist_id
                 ORDER BY total_points DESC
-            ", [$totalSeries['id']]);
+            ", [$totalSeries['id'], $totalSeries['id']]);
 
             $gravityTotalClassTotal = count($seriesStandingsAll);
             $position = 1;
@@ -234,23 +277,50 @@ if ($totalRaces > 0) {
                 $position++;
             }
 
-            // Get detailed race results for GravitySeries Total
+            // Get detailed race results for GravitySeries Total (supports both connection methods)
             $gravityTotalRaceDetails = $db->getAll("
                 SELECT
-                    r.points,
-                    r.class_position,
-                    e.name as event_name,
-                    e.date as event_date,
-                    e.location as event_location,
-                    cls.display_name as class_name
-                FROM results r
-                JOIN events e ON r.event_id = e.id
-                JOIN series_events se ON e.id = se.event_id
-                LEFT JOIN classes cls ON r.class_id = cls.id
-                WHERE se.series_id = ? AND r.cyclist_id = ?
-                AND r.status = 'finished'
-                ORDER BY e.date DESC
-            ", [$totalSeries['id'], $riderId]);
+                    points,
+                    class_position,
+                    event_name,
+                    event_date,
+                    event_location,
+                    class_name
+                FROM (
+                    -- Via series_events junction table
+                    SELECT
+                        r.points,
+                        r.class_position,
+                        e.name as event_name,
+                        e.date as event_date,
+                        e.location as event_location,
+                        cls.display_name as class_name
+                    FROM results r
+                    JOIN events e ON r.event_id = e.id
+                    JOIN series_events se ON e.id = se.event_id
+                    LEFT JOIN classes cls ON r.class_id = cls.id
+                    WHERE se.series_id = ? AND r.cyclist_id = ?
+                    AND r.status = 'finished'
+
+                    UNION
+
+                    -- Via direct events.series_id
+                    SELECT
+                        r.points,
+                        r.class_position,
+                        e.name as event_name,
+                        e.date as event_date,
+                        e.location as event_location,
+                        cls.display_name as class_name
+                    FROM results r
+                    JOIN events e ON r.event_id = e.id
+                    LEFT JOIN classes cls ON r.class_id = cls.id
+                    WHERE e.series_id = ? AND r.cyclist_id = ?
+                    AND e.series_id IS NOT NULL
+                    AND r.status = 'finished'
+                ) combined
+                ORDER BY event_date DESC
+            ", [$totalSeries['id'], $riderId, $totalSeries['id'], $riderId]);
 
             // Get GravitySeries Team stats (club points for this series)
             // Simple direct query - club_rider_points already has series_id
@@ -310,6 +380,8 @@ if ($totalRaces > 0) {
 $rankingStats = [];
 $rankingHistory = [];
 $rankingRaceDetails = [];
+$defaultDiscipline = null; // Auto-select based on priority
+
 try {
     foreach (['ENDURO', 'DH', 'GRAVITY'] as $discipline) {
         $riderData = calculateRankingData($db, $discipline, false);
@@ -353,6 +425,15 @@ try {
             AND e.date >= DATE_SUB(NOW(), INTERVAL 24 MONTH)
             ORDER BY e.date DESC
         ", [$riderId, $discipline]);
+    }
+
+    // Determine default discipline based on priority: GRAVITY > ENDURO > DH
+    if (!empty($rankingStats['GRAVITY'])) {
+        $defaultDiscipline = 'GRAVITY';
+    } elseif (!empty($rankingStats['ENDURO'])) {
+        $defaultDiscipline = 'ENDURO';
+    } elseif (!empty($rankingStats['DH'])) {
+        $defaultDiscipline = 'DH';
     }
 } catch (Exception $e) {
     error_log("Error getting ranking stats for rider {$riderId}: " . $e->getMessage());
@@ -732,23 +813,25 @@ try {
 
             <!-- Main Profile Tabs -->
             <div class="gs-card gs-mb-xl">
-                <div class="gs-main-tabs gs-mb-lg">
-                    <button class="gs-main-tab active" data-main-tab="ranking-tab">
-                        <i data-lucide="trending-up"></i>
-                        Ranking
-                    </button>
-                    <button class="gs-main-tab" data-main-tab="gravity-total-tab">
-                        <i data-lucide="trophy"></i>
-                        GravitySeries Total
-                    </button>
-                    <button class="gs-main-tab" data-main-tab="gravity-team-tab">
-                        <i data-lucide="users"></i>
-                        GravitySeries Team
-                    </button>
-                    <button class="gs-main-tab" data-main-tab="results-tab">
-                        <i data-lucide="list"></i>
-                        Tävlingsresultat
-                    </button>
+                <div class="gs-event-tabs-wrapper gs-mb-lg">
+                    <div class="gs-event-tabs">
+                        <button class="gs-event-tab active" data-main-tab="ranking-tab">
+                            <i data-lucide="trending-up"></i>
+                            Ranking
+                        </button>
+                        <button class="gs-event-tab" data-main-tab="gravity-total-tab">
+                            <i data-lucide="trophy"></i>
+                            GravitySeries Total
+                        </button>
+                        <button class="gs-event-tab" data-main-tab="gravity-team-tab">
+                            <i data-lucide="users"></i>
+                            GravitySeries Team
+                        </button>
+                        <button class="gs-event-tab" data-main-tab="results-tab">
+                            <i data-lucide="list"></i>
+                            Tävlingsresultat
+                        </button>
+                    </div>
                 </div>
 
                 <!-- Tab 1: Ranking -->
@@ -763,7 +846,7 @@ try {
                         <div class="gs-tabs gs-mb-lg">
                             <?php foreach (['GRAVITY' => 'Gravity', 'ENDURO' => 'Enduro', 'DH' => 'Downhill'] as $disc => $label): ?>
                                 <?php if (isset($rankingStats[$disc])): ?>
-                                    <button class="gs-tab <?= $disc === 'GRAVITY' ? 'active' : '' ?>" data-tab="ranking-<?= strtolower($disc) ?>">
+                                    <button class="gs-tab <?= $disc === $defaultDiscipline ? 'active' : '' ?>" data-tab="ranking-<?= strtolower($disc) ?>">
                                         <?= $label ?>
                                     </button>
                                 <?php endif; ?>
@@ -774,7 +857,7 @@ try {
                         <?php foreach (['GRAVITY' => 'Gravity', 'ENDURO' => 'Enduro', 'DH' => 'Downhill'] as $disc => $label): ?>
                             <?php if (isset($rankingStats[$disc])): ?>
                                 <?php $stats = $rankingStats[$disc]; ?>
-                                <div class="gs-tab-content <?= $disc === 'GRAVITY' ? 'active' : '' ?>" id="ranking-<?= strtolower($disc) ?>">
+                                <div class="gs-tab-content <?= $disc === $defaultDiscipline ? 'active' : '' ?>" id="ranking-<?= strtolower($disc) ?>">
 
                                     <!-- Stats Grid -->
                                     <div class="gs-ranking-stats-grid gs-mb-lg">
@@ -1257,45 +1340,9 @@ try {
 
             <!-- CSS for main tabs and styling -->
             <style>
-                /* Main Profile Tabs */
-                .gs-main-tabs {
-                    display: flex;
-                    gap: 0.5rem;
-                    border-bottom: 3px solid var(--gs-gray-200);
-                    margin-bottom: 2rem;
-                    overflow-x: auto;
-                }
-
-                .gs-main-tab {
-                    padding: 1rem 1.5rem;
-                    background: none;
-                    border: none;
-                    border-bottom: 4px solid transparent;
-                    margin-bottom: -3px;
+                /* Main Profile Tabs - using event-tab style */
+                .gs-event-tab {
                     cursor: pointer;
-                    font-weight: 600;
-                    font-size: 1rem;
-                    color: var(--gs-text-secondary);
-                    transition: all 0.2s;
-                    white-space: nowrap;
-                    display: flex;
-                    align-items: center;
-                    gap: 0.5rem;
-                }
-
-                .gs-main-tab:hover {
-                    color: var(--gs-primary);
-                    background: var(--gs-gray-50);
-                }
-
-                .gs-main-tab.active {
-                    color: var(--gs-primary);
-                    border-bottom-color: var(--gs-primary);
-                }
-
-                .gs-main-tab i {
-                    width: 20px;
-                    height: 20px;
                 }
 
                 .gs-main-tab-content {
@@ -1627,14 +1674,14 @@ try {
                 <script>
                 // Main tab functionality
                 document.addEventListener('DOMContentLoaded', function() {
-                    // Main profile tabs
-                    const mainTabs = document.querySelectorAll('.gs-main-tab');
+                    // Main profile tabs (using gs-event-tab for main tabs)
+                    const mainTabs = document.querySelectorAll('.gs-event-tab[data-main-tab]');
                     mainTabs.forEach(tab => {
                         tab.addEventListener('click', function() {
                             const targetId = this.dataset.mainTab;
 
                             // Remove active class from all main tabs and content
-                            document.querySelectorAll('.gs-main-tab').forEach(t => t.classList.remove('active'));
+                            document.querySelectorAll('.gs-event-tab[data-main-tab]').forEach(t => t.classList.remove('active'));
                             document.querySelectorAll('.gs-main-tab-content').forEach(c => c.classList.remove('active'));
 
                             // Add active class to clicked tab and corresponding content
