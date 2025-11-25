@@ -427,6 +427,20 @@ function getCurrentRanking($db, $discipline = 'gravity', $limit = 100, $offset =
     // Calculate live ranking
     $riderData = calculateRankingData($db, $discipline, false);
 
+    // Map field names to match what frontend expects
+    foreach ($riderData as &$rider) {
+        $rider['total_ranking_points'] = $rider['total_points'];
+        $rider['points_last_12_months'] = $rider['points_12'];
+        // points_months_13_24 is already correct
+        // events_count is already correct
+        // ranking_position is already correct
+
+        // Add missing fields that frontend might expect
+        $rider['previous_position'] = null;
+        $rider['position_change'] = null;
+    }
+    unset($rider);
+
     // Apply pagination
     $total = count($riderData);
     $riders = array_slice($riderData, $offset, $limit);
@@ -574,7 +588,7 @@ function runFullRankingUpdate($db, $debug = false) {
 
     if ($debug) {
         echo "<p style='background: #e3f2fd; padding: 10px; border-left: 4px solid #2196f3;'>";
-        echo "<strong>🔄 Version: 2025-11-25-010</strong><br>";
+        echo "<strong>🔄 Version: 2025-11-25-011</strong><br>";
         echo "Lightweight Ranking System - Debug Mode Active";
         echo "</p>";
         echo "<h3>Creating Ranking Snapshots</h3>";
@@ -642,6 +656,22 @@ function getCurrentClubRanking($db, $discipline = 'GRAVITY', $limit = 50, $offse
 
     // Calculate live club ranking
     $clubData = calculateClubRanking($db, $discipline);
+
+    // Map field names to match what frontend expects
+    foreach ($clubData as &$club) {
+        $club['total_ranking_points'] = $club['total_points'];
+        $club['points_last_12_months'] = $club['points_12'];
+        // points_months_13_24 is already correct
+        // events_count is already correct
+        // riders_count is already correct
+        // ranking_position is already correct
+
+        // Add missing fields that frontend might expect
+        $club['previous_position'] = null;
+        $club['position_change'] = null;
+    }
+    unset($club);
+
     $total = count($clubData);
     $clubs = array_slice($clubData, $offset, $limit);
 
