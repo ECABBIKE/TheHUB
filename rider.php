@@ -184,29 +184,58 @@ if ($totalRaces > 0) {
         ");
 
         if ($totalSeries) {
-            // Get rider's points in GravitySeries Total (via series_events)
+            // Get rider's points in GravitySeries Total (supports both connection methods)
             $gravityTotalStats = $db->getRow("
-                SELECT SUM(r.points) as total_points, COUNT(DISTINCT r.event_id) as events_count
-                FROM results r
-                JOIN events e ON r.event_id = e.id
-                JOIN series_events se ON e.id = se.event_id
-                WHERE se.series_id = ? AND r.cyclist_id = ?
-                AND r.status = 'finished' AND r.points > 0
-            ", [$totalSeries['id'], $riderId]);
+                SELECT SUM(points) as total_points, COUNT(DISTINCT event_id) as events_count
+                FROM (
+                    -- Via series_events junction table
+                    SELECT r.points, r.event_id
+                    FROM results r
+                    JOIN events e ON r.event_id = e.id
+                    JOIN series_events se ON e.id = se.event_id
+                    WHERE se.series_id = ? AND r.cyclist_id = ?
+                    AND r.status = 'finished' AND r.points > 0
+
+                    UNION
+
+                    -- Via direct events.series_id
+                    SELECT r.points, r.event_id
+                    FROM results r
+                    JOIN events e ON r.event_id = e.id
+                    WHERE e.series_id = ? AND r.cyclist_id = ?
+                    AND e.series_id IS NOT NULL
+                    AND r.status = 'finished' AND r.points > 0
+                ) combined
+            ", [$totalSeries['id'], $riderId, $totalSeries['id'], $riderId]);
 
             // Get rider's most common class from their results in this series (for display)
             $riderResultClass = $db->getRow("
-                SELECT r.class_id, c.name, c.display_name, COUNT(*) as cnt
-                FROM results r
-                JOIN events e ON r.event_id = e.id
-                JOIN series_events se ON e.id = se.event_id
-                LEFT JOIN classes c ON r.class_id = c.id
-                WHERE se.series_id = ? AND r.cyclist_id = ?
-                AND r.status = 'finished' AND r.class_id IS NOT NULL
-                GROUP BY r.class_id
+                SELECT class_id, name, display_name, COUNT(*) as cnt
+                FROM (
+                    -- Via series_events junction table
+                    SELECT r.class_id, c.name, c.display_name
+                    FROM results r
+                    JOIN events e ON r.event_id = e.id
+                    JOIN series_events se ON e.id = se.event_id
+                    LEFT JOIN classes c ON r.class_id = c.id
+                    WHERE se.series_id = ? AND r.cyclist_id = ?
+                    AND r.status = 'finished' AND r.class_id IS NOT NULL
+
+                    UNION ALL
+
+                    -- Via direct events.series_id
+                    SELECT r.class_id, c.name, c.display_name
+                    FROM results r
+                    JOIN events e ON r.event_id = e.id
+                    LEFT JOIN classes c ON r.class_id = c.id
+                    WHERE e.series_id = ? AND r.cyclist_id = ?
+                    AND e.series_id IS NOT NULL
+                    AND r.status = 'finished' AND r.class_id IS NOT NULL
+                ) combined
+                GROUP BY class_id
                 ORDER BY cnt DESC
                 LIMIT 1
-            ", [$totalSeries['id'], $riderId]);
+            ", [$totalSeries['id'], $riderId, $totalSeries['id'], $riderId]);
 
             if ($riderResultClass) {
                 $currentClassName = $riderResultClass['display_name'] ?? $riderResultClass['name'] ?? null;
@@ -214,15 +243,29 @@ if ($totalRaces > 0) {
 
             // Get overall position in series (all classes combined)
             $seriesStandingsAll = $db->getAll("
-                SELECT r.cyclist_id, SUM(r.points) as total_points
-                FROM results r
-                JOIN events e ON r.event_id = e.id
-                JOIN series_events se ON e.id = se.event_id
-                WHERE se.series_id = ?
-                AND r.status = 'finished' AND r.points > 0
-                GROUP BY r.cyclist_id
+                SELECT cyclist_id, SUM(points) as total_points
+                FROM (
+                    -- Via series_events junction table
+                    SELECT r.cyclist_id, r.points
+                    FROM results r
+                    JOIN events e ON r.event_id = e.id
+                    JOIN series_events se ON e.id = se.event_id
+                    WHERE se.series_id = ?
+                    AND r.status = 'finished' AND r.points > 0
+
+                    UNION ALL
+
+                    -- Via direct events.series_id
+                    SELECT r.cyclist_id, r.points
+                    FROM results r
+                    JOIN events e ON r.event_id = e.id
+                    WHERE e.series_id = ?
+                    AND e.series_id IS NOT NULL
+                    AND r.status = 'finished' AND r.points > 0
+                ) combined
+                GROUP BY cyclist_id
                 ORDER BY total_points DESC
-            ", [$totalSeries['id']]);
+            ", [$totalSeries['id'], $totalSeries['id']]);
 
             $gravityTotalClassTotal = count($seriesStandingsAll);
             $position = 1;
@@ -234,23 +277,50 @@ if ($totalRaces > 0) {
                 $position++;
             }
 
-            // Get detailed race results for GravitySeries Total
+            // Get detailed race results for GravitySeries Total (supports both connection methods)
             $gravityTotalRaceDetails = $db->getAll("
                 SELECT
-                    r.points,
-                    r.class_position,
-                    e.name as event_name,
-                    e.date as event_date,
-                    e.location as event_location,
-                    cls.display_name as class_name
-                FROM results r
-                JOIN events e ON r.event_id = e.id
-                JOIN series_events se ON e.id = se.event_id
-                LEFT JOIN classes cls ON r.class_id = cls.id
-                WHERE se.series_id = ? AND r.cyclist_id = ?
-                AND r.status = 'finished'
-                ORDER BY e.date DESC
-            ", [$totalSeries['id'], $riderId]);
+                    points,
+                    class_position,
+                    event_name,
+                    event_date,
+                    event_location,
+                    class_name
+                FROM (
+                    -- Via series_events junction table
+                    SELECT
+                        r.points,
+                        r.class_position,
+                        e.name as event_name,
+                        e.date as event_date,
+                        e.location as event_location,
+                        cls.display_name as class_name
+                    FROM results r
+                    JOIN events e ON r.event_id = e.id
+                    JOIN series_events se ON e.id = se.event_id
+                    LEFT JOIN classes cls ON r.class_id = cls.id
+                    WHERE se.series_id = ? AND r.cyclist_id = ?
+                    AND r.status = 'finished'
+
+                    UNION
+
+                    -- Via direct events.series_id
+                    SELECT
+                        r.points,
+                        r.class_position,
+                        e.name as event_name,
+                        e.date as event_date,
+                        e.location as event_location,
+                        cls.display_name as class_name
+                    FROM results r
+                    JOIN events e ON r.event_id = e.id
+                    LEFT JOIN classes cls ON r.class_id = cls.id
+                    WHERE e.series_id = ? AND r.cyclist_id = ?
+                    AND e.series_id IS NOT NULL
+                    AND r.status = 'finished'
+                ) combined
+                ORDER BY event_date DESC
+            ", [$totalSeries['id'], $riderId, $totalSeries['id'], $riderId]);
 
             // Get GravitySeries Team stats (club points for this series)
             // Simple direct query - club_rider_points already has series_id
