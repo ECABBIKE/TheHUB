@@ -1063,17 +1063,50 @@ try {
                                                     Race som gett rankingpoäng
                                                 </h4>
                                                 <style>
-                                                    /* Mobile portrait: Hide extra columns */
+                                                    /* Base styles for mobile */
+                                                    .ranking-events-table th,
+                                                    .ranking-events-table td {
+                                                        font-size: 0.8rem;
+                                                        padding: 0.5rem 0.25rem;
+                                                    }
+
+                                                    /* Mobile portrait: Only Placering, Event, Poäng */
                                                     @media (max-width: 767px) {
                                                         .ranking-events-table .hide-mobile-portrait {
                                                             display: none !important;
                                                         }
+                                                        .ranking-events-table .hide-mobile-landscape {
+                                                            display: none !important;
+                                                        }
+                                                        .ranking-events-table th,
+                                                        .ranking-events-table td {
+                                                            font-size: 0.75rem;
+                                                            padding: 0.4rem 0.2rem;
+                                                        }
                                                     }
 
-                                                    /* Mobile landscape and up: Show all columns */
-                                                    @media (min-width: 768px) {
+                                                    /* Mobile landscape: Add Beräkning column */
+                                                    @media (min-width: 768px) and (max-width: 1023px) {
                                                         .ranking-events-table .hide-mobile-portrait {
+                                                            display: none !important;
+                                                        }
+                                                        .ranking-events-table .show-mobile-landscape {
                                                             display: table-cell !important;
+                                                        }
+                                                        .ranking-events-table th,
+                                                        .ranking-events-table td {
+                                                            font-size: 0.75rem;
+                                                            padding: 0.4rem 0.3rem;
+                                                        }
+                                                    }
+
+                                                    /* Desktop: Show all columns */
+                                                    @media (min-width: 1024px) {
+                                                        .ranking-events-table .hide-mobile-landscape {
+                                                            display: none !important;
+                                                        }
+                                                        .ranking-events-table .show-mobile-landscape {
+                                                            display: none !important;
                                                         }
                                                     }
                                                 </style>
@@ -1081,36 +1114,41 @@ try {
                                                     <table class="gs-table gs-table-compact ranking-events-table">
                                                         <thead>
                                                             <tr>
+                                                                <th class="gs-text-center">Placering</th>
+                                                                <th>Event</th>
+                                                                <th class="gs-text-right">Poäng</th>
+                                                                <th class="gs-text-right show-mobile-landscape" style="display: none;">Beräkning</th>
                                                                 <th class="hide-mobile-portrait">Datum</th>
-                                                                <th>Tävling</th>
-                                                                <th class="gs-text-center hide-mobile-portrait">Placering</th>
                                                                 <th class="gs-text-center hide-mobile-portrait">Klass</th>
                                                                 <th class="gs-text-center hide-mobile-portrait">Fältstorlek</th>
                                                                 <th class="gs-text-right hide-mobile-portrait">Event-poäng</th>
-                                                                <th class="gs-text-right">Poäng</th>
                                                             </tr>
                                                         </thead>
                                                         <tbody>
                                                             <?php foreach ($rankingRaceDetails[$disc] as $raceDetail): ?>
                                                                 <tr>
-                                                                    <td class="gs-text-nowrap hide-mobile-portrait"><?= date('Y-m-d', strtotime($raceDetail['event_date'])) ?></td>
-                                                                    <td>
-                                                                        <strong><?= h($raceDetail['event_name']) ?></strong>
-                                                                        <div class="gs-text-xs gs-text-secondary hide-mobile-portrait">
-                                                                            Field: <?= number_format($raceDetail['field_multiplier'], 2) ?>
-                                                                            × Event: <?= number_format($raceDetail['event_level_multiplier'], 2) ?>
-                                                                            × Time: <?= number_format($raceDetail['time_multiplier'], 2) ?>
-                                                                        </div>
-                                                                    </td>
-                                                                    <td class="gs-text-center hide-mobile-portrait">
+                                                                    <td class="gs-text-center">
                                                                         <?php if (!empty($raceDetail['position'])): ?>
-                                                                            <span class="gs-badge <?= $raceDetail['position'] == 1 ? 'gs-badge-warning' : ($raceDetail['position'] <= 3 ? 'gs-badge-success' : 'gs-badge-secondary') ?>">
+                                                                            <span class="gs-badge <?= $raceDetail['position'] == 1 ? 'gs-badge-warning' : ($raceDetail['position'] <= 3 ? 'gs-badge-success' : 'gs-badge-secondary') ?>" style="font-size: 0.7rem; padding: 0.15rem 0.3rem;">
                                                                                 #<?= $raceDetail['position'] ?>
                                                                             </span>
                                                                         <?php else: ?>
                                                                             <span class="gs-text-secondary">-</span>
                                                                         <?php endif; ?>
                                                                     </td>
+                                                                    <td>
+                                                                        <strong style="font-size: 0.85rem;"><?= h($raceDetail['event_name']) ?></strong>
+                                                                        <div class="gs-text-xs gs-text-secondary hide-mobile-landscape">
+                                                                            Field: <?= number_format($raceDetail['field_multiplier'], 2) ?>
+                                                                            × Event: <?= number_format($raceDetail['event_level_multiplier'], 2) ?>
+                                                                            × Time: <?= number_format($raceDetail['time_multiplier'], 2) ?>
+                                                                        </div>
+                                                                    </td>
+                                                                    <td class="gs-text-right gs-text-primary gs-font-bold"><?= number_format($raceDetail['ranking_points'], 0) ?>p</td>
+                                                                    <td class="gs-text-right show-mobile-landscape" style="display: none; font-size: 0.7rem; white-space: nowrap;">
+                                                                        <?= number_format($raceDetail['original_points'], 0) ?>×<?= number_format($raceDetail['field_multiplier'], 2) ?>
+                                                                    </td>
+                                                                    <td class="gs-text-nowrap hide-mobile-portrait"><?= date('Y-m-d', strtotime($raceDetail['event_date'])) ?></td>
                                                                     <td class="gs-text-center hide-mobile-portrait">
                                                                         <span class="gs-text-xs"><?= h($raceDetail['class_name'] ?? '-') ?></span>
                                                                     </td>
@@ -1118,7 +1156,6 @@ try {
                                                                         <span class="gs-badge gs-badge-secondary"><?= $raceDetail['field_size'] ?></span>
                                                                     </td>
                                                                     <td class="gs-text-right hide-mobile-portrait"><?= number_format($raceDetail['original_points'], 0) ?></td>
-                                                                    <td class="gs-text-right gs-text-primary gs-font-bold"><?= number_format($raceDetail['ranking_points'], 1) ?></td>
                                                                 </tr>
                                                             <?php endforeach; ?>
                                                         </tbody>
@@ -1183,7 +1220,14 @@ try {
                                         Race och poäng
                                     </h4>
                                     <style>
-                                        /* Mobile portrait: Hide extra columns */
+                                        /* Base styles for mobile */
+                                        .gravity-total-table th,
+                                        .gravity-total-table td {
+                                            font-size: 0.8rem;
+                                            padding: 0.5rem 0.25rem;
+                                        }
+
+                                        /* Mobile portrait: Only Placering, Event, Poäng */
                                         @media (max-width: 767px) {
                                             .gravity-total-table .hide-mobile-portrait {
                                                 display: none !important;
@@ -1191,14 +1235,31 @@ try {
                                             .gravity-total-table .total-mobile-colspan {
                                                 display: table-cell !important;
                                             }
+                                            .gravity-total-table th,
+                                            .gravity-total-table td {
+                                                font-size: 0.75rem;
+                                                padding: 0.4rem 0.2rem;
+                                            }
                                         }
 
-                                        /* Mobile landscape and up: Show all columns */
-                                        @media (min-width: 768px) {
+                                        /* Mobile landscape: Add Datum */
+                                        @media (min-width: 768px) and (max-width: 1023px) {
                                             .gravity-total-table .hide-mobile-portrait {
+                                                display: none !important;
+                                            }
+                                            .gravity-total-table .show-mobile-landscape {
                                                 display: table-cell !important;
                                             }
-                                            .gravity-total-table .total-mobile-colspan {
+                                            .gravity-total-table th,
+                                            .gravity-total-table td {
+                                                font-size: 0.75rem;
+                                                padding: 0.4rem 0.3rem;
+                                            }
+                                        }
+
+                                        /* Desktop: Show all columns */
+                                        @media (min-width: 1024px) {
+                                            .gravity-total-table .show-mobile-landscape {
                                                 display: none !important;
                                             }
                                         }
@@ -1207,39 +1268,41 @@ try {
                                         <table class="gs-table gs-table-compact gravity-total-table">
                                             <thead>
                                                 <tr>
-                                                    <th class="hide-mobile-portrait">Datum</th>
-                                                    <th>Tävling</th>
-                                                    <th class="gs-text-center hide-mobile-portrait">Klass</th>
-                                                    <th class="gs-text-center hide-mobile-portrait">Placering</th>
+                                                    <th class="gs-text-center">Placering</th>
+                                                    <th>Event</th>
                                                     <th class="gs-text-right">Poäng</th>
+                                                    <th class="show-mobile-landscape" style="display: none;">Datum</th>
+                                                    <th class="hide-mobile-portrait">Datum</th>
+                                                    <th class="gs-text-center hide-mobile-portrait">Klass</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
                                                 <?php foreach ($gravityTotalRaceDetails as $raceDetail): ?>
                                                     <tr>
-                                                        <td class="hide-mobile-portrait"><?= date('Y-m-d', strtotime($raceDetail['event_date'])) ?></td>
-                                                        <td>
-                                                            <strong><?= h($raceDetail['event_name']) ?></strong>
-                                                        </td>
-                                                        <td class="gs-text-center hide-mobile-portrait"><?= h($raceDetail['class_name'] ?? '-') ?></td>
-                                                        <td class="gs-text-center hide-mobile-portrait">
+                                                        <td class="gs-text-center">
                                                             <?php
                                                             $pos = $raceDetail['class_position'];
-                                                            if ($pos == 1) echo '<span class="gs-badge gs-badge-success">🥇 1</span>';
-                                                            elseif ($pos == 2) echo '<span class="gs-badge gs-badge-secondary">🥈 2</span>';
-                                                            elseif ($pos == 3) echo '<span class="gs-badge gs-badge-warning">🥉 3</span>';
-                                                            else echo $pos ?? '-';
+                                                            if ($pos == 1) echo '<span class="gs-badge gs-badge-success" style="font-size: 0.7rem; padding: 0.15rem 0.3rem;">🥇 1</span>';
+                                                            elseif ($pos == 2) echo '<span class="gs-badge gs-badge-secondary" style="font-size: 0.7rem; padding: 0.15rem 0.3rem;">🥈 2</span>';
+                                                            elseif ($pos == 3) echo '<span class="gs-badge gs-badge-warning" style="font-size: 0.7rem; padding: 0.15rem 0.3rem;">🥉 3</span>';
+                                                            else echo '<span class="gs-badge gs-badge-secondary" style="font-size: 0.7rem; padding: 0.15rem 0.3rem;">#' . ($pos ?? '-') . '</span>';
                                                             ?>
                                                         </td>
-                                                        <td class="gs-text-right gs-text-primary gs-font-bold"><?= number_format($raceDetail['points'], 0) ?></td>
+                                                        <td>
+                                                            <strong style="font-size: 0.85rem;"><?= h($raceDetail['event_name']) ?></strong>
+                                                        </td>
+                                                        <td class="gs-text-right gs-text-primary gs-font-bold"><?= number_format($raceDetail['points'], 0) ?>p</td>
+                                                        <td class="show-mobile-landscape gs-text-nowrap" style="display: none; font-size: 0.7rem;"><?= date('Y-m-d', strtotime($raceDetail['event_date'])) ?></td>
+                                                        <td class="hide-mobile-portrait gs-text-nowrap"><?= date('Y-m-d', strtotime($raceDetail['event_date'])) ?></td>
+                                                        <td class="gs-text-center hide-mobile-portrait"><?= h($raceDetail['class_name'] ?? '-') ?></td>
                                                     </tr>
                                                 <?php endforeach; ?>
                                                 <tr class="gs-table-footer">
-                                                    <td colspan="1" class="gs-text-right gs-font-bold total-mobile-colspan">Total:</td>
-                                                    <td colspan="4" class="gs-text-right gs-font-bold hide-mobile-portrait">Total:</td>
+                                                    <td colspan="2" class="gs-text-right gs-font-bold">Total:</td>
                                                     <td class="gs-text-right gs-text-primary gs-font-bold gs-text-lg">
-                                                        <?= number_format($gravityTotalStats['total_points'], 0) ?>
+                                                        <?= number_format($gravityTotalStats['total_points'], 0) ?>p
                                                     </td>
+                                                    <td colspan="3" class="hide-mobile-portrait"></td>
                                                 </tr>
                                             </tbody>
                                         </table>
@@ -1299,7 +1362,14 @@ try {
                                         Race och klubbpoäng
                                     </h4>
                                     <style>
-                                        /* Mobile portrait: Hide extra columns */
+                                        /* Base styles for mobile */
+                                        .club-points-table th,
+                                        .club-points-table td {
+                                            font-size: 0.8rem;
+                                            padding: 0.5rem 0.25rem;
+                                        }
+
+                                        /* Mobile portrait: Only Event and Poäng */
                                         @media (max-width: 767px) {
                                             .club-points-table .hide-mobile-portrait {
                                                 display: none !important;
@@ -1307,14 +1377,31 @@ try {
                                             .club-points-table .total-mobile-colspan {
                                                 display: table-cell !important;
                                             }
+                                            .club-points-table th,
+                                            .club-points-table td {
+                                                font-size: 0.75rem;
+                                                padding: 0.4rem 0.2rem;
+                                            }
                                         }
 
-                                        /* Mobile landscape and up: Show all columns */
-                                        @media (min-width: 768px) {
+                                        /* Mobile landscape: Add Beräkning */
+                                        @media (min-width: 768px) and (max-width: 1023px) {
                                             .club-points-table .hide-mobile-portrait {
+                                                display: none !important;
+                                            }
+                                            .club-points-table .show-mobile-landscape {
                                                 display: table-cell !important;
                                             }
-                                            .club-points-table .total-mobile-colspan {
+                                            .club-points-table th,
+                                            .club-points-table td {
+                                                font-size: 0.75rem;
+                                                padding: 0.4rem 0.3rem;
+                                            }
+                                        }
+
+                                        /* Desktop: Show all columns */
+                                        @media (min-width: 1024px) {
+                                            .club-points-table .show-mobile-landscape {
                                                 display: none !important;
                                             }
                                         }
@@ -1323,35 +1410,39 @@ try {
                                         <table class="gs-table gs-table-compact club-points-table">
                                             <thead>
                                                 <tr>
+                                                    <th>Event</th>
+                                                    <th class="gs-text-right">Poäng</th>
+                                                    <th class="gs-text-right show-mobile-landscape" style="display: none;">Beräkning</th>
                                                     <th class="hide-mobile-portrait">Datum</th>
-                                                    <th>Tävling</th>
                                                     <th class="gs-text-center hide-mobile-portrait">Klass</th>
                                                     <th class="gs-text-right hide-mobile-portrait">Original</th>
                                                     <th class="gs-text-center hide-mobile-portrait">Procent</th>
-                                                    <th class="gs-text-right">Poäng</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
                                                 <?php foreach ($gravityTeamRaceDetails as $raceDetail): ?>
                                                     <tr>
-                                                        <td class="hide-mobile-portrait"><?= date('Y-m-d', strtotime($raceDetail['event_date'])) ?></td>
                                                         <td>
-                                                            <strong><?= h($raceDetail['event_name']) ?></strong>
+                                                            <strong style="font-size: 0.85rem;"><?= h($raceDetail['event_name']) ?></strong>
                                                         </td>
+                                                        <td class="gs-text-right gs-font-bold" style="color: #f59e0b;">
+                                                            <?= number_format($raceDetail['club_points'], 0) ?>p
+                                                        </td>
+                                                        <td class="gs-text-right show-mobile-landscape" style="display: none; font-size: 0.7rem; white-space: nowrap;">
+                                                            <?= number_format($raceDetail['original_points'], 0) ?>×<?= $raceDetail['percentage_applied'] ?>%
+                                                        </td>
+                                                        <td class="hide-mobile-portrait gs-text-nowrap"><?= date('Y-m-d', strtotime($raceDetail['event_date'])) ?></td>
                                                         <td class="gs-text-center hide-mobile-portrait"><?= h($raceDetail['class_name'] ?? '-') ?></td>
                                                         <td class="gs-text-right hide-mobile-portrait"><?= number_format($raceDetail['original_points'], 0) ?></td>
                                                         <td class="gs-text-center hide-mobile-portrait"><?= $raceDetail['percentage_applied'] ?>%</td>
-                                                        <td class="gs-text-right gs-font-bold" style="color: #f59e0b;">
-                                                            <?= number_format($raceDetail['club_points'], 1) ?>
-                                                        </td>
                                                     </tr>
                                                 <?php endforeach; ?>
                                                 <tr class="gs-table-footer">
-                                                    <td colspan="1" class="gs-text-right gs-font-bold total-mobile-colspan">Total:</td>
-                                                    <td colspan="5" class="gs-text-right gs-font-bold hide-mobile-portrait">Total:</td>
+                                                    <td class="gs-text-right gs-font-bold">Total:</td>
                                                     <td class="gs-text-right gs-font-bold gs-text-lg" style="color: #f59e0b;">
-                                                        <?= number_format($gravityTeamStats['total_points'], 1) ?>
+                                                        <?= number_format($gravityTeamStats['total_points'], 0) ?>p
                                                     </td>
+                                                    <td colspan="5" class="hide-mobile-portrait"></td>
                                                 </tr>
                                             </tbody>
                                         </table>
@@ -1394,17 +1485,44 @@ try {
                                 </h3>
 
                                 <style>
-                                    /* Mobile portrait: Hide extra columns */
+                                    /* Base styles for mobile */
+                                    .all-races-table th,
+                                    .all-races-table td {
+                                        font-size: 0.8rem;
+                                        padding: 0.5rem 0.25rem;
+                                    }
+
+                                    /* Mobile portrait: Only Placering, Event, Poäng */
                                     @media (max-width: 767px) {
                                         .all-races-table .hide-mobile-portrait {
                                             display: none !important;
                                         }
+                                        .all-races-table th,
+                                        .all-races-table td {
+                                            font-size: 0.75rem;
+                                            padding: 0.4rem 0.2rem;
+                                        }
                                     }
 
-                                    /* Mobile landscape and up: Show all columns */
-                                    @media (min-width: 768px) {
+                                    /* Mobile landscape: Add Datum */
+                                    @media (min-width: 768px) and (max-width: 1023px) {
                                         .all-races-table .hide-mobile-portrait {
+                                            display: none !important;
+                                        }
+                                        .all-races-table .show-mobile-landscape {
                                             display: table-cell !important;
+                                        }
+                                        .all-races-table th,
+                                        .all-races-table td {
+                                            font-size: 0.75rem;
+                                            padding: 0.4rem 0.3rem;
+                                        }
+                                    }
+
+                                    /* Desktop: Show all columns */
+                                    @media (min-width: 1024px) {
+                                        .all-races-table .show-mobile-landscape {
+                                            display: none !important;
                                         }
                                     }
                                 </style>
@@ -1413,13 +1531,14 @@ try {
                                     <table class="gs-table gs-table-compact all-races-table">
                                         <thead>
                                             <tr>
+                                                <th class="gs-text-center">Placering</th>
+                                                <th>Event</th>
+                                                <th class="gs-text-center">Poäng</th>
+                                                <th class="show-mobile-landscape" style="display: none;">Datum</th>
                                                 <th class="hide-mobile-portrait">Datum</th>
-                                                <th>Tävling</th>
                                                 <th class="hide-mobile-portrait">Plats</th>
                                                 <th class="hide-mobile-portrait">Klass</th>
-                                                <th class="gs-text-center hide-mobile-portrait">Placering</th>
                                                 <th class="gs-text-center hide-mobile-portrait">Tid</th>
-                                                <th class="gs-text-center">Poäng</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -1427,18 +1546,47 @@ try {
                                                 <?php
                                                 // Skip DNS (Did Not Start) - don't show these events
                                                 if ($result['status'] === 'dns') continue;
+                                                $awardsPoints = $result['awards_points'] ?? 1;
+                                                $displayPos = ($result['status'] === 'finished' && $awardsPoints) ? ($result['class_position'] ?? null) : null;
                                                 ?>
                                                 <tr>
-                                                    <td class="hide-mobile-portrait"><?= date('Y-m-d', strtotime($result['event_date'])) ?></td>
+                                                    <td class="gs-text-center">
+                                                        <?php if ($result['status'] === 'dnf'): ?>
+                                                            <span class="gs-badge gs-badge-danger" style="font-size: 0.7rem; padding: 0.15rem 0.3rem;">DNF</span>
+                                                        <?php elseif ($displayPos): ?>
+                                                            <?php if ($displayPos == 1): ?>
+                                                                <span class="gs-badge gs-badge-success" style="font-size: 0.7rem; padding: 0.15rem 0.3rem;">🥇 1</span>
+                                                            <?php elseif ($displayPos == 2): ?>
+                                                                <span class="gs-badge gs-badge-secondary" style="font-size: 0.7rem; padding: 0.15rem 0.3rem;">🥈 2</span>
+                                                            <?php elseif ($displayPos == 3): ?>
+                                                                <span class="gs-badge gs-badge-warning" style="font-size: 0.7rem; padding: 0.15rem 0.3rem;">🥉 3</span>
+                                                            <?php else: ?>
+                                                                <span class="gs-badge gs-badge-secondary" style="font-size: 0.7rem; padding: 0.15rem 0.3rem;">#<?= $displayPos ?></span>
+                                                            <?php endif; ?>
+                                                        <?php elseif ($result['status'] === 'finished' && !$awardsPoints): ?>
+                                                            <span class="gs-text-secondary" style="font-size: 0.65rem;">Ej tävling</span>
+                                                        <?php else: ?>
+                                                            <span class="gs-text-secondary">-</span>
+                                                        <?php endif; ?>
+                                                    </td>
                                                     <td>
                                                         <?php if ($result['event_id']): ?>
                                                             <a href="/event.php?id=<?= $result['event_id'] ?>" class="gs-link">
-                                                                <strong><?= h($result['event_name']) ?></strong>
+                                                                <strong style="font-size: 0.85rem;"><?= h($result['event_name']) ?></strong>
                                                             </a>
                                                         <?php else: ?>
-                                                            <strong><?= h($result['event_name']) ?></strong>
+                                                            <strong style="font-size: 0.85rem;"><?= h($result['event_name']) ?></strong>
                                                         <?php endif; ?>
                                                     </td>
+                                                    <td class="gs-text-center">
+                                                        <?php if ($awardsPoints): ?>
+                                                            <strong><?= $result['points'] ?? 0 ?>p</strong>
+                                                        <?php else: ?>
+                                                            <span class="gs-text-secondary">-</span>
+                                                        <?php endif; ?>
+                                                    </td>
+                                                    <td class="show-mobile-landscape gs-text-nowrap" style="display: none; font-size: 0.7rem;"><?= date('Y-m-d', strtotime($result['event_date'])) ?></td>
+                                                    <td class="hide-mobile-portrait gs-text-nowrap"><?= date('Y-m-d', strtotime($result['event_date'])) ?></td>
                                                     <td class="hide-mobile-portrait">
                                                         <?php if ($result['event_location']): ?>
                                                             <?= h($result['event_location']) ?>
@@ -1449,29 +1597,6 @@ try {
                                                         <?php endif; ?>
                                                     </td>
                                                     <td class="hide-mobile-portrait"><?= h($result['class_display_name'] ?? $result['class_name'] ?? '-') ?></td>
-                                                    <td class="gs-text-center hide-mobile-portrait">
-                                                        <?php
-                                                        $awardsPoints = $result['awards_points'] ?? 1;
-                                                        $displayPos = ($result['status'] === 'finished' && $awardsPoints) ? ($result['class_position'] ?? null) : null;
-                                                        ?>
-                                                        <?php if ($result['status'] === 'dnf'): ?>
-                                                            <span class="gs-badge gs-badge-danger">DNF</span>
-                                                        <?php elseif ($displayPos): ?>
-                                                            <?php if ($displayPos == 1): ?>
-                                                                <span class="gs-badge gs-badge-success">🥇 1</span>
-                                                            <?php elseif ($displayPos == 2): ?>
-                                                                <span class="gs-badge gs-badge-secondary">🥈 2</span>
-                                                            <?php elseif ($displayPos == 3): ?>
-                                                                <span class="gs-badge gs-badge-warning">🥉 3</span>
-                                                            <?php else: ?>
-                                                                <span><?= $displayPos ?></span>
-                                                            <?php endif; ?>
-                                                        <?php elseif ($result['status'] === 'finished' && !$awardsPoints): ?>
-                                                            <span class="gs-text-secondary" style="font-size: 0.75rem;">Ej tävling</span>
-                                                        <?php else: ?>
-                                                            -
-                                                        <?php endif; ?>
-                                                    </td>
                                                     <td class="gs-text-center hide-mobile-portrait">
                                                         <?php
                                                         if ($result['finish_time']) {
@@ -1487,13 +1612,6 @@ try {
                                                             echo '-';
                                                         }
                                                         ?>
-                                                    </td>
-                                                    <td class="gs-text-center">
-                                                        <?php if ($awardsPoints): ?>
-                                                            <?= $result['points'] ?? 0 ?>
-                                                        <?php else: ?>
-                                                            <span class="gs-text-secondary">-</span>
-                                                        <?php endif; ?>
                                                     </td>
                                                 </tr>
                                             <?php endforeach; ?>
