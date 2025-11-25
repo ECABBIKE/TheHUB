@@ -395,36 +395,59 @@ function createRankingSnapshot($db, $discipline = 'gravity', $snapshotDate = nul
     $riderData = calculateRankingData($db, $discipline, $debug);
 
     if ($debug) {
-        echo "<p>🗑️ Clearing old snapshot data in small chunks...</p>";
+        echo "<p>🔍 Checking how many old snapshot rows exist...</p>";
         flush();
     }
 
-    // Delete old snapshot data in small chunks to avoid timeout
-    // Keep deleting until no more rows exist for this discipline/date
+    // First, check how many rows exist to see if table is accessible
+    $countResult = $db->getOne("SELECT COUNT(*) FROM ranking_snapshots WHERE discipline = ? AND snapshot_date = ?",
+                               [$discipline, $snapshotDate]);
+
+    if ($debug) {
+        echo "<p>📊 Found {$countResult} existing snapshot rows for {$discipline} on {$snapshotDate}</p>";
+        echo "<p>🗑️ Attempting to delete old snapshot data one row at a time...</p>";
+        flush();
+    }
+
+    // Try deleting ONE row at a time with verbose output
     $deletedTotal = 0;
-    $maxIterations = 100; // Safety limit
+    $maxIterations = 1000; // Safety limit - higher since we're doing 1 at a time
     $iteration = 0;
 
     while ($iteration < $maxIterations) {
-        // Delete in chunks of 50 rows
-        $result = $db->query("DELETE FROM ranking_snapshots WHERE discipline = ? AND snapshot_date = ? LIMIT 50",
-                            [$discipline, $snapshotDate]);
+        if ($debug && $iteration < 5) {
+            echo "<p>⏱️ Delete attempt " . ($iteration + 1) . "...</p>";
+            flush();
+        }
+
+        // Delete just ONE row at a time
+        $db->query("DELETE FROM ranking_snapshots WHERE discipline = ? AND snapshot_date = ? LIMIT 1",
+                  [$discipline, $snapshotDate]);
 
         $affected = $db->affectedRows();
         $deletedTotal += $affected;
 
-        if ($debug && $iteration % 10 == 0 && $deletedTotal > 0) {
-            echo "<p>🗑️ Deleted {$deletedTotal} old rows so far...</p>";
+        if ($debug && $iteration < 5) {
+            echo "<p>✅ Deleted {$affected} row (total: {$deletedTotal})</p>";
             flush();
         }
 
-        if ($affected < 50) {
+        if ($debug && $deletedTotal > 0 && $deletedTotal % 100 == 0) {
+            echo "<p>🗑️ Deleted {$deletedTotal} / {$countResult} old rows...</p>";
+            flush();
+        }
+
+        if ($affected == 0) {
             // No more rows to delete
             break;
         }
 
         $iteration++;
-        usleep(10000); // 10ms pause between deletes
+
+        // Tiny pause every 10 rows
+        if ($iteration % 10 == 0) {
+            usleep(5000); // 5ms pause
+        }
     }
 
     if ($debug) {
@@ -766,7 +789,7 @@ function runFullRankingUpdate($db, $debug = false) {
 
     if ($debug) {
         echo "<p style='background: #e3f2fd; padding: 10px; border-left: 4px solid #2196f3;'>";
-        echo "<strong>🔄 Version: 2025-11-25-006</strong><br>";
+        echo "<strong>🔄 Version: 2025-11-25-007</strong><br>";
         echo "Lightweight Ranking System - Debug Mode Active";
         echo "</p>";
         echo "<h3>Creating Ranking Snapshots</h3>";
