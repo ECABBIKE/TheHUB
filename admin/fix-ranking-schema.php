@@ -47,7 +47,35 @@ try {
             echo "<p class='error'>❌ Failed to add column: " . $e->getMessage() . "</p>";
         }
 
-        echo "<h2>Step 3: Updating unique key</h2>";
+        echo "<h2>Step 3: Handling foreign key constraints</h2>";
+        try {
+            // Find and drop foreign key constraints on rider_id
+            $fks = $db->getAll("
+                SELECT CONSTRAINT_NAME
+                FROM information_schema.KEY_COLUMN_USAGE
+                WHERE TABLE_SCHEMA = DATABASE()
+                AND TABLE_NAME = 'ranking_snapshots'
+                AND CONSTRAINT_NAME LIKE '%fk%'
+                AND COLUMN_NAME = 'rider_id'
+            ");
+
+            if (!empty($fks)) {
+                foreach ($fks as $fk) {
+                    try {
+                        $db->query("ALTER TABLE ranking_snapshots DROP FOREIGN KEY " . $fk['CONSTRAINT_NAME']);
+                        echo "<p class='success'>✅ Dropped foreign key: {$fk['CONSTRAINT_NAME']}</p>";
+                    } catch (Exception $e) {
+                        echo "<p class='info'>ℹ️ Could not drop FK {$fk['CONSTRAINT_NAME']}: " . $e->getMessage() . "</p>";
+                    }
+                }
+            } else {
+                echo "<p class='info'>ℹ️ No foreign keys to drop</p>";
+            }
+        } catch (Exception $e) {
+            echo "<p class='info'>ℹ️ FK check: " . $e->getMessage() . "</p>";
+        }
+
+        echo "<h2>Step 4: Updating unique key</h2>";
         try {
             // Drop old unique key if exists
             $indexes = $db->getAll("SHOW INDEX FROM ranking_snapshots WHERE Key_name = 'unique_rider_snapshot'");
@@ -56,7 +84,7 @@ try {
                 echo "<p class='success'>✅ Dropped old unique_rider_snapshot index</p>";
             }
         } catch (Exception $e) {
-            echo "<p class='info'>ℹ️ Old index not found or already removed</p>";
+            echo "<p class='info'>ℹ️ Old index not found or already removed: " . $e->getMessage() . "</p>";
         }
 
         try {
@@ -72,7 +100,7 @@ try {
             echo "<p class='error'>❌ Failed to add unique key: " . $e->getMessage() . "</p>";
         }
 
-        echo "<h2>Step 4: Adding discipline index</h2>";
+        echo "<h2>Step 5: Adding discipline index</h2>";
         try {
             $indexes = $db->getAll("SHOW INDEX FROM ranking_snapshots WHERE Key_name = 'idx_discipline_ranking'");
             if (empty($indexes)) {
@@ -84,9 +112,31 @@ try {
         } catch (Exception $e) {
             echo "<p class='error'>❌ Failed to add index: " . $e->getMessage() . "</p>";
         }
+
+        echo "<h2>Step 6: Re-adding foreign key constraint</h2>";
+        try {
+            // Re-add foreign key on rider_id
+            $fks = $db->getAll("
+                SELECT CONSTRAINT_NAME
+                FROM information_schema.KEY_COLUMN_USAGE
+                WHERE TABLE_SCHEMA = DATABASE()
+                AND TABLE_NAME = 'ranking_snapshots'
+                AND COLUMN_NAME = 'rider_id'
+                AND CONSTRAINT_NAME LIKE '%fk%'
+            ");
+
+            if (empty($fks)) {
+                $db->query("ALTER TABLE ranking_snapshots ADD CONSTRAINT fk_ranking_snapshots_rider FOREIGN KEY (rider_id) REFERENCES riders(id) ON DELETE CASCADE");
+                echo "<p class='success'>✅ Added foreign key constraint on rider_id</p>";
+            } else {
+                echo "<p class='info'>ℹ️ Foreign key already exists</p>";
+            }
+        } catch (Exception $e) {
+            echo "<p class='error'>❌ Failed to add foreign key: " . $e->getMessage() . "</p>";
+        }
     }
 
-    echo "<h2>Step 5: Checking club_ranking_snapshots structure</h2>";
+    echo "<h2>Step 7: Checking club_ranking_snapshots structure</h2>";
     $clubColumns = $db->getAll("SHOW COLUMNS FROM club_ranking_snapshots");
     $hasClubDiscipline = false;
     foreach ($clubColumns as $col) {
