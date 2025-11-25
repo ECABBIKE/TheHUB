@@ -1046,6 +1046,43 @@ try {
                                                 <i data-lucide="pie-chart"></i>
                                                 Poängfördelning
                                             </h4>
+                                            <style>
+                                                /* Mobile portrait: Compact point breakdown */
+                                                @media (max-width: 767px) {
+                                                    .gs-points-breakdown .gs-points-row {
+                                                        padding: 0.4rem 0;
+                                                    }
+                                                    .gs-points-breakdown .gs-points-label {
+                                                        font-size: 0.75rem;
+                                                    }
+                                                    .gs-points-breakdown .gs-points-value {
+                                                        font-size: 0.85rem;
+                                                    }
+                                                    .gs-points-breakdown .gs-points-label i {
+                                                        width: 14px;
+                                                        height: 14px;
+                                                    }
+                                                    .gs-points-breakdown .gs-points-label.gs-font-bold {
+                                                        font-size: 0.85rem;
+                                                    }
+                                                    .gs-points-breakdown .gs-points-value.gs-font-bold {
+                                                        font-size: 1rem;
+                                                    }
+                                                }
+
+                                                /* Mobile landscape: Slightly larger */
+                                                @media (min-width: 768px) and (max-width: 1023px) {
+                                                    .gs-points-breakdown .gs-points-row {
+                                                        padding: 0.5rem 0;
+                                                    }
+                                                    .gs-points-breakdown .gs-points-label {
+                                                        font-size: 0.85rem;
+                                                    }
+                                                    .gs-points-breakdown .gs-points-value {
+                                                        font-size: 0.95rem;
+                                                    }
+                                                }
+                                            </style>
                                             <div class="gs-points-breakdown">
                                                 <div class="gs-points-row">
                                                     <span class="gs-points-label">
