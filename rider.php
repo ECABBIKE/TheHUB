@@ -410,7 +410,7 @@ try {
         ", [$riderId, $discipline]);
 
         // Get detailed ranking points per race from ranking_points table
-        // If empty, fall back to calculating from results table
+        // If empty or table doesn't exist, fall back to results table
         $disciplineFilter = '';
         $params = [$riderId];
 
@@ -421,30 +421,36 @@ try {
             $params[] = $discipline;
         }
 
-        $rankingRaceDetails[$discipline] = $db->getAll("
-            SELECT
-                rp.ranking_points,
-                rp.original_points,
-                rp.field_size,
-                rp.field_multiplier,
-                rp.event_level_multiplier,
-                rp.time_multiplier,
-                rp.position,
-                e.name as event_name,
-                e.date as event_date,
-                e.location as event_location,
-                e.discipline,
-                cls.display_name as class_name
-            FROM ranking_points rp
-            JOIN events e ON rp.event_id = e.id
-            LEFT JOIN classes cls ON rp.class_id = cls.id
-            WHERE rp.rider_id = ?
-            AND e.date >= DATE_SUB(NOW(), INTERVAL 24 MONTH)
-            {$disciplineFilter}
-            ORDER BY e.date DESC
-        ", $params);
+        // Try to get from ranking_points table, fallback to results if table doesn't exist
+        try {
+            $rankingRaceDetails[$discipline] = $db->getAll("
+                SELECT
+                    rp.ranking_points,
+                    rp.original_points,
+                    rp.field_size,
+                    rp.field_multiplier,
+                    rp.event_level_multiplier,
+                    rp.time_multiplier,
+                    rp.position,
+                    e.name as event_name,
+                    e.date as event_date,
+                    e.location as event_location,
+                    e.discipline,
+                    cls.display_name as class_name
+                FROM ranking_points rp
+                JOIN events e ON rp.event_id = e.id
+                LEFT JOIN classes cls ON rp.class_id = cls.id
+                WHERE rp.rider_id = ?
+                AND e.date >= DATE_SUB(NOW(), INTERVAL 24 MONTH)
+                {$disciplineFilter}
+                ORDER BY e.date DESC
+            ", $params);
+        } catch (Exception $e) {
+            // Table doesn't exist or query failed, set to empty to trigger fallback
+            $rankingRaceDetails[$discipline] = [];
+        }
 
-        // If ranking_points table is empty, calculate from results as fallback
+        // If ranking_points table is empty or doesn't exist, get from results as fallback
         if (empty($rankingRaceDetails[$discipline])) {
             $rawResults = $db->getAll("
                 SELECT
