@@ -1081,15 +1081,6 @@ try {
                                     </div>
 
                                     <!-- Ranking Race Details -->
-                                    <?php
-                                    // DEBUG: Show what we have
-                                    if ($riderId == 7726) {
-                                        echo "<!-- DEBUG: disc=$disc, rankingRaceDetails count=" . count($rankingRaceDetails[$disc] ?? []) . " -->\n";
-                                        if (!empty($rankingRaceDetails[$disc])) {
-                                            echo "<!-- DEBUG: First event: " . json_encode($rankingRaceDetails[$disc][0] ?? []) . " -->\n";
-                                        }
-                                    }
-                                    ?>
                                     <?php if (!empty($rankingRaceDetails[$disc])): ?>
                                         <div class="gs-card gs-bg-light">
                                             <div class="gs-card-content">
@@ -1187,11 +1178,6 @@ try {
                                                                         </div>
                                                                     </td>
                                                                     <td class="gs-text-right gs-text-primary gs-font-bold" style="font-size: 0.75rem; display: table-cell !important;">
-                                                                        <?php if ($riderId == 7726): ?>
-                                                                            <span style="background: yellow; color: red; padding: 2px;">
-                                                                                [<?= $raceDetail['ranking_points'] ?? 'NULL' ?>]
-                                                                            </span>
-                                                                        <?php endif; ?>
                                                                         <?= number_format($raceDetail['ranking_points'] ?? 0, 0) ?>p
                                                                     </td>
                                                                     <td class="gs-text-right show-mobile-landscape" style="display: none; font-size: 0.7rem; white-space: nowrap;">
