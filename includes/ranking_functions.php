@@ -239,7 +239,7 @@ function calculateRankingData($db, $discipline = null, $debug = false) {
         flush();
     }
 
-    $riderIds = array_unique(array_column($results, 'rider_id'));
+    $riderIds = array_values(array_unique(array_column($results, 'rider_id')));
     $riderInfo = [];
     if (!empty($riderIds)) {
         $placeholders = implode(',', array_fill(0, count($riderIds), '?'));
@@ -706,7 +706,7 @@ function runFullRankingUpdate($db, $debug = false) {
 
     if ($debug) {
         echo "<p style='background: #e3f2fd; padding: 10px; border-left: 4px solid #2196f3;'>";
-        echo "<strong>🔄 Version: 2025-11-25-001</strong><br>";
+        echo "<strong>🔄 Version: 2025-11-25-002</strong><br>";
         echo "Lightweight Ranking System - Debug Mode Active";
         echo "</p>";
         echo "<h3>Creating Ranking Snapshots</h3>";
