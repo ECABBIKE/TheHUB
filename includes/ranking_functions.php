@@ -45,38 +45,10 @@ function getDefaultEventLevelMultipliers() {
 
 /**
  * Get field multipliers from database settings
+ * TEMPORARY: Bypassing database due to table lock - using hardcoded defaults
  */
 function getRankingFieldMultipliers($db) {
-    $result = $db->getRow(
-        "SELECT setting_value FROM ranking_settings WHERE setting_key = 'field_multipliers'"
-    );
-
-    if ($result && $result['setting_value']) {
-        $decoded = json_decode($result['setting_value'], true);
-        if ($decoded) {
-            $multipliers = [];
-            foreach ($decoded as $key => $value) {
-                $intKey = (int)$key;
-                // Only keep multipliers 1-15 (migrate from old 26-item scale)
-                if ($intKey >= 1 && $intKey <= 15) {
-                    $multipliers[$intKey] = (float)$value;
-                }
-            }
-
-            // If we have valid multipliers for 1-15, return them
-            if (count($multipliers) === 15) {
-                return $multipliers;
-            }
-
-            // If old 26-item scale detected, return defaults (don't auto-save to avoid locks)
-            if (count($decoded) > 15) {
-                error_log("Found old multiplier scale with " . count($decoded) . " items, returning defaults");
-                return getDefaultFieldMultipliers();
-            }
-        }
-    }
-
-    // Return defaults without saving to avoid locks
+    // HARDCODED: Return correct 15-item scale directly
     return getDefaultFieldMultipliers();
 }
 

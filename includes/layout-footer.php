@@ -19,7 +19,7 @@
             <p class="gs-footer-version">
                 TheHUB v<?= h($versionInfo['version']) ?>
                 <?php if (!empty($versionInfo['build'])): ?>
-                    <strong>[<?= h($versionInfo['build']) ?>]</strong>
+                    <strong>[<?= h($versionInfo['build']) ?>.<?= str_pad($versionInfo['deployment'], 3, '0', STR_PAD_LEFT) ?>]</strong>
                 <?php endif; ?>
                 • <?= h($versionInfo['name']) ?>
                 <?php if ($versionInfo['commit']): ?>
