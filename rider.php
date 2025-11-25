@@ -1075,6 +1075,12 @@ try {
                                     </div>
 
                                     <!-- Ranking Race Details -->
+                                    <?php
+                                    // DEBUG: Show what we have
+                                    if ($riderId == 7726) {
+                                        echo "<!-- DEBUG: disc=$disc, rankingRaceDetails count=" . count($rankingRaceDetails[$disc] ?? []) . " -->\n";
+                                    }
+                                    ?>
                                     <?php if (!empty($rankingRaceDetails[$disc])): ?>
                                         <div class="gs-card gs-bg-light">
                                             <div class="gs-card-content">

@@ -282,7 +282,7 @@ flush();
                         <strong><?= $lastSnapshotDate ? date('Y-m-d', strtotime($lastSnapshotDate)) : 'Aldrig' ?></strong>
                     </p>
 
-                    <form method="POST">
+                    <form method="POST" style="display: inline-block;">
                         <?= csrf_field() ?>
                         <button type="submit" name="calculate" class="gs-btn gs-btn-primary"
                                 onclick="return confirm('Kör fullständig omräkning av alla rankingpoäng?')">
@@ -290,6 +290,10 @@ flush();
                             Kör beräkning
                         </button>
                     </form>
+                    <a href="/admin/recalculate-all-points.php" class="gs-btn gs-btn-secondary" style="margin-left: 0.5rem;">
+                        <i data-lucide="calculator"></i>
+                        Räkna om alla poäng
+                    </a>
                 </div>
             </div>
         </div>
