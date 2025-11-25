@@ -56,11 +56,11 @@ include __DIR__ . '/../includes/layout-header.php';
                     <?php
                     // Get statistics
                     $stats = [
-                        'total_events' => $db->getOne("SELECT COUNT(*) FROM events WHERE active = 1"),
-                        'total_results' => $db->getOne("SELECT COUNT(*) FROM results"),
-                        'total_riders' => $db->getOne("SELECT COUNT(DISTINCT cyclist_id) FROM results"),
-                        'total_series' => $db->getOne("SELECT COUNT(*) FROM series WHERE active = 1"),
-                        'total_clubs' => $db->getOne("SELECT COUNT(*) FROM clubs WHERE active = 1"),
+                        'total_events' => $db->getRow("SELECT COUNT(*) as cnt FROM events WHERE active = 1")['cnt'] ?? 0,
+                        'total_results' => $db->getRow("SELECT COUNT(*) as cnt FROM results")['cnt'] ?? 0,
+                        'total_riders' => $db->getRow("SELECT COUNT(DISTINCT cyclist_id) as cnt FROM results")['cnt'] ?? 0,
+                        'total_series' => $db->getRow("SELECT COUNT(*) as cnt FROM series WHERE active = 1")['cnt'] ?? 0,
+                        'total_clubs' => $db->getRow("SELECT COUNT(*) as cnt FROM clubs WHERE active = 1")['cnt'] ?? 0,
                     ];
                     ?>
 
