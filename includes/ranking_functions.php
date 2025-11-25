@@ -68,11 +68,11 @@ function getRankingFieldMultipliers($db) {
                 return $multipliers;
             }
 
-            // Otherwise, auto-migrate: if we have old 26-item scale, save new 15-item defaults
-            if (count($decoded) === 26) {
-                $newDefaults = getDefaultFieldMultipliers();
-                saveFieldMultipliers($db, $newDefaults);
-                return $newDefaults;
+            // Otherwise, if we have old 26-item scale, return defaults
+            // User needs to click "Reset to defaults" to save new scale
+            if (count($decoded) > 15) {
+                error_log("Found old multiplier scale with " . count($decoded) . " items, returning defaults");
+                return getDefaultFieldMultipliers();
             }
         }
     }
@@ -794,11 +794,21 @@ function getRiderRankingDetails($db, $riderId, $discipline = 'GRAVITY') {
 function saveFieldMultipliers($db, $multipliers) {
     $json = json_encode($multipliers);
 
-    return $db->query("
-        INSERT INTO ranking_settings (setting_key, setting_value, description)
-        VALUES ('field_multipliers', ?, 'Field size multipliers (1-26+ riders)')
-        ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value), updated_at = NOW()
-    ", [$json]);
+    if ($json === false) {
+        error_log("Failed to encode field multipliers: " . json_last_error_msg());
+        throw new Exception("Failed to encode multipliers: " . json_last_error_msg());
+    }
+
+    try {
+        return $db->query("
+            INSERT INTO ranking_settings (setting_key, setting_value, description)
+            VALUES ('field_multipliers', ?, 'Field size multipliers (1-15+ riders)')
+            ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value), updated_at = NOW()
+        ", [$json]);
+    } catch (Exception $e) {
+        error_log("Failed to save field multipliers: " . $e->getMessage());
+        throw $e;
+    }
 }
 
 /**
