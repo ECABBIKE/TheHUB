@@ -1130,11 +1130,11 @@ try {
                                                     Race som gett rankingpoäng
                                                 </h4>
                                                 <style>
-                                                    /* Base styles for mobile */
+                                                    /* Base styles - keep small for mobile */
                                                     .ranking-events-table th,
                                                     .ranking-events-table td {
-                                                        font-size: 0.8rem;
-                                                        padding: 0.5rem 0.25rem;
+                                                        font-size: 0.75rem;
+                                                        padding: 0.4rem 0.25rem;
                                                     }
 
                                                     /* Mobile portrait: Only Placering, Event, Poäng */
@@ -1147,13 +1147,12 @@ try {
                                                         }
                                                         .ranking-events-table th,
                                                         .ranking-events-table td {
-                                                            font-size: 0.75rem;
                                                             padding: 0.4rem 0.2rem;
                                                         }
                                                     }
 
-                                                    /* Mobile landscape: Add Beräkning column */
-                                                    @media (min-width: 768px) and (max-width: 1023px) {
+                                                    /* Mobile landscape: Add Beräkning column, keep same size */
+                                                    @media (min-width: 768px) and (max-width: 1279px) {
                                                         .ranking-events-table .hide-mobile-portrait {
                                                             display: none !important;
                                                         }
@@ -1162,18 +1161,22 @@ try {
                                                         }
                                                         .ranking-events-table th,
                                                         .ranking-events-table td {
-                                                            font-size: 0.75rem;
                                                             padding: 0.4rem 0.3rem;
                                                         }
                                                     }
 
-                                                    /* Desktop: Show all columns */
-                                                    @media (min-width: 1024px) {
+                                                    /* Desktop: Show all columns, can be larger */
+                                                    @media (min-width: 1280px) {
                                                         .ranking-events-table .hide-mobile-landscape {
                                                             display: none !important;
                                                         }
                                                         .ranking-events-table .show-mobile-landscape {
                                                             display: none !important;
+                                                        }
+                                                        .ranking-events-table th,
+                                                        .ranking-events-table td {
+                                                            font-size: 0.85rem;
+                                                            padding: 0.5rem 0.3rem;
                                                         }
                                                     }
                                                 </style>
@@ -1291,11 +1294,11 @@ try {
                                         Race och poäng
                                     </h4>
                                     <style>
-                                        /* Base styles for mobile */
+                                        /* Base styles - keep small for mobile */
                                         .gravity-total-table th,
                                         .gravity-total-table td {
-                                            font-size: 0.8rem;
-                                            padding: 0.5rem 0.25rem;
+                                            font-size: 0.75rem;
+                                            padding: 0.4rem 0.25rem;
                                         }
 
                                         /* Mobile portrait: Only Placering, Event, Poäng */
@@ -1308,13 +1311,12 @@ try {
                                             }
                                             .gravity-total-table th,
                                             .gravity-total-table td {
-                                                font-size: 0.75rem;
                                                 padding: 0.4rem 0.2rem;
                                             }
                                         }
 
-                                        /* Mobile landscape: Add Datum */
-                                        @media (min-width: 768px) and (max-width: 1023px) {
+                                        /* Mobile landscape: Add Datum, keep same size */
+                                        @media (min-width: 768px) and (max-width: 1279px) {
                                             .gravity-total-table .hide-mobile-portrait {
                                                 display: none !important;
                                             }
@@ -1323,15 +1325,19 @@ try {
                                             }
                                             .gravity-total-table th,
                                             .gravity-total-table td {
-                                                font-size: 0.75rem;
                                                 padding: 0.4rem 0.3rem;
                                             }
                                         }
 
-                                        /* Desktop: Show all columns */
-                                        @media (min-width: 1024px) {
+                                        /* Desktop: Show all columns, can be larger */
+                                        @media (min-width: 1280px) {
                                             .gravity-total-table .show-mobile-landscape {
                                                 display: none !important;
+                                            }
+                                            .gravity-total-table th,
+                                            .gravity-total-table td {
+                                                font-size: 0.85rem;
+                                                padding: 0.5rem 0.3rem;
                                             }
                                         }
                                     </style>
@@ -1433,11 +1439,11 @@ try {
                                         Race och klubbpoäng
                                     </h4>
                                     <style>
-                                        /* Base styles for mobile */
+                                        /* Base styles - keep small for mobile */
                                         .club-points-table th,
                                         .club-points-table td {
-                                            font-size: 0.8rem;
-                                            padding: 0.5rem 0.25rem;
+                                            font-size: 0.75rem;
+                                            padding: 0.4rem 0.25rem;
                                         }
 
                                         /* Mobile portrait: Only Event and Poäng */
@@ -1450,13 +1456,12 @@ try {
                                             }
                                             .club-points-table th,
                                             .club-points-table td {
-                                                font-size: 0.75rem;
                                                 padding: 0.4rem 0.2rem;
                                             }
                                         }
 
-                                        /* Mobile landscape: Add Beräkning */
-                                        @media (min-width: 768px) and (max-width: 1023px) {
+                                        /* Mobile landscape: Add Beräkning, keep same size */
+                                        @media (min-width: 768px) and (max-width: 1279px) {
                                             .club-points-table .hide-mobile-portrait {
                                                 display: none !important;
                                             }
@@ -1465,15 +1470,19 @@ try {
                                             }
                                             .club-points-table th,
                                             .club-points-table td {
-                                                font-size: 0.75rem;
                                                 padding: 0.4rem 0.3rem;
                                             }
                                         }
 
-                                        /* Desktop: Show all columns */
-                                        @media (min-width: 1024px) {
+                                        /* Desktop: Show all columns, can be larger */
+                                        @media (min-width: 1280px) {
                                             .club-points-table .show-mobile-landscape {
                                                 display: none !important;
+                                            }
+                                            .club-points-table th,
+                                            .club-points-table td {
+                                                font-size: 0.85rem;
+                                                padding: 0.5rem 0.3rem;
                                             }
                                         }
                                     </style>
@@ -1556,11 +1565,11 @@ try {
                                 </h3>
 
                                 <style>
-                                    /* Base styles for mobile */
+                                    /* Base styles - keep small for mobile */
                                     .all-races-table th,
                                     .all-races-table td {
-                                        font-size: 0.8rem;
-                                        padding: 0.5rem 0.25rem;
+                                        font-size: 0.75rem;
+                                        padding: 0.4rem 0.25rem;
                                     }
 
                                     /* Mobile portrait: Only Placering, Event, Poäng */
@@ -1570,13 +1579,12 @@ try {
                                         }
                                         .all-races-table th,
                                         .all-races-table td {
-                                            font-size: 0.75rem;
                                             padding: 0.4rem 0.2rem;
                                         }
                                     }
 
-                                    /* Mobile landscape: Add Datum */
-                                    @media (min-width: 768px) and (max-width: 1023px) {
+                                    /* Mobile landscape: Add Datum, keep same size */
+                                    @media (min-width: 768px) and (max-width: 1279px) {
                                         .all-races-table .hide-mobile-portrait {
                                             display: none !important;
                                         }
@@ -1585,15 +1593,19 @@ try {
                                         }
                                         .all-races-table th,
                                         .all-races-table td {
-                                            font-size: 0.75rem;
                                             padding: 0.4rem 0.3rem;
                                         }
                                     }
 
-                                    /* Desktop: Show all columns */
-                                    @media (min-width: 1024px) {
+                                    /* Desktop: Show all columns, can be larger */
+                                    @media (min-width: 1280px) {
                                         .all-races-table .show-mobile-landscape {
                                             display: none !important;
+                                        }
+                                        .all-races-table th,
+                                        .all-races-table td {
+                                            font-size: 0.85rem;
+                                            padding: 0.5rem 0.3rem;
                                         }
                                     }
                                 </style>
