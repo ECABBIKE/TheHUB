@@ -172,12 +172,13 @@ function calculateRankingData($db, $discipline = null, $debug = false) {
 
     // Get all ranking-eligible results
     if ($debug) {
-        echo "<p>🔍 Fetching results from database (this may take a moment)...</p>";
+        echo "<p>⏱️ Step 2: Executing query now...</p>";
         flush();
         $queryStart = microtime(true);
     }
 
-    $results = $db->getAll("
+    try {
+        $results = $db->getAll("
         SELECT
             r.cyclist_id as rider_id,
             r.event_id,
@@ -203,10 +204,17 @@ function calculateRankingData($db, $discipline = null, $debug = false) {
         AND COALESCE(cl.series_eligible, 1) = 1
         AND COALESCE(cl.awards_points, 1) = 1
     ", $params);
+    } catch (Exception $e) {
+        if ($debug) {
+            echo "<p style='color:red;'>❌ Query failed: " . htmlspecialchars($e->getMessage()) . "</p>";
+            flush();
+        }
+        throw $e;
+    }
 
     if ($debug) {
         $queryTime = round(microtime(true) - $queryStart, 2);
-        echo "<p>✅ Found " . count($results) . " results (query took {$queryTime}s)</p>";
+        echo "<p>✅ Query completed! Found " . count($results) . " results (took {$queryTime}s)</p>";
         flush();
     }
 
@@ -383,13 +391,21 @@ function createRankingSnapshot($db, $discipline = 'gravity', $snapshotDate = nul
     }
 
     // Clear existing snapshot for this discipline and date
+    $deleteStart = microtime(true);
     $db->query(
         "DELETE FROM ranking_snapshots WHERE discipline = ? AND snapshot_date = ?",
         [$discipline, $snapshotDate]
     );
 
     if ($debug) {
+        $deleteTime = round(microtime(true) - $deleteStart, 2);
+        echo "<p>✅ Delete completed in {$deleteTime}s</p>";
+        flush();
+    }
+
+    if ($debug) {
         echo "<p>🧮 Starting ranking calculation...</p>";
+        echo "<p>⏱️ Step 1: About to fetch results from database...</p>";
         flush();
     }
 
@@ -686,6 +702,10 @@ function runFullRankingUpdate($db, $debug = false) {
     $startTime = microtime(true);
 
     if ($debug) {
+        echo "<p style='background: #e3f2fd; padding: 10px; border-left: 4px solid #2196f3;'>";
+        echo "<strong>🔄 Version: 2025-11-24-086</strong><br>";
+        echo "Lightweight Ranking System - Debug Mode Active";
+        echo "</p>";
         echo "<h3>Creating Ranking Snapshots</h3>";
         flush();
     }
