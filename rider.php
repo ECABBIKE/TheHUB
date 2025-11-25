@@ -721,18 +721,9 @@ try {
                                                 <div class="gs-points-row">
                                                     <span class="gs-points-label">
                                                         <i data-lucide="calendar"></i>
-                                                        Månad 13-24 (full value)
+                                                        Månad 13-24 (viktade)
                                                     </span>
                                                     <span class="gs-points-value gs-text-secondary">
-                                                        <?= number_format($stats['points_13_24'], 1) ?> p
-                                                    </span>
-                                                </div>
-                                                <div class="gs-points-row">
-                                                    <span class="gs-points-label gs-font-bold">
-                                                        <i data-lucide="award"></i>
-                                                        Viktade poäng (50% av 13-24 mån)
-                                                    </span>
-                                                    <span class="gs-points-value gs-text-primary gs-font-bold">
                                                         <?= number_format($stats['points_13_24'] * 0.5, 1) ?> p
                                                     </span>
                                                 </div>
@@ -879,21 +870,23 @@ try {
 
                     /* Compact ranking stats grid */
                     .gs-ranking-stats-grid {
-                        grid-template-columns: 1fr;
-                        gap: 0.5rem;
+                        grid-template-columns: repeat(3, 1fr);
+                        gap: 0.25rem;
                     }
 
                     .gs-stat-box {
-                        padding: 0.5rem;
+                        padding: 0.4rem 0.2rem;
                     }
 
                     .gs-stat-label {
-                        font-size: 0.7rem;
-                        margin-bottom: 0.25rem;
+                        font-size: 0.65rem;
+                        margin-bottom: 0.15rem;
+                        text-transform: uppercase;
                     }
 
                     .gs-stat-value {
-                        font-size: 1.25rem;
+                        font-size: 1.1rem;
+                        font-weight: 700;
                     }
 
                     /* Compact tabs */
@@ -967,6 +960,40 @@ try {
                     /* Compact background card */
                     .gs-bg-light {
                         padding: 0.5rem !important;
+                    }
+
+                    /* Hide table columns on mobile portrait */
+                    table th:nth-child(3),  /* Plats */
+                    table td:nth-child(3),
+                    table th:nth-child(4),  /* Serie */
+                    table td:nth-child(4),
+                    table th:nth-child(6),  /* Tid */
+                    table td:nth-child(6),
+                    table th:nth-child(7),  /* Poäng */
+                    table td:nth-child(7) {
+                        display: none;
+                    }
+                }
+
+                /* Mobile landscape: show more columns */
+                @media (min-width: 768px) and (max-width: 1024px) and (orientation: landscape) {
+                    table th:nth-child(3),  /* Plats */
+                    table td:nth-child(3),
+                    table th:nth-child(6),  /* Tid */
+                    table td:nth-child(6),
+                    table th:nth-child(7),  /* Poäng */
+                    table td:nth-child(7) {
+                        display: table-cell;
+                    }
+
+                    table th:nth-child(4),  /* Serie - hide on landscape too */
+                    table td:nth-child(4) {
+                        display: none;
+                    }
+
+                    /* Compact font on landscape */
+                    table {
+                        font-size: 0.85rem;
                     }
                 }
                 </style>
