@@ -409,8 +409,8 @@ try {
             LIMIT 6
         ", [$riderId, $discipline]);
 
-        // Get detailed ranking points per race (last 24 months)
-        // Calculate live from results since ranking_points table might be empty
+        // Get detailed ranking points per race from ranking_points table
+        // These points are already weighted with field size and event level multipliers
         $disciplineFilter = '';
         $params = [$riderId];
 
@@ -421,118 +421,28 @@ try {
             $params[] = $discipline;
         }
 
-        $rawResults = $db->getAll("
+        $rankingRaceDetails[$discipline] = $db->getAll("
             SELECT
-                r.cyclist_id as rider_id,
-                r.event_id,
-                r.class_id,
-                r.position,
-                COALESCE(
-                    CASE
-                        WHEN COALESCE(r.run_1_points, 0) > 0 OR COALESCE(r.run_2_points, 0) > 0
-                        THEN COALESCE(r.run_1_points, 0) + COALESCE(r.run_2_points, 0)
-                        ELSE r.points
-                    END,
-                    r.points
-                ) as original_points,
+                rp.ranking_points,
+                rp.original_points,
+                rp.field_size,
+                rp.field_multiplier,
+                rp.event_level_multiplier,
+                rp.time_multiplier,
+                rp.position,
                 e.name as event_name,
                 e.date as event_date,
                 e.location as event_location,
                 e.discipline,
-                COALESCE(e.event_level, 'national') as event_level,
                 cls.display_name as class_name
-            FROM results r
-            JOIN events e ON r.event_id = e.id
-            LEFT JOIN classes cls ON r.class_id = cls.id
-            WHERE r.cyclist_id = ?
-            AND r.status = 'finished'
-            AND (r.points > 0 OR COALESCE(r.run_1_points, 0) > 0 OR COALESCE(r.run_2_points, 0) > 0)
+            FROM ranking_points rp
+            JOIN events e ON rp.event_id = e.id
+            LEFT JOIN classes cls ON rp.class_id = cls.id
+            WHERE rp.rider_id = ?
             AND e.date >= DATE_SUB(NOW(), INTERVAL 24 MONTH)
             {$disciplineFilter}
-            AND COALESCE(cls.series_eligible, 1) = 1
-            AND COALESCE(cls.awards_points, 1) = 1
             ORDER BY e.date DESC
         ", $params);
-
-        // Calculate ranking points with multipliers
-        $fieldMultipliers = getRankingFieldMultipliers($db);
-        $eventLevelMultipliers = getEventLevelMultipliers($db);
-        $timeDecay = getRankingTimeDecay($db);
-
-        // Get field sizes for each event/class
-        $fieldSizes = [];
-        foreach ($rawResults as $result) {
-            $key = $result['event_id'] . '_' . $result['class_id'];
-            if (!isset($fieldSizes[$key])) {
-                $count = $db->getRow("
-                    SELECT COUNT(*) as cnt
-                    FROM results r
-                    LEFT JOIN classes cls ON r.class_id = cls.id
-                    WHERE r.event_id = ? AND r.class_id = ? AND r.status = 'finished'
-                    AND (r.points > 0 OR COALESCE(r.run_1_points, 0) > 0 OR COALESCE(r.run_2_points, 0) > 0)
-                    AND COALESCE(cls.series_eligible, 1) = 1
-                    AND COALESCE(cls.awards_points, 1) = 1
-                ", [$result['event_id'], $result['class_id']]);
-                $fieldSizes[$key] = $count['cnt'] ?? 1;
-            }
-        }
-
-        // Calculate ranking points for each result
-        $rankingRaceDetails[$discipline] = [];
-        foreach ($rawResults as $result) {
-            $key = $result['event_id'] . '_' . $result['class_id'];
-            $fieldSize = $fieldSizes[$key] ?? 1;
-
-            // Calculate multipliers
-            $fieldMult = getFieldMultiplier($fieldSize, $fieldMultipliers);
-            $eventLevelMult = $eventLevelMultipliers[$result['event_level']] ?? 1.00;
-
-            // Calculate time decay
-            $eventDate = new DateTime($result['event_date']);
-            $today = new DateTime();
-            $monthsDiff = $eventDate->diff($today)->m + ($eventDate->diff($today)->y * 12);
-
-            $timeMult = 0;
-            if ($monthsDiff < 12) {
-                $timeMult = $timeDecay['months_1_12'];
-            } elseif ($monthsDiff < 24) {
-                $timeMult = $timeDecay['months_13_24'];
-            } else {
-                $timeMult = $timeDecay['months_25_plus'];
-            }
-
-            // Calculate final ranking points
-            $rankingPoints = $result['original_points'] * $fieldMult * $eventLevelMult * $timeMult;
-
-            // DEBUG: Log calculation details for Ella (rider 7726)
-            if ($riderId == 7726 && $discipline == 'GRAVITY') {
-                error_log(sprintf(
-                    "DEBUG Ranking calc: %s | orig=%d, field=%d (%.2f), level=%.2f, time=%.2f, months=%d => %d points",
-                    substr($result['event_name'], 0, 30),
-                    $result['original_points'],
-                    $fieldSize,
-                    $fieldMult,
-                    $eventLevelMult,
-                    $timeMult,
-                    $monthsDiff,
-                    $rankingPoints
-                ));
-            }
-
-            $rankingRaceDetails[$discipline][] = [
-                'event_name' => $result['event_name'],
-                'event_date' => $result['event_date'],
-                'event_location' => $result['event_location'],
-                'class_name' => $result['class_name'],
-                'position' => $result['position'],
-                'original_points' => $result['original_points'],
-                'ranking_points' => $rankingPoints,
-                'field_size' => $fieldSize,
-                'field_multiplier' => $fieldMult,
-                'event_level_multiplier' => $eventLevelMult,
-                'time_multiplier' => $timeMult
-            ];
-        }
     }
 
     // Determine default discipline based on priority: GRAVITY > ENDURO > DH
@@ -1219,22 +1129,7 @@ try {
                                                                         </div>
                                                                     </td>
                                                                     <td class="gs-text-right gs-text-primary gs-font-bold" style="font-size: 0.75rem;">
-                                                                        <?php
-                                                                        // Show ranking points
-                                                                        $rp = $raceDetail['ranking_points'] ?? 0;
-                                                                        echo number_format($rp, 0);
-
-                                                                        // DEBUG: Temporarily show calculation for rider 7726
-                                                                        if ($riderId == 7726 && $rp == 0) {
-                                                                            $op = $raceDetail['original_points'] ?? 0;
-                                                                            $fm = $raceDetail['field_multiplier'] ?? 0;
-                                                                            $em = $raceDetail['event_level_multiplier'] ?? 0;
-                                                                            $tm = $raceDetail['time_multiplier'] ?? 0;
-                                                                            echo "<br><small style='color:red;font-size:0.6rem;'>{$op}×{$fm}×{$em}×{$tm}</small>";
-                                                                        } else {
-                                                                            echo 'p';
-                                                                        }
-                                                                        ?>
+                                                                        <?= number_format($raceDetail['ranking_points'] ?? 0, 0) ?>p
                                                                     </td>
                                                                     <td class="gs-text-right show-mobile-landscape" style="display: none; font-size: 0.7rem; white-space: nowrap;">
                                                                         <?= number_format($raceDetail['original_points'], 0) ?>×<?= number_format($raceDetail['field_multiplier'], 2) ?>
