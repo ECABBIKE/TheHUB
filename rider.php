@@ -1180,6 +1180,9 @@ try {
                                                                             × Event: <?= number_format($raceDetail['event_level_multiplier'], 2) ?>
                                                                             × Time: <?= number_format($raceDetail['time_multiplier'], 2) ?>
                                                                         </div>
+                                                                        <button class="gs-btn-link gs-text-xs" onclick="toggleCalc(event, 'calc-<?= $raceDetail['event_id'] ?>-<?= $raceDetail['class_id'] ?>')" style="margin-top: 0.25rem; padding: 0; font-size: 0.7rem; color: #3b82f6;">
+                                                                            <i data-lucide="help-circle" style="width: 12px; height: 12px;"></i> Visa beräkning
+                                                                        </button>
                                                                     </td>
                                                                     <td class="gs-text-right gs-text-primary gs-font-bold" style="font-size: 0.75rem;">
                                                                         <?= number_format($raceDetail['ranking_points'] ?? 0, 0) ?>p
@@ -1207,6 +1210,57 @@ try {
                                                                         <span class="gs-badge gs-badge-secondary"><?= $raceDetail['field_size'] ?></span>
                                                                     </td>
                                                                     <td class="gs-text-right hide-mobile-portrait"><?= number_format($raceDetail['original_points'], 0) ?></td>
+                                                                </tr>
+                                                                <!-- Expandable calculation row -->
+                                                                <tr id="calc-<?= $raceDetail['event_id'] ?>-<?= $raceDetail['class_id'] ?>" class="calculation-row" style="display: none; background: #f0f9ff;">
+                                                                    <td colspan="8" style="padding: 0.75rem;">
+                                                                        <div style="font-size: 0.75rem; line-height: 1.6;">
+                                                                            <strong style="color: #1e40af;">📊 Poängberäkning för <?= h($raceDetail['event_name']) ?></strong>
+                                                                            <div style="margin-top: 0.5rem; padding: 0.5rem; background: white; border-radius: 4px; border-left: 3px solid #3b82f6;">
+                                                                                <div style="margin-bottom: 0.25rem;">
+                                                                                    <strong>Eventpoäng:</strong> <?= number_format($raceDetail['original_points'], 0) ?>p
+                                                                                    <span style="color: #64748b;">(från placering #<?= $raceDetail['position'] ?> i klassen)</span>
+                                                                                </div>
+                                                                                <div style="margin-bottom: 0.25rem;">
+                                                                                    <strong>× Fältstorlek:</strong> <?= number_format($raceDetail['field_multiplier'], 2) ?>
+                                                                                    <span style="color: #64748b;">(<?= $raceDetail['field_size'] ?> startande)</span>
+                                                                                </div>
+                                                                                <div style="margin-bottom: 0.25rem;">
+                                                                                    <strong>× Event-nivå:</strong> <?= number_format($raceDetail['event_level_multiplier'], 2) ?>
+                                                                                    <span style="color: #64748b;">
+                                                                                        <?php if ($raceDetail['event_level_multiplier'] == 1.0): ?>
+                                                                                            (Nationell tävling)
+                                                                                        <?php elseif ($raceDetail['event_level_multiplier'] == 0.5): ?>
+                                                                                            (Sportmotion/Regional)
+                                                                                        <?php else: ?>
+                                                                                            (Annan nivå)
+                                                                                        <?php endif; ?>
+                                                                                    </span>
+                                                                                </div>
+                                                                                <div style="margin-bottom: 0.25rem;">
+                                                                                    <strong>× Tidsviktning:</strong> <?= number_format($raceDetail['time_multiplier'], 2) ?>
+                                                                                    <span style="color: #64748b;">
+                                                                                        <?php
+                                                                                        $monthsAgo = (strtotime('now') - strtotime($raceDetail['event_date'])) / (30 * 24 * 60 * 60);
+                                                                                        if ($monthsAgo <= 12) {
+                                                                                            echo "(0-12 månader gammal)";
+                                                                                        } elseif ($monthsAgo <= 24) {
+                                                                                            echo "(13-24 månader gammal)";
+                                                                                        } else {
+                                                                                            echo "(Äldre än 24 månader)";
+                                                                                        }
+                                                                                        ?>
+                                                                                    </span>
+                                                                                </div>
+                                                                                <div style="margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid #e2e8f0; font-weight: bold; color: #1e40af;">
+                                                                                    = <?= number_format($raceDetail['ranking_points'], 0) ?>p rankingpoäng
+                                                                                </div>
+                                                                                <div style="margin-top: 0.5rem; font-size: 0.7rem; color: #64748b; font-style: italic;">
+                                                                                    Formel: <?= number_format($raceDetail['original_points'], 0) ?> × <?= number_format($raceDetail['field_multiplier'], 2) ?> × <?= number_format($raceDetail['event_level_multiplier'], 2) ?> × <?= number_format($raceDetail['time_multiplier'], 2) ?> = <?= number_format($raceDetail['ranking_points'], 2) ?>p
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+                                                                    </td>
                                                                 </tr>
                                                             <?php endforeach; ?>
                                                         </tbody>
@@ -2066,6 +2120,28 @@ try {
                             document.getElementById(targetId).classList.add('active');
                         });
                     });
+
+                    // Toggle calculation explanation
+                    window.toggleCalc = function(event, calcId) {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        const row = document.getElementById(calcId);
+                        const button = event.target.closest('button');
+
+                        if (row.style.display === 'none') {
+                            row.style.display = 'table-row';
+                            if (button) {
+                                button.innerHTML = '<i data-lucide="x-circle" style="width: 12px; height: 12px;"></i> Dölj beräkning';
+                                lucide.createIcons();
+                            }
+                        } else {
+                            row.style.display = 'none';
+                            if (button) {
+                                button.innerHTML = '<i data-lucide="help-circle" style="width: 12px; height: 12px;"></i> Visa beräkning';
+                                lucide.createIcons();
+                            }
+                        }
+                    };
                 });
                 </script>
         </div>
