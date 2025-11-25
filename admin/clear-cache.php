@@ -29,10 +29,10 @@ if (file_exists($rankingFile)) {
 
     // Check for version stamp in file
     $content = file_get_contents($rankingFile);
-    if (strpos($content, '2025-11-24-086') !== false) {
-        echo "<p style='color: green;'>✅ Version 2025-11-24-086 found in file!</p>";
+    if (strpos($content, '2025-11-25-001') !== false) {
+        echo "<p style='color: green;'>✅ Version 2025-11-25-001 found in file!</p>";
     } else {
-        echo "<p style='color: red;'>❌ Version 2025-11-24-086 NOT found in file!</p>";
+        echo "<p style='color: red;'>❌ Version 2025-11-25-001 NOT found in file!</p>";
         echo "<p>File might not be updated yet. Check git pull.</p>";
     }
 } else {
