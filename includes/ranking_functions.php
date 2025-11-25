@@ -574,7 +574,7 @@ function runFullRankingUpdate($db, $debug = false) {
 
     if ($debug) {
         echo "<p style='background: #e3f2fd; padding: 10px; border-left: 4px solid #2196f3;'>";
-        echo "<strong>🔄 Version: 2025-11-25-009</strong><br>";
+        echo "<strong>🔄 Version: 2025-11-25-010</strong><br>";
         echo "Lightweight Ranking System - Debug Mode Active";
         echo "</p>";
         echo "<h3>Creating Ranking Snapshots</h3>";
@@ -828,58 +828,73 @@ function getDisciplineDisplayName($discipline) {
  * Get ranking statistics per discipline
  */
 function getRankingStats($db) {
+    // TEMPORARY: Calculate stats from live data since snapshot tables are locked
     $stats = [
         'ENDURO' => ['riders' => 0, 'events' => 0, 'clubs' => 0],
         'DH' => ['riders' => 0, 'events' => 0, 'clubs' => 0],
         'GRAVITY' => ['riders' => 0, 'events' => 0, 'clubs' => 0]
     ];
 
-    // Get latest snapshot date
-    $latestSnapshot = $db->getRow("SELECT MAX(snapshot_date) as snapshot_date FROM ranking_snapshots");
-    if (!$latestSnapshot || !$latestSnapshot['snapshot_date']) {
-        return $stats;
-    }
-
-    $snapshotDate = $latestSnapshot['snapshot_date'];
-
-    // Get counts per discipline
-    foreach (['ENDURO', 'DH', 'GRAVITY'] as $discipline) {
-        $count = $db->getRow(
-            "SELECT COUNT(*) as count FROM ranking_snapshots WHERE discipline = ? AND snapshot_date = ?",
-            [$discipline, $snapshotDate]
-        );
-        $stats[$discipline]['riders'] = $count ? $count['count'] : 0;
-
-        // Get club counts (if table exists)
-        try {
-            $clubCount = $db->getRow(
-                "SELECT COUNT(*) as count FROM club_ranking_snapshots WHERE discipline = ? AND snapshot_date = ?",
-                [$discipline, $snapshotDate]
-            );
-            $stats[$discipline]['clubs'] = $clubCount ? $clubCount['count'] : 0;
-        } catch (Exception $e) {
-            $stats[$discipline]['clubs'] = 0;
-        }
-    }
-
-    // Get event counts from live data
     $cutoffDate = date('Y-m-d', strtotime('-24 months'));
 
-    $enduroEvents = $db->getRow("
-        SELECT COUNT(DISTINCT e.id) as count
-        FROM events e
-        WHERE e.discipline = 'ENDURO' AND e.date >= ?
-    ", [$cutoffDate]);
+    // Get rider and event counts from live data for each discipline
+    foreach (['ENDURO', 'DH', 'GRAVITY'] as $discipline) {
+        $disciplineFilter = '';
+        $params = [$cutoffDate];
 
-    $dhEvents = $db->getRow("
-        SELECT COUNT(DISTINCT e.id) as count
-        FROM events e
-        WHERE e.discipline = 'DH' AND e.date >= ?
-    ", [$cutoffDate]);
+        if ($discipline !== 'GRAVITY') {
+            $disciplineFilter = 'AND e.discipline = ?';
+            $params[] = $discipline;
+        }
 
-    $stats['ENDURO']['events'] = $enduroEvents ? $enduroEvents['count'] : 0;
-    $stats['DH']['events'] = $dhEvents ? $dhEvents['count'] : 0;
-    $stats['GRAVITY']['events'] = $stats['ENDURO']['events'] + $stats['DH']['events'];
+        // Count unique riders with results
+        $riderCount = $db->getRow("
+            SELECT COUNT(DISTINCT r.cyclist_id) as count
+            FROM results r
+            JOIN events e ON r.event_id = e.id
+            JOIN classes cl ON r.class_id = cl.id
+            WHERE r.status = 'finished'
+            AND (r.points > 0 OR COALESCE(r.run_1_points, 0) > 0 OR COALESCE(r.run_2_points, 0) > 0)
+            AND e.date >= ?
+            {$disciplineFilter}
+            AND COALESCE(cl.series_eligible, 1) = 1
+            AND COALESCE(cl.awards_points, 1) = 1
+        ", $params);
+        $stats[$discipline]['riders'] = $riderCount ? (int)$riderCount['count'] : 0;
+
+        // Count unique clubs
+        $clubCount = $db->getRow("
+            SELECT COUNT(DISTINCT riders.club_id) as count
+            FROM (
+                SELECT DISTINCT r.cyclist_id
+                FROM results r
+                JOIN events e ON r.event_id = e.id
+                JOIN classes cl ON r.class_id = cl.id
+                WHERE r.status = 'finished'
+                AND (r.points > 0 OR COALESCE(r.run_1_points, 0) > 0 OR COALESCE(r.run_2_points, 0) > 0)
+                AND e.date >= ?
+                {$disciplineFilter}
+                AND COALESCE(cl.series_eligible, 1) = 1
+                AND COALESCE(cl.awards_points, 1) = 1
+            ) as unique_riders
+            JOIN riders ON unique_riders.cyclist_id = riders.id
+            WHERE riders.club_id IS NOT NULL
+        ", $params);
+        $stats[$discipline]['clubs'] = $clubCount ? (int)$clubCount['count'] : 0;
+
+        // Count events
+        $eventParams = [$cutoffDate];
+        if ($discipline !== 'GRAVITY') {
+            $eventParams[] = $discipline;
+        }
+
+        $eventCount = $db->getRow("
+            SELECT COUNT(DISTINCT e.id) as count
+            FROM events e
+            WHERE e.date >= ? " . ($discipline !== 'GRAVITY' ? 'AND e.discipline = ?' : '') . "
+        ", $eventParams);
+        $stats[$discipline]['events'] = $eventCount ? (int)$eventCount['count'] : 0;
+    }
 
     return $stats;
 }
