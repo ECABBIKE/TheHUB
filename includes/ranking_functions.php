@@ -395,17 +395,50 @@ function createRankingSnapshot($db, $discipline = 'gravity', $snapshotDate = nul
     $riderData = calculateRankingData($db, $discipline, $debug);
 
     if ($debug) {
-        echo "<p>💾 Saving " . count($riderData) . " riders one at a time with detailed timing...</p>";
+        echo "<p>🗑️ Clearing old snapshot data in small chunks...</p>";
         flush();
     }
 
-    // Try INDIVIDUAL row inserts with detailed timing
-    // If even batch of 10 times out on first batch, try one at a time
+    // Delete old snapshot data in small chunks to avoid timeout
+    // Keep deleting until no more rows exist for this discipline/date
+    $deletedTotal = 0;
+    $maxIterations = 100; // Safety limit
+    $iteration = 0;
+
+    while ($iteration < $maxIterations) {
+        // Delete in chunks of 50 rows
+        $result = $db->query("DELETE FROM ranking_snapshots WHERE discipline = ? AND snapshot_date = ? LIMIT 50",
+                            [$discipline, $snapshotDate]);
+
+        $affected = $db->affectedRows();
+        $deletedTotal += $affected;
+
+        if ($debug && $iteration % 10 == 0 && $deletedTotal > 0) {
+            echo "<p>🗑️ Deleted {$deletedTotal} old rows so far...</p>";
+            flush();
+        }
+
+        if ($affected < 50) {
+            // No more rows to delete
+            break;
+        }
+
+        $iteration++;
+        usleep(10000); // 10ms pause between deletes
+    }
+
+    if ($debug) {
+        echo "<p>✅ Cleared {$deletedTotal} old snapshot rows</p>";
+        echo "<p>💾 Inserting " . count($riderData) . " new riders using plain INSERT...</p>";
+        flush();
+    }
+
+    // Now use plain INSERT (no duplicate key check needed since we deleted old data)
     $inserted = 0;
 
     foreach ($riderData as $index => $rider) {
-        if ($debug && $index % 50 == 0) {
-            echo "<p>📝 Processing rider " . ($index + 1) . " / " . count($riderData) . "...</p>";
+        if ($debug && $index % 100 == 0) {
+            echo "<p>📝 Inserted " . $inserted . " / " . count($riderData) . " riders...</p>";
             flush();
         }
 
@@ -415,26 +448,11 @@ function createRankingSnapshot($db, $discipline = 'gravity', $snapshotDate = nul
             $positionChange = $previousPosition - $rider['ranking_position'];
         }
 
-        if ($debug && $index < 3) {
-            echo "<p>⏱️ About to insert rider {$rider['rider_id']}...</p>";
-            flush();
-        }
-
-        // Use INSERT...ON DUPLICATE KEY UPDATE
-        $sql = "INSERT INTO ranking_snapshots
+        // Plain INSERT - faster than ON DUPLICATE KEY UPDATE
+        $db->query("INSERT INTO ranking_snapshots
                 (rider_id, discipline, snapshot_date, total_ranking_points, points_last_12_months,
                  points_months_13_24, events_count, ranking_position, previous_position, position_change)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                ON DUPLICATE KEY UPDATE
-                    total_ranking_points = VALUES(total_ranking_points),
-                    points_last_12_months = VALUES(points_last_12_months),
-                    points_months_13_24 = VALUES(points_months_13_24),
-                    events_count = VALUES(events_count),
-                    ranking_position = VALUES(ranking_position),
-                    previous_position = VALUES(previous_position),
-                    position_change = VALUES(position_change)";
-
-        $db->query($sql, [
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", [
             $rider['rider_id'],
             $discipline,
             $snapshotDate,
@@ -447,17 +465,10 @@ function createRankingSnapshot($db, $discipline = 'gravity', $snapshotDate = nul
             $positionChange
         ]);
 
-        if ($debug && $index < 3) {
-            echo "<p>✅ Rider {$rider['rider_id']} saved to snapshots!</p>";
-            flush();
-        }
-
         // Also insert into ranking_history
-        $historySql = "INSERT INTO ranking_history (rider_id, discipline, month_date, ranking_position, total_points)
-                       VALUES (?, ?, ?, ?, ?)
-                       ON DUPLICATE KEY UPDATE ranking_position = VALUES(ranking_position), total_points = VALUES(total_points)";
-
-        $db->query($historySql, [
+        $db->query("INSERT INTO ranking_history (rider_id, discipline, month_date, ranking_position, total_points)
+                   VALUES (?, ?, ?, ?, ?)
+                   ON DUPLICATE KEY UPDATE ranking_position = VALUES(ranking_position), total_points = VALUES(total_points)", [
             $rider['rider_id'],
             $discipline,
             $snapshotDate,
@@ -465,17 +476,7 @@ function createRankingSnapshot($db, $discipline = 'gravity', $snapshotDate = nul
             round($rider['total_points'], 2)
         ]);
 
-        if ($debug && $index < 3) {
-            echo "<p>✅ Rider {$rider['rider_id']} saved to history!</p>";
-            flush();
-        }
-
         $inserted++;
-
-        // Pause every 50 rows
-        if ($inserted % 50 == 0) {
-            usleep(100000); // 100ms pause every 50 rows
-        }
     }
 
     if ($debug) {
@@ -765,7 +766,7 @@ function runFullRankingUpdate($db, $debug = false) {
 
     if ($debug) {
         echo "<p style='background: #e3f2fd; padding: 10px; border-left: 4px solid #2196f3;'>";
-        echo "<strong>🔄 Version: 2025-11-25-005</strong><br>";
+        echo "<strong>🔄 Version: 2025-11-25-006</strong><br>";
         echo "Lightweight Ranking System - Debug Mode Active";
         echo "</p>";
         echo "<h3>Creating Ranking Snapshots</h3>";
