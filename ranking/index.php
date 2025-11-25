@@ -158,7 +158,7 @@ include __DIR__ . '/../includes/layout-header.php';
                         elseif ($rider['ranking_position'] == 2) $rankClass = 'rank-2';
                         elseif ($rider['ranking_position'] == 3) $rankClass = 'rank-3';
                         ?>
-                        <div class="gs-ranking-card <?= $rankClass ?>">
+                        <a href="/ranking/rider.php?id=<?= $rider['rider_id'] ?>&discipline=<?= $discipline ?>" class="gs-ranking-card <?= $rankClass ?>">
                             <div class="gs-rank-badge">
                                 <?php if ($rider['ranking_position'] <= 3): ?>
                                     <span class="gs-medal"><?php
@@ -200,7 +200,7 @@ include __DIR__ . '/../includes/layout-header.php';
                                     <div class="gs-position-change new">NY</div>
                                 <?php endif; ?>
                             </div>
-                        </div>
+                        </a>
                     <?php endforeach; ?>
                 </div>
 
@@ -219,7 +219,7 @@ include __DIR__ . '/../includes/layout-header.php';
                         </thead>
                         <tbody>
                             <?php foreach ($ranking['riders'] as $rider): ?>
-                                <tr>
+                                <tr class="gs-table-row-clickable" onclick="window.location.href='/ranking/rider.php?id=<?= $rider['rider_id'] ?>&discipline=<?= $discipline ?>'">
                                     <td>
                                         <?php if ($rider['ranking_position'] <= 3): ?>
                                             <span class="gs-medal-badge gs-medal-<?= $rider['ranking_position'] ?>">
@@ -568,6 +568,19 @@ include __DIR__ . '/../includes/layout-header.php';
     border-radius: var(--gs-radius-md);
     box-shadow: var(--gs-shadow-sm);
     gap: var(--gs-space-md);
+    text-decoration: none;
+    color: inherit;
+    transition: all 0.2s;
+    cursor: pointer;
+}
+
+.gs-ranking-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--gs-shadow-md);
+}
+
+.gs-ranking-card:active {
+    transform: translateY(0);
 }
 
 .gs-ranking-card.rank-1 {
@@ -708,6 +721,15 @@ include __DIR__ . '/../includes/layout-header.php';
 
 .gs-ranking-table tbody tr:last-child td {
     border-bottom: none;
+}
+
+.gs-table-row-clickable {
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.gs-table-row-clickable:hover {
+    background-color: var(--gs-primary-light);
 }
 
 .gs-medal-badge {
