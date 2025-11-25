@@ -459,13 +459,6 @@ try {
         $eventLevelMultipliers = getEventLevelMultipliers($db);
         $timeDecay = getRankingTimeDecay($db);
 
-        // DEBUG: Output multipliers
-        if ($riderId == 7726 && $discipline == 'GRAVITY') {
-            echo "<!-- DEBUG: Field multipliers count=" . count($fieldMultipliers) . " -->\n";
-            echo "<!-- DEBUG: Event level multipliers: " . json_encode($eventLevelMultipliers) . " -->\n";
-            echo "<!-- DEBUG: Time decay: " . json_encode($timeDecay) . " -->\n";
-        }
-
         // Get field sizes for each event/class
         $fieldSizes = [];
         foreach ($rawResults as $result) {
@@ -486,12 +479,6 @@ try {
 
         // Calculate ranking points for each result
         $rankingRaceDetails[$discipline] = [];
-
-        // DEBUG: Output raw results count
-        if ($riderId == 7726) {
-            echo "<!-- DEBUG: Discipline=$discipline, Raw results count=" . count($rawResults) . " -->\n";
-        }
-
         foreach ($rawResults as $result) {
             $key = $result['event_id'] . '_' . $result['class_id'];
             $fieldSize = $fieldSizes[$key] ?? 1;
@@ -541,20 +528,8 @@ try {
     } elseif (!empty($rankingStats['DH'])) {
         $defaultDiscipline = 'DH';
     }
-
-    // DEBUG: Output ranking race details structure
-    if ($riderId == 7726) {
-        echo "<!-- DEBUG: rankingRaceDetails keys: " . implode(', ', array_keys($rankingRaceDetails)) . " -->\n";
-        foreach ($rankingRaceDetails as $disc => $races) {
-            echo "<!-- DEBUG: $disc has " . count($races) . " races -->\n";
-        }
-    }
 } catch (Exception $e) {
     error_log("Error getting ranking stats for rider {$riderId}: " . $e->getMessage());
-    // DEBUG: Also output to HTML
-    if ($riderId == 7726) {
-        echo "<!-- DEBUG ERROR: " . $e->getMessage() . " -->\n";
-    }
 }
 
 // Get series standings for this rider - CLASS BASED
@@ -1047,13 +1022,47 @@ try {
                                                 Poängfördelning
                                             </h4>
                                             <style>
-                                                /* Mobile portrait: Compact point breakdown */
+                                                /* Mobile portrait: Very compact point breakdown */
                                                 @media (max-width: 767px) {
+                                                    .gs-points-breakdown .gs-points-row {
+                                                        padding: 0.3rem 0;
+                                                        gap: 0.5rem;
+                                                    }
+                                                    .gs-points-breakdown .gs-points-label {
+                                                        font-size: 0.7rem;
+                                                        flex: 1;
+                                                    }
+                                                    .gs-points-breakdown .gs-points-value {
+                                                        font-size: 0.75rem;
+                                                        white-space: nowrap;
+                                                    }
+                                                    .gs-points-breakdown .gs-points-label i {
+                                                        width: 12px;
+                                                        height: 12px;
+                                                        display: none; /* Hide icons on mobile portrait */
+                                                    }
+                                                    .gs-points-breakdown .gs-points-label.gs-font-bold {
+                                                        font-size: 0.8rem;
+                                                    }
+                                                    .gs-points-breakdown .gs-points-value.gs-font-bold {
+                                                        font-size: 0.9rem;
+                                                    }
+                                                    .gs-divider {
+                                                        margin: 0.3rem 0 !important;
+                                                    }
+                                                    .gs-card-content h4 {
+                                                        font-size: 0.9rem;
+                                                        margin-bottom: 0.5rem !important;
+                                                    }
+                                                }
+
+                                                /* Mobile landscape: Slightly larger */
+                                                @media (min-width: 768px) and (max-width: 1023px) {
                                                     .gs-points-breakdown .gs-points-row {
                                                         padding: 0.4rem 0;
                                                     }
                                                     .gs-points-breakdown .gs-points-label {
-                                                        font-size: 0.75rem;
+                                                        font-size: 0.8rem;
                                                     }
                                                     .gs-points-breakdown .gs-points-value {
                                                         font-size: 0.85rem;
@@ -1061,25 +1070,6 @@ try {
                                                     .gs-points-breakdown .gs-points-label i {
                                                         width: 14px;
                                                         height: 14px;
-                                                    }
-                                                    .gs-points-breakdown .gs-points-label.gs-font-bold {
-                                                        font-size: 0.85rem;
-                                                    }
-                                                    .gs-points-breakdown .gs-points-value.gs-font-bold {
-                                                        font-size: 1rem;
-                                                    }
-                                                }
-
-                                                /* Mobile landscape: Slightly larger */
-                                                @media (min-width: 768px) and (max-width: 1023px) {
-                                                    .gs-points-breakdown .gs-points-row {
-                                                        padding: 0.5rem 0;
-                                                    }
-                                                    .gs-points-breakdown .gs-points-label {
-                                                        font-size: 0.85rem;
-                                                    }
-                                                    .gs-points-breakdown .gs-points-value {
-                                                        font-size: 0.95rem;
                                                     }
                                                 }
                                             </style>
