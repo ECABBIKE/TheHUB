@@ -167,12 +167,18 @@ class DatabaseWrapper {
         return $this->pdo;
     }
 
+    public function query($sql, $params = array()) {
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute($params);
+        return $stmt;
+    }
+
     public function getAll($sql, $params = array()) {
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute($params);
         return $stmt->fetchAll();
     }
-    
+
     public function getRow($sql, $params = array()) {
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute($params);
