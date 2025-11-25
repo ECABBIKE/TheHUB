@@ -56,9 +56,24 @@ function getRankingFieldMultipliers($db) {
         if ($decoded) {
             $multipliers = [];
             foreach ($decoded as $key => $value) {
-                $multipliers[(int)$key] = (float)$value;
+                $intKey = (int)$key;
+                // Only keep multipliers 1-15 (migrate from old 26-item scale)
+                if ($intKey >= 1 && $intKey <= 15) {
+                    $multipliers[$intKey] = (float)$value;
+                }
             }
-            return $multipliers;
+
+            // If we have valid multipliers for 1-15, return them
+            if (count($multipliers) === 15) {
+                return $multipliers;
+            }
+
+            // Otherwise, auto-migrate: if we have old 26-item scale, save new 15-item defaults
+            if (count($decoded) === 26) {
+                $newDefaults = getDefaultFieldMultipliers();
+                saveFieldMultipliers($db, $newDefaults);
+                return $newDefaults;
+            }
         }
     }
 
