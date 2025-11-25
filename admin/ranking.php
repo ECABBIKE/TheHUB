@@ -44,25 +44,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     checkCsrf();
 
     if (isset($_POST['calculate'])) {
-        // Run full calculation with error handling
+        // Run full ranking update (lightweight on-the-fly calculation with snapshots)
         try {
-            $calcStats = calculateAllRankingPoints($db);
-            $snapshotStats = createRankingSnapshot($db);
+            $stats = runFullRankingUpdate($db, false);
 
-            // Try to create club rankings (will skip if table doesn't exist)
-            $clubSnapshotStats = ['enduro' => 0, 'dh' => 0, 'gravity' => 0, 'clubs_ranked' => 0];
-            try {
-                $clubSnapshotStats = createClubRankingSnapshot($db);
-            } catch (Exception $e) {
-                // Club ranking table doesn't exist yet - skip silently
-                error_log("Club ranking skipped: " . $e->getMessage());
-            }
-
-            $message = "Beräkning klar! {$calcStats['events_processed']} events, {$calcStats['riders_processed']} resultat. ";
-            $message .= "Rankade åkare: Enduro {$snapshotStats['enduro']}, DH {$snapshotStats['dh']}, Gravity {$snapshotStats['gravity']}. ";
-            if ($clubSnapshotStats['clubs_ranked'] > 0) {
-                $message .= "Rankade klubbar: Enduro {$clubSnapshotStats['enduro']}, DH {$clubSnapshotStats['dh']}, Gravity {$clubSnapshotStats['gravity']}.";
-            }
+            $message = "Beräkning klar på {$stats['total_time']}s! ";
+            $message .= "Rankade åkare: Enduro {$stats['enduro']['riders']}, DH {$stats['dh']['riders']}, Gravity {$stats['gravity']['riders']}. ";
+            $message .= "Rankade klubbar: Enduro {$stats['enduro']['clubs']}, DH {$stats['dh']['clubs']}, Gravity {$stats['gravity']['clubs']}.";
             $messageType = 'success';
         } catch (Exception $e) {
             $message = "FEL vid beräkning: " . $e->getMessage() . "\n\nStack trace:\n" . $e->getTraceAsString();
@@ -261,9 +249,9 @@ flush();
                     <p class="gs-text-sm gs-text-secondary gs-mb-md">
                         Senaste beräkning:
                         <strong><?= $lastCalc['date'] ? date('Y-m-d H:i', strtotime($lastCalc['date'])) : 'Aldrig' ?></strong>
-                        <?php if ($lastCalc['date']): ?>
+                        <?php if ($lastCalc['date'] && isset($lastCalc['stats']['total_time'])): ?>
                             <br>
-                            <?= $lastCalc['events_processed'] ?> events, <?= $lastCalc['riders_processed'] ?> resultat
+                            Tog <?= $lastCalc['stats']['total_time'] ?>s att köra
                         <?php endif; ?>
                         <br><br>
                         Senaste snapshot:
