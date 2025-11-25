@@ -172,8 +172,9 @@ function calculateRankingData($db, $discipline = null, $debug = false) {
 
     // Get all ranking-eligible results
     if ($debug) {
-        echo "<p>🔍 Fetching results...</p>";
+        echo "<p>🔍 Fetching results from database (this may take a moment)...</p>";
         flush();
+        $queryStart = microtime(true);
     }
 
     $results = $db->getAll("
@@ -211,7 +212,8 @@ function calculateRankingData($db, $discipline = null, $debug = false) {
     ", $params);
 
     if ($debug) {
-        echo "<p>✅ Found " . count($results) . " results</p>";
+        $queryTime = round(microtime(true) - $queryStart, 2);
+        echo "<p>✅ Found " . count($results) . " results (query took {$queryTime}s)</p>";
         flush();
     }
 
