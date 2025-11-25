@@ -68,16 +68,24 @@ function getRankingFieldMultipliers($db) {
                 return $multipliers;
             }
 
-            // Otherwise, if we have old 26-item scale, return defaults
-            // User needs to click "Reset to defaults" to save new scale
+            // Auto-migrate from old 26-item scale to new 15-item scale
             if (count($decoded) > 15) {
-                error_log("Found old multiplier scale with " . count($decoded) . " items, returning defaults");
-                return getDefaultFieldMultipliers();
+                error_log("Auto-migrating from old " . count($decoded) . "-item scale to 15-item scale");
+                $defaults = getDefaultFieldMultipliers();
+                saveFieldMultipliers($db, $defaults);
+                return $defaults;
             }
         }
     }
 
-    return getDefaultFieldMultipliers();
+    // No data found, save and return defaults
+    $defaults = getDefaultFieldMultipliers();
+    try {
+        saveFieldMultipliers($db, $defaults);
+    } catch (Exception $e) {
+        error_log("Failed to save default multipliers: " . $e->getMessage());
+    }
+    return $defaults;
 }
 
 /**
@@ -639,17 +647,17 @@ function runFullRankingUpdate($db, $debug = false) {
         }
     }
 
-    // Update last calculation timestamp
-    if ($debug) {
-        echo "<p>💾 Saving calculation metadata...</p>";
-        flush();
-    }
+    $stats['total_time'] = round(microtime(true) - $startTime, 2);
 
+    // Update last calculation timestamp (with timeout protection)
     try {
         $calcData = json_encode([
             'date' => date('Y-m-d H:i:s'),
             'stats' => $stats
         ]);
+
+        // Set a short timeout for this query
+        $db->query("SET SESSION max_execution_time = 2000");
 
         $db->query("
             INSERT INTO ranking_settings (setting_key, setting_value, description)
@@ -657,23 +665,9 @@ function runFullRankingUpdate($db, $debug = false) {
             ON DUPLICATE KEY UPDATE setting_value = ?, updated_at = NOW()
         ", [$calcData, $calcData]);
 
-        if ($debug) {
-            echo "<p>✅ Calculation metadata saved successfully</p>";
-            flush();
-        }
     } catch (Exception $e) {
-        if ($debug) {
-            echo "<p style='color: orange;'>⚠️ Could not save calculation metadata: " . htmlspecialchars($e->getMessage()) . "</p>";
-            flush();
-        }
+        // Don't fail the whole calculation if metadata save fails
         error_log("Failed to save last_calculation: " . $e->getMessage());
-    }
-
-    $stats['total_time'] = round(microtime(true) - $startTime, 2);
-
-    if ($debug) {
-        echo "<p>✅ All snapshots created in {$stats['total_time']}s</p>";
-        flush();
     }
 
     return $stats;
