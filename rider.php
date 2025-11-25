@@ -5,6 +5,7 @@ ini_set('display_errors', 1);
 
 require_once __DIR__ . '/config.php';
 require_once __DIR__ . '/includes/class-calculations.php';
+require_once __DIR__ . '/includes/ranking_functions.php';
 
 $db = getDB();
 
@@ -265,6 +266,24 @@ if ($totalRaces > 0) {
     } catch (Exception $e) {
         error_log("Error getting GravitySeries stats for rider {$riderId}: " . $e->getMessage());
     }
+}
+
+// Get ranking statistics for all disciplines
+$rankingStats = [];
+try {
+    foreach (['ENDURO', 'DH', 'GRAVITY'] as $discipline) {
+        $riderData = calculateRankingData($db, $discipline, false);
+
+        // Find this rider's ranking
+        foreach ($riderData as $data) {
+            if ($data['rider_id'] == $riderId) {
+                $rankingStats[$discipline] = $data;
+                break;
+            }
+        }
+    }
+} catch (Exception $e) {
+    error_log("Error getting ranking stats for rider {$riderId}: " . $e->getMessage());
 }
 
 // Get series standings for this rider - CLASS BASED
@@ -638,6 +657,265 @@ try {
                     <?php endif; ?>
                 </div>
             </div>
+
+            <!-- Ranking Statistics -->
+            <?php if (!empty($rankingStats)): ?>
+                <div class="gs-card gs-mb-xl">
+                    <div class="gs-card-header">
+                        <h2 class="gs-h4 gs-text-primary">
+                            <i data-lucide="trending-up"></i>
+                            Rankingstatistik (24 månader)
+                        </h2>
+                    </div>
+                    <div class="gs-card-content">
+                        <!-- Discipline Tabs -->
+                        <div class="gs-tabs gs-mb-lg">
+                            <?php foreach (['GRAVITY' => 'Gravity', 'ENDURO' => 'Enduro', 'DH' => 'Downhill'] as $disc => $label): ?>
+                                <?php if (isset($rankingStats[$disc])): ?>
+                                    <button class="gs-tab <?= $disc === 'GRAVITY' ? 'active' : '' ?>" data-tab="ranking-<?= strtolower($disc) ?>">
+                                        <?= $label ?>
+                                    </button>
+                                <?php endif; ?>
+                            <?php endforeach; ?>
+                        </div>
+
+                        <!-- Tab Content -->
+                        <?php foreach (['GRAVITY' => 'Gravity', 'ENDURO' => 'Enduro', 'DH' => 'Downhill'] as $disc => $label): ?>
+                            <?php if (isset($rankingStats[$disc])): ?>
+                                <?php $stats = $rankingStats[$disc]; ?>
+                                <div class="gs-tab-content <?= $disc === 'GRAVITY' ? 'active' : '' ?>" id="ranking-<?= strtolower($disc) ?>">
+
+                                    <!-- Stats Grid -->
+                                    <div class="gs-ranking-stats-grid gs-mb-lg">
+                                        <div class="gs-stat-box">
+                                            <div class="gs-stat-label">Placering</div>
+                                            <div class="gs-stat-value gs-text-primary">#<?= $stats['ranking_position'] ?></div>
+                                        </div>
+                                        <div class="gs-stat-box">
+                                            <div class="gs-stat-label">Totala poäng</div>
+                                            <div class="gs-stat-value gs-text-success"><?= number_format($stats['total_points'], 1) ?></div>
+                                        </div>
+                                        <div class="gs-stat-box">
+                                            <div class="gs-stat-label">Antal events</div>
+                                            <div class="gs-stat-value gs-text-warning"><?= $stats['events_count'] ?></div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Point Breakdown -->
+                                    <div class="gs-card gs-bg-light gs-mb-lg">
+                                        <div class="gs-card-content">
+                                            <h4 class="gs-h5 gs-text-primary gs-mb-md">
+                                                <i data-lucide="pie-chart"></i>
+                                                Poängfördelning
+                                            </h4>
+                                            <div class="gs-points-breakdown">
+                                                <div class="gs-points-row">
+                                                    <span class="gs-points-label">
+                                                        <i data-lucide="calendar-check"></i>
+                                                        Senaste 12 månader (100%)
+                                                    </span>
+                                                    <span class="gs-points-value gs-text-success">
+                                                        <?= number_format($stats['points_12'], 1) ?> p
+                                                    </span>
+                                                </div>
+                                                <div class="gs-points-row">
+                                                    <span class="gs-points-label">
+                                                        <i data-lucide="calendar"></i>
+                                                        Månad 13-24 (full value)
+                                                    </span>
+                                                    <span class="gs-points-value gs-text-secondary">
+                                                        <?= number_format($stats['points_13_24'], 1) ?> p
+                                                    </span>
+                                                </div>
+                                                <div class="gs-points-row">
+                                                    <span class="gs-points-label gs-font-bold">
+                                                        <i data-lucide="award"></i>
+                                                        Viktade poäng (50% av 13-24 mån)
+                                                    </span>
+                                                    <span class="gs-points-value gs-text-primary gs-font-bold">
+                                                        <?= number_format($stats['points_13_24'] * 0.5, 1) ?> p
+                                                    </span>
+                                                </div>
+                                                <div class="gs-divider gs-my-sm"></div>
+                                                <div class="gs-points-row">
+                                                    <span class="gs-points-label gs-font-bold gs-text-lg">
+                                                        <i data-lucide="trophy"></i>
+                                                        Total ranking
+                                                    </span>
+                                                    <span class="gs-points-value gs-text-primary gs-font-bold gs-text-lg">
+                                                        <?= number_format($stats['total_points'], 1) ?> p
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                </div>
+                            <?php endif; ?>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+
+                <style>
+                /* Ranking stats grid */
+                .gs-ranking-stats-grid {
+                    display: grid;
+                    grid-template-columns: repeat(3, 1fr);
+                    gap: 1rem;
+                }
+
+                .gs-stat-box {
+                    text-align: center;
+                    padding: 1rem;
+                    background: var(--gs-gray-50);
+                    border-radius: var(--gs-radius-md);
+                }
+
+                .gs-stat-label {
+                    font-size: 0.875rem;
+                    color: var(--gs-text-secondary);
+                    margin-bottom: 0.5rem;
+                }
+
+                .gs-stat-value {
+                    font-size: 2rem;
+                    font-weight: 700;
+                }
+
+                /* Points breakdown */
+                .gs-points-breakdown {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 0.75rem;
+                }
+
+                .gs-points-row {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    padding: 0.5rem 0;
+                }
+
+                .gs-points-label {
+                    display: flex;
+                    align-items: center;
+                    gap: 0.5rem;
+                    font-size: 0.875rem;
+                }
+
+                .gs-points-label i {
+                    width: 16px;
+                    height: 16px;
+                }
+
+                .gs-points-value {
+                    font-weight: 600;
+                    font-size: 1rem;
+                }
+
+                .gs-divider {
+                    height: 1px;
+                    background: var(--gs-gray-200);
+                }
+
+                /* Tabs */
+                .gs-tabs {
+                    display: flex;
+                    gap: 0.5rem;
+                    border-bottom: 2px solid var(--gs-gray-200);
+                }
+
+                .gs-tab {
+                    padding: 0.75rem 1.5rem;
+                    background: none;
+                    border: none;
+                    border-bottom: 3px solid transparent;
+                    margin-bottom: -2px;
+                    cursor: pointer;
+                    font-weight: 500;
+                    color: var(--gs-text-secondary);
+                    transition: all 0.2s;
+                }
+
+                .gs-tab:hover {
+                    color: var(--gs-primary);
+                }
+
+                .gs-tab.active {
+                    color: var(--gs-primary);
+                    border-bottom-color: var(--gs-primary);
+                }
+
+                .gs-tab-content {
+                    display: none;
+                }
+
+                .gs-tab-content.active {
+                    display: block;
+                }
+
+                /* Mobile responsive */
+                @media (max-width: 767px) {
+                    .gs-ranking-stats-grid {
+                        grid-template-columns: 1fr;
+                    }
+
+                    .gs-stat-value {
+                        font-size: 1.5rem;
+                    }
+
+                    .gs-tabs {
+                        flex-direction: column;
+                        border-bottom: none;
+                    }
+
+                    .gs-tab {
+                        width: 100%;
+                        text-align: left;
+                        border-bottom: 1px solid var(--gs-gray-200);
+                        border-left: 3px solid transparent;
+                        margin-bottom: 0;
+                        padding: 1rem;
+                    }
+
+                    .gs-tab.active {
+                        border-left-color: var(--gs-primary);
+                        border-bottom-color: var(--gs-gray-200);
+                        background: var(--gs-gray-50);
+                    }
+
+                    .gs-points-row {
+                        flex-direction: column;
+                        align-items: flex-start;
+                        gap: 0.25rem;
+                    }
+
+                    .gs-points-value {
+                        font-size: 1.25rem;
+                    }
+                }
+                </style>
+
+                <script>
+                // Tab functionality
+                document.addEventListener('DOMContentLoaded', function() {
+                    const tabs = document.querySelectorAll('.gs-tab');
+                    tabs.forEach(tab => {
+                        tab.addEventListener('click', function() {
+                            const targetId = this.dataset.tab;
+
+                            // Remove active class from all tabs and content
+                            document.querySelectorAll('.gs-tab').forEach(t => t.classList.remove('active'));
+                            document.querySelectorAll('.gs-tab-content').forEach(c => c.classList.remove('active'));
+
+                            // Add active class to clicked tab and corresponding content
+                            this.classList.add('active');
+                            document.getElementById(targetId).classList.add('active');
+                        });
+                    });
+                });
+                </script>
+            <?php endif; ?>
 
             <?php if (empty($results)): ?>
                 <!-- No Results -->
