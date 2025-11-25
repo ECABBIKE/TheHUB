@@ -328,14 +328,20 @@ function calculateRankingData($db, $discipline = null, $debug = false) {
  * @param object $db Database connection
  * @param string $discipline Discipline to snapshot
  * @param string $snapshotDate Date for snapshot (YYYY-MM-DD)
+ * @param bool $debug Enable debug output
  * @return int Number of riders ranked
  */
-function createRankingSnapshot($db, $discipline = 'gravity', $snapshotDate = null) {
+function createRankingSnapshot($db, $discipline = 'gravity', $snapshotDate = null, $debug = false) {
     if (!$snapshotDate) {
         $snapshotDate = date('Y-m-01');
     }
 
     $discipline = strtoupper($discipline);
+
+    if ($debug) {
+        echo "<p>🔍 Getting previous snapshot for comparison...</p>";
+        flush();
+    }
 
     // Get previous snapshot for position comparison
     $previousSnapshotDate = date('Y-m-01', strtotime("$snapshotDate -1 month"));
@@ -348,14 +354,29 @@ function createRankingSnapshot($db, $discipline = 'gravity', $snapshotDate = nul
         $previousRankings[$row['rider_id']] = $row['ranking_position'];
     }
 
+    if ($debug) {
+        echo "<p>🗑️ Clearing old snapshot data...</p>";
+        flush();
+    }
+
     // Clear existing snapshot for this discipline and date
     $db->query(
         "DELETE FROM ranking_snapshots WHERE discipline = ? AND snapshot_date = ?",
         [$discipline, $snapshotDate]
     );
 
+    if ($debug) {
+        echo "<p>🧮 Starting ranking calculation...</p>";
+        flush();
+    }
+
     // Calculate ranking data
-    $riderData = calculateRankingData($db, $discipline, false);
+    $riderData = calculateRankingData($db, $discipline, $debug);
+
+    if ($debug) {
+        echo "<p>💾 Saving " . count($riderData) . " riders to snapshot...</p>";
+        flush();
+    }
 
     // Insert snapshots with small pauses for shared hosting
     $inserted = 0;
@@ -544,14 +565,20 @@ function calculateClubRanking($db, $discipline = 'gravity') {
  * @param object $db Database connection
  * @param string $discipline Discipline to snapshot
  * @param string $snapshotDate Date for snapshot
+ * @param bool $debug Enable debug output
  * @return int Number of clubs ranked
  */
-function createClubRankingSnapshot($db, $discipline = 'gravity', $snapshotDate = null) {
+function createClubRankingSnapshot($db, $discipline = 'gravity', $snapshotDate = null, $debug = false) {
     if (!$snapshotDate) {
         $snapshotDate = date('Y-m-01');
     }
 
     $discipline = strtoupper($discipline);
+
+    if ($debug) {
+        echo "<p>🏛️ Getting previous club rankings...</p>";
+        flush();
+    }
 
     // Get previous snapshot for position comparison
     $previousSnapshotDate = date('Y-m-01', strtotime("$snapshotDate -1 month"));
@@ -564,11 +591,21 @@ function createClubRankingSnapshot($db, $discipline = 'gravity', $snapshotDate =
         $previousRankings[$row['club_id']] = $row['ranking_position'];
     }
 
+    if ($debug) {
+        echo "<p>🗑️ Clearing old club snapshot...</p>";
+        flush();
+    }
+
     // Clear existing snapshot
     $db->query(
         "DELETE FROM club_ranking_snapshots WHERE discipline = ? AND snapshot_date = ?",
         [$discipline, $snapshotDate]
     );
+
+    if ($debug) {
+        echo "<p>🧮 Calculating club rankings...</p>";
+        flush();
+    }
 
     // Calculate club ranking
     $clubData = calculateClubRanking($db, $discipline);
@@ -637,7 +674,7 @@ function runFullRankingUpdate($db, $debug = false) {
             flush();
         }
 
-        $count = createRankingSnapshot($db, $discipline);
+        $count = createRankingSnapshot($db, $discipline, null, $debug);
         $stats[strtolower($discipline)]['riders'] = $count;
 
         if ($debug) {
@@ -653,7 +690,7 @@ function runFullRankingUpdate($db, $debug = false) {
             flush();
         }
 
-        $count = createClubRankingSnapshot($db, $discipline);
+        $count = createClubRankingSnapshot($db, $discipline, null, $debug);
         $stats[strtolower($discipline)]['clubs'] = $count;
 
         if ($debug) {
