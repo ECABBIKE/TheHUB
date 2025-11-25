@@ -504,6 +504,21 @@ try {
             // Calculate final ranking points
             $rankingPoints = $result['original_points'] * $fieldMult * $eventLevelMult * $timeMult;
 
+            // DEBUG: Log calculation details for Ella (rider 7726)
+            if ($riderId == 7726 && $discipline == 'GRAVITY') {
+                error_log(sprintf(
+                    "DEBUG Ranking calc: %s | orig=%d, field=%d (%.2f), level=%.2f, time=%.2f, months=%d => %d points",
+                    substr($result['event_name'], 0, 30),
+                    $result['original_points'],
+                    $fieldSize,
+                    $fieldMult,
+                    $eventLevelMult,
+                    $timeMult,
+                    $monthsDiff,
+                    $rankingPoints
+                ));
+            }
+
             $rankingRaceDetails[$discipline][] = [
                 'event_name' => $result['event_name'],
                 'event_date' => $result['event_date'],
