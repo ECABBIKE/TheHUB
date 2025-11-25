@@ -68,24 +68,16 @@ function getRankingFieldMultipliers($db) {
                 return $multipliers;
             }
 
-            // Auto-migrate from old 26-item scale to new 15-item scale
+            // If old 26-item scale detected, return defaults (don't auto-save to avoid locks)
             if (count($decoded) > 15) {
-                error_log("Auto-migrating from old " . count($decoded) . "-item scale to 15-item scale");
-                $defaults = getDefaultFieldMultipliers();
-                saveFieldMultipliers($db, $defaults);
-                return $defaults;
+                error_log("Found old multiplier scale with " . count($decoded) . " items, returning defaults");
+                return getDefaultFieldMultipliers();
             }
         }
     }
 
-    // No data found, save and return defaults
-    $defaults = getDefaultFieldMultipliers();
-    try {
-        saveFieldMultipliers($db, $defaults);
-    } catch (Exception $e) {
-        error_log("Failed to save default multipliers: " . $e->getMessage());
-    }
-    return $defaults;
+    // Return defaults without saving to avoid locks
+    return getDefaultFieldMultipliers();
 }
 
 /**
@@ -814,11 +806,21 @@ function saveFieldMultipliers($db, $multipliers) {
     }
 
     try {
-        return $db->query("
-            INSERT INTO ranking_settings (setting_key, setting_value, description)
-            VALUES ('field_multipliers', ?, 'Field size multipliers (1-15+ riders)')
-            ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value), updated_at = NOW()
-        ", [$json]);
+        // Use simple UPDATE instead of INSERT ON DUPLICATE KEY to avoid locks
+        $exists = $db->getOne("SELECT COUNT(*) FROM ranking_settings WHERE setting_key = 'field_multipliers'");
+
+        if ($exists) {
+            return $db->query("
+                UPDATE ranking_settings
+                SET setting_value = ?, updated_at = NOW()
+                WHERE setting_key = 'field_multipliers'
+            ", [$json]);
+        } else {
+            return $db->query("
+                INSERT INTO ranking_settings (setting_key, setting_value, description)
+                VALUES ('field_multipliers', ?, 'Field size multipliers (1-15+ riders)')
+            ", [$json]);
+        }
     } catch (Exception $e) {
         error_log("Failed to save field multipliers: " . $e->getMessage());
         throw $e;
