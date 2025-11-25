@@ -854,44 +854,119 @@ try {
                     display: block;
                 }
 
-                /* Mobile responsive */
+                /* Mobile responsive - VERY COMPACT */
                 @media (max-width: 767px) {
+                    /* Make everything more compact on mobile */
+                    .gs-card {
+                        margin-bottom: 0.75rem !important;
+                    }
+
+                    .gs-card-content {
+                        padding: 0.75rem !important;
+                    }
+
+                    .gs-card-header {
+                        padding: 0.75rem !important;
+                    }
+
+                    .gs-h4 {
+                        font-size: 1rem !important;
+                    }
+
+                    .gs-h5 {
+                        font-size: 0.875rem !important;
+                    }
+
+                    /* Compact ranking stats grid */
                     .gs-ranking-stats-grid {
                         grid-template-columns: 1fr;
+                        gap: 0.5rem;
+                    }
+
+                    .gs-stat-box {
+                        padding: 0.5rem;
+                    }
+
+                    .gs-stat-label {
+                        font-size: 0.7rem;
+                        margin-bottom: 0.25rem;
                     }
 
                     .gs-stat-value {
-                        font-size: 1.5rem;
+                        font-size: 1.25rem;
                     }
 
+                    /* Compact tabs */
                     .gs-tabs {
-                        flex-direction: column;
-                        border-bottom: none;
+                        flex-direction: row;
+                        gap: 0.25rem;
+                        border-bottom: 1px solid var(--gs-gray-200);
                     }
 
                     .gs-tab {
-                        width: 100%;
-                        text-align: left;
-                        border-bottom: 1px solid var(--gs-gray-200);
-                        border-left: 3px solid transparent;
-                        margin-bottom: 0;
-                        padding: 1rem;
+                        padding: 0.5rem 0.75rem;
+                        font-size: 0.75rem;
+                        border-bottom: 2px solid transparent;
+                        margin-bottom: -1px;
                     }
 
                     .gs-tab.active {
-                        border-left-color: var(--gs-primary);
-                        border-bottom-color: var(--gs-gray-200);
-                        background: var(--gs-gray-50);
+                        border-bottom-color: var(--gs-primary);
+                    }
+
+                    /* Compact points breakdown */
+                    .gs-points-breakdown {
+                        gap: 0.5rem;
                     }
 
                     .gs-points-row {
-                        flex-direction: column;
-                        align-items: flex-start;
+                        padding: 0.35rem 0;
+                    }
+
+                    .gs-points-label {
+                        font-size: 0.75rem;
                         gap: 0.25rem;
                     }
 
+                    .gs-points-label i {
+                        width: 14px;
+                        height: 14px;
+                    }
+
                     .gs-points-value {
-                        font-size: 1.25rem;
+                        font-size: 0.875rem;
+                    }
+
+                    /* Compact divider */
+                    .gs-divider {
+                        margin: 0.25rem 0;
+                    }
+
+                    /* Overall compact typography */
+                    .gs-text-sm {
+                        font-size: 0.75rem !important;
+                    }
+
+                    .gs-text-xs {
+                        font-size: 0.65rem !important;
+                    }
+
+                    /* Reduce margins */
+                    .gs-mb-lg {
+                        margin-bottom: 0.75rem !important;
+                    }
+
+                    .gs-mb-md {
+                        margin-bottom: 0.5rem !important;
+                    }
+
+                    .gs-mb-sm {
+                        margin-bottom: 0.35rem !important;
+                    }
+
+                    /* Compact background card */
+                    .gs-bg-light {
+                        padding: 0.5rem !important;
                     }
                 }
                 </style>
