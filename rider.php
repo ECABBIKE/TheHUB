@@ -1021,6 +1021,58 @@ try {
                                                 <i data-lucide="pie-chart"></i>
                                                 Poängfördelning
                                             </h4>
+                                            <style>
+                                                /* Mobile portrait: Very compact point breakdown */
+                                                @media (max-width: 767px) {
+                                                    .gs-points-breakdown .gs-points-row {
+                                                        padding: 0.3rem 0;
+                                                        gap: 0.5rem;
+                                                    }
+                                                    .gs-points-breakdown .gs-points-label {
+                                                        font-size: 0.7rem;
+                                                        flex: 1;
+                                                    }
+                                                    .gs-points-breakdown .gs-points-value {
+                                                        font-size: 0.75rem;
+                                                        white-space: nowrap;
+                                                    }
+                                                    .gs-points-breakdown .gs-points-label i {
+                                                        width: 12px;
+                                                        height: 12px;
+                                                        display: none; /* Hide icons on mobile portrait */
+                                                    }
+                                                    .gs-points-breakdown .gs-points-label.gs-font-bold {
+                                                        font-size: 0.8rem;
+                                                    }
+                                                    .gs-points-breakdown .gs-points-value.gs-font-bold {
+                                                        font-size: 0.9rem;
+                                                    }
+                                                    .gs-divider {
+                                                        margin: 0.3rem 0 !important;
+                                                    }
+                                                    .gs-card-content h4 {
+                                                        font-size: 0.9rem;
+                                                        margin-bottom: 0.5rem !important;
+                                                    }
+                                                }
+
+                                                /* Mobile landscape: Slightly larger */
+                                                @media (min-width: 768px) and (max-width: 1023px) {
+                                                    .gs-points-breakdown .gs-points-row {
+                                                        padding: 0.4rem 0;
+                                                    }
+                                                    .gs-points-breakdown .gs-points-label {
+                                                        font-size: 0.8rem;
+                                                    }
+                                                    .gs-points-breakdown .gs-points-value {
+                                                        font-size: 0.85rem;
+                                                    }
+                                                    .gs-points-breakdown .gs-points-label i {
+                                                        width: 14px;
+                                                        height: 14px;
+                                                    }
+                                                }
+                                            </style>
                                             <div class="gs-points-breakdown">
                                                 <div class="gs-points-row">
                                                     <span class="gs-points-label">
@@ -1129,9 +1181,13 @@ try {
                                                                 <tr>
                                                                     <td class="gs-text-center">
                                                                         <?php if (!empty($raceDetail['position'])): ?>
-                                                                            <span class="gs-badge <?= $raceDetail['position'] == 1 ? 'gs-badge-warning' : ($raceDetail['position'] <= 3 ? 'gs-badge-success' : 'gs-badge-secondary') ?>" style="font-size: 0.7rem; padding: 0.15rem 0.3rem;">
-                                                                                #<?= $raceDetail['position'] ?>
-                                                                            </span>
+                                                                            <?php
+                                                                            $pos = $raceDetail['position'];
+                                                                            if ($pos == 1) echo '<span class="gs-badge gs-badge-success" style="font-size: 0.7rem; padding: 0.15rem 0.3rem;">🥇 1</span>';
+                                                                            elseif ($pos == 2) echo '<span class="gs-badge gs-badge-secondary" style="font-size: 0.7rem; padding: 0.15rem 0.3rem;">🥈 2</span>';
+                                                                            elseif ($pos == 3) echo '<span class="gs-badge gs-badge-warning" style="font-size: 0.7rem; padding: 0.15rem 0.3rem;">🥉 3</span>';
+                                                                            else echo '<span class="gs-badge gs-badge-secondary" style="font-size: 0.7rem; padding: 0.15rem 0.3rem;">#' . $pos . '</span>';
+                                                                            ?>
                                                                         <?php else: ?>
                                                                             <span class="gs-text-secondary">-</span>
                                                                         <?php endif; ?>
