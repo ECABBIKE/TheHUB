@@ -1096,12 +1096,7 @@ try {
                                                         padding: 0.4rem 0.25rem;
                                                     }
 
-                                                    /* Hide calculation column by default */
-                                                    .ranking-events-table .show-mobile-landscape {
-                                                        display: none;
-                                                    }
-
-                                                    /* Mobile portrait: Only Placering, Event, Poäng */
+                                                    /* Mobile portrait: Hide landscape column */
                                                     @media (max-width: 767px) {
                                                         .ranking-events-table .hide-mobile-portrait {
                                                             display: none !important;
@@ -1118,13 +1113,14 @@ try {
                                                         }
                                                     }
 
-                                                    /* Mobile landscape: Add Beräkning column, keep same size */
+                                                    /* Mobile landscape: Show Beräkning column */
                                                     @media (min-width: 768px) and (max-width: 1279px) {
                                                         .ranking-events-table .hide-mobile-portrait {
                                                             display: none !important;
                                                         }
                                                         .ranking-events-table .show-mobile-landscape {
                                                             display: table-cell !important;
+                                                            visibility: visible !important;
                                                         }
                                                         .ranking-events-table th,
                                                         .ranking-events-table td {
@@ -1132,7 +1128,7 @@ try {
                                                         }
                                                     }
 
-                                                    /* Desktop: Show all columns, can be larger */
+                                                    /* Desktop: Hide landscape duplicate, show desktop columns */
                                                     @media (min-width: 1280px) {
                                                         .ranking-events-table .hide-mobile-landscape {
                                                             display: none !important;
@@ -1151,10 +1147,10 @@ try {
                                                     <table class="gs-table gs-table-compact ranking-events-table">
                                                         <thead>
                                                             <tr>
-                                                                <th class="gs-text-center">Placering</th>
+                                                                                <th class="gs-text-center">Placering</th>
                                                                 <th>Event</th>
-                                                                <th class="gs-text-right" style="display: table-cell !important;">Poäng</th>
-                                                                <th class="gs-text-right show-mobile-landscape">Beräkning</th>
+                                                                <th class="gs-text-right">Poäng</th>
+                                                                <th class="gs-text-right show-mobile-landscape" style="display: none;">Beräkning</th>
                                                                 <th class="hide-mobile-portrait">Datum</th>
                                                                 <th class="gs-text-center hide-mobile-portrait">Klass</th>
                                                                 <th class="gs-text-center hide-mobile-portrait">Fältstorlek</th>
@@ -1184,11 +1180,14 @@ try {
                                                                             × Event: <?= number_format($raceDetail['event_level_multiplier'], 2) ?>
                                                                             × Time: <?= number_format($raceDetail['time_multiplier'], 2) ?>
                                                                         </div>
+                                                                        <button class="gs-btn-link gs-text-xs" onclick="toggleCalc(event, 'calc-<?= $raceDetail['event_id'] ?>-<?= $raceDetail['class_id'] ?>')" style="margin-top: 0.25rem; padding: 0; font-size: 0.7rem; color: #3b82f6;">
+                                                                            <i data-lucide="help-circle" style="width: 12px; height: 12px;"></i> Visa beräkning
+                                                                        </button>
                                                                     </td>
-                                                                    <td class="gs-text-right gs-text-primary gs-font-bold" style="font-size: 0.75rem; display: table-cell !important;">
+                                                                    <td class="gs-text-right gs-text-primary gs-font-bold" style="font-size: 0.75rem;">
                                                                         <?= number_format($raceDetail['ranking_points'] ?? 0, 0) ?>p
                                                                     </td>
-                                                                    <td class="gs-text-right show-mobile-landscape" style="font-size: 0.7rem; white-space: nowrap;">
+                                                                    <td class="gs-text-right show-mobile-landscape" style="display: none; font-size: 0.7rem; white-space: nowrap;">
                                                                         <?php
                                                                         // Show calculation: original × field × event_level
                                                                         $origPts = number_format($raceDetail['original_points'] ?? 0, 0);
@@ -1211,6 +1210,57 @@ try {
                                                                         <span class="gs-badge gs-badge-secondary"><?= $raceDetail['field_size'] ?></span>
                                                                     </td>
                                                                     <td class="gs-text-right hide-mobile-portrait"><?= number_format($raceDetail['original_points'], 0) ?></td>
+                                                                </tr>
+                                                                <!-- Expandable calculation row -->
+                                                                <tr id="calc-<?= $raceDetail['event_id'] ?>-<?= $raceDetail['class_id'] ?>" class="calculation-row" style="display: none; background: #f0f9ff;">
+                                                                    <td colspan="8" style="padding: 0.75rem;">
+                                                                        <div style="font-size: 0.75rem; line-height: 1.6;">
+                                                                            <strong style="color: #1e40af;">📊 Poängberäkning för <?= h($raceDetail['event_name']) ?></strong>
+                                                                            <div style="margin-top: 0.5rem; padding: 0.5rem; background: white; border-radius: 4px; border-left: 3px solid #3b82f6;">
+                                                                                <div style="margin-bottom: 0.25rem;">
+                                                                                    <strong>Eventpoäng:</strong> <?= number_format($raceDetail['original_points'], 0) ?>p
+                                                                                    <span style="color: #64748b;">(från placering #<?= $raceDetail['position'] ?> i klassen)</span>
+                                                                                </div>
+                                                                                <div style="margin-bottom: 0.25rem;">
+                                                                                    <strong>× Fältstorlek:</strong> <?= number_format($raceDetail['field_multiplier'], 2) ?>
+                                                                                    <span style="color: #64748b;">(<?= $raceDetail['field_size'] ?> startande)</span>
+                                                                                </div>
+                                                                                <div style="margin-bottom: 0.25rem;">
+                                                                                    <strong>× Event-nivå:</strong> <?= number_format($raceDetail['event_level_multiplier'], 2) ?>
+                                                                                    <span style="color: #64748b;">
+                                                                                        <?php if ($raceDetail['event_level_multiplier'] == 1.0): ?>
+                                                                                            (Nationell tävling)
+                                                                                        <?php elseif ($raceDetail['event_level_multiplier'] == 0.5): ?>
+                                                                                            (Sportmotion/Regional)
+                                                                                        <?php else: ?>
+                                                                                            (Annan nivå)
+                                                                                        <?php endif; ?>
+                                                                                    </span>
+                                                                                </div>
+                                                                                <div style="margin-bottom: 0.25rem;">
+                                                                                    <strong>× Tidsviktning:</strong> <?= number_format($raceDetail['time_multiplier'], 2) ?>
+                                                                                    <span style="color: #64748b;">
+                                                                                        <?php
+                                                                                        $monthsAgo = (strtotime('now') - strtotime($raceDetail['event_date'])) / (30 * 24 * 60 * 60);
+                                                                                        if ($monthsAgo <= 12) {
+                                                                                            echo "(0-12 månader gammal)";
+                                                                                        } elseif ($monthsAgo <= 24) {
+                                                                                            echo "(13-24 månader gammal)";
+                                                                                        } else {
+                                                                                            echo "(Äldre än 24 månader)";
+                                                                                        }
+                                                                                        ?>
+                                                                                    </span>
+                                                                                </div>
+                                                                                <div style="margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid #e2e8f0; font-weight: bold; color: #1e40af;">
+                                                                                    = <?= number_format($raceDetail['ranking_points'], 0) ?>p rankingpoäng
+                                                                                </div>
+                                                                                <div style="margin-top: 0.5rem; font-size: 0.7rem; color: #64748b; font-style: italic;">
+                                                                                    Formel: <?= number_format($raceDetail['original_points'], 0) ?> × <?= number_format($raceDetail['field_multiplier'], 2) ?> × <?= number_format($raceDetail['event_level_multiplier'], 2) ?> × <?= number_format($raceDetail['time_multiplier'], 2) ?> = <?= number_format($raceDetail['ranking_points'], 2) ?>p
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+                                                                    </td>
                                                                 </tr>
                                                             <?php endforeach; ?>
                                                         </tbody>
@@ -1282,11 +1332,6 @@ try {
                                             padding: 0.4rem 0.25rem;
                                         }
 
-                                        /* Hide landscape column by default */
-                                        .gravity-total-table .show-mobile-landscape {
-                                            display: none;
-                                        }
-
                                         /* Mobile portrait: Only Placering, Event, Poäng */
                                         @media (max-width: 767px) {
                                             .gravity-total-table .hide-mobile-portrait {
@@ -1308,6 +1353,7 @@ try {
                                             }
                                             .gravity-total-table .show-mobile-landscape {
                                                 display: table-cell !important;
+                                                visibility: visible !important;
                                             }
                                             .gravity-total-table th,
                                             .gravity-total-table td {
@@ -1333,8 +1379,8 @@ try {
                                                 <tr>
                                                     <th class="gs-text-center">Placering</th>
                                                     <th>Event</th>
-                                                    <th class="gs-text-right" style="display: table-cell !important;">Poäng</th>
-                                                    <th class="show-mobile-landscape">Datum</th>
+                                                    <th class="gs-text-right">Poäng</th>
+                                                    <th class="show-mobile-landscape" style="display: none;">Datum</th>
                                                     <th class="hide-mobile-portrait">Datum</th>
                                                     <th class="gs-text-center hide-mobile-portrait">Klass</th>
                                                 </tr>
@@ -1354,8 +1400,8 @@ try {
                                                         <td>
                                                             <strong style="font-size: 0.75rem;"><?= h($raceDetail['event_name']) ?></strong>
                                                         </td>
-                                                        <td class="gs-text-right gs-text-primary gs-font-bold" style="font-size: 0.75rem; display: table-cell !important;"><?= number_format($raceDetail['points'], 0) ?>p</td>
-                                                        <td class="show-mobile-landscape gs-text-nowrap" style="font-size: 0.7rem;"><?= date('Y-m-d', strtotime($raceDetail['event_date'])) ?></td>
+                                                        <td class="gs-text-right gs-text-primary gs-font-bold" style="font-size: 0.75rem;"><?= number_format($raceDetail['points'], 0) ?>p</td>
+                                                        <td class="show-mobile-landscape gs-text-nowrap" style="display: none; font-size: 0.7rem;"><?= date('Y-m-d', strtotime($raceDetail['event_date'])) ?></td>
                                                         <td class="hide-mobile-portrait gs-text-nowrap"><?= date('Y-m-d', strtotime($raceDetail['event_date'])) ?></td>
                                                         <td class="gs-text-center hide-mobile-portrait"><?= h($raceDetail['class_name'] ?? '-') ?></td>
                                                     </tr>
@@ -1432,11 +1478,6 @@ try {
                                             padding: 0.4rem 0.25rem;
                                         }
 
-                                        /* Hide landscape column by default */
-                                        .club-points-table .show-mobile-landscape {
-                                            display: none;
-                                        }
-
                                         /* Mobile portrait: Only Event and Poäng */
                                         @media (max-width: 767px) {
                                             .club-points-table .hide-mobile-portrait {
@@ -1458,6 +1499,7 @@ try {
                                             }
                                             .club-points-table .show-mobile-landscape {
                                                 display: table-cell !important;
+                                                visibility: visible !important;
                                             }
                                             .club-points-table th,
                                             .club-points-table td {
@@ -1482,8 +1524,8 @@ try {
                                             <thead>
                                                 <tr>
                                                     <th>Event</th>
-                                                    <th class="gs-text-right" style="display: table-cell !important;">Poäng</th>
-                                                    <th class="gs-text-right show-mobile-landscape">Beräkning</th>
+                                                    <th class="gs-text-right">Poäng</th>
+                                                    <th class="gs-text-right show-mobile-landscape" style="display: none;">Beräkning</th>
                                                     <th class="hide-mobile-portrait">Datum</th>
                                                     <th class="gs-text-center hide-mobile-portrait">Klass</th>
                                                     <th class="gs-text-right hide-mobile-portrait">Original</th>
@@ -1496,10 +1538,10 @@ try {
                                                         <td>
                                                             <strong style="font-size: 0.75rem;"><?= h($raceDetail['event_name']) ?></strong>
                                                         </td>
-                                                        <td class="gs-text-right gs-font-bold" style="color: #f59e0b; font-size: 0.75rem; display: table-cell !important;">
+                                                        <td class="gs-text-right gs-font-bold" style="color: #f59e0b; font-size: 0.75rem;">
                                                             <?= number_format($raceDetail['club_points'], 0) ?>p
                                                         </td>
-                                                        <td class="gs-text-right show-mobile-landscape" style="font-size: 0.7rem; white-space: nowrap;">
+                                                        <td class="gs-text-right show-mobile-landscape" style="display: none; font-size: 0.7rem; white-space: nowrap;">
                                                             <?= number_format($raceDetail['original_points'], 0) ?>×<?= $raceDetail['percentage_applied'] ?>%
                                                         </td>
                                                         <td class="hide-mobile-portrait gs-text-nowrap"><?= date('Y-m-d', strtotime($raceDetail['event_date'])) ?></td>
@@ -1563,11 +1605,6 @@ try {
                                         padding: 0.4rem 0.25rem;
                                     }
 
-                                    /* Hide landscape column by default */
-                                    .all-races-table .show-mobile-landscape {
-                                        display: none;
-                                    }
-
                                     /* Mobile portrait: Only Placering, Event, Poäng */
                                     @media (max-width: 767px) {
                                         .all-races-table .hide-mobile-portrait {
@@ -1589,6 +1626,7 @@ try {
                                         }
                                         .all-races-table .show-mobile-landscape {
                                             display: table-cell !important;
+                                            visibility: visible !important;
                                         }
                                         .all-races-table th,
                                         .all-races-table td {
@@ -1615,8 +1653,8 @@ try {
                                             <tr>
                                                 <th class="gs-text-center">Placering</th>
                                                 <th>Event</th>
-                                                <th class="gs-text-center" style="display: table-cell !important;">Poäng</th>
-                                                <th class="show-mobile-landscape">Datum</th>
+                                                <th class="gs-text-center">Poäng</th>
+                                                <th class="show-mobile-landscape" style="display: none;">Datum</th>
                                                 <th class="hide-mobile-portrait">Datum</th>
                                                 <th class="hide-mobile-portrait">Plats</th>
                                                 <th class="hide-mobile-portrait">Klass</th>
@@ -1660,14 +1698,14 @@ try {
                                                             <strong style="font-size: 0.75rem;"><?= h($result['event_name']) ?></strong>
                                                         <?php endif; ?>
                                                     </td>
-                                                    <td class="gs-text-center" style="display: table-cell !important;">
+                                                    <td class="gs-text-center">
                                                         <?php if ($awardsPoints): ?>
                                                             <strong style="font-size: 0.75rem;"><?= $result['points'] ?? 0 ?>p</strong>
                                                         <?php else: ?>
                                                             <span class="gs-text-secondary">-</span>
                                                         <?php endif; ?>
                                                     </td>
-                                                    <td class="show-mobile-landscape gs-text-nowrap" style="font-size: 0.7rem;"><?= date('Y-m-d', strtotime($result['event_date'])) ?></td>
+                                                    <td class="show-mobile-landscape gs-text-nowrap" style="display: none; font-size: 0.7rem;"><?= date('Y-m-d', strtotime($result['event_date'])) ?></td>
                                                     <td class="hide-mobile-portrait gs-text-nowrap"><?= date('Y-m-d', strtotime($result['event_date'])) ?></td>
                                                     <td class="hide-mobile-portrait">
                                                         <?php if ($result['event_location']): ?>
@@ -2082,6 +2120,28 @@ try {
                             document.getElementById(targetId).classList.add('active');
                         });
                     });
+
+                    // Toggle calculation explanation
+                    window.toggleCalc = function(event, calcId) {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        const row = document.getElementById(calcId);
+                        const button = event.target.closest('button');
+
+                        if (row.style.display === 'none') {
+                            row.style.display = 'table-row';
+                            if (button) {
+                                button.innerHTML = '<i data-lucide="x-circle" style="width: 12px; height: 12px;"></i> Dölj beräkning';
+                                lucide.createIcons();
+                            }
+                        } else {
+                            row.style.display = 'none';
+                            if (button) {
+                                button.innerHTML = '<i data-lucide="help-circle" style="width: 12px; height: 12px;"></i> Visa beräkning';
+                                lucide.createIcons();
+                            }
+                        }
+                    };
                 });
                 </script>
         </div>
