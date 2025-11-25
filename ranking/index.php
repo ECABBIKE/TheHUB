@@ -158,7 +158,7 @@ include __DIR__ . '/../includes/layout-header.php';
                         elseif ($rider['ranking_position'] == 2) $rankClass = 'rank-2';
                         elseif ($rider['ranking_position'] == 3) $rankClass = 'rank-3';
                         ?>
-                        <a href="/ranking/rider.php?id=<?= $rider['rider_id'] ?>&discipline=<?= $discipline ?>" class="gs-ranking-card <?= $rankClass ?>">
+                        <a href="/rider.php?id=<?= $rider['rider_id'] ?>" class="gs-ranking-card <?= $rankClass ?>">
                             <div class="gs-rank-badge">
                                 <?php if ($rider['ranking_position'] <= 3): ?>
                                     <span class="gs-medal"><?php
@@ -219,7 +219,7 @@ include __DIR__ . '/../includes/layout-header.php';
                         </thead>
                         <tbody>
                             <?php foreach ($ranking['riders'] as $rider): ?>
-                                <tr class="gs-table-row-clickable" onclick="window.location.href='/ranking/rider.php?id=<?= $rider['rider_id'] ?>&discipline=<?= $discipline ?>'">
+                                <tr class="gs-table-row-clickable" onclick="window.location.href='/rider.php?id=<?= $rider['rider_id'] ?>'">
                                     <td>
                                         <?php if ($rider['ranking_position'] <= 3): ?>
                                             <span class="gs-medal-badge gs-medal-<?= $rider['ranking_position'] ?>">
