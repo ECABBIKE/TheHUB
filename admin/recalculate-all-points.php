@@ -228,28 +228,48 @@ include __DIR__ . '/../includes/layout-header.php';
 
                 <?php elseif ($step === '2'): ?>
                     <!-- Step 2: Recalculate Ranking Points -->
-                    <h2 class="gs-h4 gs-mb-md">Steg 2: Räkna om Rankingpoäng</h2>
+                    <h2 class="gs-h4 gs-mb-md">Steg 2: Räkna om Rankingpoäng och Populera ranking_points</h2>
+
+                    <div class="gs-alert gs-alert-info gs-mb-md">
+                        <i data-lucide="info"></i>
+                        Detta steg kommer att:
+                        <ul class="gs-margin-list">
+                            <li>Populera ranking_points tabellen med viktade poäng</li>
+                            <li>Beräkna fältstorlek, event-nivå och tidsviktning</li>
+                            <li>Spara alla multipliers för visning</li>
+                            <li>Uppdatera ranking-snapshots</li>
+                        </ul>
+                    </div>
 
                     <div class="gs-progress-log" style="background: #f5f5f5; padding: 1rem; border-radius: 8px; max-height: 600px; overflow-y: auto; font-family: monospace; font-size: 0.9rem;">
                         <?php
                         $startTime = microtime(true);
 
-                        echo "<p>⏳ Running full ranking update...</p>";
+                        echo "<h3>A) Populera ranking_points tabell</h3>";
                         flush();
 
                         try {
+                            $populateStats = populateRankingPoints($db, true);
+
+                            echo "<hr>";
+                            echo "<h3>B) Uppdatera ranking-snapshots</h3>";
+                            flush();
+
                             $rankingStats = runFullRankingUpdate($db, true);
 
                             echo "<hr>";
                             echo "<p><strong>📊 Ranking Update Summary:</strong></p>";
                             echo "<ul>";
+                            echo "<li>Ranking points populated: {$populateStats['total_inserted']}</li>";
                             echo "<li>ENDURO: {$rankingStats['enduro']['riders']} riders, {$rankingStats['enduro']['clubs']} clubs</li>";
                             echo "<li>DH: {$rankingStats['dh']['riders']} riders, {$rankingStats['dh']['clubs']} clubs</li>";
                             echo "<li>GRAVITY: {$rankingStats['gravity']['riders']} riders, {$rankingStats['gravity']['clubs']} clubs</li>";
-                            echo "<li>Total time: {$rankingStats['total_time']}s</li>";
+                            echo "<li>Total time: " . round(microtime(true) - $startTime, 2) . "s</li>";
                             echo "</ul>";
                         } catch (Exception $e) {
-                            echo "<p class='error'>❌ Error: " . $e->getMessage() . "</p>";
+                            echo "<p class='error'>❌ Error: " . htmlspecialchars($e->getMessage()) . "</p>";
+                            echo "<p>Stack trace:</p>";
+                            echo "<pre style='font-size: 0.8rem; overflow-x: auto;'>" . htmlspecialchars($e->getTraceAsString()) . "</pre>";
                         }
 
                         $elapsed = round(microtime(true) - $startTime, 2);
