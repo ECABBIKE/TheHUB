@@ -386,25 +386,7 @@ function createRankingSnapshot($db, $discipline = 'gravity', $snapshotDate = nul
     }
 
     if ($debug) {
-        echo "<p>🗑️ Clearing old snapshot data...</p>";
-        flush();
-    }
-
-    // Clear existing snapshot for this discipline and date
-    $deleteStart = microtime(true);
-    $db->query(
-        "DELETE FROM ranking_snapshots WHERE discipline = ? AND snapshot_date = ?",
-        [$discipline, $snapshotDate]
-    );
-
-    if ($debug) {
-        $deleteTime = round(microtime(true) - $deleteStart, 2);
-        echo "<p>✅ Delete completed in {$deleteTime}s</p>";
-        flush();
-    }
-
-    if ($debug) {
-        echo "<p>🧮 Starting ranking calculation...</p>";
+        echo "<p>🧮 Starting ranking calculation (skipping DELETE to avoid timeout)...</p>";
         echo "<p>⏱️ Step 1: About to fetch results from database...</p>";
         flush();
     }
@@ -413,11 +395,12 @@ function createRankingSnapshot($db, $discipline = 'gravity', $snapshotDate = nul
     $riderData = calculateRankingData($db, $discipline, $debug);
 
     if ($debug) {
-        echo "<p>💾 Saving " . count($riderData) . " riders to snapshot...</p>";
+        echo "<p>💾 Saving " . count($riderData) . " riders to snapshot using REPLACE INTO...</p>";
         flush();
     }
 
-    // Insert snapshots with small pauses for shared hosting
+    // Insert/replace snapshots with small pauses for shared hosting
+    // Using REPLACE INTO to avoid slow DELETE queries
     $inserted = 0;
     foreach ($riderData as $rider) {
         // Calculate position change
@@ -427,17 +410,23 @@ function createRankingSnapshot($db, $discipline = 'gravity', $snapshotDate = nul
             $positionChange = $previousPosition - $rider['ranking_position'];
         }
 
-        $db->insert('ranking_snapshots', [
-            'rider_id' => $rider['rider_id'],
-            'discipline' => $discipline,
-            'snapshot_date' => $snapshotDate,
-            'total_ranking_points' => round($rider['total_points'], 2),
-            'points_last_12_months' => round($rider['points_12'], 2),
-            'points_months_13_24' => round($rider['points_13_24'], 2),
-            'events_count' => $rider['events_count'],
-            'ranking_position' => $rider['ranking_position'],
-            'previous_position' => $previousPosition,
-            'position_change' => $positionChange
+        // Use REPLACE INTO instead of INSERT to automatically handle duplicates
+        $db->query("
+            REPLACE INTO ranking_snapshots
+            (rider_id, discipline, snapshot_date, total_ranking_points, points_last_12_months,
+             points_months_13_24, events_count, ranking_position, previous_position, position_change)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ", [
+            $rider['rider_id'],
+            $discipline,
+            $snapshotDate,
+            round($rider['total_points'], 2),
+            round($rider['points_12'], 2),
+            round($rider['points_13_24'], 2),
+            $rider['events_count'],
+            $rider['ranking_position'],
+            $previousPosition,
+            $positionChange
         ]);
 
         // Also save to history table
@@ -631,25 +620,19 @@ function createClubRankingSnapshot($db, $discipline = 'gravity', $snapshotDate =
     }
 
     if ($debug) {
-        echo "<p>🗑️ Clearing old club snapshot...</p>";
-        flush();
-    }
-
-    // Clear existing snapshot
-    $db->query(
-        "DELETE FROM club_ranking_snapshots WHERE discipline = ? AND snapshot_date = ?",
-        [$discipline, $snapshotDate]
-    );
-
-    if ($debug) {
-        echo "<p>🧮 Calculating club rankings...</p>";
+        echo "<p>🧮 Calculating club rankings (skipping DELETE)...</p>";
         flush();
     }
 
     // Calculate club ranking
     $clubData = calculateClubRanking($db, $discipline);
 
-    // Insert snapshots with small pauses
+    if ($debug) {
+        echo "<p>💾 Saving " . count($clubData) . " clubs using REPLACE INTO...</p>";
+        flush();
+    }
+
+    // Insert/replace snapshots with small pauses
     $inserted = 0;
     foreach ($clubData as $club) {
         $previousPosition = $previousRankings[$club['club_id']] ?? null;
@@ -658,7 +641,27 @@ function createClubRankingSnapshot($db, $discipline = 'gravity', $snapshotDate =
             $positionChange = $previousPosition - $club['ranking_position'];
         }
 
-        $db->insert('club_ranking_snapshots', [
+        $db->query("
+            REPLACE INTO club_ranking_snapshots
+            (club_id, discipline, snapshot_date, total_ranking_points, points_last_12_months,
+             points_months_13_24, riders_count, events_count, ranking_position, previous_position, position_change)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ", [
+            $club['club_id'],
+            $discipline,
+            $snapshotDate,
+            round($club['total_points'], 2),
+            round($club['points_12'], 2),
+            round($club['points_13_24'], 2),
+            $club['riders_count'],
+            $club['events_count'],
+            $club['ranking_position'],
+            $previousPosition,
+            $positionChange
+        ]);
+
+        // Old code that used insert:
+        /*$db->insert('club_ranking_snapshots', [
             'club_id' => $club['club_id'],
             'discipline' => $discipline,
             'snapshot_date' => $snapshotDate,
@@ -670,7 +673,7 @@ function createClubRankingSnapshot($db, $discipline = 'gravity', $snapshotDate =
             'ranking_position' => $club['ranking_position'],
             'previous_position' => $previousPosition,
             'position_change' => $positionChange
-        ]);
+        ]);*/
 
         $inserted++;
 
@@ -703,7 +706,7 @@ function runFullRankingUpdate($db, $debug = false) {
 
     if ($debug) {
         echo "<p style='background: #e3f2fd; padding: 10px; border-left: 4px solid #2196f3;'>";
-        echo "<strong>🔄 Version: 2025-11-24-086</strong><br>";
+        echo "<strong>🔄 Version: 2025-11-25-001</strong><br>";
         echo "Lightweight Ranking System - Debug Mode Active";
         echo "</p>";
         echo "<h3>Creating Ranking Snapshots</h3>";
