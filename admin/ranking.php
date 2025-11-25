@@ -462,6 +462,133 @@ flush();
     </div>
 </main>
 
+<style>
+/* Mobile-responsive styles for admin ranking page */
+@media (max-width: 767px) {
+    /* Stack discipline stats to 1 column */
+    .gs-grid.gs-grid-cols-3 {
+        grid-template-columns: 1fr !important;
+    }
+
+    /* Stack info/calculation cards to 1 column */
+    .gs-grid.gs-grid-cols-2 {
+        grid-template-columns: 1fr !important;
+    }
+
+    /* Make header stack better */
+    .gs-flex.gs-items-center.gs-justify-between {
+        flex-direction: column;
+        align-items: flex-start !important;
+    }
+
+    .gs-flex.gs-items-center.gs-justify-between .gs-btn {
+        width: 100%;
+        justify-content: center;
+    }
+
+    /* Make cards more compact */
+    .gs-card {
+        margin-bottom: var(--gs-space-md);
+    }
+
+    .gs-card-content {
+        padding: var(--gs-space-md);
+    }
+
+    /* Make buttons full width and larger */
+    .gs-btn {
+        width: 100%;
+        padding: var(--gs-space-md);
+        font-size: 1rem;
+    }
+
+    .gs-flex.gs-gap-sm {
+        flex-direction: column;
+    }
+
+    /* Make inputs larger and more touch-friendly */
+    .gs-input {
+        font-size: 16px !important; /* Prevents zoom on iOS */
+        padding: var(--gs-space-md);
+        min-height: 44px; /* Touch target size */
+    }
+
+    /* Stack forms better */
+    .gs-form-group {
+        margin-bottom: var(--gs-space-md);
+    }
+
+    .gs-form-group label {
+        font-size: 1rem;
+        margin-bottom: var(--gs-space-sm);
+    }
+
+    .gs-form-group small {
+        font-size: 0.875rem;
+        display: block;
+        margin-top: var(--gs-space-xs);
+    }
+}
+
+/* Specific mobile styles for field multipliers */
+@media (max-width: 767px) {
+    /* Reduce multipliers grid to 5 columns on mobile */
+    #multipliersForm [style*="grid-template-columns: repeat(13"] {
+        grid-template-columns: repeat(5, 1fr) !important;
+    }
+
+    /* Make multiplier inputs larger */
+    #multipliersForm input[type="number"] {
+        font-size: 14px !important;
+        padding: 8px 4px !important;
+        min-height: 44px;
+    }
+
+    #multipliersForm label {
+        font-size: 0.8rem !important;
+        margin-bottom: 4px;
+    }
+
+    /* Adjust bar chart for mobile */
+    .gs-mb-lg[style*="height: 120px"] {
+        height: 80px !important;
+        margin-bottom: var(--gs-space-md) !important;
+    }
+}
+
+/* Tablet styles */
+@media (min-width: 768px) and (max-width: 1023px) {
+    /* 2 columns for discipline stats on tablet */
+    .gs-grid.gs-grid-cols-3:first-of-type {
+        grid-template-columns: repeat(2, 1fr) !important;
+    }
+
+    /* Reduce multipliers to 8 columns on tablet */
+    #multipliersForm [style*="grid-template-columns: repeat(13"] {
+        grid-template-columns: repeat(8, 1fr) !important;
+    }
+
+    #multipliersForm input[type="number"] {
+        font-size: 13px !important;
+        padding: 6px 3px !important;
+    }
+}
+
+/* Landscape phone - slightly different layout */
+@media (max-width: 767px) and (orientation: landscape) {
+    /* Keep stats in 3 columns in landscape */
+    .gs-grid.gs-grid-cols-3:first-of-type {
+        grid-template-columns: repeat(3, 1fr) !important;
+    }
+
+    /* 2 columns for event level and time decay in landscape */
+    .gs-card:has(#level_national) .gs-grid,
+    .gs-card:has(#decay_1_12) .gs-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+    }
+}
+</style>
+
 <script>
 // Update bar chart visualization
 function updateBar(index, value) {
