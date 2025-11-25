@@ -395,54 +395,36 @@ function createRankingSnapshot($db, $discipline = 'gravity', $snapshotDate = nul
     $riderData = calculateRankingData($db, $discipline, $debug);
 
     if ($debug) {
-        echo "<p>💾 Saving " . count($riderData) . " riders using small batches with INSERT...ON DUPLICATE KEY UPDATE...</p>";
+        echo "<p>💾 Saving " . count($riderData) . " riders one at a time with detailed timing...</p>";
         flush();
     }
 
-    // Use very small batches (10 rows) with INSERT...ON DUPLICATE KEY UPDATE
-    // This is more efficient than REPLACE INTO as it doesn't delete+insert, just updates
-    $batchSize = 10;
-    $batches = array_chunk($riderData, $batchSize);
+    // Try INDIVIDUAL row inserts with detailed timing
+    // If even batch of 10 times out on first batch, try one at a time
     $inserted = 0;
 
-    foreach ($batches as $batchIndex => $batch) {
-        if ($debug) {
-            echo "<p>📝 Processing batch " . ($batchIndex + 1) . " / " . count($batches) . "...</p>";
+    foreach ($riderData as $index => $rider) {
+        if ($debug && $index % 50 == 0) {
+            echo "<p>📝 Processing rider " . ($index + 1) . " / " . count($riderData) . "...</p>";
             flush();
         }
 
-        // Build multi-row INSERT...ON DUPLICATE KEY UPDATE for ranking_snapshots
-        $values = [];
-        $params = [];
-
-        foreach ($batch as $rider) {
-            $previousPosition = $previousRankings[$rider['rider_id']] ?? null;
-            $positionChange = null;
-            if ($previousPosition !== null) {
-                $positionChange = $previousPosition - $rider['ranking_position'];
-            }
-
-            $values[] = "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-            $params = array_merge($params, [
-                $rider['rider_id'],
-                $discipline,
-                $snapshotDate,
-                round($rider['total_points'], 2),
-                round($rider['points_12'], 2),
-                round($rider['points_13_24'], 2),
-                $rider['events_count'],
-                $rider['ranking_position'],
-                $previousPosition,
-                $positionChange
-            ]);
+        $previousPosition = $previousRankings[$rider['rider_id']] ?? null;
+        $positionChange = null;
+        if ($previousPosition !== null) {
+            $positionChange = $previousPosition - $rider['ranking_position'];
         }
 
-        // Use INSERT...ON DUPLICATE KEY UPDATE instead of REPLACE INTO
-        // This is more efficient as it updates in place instead of delete+insert
+        if ($debug && $index < 3) {
+            echo "<p>⏱️ About to insert rider {$rider['rider_id']}...</p>";
+            flush();
+        }
+
+        // Use INSERT...ON DUPLICATE KEY UPDATE
         $sql = "INSERT INTO ranking_snapshots
                 (rider_id, discipline, snapshot_date, total_ranking_points, points_last_12_months,
                  points_months_13_24, events_count, ranking_position, previous_position, position_change)
-                VALUES " . implode(', ', $values) . "
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON DUPLICATE KEY UPDATE
                     total_ranking_points = VALUES(total_ranking_points),
                     points_last_12_months = VALUES(points_last_12_months),
@@ -452,38 +434,48 @@ function createRankingSnapshot($db, $discipline = 'gravity', $snapshotDate = nul
                     previous_position = VALUES(previous_position),
                     position_change = VALUES(position_change)";
 
-        $db->query($sql, $params);
+        $db->query($sql, [
+            $rider['rider_id'],
+            $discipline,
+            $snapshotDate,
+            round($rider['total_points'], 2),
+            round($rider['points_12'], 2),
+            round($rider['points_13_24'], 2),
+            $rider['events_count'],
+            $rider['ranking_position'],
+            $previousPosition,
+            $positionChange
+        ]);
 
-        if ($debug) {
-            echo "<p>✓ Batch " . ($batchIndex + 1) . " saved (" . $inserted . " / " . count($riderData) . " total)</p>";
+        if ($debug && $index < 3) {
+            echo "<p>✅ Rider {$rider['rider_id']} saved to snapshots!</p>";
             flush();
         }
 
-        // Also batch insert into ranking_history
-        $historyValues = [];
-        $historyParams = [];
-
-        foreach ($batch as $rider) {
-            $historyValues[] = "(?, ?, ?, ?, ?)";
-            $historyParams = array_merge($historyParams, [
-                $rider['rider_id'],
-                $discipline,
-                $snapshotDate,
-                $rider['ranking_position'],
-                round($rider['total_points'], 2)
-            ]);
-        }
-
+        // Also insert into ranking_history
         $historySql = "INSERT INTO ranking_history (rider_id, discipline, month_date, ranking_position, total_points)
-                       VALUES " . implode(', ', $historyValues) . "
+                       VALUES (?, ?, ?, ?, ?)
                        ON DUPLICATE KEY UPDATE ranking_position = VALUES(ranking_position), total_points = VALUES(total_points)";
 
-        $db->query($historySql, $historyParams);
+        $db->query($historySql, [
+            $rider['rider_id'],
+            $discipline,
+            $snapshotDate,
+            $rider['ranking_position'],
+            round($rider['total_points'], 2)
+        ]);
 
-        $inserted += count($batch);
+        if ($debug && $index < 3) {
+            echo "<p>✅ Rider {$rider['rider_id']} saved to history!</p>";
+            flush();
+        }
 
-        // Small pause between batches for shared hosting
-        usleep(50000); // 50ms pause - longer to be safe
+        $inserted++;
+
+        // Pause every 50 rows
+        if ($inserted % 50 == 0) {
+            usleep(100000); // 100ms pause every 50 rows
+        }
     }
 
     if ($debug) {
@@ -773,7 +765,7 @@ function runFullRankingUpdate($db, $debug = false) {
 
     if ($debug) {
         echo "<p style='background: #e3f2fd; padding: 10px; border-left: 4px solid #2196f3;'>";
-        echo "<strong>🔄 Version: 2025-11-25-004</strong><br>";
+        echo "<strong>🔄 Version: 2025-11-25-005</strong><br>";
         echo "Lightweight Ranking System - Debug Mode Active";
         echo "</p>";
         echo "<h3>Creating Ranking Snapshots</h3>";
