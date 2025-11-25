@@ -1183,9 +1183,9 @@ try {
                                                                         <?php if (!empty($raceDetail['position'])): ?>
                                                                             <?php
                                                                             $pos = $raceDetail['position'];
-                                                                            if ($pos == 1) echo '<span class="gs-badge gs-badge-success" style="font-size: 0.7rem; padding: 0.15rem 0.3rem;">🥇 1</span>';
-                                                                            elseif ($pos == 2) echo '<span class="gs-badge gs-badge-secondary" style="font-size: 0.7rem; padding: 0.15rem 0.3rem;">🥈 2</span>';
-                                                                            elseif ($pos == 3) echo '<span class="gs-badge gs-badge-warning" style="font-size: 0.7rem; padding: 0.15rem 0.3rem;">🥉 3</span>';
+                                                                            if ($pos == 1) echo '<span class="gs-badge gs-badge-success" style="font-size: 0.7rem; padding: 0.15rem 0.3rem;">🥇</span>';
+                                                                            elseif ($pos == 2) echo '<span class="gs-badge gs-badge-secondary" style="font-size: 0.7rem; padding: 0.15rem 0.3rem;">🥈</span>';
+                                                                            elseif ($pos == 3) echo '<span class="gs-badge gs-badge-warning" style="font-size: 0.7rem; padding: 0.15rem 0.3rem;">🥉</span>';
                                                                             else echo '<span class="gs-badge gs-badge-secondary" style="font-size: 0.7rem; padding: 0.15rem 0.3rem;">#' . $pos . '</span>';
                                                                             ?>
                                                                         <?php else: ?>
@@ -1338,9 +1338,9 @@ try {
                                                         <td class="gs-text-center">
                                                             <?php
                                                             $pos = $raceDetail['class_position'];
-                                                            if ($pos == 1) echo '<span class="gs-badge gs-badge-success" style="font-size: 0.7rem; padding: 0.15rem 0.3rem;">🥇 1</span>';
-                                                            elseif ($pos == 2) echo '<span class="gs-badge gs-badge-secondary" style="font-size: 0.7rem; padding: 0.15rem 0.3rem;">🥈 2</span>';
-                                                            elseif ($pos == 3) echo '<span class="gs-badge gs-badge-warning" style="font-size: 0.7rem; padding: 0.15rem 0.3rem;">🥉 3</span>';
+                                                            if ($pos == 1) echo '<span class="gs-badge gs-badge-success" style="font-size: 0.7rem; padding: 0.15rem 0.3rem;">🥇</span>';
+                                                            elseif ($pos == 2) echo '<span class="gs-badge gs-badge-secondary" style="font-size: 0.7rem; padding: 0.15rem 0.3rem;">🥈</span>';
+                                                            elseif ($pos == 3) echo '<span class="gs-badge gs-badge-warning" style="font-size: 0.7rem; padding: 0.15rem 0.3rem;">🥉</span>';
                                                             else echo '<span class="gs-badge gs-badge-secondary" style="font-size: 0.7rem; padding: 0.15rem 0.3rem;">#' . ($pos ?? '-') . '</span>';
                                                             ?>
                                                         </td>
@@ -1611,11 +1611,11 @@ try {
                                                             <span class="gs-badge gs-badge-danger" style="font-size: 0.7rem; padding: 0.15rem 0.3rem;">DNF</span>
                                                         <?php elseif ($displayPos): ?>
                                                             <?php if ($displayPos == 1): ?>
-                                                                <span class="gs-badge gs-badge-success" style="font-size: 0.7rem; padding: 0.15rem 0.3rem;">🥇 1</span>
+                                                                <span class="gs-badge gs-badge-success" style="font-size: 0.7rem; padding: 0.15rem 0.3rem;">🥇</span>
                                                             <?php elseif ($displayPos == 2): ?>
-                                                                <span class="gs-badge gs-badge-secondary" style="font-size: 0.7rem; padding: 0.15rem 0.3rem;">🥈 2</span>
+                                                                <span class="gs-badge gs-badge-secondary" style="font-size: 0.7rem; padding: 0.15rem 0.3rem;">🥈</span>
                                                             <?php elseif ($displayPos == 3): ?>
-                                                                <span class="gs-badge gs-badge-warning" style="font-size: 0.7rem; padding: 0.15rem 0.3rem;">🥉 3</span>
+                                                                <span class="gs-badge gs-badge-warning" style="font-size: 0.7rem; padding: 0.15rem 0.3rem;">🥉</span>
                                                             <?php else: ?>
                                                                 <span class="gs-badge gs-badge-secondary" style="font-size: 0.7rem; padding: 0.15rem 0.3rem;">#<?= $displayPos ?></span>
                                                             <?php endif; ?>
