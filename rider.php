@@ -459,6 +459,13 @@ try {
         $eventLevelMultipliers = getEventLevelMultipliers($db);
         $timeDecay = getRankingTimeDecay($db);
 
+        // DEBUG: Output multipliers
+        if ($riderId == 7726 && $discipline == 'GRAVITY') {
+            echo "<!-- DEBUG: Field multipliers count=" . count($fieldMultipliers) . " -->\n";
+            echo "<!-- DEBUG: Event level multipliers: " . json_encode($eventLevelMultipliers) . " -->\n";
+            echo "<!-- DEBUG: Time decay: " . json_encode($timeDecay) . " -->\n";
+        }
+
         // Get field sizes for each event/class
         $fieldSizes = [];
         foreach ($rawResults as $result) {
@@ -479,6 +486,12 @@ try {
 
         // Calculate ranking points for each result
         $rankingRaceDetails[$discipline] = [];
+
+        // DEBUG: Output raw results count
+        if ($riderId == 7726) {
+            echo "<!-- DEBUG: Discipline=$discipline, Raw results count=" . count($rawResults) . " -->\n";
+        }
+
         foreach ($rawResults as $result) {
             $key = $result['event_id'] . '_' . $result['class_id'];
             $fieldSize = $fieldSizes[$key] ?? 1;
@@ -528,8 +541,20 @@ try {
     } elseif (!empty($rankingStats['DH'])) {
         $defaultDiscipline = 'DH';
     }
+
+    // DEBUG: Output ranking race details structure
+    if ($riderId == 7726) {
+        echo "<!-- DEBUG: rankingRaceDetails keys: " . implode(', ', array_keys($rankingRaceDetails)) . " -->\n";
+        foreach ($rankingRaceDetails as $disc => $races) {
+            echo "<!-- DEBUG: $disc has " . count($races) . " races -->\n";
+        }
+    }
 } catch (Exception $e) {
     error_log("Error getting ranking stats for rider {$riderId}: " . $e->getMessage());
+    // DEBUG: Also output to HTML
+    if ($riderId == 7726) {
+        echo "<!-- DEBUG ERROR: " . $e->getMessage() . " -->\n";
+    }
 }
 
 // Get series standings for this rider - CLASS BASED
