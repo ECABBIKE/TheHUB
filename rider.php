@@ -1218,7 +1218,15 @@ try {
                                                                             × Time: <?= number_format($raceDetail['time_multiplier'], 2) ?>
                                                                         </div>
                                                                     </td>
-                                                                    <td class="gs-text-right gs-text-primary gs-font-bold"><?= number_format($raceDetail['ranking_points'], 0) ?>p</td>
+                                                                    <td class="gs-text-right gs-text-primary gs-font-bold">
+                                                                        <?php
+                                                                        // DEBUG for rider 7726
+                                                                        if ($riderId == 7726) {
+                                                                            echo "<!-- DEBUG: rp=" . ($raceDetail['ranking_points'] ?? 'NULL') . ", op=" . ($raceDetail['original_points'] ?? 'NULL') . ", fm=" . ($raceDetail['field_multiplier'] ?? 'NULL') . ", em=" . ($raceDetail['event_level_multiplier'] ?? 'NULL') . ", tm=" . ($raceDetail['time_multiplier'] ?? 'NULL') . " -->";
+                                                                        }
+                                                                        echo number_format($raceDetail['ranking_points'] ?? 0, 0) . 'p';
+                                                                        ?>
+                                                                    </td>
                                                                     <td class="gs-text-right show-mobile-landscape" style="display: none; font-size: 0.7rem; white-space: nowrap;">
                                                                         <?= number_format($raceDetail['original_points'], 0) ?>×<?= number_format($raceDetail['field_multiplier'], 2) ?>
                                                                     </td>
