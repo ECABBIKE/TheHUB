@@ -45,16 +45,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if (isset($_POST['calculate'])) {
         // Run full ranking update (lightweight on-the-fly calculation with snapshots)
-        // Show progress output to prevent browser timeout
+        // Show simple progress output
         echo "<!DOCTYPE html><html><head><title>Ranking Calculation</title></head><body>";
-        echo "<h1>Calculating Rankings...</h1>";
-        echo "<div style='font-family: monospace; padding: 20px;'>";
+        echo "<h1>Beräknar rankings...</h1>";
+        echo "<p style='padding: 20px;'>Detta kan ta några sekunder...</p>";
         flush();
 
         try {
-            $stats = runFullRankingUpdate($db, true);
+            $stats = runFullRankingUpdate($db, false);  // No verbose debug output
 
-            echo "</div>";
             echo "<h2 style='color: green;'>✅ Beräkning Klar!</h2>";
             echo "<p><strong>Tid:</strong> {$stats['total_time']}s</p>";
             echo "<p><strong>Åkare:</strong> Enduro {$stats['enduro']['riders']}, DH {$stats['dh']['riders']}, Gravity {$stats['gravity']['riders']}</p>";
@@ -63,7 +62,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             echo "</body></html>";
             exit;
         } catch (Exception $e) {
-            echo "</div>";
             echo "<h2 style='color: red;'>❌ Fel vid beräkning</h2>";
             echo "<pre>" . htmlspecialchars($e->getMessage()) . "\n\n" . htmlspecialchars($e->getTraceAsString()) . "</pre>";
             echo "<p><a href='/admin/ranking.php'>← Tillbaka</a></p>";
