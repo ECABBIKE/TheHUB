@@ -24,15 +24,15 @@ PREPARE stmt FROM @drop_fk_sql;
 EXECUTE stmt;
 DEALLOCATE PREPARE stmt;
 
--- Step 3: Drop old unique key if it exists (may error if not exists - safe to ignore)
-ALTER TABLE ranking_snapshots DROP INDEX IF EXISTS unique_rider_snapshot;
+-- Step 3: Drop old unique key if it exists (will error if not exists - safe to ignore)
+ALTER TABLE ranking_snapshots DROP INDEX unique_rider_snapshot;
 
--- Step 4: Add the correct unique key (may error if exists - safe to ignore)
-ALTER TABLE ranking_snapshots ADD UNIQUE KEY IF NOT EXISTS unique_rider_discipline_snapshot (rider_id, discipline, snapshot_date);
+-- Step 4: Add the correct unique key (will error if exists - safe to ignore)
+ALTER TABLE ranking_snapshots ADD UNIQUE KEY unique_rider_discipline_snapshot (rider_id, discipline, snapshot_date);
 
--- Step 5: Add discipline ranking index (may error if exists - safe to ignore)
-ALTER TABLE ranking_snapshots ADD INDEX IF NOT EXISTS idx_discipline_ranking (discipline, snapshot_date, ranking_position);
+-- Step 5: Add discipline ranking index (will error if exists - safe to ignore)
+ALTER TABLE ranking_snapshots ADD INDEX idx_discipline_ranking (discipline, snapshot_date, ranking_position);
 
--- Step 6: Re-add foreign key constraint on rider_id
-ALTER TABLE ranking_snapshots ADD CONSTRAINT IF NOT EXISTS fk_ranking_snapshots_rider
+-- Step 6: Re-add foreign key constraint on rider_id (will error if exists - safe to ignore)
+ALTER TABLE ranking_snapshots ADD CONSTRAINT fk_ranking_snapshots_rider
     FOREIGN KEY (rider_id) REFERENCES riders(id) ON DELETE CASCADE;
