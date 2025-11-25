@@ -1211,20 +1211,29 @@ try {
                                                                         <?php endif; ?>
                                                                     </td>
                                                                     <td>
-                                                                        <strong style="font-size: 0.85rem;"><?= h($raceDetail['event_name']) ?></strong>
+                                                                        <strong style="font-size: 0.75rem;"><?= h($raceDetail['event_name']) ?></strong>
                                                                         <div class="gs-text-xs gs-text-secondary hide-mobile-landscape">
                                                                             Field: <?= number_format($raceDetail['field_multiplier'], 2) ?>
                                                                             × Event: <?= number_format($raceDetail['event_level_multiplier'], 2) ?>
                                                                             × Time: <?= number_format($raceDetail['time_multiplier'], 2) ?>
                                                                         </div>
                                                                     </td>
-                                                                    <td class="gs-text-right gs-text-primary gs-font-bold">
+                                                                    <td class="gs-text-right gs-text-primary gs-font-bold" style="font-size: 0.75rem;">
                                                                         <?php
-                                                                        // DEBUG for rider 7726
-                                                                        if ($riderId == 7726) {
-                                                                            echo "<!-- DEBUG: rp=" . ($raceDetail['ranking_points'] ?? 'NULL') . ", op=" . ($raceDetail['original_points'] ?? 'NULL') . ", fm=" . ($raceDetail['field_multiplier'] ?? 'NULL') . ", em=" . ($raceDetail['event_level_multiplier'] ?? 'NULL') . ", tm=" . ($raceDetail['time_multiplier'] ?? 'NULL') . " -->";
+                                                                        // Show ranking points
+                                                                        $rp = $raceDetail['ranking_points'] ?? 0;
+                                                                        echo number_format($rp, 0);
+
+                                                                        // DEBUG: Temporarily show calculation for rider 7726
+                                                                        if ($riderId == 7726 && $rp == 0) {
+                                                                            $op = $raceDetail['original_points'] ?? 0;
+                                                                            $fm = $raceDetail['field_multiplier'] ?? 0;
+                                                                            $em = $raceDetail['event_level_multiplier'] ?? 0;
+                                                                            $tm = $raceDetail['time_multiplier'] ?? 0;
+                                                                            echo "<br><small style='color:red;font-size:0.6rem;'>{$op}×{$fm}×{$em}×{$tm}</small>";
+                                                                        } else {
+                                                                            echo 'p';
                                                                         }
-                                                                        echo number_format($raceDetail['ranking_points'] ?? 0, 0) . 'p';
                                                                         ?>
                                                                     </td>
                                                                     <td class="gs-text-right show-mobile-landscape" style="display: none; font-size: 0.7rem; white-space: nowrap;">
@@ -1374,9 +1383,9 @@ try {
                                                             ?>
                                                         </td>
                                                         <td>
-                                                            <strong style="font-size: 0.85rem;"><?= h($raceDetail['event_name']) ?></strong>
+                                                            <strong style="font-size: 0.75rem;"><?= h($raceDetail['event_name']) ?></strong>
                                                         </td>
-                                                        <td class="gs-text-right gs-text-primary gs-font-bold"><?= number_format($raceDetail['points'], 0) ?>p</td>
+                                                        <td class="gs-text-right gs-text-primary gs-font-bold" style="font-size: 0.75rem;"><?= number_format($raceDetail['points'], 0) ?>p</td>
                                                         <td class="show-mobile-landscape gs-text-nowrap" style="display: none; font-size: 0.7rem;"><?= date('Y-m-d', strtotime($raceDetail['event_date'])) ?></td>
                                                         <td class="hide-mobile-portrait gs-text-nowrap"><?= date('Y-m-d', strtotime($raceDetail['event_date'])) ?></td>
                                                         <td class="gs-text-center hide-mobile-portrait"><?= h($raceDetail['class_name'] ?? '-') ?></td>
@@ -1511,9 +1520,9 @@ try {
                                                 <?php foreach ($gravityTeamRaceDetails as $raceDetail): ?>
                                                     <tr>
                                                         <td>
-                                                            <strong style="font-size: 0.85rem;"><?= h($raceDetail['event_name']) ?></strong>
+                                                            <strong style="font-size: 0.75rem;"><?= h($raceDetail['event_name']) ?></strong>
                                                         </td>
-                                                        <td class="gs-text-right gs-font-bold" style="color: #f59e0b;">
+                                                        <td class="gs-text-right gs-font-bold" style="color: #f59e0b; font-size: 0.75rem;">
                                                             <?= number_format($raceDetail['club_points'], 0) ?>p
                                                         </td>
                                                         <td class="gs-text-right show-mobile-landscape" style="display: none; font-size: 0.7rem; white-space: nowrap;">
@@ -1663,15 +1672,15 @@ try {
                                                     <td>
                                                         <?php if ($result['event_id']): ?>
                                                             <a href="/event.php?id=<?= $result['event_id'] ?>" class="gs-link">
-                                                                <strong style="font-size: 0.85rem;"><?= h($result['event_name']) ?></strong>
+                                                                <strong style="font-size: 0.75rem;"><?= h($result['event_name']) ?></strong>
                                                             </a>
                                                         <?php else: ?>
-                                                            <strong style="font-size: 0.85rem;"><?= h($result['event_name']) ?></strong>
+                                                            <strong style="font-size: 0.75rem;"><?= h($result['event_name']) ?></strong>
                                                         <?php endif; ?>
                                                     </td>
                                                     <td class="gs-text-center">
                                                         <?php if ($awardsPoints): ?>
-                                                            <strong><?= $result['points'] ?? 0 ?>p</strong>
+                                                            <strong style="font-size: 0.75rem;"><?= $result['points'] ?? 0 ?>p</strong>
                                                         <?php else: ?>
                                                             <span class="gs-text-secondary">-</span>
                                                         <?php endif; ?>
