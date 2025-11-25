@@ -395,18 +395,23 @@ function createRankingSnapshot($db, $discipline = 'gravity', $snapshotDate = nul
     $riderData = calculateRankingData($db, $discipline, $debug);
 
     if ($debug) {
-        echo "<p>💾 Saving " . count($riderData) . " riders to snapshot using batched REPLACE INTO...</p>";
+        echo "<p>💾 Saving " . count($riderData) . " riders using small batches with INSERT...ON DUPLICATE KEY UPDATE...</p>";
         flush();
     }
 
-    // Batch REPLACE INTO for better performance on shared hosting
-    // Instead of 474 individual queries, use batches of 50 = ~10 queries
-    $batchSize = 50;
+    // Use very small batches (10 rows) with INSERT...ON DUPLICATE KEY UPDATE
+    // This is more efficient than REPLACE INTO as it doesn't delete+insert, just updates
+    $batchSize = 10;
     $batches = array_chunk($riderData, $batchSize);
     $inserted = 0;
 
     foreach ($batches as $batchIndex => $batch) {
-        // Build multi-row REPLACE INTO for ranking_snapshots
+        if ($debug) {
+            echo "<p>📝 Processing batch " . ($batchIndex + 1) . " / " . count($batches) . "...</p>";
+            flush();
+        }
+
+        // Build multi-row INSERT...ON DUPLICATE KEY UPDATE for ranking_snapshots
         $values = [];
         $params = [];
 
@@ -432,12 +437,27 @@ function createRankingSnapshot($db, $discipline = 'gravity', $snapshotDate = nul
             ]);
         }
 
-        $sql = "REPLACE INTO ranking_snapshots
+        // Use INSERT...ON DUPLICATE KEY UPDATE instead of REPLACE INTO
+        // This is more efficient as it updates in place instead of delete+insert
+        $sql = "INSERT INTO ranking_snapshots
                 (rider_id, discipline, snapshot_date, total_ranking_points, points_last_12_months,
                  points_months_13_24, events_count, ranking_position, previous_position, position_change)
-                VALUES " . implode(', ', $values);
+                VALUES " . implode(', ', $values) . "
+                ON DUPLICATE KEY UPDATE
+                    total_ranking_points = VALUES(total_ranking_points),
+                    points_last_12_months = VALUES(points_last_12_months),
+                    points_months_13_24 = VALUES(points_months_13_24),
+                    events_count = VALUES(events_count),
+                    ranking_position = VALUES(ranking_position),
+                    previous_position = VALUES(previous_position),
+                    position_change = VALUES(position_change)";
 
         $db->query($sql, $params);
+
+        if ($debug) {
+            echo "<p>✓ Batch " . ($batchIndex + 1) . " saved (" . $inserted . " / " . count($riderData) . " total)</p>";
+            flush();
+        }
 
         // Also batch insert into ranking_history
         $historyValues = [];
@@ -462,14 +482,8 @@ function createRankingSnapshot($db, $discipline = 'gravity', $snapshotDate = nul
 
         $inserted += count($batch);
 
-        // Progress update every 5 batches
-        if ($debug && ($batchIndex + 1) % 5 == 0) {
-            echo "<p>✓ Saved " . $inserted . " / " . count($riderData) . " riders...</p>";
-            flush();
-        }
-
         // Small pause between batches for shared hosting
-        usleep(10000); // 10ms
+        usleep(50000); // 50ms pause - longer to be safe
     }
 
     if ($debug) {
@@ -661,17 +675,22 @@ function createClubRankingSnapshot($db, $discipline = 'gravity', $snapshotDate =
     $clubData = calculateClubRanking($db, $discipline);
 
     if ($debug) {
-        echo "<p>💾 Saving " . count($clubData) . " clubs using batched REPLACE INTO...</p>";
+        echo "<p>💾 Saving " . count($clubData) . " clubs using small batches with INSERT...ON DUPLICATE KEY UPDATE...</p>";
         flush();
     }
 
-    // Batch REPLACE INTO for better performance on shared hosting
-    $batchSize = 50;
+    // Use very small batches (10 rows) with INSERT...ON DUPLICATE KEY UPDATE
+    $batchSize = 10;
     $batches = array_chunk($clubData, $batchSize);
     $inserted = 0;
 
     foreach ($batches as $batchIndex => $batch) {
-        // Build multi-row REPLACE INTO
+        if ($debug) {
+            echo "<p>📝 Processing club batch " . ($batchIndex + 1) . " / " . count($batches) . "...</p>";
+            flush();
+        }
+
+        // Build multi-row INSERT...ON DUPLICATE KEY UPDATE
         $values = [];
         $params = [];
 
@@ -698,23 +717,32 @@ function createClubRankingSnapshot($db, $discipline = 'gravity', $snapshotDate =
             ]);
         }
 
-        $sql = "REPLACE INTO club_ranking_snapshots
+        // Use INSERT...ON DUPLICATE KEY UPDATE instead of REPLACE INTO
+        $sql = "INSERT INTO club_ranking_snapshots
                 (club_id, discipline, snapshot_date, total_ranking_points, points_last_12_months,
                  points_months_13_24, riders_count, events_count, ranking_position, previous_position, position_change)
-                VALUES " . implode(', ', $values);
+                VALUES " . implode(', ', $values) . "
+                ON DUPLICATE KEY UPDATE
+                    total_ranking_points = VALUES(total_ranking_points),
+                    points_last_12_months = VALUES(points_last_12_months),
+                    points_months_13_24 = VALUES(points_months_13_24),
+                    riders_count = VALUES(riders_count),
+                    events_count = VALUES(events_count),
+                    ranking_position = VALUES(ranking_position),
+                    previous_position = VALUES(previous_position),
+                    position_change = VALUES(position_change)";
 
         $db->query($sql, $params);
 
         $inserted += count($batch);
 
-        // Progress update every 3 batches
-        if ($debug && ($batchIndex + 1) % 3 == 0) {
-            echo "<p>✓ Saved " . $inserted . " / " . count($clubData) . " clubs...</p>";
+        if ($debug) {
+            echo "<p>✓ Club batch " . ($batchIndex + 1) . " saved (" . $inserted . " / " . count($clubData) . " total)</p>";
             flush();
         }
 
         // Small pause between batches
-        usleep(10000); // 10ms
+        usleep(50000); // 50ms
     }
 
     if ($debug) {
@@ -745,7 +773,7 @@ function runFullRankingUpdate($db, $debug = false) {
 
     if ($debug) {
         echo "<p style='background: #e3f2fd; padding: 10px; border-left: 4px solid #2196f3;'>";
-        echo "<strong>🔄 Version: 2025-11-25-003</strong><br>";
+        echo "<strong>🔄 Version: 2025-11-25-004</strong><br>";
         echo "Lightweight Ranking System - Debug Mode Active";
         echo "</p>";
         echo "<h3>Creating Ranking Snapshots</h3>";
