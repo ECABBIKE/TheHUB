@@ -938,3 +938,228 @@ function getRankingStats($db) {
 
     return $stats;
 }
+
+/**
+ * Populate ranking_points table with calculated weighted points
+ *
+ * This function:
+ * 1. Fetches all results from last 24 months
+ * 2. Calculates field size, multipliers, and time decay for each result
+ * 3. Saves to ranking_points table for fast retrieval
+ *
+ * @param object $db Database connection
+ * @param bool $debug Enable debug output
+ * @return array Statistics about the population process
+ */
+function populateRankingPoints($db, $debug = false) {
+    $startTime = microtime(true);
+    $stats = [
+        'total_processed' => 0,
+        'total_inserted' => 0,
+        'total_updated' => 0,
+        'errors' => []
+    ];
+
+    if ($debug) {
+        echo "<p>🔄 Starting ranking_points population...</p>";
+        flush();
+    }
+
+    // Get multiplier settings
+    $fieldMultipliers = getRankingFieldMultipliers($db);
+    $eventLevelMultipliers = getEventLevelMultipliers($db);
+    $timeDecay = getRankingTimeDecay($db);
+
+    // Cutoff dates
+    $cutoffDate = date('Y-m-d', strtotime('-24 months'));
+    $month12Cutoff = date('Y-m-d', strtotime('-12 months'));
+
+    if ($debug) {
+        echo "<p>📅 Processing results from {$cutoffDate} to today</p>";
+        echo "<p>📊 12-month cutoff: {$month12Cutoff}</p>";
+        flush();
+    }
+
+    // Clear existing data
+    if ($debug) {
+        echo "<p>🗑️ Clearing existing ranking_points...</p>";
+        flush();
+    }
+    $db->query("TRUNCATE TABLE ranking_points");
+
+    // Get all results from last 24 months with finished status and points > 0
+    $results = $db->getAll("
+        SELECT
+            r.id as result_id,
+            r.cyclist_id as rider_id,
+            r.event_id,
+            r.class_id,
+            r.position,
+            r.points as original_points,
+            e.name as event_name,
+            e.date as event_date,
+            e.discipline,
+            e.event_level,
+            COUNT(*) OVER (PARTITION BY r.event_id, r.class_id) as field_size
+        FROM results r
+        JOIN events e ON r.event_id = e.id
+        WHERE r.status = 'finished'
+        AND r.points > 0
+        AND e.date >= ?
+        AND e.discipline IN ('ENDURO', 'DH')
+        ORDER BY e.date DESC, r.cyclist_id
+    ", [$cutoffDate]);
+
+    if ($debug) {
+        echo "<p>✅ Found " . count($results) . " results to process</p>";
+        flush();
+    }
+
+    // Process each result
+    $batch = [];
+    $batchSize = 100;
+
+    foreach ($results as $idx => $result) {
+        try {
+            $discipline = normalizeDiscipline($result['discipline']);
+            $eventDate = $result['event_date'];
+            $originalPoints = (float)$result['original_points'];
+            $fieldSize = (int)$result['field_size'];
+
+            // Calculate field multiplier
+            $fieldMultiplier = getFieldMultiplier($fieldSize, $fieldMultipliers);
+
+            // Get event level multiplier
+            $eventLevel = $result['event_level'] ?? 'national';
+            $eventLevelMultiplier = $eventLevelMultipliers[$eventLevel] ?? 1.00;
+
+            // Calculate time multiplier
+            $monthsAgo = (strtotime('now') - strtotime($eventDate)) / (30 * 24 * 60 * 60);
+            if ($monthsAgo <= 12) {
+                $timeMultiplier = $timeDecay['months_1_12'];
+            } elseif ($monthsAgo <= 24) {
+                $timeMultiplier = $timeDecay['months_13_24'];
+            } else {
+                $timeMultiplier = $timeDecay['months_25_plus'];
+            }
+
+            // Calculate final ranking points
+            $rankingPoints = $originalPoints * $fieldMultiplier * $eventLevelMultiplier * $timeMultiplier;
+
+            // Add to batch
+            $batch[] = [
+                'rider_id' => $result['rider_id'],
+                'event_id' => $result['event_id'],
+                'class_id' => $result['class_id'],
+                'discipline' => $discipline,
+                'original_points' => $originalPoints,
+                'position' => $result['position'],
+                'field_size' => $fieldSize,
+                'field_multiplier' => $fieldMultiplier,
+                'event_level_multiplier' => $eventLevelMultiplier,
+                'time_multiplier' => $timeMultiplier,
+                'ranking_points' => $rankingPoints,
+                'event_date' => $eventDate
+            ];
+
+            $stats['total_processed']++;
+
+            // Insert batch when full
+            if (count($batch) >= $batchSize) {
+                $inserted = insertRankingPointsBatch($db, $batch);
+                $stats['total_inserted'] += $inserted;
+                $batch = [];
+
+                if ($debug && $stats['total_processed'] % 100 == 0) {
+                    echo "<p>⏳ Processed {$stats['total_processed']} / " . count($results) . " results...</p>";
+                    flush();
+                }
+            }
+
+        } catch (Exception $e) {
+            $stats['errors'][] = "Result ID {$result['result_id']}: " . $e->getMessage();
+            if ($debug) {
+                echo "<p style='color: orange;'>⚠️ Error processing result {$result['result_id']}: " . htmlspecialchars($e->getMessage()) . "</p>";
+                flush();
+            }
+        }
+    }
+
+    // Insert remaining batch
+    if (!empty($batch)) {
+        $inserted = insertRankingPointsBatch($db, $batch);
+        $stats['total_inserted'] += $inserted;
+    }
+
+    $stats['elapsed_time'] = round(microtime(true) - $startTime, 2);
+
+    if ($debug) {
+        echo "<hr>";
+        echo "<p><strong>📊 Population Complete</strong></p>";
+        echo "<ul>";
+        echo "<li>Results processed: {$stats['total_processed']}</li>";
+        echo "<li>Records inserted: {$stats['total_inserted']}</li>";
+        echo "<li>Errors: " . count($stats['errors']) . "</li>";
+        echo "<li>Time: {$stats['elapsed_time']}s</li>";
+        echo "</ul>";
+        flush();
+    }
+
+    return $stats;
+}
+
+/**
+ * Insert a batch of ranking points records
+ *
+ * @param object $db Database connection
+ * @param array $batch Array of ranking point records
+ * @return int Number of records inserted
+ */
+function insertRankingPointsBatch($db, $batch) {
+    if (empty($batch)) {
+        return 0;
+    }
+
+    $values = [];
+    $params = [];
+
+    foreach ($batch as $record) {
+        $values[] = "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        $params = array_merge($params, [
+            $record['rider_id'],
+            $record['event_id'],
+            $record['class_id'],
+            $record['discipline'],
+            $record['original_points'],
+            $record['position'],
+            $record['field_size'],
+            $record['field_multiplier'],
+            $record['event_level_multiplier'],
+            $record['time_multiplier'],
+            $record['ranking_points'],
+            $record['event_date']
+        ]);
+    }
+
+    $sql = "
+        INSERT INTO ranking_points (
+            rider_id, event_id, class_id, discipline,
+            original_points, position, field_size,
+            field_multiplier, event_level_multiplier, time_multiplier,
+            ranking_points, event_date
+        ) VALUES " . implode(', ', $values) . "
+        ON DUPLICATE KEY UPDATE
+            original_points = VALUES(original_points),
+            position = VALUES(position),
+            field_size = VALUES(field_size),
+            field_multiplier = VALUES(field_multiplier),
+            event_level_multiplier = VALUES(event_level_multiplier),
+            time_multiplier = VALUES(time_multiplier),
+            ranking_points = VALUES(ranking_points),
+            updated_at = NOW()
+    ";
+
+    $db->query($sql, $params);
+
+    return count($batch);
+}

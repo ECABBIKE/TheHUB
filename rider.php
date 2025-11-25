@@ -1181,7 +1181,19 @@ try {
                                                                         <?= number_format($raceDetail['ranking_points'] ?? 0, 0) ?>p
                                                                     </td>
                                                                     <td class="gs-text-right show-mobile-landscape" style="display: none; font-size: 0.7rem; white-space: nowrap;">
-                                                                        <?= number_format($raceDetail['original_points'], 0) ?>×<?= number_format($raceDetail['field_multiplier'], 2) ?>
+                                                                        <?php
+                                                                        // Show calculation: original × field × event_level
+                                                                        $origPts = number_format($raceDetail['original_points'] ?? 0, 0);
+                                                                        $fieldMult = number_format($raceDetail['field_multiplier'] ?? 1, 2);
+                                                                        $eventMult = number_format($raceDetail['event_level_multiplier'] ?? 1, 2);
+
+                                                                        // Show simplified calculation if all multipliers are 1.0
+                                                                        if ($eventMult == '1.00') {
+                                                                            echo "{$origPts} × {$fieldMult}";
+                                                                        } else {
+                                                                            echo "{$origPts} × {$fieldMult} × {$eventMult}";
+                                                                        }
+                                                                        ?>
                                                                     </td>
                                                                     <td class="gs-text-nowrap hide-mobile-portrait"><?= date('Y-m-d', strtotime($raceDetail['event_date'])) ?></td>
                                                                     <td class="gs-text-center hide-mobile-portrait">
