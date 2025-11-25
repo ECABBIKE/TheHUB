@@ -17,11 +17,8 @@ define('RANKING_DISCIPLINES', ['ENDURO', 'DH', 'GRAVITY']);
 function getDefaultFieldMultipliers() {
     return [
         1 => 0.75, 2 => 0.77, 3 => 0.79, 4 => 0.81, 5 => 0.83,
-        6 => 0.85, 7 => 0.86, 8 => 0.87, 9 => 0.88, 10 => 0.89,
-        11 => 0.90, 12 => 0.91, 13 => 0.92, 14 => 0.93, 15 => 0.94,
-        16 => 0.95, 17 => 0.95, 18 => 0.96, 19 => 0.96, 20 => 0.97,
-        21 => 0.97, 22 => 0.98, 23 => 0.98, 24 => 0.99, 25 => 0.99,
-        26 => 1.00
+        6 => 0.85, 7 => 0.87, 8 => 0.89, 9 => 0.91, 10 => 0.93,
+        11 => 0.95, 12 => 0.97, 13 => 0.98, 14 => 0.99, 15 => 1.00
     ];
 }
 
@@ -110,8 +107,8 @@ function getEventLevelMultipliers($db) {
 function getFieldMultiplier($fieldSize, $multipliers) {
     $fieldSize = max(1, (int)$fieldSize);
 
-    if ($fieldSize >= 26) {
-        return $multipliers[26] ?? 1.00;
+    if ($fieldSize >= 15) {
+        return $multipliers[15] ?? 1.00;
     }
 
     return $multipliers[$fieldSize] ?? 0.75;
