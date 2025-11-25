@@ -395,53 +395,86 @@ function createRankingSnapshot($db, $discipline = 'gravity', $snapshotDate = nul
     $riderData = calculateRankingData($db, $discipline, $debug);
 
     if ($debug) {
-        echo "<p>💾 Saving " . count($riderData) . " riders to snapshot using REPLACE INTO...</p>";
+        echo "<p>💾 Saving " . count($riderData) . " riders to snapshot using batched REPLACE INTO...</p>";
         flush();
     }
 
-    // Insert/replace snapshots with small pauses for shared hosting
-    // Using REPLACE INTO to avoid slow DELETE queries
+    // Batch REPLACE INTO for better performance on shared hosting
+    // Instead of 474 individual queries, use batches of 50 = ~10 queries
+    $batchSize = 50;
+    $batches = array_chunk($riderData, $batchSize);
     $inserted = 0;
-    foreach ($riderData as $rider) {
-        // Calculate position change
-        $previousPosition = $previousRankings[$rider['rider_id']] ?? null;
-        $positionChange = null;
-        if ($previousPosition !== null) {
-            $positionChange = $previousPosition - $rider['ranking_position'];
+
+    foreach ($batches as $batchIndex => $batch) {
+        // Build multi-row REPLACE INTO for ranking_snapshots
+        $values = [];
+        $params = [];
+
+        foreach ($batch as $rider) {
+            $previousPosition = $previousRankings[$rider['rider_id']] ?? null;
+            $positionChange = null;
+            if ($previousPosition !== null) {
+                $positionChange = $previousPosition - $rider['ranking_position'];
+            }
+
+            $values[] = "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            $params = array_merge($params, [
+                $rider['rider_id'],
+                $discipline,
+                $snapshotDate,
+                round($rider['total_points'], 2),
+                round($rider['points_12'], 2),
+                round($rider['points_13_24'], 2),
+                $rider['events_count'],
+                $rider['ranking_position'],
+                $previousPosition,
+                $positionChange
+            ]);
         }
 
-        // Use REPLACE INTO instead of INSERT to automatically handle duplicates
-        $db->query("
-            REPLACE INTO ranking_snapshots
-            (rider_id, discipline, snapshot_date, total_ranking_points, points_last_12_months,
-             points_months_13_24, events_count, ranking_position, previous_position, position_change)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ", [
-            $rider['rider_id'],
-            $discipline,
-            $snapshotDate,
-            round($rider['total_points'], 2),
-            round($rider['points_12'], 2),
-            round($rider['points_13_24'], 2),
-            $rider['events_count'],
-            $rider['ranking_position'],
-            $previousPosition,
-            $positionChange
-        ]);
+        $sql = "REPLACE INTO ranking_snapshots
+                (rider_id, discipline, snapshot_date, total_ranking_points, points_last_12_months,
+                 points_months_13_24, events_count, ranking_position, previous_position, position_change)
+                VALUES " . implode(', ', $values);
 
-        // Also save to history table
-        $db->query("
-            INSERT INTO ranking_history (rider_id, discipline, month_date, ranking_position, total_points)
-            VALUES (?, ?, ?, ?, ?)
-            ON DUPLICATE KEY UPDATE ranking_position = VALUES(ranking_position), total_points = VALUES(total_points)
-        ", [$rider['rider_id'], $discipline, $snapshotDate, $rider['ranking_position'], round($rider['total_points'], 2)]);
+        $db->query($sql, $params);
 
-        $inserted++;
+        // Also batch insert into ranking_history
+        $historyValues = [];
+        $historyParams = [];
 
-        // Small pause every 100 rows for shared hosting compatibility
-        if ($inserted % 100 == 0) {
-            usleep(10000); // 10ms pause
+        foreach ($batch as $rider) {
+            $historyValues[] = "(?, ?, ?, ?, ?)";
+            $historyParams = array_merge($historyParams, [
+                $rider['rider_id'],
+                $discipline,
+                $snapshotDate,
+                $rider['ranking_position'],
+                round($rider['total_points'], 2)
+            ]);
         }
+
+        $historySql = "INSERT INTO ranking_history (rider_id, discipline, month_date, ranking_position, total_points)
+                       VALUES " . implode(', ', $historyValues) . "
+                       ON DUPLICATE KEY UPDATE ranking_position = VALUES(ranking_position), total_points = VALUES(total_points)";
+
+        $db->query($historySql, $historyParams);
+
+        $inserted += count($batch);
+
+        // Progress update every 5 batches
+        if ($debug && ($batchIndex + 1) % 5 == 0) {
+            echo "<p>✓ Saved " . $inserted . " / " . count($riderData) . " riders...</p>";
+            flush();
+        }
+
+        // Small pause between batches for shared hosting
+        usleep(10000); // 10ms
+    }
+
+    if ($debug) {
+        echo "<p>✅ Saved all " . $inserted . " riders!</p>";
+        flush();
     }
 
     return $inserted;
@@ -628,59 +661,65 @@ function createClubRankingSnapshot($db, $discipline = 'gravity', $snapshotDate =
     $clubData = calculateClubRanking($db, $discipline);
 
     if ($debug) {
-        echo "<p>💾 Saving " . count($clubData) . " clubs using REPLACE INTO...</p>";
+        echo "<p>💾 Saving " . count($clubData) . " clubs using batched REPLACE INTO...</p>";
         flush();
     }
 
-    // Insert/replace snapshots with small pauses
+    // Batch REPLACE INTO for better performance on shared hosting
+    $batchSize = 50;
+    $batches = array_chunk($clubData, $batchSize);
     $inserted = 0;
-    foreach ($clubData as $club) {
-        $previousPosition = $previousRankings[$club['club_id']] ?? null;
-        $positionChange = null;
-        if ($previousPosition !== null) {
-            $positionChange = $previousPosition - $club['ranking_position'];
+
+    foreach ($batches as $batchIndex => $batch) {
+        // Build multi-row REPLACE INTO
+        $values = [];
+        $params = [];
+
+        foreach ($batch as $club) {
+            $previousPosition = $previousRankings[$club['club_id']] ?? null;
+            $positionChange = null;
+            if ($previousPosition !== null) {
+                $positionChange = $previousPosition - $club['ranking_position'];
+            }
+
+            $values[] = "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            $params = array_merge($params, [
+                $club['club_id'],
+                $discipline,
+                $snapshotDate,
+                round($club['total_points'], 2),
+                round($club['points_12'], 2),
+                round($club['points_13_24'], 2),
+                $club['riders_count'],
+                $club['events_count'],
+                $club['ranking_position'],
+                $previousPosition,
+                $positionChange
+            ]);
         }
 
-        $db->query("
-            REPLACE INTO club_ranking_snapshots
-            (club_id, discipline, snapshot_date, total_ranking_points, points_last_12_months,
-             points_months_13_24, riders_count, events_count, ranking_position, previous_position, position_change)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ", [
-            $club['club_id'],
-            $discipline,
-            $snapshotDate,
-            round($club['total_points'], 2),
-            round($club['points_12'], 2),
-            round($club['points_13_24'], 2),
-            $club['riders_count'],
-            $club['events_count'],
-            $club['ranking_position'],
-            $previousPosition,
-            $positionChange
-        ]);
+        $sql = "REPLACE INTO club_ranking_snapshots
+                (club_id, discipline, snapshot_date, total_ranking_points, points_last_12_months,
+                 points_months_13_24, riders_count, events_count, ranking_position, previous_position, position_change)
+                VALUES " . implode(', ', $values);
 
-        // Old code that used insert:
-        /*$db->insert('club_ranking_snapshots', [
-            'club_id' => $club['club_id'],
-            'discipline' => $discipline,
-            'snapshot_date' => $snapshotDate,
-            'total_ranking_points' => round($club['total_points'], 2),
-            'points_last_12_months' => round($club['points_12'], 2),
-            'points_months_13_24' => round($club['points_13_24'], 2),
-            'riders_count' => $club['riders_count'],
-            'events_count' => $club['events_count'],
-            'ranking_position' => $club['ranking_position'],
-            'previous_position' => $previousPosition,
-            'position_change' => $positionChange
-        ]);*/
+        $db->query($sql, $params);
 
-        $inserted++;
+        $inserted += count($batch);
 
-        // Small pause every 100 rows
-        if ($inserted % 100 == 0) {
-            usleep(10000); // 10ms pause
+        // Progress update every 3 batches
+        if ($debug && ($batchIndex + 1) % 3 == 0) {
+            echo "<p>✓ Saved " . $inserted . " / " . count($clubData) . " clubs...</p>";
+            flush();
         }
+
+        // Small pause between batches
+        usleep(10000); // 10ms
+    }
+
+    if ($debug) {
+        echo "<p>✅ Saved all " . $inserted . " clubs!</p>";
+        flush();
     }
 
     return $inserted;
@@ -706,7 +745,7 @@ function runFullRankingUpdate($db, $debug = false) {
 
     if ($debug) {
         echo "<p style='background: #e3f2fd; padding: 10px; border-left: 4px solid #2196f3;'>";
-        echo "<strong>🔄 Version: 2025-11-25-002</strong><br>";
+        echo "<strong>🔄 Version: 2025-11-25-003</strong><br>";
         echo "Lightweight Ranking System - Debug Mode Active";
         echo "</p>";
         echo "<h3>Creating Ranking Snapshots</h3>";
