@@ -421,55 +421,10 @@ function createRankingSnapshot($db, $discipline = 'gravity', $snapshotDate = nul
 function getCurrentRanking($db, $discipline = 'gravity', $limit = 100, $offset = 0, $useLive = false) {
     $discipline = strtoupper($discipline);
 
-    // Try to use snapshot first unless live is requested
-    if (!$useLive) {
-        $latestSnapshot = $db->getRow("
-            SELECT MAX(snapshot_date) as snapshot_date FROM ranking_snapshots WHERE discipline = ?
-        ", [$discipline]);
+    // TEMPORARY: Force live calculation since ranking_snapshots table is locked
+    // Skip snapshot reading entirely to avoid timeouts
 
-        if ($latestSnapshot && $latestSnapshot['snapshot_date']) {
-            $snapshotDate = $latestSnapshot['snapshot_date'];
-
-            // Get total count
-            $totalCount = $db->getRow("
-                SELECT COUNT(*) as total FROM ranking_snapshots WHERE discipline = ? AND snapshot_date = ?
-            ", [$discipline, $snapshotDate]);
-
-            // Get rankings with rider info
-            $riders = $db->getAll("
-                SELECT
-                    rs.ranking_position,
-                    rs.total_ranking_points,
-                    rs.points_last_12_months,
-                    rs.points_months_13_24,
-                    rs.events_count,
-                    rs.previous_position,
-                    rs.position_change,
-                    r.id as rider_id,
-                    r.firstname,
-                    r.lastname,
-                    r.birth_year,
-                    c.name as club_name,
-                    c.id as club_id
-                FROM ranking_snapshots rs
-                JOIN riders r ON rs.rider_id = r.id
-                LEFT JOIN clubs c ON r.club_id = c.id
-                WHERE rs.discipline = ? AND rs.snapshot_date = ?
-                ORDER BY rs.ranking_position ASC
-                LIMIT ? OFFSET ?
-            ", [$discipline, $snapshotDate, $limit, $offset]);
-
-            return [
-                'riders' => $riders,
-                'total' => (int)$totalCount['total'],
-                'snapshot_date' => $snapshotDate,
-                'discipline' => $discipline,
-                'source' => 'snapshot'
-            ];
-        }
-    }
-
-    // Fall back to live calculation
+    // Calculate live ranking
     $riderData = calculateRankingData($db, $discipline, false);
 
     // Apply pagination
@@ -619,7 +574,7 @@ function runFullRankingUpdate($db, $debug = false) {
 
     if ($debug) {
         echo "<p style='background: #e3f2fd; padding: 10px; border-left: 4px solid #2196f3;'>";
-        echo "<strong>🔄 Version: 2025-11-25-008</strong><br>";
+        echo "<strong>🔄 Version: 2025-11-25-009</strong><br>";
         echo "Lightweight Ranking System - Debug Mode Active";
         echo "</p>";
         echo "<h3>Creating Ranking Snapshots</h3>";
@@ -682,62 +637,20 @@ function runFullRankingUpdate($db, $debug = false) {
  * Get current club ranking for a specific discipline
  */
 function getCurrentClubRanking($db, $discipline = 'GRAVITY', $limit = 50, $offset = 0) {
-    // Get the most recent snapshot date for this discipline
-    $latestSnapshot = $db->getRow("
-        SELECT MAX(snapshot_date) as snapshot_date FROM club_ranking_snapshots WHERE discipline = ?
-    ", [$discipline]);
+    // TEMPORARY: Force live calculation since club_ranking_snapshots table is locked
+    // Skip snapshot reading entirely to avoid timeouts
 
-    if (!$latestSnapshot || !$latestSnapshot['snapshot_date']) {
-        // Fall back to live calculation
-        $clubData = calculateClubRanking($db, $discipline);
-        $total = count($clubData);
-        $clubs = array_slice($clubData, $offset, $limit);
-
-        return [
-            'clubs' => $clubs,
-            'total' => $total,
-            'snapshot_date' => null,
-            'discipline' => $discipline,
-            'source' => 'live'
-        ];
-    }
-
-    $snapshotDate = $latestSnapshot['snapshot_date'];
-
-    // Get total count
-    $totalCount = $db->getRow("
-        SELECT COUNT(*) as total FROM club_ranking_snapshots WHERE discipline = ? AND snapshot_date = ?
-    ", [$discipline, $snapshotDate]);
-
-    // Get rankings with club info
-    $clubs = $db->getAll("
-        SELECT
-            crs.ranking_position,
-            crs.total_ranking_points,
-            crs.points_last_12_months,
-            crs.points_months_13_24,
-            crs.riders_count,
-            crs.events_count,
-            crs.previous_position,
-            crs.position_change,
-            c.id as club_id,
-            c.name as club_name,
-            c.short_name,
-            c.city,
-            c.region
-        FROM club_ranking_snapshots crs
-        JOIN clubs c ON crs.club_id = c.id
-        WHERE crs.discipline = ? AND crs.snapshot_date = ?
-        ORDER BY crs.ranking_position ASC
-        LIMIT ? OFFSET ?
-    ", [$discipline, $snapshotDate, $limit, $offset]);
+    // Calculate live club ranking
+    $clubData = calculateClubRanking($db, $discipline);
+    $total = count($clubData);
+    $clubs = array_slice($clubData, $offset, $limit);
 
     return [
         'clubs' => $clubs,
-        'total' => (int)$totalCount['total'],
-        'snapshot_date' => $snapshotDate,
+        'total' => $total,
+        'snapshot_date' => null,
         'discipline' => $discipline,
-        'source' => 'snapshot'
+        'source' => 'live'
     ];
 }
 
