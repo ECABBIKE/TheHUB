@@ -159,11 +159,13 @@ $gravityTotalStats = null;
 $gravityTotalPosition = null;
 $gravityTotalClassTotal = 0;
 $currentClassName = null;
+$gravityTotalRaceDetails = [];
 
 // Get GravitySeries Team stats (club points)
 $gravityTeamStats = null;
 $gravityTeamPosition = null;
 $gravityTeamClassTotal = 0;
+$gravityTeamRaceDetails = [];
 
 if ($totalRaces > 0) {
     try {
@@ -232,6 +234,24 @@ if ($totalRaces > 0) {
                 $position++;
             }
 
+            // Get detailed race results for GravitySeries Total
+            $gravityTotalRaceDetails = $db->getAll("
+                SELECT
+                    r.points,
+                    r.class_position,
+                    e.name as event_name,
+                    e.date as event_date,
+                    e.location as event_location,
+                    cls.display_name as class_name
+                FROM results r
+                JOIN events e ON r.event_id = e.id
+                JOIN series_events se ON e.id = se.event_id
+                LEFT JOIN classes cls ON r.class_id = cls.id
+                WHERE se.series_id = ? AND r.cyclist_id = ?
+                AND r.status = 'finished'
+                ORDER BY e.date DESC
+            ", [$totalSeries['id'], $riderId]);
+
             // Get GravitySeries Team stats (club points for this series)
             // Simple direct query - club_rider_points already has series_id
             if ($rider['club_id']) {
@@ -261,6 +281,24 @@ if ($totalRaces > 0) {
                         $position++;
                     }
                 }
+
+                // Get detailed race results for GravitySeries Team
+                $gravityTeamRaceDetails = $db->getAll("
+                    SELECT
+                        crp.club_points,
+                        crp.original_points,
+                        crp.percentage_applied,
+                        crp.rider_rank_in_club,
+                        e.name as event_name,
+                        e.date as event_date,
+                        e.location as event_location,
+                        cls.display_name as class_name
+                    FROM club_rider_points crp
+                    JOIN events e ON crp.event_id = e.id
+                    LEFT JOIN classes cls ON crp.class_id = cls.id
+                    WHERE crp.rider_id = ? AND crp.club_id = ? AND crp.series_id = ?
+                    ORDER BY e.date DESC
+                ", [$riderId, $rider['club_id'], $totalSeries['id']]);
             }
         }
     } catch (Exception $e) {
@@ -270,6 +308,8 @@ if ($totalRaces > 0) {
 
 // Get ranking statistics for all disciplines
 $rankingStats = [];
+$rankingHistory = [];
+$rankingRaceDetails = [];
 try {
     foreach (['ENDURO', 'DH', 'GRAVITY'] as $discipline) {
         $riderData = calculateRankingData($db, $discipline, false);
@@ -281,6 +321,38 @@ try {
                 break;
             }
         }
+
+        // Get ranking history (last 6 months of snapshots)
+        $rankingHistory[$discipline] = $db->getAll("
+            SELECT
+                snapshot_date,
+                total_ranking_points,
+                ranking_position,
+                previous_position,
+                position_change,
+                events_count
+            FROM ranking_snapshots
+            WHERE rider_id = ? AND discipline = ?
+            ORDER BY snapshot_date DESC
+            LIMIT 6
+        ", [$riderId, $discipline]);
+
+        // Get detailed ranking points per race (last 24 months)
+        $rankingRaceDetails[$discipline] = $db->getAll("
+            SELECT
+                rp.*,
+                e.name as event_name,
+                e.date as event_date,
+                e.location as event_location,
+                cls.display_name as class_name
+            FROM ranking_points rp
+            JOIN events e ON rp.event_id = e.id
+            LEFT JOIN classes cls ON rp.class_id = cls.id
+            WHERE rp.rider_id = ?
+            AND rp.discipline = ?
+            AND e.date >= DATE_SUB(NOW(), INTERVAL 24 MONTH)
+            ORDER BY e.date DESC
+        ", [$riderId, $discipline]);
     }
 } catch (Exception $e) {
     error_log("Error getting ranking stats for rider {$riderId}: " . $e->getMessage());
@@ -658,16 +730,35 @@ try {
                 </div>
             </div>
 
-            <!-- Ranking Statistics -->
-            <?php if (!empty($rankingStats)): ?>
-                <div class="gs-card gs-mb-xl">
-                    <div class="gs-card-header">
-                        <h2 class="gs-h4 gs-text-primary">
+            <!-- Main Profile Tabs -->
+            <div class="gs-card gs-mb-xl">
+                <div class="gs-main-tabs gs-mb-lg">
+                    <button class="gs-main-tab active" data-main-tab="ranking-tab">
+                        <i data-lucide="trending-up"></i>
+                        Ranking
+                    </button>
+                    <button class="gs-main-tab" data-main-tab="gravity-total-tab">
+                        <i data-lucide="trophy"></i>
+                        GravitySeries Total
+                    </button>
+                    <button class="gs-main-tab" data-main-tab="gravity-team-tab">
+                        <i data-lucide="users"></i>
+                        GravitySeries Team
+                    </button>
+                    <button class="gs-main-tab" data-main-tab="results-tab">
+                        <i data-lucide="list"></i>
+                        Tävlingsresultat
+                    </button>
+                </div>
+
+                <!-- Tab 1: Ranking -->
+                <div class="gs-main-tab-content active" id="ranking-tab">
+                    <?php if (!empty($rankingStats)): ?>
+                        <h2 class="gs-h4 gs-text-primary gs-mb-lg">
                             <i data-lucide="trending-up"></i>
                             Rankingstatistik (24 månader)
                         </h2>
-                    </div>
-                    <div class="gs-card-content">
+
                         <!-- Discipline Tabs -->
                         <div class="gs-tabs gs-mb-lg">
                             <?php foreach (['GRAVITY' => 'Gravity', 'ENDURO' => 'Enduro', 'DH' => 'Downhill'] as $disc => $label): ?>
@@ -679,7 +770,7 @@ try {
                             <?php endforeach; ?>
                         </div>
 
-                        <!-- Tab Content -->
+                        <!-- Discipline Tab Content -->
                         <?php foreach (['GRAVITY' => 'Gravity', 'ENDURO' => 'Enduro', 'DH' => 'Downhill'] as $disc => $label): ?>
                             <?php if (isset($rankingStats[$disc])): ?>
                                 <?php $stats = $rankingStats[$disc]; ?>
@@ -700,6 +791,52 @@ try {
                                             <div class="gs-stat-value gs-text-warning"><?= $stats['events_count'] ?></div>
                                         </div>
                                     </div>
+
+                                    <!-- Ranking History -->
+                                    <?php if (!empty($rankingHistory[$disc])): ?>
+                                        <div class="gs-card gs-bg-light gs-mb-lg">
+                                            <div class="gs-card-content">
+                                                <h4 class="gs-h5 gs-text-primary gs-mb-md">
+                                                    <i data-lucide="calendar-check"></i>
+                                                    Ranking-historik
+                                                </h4>
+                                                <div class="gs-table-responsive">
+                                                    <table class="gs-table gs-table-compact">
+                                                        <thead>
+                                                            <tr>
+                                                                <th>Månad</th>
+                                                                <th class="gs-text-center">Placering</th>
+                                                                <th class="gs-text-center">Förändring</th>
+                                                                <th class="gs-text-right">Poäng</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            <?php foreach ($rankingHistory[$disc] as $idx => $history): ?>
+                                                                <tr>
+                                                                    <td><?= date('Y-m', strtotime($history['snapshot_date'])) ?></td>
+                                                                    <td class="gs-text-center">#<?= $history['ranking_position'] ?></td>
+                                                                    <td class="gs-text-center">
+                                                                        <?php if ($history['position_change'] > 0): ?>
+                                                                            <span class="gs-badge gs-badge-success">
+                                                                                ↑ +<?= abs($history['position_change']) ?>
+                                                                            </span>
+                                                                        <?php elseif ($history['position_change'] < 0): ?>
+                                                                            <span class="gs-badge gs-badge-danger">
+                                                                                ↓ <?= $history['position_change'] ?>
+                                                                            </span>
+                                                                        <?php else: ?>
+                                                                            <span class="gs-text-secondary">→ 0</span>
+                                                                        <?php endif; ?>
+                                                                    </td>
+                                                                    <td class="gs-text-right"><?= number_format($history['total_ranking_points'], 1) ?></td>
+                                                                </tr>
+                                                            <?php endforeach; ?>
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    <?php endif; ?>
 
                                     <!-- Point Breakdown -->
                                     <div class="gs-card gs-bg-light gs-mb-lg">
@@ -741,13 +878,502 @@ try {
                                         </div>
                                     </div>
 
+                                    <!-- Ranking Race Details -->
+                                    <?php if (!empty($rankingRaceDetails[$disc])): ?>
+                                        <div class="gs-card gs-bg-light">
+                                            <div class="gs-card-content">
+                                                <h4 class="gs-h5 gs-text-primary gs-mb-md">
+                                                    <i data-lucide="list"></i>
+                                                    Race som gett rankingpoäng
+                                                </h4>
+                                                <div class="gs-table-responsive">
+                                                    <table class="gs-table gs-table-compact">
+                                                        <thead>
+                                                            <tr>
+                                                                <th>Datum</th>
+                                                                <th>Tävling</th>
+                                                                <th class="gs-text-center">Klass</th>
+                                                                <th class="gs-text-right">Poäng</th>
+                                                                <th class="gs-text-right">Ranking-poäng</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            <?php foreach ($rankingRaceDetails[$disc] as $raceDetail): ?>
+                                                                <tr>
+                                                                    <td><?= date('Y-m-d', strtotime($raceDetail['event_date'])) ?></td>
+                                                                    <td>
+                                                                        <strong><?= h($raceDetail['event_name']) ?></strong>
+                                                                        <?php if ($raceDetail['event_location']): ?>
+                                                                            <br><span class="gs-text-xs gs-text-secondary"><?= h($raceDetail['event_location']) ?></span>
+                                                                        <?php endif; ?>
+                                                                    </td>
+                                                                    <td class="gs-text-center"><?= h($raceDetail['class_name'] ?? '-') ?></td>
+                                                                    <td class="gs-text-right"><?= number_format($raceDetail['original_points'], 0) ?></td>
+                                                                    <td class="gs-text-right gs-text-primary gs-font-bold"><?= number_format($raceDetail['ranking_points'], 1) ?></td>
+                                                                </tr>
+                                                            <?php endforeach; ?>
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    <?php endif; ?>
+
                                 </div>
                             <?php endif; ?>
                         <?php endforeach; ?>
-                    </div>
+                    <?php else: ?>
+                        <div class="gs-empty-state gs-text-center gs-py-xl">
+                            <i data-lucide="trending-up" class="gs-empty-icon"></i>
+                            <h3 class="gs-h4 gs-mb-sm">Ingen ranking ännu</h3>
+                            <p class="gs-text-secondary">
+                                Denna deltagare har inte tillräckligt med resultat för att rankas.
+                            </p>
+                        </div>
+                    <?php endif; ?>
                 </div>
 
-                <style>
+                <!-- Tab 2: GravitySeries Total -->
+                <div class="gs-main-tab-content" id="gravity-total-tab">
+                    <?php if ($gravityTotalStats && $gravityTotalStats['total_points'] > 0): ?>
+                        <h2 class="gs-h4 gs-text-primary gs-mb-lg">
+                            <i data-lucide="trophy"></i>
+                            GravitySeries Total - Individuell
+                        </h2>
+
+                        <!-- Stats Grid -->
+                        <div class="gs-ranking-stats-grid gs-mb-lg">
+                            <div class="gs-stat-box">
+                                <div class="gs-stat-label">Placering</div>
+                                <div class="gs-stat-value gs-text-primary">
+                                    #<?= $gravityTotalPosition ?? '-' ?><?php if ($gravityTotalClassTotal): ?>/<?= $gravityTotalClassTotal ?><?php endif; ?>
+                                </div>
+                            </div>
+                            <div class="gs-stat-box">
+                                <div class="gs-stat-label">Totala poäng</div>
+                                <div class="gs-stat-value gs-text-success"><?= number_format($gravityTotalStats['total_points']) ?></div>
+                            </div>
+                            <div class="gs-stat-box">
+                                <div class="gs-stat-label">Antal race</div>
+                                <div class="gs-stat-value gs-text-warning"><?= $gravityTotalStats['events_count'] ?></div>
+                            </div>
+                        </div>
+
+                        <?php if ($currentClassName): ?>
+                            <div class="gs-mb-lg">
+                                <span class="gs-badge gs-badge-primary gs-badge-lg">Klass: <?= h($currentClassName) ?></span>
+                            </div>
+                        <?php endif; ?>
+
+                        <!-- Race Details -->
+                        <?php if (!empty($gravityTotalRaceDetails)): ?>
+                            <div class="gs-card gs-bg-light">
+                                <div class="gs-card-content">
+                                    <h4 class="gs-h5 gs-text-primary gs-mb-md">
+                                        <i data-lucide="list"></i>
+                                        Race och poäng
+                                    </h4>
+                                    <div class="gs-table-responsive">
+                                        <table class="gs-table gs-table-compact">
+                                            <thead>
+                                                <tr>
+                                                    <th>Datum</th>
+                                                    <th>Tävling</th>
+                                                    <th class="gs-text-center">Klass</th>
+                                                    <th class="gs-text-center">Placering</th>
+                                                    <th class="gs-text-right">Poäng</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <?php foreach ($gravityTotalRaceDetails as $raceDetail): ?>
+                                                    <tr>
+                                                        <td><?= date('Y-m-d', strtotime($raceDetail['event_date'])) ?></td>
+                                                        <td>
+                                                            <strong><?= h($raceDetail['event_name']) ?></strong>
+                                                            <?php if ($raceDetail['event_location']): ?>
+                                                                <br><span class="gs-text-xs gs-text-secondary"><?= h($raceDetail['event_location']) ?></span>
+                                                            <?php endif; ?>
+                                                        </td>
+                                                        <td class="gs-text-center"><?= h($raceDetail['class_name'] ?? '-') ?></td>
+                                                        <td class="gs-text-center">
+                                                            <?php
+                                                            $pos = $raceDetail['class_position'];
+                                                            if ($pos == 1) echo '<span class="gs-badge gs-badge-success">🥇 1</span>';
+                                                            elseif ($pos == 2) echo '<span class="gs-badge gs-badge-secondary">🥈 2</span>';
+                                                            elseif ($pos == 3) echo '<span class="gs-badge gs-badge-warning">🥉 3</span>';
+                                                            else echo $pos ?? '-';
+                                                            ?>
+                                                        </td>
+                                                        <td class="gs-text-right gs-text-primary gs-font-bold"><?= number_format($raceDetail['points'], 0) ?></td>
+                                                    </tr>
+                                                <?php endforeach; ?>
+                                                <tr class="gs-table-footer">
+                                                    <td colspan="4" class="gs-text-right gs-font-bold">Total:</td>
+                                                    <td class="gs-text-right gs-text-primary gs-font-bold gs-text-lg">
+                                                        <?= number_format($gravityTotalStats['total_points'], 0) ?>
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        <?php endif; ?>
+                    <?php else: ?>
+                        <div class="gs-empty-state gs-text-center gs-py-xl">
+                            <i data-lucide="trophy" class="gs-empty-icon"></i>
+                            <h3 class="gs-h4 gs-mb-sm">Inga GravitySeries Total-poäng</h3>
+                            <p class="gs-text-secondary">
+                                Denna deltagare har inte några poäng i GravitySeries Total ännu.
+                            </p>
+                        </div>
+                    <?php endif; ?>
+                </div>
+
+                <!-- Tab 3: GravitySeries Team -->
+                <div class="gs-main-tab-content" id="gravity-team-tab">
+                    <?php if ($gravityTeamStats && $gravityTeamStats['total_points'] > 0): ?>
+                        <h2 class="gs-h4 gs-text-primary gs-mb-lg">
+                            <i data-lucide="users"></i>
+                            GravitySeries Team - Klubbpoäng
+                        </h2>
+
+                        <!-- Stats Grid -->
+                        <div class="gs-ranking-stats-grid gs-mb-lg">
+                            <div class="gs-stat-box">
+                                <div class="gs-stat-label">Placering i klubben</div>
+                                <div class="gs-stat-value gs-text-primary">
+                                    #<?= $gravityTeamPosition ?? '-' ?><?php if ($gravityTeamClassTotal): ?>/<?= $gravityTeamClassTotal ?><?php endif; ?>
+                                </div>
+                            </div>
+                            <div class="gs-stat-box">
+                                <div class="gs-stat-label">Klubbpoäng</div>
+                                <div class="gs-stat-value" style="color: #f59e0b;"><?= number_format($gravityTeamStats['total_points'], 1) ?></div>
+                            </div>
+                            <div class="gs-stat-box">
+                                <div class="gs-stat-label">Antal race</div>
+                                <div class="gs-stat-value gs-text-warning"><?= $gravityTeamStats['events_count'] ?></div>
+                            </div>
+                        </div>
+
+                        <?php if ($rider['club_name']): ?>
+                            <div class="gs-mb-lg">
+                                <span class="gs-badge gs-badge-primary gs-badge-lg">Klubb: <?= h($rider['club_name']) ?></span>
+                            </div>
+                        <?php endif; ?>
+
+                        <!-- Race Details -->
+                        <?php if (!empty($gravityTeamRaceDetails)): ?>
+                            <div class="gs-card gs-bg-light">
+                                <div class="gs-card-content">
+                                    <h4 class="gs-h5 gs-text-primary gs-mb-md">
+                                        <i data-lucide="list"></i>
+                                        Race och klubbpoäng
+                                    </h4>
+                                    <div class="gs-table-responsive">
+                                        <table class="gs-table gs-table-compact">
+                                            <thead>
+                                                <tr>
+                                                    <th>Datum</th>
+                                                    <th>Tävling</th>
+                                                    <th class="gs-text-center">Klass</th>
+                                                    <th class="gs-text-right">Original</th>
+                                                    <th class="gs-text-center">Procent</th>
+                                                    <th class="gs-text-right">Klubbpoäng</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <?php foreach ($gravityTeamRaceDetails as $raceDetail): ?>
+                                                    <tr>
+                                                        <td><?= date('Y-m-d', strtotime($raceDetail['event_date'])) ?></td>
+                                                        <td>
+                                                            <strong><?= h($raceDetail['event_name']) ?></strong>
+                                                            <?php if ($raceDetail['event_location']): ?>
+                                                                <br><span class="gs-text-xs gs-text-secondary"><?= h($raceDetail['event_location']) ?></span>
+                                                            <?php endif; ?>
+                                                        </td>
+                                                        <td class="gs-text-center"><?= h($raceDetail['class_name'] ?? '-') ?></td>
+                                                        <td class="gs-text-right"><?= number_format($raceDetail['original_points'], 0) ?></td>
+                                                        <td class="gs-text-center"><?= $raceDetail['percentage_applied'] ?>%</td>
+                                                        <td class="gs-text-right gs-font-bold" style="color: #f59e0b;">
+                                                            <?= number_format($raceDetail['club_points'], 1) ?>
+                                                        </td>
+                                                    </tr>
+                                                <?php endforeach; ?>
+                                                <tr class="gs-table-footer">
+                                                    <td colspan="5" class="gs-text-right gs-font-bold">Total:</td>
+                                                    <td class="gs-text-right gs-font-bold gs-text-lg" style="color: #f59e0b;">
+                                                        <?= number_format($gravityTeamStats['total_points'], 1) ?>
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    <p class="gs-text-xs gs-text-secondary gs-mt-md">
+                                        <i data-lucide="info"></i>
+                                        Procent baseras på åldersklass och klubbens regelverk för teampoäng.
+                                    </p>
+                                </div>
+                            </div>
+                        <?php endif; ?>
+                    <?php else: ?>
+                        <div class="gs-empty-state gs-text-center gs-py-xl">
+                            <i data-lucide="users" class="gs-empty-icon"></i>
+                            <h3 class="gs-h4 gs-mb-sm">Inga GravitySeries Team-poäng</h3>
+                            <p class="gs-text-secondary">
+                                <?php if (!$rider['club_id']): ?>
+                                    Denna deltagare är inte medlem i någon klubb.
+                                <?php else: ?>
+                                    Denna deltagare har inte några klubbpoäng i GravitySeries Team ännu.
+                                <?php endif; ?>
+                            </p>
+                        </div>
+                    <?php endif; ?>
+                </div>
+
+                <!-- Tab 4: Race Results -->
+                <div class="gs-main-tab-content" id="results-tab">
+                    <?php if (!empty($results)): ?>
+                        <h2 class="gs-h4 gs-text-primary gs-mb-lg">
+                            <i data-lucide="list"></i>
+                            Alla tävlingsresultat (<?= $totalRaces ?> race)
+                        </h2>
+
+                        <?php foreach ($resultsByYear as $year => $yearResults): ?>
+                            <div class="gs-mb-xl">
+                                <h3 class="gs-h5 gs-text-primary gs-mb-md">
+                                    <i data-lucide="calendar"></i>
+                                    <?= $year ?> (<?= count($yearResults) ?> lopp)
+                                </h3>
+
+                                <div class="gs-table-responsive">
+                                    <table class="gs-table gs-table-compact">
+                                        <thead>
+                                            <tr>
+                                                <th>Datum</th>
+                                                <th>Tävling</th>
+                                                <th>Plats</th>
+                                                <th>Klass</th>
+                                                <th class="gs-text-center">Placering</th>
+                                                <th class="gs-text-center">Tid</th>
+                                                <th class="gs-text-center">Poäng</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <?php foreach ($yearResults as $result): ?>
+                                                <?php
+                                                // Skip DNS (Did Not Start) - don't show these events
+                                                if ($result['status'] === 'dns') continue;
+                                                ?>
+                                                <tr>
+                                                    <td><?= date('Y-m-d', strtotime($result['event_date'])) ?></td>
+                                                    <td>
+                                                        <?php if ($result['event_id']): ?>
+                                                            <a href="/event.php?id=<?= $result['event_id'] ?>" class="gs-link">
+                                                                <strong><?= h($result['event_name']) ?></strong>
+                                                            </a>
+                                                        <?php else: ?>
+                                                            <strong><?= h($result['event_name']) ?></strong>
+                                                        <?php endif; ?>
+                                                        <?php if ($result['series_name']): ?>
+                                                            <br><span class="gs-badge gs-badge-primary gs-badge-xs"><?= h($result['series_name']) ?></span>
+                                                        <?php endif; ?>
+                                                    </td>
+                                                    <td>
+                                                        <?php if ($result['event_location']): ?>
+                                                            <?= h($result['event_location']) ?>
+                                                        <?php elseif ($result['venue_city']): ?>
+                                                            <?= h($result['venue_city']) ?>
+                                                        <?php else: ?>
+                                                            -
+                                                        <?php endif; ?>
+                                                    </td>
+                                                    <td><?= h($result['class_display_name'] ?? $result['class_name'] ?? '-') ?></td>
+                                                    <td class="gs-text-center">
+                                                        <?php
+                                                        $awardsPoints = $result['awards_points'] ?? 1;
+                                                        $displayPos = ($result['status'] === 'finished' && $awardsPoints) ? ($result['class_position'] ?? null) : null;
+                                                        ?>
+                                                        <?php if ($result['status'] === 'dnf'): ?>
+                                                            <span class="gs-badge gs-badge-danger">DNF</span>
+                                                        <?php elseif ($displayPos): ?>
+                                                            <?php if ($displayPos == 1): ?>
+                                                                <span class="gs-badge gs-badge-success">🥇 1</span>
+                                                            <?php elseif ($displayPos == 2): ?>
+                                                                <span class="gs-badge gs-badge-secondary">🥈 2</span>
+                                                            <?php elseif ($displayPos == 3): ?>
+                                                                <span class="gs-badge gs-badge-warning">🥉 3</span>
+                                                            <?php else: ?>
+                                                                <span><?= $displayPos ?></span>
+                                                            <?php endif; ?>
+                                                        <?php elseif ($result['status'] === 'finished' && !$awardsPoints): ?>
+                                                            <span class="gs-text-secondary" style="font-size: 0.75rem;">Ej tävling</span>
+                                                        <?php else: ?>
+                                                            -
+                                                        <?php endif; ?>
+                                                    </td>
+                                                    <td class="gs-text-center">
+                                                        <?php
+                                                        if ($result['finish_time']) {
+                                                            // Format time: remove leading hours if 0
+                                                            $time = $result['finish_time'];
+                                                            // Check if time starts with "00:" or "0:"
+                                                            if (preg_match('/^0?0:/', $time)) {
+                                                                // Remove leading "00:" or "0:"
+                                                                $time = preg_replace('/^0?0:/', '', $time);
+                                                            }
+                                                            echo h($time);
+                                                        } else {
+                                                            echo '-';
+                                                        }
+                                                        ?>
+                                                    </td>
+                                                    <td class="gs-text-center">
+                                                        <?php if ($awardsPoints): ?>
+                                                            <?= $result['points'] ?? 0 ?>
+                                                        <?php else: ?>
+                                                            <span class="gs-text-secondary">-</span>
+                                                        <?php endif; ?>
+                                                    </td>
+                                                </tr>
+                                            <?php endforeach; ?>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                    <?php else: ?>
+                        <div class="gs-empty-state gs-text-center gs-py-xl">
+                            <i data-lucide="list" class="gs-empty-icon"></i>
+                            <h3 class="gs-h4 gs-mb-sm">Inga resultat ännu</h3>
+                            <p class="gs-text-secondary">
+                                Denna deltagare har inte några tävlingsresultat uppladdat.
+                            </p>
+                        </div>
+                    <?php endif; ?>
+                </div>
+
+            </div><!-- End Main Profile Tabs card -->
+
+            <!-- CSS for main tabs and styling -->
+            <style>
+                /* Main Profile Tabs */
+                .gs-main-tabs {
+                    display: flex;
+                    gap: 0.5rem;
+                    border-bottom: 3px solid var(--gs-gray-200);
+                    margin-bottom: 2rem;
+                    overflow-x: auto;
+                }
+
+                .gs-main-tab {
+                    padding: 1rem 1.5rem;
+                    background: none;
+                    border: none;
+                    border-bottom: 4px solid transparent;
+                    margin-bottom: -3px;
+                    cursor: pointer;
+                    font-weight: 600;
+                    font-size: 1rem;
+                    color: var(--gs-text-secondary);
+                    transition: all 0.2s;
+                    white-space: nowrap;
+                    display: flex;
+                    align-items: center;
+                    gap: 0.5rem;
+                }
+
+                .gs-main-tab:hover {
+                    color: var(--gs-primary);
+                    background: var(--gs-gray-50);
+                }
+
+                .gs-main-tab.active {
+                    color: var(--gs-primary);
+                    border-bottom-color: var(--gs-primary);
+                }
+
+                .gs-main-tab i {
+                    width: 20px;
+                    height: 20px;
+                }
+
+                .gs-main-tab-content {
+                    display: none;
+                    animation: fadeIn 0.3s ease-in;
+                }
+
+                .gs-main-tab-content.active {
+                    display: block;
+                }
+
+                @keyframes fadeIn {
+                    from { opacity: 0; }
+                    to { opacity: 1; }
+                }
+
+                /* Table footer styling */
+                .gs-table-footer {
+                    background: var(--gs-gray-50);
+                    font-weight: bold;
+                    border-top: 2px solid var(--gs-gray-300);
+                }
+
+                /* Compact table styling */
+                .gs-table-compact {
+                    font-size: 0.9rem;
+                }
+
+                .gs-table-compact th,
+                .gs-table-compact td {
+                    padding: 0.5rem;
+                }
+
+                /* Badge sizes */
+                .gs-badge-xs {
+                    font-size: 0.65rem;
+                    padding: 0.125rem 0.375rem;
+                }
+
+                .gs-badge-lg {
+                    font-size: 1rem;
+                    padding: 0.5rem 1rem;
+                }
+
+                /* Empty state */
+                .gs-empty-icon {
+                    width: 64px;
+                    height: 64px;
+                    opacity: 0.3;
+                    margin-bottom: 1rem;
+                }
+
+                /* Mobile responsive for main tabs */
+                @media (max-width: 767px) {
+                    .gs-main-tabs {
+                        gap: 0.25rem;
+                        border-bottom-width: 2px;
+                    }
+
+                    .gs-main-tab {
+                        padding: 0.75rem 0.5rem;
+                        font-size: 0.75rem;
+                        border-bottom-width: 3px;
+                        margin-bottom: -2px;
+                    }
+
+                    .gs-main-tab i {
+                        width: 16px;
+                        height: 16px;
+                    }
+
+                    /* Stack badge */
+                    .gs-badge-lg {
+                        font-size: 0.875rem;
+                        padding: 0.375rem 0.75rem;
+                    }
+                }
+
                 /* Ranking stats grid */
                 .gs-ranking-stats-grid {
                     display: grid;
@@ -999,8 +1625,25 @@ try {
                 </style>
 
                 <script>
-                // Tab functionality
+                // Main tab functionality
                 document.addEventListener('DOMContentLoaded', function() {
+                    // Main profile tabs
+                    const mainTabs = document.querySelectorAll('.gs-main-tab');
+                    mainTabs.forEach(tab => {
+                        tab.addEventListener('click', function() {
+                            const targetId = this.dataset.mainTab;
+
+                            // Remove active class from all main tabs and content
+                            document.querySelectorAll('.gs-main-tab').forEach(t => t.classList.remove('active'));
+                            document.querySelectorAll('.gs-main-tab-content').forEach(c => c.classList.remove('active'));
+
+                            // Add active class to clicked tab and corresponding content
+                            this.classList.add('active');
+                            document.getElementById(targetId).classList.add('active');
+                        });
+                    });
+
+                    // Sub-tabs (discipline tabs within ranking)
                     const tabs = document.querySelectorAll('.gs-tab');
                     tabs.forEach(tab => {
                         tab.addEventListener('click', function() {
@@ -1017,148 +1660,6 @@ try {
                     });
                 });
                 </script>
-            <?php endif; ?>
-
-            <?php if (empty($results)): ?>
-                <!-- No Results -->
-                <div class="gs-card gs-empty-state">
-                    <i data-lucide="trophy" class="gs-empty-icon"></i>
-                    <h3 class="gs-h4 gs-mb-sm">Inga resultat ännu</h3>
-                    <p class="gs-text-secondary">
-                        Denna deltagare har inte några tävlingsresultat uppladdat.
-                    </p>
-                </div>
-            <?php else: ?>
-                <!-- Results by Year -->
-                <div class="gs-card gs-mb-xl">
-                    <div class="gs-card-header">
-                        <h2 class="gs-h4 gs-text-primary">
-                            <i data-lucide="trophy"></i>
-                            Tävlingsresultat (<?= $totalRaces ?>)
-                        </h2>
-                    </div>
-                    <div class="gs-card-content">
-                        <?php foreach ($resultsByYear as $year => $yearResults): ?>
-                            <div class="gs-mb-xl">
-                                <h3 class="gs-h5 gs-text-primary gs-mb-md">
-                                    <i data-lucide="calendar"></i>
-                                    <?= $year ?> (<?= count($yearResults) ?> lopp)
-                                </h3>
-
-                                <div class="gs-table-responsive">
-                                    <table class="gs-table">
-                                        <thead>
-                                            <tr>
-                                                <th>Datum</th>
-                                                <th>Tävling</th>
-                                                <th>Plats</th>
-                                                <th>Serie</th>
-                                                <th class="gs-text-center">Placering</th>
-                                                <th class="gs-text-center">Tid</th>
-                                                <th class="gs-text-center">Poäng</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            <?php foreach ($yearResults as $result): ?>
-                                                <?php
-                                                // Skip DNS (Did Not Start) - don't show these events
-                                                if ($result['status'] === 'dns') continue;
-                                                ?>
-                                                <tr>
-                                                    <td><?= date('Y-m-d', strtotime($result['event_date'])) ?></td>
-                                                    <td>
-                                                        <?php if ($result['event_id']): ?>
-                                                            <a href="/event.php?id=<?= $result['event_id'] ?>" class="gs-link">
-                                                                <strong><?= h($result['event_name']) ?></strong>
-                                                            </a>
-                                                        <?php else: ?>
-                                                            <strong><?= h($result['event_name']) ?></strong>
-                                                        <?php endif; ?>
-                                                        <?php if ($result['venue_name']): ?>
-                                                            <br><span class="gs-text-xs gs-text-secondary">
-                                                                <i data-lucide="map-pin"></i>
-                                                                <?= h($result['venue_name']) ?>
-                                                            </span>
-                                                        <?php endif; ?>
-                                                    </td>
-                                                    <td>
-                                                        <?php if ($result['event_location']): ?>
-                                                            <?= h($result['event_location']) ?>
-                                                        <?php elseif ($result['venue_city']): ?>
-                                                            <?= h($result['venue_city']) ?>
-                                                        <?php else: ?>
-                                                            -
-                                                        <?php endif; ?>
-                                                    </td>
-                                                    <td>
-                                                        <?php if ($result['series_name'] && $result['series_id']): ?>
-                                                            <a href="/series-standings.php?id=<?= $result['series_id'] ?>" class="gs-badge gs-badge-primary gs-badge-sm">
-                                                                <?= h($result['series_name']) ?>
-                                                            </a>
-                                                        <?php elseif ($result['series_name']): ?>
-                                                            <span class="gs-badge gs-badge-primary gs-badge-sm">
-                                                                <?= h($result['series_name']) ?>
-                                                            </span>
-                                                        <?php else: ?>
-                                                            -
-                                                        <?php endif; ?>
-                                                    </td>
-                                                    <td class="gs-text-center">
-                                                        <?php
-                                                        $awardsPoints = $result['awards_points'] ?? 1;
-                                                        $displayPos = ($result['status'] === 'finished' && $awardsPoints) ? ($result['class_position'] ?? null) : null;
-                                                        ?>
-                                                        <?php if ($result['status'] === 'dnf'): ?>
-                                                            <span class="gs-badge gs-badge-danger">DNF</span>
-                                                        <?php elseif ($displayPos): ?>
-                                                            <?php if ($displayPos == 1): ?>
-                                                                <span class="gs-badge gs-badge-success">🥇 1</span>
-                                                            <?php elseif ($displayPos == 2): ?>
-                                                                <span class="gs-badge gs-badge-secondary">🥈 2</span>
-                                                            <?php elseif ($displayPos == 3): ?>
-                                                                <span class="gs-badge gs-badge-warning">🥉 3</span>
-                                                            <?php else: ?>
-                                                                <span><?= $displayPos ?></span>
-                                                            <?php endif; ?>
-                                                        <?php elseif ($result['status'] === 'finished' && !$awardsPoints): ?>
-                                                            <span class="gs-text-secondary" style="font-size: 0.75rem;">Ej tävling</span>
-                                                        <?php else: ?>
-                                                            -
-                                                        <?php endif; ?>
-                                                    </td>
-                                                    <td class="gs-text-center">
-                                                        <?php
-                                                        if ($result['finish_time']) {
-                                                            // Format time: remove leading hours if 0
-                                                            $time = $result['finish_time'];
-                                                            // Check if time starts with "00:" or "0:"
-                                                            if (preg_match('/^0?0:/', $time)) {
-                                                                // Remove leading "00:" or "0:"
-                                                                $time = preg_replace('/^0?0:/', '', $time);
-                                                            }
-                                                            echo h($time);
-                                                        } else {
-                                                            echo '-';
-                                                        }
-                                                        ?>
-                                                    </td>
-                                                    <td class="gs-text-center">
-                                                        <?php if ($awardsPoints): ?>
-                                                            <?= $result['points'] ?? 0 ?>
-                                                        <?php else: ?>
-                                                            <span class="gs-text-secondary">-</span>
-                                                        <?php endif; ?>
-                                                    </td>
-                                                </tr>
-                                            <?php endforeach; ?>
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        <?php endforeach; ?>
-                    </div>
-                </div>
-            <?php endif; ?>
         </div>
     </main>
 
