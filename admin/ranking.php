@@ -45,18 +45,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if (isset($_POST['calculate'])) {
         // Run full ranking update (lightweight on-the-fly calculation with snapshots)
-        try {
-            $stats = runFullRankingUpdate($db, false);
+        // Show progress output to prevent browser timeout
+        echo "<!DOCTYPE html><html><head><title>Ranking Calculation</title></head><body>";
+        echo "<h1>Calculating Rankings...</h1>";
+        echo "<div style='font-family: monospace; padding: 20px;'>";
+        flush();
 
-            $message = "Beräkning klar på {$stats['total_time']}s! ";
-            $message .= "Rankade åkare: Enduro {$stats['enduro']['riders']}, DH {$stats['dh']['riders']}, Gravity {$stats['gravity']['riders']}. ";
-            $message .= "Rankade klubbar: Enduro {$stats['enduro']['clubs']}, DH {$stats['dh']['clubs']}, Gravity {$stats['gravity']['clubs']}.";
-            $messageType = 'success';
+        try {
+            $stats = runFullRankingUpdate($db, true);
+
+            echo "</div>";
+            echo "<h2 style='color: green;'>✅ Beräkning Klar!</h2>";
+            echo "<p><strong>Tid:</strong> {$stats['total_time']}s</p>";
+            echo "<p><strong>Åkare:</strong> Enduro {$stats['enduro']['riders']}, DH {$stats['dh']['riders']}, Gravity {$stats['gravity']['riders']}</p>";
+            echo "<p><strong>Klubbar:</strong> Enduro {$stats['enduro']['clubs']}, DH {$stats['dh']['clubs']}, Gravity {$stats['gravity']['clubs']}</p>";
+            echo "<p><a href='/admin/ranking.php'>← Tillbaka till Ranking Admin</a> | <a href='/ranking/'>Visa Ranking →</a></p>";
+            echo "</body></html>";
+            exit;
         } catch (Exception $e) {
-            $message = "FEL vid beräkning: " . $e->getMessage() . "\n\nStack trace:\n" . $e->getTraceAsString();
-            $messageType = 'error';
+            echo "</div>";
+            echo "<h2 style='color: red;'>❌ Fel vid beräkning</h2>";
+            echo "<pre>" . htmlspecialchars($e->getMessage()) . "\n\n" . htmlspecialchars($e->getTraceAsString()) . "</pre>";
+            echo "<p><a href='/admin/ranking.php'>← Tillbaka</a></p>";
+            echo "</body></html>";
             error_log("Ranking calculation error: " . $e->getMessage());
             error_log($e->getTraceAsString());
+            exit;
         }
 
     } elseif (isset($_POST['save_multipliers'])) {
