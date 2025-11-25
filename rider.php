@@ -1085,6 +1085,9 @@ try {
                                     // DEBUG: Show what we have
                                     if ($riderId == 7726) {
                                         echo "<!-- DEBUG: disc=$disc, rankingRaceDetails count=" . count($rankingRaceDetails[$disc] ?? []) . " -->\n";
+                                        if (!empty($rankingRaceDetails[$disc])) {
+                                            echo "<!-- DEBUG: First event: " . json_encode($rankingRaceDetails[$disc][0] ?? []) . " -->\n";
+                                        }
                                     }
                                     ?>
                                     <?php if (!empty($rankingRaceDetails[$disc])): ?>
