@@ -192,23 +192,16 @@ function calculateRankingData($db, $discipline = null, $debug = false) {
             ) as original_points,
             e.date as event_date,
             e.discipline,
-            COALESCE(e.event_level, 'national') as event_level,
-            rd.firstname,
-            rd.lastname,
-            rd.club_id,
-            c.name as club_name
+            COALESCE(e.event_level, 'national') as event_level
         FROM results r
-        JOIN events e ON r.event_id = e.id
-        JOIN riders rd ON r.cyclist_id = rd.id
-        LEFT JOIN clubs c ON rd.club_id = c.id
-        JOIN classes cl ON r.class_id = cl.id
+        STRAIGHT_JOIN events e ON r.event_id = e.id
+        STRAIGHT_JOIN classes cl ON r.class_id = cl.id
         WHERE r.status = 'finished'
         AND (r.points > 0 OR COALESCE(r.run_1_points, 0) > 0 OR COALESCE(r.run_2_points, 0) > 0)
         AND e.date >= ?
         {$disciplineFilter}
         AND COALESCE(cl.series_eligible, 1) = 1
         AND COALESCE(cl.awards_points, 1) = 1
-        ORDER BY e.date DESC
     ", $params);
 
     if ($debug) {
@@ -230,6 +223,33 @@ function calculateRankingData($db, $discipline = null, $debug = false) {
             $fieldSizes[$key] = 0;
         }
         $fieldSizes[$key]++;
+    }
+
+    // Get rider info separately (more efficient)
+    if ($debug) {
+        echo "<p>👥 Fetching rider information...</p>";
+        flush();
+    }
+
+    $riderIds = array_unique(array_column($results, 'rider_id'));
+    $riderInfo = [];
+    if (!empty($riderIds)) {
+        $placeholders = implode(',', array_fill(0, count($riderIds), '?'));
+        $riders = $db->getAll("
+            SELECT r.id, r.firstname, r.lastname, r.club_id, c.name as club_name
+            FROM riders r
+            LEFT JOIN clubs c ON r.club_id = c.id
+            WHERE r.id IN ($placeholders)
+        ", $riderIds);
+
+        foreach ($riders as $rider) {
+            $riderInfo[$rider['id']] = $rider;
+        }
+    }
+
+    if ($debug) {
+        echo "<p>🧮 Processing " . count($results) . " results...</p>";
+        flush();
     }
 
     // Calculate ranking points for each result
@@ -264,12 +284,13 @@ function calculateRankingData($db, $discipline = null, $debug = false) {
 
         // Initialize rider data if needed
         if (!isset($riderData[$riderId])) {
+            $info = $riderInfo[$riderId] ?? ['firstname' => '', 'lastname' => '', 'club_id' => null, 'club_name' => null];
             $riderData[$riderId] = [
                 'rider_id' => $riderId,
-                'firstname' => $result['firstname'],
-                'lastname' => $result['lastname'],
-                'club_id' => $result['club_id'],
-                'club_name' => $result['club_name'],
+                'firstname' => $info['firstname'],
+                'lastname' => $info['lastname'],
+                'club_id' => $info['club_id'],
+                'club_name' => $info['club_name'],
                 'total_points' => 0,
                 'points_12' => 0,
                 'points_13_24' => 0,
