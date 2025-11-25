@@ -158,7 +158,7 @@ include __DIR__ . '/../includes/layout-header.php';
                         elseif ($rider['ranking_position'] == 2) $rankClass = 'rank-2';
                         elseif ($rider['ranking_position'] == 3) $rankClass = 'rank-3';
                         ?>
-                        <div class="gs-ranking-card <?= $rankClass ?>">
+                        <a href="/ranking/rider.php?id=<?= $rider['rider_id'] ?>&discipline=<?= $discipline ?>" class="gs-ranking-card <?= $rankClass ?>">
                             <div class="gs-rank-badge">
                                 <?php if ($rider['ranking_position'] <= 3): ?>
                                     <span class="gs-medal"><?php
@@ -200,7 +200,7 @@ include __DIR__ . '/../includes/layout-header.php';
                                     <div class="gs-position-change new">NY</div>
                                 <?php endif; ?>
                             </div>
-                        </div>
+                        </a>
                     <?php endforeach; ?>
                 </div>
 
@@ -219,7 +219,7 @@ include __DIR__ . '/../includes/layout-header.php';
                         </thead>
                         <tbody>
                             <?php foreach ($ranking['riders'] as $rider): ?>
-                                <tr>
+                                <tr class="gs-table-row-clickable" onclick="window.location.href='/ranking/rider.php?id=<?= $rider['rider_id'] ?>&discipline=<?= $discipline ?>'">
                                     <td>
                                         <?php if ($rider['ranking_position'] <= 3): ?>
                                             <span class="gs-medal-badge gs-medal-<?= $rider['ranking_position'] ?>">
@@ -560,13 +560,27 @@ include __DIR__ . '/../includes/layout-header.php';
 }
 
 .gs-ranking-card {
-    display: flex;
+    display: grid;
+    grid-template-columns: 50px 1fr auto;
     align-items: center;
-    padding: var(--gs-space-md);
+    padding: var(--gs-space-sm) var(--gs-space-md);
     background: var(--gs-white);
     border-radius: var(--gs-radius-md);
     box-shadow: var(--gs-shadow-sm);
     gap: var(--gs-space-md);
+    text-decoration: none;
+    color: inherit;
+    transition: all 0.2s;
+    cursor: pointer;
+}
+
+.gs-ranking-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--gs-shadow-md);
+}
+
+.gs-ranking-card:active {
+    transform: translateY(0);
 }
 
 .gs-ranking-card.rank-1 {
@@ -585,29 +599,30 @@ include __DIR__ . '/../includes/layout-header.php';
 }
 
 .gs-rank-badge {
-    width: 40px;
-    height: 40px;
+    width: 44px;
+    height: 44px;
     display: flex;
     align-items: center;
     justify-content: center;
     font-weight: bold;
-    font-size: 1rem;
+    font-size: 1.125rem;
     background: var(--gs-light);
-    border-radius: var(--gs-radius-sm);
+    border-radius: var(--gs-radius-md);
     flex-shrink: 0;
 }
 
 .gs-medal {
-    font-size: 1.5rem;
+    font-size: 1.75rem;
 }
 
 .gs-rider-info {
-    flex: 1;
     min-width: 0;
 }
 
 .gs-rider-name {
     font-weight: 600;
+    font-size: 0.9375rem;
+    line-height: 1.3;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -619,32 +634,38 @@ include __DIR__ . '/../includes/layout-header.php';
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    margin-top: 2px;
 }
 
 .gs-rider-stats {
     text-align: right;
-    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
 }
 
 .gs-rider-points {
     font-weight: bold;
-    font-size: 1.125rem;
+    font-size: 1.25rem;
     color: var(--gs-primary);
+    line-height: 1;
 }
 
 .gs-rider-points-label {
     font-size: 0.625rem;
     color: var(--gs-text-secondary);
     text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
 .gs-position-change {
     font-size: 0.75rem;
-    display: flex;
+    display: none; /* Hidden in portrait */
     align-items: center;
     justify-content: flex-end;
     gap: 2px;
-    margin-top: 2px;
+    font-weight: 600;
 }
 
 .gs-position-change i {
@@ -702,6 +723,15 @@ include __DIR__ . '/../includes/layout-header.php';
     border-bottom: none;
 }
 
+.gs-table-row-clickable {
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.gs-table-row-clickable:hover {
+    background-color: var(--gs-primary-light);
+}
+
 .gs-medal-badge {
     display: inline-block;
     font-size: 1.25rem;
@@ -749,6 +779,30 @@ include __DIR__ . '/../includes/layout-header.php';
 .gs-pagination-info {
     font-size: 0.875rem;
     color: var(--gs-text-secondary);
+}
+
+/* Landscape mobile - show position changes */
+@media (min-width: 568px) and (max-width: 767px) {
+    .gs-position-change {
+        display: flex;
+    }
+
+    .gs-ranking-card {
+        grid-template-columns: 50px 1fr auto auto;
+        gap: var(--gs-space-sm);
+    }
+
+    .gs-rider-stats {
+        flex-direction: row;
+        gap: var(--gs-space-md);
+        align-items: center;
+    }
+
+    .gs-position-change {
+        padding: 4px 8px;
+        background: var(--gs-light);
+        border-radius: var(--gs-radius-sm);
+    }
 }
 
 /* Desktop view */
