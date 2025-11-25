@@ -1187,6 +1187,11 @@ try {
                                                                         </div>
                                                                     </td>
                                                                     <td class="gs-text-right gs-text-primary gs-font-bold" style="font-size: 0.75rem;">
+                                                                        <?php if ($riderId == 7726): ?>
+                                                                            <span style="background: yellow; color: red; padding: 2px;">
+                                                                                [<?= $raceDetail['ranking_points'] ?? 'NULL' ?>]
+                                                                            </span>
+                                                                        <?php endif; ?>
                                                                         <?= number_format($raceDetail['ranking_points'] ?? 0, 0) ?>p
                                                                     </td>
                                                                     <td class="gs-text-right show-mobile-landscape" style="display: none; font-size: 0.7rem; white-space: nowrap;">
