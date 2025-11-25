@@ -76,19 +76,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif (isset($_POST['save_multipliers'])) {
         // Save field multipliers
         $multipliers = [];
-        for ($i = 1; $i <= 26; $i++) {
+        for ($i = 1; $i <= 15; $i++) {
             $key = "mult_$i";
             if (isset($_POST[$key])) {
                 $multipliers[$i] = max(0, min(1, (float)$_POST[$key]));
             }
         }
 
-        if (count($multipliers) === 26) {
+        if (count($multipliers) === 15) {
             saveFieldMultipliers($db, $multipliers);
             $message = 'Fältstorleksmultiplikatorer sparade.';
             $messageType = 'success';
         } else {
-            $message = 'Alla 26 multiplikatorer måste anges.';
+            $message = 'Alla 15 multiplikatorer måste anges.';
             $messageType = 'error';
         }
 
@@ -347,7 +347,7 @@ flush();
 
                     <!-- Visual bar chart -->
                     <div class="gs-mb-lg" style="height: 120px; display: flex; align-items: flex-end; gap: 2px;">
-                        <?php for ($i = 1; $i <= 26; $i++): ?>
+                        <?php for ($i = 1; $i <= 15; $i++): ?>
                             <?php $value = $multipliers[$i] ?? 0.75; ?>
                             <div style="flex: 1; display: flex; flex-direction: column; align-items: center;">
                                 <div id="bar_<?= $i ?>"
@@ -359,11 +359,11 @@ flush();
                     </div>
 
                     <!-- Input grid -->
-                    <div style="display: grid; grid-template-columns: repeat(13, 1fr); gap: 4px; font-size: 0.75rem;">
-                        <?php for ($i = 1; $i <= 26; $i++): ?>
+                    <div style="display: grid; grid-template-columns: repeat(15, 1fr); gap: 4px; font-size: 0.75rem;">
+                        <?php for ($i = 1; $i <= 15; $i++): ?>
                             <div style="text-align: center;">
                                 <label style="display: block; color: var(--gs-text-secondary); margin-bottom: 2px;">
-                                    <?= $i === 26 ? '26+' : $i ?>
+                                    <?= $i === 15 ? '15+' : $i ?>
                                 </label>
                                 <input type="number"
                                        name="mult_<?= $i ?>"
@@ -533,7 +533,7 @@ flush();
 /* Specific mobile styles for field multipliers */
 @media (max-width: 767px) {
     /* Reduce multipliers grid to 5 columns on mobile */
-    #multipliersForm [style*="grid-template-columns: repeat(13"] {
+    #multipliersForm [style*="grid-template-columns: repeat(15"] {
         grid-template-columns: repeat(5, 1fr) !important;
     }
 
@@ -564,7 +564,7 @@ flush();
     }
 
     /* Reduce multipliers to 8 columns on tablet */
-    #multipliersForm [style*="grid-template-columns: repeat(13"] {
+    #multipliersForm [style*="grid-template-columns: repeat(15"] {
         grid-template-columns: repeat(8, 1fr) !important;
     }
 
@@ -601,7 +601,7 @@ function updateBar(index, value) {
 
 // Initialize bars on page load
 document.addEventListener('DOMContentLoaded', function() {
-    for (let i = 1; i <= 26; i++) {
+    for (let i = 1; i <= 15; i++) {
         const bar = document.getElementById('bar_' + i);
         if (bar) {
             const value = parseFloat(bar.dataset.value) || 0.75;
