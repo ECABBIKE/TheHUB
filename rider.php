@@ -310,6 +310,8 @@ if ($totalRaces > 0) {
 $rankingStats = [];
 $rankingHistory = [];
 $rankingRaceDetails = [];
+$defaultDiscipline = null; // Auto-select based on priority
+
 try {
     foreach (['ENDURO', 'DH', 'GRAVITY'] as $discipline) {
         $riderData = calculateRankingData($db, $discipline, false);
@@ -353,6 +355,15 @@ try {
             AND e.date >= DATE_SUB(NOW(), INTERVAL 24 MONTH)
             ORDER BY e.date DESC
         ", [$riderId, $discipline]);
+    }
+
+    // Determine default discipline based on priority: GRAVITY > ENDURO > DH
+    if (!empty($rankingStats['GRAVITY'])) {
+        $defaultDiscipline = 'GRAVITY';
+    } elseif (!empty($rankingStats['ENDURO'])) {
+        $defaultDiscipline = 'ENDURO';
+    } elseif (!empty($rankingStats['DH'])) {
+        $defaultDiscipline = 'DH';
     }
 } catch (Exception $e) {
     error_log("Error getting ranking stats for rider {$riderId}: " . $e->getMessage());
@@ -732,23 +743,25 @@ try {
 
             <!-- Main Profile Tabs -->
             <div class="gs-card gs-mb-xl">
-                <div class="gs-main-tabs gs-mb-lg">
-                    <button class="gs-main-tab active" data-main-tab="ranking-tab">
-                        <i data-lucide="trending-up"></i>
-                        Ranking
-                    </button>
-                    <button class="gs-main-tab" data-main-tab="gravity-total-tab">
-                        <i data-lucide="trophy"></i>
-                        GravitySeries Total
-                    </button>
-                    <button class="gs-main-tab" data-main-tab="gravity-team-tab">
-                        <i data-lucide="users"></i>
-                        GravitySeries Team
-                    </button>
-                    <button class="gs-main-tab" data-main-tab="results-tab">
-                        <i data-lucide="list"></i>
-                        Tävlingsresultat
-                    </button>
+                <div class="gs-event-tabs-wrapper gs-mb-lg">
+                    <div class="gs-event-tabs">
+                        <button class="gs-event-tab active" data-main-tab="ranking-tab">
+                            <i data-lucide="trending-up"></i>
+                            Ranking
+                        </button>
+                        <button class="gs-event-tab" data-main-tab="gravity-total-tab">
+                            <i data-lucide="trophy"></i>
+                            GravitySeries Total
+                        </button>
+                        <button class="gs-event-tab" data-main-tab="gravity-team-tab">
+                            <i data-lucide="users"></i>
+                            GravitySeries Team
+                        </button>
+                        <button class="gs-event-tab" data-main-tab="results-tab">
+                            <i data-lucide="list"></i>
+                            Tävlingsresultat
+                        </button>
+                    </div>
                 </div>
 
                 <!-- Tab 1: Ranking -->
@@ -763,7 +776,7 @@ try {
                         <div class="gs-tabs gs-mb-lg">
                             <?php foreach (['GRAVITY' => 'Gravity', 'ENDURO' => 'Enduro', 'DH' => 'Downhill'] as $disc => $label): ?>
                                 <?php if (isset($rankingStats[$disc])): ?>
-                                    <button class="gs-tab <?= $disc === 'GRAVITY' ? 'active' : '' ?>" data-tab="ranking-<?= strtolower($disc) ?>">
+                                    <button class="gs-tab <?= $disc === $defaultDiscipline ? 'active' : '' ?>" data-tab="ranking-<?= strtolower($disc) ?>">
                                         <?= $label ?>
                                     </button>
                                 <?php endif; ?>
@@ -774,7 +787,7 @@ try {
                         <?php foreach (['GRAVITY' => 'Gravity', 'ENDURO' => 'Enduro', 'DH' => 'Downhill'] as $disc => $label): ?>
                             <?php if (isset($rankingStats[$disc])): ?>
                                 <?php $stats = $rankingStats[$disc]; ?>
-                                <div class="gs-tab-content <?= $disc === 'GRAVITY' ? 'active' : '' ?>" id="ranking-<?= strtolower($disc) ?>">
+                                <div class="gs-tab-content <?= $disc === $defaultDiscipline ? 'active' : '' ?>" id="ranking-<?= strtolower($disc) ?>">
 
                                     <!-- Stats Grid -->
                                     <div class="gs-ranking-stats-grid gs-mb-lg">
@@ -1257,45 +1270,9 @@ try {
 
             <!-- CSS for main tabs and styling -->
             <style>
-                /* Main Profile Tabs */
-                .gs-main-tabs {
-                    display: flex;
-                    gap: 0.5rem;
-                    border-bottom: 3px solid var(--gs-gray-200);
-                    margin-bottom: 2rem;
-                    overflow-x: auto;
-                }
-
-                .gs-main-tab {
-                    padding: 1rem 1.5rem;
-                    background: none;
-                    border: none;
-                    border-bottom: 4px solid transparent;
-                    margin-bottom: -3px;
+                /* Main Profile Tabs - using event-tab style */
+                .gs-event-tab {
                     cursor: pointer;
-                    font-weight: 600;
-                    font-size: 1rem;
-                    color: var(--gs-text-secondary);
-                    transition: all 0.2s;
-                    white-space: nowrap;
-                    display: flex;
-                    align-items: center;
-                    gap: 0.5rem;
-                }
-
-                .gs-main-tab:hover {
-                    color: var(--gs-primary);
-                    background: var(--gs-gray-50);
-                }
-
-                .gs-main-tab.active {
-                    color: var(--gs-primary);
-                    border-bottom-color: var(--gs-primary);
-                }
-
-                .gs-main-tab i {
-                    width: 20px;
-                    height: 20px;
                 }
 
                 .gs-main-tab-content {
@@ -1627,14 +1604,14 @@ try {
                 <script>
                 // Main tab functionality
                 document.addEventListener('DOMContentLoaded', function() {
-                    // Main profile tabs
-                    const mainTabs = document.querySelectorAll('.gs-main-tab');
+                    // Main profile tabs (using gs-event-tab for main tabs)
+                    const mainTabs = document.querySelectorAll('.gs-event-tab[data-main-tab]');
                     mainTabs.forEach(tab => {
                         tab.addEventListener('click', function() {
                             const targetId = this.dataset.mainTab;
 
                             // Remove active class from all main tabs and content
-                            document.querySelectorAll('.gs-main-tab').forEach(t => t.classList.remove('active'));
+                            document.querySelectorAll('.gs-event-tab[data-main-tab]').forEach(t => t.classList.remove('active'));
                             document.querySelectorAll('.gs-main-tab-content').forEach(c => c.classList.remove('active'));
 
                             // Add active class to clicked tab and corresponding content
