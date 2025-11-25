@@ -1191,9 +1191,13 @@ try {
                                                                 <tr>
                                                                     <td class="gs-text-center">
                                                                         <?php if (!empty($raceDetail['position'])): ?>
-                                                                            <span class="gs-badge <?= $raceDetail['position'] == 1 ? 'gs-badge-warning' : ($raceDetail['position'] <= 3 ? 'gs-badge-success' : 'gs-badge-secondary') ?>" style="font-size: 0.7rem; padding: 0.15rem 0.3rem;">
-                                                                                #<?= $raceDetail['position'] ?>
-                                                                            </span>
+                                                                            <?php
+                                                                            $pos = $raceDetail['position'];
+                                                                            if ($pos == 1) echo '<span class="gs-badge gs-badge-success" style="font-size: 0.7rem; padding: 0.15rem 0.3rem;">🥇 1</span>';
+                                                                            elseif ($pos == 2) echo '<span class="gs-badge gs-badge-secondary" style="font-size: 0.7rem; padding: 0.15rem 0.3rem;">🥈 2</span>';
+                                                                            elseif ($pos == 3) echo '<span class="gs-badge gs-badge-warning" style="font-size: 0.7rem; padding: 0.15rem 0.3rem;">🥉 3</span>';
+                                                                            else echo '<span class="gs-badge gs-badge-secondary" style="font-size: 0.7rem; padding: 0.15rem 0.3rem;">#' . $pos . '</span>';
+                                                                            ?>
                                                                         <?php else: ?>
                                                                             <span class="gs-text-secondary">-</span>
                                                                         <?php endif; ?>
