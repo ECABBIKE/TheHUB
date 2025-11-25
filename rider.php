@@ -410,21 +410,114 @@ try {
         ", [$riderId, $discipline]);
 
         // Get detailed ranking points per race (last 24 months)
-        $rankingRaceDetails[$discipline] = $db->getAll("
+        // Calculate live from results since ranking_points table might be empty
+        $disciplineFilter = '';
+        $params = [$riderId];
+
+        if ($discipline === 'GRAVITY') {
+            $disciplineFilter = "AND e.discipline IN ('ENDURO', 'DH')";
+        } else {
+            $disciplineFilter = "AND e.discipline = ?";
+            $params[] = $discipline;
+        }
+
+        $rawResults = $db->getAll("
             SELECT
-                rp.*,
+                r.cyclist_id as rider_id,
+                r.event_id,
+                r.class_id,
+                r.position,
+                COALESCE(
+                    CASE
+                        WHEN COALESCE(r.run_1_points, 0) > 0 OR COALESCE(r.run_2_points, 0) > 0
+                        THEN COALESCE(r.run_1_points, 0) + COALESCE(r.run_2_points, 0)
+                        ELSE r.points
+                    END,
+                    r.points
+                ) as original_points,
                 e.name as event_name,
                 e.date as event_date,
                 e.location as event_location,
+                e.discipline,
+                COALESCE(e.event_level, 'national') as event_level,
                 cls.display_name as class_name
-            FROM ranking_points rp
-            JOIN events e ON rp.event_id = e.id
-            LEFT JOIN classes cls ON rp.class_id = cls.id
-            WHERE rp.rider_id = ?
-            AND rp.discipline = ?
+            FROM results r
+            JOIN events e ON r.event_id = e.id
+            LEFT JOIN classes cls ON r.class_id = cls.id
+            WHERE r.cyclist_id = ?
+            AND r.status = 'finished'
+            AND (r.points > 0 OR COALESCE(r.run_1_points, 0) > 0 OR COALESCE(r.run_2_points, 0) > 0)
             AND e.date >= DATE_SUB(NOW(), INTERVAL 24 MONTH)
+            {$disciplineFilter}
+            AND COALESCE(cls.series_eligible, 1) = 1
+            AND COALESCE(cls.awards_points, 1) = 1
             ORDER BY e.date DESC
-        ", [$riderId, $discipline]);
+        ", $params);
+
+        // Calculate ranking points with multipliers
+        $fieldMultipliers = getRankingFieldMultipliers($db);
+        $eventLevelMultipliers = getEventLevelMultipliers($db);
+        $timeDecay = getRankingTimeDecay($db);
+
+        // Get field sizes for each event/class
+        $fieldSizes = [];
+        foreach ($rawResults as $result) {
+            $key = $result['event_id'] . '_' . $result['class_id'];
+            if (!isset($fieldSizes[$key])) {
+                $count = $db->getRow("
+                    SELECT COUNT(*) as cnt
+                    FROM results r
+                    LEFT JOIN classes cls ON r.class_id = cls.id
+                    WHERE r.event_id = ? AND r.class_id = ? AND r.status = 'finished'
+                    AND (r.points > 0 OR COALESCE(r.run_1_points, 0) > 0 OR COALESCE(r.run_2_points, 0) > 0)
+                    AND COALESCE(cls.series_eligible, 1) = 1
+                    AND COALESCE(cls.awards_points, 1) = 1
+                ", [$result['event_id'], $result['class_id']]);
+                $fieldSizes[$key] = $count['cnt'] ?? 1;
+            }
+        }
+
+        // Calculate ranking points for each result
+        $rankingRaceDetails[$discipline] = [];
+        foreach ($rawResults as $result) {
+            $key = $result['event_id'] . '_' . $result['class_id'];
+            $fieldSize = $fieldSizes[$key] ?? 1;
+
+            // Calculate multipliers
+            $fieldMult = getFieldMultiplier($fieldSize, $fieldMultipliers);
+            $eventLevelMult = $eventLevelMultipliers[$result['event_level']] ?? 1.00;
+
+            // Calculate time decay
+            $eventDate = new DateTime($result['event_date']);
+            $today = new DateTime();
+            $monthsDiff = $eventDate->diff($today)->m + ($eventDate->diff($today)->y * 12);
+
+            $timeMult = 0;
+            if ($monthsDiff < 12) {
+                $timeMult = $timeDecay['months_1_12'];
+            } elseif ($monthsDiff < 24) {
+                $timeMult = $timeDecay['months_13_24'];
+            } else {
+                $timeMult = $timeDecay['months_25_plus'];
+            }
+
+            // Calculate final ranking points
+            $rankingPoints = $result['original_points'] * $fieldMult * $eventLevelMult * $timeMult;
+
+            $rankingRaceDetails[$discipline][] = [
+                'event_name' => $result['event_name'],
+                'event_date' => $result['event_date'],
+                'event_location' => $result['event_location'],
+                'class_name' => $result['class_name'],
+                'position' => $result['position'],
+                'original_points' => $result['original_points'],
+                'ranking_points' => $rankingPoints,
+                'field_size' => $fieldSize,
+                'field_multiplier' => $fieldMult,
+                'event_level_multiplier' => $eventLevelMult,
+                'time_multiplier' => $timeMult
+            ];
+        }
     }
 
     // Determine default discipline based on priority: GRAVITY > ENDURO > DH
@@ -975,22 +1068,34 @@ try {
                                                             <tr>
                                                                 <th>Datum</th>
                                                                 <th>Tävling</th>
+                                                                <th class="gs-text-center">Placering</th>
                                                                 <th class="gs-text-center">Klass</th>
-                                                                <th class="gs-text-right">Poäng</th>
+                                                                <th class="gs-text-right">Event-poäng</th>
                                                                 <th class="gs-text-right">Ranking-poäng</th>
                                                             </tr>
                                                         </thead>
                                                         <tbody>
                                                             <?php foreach ($rankingRaceDetails[$disc] as $raceDetail): ?>
                                                                 <tr>
-                                                                    <td><?= date('Y-m-d', strtotime($raceDetail['event_date'])) ?></td>
+                                                                    <td class="gs-text-nowrap"><?= date('Y-m-d', strtotime($raceDetail['event_date'])) ?></td>
                                                                     <td>
                                                                         <strong><?= h($raceDetail['event_name']) ?></strong>
-                                                                        <?php if ($raceDetail['event_location']): ?>
+                                                                        <?php if (!empty($raceDetail['event_location'])): ?>
                                                                             <br><span class="gs-text-xs gs-text-secondary"><?= h($raceDetail['event_location']) ?></span>
                                                                         <?php endif; ?>
                                                                     </td>
-                                                                    <td class="gs-text-center"><?= h($raceDetail['class_name'] ?? '-') ?></td>
+                                                                    <td class="gs-text-center">
+                                                                        <?php if (!empty($raceDetail['position'])): ?>
+                                                                            <span class="gs-badge <?= $raceDetail['position'] == 1 ? 'gs-badge-warning' : ($raceDetail['position'] <= 3 ? 'gs-badge-success' : 'gs-badge-secondary') ?>">
+                                                                                #<?= $raceDetail['position'] ?>
+                                                                            </span>
+                                                                        <?php else: ?>
+                                                                            <span class="gs-text-secondary">-</span>
+                                                                        <?php endif; ?>
+                                                                    </td>
+                                                                    <td class="gs-text-center">
+                                                                        <span class="gs-text-xs"><?= h($raceDetail['class_name'] ?? '-') ?></span>
+                                                                    </td>
                                                                     <td class="gs-text-right"><?= number_format($raceDetail['original_points'], 0) ?></td>
                                                                     <td class="gs-text-right gs-text-primary gs-font-bold"><?= number_format($raceDetail['ranking_points'], 1) ?></td>
                                                                 </tr>
