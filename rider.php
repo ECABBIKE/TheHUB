@@ -1085,6 +1085,7 @@ try {
                                                                 <th>Tävling</th>
                                                                 <th class="gs-text-center hide-mobile-portrait">Placering</th>
                                                                 <th class="gs-text-center hide-mobile-portrait">Klass</th>
+                                                                <th class="gs-text-center hide-mobile-portrait">Fältstorlek</th>
                                                                 <th class="gs-text-right hide-mobile-portrait">Event-poäng</th>
                                                                 <th class="gs-text-right">Poäng</th>
                                                             </tr>
@@ -1095,6 +1096,11 @@ try {
                                                                     <td class="gs-text-nowrap hide-mobile-portrait"><?= date('Y-m-d', strtotime($raceDetail['event_date'])) ?></td>
                                                                     <td>
                                                                         <strong><?= h($raceDetail['event_name']) ?></strong>
+                                                                        <div class="gs-text-xs gs-text-secondary hide-mobile-portrait">
+                                                                            Field: <?= number_format($raceDetail['field_multiplier'], 2) ?>
+                                                                            × Event: <?= number_format($raceDetail['event_level_multiplier'], 2) ?>
+                                                                            × Time: <?= number_format($raceDetail['time_multiplier'], 2) ?>
+                                                                        </div>
                                                                     </td>
                                                                     <td class="gs-text-center hide-mobile-portrait">
                                                                         <?php if (!empty($raceDetail['position'])): ?>
@@ -1107,6 +1113,9 @@ try {
                                                                     </td>
                                                                     <td class="gs-text-center hide-mobile-portrait">
                                                                         <span class="gs-text-xs"><?= h($raceDetail['class_name'] ?? '-') ?></span>
+                                                                    </td>
+                                                                    <td class="gs-text-center hide-mobile-portrait">
+                                                                        <span class="gs-badge gs-badge-secondary"><?= $raceDetail['field_size'] ?></span>
                                                                     </td>
                                                                     <td class="gs-text-right hide-mobile-portrait"><?= number_format($raceDetail['original_points'], 0) ?></td>
                                                                     <td class="gs-text-right gs-text-primary gs-font-bold"><?= number_format($raceDetail['ranking_points'], 1) ?></td>
