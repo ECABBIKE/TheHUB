@@ -1062,29 +1062,41 @@ try {
                                                     <i data-lucide="list"></i>
                                                     Race som gett rankingpoäng
                                                 </h4>
+                                                <style>
+                                                    /* Mobile portrait: Hide extra columns */
+                                                    @media (max-width: 767px) {
+                                                        .ranking-events-table .hide-mobile-portrait {
+                                                            display: none !important;
+                                                        }
+                                                    }
+
+                                                    /* Mobile landscape and up: Show all columns */
+                                                    @media (min-width: 768px) {
+                                                        .ranking-events-table .hide-mobile-portrait {
+                                                            display: table-cell !important;
+                                                        }
+                                                    }
+                                                </style>
                                                 <div class="gs-table-responsive">
-                                                    <table class="gs-table gs-table-compact">
+                                                    <table class="gs-table gs-table-compact ranking-events-table">
                                                         <thead>
                                                             <tr>
-                                                                <th>Datum</th>
+                                                                <th class="hide-mobile-portrait">Datum</th>
                                                                 <th>Tävling</th>
-                                                                <th class="gs-text-center">Placering</th>
-                                                                <th class="gs-text-center">Klass</th>
-                                                                <th class="gs-text-right">Event-poäng</th>
-                                                                <th class="gs-text-right">Ranking-poäng</th>
+                                                                <th class="gs-text-center hide-mobile-portrait">Placering</th>
+                                                                <th class="gs-text-center hide-mobile-portrait">Klass</th>
+                                                                <th class="gs-text-right hide-mobile-portrait">Event-poäng</th>
+                                                                <th class="gs-text-right">Poäng</th>
                                                             </tr>
                                                         </thead>
                                                         <tbody>
                                                             <?php foreach ($rankingRaceDetails[$disc] as $raceDetail): ?>
                                                                 <tr>
-                                                                    <td class="gs-text-nowrap"><?= date('Y-m-d', strtotime($raceDetail['event_date'])) ?></td>
+                                                                    <td class="gs-text-nowrap hide-mobile-portrait"><?= date('Y-m-d', strtotime($raceDetail['event_date'])) ?></td>
                                                                     <td>
                                                                         <strong><?= h($raceDetail['event_name']) ?></strong>
-                                                                        <?php if (!empty($raceDetail['event_location'])): ?>
-                                                                            <br><span class="gs-text-xs gs-text-secondary"><?= h($raceDetail['event_location']) ?></span>
-                                                                        <?php endif; ?>
                                                                     </td>
-                                                                    <td class="gs-text-center">
+                                                                    <td class="gs-text-center hide-mobile-portrait">
                                                                         <?php if (!empty($raceDetail['position'])): ?>
                                                                             <span class="gs-badge <?= $raceDetail['position'] == 1 ? 'gs-badge-warning' : ($raceDetail['position'] <= 3 ? 'gs-badge-success' : 'gs-badge-secondary') ?>">
                                                                                 #<?= $raceDetail['position'] ?>
@@ -1093,10 +1105,10 @@ try {
                                                                             <span class="gs-text-secondary">-</span>
                                                                         <?php endif; ?>
                                                                     </td>
-                                                                    <td class="gs-text-center">
+                                                                    <td class="gs-text-center hide-mobile-portrait">
                                                                         <span class="gs-text-xs"><?= h($raceDetail['class_name'] ?? '-') ?></span>
                                                                     </td>
-                                                                    <td class="gs-text-right"><?= number_format($raceDetail['original_points'], 0) ?></td>
+                                                                    <td class="gs-text-right hide-mobile-portrait"><?= number_format($raceDetail['original_points'], 0) ?></td>
                                                                     <td class="gs-text-right gs-text-primary gs-font-bold"><?= number_format($raceDetail['ranking_points'], 1) ?></td>
                                                                 </tr>
                                                             <?php endforeach; ?>
@@ -1161,29 +1173,47 @@ try {
                                         <i data-lucide="list"></i>
                                         Race och poäng
                                     </h4>
+                                    <style>
+                                        /* Mobile portrait: Hide extra columns */
+                                        @media (max-width: 767px) {
+                                            .gravity-total-table .hide-mobile-portrait {
+                                                display: none !important;
+                                            }
+                                            .gravity-total-table .total-mobile-colspan {
+                                                display: table-cell !important;
+                                            }
+                                        }
+
+                                        /* Mobile landscape and up: Show all columns */
+                                        @media (min-width: 768px) {
+                                            .gravity-total-table .hide-mobile-portrait {
+                                                display: table-cell !important;
+                                            }
+                                            .gravity-total-table .total-mobile-colspan {
+                                                display: none !important;
+                                            }
+                                        }
+                                    </style>
                                     <div class="gs-table-responsive">
-                                        <table class="gs-table gs-table-compact">
+                                        <table class="gs-table gs-table-compact gravity-total-table">
                                             <thead>
                                                 <tr>
-                                                    <th>Datum</th>
+                                                    <th class="hide-mobile-portrait">Datum</th>
                                                     <th>Tävling</th>
-                                                    <th class="gs-text-center">Klass</th>
-                                                    <th class="gs-text-center">Placering</th>
+                                                    <th class="gs-text-center hide-mobile-portrait">Klass</th>
+                                                    <th class="gs-text-center hide-mobile-portrait">Placering</th>
                                                     <th class="gs-text-right">Poäng</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
                                                 <?php foreach ($gravityTotalRaceDetails as $raceDetail): ?>
                                                     <tr>
-                                                        <td><?= date('Y-m-d', strtotime($raceDetail['event_date'])) ?></td>
+                                                        <td class="hide-mobile-portrait"><?= date('Y-m-d', strtotime($raceDetail['event_date'])) ?></td>
                                                         <td>
                                                             <strong><?= h($raceDetail['event_name']) ?></strong>
-                                                            <?php if ($raceDetail['event_location']): ?>
-                                                                <br><span class="gs-text-xs gs-text-secondary"><?= h($raceDetail['event_location']) ?></span>
-                                                            <?php endif; ?>
                                                         </td>
-                                                        <td class="gs-text-center"><?= h($raceDetail['class_name'] ?? '-') ?></td>
-                                                        <td class="gs-text-center">
+                                                        <td class="gs-text-center hide-mobile-portrait"><?= h($raceDetail['class_name'] ?? '-') ?></td>
+                                                        <td class="gs-text-center hide-mobile-portrait">
                                                             <?php
                                                             $pos = $raceDetail['class_position'];
                                                             if ($pos == 1) echo '<span class="gs-badge gs-badge-success">🥇 1</span>';
@@ -1196,7 +1226,8 @@ try {
                                                     </tr>
                                                 <?php endforeach; ?>
                                                 <tr class="gs-table-footer">
-                                                    <td colspan="4" class="gs-text-right gs-font-bold">Total:</td>
+                                                    <td colspan="1" class="gs-text-right gs-font-bold total-mobile-colspan">Total:</td>
+                                                    <td colspan="4" class="gs-text-right gs-font-bold hide-mobile-portrait">Total:</td>
                                                     <td class="gs-text-right gs-text-primary gs-font-bold gs-text-lg">
                                                         <?= number_format($gravityTotalStats['total_points'], 0) ?>
                                                     </td>
@@ -1258,38 +1289,57 @@ try {
                                         <i data-lucide="list"></i>
                                         Race och klubbpoäng
                                     </h4>
+                                    <style>
+                                        /* Mobile portrait: Hide extra columns */
+                                        @media (max-width: 767px) {
+                                            .club-points-table .hide-mobile-portrait {
+                                                display: none !important;
+                                            }
+                                            .club-points-table .total-mobile-colspan {
+                                                display: table-cell !important;
+                                            }
+                                        }
+
+                                        /* Mobile landscape and up: Show all columns */
+                                        @media (min-width: 768px) {
+                                            .club-points-table .hide-mobile-portrait {
+                                                display: table-cell !important;
+                                            }
+                                            .club-points-table .total-mobile-colspan {
+                                                display: none !important;
+                                            }
+                                        }
+                                    </style>
                                     <div class="gs-table-responsive">
-                                        <table class="gs-table gs-table-compact">
+                                        <table class="gs-table gs-table-compact club-points-table">
                                             <thead>
                                                 <tr>
-                                                    <th>Datum</th>
+                                                    <th class="hide-mobile-portrait">Datum</th>
                                                     <th>Tävling</th>
-                                                    <th class="gs-text-center">Klass</th>
-                                                    <th class="gs-text-right">Original</th>
-                                                    <th class="gs-text-center">Procent</th>
-                                                    <th class="gs-text-right">Klubbpoäng</th>
+                                                    <th class="gs-text-center hide-mobile-portrait">Klass</th>
+                                                    <th class="gs-text-right hide-mobile-portrait">Original</th>
+                                                    <th class="gs-text-center hide-mobile-portrait">Procent</th>
+                                                    <th class="gs-text-right">Poäng</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
                                                 <?php foreach ($gravityTeamRaceDetails as $raceDetail): ?>
                                                     <tr>
-                                                        <td><?= date('Y-m-d', strtotime($raceDetail['event_date'])) ?></td>
+                                                        <td class="hide-mobile-portrait"><?= date('Y-m-d', strtotime($raceDetail['event_date'])) ?></td>
                                                         <td>
                                                             <strong><?= h($raceDetail['event_name']) ?></strong>
-                                                            <?php if ($raceDetail['event_location']): ?>
-                                                                <br><span class="gs-text-xs gs-text-secondary"><?= h($raceDetail['event_location']) ?></span>
-                                                            <?php endif; ?>
                                                         </td>
-                                                        <td class="gs-text-center"><?= h($raceDetail['class_name'] ?? '-') ?></td>
-                                                        <td class="gs-text-right"><?= number_format($raceDetail['original_points'], 0) ?></td>
-                                                        <td class="gs-text-center"><?= $raceDetail['percentage_applied'] ?>%</td>
+                                                        <td class="gs-text-center hide-mobile-portrait"><?= h($raceDetail['class_name'] ?? '-') ?></td>
+                                                        <td class="gs-text-right hide-mobile-portrait"><?= number_format($raceDetail['original_points'], 0) ?></td>
+                                                        <td class="gs-text-center hide-mobile-portrait"><?= $raceDetail['percentage_applied'] ?>%</td>
                                                         <td class="gs-text-right gs-font-bold" style="color: #f59e0b;">
                                                             <?= number_format($raceDetail['club_points'], 1) ?>
                                                         </td>
                                                     </tr>
                                                 <?php endforeach; ?>
                                                 <tr class="gs-table-footer">
-                                                    <td colspan="5" class="gs-text-right gs-font-bold">Total:</td>
+                                                    <td colspan="1" class="gs-text-right gs-font-bold total-mobile-colspan">Total:</td>
+                                                    <td colspan="5" class="gs-text-right gs-font-bold hide-mobile-portrait">Total:</td>
                                                     <td class="gs-text-right gs-font-bold gs-text-lg" style="color: #f59e0b;">
                                                         <?= number_format($gravityTeamStats['total_points'], 1) ?>
                                                     </td>
@@ -1334,16 +1384,32 @@ try {
                                     <?= $year ?> (<?= count($yearResults) ?> lopp)
                                 </h3>
 
+                                <style>
+                                    /* Mobile portrait: Hide extra columns */
+                                    @media (max-width: 767px) {
+                                        .all-races-table .hide-mobile-portrait {
+                                            display: none !important;
+                                        }
+                                    }
+
+                                    /* Mobile landscape and up: Show all columns */
+                                    @media (min-width: 768px) {
+                                        .all-races-table .hide-mobile-portrait {
+                                            display: table-cell !important;
+                                        }
+                                    }
+                                </style>
+
                                 <div class="gs-table-responsive">
-                                    <table class="gs-table gs-table-compact">
+                                    <table class="gs-table gs-table-compact all-races-table">
                                         <thead>
                                             <tr>
-                                                <th>Datum</th>
+                                                <th class="hide-mobile-portrait">Datum</th>
                                                 <th>Tävling</th>
-                                                <th>Plats</th>
-                                                <th>Klass</th>
-                                                <th class="gs-text-center">Placering</th>
-                                                <th class="gs-text-center">Tid</th>
+                                                <th class="hide-mobile-portrait">Plats</th>
+                                                <th class="hide-mobile-portrait">Klass</th>
+                                                <th class="gs-text-center hide-mobile-portrait">Placering</th>
+                                                <th class="gs-text-center hide-mobile-portrait">Tid</th>
                                                 <th class="gs-text-center">Poäng</th>
                                             </tr>
                                         </thead>
@@ -1354,7 +1420,7 @@ try {
                                                 if ($result['status'] === 'dns') continue;
                                                 ?>
                                                 <tr>
-                                                    <td><?= date('Y-m-d', strtotime($result['event_date'])) ?></td>
+                                                    <td class="hide-mobile-portrait"><?= date('Y-m-d', strtotime($result['event_date'])) ?></td>
                                                     <td>
                                                         <?php if ($result['event_id']): ?>
                                                             <a href="/event.php?id=<?= $result['event_id'] ?>" class="gs-link">
@@ -1363,11 +1429,8 @@ try {
                                                         <?php else: ?>
                                                             <strong><?= h($result['event_name']) ?></strong>
                                                         <?php endif; ?>
-                                                        <?php if ($result['series_name']): ?>
-                                                            <br><span class="gs-badge gs-badge-primary gs-badge-xs"><?= h($result['series_name']) ?></span>
-                                                        <?php endif; ?>
                                                     </td>
-                                                    <td>
+                                                    <td class="hide-mobile-portrait">
                                                         <?php if ($result['event_location']): ?>
                                                             <?= h($result['event_location']) ?>
                                                         <?php elseif ($result['venue_city']): ?>
@@ -1376,8 +1439,8 @@ try {
                                                             -
                                                         <?php endif; ?>
                                                     </td>
-                                                    <td><?= h($result['class_display_name'] ?? $result['class_name'] ?? '-') ?></td>
-                                                    <td class="gs-text-center">
+                                                    <td class="hide-mobile-portrait"><?= h($result['class_display_name'] ?? $result['class_name'] ?? '-') ?></td>
+                                                    <td class="gs-text-center hide-mobile-portrait">
                                                         <?php
                                                         $awardsPoints = $result['awards_points'] ?? 1;
                                                         $displayPos = ($result['status'] === 'finished' && $awardsPoints) ? ($result['class_position'] ?? null) : null;
@@ -1400,7 +1463,7 @@ try {
                                                             -
                                                         <?php endif; ?>
                                                     </td>
-                                                    <td class="gs-text-center">
+                                                    <td class="gs-text-center hide-mobile-portrait">
                                                         <?php
                                                         if ($result['finish_time']) {
                                                             // Format time: remove leading hours if 0
