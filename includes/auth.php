@@ -225,6 +225,7 @@ function getCurrentAdmin() {
 
 /**
  * Check if user has role
+ * Role hierarchy: rider(1) < promotor(2) < admin(3) < super_admin(4)
  */
 function hasRole($role) {
     if (!isLoggedIn()) {
@@ -233,9 +234,264 @@ function hasRole($role) {
 
     $currentRole = $_SESSION['admin_role'] ?? null;
 
-    $roles = ['editor' => 1, 'admin' => 2, 'super_admin' => 3];
+    // Updated role hierarchy with new roles
+    $roles = [
+        'rider' => 1,
+        'promotor' => 2,
+        'admin' => 3,
+        'super_admin' => 4,
+        // Legacy support
+        'editor' => 1
+    ];
 
     return ($roles[$currentRole] ?? 0) >= ($roles[$role] ?? 999);
+}
+
+/**
+ * Check if user is exactly a specific role (not higher)
+ */
+function isRole($role) {
+    if (!isLoggedIn()) {
+        return false;
+    }
+    return ($_SESSION['admin_role'] ?? null) === $role;
+}
+
+/**
+ * Check if user has a specific permission
+ */
+function hasPermission($permissionName) {
+    if (!isLoggedIn()) {
+        return false;
+    }
+
+    // Super admin has all permissions
+    if (isRole('super_admin')) {
+        return true;
+    }
+
+    global $pdo;
+    if (!$pdo) {
+        return false;
+    }
+
+    try {
+        $role = $_SESSION['admin_role'] ?? null;
+        $sql = "SELECT 1 FROM role_permissions rp
+                JOIN permissions p ON rp.permission_id = p.id
+                WHERE rp.role = ? AND p.name = ?
+                LIMIT 1";
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute([$role, $permissionName]);
+        return $stmt->fetch() !== false;
+    } catch (PDOException $e) {
+        error_log("Permission check error: " . $e->getMessage());
+        return false;
+    }
+}
+
+/**
+ * Check if promotor has access to a specific event
+ */
+function canAccessEvent($eventId) {
+    if (!isLoggedIn()) {
+        return false;
+    }
+
+    // Super admin and admin can access all events
+    if (hasRole('admin')) {
+        return true;
+    }
+
+    // Promotors can only access assigned events
+    if (!isRole('promotor')) {
+        return false;
+    }
+
+    global $pdo;
+    if (!$pdo) {
+        return false;
+    }
+
+    try {
+        $userId = $_SESSION['admin_id'] ?? null;
+        $sql = "SELECT 1 FROM promotor_events
+                WHERE user_id = ? AND event_id = ?
+                LIMIT 1";
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute([$userId, $eventId]);
+        return $stmt->fetch() !== false;
+    } catch (PDOException $e) {
+        error_log("Event access check error: " . $e->getMessage());
+        return false;
+    }
+}
+
+/**
+ * Get all events a promotor can access
+ */
+function getPromotorEvents() {
+    if (!isLoggedIn()) {
+        return [];
+    }
+
+    global $pdo;
+    if (!$pdo) {
+        return [];
+    }
+
+    try {
+        $userId = $_SESSION['admin_id'] ?? null;
+        $sql = "SELECT e.*, pe.can_edit, pe.can_manage_results, pe.can_manage_registrations
+                FROM events e
+                JOIN promotor_events pe ON e.id = pe.event_id
+                WHERE pe.user_id = ?
+                ORDER BY e.date DESC";
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute([$userId]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        error_log("Get promotor events error: " . $e->getMessage());
+        return [];
+    }
+}
+
+/**
+ * Check if rider user can edit their own profile
+ */
+function canEditRiderProfile($riderId) {
+    if (!isLoggedIn()) {
+        return false;
+    }
+
+    // Admin and above can edit any profile
+    if (hasRole('admin')) {
+        return true;
+    }
+
+    global $pdo;
+    if (!$pdo) {
+        return false;
+    }
+
+    try {
+        $userId = $_SESSION['admin_id'] ?? null;
+        $sql = "SELECT can_edit_profile FROM rider_profiles
+                WHERE user_id = ? AND rider_id = ? AND can_edit_profile = 1
+                LIMIT 1";
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute([$userId, $riderId]);
+        return $stmt->fetch() !== false;
+    } catch (PDOException $e) {
+        error_log("Rider profile access check error: " . $e->getMessage());
+        return false;
+    }
+}
+
+/**
+ * Check if user can manage a specific club
+ */
+function canManageClub($clubId) {
+    if (!isLoggedIn()) {
+        return false;
+    }
+
+    // Admin and above can manage any club
+    if (hasRole('admin')) {
+        return true;
+    }
+
+    global $pdo;
+    if (!$pdo) {
+        return false;
+    }
+
+    try {
+        $userId = $_SESSION['admin_id'] ?? null;
+        $sql = "SELECT 1 FROM rider_profiles rp
+                JOIN riders r ON rp.rider_id = r.id
+                WHERE rp.user_id = ? AND r.club_id = ? AND rp.can_manage_club = 1
+                LIMIT 1";
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute([$userId, $clubId]);
+        return $stmt->fetch() !== false;
+    } catch (PDOException $e) {
+        error_log("Club access check error: " . $e->getMessage());
+        return false;
+    }
+}
+
+/**
+ * Check if user can access a specific admin page
+ */
+function canAccessPage($pageKey) {
+    if (!isLoggedIn()) {
+        return false;
+    }
+
+    // Super admin can access all pages
+    if (isRole('super_admin')) {
+        return true;
+    }
+
+    global $pdo;
+    if (!$pdo) {
+        return false;
+    }
+
+    try {
+        $userId = $_SESSION['admin_id'] ?? null;
+        $currentRole = $_SESSION['admin_role'] ?? null;
+
+        // First check if there's a specific override for this user
+        $sql = "SELECT upa.has_access FROM user_page_access upa
+                JOIN admin_pages ap ON upa.page_id = ap.id
+                WHERE upa.user_id = ? AND ap.page_key = ?
+                LIMIT 1";
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute([$userId, $pageKey]);
+        $override = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if ($override !== false) {
+            return (bool)$override['has_access'];
+        }
+
+        // Check based on role minimum requirement
+        $roles = ['rider' => 1, 'promotor' => 2, 'admin' => 3, 'super_admin' => 4];
+        $sql = "SELECT min_role FROM admin_pages WHERE page_key = ? AND is_active = 1 LIMIT 1";
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute([$pageKey]);
+        $page = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if ($page === false) {
+            return false;
+        }
+
+        return ($roles[$currentRole] ?? 0) >= ($roles[$page['min_role']] ?? 999);
+    } catch (PDOException $e) {
+        error_log("Page access check error: " . $e->getMessage());
+        return false;
+    }
+}
+
+/**
+ * Require specific role to continue
+ */
+function requireRole($role) {
+    if (!hasRole($role)) {
+        http_response_code(403);
+        die('Access denied: Insufficient permissions');
+    }
+}
+
+/**
+ * Require permission to continue
+ */
+function requirePermission($permissionName) {
+    if (!hasPermission($permissionName)) {
+        http_response_code(403);
+        die('Access denied: Missing permission - ' . htmlspecialchars($permissionName));
+    }
 }
 
 // ==============================================
