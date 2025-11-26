@@ -225,4 +225,102 @@ include __DIR__ . '/includes/layout-header.php';
     </div>
 </main>
 
+<style>
+/* Remove underline from event card links */
+.gs-event-card-link {
+    text-decoration: none;
+    color: inherit;
+    display: block;
+}
+
+.gs-event-card-link:hover {
+    text-decoration: none;
+}
+
+.gs-result-card {
+    display: grid;
+    grid-template-columns: 120px 1fr;
+    gap: 1rem;
+    padding: 1rem;
+}
+
+.gs-result-logo {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f8f9fa;
+    border-radius: 6px;
+    padding: 0.5rem;
+}
+
+.gs-result-logo img {
+    max-width: 100%;
+    max-height: 70px;
+    object-fit: contain;
+}
+
+.gs-result-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.gs-result-date {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.25rem 0.5rem;
+    background: #667eea;
+    color: white;
+    border-radius: 4px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    width: fit-content;
+}
+
+.gs-result-title {
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: #1a202c;
+    line-height: 1.3;
+}
+
+.gs-result-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    font-size: 0.875rem;
+    color: #718096;
+}
+
+.gs-result-meta span {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.gs-result-stats {
+    display: flex;
+    gap: 1rem;
+    font-size: 0.875rem;
+    color: #64748b;
+}
+
+@media (max-width: 640px) {
+    .gs-result-card {
+        grid-template-columns: 80px 1fr;
+        gap: 0.75rem;
+        padding: 0.75rem;
+    }
+
+    .gs-result-logo img {
+        max-height: 50px;
+    }
+
+    .gs-result-title {
+        font-size: 1rem;
+    }
+}
+</style>
+
 <?php include __DIR__ . '/includes/layout-footer.php'; ?>
