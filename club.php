@@ -22,6 +22,17 @@ if (!$club) {
     exit;
 }
 
+// Get selected tab and discipline
+$tab = isset($_GET['tab']) ? $_GET['tab'] : 'medlemmar';
+if (!in_array($tab, ['medlemmar', 'ranking'])) {
+    $tab = 'medlemmar';
+}
+
+$discipline = isset($_GET['discipline']) ? strtoupper($_GET['discipline']) : 'GRAVITY';
+if (!in_array($discipline, ['ENDURO', 'DH', 'GRAVITY'])) {
+    $discipline = 'GRAVITY';
+}
+
 // Fetch all riders from this club with their total points
 // Use class position (not overall position) for best_position and wins
 $clubRiders = $db->getAll("
@@ -64,6 +75,51 @@ $clubRiders = $db->getAll("
     GROUP BY r.id
     ORDER BY total_points DESC, r.lastname, r.firstname
 ", [$clubId]);
+
+// Fetch ranking contributors if on ranking tab
+$rankingContributors = [];
+if ($tab === 'ranking') {
+    require_once __DIR__ . '/includes/ranking_functions.php';
+
+    // Check if ranking_points table exists
+    $tablesExist = rankingTablesExist($db);
+
+    if ($tablesExist) {
+        try {
+            // Build discipline filter
+            $disciplineFilter = '';
+            $params = [$clubId];
+
+            if ($discipline === 'GRAVITY') {
+                $disciplineFilter = "AND e.discipline IN ('ENDURO', 'DH')";
+            } else {
+                $disciplineFilter = "AND e.discipline = ?";
+                $params[] = $discipline;
+            }
+
+            $rankingContributors = $db->getAll("
+                SELECT
+                    r.id as rider_id,
+                    r.firstname,
+                    r.lastname,
+                    SUM(rp.ranking_points) as total_ranking_points,
+                    COUNT(DISTINCT rp.event_id) as events_count
+                FROM ranking_points rp
+                JOIN riders r ON rp.rider_id = r.id
+                JOIN events e ON rp.event_id = e.id
+                WHERE r.club_id = ?
+                AND e.date >= DATE_SUB(NOW(), INTERVAL 24 MONTH)
+                {$disciplineFilter}
+                GROUP BY r.id
+                HAVING total_ranking_points > 0
+                ORDER BY total_ranking_points DESC
+            ", $params);
+        } catch (Exception $e) {
+            // Table doesn't exist, leave empty
+            $rankingContributors = [];
+        }
+    }
+}
 
 $currentYear = date('Y');
 
@@ -195,11 +251,24 @@ include __DIR__ . '/includes/layout-header.php';
             </div>
         </div>
 
-        <!-- Riders List -->
+        <!-- Tab Navigation -->
+        <div class="gs-tabs gs-mb-lg">
+            <a href="?id=<?= $clubId ?>&tab=medlemmar" class="gs-tab <?= $tab === 'medlemmar' ? 'active' : '' ?>">
+                <i data-lucide="users"></i>
+                Medlemmar
+            </a>
+            <a href="?id=<?= $clubId ?>&tab=ranking&discipline=<?= $discipline ?>" class="gs-tab <?= $tab === 'ranking' ? 'active' : '' ?>">
+                <i data-lucide="trophy"></i>
+                Ranking
+            </a>
+        </div>
+
+        <?php if ($tab === 'medlemmar'): ?>
+        <!-- Medlemmar Tab: All members with points -->
         <div class="gs-card">
             <div class="gs-card-header">
                 <h2 class="gs-h4 gs-text-primary">
-                    <i data-lucide="trophy"></i>
+                    <i data-lucide="users"></i>
                     Medlemmar med poäng
                 </h2>
             </div>
@@ -292,7 +361,171 @@ include __DIR__ . '/includes/layout-header.php';
                 <?php endif; ?>
             </div>
         </div>
+
+        <?php else: ?>
+        <!-- Ranking Tab: Ranking contributors by discipline -->
+        <div class="gs-card">
+            <div class="gs-card-header gs-flex gs-items-center gs-gap-md">
+                <h2 class="gs-h4 gs-text-primary gs-flex gs-items-center gs-gap-sm">
+                    <i data-lucide="trophy"></i>
+                    Ranking-bidrag
+                </h2>
+
+                <!-- Discipline selector -->
+                <div class="gs-ml-auto">
+                    <select class="gs-input gs-input-sm" onchange="window.location.href='?id=<?= $clubId ?>&tab=ranking&discipline=' + this.value">
+                        <option value="GRAVITY" <?= $discipline === 'GRAVITY' ? 'selected' : '' ?>>Gravity</option>
+                        <option value="ENDURO" <?= $discipline === 'ENDURO' ? 'selected' : '' ?>>Enduro</option>
+                        <option value="DH" <?= $discipline === 'DH' ? 'selected' : '' ?>>Downhill</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="gs-card-content">
+                <?php if (empty($rankingContributors)): ?>
+                    <div class="gs-text-center gs-empty-state-container">
+                        <i data-lucide="trophy" class="gs-empty-state-icon-lg"></i>
+                        <h3 class="gs-h4 gs-mb-sm">Inga rankingpoäng ännu</h3>
+                        <p class="gs-text-secondary">
+                            Ingen från klubben har rankingpoäng i <?= $discipline === 'GRAVITY' ? 'Gravity' : ($discipline === 'ENDURO' ? 'Enduro' : 'Downhill') ?> under de senaste 24 månaderna.
+                        </p>
+                    </div>
+                <?php else: ?>
+                    <div class="gs-ranking-info-banner gs-mb-lg" style="display: flex; align-items: flex-start; gap: 0.75rem; padding: 1rem; background: #E8F4FD; border-radius: 8px; font-size: 0.875rem;">
+                        <i data-lucide="info" style="flex-shrink: 0; width: 16px; height: 16px; margin-top: 2px; color: #1e40af;"></i>
+                        <span>Visar viktade rankingpoäng för <?= $discipline === 'GRAVITY' ? 'Gravity (Enduro + Downhill)' : ($discipline === 'ENDURO' ? 'Enduro' : 'Downhill') ?> från de senaste 24 månaderna.</span>
+                    </div>
+
+                    <!-- Ranking Contributors Table -->
+                    <div class="gs-table-wrapper">
+                        <table class="gs-table">
+                            <thead>
+                                <tr>
+                                    <th style="width: 50px;">#</th>
+                                    <th>Åkare</th>
+                                    <th class="gs-text-center">Events</th>
+                                    <th class="gs-text-right">Rankingpoäng</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php $position = 1; ?>
+                                <?php foreach ($rankingContributors as $contributor): ?>
+                                    <tr class="gs-table-row-clickable" onclick="window.location.href='/rider.php?id=<?= $contributor['rider_id'] ?>'">
+                                        <td><?= $position ?></td>
+                                        <td>
+                                            <strong><?= h($contributor['firstname'] . ' ' . $contributor['lastname']) ?></strong>
+                                        </td>
+                                        <td class="gs-text-center"><?= $contributor['events_count'] ?></td>
+                                        <td class="gs-text-right">
+                                            <strong class="gs-text-primary"><?= number_format($contributor['total_ranking_points'], 1) ?>p</strong>
+                                        </td>
+                                    </tr>
+                                    <?php $position++; ?>
+                                <?php endforeach; ?>
+                            </tbody>
+                            <tfoot>
+                                <tr style="background: #f8f9fa; font-weight: bold;">
+                                    <td colspan="3" class="gs-text-right">Total klubbpoäng:</td>
+                                    <td class="gs-text-right">
+                                        <strong class="gs-text-primary" style="font-size: 1.125rem;">
+                                            <?= number_format(array_sum(array_column($rankingContributors, 'total_ranking_points')), 1) ?>p
+                                        </strong>
+                                    </td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                <?php endif; ?>
+            </div>
+        </div>
+        <?php endif; ?>
     </div>
 </main>
+
+<style>
+/* Tab navigation styles */
+.gs-tabs {
+    display: flex;
+    gap: 0.5rem;
+    background: #f8f9fa;
+    padding: 0.5rem;
+    border-radius: 8px;
+}
+
+.gs-tab {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.5rem;
+    border-radius: 6px;
+    font-weight: 500;
+    font-size: 0.875rem;
+    color: #64748b;
+    text-decoration: none;
+    transition: all 0.2s;
+    background: transparent;
+}
+
+.gs-tab i {
+    width: 16px;
+    height: 16px;
+}
+
+.gs-tab:hover {
+    color: #1e40af;
+    background: #fff;
+}
+
+.gs-tab.active {
+    background: #fff;
+    color: #1e40af;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+/* Table row clickable */
+.gs-table-row-clickable {
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.gs-table-row-clickable:hover {
+    background-color: #f8f9fa;
+}
+
+/* Table wrapper */
+.gs-table-wrapper {
+    overflow-x: auto;
+}
+
+.gs-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.gs-table th,
+.gs-table td {
+    padding: 0.75rem 1rem;
+    text-align: left;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.gs-table th {
+    background: #f8f9fa;
+    font-weight: 600;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #64748b;
+}
+
+.gs-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.gs-table tfoot td {
+    border-top: 2px solid #e2e8f0;
+    padding: 1rem;
+}
+</style>
 
 <?php include __DIR__ . '/includes/layout-footer.php'; ?>
