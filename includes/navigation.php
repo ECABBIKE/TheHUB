@@ -78,6 +78,16 @@ $is_admin = isLoggedIn();
             <li><a href="/admin/public-settings.php" class="<?= $current_page == 'public-settings.php' ? 'active' : '' ?>">
                 <i data-lucide="settings"></i> Publika Inställningar
             </a></li>
+        </ul>
+    </div>
+
+    <?php if (hasRole('super_admin')): ?>
+    <div class="gs-menu-section">
+        <h3 class="gs-menu-title">System</h3>
+        <ul class="gs-menu">
+            <li><a href="/admin/users.php" class="<?= in_array($current_page, ['users.php', 'user-edit.php', 'user-events.php', 'user-rider.php']) ? 'active' : '' ?>">
+                <i data-lucide="users-cog"></i> Användare
+            </a></li>
             <li><a href="/admin/system-settings.php" class="<?= $current_page == 'system-settings.php' ? 'active' : '' ?>">
                 <i data-lucide="cog"></i> Systeminställningar
             </a></li>
@@ -88,6 +98,15 @@ $is_admin = isLoggedIn();
             </a>
         </div>
     </div>
+    <?php else: ?>
+    <div class="gs-menu-section">
+        <div class="gs-menu-footer">
+            <a href="/admin/logout.php" class="gs-btn gs-btn-sm gs-btn-outline gs-w-full">
+                <i data-lucide="log-out"></i> Logga ut
+            </a>
+        </div>
+    </div>
+    <?php endif; ?>
     <?php else: ?>
     <!-- Admin Login (shown at bottom on desktop, top on mobile) -->
     <div class="gs-menu-section gs-admin-login-section" style="margin-top: auto; padding-top: 1rem;">
