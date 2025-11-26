@@ -771,24 +771,36 @@ include __DIR__ . '/includes/layout-header.php';
                     // Check which SS columns this class has data for (ss1-ss15)
                     $classSplitCols = [];
                     if ($hasSplitTimes && !$isDH) {
+                        // DEBUG: Add HTML comment to diagnose segment detection
+                        $debugInfo = [];
+
                         // Explicitly check all 15 possible segments
                         for ($i = 1; $i <= 15; $i++) {
                             $hasData = false;
+                            $riderCount = 0;
                             // Check if any rider in this class has data for this segment
                             if (isset($groupData['results']) && is_array($groupData['results'])) {
                                 foreach ($groupData['results'] as $r) {
                                     // Check if segment column exists and has a non-empty value
                                     if (isset($r['ss' . $i]) && $r['ss' . $i] !== null && $r['ss' . $i] !== '') {
                                         $hasData = true;
-                                        break;
+                                        $riderCount++;
                                     }
                                 }
                             }
                             // Add this segment number if we found data
                             if ($hasData) {
                                 $classSplitCols[] = $i;
+                                $debugInfo[] = "ss$i: $riderCount riders";
                             }
                         }
+
+                        // Output debug info as HTML comment
+                        echo "<!-- DEBUG Segment Detection for class " . h($groupData['display_name']) . ":\n";
+                        echo "  Total riders in class: " . count($groupData['results']) . "\n";
+                        echo "  Segments found: " . implode(', ', $debugInfo) . "\n";
+                        echo "  classSplitCols array: [" . implode(', ', $classSplitCols) . "]\n";
+                        echo "-->\n";
                     }
                     ?>
                     <div class="gs-card-content gs-card-table-container">
