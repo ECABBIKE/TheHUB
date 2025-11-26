@@ -1,7 +1,7 @@
 <?php
 /**
  * API: Search Riders
- * Returns matching riders for registration form
+ * Returns matching riders for registration form and admin user linking
  */
 
 require_once __DIR__ . '/../config.php';
@@ -9,9 +9,10 @@ require_once __DIR__ . '/../config.php';
 header('Content-Type: application/json');
 
 $query = trim($_GET['q'] ?? '');
+$limit = isset($_GET['limit']) ? min(50, max(1, intval($_GET['limit']))) : 10;
 
 if (strlen($query) < 2) {
-    echo json_encode([]);
+    echo json_encode(['riders' => []]);
     exit;
 }
 
@@ -25,6 +26,7 @@ $riders = $db->getAll("
         r.id,
         r.firstname,
         r.lastname,
+        r.license_number,
         r.license_number as uci_id,
         r.email,
         r.gravity_id,
@@ -40,7 +42,7 @@ $riders = $db->getAll("
        OR r.license_number LIKE ?
        OR r.email LIKE ?
     ORDER BY r.lastname, r.firstname
-    LIMIT 10
-", [$searchTerm, $searchTerm, $searchTerm, $searchTerm, $searchTerm]);
+    LIMIT ?
+", [$searchTerm, $searchTerm, $searchTerm, $searchTerm, $searchTerm, $limit]);
 
-echo json_encode($riders);
+echo json_encode(['riders' => $riders]);
