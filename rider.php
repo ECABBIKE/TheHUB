@@ -1149,7 +1149,7 @@ try {
                                                             <tr>
                                                                                 <th class="gs-text-center">Placering</th>
                                                                 <th>Event</th>
-                                                                <th class="gs-text-right">Poäng</th>
+                                                                <th class="gs-text-right" style="display: table-cell !important;">Poäng</th>
                                                                 <th class="gs-text-right show-mobile-landscape" style="display: none;">Beräkning</th>
                                                                 <th class="hide-mobile-portrait">Datum</th>
                                                                 <th class="gs-text-center hide-mobile-portrait">Klass</th>
@@ -1158,7 +1158,7 @@ try {
                                                             </tr>
                                                         </thead>
                                                         <tbody>
-                                                            <?php foreach ($rankingRaceDetails[$disc] as $raceDetail): ?>
+                                                            <?php foreach ($rankingRaceDetails[$disc] as $idx => $raceDetail): ?>
                                                                 <tr>
                                                                     <td class="gs-text-center">
                                                                         <?php if (!empty($raceDetail['position'])): ?>
@@ -1180,11 +1180,11 @@ try {
                                                                             × Event: <?= number_format($raceDetail['event_level_multiplier'], 2) ?>
                                                                             × Time: <?= number_format($raceDetail['time_multiplier'], 2) ?>
                                                                         </div>
-                                                                        <button class="gs-btn-link gs-text-xs" onclick="toggleCalc(event, 'calc-<?= $raceDetail['event_id'] ?>-<?= $raceDetail['class_id'] ?>')" style="margin-top: 0.25rem; padding: 0; font-size: 0.7rem; color: #3b82f6;">
+                                                                        <button class="gs-btn-link gs-text-xs" onclick="toggleCalc(event, 'calc-<?= $disc ?>-<?= $idx ?>')" style="margin-top: 0.25rem; padding: 0; font-size: 0.7rem; color: #3b82f6;">
                                                                             <i data-lucide="help-circle" style="width: 12px; height: 12px;"></i> Visa beräkning
                                                                         </button>
                                                                     </td>
-                                                                    <td class="gs-text-right gs-text-primary gs-font-bold" style="font-size: 0.75rem;">
+                                                                    <td class="gs-text-right gs-text-primary gs-font-bold" style="font-size: 0.75rem; display: table-cell !important;">
                                                                         <?= number_format($raceDetail['ranking_points'] ?? 0, 0) ?>p
                                                                     </td>
                                                                     <td class="gs-text-right show-mobile-landscape" style="display: none; font-size: 0.7rem; white-space: nowrap;">
@@ -1212,7 +1212,7 @@ try {
                                                                     <td class="gs-text-right hide-mobile-portrait"><?= number_format($raceDetail['original_points'], 0) ?></td>
                                                                 </tr>
                                                                 <!-- Expandable calculation row -->
-                                                                <tr id="calc-<?= $raceDetail['event_id'] ?>-<?= $raceDetail['class_id'] ?>" class="calculation-row" style="display: none; background: #f0f9ff;">
+                                                                <tr id="calc-<?= $disc ?>-<?= $idx ?>" class="calculation-row" style="display: none; background: #f0f9ff;">
                                                                     <td colspan="8" style="padding: 0.75rem;">
                                                                         <div style="font-size: 0.75rem; line-height: 1.6;">
                                                                             <strong style="color: #1e40af;">📊 Poängberäkning för <?= h($raceDetail['event_name']) ?></strong>
@@ -1379,7 +1379,7 @@ try {
                                                 <tr>
                                                     <th class="gs-text-center">Placering</th>
                                                     <th>Event</th>
-                                                    <th class="gs-text-right">Poäng</th>
+                                                    <th class="gs-text-right" style="display: table-cell !important;">Poäng</th>
                                                     <th class="show-mobile-landscape" style="display: none;">Datum</th>
                                                     <th class="hide-mobile-portrait">Datum</th>
                                                     <th class="gs-text-center hide-mobile-portrait">Klass</th>
@@ -1400,7 +1400,7 @@ try {
                                                         <td>
                                                             <strong style="font-size: 0.75rem;"><?= h($raceDetail['event_name']) ?></strong>
                                                         </td>
-                                                        <td class="gs-text-right gs-text-primary gs-font-bold" style="font-size: 0.75rem;"><?= number_format($raceDetail['points'], 0) ?>p</td>
+                                                        <td class="gs-text-right gs-text-primary gs-font-bold" style="font-size: 0.75rem; display: table-cell !important;"><?= number_format($raceDetail['points'], 0) ?>p</td>
                                                         <td class="show-mobile-landscape gs-text-nowrap" style="display: none; font-size: 0.7rem;"><?= date('Y-m-d', strtotime($raceDetail['event_date'])) ?></td>
                                                         <td class="hide-mobile-portrait gs-text-nowrap"><?= date('Y-m-d', strtotime($raceDetail['event_date'])) ?></td>
                                                         <td class="gs-text-center hide-mobile-portrait"><?= h($raceDetail['class_name'] ?? '-') ?></td>
@@ -1524,7 +1524,7 @@ try {
                                             <thead>
                                                 <tr>
                                                     <th>Event</th>
-                                                    <th class="gs-text-right">Poäng</th>
+                                                    <th class="gs-text-right" style="display: table-cell !important;">Poäng</th>
                                                     <th class="gs-text-right show-mobile-landscape" style="display: none;">Beräkning</th>
                                                     <th class="hide-mobile-portrait">Datum</th>
                                                     <th class="gs-text-center hide-mobile-portrait">Klass</th>
@@ -1538,7 +1538,7 @@ try {
                                                         <td>
                                                             <strong style="font-size: 0.75rem;"><?= h($raceDetail['event_name']) ?></strong>
                                                         </td>
-                                                        <td class="gs-text-right gs-font-bold" style="color: #f59e0b; font-size: 0.75rem;">
+                                                        <td class="gs-text-right gs-font-bold" style="color: #f59e0b; font-size: 0.75rem; display: table-cell !important;">
                                                             <?= number_format($raceDetail['club_points'], 0) ?>p
                                                         </td>
                                                         <td class="gs-text-right show-mobile-landscape" style="display: none; font-size: 0.7rem; white-space: nowrap;">
@@ -1653,7 +1653,7 @@ try {
                                             <tr>
                                                 <th class="gs-text-center">Placering</th>
                                                 <th>Event</th>
-                                                <th class="gs-text-center">Poäng</th>
+                                                <th class="gs-text-center" style="display: table-cell !important;">Poäng</th>
                                                 <th class="show-mobile-landscape" style="display: none;">Datum</th>
                                                 <th class="hide-mobile-portrait">Datum</th>
                                                 <th class="hide-mobile-portrait">Plats</th>
@@ -1698,7 +1698,7 @@ try {
                                                             <strong style="font-size: 0.75rem;"><?= h($result['event_name']) ?></strong>
                                                         <?php endif; ?>
                                                     </td>
-                                                    <td class="gs-text-center">
+                                                    <td class="gs-text-center" style="display: table-cell !important;">
                                                         <?php if ($awardsPoints): ?>
                                                             <strong style="font-size: 0.75rem;"><?= $result['points'] ?? 0 ?>p</strong>
                                                         <?php else: ?>
