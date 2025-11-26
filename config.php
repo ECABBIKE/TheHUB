@@ -41,7 +41,7 @@ define('EVENTS_PER_PAGE', 20);
 // Version info
 define('APP_VERSION', '2.5.2');
 define('APP_VERSION_NAME', 'Mobile Optimization');
-define('APP_BUILD', '2025-11-25');
+define('APP_BUILD', '2025-11-26');
 define('DEPLOYMENT_OFFSET', 119); // Deployments before git repo
 
 try {
