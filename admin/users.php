@@ -20,8 +20,8 @@ $search = $_GET['search'] ?? '';
 $roleFilter = $_GET['role'] ?? '';
 $activeFilter = isset($_GET['active']) ? $_GET['active'] : '';
 
-// Build query filters
-$where = [];
+// Build query filters - exclude riders (they are managed via rider-edit.php)
+$where = ["role != 'rider'"];
 $params = [];
 
 if ($search) {
@@ -31,7 +31,7 @@ if ($search) {
     $params[] = "%$search%";
 }
 
-if ($roleFilter) {
+if ($roleFilter && $roleFilter !== 'rider') {
     $where[] = "role = ?";
     $params[] = $roleFilter;
 }
@@ -41,7 +41,7 @@ if ($activeFilter !== '') {
     $params[] = (int)$activeFilter;
 }
 
-$whereClause = $where ? 'WHERE ' . implode(' AND ', $where) : '';
+$whereClause = 'WHERE ' . implode(' AND ', $where);
 
 $sql = "SELECT
     id, username, email, full_name, role, active, last_login, created_at
@@ -77,14 +77,30 @@ include __DIR__ . '/../includes/layout-header.php';
                 <i data-lucide="users-cog"></i>
                 Användarhantering
             </h1>
-            <a href="/admin/user-edit.php" class="gs-btn gs-btn-primary">
-                <i data-lucide="user-plus"></i>
-                Ny användare
-            </a>
+            <div class="gs-flex gs-gap-md">
+                <a href="/admin/role-permissions.php" class="gs-btn gs-btn-outline">
+                    <i data-lucide="shield-check"></i>
+                    Rollbehörigheter
+                </a>
+                <a href="/admin/user-edit.php" class="gs-btn gs-btn-primary">
+                    <i data-lucide="user-plus"></i>
+                    Ny användare
+                </a>
+            </div>
+        </div>
+
+        <!-- Info about riders -->
+        <div class="gs-alert gs-alert-info gs-mb-lg">
+            <i data-lucide="info"></i>
+            <span>
+                <strong>Rider-användare</strong> hanteras via
+                <a href="/admin/riders.php" class="gs-link">Deltagare</a> →
+                Redigera deltagare → Användarkonto-sektionen.
+            </span>
         </div>
 
         <!-- Role Stats -->
-        <div class="gs-grid gs-grid-cols-2 gs-md-grid-cols-4 gs-gap-md gs-mb-lg">
+        <div class="gs-grid gs-grid-cols-3 gs-gap-md gs-mb-lg">
             <div class="gs-stat-card">
                 <i data-lucide="shield" class="gs-icon-lg gs-text-error gs-mb-md"></i>
                 <div class="gs-stat-number"><?= $roleStats['super_admin'] ?? 0 ?></div>
@@ -99,11 +115,6 @@ include __DIR__ . '/../includes/layout-header.php';
                 <i data-lucide="calendar-check" class="gs-icon-lg gs-text-primary gs-mb-md"></i>
                 <div class="gs-stat-number"><?= $roleStats['promotor'] ?? 0 ?></div>
                 <div class="gs-stat-label">Promotor</div>
-            </div>
-            <div class="gs-stat-card">
-                <i data-lucide="bike" class="gs-icon-lg gs-text-success gs-mb-md"></i>
-                <div class="gs-stat-number"><?= $roleStats['rider'] ?? 0 ?></div>
-                <div class="gs-stat-label">Rider</div>
             </div>
         </div>
 
@@ -128,7 +139,6 @@ include __DIR__ . '/../includes/layout-header.php';
                         <option value="super_admin" <?= $roleFilter === 'super_admin' ? 'selected' : '' ?>>Super Admin</option>
                         <option value="admin" <?= $roleFilter === 'admin' ? 'selected' : '' ?>>Admin</option>
                         <option value="promotor" <?= $roleFilter === 'promotor' ? 'selected' : '' ?>>Promotor</option>
-                        <option value="rider" <?= $roleFilter === 'rider' ? 'selected' : '' ?>>Rider</option>
                     </select>
                     <select name="active" class="gs-input" style="width: auto;" onchange="this.form.submit()">
                         <option value="">Alla status</option>
@@ -232,11 +242,6 @@ include __DIR__ . '/../includes/layout-header.php';
                                                         <i data-lucide="calendar"></i>
                                                     </a>
                                                 <?php endif; ?>
-                                                <?php if ($user['role'] === 'rider'): ?>
-                                                    <a href="/admin/user-rider.php?id=<?= $user['id'] ?>" class="gs-btn gs-btn-sm gs-btn-outline" title="Koppla rider">
-                                                        <i data-lucide="link"></i>
-                                                    </a>
-                                                <?php endif; ?>
                                             </div>
                                         </td>
                                     </tr>
@@ -254,7 +259,7 @@ include __DIR__ . '/../includes/layout-header.php';
                 <h2 class="gs-h4">Rollbeskrivningar</h2>
             </div>
             <div class="gs-card-content">
-                <div class="gs-grid gs-grid-cols-1 gs-md-grid-cols-2 gs-gap-lg">
+                <div class="gs-grid gs-grid-cols-1 gs-md-grid-cols-3 gs-gap-lg">
                     <div>
                         <h3 class="gs-font-medium gs-text-error gs-mb-xs">
                             <i data-lucide="shield" class="gs-icon-sm"></i>
@@ -275,13 +280,6 @@ include __DIR__ . '/../includes/layout-header.php';
                             Promotor
                         </h3>
                         <p class="gs-text-sm gs-text-secondary">Kan endast hantera tilldelade events - redigera eventinfo, hantera resultat och registreringar.</p>
-                    </div>
-                    <div>
-                        <h3 class="gs-font-medium gs-text-success gs-mb-xs">
-                            <i data-lucide="bike" class="gs-icon-sm"></i>
-                            Rider
-                        </h3>
-                        <p class="gs-text-sm gs-text-secondary">Kan redigera sin egen profil och hantera sin klubb (om godkänt av admin).</p>
                     </div>
                 </div>
             </div>
