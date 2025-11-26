@@ -150,6 +150,13 @@ include __DIR__ . '/includes/layout-header.php';
                 </div>
             <?php else: ?>
                 <style>
+                    /* Event card link wrapper - remove underline */
+                    .gs-event-card-link {
+                        text-decoration: none;
+                        color: inherit;
+                        display: block;
+                    }
+
                     .events-two-column {
                         display: grid;
                         grid-template-columns: 1fr;

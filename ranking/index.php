@@ -303,7 +303,7 @@ include __DIR__ . '/../includes/layout-header.php';
                         elseif ($club['ranking_position'] == 2) $rankClass = 'rank-2';
                         elseif ($club['ranking_position'] == 3) $rankClass = 'rank-3';
                         ?>
-                        <div class="gs-ranking-card <?= $rankClass ?>">
+                        <a href="/club.php?id=<?= $club['club_id'] ?>" class="gs-ranking-card <?= $rankClass ?>">
                             <div class="gs-rank-badge">
                                 <?php if ($club['ranking_position'] <= 3): ?>
                                     <span class="gs-medal"><?php
@@ -348,7 +348,7 @@ include __DIR__ . '/../includes/layout-header.php';
                                     <div class="gs-position-change new">NY</div>
                                 <?php endif; ?>
                             </div>
-                        </div>
+                        </a>
                     <?php endforeach; ?>
                 </div>
 
@@ -368,7 +368,7 @@ include __DIR__ . '/../includes/layout-header.php';
                         </thead>
                         <tbody>
                             <?php foreach ($ranking['clubs'] as $club): ?>
-                                <tr>
+                                <tr class="gs-table-row-clickable" onclick="window.location.href='/club.php?id=<?= $club['club_id'] ?>'">
                                     <td>
                                         <?php if ($club['ranking_position'] <= 3): ?>
                                             <span class="gs-medal-badge gs-medal-<?= $club['ranking_position'] ?>">

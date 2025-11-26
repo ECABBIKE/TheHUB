@@ -476,6 +476,23 @@ function calculateClubRanking($db, $discipline = 'gravity') {
         $clubData[$clubId]['events_count'] = max($clubData[$clubId]['events_count'], $rider['events_count']);
     }
 
+    // Fetch city information for all clubs
+    if (!empty($clubData)) {
+        $clubIds = array_keys($clubData);
+        $placeholders = implode(',', array_fill(0, count($clubIds), '?'));
+        $clubDetails = $db->getAll("
+            SELECT id, city
+            FROM clubs
+            WHERE id IN ($placeholders)
+        ", $clubIds);
+
+        foreach ($clubDetails as $detail) {
+            if (isset($clubData[$detail['id']])) {
+                $clubData[$detail['id']]['city'] = $detail['city'];
+            }
+        }
+    }
+
     // Sort by total points
     usort($clubData, function($a, $b) {
         return $b['total_points'] <=> $a['total_points'];
