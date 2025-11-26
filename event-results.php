@@ -771,12 +771,22 @@ include __DIR__ . '/includes/layout-header.php';
                     // Check which SS columns this class has data for (ss1-ss15)
                     $classSplitCols = [];
                     if ($hasSplitTimes && !$isDH) {
+                        // Explicitly check all 15 possible segments
                         for ($i = 1; $i <= 15; $i++) {
-                            foreach ($groupData['results'] as $r) {
-                                if (!empty($r['ss' . $i])) {
-                                    $classSplitCols[] = $i;
-                                    break;
+                            $hasData = false;
+                            // Check if any rider in this class has data for this segment
+                            if (isset($groupData['results']) && is_array($groupData['results'])) {
+                                foreach ($groupData['results'] as $r) {
+                                    // Check if segment column exists and has a non-empty value
+                                    if (isset($r['ss' . $i]) && $r['ss' . $i] !== null && $r['ss' . $i] !== '') {
+                                        $hasData = true;
+                                        break;
+                                    }
                                 }
+                            }
+                            // Add this segment number if we found data
+                            if ($hasData) {
+                                $classSplitCols[] = $i;
                             }
                         }
                     }
