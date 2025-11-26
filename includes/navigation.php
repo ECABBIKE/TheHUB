@@ -88,6 +88,9 @@ $is_admin = isLoggedIn();
             <li><a href="/admin/users.php" class="<?= in_array($current_page, ['users.php', 'user-edit.php', 'user-events.php', 'user-rider.php']) ? 'active' : '' ?>">
                 <i data-lucide="users-cog"></i> Användare
             </a></li>
+            <li><a href="/admin/role-permissions.php" class="<?= $current_page == 'role-permissions.php' ? 'active' : '' ?>">
+                <i data-lucide="shield-check"></i> Rollbehörigheter
+            </a></li>
             <li><a href="/admin/system-settings.php" class="<?= $current_page == 'system-settings.php' ? 'active' : '' ?>">
                 <i data-lucide="cog"></i> Systeminställningar
             </a></li>
