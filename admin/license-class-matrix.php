@@ -86,7 +86,7 @@ include __DIR__ . '/../includes/layout-header.php';
 
 <main class="gs-content-with-sidebar">
     <div class="gs-container">
-        <?php render_admin_header('Inställningar', []); ?>
+        <?php render_admin_header('Deltagare & Klubbar', []); ?>
 
         <!-- Messages -->
         <?php if ($message): ?>

@@ -116,6 +116,13 @@ $ADMIN_TABS = [
                 'icon' => 'layers',
                 'url' => '/admin/classes.php',
                 'pages' => ['classes.php', 'reassign-classes.php', 'reset-classes.php', 'move-class-results.php']
+            ],
+            [
+                'id' => 'license-matrix',
+                'label' => 'Licens-Klass',
+                'icon' => 'grid-3x3',
+                'url' => '/admin/license-class-matrix.php',
+                'pages' => ['license-class-matrix.php']
             ]
         ]
     ],
