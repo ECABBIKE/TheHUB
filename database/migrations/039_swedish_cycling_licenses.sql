@@ -1,8 +1,12 @@
 -- Migration 039: Swedish Cycling Federation License Types
 -- Complete license system based on SCF (Svenska Cykelförbundet) regulations
+-- This migration is IDEMPOTENT - safe to run multiple times
 
--- Clear existing license types and start fresh
-TRUNCATE TABLE license_types;
+-- Delete existing data in correct order (respecting FK constraints)
+DELETE FROM license_class_category_access WHERE 1=1;
+DELETE FROM license_age_requirements WHERE 1=1;
+DELETE FROM class_categories WHERE 1=1;
+DELETE FROM license_types WHERE 1=1;
 
 -- Insert all Swedish cycling license types
 INSERT INTO license_types (code, name, description, priority, is_active) VALUES
