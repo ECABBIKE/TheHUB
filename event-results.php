@@ -1763,10 +1763,11 @@ include __DIR__ . '/includes/layout-header.php';
                                     .then(r => r.json())
                                     .then(data => {
                                         const container = document.getElementById('rider-results');
-                                        if (data.length === 0) {
+                                        const riders = data.riders || [];
+                                        if (riders.length === 0) {
                                             container.innerHTML = '<p class="gs-text-secondary">Ingen deltagare hittades. <a href="#" onclick="showNewRiderForm(); return false;">Registrera ny deltagare</a></p>';
                                         } else {
-                                            container.innerHTML = data.map(r => `
+                                            container.innerHTML = riders.map(r => `
                                                 <div class="gs-card gs-p-sm gs-mb-sm" style="cursor: pointer;"
                                                      onclick='selectRider(${JSON.stringify({
                                                          id: r.id,
