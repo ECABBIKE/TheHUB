@@ -280,6 +280,51 @@ include __DIR__ . '/../includes/layout-header.php';
                 </div>
             </div>
 
+            <!-- Import Tools -->
+            <h3 class="gs-h5 gs-mb-md gs-mt-lg">
+                <i data-lucide="wrench"></i>
+                Verktyg
+            </h3>
+            <div class="gs-grid gs-grid-cols-1 gs-md-grid-cols-2 gs-gap-md gs-mb-lg">
+                <!-- Berika Ryttardata -->
+                <div class="gs-card" style="border-left: 4px solid var(--gs-success);">
+                    <div class="gs-card-header">
+                        <h2 class="gs-h6">
+                            <i data-lucide="user-plus"></i>
+                            Berika Ryttardata
+                        </h2>
+                    </div>
+                    <div class="gs-card-content">
+                        <p class="gs-text-sm gs-text-secondary gs-mb-md">
+                            Uppdatera SWE ID-ryttare med saknad data från gamla anmälningar.
+                        </p>
+                        <a href="/admin/enrich-riders.php" class="gs-btn gs-btn-success gs-btn-sm">
+                            <i data-lucide="upload"></i>
+                            Berika data
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Kontrollera License Numbers -->
+                <div class="gs-card" style="border-left: 4px solid var(--gs-warning);">
+                    <div class="gs-card-header">
+                        <h2 class="gs-h6">
+                            <i data-lucide="shield-check"></i>
+                            Kontrollera License Numbers
+                        </h2>
+                    </div>
+                    <div class="gs-card-content">
+                        <p class="gs-text-sm gs-text-secondary gs-mb-md">
+                            Hitta och konvertera ogiltiga license numbers till SWE ID.
+                        </p>
+                        <a href="/admin/check-license-numbers.php" class="gs-btn gs-btn-warning gs-btn-sm">
+                            <i data-lucide="search"></i>
+                            Kontrollera
+                        </a>
+                    </div>
+                </div>
+            </div>
+
             <!-- Format Guide -->
             <div class="gs-card">
                 <div class="gs-card-header">
