@@ -1,15 +1,16 @@
 <?php
 /**
- * TheHUB Navigation v2.0 - Restructured
- * 5 huvudgrupper med fliknavigation
+ * TheHUB Navigation v2.1 - Restructured
+ * 6 huvudgrupper med fliknavigation
  *
  * Struktur:
  * - Dashboard
- * - Tävlingar (Events, Resultat, Biljetter, Regler)
- * - Serier & Poäng (Serier, Ranking, Klubbpoäng, Skalor)
- * - Deltagare & Klubbar (Deltagare, Klubbar, Venues, Klasser)
- * - Import & Data (Översikt, Riders, Resultat, Events, UCI, Historik)
- * - Inställningar (Användare, Behörigheter, Publikt, System) [Super Admin]
+ * - Tävlingar (Events, Resultat, Venues, Biljetter)
+ * - Serier (Serier, Ranking, Klubbpoäng)
+ * - Deltagare (Deltagare, Klubbar)
+ * - Konfiguration (Klasser, Licenser, Poängskalor, Regler, Texter)
+ * - Import (Översikt, Deltagare, Resultat, Events, UCI, Historik)
+ * - System (Användare, Behörigheter, Databas) [Super Admin]
  */
 
 $current_page = basename($_SERVER['PHP_SELF']);
@@ -26,37 +27,46 @@ function get_active_admin_group($current_page, $current_path) {
         return 'dashboard';
     }
 
-    // Tävlingar
+    // Tävlingar (Events, Resultat, Venues, Biljetter)
     $competition_pages = [
         'events.php', 'event-create.php', 'event-edit.php', 'event-delete.php',
         'results.php', 'edit-results.php', 'recalculate-results.php', 'clear-event-results.php', 'reset-results.php',
-        'ticketing.php', 'event-pricing.php', 'event-tickets.php', 'event-ticketing.php', 'refund-requests.php', 'pricing-templates.php',
-        'registration-rules.php'
+        'venues.php',
+        'ticketing.php', 'event-pricing.php', 'event-tickets.php', 'event-ticketing.php', 'refund-requests.php', 'pricing-templates.php'
     ];
     if (in_array($current_page, $competition_pages) && strpos($current_path, '/admin/') !== false) {
         return 'competitions';
     }
 
-    // Serier & Poäng
+    // Serier (Serier, Ranking, Klubbpoäng)
     $standings_pages = [
         'series.php', 'series-events.php', 'series-pricing.php',
         'ranking.php', 'ranking-debug.php', 'ranking-minimal.php', 'setup-ranking-system.php',
-        'club-points.php', 'club-points-detail.php',
-        'point-scales.php', 'point-scale-edit.php', 'point-templates.php'
+        'club-points.php', 'club-points-detail.php'
     ];
     if (in_array($current_page, $standings_pages) && strpos($current_path, '/admin/') !== false) {
         return 'standings';
     }
 
-    // Deltagare & Klubbar
+    // Deltagare (Deltagare, Klubbar)
     $participants_pages = [
         'riders.php', 'rider-edit.php', 'rider-delete.php',
-        'clubs.php', 'club-edit.php', 'cleanup-clubs.php',
-        'venues.php',
-        'classes.php', 'reassign-classes.php', 'reset-classes.php', 'move-class-results.php'
+        'clubs.php', 'club-edit.php', 'cleanup-clubs.php'
     ];
     if (in_array($current_page, $participants_pages) && strpos($current_path, '/admin/') !== false) {
         return 'participants';
+    }
+
+    // Konfiguration (Klasser, Licenser, Poängskalor, Regler, Texter)
+    $config_pages = [
+        'classes.php', 'reassign-classes.php', 'reset-classes.php', 'move-class-results.php',
+        'license-class-matrix.php',
+        'point-scales.php', 'point-scale-edit.php', 'point-templates.php',
+        'registration-rules.php',
+        'public-settings.php', 'global-texts.php'
+    ];
+    if (in_array($current_page, $config_pages) && strpos($current_path, '/admin/') !== false) {
+        return 'config';
     }
 
     // Import
@@ -71,11 +81,10 @@ function get_active_admin_group($current_page, $current_path) {
         return 'import';
     }
 
-    // Inställningar
+    // System (super admin)
     $settings_pages = [
         'users.php', 'user-edit.php', 'user-events.php', 'user-rider.php',
         'role-permissions.php',
-        'public-settings.php', 'global-texts.php',
         'system-settings.php', 'settings.php', 'setup-database.php', 'run-migrations.php'
     ];
     if (in_array($current_page, $settings_pages) && strpos($current_path, '/admin/') !== false) {
@@ -139,7 +148,7 @@ $active_group = get_active_admin_group($current_page, $current_path);
     </div>
 
     <?php if ($is_admin): ?>
-    <!-- ADMIN MENU v2.0 - 5 GRUPPER -->
+    <!-- ADMIN MENU v2.1 - 6 GRUPPER -->
     <div class="gs-menu-section">
         <h3 class="gs-menu-title">Admin</h3>
         <ul class="gs-menu">
@@ -158,26 +167,32 @@ $active_group = get_active_admin_group($current_page, $current_path);
             <li>
                 <a href="/admin/series.php" class="<?= $active_group === 'standings' ? 'active' : '' ?>">
                     <i data-lucide="medal"></i>
-                    <span>Serier & Poäng</span>
+                    <span>Serier</span>
                 </a>
             </li>
             <li>
                 <a href="/admin/riders.php" class="<?= $active_group === 'participants' ? 'active' : '' ?>">
                     <i data-lucide="users"></i>
-                    <span>Deltagare & Klubbar</span>
+                    <span>Deltagare</span>
+                </a>
+            </li>
+            <li>
+                <a href="/admin/classes.php" class="<?= $active_group === 'config' ? 'active' : '' ?>">
+                    <i data-lucide="sliders"></i>
+                    <span>Konfiguration</span>
                 </a>
             </li>
             <li>
                 <a href="/admin/import.php" class="<?= $active_group === 'import' ? 'active' : '' ?>">
                     <i data-lucide="upload"></i>
-                    <span>Import & Data</span>
+                    <span>Import</span>
                 </a>
             </li>
             <?php if ($is_super_admin): ?>
             <li>
                 <a href="/admin/users.php" class="<?= $active_group === 'settings' ? 'active' : '' ?>">
                     <i data-lucide="settings"></i>
-                    <span>Inställningar</span>
+                    <span>System</span>
                 </a>
             </li>
             <?php endif; ?>
