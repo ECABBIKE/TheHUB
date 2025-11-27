@@ -7,9 +7,10 @@ SET `template_id` = NULL
 WHERE `template_id` IS NOT NULL
   AND `template_id` NOT IN (SELECT id FROM point_scales);
 
--- Step 2: Drop the old foreign key constraint
-ALTER TABLE `series_results`
-DROP FOREIGN KEY `series_results_ibfk_5`;
+-- Step 2: Remove the template_id column completely and re-add it without FK
+-- This is the safest way to remove unknown FK constraints
+ALTER TABLE `series_results` DROP COLUMN `template_id`;
+ALTER TABLE `series_results` ADD COLUMN `template_id` INT NULL;
 
 -- Step 3: Add new foreign key referencing point_scales
 ALTER TABLE `series_results`
