@@ -287,18 +287,33 @@ include __DIR__ . '/../includes/layout-header.php';
                         </select>
                     </div>
 
-                    <!-- Event Level (National/Sportmotion) -->
-                    <div>
-                        <label for="event_level" class="gs-label">
-                            <i data-lucide="trophy"></i>
-                            Tävlingsnivå
-                            <span class="gs-text-secondary gs-text-xs">(påverkar rankingpoäng)</span>
-                        </label>
-                        <select id="event_level" name="event_level" class="gs-input">
-                            <option value="national" <?= ($event['event_level'] ?? 'national') === 'national' ? 'selected' : '' ?>>Nationell tävling (100% poäng)</option>
-                            <option value="sportmotion" <?= ($event['event_level'] ?? 'national') === 'sportmotion' ? 'selected' : '' ?>>Sportmotion (50% poäng)</option>
-                        </select>
-                        <small class="gs-text-secondary">Nationella tävlingar ger fulla rankingpoäng, Sportmotion-event ger 50% av poängen</small>
+                    <!-- Event Level (Ranking Points) -->
+                    <div class="gs-grid gs-grid-cols-2 gs-gap-md">
+                        <div>
+                            <label for="event_level" class="gs-label">
+                                <i data-lucide="trophy"></i>
+                                Rankingklass
+                                <span class="gs-text-secondary gs-text-xs">(poäng)</span>
+                            </label>
+                            <select id="event_level" name="event_level" class="gs-input">
+                                <option value="national" <?= ($event['event_level'] ?? 'national') === 'national' ? 'selected' : '' ?>>Nationell (100%)</option>
+                                <option value="sportmotion" <?= ($event['event_level'] ?? 'national') === 'sportmotion' ? 'selected' : '' ?>>Sportmotion (50%)</option>
+                            </select>
+                            <small class="gs-text-secondary">Styr rankingpoäng</small>
+                        </div>
+                        <div>
+                            <label for="license_class" class="gs-label">
+                                <i data-lucide="id-card"></i>
+                                Licensklass
+                                <span class="gs-text-secondary gs-text-xs">(anmälan)</span>
+                            </label>
+                            <select id="license_class" name="license_class" class="gs-input">
+                                <option value="national" <?= ($event['license_class'] ?? 'national') === 'national' ? 'selected' : '' ?>>Nationell</option>
+                                <option value="sportmotion" <?= ($event['license_class'] ?? 'national') === 'sportmotion' ? 'selected' : '' ?>>Sportmotion</option>
+                                <option value="motion" <?= ($event['license_class'] ?? 'national') === 'motion' ? 'selected' : '' ?>>Motion</option>
+                            </select>
+                            <small class="gs-text-secondary">Styr vilka licenser som kan anmäla sig</small>
+                        </div>
                     </div>
 
                     <div class="gs-grid gs-grid-cols-2 gs-gap-md">
