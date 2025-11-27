@@ -1,6 +1,7 @@
 -- Migration 039: Swedish Cycling Federation License Types
 -- Complete license system based on SCF (Svenska Cykelförbundet) regulations
 -- This migration is IDEMPOTENT - safe to run multiple times
+-- Version 2: Removed ecycling, paracyclist, pilot. Added SWE ID.
 
 -- Delete existing data in correct order (respecting FK constraints)
 DELETE FROM license_class_category_access WHERE 1=1;
@@ -12,24 +13,24 @@ DELETE FROM license_types WHERE 1=1;
 INSERT INTO license_types (code, name, description, priority, is_active) VALUES
 -- Day/Motion licenses (lower priority)
 ('engangslicens', 'Engångslicens', 'Giltig i Sport/Motion-klasser. 65 kr (11+), 0 kr (0-10 år)', 10, 1),
-('motionslicens', 'Motionslicens', '15 år+. Motion, Sportmotion, E-bike, E-cycling. 300 kr', 20, 1),
-('ecycling', 'E-cyclinglicens', 'E-cycling klassen. 260 kr', 15, 1),
+('motionslicens', 'Motionslicens', '15 år+. Motion, Sportmotion, E-bike. 300 kr', 20, 1),
+
+-- SWE ID (Swedish cycling federation ID - not a full license)
+('sweid', 'SWE ID', 'Svenskt cykel-ID. Kan delta i vissa klasser beroende på inställningar.', 25, 1),
 
 -- Youth licenses
-('under11', 'Under 11 Men/Women', 'Pojkar/Flickor 5-10 år. P/F 5-10, Ungdom Sport, E-cycling. UCI ID. 0 kr', 30, 1),
-('youth', 'Youth Men/Women', 'Pojkar/Flickor 11-16 år. P/F 10-16, Ungdom Sport, E-bike, E-cycling. UCI ID. 260 kr', 40, 1),
+('under11', 'Under 11 Men/Women', 'Pojkar/Flickor 5-10 år. P/F 5-10, Ungdom Sport. UCI ID. 0 kr', 30, 1),
+('youth', 'Youth Men/Women', 'Pojkar/Flickor 11-16 år. P/F 10-16, Ungdom Sport, E-bike. UCI ID. 260 kr', 40, 1),
 
 -- Competition licenses (higher priority)
-('junior', 'Junior Men/Women', '17-18 år. U21, Junior, Senior, Sport, E-bike, E-cycling. UCI ID. 660 kr', 60, 1),
-('u23', 'Under 23 Men/Women', '19-22 år. U21, U23, Elit, Senior, Sport, E-bike, E-cycling. UCI ID. 960 kr', 70, 1),
-('elite_women', 'Elite Women', '23+ år. Dam Elit, Seniorer, Tävling, Sport, E-bike, E-cycling. UCI ID. 960 kr', 90, 1),
-('elite_men', 'Elite Men', '23+ år. Herr Elit, Seniorer, Tävling, Sport, E-bike, E-cycling. UCI ID. 960 kr', 90, 1),
-('master', 'Master Men/Women', '30+ år. H30-H75, D30-D60, Master, Seniorer, Sport, E-bike, E-cycling. UCI ID. 960 kr', 80, 1),
+('junior', 'Junior Men/Women', '17-18 år. U21, Junior, Senior, Sport, E-bike. UCI ID. 660 kr', 60, 1),
+('u23', 'Under 23 Men/Women', '19-22 år. U21, U23, Elit, Senior, Sport, E-bike. UCI ID. 960 kr', 70, 1),
+('elite_women', 'Elite Women', '23+ år. Dam Elit, Seniorer, Tävling, Sport, E-bike. UCI ID. 960 kr', 90, 1),
+('elite_men', 'Elite Men', '23+ år. Herr Elit, Seniorer, Tävling, Sport, E-bike. UCI ID. 960 kr', 90, 1),
+('master', 'Master Men/Women', '30+ år. H30-H75, D30-D60, Master, Seniorer, Sport, E-bike. UCI ID. 960 kr', 80, 1),
 
 -- Special licenses
-('paracyclist', 'Para-cyclist Men/Women', '16+ år. Samtliga Paracykelklasser, E-cycling. UCI ID. 960 kr', 85, 1),
-('pilot', 'Pilotlicens Men/Women', '16+ år. Pilot i tandemklasser. UCI ID. 210 kr', 50, 1),
-('baslicens', 'Baslicens Men/Women', '15+ år. H/D Sport, Sportmotion, E-bike, E-cycling, BMX nationellt. UCI ID. 420 kr', 55, 1);
+('baslicens', 'Baslicens Men/Women', '15+ år. H/D Sport, Sportmotion, E-bike, BMX nationellt. UCI ID. 420 kr', 55, 1);
 
 -- Create license age requirements table
 CREATE TABLE IF NOT EXISTS license_age_requirements (
@@ -46,7 +47,7 @@ CREATE TABLE IF NOT EXISTS license_age_requirements (
 INSERT INTO license_age_requirements (license_type_code, min_age, max_age, gender) VALUES
 ('engangslicens', NULL, NULL, 'ALL'),  -- All ages
 ('motionslicens', 15, NULL, 'ALL'),
-('ecycling', NULL, NULL, 'ALL'),
+('sweid', NULL, NULL, 'ALL'),  -- All ages
 ('under11', 5, 10, 'ALL'),
 ('youth', 11, 16, 'ALL'),
 ('junior', 17, 18, 'ALL'),
@@ -54,8 +55,6 @@ INSERT INTO license_age_requirements (license_type_code, min_age, max_age, gende
 ('elite_women', 23, NULL, 'K'),
 ('elite_men', 23, NULL, 'M'),
 ('master', 30, NULL, 'ALL'),
-('paracyclist', 16, NULL, 'ALL'),
-('pilot', 16, NULL, 'ALL'),
 ('baslicens', 15, NULL, 'ALL');
 
 -- Create class categories for easier mapping
@@ -78,8 +77,7 @@ INSERT INTO class_categories (code, name, description, sort_order) VALUES
 ('master_k', 'Master Damer', 'D30-D60', 80),
 ('sport', 'Sport', 'Herrar Sport, Damer Sport, Ungdom Sport', 90),
 ('motion', 'Motion', 'Motion, Sportmotion', 100),
-('ebike', 'E-bike/E-cycling', 'E-bike, E-cycling', 110),
-('para', 'Paracykel', 'Samtliga paracykelklasser', 120);
+('ebike', 'E-bike', 'E-bike klasser', 110);
 
 -- License to class category mapping (which licenses can compete in which category)
 CREATE TABLE IF NOT EXISTS license_class_category_access (
@@ -100,7 +98,6 @@ INSERT INTO license_class_category_access (license_type_code, class_category_cod
 ('engangslicens', 'youth_f'),
 ('engangslicens', 'sport'),
 ('engangslicens', 'motion'),
-('engangslicens', 'para'),
 ('engangslicens', 'ebike');
 
 -- Motionslicens
@@ -108,9 +105,11 @@ INSERT INTO license_class_category_access (license_type_code, class_category_cod
 ('motionslicens', 'motion'),
 ('motionslicens', 'ebike');
 
--- E-cyclinglicens
+-- SWE ID - default to sport/motion access
 INSERT INTO license_class_category_access (license_type_code, class_category_code) VALUES
-('ecycling', 'ebike');
+('sweid', 'sport'),
+('sweid', 'motion'),
+('sweid', 'ebike');
 
 -- Under 11
 INSERT INTO license_class_category_access (license_type_code, class_category_code) VALUES
@@ -169,11 +168,6 @@ INSERT INTO license_class_category_access (license_type_code, class_category_cod
 ('master', 'sport'),
 ('master', 'motion'),
 ('master', 'ebike');
-
--- Paracyclist
-INSERT INTO license_class_category_access (license_type_code, class_category_code) VALUES
-('paracyclist', 'para'),
-('paracyclist', 'ebike');
 
 -- Baslicens
 INSERT INTO license_class_category_access (license_type_code, class_category_code) VALUES

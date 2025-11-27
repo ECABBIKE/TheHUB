@@ -135,6 +135,26 @@ if (!empty($event['series_id'])) {
     }
 }
 
+// Get license-class matrix from class_license_eligibility table
+// This determines which license types can register for which classes
+$licenseMatrixMap = [];
+try {
+    $licenseMatrix = $db->getAll("
+        SELECT class_id, license_type_code
+        FROM class_license_eligibility
+        WHERE is_allowed = 1
+    ");
+    // Group by class_id: { classId: ['license1', 'license2', ...] }
+    foreach ($licenseMatrix as $mapping) {
+        if (!isset($licenseMatrixMap[$mapping['class_id']])) {
+            $licenseMatrixMap[$mapping['class_id']] = [];
+        }
+        $licenseMatrixMap[$mapping['class_id']][] = $mapping['license_type_code'];
+    }
+} catch (Exception $e) {
+    // Table might not exist yet - no license restrictions applied
+}
+
 // Fetch global texts for use_global functionality
 $globalTexts = $db->getAll("SELECT field_key, content FROM global_texts WHERE is_active = 1");
 $globalTextMap = [];
@@ -1761,6 +1781,10 @@ include __DIR__ . '/includes/layout-header.php';
                         // Class rules for license validation
                         const classRules = <?= json_encode($classRulesMap) ?>;
 
+                        // License matrix: which license types can register for which classes
+                        // Format: { classId: ['license1', 'license2', ...] }
+                        const licenseMatrix = <?= json_encode($licenseMatrixMap) ?>;
+
                         // Current rider data for validation
                         let currentRiderData = null;
 
@@ -1847,9 +1871,24 @@ include __DIR__ . '/includes/layout-header.php';
                                 let allowed = true;
                                 let reason = '';
 
+                                // LICENSE MATRIX CHECK - Primary filter based on admin matrix
+                                // This checks class_license_eligibility table configured in Konfiguration → Licenser
+                                const allowedLicenses = licenseMatrix[classId];
+                                if (allowedLicenses && allowedLicenses.length > 0) {
+                                    // Matrix has rules for this class - check if rider's license is allowed
+                                    const riderLicense = currentRiderData.licenseType?.toLowerCase() || '';
+                                    if (!riderLicense || !allowedLicenses.includes(riderLicense)) {
+                                        // License override allows bypassing this check
+                                        if (!licenseOverride) {
+                                            allowed = false;
+                                            reason = 'Din licens tillåter inte anmälan till denna klass';
+                                        }
+                                    }
+                                }
+
                                 if (rules) {
                                     // GENDER IS ALWAYS ENFORCED - Never bypassed by license override
-                                    if (rules.allowed_genders && currentRiderData.gender) {
+                                    if (allowed && rules.allowed_genders && currentRiderData.gender) {
                                         const allowedGenders = JSON.parse(rules.allowed_genders);
                                         if (allowedGenders.length > 0 && !allowedGenders.includes(currentRiderData.gender)) {
                                             allowed = false;
@@ -1857,7 +1896,7 @@ include __DIR__ . '/includes/layout-header.php';
                                         }
                                     }
 
-                                    // License type check - can be bypassed with license override
+                                    // License type check from series rules - can be bypassed with license override
                                     if (allowed && !licenseOverride && rules.allowed_license_types) {
                                         const allowedTypes = JSON.parse(rules.allowed_license_types);
                                         if (allowedTypes.length > 0 && currentRiderData.licenseType) {
