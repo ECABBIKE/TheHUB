@@ -2,26 +2,26 @@
 /**
  * Series Points Calculation System
  *
- * IMPORTANT: This system is COMPLETELY SEPARATE from ranking points!
+ * IMPORTANT: Series points are stored SEPARATELY from ranking points!
  *
  * - Series points: Stored in series_results table
- *   - Calculated using series_events.template_id -> qualification_point_templates
+ *   - Calculated using series_events.template_id -> point_scales -> point_scale_values
  *   - Each series can have different templates per event
  *   - Managed via /admin/series-events.php
+ *   - ONLY recalculated when you change template in series-events.php
  *
  * - Ranking points: Stored in results.points
- *   - Calculated using events.point_scale_id -> point_scales
- *   - Used for national/international ranking
- *   - Managed via /admin/ranking.php
+ *   - Uses the same point_scales table
+ *   - But stored in different place (results.points vs series_results.points)
  *
- * NEVER mix these two systems!
+ * Both use the same templates (point_scales), but store results separately!
  */
 
 /**
  * Calculate series points for a single result
  *
  * @param object $db Database instance
- * @param int $templateId The qualification_point_templates.id to use
+ * @param int $templateId The point_scales.id to use
  * @param int $position The rider's position (1-based)
  * @param string $status Result status (finished, dnf, dns, dq)
  * @return int Points earned (0 if no points for this position)
@@ -42,28 +42,17 @@ function calculateSeriesPointsForPosition($db, $templateId, $position, $status =
         return 0;
     }
 
-    // Get the template
-    $template = $db->getRow(
-        "SELECT points FROM qualification_point_templates WHERE id = ? AND active = 1",
-        [$templateId]
+    // Get points from point_scale_values table
+    $pointValue = $db->getRow(
+        "SELECT psv.points
+         FROM point_scale_values psv
+         JOIN point_scales ps ON psv.scale_id = ps.id
+         WHERE ps.id = ? AND ps.active = 1 AND psv.position = ?",
+        [$templateId, $position]
     );
 
-    if (!$template || !$template['points']) {
-        error_log("Series points: Template {$templateId} not found or inactive");
-        return 0;
-    }
-
-    // Parse JSON points array
-    $pointsArray = json_decode($template['points'], true);
-    if (!$pointsArray) {
-        error_log("Series points: Invalid JSON in template {$templateId}");
-        return 0;
-    }
-
-    // Get points for this position (keys are strings like "1", "2", etc.)
-    $positionKey = (string)$position;
-    if (isset($pointsArray[$positionKey])) {
-        return (int)$pointsArray[$positionKey];
+    if ($pointValue) {
+        return (int)$pointValue['points'];
     }
 
     // Position not in template = 0 points
