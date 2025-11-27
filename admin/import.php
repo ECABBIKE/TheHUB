@@ -323,6 +323,25 @@ include __DIR__ . '/../includes/layout-header.php';
                         </a>
                     </div>
                 </div>
+
+                <!-- Hitta Dubbletter -->
+                <div class="gs-card" style="border-left: 4px solid var(--gs-danger);">
+                    <div class="gs-card-header">
+                        <h2 class="gs-h6">
+                            <i data-lucide="users"></i>
+                            Hitta Dubbletter
+                        </h2>
+                    </div>
+                    <div class="gs-card-content">
+                        <p class="gs-text-sm gs-text-secondary gs-mb-md">
+                            Smart sökning efter dubbletter med fuzzy name matching.
+                        </p>
+                        <a href="/admin/find-duplicates.php" class="gs-btn gs-btn-danger gs-btn-sm">
+                            <i data-lucide="git-merge"></i>
+                            Hitta
+                        </a>
+                    </div>
+                </div>
             </div>
 
             <!-- Format Guide -->
