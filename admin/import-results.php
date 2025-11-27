@@ -5,6 +5,7 @@ require_once __DIR__ . '/../includes/class-calculations.php';
 require_once __DIR__ . '/../includes/point-calculations.php';
 require_once __DIR__ . '/../includes/import-functions.php';
 require_admin();
+require_once __DIR__ . '/../includes/admin-layout.php';
 
 $db = getDB();
 $current_admin = get_current_admin();
@@ -131,17 +132,7 @@ include __DIR__ . '/../includes/layout-header.php';
 
 <main class="gs-content-with-sidebar">
     <div class="gs-container">
-        <!-- Header -->
-        <div class="gs-flex gs-items-center gs-justify-between gs-mb-xl">
-            <h1 class="gs-h1 gs-text-primary">
-                <i data-lucide="upload"></i>
-                Importera Resultat
-            </h1>
-            <a href="/admin/import-history.php" class="gs-btn gs-btn-outline">
-                <i data-lucide="history"></i>
-                Importhistorik
-            </a>
-        </div>
+        <?php render_admin_header('Import & Data'); ?>
 
         <!-- Messages -->
         <?php if ($message): ?>

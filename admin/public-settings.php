@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../config.php';
 require_admin();
+require_once __DIR__ . '/../includes/admin-layout.php';
 
 $db = getDB();
 $current_admin = get_current_admin();
@@ -80,14 +81,8 @@ include __DIR__ . '/../includes/layout-header.php';
 ?>
 
 <main class="gs-main-content">
-    <div class="gs-container" class="gs-max-w-900">
-        <!-- Header -->
-        <div class="gs-flex gs-items-center gs-justify-between gs-mb-xl">
-            <h1 class="gs-h1 gs-text-primary">
-                <i data-lucide="settings"></i>
-                Publika Inställningar
-            </h1>
-        </div>
+    <div class="gs-container gs-max-w-900">
+        <?php render_admin_header('Inställningar'); ?>
 
         <!-- Messages -->
         <?php if ($message): ?>

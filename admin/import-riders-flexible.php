@@ -17,6 +17,7 @@ ini_set('display_errors', 1);
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/../includes/helpers.php';
 require_admin();
+require_once __DIR__ . '/../includes/admin-layout.php';
 
 $db = getDB();
 $current_admin = get_current_admin();
@@ -471,22 +472,7 @@ include __DIR__ . '/../includes/layout-header.php';
 
 <main class="gs-content-with-sidebar">
     <div class="gs-container">
-        <!-- Header -->
-        <div class="gs-flex gs-items-center gs-justify-between gs-mb-xl">
-            <div>
-                <h1 class="gs-h1 gs-text-primary">
-                    <i data-lucide="shuffle"></i>
-                    Flexibel Import
-                </h1>
-                <p class="gs-text-secondary gs-mt-sm">
-                    Importera deltagare från CSV - kolumnordning spelar ingen roll!
-                </p>
-            </div>
-            <a href="/admin/riders.php" class="gs-btn gs-btn-outline">
-                <i data-lucide="arrow-left"></i>
-                Tillbaka
-            </a>
-        </div>
+        <?php render_admin_header('Import & Data'); ?>
 
         <!-- Features Info -->
         <div class="gs-alert gs-alert-success gs-mb-lg">

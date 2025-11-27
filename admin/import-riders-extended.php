@@ -40,6 +40,7 @@ register_shutdown_function(function() {
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/../includes/helpers.php';
 require_admin();
+require_once __DIR__ . '/../includes/admin-layout.php';
 
 $db = getDB();
 $current_admin = get_current_admin();
@@ -509,28 +510,7 @@ include __DIR__ . '/../includes/layout-header.php';
 
 <main class="gs-content-with-sidebar">
     <div class="gs-container">
-        <!-- Header -->
-        <div class="gs-flex gs-items-center gs-justify-between gs-mb-xl">
-            <div>
-                <h1 class="gs-h1 gs-text-primary">
-                    <i data-lucide="shield-check"></i>
-                    Importera Deltagare (Utökad Mall)
-                </h1>
-                <p class="gs-text-secondary gs-mt-sm">
-                    Bulk-import av deltagare med fullständig persondata (KONFIDENTIELLT)
-                </p>
-            </div>
-            <div class="gs-flex gs-gap-sm">
-                <a href="/admin/run-migration-extended-riders.php" class="gs-btn gs-btn-outline gs-btn-sm">
-                    <i data-lucide="database"></i>
-                    Kör Migration
-                </a>
-                <a href="/admin/riders.php" class="gs-btn gs-btn-outline">
-                    <i data-lucide="arrow-left"></i>
-                    Tillbaka
-                </a>
-            </div>
-        </div>
+        <?php render_admin_header('Import & Data'); ?>
 
         <!-- Privacy Warning -->
         <div class="gs-alert gs-alert-warning gs-mb-lg gs-alert-border-danger">

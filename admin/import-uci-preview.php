@@ -6,6 +6,7 @@
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/../includes/helpers.php';
 require_admin();
+require_once __DIR__ . '/../includes/admin-layout.php';
 
 $db = getDB();
 $current_admin = get_current_admin();
@@ -450,17 +451,7 @@ include __DIR__ . '/../includes/layout-header.php';
 
 <main class="gs-content-with-sidebar">
     <div class="gs-container">
-
-        <!-- Header -->
-        <div class="gs-mb-xl">
-            <h1 class="gs-h1 gs-text-primary">
-                <i data-lucide="upload"></i>
-                UCI Import med Förhandsgranskning
-            </h1>
-            <p class="gs-text-secondary">
-                Två-stegs import: Granska → Bekräfta → Spara
-            </p>
-        </div>
+        <?php render_admin_header('Import & Data'); ?>
 
         <!-- Messages -->
         <?php if ($message): ?>

@@ -6,6 +6,7 @@
 
 require_once __DIR__ . '/../config.php';
 require_admin();
+require_once __DIR__ . '/../includes/admin-layout.php';
 
 $db = getDB();
 
@@ -41,26 +42,7 @@ include __DIR__ . '/../includes/layout-header.php';
 
 <main class="gs-content-with-sidebar">
     <div class="gs-container">
-        <!-- Header -->
-        <div class="gs-card gs-mb-lg">
-            <div class="gs-card-content">
-                <div class="gs-flex gs-justify-between gs-items-start">
-                    <div>
-                        <h1 class="gs-h2 gs-text-primary gs-mb-sm">
-                            <i data-lucide="ticket" class="gs-icon-lg"></i>
-                            Ticketing Dashboard
-                        </h1>
-                        <p class="gs-text-secondary">
-                            Hantera biljetter, priser och försäljning för alla events
-                        </p>
-                    </div>
-                    <a href="/admin/pricing-templates.php" class="gs-btn gs-btn-primary">
-                        <i data-lucide="credit-card"></i>
-                        Prismallar
-                    </a>
-                </div>
-            </div>
-        </div>
+        <?php render_admin_header('Tävlingar'); ?>
 
         <div class="gs-alert gs-alert-info gs-mb-lg">
             <i data-lucide="info"></i>

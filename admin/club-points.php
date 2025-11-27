@@ -6,6 +6,7 @@
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/../includes/club-points-system.php';
 require_admin();
+require_once __DIR__ . '/../includes/admin-layout.php';
 
 $db = getDB();
 $current_admin = get_current_admin();
@@ -66,12 +67,8 @@ include __DIR__ . '/../includes/layout-header.php';
 
 <main class="gs-content-with-sidebar">
     <div class="gs-container">
-        <!-- Header -->
-        <div class="gs-flex gs-items-center gs-justify-between gs-mb-xl gs-flex-wrap gs-gap-md">
-            <h1 class="gs-h1 gs-text-primary">
-                <i data-lucide="trophy"></i>
-                Klubbpoäng
-            </h1>
+        <?php render_admin_header('Serier & Poäng'); ?>
+        <div class="gs-mb-lg">
             <a href="/clubs/leaderboard.php<?= $selectedSeriesId ? '?series_id=' . $selectedSeriesId : '' ?>" class="gs-btn gs-btn-outline" target="_blank">
                 <i data-lucide="external-link"></i>
                 Publik vy

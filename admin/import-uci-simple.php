@@ -9,6 +9,7 @@ ini_set('display_errors', 1);
 
 require_once '../config.php';
 require_admin();
+require_once __DIR__ . '/../includes/admin-layout.php';
 
 $db = getDB();
 $pdo = $db->getConnection();
@@ -266,10 +267,7 @@ include '../includes/layout-header.php';
 
 <main class="gs-content-with-sidebar">
     <div class="gs-container">
-        <h1 class="gs-h2 gs-mb-lg">
-            <i data-lucide="upload"></i>
-            UCI Licensregister Import (Simplified)
-        </h1>
+        <?php render_admin_header('Import & Data'); ?>
 
         <?php if (isset($_GET['error'])): ?>
             <div class="gs-alert gs-alert-error gs-mb-lg">

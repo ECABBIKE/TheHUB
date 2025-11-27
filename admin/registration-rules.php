@@ -8,6 +8,7 @@
 
 require_once __DIR__ . '/../config.php';
 require_admin();
+require_once __DIR__ . '/../includes/admin-layout.php';
 
 require_once __DIR__ . '/../includes/registration-rules.php';
 require_once __DIR__ . '/../includes/registration-validator.php';
@@ -177,13 +178,7 @@ include __DIR__ . '/../includes/layout-header.php';
 
 <main class="gs-main-content">
     <div class="gs-container">
-        <!-- Header -->
-        <div class="gs-flex gs-items-center gs-justify-between gs-mb-lg">
-            <h1 class="gs-h1">
-                <i data-lucide="shield-check"></i>
-                Registreringsregler
-            </h1>
-        </div>
+        <?php render_admin_header('Tävlingar'); ?>
 
         <!-- Messages -->
         <?php if ($message): ?>
