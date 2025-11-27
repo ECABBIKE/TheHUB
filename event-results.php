@@ -1644,19 +1644,47 @@ include __DIR__ . '/includes/layout-header.php';
                                 </div>
                             </div>
 
-                            <!-- License Override Option -->
-                            <div id="license-override-section" class="gs-card gs-mb-md" style="display: none;">
+                            <!-- License Type Selection -->
+                            <div id="license-type-section" class="gs-card gs-mb-md" style="display: none;">
+                                <div class="gs-card-header">
+                                    <h3 class="gs-h5">
+                                        <i data-lucide="id-card"></i>
+                                        Välj licenstyp
+                                    </h3>
+                                </div>
                                 <div class="gs-card-content">
-                                    <label class="gs-flex gs-items-start gs-gap-md" style="cursor: pointer;">
-                                        <input type="checkbox" id="license-override" onchange="filterClasses()" class="gs-mt-xs">
-                                        <div>
-                                            <strong>Jag har aktiv tävlingslicens</strong>
-                                            <p class="gs-text-sm gs-text-secondary gs-mb-0">
-                                                Kryssa i om du har en giltig tävlingslicens och vill se alla klasser för ditt kön.
-                                                Licenstyp verifieras vid incheckning.
-                                            </p>
-                                        </div>
-                                    </label>
+                                    <p class="gs-text-sm gs-text-secondary gs-mb-md">
+                                        Välj vilken typ av licens du tävlar med. Detta avgör vilka klasser du kan anmäla dig till.
+                                    </p>
+                                    <div class="gs-grid gs-grid-cols-1 gs-gap-sm">
+                                        <label class="gs-card gs-p-md" style="cursor: pointer; border: 2px solid var(--gs-border);">
+                                            <div class="gs-flex gs-items-center gs-gap-md">
+                                                <input type="radio" name="selected_license" value="engangslicens" onchange="onLicenseSelected()">
+                                                <div>
+                                                    <strong>Engångslicens</strong>
+                                                    <p class="gs-text-sm gs-text-secondary gs-mb-0">För enstaka tävlingar i Sport/Motion-klasser</p>
+                                                </div>
+                                            </div>
+                                        </label>
+                                        <label class="gs-card gs-p-md" style="cursor: pointer; border: 2px solid var(--gs-border);">
+                                            <div class="gs-flex gs-items-center gs-gap-md">
+                                                <input type="radio" name="selected_license" value="motionslicens" onchange="onLicenseSelected()">
+                                                <div>
+                                                    <strong>Motionslicens</strong>
+                                                    <p class="gs-text-sm gs-text-secondary gs-mb-0">För Motion och Sportmotion-klasser</p>
+                                                </div>
+                                            </div>
+                                        </label>
+                                        <label class="gs-card gs-p-md" style="cursor: pointer; border: 2px solid var(--gs-border);">
+                                            <div class="gs-flex gs-items-center gs-gap-md">
+                                                <input type="radio" name="selected_license" value="tavlingslicens" onchange="onLicenseSelected()">
+                                                <div>
+                                                    <strong>Tävlingslicens</strong>
+                                                    <p class="gs-text-sm gs-text-secondary gs-mb-0">Youth, Junior, U23, Elite, Master eller Baslicens - öppnar alla klasser</p>
+                                                </div>
+                                            </div>
+                                        </label>
+                                    </div>
                                 </div>
                             </div>
 
@@ -1848,21 +1876,43 @@ include __DIR__ . '/includes/layout-header.php';
                             document.getElementById('rider-results').style.display = 'none';
                             document.getElementById('rider-search').value = riderData.name;
 
-                            // Show license override option (allows users with active license to bypass license type filter)
-                            document.getElementById('license-override-section').style.display = 'block';
-                            // Reset checkbox when selecting new rider
-                            document.getElementById('license-override').checked = false;
+                            // Show license type selector
+                            document.getElementById('license-type-section').style.display = 'block';
+                            // Reset license selection when selecting new rider
+                            document.querySelectorAll('input[name="selected_license"]').forEach(r => r.checked = false);
 
-                            // Filter classes based on rider's license/age/gender
+                            // Filter classes based on rider's gender (license not yet selected)
                             filterClasses();
                             updatePrice();
+                        }
+
+                        // Called when user selects a license type
+                        function onLicenseSelected() {
+                            filterClasses();
+                            // Highlight selected license card
+                            document.querySelectorAll('input[name="selected_license"]').forEach(radio => {
+                                const card = radio.closest('label');
+                                if (radio.checked) {
+                                    card.style.borderColor = 'var(--gs-primary)';
+                                    card.style.backgroundColor = 'var(--gs-primary-light, rgba(var(--gs-primary-rgb), 0.1))';
+                                } else {
+                                    card.style.borderColor = 'var(--gs-border)';
+                                    card.style.backgroundColor = '';
+                                }
+                            });
                         }
 
                         function filterClasses() {
                             if (!currentRiderData) return;
 
                             const classOptions = document.querySelectorAll('input[name="class_id"]');
-                            const licenseOverride = document.getElementById('license-override')?.checked || false;
+
+                            // Get selected license type from radio buttons
+                            const selectedLicenseRadio = document.querySelector('input[name="selected_license"]:checked');
+                            const selectedLicense = selectedLicenseRadio?.value || null;
+
+                            // Tävlingslicens bypasses matrix restrictions (but not gender)
+                            const hasCompetitionLicense = selectedLicense === 'tavlingslicens';
 
                             classOptions.forEach(radio => {
                                 const classId = radio.value;
@@ -1871,44 +1921,40 @@ include __DIR__ . '/includes/layout-header.php';
                                 let allowed = true;
                                 let reason = '';
 
-                                // LICENSE MATRIX CHECK - Primary filter based on admin matrix
-                                // This checks class_license_eligibility table configured in Konfiguration → Licenser
-                                const allowedLicenses = licenseMatrix[classId];
-                                if (allowedLicenses && allowedLicenses.length > 0) {
-                                    // Matrix has rules for this class - check if rider's license is allowed
-                                    const riderLicense = currentRiderData.licenseType?.toLowerCase() || '';
-                                    if (!riderLicense || !allowedLicenses.includes(riderLicense)) {
-                                        // License override allows bypassing this check
-                                        if (!licenseOverride) {
-                                            allowed = false;
-                                            reason = 'Din licens tillåter inte anmälan till denna klass';
-                                        }
+                                // GENDER IS ALWAYS ENFORCED FIRST - Never bypassed
+                                if (rules && rules.allowed_genders && currentRiderData.gender) {
+                                    const allowedGenders = JSON.parse(rules.allowed_genders);
+                                    if (allowedGenders.length > 0 && !allowedGenders.includes(currentRiderData.gender)) {
+                                        allowed = false;
+                                        reason = currentRiderData.gender === 'M' ? 'Endast för kvinnor' : 'Endast för män';
                                     }
                                 }
 
-                                if (rules) {
-                                    // GENDER IS ALWAYS ENFORCED - Never bypassed by license override
-                                    if (allowed && rules.allowed_genders && currentRiderData.gender) {
-                                        const allowedGenders = JSON.parse(rules.allowed_genders);
-                                        if (allowedGenders.length > 0 && !allowedGenders.includes(currentRiderData.gender)) {
+                                // LICENSE MATRIX CHECK - Based on selected license type
+                                // Skip if no license selected yet (show as locked)
+                                if (allowed && !selectedLicense) {
+                                    allowed = false;
+                                    reason = 'Välj licenstyp först';
+                                }
+
+                                // If tavlingslicens selected - all classes open (gender already checked)
+                                // Otherwise check the matrix
+                                if (allowed && !hasCompetitionLicense) {
+                                    const allowedLicenses = licenseMatrix[classId];
+                                    if (allowedLicenses && allowedLicenses.length > 0) {
+                                        // Matrix has rules - check if selected license is allowed
+                                        if (!allowedLicenses.includes(selectedLicense)) {
                                             allowed = false;
-                                            reason = currentRiderData.gender === 'M' ? 'Endast för kvinnor' : 'Endast för män';
+                                            reason = 'Kräver annan licenstyp';
                                         }
                                     }
+                                    // If no matrix rules for this class, allow it (backward compatibility)
+                                }
 
-                                    // License type check from series rules - can be bypassed with license override
-                                    if (allowed && !licenseOverride && rules.allowed_license_types) {
-                                        const allowedTypes = JSON.parse(rules.allowed_license_types);
-                                        if (allowedTypes.length > 0 && currentRiderData.licenseType) {
-                                            if (!allowedTypes.includes(currentRiderData.licenseType)) {
-                                                allowed = false;
-                                                reason = 'Kräver licens: ' + allowedTypes.join(', ');
-                                            }
-                                        }
-                                    }
-
-                                    // Check birth year (age restrictions) - can be bypassed with license override
-                                    if (allowed && !licenseOverride && currentRiderData.birthYear) {
+                                // Additional series rules (age restrictions etc)
+                                if (rules && allowed) {
+                                    // Check birth year (age restrictions)
+                                    if (currentRiderData.birthYear) {
                                         if (rules.min_birth_year && currentRiderData.birthYear < rules.min_birth_year) {
                                             allowed = false;
                                             reason = 'Födelseår måste vara ' + rules.min_birth_year + ' eller senare';
@@ -1917,12 +1963,6 @@ include __DIR__ . '/includes/layout-header.php';
                                             allowed = false;
                                             reason = 'Födelseår måste vara ' + rules.max_birth_year + ' eller tidigare';
                                         }
-                                    }
-
-                                    // Check license requirement - can be bypassed with license override
-                                    if (allowed && !licenseOverride && rules.requires_license && !currentRiderData.licenseType) {
-                                        allowed = false;
-                                        reason = 'Kräver tävlingslicens';
                                     }
                                 }
 
