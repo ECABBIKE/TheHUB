@@ -1645,19 +1645,37 @@ include __DIR__ . '/includes/layout-header.php';
                             </div>
 
                             <!-- License Type Selection -->
+                            <?php
+                            $licenseClass = $event['license_class'] ?? 'national';
+                            $showEngangMotion = in_array($licenseClass, ['sportmotion', 'motion']);
+                            ?>
                             <div id="license-type-section" class="gs-card gs-mb-md" style="display: none;">
                                 <div class="gs-card-header">
                                     <h3 class="gs-h5">
                                         <i data-lucide="id-card"></i>
                                         Välj licenstyp
+                                        <?php if ($licenseClass === 'national'): ?>
+                                            <span class="gs-badge gs-badge-warning gs-ml-sm">Nationellt event</span>
+                                        <?php elseif ($licenseClass === 'sportmotion'): ?>
+                                            <span class="gs-badge gs-badge-info gs-ml-sm">Sportmotion</span>
+                                        <?php else: ?>
+                                            <span class="gs-badge gs-badge-success gs-ml-sm">Motion</span>
+                                        <?php endif; ?>
                                     </h3>
                                 </div>
                                 <div class="gs-card-content">
-                                    <p class="gs-text-sm gs-text-secondary gs-mb-md">
-                                        Välj vilken typ av licens du tävlar med. Detta avgör vilka klasser du kan anmäla dig till.
-                                    </p>
+                                    <?php if ($licenseClass === 'national'): ?>
+                                        <p class="gs-text-sm gs-text-secondary gs-mb-md">
+                                            Detta är ett <strong>nationellt event</strong> - endast tävlingslicens tillåts.
+                                        </p>
+                                    <?php else: ?>
+                                        <p class="gs-text-sm gs-text-secondary gs-mb-md">
+                                            Välj vilken typ av licens du tävlar med. Detta avgör vilka klasser du kan anmäla dig till.
+                                        </p>
+                                    <?php endif; ?>
                                     <div class="gs-grid gs-grid-cols-1 gs-gap-sm">
-                                        <label class="gs-card gs-p-md" style="cursor: pointer; border: 2px solid var(--gs-border);">
+                                        <?php if ($showEngangMotion): ?>
+                                        <label class="gs-card gs-p-md license-option" style="cursor: pointer; border: 2px solid var(--gs-border);">
                                             <div class="gs-flex gs-items-center gs-gap-md">
                                                 <input type="radio" name="selected_license" value="engangslicens" onchange="onLicenseSelected()">
                                                 <div>
@@ -1666,7 +1684,7 @@ include __DIR__ . '/includes/layout-header.php';
                                                 </div>
                                             </div>
                                         </label>
-                                        <label class="gs-card gs-p-md" style="cursor: pointer; border: 2px solid var(--gs-border);">
+                                        <label class="gs-card gs-p-md license-option" style="cursor: pointer; border: 2px solid var(--gs-border);">
                                             <div class="gs-flex gs-items-center gs-gap-md">
                                                 <input type="radio" name="selected_license" value="motionslicens" onchange="onLicenseSelected()">
                                                 <div>
@@ -1675,7 +1693,8 @@ include __DIR__ . '/includes/layout-header.php';
                                                 </div>
                                             </div>
                                         </label>
-                                        <label class="gs-card gs-p-md" style="cursor: pointer; border: 2px solid var(--gs-border);">
+                                        <?php endif; ?>
+                                        <label class="gs-card gs-p-md license-option" style="cursor: pointer; border: 2px solid var(--gs-border);">
                                             <div class="gs-flex gs-items-center gs-gap-md">
                                                 <input type="radio" name="selected_license" value="tavlingslicens" onchange="onLicenseSelected()">
                                                 <div>
@@ -1806,6 +1825,12 @@ include __DIR__ . '/includes/layout-header.php';
                         const wooProductId = '<?= h($event['woo_product_id']) ?>';
                         const gravityIdDiscount = 50;
 
+                        // Event license class: 'national', 'sportmotion', or 'motion'
+                        // - national: Only tävlingslicens allowed
+                        // - sportmotion: Engångslicens, motionslicens, and tävlingslicens allowed
+                        // - motion: All license types allowed
+                        const eventLicenseClass = '<?= h($event['license_class'] ?? 'national') ?>';
+
                         // Class rules for license validation
                         const classRules = <?= json_encode($classRulesMap) ?>;
 
@@ -1911,8 +1936,17 @@ include __DIR__ . '/includes/layout-header.php';
                             const selectedLicenseRadio = document.querySelector('input[name="selected_license"]:checked');
                             const selectedLicense = selectedLicenseRadio?.value || null;
 
-                            // Tävlingslicens bypasses matrix restrictions (but not gender)
-                            const hasCompetitionLicense = selectedLicense === 'tavlingslicens';
+                            // Check if selected license is allowed for this event's license class
+                            // - national: only tävlingslicens
+                            // - sportmotion: engångslicens, motionslicens, tävlingslicens
+                            // - motion: all licenses
+                            const licensesAllowedForEvent = {
+                                'national': ['tavlingslicens'],
+                                'sportmotion': ['engangslicens', 'motionslicens', 'tavlingslicens'],
+                                'motion': ['engangslicens', 'motionslicens', 'tavlingslicens']
+                            };
+                            const allowedForEvent = licensesAllowedForEvent[eventLicenseClass] || licensesAllowedForEvent['national'];
+                            const licenseAllowedForThisEvent = selectedLicense && allowedForEvent.includes(selectedLicense);
 
                             classOptions.forEach(radio => {
                                 const classId = radio.value;
@@ -1930,22 +1964,31 @@ include __DIR__ . '/includes/layout-header.php';
                                     }
                                 }
 
-                                // LICENSE MATRIX CHECK - Based on selected license type
-                                // Skip if no license selected yet (show as locked)
+                                // Check if license is selected
                                 if (allowed && !selectedLicense) {
                                     allowed = false;
                                     reason = 'Välj licenstyp först';
                                 }
 
-                                // If tavlingslicens selected - all classes open (gender already checked)
-                                // Otherwise check the matrix
-                                if (allowed && !hasCompetitionLicense) {
+                                // Check if selected license is allowed for this event type
+                                if (allowed && !licenseAllowedForThisEvent) {
+                                    allowed = false;
+                                    if (eventLicenseClass === 'national') {
+                                        reason = 'Nationellt event - kräver tävlingslicens';
+                                    } else {
+                                        reason = 'Din licenstyp är inte tillåten för detta event';
+                                    }
+                                }
+
+                                // LICENSE MATRIX CHECK - Only if license is allowed for event
+                                // Tävlingslicens bypasses matrix, others must check
+                                if (allowed && selectedLicense !== 'tavlingslicens') {
                                     const allowedLicenses = licenseMatrix[classId];
                                     if (allowedLicenses && allowedLicenses.length > 0) {
                                         // Matrix has rules - check if selected license is allowed
                                         if (!allowedLicenses.includes(selectedLicense)) {
                                             allowed = false;
-                                            reason = 'Kräver annan licenstyp';
+                                            reason = 'Denna klass kräver annan licenstyp';
                                         }
                                     }
                                     // If no matrix rules for this class, allow it (backward compatibility)
