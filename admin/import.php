@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../config.php';
 require_admin();
+require_once __DIR__ . '/../includes/admin-layout.php';
 
 $db = getDB();
 $current_admin = get_current_admin();
@@ -125,10 +126,9 @@ include __DIR__ . '/../includes/layout-header.php';
 
 <main class="gs-content-with-sidebar">
     <div class="gs-container">
-        <h1 class="gs-h3 gs-mb-lg">
-            <i data-lucide="upload"></i>
-            Importera data
-        </h1>
+        <?php
+        render_admin_header('Import & Data');
+        ?>
 
         <!-- Tabs -->
         <div class="gs-tabs gs-mb-lg">
@@ -618,6 +618,7 @@ include __DIR__ . '/../includes/layout-header.php';
 </main>
 
 
+<?php render_admin_footer(); ?>
 <?php include __DIR__ . '/../includes/layout-footer.php'; ?>
 
 <?php

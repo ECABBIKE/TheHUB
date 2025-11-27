@@ -341,7 +341,40 @@ Systemet använder **Lucide Icons** via `data-lucide` attribut.
 | Version | Datum | Beskrivning |
 |---------|-------|-------------|
 | 1.0 | 2025-11-27 | Initial dokumentation av befintlig menystruktur |
-| 2.0 | *Planerad* | Omstrukturering till 5 grupper med fliknavigation |
+| 2.0 | 2025-11-27 | Omstrukturering till 5 grupper med fliknavigation |
+
+---
+
+## Version 2.0 - Ny Menystruktur
+
+### Sidebar (5 huvudgrupper)
+
+```
+ADMIN SIDEBAR v2.0
+├── 📊 Dashboard
+├── 📅 Tävlingar         → [Events] [Resultat] [Biljetter] [Regler]
+├── 🎖️ Serier & Poäng    → [Serier] [Ranking] [Klubbpoäng] [Poängskalor]
+├── 👥 Deltagare & Klubbar → [Deltagare] [Klubbar] [Venues] [Klasser]
+├── 📤 Import & Data     → [Översikt] [Riders] [Resultat] [Events] [UCI] [Historik]
+└── ⚙️ Inställningar     → [Användare] [Behörigheter] [Publikt] [System]
+```
+
+### Nya filer i v2.0
+
+| Fil | Beskrivning |
+|-----|-------------|
+| `/includes/components/admin-tabs.php` | Återanvändbar flik-komponent |
+| `/includes/config/admin-tabs-config.php` | Konfiguration för alla flikgrupper |
+| `/includes/admin-layout.php` | Layout-wrapper med flikar |
+| `/public/css/components/_admin-tabs.css` | CSS för flikar (mobile-first) |
+
+### Design-principer v2.0
+
+- **Mobile-first:** Vertikala flikar på mobil, horisontella på desktop
+- **Orientation-aware:** Anpassar sig till portrait/landscape
+- **Touch targets:** Minst 44px på mobil
+- **Ikoner + text:** Alltid båda på mobil för tillgänglighet
+- **Desktop:** Endast text (ikoner dolda för renare design)
 
 ---
 

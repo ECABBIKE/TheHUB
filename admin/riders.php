@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../config.php';
 require_admin();
+require_once __DIR__ . '/../includes/admin-layout.php';
 
 global $pdo;
 $db = getDB();
@@ -86,16 +87,11 @@ include __DIR__ . '/../includes/layout-header.php';
 
 <main class="gs-main-content">
     <div class="gs-container">
-        <div class="gs-flex gs-justify-between gs-items-center gs-mb-lg">
-            <h1 class="gs-h2">
-                <i data-lucide="users"></i>
-                Deltagare (<?= count($riders) ?>)
-            </h1>
-            <a href="/admin/import-uci.php" class="gs-btn gs-btn-primary">
-                <i data-lucide="upload"></i>
-                Importera
-            </a>
-        </div>
+        <?php
+        render_admin_header('Deltagare & Klubbar', [
+            ['label' => 'Importera', 'url' => '/admin/import-riders.php', 'icon' => 'upload', 'class' => 'gs-btn-primary']
+        ]);
+        ?>
 
         <!-- Filter indicator -->
         <?php if ($selectedClub): ?>
@@ -395,4 +391,5 @@ include __DIR__ . '/../includes/layout-header.php';
     })();
 </script>
 
+<?php render_admin_footer(); ?>
 <?php include __DIR__ . '/../includes/layout-footer.php'; ?>

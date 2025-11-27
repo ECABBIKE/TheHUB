@@ -5,6 +5,7 @@
  */
 require_once __DIR__ . '/../config.php';
 require_admin();
+require_once __DIR__ . '/../includes/admin-layout.php';
 
 // Only super_admin can access this page
 if (!hasRole('super_admin')) {
@@ -72,22 +73,11 @@ include __DIR__ . '/../includes/layout-header.php';
 
 <main class="gs-main-content">
     <div class="gs-container">
-        <div class="gs-flex gs-justify-between gs-items-center gs-mb-lg">
-            <h1 class="gs-h2">
-                <i data-lucide="users-cog"></i>
-                Användarhantering
-            </h1>
-            <div class="gs-flex gs-gap-md">
-                <a href="/admin/role-permissions.php" class="gs-btn gs-btn-outline">
-                    <i data-lucide="shield-check"></i>
-                    Rollbehörigheter
-                </a>
-                <a href="/admin/user-edit.php" class="gs-btn gs-btn-primary">
-                    <i data-lucide="user-plus"></i>
-                    Ny användare
-                </a>
-            </div>
-        </div>
+        <?php
+        render_admin_header('Inställningar', [
+            ['label' => 'Ny användare', 'url' => '/admin/user-edit.php', 'icon' => 'user-plus', 'class' => 'gs-btn-primary']
+        ]);
+        ?>
 
         <!-- Info about riders -->
         <div class="gs-alert gs-alert-info gs-mb-lg">
@@ -307,4 +297,5 @@ include __DIR__ . '/../includes/layout-header.php';
 }
 </style>
 
+<?php render_admin_footer(); ?>
 <?php include __DIR__ . '/../includes/layout-footer.php'; ?>

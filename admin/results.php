@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../config.php';
 require_admin();
+require_once __DIR__ . '/../includes/admin-layout.php';
 
 global $pdo;
 $db = getDB();
@@ -62,18 +63,11 @@ include __DIR__ . '/../includes/layout-header.php';
 
 <main class="gs-main-content">
     <div class="gs-container">
-        <div class="gs-flex gs-justify-between gs-items-center gs-mb-lg">
-            <h1 class="gs-h2">
-                <i data-lucide="trophy"></i>
-                Resultat - Event (<?= count($events) ?>)
-            </h1>
-            <div class="gs-flex gs-gap-sm">
-                <a href="/admin/import-results.php" class="gs-btn gs-btn-primary">
-                    <i data-lucide="upload"></i>
-                    Importera Resultat
-                </a>
-            </div>
-        </div>
+        <?php
+        render_admin_header('Tävlingar', [
+            ['label' => 'Importera Resultat', 'url' => '/admin/import-results.php', 'icon' => 'upload', 'class' => 'gs-btn-primary']
+        ]);
+        ?>
 
         <?php if (isset($_SESSION['recalc_message'])): ?>
             <div class="gs-alert gs-alert-<?= h($_SESSION['recalc_type'] ?? 'info') ?> gs-mb-lg">
@@ -236,4 +230,5 @@ include __DIR__ . '/../includes/layout-header.php';
     lucide.createIcons();
 </script>
 
+<?php render_admin_footer(); ?>
 <?php include __DIR__ . '/../includes/layout-footer.php'; ?>
