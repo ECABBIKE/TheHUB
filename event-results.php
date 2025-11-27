@@ -55,7 +55,7 @@ if (!empty($event['ticketing_enabled']) && !empty($event['pricing_template_id'])
     if ($template) {
         // Get pricing rules from template (only base_price per class)
         $pricingRules = $db->getAll("
-            SELECT ptr.*, c.name as class_name, c.display_name as class_display_name
+            SELECT ptr.*, c.name as class_name, c.display_name as class_display_name, c.gender as class_gender
             FROM pricing_template_rules ptr
             JOIN classes c ON ptr.class_id = c.id
             WHERE ptr.template_id = ?
@@ -1611,6 +1611,10 @@ include __DIR__ . '/includes/layout-header.php';
                                                 <br><span class="gs-badge gs-badge-primary gs-mt-sm">Gravity-ID medlem</span>
                                             </span>
                                         </div>
+                                        <div id="active-license-locked" class="gs-alert gs-alert-info gs-mt-sm" style="display: none;">
+                                            <i data-lucide="shield-check"></i>
+                                            <span>Aktiv licens (låst)</span>
+                                        </div>
                                         <input type="hidden" id="selected-rider-id" value="">
                                         <input type="hidden" id="has-gravity-id" value="0">
                                     </div>
@@ -1836,8 +1840,13 @@ include __DIR__ . '/includes/layout-header.php';
                         // - motion: All license types allowed
                         const eventLicenseClass = '<?= h($event['license_class'] ?? 'national') ?>';
 
-                        // Class rules for license validation
+                        // Class rules for license validation (from series)
                         const classRules = <?= json_encode($classRulesMap) ?>;
+
+                        // Class genders from classes table: { classId: 'M'|'K'|'ALL' }
+                        const classGenders = <?= json_encode(array_column(array_map(function($r) {
+                            return ['id' => (string)$r['class_id'], 'gender' => $r['class_gender'] ?? 'ALL'];
+                        }, $pricingRules), 'gender', 'id')) ?>;
 
                         // License matrix: which license types can register for which classes
                         // Format: { classId: ['license1', 'license2', ...] }
@@ -1874,11 +1883,13 @@ include __DIR__ . '/includes/layout-header.php';
                                                          uciId: r.uci_id || "",
                                                          hasGravityId: r.gravity_id ? 1 : 0,
                                                          licenseType: r.license_type || "",
+                                                         hasActiveLicense: r.has_active_license ? 1 : 0,
                                                          birthYear: r.birth_year || null,
                                                          gender: r.gender || ""
                                                      })})'>
                                                     <strong>${r.firstname} ${r.lastname}</strong>
                                                     ${r.license_type ? '<span class="gs-badge gs-badge-secondary gs-badge-sm gs-ml-sm">' + r.license_type + '</span>' : ''}
+                                                    ${r.has_active_license ? '<span class="gs-badge gs-badge-success gs-badge-sm gs-ml-sm">Aktiv licens</span>' : ''}
                                                     ${r.club_name ? '<br><span class="gs-text-sm gs-text-secondary">' + r.club_name + '</span>' : ''}
                                                     ${r.gravity_id ? '<span class="gs-badge gs-badge-primary gs-badge-sm gs-ml-sm">GID</span>' : ''}
                                                 </div>
@@ -1906,66 +1917,86 @@ include __DIR__ . '/includes/layout-header.php';
                             document.getElementById('rider-results').style.display = 'none';
                             document.getElementById('rider-search').value = riderData.name;
 
-                            // Show license type selector
-                            document.getElementById('license-type-section').style.display = 'block';
+                            // Hide both alerts initially
+                            document.getElementById('license-from-profile').style.display = 'none';
+                            document.getElementById('license-not-found').style.display = 'none';
+                            document.getElementById('active-license-locked').style.display = 'none';
 
                             // Reset all license selections
                             document.querySelectorAll('input[name="selected_license"]').forEach(r => {
                                 r.checked = false;
+                                r.disabled = false;
                                 const card = r.closest('label');
                                 if (card) {
                                     card.style.borderColor = 'var(--gs-border)';
                                     card.style.backgroundColor = '';
+                                    card.style.display = '';
                                 }
                             });
 
-                            // Hide both alerts initially
-                            document.getElementById('license-from-profile').style.display = 'none';
-                            document.getElementById('license-not-found').style.display = 'none';
+                            // Check if rider has active license
+                            if (riderData.hasActiveLicense) {
+                                // Rider has active license - hide selector and use their license directly
+                                document.getElementById('license-type-section').style.display = 'none';
 
-                            // Pre-select rider's license type if they have one in their profile
-                            let licenseFound = false;
-                            if (riderData.licenseType) {
-                                // Try to match the license type (convert to lowercase, handle common variations)
-                                const licenseCode = riderData.licenseType.toLowerCase()
-                                    .replace(/\s+/g, '_')
-                                    .replace(/ä/g, 'a')
-                                    .replace(/å/g, 'a')
-                                    .replace(/ö/g, 'o');
+                                // Store the license for class filtering
+                                currentRiderData.effectiveLicense = riderData.licenseType;
 
-                                // Try exact match first
-                                let matchingRadio = document.querySelector(`input[name="selected_license"][value="${licenseCode}"]`);
+                                // Show locked license message in selected rider card
+                                document.getElementById('active-license-locked').style.display = 'flex';
+                                document.getElementById('active-license-locked').querySelector('span').textContent =
+                                    'Aktiv licens: ' + riderData.licenseType + ' (låst)';
+                            } else {
+                                // No active license - show selector with limited options
+                                document.getElementById('license-type-section').style.display = 'block';
 
-                                // Try partial matches for common license names
-                                if (!matchingRadio) {
-                                    const licenseRadios = document.querySelectorAll('input[name="selected_license"]');
-                                    licenseRadios.forEach(radio => {
-                                        const value = radio.value.toLowerCase();
-                                        if (licenseCode.includes(value) || value.includes(licenseCode)) {
-                                            matchingRadio = radio;
-                                        }
-                                    });
-                                }
+                                // Only show: tävlingslicens (competition types), motionslicens, engångslicens
+                                const allowedForSelection = ['elite_men', 'elite_women', 'u23', 'junior', 'youth', 'under11', 'master', 'motionslicens', 'engangslicens', 'baslicens'];
 
-                                if (matchingRadio) {
-                                    matchingRadio.checked = true;
-                                    const card = matchingRadio.closest('label');
-                                    if (card) {
-                                        card.style.borderColor = 'var(--gs-primary)';
-                                        card.style.backgroundColor = 'var(--gs-primary-light, rgba(var(--gs-primary-rgb), 0.1))';
+                                document.querySelectorAll('input[name="selected_license"]').forEach(radio => {
+                                    const card = radio.closest('label');
+                                    if (!allowedForSelection.includes(radio.value)) {
+                                        // Hide license types that aren't available for selection
+                                        if (card) card.style.display = 'none';
                                     }
-                                    licenseFound = true;
-                                    // Show success alert - license was found in profile
-                                    document.getElementById('license-from-profile').style.display = 'flex';
+                                });
+
+                                // Pre-select if they have a license type stored
+                                if (riderData.licenseType) {
+                                    const licenseCode = riderData.licenseType.toLowerCase()
+                                        .replace(/\s+/g, '_')
+                                        .replace(/ä/g, 'a')
+                                        .replace(/å/g, 'a')
+                                        .replace(/ö/g, 'o');
+
+                                    let matchingRadio = document.querySelector(`input[name="selected_license"][value="${licenseCode}"]`);
+                                    if (!matchingRadio) {
+                                        const licenseRadios = document.querySelectorAll('input[name="selected_license"]');
+                                        licenseRadios.forEach(radio => {
+                                            const value = radio.value.toLowerCase();
+                                            if (licenseCode.includes(value) || value.includes(licenseCode)) {
+                                                matchingRadio = radio;
+                                            }
+                                        });
+                                    }
+
+                                    if (matchingRadio && matchingRadio.closest('label').style.display !== 'none') {
+                                        matchingRadio.checked = true;
+                                        const card = matchingRadio.closest('label');
+                                        if (card) {
+                                            card.style.borderColor = 'var(--gs-primary)';
+                                            card.style.backgroundColor = 'var(--gs-primary-light, rgba(var(--gs-primary-rgb), 0.1))';
+                                        }
+                                        document.getElementById('license-from-profile').style.display = 'flex';
+                                    } else {
+                                        document.getElementById('license-not-found').style.display = 'flex';
+                                    }
+                                } else {
+                                    document.getElementById('license-not-found').style.display = 'flex';
                                 }
                             }
 
-                            // Show info alert if no license was found in profile
-                            if (!licenseFound) {
-                                document.getElementById('license-not-found').style.display = 'flex';
-                            }
-
-                            // Filter classes based on rider's license (or show all locked if no license selected)
+                            // Filter classes based on rider's license
                             filterClasses();
                             updatePrice();
                         }
@@ -1996,9 +2027,21 @@ include __DIR__ . '/includes/layout-header.php';
 
                             const classOptions = document.querySelectorAll('input[name="class_id"]');
 
-                            // Get selected license type from radio buttons
-                            const selectedLicenseRadio = document.querySelector('input[name="selected_license"]:checked');
-                            const selectedLicense = selectedLicenseRadio?.value || null;
+                            // Get effective license:
+                            // 1. If rider has active license, use effectiveLicense (stored license type)
+                            // 2. Otherwise use selected license from radio buttons
+                            let effectiveLicense = null;
+                            if (currentRiderData.hasActiveLicense && currentRiderData.effectiveLicense) {
+                                // Convert stored license type to code format for matrix lookup
+                                effectiveLicense = currentRiderData.effectiveLicense.toLowerCase()
+                                    .replace(/\s+/g, '_')
+                                    .replace(/ä/g, 'a')
+                                    .replace(/å/g, 'a')
+                                    .replace(/ö/g, 'o');
+                            } else {
+                                const selectedLicenseRadio = document.querySelector('input[name="selected_license"]:checked');
+                                effectiveLicense = selectedLicenseRadio?.value || null;
+                            }
 
                             classOptions.forEach(radio => {
                                 const classId = radio.value;
@@ -2007,29 +2050,32 @@ include __DIR__ . '/includes/layout-header.php';
                                 let allowed = true;
                                 let reason = '';
 
-                                // GENDER IS ALWAYS ENFORCED FIRST - Never bypassed
-                                if (rules && rules.allowed_genders && currentRiderData.gender) {
-                                    const allowedGenders = JSON.parse(rules.allowed_genders);
-                                    if (allowedGenders.length > 0 && !allowedGenders.includes(currentRiderData.gender)) {
+                                // GENDER IS ALWAYS ENFORCED - Check class gender from classes table
+                                const classGender = classGenders[classId];
+                                if (classGender && classGender !== 'ALL' && currentRiderData.gender) {
+                                    // Normalize rider gender: 'F' or 'K' both mean female
+                                    const riderGender = (currentRiderData.gender === 'F' || currentRiderData.gender === 'K') ? 'K' : currentRiderData.gender;
+
+                                    if (classGender !== riderGender) {
                                         allowed = false;
-                                        reason = currentRiderData.gender === 'M' ? 'Endast för kvinnor' : 'Endast för män';
+                                        reason = classGender === 'K' ? 'Endast för kvinnor' : 'Endast för män';
                                     }
                                 }
 
-                                // Check if license is selected
-                                if (allowed && !selectedLicense) {
+                                // Check if license is selected/available
+                                if (allowed && !effectiveLicense) {
                                     allowed = false;
                                     reason = 'Välj licenstyp först';
                                 }
 
                                 // LICENSE MATRIX CHECK
                                 // The matrix is already filtered by event license class (loaded from PHP)
-                                // Check if the selected license is allowed for this class
-                                if (allowed && selectedLicense) {
+                                // Check if the effective license is allowed for this class
+                                if (allowed && effectiveLicense) {
                                     const allowedLicenses = licenseMatrix[classId];
                                     if (allowedLicenses && allowedLicenses.length > 0) {
-                                        // Matrix has rules for this class - check if selected license is allowed
-                                        if (!allowedLicenses.includes(selectedLicense)) {
+                                        // Matrix has rules for this class - check if effective license is allowed
+                                        if (!allowedLicenses.includes(effectiveLicense)) {
                                             allowed = false;
                                             reason = 'Din licenstyp tillåter inte denna klass';
                                         }

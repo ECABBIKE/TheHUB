@@ -30,7 +30,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $resultId = isset($_POST['result_id']) ? (int)$_POST['result_id'] : 0;
     $action = $_POST['action'] ?? '';
 
-    if ($action === 'update' && $resultId) {
+    if ($action === 'set_license') {
+        // Set license for a rider
+        $riderId = isset($_POST['rider_id']) ? (int)$_POST['rider_id'] : 0;
+        $licenseType = trim($_POST['license_type'] ?? '');
+        $currentYear = (int)date('Y');
+
+        if ($riderId && in_array($licenseType, ['motionslicens', 'engangslicens', 'baslicens'])) {
+            try {
+                $db->update('riders', [
+                    'license_type' => $licenseType,
+                    'license_year' => $currentYear
+                ], 'id = ?', [$riderId]);
+                $message = 'Licens uppdaterad till ' . ucfirst($licenseType) . ' för ' . $currentYear . '!';
+                $messageType = 'success';
+            } catch (Exception $e) {
+                $message = 'Fel vid uppdatering av licens: ' . $e->getMessage();
+                $messageType = 'error';
+            }
+        } else {
+            $message = 'Ogiltig licenstyp eller åkare.';
+            $messageType = 'error';
+        }
+    } elseif ($action === 'update' && $resultId) {
         // Update result
         $updateData = [
             'position' => !empty($_POST['position']) ? (int)$_POST['position'] : null,
@@ -62,13 +84,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 // Fetch all results for this event
+$currentYear = (int)date('Y');
 $results = $db->getAll("
     SELECT
         res.*,
+        r.id as rider_id,
         r.firstname,
         r.lastname,
         r.gender,
         r.birth_year,
+        r.license_type,
+        r.license_year,
+        r.license_number,
+        CASE
+            WHEN r.license_year = ? AND r.license_type IS NOT NULL AND r.license_type != ''
+                AND r.license_type NOT IN ('engangslicens', 'Engångslicens', 'sweid', 'SWE ID')
+            THEN 1
+            ELSE 0
+        END as has_active_license,
         c.name as club_name,
         cls.name as class_name,
         cls.display_name as class_display_name,
@@ -83,7 +116,7 @@ $results = $db->getAll("
         COALESCE(cls.name, 'Oklassificerad'),
         CASE WHEN res.status = 'finished' THEN res.class_position ELSE 999 END,
         res.finish_time
-", [$eventId]);
+", [$currentYear, $eventId]);
 
 // Group results by class
 $resultsByClass = [];
@@ -170,6 +203,7 @@ include __DIR__ . '/../includes/layout-header.php';
                                 <tr>
                                     <th class="gs-table-th-w60">Plac.</th>
                                     <th>Namn</th>
+                                    <th class="gs-table-th-w120">Licens</th>
                                     <th class="gs-table-th-w150">Klubb</th>
                                     <th class="gs-table-th-w100">Startnr</th>
                                     <th class="gs-table-th-w120">Tid</th>
@@ -206,6 +240,31 @@ include __DIR__ . '/../includes/layout-header.php';
                                                         • <?= $result['gender'] == 'M' ? 'Herr' : ($result['gender'] == 'F' ? 'Dam' : '') ?>
                                                     <?php endif; ?>
                                                 </div>
+                                            </td>
+
+                                            <!-- License -->
+                                            <td>
+                                                <?php if ($result['has_active_license']): ?>
+                                                    <span class="gs-badge gs-badge-success gs-badge-sm">
+                                                        <?= h($result['license_type']) ?>
+                                                    </span>
+                                                <?php elseif ($result['license_number']): ?>
+                                                    <!-- Has SWE ID but no active license - allow setting -->
+                                                    <div class="gs-flex gs-gap-xs gs-items-center">
+                                                        <span class="gs-badge gs-badge-warning gs-badge-sm" title="SWE ID utan aktiv licens">
+                                                            SWE ID
+                                                        </span>
+                                                        <button type="button"
+                                                                class="gs-btn gs-btn-outline gs-btn-xs set-license-btn"
+                                                                data-rider-id="<?= $result['rider_id'] ?>"
+                                                                data-rider-name="<?= h($result['firstname'] . ' ' . $result['lastname']) ?>"
+                                                                title="Tilldela licens">
+                                                            <i data-lucide="id-card" class="gs-icon-12"></i>
+                                                        </button>
+                                                    </div>
+                                                <?php else: ?>
+                                                    <span class="gs-text-secondary gs-text-xs">-</span>
+                                                <?php endif; ?>
                                             </td>
 
                                             <!-- Club (read-only) -->
@@ -285,6 +344,73 @@ include __DIR__ . '/../includes/layout-header.php';
     </div>
 </main>
 
+<!-- License Assignment Modal -->
+<div id="license-modal" class="gs-modal" style="display: none;">
+    <div class="gs-modal-backdrop"></div>
+    <div class="gs-modal-content" style="max-width: 400px;">
+        <div class="gs-modal-header">
+            <h3 class="gs-h4">
+                <i data-lucide="id-card"></i>
+                Tilldela licens
+            </h3>
+            <button type="button" class="gs-btn gs-btn-ghost gs-btn-sm close-modal">
+                <i data-lucide="x"></i>
+            </button>
+        </div>
+        <form method="POST" id="license-form">
+            <?= csrf_field() ?>
+            <input type="hidden" name="action" value="set_license">
+            <input type="hidden" name="rider_id" id="modal-rider-id" value="">
+
+            <div class="gs-modal-body">
+                <p class="gs-mb-md">
+                    Tilldela licens till <strong id="modal-rider-name"></strong> för <?= date('Y') ?>:
+                </p>
+
+                <div class="gs-grid gs-gap-sm">
+                    <label class="gs-card gs-p-md" style="cursor: pointer; border: 2px solid var(--gs-border);">
+                        <div class="gs-flex gs-items-center gs-gap-md">
+                            <input type="radio" name="license_type" value="motionslicens" required>
+                            <div>
+                                <strong>Motionslicens</strong>
+                                <p class="gs-text-sm gs-text-secondary gs-mb-0">För motionslopp och breddtävlingar</p>
+                            </div>
+                        </div>
+                    </label>
+
+                    <label class="gs-card gs-p-md" style="cursor: pointer; border: 2px solid var(--gs-border);">
+                        <div class="gs-flex gs-items-center gs-gap-md">
+                            <input type="radio" name="license_type" value="baslicens">
+                            <div>
+                                <strong>Baslicens</strong>
+                                <p class="gs-text-sm gs-text-secondary gs-mb-0">Grundläggande licens</p>
+                            </div>
+                        </div>
+                    </label>
+
+                    <label class="gs-card gs-p-md" style="cursor: pointer; border: 2px solid var(--gs-border);">
+                        <div class="gs-flex gs-items-center gs-gap-md">
+                            <input type="radio" name="license_type" value="engangslicens">
+                            <div>
+                                <strong>Engångslicens</strong>
+                                <p class="gs-text-sm gs-text-secondary gs-mb-0">Engångslicens för enstaka tävling</p>
+                            </div>
+                        </div>
+                    </label>
+                </div>
+            </div>
+
+            <div class="gs-modal-footer">
+                <button type="button" class="gs-btn gs-btn-outline close-modal">Avbryt</button>
+                <button type="submit" class="gs-btn gs-btn-primary">
+                    <i data-lucide="check"></i>
+                    Tilldela licens
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <script src="https://unpkg.com/lucide@latest"></script>
 <script>
     lucide.createIcons();
@@ -305,6 +431,47 @@ include __DIR__ . '/../includes/layout-header.php';
                 `;
                 document.body.appendChild(form);
                 form.submit();
+            }
+        });
+    });
+
+    // License assignment modal
+    const modal = document.getElementById('license-modal');
+
+    document.querySelectorAll('.set-license-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const riderId = this.dataset.riderId;
+            const riderName = this.dataset.riderName;
+
+            document.getElementById('modal-rider-id').value = riderId;
+            document.getElementById('modal-rider-name').textContent = riderName;
+
+            // Reset radio buttons
+            document.querySelectorAll('#license-form input[type="radio"]').forEach(r => r.checked = false);
+
+            modal.style.display = 'flex';
+            lucide.createIcons();
+        });
+    });
+
+    // Close modal
+    document.querySelectorAll('.close-modal, .gs-modal-backdrop').forEach(el => {
+        el.addEventListener('click', function() {
+            modal.style.display = 'none';
+        });
+    });
+
+    // Highlight selected license card
+    document.querySelectorAll('#license-form input[type="radio"]').forEach(radio => {
+        radio.addEventListener('change', function() {
+            document.querySelectorAll('#license-form label.gs-card').forEach(card => {
+                card.style.borderColor = 'var(--gs-border)';
+                card.style.backgroundColor = '';
+            });
+            if (this.checked) {
+                const card = this.closest('label');
+                card.style.borderColor = 'var(--gs-primary)';
+                card.style.backgroundColor = 'var(--gs-primary-light, rgba(var(--gs-primary-rgb), 0.1))';
             }
         });
     });
