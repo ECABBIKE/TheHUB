@@ -2,6 +2,13 @@
 /**
  * Check License Numbers
  * Find riders with potentially incorrect license_number formats
+ *
+ * Valid formats:
+ * - UCI ID: 10-11 digits starting with 100 or 101 (e.g., 10048820303)
+ * - SWE ID: Starts with "SWE" followed by digits
+ *
+ * Invalid (should be cleared):
+ * - Other numeric values (incorrectly created from results import)
  */
 
 require_once __DIR__ . '/../config.php';
@@ -9,20 +16,35 @@ require_admin();
 require_once __DIR__ . '/../includes/admin-layout.php';
 
 $db = getDB();
+$message = '';
+$messageType = 'info';
 
-// Find riders where license_number looks like a SWE ID but doesn't start with "SWE"
-// SWE IDs are typically numeric and might be stored without the SWE prefix
-// UCI IDs are 11 digits starting with country code
+// Handle clear action
+if (isset($_GET['action']) && $_GET['action'] === 'clear' && isset($_GET['id'])) {
+    $riderId = (int)$_GET['id'];
+    $db->update('riders', ['license_number' => null], 'id = ?', [$riderId]);
+    $message = "License number rensat för ryttare ID {$riderId}";
+    $messageType = 'success';
+}
 
-// Get rider 10915 first
-$specificRider = $db->getRow("SELECT * FROM riders WHERE id = 10915");
+// Handle bulk clear action
+if (isset($_GET['action']) && $_GET['action'] === 'clear_all_invalid') {
+    $cleared = $db->query("
+        UPDATE riders
+        SET license_number = NULL
+        WHERE license_number IS NOT NULL
+        AND license_number != ''
+        AND license_number NOT REGEXP '^SWE'
+        AND license_number NOT REGEXP '^10[01][0-9]{7,8}$'
+    ");
+    $affectedRows = $cleared->rowCount();
+    $message = "Rensade {$affectedRows} ogiltiga license_number";
+    $messageType = 'success';
+}
 
-// Find patterns:
-// 1. License numbers that are 5-8 digits (could be SWE IDs without prefix)
-// 2. License numbers that don't match UCI format (11 digits)
-// 3. License numbers that might be SWE-formatted
-
-$suspiciousRiders = $db->getAll("
+// Valid UCI: 10-11 digits starting with 100 or 101
+// Valid SWE: Starts with SWE
+$invalidRiders = $db->getAll("
     SELECT
         r.id,
         r.firstname,
@@ -32,40 +54,34 @@ $suspiciousRiders = $db->getAll("
         r.license_year,
         r.birth_year,
         c.name as club_name,
-        LENGTH(r.license_number) as license_length,
-        CASE
-            WHEN r.license_number REGEXP '^[0-9]{5,8}$' THEN 'Possible SWE ID (5-8 digits)'
-            WHEN r.license_number REGEXP '^[0-9]{9,10}$' THEN 'Possible short UCI (9-10 digits)'
-            WHEN r.license_number REGEXP '^SWE' THEN 'SWE format (correct)'
-            WHEN r.license_number REGEXP '^[0-9]{11}$' THEN 'UCI format (11 digits)'
-            WHEN r.license_number REGEXP '[A-Z]{3}[0-9]+' THEN 'Country prefix format'
-            ELSE 'Unknown format'
-        END as format_type
+        LENGTH(r.license_number) as license_length
     FROM riders r
     LEFT JOIN clubs c ON r.club_id = c.id
     WHERE r.license_number IS NOT NULL
     AND r.license_number != ''
     AND r.license_number NOT REGEXP '^SWE'
-    AND r.license_number NOT REGEXP '^[0-9]{11}$'
-    ORDER BY
-        CASE
-            WHEN r.license_number REGEXP '^[0-9]{5,8}$' THEN 1
-            ELSE 2
-        END,
-        r.id DESC
-    LIMIT 100
+    AND r.license_number NOT REGEXP '^10[01][0-9]{7,8}$'
+    ORDER BY r.id DESC
+    LIMIT 200
 ");
+
+// Count total invalid
+$invalidCount = $db->getRow("
+    SELECT COUNT(*) as count
+    FROM riders
+    WHERE license_number IS NOT NULL
+    AND license_number != ''
+    AND license_number NOT REGEXP '^SWE'
+    AND license_number NOT REGEXP '^10[01][0-9]{7,8}$'
+")['count'];
 
 // Count by format type
 $formatCounts = $db->getAll("
     SELECT
         CASE
-            WHEN license_number REGEXP '^SWE' THEN 'SWE format'
-            WHEN license_number REGEXP '^[0-9]{11}$' THEN 'UCI format (11 digits)'
-            WHEN license_number REGEXP '^[0-9]{5,8}$' THEN 'Possible SWE ID (5-8 digits)'
-            WHEN license_number REGEXP '^[0-9]{9,10}$' THEN 'Short number (9-10 digits)'
-            WHEN license_number REGEXP '[A-Z]{3}[0-9]+' THEN 'Country prefix'
-            ELSE 'Other'
+            WHEN license_number REGEXP '^SWE' THEN 'SWE ID (korrekt)'
+            WHEN license_number REGEXP '^10[01][0-9]{7,8}$' THEN 'UCI ID (korrekt)'
+            ELSE 'Ogiltigt format (bör rensas)'
         END as format_type,
         COUNT(*) as count
     FROM riders
@@ -83,66 +99,30 @@ include __DIR__ . '/../includes/layout-header.php';
     <div class="gs-container">
         <?php render_admin_header('Kontrollera License Numbers', 'settings'); ?>
 
-        <!-- Specific Rider Check -->
-        <?php if ($specificRider): ?>
-        <div class="gs-card gs-mb-lg">
-            <div class="gs-card-header">
-                <h2 class="gs-h4 gs-text-primary">
-                    <i data-lucide="user"></i>
-                    Ryttare ID 10915
-                </h2>
+        <?php if ($message): ?>
+            <div class="gs-alert gs-alert-<?= $messageType ?> gs-mb-lg">
+                <i data-lucide="<?= $messageType === 'success' ? 'check-circle' : 'info' ?>"></i>
+                <?= h($message) ?>
             </div>
-            <div class="gs-card-content">
-                <table class="gs-table">
-                    <tr>
-                        <th>Fält</th>
-                        <th>Värde</th>
-                    </tr>
-                    <tr>
-                        <td>Namn</td>
-                        <td><?= h($specificRider['firstname'] . ' ' . $specificRider['lastname']) ?></td>
-                    </tr>
-                    <tr>
-                        <td>License Number</td>
-                        <td><code><?= h($specificRider['license_number'] ?? 'NULL') ?></code></td>
-                    </tr>
-                    <tr>
-                        <td>License Type</td>
-                        <td><?= h($specificRider['license_type'] ?? 'NULL') ?></td>
-                    </tr>
-                    <tr>
-                        <td>License Year</td>
-                        <td><?= h($specificRider['license_year'] ?? 'NULL') ?></td>
-                    </tr>
-                    <tr>
-                        <td>Födelseår</td>
-                        <td><?= h($specificRider['birth_year'] ?? 'NULL') ?></td>
-                    </tr>
-                    <tr>
-                        <td>Gravity ID</td>
-                        <td><?= h($specificRider['gravity_id'] ?? 'NULL') ?></td>
-                    </tr>
-                </table>
-                <div class="gs-mt-md">
-                    <a href="/rider.php?id=10915" class="gs-btn gs-btn-outline" target="_blank">
-                        <i data-lucide="external-link"></i>
-                        Öppna profil
-                    </a>
-                    <a href="/admin/edit-rider.php?id=10915" class="gs-btn gs-btn-primary">
-                        <i data-lucide="edit"></i>
-                        Redigera
-                    </a>
-                </div>
+        <?php endif; ?>
+
+        <!-- Format explanation -->
+        <div class="gs-alert gs-alert-info gs-mb-lg">
+            <i data-lucide="info"></i>
+            <div>
+                <strong>Giltiga format:</strong><br>
+                - <strong>UCI ID:</strong> 10-11 siffror som börjar med 100 eller 101 (t.ex. 10048820303)<br>
+                - <strong>SWE ID:</strong> Börjar med "SWE" följt av siffror<br><br>
+                <strong>Ogiltiga:</strong> Allt annat (skapade felaktigt från resultatimport)
             </div>
         </div>
-        <?php endif; ?>
 
         <!-- Format Statistics -->
         <div class="gs-card gs-mb-lg">
             <div class="gs-card-header">
                 <h2 class="gs-h4 gs-text-primary">
                     <i data-lucide="bar-chart"></i>
-                    License Number Format Statistik
+                    License Number Statistik
                 </h2>
             </div>
             <div class="gs-card-content">
@@ -155,8 +135,15 @@ include __DIR__ . '/../includes/layout-header.php';
                     </thead>
                     <tbody>
                         <?php foreach ($formatCounts as $format): ?>
-                        <tr>
-                            <td><?= h($format['format_type']) ?></td>
+                        <tr class="<?= strpos($format['format_type'], 'Ogiltigt') !== false ? 'gs-bg-warning-light' : '' ?>">
+                            <td>
+                                <?php if (strpos($format['format_type'], 'Ogiltigt') !== false): ?>
+                                    <i data-lucide="alert-triangle" class="gs-text-warning"></i>
+                                <?php else: ?>
+                                    <i data-lucide="check-circle" class="gs-text-success"></i>
+                                <?php endif; ?>
+                                <?= h($format['format_type']) ?>
+                            </td>
                             <td><?= number_format($format['count']) ?></td>
                         </tr>
                         <?php endforeach; ?>
@@ -165,36 +152,47 @@ include __DIR__ . '/../includes/layout-header.php';
             </div>
         </div>
 
-        <!-- Suspicious Riders -->
+        <!-- Invalid Riders -->
         <div class="gs-card">
-            <div class="gs-card-header">
+            <div class="gs-card-header gs-flex gs-justify-between gs-items-center">
                 <h2 class="gs-h4 gs-text-warning">
                     <i data-lucide="alert-triangle"></i>
-                    Ryttare med ovanligt license_number format (<?= count($suspiciousRiders) ?>)
+                    Ryttare med ogiltigt license_number (<?= number_format($invalidCount) ?> totalt)
                 </h2>
+                <?php if ($invalidCount > 0): ?>
+                <a href="?action=clear_all_invalid"
+                   class="gs-btn gs-btn-danger"
+                   onclick="return confirm('Är du säker? Detta rensar license_number för alla <?= $invalidCount ?> ryttare med ogiltigt format.')">
+                    <i data-lucide="trash-2"></i>
+                    Rensa alla ogiltiga (<?= $invalidCount ?>)
+                </a>
+                <?php endif; ?>
             </div>
             <div class="gs-card-content">
-                <?php if (empty($suspiciousRiders)): ?>
-                    <p class="gs-text-secondary">Inga ryttare med ovanligt format hittades.</p>
-                <?php else: ?>
-                    <div class="gs-alert gs-alert-info gs-mb-md">
-                        <i data-lucide="info"></i>
-                        Visar ryttare vars license_number inte matchar standard UCI (11 siffror) eller SWE-format.
+                <?php if (empty($invalidRiders)): ?>
+                    <div class="gs-text-center gs-py-lg">
+                        <i data-lucide="check-circle" style="width: 48px; height: 48px; color: var(--gs-success);"></i>
+                        <p class="gs-text-success gs-mt-md">Inga ryttare med ogiltigt format!</p>
                     </div>
+                <?php else: ?>
+                    <p class="gs-text-secondary gs-mb-md">
+                        Visar <?= count($invalidRiders) ?> av <?= number_format($invalidCount) ?> ryttare.
+                        Dessa license_number är varken giltiga UCI ID eller SWE ID och bör rensas.
+                    </p>
                     <div class="gs-table-responsive">
                         <table class="gs-table">
                             <thead>
                                 <tr>
                                     <th>ID</th>
                                     <th>Namn</th>
-                                    <th>License Number</th>
-                                    <th>Format</th>
+                                    <th>Ogiltigt License Number</th>
+                                    <th>Längd</th>
                                     <th>Licenstyp</th>
                                     <th>Åtgärd</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                <?php foreach ($suspiciousRiders as $rider): ?>
+                                <?php foreach ($invalidRiders as $rider): ?>
                                 <tr>
                                     <td><?= $rider['id'] ?></td>
                                     <td>
@@ -202,16 +200,15 @@ include __DIR__ . '/../includes/layout-header.php';
                                             <?= h($rider['firstname'] . ' ' . $rider['lastname']) ?>
                                         </a>
                                     </td>
-                                    <td><code><?= h($rider['license_number']) ?></code></td>
-                                    <td>
-                                        <span class="gs-badge <?= strpos($rider['format_type'], 'SWE') !== false ? 'gs-badge-warning' : 'gs-badge-secondary' ?>">
-                                            <?= h($rider['format_type']) ?>
-                                        </span>
-                                    </td>
+                                    <td><code class="gs-text-warning"><?= h($rider['license_number']) ?></code></td>
+                                    <td><?= $rider['license_length'] ?> tecken</td>
                                     <td><?= h($rider['license_type'] ?? '-') ?></td>
                                     <td>
-                                        <a href="/admin/edit-rider.php?id=<?= $rider['id'] ?>" class="gs-btn gs-btn-sm gs-btn-outline">
-                                            <i data-lucide="edit"></i>
+                                        <a href="?action=clear&id=<?= $rider['id'] ?>"
+                                           class="gs-btn gs-btn-sm gs-btn-danger"
+                                           onclick="return confirm('Rensa license_number för denna ryttare?')">
+                                            <i data-lucide="x"></i>
+                                            Rensa
                                         </a>
                                     </td>
                                 </tr>
@@ -226,5 +223,11 @@ include __DIR__ . '/../includes/layout-header.php';
         <?php render_admin_footer(); ?>
     </div>
 </main>
+
+<style>
+.gs-bg-warning-light {
+    background-color: rgba(255, 193, 7, 0.1);
+}
+</style>
 
 <?php include __DIR__ . '/../includes/layout-footer.php'; ?>
