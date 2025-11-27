@@ -1852,6 +1852,11 @@ include __DIR__ . '/includes/layout-header.php';
                         // Format: { classId: ['license1', 'license2', ...] }
                         const licenseMatrix = <?= json_encode($licenseMatrixMap) ?>;
 
+                        // Debug: log matrix to console
+                        console.log('License Matrix:', licenseMatrix);
+                        console.log('Class Genders:', classGenders);
+                        console.log('Event License Class:', eventLicenseClass);
+
                         // Current rider data for validation
                         let currentRiderData = null;
 
