@@ -55,7 +55,8 @@ if (!empty($event['ticketing_enabled']) && !empty($event['pricing_template_id'])
     if ($template) {
         // Get pricing rules from template (only base_price per class)
         $pricingRules = $db->getAll("
-            SELECT ptr.*, c.name as class_name, c.display_name as class_display_name, c.gender as class_gender
+            SELECT ptr.*, c.name as class_name, c.display_name as class_display_name, c.gender as class_gender,
+                   c.min_age as class_min_age, c.max_age as class_max_age
             FROM pricing_template_rules ptr
             JOIN classes c ON ptr.class_id = c.id
             WHERE ptr.template_id = ?
@@ -1848,6 +1849,17 @@ include __DIR__ . '/includes/layout-header.php';
                             return ['id' => (string)$r['class_id'], 'gender' => $r['class_gender'] ?? 'ALL'];
                         }, $pricingRules), 'gender', 'id')) ?>;
 
+                        // Class age limits from classes table: { classId: { min: number|null, max: number|null } }
+                        const classAgeLimits = <?= json_encode(array_column(array_map(function($r) {
+                            return [
+                                'id' => (string)$r['class_id'],
+                                'limits' => [
+                                    'min' => $r['class_min_age'] ?? null,
+                                    'max' => $r['class_max_age'] ?? null
+                                ]
+                            ];
+                        }, $pricingRules), 'limits', 'id')) ?>;
+
                         // License matrix: which license types can register for which classes
                         // Format: { classId: ['license1', 'license2', ...] }
                         const licenseMatrix = <?= json_encode($licenseMatrixMap) ?>;
@@ -1860,6 +1872,7 @@ include __DIR__ . '/includes/layout-header.php';
                         // Debug: log matrix to console
                         console.log('License Matrix:', licenseMatrix);
                         console.log('Class Genders:', classGenders);
+                        console.log('Class Age Limits:', classAgeLimits);
                         console.log('Event License Class:', eventLicenseClass);
                         console.log('License Name to Code:', licenseNameToCode);
 
@@ -2115,6 +2128,25 @@ include __DIR__ . '/includes/layout-header.php';
                                         }
                                     }
                                     // If no matrix rules for this class, allow all licenses (backward compatibility)
+                                }
+
+                                // CLASS AGE LIMITS CHECK (from classes table)
+                                // Check rider's age against class min_age and max_age
+                                if (allowed && currentRiderData.birthYear) {
+                                    const ageLimits = classAgeLimits[classId];
+                                    if (ageLimits) {
+                                        const currentYear = new Date().getFullYear();
+                                        const riderAge = currentYear - currentRiderData.birthYear;
+
+                                        if (ageLimits.min !== null && riderAge < ageLimits.min) {
+                                            allowed = false;
+                                            reason = 'Minsta ålder: ' + ageLimits.min + ' år (du är ' + riderAge + ')';
+                                        }
+                                        if (ageLimits.max !== null && riderAge > ageLimits.max) {
+                                            allowed = false;
+                                            reason = 'Maxålder: ' + ageLimits.max + ' år (du är ' + riderAge + ')';
+                                        }
+                                    }
                                 }
 
                                 // Additional series rules (age restrictions etc)

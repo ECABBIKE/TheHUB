@@ -144,10 +144,17 @@ $ADMIN_TABS = [
             ],
             [
                 'id' => 'public',
+                'label' => 'Publikt',
+                'icon' => 'globe',
+                'url' => '/admin/public-settings.php',
+                'pages' => ['public-settings.php']
+            ],
+            [
+                'id' => 'global-texts',
                 'label' => 'Texter',
                 'icon' => 'file-text',
-                'url' => '/admin/public-settings.php',
-                'pages' => ['public-settings.php', 'global-texts.php']
+                'url' => '/admin/global-texts.php',
+                'pages' => ['global-texts.php']
             ]
         ]
     ],
@@ -232,6 +239,13 @@ $ADMIN_TABS = [
                 'icon' => 'server',
                 'url' => '/admin/system-settings.php',
                 'pages' => ['system-settings.php', 'settings.php', 'setup-database.php', 'run-migrations.php']
+            ],
+            [
+                'id' => 'debug',
+                'label' => 'Debug',
+                'icon' => 'bug',
+                'url' => '/admin/debug.php',
+                'pages' => ['debug.php']
             ]
         ]
     ]
