@@ -336,4 +336,13 @@ Systemet använder **Lucide Icons** via `data-lucide` attribut.
 
 ---
 
-*Dokumentation genererad: 2024*
+## Changelog
+
+| Version | Datum | Beskrivning |
+|---------|-------|-------------|
+| 1.0 | 2025-11-27 | Initial dokumentation av befintlig menystruktur |
+| 2.0 | *Planerad* | Omstrukturering till 5 grupper med fliknavigation |
+
+---
+
+*Senast uppdaterad: 2025-11-27*
