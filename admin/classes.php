@@ -45,8 +45,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'awards_points' => isset($_POST['awards_points']) ? 1 : 0,
                 'ranking_type' => in_array($_POST['ranking_type'] ?? 'time', ['time', 'name', 'bib']) ? $_POST['ranking_type'] : 'time',
                 'series_eligible' => isset($_POST['series_eligible']) ? 1 : 0,
-                'class_category_code' => !empty($_POST['class_category_code']) ? trim($_POST['class_category_code']) : null,
             ];
+
+            // Add class_category_code only if column exists
+            try {
+                $db->getRow("SELECT class_category_code FROM classes LIMIT 1");
+                $classData['class_category_code'] = !empty($_POST['class_category_code']) ? trim($_POST['class_category_code']) : null;
+            } catch (Exception $e) {
+                // Column doesn't exist yet - skip
+            }
 
             try {
                 if ($action === 'create') {
@@ -108,7 +115,17 @@ if ($disciplineFilter) {
 
 $whereClause = $where ? 'WHERE ' . implode(' AND ', $where) : '';
 
+// Check if class_category_code column exists
+$hasClassCategoryColumn = false;
+try {
+    $db->getRow("SELECT class_category_code FROM classes LIMIT 1");
+    $hasClassCategoryColumn = true;
+} catch (Exception $e) {
+    // Column doesn't exist yet
+}
+
 // Get classes with result count
+$categorySelect = $hasClassCategoryColumn ? "c.class_category_code," : "NULL as class_category_code,";
 $sql = "SELECT
             c.id,
             c.name,
@@ -122,7 +139,7 @@ $sql = "SELECT
             c.awards_points,
             c.ranking_type,
             c.series_eligible,
-            c.class_category_code,
+            $categorySelect
             COUNT(DISTINCT r.id) as result_count
         FROM classes c
         LEFT JOIN results r ON c.id = r.class_id
