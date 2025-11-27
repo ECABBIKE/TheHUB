@@ -1334,35 +1334,44 @@ details.gs-details-lg summary {
 
 /* =======================================================
    26. ADMIN TABS v2.0 (Grouped Navigation)
-   Mobile-first, orientation-aware
+   Horisontella flikar - scrollbara på mobil, fasta på desktop
 ======================================================= */
 
-/* ===== BASE STYLES (Mobile Portrait 320px+) ===== */
+/* ===== BASE STYLES - Alltid horisontella ===== */
 .admin-tabs {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   gap: var(--gs-space-sm);
-  padding: var(--gs-space-md);
+  padding: var(--gs-space-sm) var(--gs-space-md);
   background: var(--gs-background-secondary);
   border-bottom: 1px solid var(--gs-border);
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.admin-tabs::-webkit-scrollbar {
+  display: none;
 }
 
 .admin-tabs__tab {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: var(--gs-space-sm);
-  padding: var(--gs-space-md);
+  gap: var(--gs-space-xs);
+  padding: var(--gs-space-sm) var(--gs-space-md);
   color: var(--gs-text-secondary);
   text-decoration: none;
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
   font-weight: 500;
   border-radius: var(--gs-radius-sm);
   transition: var(--gs-transition-fast);
   position: relative;
-  min-height: 44px;
+  min-height: 40px;
   background: var(--gs-white);
   border: 1px solid var(--gs-border);
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .admin-tabs__tab:hover,
@@ -1446,32 +1455,12 @@ details.gs-details-lg summary {
   padding: var(--gs-space-md);
 }
 
-/* ===== MOBILE LANDSCAPE ===== */
-@media (max-width: 900px) and (orientation: landscape) {
-  .admin-tabs {
-    flex-direction: row;
-    flex-wrap: wrap;
-    padding: var(--gs-space-sm) var(--gs-space-md);
-    gap: var(--gs-space-sm);
-  }
-
-  .admin-tabs__tab {
-    flex: 0 1 auto;
-    padding: var(--gs-space-sm) var(--gs-space-md);
-    min-height: 36px;
-    font-size: 0.875rem;
-  }
-
-  .admin-tabs__tab i {
-    width: 16px;
-    height: 16px;
-  }
-
+/* ===== TABLET (768px+) ===== */
+@media (min-width: 768px) {
   .admin-page-header {
     flex-direction: row;
     justify-content: space-between;
     align-items: center;
-    padding: var(--gs-space-md);
   }
 
   .admin-page-header__actions {
@@ -1481,64 +1470,17 @@ details.gs-details-lg summary {
   .admin-page-header__actions .gs-btn {
     flex: 0 0 auto;
   }
-
-  .admin-tab-content {
-    padding: var(--gs-space-md) var(--gs-space-lg);
-  }
 }
 
-/* ===== TABLET PORTRAIT ===== */
-@media (min-width: 768px) and (orientation: portrait) {
-  .admin-tabs {
-    flex-direction: row;
-    flex-wrap: wrap;
-    padding: var(--gs-space-md) var(--gs-space-lg);
-  }
-
-  .admin-tabs__tab {
-    flex: 0 1 calc(50% - var(--gs-space-sm));
-    max-width: calc(50% - var(--gs-space-sm));
-  }
-
-  .admin-tabs--few .admin-tabs__tab {
-    flex: 0 1 auto;
-    max-width: none;
-  }
-
-  .admin-page-header {
-    flex-direction: row;
-    justify-content: space-between;
-    align-items: center;
-    padding: var(--gs-space-lg);
-  }
-
-  .admin-page-header__title {
-    font-size: 1.5rem;
-  }
-
-  .admin-page-header__actions .gs-btn {
-    flex: 0 0 auto;
-  }
-
-  .admin-tab-content {
-    padding: var(--gs-space-lg);
-  }
-}
-
-/* ===== TABLET LANDSCAPE / DESKTOP ===== */
+/* ===== DESKTOP (1024px+) ===== */
 @media (min-width: 1024px) {
   .admin-tabs {
-    flex-direction: row;
-    flex-wrap: nowrap;
-    padding: var(--gs-space-md) var(--gs-space-lg);
-    gap: var(--gs-space-sm);
     overflow-x: visible;
+    padding: var(--gs-space-md) var(--gs-space-lg);
   }
 
   .admin-tabs__tab {
-    flex: 0 0 auto;
-    padding: var(--gs-space-md) var(--gs-space-lg);
-    min-height: 40px;
+    padding: var(--gs-space-sm) var(--gs-space-lg);
     border: none;
     background: transparent;
   }
@@ -1549,12 +1491,6 @@ details.gs-details-lg summary {
 
   .admin-tabs__tab--active {
     background: var(--gs-primary);
-    border-radius: var(--gs-radius-sm);
-  }
-
-  /* Hide icons on desktop */
-  .admin-tabs__tab i {
-    display: none;
   }
 
   .admin-page-header {
@@ -1570,7 +1506,7 @@ details.gs-details-lg summary {
   }
 }
 
-/* ===== WIDE DESKTOP ===== */
+/* ===== WIDE DESKTOP (1440px+) ===== */
 @media (min-width: 1440px) {
   .admin-tabs {
     padding: var(--gs-space-md) var(--gs-space-xl);

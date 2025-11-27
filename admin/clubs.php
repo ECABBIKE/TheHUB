@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../config.php';
 require_admin();
+require_once __DIR__ . '/../includes/admin-layout.php';
 
 $db = getDB();
 $current_admin = get_current_admin();
@@ -107,23 +108,7 @@ include __DIR__ . '/../includes/layout-header.php';
 
     <main class="gs-content-with-sidebar">
         <div class="gs-container">
-            <!-- Header -->
-            <div class="gs-flex gs-items-center gs-justify-between gs-mb-xl">
-                <h1 class="gs-h1 gs-text-primary">
-                    <i data-lucide="building"></i>
-                    Klubbar
-                </h1>
-                <div class="gs-flex gs-gap-sm">
-                    <a href="/admin/import-clubs.php" class="gs-btn gs-btn-outline">
-                        <i data-lucide="upload"></i>
-                        Importera
-                    </a>
-                    <button type="button" class="gs-btn gs-btn-primary" onclick="openClubModal()">
-                        <i data-lucide="plus"></i>
-                        Ny Klubb
-                    </button>
-                </div>
-            </div>
+            <?php render_admin_header('Deltagare & Klubbar'); ?>
 
             <!-- Messages -->
             <?php if ($message): ?>

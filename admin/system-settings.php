@@ -6,6 +6,7 @@
 
 require_once __DIR__ . '/../config.php';
 require_admin();
+require_once __DIR__ . '/../includes/admin-layout.php';
 
 $db = getDB();
 $current_admin = get_current_admin();
@@ -291,13 +292,7 @@ include __DIR__ . '/../includes/layout-header.php';
 
 <main class="gs-main-content">
     <div class="gs-container">
-        <!-- Header -->
-        <div class="gs-flex gs-items-center gs-justify-between gs-mb-lg">
-            <h1 class="gs-h2 gs-text-primary">
-                <i data-lucide="settings"></i>
-                Systeminställningar
-            </h1>
-        </div>
+        <?php render_admin_header('Inställningar'); ?>
 
         <!-- Messages -->
         <?php if ($message): ?>

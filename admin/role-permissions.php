@@ -6,6 +6,7 @@
  */
 require_once __DIR__ . '/../config.php';
 require_admin();
+require_once __DIR__ . '/../includes/admin-layout.php';
 
 // Only super_admin can access this page
 if (!hasRole('super_admin')) {
@@ -118,16 +119,7 @@ include __DIR__ . '/../includes/layout-header.php';
 
 <main class="gs-main-content">
     <div class="gs-container">
-        <div class="gs-flex gs-justify-between gs-items-center gs-mb-lg">
-            <h1 class="gs-h2">
-                <i data-lucide="shield-check"></i>
-                Rollbehörigheter
-            </h1>
-            <a href="/admin/users.php" class="gs-btn gs-btn-outline">
-                <i data-lucide="arrow-left"></i>
-                Tillbaka
-            </a>
-        </div>
+        <?php render_admin_header('Inställningar'); ?>
 
         <!-- Message -->
         <?php if ($message): ?>
