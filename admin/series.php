@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../config.php';
 require_admin();
+require_once __DIR__ . '/../includes/admin-layout.php';
 
 $db = getDB();
 $current_admin = get_current_admin();
@@ -177,17 +178,11 @@ include __DIR__ . '/../includes/layout-header.php';
 
     <main class="gs-content-with-sidebar">
         <div class="gs-container">
-            <!-- Header -->
-            <div class="gs-flex gs-items-center gs-justify-between gs-mb-lg">
-                <h1 class="gs-h2">
-                    <i data-lucide="trophy"></i>
-                    Serier (<?= count($series) ?>)
-                </h1>
-                <button type="button" class="gs-btn gs-btn-primary" onclick="openSeriesModal()">
-                    <i data-lucide="plus"></i>
-                    Ny Serie
-                </button>
-            </div>
+            <?php
+            render_admin_header('Serier & Poäng', [
+                ['label' => 'Ny Serie', 'url' => 'javascript:openSeriesModal()', 'icon' => 'plus', 'class' => 'gs-btn-primary']
+            ]);
+            ?>
 
             <!-- Messages -->
             <?php if ($message): ?>
@@ -638,4 +633,5 @@ include __DIR__ . '/../includes/layout-header.php';
             });
         </script>
 
+<?php render_admin_footer(); ?>
 <?php include __DIR__ . '/../includes/layout-footer.php'; ?>

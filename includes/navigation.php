@@ -1,120 +1,204 @@
 <?php
 /**
- * Navigation sidebar for TheHUB
+ * TheHUB Navigation v2.0 - Restructured
+ * 5 huvudgrupper med fliknavigation
+ *
+ * Struktur:
+ * - Dashboard
+ * - Tävlingar (Events, Resultat, Biljetter, Regler)
+ * - Serier & Poäng (Serier, Ranking, Klubbpoäng, Skalor)
+ * - Deltagare & Klubbar (Deltagare, Klubbar, Venues, Klasser)
+ * - Import & Data (Översikt, Riders, Resultat, Events, UCI, Historik)
+ * - Inställningar (Användare, Behörigheter, Publikt, System) [Super Admin]
  */
 
-// Get current page
 $current_page = basename($_SERVER['PHP_SELF']);
+$current_path = $_SERVER['PHP_SELF'];
 $is_admin = isLoggedIn();
+$is_super_admin = hasRole('super_admin');
+
+/**
+ * Bestäm vilken huvudgrupp som är aktiv
+ */
+function get_active_admin_group($current_page, $current_path) {
+    // Dashboard
+    if ($current_page === 'dashboard.php') {
+        return 'dashboard';
+    }
+
+    // Tävlingar
+    $competition_pages = [
+        'events.php', 'event-create.php', 'event-edit.php', 'event-delete.php',
+        'results.php', 'edit-results.php', 'recalculate-results.php', 'clear-event-results.php', 'reset-results.php',
+        'ticketing.php', 'event-pricing.php', 'event-tickets.php', 'event-ticketing.php', 'refund-requests.php', 'pricing-templates.php',
+        'registration-rules.php'
+    ];
+    if (in_array($current_page, $competition_pages) && strpos($current_path, '/admin/') !== false) {
+        return 'competitions';
+    }
+
+    // Serier & Poäng
+    $standings_pages = [
+        'series.php', 'series-events.php', 'series-pricing.php',
+        'ranking.php', 'ranking-debug.php', 'ranking-minimal.php', 'setup-ranking-system.php',
+        'club-points.php', 'club-points-detail.php',
+        'point-scales.php', 'point-scale-edit.php', 'point-templates.php'
+    ];
+    if (in_array($current_page, $standings_pages) && strpos($current_path, '/admin/') !== false) {
+        return 'standings';
+    }
+
+    // Deltagare & Klubbar
+    $participants_pages = [
+        'riders.php', 'rider-edit.php', 'rider-delete.php',
+        'clubs.php', 'club-edit.php', 'cleanup-clubs.php',
+        'venues.php',
+        'classes.php', 'reassign-classes.php', 'reset-classes.php', 'move-class-results.php'
+    ];
+    if (in_array($current_page, $participants_pages) && strpos($current_path, '/admin/') !== false) {
+        return 'participants';
+    }
+
+    // Import
+    $import_pages = [
+        'import.php', 'import-history.php',
+        'import-riders.php', 'import-riders-flexible.php', 'import-riders-extended.php',
+        'import-results.php', 'import-results-preview.php',
+        'import-events.php', 'import-series.php', 'import-classes.php', 'import-clubs.php',
+        'import-uci-preview.php', 'import-uci-simple.php', 'import-gravity-id.php'
+    ];
+    if (in_array($current_page, $import_pages) && strpos($current_path, '/admin/') !== false) {
+        return 'import';
+    }
+
+    // Inställningar
+    $settings_pages = [
+        'users.php', 'user-edit.php', 'user-events.php', 'user-rider.php',
+        'role-permissions.php',
+        'public-settings.php', 'global-texts.php',
+        'system-settings.php', 'settings.php', 'setup-database.php', 'run-migrations.php'
+    ];
+    if (in_array($current_page, $settings_pages) && strpos($current_path, '/admin/') !== false) {
+        return 'settings';
+    }
+
+    return 'dashboard';
+}
+
+$active_group = get_active_admin_group($current_page, $current_path);
 ?>
+
 <nav class="gs-sidebar">
+    <!-- PUBLIC MENU -->
     <div class="gs-menu-section gs-main-menu">
         <h3 class="gs-menu-title"><a href="<?= SITE_URL ?>" style="color: inherit; text-decoration: none;">TheHUB</a></h3>
         <ul class="gs-menu">
-            <li><a href="<?= SITE_URL ?>" class="<?= $current_page == 'index.php' ? 'active' : '' ?>">
-                <i data-lucide="home"></i> Hem
-            </a></li>
-            <li><a href="/events.php" class="<?= $current_page == 'events.php' && strpos($_SERVER['PHP_SELF'], '/admin/') === false ? 'active' : '' ?>">
-                <i data-lucide="calendar"></i> Kalender
-            </a></li>
-            <li><a href="/results.php" class="<?= $current_page == 'results.php' && strpos($_SERVER['PHP_SELF'], '/admin/') === false ? 'active' : '' ?>">
-                <i data-lucide="trophy"></i> Resultat
-            </a></li>
-            <li><a href="/series.php" class="<?= $current_page == 'series.php' && strpos($_SERVER['PHP_SELF'], '/admin/') === false ? 'active' : '' ?>">
-                <i data-lucide="award"></i> Serier
-            </a></li>
-            <li><a href="/riders.php" class="<?= $current_page == 'riders.php' && strpos($_SERVER['PHP_SELF'], '/admin/') === false ? 'active' : '' ?>">
-                <i data-lucide="users"></i> Deltagare
-            </a></li>
-            <li><a href="/clubs/leaderboard.php" class="<?= $current_page == 'leaderboard.php' ? 'active' : '' ?>">
-                <i data-lucide="trophy"></i> Klubbar
-            </a></li>
-            <li><a href="/ranking/" class="<?= strpos($_SERVER['PHP_SELF'], '/ranking/') !== false ? 'active' : '' ?>">
-                <i data-lucide="trending-up"></i> Ranking
-            </a></li>
+            <li>
+                <a href="<?= SITE_URL ?>" class="<?= $current_page == 'index.php' && strpos($current_path, '/admin/') === false ? 'active' : '' ?>">
+                    <i data-lucide="home"></i>
+                    <span>Hem</span>
+                </a>
+            </li>
+            <li>
+                <a href="/events.php" class="<?= $current_page == 'events.php' && strpos($current_path, '/admin/') === false ? 'active' : '' ?>">
+                    <i data-lucide="calendar"></i>
+                    <span>Kalender</span>
+                </a>
+            </li>
+            <li>
+                <a href="/results.php" class="<?= $current_page == 'results.php' && strpos($current_path, '/admin/') === false ? 'active' : '' ?>">
+                    <i data-lucide="trophy"></i>
+                    <span>Resultat</span>
+                </a>
+            </li>
+            <li>
+                <a href="/series.php" class="<?= $current_page == 'series.php' && strpos($current_path, '/admin/') === false ? 'active' : '' ?>">
+                    <i data-lucide="award"></i>
+                    <span>Serier</span>
+                </a>
+            </li>
+            <li>
+                <a href="/riders.php" class="<?= $current_page == 'riders.php' && strpos($current_path, '/admin/') === false ? 'active' : '' ?>">
+                    <i data-lucide="users"></i>
+                    <span>Deltagare</span>
+                </a>
+            </li>
+            <li>
+                <a href="/clubs/leaderboard.php" class="<?= strpos($current_path, '/clubs/') !== false && strpos($current_path, '/admin/') === false ? 'active' : '' ?>">
+                    <i data-lucide="trophy"></i>
+                    <span>Klubbar</span>
+                </a>
+            </li>
+            <li>
+                <a href="/ranking/" class="<?= strpos($current_path, '/ranking/') !== false && strpos($current_path, '/admin/') === false ? 'active' : '' ?>">
+                    <i data-lucide="trending-up"></i>
+                    <span>Ranking</span>
+                </a>
+            </li>
         </ul>
     </div>
 
     <?php if ($is_admin): ?>
+    <!-- ADMIN MENU v2.0 - 5 GRUPPER -->
     <div class="gs-menu-section">
         <h3 class="gs-menu-title">Admin</h3>
         <ul class="gs-menu">
-            <li><a href="/admin/dashboard.php" class="<?= $current_page == 'dashboard.php' ? 'active' : '' ?>">
-                <i data-lucide="layout-dashboard"></i> Dashboard
-            </a></li>
-            <li><a href="/admin/events.php" class="<?= $current_page == 'events.php' && strpos($_SERVER['PHP_SELF'], '/admin/') !== false ? 'active' : '' ?>">
-                <i data-lucide="calendar-check"></i> Events
-            </a></li>
-            <li><a href="/admin/ticketing.php" class="<?= in_array($current_page, ['ticketing.php', 'event-pricing.php', 'event-tickets.php', 'refund-requests.php', 'pricing-templates.php']) ? 'active' : '' ?>">
-                <i data-lucide="ticket"></i> Ticketing
-            </a></li>
-            <li><a href="/admin/series.php" class="<?= $current_page == 'series.php' && strpos($_SERVER['PHP_SELF'], '/admin/') !== false ? 'active' : '' ?>">
-                <i data-lucide="award"></i> Serier
-            </a></li>
-            <li><a href="/admin/registration-rules.php" class="<?= $current_page == 'registration-rules.php' ? 'active' : '' ?>">
-                <i data-lucide="shield-check"></i> Registreringsregler
-            </a></li>
-            <li><a href="/admin/riders.php" class="<?= $current_page == 'riders.php' && strpos($_SERVER['PHP_SELF'], '/admin/') !== false ? 'active' : '' ?>">
-                <i data-lucide="user-circle"></i> Deltagare
-            </a></li>
-            <li><a href="/admin/clubs.php" class="<?= $current_page == 'clubs.php' ? 'active' : '' ?>">
-                <i data-lucide="building"></i> Klubbar
-            </a></li>
-            <li><a href="/admin/club-points.php" class="<?= $current_page == 'club-points.php' || $current_page == 'club-points-detail.php' ? 'active' : '' ?>">
-                <i data-lucide="trophy"></i> Klubbpoäng
-            </a></li>
-            <li><a href="/admin/ranking.php" class="<?= $current_page == 'ranking.php' && strpos($_SERVER['PHP_SELF'], '/admin/') !== false ? 'active' : '' ?>">
-                <i data-lucide="trending-up"></i> Ranking
-            </a></li>
-            <li><a href="/admin/venues.php" class="<?= $current_page == 'venues.php' ? 'active' : '' ?>">
-                <i data-lucide="mountain"></i> Venues
-            </a></li>
-            <li><a href="/admin/results.php" class="<?= $current_page == 'results.php' && strpos($_SERVER['PHP_SELF'], '/admin/') !== false ? 'active' : '' ?>">
-                <i data-lucide="trophy"></i> Resultat
-            </a></li>
-            <li><a href="/admin/import.php" class="<?= in_array($current_page, ['import.php', 'import-history.php']) ? 'active' : '' ?>">
-                <i data-lucide="upload"></i> Import
-            </a></li>
-            <li><a href="/admin/public-settings.php" class="<?= $current_page == 'public-settings.php' ? 'active' : '' ?>">
-                <i data-lucide="settings"></i> Publika Inställningar
-            </a></li>
+            <li>
+                <a href="/admin/dashboard.php" class="<?= $active_group === 'dashboard' ? 'active' : '' ?>">
+                    <i data-lucide="layout-dashboard"></i>
+                    <span>Dashboard</span>
+                </a>
+            </li>
+            <li>
+                <a href="/admin/events.php" class="<?= $active_group === 'competitions' ? 'active' : '' ?>">
+                    <i data-lucide="calendar-check"></i>
+                    <span>Tävlingar</span>
+                </a>
+            </li>
+            <li>
+                <a href="/admin/series.php" class="<?= $active_group === 'standings' ? 'active' : '' ?>">
+                    <i data-lucide="medal"></i>
+                    <span>Serier & Poäng</span>
+                </a>
+            </li>
+            <li>
+                <a href="/admin/riders.php" class="<?= $active_group === 'participants' ? 'active' : '' ?>">
+                    <i data-lucide="users"></i>
+                    <span>Deltagare & Klubbar</span>
+                </a>
+            </li>
+            <li>
+                <a href="/admin/import.php" class="<?= $active_group === 'import' ? 'active' : '' ?>">
+                    <i data-lucide="upload"></i>
+                    <span>Import & Data</span>
+                </a>
+            </li>
+            <?php if ($is_super_admin): ?>
+            <li>
+                <a href="/admin/users.php" class="<?= $active_group === 'settings' ? 'active' : '' ?>">
+                    <i data-lucide="settings"></i>
+                    <span>Inställningar</span>
+                </a>
+            </li>
+            <?php endif; ?>
         </ul>
     </div>
 
-    <?php if (hasRole('super_admin')): ?>
-    <div class="gs-menu-section">
-        <h3 class="gs-menu-title">System</h3>
-        <ul class="gs-menu">
-            <li><a href="/admin/users.php" class="<?= in_array($current_page, ['users.php', 'user-edit.php', 'user-events.php', 'user-rider.php']) ? 'active' : '' ?>">
-                <i data-lucide="users-cog"></i> Användare
-            </a></li>
-            <li><a href="/admin/role-permissions.php" class="<?= $current_page == 'role-permissions.php' ? 'active' : '' ?>">
-                <i data-lucide="shield-check"></i> Rollbehörigheter
-            </a></li>
-            <li><a href="/admin/system-settings.php" class="<?= $current_page == 'system-settings.php' ? 'active' : '' ?>">
-                <i data-lucide="cog"></i> Systeminställningar
-            </a></li>
-        </ul>
+    <!-- LOGOUT -->
+    <div class="gs-menu-section" style="margin-top: auto;">
         <div class="gs-menu-footer">
             <a href="/admin/logout.php" class="gs-btn gs-btn-sm gs-btn-outline gs-w-full">
-                <i data-lucide="log-out"></i> Logga ut
+                <i data-lucide="log-out"></i>
+                <span>Logga ut</span>
             </a>
         </div>
     </div>
     <?php else: ?>
-    <div class="gs-menu-section">
-        <div class="gs-menu-footer">
-            <a href="/admin/logout.php" class="gs-btn gs-btn-sm gs-btn-outline gs-w-full">
-                <i data-lucide="log-out"></i> Logga ut
-            </a>
-        </div>
-    </div>
-    <?php endif; ?>
-    <?php else: ?>
-    <!-- Admin Login (shown at bottom on desktop, top on mobile) -->
+    <!-- ADMIN LOGIN -->
     <div class="gs-menu-section gs-admin-login-section" style="margin-top: auto; padding-top: 1rem;">
         <a href="/admin/login.php" class="gs-btn gs-btn-sm gs-btn-primary gs-w-full">
-            <i data-lucide="log-in"></i> Admin Login
+            <i data-lucide="log-in"></i>
+            <span>Admin Login</span>
         </a>
     </div>
     <?php endif; ?>

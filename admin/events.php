@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../config.php';
 require_admin();
+require_once __DIR__ . '/../includes/admin-layout.php';
 
 global $pdo;
 $db = getDB();
@@ -68,16 +69,11 @@ include __DIR__ . '/../includes/layout-header.php';
 
 <main class="gs-main-content">
     <div class="gs-container">
-        <div class="gs-flex gs-justify-between gs-items-center gs-mb-lg">
-            <h1 class="gs-h2">
-                <i data-lucide="calendar"></i>
-                Events (<?= count($events) ?>)
-            </h1>
-            <a href="/admin/event-create.php" class="gs-btn gs-btn-primary">
-                <i data-lucide="plus"></i>
-                Nytt Event
-            </a>
-        </div>
+        <?php
+        render_admin_header('Tävlingar', [
+            ['label' => 'Nytt Event', 'url' => '/admin/event-create.php', 'icon' => 'plus', 'class' => 'gs-btn-primary']
+        ]);
+        ?>
 
         <?php if (isset($error)): ?>
             <div class="gs-alert gs-alert-danger gs-mb-lg">
@@ -259,4 +255,5 @@ include __DIR__ . '/../includes/layout-header.php';
     }
 </script>
 
+<?php render_admin_footer(); ?>
 <?php include __DIR__ . '/../includes/layout-footer.php'; ?>

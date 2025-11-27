@@ -1331,3 +1331,363 @@ details.gs-details-lg summary {
 .gs-table-scrollable.has-scroll::after {
   opacity: 1;
 }
+
+/* =======================================================
+   26. ADMIN TABS v2.0 (Grouped Navigation)
+   Mobile-first, orientation-aware
+======================================================= */
+
+/* ===== BASE STYLES (Mobile Portrait 320px+) ===== */
+.admin-tabs {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gs-space-sm);
+  padding: var(--gs-space-md);
+  background: var(--gs-background-secondary);
+  border-bottom: 1px solid var(--gs-border);
+}
+
+.admin-tabs__tab {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--gs-space-sm);
+  padding: var(--gs-space-md);
+  color: var(--gs-text-secondary);
+  text-decoration: none;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border-radius: var(--gs-radius-sm);
+  transition: var(--gs-transition-fast);
+  position: relative;
+  min-height: 44px;
+  background: var(--gs-white);
+  border: 1px solid var(--gs-border);
+}
+
+.admin-tabs__tab:hover,
+.admin-tabs__tab:focus-visible {
+  background: var(--gs-light);
+  color: var(--gs-text-primary);
+  outline: none;
+}
+
+.admin-tabs__tab:focus-visible {
+  box-shadow: 0 0 0 2px var(--gs-accent);
+}
+
+.admin-tabs__tab--active {
+  background: var(--gs-primary);
+  color: var(--gs-white);
+  border-color: var(--gs-primary);
+}
+
+.admin-tabs__tab--active:hover {
+  background: var(--gs-primary-dark);
+}
+
+.admin-tabs__tab i {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+/* Badge för notifieringar */
+.admin-tabs__tab[data-badge]::after {
+  content: attr(data-badge);
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  background: var(--gs-danger);
+  color: var(--gs-white);
+  font-size: 10px;
+  font-weight: 600;
+  border-radius: var(--gs-radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ===== PAGE HEADER ===== */
+.admin-page-header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gs-space-md);
+  padding: var(--gs-space-md);
+  background: var(--gs-background-secondary);
+  border-bottom: 1px solid var(--gs-border);
+}
+
+.admin-page-header__title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--gs-text-primary);
+  margin: 0;
+  line-height: 1.2;
+}
+
+.admin-page-header__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gs-space-sm);
+}
+
+.admin-page-header__actions .gs-btn {
+  flex: 1;
+  min-width: 0;
+  justify-content: center;
+}
+
+/* ===== TAB CONTENT ===== */
+.admin-tab-content {
+  padding: var(--gs-space-md);
+}
+
+/* ===== MOBILE LANDSCAPE ===== */
+@media (max-width: 900px) and (orientation: landscape) {
+  .admin-tabs {
+    flex-direction: row;
+    flex-wrap: wrap;
+    padding: var(--gs-space-sm) var(--gs-space-md);
+    gap: var(--gs-space-sm);
+  }
+
+  .admin-tabs__tab {
+    flex: 0 1 auto;
+    padding: var(--gs-space-sm) var(--gs-space-md);
+    min-height: 36px;
+    font-size: 0.875rem;
+  }
+
+  .admin-tabs__tab i {
+    width: 16px;
+    height: 16px;
+  }
+
+  .admin-page-header {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--gs-space-md);
+  }
+
+  .admin-page-header__actions {
+    flex-wrap: nowrap;
+  }
+
+  .admin-page-header__actions .gs-btn {
+    flex: 0 0 auto;
+  }
+
+  .admin-tab-content {
+    padding: var(--gs-space-md) var(--gs-space-lg);
+  }
+}
+
+/* ===== TABLET PORTRAIT ===== */
+@media (min-width: 768px) and (orientation: portrait) {
+  .admin-tabs {
+    flex-direction: row;
+    flex-wrap: wrap;
+    padding: var(--gs-space-md) var(--gs-space-lg);
+  }
+
+  .admin-tabs__tab {
+    flex: 0 1 calc(50% - var(--gs-space-sm));
+    max-width: calc(50% - var(--gs-space-sm));
+  }
+
+  .admin-tabs--few .admin-tabs__tab {
+    flex: 0 1 auto;
+    max-width: none;
+  }
+
+  .admin-page-header {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--gs-space-lg);
+  }
+
+  .admin-page-header__title {
+    font-size: 1.5rem;
+  }
+
+  .admin-page-header__actions .gs-btn {
+    flex: 0 0 auto;
+  }
+
+  .admin-tab-content {
+    padding: var(--gs-space-lg);
+  }
+}
+
+/* ===== TABLET LANDSCAPE / DESKTOP ===== */
+@media (min-width: 1024px) {
+  .admin-tabs {
+    flex-direction: row;
+    flex-wrap: nowrap;
+    padding: var(--gs-space-md) var(--gs-space-lg);
+    gap: var(--gs-space-sm);
+    overflow-x: visible;
+  }
+
+  .admin-tabs__tab {
+    flex: 0 0 auto;
+    padding: var(--gs-space-md) var(--gs-space-lg);
+    min-height: 40px;
+    border: none;
+    background: transparent;
+  }
+
+  .admin-tabs__tab:hover {
+    background: rgba(0, 0, 0, 0.05);
+  }
+
+  .admin-tabs__tab--active {
+    background: var(--gs-primary);
+    border-radius: var(--gs-radius-sm);
+  }
+
+  /* Hide icons on desktop */
+  .admin-tabs__tab i {
+    display: none;
+  }
+
+  .admin-page-header {
+    padding: var(--gs-space-lg) var(--gs-space-xl);
+  }
+
+  .admin-page-header__title {
+    font-size: 1.5rem;
+  }
+
+  .admin-tab-content {
+    padding: var(--gs-space-lg) var(--gs-space-xl);
+  }
+}
+
+/* ===== WIDE DESKTOP ===== */
+@media (min-width: 1440px) {
+  .admin-tabs {
+    padding: var(--gs-space-md) var(--gs-space-xl);
+    gap: var(--gs-space-md);
+  }
+
+  .admin-tabs__tab {
+    padding: var(--gs-space-md) var(--gs-space-xl);
+    font-size: 1rem;
+  }
+
+  .admin-page-header {
+    padding: var(--gs-space-xl);
+  }
+
+  .admin-tab-content {
+    padding: var(--gs-space-xl);
+  }
+}
+
+/* ===== COMPACT TABS (5+ tabs) ===== */
+.admin-tabs--compact {
+  flex-direction: row;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  padding-bottom: var(--gs-space-md);
+  position: relative;
+}
+
+.admin-tabs--compact::-webkit-scrollbar {
+  display: none;
+}
+
+.admin-tabs--compact .admin-tabs__tab {
+  flex: 0 0 auto;
+  scroll-snap-align: start;
+  min-width: max-content;
+}
+
+.admin-tabs--compact::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 40px;
+  background: linear-gradient(to right, transparent, var(--gs-background-secondary));
+  pointer-events: none;
+}
+
+@media (min-width: 768px) {
+  .admin-tabs--compact {
+    flex-wrap: wrap;
+    overflow-x: visible;
+  }
+
+  .admin-tabs--compact::after {
+    display: none;
+  }
+}
+
+@media (min-width: 1024px) {
+  .admin-tabs--compact {
+    flex-wrap: nowrap;
+  }
+
+  .admin-tabs--compact .admin-tabs__tab {
+    padding: var(--gs-space-sm) var(--gs-space-md);
+    font-size: 0.875rem;
+  }
+}
+
+/* ===== ACCESSIBILITY ===== */
+@media (prefers-reduced-motion: reduce) {
+  .admin-tabs__tab {
+    transition: none;
+  }
+}
+
+@media (prefers-contrast: high) {
+  .admin-tabs__tab {
+    border: 2px solid currentColor;
+  }
+
+  .admin-tabs__tab--active {
+    outline: 3px solid var(--gs-text-primary);
+    outline-offset: 2px;
+  }
+}
+
+.admin-tabs__tab:focus-visible {
+  outline: 2px solid var(--gs-accent);
+  outline-offset: 2px;
+}
+
+@media print {
+  .admin-tabs {
+    display: block;
+    background: none;
+    border: none;
+  }
+
+  .admin-tabs__tab {
+    display: inline;
+    padding: 0;
+    background: none;
+    border: none;
+  }
+
+  .admin-tabs__tab::after {
+    content: " | ";
+  }
+
+  .admin-tabs__tab:last-child::after {
+    content: "";
+  }
+}
