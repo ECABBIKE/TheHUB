@@ -4,10 +4,10 @@
  * Find riders with potentially incorrect license_number formats
  *
  * Valid formats:
- * - UCI ID: 10-11 digits (with or without spaces) starting with 100 or 101
+ * - UCI ID: Starts with 100 or 101 (any length, with or without spaces)
  * - SWE ID: Starts with "SWE" followed by digits (e.g., SWE2512345)
  *
- * Invalid → Convert to SWE ID format: SWE25XXXXX
+ * Invalid (not UCI, not SWE) → Convert to SWE ID format: SWE25XXXXX
  */
 
 require_once __DIR__ . '/../config.php';
@@ -21,9 +21,9 @@ $messageType = 'info';
 // Helper function to check if license_number is valid UCI
 function isValidUCI($licenseNumber) {
     if (empty($licenseNumber)) return false;
-    // Remove spaces and check if 10-11 digits starting with 100 or 101
+    // Remove spaces and check if starts with 100 or 101 (any length)
     $cleaned = preg_replace('/\s+/', '', $licenseNumber);
-    return preg_match('/^10[01]\d{7,8}$/', $cleaned);
+    return preg_match('/^10[01]\d+$/', $cleaned);
 }
 
 // Helper function to check if license_number is valid SWE
@@ -76,7 +76,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'convert_all_invalid') {
         WHERE license_number IS NOT NULL
         AND license_number != ''
         AND license_number NOT REGEXP '^SWE'
-        AND REPLACE(REPLACE(license_number, ' ', ''), '-', '') NOT REGEXP '^10[01][0-9]{7,8}$'
+        AND REPLACE(REPLACE(license_number, ' ', ''), '-', '') NOT REGEXP '^10[01][0-9]+$'
         ORDER BY id
     ");
 
@@ -125,7 +125,7 @@ $invalidRiders = $db->getAll("
     WHERE r.license_number IS NOT NULL
     AND r.license_number != ''
     AND r.license_number NOT REGEXP '^SWE'
-    AND REPLACE(REPLACE(r.license_number, ' ', ''), '-', '') NOT REGEXP '^10[01][0-9]{7,8}$'
+    AND REPLACE(REPLACE(r.license_number, ' ', ''), '-', '') NOT REGEXP '^10[01][0-9]+$'
     ORDER BY r.id DESC
     LIMIT 200
 ");
@@ -137,7 +137,7 @@ $invalidCount = $db->getRow("
     WHERE license_number IS NOT NULL
     AND license_number != ''
     AND license_number NOT REGEXP '^SWE'
-    AND REPLACE(REPLACE(license_number, ' ', ''), '-', '') NOT REGEXP '^10[01][0-9]{7,8}$'
+    AND REPLACE(REPLACE(license_number, ' ', ''), '-', '') NOT REGEXP '^10[01][0-9]+$'
 ")['count'];
 
 // Count by format type
@@ -145,7 +145,7 @@ $formatCounts = $db->getAll("
     SELECT
         CASE
             WHEN license_number REGEXP '^SWE' THEN 'SWE ID (korrekt)'
-            WHEN REPLACE(REPLACE(license_number, ' ', ''), '-', '') REGEXP '^10[01][0-9]{7,8}$' THEN 'UCI ID (korrekt)'
+            WHEN REPLACE(REPLACE(license_number, ' ', ''), '-', '') REGEXP '^10[01][0-9]+$' THEN 'UCI ID (korrekt)'
             ELSE 'Ogiltigt format (bör konverteras till SWE ID)'
         END as format_type,
         COUNT(*) as count
@@ -176,8 +176,8 @@ include __DIR__ . '/../includes/layout-header.php';
             <i data-lucide="info"></i>
             <div>
                 <strong>Giltiga format:</strong><br>
-                - <strong>UCI ID:</strong> 10-11 siffror (med eller utan mellanslag) som börjar med 100 eller 101<br>
-                  &nbsp;&nbsp;Exempel: <code>10048820303</code> eller <code>100 683 277 90</code><br>
+                - <strong>UCI ID:</strong> Börjar med 100 eller 101 (valfri längd, med eller utan mellanslag)<br>
+                  &nbsp;&nbsp;Exempel: <code>10048820303</code>, <code>100 683 277 90</code>, <code>1006832</code><br>
                 - <strong>SWE ID:</strong> Börjar med "SWE" följt av år och nummer<br>
                   &nbsp;&nbsp;Exempel: <code>SWE2512345</code><br><br>
                 <strong>Ogiltiga:</strong> Konverteras till SWE ID format (SWE25XXXXX)
