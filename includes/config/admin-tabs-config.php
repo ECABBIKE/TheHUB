@@ -2,6 +2,14 @@
 /**
  * Flik-konfiguration för admin-grupper
  * Definierar flikar för varje huvudgrupp i Admin 2.0
+ *
+ * Struktur:
+ * 1. Tävlingar - Events, resultat, venues, biljetter
+ * 2. Serier - Serier, ranking, klubbpoäng
+ * 3. Deltagare - Deltagare och klubbar
+ * 4. Konfiguration - Klasser, licenser, poängskalor, regler, texter
+ * 5. Import - All dataimport
+ * 6. System - Användarhantering och systemadmin (super admin)
  */
 
 $ADMIN_TABS = [
@@ -28,27 +36,27 @@ $ADMIN_TABS = [
                 'pages' => ['results.php', 'edit-results.php', 'recalculate-results.php', 'clear-event-results.php', 'reset-results.php']
             ],
             [
+                'id' => 'venues',
+                'label' => 'Venues',
+                'icon' => 'mountain',
+                'url' => '/admin/venues.php',
+                'pages' => ['venues.php']
+            ],
+            [
                 'id' => 'ticketing',
                 'label' => 'Biljetter',
                 'icon' => 'ticket',
                 'url' => '/admin/ticketing.php',
                 'pages' => ['ticketing.php', 'event-pricing.php', 'event-tickets.php', 'event-ticketing.php', 'refund-requests.php', 'pricing-templates.php']
-            ],
-            [
-                'id' => 'rules',
-                'label' => 'Regler',
-                'icon' => 'shield-check',
-                'url' => '/admin/registration-rules.php',
-                'pages' => ['registration-rules.php']
             ]
         ]
     ],
 
     // ========================================
-    // SERIER & POÄNG
+    // SERIER
     // ========================================
     'standings' => [
-        'title' => 'Serier & Poäng',
+        'title' => 'Serier',
         'icon' => 'medal',
         'tabs' => [
             [
@@ -71,22 +79,15 @@ $ADMIN_TABS = [
                 'icon' => 'building-2',
                 'url' => '/admin/club-points.php',
                 'pages' => ['club-points.php', 'club-points-detail.php']
-            ],
-            [
-                'id' => 'point-scales',
-                'label' => 'Poängskalor',
-                'icon' => 'sliders',
-                'url' => '/admin/point-scales.php',
-                'pages' => ['point-scales.php', 'point-scale-edit.php', 'point-templates.php']
             ]
         ]
     ],
 
     // ========================================
-    // DELTAGARE & KLUBBAR
+    // DELTAGARE
     // ========================================
     'participants' => [
-        'title' => 'Deltagare & Klubbar',
+        'title' => 'Deltagare',
         'icon' => 'users',
         'tabs' => [
             [
@@ -102,29 +103,60 @@ $ADMIN_TABS = [
                 'icon' => 'building-2',
                 'url' => '/admin/clubs.php',
                 'pages' => ['clubs.php', 'club-edit.php', 'cleanup-clubs.php']
-            ],
-            [
-                'id' => 'venues',
-                'label' => 'Venues',
-                'icon' => 'mountain',
-                'url' => '/admin/venues.php',
-                'pages' => ['venues.php']
-            ],
+            ]
+        ]
+    ],
+
+    // ========================================
+    // KONFIGURATION
+    // ========================================
+    'config' => [
+        'title' => 'Konfiguration',
+        'icon' => 'sliders',
+        'tabs' => [
             [
                 'id' => 'classes',
                 'label' => 'Klasser',
                 'icon' => 'layers',
                 'url' => '/admin/classes.php',
                 'pages' => ['classes.php', 'reassign-classes.php', 'reset-classes.php', 'move-class-results.php']
+            ],
+            [
+                'id' => 'license-matrix',
+                'label' => 'Licenser',
+                'icon' => 'grid-3x3',
+                'url' => '/admin/license-class-matrix.php',
+                'pages' => ['license-class-matrix.php']
+            ],
+            [
+                'id' => 'point-scales',
+                'label' => 'Poängskalor',
+                'icon' => 'calculator',
+                'url' => '/admin/point-scales.php',
+                'pages' => ['point-scales.php', 'point-scale-edit.php', 'point-templates.php']
+            ],
+            [
+                'id' => 'rules',
+                'label' => 'Regler',
+                'icon' => 'shield-check',
+                'url' => '/admin/registration-rules.php',
+                'pages' => ['registration-rules.php']
+            ],
+            [
+                'id' => 'public',
+                'label' => 'Texter',
+                'icon' => 'file-text',
+                'url' => '/admin/public-settings.php',
+                'pages' => ['public-settings.php', 'global-texts.php']
             ]
         ]
     ],
 
     // ========================================
-    // IMPORT & DATA
+    // IMPORT
     // ========================================
     'import' => [
-        'title' => 'Import & Data',
+        'title' => 'Import',
         'icon' => 'upload',
         'tabs' => [
             [
@@ -150,7 +182,7 @@ $ADMIN_TABS = [
             ],
             [
                 'id' => 'events',
-                'label' => 'Events/Serier',
+                'label' => 'Events',
                 'icon' => 'calendar-plus',
                 'url' => '/admin/import-events.php',
                 'pages' => ['import-events.php', 'import-series.php', 'import-classes.php', 'import-clubs.php']
@@ -173,10 +205,10 @@ $ADMIN_TABS = [
     ],
 
     // ========================================
-    // INSTÄLLNINGAR (Super Admin)
+    // SYSTEM (Super Admin)
     // ========================================
     'settings' => [
-        'title' => 'Inställningar',
+        'title' => 'System',
         'icon' => 'settings',
         'super_admin_only' => true,
         'tabs' => [
@@ -195,15 +227,8 @@ $ADMIN_TABS = [
                 'pages' => ['role-permissions.php']
             ],
             [
-                'id' => 'public',
-                'label' => 'Publikt',
-                'icon' => 'eye',
-                'url' => '/admin/public-settings.php',
-                'pages' => ['public-settings.php', 'global-texts.php']
-            ],
-            [
                 'id' => 'system',
-                'label' => 'System',
+                'label' => 'Databas',
                 'icon' => 'server',
                 'url' => '/admin/system-settings.php',
                 'pages' => ['system-settings.php', 'settings.php', 'setup-database.php', 'run-migrations.php']
