@@ -5,16 +5,6 @@ require_once __DIR__ . '/includes/class-calculations.php';
 
 $db = getDB();
 
-// Check if series_results table exists (for backwards compatibility during migration)
-$useSeriesResults = false;
-try {
-    $tableCheck = $db->getRow("SELECT 1 FROM series_results LIMIT 1");
-    $useSeriesResults = true;
-} catch (Exception $e) {
-    // Table doesn't exist yet, use old system
-    $useSeriesResults = false;
-}
-
 // Get series ID from URL
 $seriesId = isset($_GET['id']) ? (int)$_GET['id'] : 0;
 
@@ -22,6 +12,20 @@ if (!$seriesId) {
     // Redirect to series page if no ID provided
     header('Location: /series.php');
     exit;
+}
+
+// Check if series_results table exists AND has data for this series
+// If not, fall back to old system (results.points)
+$useSeriesResults = false;
+try {
+    $seriesResultsCount = $db->getRow(
+        "SELECT COUNT(*) as cnt FROM series_results WHERE series_id = ?",
+        [$seriesId]
+    );
+    $useSeriesResults = ($seriesResultsCount && $seriesResultsCount['cnt'] > 0);
+} catch (Exception $e) {
+    // Table doesn't exist yet, use old system
+    $useSeriesResults = false;
 }
 
 // Fetch series details
