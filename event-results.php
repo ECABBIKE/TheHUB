@@ -1624,6 +1624,22 @@ include __DIR__ . '/includes/layout-header.php';
                                 </div>
                             </div>
 
+                            <!-- License Override Option -->
+                            <div id="license-override-section" class="gs-card gs-mb-md" style="display: none;">
+                                <div class="gs-card-content">
+                                    <label class="gs-flex gs-items-start gs-gap-md" style="cursor: pointer;">
+                                        <input type="checkbox" id="license-override" onchange="filterClasses()" class="gs-mt-xs">
+                                        <div>
+                                            <strong>Jag har aktiv tävlingslicens</strong>
+                                            <p class="gs-text-sm gs-text-secondary gs-mb-0">
+                                                Kryssa i om du har en giltig tävlingslicens och vill se alla klasser för ditt kön.
+                                                Licenstyp verifieras vid incheckning.
+                                            </p>
+                                        </div>
+                                    </label>
+                                </div>
+                            </div>
+
                             <!-- Step 2: Select Class -->
                             <div class="gs-card gs-mb-md">
                                 <div class="gs-card-header">
@@ -1808,6 +1824,11 @@ include __DIR__ . '/includes/layout-header.php';
                             document.getElementById('rider-results').style.display = 'none';
                             document.getElementById('rider-search').value = riderData.name;
 
+                            // Show license override option (allows users with active license to bypass license type filter)
+                            document.getElementById('license-override-section').style.display = 'block';
+                            // Reset checkbox when selecting new rider
+                            document.getElementById('license-override').checked = false;
+
                             // Filter classes based on rider's license/age/gender
                             filterClasses();
                             updatePrice();
@@ -1817,6 +1838,7 @@ include __DIR__ . '/includes/layout-header.php';
                             if (!currentRiderData) return;
 
                             const classOptions = document.querySelectorAll('input[name="class_id"]');
+                            const licenseOverride = document.getElementById('license-override')?.checked || false;
 
                             classOptions.forEach(radio => {
                                 const classId = radio.value;
@@ -1826,8 +1848,17 @@ include __DIR__ . '/includes/layout-header.php';
                                 let reason = '';
 
                                 if (rules) {
-                                    // Check license type
-                                    if (rules.allowed_license_types) {
+                                    // GENDER IS ALWAYS ENFORCED - Never bypassed by license override
+                                    if (rules.allowed_genders && currentRiderData.gender) {
+                                        const allowedGenders = JSON.parse(rules.allowed_genders);
+                                        if (allowedGenders.length > 0 && !allowedGenders.includes(currentRiderData.gender)) {
+                                            allowed = false;
+                                            reason = currentRiderData.gender === 'M' ? 'Endast för kvinnor' : 'Endast för män';
+                                        }
+                                    }
+
+                                    // License type check - can be bypassed with license override
+                                    if (allowed && !licenseOverride && rules.allowed_license_types) {
                                         const allowedTypes = JSON.parse(rules.allowed_license_types);
                                         if (allowedTypes.length > 0 && currentRiderData.licenseType) {
                                             if (!allowedTypes.includes(currentRiderData.licenseType)) {
@@ -1837,8 +1868,8 @@ include __DIR__ . '/includes/layout-header.php';
                                         }
                                     }
 
-                                    // Check birth year (age restrictions)
-                                    if (allowed && currentRiderData.birthYear) {
+                                    // Check birth year (age restrictions) - can be bypassed with license override
+                                    if (allowed && !licenseOverride && currentRiderData.birthYear) {
                                         if (rules.min_birth_year && currentRiderData.birthYear < rules.min_birth_year) {
                                             allowed = false;
                                             reason = 'Födelseår måste vara ' + rules.min_birth_year + ' eller senare';
@@ -1849,17 +1880,8 @@ include __DIR__ . '/includes/layout-header.php';
                                         }
                                     }
 
-                                    // Check gender
-                                    if (allowed && rules.allowed_genders && currentRiderData.gender) {
-                                        const allowedGenders = JSON.parse(rules.allowed_genders);
-                                        if (allowedGenders.length > 0 && !allowedGenders.includes(currentRiderData.gender)) {
-                                            allowed = false;
-                                            reason = 'Endast för kön: ' + allowedGenders.join(', ');
-                                        }
-                                    }
-
-                                    // Check license requirement
-                                    if (allowed && rules.requires_license && !currentRiderData.licenseType) {
+                                    // Check license requirement - can be bypassed with license override
+                                    if (allowed && !licenseOverride && rules.requires_license && !currentRiderData.licenseType) {
                                         allowed = false;
                                         reason = 'Kräver tävlingslicens';
                                     }
