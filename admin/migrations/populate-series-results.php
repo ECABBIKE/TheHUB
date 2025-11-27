@@ -13,6 +13,12 @@
 
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
+ini_set('max_execution_time', 300); // 5 minutes
+set_time_limit(300);
+
+// Disable output buffering for real-time progress
+if (ob_get_level()) ob_end_flush();
+ob_implicit_flush(true);
 
 require_once __DIR__ . '/../../config.php';
 require_once __DIR__ . '/../../includes/series-points.php';
@@ -84,25 +90,35 @@ $totalStats = [
 foreach ($seriesList as $series) {
     echo "<div class='series-block'>";
     echo "<h3>{$series['name']} ({$series['year']}) - {$series['event_count']} events</h3>";
+    flush();
 
-    // Recalculate all series points
-    $stats = recalculateAllSeriesPoints($db, $series['id']);
+    try {
+        // Recalculate all series points
+        echo "<p class='info'>Beräknar poäng...</p>";
+        flush();
 
-    echo "<p class='success'>";
-    echo "Events: {$stats['events']}, ";
-    echo "Inserted: {$stats['inserted']}, ";
-    echo "Updated: {$stats['updated']}, ";
-    echo "Deleted: {$stats['deleted']}";
-    echo "</p>";
+        $stats = recalculateAllSeriesPoints($db, $series['id']);
 
-    // Update totals
-    $totalStats['series']++;
-    $totalStats['events'] += $stats['events'];
-    $totalStats['inserted'] += $stats['inserted'];
-    $totalStats['updated'] += $stats['updated'];
-    $totalStats['deleted'] += $stats['deleted'];
+        echo "<p class='success'>";
+        echo "Events: {$stats['events']}, ";
+        echo "Inserted: {$stats['inserted']}, ";
+        echo "Updated: {$stats['updated']}, ";
+        echo "Deleted: {$stats['deleted']}";
+        echo "</p>";
+
+        // Update totals
+        $totalStats['series']++;
+        $totalStats['events'] += $stats['events'];
+        $totalStats['inserted'] += $stats['inserted'];
+        $totalStats['updated'] += $stats['updated'];
+        $totalStats['deleted'] += $stats['deleted'];
+    } catch (Exception $e) {
+        echo "<p class='error'>FEL: " . htmlspecialchars($e->getMessage()) . "</p>";
+        echo "<pre>" . htmlspecialchars($e->getTraceAsString()) . "</pre>";
+    }
 
     echo "</div>";
+    flush();
 }
 
 echo "<div class='stats'>";
