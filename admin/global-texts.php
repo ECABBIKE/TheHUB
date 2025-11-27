@@ -6,6 +6,7 @@
 
 require_once __DIR__ . '/../config.php';
 require_admin();
+require_once __DIR__ . '/../includes/admin-layout.php';
 
 $db = getDB();
 $message = '';
@@ -99,17 +100,13 @@ include __DIR__ . '/../includes/layout-header.php';
 
 <main class="gs-main-content">
     <div class="gs-container">
-        <!-- Header -->
-        <div class="gs-flex gs-justify-between gs-items-center gs-mb-xl gs-flex-wrap gs-gap-md">
-            <div>
-                <h1 class="gs-h2 gs-text-primary gs-mb-xs">
-                    <i data-lucide="file-text"></i>
-                    Globala Texter
-                </h1>
-                <p class="gs-text-secondary">
-                    Standardtexter som kan användas i events
-                </p>
-            </div>
+        <?php render_admin_header('Globala Texter', 'config'); ?>
+
+        <!-- Actions -->
+        <div class="gs-flex gs-justify-between gs-items-center gs-mb-lg gs-flex-wrap gs-gap-md">
+            <p class="gs-text-secondary">
+                Standardtexter som kan användas i events
+            </p>
             <button type="button" class="gs-btn gs-btn-primary" onclick="showAddModal()">
                 <i data-lucide="plus"></i>
                 Ny Global Text
@@ -201,6 +198,8 @@ include __DIR__ . '/../includes/layout-header.php';
             </div>
             <?php endforeach; ?>
         <?php endif; ?>
+
+        <?php render_admin_footer(); ?>
     </div>
 </main>
 
