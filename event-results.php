@@ -1677,7 +1677,7 @@ include __DIR__ . '/includes/layout-header.php';
                                 <div class="gs-card-header">
                                     <h3 class="gs-h5">
                                         <i data-lucide="id-card"></i>
-                                        Välj din licenstyp
+                                        Din licens
                                         <?php if ($licenseClass === 'national'): ?>
                                             <span class="gs-badge gs-badge-warning gs-ml-sm">Nationellt event</span>
                                         <?php elseif ($licenseClass === 'sportmotion'): ?>
@@ -1688,9 +1688,14 @@ include __DIR__ . '/includes/layout-header.php';
                                     </h3>
                                 </div>
                                 <div class="gs-card-content">
-                                    <p class="gs-text-sm gs-text-secondary gs-mb-md">
-                                        Välj vilken licens du tävlar med. Tillgängliga klasser beror på din licenstyp.
-                                    </p>
+                                    <div id="license-from-profile" class="gs-alert gs-alert-success gs-mb-md" style="display: none;">
+                                        <i data-lucide="check-circle"></i>
+                                        <span>Din licens hämtades från din profil. Ändra vid behov.</span>
+                                    </div>
+                                    <div id="license-not-found" class="gs-alert gs-alert-info gs-mb-md" style="display: none;">
+                                        <i data-lucide="info"></i>
+                                        <span>Välj vilken licens du tävlar med.</span>
+                                    </div>
                                     <div class="gs-grid gs-grid-cols-1 gs-md-grid-cols-2 gs-gap-sm">
                                         <?php foreach ($availableLicenseTypes as $license): ?>
                                         <label class="gs-card gs-p-md license-option" style="cursor: pointer; border: 2px solid var(--gs-border);">
@@ -1903,10 +1908,64 @@ include __DIR__ . '/includes/layout-header.php';
 
                             // Show license type selector
                             document.getElementById('license-type-section').style.display = 'block';
-                            // Reset license selection when selecting new rider
-                            document.querySelectorAll('input[name="selected_license"]').forEach(r => r.checked = false);
 
-                            // Filter classes based on rider's gender (license not yet selected)
+                            // Reset all license selections
+                            document.querySelectorAll('input[name="selected_license"]').forEach(r => {
+                                r.checked = false;
+                                const card = r.closest('label');
+                                if (card) {
+                                    card.style.borderColor = 'var(--gs-border)';
+                                    card.style.backgroundColor = '';
+                                }
+                            });
+
+                            // Hide both alerts initially
+                            document.getElementById('license-from-profile').style.display = 'none';
+                            document.getElementById('license-not-found').style.display = 'none';
+
+                            // Pre-select rider's license type if they have one in their profile
+                            let licenseFound = false;
+                            if (riderData.licenseType) {
+                                // Try to match the license type (convert to lowercase, handle common variations)
+                                const licenseCode = riderData.licenseType.toLowerCase()
+                                    .replace(/\s+/g, '_')
+                                    .replace(/ä/g, 'a')
+                                    .replace(/å/g, 'a')
+                                    .replace(/ö/g, 'o');
+
+                                // Try exact match first
+                                let matchingRadio = document.querySelector(`input[name="selected_license"][value="${licenseCode}"]`);
+
+                                // Try partial matches for common license names
+                                if (!matchingRadio) {
+                                    const licenseRadios = document.querySelectorAll('input[name="selected_license"]');
+                                    licenseRadios.forEach(radio => {
+                                        const value = radio.value.toLowerCase();
+                                        if (licenseCode.includes(value) || value.includes(licenseCode)) {
+                                            matchingRadio = radio;
+                                        }
+                                    });
+                                }
+
+                                if (matchingRadio) {
+                                    matchingRadio.checked = true;
+                                    const card = matchingRadio.closest('label');
+                                    if (card) {
+                                        card.style.borderColor = 'var(--gs-primary)';
+                                        card.style.backgroundColor = 'var(--gs-primary-light, rgba(var(--gs-primary-rgb), 0.1))';
+                                    }
+                                    licenseFound = true;
+                                    // Show success alert - license was found in profile
+                                    document.getElementById('license-from-profile').style.display = 'flex';
+                                }
+                            }
+
+                            // Show info alert if no license was found in profile
+                            if (!licenseFound) {
+                                document.getElementById('license-not-found').style.display = 'flex';
+                            }
+
+                            // Filter classes based on rider's license (or show all locked if no license selected)
                             filterClasses();
                             updatePrice();
                         }
@@ -1914,6 +1973,11 @@ include __DIR__ . '/includes/layout-header.php';
                         // Called when user selects a license type
                         function onLicenseSelected() {
                             filterClasses();
+
+                            // Hide alerts when user manually changes license
+                            document.getElementById('license-from-profile').style.display = 'none';
+                            document.getElementById('license-not-found').style.display = 'none';
+
                             // Highlight selected license card
                             document.querySelectorAll('input[name="selected_license"]').forEach(radio => {
                                 const card = radio.closest('label');
