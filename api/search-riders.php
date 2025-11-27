@@ -21,6 +21,8 @@ $db = getDB();
 // Search by name, UCI ID, or email
 $searchTerm = '%' . $query . '%';
 
+$currentYear = (int)date('Y');
+
 $riders = $db->getAll("
     SELECT
         r.id,
@@ -31,9 +33,20 @@ $riders = $db->getAll("
         r.email,
         r.gravity_id,
         r.license_type,
+        r.license_year,
+        r.license_valid_until,
         r.birth_year,
         r.gender,
-        c.name as club_name
+        c.name as club_name,
+        CASE
+            WHEN r.license_year = ? AND r.license_type IS NOT NULL AND r.license_type != ''
+                AND r.license_type NOT IN ('engangslicens', 'Engångslicens', 'sweid', 'SWE ID')
+            THEN 1
+            WHEN r.license_valid_until >= CURDATE() AND r.license_type IS NOT NULL AND r.license_type != ''
+                AND r.license_type NOT IN ('engangslicens', 'Engångslicens', 'sweid', 'SWE ID')
+            THEN 1
+            ELSE 0
+        END as has_active_license
     FROM riders r
     LEFT JOIN clubs c ON r.club_id = c.id
     WHERE r.firstname LIKE ?
@@ -43,6 +56,6 @@ $riders = $db->getAll("
        OR r.email LIKE ?
     ORDER BY r.lastname, r.firstname
     LIMIT ?
-", [$searchTerm, $searchTerm, $searchTerm, $searchTerm, $searchTerm, $limit]);
+", [$currentYear, $searchTerm, $searchTerm, $searchTerm, $searchTerm, $searchTerm, $limit]);
 
 echo json_encode(['riders' => $riders]);
