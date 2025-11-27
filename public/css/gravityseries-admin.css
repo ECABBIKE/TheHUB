@@ -1348,6 +1348,10 @@ details.gs-details-lg summary {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
+  /* Break out of container on mobile for full-width scroll */
+  margin-left: calc(-1 * var(--gs-space-md));
+  margin-right: calc(-1 * var(--gs-space-md));
+  width: calc(100% + 2 * var(--gs-space-md));
 }
 
 .admin-tabs::-webkit-scrollbar {
@@ -1477,6 +1481,10 @@ details.gs-details-lg summary {
   .admin-tabs {
     overflow-x: visible;
     padding: var(--gs-space-md) var(--gs-space-lg);
+    /* Reset negative margins on desktop */
+    margin-left: 0;
+    margin-right: 0;
+    width: 100%;
   }
 
   .admin-tabs__tab {

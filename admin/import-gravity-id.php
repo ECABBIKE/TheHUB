@@ -5,6 +5,7 @@
  */
 require_once __DIR__ . '/../config.php';
 require_admin();
+require_once __DIR__ . '/../includes/admin-layout.php';
 
 $db = getDB();
 $message = '';
@@ -241,23 +242,7 @@ include __DIR__ . '/../includes/layout-header.php';
 
 <main class="gs-main-content">
     <div class="gs-container">
-
-        <!-- Header -->
-        <div class="gs-flex gs-justify-between gs-items-center gs-mb-lg">
-            <div>
-                <h1 class="gs-h1">
-                    <i data-lucide="id-card"></i>
-                    Importera Gravity ID
-                </h1>
-                <p class="gs-text-secondary">
-                    Tilldela Gravity ID till deltagare för rabatter vid eventanmälan
-                </p>
-            </div>
-            <a href="/admin/import.php" class="gs-btn gs-btn-outline">
-                <i data-lucide="arrow-left"></i>
-                Tillbaka
-            </a>
-        </div>
+        <?php render_admin_header('Import & Data'); ?>
 
         <?php if ($message): ?>
             <div class="gs-alert gs-alert-<?= h($messageType) ?> gs-mb-lg">

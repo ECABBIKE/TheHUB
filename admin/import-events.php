@@ -9,6 +9,7 @@
 
 require_once __DIR__ . '/../config.php';
 require_admin();
+require_once __DIR__ . '/../includes/admin-layout.php';
 
 $db = getDB();
 $current_admin = get_current_admin();
@@ -294,17 +295,7 @@ include __DIR__ . '/../includes/layout-header.php';
 
 <main class="gs-content-with-sidebar">
     <div class="gs-container">
-        <!-- Header -->
-        <div class="gs-flex gs-items-center gs-justify-between gs-mb-lg">
-            <h1 class="gs-h3">
-                <i data-lucide="calendar-plus"></i>
-                Importera Events
-            </h1>
-            <a href="/admin/events.php" class="gs-btn gs-btn-outline gs-btn-sm">
-                <i data-lucide="arrow-left"></i>
-                Tillbaka
-            </a>
-        </div>
+        <?php render_admin_header('Import & Data'); ?>
 
         <!-- Messages -->
         <?php if ($message): ?>
