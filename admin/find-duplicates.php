@@ -405,13 +405,13 @@ include __DIR__ . '/../includes/layout-header.php';
                             <span class="gs-text-sm gs-text-secondary">#<?= $idx + 1 ?></span>
                         </div>
                         <div class="gs-card-content">
-                            <div class="gs-grid gs-grid-cols-2 gs-gap-md">
+                            <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
                                 <?php foreach (['rider1', 'rider2'] as $key):
                                     $rider = $dup[$key];
                                     $isComplete = empty($rider['missing']);
-                                    $bgColor = $isComplete ? 'rgba(40,167,69,0.05)' : 'rgba(220,53,69,0.05)';
+                                    $bgColor = $isComplete ? 'rgba(40,167,69,0.1)' : 'rgba(220,53,69,0.1)';
                                 ?>
-                                <div style="padding: 1rem; background: <?= $bgColor ?>; border-radius: 8px;">
+                                <div style="flex: 1; min-width: 280px; padding: 1rem; background: <?= $bgColor ?>; border-radius: 8px; border: 1px solid <?= $isComplete ? 'rgba(40,167,69,0.3)' : 'rgba(220,53,69,0.3)' ?>;">
                                     <div class="gs-flex gs-justify-between gs-items-start gs-mb-sm">
                                         <div>
                                             <strong class="gs-text-lg"><?= h($rider['name']) ?></strong>
