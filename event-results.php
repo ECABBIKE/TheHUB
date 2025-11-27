@@ -1852,10 +1852,42 @@ include __DIR__ . '/includes/layout-header.php';
                         // Format: { classId: ['license1', 'license2', ...] }
                         const licenseMatrix = <?= json_encode($licenseMatrixMap) ?>;
 
+                        // License name to code mapping (for matching rider's stored license_type to matrix codes)
+                        const licenseNameToCode = <?= json_encode(array_column(array_map(function($lt) {
+                            return ['name' => strtolower($lt['name']), 'code' => $lt['code']];
+                        }, $availableLicenseTypes), 'code', 'name')) ?>;
+
                         // Debug: log matrix to console
                         console.log('License Matrix:', licenseMatrix);
                         console.log('Class Genders:', classGenders);
                         console.log('Event License Class:', eventLicenseClass);
+                        console.log('License Name to Code:', licenseNameToCode);
+
+                        // Helper function to convert license name/type to code
+                        function getLicenseCode(licenseType) {
+                            if (!licenseType) return null;
+                            const normalized = licenseType.toLowerCase().trim();
+
+                            // Direct match in mapping
+                            if (licenseNameToCode[normalized]) {
+                                return licenseNameToCode[normalized];
+                            }
+
+                            // Try partial matches
+                            for (const [name, code] of Object.entries(licenseNameToCode)) {
+                                if (normalized.includes(name) || name.includes(normalized)) {
+                                    return code;
+                                }
+                            }
+
+                            // Fallback: convert to code format
+                            return normalized
+                                .replace(/\s+/g, '_')
+                                .replace(/ä/g, 'a')
+                                .replace(/å/g, 'a')
+                                .replace(/ö/g, 'o')
+                                .replace(/[^a-z0-9_]/g, '');
+                        }
 
                         // Current rider data for validation
                         let currentRiderData = null;
@@ -2037,12 +2069,9 @@ include __DIR__ . '/includes/layout-header.php';
                             // 2. Otherwise use selected license from radio buttons
                             let effectiveLicense = null;
                             if (currentRiderData.hasActiveLicense && currentRiderData.effectiveLicense) {
-                                // Convert stored license type to code format for matrix lookup
-                                effectiveLicense = currentRiderData.effectiveLicense.toLowerCase()
-                                    .replace(/\s+/g, '_')
-                                    .replace(/ä/g, 'a')
-                                    .replace(/å/g, 'a')
-                                    .replace(/ö/g, 'o');
+                                // Convert stored license name to code using lookup function
+                                effectiveLicense = getLicenseCode(currentRiderData.effectiveLicense);
+                                console.log('Active license:', currentRiderData.effectiveLicense, '-> code:', effectiveLicense);
                             } else {
                                 const selectedLicenseRadio = document.querySelector('input[name="selected_license"]:checked');
                                 effectiveLicense = selectedLicenseRadio?.value || null;
