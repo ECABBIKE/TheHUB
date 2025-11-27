@@ -1,9 +1,19 @@
 <?php
 require_once __DIR__ . '/config.php';
-require_once __DIR__ . '/includes/point-calculations.php';
+require_once __DIR__ . '/includes/series-points.php';  // NEW: Series-specific points
 require_once __DIR__ . '/includes/class-calculations.php';
 
 $db = getDB();
+
+// Check if series_results table exists (for backwards compatibility during migration)
+$useSeriesResults = false;
+try {
+    $tableCheck = $db->getRow("SELECT 1 FROM series_results LIMIT 1");
+    $useSeriesResults = true;
+} catch (Exception $e) {
+    // Table doesn't exist yet, use old system
+    $useSeriesResults = false;
+}
 
 // Get series ID from URL
 $seriesId = isset($_GET['id']) ? (int)$_GET['id'] : 0;
@@ -122,14 +132,26 @@ if ($showAllClasses) {
         ];
 
         // Get points for each event (using rider's class)
+        // NOTE: Uses series_results for series-specific points (not results.points which is for ranking)
         $allPoints = [];
         foreach ($seriesEvents as $event) {
-            $result = $db->getRow("
-                SELECT points
-                FROM results
-                WHERE cyclist_id = ? AND event_id = ? AND class_id = ?
-                LIMIT 1
-            ", [$rider['id'], $event['id'], $rider['class_id']]);
+            if ($useSeriesResults) {
+                // NEW: Read from series_results table (series-specific points)
+                $result = $db->getRow("
+                    SELECT points
+                    FROM series_results
+                    WHERE series_id = ? AND cyclist_id = ? AND event_id = ? AND class_id <=> ?
+                    LIMIT 1
+                ", [$seriesId, $rider['id'], $event['id'], $rider['class_id']]);
+            } else {
+                // FALLBACK: Old system using results.points (will be deprecated)
+                $result = $db->getRow("
+                    SELECT points
+                    FROM results
+                    WHERE cyclist_id = ? AND event_id = ? AND class_id = ?
+                    LIMIT 1
+                ", [$rider['id'], $event['id'], $rider['class_id']]);
+            }
 
             $points = $result ? (int)$result['points'] : 0;
             $riderData['event_points'][$event['id']] = $points;
@@ -228,14 +250,26 @@ if ($showAllClasses) {
         ];
 
         // Get points for each event
+        // NOTE: Uses series_results for series-specific points (not results.points which is for ranking)
         $allPoints = [];
         foreach ($seriesEvents as $event) {
-            $result = $db->getRow("
-                SELECT points
-                FROM results
-                WHERE cyclist_id = ? AND event_id = ? AND class_id = ?
-                LIMIT 1
-            ", [$rider['id'], $event['id'], $selectedClass]);
+            if ($useSeriesResults) {
+                // NEW: Read from series_results table (series-specific points)
+                $result = $db->getRow("
+                    SELECT points
+                    FROM series_results
+                    WHERE series_id = ? AND cyclist_id = ? AND event_id = ? AND class_id <=> ?
+                    LIMIT 1
+                ", [$seriesId, $rider['id'], $event['id'], $selectedClass]);
+            } else {
+                // FALLBACK: Old system using results.points (will be deprecated)
+                $result = $db->getRow("
+                    SELECT points
+                    FROM results
+                    WHERE cyclist_id = ? AND event_id = ? AND class_id = ?
+                    LIMIT 1
+                ", [$rider['id'], $event['id'], $selectedClass]);
+            }
 
             $points = $result ? (int)$result['points'] : 0;
             $riderData['event_points'][$event['id']] = $points;

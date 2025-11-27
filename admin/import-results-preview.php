@@ -4,6 +4,7 @@ require_once __DIR__ . '/../includes/import-history.php';
 require_once __DIR__ . '/../includes/class-calculations.php';
 require_once __DIR__ . '/../includes/point-calculations.php';
 require_once __DIR__ . '/../includes/import-functions.php';
+require_once __DIR__ . '/../includes/series-points.php';  // For syncing series results
 require_admin();
 require_once __DIR__ . '/../includes/admin-layout.php';
 
@@ -153,6 +154,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_import'])) {
         $recalcStats = recalculateEventResults($db, $selectedEventId);
         $classesFixed = $recalcStats['classes_fixed'] ?? 0;
         $pointsCalculated = $recalcStats['points_updated'] ?? 0;
+
+        // Sync series results (if event is part of any series)
+        // NOTE: This updates series_results table, separate from ranking points in results.points
+        $seriesStats = syncEventResultsToAllSeries($db, $selectedEventId);
+        $seriesSynced = count($seriesStats);
 
         // Clean up
         @unlink($_SESSION['import_preview_file']);
