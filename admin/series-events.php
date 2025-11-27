@@ -1,6 +1,6 @@
 <?php
 require_once __DIR__ . '/../config.php';
-require_once __DIR__ . '/../includes/point-calculations.php';
+require_once __DIR__ . '/../includes/series-points.php';  // NEW: Series-specific points (separate from ranking)
 require_admin();
 
 $db = getDB();
@@ -57,16 +57,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'sort_order' => $sortOrder
             ]);
 
-            // If a template was specified, update event and recalculate points
+            // If a template was specified, calculate series points
+            // NOTE: This only affects series_results, NOT results.points (ranking)
             if ($templateId) {
-                $db->update('events', [
-                    'point_scale_id' => $templateId
-                ], 'id = ?', [$eventId]);
-
-                $stats = recalculateEventPoints($db, $eventId);
-                $message = "Event tillagt i serien! {$stats['updated']} resultat omräknade.";
+                $stats = recalculateSeriesEventPoints($db, $seriesId, $eventId);
+                $message = "Event tillagt i serien! {$stats['inserted']} seriepoäng beräknade.";
             } else {
-                $message = 'Event tillagt i serien!';
+                $message = 'Event tillagt i serien! (ingen poängmall vald)';
             }
             $messageType = 'success';
         }
@@ -88,15 +85,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'template_id' => $templateId
             ], 'id = ? AND series_id = ?', [$seriesEventId, $seriesId]);
 
-            // Also update the event's point_scale_id so calculations use the right template
-            $db->update('events', [
-                'point_scale_id' => $templateId
-            ], 'id = ?', [$eventId]);
+            // Recalculate series points using new template
+            // NOTE: This only affects series_results, NOT results.points (ranking stays unchanged!)
+            $stats = recalculateSeriesEventPoints($db, $seriesId, $eventId);
 
-            // Recalculate all points for this event
-            $stats = recalculateEventPoints($db, $eventId);
-
-            $message = "Poängmall uppdaterad! {$stats['updated']} resultat omräknade.";
+            $totalChanged = $stats['inserted'] + $stats['updated'];
+            $message = "Poängmall uppdaterad! {$totalChanged} seriepoäng omräknade.";
             $messageType = 'success';
         } else {
             $message = 'Kunde inte hitta eventet';
