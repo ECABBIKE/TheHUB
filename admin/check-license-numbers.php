@@ -4,11 +4,10 @@
  * Find riders with potentially incorrect license_number formats
  *
  * Valid formats:
- * - UCI ID: 10-11 digits starting with 100 or 101 (e.g., 10048820303)
- * - SWE ID: Starts with "SWE" followed by digits
+ * - UCI ID: Starts with 100 or 101 (any length, with or without spaces)
+ * - SWE ID: Starts with "SWE" followed by digits (e.g., SWE2512345)
  *
- * Invalid (should be cleared):
- * - Other numeric values (incorrectly created from results import)
+ * Invalid (not UCI, not SWE) → Convert to SWE ID format: SWE25XXXXX
  */
 
 require_once __DIR__ . '/../config.php';
@@ -19,31 +18,97 @@ $db = getDB();
 $message = '';
 $messageType = 'info';
 
-// Handle clear action
-if (isset($_GET['action']) && $_GET['action'] === 'clear' && isset($_GET['id'])) {
+// Helper function to check if license_number is valid UCI
+function isValidUCI($licenseNumber) {
+    if (empty($licenseNumber)) return false;
+    // Remove spaces and check if starts with 100 or 101 (any length)
+    $cleaned = preg_replace('/\s+/', '', $licenseNumber);
+    return preg_match('/^10[01]\d+$/', $cleaned);
+}
+
+// Helper function to check if license_number is valid SWE
+function isValidSWE($licenseNumber) {
+    if (empty($licenseNumber)) return false;
+    return preg_match('/^SWE/i', $licenseNumber);
+}
+
+// Get next SWE ID number
+function getNextSweId($db) {
+    $year = date('y'); // 25 for 2025
+    $prefix = "SWE{$year}";
+
+    // Find highest existing SWE ID for this year
+    $highest = $db->getRow("
+        SELECT license_number
+        FROM riders
+        WHERE license_number LIKE ?
+        ORDER BY license_number DESC
+        LIMIT 1
+    ", [$prefix . '%']);
+
+    if ($highest && preg_match('/SWE\d{2}(\d+)/', $highest['license_number'], $matches)) {
+        $nextNum = (int)$matches[1] + 1;
+    } else {
+        $nextNum = 10001; // Start from 10001
+    }
+
+    return $prefix . $nextNum;
+}
+
+// Handle convert single action
+if (isset($_GET['action']) && $_GET['action'] === 'convert' && isset($_GET['id'])) {
     $riderId = (int)$_GET['id'];
-    $db->update('riders', ['license_number' => null], 'id = ?', [$riderId]);
-    $message = "License number rensat för ryttare ID {$riderId}";
+    $newSweId = getNextSweId($db);
+    $db->update('riders', ['license_number' => $newSweId], 'id = ?', [$riderId]);
+    $message = "Ryttare ID {$riderId} fick nytt SWE ID: {$newSweId}";
     $messageType = 'success';
 }
 
-// Handle bulk clear action
-if (isset($_GET['action']) && $_GET['action'] === 'clear_all_invalid') {
-    $cleared = $db->query("
-        UPDATE riders
-        SET license_number = NULL
+// Handle bulk convert action
+if (isset($_GET['action']) && $_GET['action'] === 'convert_all_invalid') {
+    $year = date('y');
+    $prefix = "SWE{$year}";
+
+    // Get all invalid riders
+    $invalidRiders = $db->getAll("
+        SELECT id, license_number
+        FROM riders
         WHERE license_number IS NOT NULL
         AND license_number != ''
         AND license_number NOT REGEXP '^SWE'
-        AND license_number NOT REGEXP '^10[01][0-9]{7,8}$'
+        AND REPLACE(REPLACE(license_number, ' ', ''), '-', '') NOT REGEXP '^10[01][0-9]+$'
+        ORDER BY id
     ");
-    $affectedRows = $cleared->rowCount();
-    $message = "Rensade {$affectedRows} ogiltiga license_number";
+
+    // Find starting number
+    $highest = $db->getRow("
+        SELECT license_number
+        FROM riders
+        WHERE license_number LIKE ?
+        ORDER BY license_number DESC
+        LIMIT 1
+    ", [$prefix . '%']);
+
+    if ($highest && preg_match('/SWE\d{2}(\d+)/', $highest['license_number'], $matches)) {
+        $nextNum = (int)$matches[1] + 1;
+    } else {
+        $nextNum = 10001;
+    }
+
+    $converted = 0;
+    foreach ($invalidRiders as $rider) {
+        $newSweId = $prefix . $nextNum;
+        $db->update('riders', ['license_number' => $newSweId], 'id = ?', [$rider['id']]);
+        $nextNum++;
+        $converted++;
+    }
+
+    $message = "Konverterade {$converted} ryttare till SWE ID format";
     $messageType = 'success';
 }
 
-// Valid UCI: 10-11 digits starting with 100 or 101
-// Valid SWE: Starts with SWE
+// Query for invalid riders - UCI can have spaces
+// Remove spaces before checking the pattern
 $invalidRiders = $db->getAll("
     SELECT
         r.id,
@@ -60,7 +125,7 @@ $invalidRiders = $db->getAll("
     WHERE r.license_number IS NOT NULL
     AND r.license_number != ''
     AND r.license_number NOT REGEXP '^SWE'
-    AND r.license_number NOT REGEXP '^10[01][0-9]{7,8}$'
+    AND REPLACE(REPLACE(r.license_number, ' ', ''), '-', '') NOT REGEXP '^10[01][0-9]+$'
     ORDER BY r.id DESC
     LIMIT 200
 ");
@@ -72,7 +137,7 @@ $invalidCount = $db->getRow("
     WHERE license_number IS NOT NULL
     AND license_number != ''
     AND license_number NOT REGEXP '^SWE'
-    AND license_number NOT REGEXP '^10[01][0-9]{7,8}$'
+    AND REPLACE(REPLACE(license_number, ' ', ''), '-', '') NOT REGEXP '^10[01][0-9]+$'
 ")['count'];
 
 // Count by format type
@@ -80,8 +145,8 @@ $formatCounts = $db->getAll("
     SELECT
         CASE
             WHEN license_number REGEXP '^SWE' THEN 'SWE ID (korrekt)'
-            WHEN license_number REGEXP '^10[01][0-9]{7,8}$' THEN 'UCI ID (korrekt)'
-            ELSE 'Ogiltigt format (bör rensas)'
+            WHEN REPLACE(REPLACE(license_number, ' ', ''), '-', '') REGEXP '^10[01][0-9]+$' THEN 'UCI ID (korrekt)'
+            ELSE 'Ogiltigt format (bör konverteras till SWE ID)'
         END as format_type,
         COUNT(*) as count
     FROM riders
@@ -111,9 +176,11 @@ include __DIR__ . '/../includes/layout-header.php';
             <i data-lucide="info"></i>
             <div>
                 <strong>Giltiga format:</strong><br>
-                - <strong>UCI ID:</strong> 10-11 siffror som börjar med 100 eller 101 (t.ex. 10048820303)<br>
-                - <strong>SWE ID:</strong> Börjar med "SWE" följt av siffror<br><br>
-                <strong>Ogiltiga:</strong> Allt annat (skapade felaktigt från resultatimport)
+                - <strong>UCI ID:</strong> Börjar med 100 eller 101 (valfri längd, med eller utan mellanslag)<br>
+                  &nbsp;&nbsp;Exempel: <code>10048820303</code>, <code>100 683 277 90</code>, <code>1006832</code><br>
+                - <strong>SWE ID:</strong> Börjar med "SWE" följt av år och nummer<br>
+                  &nbsp;&nbsp;Exempel: <code>SWE2512345</code><br><br>
+                <strong>Ogiltiga:</strong> Konverteras till SWE ID format (SWE25XXXXX)
             </div>
         </div>
 
@@ -160,11 +227,11 @@ include __DIR__ . '/../includes/layout-header.php';
                     Ryttare med ogiltigt license_number (<?= number_format($invalidCount) ?> totalt)
                 </h2>
                 <?php if ($invalidCount > 0): ?>
-                <a href="?action=clear_all_invalid"
-                   class="gs-btn gs-btn-danger"
-                   onclick="return confirm('Är du säker? Detta rensar license_number för alla <?= $invalidCount ?> ryttare med ogiltigt format.')">
-                    <i data-lucide="trash-2"></i>
-                    Rensa alla ogiltiga (<?= $invalidCount ?>)
+                <a href="?action=convert_all_invalid"
+                   class="gs-btn gs-btn-primary"
+                   onclick="return confirm('Är du säker? Detta konverterar alla <?= $invalidCount ?> ryttare till SWE ID format (SWE25XXXXX).')">
+                    <i data-lucide="refresh-cw"></i>
+                    Konvertera alla till SWE ID (<?= $invalidCount ?>)
                 </a>
                 <?php endif; ?>
             </div>
@@ -177,7 +244,7 @@ include __DIR__ . '/../includes/layout-header.php';
                 <?php else: ?>
                     <p class="gs-text-secondary gs-mb-md">
                         Visar <?= count($invalidRiders) ?> av <?= number_format($invalidCount) ?> ryttare.
-                        Dessa license_number är varken giltiga UCI ID eller SWE ID och bör rensas.
+                        Dessa license_number är varken giltiga UCI ID eller SWE ID och bör konverteras.
                     </p>
                     <div class="gs-table-responsive">
                         <table class="gs-table">
@@ -185,8 +252,7 @@ include __DIR__ . '/../includes/layout-header.php';
                                 <tr>
                                     <th>ID</th>
                                     <th>Namn</th>
-                                    <th>Ogiltigt License Number</th>
-                                    <th>Längd</th>
+                                    <th>Nuvarande License Number</th>
                                     <th>Licenstyp</th>
                                     <th>Åtgärd</th>
                                 </tr>
@@ -201,14 +267,13 @@ include __DIR__ . '/../includes/layout-header.php';
                                         </a>
                                     </td>
                                     <td><code class="gs-text-warning"><?= h($rider['license_number']) ?></code></td>
-                                    <td><?= $rider['license_length'] ?> tecken</td>
                                     <td><?= h($rider['license_type'] ?? '-') ?></td>
                                     <td>
-                                        <a href="?action=clear&id=<?= $rider['id'] ?>"
-                                           class="gs-btn gs-btn-sm gs-btn-danger"
-                                           onclick="return confirm('Rensa license_number för denna ryttare?')">
-                                            <i data-lucide="x"></i>
-                                            Rensa
+                                        <a href="?action=convert&id=<?= $rider['id'] ?>"
+                                           class="gs-btn gs-btn-sm gs-btn-primary"
+                                           onclick="return confirm('Konvertera till SWE ID?')">
+                                            <i data-lucide="refresh-cw"></i>
+                                            Till SWE ID
                                         </a>
                                     </td>
                                 </tr>
