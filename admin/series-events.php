@@ -1,6 +1,6 @@
 <?php
 require_once __DIR__ . '/../config.php';
-require_once __DIR__ . '/../includes/series-points.php';  // NEW: Series-specific points (separate from ranking)
+require_once __DIR__ . '/../includes/series-points.php';  // Series-specific points (separate from ranking)
 require_admin();
 
 $db = getDB();
@@ -175,12 +175,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 // Get events in this series - sorted by sort_order (user-defined order)
+// NOTE: series_events.template_id references qualification_point_templates (for series)
+//       NOT point_scales (which is for ranking points)
 $seriesEvents = $db->getAll("
     SELECT se.*, e.name as event_name, e.date as event_date, e.location, e.discipline,
-           ps.name as template_name
+           qpt.name as template_name
     FROM series_events se
     JOIN events e ON se.event_id = e.id
-    LEFT JOIN point_scales ps ON se.template_id = ps.id
+    LEFT JOIN qualification_point_templates qpt ON se.template_id = qpt.id
     WHERE se.series_id = ?
     ORDER BY se.sort_order ASC
 ", [$seriesId]);
@@ -196,8 +198,9 @@ $eventsNotInSeries = $db->getAll("
     ORDER BY e.date DESC
 ", [$seriesId]);
 
-// Get all point scales (not old qualification_point_templates)
-$templates = $db->getAll("SELECT id, name FROM point_scales WHERE active = 1 ORDER BY name");
+// Get all qualification point templates for series points
+// NOTE: This is SEPARATE from point_scales (which is for ranking points)
+$templates = $db->getAll("SELECT id, name FROM qualification_point_templates WHERE active = 1 ORDER BY name");
 
 $pageTitle = 'Hantera Events - ' . $series['name'];
 $pageType = 'admin';
