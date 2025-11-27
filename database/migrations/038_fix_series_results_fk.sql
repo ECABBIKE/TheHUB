@@ -1,21 +1,33 @@
 -- Fix series_results foreign key to reference point_scales instead of qualification_point_templates
 -- Run this AFTER 037_series_results_table.sql
+-- This migration is idempotent - safe to run multiple times
 
--- Step 1: Set template_id to NULL where it doesn't exist in point_scales
-UPDATE `series_results`
-SET `template_id` = NULL
-WHERE `template_id` IS NOT NULL
-  AND `template_id` NOT IN (SELECT id FROM point_scales);
+-- Step 1: Set template_id to NULL (clean slate)
+UPDATE `series_results` SET `template_id` = NULL;
 
--- Step 2: Remove the template_id column completely and re-add it without FK
--- This is the safest way to remove unknown FK constraints
-ALTER TABLE `series_results` DROP COLUMN `template_id`;
-ALTER TABLE `series_results` ADD COLUMN `template_id` INT NULL;
+-- Step 2: Drop FK if it exists (try both possible names)
+SET @fk_exists = (SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS
+    WHERE CONSTRAINT_SCHEMA = DATABASE()
+    AND TABLE_NAME = 'series_results'
+    AND CONSTRAINT_NAME = 'series_results_template_fk');
+SET @sql = IF(@fk_exists > 0,
+    'ALTER TABLE series_results DROP FOREIGN KEY series_results_template_fk',
+    'SELECT 1');
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
 
--- Step 3: Add new foreign key referencing point_scales
-ALTER TABLE `series_results`
-ADD CONSTRAINT `series_results_template_fk`
-FOREIGN KEY (`template_id`) REFERENCES `point_scales`(`id`) ON DELETE SET NULL;
+-- Step 3: Add FK to point_scales (only if not exists)
+SET @fk_exists2 = (SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS
+    WHERE CONSTRAINT_SCHEMA = DATABASE()
+    AND TABLE_NAME = 'series_results'
+    AND CONSTRAINT_NAME = 'series_results_template_fk');
+SET @sql2 = IF(@fk_exists2 = 0,
+    'ALTER TABLE series_results ADD CONSTRAINT series_results_template_fk FOREIGN KEY (template_id) REFERENCES point_scales(id) ON DELETE SET NULL',
+    'SELECT 1');
+PREPARE stmt2 FROM @sql2;
+EXECUTE stmt2;
+DEALLOCATE PREPARE stmt2;
 
 -- Verify
-SELECT 'Foreign key updated to reference point_scales' as status;
+SELECT 'series_results.template_id now references point_scales' as status;
