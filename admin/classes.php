@@ -45,6 +45,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'awards_points' => isset($_POST['awards_points']) ? 1 : 0,
                 'ranking_type' => in_array($_POST['ranking_type'] ?? 'time', ['time', 'name', 'bib']) ? $_POST['ranking_type'] : 'time',
                 'series_eligible' => isset($_POST['series_eligible']) ? 1 : 0,
+                'class_category_code' => !empty($_POST['class_category_code']) ? trim($_POST['class_category_code']) : null,
             ];
 
             try {
@@ -121,6 +122,7 @@ $sql = "SELECT
             c.awards_points,
             c.ranking_type,
             c.series_eligible,
+            c.class_category_code,
             COUNT(DISTINCT r.id) as result_count
         FROM classes c
         LEFT JOIN results r ON c.id = r.class_id
@@ -132,6 +134,14 @@ $classes = $db->getAll($sql, $params);
 
 // Get all unique disciplines for filter
 $disciplines = $db->getAll("SELECT DISTINCT discipline FROM classes WHERE discipline IS NOT NULL AND discipline != '' ORDER BY discipline");
+
+// Get class categories for dropdown (if table exists)
+$classCategories = [];
+try {
+    $classCategories = $db->getAll("SELECT code, name FROM class_categories ORDER BY sort_order");
+} catch (Exception $e) {
+    // Table doesn't exist yet - migration 039 not run
+}
 
 $pageTitle = 'Klasser';
 $pageType = 'admin';
@@ -505,6 +515,20 @@ include __DIR__ . '/../includes/layout-header.php';
                                         </label>
                                         <small class="gs-text-secondary gs-display-block gs-ml-lg">Avmarkera för klasser som inte ska räknas i serieställningen (t.ex. motion)</small>
                                     </div>
+
+                                    <!-- Class Category (License eligibility) -->
+                                    <?php if (!empty($classCategories)): ?>
+                                    <div class="gs-mb-md">
+                                        <label class="gs-label">Licenskategori</label>
+                                        <select name="class_category_code" id="classCategoryCode" class="gs-input">
+                                            <option value="">-- Ingen kategori --</option>
+                                            <?php foreach ($classCategories as $cat): ?>
+                                                <option value="<?= h($cat['code']) ?>"><?= h($cat['name']) ?></option>
+                                            <?php endforeach; ?>
+                                        </select>
+                                        <small class="gs-text-secondary">Bestämmer vilka licenstyper som kan anmäla sig till klassen</small>
+                                    </div>
+                                    <?php endif; ?>
                                 </div>
                             </div>
                         </div>
@@ -566,6 +590,12 @@ function editClass(classData) {
     document.getElementById('awardsPoints').checked = classData.awards_points == 1 || classData.awards_points === null;
     document.getElementById('rankingType').value = classData.ranking_type || 'time';
     document.getElementById('seriesEligible').checked = classData.series_eligible == 1 || classData.series_eligible === null;
+
+    // Set class category if element exists
+    const categorySelect = document.getElementById('classCategoryCode');
+    if (categorySelect) {
+        categorySelect.value = classData.class_category_code || '';
+    }
 
     // Uncheck all disciplines first
     document.querySelectorAll('.discipline-checkbox').forEach(cb => cb.checked = false);
