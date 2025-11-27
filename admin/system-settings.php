@@ -13,14 +13,18 @@ $current_admin = get_current_admin();
 
 // Get active tab
 $activeTab = $_GET['tab'] ?? 'info';
-$validTabs = ['info', 'debug', 'classes', 'global-texts'];
+$validTabs = ['info', 'debug', 'global-texts'];
 if (!in_array($activeTab, $validTabs)) {
     $activeTab = 'info';
 }
 
-// Redirect old point-templates tab to point-scales page
+// Redirect old tabs to their new locations
 if (isset($_GET['tab']) && $_GET['tab'] === 'point-templates') {
     header('Location: /admin/point-scales.php');
+    exit;
+}
+if (isset($_GET['tab']) && $_GET['tab'] === 'classes') {
+    header('Location: /admin/classes.php');
     exit;
 }
 
@@ -35,74 +39,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
     $formTab = $_POST['form_tab'] ?? '';
 
-    // Classes form handling
-    if ($formTab === 'classes') {
-        if ($action === 'create' || $action === 'update') {
-            $name = trim($_POST['name'] ?? '');
-            $displayName = trim($_POST['display_name'] ?? '');
-
-            if (empty($name)) {
-                $message = 'Klassnamn är obligatoriskt';
-                $messageType = 'error';
-            } elseif (empty($displayName)) {
-                $message = 'Visningsnamn är obligatoriskt';
-                $messageType = 'error';
-            } else {
-                $disciplines = $_POST['disciplines'] ?? [];
-                $disciplineString = is_array($disciplines) ? implode(',', $disciplines) : '';
-
-                $classData = [
-                    'name' => $name,
-                    'display_name' => $displayName,
-                    'discipline' => $disciplineString,
-                    'gender' => trim($_POST['gender'] ?? ''),
-                    'min_age' => !empty($_POST['min_age']) ? (int)$_POST['min_age'] : null,
-                    'max_age' => !empty($_POST['max_age']) ? (int)$_POST['max_age'] : null,
-                    'sort_order' => !empty($_POST['sort_order']) ? (int)$_POST['sort_order'] : 999,
-                    'active' => isset($_POST['active']) ? 1 : 0,
-                ];
-
-                // Add new fields only if migration 015 has been run
-                try {
-                    $db->getRow("SELECT awards_points FROM classes LIMIT 1");
-                    $classData['awards_points'] = isset($_POST['awards_points']) ? 1 : 0;
-                    $classData['series_eligible'] = isset($_POST['series_eligible']) ? 1 : 0;
-                    $classData['ranking_type'] = in_array($_POST['ranking_type'] ?? '', ['time', 'name', 'bib']) ? $_POST['ranking_type'] : 'time';
-                } catch (Exception $e) {
-                    // Columns don't exist yet - skip these fields
-                }
-
-                try {
-                    if ($action === 'create') {
-                        $db->insert('classes', $classData);
-                        $message = 'Klass skapad!';
-                    } else {
-                        $id = intval($_POST['id']);
-                        $db->update('classes', $classData, 'id = ?', [$id]);
-                        $message = 'Klass uppdaterad!';
-                    }
-                    $messageType = 'success';
-                } catch (Exception $e) {
-                    $message = 'Ett fel uppstod: ' . $e->getMessage();
-                    $messageType = 'error';
-                }
-            }
-        } elseif ($action === 'delete') {
-            $id = intval($_POST['id']);
-            try {
-                $db->delete('classes', 'id = ?', [$id]);
-                $message = 'Klass borttagen!';
-                $messageType = 'success';
-            } catch (Exception $e) {
-                $message = 'Ett fel uppstod: ' . $e->getMessage();
-                $messageType = 'error';
-            }
-        }
-        $activeTab = 'classes';
-    }
-
     // Global Texts form handling
-    elseif ($formTab === 'global-texts') {
+    if ($formTab === 'global-texts') {
         if (!verify_csrf_token($_POST['csrf_token'] ?? '')) {
             $message = 'Ogiltig CSRF-token';
             $messageType = 'error';
@@ -150,64 +88,6 @@ $systemInfo = [
     'server_software' => $_SERVER['SERVER_SOFTWARE'] ?? 'N/A',
     'document_root' => $_SERVER['DOCUMENT_ROOT'] ?? 'N/A',
 ];
-
-// Classes data
-$classSearch = $_GET['class_search'] ?? '';
-$classDisciplineFilter = $_GET['class_discipline'] ?? '';
-
-$classWhere = [];
-$classParams = [];
-
-if ($classSearch) {
-    $classWhere[] = "(name LIKE ? OR display_name LIKE ?)";
-    $classParams[] = "%$classSearch%";
-    $classParams[] = "%$classSearch%";
-}
-
-if ($classDisciplineFilter) {
-    $classWhere[] = "(discipline = ? OR discipline LIKE ? OR discipline LIKE ? OR discipline LIKE ?)";
-    $classParams[] = $classDisciplineFilter;
-    $classParams[] = $classDisciplineFilter . ',%';
-    $classParams[] = '%,' . $classDisciplineFilter . ',%';
-    $classParams[] = '%,' . $classDisciplineFilter;
-}
-
-$classWhereClause = $classWhere ? 'WHERE ' . implode(' AND ', $classWhere) : '';
-
-// Check if new class columns exist (migration 015)
-$hasClassSettings = false;
-try {
-    $db->getRow("SELECT awards_points FROM classes LIMIT 1");
-    $hasClassSettings = true;
-} catch (Exception $e) {
-    // Columns don't exist yet
-}
-
-if ($hasClassSettings) {
-    $classes = $db->getAll("
-        SELECT c.id, c.name, c.display_name, c.discipline, c.gender, c.min_age, c.max_age,
-               c.sort_order, c.active, c.awards_points, c.series_eligible, c.ranking_type,
-               COUNT(DISTINCT r.id) as result_count
-        FROM classes c
-        LEFT JOIN results r ON c.id = r.class_id
-        $classWhereClause
-        GROUP BY c.id
-        ORDER BY c.sort_order ASC, c.name ASC
-    ", $classParams);
-} else {
-    $classes = $db->getAll("
-        SELECT c.id, c.name, c.display_name, c.discipline, c.gender, c.min_age, c.max_age,
-               c.sort_order, c.active, 1 as awards_points, 1 as series_eligible, 'time' as ranking_type,
-               COUNT(DISTINCT r.id) as result_count
-        FROM classes c
-        LEFT JOIN results r ON c.id = r.class_id
-        $classWhereClause
-        GROUP BY c.id
-        ORDER BY c.sort_order ASC, c.name ASC
-    ", $classParams);
-}
-
-$classDisciplines = $db->getAll("SELECT DISTINCT discipline FROM classes WHERE discipline IS NOT NULL AND discipline != '' ORDER BY discipline");
 
 // Global Texts data
 $gtCategoryFilter = $_GET['gt_category'] ?? '';
@@ -312,10 +192,6 @@ include __DIR__ . '/../includes/layout-header.php';
                 <i data-lucide="bug"></i>
                 Debug
             </a>
-            <a href="?tab=classes" class="gs-tab <?= $activeTab === 'classes' ? 'active' : '' ?>">
-                <i data-lucide="layers"></i>
-                Klasser
-            </a>
             <a href="?tab=global-texts" class="gs-tab <?= $activeTab === 'global-texts' ? 'active' : '' ?>">
                 <i data-lucide="file-text"></i>
                 Globala Texter
@@ -406,144 +282,6 @@ include __DIR__ . '/../includes/layout-header.php';
             </div>
             <?php endforeach; ?>
 
-        <?php elseif ($activeTab === 'classes'): ?>
-            <!-- CLASSES TAB -->
-            <div class="gs-flex gs-items-center gs-justify-between gs-mb-lg">
-                <div></div>
-                <div class="gs-flex gs-gap-sm">
-                    <a href="/admin/import-classes.php" class="gs-btn gs-btn-outline">
-                        <i data-lucide="upload"></i>
-                        Importera CSV
-                    </a>
-                    <button type="button" class="gs-btn gs-btn-primary" onclick="openClassModal()">
-                        <i data-lucide="plus"></i>
-                        Ny Klass
-                    </button>
-                </div>
-            </div>
-
-            <!-- Search and Filter -->
-            <div class="gs-card gs-mb-lg">
-                <div class="gs-card-content">
-                    <form method="GET" class="gs-grid gs-grid-cols-1 gs-md-grid-cols-3 gs-gap-md">
-                        <input type="hidden" name="tab" value="classes">
-                        <div class="gs-form-group">
-                            <label class="gs-label">Sök</label>
-                            <input type="text" name="class_search" class="gs-input" placeholder="Klassnamn..." value="<?= h($classSearch) ?>">
-                        </div>
-                        <div class="gs-form-group">
-                            <label class="gs-label">Disciplin</label>
-                            <select name="class_discipline" class="gs-input">
-                                <option value="">Alla discipliner</option>
-                                <?php foreach ($classDisciplines as $disc): ?>
-                                    <option value="<?= h($disc['discipline']) ?>" <?= $classDisciplineFilter === $disc['discipline'] ? 'selected' : '' ?>>
-                                        <?= h($disc['discipline']) ?>
-                                    </option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-                        <div class="gs-form-group gs-flex gs-items-end">
-                            <button type="submit" class="gs-btn gs-btn-primary gs-mr-sm">
-                                <i data-lucide="search"></i>
-                                Filtrera
-                            </button>
-                            <?php if ($classSearch || $classDisciplineFilter): ?>
-                                <a href="?tab=classes" class="gs-btn gs-btn-outline">
-                                    <i data-lucide="x"></i>
-                                    Rensa
-                                </a>
-                            <?php endif; ?>
-                        </div>
-                    </form>
-                </div>
-            </div>
-
-            <!-- Classes List -->
-            <div class="gs-card">
-                <div class="gs-card-header">
-                    <h2 class="gs-h4">
-                        <i data-lucide="list"></i>
-                        Alla Klasser (<?= count($classes) ?>)
-                    </h2>
-                </div>
-                <div class="gs-card-content gs-padding-0">
-                    <?php if (empty($classes)): ?>
-                        <div class="gs-padding-lg gs-text-center">
-                            <i data-lucide="inbox" style="width: 48px; height: 48px; opacity: 0.3;"></i>
-                            <p class="gs-text-secondary gs-mt-sm">Inga klasser hittades</p>
-                        </div>
-                    <?php else: ?>
-                        <div class="gs-table-responsive">
-                            <table class="gs-table">
-                                <thead>
-                                    <tr>
-                                        <th>Visningsnamn</th>
-                                        <th>Namn</th>
-                                        <th>Disciplin</th>
-                                        <th>Kön</th>
-                                        <th>Ålder</th>
-                                        <th>Sort</th>
-                                        <th>Resultat</th>
-                                        <th>Status</th>
-                                        <th class="gs-text-right">Åtgärder</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php foreach ($classes as $class): ?>
-                                        <tr>
-                                            <td><strong><?= h($class['display_name']) ?></strong></td>
-                                            <td><?= h($class['name']) ?></td>
-                                            <td>
-                                                <?php if ($class['discipline']): ?>
-                                                    <?php foreach (explode(',', $class['discipline']) as $disc): ?>
-                                                        <span class="gs-badge gs-badge-secondary gs-badge-sm"><?= h(trim($disc)) ?></span>
-                                                    <?php endforeach; ?>
-                                                <?php else: ?>
-                                                    <span class="gs-badge gs-badge-info gs-badge-sm">Alla</span>
-                                                <?php endif; ?>
-                                            </td>
-                                            <td>
-                                                <?= $class['gender'] === 'M' ? 'Herr' : ($class['gender'] === 'K' || $class['gender'] === 'F' ? 'Dam' : '–') ?>
-                                            </td>
-                                            <td>
-                                                <?php if ($class['min_age'] || $class['max_age']): ?>
-                                                    <?= $class['min_age'] ?? '∞' ?> - <?= $class['max_age'] ?? '∞' ?>
-                                                <?php else: ?>
-                                                    –
-                                                <?php endif; ?>
-                                            </td>
-                                            <td><?= $class['sort_order'] ?></td>
-                                            <td><?= number_format($class['result_count']) ?></td>
-                                            <td>
-                                                <span class="gs-badge <?= $class['active'] ? 'gs-badge-success' : 'gs-badge-secondary' ?> gs-badge-sm">
-                                                    <?= $class['active'] ? 'Aktiv' : 'Inaktiv' ?>
-                                                </span>
-                                            </td>
-                                            <td class="gs-text-right">
-                                                <button type="button" class="gs-btn gs-btn-sm gs-btn-outline" onclick='editClass(<?= json_encode($class) ?>)'>
-                                                    <i data-lucide="edit-2"></i>
-                                                </button>
-                                                <?php if ($class['result_count'] == 0): ?>
-                                                    <form method="POST" class="gs-display-inline" onsubmit="return confirm('Ta bort denna klass?');">
-                                                        <?= csrf_field() ?>
-                                                        <input type="hidden" name="form_tab" value="classes">
-                                                        <input type="hidden" name="action" value="delete">
-                                                        <input type="hidden" name="id" value="<?= $class['id'] ?>">
-                                                        <button type="submit" class="gs-btn gs-btn-sm gs-btn-danger">
-                                                            <i data-lucide="trash-2"></i>
-                                                        </button>
-                                                    </form>
-                                                <?php endif; ?>
-                                            </td>
-                                        </tr>
-                                    <?php endforeach; ?>
-                                </tbody>
-                            </table>
-                        </div>
-                    <?php endif; ?>
-                </div>
-            </div>
-
         <?php elseif ($activeTab === 'global-texts'): ?>
             <!-- GLOBAL TEXTS TAB -->
             <div class="gs-flex gs-items-center gs-justify-between gs-mb-lg">
@@ -625,110 +363,6 @@ include __DIR__ . '/../includes/layout-header.php';
     </div>
 </main>
 
-<!-- Class Modal -->
-<div id="classModal" class="gs-modal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 10000; align-items: flex-start; justify-content: center; padding-top: 5vh; overflow-y: auto;">
-    <div class="gs-modal-overlay" onclick="closeClassModal()" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: -1;"></div>
-    <div class="gs-modal-content" style="max-width: 600px; background: white; border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); position: relative;">
-        <div class="gs-modal-header">
-            <h2 class="gs-modal-title">
-                <i data-lucide="layers"></i>
-                <span id="classModalTitle">Ny Klass</span>
-            </h2>
-            <button type="button" class="gs-modal-close" onclick="closeClassModal()">
-                <i data-lucide="x"></i>
-            </button>
-        </div>
-        <form method="POST" id="classForm">
-            <?= csrf_field() ?>
-            <input type="hidden" name="form_tab" value="classes">
-            <input type="hidden" name="action" id="classFormAction" value="create">
-            <input type="hidden" name="id" id="classId" value="">
-
-            <div class="gs-modal-body">
-                <div class="gs-grid gs-grid-cols-1 gs-gap-md">
-                    <div class="gs-form-group">
-                        <label class="gs-label">Visningsnamn *</label>
-                        <input type="text" name="display_name" id="classDisplayName" class="gs-input" required>
-                    </div>
-                    <div class="gs-form-group">
-                        <label class="gs-label">Namn *</label>
-                        <input type="text" name="name" id="className" class="gs-input" required>
-                    </div>
-                    <div class="gs-form-group">
-                        <label class="gs-label">Discipliner</label>
-                        <div class="gs-grid gs-grid-cols-2 gs-gap-sm">
-                            <label class="gs-checkbox-label"><input type="checkbox" name="disciplines[]" value="XC" class="discipline-cb"> XC</label>
-                            <label class="gs-checkbox-label"><input type="checkbox" name="disciplines[]" value="DH" class="discipline-cb"> DH</label>
-                            <label class="gs-checkbox-label"><input type="checkbox" name="disciplines[]" value="ENDURO" class="discipline-cb"> Enduro</label>
-                            <label class="gs-checkbox-label"><input type="checkbox" name="disciplines[]" value="ROAD" class="discipline-cb"> Road</label>
-                        </div>
-                    </div>
-                    <div class="gs-grid gs-grid-cols-3 gs-gap-md">
-                        <div class="gs-form-group">
-                            <label class="gs-label">Kön</label>
-                            <select name="gender" id="classGender" class="gs-input">
-                                <option value="">Alla</option>
-                                <option value="M">Herr</option>
-                                <option value="K">Dam</option>
-                            </select>
-                        </div>
-                        <div class="gs-form-group">
-                            <label class="gs-label">Min ålder</label>
-                            <input type="number" name="min_age" id="classMinAge" class="gs-input">
-                        </div>
-                        <div class="gs-form-group">
-                            <label class="gs-label">Max ålder</label>
-                            <input type="number" name="max_age" id="classMaxAge" class="gs-input">
-                        </div>
-                    </div>
-                    <div class="gs-grid gs-grid-cols-2 gs-gap-md">
-                        <div class="gs-form-group">
-                            <label class="gs-label">Sortering</label>
-                            <input type="number" name="sort_order" id="classSortOrder" class="gs-input" value="999">
-                        </div>
-                        <div class="gs-form-group">
-                            <label class="gs-label">Rankning</label>
-                            <select name="ranking_type" id="classRankingType" class="gs-input">
-                                <option value="time">Tid (snabbast först)</option>
-                                <option value="name">Namn (alfabetisk)</option>
-                                <option value="bib">Startnummer</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="gs-grid gs-grid-cols-3 gs-gap-md gs-mt-md">
-                        <div class="gs-form-group gs-flex gs-items-end">
-                            <label class="gs-checkbox-label">
-                                <input type="checkbox" name="active" id="classActive" checked>
-                                Aktiv
-                            </label>
-                        </div>
-                        <div class="gs-form-group gs-flex gs-items-end">
-                            <label class="gs-checkbox-label">
-                                <input type="checkbox" name="awards_points" id="classAwardsPoints" checked>
-                                Ger poäng
-                            </label>
-                        </div>
-                        <div class="gs-form-group gs-flex gs-items-end">
-                            <label class="gs-checkbox-label">
-                                <input type="checkbox" name="series_eligible" id="classSeriesEligible" checked>
-                                Räknas i serie
-                            </label>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="gs-modal-footer">
-                <button type="button" class="gs-btn gs-btn-outline" onclick="closeClassModal()">Avbryt</button>
-                <button type="submit" class="gs-btn gs-btn-primary">
-                    <i data-lucide="save"></i>
-                    <span id="classSubmitText">Skapa</span>
-                </button>
-            </div>
-        </form>
-    </div>
-</div>
-
 <!-- Add Global Text Modal -->
 <div id="addTextModal" class="gs-modal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 10000; align-items: flex-start; justify-content: center; padding-top: 5vh; overflow-y: auto;">
     <div class="gs-modal-overlay" onclick="closeAddTextModal()" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: -1;"></div>
@@ -786,53 +420,6 @@ include __DIR__ . '/../includes/layout-header.php';
 </div>
 
 <script>
-// Class Modal functions
-function openClassModal() {
-    document.getElementById('classModal').style.display = 'flex';
-    document.getElementById('classModalTitle').textContent = 'Ny Klass';
-    document.getElementById('classSubmitText').textContent = 'Skapa';
-    document.getElementById('classFormAction').value = 'create';
-    document.getElementById('classForm').reset();
-    document.getElementById('classId').value = '';
-    document.getElementById('classActive').checked = true;
-    document.getElementById('classAwardsPoints').checked = true;
-    document.getElementById('classSeriesEligible').checked = true;
-    document.getElementById('classRankingType').value = 'time';
-    document.querySelectorAll('.discipline-cb').forEach(cb => cb.checked = false);
-    if (typeof lucide !== 'undefined') lucide.createIcons();
-}
-
-function closeClassModal() {
-    document.getElementById('classModal').style.display = 'none';
-}
-
-function editClass(classData) {
-    document.getElementById('classModal').style.display = 'flex';
-    document.getElementById('classModalTitle').textContent = 'Redigera Klass';
-    document.getElementById('classSubmitText').textContent = 'Uppdatera';
-    document.getElementById('classFormAction').value = 'update';
-    document.getElementById('classId').value = classData.id;
-    document.getElementById('className').value = classData.name;
-    document.getElementById('classDisplayName').value = classData.display_name;
-    document.getElementById('classGender').value = classData.gender || '';
-    document.getElementById('classMinAge').value = classData.min_age || '';
-    document.getElementById('classMaxAge').value = classData.max_age || '';
-    document.getElementById('classSortOrder').value = classData.sort_order || 999;
-    document.getElementById('classActive').checked = classData.active == 1;
-    document.getElementById('classAwardsPoints').checked = classData.awards_points == 1 || classData.awards_points === null;
-    document.getElementById('classSeriesEligible').checked = classData.series_eligible == 1 || classData.series_eligible === null;
-    document.getElementById('classRankingType').value = classData.ranking_type || 'time';
-
-    document.querySelectorAll('.discipline-cb').forEach(cb => cb.checked = false);
-    if (classData.discipline) {
-        const disciplines = classData.discipline.split(',').map(d => d.trim());
-        document.querySelectorAll('.discipline-cb').forEach(cb => {
-            if (disciplines.includes(cb.value)) cb.checked = true;
-        });
-    }
-    if (typeof lucide !== 'undefined') lucide.createIcons();
-}
-
 // Global Text Modal
 function showAddTextModal() {
     document.getElementById('addTextModal').style.display = 'flex';
@@ -855,7 +442,6 @@ function deleteGlobalText(id, name) {
 // Close modals on escape
 document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') {
-        closeClassModal();
         closeAddTextModal();
     }
 });
