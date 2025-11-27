@@ -251,6 +251,7 @@ include __DIR__ . '/../includes/layout-header.php';
                 </a>
             </div>
         </div>
+        <?php render_admin_footer(); ?>
     </div>
 </main>
 

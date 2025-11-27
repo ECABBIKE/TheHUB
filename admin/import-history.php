@@ -331,6 +331,9 @@ include __DIR__ . '/../includes/layout-header.php';
                 form.submit();
             }
         </script>
+        <?php render_admin_footer(); ?>
+    </div>
+</main>
 
 <?php include __DIR__ . '/../includes/layout-footer.php'; ?>
 

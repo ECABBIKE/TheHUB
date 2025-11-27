@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../config.php';
 require_admin();
+require_once __DIR__ . '/../includes/admin-layout.php';
 
 $db = getDB();
 $message = '';
@@ -239,22 +240,10 @@ include __DIR__ . '/../includes/layout-header.php';
 
 <main class="gs-main-content">
     <div class="gs-container">
-        <div class="gs-flex gs-justify-between gs-items-center gs-mb-lg">
-            <h1 class="gs-h2">
-                <i data-lucide="award"></i>
-                Poängmallar
-            </h1>
-            <div class="gs-flex gs-gap-sm">
-                <button type="button" class="gs-btn gs-btn-outline" onclick="openImportModal()">
-                    <i data-lucide="upload"></i>
-                    Importera CSV
-                </button>
-                <button type="button" class="gs-btn gs-btn-primary" onclick="openCreateModal()">
-                    <i data-lucide="plus"></i>
-                    Ny Poängmall
-                </button>
-            </div>
-        </div>
+        <?php render_admin_header('Serier & Poäng', [
+            ['label' => 'Importera CSV', 'url' => '#', 'icon' => 'upload', 'class' => 'gs-btn-outline" onclick="openImportModal(); return false;'],
+            ['label' => 'Ny Poängmall', 'url' => '#', 'icon' => 'plus', 'class' => 'gs-btn-primary" onclick="openCreateModal(); return false;']
+        ]); ?>
 
         <?php if ($message): ?>
             <div class="gs-alert gs-alert-<?= $messageType ?> gs-mb-lg">
@@ -347,6 +336,7 @@ include __DIR__ . '/../includes/layout-header.php';
                 </table>
             </div>
         </div>
+        <?php render_admin_footer(); ?>
     </div>
 </main>
 

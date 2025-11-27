@@ -621,6 +621,7 @@ include __DIR__ . '/../includes/layout-header.php';
                 <?php endforeach; ?>
             <?php endif; ?>
         <?php endif; ?>
+        <?php render_admin_footer(); ?>
     </div>
 </main>
 

@@ -308,6 +308,7 @@ Herrar Elite,2,Erik,SVENSSON,Göteborg MTB,,DNF,DNF,1:55.34,1:39.21,DNF</pre>
             </div>
         </div>
     </div>
+        <?php render_admin_footer(); ?>
 </main>
 
 <?php include __DIR__ . '/../includes/layout-footer.php'; ?>

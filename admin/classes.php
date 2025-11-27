@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../config.php';
 require_admin();
+require_once __DIR__ . '/../includes/admin-layout.php';
 
 $db = getDB();
 $current_admin = get_current_admin();
@@ -139,23 +140,10 @@ include __DIR__ . '/../includes/layout-header.php';
 
     <main class="gs-content-with-sidebar">
         <div class="gs-container">
-            <!-- Header -->
-            <div class="gs-flex gs-items-center gs-justify-between gs-mb-xl">
-                <h1 class="gs-h1 gs-text-primary">
-                    <i data-lucide="layers"></i>
-                    Klasser
-                </h1>
-                <div class="gs-flex gs-gap-sm">
-                    <a href="/admin/import-classes.php" class="gs-btn gs-btn-outline">
-                        <i data-lucide="upload"></i>
-                        Importera CSV
-                    </a>
-                    <button type="button" class="gs-btn gs-btn-primary" onclick="openClassModal()">
-                        <i data-lucide="plus"></i>
-                        Ny Klass
-                    </button>
-                </div>
-            </div>
+            <?php render_admin_header('Deltagare & Klubbar', [
+                ['label' => 'Importera CSV', 'url' => '/admin/import-classes.php', 'icon' => 'upload', 'class' => 'gs-btn-outline'],
+                ['label' => 'Ny Klass', 'url' => '#', 'icon' => 'plus', 'class' => 'gs-btn-primary" onclick="openClassModal(); return false;']
+            ]); ?>
 
             <!-- Messages -->
             <?php if ($message): ?>
@@ -533,6 +521,7 @@ include __DIR__ . '/../includes/layout-header.php';
                     </form>
                 </div>
             </div>
+            <?php render_admin_footer(); ?>
         </div>
     </main>
 
