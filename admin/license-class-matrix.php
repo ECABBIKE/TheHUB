@@ -67,12 +67,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// Simplified license types for the matrix (the three main types users select)
-$licenseTypes = [
-    ['code' => 'engangslicens', 'name' => 'Engångslicens', 'description' => 'För enstaka tävlingar', 'priority' => 10],
-    ['code' => 'motionslicens', 'name' => 'Motionslicens', 'description' => 'För motion/sportmotion', 'priority' => 20],
-    ['code' => 'tavlingslicens', 'name' => 'Tävlingslicens', 'description' => 'Youth, Junior, Elite, Master etc', 'priority' => 100]
-];
+// Get all license types from database
+$licenseTypes = [];
+try {
+    $licenseTypes = $db->getAll("
+        SELECT code, name, description, priority
+        FROM license_types
+        WHERE is_active = 1
+        ORDER BY priority DESC
+    ");
+} catch (Exception $e) {
+    // Fallback to basic types if table doesn't exist
+    $licenseTypes = [
+        ['code' => 'engangslicens', 'name' => 'Engångslicens', 'description' => 'För enstaka tävlingar', 'priority' => 10],
+        ['code' => 'motionslicens', 'name' => 'Motionslicens', 'description' => 'För motion/sportmotion', 'priority' => 20],
+        ['code' => 'tavlingslicens', 'name' => 'Tävlingslicens', 'description' => 'Youth, Junior, Elite, Master etc', 'priority' => 100]
+    ];
+}
 
 // Get all active classes
 $classes = $db->getAll("

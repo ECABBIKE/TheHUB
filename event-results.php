@@ -157,6 +157,31 @@ try {
     // Table might not exist yet or column missing - no license restrictions applied
 }
 
+// Get all available license types from database for the registration form
+$availableLicenseTypes = [];
+try {
+    $availableLicenseTypes = $db->getAll("
+        SELECT code, name, description, priority
+        FROM license_types
+        WHERE is_active = 1
+        ORDER BY priority DESC
+    ");
+} catch (Exception $e) {
+    // Fallback to basic types
+    $availableLicenseTypes = [
+        ['code' => 'elite_men', 'name' => 'Elite Men', 'description' => 'Herr Elit', 'priority' => 90],
+        ['code' => 'elite_women', 'name' => 'Elite Women', 'description' => 'Dam Elit', 'priority' => 90],
+        ['code' => 'master', 'name' => 'Master', 'description' => 'Master H30+/D30+', 'priority' => 80],
+        ['code' => 'u23', 'name' => 'U23', 'description' => 'Under 23', 'priority' => 70],
+        ['code' => 'junior', 'name' => 'Junior', 'description' => '17-18 år', 'priority' => 60],
+        ['code' => 'baslicens', 'name' => 'Baslicens', 'description' => 'Sport/Sportmotion', 'priority' => 55],
+        ['code' => 'youth', 'name' => 'Youth', 'description' => '11-16 år', 'priority' => 40],
+        ['code' => 'under11', 'name' => 'Under 11', 'description' => '5-10 år', 'priority' => 30],
+        ['code' => 'motionslicens', 'name' => 'Motionslicens', 'description' => 'Motion/Sportmotion', 'priority' => 20],
+        ['code' => 'engangslicens', 'name' => 'Engångslicens', 'description' => 'Enstaka tävling', 'priority' => 10]
+    ];
+}
+
 // Fetch global texts for use_global functionality
 $globalTexts = $db->getAll("SELECT field_key, content FROM global_texts WHERE is_active = 1");
 $globalTextMap = [];
@@ -1652,7 +1677,7 @@ include __DIR__ . '/includes/layout-header.php';
                                 <div class="gs-card-header">
                                     <h3 class="gs-h5">
                                         <i data-lucide="id-card"></i>
-                                        Välj licenstyp
+                                        Din licens
                                         <?php if ($licenseClass === 'national'): ?>
                                             <span class="gs-badge gs-badge-warning gs-ml-sm">Nationellt event</span>
                                         <?php elseif ($licenseClass === 'sportmotion'): ?>
@@ -1663,37 +1688,26 @@ include __DIR__ . '/includes/layout-header.php';
                                     </h3>
                                 </div>
                                 <div class="gs-card-content">
-                                    <p class="gs-text-sm gs-text-secondary gs-mb-md">
-                                        Välj vilken typ av licens du tävlar med. Tillgängliga klasser beror på din licenstyp.
-                                    </p>
-                                    <div class="gs-grid gs-grid-cols-1 gs-gap-sm">
+                                    <div id="license-from-profile" class="gs-alert gs-alert-success gs-mb-md" style="display: none;">
+                                        <i data-lucide="check-circle"></i>
+                                        <span>Din licens hämtades från din profil. Ändra vid behov.</span>
+                                    </div>
+                                    <div id="license-not-found" class="gs-alert gs-alert-info gs-mb-md" style="display: none;">
+                                        <i data-lucide="info"></i>
+                                        <span>Välj vilken licens du tävlar med.</span>
+                                    </div>
+                                    <div class="gs-grid gs-grid-cols-1 gs-md-grid-cols-2 gs-gap-sm">
+                                        <?php foreach ($availableLicenseTypes as $license): ?>
                                         <label class="gs-card gs-p-md license-option" style="cursor: pointer; border: 2px solid var(--gs-border);">
                                             <div class="gs-flex gs-items-center gs-gap-md">
-                                                <input type="radio" name="selected_license" value="engangslicens" onchange="onLicenseSelected()">
+                                                <input type="radio" name="selected_license" value="<?= h($license['code']) ?>" onchange="onLicenseSelected()">
                                                 <div>
-                                                    <strong>Engångslicens</strong>
-                                                    <p class="gs-text-sm gs-text-secondary gs-mb-0">För enstaka tävlingar</p>
+                                                    <strong><?= h($license['name']) ?></strong>
+                                                    <p class="gs-text-sm gs-text-secondary gs-mb-0"><?= h($license['description']) ?></p>
                                                 </div>
                                             </div>
                                         </label>
-                                        <label class="gs-card gs-p-md license-option" style="cursor: pointer; border: 2px solid var(--gs-border);">
-                                            <div class="gs-flex gs-items-center gs-gap-md">
-                                                <input type="radio" name="selected_license" value="motionslicens" onchange="onLicenseSelected()">
-                                                <div>
-                                                    <strong>Motionslicens</strong>
-                                                    <p class="gs-text-sm gs-text-secondary gs-mb-0">För motion och sportmotion</p>
-                                                </div>
-                                            </div>
-                                        </label>
-                                        <label class="gs-card gs-p-md license-option" style="cursor: pointer; border: 2px solid var(--gs-border);">
-                                            <div class="gs-flex gs-items-center gs-gap-md">
-                                                <input type="radio" name="selected_license" value="tavlingslicens" onchange="onLicenseSelected()">
-                                                <div>
-                                                    <strong>Tävlingslicens</strong>
-                                                    <p class="gs-text-sm gs-text-secondary gs-mb-0">Youth, Junior, U23, Elite, Master eller Baslicens</p>
-                                                </div>
-                                            </div>
-                                        </label>
+                                        <?php endforeach; ?>
                                     </div>
                                 </div>
                             </div>
@@ -1894,10 +1908,64 @@ include __DIR__ . '/includes/layout-header.php';
 
                             // Show license type selector
                             document.getElementById('license-type-section').style.display = 'block';
-                            // Reset license selection when selecting new rider
-                            document.querySelectorAll('input[name="selected_license"]').forEach(r => r.checked = false);
 
-                            // Filter classes based on rider's gender (license not yet selected)
+                            // Reset all license selections
+                            document.querySelectorAll('input[name="selected_license"]').forEach(r => {
+                                r.checked = false;
+                                const card = r.closest('label');
+                                if (card) {
+                                    card.style.borderColor = 'var(--gs-border)';
+                                    card.style.backgroundColor = '';
+                                }
+                            });
+
+                            // Hide both alerts initially
+                            document.getElementById('license-from-profile').style.display = 'none';
+                            document.getElementById('license-not-found').style.display = 'none';
+
+                            // Pre-select rider's license type if they have one in their profile
+                            let licenseFound = false;
+                            if (riderData.licenseType) {
+                                // Try to match the license type (convert to lowercase, handle common variations)
+                                const licenseCode = riderData.licenseType.toLowerCase()
+                                    .replace(/\s+/g, '_')
+                                    .replace(/ä/g, 'a')
+                                    .replace(/å/g, 'a')
+                                    .replace(/ö/g, 'o');
+
+                                // Try exact match first
+                                let matchingRadio = document.querySelector(`input[name="selected_license"][value="${licenseCode}"]`);
+
+                                // Try partial matches for common license names
+                                if (!matchingRadio) {
+                                    const licenseRadios = document.querySelectorAll('input[name="selected_license"]');
+                                    licenseRadios.forEach(radio => {
+                                        const value = radio.value.toLowerCase();
+                                        if (licenseCode.includes(value) || value.includes(licenseCode)) {
+                                            matchingRadio = radio;
+                                        }
+                                    });
+                                }
+
+                                if (matchingRadio) {
+                                    matchingRadio.checked = true;
+                                    const card = matchingRadio.closest('label');
+                                    if (card) {
+                                        card.style.borderColor = 'var(--gs-primary)';
+                                        card.style.backgroundColor = 'var(--gs-primary-light, rgba(var(--gs-primary-rgb), 0.1))';
+                                    }
+                                    licenseFound = true;
+                                    // Show success alert - license was found in profile
+                                    document.getElementById('license-from-profile').style.display = 'flex';
+                                }
+                            }
+
+                            // Show info alert if no license was found in profile
+                            if (!licenseFound) {
+                                document.getElementById('license-not-found').style.display = 'flex';
+                            }
+
+                            // Filter classes based on rider's license (or show all locked if no license selected)
                             filterClasses();
                             updatePrice();
                         }
@@ -1905,6 +1973,11 @@ include __DIR__ . '/includes/layout-header.php';
                         // Called when user selects a license type
                         function onLicenseSelected() {
                             filterClasses();
+
+                            // Hide alerts when user manually changes license
+                            document.getElementById('license-from-profile').style.display = 'none';
+                            document.getElementById('license-not-found').style.display = 'none';
+
                             // Highlight selected license card
                             document.querySelectorAll('input[name="selected_license"]').forEach(radio => {
                                 const card = radio.closest('label');
