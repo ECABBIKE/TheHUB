@@ -470,6 +470,7 @@ flush();
                 </form>
             </div>
         </div>
+        <?php render_admin_footer(); ?>
     </div>
 </main>
 

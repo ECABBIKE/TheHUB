@@ -125,6 +125,7 @@ include __DIR__ . '/../includes/layout-header.php';
             </div>
         </div>
         <?php endif; ?>
+        <?php render_admin_footer(); ?>
     </div>
 </main>
 

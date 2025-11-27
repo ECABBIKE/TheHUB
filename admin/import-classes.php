@@ -440,6 +440,8 @@ MASTER_40,Master 40+,"XC,ENDURO",M,40,,100,1</pre>
                 </div>
             </div>
         </div>
-    </main>
+        <?php render_admin_footer(); ?>
+    </div>
+</main>
 
 <?php include __DIR__ . '/../includes/layout-footer.php'; ?>

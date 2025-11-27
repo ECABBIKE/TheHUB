@@ -476,6 +476,7 @@ include __DIR__ . '/../includes/layout-header.php';
                 </div>
             <?php endif; ?>
         <?php endif; ?>
+        <?php render_admin_footer(); ?>
     </div>
 </main>
 

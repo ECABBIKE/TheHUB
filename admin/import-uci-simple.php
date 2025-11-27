@@ -345,6 +345,7 @@ include '../includes/layout-header.php';
             </div>
         </div>
     </div>
+        <?php render_admin_footer(); ?>
 </main>
 
 <?php include '../includes/layout-footer.php'; ?>

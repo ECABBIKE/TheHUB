@@ -324,6 +324,7 @@ include __DIR__ . '/../includes/layout-header.php';
             </div>
         <?php endif; ?>
     </div>
+        <?php render_admin_footer(); ?>
 </main>
 
 <?php include __DIR__ . '/../includes/layout-footer.php'; ?>

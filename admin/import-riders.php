@@ -797,6 +797,11 @@ $additionalScripts = <<<'SCRIPT'
     });
 </script>
 SCRIPT;
+?>
+        <?php render_admin_footer(); ?>
+    </div>
+</main>
 
+<?php
 include __DIR__ . '/../includes/layout-footer.php';
 ?>
