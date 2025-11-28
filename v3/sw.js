@@ -3,7 +3,7 @@
  * Handles caching and offline functionality
  */
 
-const CACHE_NAME = 'thehub-v3-cache-v1';
+const CACHE_NAME = 'thehub-v3-cache-v2';
 const OFFLINE_URL = '/v3/offline.html';
 
 // Assets to cache immediately on install
@@ -23,8 +23,8 @@ const PRECACHE_ASSETS = [
   '/v3/assets/js/router.js',
   '/v3/assets/js/app.js',
   '/v3/assets/js/pwa.js',
-  '/v3/assets/icons/icon-192.png',
-  '/v3/assets/icons/icon-512.png'
+  '/v3/assets/js/search.js',
+  '/uploads/icons/GSIkon.png'
 ];
 
 // Install event - precache assets
