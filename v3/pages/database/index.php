@@ -65,9 +65,14 @@ $clubCount = $pdo->query("SELECT COUNT(*) FROM clubs")->fetchColumn();
         <h2>Senast aktiva</h2>
         <?php
         $recentStmt = $pdo->query("
-            SELECT r.id, r.first_name, r.last_name, c.name as club_name
+            SELECT r.id, r.firstname, r.lastname, c.name as club_name,
+                   COUNT(DISTINCT res.id) as total_races,
+                   COUNT(CASE WHEN res.position <= 3 THEN 1 END) as podiums
             FROM riders r
             LEFT JOIN clubs c ON r.club_id = c.id
+            LEFT JOIN results res ON r.id = res.cyclist_id
+            WHERE r.active = 1
+            GROUP BY r.id
             ORDER BY r.updated_at DESC
             LIMIT 20
         ");
@@ -76,11 +81,19 @@ $clubCount = $pdo->query("SELECT COUNT(*) FROM clubs")->fetchColumn();
         <div class="quick-list">
             <?php foreach ($recentRiders as $rider): ?>
                 <a href="/v3/database/rider/<?= $rider['id'] ?>" class="quick-item">
-                    <span class="quick-item-avatar"><?= strtoupper(substr($rider['first_name'], 0, 1)) ?></span>
+                    <span class="quick-item-avatar"><?= strtoupper(substr($rider['firstname'], 0, 1)) ?></span>
                     <div class="quick-item-info">
-                        <span class="quick-item-name"><?= htmlspecialchars($rider['first_name'] . ' ' . $rider['last_name']) ?></span>
+                        <span class="quick-item-name"><?= htmlspecialchars($rider['firstname'] . ' ' . $rider['lastname']) ?></span>
                         <?php if ($rider['club_name']): ?>
                             <span class="quick-item-meta"><?= htmlspecialchars($rider['club_name']) ?></span>
+                        <?php endif; ?>
+                    </div>
+                    <div class="quick-item-stats">
+                        <?php if ($rider['total_races'] > 0): ?>
+                            <span class="stat"><?= $rider['total_races'] ?> 🏁</span>
+                        <?php endif; ?>
+                        <?php if ($rider['podiums'] > 0): ?>
+                            <span class="stat"><?= $rider['podiums'] ?> 🏆</span>
                         <?php endif; ?>
                     </div>
                 </a>
@@ -91,11 +104,15 @@ $clubCount = $pdo->query("SELECT COUNT(*) FROM clubs")->fetchColumn();
         <h2>Alla klubbar</h2>
         <?php
         $clubsStmt = $pdo->query("
-            SELECT c.id, c.name, COUNT(r.id) as member_count
+            SELECT c.id, c.name,
+                   COUNT(DISTINCT r.id) as member_count,
+                   COUNT(DISTINCT res.id) as total_races,
+                   COUNT(CASE WHEN res.position <= 3 THEN 1 END) as podiums
             FROM clubs c
-            LEFT JOIN riders r ON c.id = r.club_id
+            LEFT JOIN riders r ON c.id = r.club_id AND r.active = 1
+            LEFT JOIN results res ON r.id = res.cyclist_id
             GROUP BY c.id
-            ORDER BY c.name
+            ORDER BY total_races DESC, c.name
         ");
         $clubs = $clubsStmt->fetchAll(PDO::FETCH_ASSOC);
         ?>
@@ -105,7 +122,15 @@ $clubCount = $pdo->query("SELECT COUNT(*) FROM clubs")->fetchColumn();
                     <span class="club-avatar"><?= strtoupper(substr($club['name'], 0, 2)) ?></span>
                     <div class="club-info">
                         <span class="club-name"><?= htmlspecialchars($club['name']) ?></span>
-                        <span class="club-members"><?= $club['member_count'] ?> medlemmar</span>
+                        <span class="club-members"><?= $club['member_count'] ?> aktiva medlemmar</span>
+                    </div>
+                    <div class="club-stats">
+                        <?php if ($club['total_races'] > 0): ?>
+                            <span class="stat"><?= $club['total_races'] ?> starter</span>
+                        <?php endif; ?>
+                        <?php if ($club['podiums'] > 0): ?>
+                            <span class="stat podium"><?= $club['podiums'] ?> 🏆</span>
+                        <?php endif; ?>
                     </div>
                 </a>
             <?php endforeach; ?>
@@ -296,6 +321,15 @@ $clubCount = $pdo->query("SELECT COUNT(*) FROM clubs")->fetchColumn();
     font-size: var(--text-sm);
     color: var(--color-text-secondary);
 }
+.quick-item-stats {
+    display: flex;
+    gap: var(--space-sm);
+    margin-left: auto;
+}
+.quick-item-stats .stat {
+    font-size: var(--text-sm);
+    color: var(--color-text-secondary);
+}
 
 .club-grid {
     display: grid;
@@ -335,6 +369,24 @@ $clubCount = $pdo->query("SELECT COUNT(*) FROM clubs")->fetchColumn();
 .club-members {
     font-size: var(--text-sm);
     color: var(--color-text-secondary);
+}
+.club-stats {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: var(--space-2xs);
+    margin-left: auto;
+}
+.club-stats .stat {
+    font-size: var(--text-xs);
+    color: var(--color-text-secondary);
+    background: var(--color-bg-surface);
+    padding: var(--space-2xs) var(--space-xs);
+    border-radius: var(--radius-sm);
+}
+.club-stats .stat.podium {
+    background: var(--color-accent-light);
+    color: var(--color-accent);
 }
 </style>
 
