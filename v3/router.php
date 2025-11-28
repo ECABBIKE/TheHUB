@@ -1,40 +1,133 @@
 <?php
+/**
+ * TheHUB V3.5 Router
+ * Handles URL routing for the SPA structure
+ */
 require_once __DIR__ . '/config.php';
 
 function hub_get_current_page(): array {
     $raw = trim($_GET['page'] ?? '', '/');
 
     if ($raw === '' || $raw === 'index.php') {
-        return ['page' => 'dashboard', 'params' => [], 'file' => HUB_V3_ROOT . '/pages/dashboard.php'];
+        return ['page' => 'dashboard', 'section' => 'dashboard', 'params' => [], 'file' => HUB_V3_ROOT . '/pages/dashboard.php'];
     }
 
     $segments = explode('/', $raw);
-    $page = $segments[0];
+    $section = $segments[0];
+    $subpage = $segments[1] ?? 'index';
+    $id = $segments[2] ?? ($segments[1] ?? null);
 
-    // Single-item pages (rider/123, event/456, club/789, series/123)
-    $singlePages = ['rider', 'event', 'club'];
-    if (in_array($page, $singlePages) && isset($segments[1])) {
+    // New V3.5 section-based routing
+    $sectionRoutes = [
+        'calendar' => [
+            'index' => '/pages/calendar/index.php',
+            'event' => '/pages/calendar/event.php'
+        ],
+        'results' => [
+            'index' => '/pages/results.php',  // Legacy - will move to /pages/results/index.php
+            'event' => '/pages/event.php',    // Legacy
+            'series' => '/pages/series-single.php'
+        ],
+        'database' => [
+            'index' => '/pages/database/index.php',
+            'rider' => '/pages/rider.php',    // Legacy - will move
+            'club' => '/pages/club.php'       // Legacy
+        ],
+        'ranking' => [
+            'index' => '/pages/ranking.php',  // Legacy
+            'riders' => '/pages/ranking.php',
+            'clubs' => '/pages/ranking.php',
+            'events' => '/pages/ranking.php'
+        ],
+        'profile' => [
+            'index' => '/pages/profile/index.php',
+            'edit' => '/pages/profile/edit.php',
+            'children' => '/pages/profile/children.php',
+            'club-admin' => '/pages/profile/club-admin.php',
+            'registrations' => '/pages/profile/registrations.php',
+            'results' => '/pages/profile/results.php',
+            'receipts' => '/pages/profile/receipts.php',
+            'login' => '/pages/profile/login.php'
+        ]
+    ];
+
+    // Check if this is a V3.5 section route
+    if (isset($sectionRoutes[$section])) {
+        // If second segment is numeric, it's an ID
+        if (isset($segments[1]) && is_numeric($segments[1])) {
+            $id = $segments[1];
+            // Determine detail page based on section
+            $detailPages = [
+                'calendar' => 'event',
+                'results' => 'event',
+                'database' => 'rider',
+                'ranking' => 'riders'
+            ];
+            $subpage = $detailPages[$section] ?? 'index';
+        } elseif (isset($segments[1]) && !is_numeric($segments[1])) {
+            $subpage = $segments[1];
+            $id = $segments[2] ?? null;
+        } else {
+            $subpage = 'index';
+        }
+
+        $file = HUB_V3_ROOT . ($sectionRoutes[$section][$subpage] ?? $sectionRoutes[$section]['index']);
+
         return [
-            'page' => $page,
-            'params' => ['id' => $segments[1]],
-            'file' => HUB_V3_ROOT . '/pages/' . $page . '.php'
+            'page' => $section . '-' . $subpage,
+            'section' => $section,
+            'subpage' => $subpage,
+            'params' => $id ? ['id' => $id] : [],
+            'file' => $file
         ];
     }
 
-    // Series single page (series/123 -> series-single.php)
-    if ($page === 'series' && isset($segments[1]) && is_numeric($segments[1])) {
+    // Legacy single-item pages (rider/123, event/456, club/789)
+    $singlePages = ['rider', 'event', 'club'];
+    if (in_array($section, $singlePages) && isset($segments[1])) {
+        return [
+            'page' => $section,
+            'section' => $section === 'rider' || $section === 'club' ? 'database' : 'results',
+            'params' => ['id' => $segments[1]],
+            'file' => HUB_V3_ROOT . '/pages/' . $section . '.php'
+        ];
+    }
+
+    // Legacy series single page
+    if ($section === 'series' && isset($segments[1]) && is_numeric($segments[1])) {
         return [
             'page' => 'series-single',
+            'section' => 'results',
             'params' => ['id' => $segments[1]],
             'file' => HUB_V3_ROOT . '/pages/series-single.php'
         ];
     }
 
-    if (in_array($page, HUB_VALID_PAGES)) {
-        return ['page' => $page, 'params' => [], 'file' => HUB_V3_ROOT . '/pages/' . $page . '.php'];
+    // Legacy list pages
+    $legacyPages = [
+        'series' => ['section' => 'results', 'file' => '/pages/series.php'],
+        'riders' => ['section' => 'database', 'file' => '/pages/riders.php'],
+        'clubs' => ['section' => 'database', 'file' => '/pages/clubs.php'],
+        'results' => ['section' => 'results', 'file' => '/pages/results.php'],
+        'ranking' => ['section' => 'ranking', 'file' => '/pages/ranking.php']
+    ];
+
+    if (isset($legacyPages[$section])) {
+        return [
+            'page' => $section,
+            'section' => $legacyPages[$section]['section'],
+            'params' => [],
+            'file' => HUB_V3_ROOT . $legacyPages[$section]['file']
+        ];
     }
 
-    return ['page' => '404', 'params' => ['requested' => $raw], 'file' => HUB_V3_ROOT . '/pages/404.php'];
+    // Dashboard
+    if ($section === 'dashboard') {
+        return ['page' => 'dashboard', 'section' => 'dashboard', 'params' => [], 'file' => HUB_V3_ROOT . '/pages/dashboard.php'];
+    }
+
+    // 404
+    return ['page' => '404', 'section' => null, 'params' => ['requested' => $raw], 'file' => HUB_V3_ROOT . '/pages/404.php'];
 }
 
 function hub_is_ajax(): bool {
@@ -43,11 +136,18 @@ function hub_is_ajax(): bool {
 }
 
 function hub_is_nav_active(string $navId, string $currentPage): bool {
-    if ($navId === 'dashboard' && $currentPage === 'dashboard') return true;
-    if ($navId === 'series' && in_array($currentPage, ['series', 'series-single'])) return true;
-    if ($navId === 'results' && in_array($currentPage, ['results', 'event'])) return true;
-    if ($navId === 'riders' && in_array($currentPage, ['riders', 'rider'])) return true;
-    if ($navId === 'clubs' && in_array($currentPage, ['clubs', 'club'])) return true;
-    if ($navId === 'ranking' && $currentPage === 'ranking') return true;
-    return $navId === $currentPage;
+    // Get section from page info
+    global $pageInfo;
+    $section = $pageInfo['section'] ?? null;
+
+    if ($section === $navId) return true;
+
+    // Legacy mappings
+    if ($navId === 'calendar' && in_array($currentPage, ['calendar', 'calendar-event', 'calendar-index'])) return true;
+    if ($navId === 'results' && in_array($currentPage, ['results', 'event', 'series', 'series-single', 'results-event', 'results-series'])) return true;
+    if ($navId === 'database' && in_array($currentPage, ['database', 'riders', 'rider', 'clubs', 'club', 'database-rider', 'database-club'])) return true;
+    if ($navId === 'ranking' && str_starts_with($currentPage, 'ranking')) return true;
+    if ($navId === 'profile' && str_starts_with($currentPage, 'profile')) return true;
+
+    return false;
 }
