@@ -69,7 +69,7 @@ $bodyClass = isset($bodyClass) ? $defaultBodyClass . ' ' . $bodyClass : $default
 <html lang="sv">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title><?= h($pageTitle) ?><?= $titleSuffix ?></title>
 
     <!-- CRITICAL CSS - INLINE to ensure it loads FIRST -->
@@ -137,11 +137,37 @@ $bodyClass = isset($bodyClass) ? $defaultBodyClass . ' ' . $bodyClass : $default
         }
     </style>
 
+    <!-- V2.5 Modern Theme System - Load FIRST -->
+    <link rel="stylesheet" href="/assets/css/tokens.css?v=<?= filemtime(__DIR__ . '/../assets/css/tokens.css') ?>">
+    <link rel="stylesheet" href="/assets/css/theme-base.css?v=<?= filemtime(__DIR__ . '/../assets/css/theme-base.css') ?>">
+
     <!-- GravitySeries v4.0 CSS -->
     <link rel="stylesheet" href="/public/css/gravityseries-main.css?v=<?= filemtime(__DIR__ . '/../public/css/gravityseries-main.css') ?>">
     <?php if (isset($pageType) && $pageType === 'admin'): ?>
     <link rel="stylesheet" href="/public/css/gravityseries-admin.css?v=<?= filemtime(__DIR__ . '/../public/css/gravityseries-admin.css') ?>">
     <?php endif; ?>
+
+    <!-- PWA Support -->
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#2563EB">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="TheHUB">
+    <link rel="apple-touch-icon" href="/assets/icons/icon-192.png">
+
+    <!-- Theme Prevention Script (prevents flash of wrong theme) -->
+    <script>
+    (function() {
+        const saved = localStorage.getItem('thehub-theme');
+        let theme = 'light';
+        if (saved === 'dark') {
+            theme = 'dark';
+        } else if (!saved || saved === 'auto') {
+            theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        }
+        document.documentElement.setAttribute('data-theme', theme);
+    })();
+    </script>
 </head>
 <body class="<?= $bodyClass ?>">
     <!-- Hamburger (hidden on desktop via inline CSS) -->

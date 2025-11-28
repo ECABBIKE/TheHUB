@@ -29,6 +29,9 @@
         </div>
     </footer>
 
+    <!-- Bottom Navigation (V2.5 - visible on mobile only) -->
+    <?php include __DIR__ . '/nav-bottom.php'; ?>
+
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
     <script>
@@ -99,5 +102,9 @@
         <?= $additionalScripts ?>
         <?php endif; ?>
     </script>
+
+    <!-- V2.5 Modern Theme System Scripts -->
+    <script src="/assets/js/theme.js?v=<?= filemtime(__DIR__ . '/../assets/js/theme.js') ?>"></script>
+    <script src="/assets/js/dropdown.js?v=<?= filemtime(__DIR__ . '/../assets/js/dropdown.js') ?>"></script>
 </body>
 </html>
