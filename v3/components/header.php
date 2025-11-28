@@ -97,7 +97,7 @@ $isAdmin = hub_is_admin();
             </div>
 
         <?php else: ?>
-            <a href="<?= HUB_V3_URL ?>/login" class="btn btn-primary btn-sm">Logga in</a>
+            <a href="/admin/login.php?redirect=<?= urlencode($_SERVER['REQUEST_URI']) ?>" class="btn btn-primary btn-sm">Logga in</a>
         <?php endif; ?>
     </div>
 </header>
