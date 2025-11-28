@@ -336,19 +336,23 @@ if (!$event) {
           <th class="col-place"><?= $isTimeRanked ? '#' : '' ?></th>
           <th class="col-rider">Åkare</th>
           <th class="table-col-hide-portrait">Klubb</th>
-          <?php if ($hasSplitTimes && $isTimeRanked): ?>
-            <?php for ($ss = 1; $ss <= 10; $ss++): ?>
-              <?php
-              $hasThisSplit = false;
-              foreach ($classData['results'] as $r) {
-                  if (!empty($r['ss' . $ss])) { $hasThisSplit = true; break; }
+          <?php
+          // Check which splits this class has
+          $classSplits = [];
+          if ($hasSplitTimes) {
+              for ($ss = 1; $ss <= 10; $ss++) {
+                  foreach ($classData['results'] as $r) {
+                      if (!empty($r['ss' . $ss])) {
+                          $classSplits[] = $ss;
+                          break;
+                      }
+                  }
               }
-              if ($hasThisSplit):
-              ?>
-              <th class="col-split table-col-hide-portrait">SS<?= $ss ?></th>
-              <?php endif; ?>
-            <?php endfor; ?>
-          <?php endif; ?>
+          }
+          ?>
+          <?php foreach ($classSplits as $ss): ?>
+          <th class="col-split table-col-hide-portrait">SS<?= $ss ?></th>
+          <?php endforeach; ?>
           <th class="col-time">Tid</th>
           <?php if ($isTimeRanked): ?>
           <th class="col-gap table-col-hide-portrait">+Tid</th>
@@ -390,21 +394,11 @@ if (!$event) {
               -
             <?php endif; ?>
           </td>
-          <?php if ($hasSplitTimes && $isTimeRanked): ?>
-            <?php for ($ss = 1; $ss <= 10; $ss++): ?>
-              <?php
-              $hasThisSplit = false;
-              foreach ($classData['results'] as $r) {
-                  if (!empty($r['ss' . $ss])) { $hasThisSplit = true; break; }
-              }
-              if ($hasThisSplit):
-              ?>
-              <td class="col-split table-col-hide-portrait">
-                <?= !empty($result['ss' . $ss]) ? formatDisplayTime($result['ss' . $ss]) : '-' ?>
-              </td>
-              <?php endif; ?>
-            <?php endfor; ?>
-          <?php endif; ?>
+          <?php foreach ($classSplits as $ss): ?>
+          <td class="col-split table-col-hide-portrait">
+            <?= !empty($result['ss' . $ss]) ? formatDisplayTime($result['ss' . $ss]) : '-' ?>
+          </td>
+          <?php endforeach; ?>
           <td class="col-time">
             <?php if ($result['status'] === 'finished' && $result['finish_time']): ?>
               <?= formatDisplayTime($result['finish_time']) ?>
