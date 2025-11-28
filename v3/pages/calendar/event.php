@@ -12,18 +12,35 @@ if (!defined('HUB_V3_ROOT')) {
 
 $pdo = hub_db();
 $eventId = $pageInfo['params']['id'] ?? 0;
+
+// Debug: Show what we're looking for
+if (isset($_GET['debug'])) {
+    echo "<pre>Event ID: " . var_export($eventId, true) . "</pre>";
+    echo "<pre>pageInfo: " . var_export($pageInfo, true) . "</pre>";
+}
+
+if (!$eventId) {
+    echo "<div class='card' style='padding:20px;margin:20px;'>Inget event-ID angivet.</div>";
+    return;
+}
+
 $currentUser = hub_current_user();
 $linkedChildren = $currentUser ? hub_get_linked_children($currentUser['id']) : [];
 
 // Get event details
-$stmt = $pdo->prepare("
-    SELECT e.*, s.name as series_name, s.id as series_id
-    FROM events e
-    LEFT JOIN series s ON e.series_id = s.id
-    WHERE e.id = ?
-");
-$stmt->execute([$eventId]);
-$event = $stmt->fetch(PDO::FETCH_ASSOC);
+try {
+    $stmt = $pdo->prepare("
+        SELECT e.*, s.name as series_name, s.id as series_id
+        FROM events e
+        LEFT JOIN series s ON e.series_id = s.id
+        WHERE e.id = ?
+    ");
+    $stmt->execute([$eventId]);
+    $event = $stmt->fetch(PDO::FETCH_ASSOC);
+} catch (PDOException $e) {
+    echo "<div class='card' style='padding:20px;margin:20px;color:red;'>Databasfel: " . htmlspecialchars($e->getMessage()) . "</div>";
+    return;
+}
 
 if (!$event) {
     include HUB_V3_ROOT . '/pages/404.php';
