@@ -283,19 +283,19 @@ if (!$event) {
 
 <!-- Class Filter -->
 <?php if (count($resultsByClass) > 1): ?>
-<section class="card mb-lg">
-  <div class="filter-row">
+<div class="filter-bar mb-lg">
+  <label class="filter-select-wrapper">
     <span class="filter-label">Klass:</span>
-    <a href="/v3/event/<?= $eventId ?>" class="btn <?= $selectedClass === 'all' ? 'btn--primary' : 'btn--ghost' ?>">Alla</a>
-    <?php foreach ($resultsByClass as $classKey => $classData): ?>
-    <a href="/v3/event/<?= $eventId ?>?class=<?= $classKey ?>"
-       class="btn <?= $selectedClass == $classKey ? 'btn--primary' : 'btn--ghost' ?>">
-      <?= htmlspecialchars($classData['display_name']) ?>
-      <span class="badge-count"><?= count($classData['results']) ?></span>
-    </a>
-    <?php endforeach; ?>
-  </div>
-</section>
+    <select class="filter-select" onchange="if(this.value) window.location=this.value">
+      <option value="/v3/event/<?= $eventId ?>" <?= $selectedClass === 'all' ? 'selected' : '' ?>>Alla klasser</option>
+      <?php foreach ($resultsByClass as $classKey => $classData): ?>
+      <option value="/v3/event/<?= $eventId ?>?class=<?= $classKey ?>" <?= $selectedClass == $classKey ? 'selected' : '' ?>>
+        <?= htmlspecialchars($classData['display_name']) ?> (<?= count($classData['results']) ?>)
+      </option>
+      <?php endforeach; ?>
+    </select>
+  </label>
+</div>
 <?php endif; ?>
 
 <?php if (empty($resultsByClass)): ?>
@@ -343,8 +343,8 @@ if (!$event) {
               <?php endif; ?>
             <?php endfor; ?>
           <?php endif; ?>
-          <?php if ($isTimeRanked): ?>
           <th class="col-time">Tid</th>
+          <?php if ($isTimeRanked): ?>
           <th class="col-gap table-col-hide-portrait">+Tid</th>
           <?php endif; ?>
           <?php if ($showPoints): ?>
@@ -374,9 +374,6 @@ if (!$event) {
             <a href="/v3/rider/<?= $result['rider_id'] ?>" class="rider-link">
               <?= htmlspecialchars($result['firstname'] . ' ' . $result['lastname']) ?>
             </a>
-            <?php if ($result['license_number']): ?>
-              <span class="license-badge"><?= htmlspecialchars($result['license_number']) ?></span>
-            <?php endif; ?>
           </td>
           <td class="table-col-hide-portrait text-muted">
             <?php if ($result['club_id']): ?>
@@ -400,7 +397,6 @@ if (!$event) {
               <?php endif; ?>
             <?php endfor; ?>
           <?php endif; ?>
-          <?php if ($isTimeRanked): ?>
           <td class="col-time">
             <?php if ($result['status'] === 'finished' && $result['finish_time']): ?>
               <?= formatDisplayTime($result['finish_time']) ?>
@@ -408,6 +404,7 @@ if (!$event) {
               -
             <?php endif; ?>
           </td>
+          <?php if ($isTimeRanked): ?>
           <td class="col-gap table-col-hide-portrait text-muted">
             <?= $result['time_behind'] ?? '-' ?>
           </td>
@@ -451,8 +448,11 @@ if (!$event) {
         <div class="result-club"><?= htmlspecialchars($result['club_name'] ?? '-') ?></div>
       </div>
       <div class="result-time-col">
-        <?php if ($isTimeRanked && $result['status'] === 'finished' && $result['finish_time']): ?>
+        <?php if ($result['status'] === 'finished' && $result['finish_time']): ?>
           <div class="time-value"><?= formatDisplayTime($result['finish_time']) ?></div>
+          <?php if ($isTimeRanked && !empty($result['time_behind'])): ?>
+            <div class="time-behind-small"><?= $result['time_behind'] ?></div>
+          <?php endif; ?>
         <?php endif; ?>
         <?php if ($showPoints && $result['points']): ?>
           <div class="points-small"><?= $result['points'] ?> p</div>
@@ -515,23 +515,40 @@ if (!$event) {
   text-decoration: underline;
 }
 
-.filter-row {
+.filter-bar {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-xs);
+  gap: var(--space-sm);
   align-items: center;
+}
+.filter-select-wrapper {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
 }
 .filter-label {
   font-size: var(--text-sm);
   color: var(--color-text-secondary);
-  margin-right: var(--space-xs);
+  white-space: nowrap;
 }
-.badge-count {
-  font-size: var(--text-xs);
-  background: var(--color-bg-sunken);
-  padding: 1px 6px;
-  border-radius: var(--radius-full);
-  margin-left: var(--space-2xs);
+.filter-select {
+  padding: var(--space-xs) var(--space-sm);
+  padding-right: var(--space-lg);
+  font-size: var(--text-sm);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-surface);
+  color: var(--color-text);
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236b7280' d='M3 4.5L6 7.5L9 4.5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  min-width: 140px;
+}
+.filter-select:focus {
+  outline: none;
+  border-color: var(--color-accent);
 }
 
 .col-place {
@@ -600,15 +617,6 @@ if (!$event) {
 .rider-link:hover {
   color: var(--color-accent-text);
 }
-.license-badge {
-  font-family: var(--font-mono);
-  font-size: var(--text-xs);
-  padding: 1px 4px;
-  background: var(--color-bg-sunken);
-  border-radius: var(--radius-sm);
-  margin-left: var(--space-xs);
-  color: var(--color-text-muted);
-}
 
 .result-place.top-3 {
   background: var(--color-accent-light);
@@ -619,6 +627,11 @@ if (!$event) {
 .time-value {
   font-family: var(--font-mono);
   font-size: var(--text-sm);
+}
+.time-behind-small {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
 }
 .points-small {
   font-size: var(--text-xs);
@@ -636,15 +649,11 @@ if (!$event) {
 }
 
 @media (max-width: 599px) {
-  .filter-row {
-    gap: 4px;
-  }
-  .filter-row .btn {
-    padding: var(--space-xs) var(--space-sm);
-    font-size: var(--text-xs);
-  }
   .page-title {
     font-size: var(--text-xl);
+  }
+  .filter-select {
+    min-width: 120px;
   }
 }
 </style>

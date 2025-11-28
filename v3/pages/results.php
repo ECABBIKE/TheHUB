@@ -111,28 +111,33 @@ try {
 </div>
 
 <!-- Filters -->
-<section class="card mb-lg">
-  <div class="filter-row">
+<div class="filter-bar mb-lg">
+  <label class="filter-select-wrapper">
     <span class="filter-label">Serie:</span>
-    <a href="/v3/results" class="btn <?= !$filterSeries && !$filterYear ? 'btn--primary' : 'btn--ghost' ?>">Alla</a>
-    <?php foreach ($allSeries as $s): ?>
-    <a href="/v3/results?series=<?= $s['id'] ?>" class="btn <?= $filterSeries == $s['id'] ? 'btn--primary' : 'btn--ghost' ?>">
-      <?= htmlspecialchars($s['name']) ?>
-    </a>
-    <?php endforeach; ?>
-  </div>
+    <select class="filter-select" onchange="if(this.value) window.location=this.value">
+      <option value="/v3/results<?= $filterYear ? '?year=' . $filterYear : '' ?>" <?= !$filterSeries ? 'selected' : '' ?>>Alla serier</option>
+      <?php foreach ($allSeries as $s): ?>
+      <option value="/v3/results?series=<?= $s['id'] ?><?= $filterYear ? '&year=' . $filterYear : '' ?>" <?= $filterSeries == $s['id'] ? 'selected' : '' ?>>
+        <?= htmlspecialchars($s['name']) ?>
+      </option>
+      <?php endforeach; ?>
+    </select>
+  </label>
+
   <?php if (!empty($allYears)): ?>
-  <div class="filter-row mt-sm">
+  <label class="filter-select-wrapper">
     <span class="filter-label">År:</span>
-    <?php foreach (array_slice($allYears, 0, 5) as $y): ?>
-    <a href="/v3/results?year=<?= $y['year'] ?><?= $filterSeries ? '&series=' . $filterSeries : '' ?>"
-       class="btn <?= $filterYear == $y['year'] ? 'btn--primary' : 'btn--ghost' ?>">
-      <?= $y['year'] ?>
-    </a>
-    <?php endforeach; ?>
-  </div>
+    <select class="filter-select" onchange="if(this.value) window.location=this.value">
+      <option value="/v3/results<?= $filterSeries ? '?series=' . $filterSeries : '' ?>" <?= !$filterYear ? 'selected' : '' ?>>Alla år</option>
+      <?php foreach ($allYears as $y): ?>
+      <option value="/v3/results?year=<?= $y['year'] ?><?= $filterSeries ? '&series=' . $filterSeries : '' ?>" <?= $filterYear == $y['year'] ? 'selected' : '' ?>>
+        <?= $y['year'] ?>
+      </option>
+      <?php endforeach; ?>
+    </select>
+  </label>
   <?php endif; ?>
-</section>
+</div>
 
 <?php if (isset($error)): ?>
 <section class="card mb-lg">
@@ -257,18 +262,41 @@ try {
   color: var(--color-text-inverse);
 }
 
-.filter-row {
+.filter-bar {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-xs);
+  gap: var(--space-sm);
   align-items: center;
+}
+.filter-select-wrapper {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
 }
 .filter-label {
   font-size: var(--text-sm);
   color: var(--color-text-secondary);
-  margin-right: var(--space-xs);
+  white-space: nowrap;
 }
-.mt-sm { margin-top: var(--space-sm); }
+.filter-select {
+  padding: var(--space-xs) var(--space-sm);
+  padding-right: var(--space-lg);
+  font-size: var(--text-sm);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-surface);
+  color: var(--color-text);
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236b7280' d='M3 4.5L6 7.5L9 4.5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  min-width: 120px;
+}
+.filter-select:focus {
+  outline: none;
+  border-color: var(--color-accent);
+}
 .mb-lg { margin-bottom: var(--space-lg); }
 
 .col-place {
@@ -330,15 +358,19 @@ try {
 }
 
 @media (max-width: 599px) {
-  .filter-row {
-    gap: 4px;
-  }
-  .filter-row .btn {
-    padding: var(--space-xs) var(--space-sm);
-    font-size: var(--text-xs);
-  }
   .page-title {
     font-size: var(--text-xl);
+  }
+  .filter-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .filter-select-wrapper {
+    width: 100%;
+  }
+  .filter-select {
+    flex: 1;
+    min-width: 0;
   }
 }
 </style>

@@ -318,39 +318,32 @@ if (!$series) {
 
 <!-- Class Filter and Search -->
 <?php if (count($activeClasses) > 1 || $searchName): ?>
-<section class="card mb-lg">
-  <div class="filter-grid">
-    <!-- Class Filter -->
-    <div class="filter-section">
-      <span class="filter-label">Klass:</span>
-      <div class="filter-row">
-        <a href="/v3/series/<?= $seriesId ?><?= $searchName ? '?search=' . urlencode($searchName) : '' ?>"
-           class="btn <?= $selectedClass === 'all' ? 'btn--primary' : 'btn--ghost' ?>">Alla</a>
-        <?php foreach ($activeClasses as $class): ?>
-        <a href="/v3/series/<?= $seriesId ?>?class=<?= $class['id'] ?><?= $searchName ? '&search=' . urlencode($searchName) : '' ?>"
-           class="btn <?= $selectedClass == $class['id'] ? 'btn--primary' : 'btn--ghost' ?>">
-          <?= htmlspecialchars($class['display_name'] ?? $class['name']) ?>
-          <span class="badge-count"><?= $class['rider_count'] ?></span>
-        </a>
-        <?php endforeach; ?>
-      </div>
-    </div>
+<div class="filter-bar mb-lg">
+  <?php if (count($activeClasses) > 1): ?>
+  <label class="filter-select-wrapper">
+    <span class="filter-label">Klass:</span>
+    <select class="filter-select" onchange="if(this.value) window.location=this.value">
+      <option value="/v3/series/<?= $seriesId ?><?= $searchName ? '?search=' . urlencode($searchName) : '' ?>" <?= $selectedClass === 'all' ? 'selected' : '' ?>>Alla klasser</option>
+      <?php foreach ($activeClasses as $class): ?>
+      <option value="/v3/series/<?= $seriesId ?>?class=<?= $class['id'] ?><?= $searchName ? '&search=' . urlencode($searchName) : '' ?>" <?= $selectedClass == $class['id'] ? 'selected' : '' ?>>
+        <?= htmlspecialchars($class['display_name'] ?? $class['name']) ?> (<?= $class['rider_count'] ?>)
+      </option>
+      <?php endforeach; ?>
+    </select>
+  </label>
+  <?php endif; ?>
 
-    <!-- Name Search -->
-    <div class="filter-section">
-      <form method="get" action="/v3/series/<?= $seriesId ?>" class="search-form">
-        <?php if ($selectedClass !== 'all'): ?>
-          <input type="hidden" name="class" value="<?= htmlspecialchars($selectedClass) ?>">
-        <?php endif; ?>
-        <input type="text" name="search" placeholder="Sök namn..." value="<?= htmlspecialchars($searchName) ?>" class="search-input">
-        <button type="submit" class="btn btn--primary">Sök</button>
-        <?php if ($searchName): ?>
-          <a href="/v3/series/<?= $seriesId ?><?= $selectedClass !== 'all' ? '?class=' . $selectedClass : '' ?>" class="btn btn--ghost">Rensa</a>
-        <?php endif; ?>
-      </form>
-    </div>
-  </div>
-</section>
+  <form method="get" action="/v3/series/<?= $seriesId ?>" class="search-inline">
+    <?php if ($selectedClass !== 'all'): ?>
+      <input type="hidden" name="class" value="<?= htmlspecialchars($selectedClass) ?>">
+    <?php endif; ?>
+    <input type="text" name="search" placeholder="Sök namn..." value="<?= htmlspecialchars($searchName) ?>" class="search-input-inline">
+    <button type="submit" class="btn btn--sm">Sök</button>
+    <?php if ($searchName): ?>
+      <a href="/v3/series/<?= $seriesId ?><?= $selectedClass !== 'all' ? '?class=' . $selectedClass : '' ?>" class="btn btn--sm btn--ghost">×</a>
+    <?php endif; ?>
+  </form>
+</div>
 <?php endif; ?>
 
 <?php if ($searchName): ?>
@@ -559,51 +552,62 @@ if (!$series) {
   white-space: nowrap;
 }
 
-.filter-grid {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-md);
-}
-.filter-section {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-sm);
-}
-.filter-row {
+.filter-bar {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-xs);
+  gap: var(--space-sm);
   align-items: center;
+}
+.filter-select-wrapper {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
 }
 .filter-label {
   font-size: var(--text-sm);
   color: var(--color-text-secondary);
-  font-weight: var(--weight-medium);
+  white-space: nowrap;
 }
-.badge-count {
-  font-size: var(--text-xs);
-  background: var(--color-bg-sunken);
-  padding: 1px 6px;
-  border-radius: var(--radius-full);
-  margin-left: var(--space-2xs);
-}
-.search-form {
-  display: flex;
-  gap: var(--space-sm);
-  flex-wrap: wrap;
-}
-.search-input {
-  flex: 1;
-  min-width: 150px;
-  padding: var(--space-sm) var(--space-md);
+.filter-select {
+  padding: var(--space-xs) var(--space-sm);
+  padding-right: var(--space-lg);
+  font-size: var(--text-sm);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   background: var(--color-bg-surface);
   color: var(--color-text);
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236b7280' d='M3 4.5L6 7.5L9 4.5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  min-width: 140px;
 }
-.search-input:focus {
+.filter-select:focus {
   outline: none;
   border-color: var(--color-accent);
+}
+.search-inline {
+  display: flex;
+  gap: var(--space-xs);
+  align-items: center;
+}
+.search-input-inline {
+  padding: var(--space-xs) var(--space-sm);
+  font-size: var(--text-sm);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-surface);
+  color: var(--color-text);
+  width: 140px;
+}
+.search-input-inline:focus {
+  outline: none;
+  border-color: var(--color-accent);
+}
+.btn--sm {
+  padding: var(--space-xs) var(--space-sm);
+  font-size: var(--text-sm);
 }
 .search-info {
   display: flex;
@@ -677,13 +681,6 @@ if (!$series) {
 }
 
 @media (max-width: 599px) {
-  .filter-row {
-    gap: 4px;
-  }
-  .filter-row .btn {
-    padding: var(--space-xs) var(--space-sm);
-    font-size: var(--text-xs);
-  }
   .page-title {
     font-size: var(--text-xl);
   }
@@ -697,11 +694,23 @@ if (!$series) {
   .event-num {
     min-width: auto;
   }
-  .search-form {
+  .filter-bar {
     flex-direction: column;
+    align-items: stretch;
   }
-  .search-form .btn {
+  .filter-select-wrapper {
     width: 100%;
+  }
+  .filter-select {
+    flex: 1;
+    min-width: 0;
+  }
+  .search-inline {
+    width: 100%;
+  }
+  .search-input-inline {
+    flex: 1;
+    width: auto;
   }
 }
 </style>
