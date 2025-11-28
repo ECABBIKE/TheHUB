@@ -24,19 +24,19 @@ $results = [];
 // Search riders
 if ($type === 'all' || $type === 'riders') {
     $stmt = $pdo->prepare("
-        SELECT r.id, r.first_name, r.last_name, c.name as club_name
+        SELECT r.id, r.firstname, r.lastname, c.name as club_name
         FROM riders r
         LEFT JOIN clubs c ON r.club_id = c.id
-        WHERE CONCAT(r.first_name, ' ', r.last_name) LIKE ?
-           OR r.first_name LIKE ?
-           OR r.last_name LIKE ?
+        WHERE CONCAT(r.firstname, ' ', r.lastname) LIKE ?
+           OR r.firstname LIKE ?
+           OR r.lastname LIKE ?
         ORDER BY
             CASE
-                WHEN CONCAT(r.first_name, ' ', r.last_name) LIKE ? THEN 1
-                WHEN r.first_name LIKE ? THEN 2
+                WHEN CONCAT(r.firstname, ' ', r.lastname) LIKE ? THEN 1
+                WHEN r.firstname LIKE ? THEN 2
                 ELSE 3
             END,
-            r.last_name, r.first_name
+            r.lastname, r.firstname
         LIMIT ?
     ");
 
@@ -48,9 +48,9 @@ if ($type === 'all' || $type === 'riders') {
         $results[] = [
             'id' => $row['id'],
             'type' => 'rider',
-            'name' => $row['first_name'] . ' ' . $row['last_name'],
+            'name' => $row['firstname'] . ' ' . $row['lastname'],
             'meta' => $row['club_name'] ?? '',
-            'initials' => strtoupper(substr($row['first_name'], 0, 1))
+            'initials' => strtoupper(substr($row['firstname'], 0, 1))
         ];
     }
 }

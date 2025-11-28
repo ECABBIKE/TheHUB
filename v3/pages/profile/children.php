@@ -45,11 +45,11 @@ $message = $_GET['msg'] ?? '';
         <?php foreach ($linkedChildren as $child): ?>
             <div class="child-card">
                 <div class="child-avatar">
-                    <?= strtoupper(substr($child['first_name'], 0, 1)) ?>
+                    <?= strtoupper(substr($child['firstname'], 0, 1)) ?>
                 </div>
                 <div class="child-info">
                     <a href="/v3/database/rider/<?= $child['id'] ?>" class="child-name">
-                        <?= htmlspecialchars($child['first_name'] . ' ' . $child['last_name']) ?>
+                        <?= htmlspecialchars($child['firstname'] . ' ' . $child['lastname']) ?>
                     </a>
                     <?php if ($child['birth_year']): ?>
                         <span class="child-age">Född <?= $child['birth_year'] ?></span>
@@ -58,7 +58,7 @@ $message = $_GET['msg'] ?? '';
                 <div class="child-actions">
                     <a href="/v3/profile/edit-child/<?= $child['id'] ?>" class="btn btn-sm btn-outline">Redigera</a>
                     <button type="button" class="btn btn-sm btn-danger-outline"
-                            onclick="confirmRemove(<?= $child['id'] ?>, '<?= htmlspecialchars($child['first_name']) ?>')">
+                            onclick="confirmRemove(<?= $child['id'] ?>, '<?= htmlspecialchars($child['firstname']) ?>')">
                         Ta bort
                     </button>
                 </div>

@@ -21,13 +21,13 @@ $adminClubs = hub_get_admin_clubs($currentUser['id']);
 
 // Get upcoming registrations
 $regStmt = $pdo->prepare("
-    SELECT r.*, e.name as event_name, e.event_date, e.location,
+    SELECT r.*, e.name as event_name, e.date as event_date, e.location,
            ec.name as class_name
-    FROM registrations r
+    FROM event_registrations r
     JOIN events e ON r.event_id = e.id
     LEFT JOIN event_classes ec ON r.class_id = ec.id
-    WHERE r.rider_id = ? AND e.event_date >= CURDATE() AND r.status != 'cancelled'
-    ORDER BY e.event_date ASC
+    WHERE r.rider_id = ? AND e.date >= CURDATE() AND r.status != 'cancelled'
+    ORDER BY e.date ASC
     LIMIT 5
 ");
 $regStmt->execute([$currentUser['id']]);
@@ -35,13 +35,13 @@ $upcomingRegs = $regStmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Get recent results
 $resultStmt = $pdo->prepare("
-    SELECT res.*, e.name as event_name, e.event_date,
+    SELECT res.*, e.name as event_name, e.date as event_date,
            ec.name as class_name
     FROM results res
     JOIN events e ON res.event_id = e.id
     LEFT JOIN event_classes ec ON res.class_id = ec.id
     WHERE res.rider_id = ?
-    ORDER BY e.event_date DESC
+    ORDER BY e.date DESC
     LIMIT 5
 ");
 $resultStmt->execute([$currentUser['id']]);
@@ -58,10 +58,10 @@ $recentResults = $resultStmt->fetchAll(PDO::FETCH_ASSOC);
 <!-- Profile Card -->
 <div class="profile-card">
     <div class="profile-avatar">
-        <?= strtoupper(substr($currentUser['first_name'], 0, 1) . substr($currentUser['last_name'], 0, 1)) ?>
+        <?= strtoupper(substr($currentUser['firstname'], 0, 1) . substr($currentUser['lastname'], 0, 1)) ?>
     </div>
     <div class="profile-info">
-        <h2 class="profile-name"><?= htmlspecialchars($currentUser['first_name'] . ' ' . $currentUser['last_name']) ?></h2>
+        <h2 class="profile-name"><?= htmlspecialchars($currentUser['firstname'] . ' ' . $currentUser['lastname']) ?></h2>
         <?php if ($currentUser['email']): ?>
             <p class="profile-email"><?= htmlspecialchars($currentUser['email']) ?></p>
         <?php endif; ?>
