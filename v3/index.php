@@ -54,5 +54,6 @@ if (hub_is_ajax()) {
     <script src="<?= hub_asset('js/theme.js') ?>"></script>
     <script src="<?= hub_asset('js/router.js') ?>"></script>
     <script src="<?= hub_asset('js/app.js') ?>"></script>
+    <script src="<?= hub_asset('js/pwa.js') ?>"></script>
 </body>
 </html>
