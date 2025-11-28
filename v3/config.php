@@ -26,33 +26,50 @@ if (!isset($GLOBALS['pdo'])) {
 }
 
 // ============================================================================
-// V3 VERSION INFO (only define if not already defined)
+// V3.5 VERSION INFO
 // ============================================================================
-if (!defined('HUB_VERSION')) define('HUB_VERSION', '3.2.3');
-if (!defined('CSS_VERSION')) define('CSS_VERSION', '3.2.3');
-if (!defined('JS_VERSION')) define('JS_VERSION', '3.2.3');
+if (!defined('HUB_VERSION')) define('HUB_VERSION', '3.5.0');
+if (!defined('CSS_VERSION')) define('CSS_VERSION', '3.5.0');
+if (!defined('JS_VERSION')) define('JS_VERSION', '3.5.0');
 
 if (!defined('HUB_V3_ROOT')) define('HUB_V3_ROOT', __DIR__);
 if (!defined('HUB_V3_URL')) define('HUB_V3_URL', '/v3');
+if (!defined('HUB_V2_ROOT')) define('HUB_V2_ROOT', dirname(__DIR__));
+
+// WooCommerce integration
+if (!defined('WC_CHECKOUT_URL')) define('WC_CHECKOUT_URL', '/checkout');
 
 // ============================================================================
-// V3 NAVIGATION & PAGES
+// V3.5 NAVIGATION (5 main sections)
 // ============================================================================
-if (!defined('HUB_VALID_PAGES')) {
-    define('HUB_VALID_PAGES', [
-        'dashboard', 'series', 'series-single', 'results', 'event',
-        'riders', 'rider', 'clubs', 'club', 'ranking', '404'
+if (!defined('HUB_NAV')) {
+    define('HUB_NAV', [
+        ['id' => 'calendar', 'label' => 'Kalender', 'icon' => 'calendar', 'url' => '/v3/calendar', 'aria' => 'Visa eventkalender'],
+        ['id' => 'results', 'label' => 'Resultat', 'icon' => 'flag', 'url' => '/v3/results', 'aria' => 'Visa tävlingsresultat'],
+        ['id' => 'database', 'label' => 'Databas', 'icon' => 'search', 'url' => '/v3/database', 'aria' => 'Sök åkare och klubbar'],
+        ['id' => 'ranking', 'label' => 'Ranking', 'icon' => 'trending-up', 'url' => '/v3/ranking', 'aria' => 'Visa ranking'],
+        ['id' => 'profile', 'label' => 'Mitt', 'icon' => 'user', 'url' => '/v3/profile', 'aria' => 'Min profil']
     ]);
 }
 
-if (!defined('HUB_NAV')) {
-    define('HUB_NAV', [
-        ['id' => 'dashboard', 'label' => 'Dashboard', 'icon' => 'home', 'url' => '/v3/', 'aria' => 'Gå till startsidan'],
-        ['id' => 'series', 'label' => 'Serier', 'icon' => 'trophy', 'url' => '/v3/series', 'aria' => 'Visa alla serier'],
-        ['id' => 'results', 'label' => 'Resultat', 'icon' => 'flag', 'url' => '/v3/results', 'aria' => 'Visa tävlingsresultat'],
-        ['id' => 'ranking', 'label' => 'Ranking', 'icon' => 'trending-up', 'url' => '/v3/ranking', 'aria' => 'Visa ranking'],
-        ['id' => 'riders', 'label' => 'Åkare', 'icon' => 'users', 'url' => '/v3/riders', 'aria' => 'Sök bland åkare'],
-        ['id' => 'clubs', 'label' => 'Klubbar', 'icon' => 'shield', 'url' => '/v3/clubs', 'aria' => 'Visa klubbar och lag']
+// Valid pages/routes
+if (!defined('HUB_VALID_PAGES')) {
+    define('HUB_VALID_PAGES', [
+        'dashboard',
+        // Calendar
+        'calendar', 'calendar-event',
+        // Results
+        'results', 'results-event', 'results-series',
+        // Database
+        'database', 'database-rider', 'database-club',
+        // Ranking
+        'ranking', 'ranking-riders', 'ranking-clubs', 'ranking-events',
+        // Profile
+        'profile', 'profile-edit', 'profile-children', 'profile-club-admin',
+        'profile-registrations', 'profile-results', 'profile-receipts', 'profile-login',
+        // Legacy support
+        'series', 'series-single', 'event', 'riders', 'rider', 'clubs', 'club',
+        '404'
     ]);
 }
 
@@ -80,5 +97,112 @@ if (!function_exists('hub_db')) {
      */
     function hub_db(): PDO {
         return $GLOBALS['pdo'];
+    }
+}
+
+// ============================================================================
+// AUTHENTICATION FUNCTIONS
+// ============================================================================
+
+if (!function_exists('hub_is_logged_in')) {
+    /**
+     * Check if user is logged in (via WooCommerce/WordPress or session)
+     */
+    function hub_is_logged_in(): bool {
+        if (function_exists('is_user_logged_in')) {
+            return is_user_logged_in();
+        }
+        return isset($_SESSION['hub_user_id']) && $_SESSION['hub_user_id'] > 0;
+    }
+}
+
+if (!function_exists('hub_current_user')) {
+    /**
+     * Get current logged in user's rider profile
+     */
+    function hub_current_user(): ?array {
+        if (!hub_is_logged_in()) return null;
+
+        if (function_exists('wp_get_current_user')) {
+            $wp_user = wp_get_current_user();
+            return hub_get_rider_by_email($wp_user->user_email);
+        }
+
+        return isset($_SESSION['hub_user_id'])
+            ? hub_get_rider_by_id($_SESSION['hub_user_id'])
+            : null;
+    }
+}
+
+if (!function_exists('hub_get_rider_by_id')) {
+    function hub_get_rider_by_id(int $id): ?array {
+        $stmt = hub_db()->prepare("SELECT * FROM riders WHERE id = ?");
+        $stmt->execute([$id]);
+        return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+    }
+}
+
+if (!function_exists('hub_get_rider_by_email')) {
+    function hub_get_rider_by_email(string $email): ?array {
+        $stmt = hub_db()->prepare("SELECT * FROM riders WHERE email = ?");
+        $stmt->execute([$email]);
+        return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+    }
+}
+
+// ============================================================================
+// PARENT/CHILD & PERMISSIONS
+// ============================================================================
+
+if (!function_exists('hub_is_parent_of')) {
+    function hub_is_parent_of(int $parentId, int $childId): bool {
+        $stmt = hub_db()->prepare("SELECT 1 FROM rider_parents WHERE parent_rider_id = ? AND child_rider_id = ?");
+        $stmt->execute([$parentId, $childId]);
+        return (bool) $stmt->fetch();
+    }
+}
+
+if (!function_exists('hub_get_linked_children')) {
+    function hub_get_linked_children(int $parentId): array {
+        $stmt = hub_db()->prepare("
+            SELECT r.* FROM riders r
+            JOIN rider_parents rp ON r.id = rp.child_rider_id
+            WHERE rp.parent_rider_id = ?
+        ");
+        $stmt->execute([$parentId]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+}
+
+if (!function_exists('hub_can_edit_profile')) {
+    function hub_can_edit_profile(int $profileId): bool {
+        $user = hub_current_user();
+        if (!$user) return false;
+        if ($user['id'] === $profileId) return true;
+        if (hub_is_parent_of($user['id'], $profileId)) return true;
+        return false;
+    }
+}
+
+if (!function_exists('hub_can_edit_club')) {
+    function hub_can_edit_club(int $clubId): bool {
+        $user = hub_current_user();
+        if (!$user) return false;
+
+        $stmt = hub_db()->prepare("SELECT 1 FROM club_admins WHERE rider_id = ? AND club_id = ?");
+        $stmt->execute([$user['id'], $clubId]);
+        return (bool) $stmt->fetch();
+    }
+}
+
+if (!function_exists('hub_get_admin_clubs')) {
+    function hub_get_admin_clubs(int $riderId): array {
+        $stmt = hub_db()->prepare("
+            SELECT c.* FROM clubs c
+            JOIN club_admins ca ON c.id = ca.club_id
+            WHERE ca.rider_id = ?
+        ");
+        $stmt->execute([$riderId]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 }

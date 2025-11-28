@@ -39,18 +39,25 @@
   ],
   "shortcuts": [
     {
+      "name": "Kalender",
+      "short_name": "Kalender",
+      "description": "Visa kommande tävlingar",
+      "url": "/v3/calendar",
+      "icons": [{ "src": "/uploads/icons/GSIkon.png", "sizes": "192x192" }]
+    },
+    {
       "name": "Resultat",
       "short_name": "Resultat",
       "description": "Visa senaste tävlingsresultat",
       "url": "/v3/results",
-      "icons": [{ "src": "/v3/assets/icons/shortcut-results.png", "sizes": "192x192" }]
+      "icons": [{ "src": "/uploads/icons/GSIkon.png", "sizes": "192x192" }]
     },
     {
-      "name": "Serier",
-      "short_name": "Serier",
-      "description": "Visa serieställningar",
-      "url": "/v3/series",
-      "icons": [{ "src": "/v3/assets/icons/shortcut-series.png", "sizes": "192x192" }]
+      "name": "Min Sida",
+      "short_name": "Profil",
+      "description": "Min profil och anmälningar",
+      "url": "/v3/profile",
+      "icons": [{ "src": "/uploads/icons/GSIkon.png", "sizes": "192x192" }]
     }
   ],
   "related_applications": [],
