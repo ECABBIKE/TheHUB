@@ -55,12 +55,6 @@ if (!$club) {
 }
 ?>
 
-<nav class="breadcrumb mb-md">
-  <a href="/v3/riders" class="breadcrumb-link">Deltagare</a>
-  <span class="breadcrumb-separator">›</span>
-  <span class="breadcrumb-current"><?= htmlspecialchars($club['name']) ?></span>
-</nav>
-
 <div class="page-header">
   <h1 class="page-title"><?= htmlspecialchars($club['name']) ?></h1>
   <div class="page-meta">

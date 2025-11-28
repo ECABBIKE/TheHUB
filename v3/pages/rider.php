@@ -124,12 +124,6 @@ $genderText = match($rider['gender']) {
 };
 ?>
 
-<nav class="breadcrumb mb-md">
-  <a href="/v3/riders" class="breadcrumb-link">Deltagare</a>
-  <span class="breadcrumb-separator">›</span>
-  <span class="breadcrumb-current"><?= $fullName ?></span>
-</nav>
-
 <?php if (isset($error)): ?>
 <section class="card mb-lg">
   <div class="card-title" style="color: var(--color-error)">Fel</div>
@@ -165,7 +159,7 @@ $genderText = match($rider['gender']) {
 </section>
 
 <!-- Stats Grid -->
-<section class="stats-row mb-lg">
+<section class="stats-grid-4 mb-lg">
   <div class="stat-box">
     <div class="stat-value"><?= $totalStarts ?></div>
     <div class="stat-label">Starter</div>
@@ -174,7 +168,6 @@ $genderText = match($rider['gender']) {
     <div class="stat-value"><?= $finishedRaces ?></div>
     <div class="stat-label">Fullföljt</div>
   </div>
-  <?php if ($wins > 0 || $podiums > 0): ?>
   <div class="stat-box <?= $wins > 0 ? 'stat-box--gold' : '' ?>">
     <div class="stat-value"><?= $wins ?></div>
     <div class="stat-label">Segrar</div>
@@ -183,12 +176,6 @@ $genderText = match($rider['gender']) {
     <div class="stat-value"><?= $podiums ?></div>
     <div class="stat-label">Pallplatser</div>
   </div>
-  <?php else: ?>
-  <div class="stat-box">
-    <div class="stat-value"><?= $bestPosition ? '#' . $bestPosition : '-' ?></div>
-    <div class="stat-label">Bästa</div>
-  </div>
-  <?php endif; ?>
 </section>
 
 <!-- Results -->
@@ -389,17 +376,15 @@ $genderText = match($rider['gender']) {
   color: var(--color-text-muted);
 }
 
-/* Stats Row */
-.stats-row {
-  display: flex;
+/* Stats Grid 4 columns */
+.stats-grid-4 {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
   gap: var(--space-sm);
-  flex-wrap: wrap;
 }
 .stat-box {
-  flex: 1;
-  min-width: 70px;
   text-align: center;
-  padding: var(--space-md) var(--space-sm);
+  padding: var(--space-md) var(--space-xs);
   background: var(--color-bg-surface);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-sm);
@@ -506,12 +491,18 @@ $genderText = match($rider['gender']) {
   .profile-name {
     font-size: var(--text-lg);
   }
+  .stats-grid-4 {
+    grid-template-columns: repeat(4, 1fr);
+    gap: var(--space-xs);
+  }
   .stat-box {
-    min-width: 60px;
-    padding: var(--space-sm);
+    padding: var(--space-sm) var(--space-2xs);
   }
   .stat-value {
-    font-size: var(--text-xl);
+    font-size: var(--text-lg);
+  }
+  .stat-label {
+    font-size: 9px;
   }
 }
 </style>
