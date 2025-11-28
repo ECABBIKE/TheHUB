@@ -1,6 +1,6 @@
 <?php
 /**
- * V3 Results Page - Events with results
+ * V3 Results Page - Shows recent results (actual results, not just events)
  */
 
 $db = hub_db();
@@ -8,140 +8,337 @@ $db = hub_db();
 // Get filter parameters
 $filterSeries = isset($_GET['series']) && is_numeric($_GET['series']) ? intval($_GET['series']) : null;
 $filterYear = isset($_GET['year']) && is_numeric($_GET['year']) ? intval($_GET['year']) : null;
+$filterEvent = isset($_GET['event']) && is_numeric($_GET['event']) ? intval($_GET['event']) : null;
 
-// Build query
-$where = [];
-$params = [];
+try {
+    // Build query for results
+    $where = ["r.id IS NOT NULL"];
+    $params = [];
 
-if ($filterSeries) {
-    $where[] = "e.series_id = ?";
-    $params[] = $filterSeries;
+    if ($filterSeries) {
+        $where[] = "s.id = ?";
+        $params[] = $filterSeries;
+    }
+    if ($filterYear) {
+        $where[] = "YEAR(e.date) = ?";
+        $params[] = $filterYear;
+    }
+    if ($filterEvent) {
+        $where[] = "e.id = ?";
+        $params[] = $filterEvent;
+    }
+
+    $whereClause = 'WHERE ' . implode(' AND ', $where);
+
+    // Get recent results with rider, event, and class info
+    $sql = "SELECT
+        r.id, r.position, r.finish_time, r.points, r.status,
+        c.id as rider_id, c.firstname, c.lastname,
+        cl.name as club_name,
+        e.id as event_id, e.name as event_name, e.date as event_date,
+        s.name as series_name, s.id as series_id,
+        cls.display_name as class_name
+    FROM results r
+    JOIN riders c ON r.cyclist_id = c.id
+    LEFT JOIN clubs cl ON c.club_id = cl.id
+    JOIN events e ON r.event_id = e.id
+    LEFT JOIN series s ON e.series_id = s.id
+    LEFT JOIN classes cls ON r.class_id = cls.id
+    {$whereClause}
+    ORDER BY e.date DESC, r.position ASC
+    LIMIT 200";
+
+    $stmt = $db->prepare($sql);
+    $stmt->execute($params);
+    $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // Group results by event for display
+    $resultsByEvent = [];
+    foreach ($results as $result) {
+        $eventId = $result['event_id'];
+        if (!isset($resultsByEvent[$eventId])) {
+            $resultsByEvent[$eventId] = [
+                'event_id' => $eventId,
+                'event_name' => $result['event_name'],
+                'event_date' => $result['event_date'],
+                'series_name' => $result['series_name'],
+                'series_id' => $result['series_id'],
+                'results' => []
+            ];
+        }
+        $resultsByEvent[$eventId]['results'][] = $result;
+    }
+
+    // Get series for filter
+    $allSeries = $db->query("
+        SELECT DISTINCT s.id, s.name
+        FROM series s
+        INNER JOIN events e ON s.id = e.series_id
+        INNER JOIN results r ON e.id = r.event_id
+        WHERE s.status = 'active'
+        ORDER BY s.name
+    ")->fetchAll(PDO::FETCH_ASSOC);
+
+    // Get years for filter
+    $allYears = $db->query("
+        SELECT DISTINCT YEAR(e.date) as year
+        FROM events e
+        INNER JOIN results r ON e.id = r.event_id
+        WHERE e.date IS NOT NULL
+        ORDER BY year DESC
+    ")->fetchAll(PDO::FETCH_ASSOC);
+
+    $totalResults = count($results);
+    $totalEvents = count($resultsByEvent);
+
+} catch (Exception $e) {
+    $results = [];
+    $resultsByEvent = [];
+    $allSeries = [];
+    $allYears = [];
+    $totalResults = 0;
+    $totalEvents = 0;
+    $error = $e->getMessage();
 }
-if ($filterYear) {
-    $where[] = "YEAR(e.date) = ?";
-    $params[] = $filterYear;
-}
-
-$whereClause = !empty($where) ? 'WHERE ' . implode(' AND ', $where) : '';
-
-// Get events with results
-$sql = "SELECT
-    e.id, e.name, e.date, e.location, e.status,
-    s.name as series_name, s.id as series_id,
-    COUNT(DISTINCT r.id) as result_count,
-    COUNT(DISTINCT r.cyclist_id) as rider_count
-FROM events e
-LEFT JOIN results r ON e.id = r.event_id
-LEFT JOIN series s ON e.series_id = s.id
-{$whereClause}
-GROUP BY e.id
-HAVING result_count > 0
-ORDER BY e.date DESC
-LIMIT 50";
-
-$stmt = $db->prepare($sql);
-$stmt->execute($params);
-$events = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-// Get series for filter
-$allSeries = $db->query("
-    SELECT DISTINCT s.id, s.name
-    FROM series s
-    INNER JOIN events e ON s.id = e.series_id
-    INNER JOIN results r ON e.id = r.event_id
-    WHERE s.status = 'active'
-    ORDER BY s.name
-")->fetchAll(PDO::FETCH_ASSOC);
-
-// Get years for filter
-$allYears = $db->query("
-    SELECT DISTINCT YEAR(e.date) as year
-    FROM events e
-    INNER JOIN results r ON e.id = r.event_id
-    WHERE e.date IS NOT NULL
-    ORDER BY year DESC
-")->fetchAll(PDO::FETCH_ASSOC);
-
-$total = count($events);
 ?>
 
-<h1 class="text-2xl font-bold mb-lg">Resultat</h1>
-
-<div class="page-grid">
-  <!-- Filters -->
-  <section class="card grid-full">
-    <div class="flex flex-wrap gap-sm items-center">
-      <span class="text-secondary text-sm">Filter:</span>
-      <a href="/v3/results" class="btn <?= !$filterSeries && !$filterYear ? 'btn--primary' : 'btn--secondary' ?> text-sm">Alla</a>
-      <?php foreach ($allSeries as $s): ?>
-      <a href="/v3/results?series=<?= $s['id'] ?>" class="btn <?= $filterSeries == $s['id'] ? 'btn--primary' : 'btn--secondary' ?> text-sm">
-        <?= htmlspecialchars($s['name']) ?>
-      </a>
-      <?php endforeach; ?>
-    </div>
-    <?php if (!empty($allYears)): ?>
-    <div class="flex flex-wrap gap-sm items-center mt-sm">
-      <span class="text-secondary text-sm">År:</span>
-      <?php foreach (array_slice($allYears, 0, 5) as $y): ?>
-      <a href="/v3/results?year=<?= $y['year'] ?>" class="btn <?= $filterYear == $y['year'] ? 'btn--primary' : 'btn--ghost' ?> text-sm">
-        <?= $y['year'] ?>
-      </a>
-      <?php endforeach; ?>
-    </div>
-    <?php endif; ?>
-  </section>
-
-  <!-- Events List -->
-  <section class="card grid-full" aria-labelledby="events-title">
-    <div class="card-header">
-      <div>
-        <h2 id="events-title" class="card-title">Event med resultat</h2>
-        <p class="card-subtitle"><?= $total ?> event</p>
-      </div>
-    </div>
-
-    <?php if (empty($events)): ?>
-    <div class="text-center p-lg">
-      <p class="text-muted">Inga event hittades med dessa filter</p>
-    </div>
-    <?php else: ?>
-    <div class="table-wrapper">
-      <table class="table table--striped table--clickable">
-        <thead>
-          <tr>
-            <th scope="col">Event</th>
-            <th scope="col" class="table-col-hide-portrait">Serie</th>
-            <th scope="col">Datum</th>
-            <th scope="col" class="text-right">Resultat</th>
-          </tr>
-        </thead>
-        <tbody>
-          <?php foreach ($events as $event): ?>
-          <tr data-href="/v3/event/<?= $event['id'] ?>">
-            <td class="col-rider"><?= htmlspecialchars($event['name']) ?></td>
-            <td class="table-col-hide-portrait text-secondary"><?= htmlspecialchars($event['series_name'] ?? '-') ?></td>
-            <td><?= $event['date'] ? date('j M Y', strtotime($event['date'])) : '-' ?></td>
-            <td class="text-right">
-              <span class="chip chip--success"><?= $event['result_count'] ?></span>
-            </td>
-          </tr>
-          <?php endforeach; ?>
-        </tbody>
-      </table>
-    </div>
-
-    <!-- Mobile Card View -->
-    <div class="result-list">
-      <?php foreach ($events as $event): ?>
-      <a href="/v3/event/<?= $event['id'] ?>" class="result-item">
-        <div class="result-place"><?= $event['result_count'] ?></div>
-        <div class="result-info">
-          <div class="result-name"><?= htmlspecialchars($event['name']) ?></div>
-          <div class="result-club"><?= htmlspecialchars($event['series_name'] ?? '') ?> • <?= $event['date'] ? date('j M Y', strtotime($event['date'])) : '' ?></div>
-        </div>
-      </a>
-      <?php endforeach; ?>
-    </div>
-    <?php endif; ?>
-  </section>
+<div class="page-header">
+  <h1 class="page-title">Resultat</h1>
+  <div class="page-meta">
+    <span class="chip chip--primary"><?= number_format($totalResults) ?> resultat</span>
+    <span class="chip"><?= $totalEvents ?> event</span>
+  </div>
 </div>
+
+<!-- Filters -->
+<section class="card mb-lg">
+  <div class="filter-row">
+    <span class="filter-label">Serie:</span>
+    <a href="/v3/results" class="btn <?= !$filterSeries && !$filterYear ? 'btn--primary' : 'btn--ghost' ?>">Alla</a>
+    <?php foreach ($allSeries as $s): ?>
+    <a href="/v3/results?series=<?= $s['id'] ?>" class="btn <?= $filterSeries == $s['id'] ? 'btn--primary' : 'btn--ghost' ?>">
+      <?= htmlspecialchars($s['name']) ?>
+    </a>
+    <?php endforeach; ?>
+  </div>
+  <?php if (!empty($allYears)): ?>
+  <div class="filter-row mt-sm">
+    <span class="filter-label">År:</span>
+    <?php foreach (array_slice($allYears, 0, 5) as $y): ?>
+    <a href="/v3/results?year=<?= $y['year'] ?><?= $filterSeries ? '&series=' . $filterSeries : '' ?>"
+       class="btn <?= $filterYear == $y['year'] ? 'btn--primary' : 'btn--ghost' ?>">
+      <?= $y['year'] ?>
+    </a>
+    <?php endforeach; ?>
+  </div>
+  <?php endif; ?>
+</section>
+
+<?php if (isset($error)): ?>
+<section class="card mb-lg">
+  <div class="card-title" style="color: var(--color-error)">Fel</div>
+  <p><?= htmlspecialchars($error) ?></p>
+</section>
+<?php endif; ?>
+
+<?php if (empty($resultsByEvent)): ?>
+<section class="card">
+  <div class="empty-state">
+    <div class="empty-state-icon">🏁</div>
+    <p>Inga resultat hittades med dessa filter</p>
+  </div>
+</section>
+<?php else: ?>
+
+<?php foreach ($resultsByEvent as $eventData): ?>
+<section class="card mb-lg">
+  <div class="card-header">
+    <div>
+      <h2 class="card-title">
+        <a href="/v3/event/<?= $eventData['event_id'] ?>"><?= htmlspecialchars($eventData['event_name']) ?></a>
+      </h2>
+      <p class="card-subtitle">
+        <?= htmlspecialchars($eventData['series_name'] ?? '') ?>
+        <?php if ($eventData['event_date']): ?>
+          • <?= date('j M Y', strtotime($eventData['event_date'])) ?>
+        <?php endif; ?>
+        • <?= count($eventData['results']) ?> resultat
+      </p>
+    </div>
+    <a href="/v3/event/<?= $eventData['event_id'] ?>" class="btn btn--ghost">Visa alla →</a>
+  </div>
+
+  <div class="table-wrapper">
+    <table class="table table--striped table--hover">
+      <thead>
+        <tr>
+          <th class="col-place">#</th>
+          <th class="col-rider">Åkare</th>
+          <th class="table-col-hide-portrait">Klubb</th>
+          <th class="table-col-hide-portrait">Klass</th>
+          <th class="col-time">Tid</th>
+          <th class="col-points table-col-hide-portrait">Poäng</th>
+        </tr>
+      </thead>
+      <tbody>
+        <?php foreach (array_slice($eventData['results'], 0, 10) as $result): ?>
+        <tr onclick="window.location='/v3/rider/<?= $result['rider_id'] ?>'" style="cursor:pointer">
+          <td class="col-place <?= $result['position'] <= 3 ? 'col-place--' . $result['position'] : '' ?>">
+            <?php if ($result['position'] == 1): ?>🥇
+            <?php elseif ($result['position'] == 2): ?>🥈
+            <?php elseif ($result['position'] == 3): ?>🥉
+            <?php else: ?><?= $result['position'] ?>
+            <?php endif; ?>
+          </td>
+          <td class="col-rider">
+            <a href="/v3/rider/<?= $result['rider_id'] ?>" class="rider-link">
+              <?= htmlspecialchars($result['firstname'] . ' ' . $result['lastname']) ?>
+            </a>
+          </td>
+          <td class="table-col-hide-portrait text-muted"><?= htmlspecialchars($result['club_name'] ?? '-') ?></td>
+          <td class="table-col-hide-portrait text-muted"><?= htmlspecialchars($result['class_name'] ?? '-') ?></td>
+          <td class="col-time"><?= htmlspecialchars($result['finish_time'] ?? '-') ?></td>
+          <td class="col-points table-col-hide-portrait">
+            <?php if ($result['points']): ?>
+              <span class="points-value"><?= $result['points'] ?></span>
+            <?php else: ?>-<?php endif; ?>
+          </td>
+        </tr>
+        <?php endforeach; ?>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Mobile Card View -->
+  <div class="result-list">
+    <?php foreach (array_slice($eventData['results'], 0, 10) as $result): ?>
+    <a href="/v3/rider/<?= $result['rider_id'] ?>" class="result-item">
+      <div class="result-place <?= $result['position'] <= 3 ? 'top-3' : '' ?>">
+        <?php if ($result['position'] == 1): ?>🥇
+        <?php elseif ($result['position'] == 2): ?>🥈
+        <?php elseif ($result['position'] == 3): ?>🥉
+        <?php else: ?><?= $result['position'] ?>
+        <?php endif; ?>
+      </div>
+      <div class="result-info">
+        <div class="result-name"><?= htmlspecialchars($result['firstname'] . ' ' . $result['lastname']) ?></div>
+        <div class="result-club"><?= htmlspecialchars($result['club_name'] ?? '-') ?> • <?= htmlspecialchars($result['class_name'] ?? '') ?></div>
+      </div>
+      <div class="result-time-col">
+        <div class="time-value"><?= htmlspecialchars($result['finish_time'] ?? '-') ?></div>
+        <?php if ($result['points']): ?>
+          <div class="points-small"><?= $result['points'] ?> p</div>
+        <?php endif; ?>
+      </div>
+    </a>
+    <?php endforeach; ?>
+  </div>
+</section>
+<?php endforeach; ?>
+
+<?php endif; ?>
+
+<style>
+.page-header {
+  margin-bottom: var(--space-lg);
+}
+.page-title {
+  font-size: var(--text-2xl);
+  font-weight: var(--weight-bold);
+  margin: 0 0 var(--space-sm) 0;
+}
+.page-meta {
+  display: flex;
+  gap: var(--space-sm);
+  flex-wrap: wrap;
+}
+.chip--primary {
+  background: var(--color-accent);
+  color: var(--color-text-inverse);
+}
+
+.filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+  align-items: center;
+}
+.filter-label {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  margin-right: var(--space-xs);
+}
+.mt-sm { margin-top: var(--space-sm); }
+.mb-lg { margin-bottom: var(--space-lg); }
+
+.col-place {
+  width: 40px;
+  text-align: center;
+  font-weight: var(--weight-bold);
+}
+.col-place--1 { color: #FFD700; }
+.col-place--2 { color: #C0C0C0; }
+.col-place--3 { color: #CD7F32; }
+
+.col-time {
+  text-align: right;
+  font-family: var(--font-mono);
+  white-space: nowrap;
+}
+.col-points {
+  text-align: right;
+}
+.points-value {
+  font-weight: var(--weight-semibold);
+  color: var(--color-accent-text);
+}
+
+.rider-link {
+  color: var(--color-text);
+  font-weight: var(--weight-medium);
+}
+.rider-link:hover {
+  color: var(--color-accent-text);
+}
+.text-muted {
+  color: var(--color-text-muted);
+}
+
+.empty-state {
+  text-align: center;
+  padding: var(--space-2xl);
+  color: var(--color-text-muted);
+}
+.empty-state-icon {
+  font-size: 48px;
+  margin-bottom: var(--space-md);
+}
+
+.result-place.top-3 {
+  background: var(--color-accent-light);
+}
+.result-time-col {
+  text-align: right;
+}
+.time-value {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+}
+.points-small {
+  font-size: var(--text-xs);
+  color: var(--color-accent-text);
+}
+
+@media (max-width: 599px) {
+  .filter-row {
+    gap: 4px;
+  }
+  .filter-row .btn {
+    padding: var(--space-xs) var(--space-sm);
+    font-size: var(--text-xs);
+  }
+  .page-title {
+    font-size: var(--text-xl);
+  }
+}
+</style>

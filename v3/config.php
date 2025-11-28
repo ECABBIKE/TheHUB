@@ -28,9 +28,9 @@ if (!isset($GLOBALS['pdo'])) {
 // ============================================================================
 // V3 VERSION INFO (only define if not already defined)
 // ============================================================================
-if (!defined('HUB_VERSION')) define('HUB_VERSION', '3.0.3');
-if (!defined('CSS_VERSION')) define('CSS_VERSION', '3.0.3');
-if (!defined('JS_VERSION')) define('JS_VERSION', '3.0.3');
+if (!defined('HUB_VERSION')) define('HUB_VERSION', '3.0.4');
+if (!defined('CSS_VERSION')) define('CSS_VERSION', '3.0.4');
+if (!defined('JS_VERSION')) define('JS_VERSION', '3.0.4');
 
 if (!defined('HUB_V3_ROOT')) define('HUB_V3_ROOT', __DIR__);
 if (!defined('HUB_V3_URL')) define('HUB_V3_URL', '/v3');
@@ -40,8 +40,8 @@ if (!defined('HUB_V3_URL')) define('HUB_V3_URL', '/v3');
 // ============================================================================
 if (!defined('HUB_VALID_PAGES')) {
     define('HUB_VALID_PAGES', [
-        'dashboard', 'series', 'results', 'event',
-        'riders', 'rider', 'clubs', 'club', '404'
+        'dashboard', 'series', 'series-single', 'results', 'event',
+        'riders', 'rider', 'clubs', 'club', 'ranking', '404'
     ]);
 }
 
@@ -50,6 +50,7 @@ if (!defined('HUB_NAV')) {
         ['id' => 'dashboard', 'label' => 'Dashboard', 'icon' => 'home', 'url' => '/v3/', 'aria' => 'Gå till startsidan'],
         ['id' => 'series', 'label' => 'Serier', 'icon' => 'trophy', 'url' => '/v3/series', 'aria' => 'Visa alla serier'],
         ['id' => 'results', 'label' => 'Resultat', 'icon' => 'flag', 'url' => '/v3/results', 'aria' => 'Visa tävlingsresultat'],
+        ['id' => 'ranking', 'label' => 'Ranking', 'icon' => 'trending-up', 'url' => '/v3/ranking', 'aria' => 'Visa ranking'],
         ['id' => 'riders', 'label' => 'Åkare', 'icon' => 'users', 'url' => '/v3/riders', 'aria' => 'Sök bland åkare'],
         ['id' => 'clubs', 'label' => 'Klubbar', 'icon' => 'shield', 'url' => '/v3/clubs', 'aria' => 'Visa klubbar och lag']
     ]);

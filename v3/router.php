@@ -11,13 +11,22 @@ function hub_get_current_page(): array {
     $segments = explode('/', $raw);
     $page = $segments[0];
 
-    // Single-item pages (rider/123, event/456, club/789)
+    // Single-item pages (rider/123, event/456, club/789, series/123)
     $singlePages = ['rider', 'event', 'club'];
     if (in_array($page, $singlePages) && isset($segments[1])) {
         return [
             'page' => $page,
             'params' => ['id' => $segments[1]],
             'file' => HUB_V3_ROOT . '/pages/' . $page . '.php'
+        ];
+    }
+
+    // Series single page (series/123 -> series-single.php)
+    if ($page === 'series' && isset($segments[1]) && is_numeric($segments[1])) {
+        return [
+            'page' => 'series-single',
+            'params' => ['id' => $segments[1]],
+            'file' => HUB_V3_ROOT . '/pages/series-single.php'
         ];
     }
 
@@ -35,8 +44,10 @@ function hub_is_ajax(): bool {
 
 function hub_is_nav_active(string $navId, string $currentPage): bool {
     if ($navId === 'dashboard' && $currentPage === 'dashboard') return true;
+    if ($navId === 'series' && in_array($currentPage, ['series', 'series-single'])) return true;
     if ($navId === 'results' && in_array($currentPage, ['results', 'event'])) return true;
     if ($navId === 'riders' && in_array($currentPage, ['riders', 'rider'])) return true;
     if ($navId === 'clubs' && in_array($currentPage, ['clubs', 'club'])) return true;
+    if ($navId === 'ranking' && $currentPage === 'ranking') return true;
     return $navId === $currentPage;
 }
