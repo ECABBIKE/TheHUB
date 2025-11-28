@@ -656,4 +656,11 @@ if (!$event) {
     min-width: 120px;
   }
 }
+
+/* Hide points in portrait mode on mobile */
+@media (max-width: 599px) and (orientation: portrait) {
+  .points-small {
+    display: none;
+  }
+}
 </style>
