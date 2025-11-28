@@ -298,11 +298,39 @@ a:hover {
     padding-bottom: calc(var(--space-xs) + env(safe-area-inset-bottom, 0));
 }
 
-/* Visa på mobil */
-@media (max-width: 768px) {
+/* Visa på mobil och tablet */
+@media (max-width: 1023px) {
     .nav-bottom {
         display: flex;
         justify-content: space-around;
+    }
+
+    /* Dölj hamburger-meny på mobil/tablet (bottom nav ersätter den) */
+    .gs-mobile-menu-toggle {
+        display: none !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
+        pointer-events: none !important;
+    }
+
+    /* Dölj sidebar på mobil/tablet (bottom nav ersätter den) */
+    .gs-sidebar {
+        display: none !important;
+    }
+
+    /* Dölj overlay på mobil/tablet */
+    .gs-sidebar-overlay {
+        display: none !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
+        pointer-events: none !important;
+    }
+
+    /* Ta bort sidebar offset på mobil/tablet */
+    .gs-main-content,
+    .gs-content-with-sidebar {
+        margin-left: 0 !important;
+        width: 100% !important;
     }
 
     /* Lägg till padding längst ner på sidan så content inte döljs */
