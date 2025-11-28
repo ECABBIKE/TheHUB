@@ -229,62 +229,63 @@ if (isset($_GET['action']) && $_GET['action'] === 'merge') {
     }
 }
 
-// Find potential duplicates
+// Find potential duplicates - simple approach: same firstname+lastname
 $potentialDuplicates = [];
-$processedPairs = [];
 
-$allRiders = $db->getAll("
-    SELECT
-        r.id, r.firstname, r.lastname, r.birth_year, r.license_number,
-        r.email, r.club_id,
-        c.name as club_name,
-        (SELECT COUNT(*) FROM results WHERE cyclist_id = r.id) as result_count
-    FROM riders r
-    LEFT JOIN clubs c ON r.club_id = c.id
-    WHERE r.firstname IS NOT NULL AND r.lastname IS NOT NULL
-    ORDER BY r.lastname, r.firstname
+$duplicateGroups = $db->getAll("
+    SELECT firstname, lastname, COUNT(*) as cnt
+    FROM riders
+    WHERE firstname IS NOT NULL AND lastname IS NOT NULL
+    GROUP BY LOWER(firstname), LOWER(lastname)
+    HAVING cnt > 1
+    LIMIT 30
 ");
 
-// Group by lastname
-$byLastname = [];
-foreach ($allRiders as $r) {
-    $lnKey = strtolower(trim($r['lastname']));
-    if (strlen($lnKey) > 0) {
-        $byLastname[$lnKey][] = $r;
+foreach ($duplicateGroups as $group) {
+    $riders = $db->getAll("
+        SELECT r.id, r.firstname, r.lastname, r.birth_year, r.license_number,
+               r.email, r.club_id, c.name as club_name
+        FROM riders r
+        LEFT JOIN clubs c ON r.club_id = c.id
+        WHERE LOWER(r.firstname) = LOWER(?) AND LOWER(r.lastname) = LOWER(?)
+        LIMIT 5
+    ", [$group['firstname'], $group['lastname']]);
+
+    if (count($riders) >= 2) {
+        $r1 = $riders[0];
+        $r2 = $riders[1];
+
+        // Skip if different UCI or different birth year
+        $uci1 = isRealUci($r1['license_number']) ? normalizeUci($r1['license_number']) : null;
+        $uci2 = isRealUci($r2['license_number']) ? normalizeUci($r2['license_number']) : null;
+
+        if ($uci1 && $uci2 && $uci1 !== $uci2) continue;
+        if ($r1['birth_year'] && $r2['birth_year'] && $r1['birth_year'] !== $r2['birth_year']) continue;
+
+        // Check missing data
+        $r1Missing = [];
+        $r2Missing = [];
+        if (!$r1['birth_year'] && $r2['birth_year']) $r1Missing[] = 'födelseår';
+        if (!$r2['birth_year'] && $r1['birth_year']) $r2Missing[] = 'födelseår';
+        if (!$uci1 && $uci2) $r1Missing[] = 'UCI ID';
+        if (!$uci2 && $uci1) $r2Missing[] = 'UCI ID';
+        if (!$r1['email'] && $r2['email']) $r1Missing[] = 'e-post';
+        if (!$r2['email'] && $r1['email']) $r2Missing[] = 'e-post';
+
+        $sameUci = $uci1 && $uci2 && $uci1 === $uci2;
+        if (!$sameUci && empty($r1Missing) && empty($r2Missing)) continue;
+
+        $potentialDuplicates[] = [
+            'reason' => $sameUci ? 'Samma UCI ID' : 'Exakt samma namn',
+            'rider1' => ['id' => $r1['id'], 'name' => $r1['firstname'].' '.$r1['lastname'],
+                        'birth_year' => $r1['birth_year'], 'license' => $r1['license_number'],
+                        'email' => $r1['email'], 'club' => $r1['club_name'], 'missing' => $r1Missing],
+            'rider2' => ['id' => $r2['id'], 'name' => $r2['firstname'].' '.$r2['lastname'],
+                        'birth_year' => $r2['birth_year'], 'license' => $r2['license_number'],
+                        'email' => $r2['email'], 'club' => $r2['club_name'], 'missing' => $r2Missing]
+        ];
     }
 }
-
-// Compare within same lastname groups
-foreach ($byLastname as $lnKey => $riders) {
-    if (count($riders) < 2) continue;
-
-    for ($i = 0; $i < count($riders); $i++) {
-        for ($j = $i + 1; $j < count($riders); $j++) {
-            $r1 = $riders[$i];
-            $r2 = $riders[$j];
-            $pairKey = min($r1['id'], $r2['id']) . '-' . max($r1['id'], $r2['id']);
-            if (isset($processedPairs[$pairKey])) continue;
-
-            $nameCheck = areNamesSimilar($r1['firstname'], $r1['lastname'], $r2['firstname'], $r2['lastname']);
-            if ($nameCheck['match']) {
-                $result = checkDuplicatePair($r1, $r2, $nameCheck['reason']);
-                if ($result) {
-                    $potentialDuplicates[] = $result;
-                    $processedPairs[$pairKey] = true;
-                }
-            }
-        }
-    }
-
-    if (count($potentialDuplicates) >= 50) break;
-}
-
-// Sort: Same UCI first
-usort($potentialDuplicates, function($a, $b) {
-    if ($a['reason'] === 'Samma UCI ID' && $b['reason'] !== 'Samma UCI ID') return -1;
-    if ($b['reason'] === 'Samma UCI ID' && $a['reason'] !== 'Samma UCI ID') return 1;
-    return 0;
-});
 
 $pageTitle = 'Hitta Dubbletter';
 $pageType = 'admin';
