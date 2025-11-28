@@ -266,21 +266,6 @@ if (!$series) {
 }
 ?>
 
-<div class="page-header">
-  <h1 class="page-title"><?= htmlspecialchars($series['name']) ?></h1>
-  <div class="page-meta">
-    <span class="chip chip--primary"><?= $series['year'] ?></span>
-    <span class="chip"><?= count($seriesEvents) ?> tävlingar</span>
-    <?php if (!empty($series['count_best_results'])): ?>
-      <span class="chip chip--info">Räknar <?= $series['count_best_results'] ?> bästa</span>
-    <?php endif; ?>
-  </div>
-</div>
-
-<?php if (!empty($series['description'])): ?>
-<p class="text-secondary mb-lg"><?= htmlspecialchars($series['description']) ?></p>
-<?php endif; ?>
-
 <?php if (isset($error)): ?>
 <section class="card mb-lg">
   <div class="card-title" style="color: var(--color-error)">Fel</div>
@@ -288,41 +273,55 @@ if (!$series) {
 </section>
 <?php endif; ?>
 
-<!-- Class Filter and Search -->
-<?php if (count($activeClasses) > 1 || $searchName): ?>
-<div class="filter-bar mb-lg">
-  <?php if (count($activeClasses) > 1): ?>
-  <label class="filter-select-wrapper">
-    <span class="filter-label">Klass:</span>
-    <select class="filter-select" onchange="if(this.value) window.location=this.value">
-      <option value="/v3/series/<?= $seriesId ?><?= $searchName ? '?search=' . urlencode($searchName) : '' ?>" <?= $selectedClass === 'all' ? 'selected' : '' ?>>Alla klasser</option>
+<!-- Series Info Card -->
+<section class="info-card mb-lg">
+  <div class="info-card-stripe"></div>
+  <div class="info-card-content">
+    <div class="info-card-main">
+      <h1 class="info-card-title"><?= htmlspecialchars($series['name']) ?></h1>
+      <div class="info-card-meta">
+        <span><?= $series['year'] ?></span>
+        <?php if (!empty($series['count_best_results'])): ?>
+          <span class="info-card-sep">•</span>
+          <span>Räknar <?= $series['count_best_results'] ?> bästa</span>
+        <?php endif; ?>
+        <?php if (!empty($series['description'])): ?>
+          <span class="info-card-sep">•</span>
+          <span><?= htmlspecialchars($series['description']) ?></span>
+        <?php endif; ?>
+      </div>
+    </div>
+    <div class="info-card-stats">
+      <div class="info-card-stat">
+        <span class="info-card-stat-value"><?= count($seriesEvents) ?></span>
+        <span class="info-card-stat-label">tävlingar</span>
+      </div>
+      <div class="info-card-stat">
+        <span class="info-card-stat-value"><?= $totalParticipants ?></span>
+        <span class="info-card-stat-label">deltagare</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Filters: Class + Search -->
+<div class="filter-row mb-lg">
+  <div class="filter-field">
+    <label class="filter-label">Klass</label>
+    <select class="filter-select" id="classFilter" onchange="applyFilters()">
+      <option value="all" <?= $selectedClass === 'all' ? 'selected' : '' ?>>Alla klasser</option>
       <?php foreach ($activeClasses as $class): ?>
-      <option value="/v3/series/<?= $seriesId ?>?class=<?= $class['id'] ?><?= $searchName ? '&search=' . urlencode($searchName) : '' ?>" <?= $selectedClass == $class['id'] ? 'selected' : '' ?>>
+      <option value="<?= $class['id'] ?>" <?= $selectedClass == $class['id'] ? 'selected' : '' ?>>
         <?= htmlspecialchars($class['display_name'] ?? $class['name']) ?> (<?= $class['rider_count'] ?>)
       </option>
       <?php endforeach; ?>
     </select>
-  </label>
-  <?php endif; ?>
-
-  <form method="get" action="/v3/series/<?= $seriesId ?>" class="search-inline">
-    <?php if ($selectedClass !== 'all'): ?>
-      <input type="hidden" name="class" value="<?= htmlspecialchars($selectedClass) ?>">
-    <?php endif; ?>
-    <input type="text" name="search" placeholder="Sök namn..." value="<?= htmlspecialchars($searchName) ?>" class="search-input-inline">
-    <button type="submit" class="btn btn--sm">Sök</button>
-    <?php if ($searchName): ?>
-      <a href="/v3/series/<?= $seriesId ?><?= $selectedClass !== 'all' ? '?class=' . $selectedClass : '' ?>" class="btn btn--sm btn--ghost">×</a>
-    <?php endif; ?>
-  </form>
+  </div>
+  <div class="filter-field">
+    <label class="filter-label">Sök åkare</label>
+    <input type="text" class="filter-input" id="searchFilter" placeholder="Namn..." value="<?= htmlspecialchars($searchName) ?>" oninput="applyFilters()">
+  </div>
 </div>
-<?php endif; ?>
-
-<?php if ($searchName): ?>
-<div class="search-info mb-md">
-  <span class="chip chip--info">Sökresultat för "<?= htmlspecialchars($searchName) ?>"</span>
-</div>
-<?php endif; ?>
 
 <!-- Standings by Class -->
 <?php if (empty($standingsByClass)): ?>
@@ -335,7 +334,7 @@ if (!$series) {
 <?php else: ?>
 
 <?php foreach ($standingsByClass as $classData): ?>
-<section class="card mb-lg standings-card">
+<section class="card mb-lg standings-card class-section" data-class="<?= $classData['class_id'] ?>">
   <div class="card-header">
     <div>
       <h2 class="card-title"><?= htmlspecialchars($classData['class_display_name'] ?? $classData['class_name']) ?></h2>
@@ -361,8 +360,10 @@ if (!$series) {
         </tr>
       </thead>
       <tbody>
-        <?php foreach ($classData['riders'] as $pos => $rider): ?>
-        <tr onclick="window.location='/v3/rider/<?= $rider['rider_id'] ?>'" style="cursor:pointer">
+        <?php foreach ($classData['riders'] as $pos => $rider):
+            $searchData = strtolower($rider['firstname'] . ' ' . $rider['lastname'] . ' ' . ($rider['club_name'] ?? ''));
+        ?>
+        <tr class="result-row" onclick="window.location='/v3/rider/<?= $rider['rider_id'] ?>'" style="cursor:pointer" data-search="<?= htmlspecialchars($searchData) ?>">
           <td class="col-place <?= ($pos + 1) <= 3 ? 'col-place--' . ($pos + 1) : '' ?>">
             <?php if ($pos == 0): ?>🥇
             <?php elseif ($pos == 1): ?>🥈
@@ -406,8 +407,10 @@ if (!$series) {
 
   <!-- Mobile Card View -->
   <div class="result-list">
-    <?php foreach ($classData['riders'] as $pos => $rider): ?>
-    <a href="/v3/rider/<?= $rider['rider_id'] ?>" class="result-item">
+    <?php foreach ($classData['riders'] as $pos => $rider):
+        $searchData = strtolower($rider['firstname'] . ' ' . $rider['lastname'] . ' ' . ($rider['club_name'] ?? ''));
+    ?>
+    <a href="/v3/rider/<?= $rider['rider_id'] ?>" class="result-item" data-search="<?= htmlspecialchars($searchData) ?>">
       <div class="result-place <?= ($pos + 1) <= 3 ? 'top-3' : '' ?>">
         <?php if ($pos == 0): ?>🥇
         <?php elseif ($pos == 1): ?>🥈
@@ -452,51 +455,140 @@ if (!$series) {
   </details>
 </section>
 
+<script>
+function applyFilters() {
+  const classFilter = document.getElementById('classFilter').value;
+  const searchFilter = document.getElementById('searchFilter').value.toLowerCase().trim();
+
+  document.querySelectorAll('.class-section').forEach(section => {
+    const classId = section.dataset.class;
+    const showClass = classFilter === 'all' || classFilter === classId;
+    section.style.display = showClass ? '' : 'none';
+
+    if (showClass) {
+      section.querySelectorAll('.result-row, .result-item').forEach(row => {
+        const searchData = row.dataset.search || '';
+        const matchesSearch = !searchFilter || searchData.includes(searchFilter);
+        row.style.display = matchesSearch ? '' : 'none';
+      });
+    }
+  });
+}
+</script>
+
 <style>
-.breadcrumb {
-  display: flex;
-  align-items: center;
-  gap: var(--space-xs);
-  font-size: var(--text-sm);
-  color: var(--color-text-muted);
-}
-.breadcrumb-link {
-  color: var(--color-text-secondary);
-}
-.breadcrumb-link:hover {
-  color: var(--color-accent-text);
-}
-.breadcrumb-current {
-  color: var(--color-text);
-  font-weight: var(--weight-medium);
-}
-
-.page-header {
-  margin-bottom: var(--space-lg);
-}
-.page-title {
-  font-size: var(--text-2xl);
-  font-weight: var(--weight-bold);
-  margin: 0 0 var(--space-sm) 0;
-}
-.page-meta {
-  display: flex;
-  gap: var(--space-sm);
-  flex-wrap: wrap;
-}
-.chip--primary {
-  background: var(--color-accent);
-  color: var(--color-text-inverse);
-}
-.chip--info {
-  background: rgba(59, 130, 246, 0.1);
-  color: var(--color-accent-text);
-}
-
 .mb-md { margin-bottom: var(--space-md); }
 .mb-lg { margin-bottom: var(--space-lg); }
 .text-secondary { color: var(--color-text-secondary); }
 .text-muted { color: var(--color-text-muted); }
+
+/* Info Card */
+.info-card {
+  background: var(--color-bg-surface);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+}
+.info-card-stripe {
+  height: 4px;
+  background: linear-gradient(90deg, var(--color-accent) 0%, #00A3E0 100%);
+}
+.info-card-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-md);
+}
+.info-card-main {
+  flex: 1;
+  min-width: 0;
+}
+.info-card-title {
+  font-size: var(--text-lg);
+  font-weight: var(--weight-bold);
+  margin: 0;
+  line-height: 1.3;
+}
+.info-card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-xs);
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  margin-top: var(--space-2xs);
+}
+.info-card-sep {
+  color: var(--color-text-muted);
+}
+.info-card-stats {
+  display: flex;
+  gap: var(--space-sm);
+  flex-shrink: 0;
+}
+.info-card-stat {
+  text-align: center;
+  padding: var(--space-xs) var(--space-sm);
+  background: var(--color-bg-sunken);
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2xs);
+}
+.info-card-stat-value {
+  font-size: var(--text-lg);
+  font-weight: var(--weight-bold);
+  color: var(--color-accent-text);
+}
+.info-card-stat-label {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+
+/* Filter Row */
+.filter-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-md);
+}
+.filter-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+.filter-label {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--color-text-secondary);
+}
+.filter-select,
+.filter-input {
+  padding: var(--space-sm) var(--space-md);
+  font-size: var(--text-sm);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-surface);
+  color: var(--color-text);
+  width: 100%;
+  box-sizing: border-box;
+}
+.filter-select {
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236b7280' d='M3 4.5L6 7.5L9 4.5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: var(--space-xl);
+}
+.filter-select:focus,
+.filter-input:focus {
+  outline: none;
+  border-color: var(--color-accent);
+}
+.filter-input::placeholder {
+  color: var(--color-text-muted);
+}
 
 /* Compact events section */
 .events-section {
@@ -567,67 +659,6 @@ details[open] .events-summary::before {
   text-overflow: ellipsis;
 }
 
-.filter-bar {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-sm);
-  align-items: center;
-}
-.filter-select-wrapper {
-  display: flex;
-  align-items: center;
-  gap: var(--space-xs);
-}
-.filter-label {
-  font-size: var(--text-sm);
-  color: var(--color-text-secondary);
-  white-space: nowrap;
-}
-.filter-select {
-  padding: var(--space-xs) var(--space-sm);
-  padding-right: var(--space-lg);
-  font-size: var(--text-sm);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  background: var(--color-bg-surface);
-  color: var(--color-text);
-  cursor: pointer;
-  appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236b7280' d='M3 4.5L6 7.5L9 4.5'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 8px center;
-  min-width: 140px;
-}
-.filter-select:focus {
-  outline: none;
-  border-color: var(--color-accent);
-}
-.search-inline {
-  display: flex;
-  gap: var(--space-xs);
-  align-items: center;
-}
-.search-input-inline {
-  padding: var(--space-xs) var(--space-sm);
-  font-size: var(--text-sm);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  background: var(--color-bg-surface);
-  color: var(--color-text);
-  width: 140px;
-}
-.search-input-inline:focus {
-  outline: none;
-  border-color: var(--color-accent);
-}
-.btn--sm {
-  padding: var(--space-xs) var(--space-sm);
-  font-size: var(--text-sm);
-}
-.search-info {
-  display: flex;
-  gap: var(--space-sm);
-}
 
 .standings-table .col-event {
   text-align: center;
@@ -696,26 +727,22 @@ details[open] .events-summary::before {
 }
 
 @media (max-width: 599px) {
-  .page-title {
-    font-size: var(--text-xl);
-  }
-  .filter-bar {
+  .info-card-content {
     flex-direction: column;
     align-items: stretch;
+    gap: var(--space-sm);
   }
-  .filter-select-wrapper {
-    width: 100%;
+  .info-card-title {
+    font-size: var(--text-base);
   }
-  .filter-select {
-    flex: 1;
-    min-width: 0;
+  .info-card-stats {
+    justify-content: center;
+    padding-top: var(--space-sm);
+    border-top: 1px solid var(--color-border);
   }
-  .search-inline {
-    width: 100%;
-  }
-  .search-input-inline {
-    flex: 1;
-    width: auto;
+  .filter-row {
+    grid-template-columns: 1fr;
+    gap: var(--space-sm);
   }
 }
 </style>

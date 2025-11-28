@@ -256,32 +256,33 @@ if (!$event) {
 <?php endif; ?>
 
 <!-- Event Info Card -->
-<section class="event-card mb-lg">
-  <div class="event-stripe"></div>
-  <div class="event-content">
-    <div class="event-icon">🏁</div>
-    <div class="event-info">
-      <h1 class="event-name"><?= htmlspecialchars($event['name']) ?></h1>
-      <?php if ($event['series_id']): ?>
-        <a href="/v3/series/<?= $event['series_id'] ?>" class="event-series"><?= htmlspecialchars($event['series_name']) ?></a>
-      <?php endif; ?>
-      <div class="event-details">
+<section class="info-card mb-lg">
+  <div class="info-card-stripe"></div>
+  <div class="info-card-content">
+    <div class="info-card-main">
+      <h1 class="info-card-title"><?= htmlspecialchars($event['name']) ?></h1>
+      <div class="info-card-meta">
+        <?php if ($event['series_id']): ?>
+          <a href="/v3/series/<?= $event['series_id'] ?>" class="info-card-link"><?= htmlspecialchars($event['series_name']) ?></a>
+          <span class="info-card-sep">•</span>
+        <?php endif; ?>
         <?php if ($event['date']): ?>
-          <span class="event-detail"><?= date('j F Y', strtotime($event['date'])) ?></span>
+          <span><?= date('j M Y', strtotime($event['date'])) ?></span>
         <?php endif; ?>
         <?php if ($event['location']): ?>
-          <span class="event-detail"><?= htmlspecialchars($event['location']) ?></span>
+          <span class="info-card-sep">•</span>
+          <span><?= htmlspecialchars($event['location']) ?></span>
         <?php endif; ?>
       </div>
     </div>
-    <div class="event-stats">
-      <div class="event-stat">
-        <div class="event-stat-value"><?= $totalParticipants ?></div>
-        <div class="event-stat-label">Deltagare</div>
+    <div class="info-card-stats">
+      <div class="info-card-stat">
+        <span class="info-card-stat-value"><?= $totalParticipants ?></span>
+        <span class="info-card-stat-label">deltagare</span>
       </div>
-      <div class="event-stat">
-        <div class="event-stat-value"><?= $totalFinished ?></div>
-        <div class="event-stat-label">I mål</div>
+      <div class="info-card-stat">
+        <span class="info-card-stat-value"><?= $totalFinished ?></span>
+        <span class="info-card-stat-label">i mål</span>
       </div>
     </div>
   </div>
@@ -504,87 +505,75 @@ function filterResults() {
 .text-secondary { color: var(--color-text-secondary); }
 .text-muted { color: var(--color-text-muted); }
 
-/* Event Card */
-.event-card {
+/* Info Card (shared by event/series) */
+.info-card {
   background: var(--color-bg-surface);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-md);
   overflow: hidden;
-  box-shadow: var(--shadow-md);
+  box-shadow: var(--shadow-sm);
 }
-.event-stripe {
-  height: 6px;
+.info-card-stripe {
+  height: 4px;
   background: linear-gradient(90deg, var(--color-accent) 0%, #00A3E0 100%);
 }
-.event-content {
+.info-card-content {
   display: flex;
+  justify-content: space-between;
+  align-items: center;
   gap: var(--space-md);
-  padding: var(--space-lg);
-  align-items: center;
+  padding: var(--space-md);
 }
-.event-icon {
-  flex-shrink: 0;
-  width: 64px;
-  height: 64px;
-  border-radius: var(--radius-md);
-  background: var(--color-bg-sunken);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 32px;
-}
-.event-info {
+.info-card-main {
   flex: 1;
   min-width: 0;
 }
-.event-name {
-  font-size: var(--text-xl);
+.info-card-title {
+  font-size: var(--text-lg);
   font-weight: var(--weight-bold);
-  margin: 0 0 var(--space-2xs) 0;
-  line-height: 1.2;
+  margin: 0;
+  line-height: 1.3;
 }
-.event-series {
-  display: inline-block;
-  color: var(--color-accent-text);
-  font-size: var(--text-sm);
-  font-weight: var(--weight-medium);
-  margin-bottom: var(--space-xs);
-}
-.event-series:hover {
-  text-decoration: underline;
-}
-.event-details {
+.info-card-meta {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-sm);
+  align-items: center;
+  gap: var(--space-xs);
   font-size: var(--text-sm);
   color: var(--color-text-secondary);
+  margin-top: var(--space-2xs);
 }
-.event-detail:not(:last-child)::after {
-  content: '•';
-  margin-left: var(--space-sm);
+.info-card-link {
+  color: var(--color-accent-text);
+  font-weight: var(--weight-medium);
+}
+.info-card-link:hover {
+  text-decoration: underline;
+}
+.info-card-sep {
   color: var(--color-text-muted);
 }
-.event-stats {
+.info-card-stats {
   display: flex;
-  gap: var(--space-md);
+  gap: var(--space-sm);
   flex-shrink: 0;
 }
-.event-stat {
+.info-card-stat {
   text-align: center;
-  padding: var(--space-sm) var(--space-md);
+  padding: var(--space-xs) var(--space-sm);
   background: var(--color-bg-sunken);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2xs);
 }
-.event-stat-value {
-  font-size: var(--text-xl);
+.info-card-stat-value {
+  font-size: var(--text-lg);
   font-weight: var(--weight-bold);
-  line-height: 1;
   color: var(--color-accent-text);
 }
-.event-stat-label {
+.info-card-stat-label {
   font-size: var(--text-xs);
   color: var(--color-text-muted);
-  margin-top: var(--space-2xs);
 }
 
 /* Filter Row */
@@ -729,30 +718,18 @@ function filterResults() {
 }
 
 @media (max-width: 599px) {
-  .event-content {
-    flex-wrap: wrap;
-    padding: var(--space-md);
+  .info-card-content {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-sm);
   }
-  .event-icon {
-    width: 48px;
-    height: 48px;
-    font-size: 24px;
+  .info-card-title {
+    font-size: var(--text-base);
   }
-  .event-info {
-    flex: 1 1 calc(100% - 64px);
-  }
-  .event-name {
-    font-size: var(--text-lg);
-  }
-  .event-stats {
-    width: 100%;
+  .info-card-stats {
     justify-content: center;
-    margin-top: var(--space-sm);
     padding-top: var(--space-sm);
     border-top: 1px solid var(--color-border);
-  }
-  .event-stat {
-    flex: 1;
   }
   .filter-row {
     grid-template-columns: 1fr;
