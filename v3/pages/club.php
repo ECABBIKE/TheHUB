@@ -1,135 +1,371 @@
 <?php
 /**
- * V3 Single Club Page - Club profile with members
+ * V3 Single Club Page - Club profile with members and stats
  */
 
 $db = hub_db();
 $clubId = intval($pageInfo['params']['id'] ?? 0);
 
 if (!$clubId) {
-    header('Location: /v3/clubs');
+    header('Location: /v3/riders');
     exit;
 }
 
-// Fetch club details
-$stmt = $db->prepare("SELECT * FROM clubs WHERE id = ?");
-$stmt->execute([$clubId]);
-$club = $stmt->fetch(PDO::FETCH_ASSOC);
+try {
+    // Fetch club details
+    $stmt = $db->prepare("SELECT * FROM clubs WHERE id = ?");
+    $stmt->execute([$clubId]);
+    $club = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$club) {
+        include HUB_V3_ROOT . '/pages/404.php';
+        return;
+    }
+
+    // Fetch club members with stats
+    $stmt = $db->prepare("
+        SELECT
+            r.id, r.firstname, r.lastname, r.birth_year, r.gender,
+            COUNT(DISTINCT res.id) as total_races,
+            COUNT(CASE WHEN res.class_position <= 3 THEN 1 END) as podiums,
+            SUM(COALESCE(res.points, 0)) as total_points,
+            MIN(res.class_position) as best_position
+        FROM riders r
+        LEFT JOIN results res ON r.id = res.cyclist_id
+        WHERE r.club_id = ? AND r.active = 1
+        GROUP BY r.id
+        ORDER BY total_points DESC, total_races DESC, r.lastname, r.firstname
+    ");
+    $stmt->execute([$clubId]);
+    $members = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    $totalMembers = count($members);
+    $totalRaces = array_sum(array_column($members, 'total_races'));
+    $totalPoints = array_sum(array_column($members, 'total_points'));
+    $totalPodiums = array_sum(array_column($members, 'podiums'));
+
+} catch (Exception $e) {
+    $error = $e->getMessage();
+    $club = null;
+}
 
 if (!$club) {
     include HUB_V3_ROOT . '/pages/404.php';
     return;
 }
-
-// Fetch club members with stats
-$stmt = $db->prepare("
-    SELECT
-        r.id, r.firstname, r.lastname, r.birth_year, r.gender,
-        COUNT(DISTINCT res.id) as total_races,
-        SUM(res.points) as total_points,
-        MIN(res.position) as best_position
-    FROM riders r
-    LEFT JOIN results res ON r.id = res.cyclist_id
-    WHERE r.club_id = ? AND r.active = 1
-    GROUP BY r.id
-    ORDER BY total_points DESC, r.lastname, r.firstname
-");
-$stmt->execute([$clubId]);
-$members = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-$totalMembers = count($members);
-$totalRaces = array_sum(array_column($members, 'total_races'));
-$totalPoints = array_sum(array_column($members, 'total_points'));
 ?>
 
-<h1 class="text-2xl font-bold mb-lg"><?= htmlspecialchars($club['name']) ?></h1>
+<nav class="breadcrumb mb-md">
+  <a href="/v3/riders" class="breadcrumb-link">Deltagare</a>
+  <span class="breadcrumb-separator">›</span>
+  <span class="breadcrumb-current"><?= htmlspecialchars($club['name']) ?></span>
+</nav>
 
-<div class="page-grid">
-  <!-- Club Info -->
-  <section class="card" aria-labelledby="club-info-title">
-    <h2 id="club-info-title" class="card-title">Klubbinformation</h2>
-    <div class="card-body">
-      <?php if ($club['city']): ?>
-      <p><strong>Ort:</strong> <?= htmlspecialchars($club['city']) ?></p>
-      <?php endif; ?>
-      <?php if ($club['website']): ?>
-      <p class="mt-xs"><strong>Hemsida:</strong> <a href="<?= htmlspecialchars($club['website']) ?>" target="_blank" rel="noopener" class="text-accent"><?= htmlspecialchars($club['website']) ?></a></p>
-      <?php endif; ?>
-      <?php if ($club['email']): ?>
-      <p class="mt-xs"><strong>E-post:</strong> <a href="mailto:<?= htmlspecialchars($club['email']) ?>" class="text-accent"><?= htmlspecialchars($club['email']) ?></a></p>
-      <?php endif; ?>
-    </div>
-  </section>
-
-  <!-- Stats -->
-  <section class="card" aria-labelledby="club-stats-title">
-    <h2 id="club-stats-title" class="card-title">Statistik</h2>
-    <div class="stats-row">
-      <div class="stat-block">
-        <div class="stat-value"><?= $totalMembers ?></div>
-        <div class="stat-label">Medlemmar</div>
-      </div>
-      <div class="stat-block">
-        <div class="stat-value"><?= $totalRaces ?></div>
-        <div class="stat-label">Starter</div>
-      </div>
-      <div class="stat-block">
-        <div class="stat-value"><?= number_format($totalPoints) ?></div>
-        <div class="stat-label">Poäng</div>
-      </div>
-    </div>
-  </section>
-
-  <!-- Members -->
-  <section class="card grid-full" aria-labelledby="members-title">
-    <div class="card-header">
-      <div>
-        <h2 id="members-title" class="card-title">Medlemmar</h2>
-        <p class="card-subtitle"><?= $totalMembers ?> aktiva åkare</p>
-      </div>
-    </div>
-
-    <?php if (empty($members)): ?>
-    <div class="text-center p-lg">
-      <p class="text-muted">Inga registrerade medlemmar</p>
-    </div>
-    <?php else: ?>
-    <div class="table-wrapper">
-      <table class="table table--striped table--clickable">
-        <thead>
-          <tr>
-            <th class="col-rider" scope="col">Namn</th>
-            <th scope="col" class="text-right">Starter</th>
-            <th scope="col" class="text-right table-col-hide-portrait">Bästa</th>
-            <th class="col-points" scope="col">Poäng</th>
-          </tr>
-        </thead>
-        <tbody>
-          <?php foreach ($members as $member): ?>
-          <tr data-href="/v3/rider/<?= $member['id'] ?>">
-            <td class="col-rider"><?= htmlspecialchars($member['firstname'] . ' ' . $member['lastname']) ?></td>
-            <td class="text-right"><?= $member['total_races'] ?></td>
-            <td class="text-right table-col-hide-portrait"><?= $member['best_position'] ? '#' . $member['best_position'] : '-' ?></td>
-            <td class="col-points"><?= number_format($member['total_points'] ?? 0) ?></td>
-          </tr>
-          <?php endforeach; ?>
-        </tbody>
-      </table>
-    </div>
-
-    <!-- Mobile Card View -->
-    <div class="result-list">
-      <?php foreach ($members as $member): ?>
-      <a href="/v3/rider/<?= $member['id'] ?>" class="result-item">
-        <div class="result-place"><?= $member['total_races'] ?></div>
-        <div class="result-info">
-          <div class="result-name"><?= htmlspecialchars($member['firstname'] . ' ' . $member['lastname']) ?></div>
-          <div class="result-club"><?= number_format($member['total_points'] ?? 0) ?> poäng</div>
-        </div>
-        <div class="result-time"><?= $member['best_position'] ? '#' . $member['best_position'] : '-' ?></div>
-      </a>
-      <?php endforeach; ?>
-    </div>
+<div class="page-header">
+  <h1 class="page-title"><?= htmlspecialchars($club['name']) ?></h1>
+  <div class="page-meta">
+    <?php if ($club['city']): ?>
+      <span class="chip"><?= htmlspecialchars($club['city']) ?></span>
     <?php endif; ?>
-  </section>
+    <span class="chip chip--primary"><?= $totalMembers ?> medlemmar</span>
+  </div>
 </div>
+
+<?php if (isset($error)): ?>
+<section class="card mb-lg">
+  <div class="card-title" style="color: var(--color-error)">Fel</div>
+  <p><?= htmlspecialchars($error) ?></p>
+</section>
+<?php endif; ?>
+
+<!-- Club Info -->
+<?php if ($club['website'] || $club['email']): ?>
+<section class="card mb-lg">
+  <div class="club-contact">
+    <?php if ($club['website']): ?>
+    <a href="<?= htmlspecialchars($club['website']) ?>" target="_blank" rel="noopener" class="contact-link">
+      <span class="contact-icon">🌐</span>
+      <span><?= htmlspecialchars(preg_replace('#^https?://#', '', $club['website'])) ?></span>
+    </a>
+    <?php endif; ?>
+    <?php if ($club['email']): ?>
+    <a href="mailto:<?= htmlspecialchars($club['email']) ?>" class="contact-link">
+      <span class="contact-icon">✉️</span>
+      <span><?= htmlspecialchars($club['email']) ?></span>
+    </a>
+    <?php endif; ?>
+  </div>
+</section>
+<?php endif; ?>
+
+<!-- Stats Grid -->
+<section class="card mb-lg">
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-value"><?= $totalMembers ?></div>
+      <div class="stat-label">Medlemmar</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value"><?= $totalRaces ?></div>
+      <div class="stat-label">Starter</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value"><?= $totalPodiums ?></div>
+      <div class="stat-label">Pallplatser</div>
+    </div>
+    <div class="stat-card stat-card--accent">
+      <div class="stat-value"><?= number_format($totalPoints) ?></div>
+      <div class="stat-label">Poäng</div>
+    </div>
+  </div>
+</section>
+
+<!-- Members -->
+<section class="card">
+  <div class="card-header">
+    <div>
+      <h2 class="card-title">Medlemmar</h2>
+      <p class="card-subtitle"><?= $totalMembers ?> aktiva åkare</p>
+    </div>
+  </div>
+
+  <?php if (empty($members)): ?>
+  <div class="empty-state">
+    <div class="empty-state-icon">👥</div>
+    <p>Inga registrerade medlemmar</p>
+  </div>
+  <?php else: ?>
+  <div class="table-wrapper">
+    <table class="table table--striped table--hover">
+      <thead>
+        <tr>
+          <th class="col-rider">Namn</th>
+          <th class="text-center">Starter</th>
+          <th class="text-center table-col-hide-portrait">Pallplatser</th>
+          <th class="text-center">Bästa</th>
+          <th class="text-right table-col-hide-portrait">Poäng</th>
+        </tr>
+      </thead>
+      <tbody>
+        <?php foreach ($members as $member): ?>
+        <tr onclick="window.location='/v3/rider/<?= $member['id'] ?>'" style="cursor:pointer">
+          <td class="col-rider">
+            <a href="/v3/rider/<?= $member['id'] ?>" class="rider-link">
+              <?= htmlspecialchars($member['firstname'] . ' ' . $member['lastname']) ?>
+            </a>
+            <?php if ($member['birth_year']): ?>
+              <span class="rider-year"><?= $member['birth_year'] ?></span>
+            <?php endif; ?>
+          </td>
+          <td class="text-center">
+            <strong><?= $member['total_races'] ?: 0 ?></strong>
+          </td>
+          <td class="text-center table-col-hide-portrait">
+            <?php if ($member['podiums'] > 0): ?>
+              <span class="podium-badge">🏆 <?= $member['podiums'] ?></span>
+            <?php else: ?>
+              <span class="text-muted">-</span>
+            <?php endif; ?>
+          </td>
+          <td class="text-center">
+            <?php if ($member['best_position']): ?>
+              <?php if ($member['best_position'] == 1): ?>
+                <span class="position-badge position--1">🥇</span>
+              <?php elseif ($member['best_position'] == 2): ?>
+                <span class="position-badge position--2">🥈</span>
+              <?php elseif ($member['best_position'] == 3): ?>
+                <span class="position-badge position--3">🥉</span>
+              <?php else: ?>
+                <span class="position-badge">#<?= $member['best_position'] ?></span>
+              <?php endif; ?>
+            <?php else: ?>
+              <span class="text-muted">-</span>
+            <?php endif; ?>
+          </td>
+          <td class="text-right table-col-hide-portrait">
+            <?php if ($member['total_points'] > 0): ?>
+              <span class="points-value"><?= number_format($member['total_points'], 0) ?></span>
+            <?php else: ?>
+              <span class="text-muted">-</span>
+            <?php endif; ?>
+          </td>
+        </tr>
+        <?php endforeach; ?>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Mobile Card View -->
+  <div class="result-list">
+    <?php foreach ($members as $member): ?>
+    <a href="/v3/rider/<?= $member['id'] ?>" class="result-item">
+      <div class="result-place">
+        <?php if ($member['best_position'] && $member['best_position'] <= 3): ?>
+          <?= $member['best_position'] == 1 ? '🥇' : ($member['best_position'] == 2 ? '🥈' : '🥉') ?>
+        <?php else: ?>
+          <?= $member['total_races'] ?: 0 ?>
+        <?php endif; ?>
+      </div>
+      <div class="result-info">
+        <div class="result-name"><?= htmlspecialchars($member['firstname'] . ' ' . $member['lastname']) ?></div>
+        <div class="result-club"><?= $member['total_races'] ?: 0 ?> starter<?= $member['podiums'] > 0 ? ' • 🏆 ' . $member['podiums'] : '' ?></div>
+      </div>
+      <div class="result-points">
+        <div class="points-big"><?= number_format($member['total_points'] ?? 0) ?></div>
+        <div class="points-label">poäng</div>
+      </div>
+    </a>
+    <?php endforeach; ?>
+  </div>
+  <?php endif; ?>
+</section>
+
+<style>
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+.breadcrumb-link {
+  color: var(--color-text-secondary);
+}
+.breadcrumb-link:hover {
+  color: var(--color-accent-text);
+}
+.breadcrumb-current {
+  color: var(--color-text);
+  font-weight: var(--weight-medium);
+}
+
+.page-header {
+  margin-bottom: var(--space-lg);
+}
+.page-title {
+  font-size: var(--text-2xl);
+  font-weight: var(--weight-bold);
+  margin: 0 0 var(--space-sm) 0;
+}
+.page-meta {
+  display: flex;
+  gap: var(--space-sm);
+  flex-wrap: wrap;
+}
+.chip--primary {
+  background: var(--color-accent);
+  color: var(--color-text-inverse);
+}
+
+.mb-md { margin-bottom: var(--space-md); }
+.mb-lg { margin-bottom: var(--space-lg); }
+.text-muted { color: var(--color-text-muted); }
+
+.club-contact {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-lg);
+}
+.contact-link {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  color: var(--color-accent-text);
+}
+.contact-link:hover {
+  text-decoration: underline;
+}
+.contact-icon {
+  font-size: var(--text-lg);
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-md);
+}
+.stat-card {
+  text-align: center;
+  padding: var(--space-md);
+  background: var(--color-bg-sunken);
+  border-radius: var(--radius-md);
+}
+.stat-card--accent {
+  background: var(--color-accent);
+  color: var(--color-text-inverse);
+}
+.stat-card--accent .stat-label {
+  color: rgba(255,255,255,0.8);
+}
+.stat-value {
+  font-size: var(--text-2xl);
+  font-weight: var(--weight-bold);
+}
+.stat-label {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  margin-top: var(--space-2xs);
+}
+
+.rider-link {
+  color: var(--color-text);
+  font-weight: var(--weight-medium);
+}
+.rider-link:hover {
+  color: var(--color-accent-text);
+}
+.rider-year {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  margin-left: var(--space-xs);
+}
+.podium-badge {
+  font-size: var(--text-sm);
+}
+.position-badge {
+  font-weight: var(--weight-semibold);
+}
+.points-value {
+  font-weight: var(--weight-semibold);
+  color: var(--color-accent-text);
+}
+
+.result-place.top-3 {
+  background: var(--color-accent-light);
+}
+.result-points {
+  text-align: right;
+}
+.points-big {
+  font-size: var(--text-lg);
+  font-weight: var(--weight-bold);
+  color: var(--color-accent-text);
+}
+.points-label {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+
+.empty-state {
+  text-align: center;
+  padding: var(--space-2xl);
+  color: var(--color-text-muted);
+}
+.empty-state-icon {
+  font-size: 48px;
+  margin-bottom: var(--space-md);
+}
+
+@media (max-width: 599px) {
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .page-title {
+    font-size: var(--text-xl);
+  }
+  .club-contact {
+    flex-direction: column;
+    gap: var(--space-sm);
+  }
+}
+</style>
