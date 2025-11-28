@@ -492,17 +492,17 @@ $genderText = match($rider['gender']) {
     font-size: var(--text-lg);
   }
   .stats-grid-4 {
-    grid-template-columns: repeat(4, 1fr);
-    gap: var(--space-xs);
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-sm);
   }
   .stat-box {
-    padding: var(--space-sm) var(--space-2xs);
+    padding: var(--space-sm);
   }
   .stat-value {
-    font-size: var(--text-lg);
+    font-size: var(--text-xl);
   }
   .stat-label {
-    font-size: 9px;
+    font-size: var(--text-xs);
   }
 }
 </style>
