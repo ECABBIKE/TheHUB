@@ -6,7 +6,16 @@
     </svg>
     <span>TheHUB</span>
   </a>
+
   <div class="header-actions">
-    <span class="header-version">V3.0 Beta</span>
+    <button type="button"
+            class="pwa-install-btn header-install hidden"
+            id="pwa-install-btn"
+            data-pwa-install
+            aria-label="Installera TheHUB som app">
+      <span class="pwa-install-icon" aria-hidden="true">📲</span>
+      <span class="hide-mobile">Installera</span>
+    </button>
+    <span class="header-version">V<?= HUB_VERSION ?></span>
   </div>
 </header>

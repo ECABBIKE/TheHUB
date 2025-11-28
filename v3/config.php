@@ -28,9 +28,9 @@ if (!isset($GLOBALS['pdo'])) {
 // ============================================================================
 // V3 VERSION INFO (only define if not already defined)
 // ============================================================================
-if (!defined('HUB_VERSION')) define('HUB_VERSION', '3.0.4');
-if (!defined('CSS_VERSION')) define('CSS_VERSION', '3.0.4');
-if (!defined('JS_VERSION')) define('JS_VERSION', '3.0.4');
+if (!defined('HUB_VERSION')) define('HUB_VERSION', '3.1.0');
+if (!defined('CSS_VERSION')) define('CSS_VERSION', '3.1.0');
+if (!defined('JS_VERSION')) define('JS_VERSION', '3.1.0');
 
 if (!defined('HUB_V3_ROOT')) define('HUB_V3_ROOT', __DIR__);
 if (!defined('HUB_V3_URL')) define('HUB_V3_URL', '/v3');
