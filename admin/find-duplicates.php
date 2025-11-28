@@ -2,14 +2,9 @@
 /**
  * Smart Duplicate Finder
  * Find potential duplicate riders - only when one profile is missing data
- *
- * NOT duplicates if:
- * - Both have different UCI IDs
- * - Both have different birth years
- *
- * ARE duplicates if:
- * - Same name AND one is missing UCI/birth year that the other has
  */
+ini_set('display_errors', '1');
+error_reporting(E_ALL);
 
 require_once __DIR__ . '/../config.php';
 require_admin();
@@ -24,6 +19,122 @@ if (isset($_SESSION['dup_message'])) {
     $message = $_SESSION['dup_message'];
     $messageType = $_SESSION['dup_message_type'] ?? 'info';
     unset($_SESSION['dup_message'], $_SESSION['dup_message_type']);
+}
+
+// Helper functions - defined first
+function normalizeUci($uci) {
+    if (empty($uci)) return null;
+    return preg_replace('/\s+/', '', $uci);
+}
+
+function isRealUci($license) {
+    if (empty($license)) return false;
+    return strpos($license, 'SWE') !== 0;
+}
+
+function nameSimilarity($name1, $name2) {
+    $name1 = mb_strtolower(trim($name1), 'UTF-8');
+    $name2 = mb_strtolower(trim($name2), 'UTF-8');
+    if ($name1 === $name2) return 100;
+    if (strlen($name1) < 2 || strlen($name2) < 2) return 0;
+    if (strpos($name1, $name2) !== false || strpos($name2, $name1) !== false) {
+        return 90;
+    }
+    $name1 = substr($name1, 0, 255);
+    $name2 = substr($name2, 0, 255);
+    $maxLen = max(strlen($name1), strlen($name2));
+    if ($maxLen === 0) return 0;
+    $distance = levenshtein($name1, $name2);
+    return round((1 - $distance / $maxLen) * 100);
+}
+
+function areNamesSimilar($fn1, $ln1, $fn2, $ln2) {
+    $fn1 = trim($fn1); $ln1 = trim($ln1);
+    $fn2 = trim($fn2); $ln2 = trim($ln2);
+
+    if (empty($fn1) || empty($ln1) || empty($fn2) || empty($ln2)) {
+        return ['match' => false, 'reason' => null];
+    }
+
+    if (strtolower($fn1) === strtolower($fn2) && strtolower($ln1) === strtolower($ln2)) {
+        return ['match' => true, 'reason' => 'Exakt samma namn'];
+    }
+    if (strtolower($ln1) === strtolower($ln2)) {
+        $fnSim = nameSimilarity($fn1, $fn2);
+        if ($fnSim >= 80) {
+            return ['match' => true, 'reason' => "Samma efternamn, liknande förnamn ({$fnSim}%)"];
+        }
+    }
+    $lnSim = nameSimilarity($ln1, $ln2);
+    if ($lnSim >= 85 && strtolower($fn1) === strtolower($fn2)) {
+        return ['match' => true, 'reason' => "Samma förnamn, liknande efternamn ({$lnSim}%)"];
+    }
+    $ln1Lower = strtolower($ln1);
+    $ln2Lower = strtolower($ln2);
+    if (strlen($ln1Lower) > 3 && strlen($ln2Lower) > 3) {
+        if ((strpos($ln1Lower, $ln2Lower) !== false || strpos($ln2Lower, $ln1Lower) !== false) &&
+            strtolower($fn1) === strtolower($fn2)) {
+            return ['match' => true, 'reason' => 'Samma förnamn, dubbelt efternamn'];
+        }
+    }
+    return ['match' => false, 'reason' => null];
+}
+
+function checkDuplicatePair($r1, $r2, $nameReason) {
+    $uci1 = normalizeUci($r1['license_number']);
+    $uci2 = normalizeUci($r2['license_number']);
+    $isRealUci1 = isRealUci($r1['license_number']);
+    $isRealUci2 = isRealUci($r2['license_number']);
+
+    if ($isRealUci1 && $isRealUci2 && $uci1 !== $uci2) {
+        return null;
+    }
+    if (!empty($r1['birth_year']) && !empty($r2['birth_year']) && $r1['birth_year'] !== $r2['birth_year']) {
+        return null;
+    }
+
+    $r1Missing = [];
+    $r2Missing = [];
+
+    if (empty($r1['birth_year']) && !empty($r2['birth_year'])) $r1Missing[] = 'födelseår';
+    if (empty($r2['birth_year']) && !empty($r1['birth_year'])) $r2Missing[] = 'födelseår';
+    if (!$isRealUci1 && $isRealUci2) $r1Missing[] = 'UCI ID';
+    if (!$isRealUci2 && $isRealUci1) $r2Missing[] = 'UCI ID';
+    if (empty($r1['email']) && !empty($r2['email'])) $r1Missing[] = 'e-post';
+    if (empty($r2['email']) && !empty($r1['email'])) $r2Missing[] = 'e-post';
+    if (empty($r1['club_id']) && !empty($r2['club_id'])) $r1Missing[] = 'klubb';
+    if (empty($r2['club_id']) && !empty($r1['club_id'])) $r2Missing[] = 'klubb';
+
+    $sameUci = $isRealUci1 && $isRealUci2 && $uci1 === $uci2;
+    $hasMissingData = !empty($r1Missing) || !empty($r2Missing);
+
+    if (!$sameUci && !$hasMissingData) {
+        return null;
+    }
+
+    return [
+        'reason' => $sameUci ? 'Samma UCI ID' : $nameReason,
+        'rider1' => [
+            'id' => $r1['id'],
+            'name' => $r1['firstname'] . ' ' . $r1['lastname'],
+            'birth_year' => $r1['birth_year'],
+            'license' => $r1['license_number'],
+            'email' => $r1['email'],
+            'club' => $r1['club_name'],
+            'results' => $r1['result_count'],
+            'missing' => $r1Missing
+        ],
+        'rider2' => [
+            'id' => $r2['id'],
+            'name' => $r2['firstname'] . ' ' . $r2['lastname'],
+            'birth_year' => $r2['birth_year'],
+            'license' => $r2['license_number'],
+            'email' => $r2['email'],
+            'club' => $r2['club_name'],
+            'results' => $r2['result_count'],
+            'missing' => $r2Missing
+        ]
+    ];
 }
 
 // Handle merge action
@@ -118,242 +229,63 @@ if (isset($_GET['action']) && $_GET['action'] === 'merge') {
     }
 }
 
-// Normalize UCI ID for comparison (remove spaces)
-function normalizeUci($uci) {
-    if (empty($uci)) return null;
-    return preg_replace('/\s+/', '', $uci);
-}
-
-// Check if license is a real UCI (not SWE ID)
-function isRealUci($license) {
-    if (empty($license)) return false;
-    return strpos($license, 'SWE') !== 0;
-}
-
-// Calculate name similarity (0-100)
-function nameSimilarity($name1, $name2) {
-    $name1 = mb_strtolower(trim($name1), 'UTF-8');
-    $name2 = mb_strtolower(trim($name2), 'UTF-8');
-
-    if ($name1 === $name2) return 100;
-
-    // Check if one contains the other (for double surnames)
-    if (strpos($name1, $name2) !== false || strpos($name2, $name1) !== false) {
-        return 90;
-    }
-
-    // Try Levenshtein
-    $name1 = substr($name1, 0, 255);
-    $name2 = substr($name2, 0, 255);
-    $maxLen = max(strlen($name1), strlen($name2));
-    if ($maxLen === 0) return 0;
-
-    $distance = levenshtein($name1, $name2);
-    return round((1 - $distance / $maxLen) * 100);
-}
-
-// Check if two names are similar enough to be potential duplicates
-function areNamesSimilar($fn1, $ln1, $fn2, $ln2) {
-    // Exact match
-    if (strtolower($fn1) === strtolower($fn2) && strtolower($ln1) === strtolower($ln2)) {
-        return ['match' => true, 'reason' => 'Exakt samma namn'];
-    }
-
-    // Same lastname, similar firstname (typos)
-    if (strtolower($ln1) === strtolower($ln2)) {
-        $fnSim = nameSimilarity($fn1, $fn2);
-        if ($fnSim >= 80) {
-            return ['match' => true, 'reason' => "Samma efternamn, liknande förnamn ({$fnSim}%)"];
-        }
-    }
-
-    // Similar lastname (one contains the other, or typos)
-    $lnSim = nameSimilarity($ln1, $ln2);
-    if ($lnSim >= 85 && strtolower($fn1) === strtolower($fn2)) {
-        return ['match' => true, 'reason' => "Samma förnamn, liknande efternamn ({$lnSim}%)"];
-    }
-
-    // One lastname contains the other (double surname)
-    $ln1Lower = strtolower($ln1);
-    $ln2Lower = strtolower($ln2);
-    if ((strpos($ln1Lower, $ln2Lower) !== false || strpos($ln2Lower, $ln1Lower) !== false) &&
-        strtolower($fn1) === strtolower($fn2)) {
-        return ['match' => true, 'reason' => 'Samma förnamn, dubbelt efternamn'];
-    }
-
-    // Full name similarity
-    $fullSim = nameSimilarity("$fn1 $ln1", "$fn2 $ln2");
-    if ($fullSim >= 90) {
-        return ['match' => true, 'reason' => "Mycket lika namn ({$fullSim}%)"];
-    }
-
-    return ['match' => false, 'reason' => null];
-}
-
-// Find potential duplicates - same/similar name where one is missing data
+// Find potential duplicates - simple approach: same firstname+lastname
 $potentialDuplicates = [];
-$processedPairs = []; // Track processed pairs to avoid duplicates
 
-// Get all riders for comparison
-$allRiders = $db->getAll("
-    SELECT
-        r.id, r.firstname, r.lastname, r.birth_year, r.license_number,
-        r.email, r.club_id, r.license_type, r.gender,
-        c.name as club_name,
-        (SELECT COUNT(*) FROM results WHERE cyclist_id = r.id) as result_count
-    FROM riders r
-    LEFT JOIN clubs c ON r.club_id = c.id
-    WHERE r.firstname IS NOT NULL AND r.lastname IS NOT NULL
-    ORDER BY r.lastname, r.firstname
+$duplicateGroups = $db->getAll("
+    SELECT firstname, lastname, COUNT(*) as cnt
+    FROM riders
+    WHERE firstname IS NOT NULL AND lastname IS NOT NULL
+    GROUP BY LOWER(firstname), LOWER(lastname)
+    HAVING cnt > 1
+    LIMIT 30
 ");
 
-// Group by similar lastname for efficient comparison
-$byLastname = [];
-foreach ($allRiders as $r) {
-    $lnKey = strtolower($r['lastname']);
-    $byLastname[$lnKey][] = $r;
-}
+foreach ($duplicateGroups as $group) {
+    $riders = $db->getAll("
+        SELECT r.id, r.firstname, r.lastname, r.birth_year, r.license_number,
+               r.email, r.club_id, c.name as club_name
+        FROM riders r
+        LEFT JOIN clubs c ON r.club_id = c.id
+        WHERE LOWER(r.firstname) = LOWER(?) AND LOWER(r.lastname) = LOWER(?)
+        LIMIT 5
+    ", [$group['firstname'], $group['lastname']]);
 
-// Compare within same lastname groups (exact)
-foreach ($byLastname as $lnKey => $riders) {
-    if (count($riders) < 2) continue;
+    if (count($riders) >= 2) {
+        $r1 = $riders[0];
+        $r2 = $riders[1];
 
-    for ($i = 0; $i < count($riders); $i++) {
-        for ($j = $i + 1; $j < count($riders); $j++) {
-            $r1 = $riders[$i];
-            $r2 = $riders[$j];
-            $pairKey = min($r1['id'], $r2['id']) . '-' . max($r1['id'], $r2['id']);
-            if (isset($processedPairs[$pairKey])) continue;
+        // Skip if different UCI or different birth year
+        $uci1 = isRealUci($r1['license_number']) ? normalizeUci($r1['license_number']) : null;
+        $uci2 = isRealUci($r2['license_number']) ? normalizeUci($r2['license_number']) : null;
 
-            $nameCheck = areNamesSimilar($r1['firstname'], $r1['lastname'], $r2['firstname'], $r2['lastname']);
-            if ($nameCheck['match']) {
-                $result = checkDuplicatePair($r1, $r2, $nameCheck['reason']);
-                if ($result) {
-                    $potentialDuplicates[] = $result;
-                    $processedPairs[$pairKey] = true;
-                }
-            }
-        }
+        if ($uci1 && $uci2 && $uci1 !== $uci2) continue;
+        if ($r1['birth_year'] && $r2['birth_year'] && $r1['birth_year'] !== $r2['birth_year']) continue;
+
+        // Check missing data
+        $r1Missing = [];
+        $r2Missing = [];
+        if (!$r1['birth_year'] && $r2['birth_year']) $r1Missing[] = 'födelseår';
+        if (!$r2['birth_year'] && $r1['birth_year']) $r2Missing[] = 'födelseår';
+        if (!$uci1 && $uci2) $r1Missing[] = 'UCI ID';
+        if (!$uci2 && $uci1) $r2Missing[] = 'UCI ID';
+        if (!$r1['email'] && $r2['email']) $r1Missing[] = 'e-post';
+        if (!$r2['email'] && $r1['email']) $r2Missing[] = 'e-post';
+
+        $sameUci = $uci1 && $uci2 && $uci1 === $uci2;
+        if (!$sameUci && empty($r1Missing) && empty($r2Missing)) continue;
+
+        $potentialDuplicates[] = [
+            'reason' => $sameUci ? 'Samma UCI ID' : 'Exakt samma namn',
+            'rider1' => ['id' => $r1['id'], 'name' => $r1['firstname'].' '.$r1['lastname'],
+                        'birth_year' => $r1['birth_year'], 'license' => $r1['license_number'],
+                        'email' => $r1['email'], 'club' => $r1['club_name'], 'missing' => $r1Missing],
+            'rider2' => ['id' => $r2['id'], 'name' => $r2['firstname'].' '.$r2['lastname'],
+                        'birth_year' => $r2['birth_year'], 'license' => $r2['license_number'],
+                        'email' => $r2['email'], 'club' => $r2['club_name'], 'missing' => $r2Missing]
+        ];
     }
 }
-
-// Also check for similar lastnames (typos, double surnames)
-$lastnameKeys = array_keys($byLastname);
-for ($i = 0; $i < count($lastnameKeys); $i++) {
-    for ($j = $i + 1; $j < count($lastnameKeys); $j++) {
-        $ln1 = $lastnameKeys[$i];
-        $ln2 = $lastnameKeys[$j];
-
-        // Check if lastnames are similar
-        $lnSim = nameSimilarity($ln1, $ln2);
-        $oneContainsOther = strpos($ln1, $ln2) !== false || strpos($ln2, $ln1) !== false;
-
-        if ($lnSim >= 85 || $oneContainsOther) {
-            foreach ($byLastname[$ln1] as $r1) {
-                foreach ($byLastname[$ln2] as $r2) {
-                    $pairKey = min($r1['id'], $r2['id']) . '-' . max($r1['id'], $r2['id']);
-                    if (isset($processedPairs[$pairKey])) continue;
-
-                    $nameCheck = areNamesSimilar($r1['firstname'], $r1['lastname'], $r2['firstname'], $r2['lastname']);
-                    if ($nameCheck['match']) {
-                        $result = checkDuplicatePair($r1, $r2, $nameCheck['reason']);
-                        if ($result) {
-                            $potentialDuplicates[] = $result;
-                            $processedPairs[$pairKey] = true;
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    if (count($potentialDuplicates) >= 100) break;
-}
-
-// Function to check if two riders are potential duplicates
-function checkDuplicatePair($r1, $r2, $nameReason) {
-    $uci1 = normalizeUci($r1['license_number']);
-    $uci2 = normalizeUci($r2['license_number']);
-    $isRealUci1 = isRealUci($r1['license_number']);
-    $isRealUci2 = isRealUci($r2['license_number']);
-
-    // NOT duplicates if both have DIFFERENT real UCI IDs
-    if ($isRealUci1 && $isRealUci2 && $uci1 !== $uci2) {
-        return null; // Different people
-    }
-
-    // NOT duplicates if both have DIFFERENT birth years
-    if (!empty($r1['birth_year']) && !empty($r2['birth_year']) && $r1['birth_year'] !== $r2['birth_year']) {
-        return null; // Different people
-    }
-
-    // Check if one is missing data that the other has
-    $r1Missing = [];
-    $r2Missing = [];
-
-    if (empty($r1['birth_year']) && !empty($r2['birth_year'])) $r1Missing[] = 'födelseår';
-    if (empty($r2['birth_year']) && !empty($r1['birth_year'])) $r2Missing[] = 'födelseår';
-
-    if (!$isRealUci1 && $isRealUci2) $r1Missing[] = 'UCI ID';
-    if (!$isRealUci2 && $isRealUci1) $r2Missing[] = 'UCI ID';
-
-    if (empty($r1['email']) && !empty($r2['email'])) $r1Missing[] = 'e-post';
-    if (empty($r2['email']) && !empty($r1['email'])) $r2Missing[] = 'e-post';
-
-    if (empty($r1['club_id']) && !empty($r2['club_id'])) $r1Missing[] = 'klubb';
-    if (empty($r2['club_id']) && !empty($r1['club_id'])) $r2Missing[] = 'klubb';
-
-    if (empty($r1['license_type']) && !empty($r2['license_type'])) $r1Missing[] = 'licenstyp';
-    if (empty($r2['license_type']) && !empty($r1['license_type'])) $r2Missing[] = 'licenstyp';
-
-    // Only flag as duplicate if one has data the other is missing
-    // OR if they have the same UCI ID (clear duplicate)
-    $sameUci = $isRealUci1 && $isRealUci2 && $uci1 === $uci2;
-    $hasMissingData = !empty($r1Missing) || !empty($r2Missing);
-
-    if (!$sameUci && !$hasMissingData) {
-        return null; // Both have same data, not a merge candidate
-    }
-
-    $reason = $sameUci ? 'Samma UCI ID' : $nameReason;
-
-    return [
-        'reason' => $reason,
-        'rider1' => [
-            'id' => $r1['id'],
-            'name' => $r1['firstname'] . ' ' . $r1['lastname'],
-            'birth_year' => $r1['birth_year'],
-            'license' => $r1['license_number'],
-            'email' => $r1['email'],
-            'club' => $r1['club_name'],
-            'license_type' => $r1['license_type'],
-            'gender' => $r1['gender'],
-            'results' => $r1['result_count'],
-            'missing' => $r1Missing
-        ],
-        'rider2' => [
-            'id' => $r2['id'],
-            'name' => $r2['firstname'] . ' ' . $r2['lastname'],
-            'birth_year' => $r2['birth_year'],
-            'license' => $r2['license_number'],
-            'email' => $r2['email'],
-            'club' => $r2['club_name'],
-            'license_type' => $r2['license_type'],
-            'gender' => $r2['gender'],
-            'results' => $r2['result_count'],
-            'missing' => $r2Missing
-        ]
-    ];
-}
-
-// Sort: Same UCI first, then by number of missing fields
-usort($potentialDuplicates, function($a, $b) {
-    if ($a['reason'] === 'Samma UCI ID' && $b['reason'] !== 'Samma UCI ID') return -1;
-    if ($b['reason'] === 'Samma UCI ID' && $a['reason'] !== 'Samma UCI ID') return 1;
-    $aMissing = count($a['rider1']['missing']) + count($a['rider2']['missing']);
-    $bMissing = count($b['rider1']['missing']) + count($b['rider2']['missing']);
-    return $bMissing - $aMissing;
-});
 
 $pageTitle = 'Hitta Dubbletter';
 $pageType = 'admin';
@@ -371,20 +303,9 @@ include __DIR__ . '/../includes/layout-header.php';
             </div>
         <?php endif; ?>
 
-        <div class="gs-alert gs-alert-info gs-mb-lg">
-            <i data-lucide="info"></i>
-            <div>
-                <strong>Smart dubblettdetektering</strong><br>
-                Hittar endast dubbletter när:<br>
-                - Samma namn OCH en profil saknar data (UCI, födelseår, e-post)<br>
-                - Eller samma UCI ID<br><br>
-                <strong>EJ dubbletter om:</strong> Olika UCI ID eller olika födelseår
-            </div>
-        </div>
-
         <div class="gs-card">
             <div class="gs-card-header">
-                <h2 class="gs-h4 gs-text-warning">
+                <h2 class="gs-h4">
                     <i data-lucide="users"></i>
                     Potentiella dubbletter (<?= count($potentialDuplicates) ?>)
                 </h2>
@@ -397,74 +318,69 @@ include __DIR__ . '/../includes/layout-header.php';
                     </div>
                 <?php else: ?>
                     <?php foreach ($potentialDuplicates as $idx => $dup): ?>
-                    <div class="gs-card gs-mb-md" style="border: 2px solid var(--gs-warning); border-radius: 8px;">
-                        <div class="gs-card-header gs-flex gs-justify-between gs-items-center" style="background: rgba(255,193,7,0.1);">
+                    <div style="border: 2px solid #ffc107; border-radius: 8px; margin-bottom: 1rem; overflow: hidden;">
+                        <div style="background: rgba(255,193,7,0.15); padding: 0.5rem 1rem; display: flex; justify-content: space-between; align-items: center;">
                             <span class="gs-badge <?= $dup['reason'] === 'Samma UCI ID' ? 'gs-badge-danger' : 'gs-badge-warning' ?>">
                                 <?= h($dup['reason']) ?>
                             </span>
-                            <span class="gs-text-sm gs-text-secondary">#<?= $idx + 1 ?></span>
+                            <span style="color: #666; font-size: 0.875rem;">#<?= $idx + 1 ?></span>
                         </div>
-                        <div class="gs-card-content">
-                            <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
-                                <?php foreach (['rider1', 'rider2'] as $key):
-                                    $rider = $dup[$key];
-                                    $isComplete = empty($rider['missing']);
-                                    $bgColor = $isComplete ? 'rgba(40,167,69,0.1)' : 'rgba(220,53,69,0.1)';
-                                ?>
-                                <div style="flex: 1; min-width: 280px; padding: 1rem; background: <?= $bgColor ?>; border-radius: 8px; border: 1px solid <?= $isComplete ? 'rgba(40,167,69,0.3)' : 'rgba(220,53,69,0.3)' ?>;">
-                                    <div class="gs-flex gs-justify-between gs-items-start gs-mb-sm">
-                                        <div>
-                                            <strong class="gs-text-lg"><?= h($rider['name']) ?></strong>
-                                            <div class="gs-text-sm gs-text-secondary">ID: <?= $rider['id'] ?></div>
-                                        </div>
-                                        <span class="gs-badge gs-badge-secondary"><?= $rider['results'] ?> resultat</span>
+                        <div style="padding: 1rem; display: flex; gap: 1rem; flex-wrap: wrap;">
+                            <?php foreach (['rider1', 'rider2'] as $key):
+                                $rider = $dup[$key];
+                                $isComplete = empty($rider['missing']);
+                                $borderColor = $isComplete ? '#28a745' : '#dc3545';
+                                $bgColor = $isComplete ? 'rgba(40,167,69,0.08)' : 'rgba(220,53,69,0.08)';
+                            ?>
+                            <div style="flex: 1; min-width: 280px; padding: 1rem; background: <?= $bgColor ?>; border: 2px solid <?= $borderColor ?>; border-radius: 8px;">
+                                <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                                    <div>
+                                        <strong style="font-size: 1.1rem;"><?= h($rider['name']) ?></strong>
+                                        <div style="font-size: 0.75rem; color: #666;">ID: <?= $rider['id'] ?></div>
                                     </div>
-
-                                    <?php if (!empty($rider['missing'])): ?>
-                                    <div class="gs-alert gs-alert-warning gs-mb-sm" style="padding: 0.5rem;">
-                                        <small><strong>Saknar:</strong> <?= implode(', ', $rider['missing']) ?></small>
-                                    </div>
-                                    <?php endif; ?>
-
-                                    <table class="gs-text-sm" style="width: 100%;">
-                                        <tr>
-                                            <td class="gs-text-secondary" style="width: 90px;">Födelseår:</td>
-                                            <td><?= $rider['birth_year'] ?: '<span class="gs-text-error">-</span>' ?></td>
-                                        </tr>
-                                        <tr>
-                                            <td class="gs-text-secondary">License:</td>
-                                            <td><code><?= h($rider['license'] ?: '-') ?></code></td>
-                                        </tr>
-                                        <tr>
-                                            <td class="gs-text-secondary">Licenstyp:</td>
-                                            <td><?= h($rider['license_type'] ?: '-') ?></td>
-                                        </tr>
-                                        <tr>
-                                            <td class="gs-text-secondary">Klubb:</td>
-                                            <td><?= h($rider['club'] ?: '-') ?></td>
-                                        </tr>
-                                        <tr>
-                                            <td class="gs-text-secondary">E-post:</td>
-                                            <td><?= h($rider['email'] ?: '-') ?></td>
-                                        </tr>
-                                    </table>
-
-                                    <div class="gs-mt-md gs-flex gs-gap-sm">
-                                        <a href="/rider.php?id=<?= $rider['id'] ?>" target="_blank" class="gs-btn gs-btn-sm gs-btn-outline">
-                                            <i data-lucide="external-link"></i>
-                                        </a>
-                                        <?php
-                                        $otherId = $key === 'rider1' ? $dup['rider2']['id'] : $dup['rider1']['id'];
-                                        ?>
-                                        <a href="?action=merge&keep=<?= $rider['id'] ?>&remove=<?= $otherId ?>"
-                                           class="gs-btn gs-btn-sm gs-btn-success gs-flex-1"
-                                           onclick="return confirm('Behåll denna och slå ihop med den andra?')">
-                                            <i data-lucide="check"></i> Behåll
-                                        </a>
-                                    </div>
+                                    <span class="gs-badge gs-badge-secondary"><?= $rider['results'] ?> resultat</span>
                                 </div>
-                                <?php endforeach; ?>
+
+                                <?php if (!empty($rider['missing'])): ?>
+                                <div style="background: rgba(255,193,7,0.2); padding: 0.5rem; border-radius: 4px; margin-bottom: 0.5rem; font-size: 0.875rem;">
+                                    <strong>Saknar:</strong> <?= implode(', ', $rider['missing']) ?>
+                                </div>
+                                <?php endif; ?>
+
+                                <table style="width: 100%; font-size: 0.875rem;">
+                                    <tr>
+                                        <td style="color: #666; width: 80px;">Födelseår:</td>
+                                        <td><?= $rider['birth_year'] ?: '<span style="color: #dc3545;">-</span>' ?></td>
+                                    </tr>
+                                    <tr>
+                                        <td style="color: #666;">License:</td>
+                                        <td><code><?= h($rider['license'] ?: '-') ?></code></td>
+                                    </tr>
+                                    <tr>
+                                        <td style="color: #666;">Klubb:</td>
+                                        <td><?= h($rider['club'] ?: '-') ?></td>
+                                    </tr>
+                                    <tr>
+                                        <td style="color: #666;">E-post:</td>
+                                        <td><?= h($rider['email'] ?: '-') ?></td>
+                                    </tr>
+                                </table>
+
+                                <div style="margin-top: 1rem; display: flex; gap: 0.5rem;">
+                                    <a href="/rider.php?id=<?= $rider['id'] ?>" target="_blank" class="gs-btn gs-btn-sm gs-btn-outline">
+                                        <i data-lucide="external-link"></i>
+                                    </a>
+                                    <?php
+                                    $otherId = $key === 'rider1' ? $dup['rider2']['id'] : $dup['rider1']['id'];
+                                    ?>
+                                    <a href="?action=merge&keep=<?= $rider['id'] ?>&remove=<?= $otherId ?>"
+                                       class="gs-btn gs-btn-sm gs-btn-success" style="flex: 1;"
+                                       onclick="return confirm('Behåll denna profil och ta bort den andra?\n\nResultat flyttas och data slås ihop.')">
+                                        <i data-lucide="check"></i> Behåll denna
+                                    </a>
+                                </div>
                             </div>
+                            <?php endforeach; ?>
                         </div>
                     </div>
                     <?php endforeach; ?>
