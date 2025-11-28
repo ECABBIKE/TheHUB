@@ -76,11 +76,10 @@ if ($useSeriesEvents) {
 $stmt->execute([$seriesId]);
 $events = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-// Get classes with results in this series - SEPARATE point classes from participation-only classes
+// Get classes with results in this series (only point-awarding classes)
 if ($useSeriesEvents) {
-    // Classes that award points (for standings)
     $stmt = $pdo->prepare("
-        SELECT DISTINCT c.id, c.name, c.display_name, c.sort_order, c.awards_points,
+        SELECT DISTINCT c.id, c.name, c.display_name, c.sort_order,
                COUNT(DISTINCT r.cyclist_id) as rider_count
         FROM classes c
         JOIN results r ON c.id = r.class_id
@@ -93,25 +92,9 @@ if ($useSeriesEvents) {
     ");
     $stmt->execute([$seriesId]);
     $classes = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-    // Participation-only classes (Motion Kids, Mellan, Lång - no points)
-    $stmt = $pdo->prepare("
-        SELECT DISTINCT c.id, c.name, c.display_name, c.sort_order,
-               COUNT(DISTINCT r.cyclist_id) as rider_count
-        FROM classes c
-        JOIN results r ON c.id = r.class_id
-        JOIN series_events se ON r.event_id = se.event_id
-        WHERE se.series_id = ?
-          AND COALESCE(c.awards_points, 1) = 0
-        GROUP BY c.id
-        ORDER BY c.sort_order ASC
-    ");
-    $stmt->execute([$seriesId]);
-    $participationClasses = $stmt->fetchAll(PDO::FETCH_ASSOC);
 } else {
-    // Fallback - Classes that award points
     $stmt = $pdo->prepare("
-        SELECT DISTINCT c.id, c.name, c.display_name, c.sort_order, c.awards_points,
+        SELECT DISTINCT c.id, c.name, c.display_name, c.sort_order,
                COUNT(DISTINCT r.cyclist_id) as rider_count
         FROM classes c
         JOIN results r ON c.id = r.class_id
@@ -124,21 +107,6 @@ if ($useSeriesEvents) {
     ");
     $stmt->execute([$seriesId]);
     $classes = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-    // Participation-only classes
-    $stmt = $pdo->prepare("
-        SELECT DISTINCT c.id, c.name, c.display_name, c.sort_order,
-               COUNT(DISTINCT r.cyclist_id) as rider_count
-        FROM classes c
-        JOIN results r ON c.id = r.class_id
-        JOIN events e ON r.event_id = e.id
-        WHERE e.series_id = ?
-          AND COALESCE(c.awards_points, 1) = 0
-        GROUP BY c.id
-        ORDER BY c.sort_order ASC
-    ");
-    $stmt->execute([$seriesId]);
-    $participationClasses = $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
 
 // Selected class filter
@@ -228,38 +196,6 @@ if ($useSeriesResults) {
         $stmt = $pdo->prepare($sql);
         $stmt->execute($params);
         $standings = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    }
-}
-
-// Get participants for participation-only classes (Motion Kids, Mellan, Lång)
-$participationByClass = [];
-if (!empty($participationClasses)) {
-    $eventIds = array_column($events, 'id');
-    if (!empty($eventIds)) {
-        $placeholders = implode(',', array_fill(0, count($eventIds), '?'));
-        foreach ($participationClasses as $pClass) {
-            $stmt = $pdo->prepare("
-                SELECT DISTINCT
-                    ri.id as rider_id,
-                    ri.firstname,
-                    ri.lastname,
-                    c.name as club_name,
-                    COUNT(DISTINCT r.event_id) as events_count
-                FROM results r
-                JOIN riders ri ON r.cyclist_id = ri.id
-                LEFT JOIN clubs c ON ri.club_id = c.id
-                WHERE r.event_id IN ({$placeholders})
-                  AND r.class_id = ?
-                GROUP BY ri.id
-                ORDER BY ri.lastname, ri.firstname
-            ");
-            $params = array_merge($eventIds, [$pClass['id']]);
-            $stmt->execute($params);
-            $participants = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            if (!empty($participants)) {
-                $participationByClass[$pClass['display_name'] ?? $pClass['name']] = $participants;
-            }
-        }
     }
 }
 
@@ -406,32 +342,6 @@ $countBest = $series['count_best_results'] ?? 5;
         <?php endif; ?>
     </div>
 
-    <!-- Participation-only Classes (Motion Kids, Mellan, Lång) -->
-    <?php if (!empty($participationByClass)): ?>
-    <div class="card">
-        <h2 class="card-title">Deltagarklasser</h2>
-        <p class="text-muted" style="margin-bottom: var(--space-md);">Dessa klasser har ingen poängräkning - bara deltagande!</p>
-
-        <?php foreach ($participationByClass as $className => $participants): ?>
-        <div class="participation-class">
-            <h3 class="participation-class-title"><?= htmlspecialchars($className) ?> <span class="participant-count">(<?= count($participants) ?> deltagare)</span></h3>
-            <div class="participants-grid">
-                <?php foreach ($participants as $p): ?>
-                <div class="participant-item">
-                    <a href="/v3/database/rider/<?= $p['rider_id'] ?>">
-                        <?= htmlspecialchars($p['firstname'] . ' ' . $p['lastname']) ?>
-                    </a>
-                    <?php if ($p['club_name']): ?>
-                        <span class="participant-club"><?= htmlspecialchars($p['club_name']) ?></span>
-                    <?php endif; ?>
-                    <span class="participant-events"><?= $p['events_count'] ?> tävl.</span>
-                </div>
-                <?php endforeach; ?>
-            </div>
-        </div>
-        <?php endforeach; ?>
-    </div>
-    <?php endif; ?>
 </div>
 
 <style>
@@ -655,74 +565,6 @@ $countBest = $series['count_best_results'] ?? 5;
     .filter-group select,
     .filter-group input {
         width: 100%;
-    }
-}
-
-/* Participation-only classes (Motion Kids, Mellan, Lång) */
-.participation-class {
-    margin-bottom: var(--space-xl);
-}
-
-.participation-class:last-child {
-    margin-bottom: 0;
-}
-
-.participation-class-title {
-    font-size: var(--text-md);
-    color: var(--color-success);
-    margin: 0 0 var(--space-sm);
-    padding-bottom: var(--space-xs);
-    border-bottom: 2px solid var(--color-success);
-}
-
-.participant-count {
-    font-weight: normal;
-    font-size: var(--text-sm);
-    color: var(--color-text-muted);
-}
-
-.participants-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: var(--space-sm);
-}
-
-.participant-item {
-    display: flex;
-    align-items: center;
-    gap: var(--space-sm);
-    padding: var(--space-sm);
-    background: var(--color-bg-sunken);
-    border-radius: var(--radius-md);
-}
-
-.participant-item a {
-    font-weight: var(--weight-medium);
-    color: inherit;
-    text-decoration: none;
-}
-
-.participant-item a:hover {
-    color: var(--color-accent);
-}
-
-.participant-club {
-    color: var(--color-text-muted);
-    font-size: var(--text-sm);
-    flex: 1;
-}
-
-.participant-events {
-    font-size: var(--text-xs);
-    color: var(--color-text-secondary);
-    background: var(--color-bg-card);
-    padding: 2px 8px;
-    border-radius: var(--radius-sm);
-}
-
-@media (max-width: 768px) {
-    .participants-grid {
-        grid-template-columns: 1fr;
     }
 }
 </style>
