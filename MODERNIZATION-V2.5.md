@@ -5,6 +5,7 @@
 ### 1. CSS Tema-System
 - ✅ `/assets/css/tokens.css` - Design tokens (färger, spacing, typografi)
 - ✅ `/assets/css/theme-base.css` - Bas-komponenter med light/dark tema
+- ✅ `/assets/css/responsive.css` - Mobile & tablet optimizations (V3.5 best practices)
 - ✅ Automatisk dark mode baserat på system eller manuellt val
 
 ### 2. JavaScript
@@ -133,6 +134,62 @@ $navItems = [
     // Lägg till fler här...
 ];
 ```
+
+---
+
+## 📱 Mobilanpassningar (från V3.5)
+
+TheHUB V2.5 inkluderar omfattande mobiloptimizeringar baserade på V3.5:s best practices.
+
+### Touch-Optimized Inputs
+- **16px font-size** på formulär för att förhindra iOS zoom
+- **44px minimum touch targets** (Apple standard)
+- Touch-friendly spacing och padding
+
+### Scrollbara Tabeller
+```html
+<div class="table-wrapper">
+    <table class="table">
+        <!-- Din tabell här -->
+    </table>
+</div>
+```
+
+- Automatisk horizontal scroll på mobil
+- `-webkit-overflow-scrolling: touch` för smooth scrolling
+- Döljer mindre viktiga kolumner (`.col-split`, `.col-diff`) på portrait
+
+### Mobile Card List
+För små skärmar (<599px) visas resultat som cards istället för tabeller:
+
+```html
+<div class="result-list">
+    <div class="result-item">
+        <div class="result-place">1</div>
+        <div class="result-info">
+            <div class="result-name">Förare Namn</div>
+            <div class="result-club">Klubbnamn</div>
+        </div>
+        <div class="result-time">1:23.456</div>
+    </div>
+</div>
+```
+
+### Responsive Grids
+- Grid-kolumner kollapsas till 1 kolumn på mobil
+- Stat cards behåller 2 kolumner för kompakthet
+- Flex-layouter stackas vertikalt (`.flex-stack-mobile`)
+
+### Modaler
+- Full-screen på mobil för bättre UX
+- No border-radius på mobil
+- Kompakt padding
+
+### Breakpoints
+- **Mobile Portrait:** < 900px
+- **Mobile Landscape:** 600px - 900px
+- **Tablet:** 601px - 1023px
+- **Desktop:** ≥ 1024px
 
 ---
 
@@ -327,6 +384,7 @@ window.addEventListener('themechange', (e) => {
 ```
 /assets/css/tokens.css
 /assets/css/theme-base.css
+/assets/css/responsive.css
 /assets/js/theme.js
 /assets/js/dropdown.js
 /includes/nav-bottom.php
