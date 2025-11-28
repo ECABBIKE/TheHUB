@@ -1,6 +1,16 @@
 <?php
 $currentPage = $pageInfo['page'] ?? 'dashboard';
-$icons = ['home'=>'🏠','trophy'=>'🏆','flag'=>'🏁','users'=>'👥','shield'=>'🛡️'];
+$icons = [
+    'calendar' => '📅',
+    'flag' => '🏁',
+    'trophy' => '🏆',
+    'search' => '🔍',
+    'trending-up' => '📈',
+    'user' => '👤',
+    'home' => '🏠',
+    'users' => '👥',
+    'shield' => '🛡️'
+];
 ?>
 <aside class="sidebar" role="navigation" aria-label="Huvudnavigering">
   <nav class="sidebar-nav">

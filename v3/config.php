@@ -40,12 +40,13 @@ if (!defined('HUB_V2_ROOT')) define('HUB_V2_ROOT', dirname(__DIR__));
 if (!defined('WC_CHECKOUT_URL')) define('WC_CHECKOUT_URL', '/checkout');
 
 // ============================================================================
-// V3.5 NAVIGATION (5 main sections)
+// V3.5 NAVIGATION (6 main sections)
 // ============================================================================
 if (!defined('HUB_NAV')) {
     define('HUB_NAV', [
         ['id' => 'calendar', 'label' => 'Kalender', 'icon' => 'calendar', 'url' => '/v3/calendar', 'aria' => 'Visa eventkalender'],
         ['id' => 'results', 'label' => 'Resultat', 'icon' => 'flag', 'url' => '/v3/results', 'aria' => 'Visa tävlingsresultat'],
+        ['id' => 'series', 'label' => 'Serier', 'icon' => 'trophy', 'url' => '/v3/series', 'aria' => 'Visa tävlingsserier'],
         ['id' => 'database', 'label' => 'Databas', 'icon' => 'search', 'url' => '/v3/database', 'aria' => 'Sök åkare och klubbar'],
         ['id' => 'ranking', 'label' => 'Ranking', 'icon' => 'trending-up', 'url' => '/v3/ranking', 'aria' => 'Visa ranking'],
         ['id' => 'profile', 'label' => 'Mitt', 'icon' => 'user', 'url' => '/v3/profile', 'aria' => 'Min profil']
@@ -59,7 +60,9 @@ if (!defined('HUB_VALID_PAGES')) {
         // Calendar
         'calendar', 'calendar-event',
         // Results
-        'results', 'results-event', 'results-series',
+        'results', 'results-event',
+        // Series
+        'series', 'series-index', 'series-show',
         // Database
         'database', 'database-rider', 'database-club',
         // Ranking
