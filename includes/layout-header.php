@@ -62,7 +62,7 @@ if (!isset($pageType)) {
 
 // Determine title suffix and body class
 $titleSuffix = ($pageType === 'admin') ? ' - TheHUB Admin' : ' - TheHUB';
-$defaultBodyClass = ($pageType === 'admin') ? 'gs-admin-page' : 'gs-public-page';
+$defaultBodyClass = ($pageType === 'admin') ? 'admin-page' : 'public-page';
 $bodyClass = isset($bodyClass) ? $defaultBodyClass . ' ' . $bodyClass : $defaultBodyClass;
 ?>
 <!DOCTYPE html>
@@ -77,7 +77,7 @@ $bodyClass = isset($bodyClass) ? $defaultBodyClass . ' ' . $bodyClass : $default
         /* Force sidebar permanent on desktop - INLINE to bypass loading issues */
         @media (min-width: 1024px) {
             /* Hide hamburger completely on desktop */
-            .gs-mobile-menu-toggle {
+            .mobile-menu-toggle {
                 display: none !important;
                 visibility: hidden !important;
                 opacity: 0 !important;
@@ -85,7 +85,7 @@ $bodyClass = isset($bodyClass) ? $defaultBodyClass . ' ' . $bodyClass : $default
             }
 
             /* Show sidebar permanently */
-            .gs-sidebar {
+            .sidebar {
                 display: flex !important;
                 position: fixed !important;
                 left: 0 !important;
@@ -100,7 +100,7 @@ $bodyClass = isset($bodyClass) ? $defaultBodyClass . ' ' . $bodyClass : $default
             }
 
             /* Hide overlay completely on desktop */
-            .gs-sidebar-overlay {
+            .sidebar-overlay {
                 display: none !important;
                 visibility: hidden !important;
                 opacity: 0 !important;
@@ -108,8 +108,7 @@ $bodyClass = isset($bodyClass) ? $defaultBodyClass . ' ' . $bodyClass : $default
             }
 
             /* Offset content for sidebar */
-            .gs-main-content,
-            .gs-content-with-sidebar {
+            .main-content {
                 margin-left: 280px !important;
                 width: calc(100% - 280px) !important;
             }
@@ -122,16 +121,16 @@ $bodyClass = isset($bodyClass) ? $defaultBodyClass . ' ' . $bodyClass : $default
 
         /* Mobile behavior unchanged */
         @media (max-width: 1023px) {
-            .gs-sidebar {
+            .sidebar {
                 transform: translateX(-100%);
                 z-index: 1100;
             }
 
-            .gs-sidebar.open {
+            .sidebar.open {
                 transform: translateX(0);
             }
 
-            .gs-mobile-menu-toggle {
+            .mobile-menu-toggle {
                 display: flex !important;
             }
         }
@@ -217,7 +216,7 @@ $bodyClass = isset($bodyClass) ? $defaultBodyClass . ' ' . $bodyClass : $default
 </head>
 <body class="<?= $bodyClass ?>">
     <!-- Hamburger (hidden on desktop via inline CSS) -->
-    <button class="gs-mobile-menu-toggle" onclick="toggleMenu()" aria-label="Toggle menu">
+    <button class="mobile-menu-toggle" onclick="toggleMenu()" aria-label="Toggle menu">
         <i data-lucide="menu"></i>
     </button>
 
@@ -225,4 +224,4 @@ $bodyClass = isset($bodyClass) ? $defaultBodyClass . ' ' . $bodyClass : $default
     <?php include __DIR__ . '/navigation.php'; ?>
 
     <!-- Overlay (hidden on desktop via inline CSS) -->
-    <div class="gs-sidebar-overlay" onclick="closeMenu()"></div>
+    <div class="sidebar-overlay" onclick="closeMenu()"></div>

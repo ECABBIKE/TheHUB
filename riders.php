@@ -5,7 +5,7 @@ ini_set('display_errors', 1);
 
 // Load config first
 if (!file_exists(__DIR__ . '/config.php')) {
-    die('ERROR: config.php not found! Current directory: ' . __DIR__);
+ die('ERROR: config.php not found! Current directory: ' . __DIR__);
 }
 require_once __DIR__ . '/config.php';
 require_once __DIR__ . '/includes/class-calculations.php';
@@ -22,72 +22,72 @@ $filterDiscipline = $publicSettings['filter_discipline'] ?? null;
 $disciplineWhere = '';
 $disciplineParam = [];
 if ($filterDiscipline) {
-    // Check if disciplines JSON contains the filter discipline
-    $disciplineWhere = " AND (
-        c.disciplines LIKE ? OR
-        c.disciplines LIKE ? OR
-        c.disciplines LIKE ? OR
-        c.disciplines LIKE ?
-    )";
-    $disciplineParam = [
-        '%"' . $filterDiscipline . '"%',    // Exact match in JSON
-        '%' . strtolower($filterDiscipline) . '%',  // Lowercase variant
-        '%' . ucfirst(strtolower($filterDiscipline)) . '%',  // Capitalized
-        '%' . strtoupper($filterDiscipline) . '%'   // Uppercase
-    ];
+ // Check if disciplines JSON contains the filter discipline
+ $disciplineWhere =" AND (
+ c.disciplines LIKE ? OR
+ c.disciplines LIKE ? OR
+ c.disciplines LIKE ? OR
+ c.disciplines LIKE ?
+ )";
+ $disciplineParam = [
+ '%"' . $filterDiscipline . '"%', // Exact match in JSON
+ '%' . strtolower($filterDiscipline) . '%', // Lowercase variant
+ '%' . ucfirst(strtolower($filterDiscipline)) . '%', // Capitalized
+ '%' . strtoupper($filterDiscipline) . '%' // Uppercase
+ ];
 }
 
 // Build query based on settings
 if ($displayMode === 'all') {
-    // Show ALL active riders (optionally filtered by discipline)
-    $cyclists = $db->getAll("
-        SELECT
-            c.id,
-            c.firstname,
-            c.lastname,
-            c.birth_year,
-            c.gender,
-            c.license_number,
-            c.license_type,
-            c.license_year,
-            c.license_valid_until,
-            cl.name as club_name,
-            COUNT(DISTINCT r.id) as total_races,
-            COUNT(CASE WHEN r.position <= 3 THEN 1 END) as podiums,
-            MIN(r.position) as best_position
-        FROM riders c
-        LEFT JOIN clubs cl ON c.club_id = cl.id
-        LEFT JOIN results r ON c.id = r.cyclist_id
-        WHERE c.active = 1 {$disciplineWhere}
-        GROUP BY c.id
-        ORDER BY c.lastname, c.firstname
-    ", $disciplineParam);
+ // Show ALL active riders (optionally filtered by discipline)
+ $cyclists = $db->getAll("
+ SELECT
+  c.id,
+  c.firstname,
+  c.lastname,
+  c.birth_year,
+  c.gender,
+  c.license_number,
+  c.license_type,
+  c.license_year,
+  c.license_valid_until,
+  cl.name as club_name,
+  COUNT(DISTINCT r.id) as total_races,
+  COUNT(CASE WHEN r.position <= 3 THEN 1 END) as podiums,
+  MIN(r.position) as best_position
+ FROM riders c
+ LEFT JOIN clubs cl ON c.club_id = cl.id
+ LEFT JOIN results r ON c.id = r.cyclist_id
+ WHERE c.active = 1 {$disciplineWhere}
+ GROUP BY c.id
+ ORDER BY c.lastname, c.firstname
+", $disciplineParam);
 } else {
-    // Show ONLY riders with results (minimum required results)
-    $params = array_merge($disciplineParam, [$minResults]);
-    $cyclists = $db->getAll("
-        SELECT
-            c.id,
-            c.firstname,
-            c.lastname,
-            c.birth_year,
-            c.gender,
-            c.license_number,
-            c.license_type,
-            c.license_year,
-            c.license_valid_until,
-            cl.name as club_name,
-            COUNT(DISTINCT r.id) as total_races,
-            COUNT(CASE WHEN r.position <= 3 THEN 1 END) as podiums,
-            MIN(r.position) as best_position
-        FROM riders c
-        LEFT JOIN clubs cl ON c.club_id = cl.id
-        INNER JOIN results r ON c.id = r.cyclist_id
-        WHERE c.active = 1 {$disciplineWhere}
-        GROUP BY c.id
-        HAVING total_races >= ?
-        ORDER BY c.lastname, c.firstname
-    ", $params);
+ // Show ONLY riders with results (minimum required results)
+ $params = array_merge($disciplineParam, [$minResults]);
+ $cyclists = $db->getAll("
+ SELECT
+  c.id,
+  c.firstname,
+  c.lastname,
+  c.birth_year,
+  c.gender,
+  c.license_number,
+  c.license_type,
+  c.license_year,
+  c.license_valid_until,
+  cl.name as club_name,
+  COUNT(DISTINCT r.id) as total_races,
+  COUNT(CASE WHEN r.position <= 3 THEN 1 END) as podiums,
+  MIN(r.position) as best_position
+ FROM riders c
+ LEFT JOIN clubs cl ON c.club_id = cl.id
+ INNER JOIN results r ON c.id = r.cyclist_id
+ WHERE c.active = 1 {$disciplineWhere}
+ GROUP BY c.id
+ HAVING total_races >= ?
+ ORDER BY c.lastname, c.firstname
+", $params);
 }
 
 $total_count = count($cyclists);
@@ -101,205 +101,205 @@ $pageType = 'public';
 include __DIR__ . '/includes/layout-header.php';
 ?>
 
-    <main class="gs-main-content">
-        <div class="gs-container">
+ <main class="main-content">
+ <div class="container">
 
-            <!-- Header -->
-            <div class="gs-mb-xl">
-                <h1 class="gs-h2 gs-text-primary gs-mb-sm">
-                    <i data-lucide="users"></i>
-                    Aktiva Deltagare
-                </h1>
-                <div class="gs-flex gs-gap-md gs-flex-wrap">
-                    <span class="gs-badge gs-badge-primary">
-                        <?php if ($displayMode === 'all'): ?>
-                            <?= $total_count ?> aktiva deltagare
-                        <?php else: ?>
-                            <?= $total_count ?> deltagare med resultat
-                        <?php endif; ?>
-                    </span>
-                    <span class="gs-badge gs-badge-secondary">
-                        <?= $club_count ?> aktiva klubbar
-                    </span>
-                </div>
-            </div>
+  <!-- Header -->
+  <div class="mb-lg">
+  <h1 class="text-primary mb-sm">
+   <i data-lucide="users"></i>
+   Aktiva Deltagare
+  </h1>
+  <div class="flex gap-md flex-wrap">
+   <span class="badge badge-primary">
+   <?php if ($displayMode === 'all'): ?>
+    <?= $total_count ?> aktiva deltagare
+   <?php else: ?>
+    <?= $total_count ?> deltagare med resultat
+   <?php endif; ?>
+   </span>
+   <span class="badge badge-secondary">
+   <?= $club_count ?> aktiva klubbar
+   </span>
+  </div>
+  </div>
 
-            <!-- Search Box -->
-            <div class="gs-mb-lg">
-                <input type="text"
-                       id="searchRiders"
-                       class="gs-input"
-                       placeholder="🔍 Sök på namn, klubb eller licens...">
-            </div>
+  <!-- Search Box -->
+  <div class="mb-lg">
+  <input type="text"
+   id="searchRiders"
+   class="input"
+   placeholder="🔍 Sök på namn, klubb eller licens...">
+  </div>
 
-            <!-- Results Counter -->
-            <div class="gs-mb-md gs-hidden" id="resultsCounter">
-                <div class="gs-alert gs-alert-info gs-p-3">
-                    <i data-lucide="filter"></i>
-                    <span id="resultsCount"></span>
-                </div>
-            </div>
+  <!-- Results Counter -->
+  <div class="mb-md hidden" id="resultsCounter">
+  <div class="alert alert--info gs-p-3">
+   <i data-lucide="filter"></i>
+   <span id="resultsCount"></span>
+  </div>
+  </div>
 
-            <!-- Initial Message -->
-            <div id="initialMessage" class="gs-card gs-text-center gs-empty-state-container">
-                <i data-lucide="search" class="gs-empty-state-icon-lg"></i>
-                <h3 class="gs-h4 gs-mb-sm">Sök efter deltagare</h3>
-                <p class="gs-text-secondary">
-                    Börja skriva minst 2 tecken för att hitta deltagare<br>
-                    <span class="gs-text-xs-special">
-                        (<?= number_format($total_count, 0, ',', ' ') ?> deltagare i databasen)
-                    </span>
-                </p>
-            </div>
+  <!-- Initial Message -->
+  <div id="initialMessage" class="card text-center gs-empty-state-container">
+  <i data-lucide="search" class="gs-empty-state-icon-lg"></i>
+  <h3 class="mb-sm">Sök efter deltagare</h3>
+  <p class="text-secondary">
+   Börja skriva minst 2 tecken för att hitta deltagare<br>
+   <span class="text-xs-special">
+   (<?= number_format($total_count, 0, ',', ' ') ?> deltagare i databasen)
+   </span>
+  </p>
+  </div>
 
-            <!-- Riders Grid - Will be populated via search -->
-            <div class="gs-grid gs-grid-cols-1 gs-md-grid-cols-2 gs-lg-grid-cols-3 gs-xl-grid-cols-4 gs-gap-md gs-hidden" id="ridersGrid">
-                    <?php
-                    $currentYear = date('Y');
-                    foreach ($cyclists as $rider):
-                        // Calculate age
-                        $age = ($rider['birth_year'] && $rider['birth_year'] > 0)
-                            ? ($currentYear - $rider['birth_year'])
-                            : null;
+  <!-- Riders Grid - Will be populated via search -->
+  <div class="grid grid-cols-1 md-grid-cols-2 gs-lg-grid-cols-3 gs-xl-grid-cols-4 gap-md hidden" id="ridersGrid">
+   <?php
+   $currentYear = date('Y');
+   foreach ($cyclists as $rider):
+   // Calculate age
+   $age = ($rider['birth_year'] && $rider['birth_year'] > 0)
+    ? ($currentYear - $rider['birth_year'])
+    : null;
 
-                        // Check license status
-                        $isUciLicense = !empty($rider['license_number']) && strpos($rider['license_number'], 'SWE') !== 0;
-                        $licenseCheck = checkLicense($rider);
-                        $isLicenseActive = $isUciLicense && !empty($rider['license_type']) && $rider['license_type'] !== 'None' && $licenseCheck['valid'];
-                    ?>
-                        <a href="/rider.php?id=<?= $rider['id'] ?>"
-                           class="gs-license-card-compact"
-                           data-search="<?= strtolower(h($rider['firstname'] . ' ' . $rider['lastname'] . ' ' . ($rider['club_name'] ?? '') . ' ' . ($rider['license_number'] ?? ''))) ?>">
+   // Check license status
+   $isUciLicense = !empty($rider['license_number']) && strpos($rider['license_number'], 'SWE') !== 0;
+   $licenseCheck = checkLicense($rider);
+   $isLicenseActive = $isUciLicense && !empty($rider['license_type']) && $rider['license_type'] !== 'None' && $licenseCheck['valid'];
+   ?>
+   <a href="/rider.php?id=<?= $rider['id'] ?>"
+    class="gs-license-card-compact"
+    data-search="<?= strtolower(h($rider['firstname'] . ' ' . $rider['lastname'] . ' ' . ($rider['club_name'] ?? '') . ' ' . ($rider['license_number'] ?? ''))) ?>">
 
-                            <!-- UCI Color Stripe -->
-                            <div class="uci-stripe"></div>
+    <!-- UCI Color Stripe -->
+    <div class="uci-stripe"></div>
 
-                            <!-- Card Content -->
-                            <div class="gs-license-card-content">
-                                <!-- Name -->
-                                <div class="gs-rider-name-line">
-                                    <?= h($rider['firstname']) ?> <?= h($rider['lastname']) ?>
-                                </div>
+    <!-- Card Content -->
+    <div class="gs-license-card-content">
+    <!-- Name -->
+    <div class="gs-rider-name-line">
+     <?= h($rider['firstname']) ?> <?= h($rider['lastname']) ?>
+    </div>
 
-                                <!-- License ID -->
-                                <div class="license-id">
-                                    <?php if ($isUciLicense): ?>
-                                        UCI <?= h($rider['license_number']) ?>
-                                    <?php elseif (!empty($rider['license_number'])): ?>
-                                        <?= h($rider['license_number']) ?>
-                                    <?php endif; ?>
-                                </div>
+    <!-- License ID -->
+    <div class="license-id">
+     <?php if ($isUciLicense): ?>
+     UCI <?= h($rider['license_number']) ?>
+     <?php elseif (!empty($rider['license_number'])): ?>
+     <?= h($rider['license_number']) ?>
+     <?php endif; ?>
+    </div>
 
-                                <!-- Essential Info Grid -->
-                                <div class="gs-license-info-compact">
-                                    <div class="gs-info-field-compact">
-                                        <div class="gs-info-label-compact">Ålder</div>
-                                        <div class="gs-info-value-compact">
-                                            <?= $age !== null ? $age : '–' ?>
-                                        </div>
-                                    </div>
+    <!-- Essential Info Grid -->
+    <div class="gs-license-info-compact">
+     <div class="gs-info-field-compact">
+     <div class="gs-info-label-compact">Ålder</div>
+     <div class="gs-info-value-compact">
+      <?= $age !== null ? $age : '–' ?>
+     </div>
+     </div>
 
-                                    <div class="gs-info-field-compact">
-                                        <div class="gs-info-label-compact">Kön</div>
-                                        <div class="gs-info-value-compact">
-                                            <?php
-                                            if ($rider['gender'] === 'M') {
-                                                echo 'Man';
-                                            } elseif (in_array($rider['gender'], ['F', 'K'])) {
-                                                echo 'Kvinna';
-                                            } else {
-                                                echo '–';
-                                            }
-                                            ?>
-                                        </div>
-                                    </div>
+     <div class="gs-info-field-compact">
+     <div class="gs-info-label-compact">Kön</div>
+     <div class="gs-info-value-compact">
+      <?php
+      if ($rider['gender'] === 'M') {
+      echo 'Man';
+      } elseif (in_array($rider['gender'], ['F', 'K'])) {
+      echo 'Kvinna';
+      } else {
+      echo '–';
+      }
+      ?>
+     </div>
+     </div>
 
-                                    <!-- Club -->
-                                    <div class="gs-club-field-wide">
-                                        <div class="gs-info-label-compact">Klubb</div>
-                                        <div class="gs-info-value-compact gs-text-11">
-                                            <?= $rider['club_name'] ? h($rider['club_name']) : '–' ?>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </a>
-                    <?php endforeach; ?>
-                </div>
+     <!-- Club -->
+     <div class="gs-club-field-wide">
+     <div class="gs-info-label-compact">Klubb</div>
+     <div class="gs-info-value-compact gs-text-11">
+      <?= $rider['club_name'] ? h($rider['club_name']) : '–' ?>
+     </div>
+     </div>
+    </div>
+    </div>
+   </a>
+   <?php endforeach; ?>
+  </div>
 
-            <!-- No Results Message (hidden by default) -->
-            <div id="noResults" class="gs-card gs-text-center gs-hidden gs-empty-state-container gs-mt-8">
-                <i data-lucide="search-x" class="gs-empty-state-icon-lg"></i>
-                <h3 class="gs-h4 gs-mb-sm">Inga matchande deltagare</h3>
-                <p class="gs-text-secondary">
-                    Prova att söka med andra ord eller rensa sökningen.
-                </p>
-            </div>
-        </div>
+  <!-- No Results Message (hidden by default) -->
+  <div id="noResults" class="card text-center hidden gs-empty-state-container gs-mt-8">
+  <i data-lucide="search-x" class="gs-empty-state-icon-lg"></i>
+  <h3 class="mb-sm">Inga matchande deltagare</h3>
+  <p class="text-secondary">
+   Prova att söka med andra ord eller rensa sökningen.
+  </p>
+  </div>
+ </div>
 
 
 <?php
 // Additional page-specific scripts
-$additionalScripts = "
-    // Search functionality - optimized for 3000+ riders
-    const searchInput = document.getElementById('searchRiders');
-    const ridersGrid = document.getElementById('ridersGrid');
-    const noResults = document.getElementById('noResults');
-    const resultsCounter = document.getElementById('resultsCounter');
-    const resultsCount = document.getElementById('resultsCount');
-    const totalRiders = " . count($cyclists) . ";
-    const initialMessage = document.getElementById('initialMessage');
+$additionalScripts ="
+ // Search functionality - optimized for 3000+ riders
+ const searchInput = document.getElementById('searchRiders');
+ const ridersGrid = document.getElementById('ridersGrid');
+ const noResults = document.getElementById('noResults');
+ const resultsCounter = document.getElementById('resultsCounter');
+ const resultsCount = document.getElementById('resultsCount');
+ const totalRiders =" . count($cyclists) .";
+ const initialMessage = document.getElementById('initialMessage');
 
-    if (searchInput && ridersGrid) {
-        searchInput.addEventListener('input', function(e) {
-            const search = e.target.value.toLowerCase().trim();
-            const cards = ridersGrid.querySelectorAll('.gs-license-card-compact');
+ if (searchInput && ridersGrid) {
+ searchInput.addEventListener('input', function(e) {
+  const search = e.target.value.toLowerCase().trim();
+  const cards = ridersGrid.querySelectorAll('.gs-license-card-compact');
 
-            // Require at least 2 characters for search
-            if (search.length < 2) {
-                if (initialMessage) initialMessage.style.display = 'block';
-                ridersGrid.style.display = 'none';
-                if (resultsCounter) resultsCounter.style.display = 'none';
-                if (noResults) noResults.style.display = 'none';
-                return;
-            }
+  // Require at least 2 characters for search
+  if (search.length < 2) {
+  if (initialMessage) initialMessage.style.display = 'block';
+  ridersGrid.style.display = 'none';
+  if (resultsCounter) resultsCounter.style.display = 'none';
+  if (noResults) noResults.style.display = 'none';
+  return;
+  }
 
-            // Hide initial message and show grid
-            if (initialMessage) initialMessage.style.display = 'none';
-            ridersGrid.style.display = 'grid';
+  // Hide initial message and show grid
+  if (initialMessage) initialMessage.style.display = 'none';
+  ridersGrid.style.display = 'grid';
 
-            let visibleCount = 0;
+  let visibleCount = 0;
 
-            // Filter cards
-            cards.forEach(card => {
-                const searchData = card.getAttribute('data-search');
-                if (searchData.includes(search)) {
-                    card.style.display = 'block';
-                    visibleCount++;
-                } else {
-                    card.style.display = 'none';
-                }
-            });
+  // Filter cards
+  cards.forEach(card => {
+  const searchData = card.getAttribute('data-search');
+  if (searchData.includes(search)) {
+   card.style.display = 'block';
+   visibleCount++;
+  } else {
+   card.style.display = 'none';
+  }
+  });
 
-            // Update results counter
-            if (resultsCounter && resultsCount) {
-                resultsCounter.style.display = 'block';
-                if (visibleCount === 1) {
-                    resultsCount.textContent = 'Visar 1 deltagare av ' + totalRiders + ' totalt';
-                } else {
-                    resultsCount.textContent = 'Visar ' + visibleCount + ' deltagare av ' + totalRiders + ' totalt';
-                }
-            }
+  // Update results counter
+  if (resultsCounter && resultsCount) {
+  resultsCounter.style.display = 'block';
+  if (visibleCount === 1) {
+   resultsCount.textContent = 'Visar 1 deltagare av ' + totalRiders + ' totalt';
+  } else {
+   resultsCount.textContent = 'Visar ' + visibleCount + ' deltagare av ' + totalRiders + ' totalt';
+  }
+  }
 
-            // Show/hide no results message
-            if (noResults) {
-                noResults.style.display = visibleCount === 0 ? 'block' : 'none';
-            }
-            if (ridersGrid) {
-                ridersGrid.style.display = visibleCount === 0 ? 'none' : 'grid';
-            }
-        });
-    }
+  // Show/hide no results message
+  if (noResults) {
+  noResults.style.display = visibleCount === 0 ? 'block' : 'none';
+  }
+  if (ridersGrid) {
+  ridersGrid.style.display = visibleCount === 0 ? 'none' : 'grid';
+  }
+ });
+ }
 ";
 include __DIR__ . '/includes/layout-footer.php';
 ?>

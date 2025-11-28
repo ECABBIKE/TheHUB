@@ -11,12 +11,12 @@
     </main>
 
     <!-- Footer -->
-    <footer class="gs-footer">
-        <div class="gs-container">
+    <footer class="footer">
+        <div class="container">
             <?php
             $versionInfo = getVersionInfo();
             ?>
-            <p class="gs-footer-version">
+            <p class="footer-version">
                 TheHUB v<?= h($versionInfo['version']) ?>
                 <?php if (!empty($versionInfo['build'])): ?>
                     <strong>[<?= h($versionInfo['build']) ?>.<?= str_pad($versionInfo['deployment'], 3, '0', STR_PAD_LEFT) ?>]</strong>
@@ -62,8 +62,8 @@
 
         // Mobile menu toggle
         function toggleMenu() {
-            const sidebar = document.querySelector('.gs-sidebar');
-            const overlay = document.querySelector('.gs-sidebar-overlay');
+            const sidebar = document.querySelector('.sidebar');
+            const overlay = document.querySelector('.sidebar-overlay');
 
             if (!sidebar || !overlay) return;
 
@@ -81,8 +81,8 @@
         }
 
         function closeMenu() {
-            const sidebar = document.querySelector('.gs-sidebar');
-            const overlay = document.querySelector('.gs-sidebar-overlay');
+            const sidebar = document.querySelector('.sidebar');
+            const overlay = document.querySelector('.sidebar-overlay');
 
             if (sidebar && overlay) {
                 sidebar.classList.remove('open');
@@ -93,7 +93,7 @@
 
         // Close menu when clicking on links
         document.addEventListener('DOMContentLoaded', function() {
-            const menuLinks = document.querySelectorAll('.gs-sidebar a');
+            const menuLinks = document.querySelectorAll('.sidebar a');
             menuLinks.forEach(link => {
                 link.addEventListener('click', closeMenu);
             });
