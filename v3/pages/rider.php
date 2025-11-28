@@ -136,20 +136,18 @@ $genderText = match($rider['gender']) {
     <div class="stat-value"><?= $finishedRaces ?></div>
     <div class="stat-label">Fullföljt</div>
   </div>
-  <?php if ($wins > 0): ?>
-  <div class="stat-box stat-box--gold">
+  <?php if ($wins > 0 || $podiums > 0): ?>
+  <div class="stat-box <?= $wins > 0 ? 'stat-box--gold' : '' ?>">
     <div class="stat-value"><?= $wins ?></div>
     <div class="stat-label">Segrar</div>
   </div>
-  <?php endif; ?>
-  <?php if ($podiums > 0): ?>
-  <div class="stat-box stat-box--accent">
+  <div class="stat-box <?= $podiums > 0 ? 'stat-box--accent' : '' ?>">
     <div class="stat-value"><?= $podiums ?></div>
     <div class="stat-label">Pallplatser</div>
   </div>
-  <?php elseif ($bestPosition): ?>
+  <?php else: ?>
   <div class="stat-box">
-    <div class="stat-value">#<?= $bestPosition ?></div>
+    <div class="stat-value"><?= $bestPosition ? '#' . $bestPosition : '-' ?></div>
     <div class="stat-label">Bästa</div>
   </div>
   <?php endif; ?>
