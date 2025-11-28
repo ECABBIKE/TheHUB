@@ -101,6 +101,10 @@
     --color-gold: #F59E0B;
     --color-silver: #9CA3AF;
     --color-bronze: #D97706;
+
+    /* Enduro Brand Color */
+    --color-enduro-yellow: #FFD200;
+    --color-enduro-yellow-dark: #E6BD00;
 }
 
 /* ===== DARK THEME ===== */
