@@ -248,26 +248,6 @@ if (!$event) {
 }
 ?>
 
-<div class="page-header">
-  <h1 class="page-title"><?= htmlspecialchars($event['name']) ?></h1>
-  <div class="page-meta">
-    <?php if ($event['date']): ?>
-      <span class="chip"><?= date('j F Y', strtotime($event['date'])) ?></span>
-    <?php endif; ?>
-    <?php if ($event['location']): ?>
-      <span class="chip"><?= htmlspecialchars($event['location']) ?></span>
-    <?php endif; ?>
-    <span class="chip chip--primary"><?= $totalParticipants ?> deltagare</span>
-    <span class="chip"><?= $totalFinished ?> i mål</span>
-  </div>
-</div>
-
-<?php if ($event['series_id']): ?>
-<p class="text-secondary mb-lg">
-  Del av <a href="/v3/series/<?= $event['series_id'] ?>" class="link"><?= htmlspecialchars($event['series_name']) ?></a>
-</p>
-<?php endif; ?>
-
 <?php if (isset($error)): ?>
 <section class="card mb-lg">
   <div class="card-title" style="color: var(--color-error)">Fel</div>
@@ -275,22 +255,56 @@ if (!$event) {
 </section>
 <?php endif; ?>
 
-<!-- Class Filter -->
-<?php if (count($resultsByClass) > 1): ?>
-<div class="filter-bar mb-lg">
-  <label class="filter-select-wrapper">
-    <span class="filter-label">Klass:</span>
-    <select class="filter-select" onchange="if(this.value) window.location=this.value">
-      <option value="/v3/event/<?= $eventId ?>" <?= $selectedClass === 'all' ? 'selected' : '' ?>>Alla klasser</option>
+<!-- Event Info Card -->
+<section class="event-card mb-lg">
+  <div class="event-stripe"></div>
+  <div class="event-content">
+    <div class="event-icon">🏁</div>
+    <div class="event-info">
+      <h1 class="event-name"><?= htmlspecialchars($event['name']) ?></h1>
+      <?php if ($event['series_id']): ?>
+        <a href="/v3/series/<?= $event['series_id'] ?>" class="event-series"><?= htmlspecialchars($event['series_name']) ?></a>
+      <?php endif; ?>
+      <div class="event-details">
+        <?php if ($event['date']): ?>
+          <span class="event-detail"><?= date('j F Y', strtotime($event['date'])) ?></span>
+        <?php endif; ?>
+        <?php if ($event['location']): ?>
+          <span class="event-detail"><?= htmlspecialchars($event['location']) ?></span>
+        <?php endif; ?>
+      </div>
+    </div>
+    <div class="event-stats">
+      <div class="event-stat">
+        <div class="event-stat-value"><?= $totalParticipants ?></div>
+        <div class="event-stat-label">Deltagare</div>
+      </div>
+      <div class="event-stat">
+        <div class="event-stat-value"><?= $totalFinished ?></div>
+        <div class="event-stat-label">I mål</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Filters: Class + Search -->
+<div class="filter-row mb-lg">
+  <div class="filter-field">
+    <label class="filter-label">Klass</label>
+    <select class="filter-select" id="classFilter" onchange="filterResults()">
+      <option value="all" <?= $selectedClass === 'all' ? 'selected' : '' ?>>Alla klasser</option>
       <?php foreach ($resultsByClass as $classKey => $classData): ?>
-      <option value="/v3/event/<?= $eventId ?>?class=<?= $classKey ?>" <?= $selectedClass == $classKey ? 'selected' : '' ?>>
+      <option value="<?= $classKey ?>" <?= $selectedClass == $classKey ? 'selected' : '' ?>>
         <?= htmlspecialchars($classData['display_name']) ?> (<?= count($classData['results']) ?>)
       </option>
       <?php endforeach; ?>
     </select>
-  </label>
+  </div>
+  <div class="filter-field">
+    <label class="filter-label">Sök åkare</label>
+    <input type="text" class="filter-input" id="searchFilter" placeholder="Namn eller klubb..." oninput="filterResults()">
+  </div>
 </div>
-<?php endif; ?>
 
 <?php if (empty($resultsByClass)): ?>
 <section class="card">
@@ -302,14 +316,11 @@ if (!$event) {
 <?php else: ?>
 
 <?php foreach ($resultsByClass as $classKey => $classData):
-    // Skip if filtering by class and this isn't the selected one
-    if ($selectedClass !== 'all' && $selectedClass != $classKey) continue;
-
     // Class-specific display rules
     $isTimeRanked = ($classData['ranking_type'] ?? 'time') === 'time';
     $showPoints = ($classData['awards_points'] ?? 1) == 1;
 ?>
-<section class="card mb-lg" id="class-<?= $classKey ?>">
+<section class="card mb-lg class-section" id="class-<?= $classKey ?>" data-class="<?= $classKey ?>">
   <div class="card-header">
     <div>
       <h2 class="card-title"><?= htmlspecialchars($classData['display_name']) ?></h2>
@@ -347,8 +358,10 @@ if (!$event) {
         </tr>
       </thead>
       <tbody>
-        <?php foreach ($classData['results'] as $result): ?>
-        <tr onclick="window.location='/v3/rider/<?= $result['rider_id'] ?>'" style="cursor:pointer">
+        <?php foreach ($classData['results'] as $result):
+            $searchData = strtolower($result['firstname'] . ' ' . $result['lastname'] . ' ' . ($result['club_name'] ?? ''));
+        ?>
+        <tr class="result-row" onclick="window.location='/v3/rider/<?= $result['rider_id'] ?>'" style="cursor:pointer" data-search="<?= htmlspecialchars($searchData) ?>">
           <td class="col-place <?= $result['class_position'] && $result['class_position'] <= 3 ? 'col-place--' . $result['class_position'] : '' ?>">
             <?php if (!$isTimeRanked): ?>
               ✓
@@ -420,8 +433,10 @@ if (!$event) {
 
   <!-- Mobile Card View -->
   <div class="result-list">
-    <?php foreach ($classData['results'] as $result): ?>
-    <a href="/v3/rider/<?= $result['rider_id'] ?>" class="result-item">
+    <?php foreach ($classData['results'] as $result):
+        $searchData = strtolower($result['firstname'] . ' ' . $result['lastname'] . ' ' . ($result['club_name'] ?? ''));
+    ?>
+    <a href="/v3/rider/<?= $result['rider_id'] ?>" class="result-item" data-search="<?= htmlspecialchars($searchData) ?>">
       <div class="result-place <?= $result['class_position'] && $result['class_position'] <= 3 ? 'top-3' : '' ?>">
         <?php if (!$isTimeRanked): ?>
           ✓
@@ -460,89 +475,160 @@ if (!$event) {
 
 <?php endif; ?>
 
+<script>
+function filterResults() {
+  const classFilter = document.getElementById('classFilter').value;
+  const searchFilter = document.getElementById('searchFilter').value.toLowerCase().trim();
+
+  // Filter class sections
+  document.querySelectorAll('.class-section').forEach(section => {
+    const classId = section.dataset.class;
+    const showClass = classFilter === 'all' || classFilter === classId;
+    section.style.display = showClass ? '' : 'none';
+
+    if (showClass) {
+      // Filter rows within this class
+      section.querySelectorAll('.result-row, .result-item').forEach(row => {
+        const searchData = row.dataset.search || '';
+        const matchesSearch = !searchFilter || searchData.includes(searchFilter);
+        row.style.display = matchesSearch ? '' : 'none';
+      });
+    }
+  });
+}
+</script>
+
 <style>
-.breadcrumb {
-  display: flex;
-  align-items: center;
-  gap: var(--space-xs);
-  font-size: var(--text-sm);
-  color: var(--color-text-muted);
-}
-.breadcrumb-link {
-  color: var(--color-text-secondary);
-}
-.breadcrumb-link:hover {
-  color: var(--color-accent-text);
-}
-.breadcrumb-current {
-  color: var(--color-text);
-  font-weight: var(--weight-medium);
-}
-
-.page-header {
-  margin-bottom: var(--space-lg);
-}
-.page-title {
-  font-size: var(--text-2xl);
-  font-weight: var(--weight-bold);
-  margin: 0 0 var(--space-sm) 0;
-}
-.page-meta {
-  display: flex;
-  gap: var(--space-sm);
-  flex-wrap: wrap;
-}
-.chip--primary {
-  background: var(--color-accent);
-  color: var(--color-text-inverse);
-}
-
 .mb-md { margin-bottom: var(--space-md); }
 .mb-lg { margin-bottom: var(--space-lg); }
 .text-secondary { color: var(--color-text-secondary); }
 .text-muted { color: var(--color-text-muted); }
 
-.link {
-  color: var(--color-accent-text);
+/* Event Card */
+.event-card {
+  background: var(--color-bg-surface);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-md);
 }
-.link:hover {
+.event-stripe {
+  height: 6px;
+  background: linear-gradient(90deg, var(--color-accent) 0%, #00A3E0 100%);
+}
+.event-content {
+  display: flex;
+  gap: var(--space-md);
+  padding: var(--space-lg);
+  align-items: center;
+}
+.event-icon {
+  flex-shrink: 0;
+  width: 64px;
+  height: 64px;
+  border-radius: var(--radius-md);
+  background: var(--color-bg-sunken);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32px;
+}
+.event-info {
+  flex: 1;
+  min-width: 0;
+}
+.event-name {
+  font-size: var(--text-xl);
+  font-weight: var(--weight-bold);
+  margin: 0 0 var(--space-2xs) 0;
+  line-height: 1.2;
+}
+.event-series {
+  display: inline-block;
+  color: var(--color-accent-text);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  margin-bottom: var(--space-xs);
+}
+.event-series:hover {
   text-decoration: underline;
 }
-
-.filter-bar {
+.event-details {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-sm);
-  align-items: center;
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
 }
-.filter-select-wrapper {
+.event-detail:not(:last-child)::after {
+  content: '•';
+  margin-left: var(--space-sm);
+  color: var(--color-text-muted);
+}
+.event-stats {
   display: flex;
-  align-items: center;
+  gap: var(--space-md);
+  flex-shrink: 0;
+}
+.event-stat {
+  text-align: center;
+  padding: var(--space-sm) var(--space-md);
+  background: var(--color-bg-sunken);
+  border-radius: var(--radius-md);
+}
+.event-stat-value {
+  font-size: var(--text-xl);
+  font-weight: var(--weight-bold);
+  line-height: 1;
+  color: var(--color-accent-text);
+}
+.event-stat-label {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  margin-top: var(--space-2xs);
+}
+
+/* Filter Row */
+.filter-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-md);
+}
+.filter-field {
+  display: flex;
+  flex-direction: column;
   gap: var(--space-xs);
 }
 .filter-label {
   font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
   color: var(--color-text-secondary);
-  white-space: nowrap;
 }
-.filter-select {
-  padding: var(--space-xs) var(--space-sm);
-  padding-right: var(--space-lg);
+.filter-select,
+.filter-input {
+  padding: var(--space-sm) var(--space-md);
   font-size: var(--text-sm);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   background: var(--color-bg-surface);
   color: var(--color-text);
+  width: 100%;
+  box-sizing: border-box;
+}
+.filter-select {
   cursor: pointer;
   appearance: none;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236b7280' d='M3 4.5L6 7.5L9 4.5'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
-  background-position: right 8px center;
-  min-width: 140px;
+  background-position: right 12px center;
+  padding-right: var(--space-xl);
 }
-.filter-select:focus {
+.filter-select:focus,
+.filter-input:focus {
   outline: none;
   border-color: var(--color-accent);
+}
+.filter-input::placeholder {
+  color: var(--color-text-muted);
 }
 
 .col-place {
@@ -643,11 +729,34 @@ if (!$event) {
 }
 
 @media (max-width: 599px) {
-  .page-title {
-    font-size: var(--text-xl);
+  .event-content {
+    flex-wrap: wrap;
+    padding: var(--space-md);
   }
-  .filter-select {
-    min-width: 120px;
+  .event-icon {
+    width: 48px;
+    height: 48px;
+    font-size: 24px;
+  }
+  .event-info {
+    flex: 1 1 calc(100% - 64px);
+  }
+  .event-name {
+    font-size: var(--text-lg);
+  }
+  .event-stats {
+    width: 100%;
+    justify-content: center;
+    margin-top: var(--space-sm);
+    padding-top: var(--space-sm);
+    border-top: 1px solid var(--color-border);
+  }
+  .event-stat {
+    flex: 1;
+  }
+  .filter-row {
+    grid-template-columns: 1fr;
+    gap: var(--space-sm);
   }
 }
 
