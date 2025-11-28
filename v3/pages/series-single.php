@@ -266,12 +266,6 @@ if (!$series) {
 }
 ?>
 
-<nav class="breadcrumb mb-md">
-  <a href="/v3/series" class="breadcrumb-link">Serier</a>
-  <span class="breadcrumb-separator">›</span>
-  <span class="breadcrumb-current"><?= htmlspecialchars($series['name']) ?></span>
-</nav>
-
 <div class="page-header">
   <h1 class="page-title"><?= htmlspecialchars($series['name']) ?></h1>
   <div class="page-meta">

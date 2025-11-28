@@ -248,12 +248,6 @@ if (!$event) {
 }
 ?>
 
-<nav class="breadcrumb mb-md">
-  <a href="/v3/results" class="breadcrumb-link">Resultat</a>
-  <span class="breadcrumb-separator">›</span>
-  <span class="breadcrumb-current"><?= htmlspecialchars($event['name']) ?></span>
-</nav>
-
 <div class="page-header">
   <h1 class="page-title"><?= htmlspecialchars($event['name']) ?></h1>
   <div class="page-meta">
