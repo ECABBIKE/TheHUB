@@ -1,35 +1,36 @@
 <?php
 /**
  * TheHUB V3.5 Bottom Navigation
- * 6 main sections: Kalender, Resultat, Serier, Databas, Ranking, Mitt
+ * Uses SVG icons (Lucide-style)
  */
+require_once __DIR__ . '/icons.php';
+
 $currentPage = $pageInfo['page'] ?? 'dashboard';
 $isLoggedIn = hub_is_logged_in();
 
 // Icon mapping for nav items
-$icons = [
-    'calendar' => '📅',
-    'flag' => '🏁',
-    'search' => '🔍',
-    'trending-up' => '📊',
-    'user' => '👤',
-    // Legacy
-    'home' => '🏠',
-    'trophy' => '🏆',
-    'users' => '👥',
-    'shield' => '🛡️'
+$navIcons = [
+    'calendar' => 'calendar',
+    'results' => 'flag',
+    'series' => 'trophy',
+    'database' => 'search',
+    'ranking' => 'trending-up',
+    'profile' => 'user',
 ];
 ?>
 <nav class="mobile-nav" role="navigation" aria-label="Huvudnavigering">
   <div class="mobile-nav-inner">
     <?php foreach (HUB_NAV as $item): ?>
-      <?php $isActive = hub_is_nav_active($item['id'], $currentPage); ?>
+      <?php
+      $isActive = hub_is_nav_active($item['id'], $currentPage);
+      $iconName = $navIcons[$item['id']] ?? 'info';
+      ?>
       <a href="<?= htmlspecialchars($item['url']) ?>"
          class="mobile-nav-link<?= $isActive ? ' active' : '' ?>"
          data-nav="<?= htmlspecialchars($item['id']) ?>"
          <?= $isActive ? 'aria-current="page"' : '' ?>
          aria-label="<?= htmlspecialchars($item['aria']) ?>">
-        <span class="mobile-nav-icon" aria-hidden="true"><?= $icons[$item['icon']] ?? '📄' ?></span>
+        <span class="mobile-nav-icon" aria-hidden="true"><?= hub_icon($iconName) ?></span>
         <span class="mobile-nav-label"><?= htmlspecialchars($item['label']) ?></span>
       </a>
     <?php endforeach; ?>

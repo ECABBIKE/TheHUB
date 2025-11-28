@@ -280,3 +280,100 @@ if (!function_exists('hub_format_month_year')) {
         return ucfirst(hub_month_full($timestamp)) . ' ' . date('Y', $timestamp);
     }
 }
+
+// ============================================================================
+// IMAGE HANDLING
+// ============================================================================
+
+if (!function_exists('hub_get_image')) {
+    /**
+     * Get image URL with theme variant support
+     * Returns the appropriate image URL for the current theme, or data attributes
+     * for JavaScript to handle theme switching.
+     *
+     * @param string $type Type of image (series, club, sponsor, site)
+     * @param int $entityId ID of the entity
+     * @param string $fallback Fallback URL if no image found
+     * @return string Image URL or data attributes
+     */
+    function hub_get_image(string $type, int $entityId, string $fallback = ''): string {
+        static $cache = [];
+        $cacheKey = "{$type}-{$entityId}";
+
+        if (!isset($cache[$cacheKey])) {
+            try {
+                $stmt = hub_db()->prepare("
+                    SELECT variant, filename FROM images
+                    WHERE type = ? AND entity_id = ?
+                ");
+                $stmt->execute([$type, $entityId]);
+                $cache[$cacheKey] = $stmt->fetchAll(PDO::FETCH_KEY_PAIR);
+            } catch (Exception $e) {
+                $cache[$cacheKey] = [];
+            }
+        }
+
+        $images = $cache[$cacheKey];
+        if (empty($images)) {
+            return $fallback;
+        }
+
+        $default = $images['default'] ?? '';
+        $light = $images['light'] ?? $default;
+        $dark = $images['dark'] ?? $default;
+
+        // If only one image or same for both, return simple URL
+        if ($light === $dark && $default) {
+            return HUB_V3_URL . '/uploads/images/' . $default;
+        }
+
+        // Return the default/light version as src, with data attributes for JS
+        $src = HUB_V3_URL . '/uploads/images/' . ($light ?: $default);
+        return $src;
+    }
+}
+
+if (!function_exists('hub_get_image_attrs')) {
+    /**
+     * Get image attributes for theme-aware images
+     * Use this when you need data attributes for JavaScript theme switching
+     *
+     * @param string $type Type of image
+     * @param int $entityId ID of the entity
+     * @param string $fallback Fallback URL
+     * @return array Array with 'src', 'light', 'dark' keys
+     */
+    function hub_get_image_attrs(string $type, int $entityId, string $fallback = ''): array {
+        static $cache = [];
+        $cacheKey = "{$type}-{$entityId}";
+
+        if (!isset($cache[$cacheKey])) {
+            try {
+                $stmt = hub_db()->prepare("
+                    SELECT variant, filename FROM images
+                    WHERE type = ? AND entity_id = ?
+                ");
+                $stmt->execute([$type, $entityId]);
+                $cache[$cacheKey] = $stmt->fetchAll(PDO::FETCH_KEY_PAIR);
+            } catch (Exception $e) {
+                $cache[$cacheKey] = [];
+            }
+        }
+
+        $images = $cache[$cacheKey];
+        if (empty($images)) {
+            return ['src' => $fallback, 'light' => '', 'dark' => ''];
+        }
+
+        $baseUrl = HUB_V3_URL . '/uploads/images/';
+        $default = isset($images['default']) ? $baseUrl . $images['default'] : $fallback;
+        $light = isset($images['light']) ? $baseUrl . $images['light'] : $default;
+        $dark = isset($images['dark']) ? $baseUrl . $images['dark'] : $default;
+
+        return [
+            'src' => $light ?: $default,
+            'light' => $light,
+            'dark' => $dark
+        ];
+    }
+}
