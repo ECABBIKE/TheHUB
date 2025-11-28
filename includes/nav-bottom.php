@@ -1,7 +1,7 @@
 <?php
 /**
  * Bottom Navigation - Visas på mobil (samma items som desktop header-nav)
- * 5 items: Kalender, Resultat, Serier, Databas, Ranking
+ * 5 items: Kalender, Resultat, Serier, Ranking, Profil
  */
 
 $currentPage = basename($_SERVER['PHP_SELF']);
@@ -11,7 +11,7 @@ $navItems = [
     ['id' => 'events', 'label' => 'Kalender', 'url' => '/events.php', 'icon' => 'calendar'],
     ['id' => 'results', 'label' => 'Resultat', 'url' => '/results.php', 'icon' => 'flag'],
     ['id' => 'series', 'label' => 'Serier', 'url' => '/series.php', 'icon' => 'trophy'],
-    ['id' => 'ranking', 'label' => 'Ranking', 'url' => '/ranking.php', 'icon' => 'trending-up'],
+    ['id' => 'ranking', 'label' => 'Ranking', 'url' => '/ranking/', 'icon' => 'trending-up'],
     ['id' => 'profile', 'label' => 'Profil', 'url' => '/profile.php', 'icon' => 'user'],
 ];
 
