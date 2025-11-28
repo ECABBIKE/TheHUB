@@ -25,8 +25,11 @@ function hub_get_current_page(): array {
         ],
         'results' => [
             'index' => '/pages/results.php',  // Legacy - will move to /pages/results/index.php
-            'event' => '/pages/event.php',    // Legacy
-            'series' => '/pages/series-single.php'
+            'event' => '/pages/event.php'     // Legacy
+        ],
+        'series' => [
+            'index' => '/pages/series/index.php',
+            'show' => '/pages/series/show.php'
         ],
         'database' => [
             'index' => '/pages/database/index.php',
@@ -60,6 +63,7 @@ function hub_get_current_page(): array {
             $detailPages = [
                 'calendar' => 'event',
                 'results' => 'event',
+                'series' => 'show',
                 'database' => 'rider',
                 'ranking' => 'riders'
             ];
@@ -93,19 +97,8 @@ function hub_get_current_page(): array {
         ];
     }
 
-    // Legacy series single page
-    if ($section === 'series' && isset($segments[1]) && is_numeric($segments[1])) {
-        return [
-            'page' => 'series-single',
-            'section' => 'results',
-            'params' => ['id' => $segments[1]],
-            'file' => HUB_V3_ROOT . '/pages/series-single.php'
-        ];
-    }
-
     // Legacy list pages
     $legacyPages = [
-        'series' => ['section' => 'results', 'file' => '/pages/series.php'],
         'riders' => ['section' => 'database', 'file' => '/pages/riders.php'],
         'clubs' => ['section' => 'database', 'file' => '/pages/clubs.php'],
         'results' => ['section' => 'results', 'file' => '/pages/results.php'],
@@ -144,7 +137,8 @@ function hub_is_nav_active(string $navId, string $currentPage): bool {
 
     // Legacy mappings
     if ($navId === 'calendar' && in_array($currentPage, ['calendar', 'calendar-event', 'calendar-index'])) return true;
-    if ($navId === 'results' && in_array($currentPage, ['results', 'event', 'series', 'series-single', 'results-event', 'results-series'])) return true;
+    if ($navId === 'results' && in_array($currentPage, ['results', 'event', 'results-event'])) return true;
+    if ($navId === 'series' && in_array($currentPage, ['series', 'series-index', 'series-show'])) return true;
     if ($navId === 'database' && in_array($currentPage, ['database', 'riders', 'rider', 'clubs', 'club', 'database-rider', 'database-club'])) return true;
     if ($navId === 'ranking' && str_starts_with($currentPage, 'ranking')) return true;
     if ($navId === 'profile' && str_starts_with($currentPage, 'profile')) return true;

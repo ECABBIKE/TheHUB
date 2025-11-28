@@ -1,7 +1,7 @@
 <?php
 /**
  * TheHUB V3.5 Bottom Navigation
- * 5 main sections: Kalender, Resultat, Databas, Ranking, Mitt
+ * 6 main sections: Kalender, Resultat, Serier, Databas, Ranking, Mitt
  */
 $currentPage = $pageInfo['page'] ?? 'dashboard';
 $isLoggedIn = hub_is_logged_in();

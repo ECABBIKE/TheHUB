@@ -5,16 +5,6 @@ require_once __DIR__ . '/router.php';
 $pageInfo = hub_get_current_page();
 $theme = hub_get_theme();
 
-// DEBUG - remove after testing
-if (isset($_GET['debug'])) {
-    echo '<pre style="background:#111;color:#0f0;padding:20px;margin:20px;">';
-    echo "REQUEST: " . ($_GET['page'] ?? 'empty') . "\n";
-    echo "PAGE INFO:\n";
-    print_r($pageInfo);
-    echo "FILE EXISTS: " . (file_exists($pageInfo['file']) ? 'YES' : 'NO') . "\n";
-    echo '</pre>';
-}
-
 // AJAX request = return only content
 if (hub_is_ajax()) {
     header('Content-Type: text/html; charset=utf-8');
