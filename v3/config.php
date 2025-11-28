@@ -49,7 +49,7 @@ if (!defined('HUB_NAV')) {
         ['id' => 'series', 'label' => 'Serier', 'icon' => 'trophy', 'url' => '/v3/series', 'aria' => 'Visa tävlingsserier'],
         ['id' => 'database', 'label' => 'Databas', 'icon' => 'search', 'url' => '/v3/database', 'aria' => 'Sök åkare och klubbar'],
         ['id' => 'ranking', 'label' => 'Ranking', 'icon' => 'trending-up', 'url' => '/v3/ranking', 'aria' => 'Visa ranking'],
-        ['id' => 'profile', 'label' => 'Mitt', 'icon' => 'user', 'url' => '/v3/profile', 'aria' => 'Min profil']
+        // 'Mitt' borttagen - nu i header istället
     ]);
 }
 
@@ -207,6 +207,30 @@ if (!function_exists('hub_get_admin_clubs')) {
         ");
         $stmt->execute([$riderId]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+}
+
+if (!function_exists('hub_is_admin')) {
+    /**
+     * Check if current user is an admin
+     */
+    function hub_is_admin(): bool {
+        $user = hub_current_user();
+        if (!$user) return false;
+
+        // Check is_admin flag in riders table
+        if (isset($user['is_admin']) && $user['is_admin']) {
+            return true;
+        }
+
+        // Check WordPress role if available
+        if (function_exists('current_user_can')) {
+            return current_user_can('manage_options') || current_user_can('edit_others_posts');
+        }
+
+        // Fallback: check specific admin user IDs
+        $adminIds = [1, 2];
+        return in_array($user['id'] ?? 0, $adminIds);
     }
 }
 

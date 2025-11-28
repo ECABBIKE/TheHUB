@@ -1,0 +1,9 @@
+RewriteEngine On
+RewriteBase /v3/admin/
+
+# Don't rewrite actual files/directories
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+
+# Route everything to admin index.php
+RewriteRule ^(.*)$ index.php [QSA,L]
