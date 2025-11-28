@@ -13,14 +13,14 @@ $pdo = hub_db();
 
 // Get results
 $stmt = $pdo->prepare("
-    SELECT res.*, e.name as event_name, e.event_date,
-           ec.name as class_name, s.name as series_name
+    SELECT res.*, e.name as event_name, e.date as event_date,
+           cls.display_name as class_name, s.name as series_name
     FROM results res
     JOIN events e ON res.event_id = e.id
-    LEFT JOIN event_classes ec ON res.class_id = ec.id
+    LEFT JOIN classes cls ON res.class_id = cls.id
     LEFT JOIN series s ON e.series_id = s.id
     WHERE res.rider_id = ?
-    ORDER BY e.event_date DESC
+    ORDER BY e.date DESC
 ");
 $stmt->execute([$currentUser['id']]);
 $results = $stmt->fetchAll(PDO::FETCH_ASSOC);

@@ -14,13 +14,14 @@ $pdo = hub_db();
 // Get payment history (would be from WooCommerce in production)
 // For now, show registrations with payment status
 $stmt = $pdo->prepare("
-    SELECT r.*, e.name as event_name, e.event_date,
-           ec.name as class_name, ec.price
-    FROM registrations r
+    SELECT r.*, e.name as event_name, e.date as event_date,
+           cls.display_name as class_name, epr.base_price as price
+    FROM event_registrations r
     JOIN events e ON r.event_id = e.id
-    LEFT JOIN event_classes ec ON r.class_id = ec.id
+    LEFT JOIN classes cls ON r.class_id = cls.id
+    LEFT JOIN event_pricing_rules epr ON r.event_id = epr.event_id AND r.class_id = epr.class_id
     WHERE r.rider_id = ? AND r.status = 'confirmed'
-    ORDER BY r.created_at DESC
+    ORDER BY r.registration_date DESC
 ");
 $stmt->execute([$currentUser['id']]);
 $payments = $stmt->fetchAll(PDO::FETCH_ASSOC);

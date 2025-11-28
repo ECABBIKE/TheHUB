@@ -22,10 +22,10 @@ $adminClubs = hub_get_admin_clubs($currentUser['id']);
 // Get upcoming registrations
 $regStmt = $pdo->prepare("
     SELECT r.*, e.name as event_name, e.date as event_date, e.location,
-           ec.name as class_name
+           cls.display_name as class_name
     FROM event_registrations r
     JOIN events e ON r.event_id = e.id
-    LEFT JOIN event_classes ec ON r.class_id = ec.id
+    LEFT JOIN classes cls ON r.class_id = cls.id
     WHERE r.rider_id = ? AND e.date >= CURDATE() AND r.status != 'cancelled'
     ORDER BY e.date ASC
     LIMIT 5
@@ -36,10 +36,10 @@ $upcomingRegs = $regStmt->fetchAll(PDO::FETCH_ASSOC);
 // Get recent results
 $resultStmt = $pdo->prepare("
     SELECT res.*, e.name as event_name, e.date as event_date,
-           ec.name as class_name
+           cls.display_name as class_name
     FROM results res
     JOIN events e ON res.event_id = e.id
-    LEFT JOIN event_classes ec ON res.class_id = ec.id
+    LEFT JOIN classes cls ON res.class_id = cls.id
     WHERE res.rider_id = ?
     ORDER BY e.date DESC
     LIMIT 5
