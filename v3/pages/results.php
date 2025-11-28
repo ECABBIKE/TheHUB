@@ -183,75 +183,95 @@ try {
 .filter-bar {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-sm);
-  align-items: center;
+  gap: var(--space-md);
+  margin-bottom: var(--space-lg);
+  padding: var(--space-md);
+  background: var(--color-bg-card);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border);
 }
 .filter-select-wrapper {
   display: flex;
-  align-items: center;
-  gap: var(--space-xs);
+  flex-direction: column;
+  gap: var(--space-2xs);
+  flex: 1;
+  min-width: 140px;
 }
 .filter-label {
-  font-size: var(--text-sm);
+  font-size: var(--text-xs);
   color: var(--color-text-secondary);
-  white-space: nowrap;
+  text-transform: uppercase;
+  font-weight: var(--weight-medium);
 }
 .filter-select {
-  padding: var(--space-xs) var(--space-sm);
-  padding-right: var(--space-lg);
+  padding: var(--space-sm) var(--space-md);
+  padding-right: var(--space-xl);
   font-size: var(--text-sm);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   background: var(--color-bg-surface);
-  color: var(--color-text);
+  color: var(--color-text-primary);
   cursor: pointer;
   appearance: none;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236b7280' d='M3 4.5L6 7.5L9 4.5'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 8px center;
-  min-width: 120px;
+  transition: border-color var(--transition-fast);
 }
 .filter-select:focus {
   outline: none;
   border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px rgba(59, 158, 255, 0.1);
 }
 .mb-lg { margin-bottom: var(--space-lg); }
 
 .events-list {
   display: flex;
   flex-direction: column;
+  gap: var(--space-xs);
 }
 .event-row {
   display: flex;
   align-items: center;
   gap: var(--space-md);
-  padding: var(--space-sm) var(--space-md);
-  border-bottom: 1px solid var(--color-border);
-  transition: background var(--transition-fast);
-}
-.event-row:last-child {
-  border-bottom: none;
+  padding: var(--space-md);
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  transition: all var(--transition-fast);
+  text-decoration: none;
+  color: inherit;
 }
 .event-row:hover {
-  background: var(--color-bg-hover);
+  border-color: var(--color-accent);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 .event-date-col {
   display: flex;
   flex-direction: column;
   align-items: center;
-  min-width: 40px;
+  justify-content: center;
+  min-width: 56px;
+  height: 56px;
+  padding: var(--space-sm);
+  background: var(--color-accent);
+  border-radius: var(--radius-md);
+  color: white;
   text-align: center;
 }
 .event-day {
-  font-size: var(--text-lg);
+  font-size: var(--text-xl);
   font-weight: var(--weight-bold);
   line-height: 1;
+  margin-bottom: 2px;
 }
 .event-month {
   font-size: var(--text-xs);
-  color: var(--color-text-muted);
   text-transform: uppercase;
+  opacity: 0.9;
+  font-weight: var(--weight-medium);
 }
 
 .event-main {
@@ -310,22 +330,33 @@ try {
   }
   .filter-bar {
     flex-direction: column;
-    align-items: stretch;
+    padding: var(--space-sm);
+    gap: var(--space-sm);
   }
   .filter-select-wrapper {
     width: 100%;
+    min-width: 0;
   }
   .filter-select {
-    flex: 1;
-    min-width: 0;
+    width: 100%;
   }
   .event-row {
     padding: var(--space-sm);
     gap: var(--space-sm);
   }
+  .event-row:hover {
+    transform: none;
+  }
+  .event-date-col {
+    min-width: 48px;
+    height: 48px;
+  }
+  .event-day {
+    font-size: var(--text-lg);
+  }
   .event-details {
     flex-direction: column;
-    gap: 0;
+    gap: var(--space-3xs);
   }
   .event-stats {
     display: none;
