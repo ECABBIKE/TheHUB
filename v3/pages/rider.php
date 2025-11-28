@@ -30,7 +30,7 @@ try {
         return;
     }
 
-    // Fetch rider's results with position info
+    // Fetch rider's results with position info (exclude DNS)
     $stmt = $db->prepare("
         SELECT
             res.id, res.finish_time, res.status, res.points, res.position, res.class_position,
@@ -41,24 +41,32 @@ try {
         JOIN events e ON res.event_id = e.id
         LEFT JOIN series s ON e.series_id = s.id
         LEFT JOIN classes cls ON res.class_id = cls.id
-        WHERE res.cyclist_id = ?
+        WHERE res.cyclist_id = ? AND res.status != 'dns'
         ORDER BY e.date DESC
     ");
     $stmt->execute([$riderId]);
     $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     // Calculate stats
-    $totalRaces = count($results);
+    $totalStarts = count($results);
     $finishedRaces = count(array_filter($results, fn($r) => $r['status'] === 'finished'));
     $totalPoints = array_sum(array_column($results, 'points'));
     $podiums = count(array_filter($results, fn($r) => $r['class_position'] && $r['class_position'] <= 3));
-    $wins = count(array_filter($results, fn($r) => $r['class_position'] === 1 || $r['class_position'] === '1'));
+    $wins = count(array_filter($results, fn($r) => $r['class_position'] == 1));
     $bestPosition = null;
     foreach ($results as $r) {
-        if ($r['class_position'] && (!$bestPosition || $r['class_position'] < $bestPosition)) {
-            $bestPosition = $r['class_position'];
+        if ($r['class_position'] && $r['status'] === 'finished') {
+            if (!$bestPosition || $r['class_position'] < $bestPosition) {
+                $bestPosition = (int)$r['class_position'];
+            }
         }
     }
+
+    // Calculate age
+    $currentYear = date('Y');
+    $age = ($rider['birth_year'] && $rider['birth_year'] > 0)
+        ? ($currentYear - $rider['birth_year'])
+        : null;
 
 } catch (Exception $e) {
     $error = $e->getMessage();
@@ -71,6 +79,11 @@ if (!$rider) {
 }
 
 $fullName = htmlspecialchars($rider['firstname'] . ' ' . $rider['lastname']);
+$genderText = match($rider['gender']) {
+    'M' => 'Man',
+    'F', 'K' => 'Kvinna',
+    default => null
+};
 ?>
 
 <nav class="breadcrumb mb-md">
@@ -79,21 +92,6 @@ $fullName = htmlspecialchars($rider['firstname'] . ' ' . $rider['lastname']);
   <span class="breadcrumb-current"><?= $fullName ?></span>
 </nav>
 
-<div class="page-header">
-  <h1 class="page-title"><?= $fullName ?></h1>
-  <div class="page-meta">
-    <?php if ($rider['club_name']): ?>
-      <a href="/v3/club/<?= $rider['club_id'] ?>" class="chip chip--clickable"><?= htmlspecialchars($rider['club_name']) ?></a>
-    <?php endif; ?>
-    <?php if ($rider['birth_year']): ?>
-      <span class="chip">Född <?= $rider['birth_year'] ?></span>
-    <?php endif; ?>
-    <?php if ($rider['license_number']): ?>
-      <span class="chip"><?= htmlspecialchars($rider['license_number']) ?></span>
-    <?php endif; ?>
-  </div>
-</div>
-
 <?php if (isset($error)): ?>
 <section class="card mb-lg">
   <div class="card-title" style="color: var(--color-error)">Fel</div>
@@ -101,34 +99,60 @@ $fullName = htmlspecialchars($rider['firstname'] . ' ' . $rider['lastname']);
 </section>
 <?php endif; ?>
 
-<!-- Stats Grid -->
-<section class="card mb-lg">
-  <div class="stats-grid">
-    <div class="stat-card">
-      <div class="stat-value"><?= $totalRaces ?></div>
-      <div class="stat-label">Starter</div>
+<!-- Profile Card -->
+<section class="profile-card mb-lg">
+  <div class="profile-stripe"></div>
+  <div class="profile-content">
+    <div class="profile-photo">
+      <div class="photo-placeholder">👤</div>
     </div>
-    <div class="stat-card">
-      <div class="stat-value"><?= $finishedRaces ?></div>
-      <div class="stat-label">Fullföljt</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-value"><?= $wins ?></div>
-      <div class="stat-label">Segrar</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-value"><?= $podiums ?></div>
-      <div class="stat-label">Pallplatser</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-value"><?= $bestPosition ? '#' . $bestPosition : '-' ?></div>
-      <div class="stat-label">Bästa</div>
-    </div>
-    <div class="stat-card stat-card--accent">
-      <div class="stat-value"><?= number_format($totalPoints) ?></div>
-      <div class="stat-label">Poäng</div>
+    <div class="profile-info">
+      <h1 class="profile-name"><?= $fullName ?></h1>
+      <?php if ($rider['club_name']): ?>
+        <a href="/v3/club/<?= $rider['club_id'] ?>" class="profile-club"><?= htmlspecialchars($rider['club_name']) ?></a>
+      <?php endif; ?>
+      <div class="profile-details">
+        <?php if ($age): ?>
+          <span class="profile-detail"><?= $age ?> år</span>
+        <?php endif; ?>
+        <?php if ($genderText): ?>
+          <span class="profile-detail"><?= $genderText ?></span>
+        <?php endif; ?>
+        <?php if ($rider['birth_year']): ?>
+          <span class="profile-detail">f. <?= $rider['birth_year'] ?></span>
+        <?php endif; ?>
+      </div>
     </div>
   </div>
+</section>
+
+<!-- Stats Grid -->
+<section class="stats-row mb-lg">
+  <div class="stat-box">
+    <div class="stat-value"><?= $totalStarts ?></div>
+    <div class="stat-label">Starter</div>
+  </div>
+  <div class="stat-box">
+    <div class="stat-value"><?= $finishedRaces ?></div>
+    <div class="stat-label">Fullföljt</div>
+  </div>
+  <?php if ($wins > 0): ?>
+  <div class="stat-box stat-box--gold">
+    <div class="stat-value"><?= $wins ?></div>
+    <div class="stat-label">Segrar</div>
+  </div>
+  <?php endif; ?>
+  <?php if ($podiums > 0): ?>
+  <div class="stat-box stat-box--accent">
+    <div class="stat-value"><?= $podiums ?></div>
+    <div class="stat-label">Pallplatser</div>
+  </div>
+  <?php elseif ($bestPosition): ?>
+  <div class="stat-box">
+    <div class="stat-value">#<?= $bestPosition ?></div>
+    <div class="stat-label">Bästa</div>
+  </div>
+  <?php endif; ?>
 </section>
 
 <!-- Results -->
@@ -136,7 +160,7 @@ $fullName = htmlspecialchars($rider['firstname'] . ' ' . $rider['lastname']);
   <div class="card-header">
     <div>
       <h2 class="card-title">Resultathistorik</h2>
-      <p class="card-subtitle"><?= $totalRaces ?> registrerade starter</p>
+      <p class="card-subtitle"><?= $totalStarts ?> registrerade starter</p>
     </div>
   </div>
 
@@ -255,57 +279,120 @@ $fullName = htmlspecialchars($rider['firstname'] . ' ' . $rider['lastname']);
   font-weight: var(--weight-medium);
 }
 
-.page-header {
-  margin-bottom: var(--space-lg);
-}
-.page-title {
-  font-size: var(--text-2xl);
-  font-weight: var(--weight-bold);
-  margin: 0 0 var(--space-sm) 0;
-}
-.page-meta {
-  display: flex;
-  gap: var(--space-sm);
-  flex-wrap: wrap;
-}
-.chip--clickable {
-  cursor: pointer;
-}
-.chip--clickable:hover {
-  background: var(--color-accent);
-  color: var(--color-text-inverse);
-}
-
 .mb-md { margin-bottom: var(--space-md); }
 .mb-lg { margin-bottom: var(--space-lg); }
 .text-muted { color: var(--color-text-muted); }
 
-.stats-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
+/* Profile Card */
+.profile-card {
+  background: var(--color-bg-surface);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-md);
+}
+.profile-stripe {
+  height: 6px;
+  background: linear-gradient(90deg, var(--color-accent) 0%, #00A3E0 100%);
+}
+.profile-content {
+  display: flex;
   gap: var(--space-md);
+  padding: var(--space-lg);
+  align-items: center;
 }
-.stat-card {
-  text-align: center;
-  padding: var(--space-md);
-  background: var(--color-bg-sunken);
+.profile-photo {
+  flex-shrink: 0;
+  width: 80px;
+  height: 80px;
   border-radius: var(--radius-md);
+  background: var(--color-bg-sunken);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
 }
-.stat-card--accent {
+.photo-placeholder {
+  font-size: 40px;
+  opacity: 0.5;
+}
+.profile-info {
+  flex: 1;
+  min-width: 0;
+}
+.profile-name {
+  font-size: var(--text-xl);
+  font-weight: var(--weight-bold);
+  margin: 0 0 var(--space-2xs) 0;
+  line-height: 1.2;
+}
+.profile-club {
+  display: inline-block;
+  color: var(--color-accent-text);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  margin-bottom: var(--space-xs);
+}
+.profile-club:hover {
+  text-decoration: underline;
+}
+.profile-details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+.profile-detail {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2xs);
+}
+.profile-detail:not(:last-child)::after {
+  content: '•';
+  margin-left: var(--space-sm);
+  color: var(--color-text-muted);
+}
+
+/* Stats Row */
+.stats-row {
+  display: flex;
+  gap: var(--space-sm);
+  flex-wrap: wrap;
+}
+.stat-box {
+  flex: 1;
+  min-width: 70px;
+  text-align: center;
+  padding: var(--space-md) var(--space-sm);
+  background: var(--color-bg-surface);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+}
+.stat-box--gold {
+  background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+  color: #000;
+}
+.stat-box--gold .stat-label {
+  color: rgba(0,0,0,0.7);
+}
+.stat-box--accent {
   background: var(--color-accent);
   color: var(--color-text-inverse);
 }
-.stat-card--accent .stat-label {
+.stat-box--accent .stat-label {
   color: rgba(255,255,255,0.8);
 }
 .stat-value {
   font-size: var(--text-2xl);
   font-weight: var(--weight-bold);
+  line-height: 1;
 }
 .stat-label {
   font-size: var(--text-xs);
   color: var(--color-text-muted);
   margin-top: var(--space-2xs);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .col-place {
@@ -370,10 +457,24 @@ $fullName = htmlspecialchars($rider['firstname'] . ' ' . $rider['lastname']);
 }
 
 @media (max-width: 599px) {
-  .stats-grid {
-    grid-template-columns: repeat(2, 1fr);
+  .profile-content {
+    padding: var(--space-md);
   }
-  .page-title {
+  .profile-photo {
+    width: 64px;
+    height: 64px;
+  }
+  .photo-placeholder {
+    font-size: 32px;
+  }
+  .profile-name {
+    font-size: var(--text-lg);
+  }
+  .stat-box {
+    min-width: 60px;
+    padding: var(--space-sm);
+  }
+  .stat-value {
     font-size: var(--text-xl);
   }
 }
