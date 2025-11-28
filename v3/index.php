@@ -50,10 +50,17 @@ if (hub_is_ajax()) {
 
     <?php include __DIR__ . '/components/mobile-nav.php'; ?>
     <?php include __DIR__ . '/components/footer.php'; ?>
+    <?php include __DIR__ . '/components/woocommerce-modal.php'; ?>
+
+    <!-- Toast Container -->
+    <div id="toast-container" class="toast-container"></div>
 
     <script src="<?= hub_asset('js/theme.js') ?>"></script>
     <script src="<?= hub_asset('js/router.js') ?>"></script>
     <script src="<?= hub_asset('js/app.js') ?>"></script>
+    <script src="<?= hub_asset('js/search.js') ?>"></script>
+    <script src="<?= hub_asset('js/registration.js') ?>"></script>
+    <script src="<?= hub_asset('js/woocommerce.js') ?>"></script>
     <script src="<?= hub_asset('js/pwa.js') ?>"></script>
 </body>
 </html>

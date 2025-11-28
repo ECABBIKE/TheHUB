@@ -21,3 +21,28 @@
 @media(orientation:landscape){.hide-landscape{display:none!important}}
 @media(max-width:599px){.hide-mobile{display:none!important}}
 @media(min-width:900px){.hide-desktop{display:none!important}}
+
+/* Toast Notifications */
+.toast-container{position:fixed;top:var(--space-lg);right:var(--space-lg);z-index:10000;display:flex;flex-direction:column;gap:var(--space-sm);pointer-events:none}
+.toast{padding:var(--space-md) var(--space-lg);background:var(--color-bg-elevated);border:1px solid var(--color-border);border-radius:var(--radius-lg);color:var(--color-text-primary);font-weight:var(--weight-medium);box-shadow:var(--shadow-lg);transform:translateX(100%);opacity:0;transition:all 0.3s ease;pointer-events:auto}
+.toast.visible{transform:translateX(0);opacity:1}
+.toast-success{background:var(--color-success-bg,rgba(34,197,94,0.15));border-color:var(--color-success,#22c55e);color:var(--color-success,#22c55e)}
+.toast-error{background:var(--color-error-bg,rgba(239,68,68,0.15));border-color:var(--color-error,#ef4444);color:var(--color-error,#ef4444)}
+.toast-warning{background:var(--color-warning-bg,rgba(234,179,8,0.15));border-color:var(--color-warning,#eab308);color:var(--color-warning,#eab308)}
+.toast-info{background:var(--color-accent-light,rgba(59,130,246,0.15));border-color:var(--color-accent,#3b82f6);color:var(--color-accent,#3b82f6)}
+
+/* Registration Participant Cards */
+.registration-participant{display:flex;align-items:center;gap:var(--space-md);padding:var(--space-md);background:var(--color-bg-card);border:1px solid var(--color-border);border-radius:var(--radius-lg);margin-bottom:var(--space-sm)}
+.participant-avatar{width:40px;height:40px;display:flex;align-items:center;justify-content:center;background:var(--color-accent);color:white;border-radius:var(--radius-full);font-weight:var(--weight-bold)}
+.participant-info{flex:1;min-width:0}
+.participant-name{display:block;font-weight:var(--weight-medium)}
+.participant-class{display:block;padding:var(--space-xs) var(--space-sm);background:var(--color-bg-surface);border:1px solid var(--color-border);border-radius:var(--radius-md);font-size:var(--text-sm);color:var(--color-text-primary);margin-top:var(--space-2xs)}
+.participant-price{font-weight:var(--weight-semibold);color:var(--color-accent)}
+.participant-remove{width:32px;height:32px;display:flex;align-items:center;justify-content:center;background:transparent;border:1px solid var(--color-border);border-radius:var(--radius-full);color:var(--color-text-secondary);cursor:pointer;transition:all var(--transition-fast)}
+.participant-remove:hover{background:var(--color-error-bg,rgba(239,68,68,0.1));border-color:var(--color-error,#ef4444);color:var(--color-error,#ef4444)}
+
+/* Registration Summary */
+.registration-summary{background:var(--color-bg-card);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:var(--space-lg);margin-top:var(--space-lg)}
+.summary-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--space-md);padding-bottom:var(--space-md);border-bottom:1px solid var(--color-border)}
+.summary-row span{font-size:var(--text-lg)}
+.summary-row strong{font-size:var(--text-xl);color:var(--color-accent)}
