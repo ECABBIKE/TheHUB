@@ -138,7 +138,13 @@ $bodyClass = isset($bodyClass) ? $defaultBodyClass . ' ' . $bodyClass : $default
     </style>
 
     <!-- V2.5 Modern Theme System - Load FIRST -->
+    <!-- 1. Design Tokens -->
     <link rel="stylesheet" href="/assets/css/tokens.css?v=<?= filemtime(__DIR__ . '/../assets/css/tokens.css') ?>">
+
+    <!-- 2. Theme Variables (Light/Dark Support from V3.5) -->
+    <link rel="stylesheet" href="/assets/css/theme.css?v=<?= filemtime(__DIR__ . '/../assets/css/theme.css') ?>">
+
+    <!-- 3. Component Styles -->
     <link rel="stylesheet" href="/assets/css/theme-base.css?v=<?= filemtime(__DIR__ . '/../assets/css/theme-base.css') ?>">
 
     <!-- GravitySeries v4.0 CSS -->
@@ -149,6 +155,9 @@ $bodyClass = isset($bodyClass) ? $defaultBodyClass . ' ' . $bodyClass : $default
 
     <!-- V2.5 Mobile & Responsive Enhancements -->
     <link rel="stylesheet" href="/assets/css/responsive.css?v=<?= filemtime(__DIR__ . '/../assets/css/responsive.css') ?>">
+
+    <!-- PWA Support (from V3.5) -->
+    <link rel="stylesheet" href="/assets/css/pwa.css?v=<?= filemtime(__DIR__ . '/../assets/css/pwa.css') ?>">
 
     <!-- PWA Support -->
     <link rel="manifest" href="/manifest.json">
