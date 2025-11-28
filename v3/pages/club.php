@@ -26,10 +26,10 @@ try {
     $stmt = $db->prepare("
         SELECT
             r.id, r.firstname, r.lastname, r.birth_year, r.gender,
-            COUNT(DISTINCT res.id) as total_races,
-            COUNT(CASE WHEN res.class_position <= 3 THEN 1 END) as podiums,
-            SUM(COALESCE(res.points, 0)) as total_points,
-            MIN(res.class_position) as best_position
+            COUNT(DISTINCT CASE WHEN res.status = 'finished' THEN res.id END) as total_races,
+            COUNT(CASE WHEN res.status = 'finished' AND res.position <= 3 THEN 1 END) as podiums,
+            SUM(CASE WHEN res.status = 'finished' THEN COALESCE(res.points, 0) ELSE 0 END) as total_points,
+            MIN(CASE WHEN res.status = 'finished' THEN res.position END) as best_position
         FROM riders r
         LEFT JOIN results res ON r.id = res.cyclist_id
         WHERE r.club_id = ? AND r.active = 1
