@@ -5,11 +5,8 @@
 session_start();
 require_once dirname(__DIR__) . '/config.php';
 
-// Check auth
-if (!hub_is_logged_in() || !hub_is_admin()) {
-    header('Location: ' . HUB_V3_URL . '/login?redirect=' . urlencode($_SERVER['REQUEST_URI']));
-    exit;
-}
+// Require admin access
+hub_require_admin();
 
 $currentUser = hub_current_user();
 require_once __DIR__ . '/router.php';

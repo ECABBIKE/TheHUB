@@ -97,7 +97,11 @@ $isAdmin = hub_is_admin();
             </div>
 
         <?php else: ?>
-            <a href="/admin/login.php?redirect=<?= urlencode($_SERVER['REQUEST_URI']) ?>" class="btn btn-primary btn-sm">Logga in</a>
+            <a href="<?= HUB_V3_URL ?>/login?redirect=<?= urlencode($_SERVER['REQUEST_URI']) ?>" class="btn btn-primary btn-sm">
+                <?php require_once HUB_V3_ROOT . '/components/icons.php'; ?>
+                <?= hub_icon('log-in', 'icon-sm') ?>
+                <span class="header-login-text">Logga in</span>
+            </a>
         <?php endif; ?>
     </div>
 </header>
@@ -247,6 +251,9 @@ $isAdmin = hub_is_admin();
 
 /* Login button */
 .btn-primary {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-xs);
     background: var(--color-accent);
     color: white;
     padding: var(--space-xs) var(--space-md);
@@ -256,8 +263,23 @@ $isAdmin = hub_is_admin();
     font-weight: var(--weight-medium);
 }
 
+.btn-primary .icon-sm {
+    width: 16px;
+    height: 16px;
+}
+
 .btn-primary:hover {
     opacity: 0.9;
+}
+
+.header-login-text {
+    display: none;
+}
+
+@media (min-width: 480px) {
+    .header-login-text {
+        display: inline;
+    }
 }
 </style>
 
