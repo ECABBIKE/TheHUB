@@ -24,21 +24,27 @@ if (!$event) {
     return;
 }
 
-// Get event classes
-$classStmt = $pdo->prepare("SELECT * FROM event_classes WHERE event_id = ? ORDER BY sort_order, name");
+// Get event classes (from pricing rules)
+$classStmt = $pdo->prepare("
+    SELECT epr.*, cls.name, cls.display_name, cls.gender, cls.min_age, cls.max_age, cls.sort_order
+    FROM event_pricing_rules epr
+    JOIN classes cls ON epr.class_id = cls.id
+    WHERE epr.event_id = ?
+    ORDER BY cls.sort_order, cls.name
+");
 $classStmt->execute([$eventId]);
 $classes = $classStmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Get registrations
 $regStmt = $pdo->prepare("
     SELECT r.*, ri.firstname, ri.lastname, ri.club_id, c.name as club_name,
-           ec.name as class_name
+           cls.display_name as class_name, cls.sort_order as class_sort_order
     FROM event_registrations r
     JOIN riders ri ON r.rider_id = ri.id
     LEFT JOIN clubs c ON ri.club_id = c.id
-    LEFT JOIN event_classes ec ON r.class_id = ec.id
+    LEFT JOIN classes cls ON r.class_id = cls.id
     WHERE r.event_id = ? AND r.status != 'cancelled'
-    ORDER BY ec.sort_order, ri.lastname, ri.firstname
+    ORDER BY cls.sort_order, ri.lastname, ri.firstname
 ");
 $regStmt->execute([$eventId]);
 $registrations = $regStmt->fetchAll(PDO::FETCH_ASSOC);

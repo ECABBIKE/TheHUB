@@ -124,15 +124,12 @@ try {
                 }
 
                 $stmt = $pdo->prepare("
-                    SELECT ec.id, ec.class_id, c.name, c.display_name, c.gender,
+                    SELECT epr.id, epr.class_id, c.name, c.display_name, c.gender,
                            c.min_age, c.max_age,
-                           COALESCE(ptr.base_price, 0) as price
-                    FROM event_classes ec
-                    JOIN classes c ON ec.class_id = c.id
-                    LEFT JOIN events e ON ec.event_id = e.id
-                    LEFT JOIN pricing_template_rules ptr ON e.pricing_template_id = ptr.template_id
-                        AND ptr.class_id = ec.class_id
-                    WHERE ec.event_id = ? AND ec.is_active = 1
+                           epr.base_price as price
+                    FROM event_pricing_rules epr
+                    JOIN classes c ON epr.class_id = c.id
+                    WHERE epr.event_id = ?
                     ORDER BY c.sort_order, c.name
                 ");
                 $stmt->execute([$eventId]);

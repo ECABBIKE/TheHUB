@@ -17,16 +17,16 @@ $allRiderIds = array_merge([$currentUser['id']], $childIds);
 $placeholders = implode(',', array_fill(0, count($allRiderIds), '?'));
 
 $stmt = $pdo->prepare("
-    SELECT r.*, ri.first_name, ri.last_name,
-           e.name as event_name, e.event_date, e.location,
-           ec.name as class_name, s.name as series_name
-    FROM registrations r
+    SELECT r.*, ri.firstname, ri.lastname,
+           e.name as event_name, e.date as event_date, e.location,
+           cls.display_name as class_name, s.name as series_name
+    FROM event_registrations r
     JOIN riders ri ON r.rider_id = ri.id
     JOIN events e ON r.event_id = e.id
-    LEFT JOIN event_classes ec ON r.class_id = ec.id
+    LEFT JOIN classes cls ON r.class_id = cls.id
     LEFT JOIN series s ON e.series_id = s.id
     WHERE r.rider_id IN ($placeholders) AND r.status != 'cancelled'
-    ORDER BY e.event_date DESC
+    ORDER BY e.date DESC
 ");
 $stmt->execute($allRiderIds);
 $registrations = $stmt->fetchAll(PDO::FETCH_ASSOC);
