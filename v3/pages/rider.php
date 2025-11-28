@@ -233,6 +233,74 @@ try {
         }
     }
 
+    // GS Total - Event breakdown (which events gave points)
+    $gsEventBreakdown = [];
+    if ($totalSeries) {
+        $stmt = $db->prepare("
+            SELECT
+                sr.points,
+                e.id as event_id,
+                e.name as event_name,
+                e.date as event_date,
+                cls.display_name as class_name
+            FROM series_results sr
+            JOIN events e ON sr.event_id = e.id
+            LEFT JOIN classes cls ON sr.class_id = cls.id
+            WHERE sr.series_id = ? AND sr.cyclist_id = ? AND sr.points > 0
+            ORDER BY e.date DESC
+        ");
+        $stmt->execute([$totalSeries['id'], $riderId]);
+        $gsEventBreakdown = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    // Ranking stats (24 months rolling)
+    $rankingPoints = 0;
+    $rankingPosition = null;
+    $rankingTotal = 0;
+    $rankingMonths = 24;
+
+    $cutoffDate = date('Y-m-d', strtotime("-{$rankingMonths} months"));
+
+    // Get rider's ranking points (sum of all points in last 24 months)
+    $stmt = $db->prepare("
+        SELECT COALESCE(SUM(res.points), 0) as total_points
+        FROM results res
+        JOIN events e ON res.event_id = e.id
+        WHERE res.cyclist_id = ?
+        AND res.status = 'finished'
+        AND res.points > 0
+        AND e.date >= ?
+    ");
+    $stmt->execute([$riderId, $cutoffDate]);
+    $rankingStats = $stmt->fetch(PDO::FETCH_ASSOC);
+    $rankingPoints = $rankingStats['total_points'] ?? 0;
+
+    // Get ranking position among all riders
+    if ($rankingPoints > 0) {
+        $stmt = $db->prepare("
+            SELECT res.cyclist_id, SUM(res.points) as total_points
+            FROM results res
+            JOIN events e ON res.event_id = e.id
+            WHERE res.status = 'finished'
+            AND res.points > 0
+            AND e.date >= ?
+            GROUP BY res.cyclist_id
+            ORDER BY total_points DESC
+        ");
+        $stmt->execute([$cutoffDate]);
+        $allRankings = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $rankingTotal = count($allRankings);
+        $position = 1;
+        foreach ($allRankings as $ranking) {
+            if ($ranking['cyclist_id'] == $riderId) {
+                $rankingPosition = $position;
+                break;
+            }
+            $position++;
+        }
+    }
+
 } catch (Exception $e) {
     $error = $e->getMessage();
     $rider = null;
@@ -258,7 +326,7 @@ $genderText = match($rider['gender']) {
 </section>
 <?php endif; ?>
 
-<!-- Profile Card -->
+<!-- Profile Card with Ranking -->
 <section class="profile-card mb-lg">
   <div class="profile-stripe"></div>
   <div class="profile-content">
@@ -282,6 +350,12 @@ $genderText = match($rider['gender']) {
         <?php endif; ?>
       </div>
     </div>
+    <?php if ($rankingPosition): ?>
+    <div class="profile-ranking">
+      <div class="ranking-position">#<?= $rankingPosition ?></div>
+      <div class="ranking-label">Ranking</div>
+    </div>
+    <?php endif; ?>
   </div>
 </section>
 
@@ -315,6 +389,7 @@ $genderText = match($rider['gender']) {
 <!-- Tab Navigation -->
 <nav class="tabs mb-md">
   <button class="tab-btn active" data-tab="resultat">Resultat</button>
+  <button class="tab-btn" data-tab="ranking">Ranking</button>
   <button class="tab-btn" data-tab="gs-total">GS Total</button>
   <button class="tab-btn" data-tab="gs-team">GS Team</button>
 </nav>
@@ -424,6 +499,34 @@ $genderText = match($rider['gender']) {
   <?php endif; ?>
 </section>
 
+<!-- Tab: Ranking -->
+<section class="tab-content" id="tab-ranking">
+  <div class="card">
+    <div class="card-header">
+      <h2 class="card-title">Ranking</h2>
+      <p class="card-subtitle">Poäng senaste <?= $rankingMonths ?> månaderna</p>
+    </div>
+    <div class="gs-stats-card gs-stats-card--ranking">
+      <div class="gs-main-stat">
+        <div class="gs-points"><?= number_format($rankingPoints) ?></div>
+        <div class="gs-points-label">Poäng</div>
+      </div>
+      <?php if ($rankingPosition): ?>
+      <div class="gs-details">
+        <div class="gs-detail">
+          <span class="gs-detail-value">#<?= $rankingPosition ?></span>
+          <span class="gs-detail-label">Position</span>
+        </div>
+        <div class="gs-detail">
+          <span class="gs-detail-value"><?= $rankingTotal ?></span>
+          <span class="gs-detail-label">Totalt</span>
+        </div>
+      </div>
+      <?php endif; ?>
+    </div>
+  </div>
+</section>
+
 <!-- Tab: GS Total -->
 <section class="tab-content" id="tab-gs-total">
   <div class="card">
@@ -455,6 +558,26 @@ $genderText = match($rider['gender']) {
       </div>
       <?php endif; ?>
     </div>
+
+    <?php if (!empty($gsEventBreakdown)): ?>
+    <div class="event-breakdown">
+      <h3 class="breakdown-title">Poäng per event</h3>
+      <div class="breakdown-list">
+        <?php foreach ($gsEventBreakdown as $event): ?>
+        <a href="/v3/event/<?= $event['event_id'] ?>" class="breakdown-item">
+          <div class="breakdown-info">
+            <div class="breakdown-name"><?= htmlspecialchars($event['event_name']) ?></div>
+            <div class="breakdown-meta">
+              <?= $event['event_date'] ? date('j M Y', strtotime($event['event_date'])) : '' ?>
+              <?php if ($event['class_name']): ?> • <?= htmlspecialchars($event['class_name']) ?><?php endif; ?>
+            </div>
+          </div>
+          <div class="breakdown-points">+<?= $event['points'] ?></div>
+        </a>
+        <?php endforeach; ?>
+      </div>
+    </div>
+    <?php endif; ?>
   </div>
 </section>
 
@@ -485,6 +608,25 @@ $genderText = match($rider['gender']) {
       </div>
       <?php endif; ?>
     </div>
+
+    <?php if (!empty($gsEventBreakdown)): ?>
+    <div class="event-breakdown">
+      <h3 class="breakdown-title">Ditt bidrag till laget</h3>
+      <div class="breakdown-list">
+        <?php foreach ($gsEventBreakdown as $event): ?>
+        <a href="/v3/event/<?= $event['event_id'] ?>" class="breakdown-item">
+          <div class="breakdown-info">
+            <div class="breakdown-name"><?= htmlspecialchars($event['event_name']) ?></div>
+            <div class="breakdown-meta">
+              <?= $event['event_date'] ? date('j M Y', strtotime($event['event_date'])) : '' ?>
+            </div>
+          </div>
+          <div class="breakdown-points">+<?= $event['points'] ?></div>
+        </a>
+        <?php endforeach; ?>
+      </div>
+    </div>
+    <?php endif; ?>
     <?php else: ?>
     <div class="empty-state">
       <div class="empty-state-icon">👥</div>
@@ -583,6 +725,9 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
 }
 .gs-stats-card--team {
   background: linear-gradient(135deg, #6B5B95 0%, #9B59B6 100%);
+}
+.gs-stats-card--ranking {
+  background: linear-gradient(135deg, #2ECC71 0%, #27AE60 100%);
 }
 .gs-team-name {
   font-size: var(--text-lg);
@@ -695,6 +840,77 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
   content: '•';
   margin-left: var(--space-sm);
   color: var(--color-text-muted);
+}
+
+/* Profile Ranking Badge */
+.profile-ranking {
+  flex-shrink: 0;
+  text-align: center;
+  padding: var(--space-sm) var(--space-md);
+  background: linear-gradient(135deg, #2ECC71 0%, #27AE60 100%);
+  border-radius: var(--radius-md);
+  color: #fff;
+}
+.ranking-position {
+  font-size: var(--text-2xl);
+  font-weight: var(--weight-bold);
+  line-height: 1;
+}
+.ranking-label {
+  font-size: var(--text-xs);
+  opacity: 0.85;
+  text-transform: uppercase;
+  margin-top: var(--space-2xs);
+}
+
+/* Event Breakdown */
+.event-breakdown {
+  padding: var(--space-md);
+  border-top: 1px solid var(--color-border);
+}
+.breakdown-title {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--color-text-secondary);
+  margin: 0 0 var(--space-sm) 0;
+}
+.breakdown-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+.breakdown-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-sm);
+  background: var(--color-bg-sunken);
+  border-radius: var(--radius-sm);
+  text-decoration: none;
+  color: inherit;
+  transition: background var(--transition-fast);
+}
+.breakdown-item:hover {
+  background: var(--color-bg-hover);
+}
+.breakdown-info {
+  min-width: 0;
+}
+.breakdown-name {
+  font-weight: var(--weight-medium);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.breakdown-meta {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+.breakdown-points {
+  font-weight: var(--weight-bold);
+  color: var(--color-accent-text);
+  flex-shrink: 0;
+  margin-left: var(--space-sm);
 }
 
 /* Stats Grid layouts */
