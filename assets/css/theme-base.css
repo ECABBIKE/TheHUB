@@ -292,7 +292,7 @@ a:hover {
     position: fixed;
     bottom: calc(var(--nav-height) + var(--space-md) + env(safe-area-inset-bottom, 0));
     right: var(--space-md);
-    display: flex;
+    display: none; /* Dölj på desktop som standard */
     background: var(--color-bg-surface);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-full);
@@ -302,11 +302,10 @@ a:hover {
     transition: all var(--transition-fast);
 }
 
-/* Desktop position */
-@media (min-width: 1024px) {
-    .theme-switcher {
-        bottom: var(--space-lg);
-        right: var(--space-lg);
+/* Visa floating FAB endast på mobil (samma breakpoint som nav-bottom) */
+@media (max-width: 767px) {
+    .theme-switcher:not(.theme-switcher--header) {
+        display: flex;
     }
 }
 
@@ -532,12 +531,13 @@ a:hover {
     flex-shrink: 0;
 }
 
-/* Theme switcher i header - kompaktare */
+/* Theme switcher i header - kompaktare (endast desktop) */
 .theme-switcher--header {
     position: static;
     bottom: auto;
     right: auto;
     box-shadow: none;
+    display: flex; /* Visa på desktop */
 }
 
 /* Dölj desktop nav och header theme switcher på mobil */

@@ -21,7 +21,7 @@ $navItems = [
     ['id' => 'events', 'label' => 'Kalender', 'url' => '/events.php'],
     ['id' => 'results', 'label' => 'Resultat', 'url' => '/results.php'],
     ['id' => 'series', 'label' => 'Serier', 'url' => '/series.php'],
-    ['id' => 'ranking', 'label' => 'Ranking', 'url' => '/ranking.php'],
+    ['id' => 'ranking', 'label' => 'Ranking', 'url' => '/ranking/'],
     ['id' => 'profile', 'label' => 'Profil', 'url' => '/profile.php'],
 ];
 ?>
