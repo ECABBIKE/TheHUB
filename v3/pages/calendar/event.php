@@ -4,13 +4,6 @@
  * Based on V2 event-results.php but with V3.5 design
  */
 
-// DEBUG - ta bort efter felsökning
-echo "<!-- DEBUG: event.php loaded -->";
-echo "<pre style='background:#ff0;padding:10px;'>";
-echo "pageInfo: "; print_r($pageInfo ?? 'NOT SET');
-echo "REQUEST_URI: " . ($_SERVER['REQUEST_URI'] ?? 'NOT SET');
-echo "</pre>";
-
 // Prevent direct access
 if (!defined('HUB_V3_ROOT')) {
     header('Location: /v3/calendar');
@@ -71,16 +64,6 @@ $stmt = $pdo->prepare("
 ");
 $stmt->execute([$eventId]);
 $event = $stmt->fetch(PDO::FETCH_ASSOC);
-
-// DEBUG
-echo "<pre style='background:#ff0;padding:10px;'>";
-echo "eventId: " . $eventId . "\n";
-echo "event found: " . ($event ? 'YES' : 'NO') . "\n";
-if ($event) {
-    echo "event name: " . ($event['name'] ?? 'N/A') . "\n";
-    echo "event date: " . ($event['date'] ?? 'N/A') . "\n";
-}
-echo "</pre>";
 
 if (!$event) {
     ?>
