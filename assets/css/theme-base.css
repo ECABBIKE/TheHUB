@@ -247,20 +247,35 @@ a:hover {
 
 .py-lg { padding-top: var(--space-lg); padding-bottom: var(--space-lg); }
 
-/* ===== THEME SWITCHER ===== */
+/* ===== THEME SWITCHER (Floating FAB) ===== */
 .theme-switcher {
+    position: fixed;
+    bottom: calc(var(--nav-height) + var(--space-md) + env(safe-area-inset-bottom, 0));
+    right: var(--space-md);
     display: flex;
-    background: var(--color-bg-sunken);
+    background: var(--color-bg-surface);
+    border: 1px solid var(--color-border);
     border-radius: var(--radius-full);
-    padding: 2px;
+    padding: var(--space-2xs);
+    box-shadow: var(--shadow-lg);
+    z-index: calc(var(--z-fixed) - 1);
+    transition: all var(--transition-fast);
+}
+
+/* Desktop position */
+@media (min-width: 1024px) {
+    .theme-switcher {
+        bottom: var(--space-lg);
+        right: var(--space-lg);
+    }
 }
 
 .theme-btn {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 32px;
-    height: 32px;
+    width: 36px;
+    height: 36px;
     border: none;
     background: transparent;
     border-radius: var(--radius-full);
@@ -270,18 +285,18 @@ a:hover {
 }
 
 .theme-btn:hover {
+    background: var(--color-bg-hover);
     color: var(--color-text-primary);
 }
 
 .theme-btn.is-active {
-    background: var(--color-bg-surface);
+    background: var(--color-accent-light);
     color: var(--color-accent);
-    box-shadow: var(--shadow-sm);
 }
 
 .theme-btn svg {
-    width: 18px;
-    height: 18px;
+    width: 20px;
+    height: 20px;
 }
 
 /* ===== BOTTOM NAV ===== */
@@ -347,18 +362,27 @@ a:hover {
     gap: 2px;
     padding: var(--space-xs);
     min-width: 56px;
-    color: var(--color-text-muted);
+    color: var(--color-text-secondary);
     text-decoration: none;
     border-radius: var(--radius-md);
     transition: all var(--transition-fast);
 }
 
 .nav-bottom-item:hover {
-    color: var(--color-text-secondary);
+    color: var(--color-text-primary);
 }
 
 .nav-bottom-item.is-active {
-    color: var(--color-accent);
+    color: var(--color-enduro-yellow);
+}
+
+.nav-bottom-item.is-active .nav-bottom-icon svg {
+    stroke: var(--color-enduro-yellow);
+}
+
+/* Dark mode: använd samma gula färg */
+[data-theme="dark"] .nav-bottom-item.is-active {
+    color: var(--color-enduro-yellow);
 }
 
 .nav-bottom-icon {
@@ -375,6 +399,27 @@ a:hover {
 .nav-bottom-label {
     font-size: 10px;
     font-weight: var(--weight-medium);
+}
+
+/* Landscape mode - kompaktare nav */
+@media (max-width: 1023px) and (orientation: landscape) {
+    .nav-bottom {
+        padding: 2px var(--space-sm);
+    }
+
+    .nav-bottom-item {
+        padding: var(--space-2xs);
+        gap: 0;
+    }
+
+    .nav-bottom-icon svg {
+        width: 20px;
+        height: 20px;
+    }
+
+    .nav-bottom-label {
+        font-size: 8px;
+    }
 }
 
 /* ===== HEADER ===== */
