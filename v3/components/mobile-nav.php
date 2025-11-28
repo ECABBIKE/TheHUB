@@ -1,6 +1,6 @@
 <?php
 $currentPage = $pageInfo['page'] ?? 'dashboard';
-$icons = ['home'=>'🏠','trophy'=>'🏆','flag'=>'🏁','users'=>'👥','shield'=>'🛡️'];
+$icons = ['home'=>'🏠','trophy'=>'🏆','flag'=>'🏁','users'=>'👥','shield'=>'🛡️','trending-up'=>'📈'];
 ?>
 <nav class="mobile-nav" role="navigation" aria-label="Mobilnavigering">
   <div class="mobile-nav-inner">

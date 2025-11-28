@@ -97,7 +97,9 @@ try {
             cls.id as class_id,
             cls.name as class_name,
             cls.display_name as class_display_name,
-            cls.sort_order as class_sort_order
+            cls.sort_order as class_sort_order,
+            cls.awards_points as class_awards_points,
+            cls.ranking_type as class_ranking_type
         FROM results res
         INNER JOIN riders r ON res.cyclist_id = r.id
         LEFT JOIN clubs c ON r.club_id = c.id
@@ -138,6 +140,8 @@ try {
                 'display_name' => $result['class_display_name'] ?? $className,
                 'class_name' => $className,
                 'sort_order' => $result['class_sort_order'] ?? 999,
+                'awards_points' => (int)($result['class_awards_points'] ?? 1),
+                'ranking_type' => $result['class_ranking_type'] ?? 'time',
                 'results' => []
             ];
         }
@@ -151,7 +155,16 @@ try {
 
     // Sort results within each class and calculate positions
     foreach ($resultsByClass as $classKey => &$classData) {
-        usort($classData['results'], function($a, $b) {
+        $rankingType = $classData['ranking_type'] ?? 'time';
+
+        usort($classData['results'], function($a, $b) use ($rankingType) {
+            // For non-time ranking (motion/kids), sort alphabetically by name
+            if ($rankingType !== 'time') {
+                $aName = ($a['lastname'] ?? '') . ' ' . ($a['firstname'] ?? '');
+                $bName = ($b['lastname'] ?? '') . ' ' . ($b['firstname'] ?? '');
+                return strcasecmp($aName, $bName);
+            }
+
             // Finished riders come first
             if ($a['status'] === 'finished' && $b['status'] !== 'finished') return -1;
             if ($a['status'] !== 'finished' && $b['status'] === 'finished') return 1;
@@ -170,10 +183,17 @@ try {
             return $aPriority <=> $bPriority;
         });
 
-        // Calculate positions and time behind
+        // Calculate positions and time behind (only for time-ranked classes)
         $position = 0;
         $winnerSeconds = 0;
         foreach ($classData['results'] as &$result) {
+            // Non-time ranked classes (motion/kids) don't get positions
+            if ($rankingType !== 'time') {
+                $result['class_position'] = null;
+                $result['time_behind'] = null;
+                continue;
+            }
+
             if ($result['status'] === 'finished') {
                 $position++;
                 $result['class_position'] = $position;
@@ -290,12 +310,16 @@ if (!$event) {
 <?php foreach ($resultsByClass as $classKey => $classData):
     // Skip if filtering by class and this isn't the selected one
     if ($selectedClass !== 'all' && $selectedClass != $classKey) continue;
+
+    // Class-specific display rules
+    $isTimeRanked = ($classData['ranking_type'] ?? 'time') === 'time';
+    $showPoints = ($classData['awards_points'] ?? 1) == 1;
 ?>
 <section class="card mb-lg" id="class-<?= $classKey ?>">
   <div class="card-header">
     <div>
       <h2 class="card-title"><?= htmlspecialchars($classData['display_name']) ?></h2>
-      <p class="card-subtitle"><?= count($classData['results']) ?> deltagare</p>
+      <p class="card-subtitle"><?= count($classData['results']) ?> deltagare<?= !$isTimeRanked ? ' (motion)' : '' ?></p>
     </div>
   </div>
 
@@ -303,10 +327,10 @@ if (!$event) {
     <table class="table table--striped table--hover">
       <thead>
         <tr>
-          <th class="col-place">#</th>
+          <th class="col-place"><?= $isTimeRanked ? '#' : '' ?></th>
           <th class="col-rider">Åkare</th>
           <th class="table-col-hide-portrait">Klubb</th>
-          <?php if ($hasSplitTimes): ?>
+          <?php if ($hasSplitTimes && $isTimeRanked): ?>
             <?php for ($ss = 1; $ss <= 10; $ss++): ?>
               <?php
               $hasThisSplit = false;
@@ -319,16 +343,22 @@ if (!$event) {
               <?php endif; ?>
             <?php endfor; ?>
           <?php endif; ?>
+          <?php if ($isTimeRanked): ?>
           <th class="col-time">Tid</th>
           <th class="col-gap table-col-hide-portrait">+Tid</th>
+          <?php endif; ?>
+          <?php if ($showPoints): ?>
           <th class="col-points table-col-hide-portrait">Poäng</th>
+          <?php endif; ?>
         </tr>
       </thead>
       <tbody>
         <?php foreach ($classData['results'] as $result): ?>
         <tr onclick="window.location='/v3/rider/<?= $result['rider_id'] ?>'" style="cursor:pointer">
           <td class="col-place <?= $result['class_position'] && $result['class_position'] <= 3 ? 'col-place--' . $result['class_position'] : '' ?>">
-            <?php if ($result['status'] !== 'finished'): ?>
+            <?php if (!$isTimeRanked): ?>
+              ✓
+            <?php elseif ($result['status'] !== 'finished'): ?>
               <span class="status-badge status-<?= strtolower($result['status']) ?>"><?= strtoupper($result['status']) ?></span>
             <?php elseif ($result['class_position'] == 1): ?>
               🥇
@@ -355,7 +385,7 @@ if (!$event) {
               -
             <?php endif; ?>
           </td>
-          <?php if ($hasSplitTimes): ?>
+          <?php if ($hasSplitTimes && $isTimeRanked): ?>
             <?php for ($ss = 1; $ss <= 10; $ss++): ?>
               <?php
               $hasThisSplit = false;
@@ -370,6 +400,7 @@ if (!$event) {
               <?php endif; ?>
             <?php endfor; ?>
           <?php endif; ?>
+          <?php if ($isTimeRanked): ?>
           <td class="col-time">
             <?php if ($result['status'] === 'finished' && $result['finish_time']): ?>
               <?= formatDisplayTime($result['finish_time']) ?>
@@ -380,6 +411,8 @@ if (!$event) {
           <td class="col-gap table-col-hide-portrait text-muted">
             <?= $result['time_behind'] ?? '-' ?>
           </td>
+          <?php endif; ?>
+          <?php if ($showPoints): ?>
           <td class="col-points table-col-hide-portrait">
             <?php if ($result['points']): ?>
               <span class="points-value"><?= $result['points'] ?></span>
@@ -387,6 +420,7 @@ if (!$event) {
               -
             <?php endif; ?>
           </td>
+          <?php endif; ?>
         </tr>
         <?php endforeach; ?>
       </tbody>
@@ -398,7 +432,9 @@ if (!$event) {
     <?php foreach ($classData['results'] as $result): ?>
     <a href="/v3/rider/<?= $result['rider_id'] ?>" class="result-item">
       <div class="result-place <?= $result['class_position'] && $result['class_position'] <= 3 ? 'top-3' : '' ?>">
-        <?php if ($result['status'] !== 'finished'): ?>
+        <?php if (!$isTimeRanked): ?>
+          ✓
+        <?php elseif ($result['status'] !== 'finished'): ?>
           <span class="status-mini"><?= strtoupper(substr($result['status'], 0, 3)) ?></span>
         <?php elseif ($result['class_position'] == 1): ?>
           🥇
@@ -415,10 +451,10 @@ if (!$event) {
         <div class="result-club"><?= htmlspecialchars($result['club_name'] ?? '-') ?></div>
       </div>
       <div class="result-time-col">
-        <?php if ($result['status'] === 'finished' && $result['finish_time']): ?>
+        <?php if ($isTimeRanked && $result['status'] === 'finished' && $result['finish_time']): ?>
           <div class="time-value"><?= formatDisplayTime($result['finish_time']) ?></div>
         <?php endif; ?>
-        <?php if ($result['points']): ?>
+        <?php if ($showPoints && $result['points']): ?>
           <div class="points-small"><?= $result['points'] ?> p</div>
         <?php endif; ?>
       </div>
