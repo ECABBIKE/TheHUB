@@ -83,14 +83,14 @@ foreach ($events as $event) {
         <?php foreach ($eventsByMonth as $month => $monthEvents): ?>
             <div class="calendar-month">
                 <h2 class="calendar-month-title">
-                    <?= strftime('%B %Y', strtotime($month . '-01')) ?>
+                    <?= hub_format_month_year($month . '-01') ?>
                 </h2>
                 <div class="event-cards">
                     <?php foreach ($monthEvents as $event): ?>
                         <?php
                         $eventDate = strtotime($event['date']);
                         $isRegistrationOpen = $event['registration_open'] ?? false;
-                        $dayName = strftime('%a', $eventDate);
+                        $dayName = hub_day_short($eventDate);
                         $dayNum = date('j', $eventDate);
                         ?>
                         <a href="/v3/calendar/<?= $event['id'] ?>" class="event-card">
