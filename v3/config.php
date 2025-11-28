@@ -115,7 +115,15 @@ if (!function_exists('hub_is_logged_in')) {
         if (function_exists('is_user_logged_in')) {
             return is_user_logged_in();
         }
-        return isset($_SESSION['hub_user_id']) && $_SESSION['hub_user_id'] > 0;
+        // Check V3 session
+        if (isset($_SESSION['hub_user_id']) && $_SESSION['hub_user_id'] > 0) {
+            return true;
+        }
+        // Check V2 rider session (backwards compatibility)
+        if (isset($_SESSION['rider_id']) && $_SESSION['rider_id'] > 0) {
+            return true;
+        }
+        return false;
     }
 }
 
@@ -131,9 +139,17 @@ if (!function_exists('hub_current_user')) {
             return hub_get_rider_by_email($wp_user->user_email);
         }
 
-        return isset($_SESSION['hub_user_id'])
-            ? hub_get_rider_by_id($_SESSION['hub_user_id'])
-            : null;
+        // Check V3 session first
+        if (isset($_SESSION['hub_user_id'])) {
+            return hub_get_rider_by_id($_SESSION['hub_user_id']);
+        }
+
+        // Check V2 rider session
+        if (isset($_SESSION['rider_id'])) {
+            return hub_get_rider_by_id($_SESSION['rider_id']);
+        }
+
+        return null;
     }
 }
 
@@ -231,6 +247,112 @@ if (!function_exists('hub_is_admin')) {
         // Fallback: check specific admin user IDs
         $adminIds = [1, 2];
         return in_array($user['id'] ?? 0, $adminIds);
+    }
+}
+
+if (!function_exists('hub_attempt_login')) {
+    /**
+     * Attempt to log in a user with email/password
+     * Works with the riders table using password_hash
+     */
+    function hub_attempt_login(string $email, string $password): array {
+        $pdo = hub_db();
+
+        // Find rider by email
+        $stmt = $pdo->prepare("
+            SELECT id, email, password, firstname, lastname, is_admin
+            FROM riders
+            WHERE email = ? AND active = 1
+            LIMIT 1
+        ");
+        $stmt->execute([$email]);
+        $rider = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$rider) {
+            return ['success' => false, 'error' => 'Ogiltig e-post eller lösenord.'];
+        }
+
+        // Check if rider has a password set
+        if (empty($rider['password'])) {
+            return ['success' => false, 'error' => 'Du har inte satt ett lösenord ännu. Klicka på "Glömt lösenord" för att skapa ett.'];
+        }
+
+        // Verify password (bcrypt)
+        if (!password_verify($password, $rider['password'])) {
+            return ['success' => false, 'error' => 'Ogiltig e-post eller lösenord.'];
+        }
+
+        // Login successful - create session
+        hub_set_user_session($rider);
+
+        // Update last login
+        $stmt = $pdo->prepare("UPDATE riders SET last_login = NOW() WHERE id = ?");
+        $stmt->execute([$rider['id']]);
+
+        return ['success' => true, 'user' => $rider];
+    }
+}
+
+if (!function_exists('hub_set_user_session')) {
+    /**
+     * Set user session after successful login
+     */
+    function hub_set_user_session(array $user): void {
+        $_SESSION['hub_user_id'] = $user['id'];
+        $_SESSION['hub_user_email'] = $user['email'];
+        $_SESSION['hub_user_name'] = ($user['firstname'] ?? '') . ' ' . ($user['lastname'] ?? '');
+        $_SESSION['hub_is_admin'] = (bool) ($user['is_admin'] ?? false);
+        $_SESSION['hub_logged_in_at'] = time();
+
+        // Also set rider_* for backwards compatibility with V2 code
+        $_SESSION['rider_id'] = $user['id'];
+        $_SESSION['rider_email'] = $user['email'];
+        $_SESSION['rider_name'] = $_SESSION['hub_user_name'];
+    }
+}
+
+if (!function_exists('hub_logout')) {
+    /**
+     * Log out the current user
+     */
+    function hub_logout(): void {
+        unset($_SESSION['hub_user_id']);
+        unset($_SESSION['hub_user_email']);
+        unset($_SESSION['hub_user_name']);
+        unset($_SESSION['hub_is_admin']);
+        unset($_SESSION['hub_logged_in_at']);
+
+        // Also clear V2 rider session
+        unset($_SESSION['rider_id']);
+        unset($_SESSION['rider_email']);
+        unset($_SESSION['rider_name']);
+    }
+}
+
+if (!function_exists('hub_require_login')) {
+    /**
+     * Require user to be logged in, redirect to login if not
+     */
+    function hub_require_login(?string $redirect = null): void {
+        if (!hub_is_logged_in()) {
+            $redirect = $redirect ?? $_SERVER['REQUEST_URI'];
+            header('Location: ' . HUB_V3_URL . '/login?redirect=' . urlencode($redirect));
+            exit;
+        }
+    }
+}
+
+if (!function_exists('hub_require_admin')) {
+    /**
+     * Require user to be admin, redirect if not
+     */
+    function hub_require_admin(): void {
+        hub_require_login();
+
+        if (!hub_is_admin()) {
+            header('Location: ' . HUB_V3_URL . '/?error=access_denied');
+            exit;
+        }
     }
 }
 

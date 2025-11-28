@@ -17,6 +17,21 @@ function hub_get_current_page(): array {
     $subpage = $segments[1] ?? 'index';
     $id = $segments[2] ?? ($segments[1] ?? null);
 
+    // Simple pages (login, logout, etc.)
+    $simplePages = [
+        'login' => '/pages/login.php',
+        'logout' => '/pages/logout.php',
+    ];
+
+    if (isset($simplePages[$section])) {
+        return [
+            'page' => $section,
+            'section' => $section,
+            'params' => [],
+            'file' => HUB_V3_ROOT . $simplePages[$section]
+        ];
+    }
+
     // New V3.5 section-based routing
     $sectionRoutes = [
         'calendar' => [
