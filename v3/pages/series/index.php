@@ -69,34 +69,37 @@ $seriesList = $stmt->fetchAll(PDO::FETCH_ASSOC);
     <div class="series-grid">
         <?php foreach ($seriesList as $s): ?>
         <a href="/v3/series/<?= $s['id'] ?>" class="series-card">
-            <div class="series-card-logo">
-                <?php if ($s['logo']): ?>
-                    <img src="<?= htmlspecialchars($s['logo']) ?>" alt="<?= htmlspecialchars($s['name']) ?>">
-                <?php else: ?>
-                    <span class="series-card-logo-placeholder">🏆</span>
-                <?php endif; ?>
-            </div>
-
-            <div class="series-card-content">
-                <h2 class="series-card-title">
-                    <?= htmlspecialchars($s['name']) ?>
-                    <?php if ($s['year']): ?>
-                        <span class="badge"><?= $s['year'] ?></span>
-                    <?php endif; ?>
-                </h2>
-                <?php if ($s['description']): ?>
-                    <p class="series-card-description"><?= htmlspecialchars($s['description']) ?></p>
-                <?php endif; ?>
-
-                <div class="series-card-meta">
-                    <span><?= $s['event_count'] ?> tävlingar</span>
-                    <?php if ($s['participant_count']): ?>
-                        <span><?= $s['participant_count'] ?> deltagare</span>
+            <div class="series-card-header">
+                <div class="series-card-logo">
+                    <?php if ($s['logo']): ?>
+                        <img src="<?= htmlspecialchars($s['logo']) ?>" alt="<?= htmlspecialchars($s['name']) ?>">
+                    <?php else: ?>
+                        <span class="series-card-logo-placeholder">🏆</span>
                     <?php endif; ?>
                 </div>
+                <?php if ($s['year']): ?>
+                    <span class="series-badge"><?= $s['year'] ?></span>
+                <?php endif; ?>
             </div>
 
-            <div class="series-card-arrow">→</div>
+            <h2 class="series-card-title"><?= htmlspecialchars($s['name']) ?></h2>
+
+            <?php if ($s['description']): ?>
+                <p class="series-card-description"><?= htmlspecialchars($s['description']) ?></p>
+            <?php endif; ?>
+
+            <div class="series-card-stats">
+                <div class="stat">
+                    <span class="stat-value"><?= $s['event_count'] ?></span>
+                    <span class="stat-label">tävlingar</span>
+                </div>
+                <?php if ($s['participant_count']): ?>
+                <div class="stat">
+                    <span class="stat-value"><?= $s['participant_count'] ?></span>
+                    <span class="stat-label">deltagare</span>
+                </div>
+                <?php endif; ?>
+            </div>
         </a>
         <?php endforeach; ?>
     </div>
@@ -104,16 +107,15 @@ $seriesList = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 <style>
 .series-grid {
-    display: flex;
-    flex-direction: column;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
     gap: var(--space-md);
 }
 
 .series-card {
     display: flex;
-    align-items: center;
-    gap: var(--space-lg);
-    padding: var(--space-lg);
+    flex-direction: column;
+    padding: var(--space-md);
     background: var(--color-bg-card);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-lg);
@@ -128,9 +130,16 @@ $seriesList = $stmt->fetchAll(PDO::FETCH_ASSOC);
     transform: translateY(-2px);
 }
 
+.series-card-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: var(--space-sm);
+}
+
 .series-card-logo {
-    width: 80px;
-    height: 80px;
+    width: 48px;
+    height: 48px;
     flex-shrink: 0;
     display: flex;
     align-items: center;
@@ -147,30 +156,23 @@ $seriesList = $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
 
 .series-card-logo-placeholder {
-    font-size: 2rem;
+    font-size: 1.5rem;
 }
 
-.series-card-content {
-    flex: 1;
-    min-width: 0;
+.series-badge {
+    background: var(--color-accent);
+    color: white;
+    padding: 2px 10px;
+    border-radius: var(--radius-full);
+    font-size: var(--text-xs);
+    font-weight: var(--weight-semibold);
 }
 
 .series-card-title {
-    font-size: var(--text-lg);
+    font-size: var(--text-md);
     font-weight: var(--weight-semibold);
     margin: 0 0 var(--space-xs);
-    display: flex;
-    align-items: center;
-    gap: var(--space-sm);
-}
-
-.series-card-title .badge {
-    background: var(--color-accent);
-    color: white;
-    padding: 2px 8px;
-    border-radius: var(--radius-full);
-    font-size: var(--text-xs);
-    font-weight: var(--weight-medium);
+    line-height: 1.3;
 }
 
 .series-card-description {
@@ -181,25 +183,32 @@ $seriesList = $stmt->fetchAll(PDO::FETCH_ASSOC);
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
+    flex: 1;
 }
 
-.series-card-meta {
+.series-card-stats {
     display: flex;
-    flex-wrap: wrap;
-    gap: var(--space-md);
-    font-size: var(--text-sm);
-    color: var(--color-text-muted);
+    gap: var(--space-lg);
+    padding-top: var(--space-sm);
+    border-top: 1px solid var(--color-border-light);
+    margin-top: auto;
 }
 
-.series-card-arrow {
-    font-size: var(--text-xl);
-    color: var(--color-text-muted);
-    transition: transform var(--transition-fast);
+.stat {
+    display: flex;
+    flex-direction: column;
 }
 
-.series-card:hover .series-card-arrow {
-    transform: translateX(4px);
+.stat-value {
+    font-size: var(--text-lg);
+    font-weight: var(--weight-bold);
     color: var(--color-accent);
+    line-height: 1;
+}
+
+.stat-label {
+    font-size: var(--text-xs);
+    color: var(--color-text-muted);
 }
 
 .empty-state {
@@ -223,18 +232,85 @@ $seriesList = $stmt->fetchAll(PDO::FETCH_ASSOC);
     margin: 0;
 }
 
-@media (max-width: 600px) {
+/* Tablet: 2 kolumner */
+@media (min-width: 600px) and (max-width: 900px) {
+    .series-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+/* Desktop: max 3 kolumner, centrerade */
+@media (min-width: 901px) {
+    .series-grid {
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        max-width: 1000px;
+    }
+}
+
+/* Mobil: kompaktare kort */
+@media (max-width: 599px) {
+    .series-grid {
+        grid-template-columns: 1fr;
+        gap: var(--space-sm);
+    }
+
     .series-card {
-        flex-direction: column;
-        text-align: center;
+        flex-direction: row;
+        flex-wrap: wrap;
+        align-items: center;
+        padding: var(--space-sm) var(--space-md);
+        gap: var(--space-sm);
     }
 
-    .series-card-meta {
-        justify-content: center;
+    .series-card-header {
+        margin-bottom: 0;
+        flex-shrink: 0;
     }
 
-    .series-card-arrow {
+    .series-card-logo {
+        width: 40px;
+        height: 40px;
+    }
+
+    .series-badge {
+        position: absolute;
+        top: var(--space-sm);
+        right: var(--space-sm);
+    }
+
+    .series-card {
+        position: relative;
+    }
+
+    .series-card-title {
+        flex: 1;
+        min-width: 0;
+        font-size: var(--text-sm);
+        margin: 0;
+    }
+
+    .series-card-description {
         display: none;
+    }
+
+    .series-card-stats {
+        width: 100%;
+        padding-top: var(--space-xs);
+        gap: var(--space-md);
+    }
+
+    .stat {
+        flex-direction: row;
+        align-items: baseline;
+        gap: 4px;
+    }
+
+    .stat-value {
+        font-size: var(--text-sm);
+    }
+
+    .stat-label {
+        font-size: var(--text-xs);
     }
 }
 </style>
