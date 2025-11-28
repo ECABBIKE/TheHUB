@@ -1,6 +1,7 @@
 <?php
 /**
  * V3 Series Single Page - Series standings with per-event points
+ * Uses series_results table for series-specific points (matches V2)
  */
 
 $db = hub_db();
@@ -9,6 +10,17 @@ $seriesId = intval($pageInfo['params']['id'] ?? 0);
 if (!$seriesId) {
     header('Location: /v3/series');
     exit;
+}
+
+// Check if series_results table exists and has data for this series
+$useSeriesResults = false;
+try {
+    $stmt = $db->prepare("SELECT COUNT(*) FROM series_results WHERE series_id = ?");
+    $stmt->execute([$seriesId]);
+    $useSeriesResults = ($stmt->fetchColumn() > 0);
+} catch (Exception $e) {
+    // Table doesn't exist yet, use old system
+    $useSeriesResults = false;
 }
 
 try {
@@ -28,23 +40,59 @@ try {
         return;
     }
 
-    // Get selected class filter
+    // Get filter parameters
     $selectedClass = isset($_GET['class']) ? $_GET['class'] : 'all';
+    $searchName = isset($_GET['search']) ? trim($_GET['search']) : '';
 
-    // Get all events in this series
+    // Get all events in this series (using series_events junction table like V2)
     $stmt = $db->prepare("
-        SELECT e.id, e.name, e.date, e.location,
-               COUNT(DISTINCT r.id) as result_count
-        FROM events e
+        SELECT
+            e.id,
+            e.name,
+            e.date,
+            e.location,
+            se.template_id,
+            COUNT(DISTINCT r.id) as result_count
+        FROM series_events se
+        JOIN events e ON se.event_id = e.id
         LEFT JOIN results r ON e.id = r.event_id
-        WHERE e.series_id = ?
+        WHERE se.series_id = ?
         GROUP BY e.id
         ORDER BY e.date ASC
     ");
     $stmt->execute([$seriesId]);
     $seriesEvents = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // Get all classes that have results in this series
+    // If no series_events, fall back to events with series_id
+    if (empty($seriesEvents)) {
+        $stmt = $db->prepare("
+            SELECT
+                e.id,
+                e.name,
+                e.date,
+                e.location,
+                NULL as template_id,
+                COUNT(DISTINCT r.id) as result_count
+            FROM events e
+            LEFT JOIN results r ON e.id = r.event_id
+            WHERE e.series_id = ?
+            GROUP BY e.id
+            ORDER BY e.date ASC
+        ");
+        $stmt->execute([$seriesId]);
+        $seriesEvents = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    // Filter events that have templates (these will show in standings columns)
+    $eventsWithPoints = array_filter($seriesEvents, function($e) {
+        return !empty($e['template_id']);
+    });
+    // If no template-based events, use all events
+    if (empty($eventsWithPoints)) {
+        $eventsWithPoints = $seriesEvents;
+    }
+
+    // Get all classes that have results in this series (only series-eligible classes that award points)
     $stmt = $db->prepare("
         SELECT DISTINCT c.id, c.name, c.display_name, c.sort_order,
                COUNT(DISTINCT r.cyclist_id) as rider_count
@@ -52,6 +100,8 @@ try {
         JOIN results r ON c.id = r.class_id
         JOIN events e ON r.event_id = e.id
         WHERE e.series_id = ?
+          AND COALESCE(c.series_eligible, 1) = 1
+          AND COALESCE(c.awards_points, 1) = 1
         GROUP BY c.id
         ORDER BY c.sort_order ASC
     ");
@@ -60,8 +110,9 @@ try {
 
     // Build standings
     $standingsByClass = [];
+    $countBest = $series['count_best_results'] ?? null;
 
-    // Get all riders with points in this series
+    // Get class filter condition
     $classFilter = '';
     $params = [$seriesId];
     if ($selectedClass !== 'all' && is_numeric($selectedClass)) {
@@ -69,6 +120,7 @@ try {
         $params[] = $selectedClass;
     }
 
+    // Get all riders who have results in this series
     $stmt = $db->prepare("
         SELECT DISTINCT
             riders.id,
@@ -85,7 +137,10 @@ try {
         JOIN results r ON riders.id = r.cyclist_id
         JOIN events e ON r.event_id = e.id
         LEFT JOIN classes cls ON r.class_id = cls.id
-        WHERE e.series_id = ? {$classFilter}
+        WHERE e.series_id = ?
+          AND COALESCE(cls.series_eligible, 1) = 1
+          AND COALESCE(cls.awards_points, 1) = 1
+          {$classFilter}
         ORDER BY cls.sort_order ASC, riders.lastname, riders.firstname
     ");
     $stmt->execute($params);
@@ -93,6 +148,13 @@ try {
 
     // For each rider, get their points from each event
     foreach ($ridersInSeries as $rider) {
+        $fullname = $rider['firstname'] . ' ' . $rider['lastname'];
+
+        // Apply name search filter early
+        if ($searchName !== '' && stripos($fullname, $searchName) === false) {
+            continue;
+        }
+
         $riderData = [
             'rider_id' => $rider['id'],
             'firstname' => $rider['firstname'],
@@ -101,23 +163,65 @@ try {
             'class_name' => $rider['class_display_name'] ?? $rider['class_name'] ?? 'Okänd',
             'class_id' => $rider['class_id'],
             'event_points' => [],
+            'excluded_events' => [],
             'total_points' => 0
         ];
 
         // Get points for each event
+        $allPoints = [];
         foreach ($seriesEvents as $event) {
-            $stmt = $db->prepare("
-                SELECT points
-                FROM results
-                WHERE cyclist_id = ? AND event_id = ? AND class_id = ?
-                LIMIT 1
-            ");
-            $stmt->execute([$rider['id'], $event['id'], $rider['class_id']]);
-            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            $points = 0;
 
+            if ($useSeriesResults) {
+                // Use series_results table (series-specific points)
+                $stmt = $db->prepare("
+                    SELECT points
+                    FROM series_results
+                    WHERE series_id = ? AND cyclist_id = ? AND event_id = ? AND class_id <=> ?
+                    LIMIT 1
+                ");
+                $stmt->execute([$seriesId, $rider['id'], $event['id'], $rider['class_id']]);
+            } else {
+                // Fallback: Use results.points
+                $stmt = $db->prepare("
+                    SELECT points
+                    FROM results
+                    WHERE cyclist_id = ? AND event_id = ? AND class_id = ?
+                    LIMIT 1
+                ");
+                $stmt->execute([$rider['id'], $event['id'], $rider['class_id']]);
+            }
+
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
             $points = $result ? (int)$result['points'] : 0;
+
             $riderData['event_points'][$event['id']] = $points;
-            $riderData['total_points'] += $points;
+            if ($points > 0) {
+                $allPoints[] = ['event_id' => $event['id'], 'points' => $points];
+            }
+        }
+
+        // Apply count_best_results rule
+        if ($countBest && count($allPoints) > $countBest) {
+            // Sort by points descending
+            usort($allPoints, function($a, $b) {
+                return $b['points'] - $a['points'];
+            });
+
+            // Mark events beyond the best X as excluded
+            for ($i = $countBest; $i < count($allPoints); $i++) {
+                $riderData['excluded_events'][$allPoints[$i]['event_id']] = true;
+            }
+
+            // Sum only the best results
+            for ($i = 0; $i < $countBest; $i++) {
+                $riderData['total_points'] += $allPoints[$i]['points'];
+            }
+        } else {
+            // Sum all points
+            foreach ($allPoints as $p) {
+                $riderData['total_points'] += $p['points'];
+            }
         }
 
         // Skip 0-point riders
@@ -196,8 +300,10 @@ if (!$series) {
     <h2 class="card-title">Tävlingar i serien</h2>
   </div>
   <div class="events-grid">
+    <?php $eventNum = 1; ?>
     <?php foreach ($seriesEvents as $event): ?>
     <a href="/v3/event/<?= $event['id'] ?>" class="event-card">
+      <div class="event-num">#<?= $eventNum ?></div>
       <div class="event-date"><?= $event['date'] ? date('j M', strtotime($event['date'])) : '-' ?></div>
       <div class="event-info">
         <div class="event-name"><?= htmlspecialchars($event['name']) ?></div>
@@ -205,25 +311,52 @@ if (!$series) {
       </div>
       <div class="event-results"><?= $event['result_count'] ?> resultat</div>
     </a>
+    <?php $eventNum++; ?>
     <?php endforeach; ?>
   </div>
 </section>
 
-<!-- Class Filter -->
-<?php if (count($activeClasses) > 1): ?>
+<!-- Class Filter and Search -->
+<?php if (count($activeClasses) > 1 || $searchName): ?>
 <section class="card mb-lg">
-  <div class="filter-row">
-    <span class="filter-label">Klass:</span>
-    <a href="/v3/series/<?= $seriesId ?>" class="btn <?= $selectedClass === 'all' ? 'btn--primary' : 'btn--ghost' ?>">Alla klasser</a>
-    <?php foreach ($activeClasses as $class): ?>
-    <a href="/v3/series/<?= $seriesId ?>?class=<?= $class['id'] ?>"
-       class="btn <?= $selectedClass == $class['id'] ? 'btn--primary' : 'btn--ghost' ?>">
-      <?= htmlspecialchars($class['display_name'] ?? $class['name']) ?>
-      <span class="badge-count"><?= $class['rider_count'] ?></span>
-    </a>
-    <?php endforeach; ?>
+  <div class="filter-grid">
+    <!-- Class Filter -->
+    <div class="filter-section">
+      <span class="filter-label">Klass:</span>
+      <div class="filter-row">
+        <a href="/v3/series/<?= $seriesId ?><?= $searchName ? '?search=' . urlencode($searchName) : '' ?>"
+           class="btn <?= $selectedClass === 'all' ? 'btn--primary' : 'btn--ghost' ?>">Alla</a>
+        <?php foreach ($activeClasses as $class): ?>
+        <a href="/v3/series/<?= $seriesId ?>?class=<?= $class['id'] ?><?= $searchName ? '&search=' . urlencode($searchName) : '' ?>"
+           class="btn <?= $selectedClass == $class['id'] ? 'btn--primary' : 'btn--ghost' ?>">
+          <?= htmlspecialchars($class['display_name'] ?? $class['name']) ?>
+          <span class="badge-count"><?= $class['rider_count'] ?></span>
+        </a>
+        <?php endforeach; ?>
+      </div>
+    </div>
+
+    <!-- Name Search -->
+    <div class="filter-section">
+      <form method="get" action="/v3/series/<?= $seriesId ?>" class="search-form">
+        <?php if ($selectedClass !== 'all'): ?>
+          <input type="hidden" name="class" value="<?= htmlspecialchars($selectedClass) ?>">
+        <?php endif; ?>
+        <input type="text" name="search" placeholder="Sök namn..." value="<?= htmlspecialchars($searchName) ?>" class="search-input">
+        <button type="submit" class="btn btn--primary">Sök</button>
+        <?php if ($searchName): ?>
+          <a href="/v3/series/<?= $seriesId ?><?= $selectedClass !== 'all' ? '?class=' . $selectedClass : '' ?>" class="btn btn--ghost">Rensa</a>
+        <?php endif; ?>
+      </form>
+    </div>
   </div>
 </section>
+<?php endif; ?>
+
+<?php if ($searchName): ?>
+<div class="search-info mb-md">
+  <span class="chip chip--info">Sökresultat för "<?= htmlspecialchars($searchName) ?>"</span>
+</div>
 <?php endif; ?>
 
 <!-- Standings by Class -->
@@ -231,7 +364,7 @@ if (!$series) {
 <section class="card">
   <div class="empty-state">
     <div class="empty-state-icon">🏆</div>
-    <p>Inga resultat registrerade ännu</p>
+    <p><?= $searchName ? 'Inga resultat för "' . htmlspecialchars($searchName) . '"' : 'Inga resultat registrerade ännu' ?></p>
   </div>
 </section>
 <?php else: ?>
@@ -252,10 +385,12 @@ if (!$series) {
           <th class="col-place">#</th>
           <th class="col-rider">Åkare</th>
           <th class="col-club table-col-hide-portrait">Klubb</th>
-          <?php foreach ($seriesEvents as $event): ?>
+          <?php $eventNum = 1; ?>
+          <?php foreach ($eventsWithPoints as $event): ?>
           <th class="col-event table-col-hide-portrait" title="<?= htmlspecialchars($event['name']) ?>">
-            <?= $event['date'] ? date('j/n', strtotime($event['date'])) : 'E' . $event['id'] ?>
+            #<?= $eventNum ?>
           </th>
+          <?php $eventNum++; ?>
           <?php endforeach; ?>
           <th class="col-total">Totalt</th>
         </tr>
@@ -278,12 +413,21 @@ if (!$series) {
           <td class="col-club table-col-hide-portrait text-muted">
             <?= htmlspecialchars($rider['club_name'] ?? '-') ?>
           </td>
-          <?php foreach ($seriesEvents as $event): ?>
-          <td class="col-event table-col-hide-portrait <?= ($rider['event_points'][$event['id']] ?? 0) > 0 ? 'has-points' : '' ?>">
-            <?php
-            $pts = $rider['event_points'][$event['id']] ?? 0;
-            echo $pts > 0 ? $pts : '-';
-            ?>
+          <?php foreach ($eventsWithPoints as $event): ?>
+          <?php
+          $pts = $rider['event_points'][$event['id']] ?? 0;
+          $isExcluded = isset($rider['excluded_events'][$event['id']]);
+          ?>
+          <td class="col-event table-col-hide-portrait <?= $pts > 0 ? 'has-points' : '' ?> <?= $isExcluded ? 'excluded' : '' ?>">
+            <?php if ($pts > 0): ?>
+              <?php if ($isExcluded): ?>
+                <span class="excluded-points" title="Räknas ej"><?= $pts ?></span>
+              <?php else: ?>
+                <?= $pts ?>
+              <?php endif; ?>
+            <?php else: ?>
+              –
+            <?php endif; ?>
           </td>
           <?php endforeach; ?>
           <td class="col-total">
@@ -385,9 +529,14 @@ if (!$series) {
 .event-card:hover {
   background: var(--color-bg-hover);
 }
+.event-num {
+  font-weight: var(--weight-bold);
+  color: var(--color-accent-text);
+  min-width: 30px;
+}
 .event-date {
   font-weight: var(--weight-semibold);
-  color: var(--color-accent-text);
+  color: var(--color-text-secondary);
   min-width: 50px;
 }
 .event-info {
@@ -410,6 +559,16 @@ if (!$series) {
   white-space: nowrap;
 }
 
+.filter-grid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+.filter-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
 .filter-row {
   display: flex;
   flex-wrap: wrap;
@@ -419,7 +578,7 @@ if (!$series) {
 .filter-label {
   font-size: var(--text-sm);
   color: var(--color-text-secondary);
-  margin-right: var(--space-xs);
+  font-weight: var(--weight-medium);
 }
 .badge-count {
   font-size: var(--text-xs);
@@ -427,6 +586,28 @@ if (!$series) {
   padding: 1px 6px;
   border-radius: var(--radius-full);
   margin-left: var(--space-2xs);
+}
+.search-form {
+  display: flex;
+  gap: var(--space-sm);
+  flex-wrap: wrap;
+}
+.search-input {
+  flex: 1;
+  min-width: 150px;
+  padding: var(--space-sm) var(--space-md);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-surface);
+  color: var(--color-text);
+}
+.search-input:focus {
+  outline: none;
+  border-color: var(--color-accent);
+}
+.search-info {
+  display: flex;
+  gap: var(--space-sm);
 }
 
 .standings-table .col-event {
@@ -438,6 +619,13 @@ if (!$series) {
 .standings-table .col-event.has-points {
   color: var(--color-text);
   font-weight: var(--weight-medium);
+}
+.standings-table .col-event.excluded {
+  opacity: 0.5;
+}
+.excluded-points {
+  text-decoration: line-through;
+  color: var(--color-text-muted);
 }
 .standings-table .col-total {
   text-align: right;
@@ -504,6 +692,16 @@ if (!$series) {
   }
   .event-card {
     padding: var(--space-xs) var(--space-sm);
+    flex-wrap: wrap;
+  }
+  .event-num {
+    min-width: auto;
+  }
+  .search-form {
+    flex-direction: column;
+  }
+  .search-form .btn {
+    width: 100%;
   }
 }
 </style>
