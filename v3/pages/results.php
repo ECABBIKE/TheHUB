@@ -1,6 +1,6 @@
 <?php
 /**
- * V3 Results Page - Shows recent results (actual results, not just events)
+ * V3 Results Page - Shows events with results
  */
 
 $db = hub_db();
@@ -8,66 +8,41 @@ $db = hub_db();
 // Get filter parameters
 $filterSeries = isset($_GET['series']) && is_numeric($_GET['series']) ? intval($_GET['series']) : null;
 $filterYear = isset($_GET['year']) && is_numeric($_GET['year']) ? intval($_GET['year']) : null;
-$filterEvent = isset($_GET['event']) && is_numeric($_GET['event']) ? intval($_GET['event']) : null;
 
 try {
-    // Build query for results
-    $where = ["r.id IS NOT NULL"];
+    // Build query for events with results
+    $where = ["1=1"];
     $params = [];
 
     if ($filterSeries) {
-        $where[] = "s.id = ?";
+        $where[] = "e.series_id = ?";
         $params[] = $filterSeries;
     }
     if ($filterYear) {
         $where[] = "YEAR(e.date) = ?";
         $params[] = $filterYear;
     }
-    if ($filterEvent) {
-        $where[] = "e.id = ?";
-        $params[] = $filterEvent;
-    }
 
     $whereClause = 'WHERE ' . implode(' AND ', $where);
 
-    // Get recent results with rider, event, and class info
+    // Get events with result counts
     $sql = "SELECT
-        r.id, r.position, r.finish_time, r.points, r.status,
-        c.id as rider_id, c.firstname, c.lastname,
-        cl.name as club_name,
-        e.id as event_id, e.name as event_name, e.date as event_date,
-        s.name as series_name, s.id as series_id,
-        cls.display_name as class_name
-    FROM results r
-    JOIN riders c ON r.cyclist_id = c.id
-    LEFT JOIN clubs cl ON c.club_id = cl.id
-    JOIN events e ON r.event_id = e.id
+        e.id, e.name, e.date, e.location,
+        s.id as series_id, s.name as series_name,
+        COUNT(DISTINCT r.id) as result_count,
+        COUNT(DISTINCT r.cyclist_id) as rider_count
+    FROM events e
     LEFT JOIN series s ON e.series_id = s.id
-    LEFT JOIN classes cls ON r.class_id = cls.id
+    LEFT JOIN results r ON e.id = r.event_id
     {$whereClause}
-    ORDER BY e.date DESC, r.position ASC
-    LIMIT 200";
+    GROUP BY e.id
+    HAVING result_count > 0
+    ORDER BY e.date DESC
+    LIMIT 100";
 
     $stmt = $db->prepare($sql);
     $stmt->execute($params);
-    $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-    // Group results by event for display
-    $resultsByEvent = [];
-    foreach ($results as $result) {
-        $eventId = $result['event_id'];
-        if (!isset($resultsByEvent[$eventId])) {
-            $resultsByEvent[$eventId] = [
-                'event_id' => $eventId,
-                'event_name' => $result['event_name'],
-                'event_date' => $result['event_date'],
-                'series_name' => $result['series_name'],
-                'series_id' => $result['series_id'],
-                'results' => []
-            ];
-        }
-        $resultsByEvent[$eventId]['results'][] = $result;
-    }
+    $events = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     // Get series for filter
     $allSeries = $db->query("
@@ -88,15 +63,12 @@ try {
         ORDER BY year DESC
     ")->fetchAll(PDO::FETCH_ASSOC);
 
-    $totalResults = count($results);
-    $totalEvents = count($resultsByEvent);
+    $totalEvents = count($events);
 
 } catch (Exception $e) {
-    $results = [];
-    $resultsByEvent = [];
+    $events = [];
     $allSeries = [];
     $allYears = [];
-    $totalResults = 0;
     $totalEvents = 0;
     $error = $e->getMessage();
 }
@@ -105,8 +77,7 @@ try {
 <div class="page-header">
   <h1 class="page-title">Resultat</h1>
   <div class="page-meta">
-    <span class="chip chip--primary"><?= number_format($totalResults) ?> resultat</span>
-    <span class="chip"><?= $totalEvents ?> event</span>
+    <span class="chip chip--primary"><?= $totalEvents ?> tävlingar</span>
   </div>
 </div>
 
@@ -146,100 +117,47 @@ try {
 </section>
 <?php endif; ?>
 
-<?php if (empty($resultsByEvent)): ?>
+<?php if (empty($events)): ?>
 <section class="card">
   <div class="empty-state">
     <div class="empty-state-icon">🏁</div>
-    <p>Inga resultat hittades med dessa filter</p>
+    <p>Inga resultat hittades</p>
   </div>
 </section>
 <?php else: ?>
 
-<?php foreach ($resultsByEvent as $eventData): ?>
-<section class="card mb-lg">
-  <div class="card-header">
-    <div>
-      <h2 class="card-title">
-        <a href="/v3/event/<?= $eventData['event_id'] ?>"><?= htmlspecialchars($eventData['event_name']) ?></a>
-      </h2>
-      <p class="card-subtitle">
-        <?= htmlspecialchars($eventData['series_name'] ?? '') ?>
-        <?php if ($eventData['event_date']): ?>
-          • <?= date('j M Y', strtotime($eventData['event_date'])) ?>
-        <?php endif; ?>
-        • <?= count($eventData['results']) ?> resultat
-      </p>
-    </div>
-    <a href="/v3/event/<?= $eventData['event_id'] ?>" class="btn btn--ghost">Visa alla →</a>
-  </div>
-
-  <div class="table-wrapper">
-    <table class="table table--striped table--hover">
-      <thead>
-        <tr>
-          <th class="col-place">#</th>
-          <th class="col-rider">Åkare</th>
-          <th class="table-col-hide-portrait">Klubb</th>
-          <th class="table-col-hide-portrait">Klass</th>
-          <th class="col-time">Tid</th>
-          <th class="col-points table-col-hide-portrait">Poäng</th>
-        </tr>
-      </thead>
-      <tbody>
-        <?php foreach (array_slice($eventData['results'], 0, 10) as $result): ?>
-        <tr onclick="window.location='/v3/rider/<?= $result['rider_id'] ?>'" style="cursor:pointer">
-          <td class="col-place <?= $result['position'] <= 3 ? 'col-place--' . $result['position'] : '' ?>">
-            <?php if ($result['position'] == 1): ?>🥇
-            <?php elseif ($result['position'] == 2): ?>🥈
-            <?php elseif ($result['position'] == 3): ?>🥉
-            <?php else: ?><?= $result['position'] ?>
-            <?php endif; ?>
-          </td>
-          <td class="col-rider">
-            <a href="/v3/rider/<?= $result['rider_id'] ?>" class="rider-link">
-              <?= htmlspecialchars($result['firstname'] . ' ' . $result['lastname']) ?>
-            </a>
-          </td>
-          <td class="table-col-hide-portrait text-muted"><?= htmlspecialchars($result['club_name'] ?? '-') ?></td>
-          <td class="table-col-hide-portrait text-muted"><?= htmlspecialchars($result['class_name'] ?? '-') ?></td>
-          <td class="col-time"><?= htmlspecialchars($result['finish_time'] ?? '-') ?></td>
-          <td class="col-points table-col-hide-portrait">
-            <?php if ($result['points']): ?>
-              <span class="points-value"><?= $result['points'] ?></span>
-            <?php else: ?>-<?php endif; ?>
-          </td>
-        </tr>
-        <?php endforeach; ?>
-      </tbody>
-    </table>
-  </div>
-
-  <!-- Mobile Card View -->
-  <div class="result-list">
-    <?php foreach (array_slice($eventData['results'], 0, 10) as $result): ?>
-    <a href="/v3/rider/<?= $result['rider_id'] ?>" class="result-item">
-      <div class="result-place <?= $result['position'] <= 3 ? 'top-3' : '' ?>">
-        <?php if ($result['position'] == 1): ?>🥇
-        <?php elseif ($result['position'] == 2): ?>🥈
-        <?php elseif ($result['position'] == 3): ?>🥉
-        <?php else: ?><?= $result['position'] ?>
+<section class="card">
+  <div class="events-list">
+    <?php foreach ($events as $event): ?>
+    <a href="/v3/event/<?= $event['id'] ?>" class="event-row">
+      <div class="event-date-col">
+        <?php if ($event['date']): ?>
+          <span class="event-day"><?= date('j', strtotime($event['date'])) ?></span>
+          <span class="event-month"><?= date('M', strtotime($event['date'])) ?></span>
+        <?php else: ?>
+          <span class="event-day">-</span>
         <?php endif; ?>
       </div>
-      <div class="result-info">
-        <div class="result-name"><?= htmlspecialchars($result['firstname'] . ' ' . $result['lastname']) ?></div>
-        <div class="result-club"><?= htmlspecialchars($result['club_name'] ?? '-') ?> • <?= htmlspecialchars($result['class_name'] ?? '') ?></div>
+      <div class="event-main">
+        <div class="event-name"><?= htmlspecialchars($event['name']) ?></div>
+        <div class="event-details">
+          <?php if ($event['series_name']): ?>
+            <span class="event-series"><?= htmlspecialchars($event['series_name']) ?></span>
+          <?php endif; ?>
+          <?php if ($event['location']): ?>
+            <span class="event-location"><?= htmlspecialchars($event['location']) ?></span>
+          <?php endif; ?>
+        </div>
       </div>
-      <div class="result-time-col">
-        <div class="time-value"><?= htmlspecialchars($result['finish_time'] ?? '-') ?></div>
-        <?php if ($result['points']): ?>
-          <div class="points-small"><?= $result['points'] ?> p</div>
-        <?php endif; ?>
+      <div class="event-stats">
+        <span class="stat-value"><?= $event['rider_count'] ?></span>
+        <span class="stat-label">deltagare</span>
       </div>
+      <div class="event-arrow">→</div>
     </a>
     <?php endforeach; ?>
   </div>
 </section>
-<?php endforeach; ?>
 
 <?php endif; ?>
 
@@ -299,37 +217,81 @@ try {
 }
 .mb-lg { margin-bottom: var(--space-lg); }
 
-.col-place {
-  width: 40px;
+.events-list {
+  display: flex;
+  flex-direction: column;
+}
+.event-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-sm) var(--space-md);
+  border-bottom: 1px solid var(--color-border);
+  transition: background var(--transition-fast);
+}
+.event-row:last-child {
+  border-bottom: none;
+}
+.event-row:hover {
+  background: var(--color-bg-hover);
+}
+
+.event-date-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 40px;
   text-align: center;
+}
+.event-day {
+  font-size: var(--text-lg);
   font-weight: var(--weight-bold);
+  line-height: 1;
 }
-.col-place--1 { color: #FFD700; }
-.col-place--2 { color: #C0C0C0; }
-.col-place--3 { color: #CD7F32; }
-
-.col-time {
-  text-align: right;
-  font-family: var(--font-mono);
-  white-space: nowrap;
-}
-.col-points {
-  text-align: right;
-}
-.points-value {
-  font-weight: var(--weight-semibold);
-  color: var(--color-accent-text);
-}
-
-.rider-link {
-  color: var(--color-text);
-  font-weight: var(--weight-medium);
-}
-.rider-link:hover {
-  color: var(--color-accent-text);
-}
-.text-muted {
+.event-month {
+  font-size: var(--text-xs);
   color: var(--color-text-muted);
+  text-transform: uppercase;
+}
+
+.event-main {
+  flex: 1;
+  min-width: 0;
+}
+.event-name {
+  font-weight: var(--weight-medium);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.event-details {
+  display: flex;
+  gap: var(--space-sm);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+.event-series {
+  color: var(--color-accent-text);
+}
+
+.event-stats {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+.stat-value {
+  font-weight: var(--weight-bold);
+  font-size: var(--text-lg);
+}
+.stat-label {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+
+.event-arrow {
+  color: var(--color-text-muted);
+  font-size: var(--text-lg);
 }
 
 .empty-state {
@@ -340,21 +302,6 @@ try {
 .empty-state-icon {
   font-size: 48px;
   margin-bottom: var(--space-md);
-}
-
-.result-place.top-3 {
-  background: var(--color-accent-light);
-}
-.result-time-col {
-  text-align: right;
-}
-.time-value {
-  font-family: var(--font-mono);
-  font-size: var(--text-sm);
-}
-.points-small {
-  font-size: var(--text-xs);
-  color: var(--color-accent-text);
 }
 
 @media (max-width: 599px) {
@@ -371,6 +318,20 @@ try {
   .filter-select {
     flex: 1;
     min-width: 0;
+  }
+  .event-row {
+    padding: var(--space-sm);
+    gap: var(--space-sm);
+  }
+  .event-details {
+    flex-direction: column;
+    gap: 0;
+  }
+  .event-stats {
+    display: none;
+  }
+  .event-arrow {
+    display: none;
   }
 }
 </style>
