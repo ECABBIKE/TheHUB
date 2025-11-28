@@ -17,7 +17,17 @@ function announce(t){
 function init(){
   apply(getSaved());
   window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>{if(getSaved()==='auto')apply('auto')});
-  document.addEventListener('click',e=>{const b=e.target.closest('.theme-toggle-btn');if(b)set(b.dataset.theme)});
+  // Only listen for clicks on actual theme toggle buttons within the theme toggle container
+  document.querySelectorAll('.theme-toggle').forEach(container=>{
+    container.addEventListener('click',e=>{
+      const b=e.target.closest('.theme-toggle-btn');
+      if(b&&b.dataset.theme){
+        e.preventDefault();
+        e.stopPropagation();
+        set(b.dataset.theme);
+      }
+    });
+  });
 }
 return{init,setTheme:set,getTheme:getSaved}})();
 document.readyState==='loading'?document.addEventListener('DOMContentLoaded',HubTheme.init):HubTheme.init();

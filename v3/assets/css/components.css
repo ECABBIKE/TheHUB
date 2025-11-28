@@ -132,3 +132,39 @@
 .loading::after{content:'';position:absolute;inset:0;background:var(--color-bg-surface);opacity:0.7}
 .spinner{width:24px;height:24px;border:2px solid var(--color-border);border-top-color:var(--color-accent);border-radius:50%;animation:spin 0.8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
+
+/* Icons */
+.icon{width:20px;height:20px;flex-shrink:0;color:inherit}
+.icon-sm{width:16px;height:16px}
+.icon-lg{width:24px;height:24px}
+.icon-xl{width:32px;height:32px}
+
+/* Nav Icons */
+.mobile-nav-icon .icon{width:24px;height:24px}
+.admin-nav-icon .icon{width:20px;height:20px}
+
+/* Alerts */
+.alert{
+  display:flex;align-items:flex-start;gap:var(--space-sm);
+  padding:var(--space-md);border-radius:var(--radius-md);
+  font-size:var(--text-sm);
+}
+.alert--success{background:var(--color-success-light);color:var(--color-success);border:1px solid var(--color-success)}
+.alert--error{background:var(--color-error-light);color:var(--color-error);border:1px solid var(--color-error)}
+.alert--warning{background:var(--color-warning-light);color:var(--color-warning);border:1px solid var(--color-warning)}
+.alert--info{background:var(--color-accent-light);color:var(--color-accent);border:1px solid var(--color-accent)}
+
+/* Image Grid (Admin) */
+.image-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:var(--space-md)}
+.image-card{background:var(--color-bg-surface);border:1px solid var(--color-border);border-radius:var(--radius-lg);overflow:hidden}
+.image-preview{aspect-ratio:16/9;display:flex;align-items:center;justify-content:center;padding:var(--space-md);background:var(--color-bg-sunken)}
+.image-preview.bg-dark{background:#1a1a1a}
+.image-preview.bg-light{background:#f5f5f5}
+.image-preview img{max-width:100%;max-height:100%;object-fit:contain}
+.image-info{padding:var(--space-sm) var(--space-md);display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-xs)}
+.image-actions{padding:var(--space-xs) var(--space-md) var(--space-sm);border-top:1px solid var(--color-border)}
+
+/* Badge variants */
+.badge--default{background:var(--color-bg-sunken)}
+.badge--light{background:#f5f5f5;color:#333}
+.badge--dark{background:#333;color:#fff}

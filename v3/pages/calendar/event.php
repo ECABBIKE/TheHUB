@@ -10,14 +10,40 @@ if (!defined('HUB_V3_ROOT')) {
     exit;
 }
 
+require_once HUB_V3_ROOT . '/components/icons.php';
+
 $pdo = hub_db();
-$eventId = $pageInfo['params']['id'] ?? 0;
+
+// Get event ID from multiple sources for robustness
+$eventId = $pageInfo['params']['id'] ?? null;
+
+// Fallback: try to get ID from URL path
+if (!$eventId && isset($_SERVER['REQUEST_URI'])) {
+    if (preg_match('/\/calendar\/(\d+)/', $_SERVER['REQUEST_URI'], $matches)) {
+        $eventId = $matches[1];
+    }
+}
+
+// Fallback: try to get ID from query string
+if (!$eventId && isset($_GET['id'])) {
+    $eventId = $_GET['id'];
+}
+
+// Fallback: try to get from page query param
+if (!$eventId && isset($_GET['page'])) {
+    $segments = explode('/', trim($_GET['page'], '/'));
+    if (count($segments) >= 2 && is_numeric($segments[1])) {
+        $eventId = $segments[1];
+    }
+}
+
+$eventId = (int) $eventId;
 
 if (!$eventId) {
     ?>
     <div class="card" style="padding:var(--space-xl);text-align:center;">
         <h2>Inget event valt</h2>
-        <p>Gå tillbaka till <a href="/v3/calendar">kalendern</a> och välj ett event.</p>
+        <p>Ga tillbaka till <a href="/v3/calendar">kalendern</a> och valj ett event.</p>
     </div>
     <?php
     return;
@@ -113,7 +139,8 @@ foreach ($registrations as $reg) {
 
             <?php if ($event['location'] || $event['venue_city']): ?>
                 <p class="event-location">
-                    📍 <?= htmlspecialchars($event['location'] ?? $event['venue_city']) ?>
+                    <?= hub_icon('map-pin', 'icon-sm') ?>
+                    <?= htmlspecialchars($event['location'] ?? $event['venue_city']) ?>
                 </p>
             <?php endif; ?>
         </div>
@@ -169,7 +196,7 @@ foreach ($registrations as $reg) {
     <?php if ($isPast): ?>
     <div class="card">
         <a href="/v3/event/<?= $eventId ?>" class="btn btn-primary btn-lg">
-            📊 Visa resultat
+            <?= hub_icon('trending-up', 'icon') ?> Visa resultat
         </a>
     </div>
     <?php endif; ?>
