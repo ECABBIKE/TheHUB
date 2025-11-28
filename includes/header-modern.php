@@ -21,8 +21,8 @@ $navItems = [
     ['id' => 'events', 'label' => 'Kalender', 'url' => '/events.php'],
     ['id' => 'results', 'label' => 'Resultat', 'url' => '/results.php'],
     ['id' => 'series', 'label' => 'Serier', 'url' => '/series.php'],
-    ['id' => 'database', 'label' => 'Databas', 'url' => '/database.php'],
-    ['id' => 'ranking', 'label' => 'Ranking', 'url' => '/ranking/'],
+    ['id' => 'ranking', 'label' => 'Ranking', 'url' => '/ranking.php'],
+    ['id' => 'profile', 'label' => 'Profil', 'url' => '/profile.php'],
 ];
 ?>
 
@@ -43,11 +43,13 @@ $navItems = [
             <?php
             // Determine if this item is active
             $isActive = false;
-            if ($item['id'] === 'ranking' && strpos($currentPath, '/ranking/') !== false) {
+            if ($item['id'] === 'ranking' && ($currentPage === 'ranking.php' || strpos($currentPath, '/ranking/') !== false)) {
                 $isActive = true;
             } elseif ($item['id'] === 'events' && ($currentPage === 'events.php' || $currentPage === 'calendar.php')) {
                 $isActive = true;
-            } elseif ($item['id'] !== 'ranking') {
+            } elseif ($item['id'] === 'profile' && $currentPage === 'profile.php') {
+                $isActive = true;
+            } elseif ($item['id'] !== 'ranking' && $item['id'] !== 'profile') {
                 $isActive = ($currentPage === $item['id'] . '.php');
             }
             ?>
@@ -153,16 +155,6 @@ $navItems = [
                     </a>
                 </div>
             </div>
-        <?php else: ?>
-            <!-- Login-knapp - Enduro Gul -->
-            <a href="/rider-login.php" class="btn btn--login">
-                <svg class="btn--login-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
-                    <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
-                    <polyline points="10 17 15 12 10 7"/>
-                    <line x1="15" y1="12" x2="3" y2="12"/>
-                </svg>
-                <span class="btn--login-text">Logga in</span>
-            </a>
         <?php endif; ?>
     </div>
 </header>
