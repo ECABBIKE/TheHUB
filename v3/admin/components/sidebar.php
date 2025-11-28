@@ -2,8 +2,12 @@
 /**
  * Admin Sidebar Navigation
  * Uses hub_icon() for consistent SVG icons
+ * Shows menu items based on user role
  */
 require_once HUB_V3_ROOT . '/components/icons.php';
+
+$userRole = hub_get_user_role();
+$userId = $_SESSION['hub_user_id'] ?? 0;
 ?>
 <aside class="admin-sidebar">
     <div class="admin-sidebar-brand">
@@ -17,7 +21,7 @@ require_once HUB_V3_ROOT . '/components/icons.php';
             </span>
             <span class="admin-title">TheHUB</span>
         </a>
-        <span class="admin-badge">Admin</span>
+        <span class="admin-badge admin-badge--role-<?= $userRole ?>"><?= hub_get_role_name($userRole) ?></span>
     </div>
 
     <nav class="admin-nav">
@@ -36,8 +40,15 @@ require_once HUB_V3_ROOT . '/components/icons.php';
                class="admin-nav-item <?= admin_is_active('events') ? 'is-active' : '' ?>">
                 <span class="admin-nav-icon"><?= hub_icon('calendar') ?></span>
                 Tavlingar
+                <?php if (hub_is_promotor() && !hub_is_admin()): ?>
+                    <?php $eventCount = count(hub_get_promotor_events($userId)); ?>
+                    <?php if ($eventCount > 0): ?>
+                        <span class="admin-nav-badge"><?= $eventCount ?></span>
+                    <?php endif; ?>
+                <?php endif; ?>
             </a>
 
+            <?php if (hub_is_admin()): ?>
             <a href="<?= admin_url('series') ?>"
                class="admin-nav-item <?= admin_is_active('series') ? 'is-active' : '' ?>">
                 <span class="admin-nav-icon"><?= hub_icon('trophy') ?></span>
@@ -55,6 +66,18 @@ require_once HUB_V3_ROOT . '/components/icons.php';
                 <span class="admin-nav-icon"><?= hub_icon('building') ?></span>
                 Klubbar
             </a>
+            <?php endif; ?>
+        </div>
+
+        <?php if (hub_is_admin()): ?>
+        <div class="admin-nav-section">
+            <span class="admin-nav-label">Verktyg</span>
+
+            <a href="<?= admin_url('import') ?>"
+               class="admin-nav-item <?= admin_is_active('import') ? 'is-active' : '' ?>">
+                <span class="admin-nav-icon"><?= hub_icon('upload') ?></span>
+                Import
+            </a>
 
             <a href="<?= admin_url('images') ?>"
                class="admin-nav-item <?= admin_is_active('images') ? 'is-active' : '' ?>">
@@ -62,20 +85,22 @@ require_once HUB_V3_ROOT . '/components/icons.php';
                 Bilder
             </a>
         </div>
+        <?php endif; ?>
 
+        <?php if (hub_is_super_admin()): ?>
         <div class="admin-nav-section">
             <span class="admin-nav-label">System</span>
+
+            <a href="<?= admin_url('users') ?>"
+               class="admin-nav-item <?= admin_is_active('users') ? 'is-active' : '' ?>">
+                <span class="admin-nav-icon"><?= hub_icon('user') ?></span>
+                Anvandare & Roller
+            </a>
 
             <a href="<?= admin_url('config') ?>"
                class="admin-nav-item <?= admin_is_active('config') ? 'is-active' : '' ?>">
                 <span class="admin-nav-icon"><?= hub_icon('settings') ?></span>
                 Konfiguration
-            </a>
-
-            <a href="<?= admin_url('import') ?>"
-               class="admin-nav-item <?= admin_is_active('import') ? 'is-active' : '' ?>">
-                <span class="admin-nav-icon"><?= hub_icon('upload') ?></span>
-                Import
             </a>
 
             <a href="<?= admin_url('system') ?>"
@@ -84,6 +109,7 @@ require_once HUB_V3_ROOT . '/components/icons.php';
                 System
             </a>
         </div>
+        <?php endif; ?>
     </nav>
 
     <div class="admin-sidebar-footer">

@@ -228,13 +228,29 @@ if (!function_exists('hub_get_admin_clubs')) {
 
 if (!function_exists('hub_is_admin')) {
     /**
-     * Check if current user is an admin
+     * Check if current user is an admin (role level 3+)
      */
-    function hub_is_admin(): bool {
+    function hub_is_admin(?int $userId = null): bool {
+        // Check session role first
+        if ($userId === null && isset($_SESSION['hub_user_role'])) {
+            return $_SESSION['hub_user_role'] >= ROLE_ADMIN;
+        }
+
+        // Check database role
+        if ($userId !== null || isset($_SESSION['hub_user_id'])) {
+            $checkId = $userId ?? $_SESSION['hub_user_id'];
+            return hub_has_role(ROLE_ADMIN, $checkId);
+        }
+
         $user = hub_current_user();
         if (!$user) return false;
 
-        // Check is_admin flag in riders table
+        // Check role_id in riders table
+        if (isset($user['role_id']) && $user['role_id'] >= ROLE_ADMIN) {
+            return true;
+        }
+
+        // Fallback: check is_admin flag in riders table (legacy)
         if (isset($user['is_admin']) && $user['is_admin']) {
             return true;
         }
@@ -244,9 +260,7 @@ if (!function_exists('hub_is_admin')) {
             return current_user_can('manage_options') || current_user_can('edit_others_posts');
         }
 
-        // Fallback: check specific admin user IDs
-        $adminIds = [1, 2];
-        return in_array($user['id'] ?? 0, $adminIds);
+        return false;
     }
 }
 
@@ -260,7 +274,7 @@ if (!function_exists('hub_attempt_login')) {
 
         // Find rider by email
         $stmt = $pdo->prepare("
-            SELECT id, email, password, firstname, lastname, is_admin
+            SELECT id, email, password, firstname, lastname, is_admin, role_id
             FROM riders
             WHERE email = ? AND active = 1
             LIMIT 1
@@ -301,8 +315,11 @@ if (!function_exists('hub_set_user_session')) {
         $_SESSION['hub_user_id'] = $user['id'];
         $_SESSION['hub_user_email'] = $user['email'];
         $_SESSION['hub_user_name'] = ($user['firstname'] ?? '') . ' ' . ($user['lastname'] ?? '');
-        $_SESSION['hub_is_admin'] = (bool) ($user['is_admin'] ?? false);
+        $_SESSION['hub_user_role'] = (int) ($user['role_id'] ?? ROLE_RIDER);
         $_SESSION['hub_logged_in_at'] = time();
+
+        // Backwards compatibility - is_admin based on role
+        $_SESSION['hub_is_admin'] = $_SESSION['hub_user_role'] >= ROLE_ADMIN;
 
         // Also set rider_* for backwards compatibility with V2 code
         $_SESSION['rider_id'] = $user['id'];
@@ -319,6 +336,7 @@ if (!function_exists('hub_logout')) {
         unset($_SESSION['hub_user_id']);
         unset($_SESSION['hub_user_email']);
         unset($_SESSION['hub_user_name']);
+        unset($_SESSION['hub_user_role']);
         unset($_SESSION['hub_is_admin']);
         unset($_SESSION['hub_logged_in_at']);
 
@@ -351,6 +369,220 @@ if (!function_exists('hub_require_admin')) {
 
         if (!hub_is_admin()) {
             header('Location: ' . HUB_V3_URL . '/?error=access_denied');
+            exit;
+        }
+    }
+}
+
+// ============================================================================
+// ROLE-BASED PERMISSION SYSTEM
+// ============================================================================
+
+// Role constants
+if (!defined('ROLE_RIDER')) {
+    define('ROLE_RIDER', 1);
+    define('ROLE_PROMOTOR', 2);
+    define('ROLE_ADMIN', 3);
+    define('ROLE_SUPER_ADMIN', 4);
+
+    define('ROLE_NAMES', [
+        ROLE_RIDER => 'Rider',
+        ROLE_PROMOTOR => 'Promotor',
+        ROLE_ADMIN => 'Admin',
+        ROLE_SUPER_ADMIN => 'Super Admin'
+    ]);
+}
+
+if (!function_exists('hub_get_user_role')) {
+    /**
+     * Get user's role level
+     */
+    function hub_get_user_role(?int $userId = null): int {
+        if ($userId === null) {
+            return $_SESSION['hub_user_role'] ?? ROLE_RIDER;
+        }
+
+        static $cache = [];
+        if (!isset($cache[$userId])) {
+            $stmt = hub_db()->prepare("SELECT role_id FROM riders WHERE id = ?");
+            $stmt->execute([$userId]);
+            $cache[$userId] = (int) ($stmt->fetchColumn() ?: ROLE_RIDER);
+        }
+
+        return $cache[$userId];
+    }
+}
+
+if (!function_exists('hub_get_role_name')) {
+    /**
+     * Get role display name
+     */
+    function hub_get_role_name(int $roleId): string {
+        return ROLE_NAMES[$roleId] ?? 'Okänd';
+    }
+}
+
+if (!function_exists('hub_has_role')) {
+    /**
+     * Check if user has at least a certain role level
+     */
+    function hub_has_role(int $requiredRole, ?int $userId = null): bool {
+        $userRole = hub_get_user_role($userId);
+        return $userRole >= $requiredRole;
+    }
+}
+
+if (!function_exists('hub_is_role')) {
+    /**
+     * Check if user is exactly a certain role
+     */
+    function hub_is_role(int $role, ?int $userId = null): bool {
+        return hub_get_user_role($userId) === $role;
+    }
+}
+
+if (!function_exists('hub_is_promotor')) {
+    /**
+     * Check if user is promotor or higher
+     */
+    function hub_is_promotor(?int $userId = null): bool {
+        return hub_has_role(ROLE_PROMOTOR, $userId);
+    }
+}
+
+if (!function_exists('hub_is_super_admin')) {
+    /**
+     * Check if user is super admin
+     */
+    function hub_is_super_admin(?int $userId = null): bool {
+        return hub_has_role(ROLE_SUPER_ADMIN, $userId);
+    }
+}
+
+if (!function_exists('hub_can_manage_event')) {
+    /**
+     * Check if user can manage a specific event
+     */
+    function hub_can_manage_event(int $eventId, ?int $userId = null): bool {
+        $userId = $userId ?? ($_SESSION['hub_user_id'] ?? 0);
+
+        if (!$userId) return false;
+
+        // Admin and Super Admin can manage all events
+        if (hub_has_role(ROLE_ADMIN, $userId)) {
+            return true;
+        }
+
+        // Promotor - check specific assignment
+        if (hub_is_promotor($userId)) {
+            $pdo = hub_db();
+
+            // Check direct event assignment
+            $stmt = $pdo->prepare("SELECT 1 FROM promotor_events WHERE rider_id = ? AND event_id = ?");
+            $stmt->execute([$userId, $eventId]);
+            if ($stmt->fetchColumn()) {
+                return true;
+            }
+
+            // Check series assignment
+            $stmt = $pdo->prepare("
+                SELECT 1 FROM promotor_series ps
+                JOIN events e ON e.series_id = ps.series_id
+                WHERE ps.rider_id = ? AND e.id = ?
+            ");
+            $stmt->execute([$userId, $eventId]);
+            if ($stmt->fetchColumn()) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+}
+
+if (!function_exists('hub_can_manage_series')) {
+    /**
+     * Check if user can manage a specific series
+     */
+    function hub_can_manage_series(int $seriesId, ?int $userId = null): bool {
+        $userId = $userId ?? ($_SESSION['hub_user_id'] ?? 0);
+
+        if (!$userId) return false;
+
+        // Admin and Super Admin can manage all series
+        if (hub_has_role(ROLE_ADMIN, $userId)) {
+            return true;
+        }
+
+        // Promotor - check specific assignment
+        if (hub_is_promotor($userId)) {
+            $stmt = hub_db()->prepare("SELECT 1 FROM promotor_series WHERE rider_id = ? AND series_id = ?");
+            $stmt->execute([$userId, $seriesId]);
+            return (bool) $stmt->fetchColumn();
+        }
+
+        return false;
+    }
+}
+
+if (!function_exists('hub_get_promotor_events')) {
+    /**
+     * Get all events a promotor can manage
+     */
+    function hub_get_promotor_events(int $userId): array {
+        $pdo = hub_db();
+
+        if (hub_has_role(ROLE_ADMIN, $userId)) {
+            // Admin sees all events
+            return $pdo->query("
+                SELECT e.*, s.name as series_name
+                FROM events e
+                LEFT JOIN series s ON e.series_id = s.id
+                WHERE e.date >= DATE_SUB(NOW(), INTERVAL 1 YEAR)
+                ORDER BY e.date DESC
+            ")->fetchAll(PDO::FETCH_ASSOC);
+        }
+
+        // Promotor sees assigned events
+        $stmt = $pdo->prepare("
+            SELECT DISTINCT e.*, s.name as series_name,
+                   CASE WHEN pe.id IS NOT NULL THEN 'event' ELSE 'series' END as assigned_via
+            FROM events e
+            LEFT JOIN series s ON e.series_id = s.id
+            LEFT JOIN promotor_events pe ON pe.event_id = e.id AND pe.rider_id = ?
+            LEFT JOIN promotor_series ps ON ps.series_id = e.series_id AND ps.rider_id = ?
+            WHERE (pe.id IS NOT NULL OR ps.id IS NOT NULL)
+            ORDER BY e.date DESC
+        ");
+        $stmt->execute([$userId, $userId]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+}
+
+if (!function_exists('hub_require_role')) {
+    /**
+     * Require specific role level, redirect if not authorized
+     */
+    function hub_require_role(int $role, ?string $redirect = null): void {
+        hub_require_login();
+
+        if (!hub_has_role($role)) {
+            $redirect = $redirect ?? HUB_V3_URL . '/?error=access_denied';
+            header('Location: ' . $redirect);
+            exit;
+        }
+    }
+}
+
+if (!function_exists('hub_require_event_access')) {
+    /**
+     * Require access to specific event
+     */
+    function hub_require_event_access(int $eventId): void {
+        hub_require_login();
+
+        if (!hub_can_manage_event($eventId)) {
+            header('Location: ' . HUB_V3_URL . '/admin?error=no_access');
             exit;
         }
     }

@@ -24,15 +24,22 @@ function admin_parse_route(): array {
     $section = $segments[0] ?? 'dashboard';
     $action = $segments[1] ?? 'index';
     $id = $segments[2] ?? null;
+    $params = [];
 
+    // Special handling for users section (users/123/assignments)
+    if ($section === 'users' && isset($segments[1]) && is_numeric($segments[1])) {
+        $params['id'] = (int) $segments[1];
+        $action = $segments[2] ?? 'edit';
+        $id = $segments[3] ?? null;
+    }
     // If second segment is numeric, it's an ID for edit
-    if (isset($segments[1]) && is_numeric($segments[1])) {
+    elseif (isset($segments[1]) && is_numeric($segments[1])) {
         $id = $segments[1];
         $action = 'edit';
     }
 
     // Map sections to files
-    $validSections = ['dashboard', 'events', 'series', 'riders', 'clubs', 'config', 'import', 'system'];
+    $validSections = ['dashboard', 'events', 'series', 'riders', 'clubs', 'config', 'import', 'system', 'users', 'images'];
 
     if (!in_array($section, $validSections)) {
         $section = 'dashboard';
@@ -48,7 +55,7 @@ function admin_parse_route(): array {
         }
     }
 
-    return compact('section', 'action', 'id', 'file');
+    return compact('section', 'action', 'id', 'file', 'params');
 }
 
 function admin_is_active(string $section): bool {

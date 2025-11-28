@@ -489,3 +489,186 @@
         justify-content: center;
     }
 }
+
+/* ===== ROLE BADGES ===== */
+.badge--role-1 { background: var(--color-bg-sunken); color: var(--color-text-secondary); }
+.badge--role-2 { background: #DBEAFE; color: #1E40AF; }
+.badge--role-3 { background: #FEF3C7; color: #92400E; }
+.badge--role-4 { background: #FEE2E2; color: #991B1B; }
+
+[data-theme="dark"] .badge--role-1 { background: var(--color-bg-sunken); }
+[data-theme="dark"] .badge--role-2 { background: rgba(59, 130, 246, 0.2); color: #93C5FD; }
+[data-theme="dark"] .badge--role-3 { background: rgba(245, 158, 11, 0.2); color: #FCD34D; }
+[data-theme="dark"] .badge--role-4 { background: rgba(239, 68, 68, 0.2); color: #FCA5A5; }
+
+.admin-badge--role-2 { background: #DBEAFE !important; color: #1E40AF !important; }
+.admin-badge--role-3 { background: #FEF3C7 !important; color: #92400E !important; }
+.admin-badge--role-4 { background: #FEE2E2 !important; color: #991B1B !important; }
+
+[data-theme="dark"] .admin-badge--role-2 { background: rgba(59, 130, 246, 0.2) !important; color: #93C5FD !important; }
+[data-theme="dark"] .admin-badge--role-3 { background: rgba(245, 158, 11, 0.2) !important; color: #FCD34D !important; }
+[data-theme="dark"] .admin-badge--role-4 { background: rgba(239, 68, 68, 0.2) !important; color: #FCA5A5 !important; }
+
+/* ===== ASSIGNMENT LIST ===== */
+.assignment-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.assignment-list--scrollable {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.assignment-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--space-sm) var(--space-md);
+    border-bottom: 1px solid var(--color-border);
+}
+
+.assignment-item:last-child {
+    border-bottom: none;
+}
+
+.assignment-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+    flex: 1;
+}
+
+.assignment-info strong {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.admin-card-footer {
+    padding: var(--space-md);
+    border-top: 1px solid var(--color-border);
+    background: var(--color-bg-sunken);
+    margin: var(--space-lg) calc(-1 * var(--space-lg)) calc(-1 * var(--space-lg));
+    border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+}
+
+.inline-form {
+    display: flex;
+    gap: var(--space-sm);
+    align-items: center;
+}
+
+.inline-form .form-select {
+    flex: 1;
+}
+
+/* ===== MODAL ===== */
+.modal {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-md);
+}
+
+.modal-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+}
+
+.modal-content {
+    position: relative;
+    background: var(--color-bg-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-xl);
+    width: 100%;
+    max-width: 480px;
+    max-height: 90vh;
+    overflow: auto;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--space-md) var(--space-lg);
+    border-bottom: 1px solid var(--color-border);
+}
+
+.modal-header h2 {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    margin: 0;
+    font-size: var(--text-lg);
+}
+
+.modal-body {
+    padding: var(--space-lg);
+}
+
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--space-sm);
+    padding: var(--space-md) var(--space-lg);
+    border-top: 1px solid var(--color-border);
+    background: var(--color-bg-sunken);
+}
+
+/* ===== FILTER FORM ===== */
+.admin-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-md);
+    align-items: center;
+}
+
+.admin-filter-form {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-md);
+    align-items: center;
+    width: 100%;
+}
+
+.admin-search-box {
+    display: flex;
+    gap: var(--space-sm);
+    flex: 1;
+    min-width: 200px;
+    max-width: 400px;
+}
+
+.admin-search-box .form-input {
+    flex: 1;
+}
+
+/* ===== NAV BADGE ===== */
+.admin-nav-badge {
+    margin-left: auto;
+    padding: 2px 8px;
+    font-size: var(--text-xs);
+    font-weight: var(--weight-medium);
+    background: var(--color-accent);
+    color: white;
+    border-radius: var(--radius-full);
+}
+
+/* ===== 2-COLUMN GRID ===== */
+.admin-grid--2 {
+    grid-template-columns: repeat(2, 1fr);
+}
+
+@media (max-width: 768px) {
+    .admin-grid--2 {
+        grid-template-columns: 1fr;
+    }
+}
