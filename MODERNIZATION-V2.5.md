@@ -106,16 +106,30 @@ Lägg till denna kod där du vill ha tema-switchern:
 
 ## 📱 Bottom Navigation
 
-Bottom nav visas **automatiskt på mobil** (`< 768px`).
+Bottom nav visas **automatiskt på mobil/tablet** (`< 1024px`) och **ersätter sidebaren**.
+
+**Beteende:**
+- **Desktop (≥1024px):** Sidebar visas permanent
+- **Mobil/Tablet (<1024px):** Bottom nav visas, sidebar och hamburger-meny döljs
 
 **Navigation items finns i:** `/includes/nav-bottom.php`
+
+**Standardnavigation:**
+- 🏠 Hem
+- 📅 Kalender (events.php)
+- 🏆 Resultat (results.php)
+- 🥇 Serier (series.php)
+- 📈 Ranking (ranking/)
 
 **Anpassa navigationen:**
 
 ```php
 $navItems = [
-    ['id' => 'calendar', 'label' => 'Kalender', 'url' => '/calendar.php', 'icon' => 'calendar'],
-    ['id' => 'results', 'label' => 'Resultat', 'url' => '/results.php', 'icon' => 'flag'],
+    ['id' => 'index', 'label' => 'Hem', 'url' => '/', 'icon' => 'home'],
+    ['id' => 'events', 'label' => 'Kalender', 'url' => '/events.php', 'icon' => 'calendar'],
+    ['id' => 'results', 'label' => 'Resultat', 'url' => '/results.php', 'icon' => 'trophy'],
+    ['id' => 'series', 'label' => 'Serier', 'url' => '/series.php', 'icon' => 'award'],
+    ['id' => 'ranking', 'label' => 'Ranking', 'url' => '/ranking/', 'icon' => 'trending-up'],
     // Lägg till fler här...
 ];
 ```
@@ -233,9 +247,11 @@ window.addEventListener('themechange', (e) => {
 3. Kontrollera att temat sparas vid omladdning
 
 ### Bottom Nav
-1. Öppna på mobil eller minska fönstret till < 768px
-2. Navigation ska synas längst ner
-3. Aktiv sida ska markeras med accent-färg
+1. Öppna på mobil eller minska fönstret till < 1024px
+2. Bottom navigation ska synas längst ner
+3. Sidebar och hamburger-meny ska vara dolda
+4. Aktiv sida ska markeras med accent-färg
+5. Testa att navigera mellan sidorna - länkarna ska fungera
 
 ### PWA
 1. **Chrome Desktop:** DevTools → Application → Manifest
@@ -264,6 +280,12 @@ window.addEventListener('themechange', (e) => {
 - Kontrollera att `/includes/nav-bottom.php` inkluderas i footer
 - Kolla att `theme-base.css` har laddats
 - Öppna DevTools och se om elementet finns men är dolt
+
+### Dubbla menyer på mobil
+- Detta borde vara fixat automatiskt
+- Bottom nav ersätter sidebar/hamburger på mobil (<1024px)
+- Om du ser både sidebar och bottom nav, kontrollera att `theme-base.css` laddas efter `gravityseries-main.css`
+- Force-refresh (Ctrl+Shift+R) för att rensa cache
 
 ### PWA fungerar inte
 - Kontrollera att `/manifest.json` är tillgänglig
