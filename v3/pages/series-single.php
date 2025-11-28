@@ -294,28 +294,6 @@ if (!$series) {
 </section>
 <?php endif; ?>
 
-<!-- Events in Series -->
-<section class="card mb-lg">
-  <div class="card-header">
-    <h2 class="card-title">Tävlingar i serien</h2>
-  </div>
-  <div class="events-grid">
-    <?php $eventNum = 1; ?>
-    <?php foreach ($seriesEvents as $event): ?>
-    <a href="/v3/event/<?= $event['id'] ?>" class="event-card">
-      <div class="event-num">#<?= $eventNum ?></div>
-      <div class="event-date"><?= $event['date'] ? date('j M', strtotime($event['date'])) : '-' ?></div>
-      <div class="event-info">
-        <div class="event-name"><?= htmlspecialchars($event['name']) ?></div>
-        <div class="event-location"><?= htmlspecialchars($event['location'] ?? '') ?></div>
-      </div>
-      <div class="event-results"><?= $event['result_count'] ?> resultat</div>
-    </a>
-    <?php $eventNum++; ?>
-    <?php endforeach; ?>
-  </div>
-</section>
-
 <!-- Class Filter and Search -->
 <?php if (count($activeClasses) > 1 || $searchName): ?>
 <div class="filter-bar mb-lg">
@@ -459,6 +437,27 @@ if (!$series) {
 
 <?php endif; ?>
 
+<!-- Events in Series (compact list at bottom) -->
+<section class="card events-section">
+  <details class="events-details">
+    <summary class="events-summary">
+      <span class="events-title">Tävlingar i serien</span>
+      <span class="events-count"><?= count($seriesEvents) ?> st</span>
+    </summary>
+    <div class="events-compact">
+      <?php $eventNum = 1; ?>
+      <?php foreach ($seriesEvents as $event): ?>
+      <a href="/v3/event/<?= $event['id'] ?>" class="event-compact-row">
+        <span class="event-compact-num">#<?= $eventNum ?></span>
+        <span class="event-compact-date"><?= $event['date'] ? date('j M', strtotime($event['date'])) : '-' ?></span>
+        <span class="event-compact-name"><?= htmlspecialchars($event['name']) ?></span>
+      </a>
+      <?php $eventNum++; ?>
+      <?php endforeach; ?>
+    </div>
+  </details>
+</section>
+
 <style>
 .breadcrumb {
   display: flex;
@@ -505,51 +504,73 @@ if (!$series) {
 .text-secondary { color: var(--color-text-secondary); }
 .text-muted { color: var(--color-text-muted); }
 
-.events-grid {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-sm);
+/* Compact events section */
+.events-section {
+  margin-top: var(--space-xl);
 }
-.event-card {
+.events-details {
+  cursor: pointer;
+}
+.events-summary {
   display: flex;
   align-items: center;
-  gap: var(--space-md);
+  justify-content: space-between;
   padding: var(--space-sm) var(--space-md);
-  background: var(--color-bg-sunken);
-  border-radius: var(--radius-md);
-  transition: background var(--transition-fast);
+  list-style: none;
+  user-select: none;
 }
-.event-card:hover {
-  background: var(--color-bg-hover);
+.events-summary::-webkit-details-marker {
+  display: none;
 }
-.event-num {
-  font-weight: var(--weight-bold);
-  color: var(--color-accent-text);
-  min-width: 30px;
+.events-summary::before {
+  content: '▸';
+  margin-right: var(--space-sm);
+  transition: transform var(--transition-fast);
 }
-.event-date {
-  font-weight: var(--weight-semibold);
-  color: var(--color-text-secondary);
-  min-width: 50px;
+details[open] .events-summary::before {
+  transform: rotate(90deg);
 }
-.event-info {
-  flex: 1;
-  min-width: 0;
-}
-.event-name {
+.events-title {
   font-weight: var(--weight-medium);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  font-size: var(--text-sm);
 }
-.event-location {
+.events-count {
   font-size: var(--text-sm);
   color: var(--color-text-muted);
 }
-.event-results {
+.events-compact {
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid var(--color-border);
+}
+.event-compact-row {
+  display: flex;
+  gap: var(--space-sm);
+  padding: var(--space-xs) var(--space-md);
   font-size: var(--text-sm);
-  color: var(--color-text-secondary);
+  border-bottom: 1px solid var(--color-border);
+  transition: background var(--transition-fast);
+}
+.event-compact-row:last-child {
+  border-bottom: none;
+}
+.event-compact-row:hover {
+  background: var(--color-bg-hover);
+}
+.event-compact-num {
+  color: var(--color-accent-text);
+  font-weight: var(--weight-medium);
+  min-width: 24px;
+}
+.event-compact-date {
+  color: var(--color-text-muted);
+  min-width: 50px;
+}
+.event-compact-name {
+  flex: 1;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .filter-bar {
@@ -683,16 +704,6 @@ if (!$series) {
 @media (max-width: 599px) {
   .page-title {
     font-size: var(--text-xl);
-  }
-  .events-grid {
-    gap: var(--space-xs);
-  }
-  .event-card {
-    padding: var(--space-xs) var(--space-sm);
-    flex-wrap: wrap;
-  }
-  .event-num {
-    min-width: auto;
   }
   .filter-bar {
     flex-direction: column;
