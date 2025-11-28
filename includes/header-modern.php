@@ -1,7 +1,7 @@
 <?php
 /**
  * TheHUB Modern Header (V2.5)
- * Includes theme switcher and profile dropdown
+ * Includes desktop navigation, theme switcher and profile dropdown
  */
 
 // Include necessary helpers
@@ -12,9 +12,22 @@ if (!function_exists('get_current_rider')) {
 $isLoggedIn = isset($_SESSION['rider_id']) && $_SESSION['rider_id'] > 0;
 $currentUser = $isLoggedIn ? get_current_rider() : null;
 $isAdmin = isset($_SESSION['admin_id']) && $_SESSION['admin_id'] > 0;
+
+// Navigation items (samma som bottom nav)
+$currentPage = basename($_SERVER['PHP_SELF']);
+$currentPath = $_SERVER['PHP_SELF'];
+
+$navItems = [
+    ['id' => 'events', 'label' => 'Kalender', 'url' => '/events.php'],
+    ['id' => 'results', 'label' => 'Resultat', 'url' => '/results.php'],
+    ['id' => 'series', 'label' => 'Serier', 'url' => '/series.php'],
+    ['id' => 'database', 'label' => 'Databas', 'url' => '/database.php'],
+    ['id' => 'ranking', 'label' => 'Ranking', 'url' => '/ranking/'],
+];
 ?>
 
 <header class="header">
+    <!-- Logo - klickbar till startsida -->
     <a href="/" class="header-brand">
         <svg class="header-logo" viewBox="0 0 40 40">
             <circle cx="20" cy="20" r="18" fill="currentColor" opacity="0.1"/>
@@ -24,9 +37,32 @@ $isAdmin = isset($_SESSION['admin_id']) && $_SESSION['admin_id'] > 0;
         <span class="header-title">TheHUB</span>
     </a>
 
+    <!-- Desktop navigation (dold på mobil) -->
+    <nav class="header-nav" role="navigation">
+        <?php foreach ($navItems as $item): ?>
+            <?php
+            // Determine if this item is active
+            $isActive = false;
+            if ($item['id'] === 'ranking' && strpos($currentPath, '/ranking/') !== false) {
+                $isActive = true;
+            } elseif ($item['id'] === 'events' && ($currentPage === 'events.php' || $currentPage === 'calendar.php')) {
+                $isActive = true;
+            } elseif ($item['id'] !== 'ranking') {
+                $isActive = ($currentPage === $item['id'] . '.php');
+            }
+            ?>
+            <a href="<?= $item['url'] ?>"
+               class="header-nav-item <?= $isActive ? 'is-active' : '' ?>"
+               <?= $isActive ? 'aria-current="page"' : '' ?>>
+                <?= $item['label'] ?>
+            </a>
+        <?php endforeach; ?>
+    </nav>
+
+    <!-- Actions (tema, admin, login/profile) -->
     <div class="header-actions">
-        <!-- Tema-switcher -->
-        <div class="theme-switcher">
+        <!-- Tema-switcher (endast desktop i header) -->
+        <div class="theme-switcher theme-switcher--header">
             <button data-theme-set="light" class="theme-btn" title="Ljust tema" aria-label="Ljust tema">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <circle cx="12" cy="12" r="4"/>
@@ -118,7 +154,39 @@ $isAdmin = isset($_SESSION['admin_id']) && $_SESSION['admin_id'] > 0;
                 </div>
             </div>
         <?php else: ?>
-            <a href="/rider-login.php" class="btn btn--primary btn--sm">Logga in</a>
+            <!-- Login-knapp - Enduro Gul -->
+            <a href="/rider-login.php" class="btn btn--login">
+                <svg class="btn--login-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
+                    <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
+                    <polyline points="10 17 15 12 10 7"/>
+                    <line x1="15" y1="12" x2="3" y2="12"/>
+                </svg>
+                <span class="btn--login-text">Logga in</span>
+            </a>
         <?php endif; ?>
     </div>
 </header>
+
+<!-- Dropdown script -->
+<script>
+(function() {
+    document.querySelectorAll('[data-dropdown]').forEach(dropdown => {
+        const btn = dropdown.querySelector('.header-user-btn');
+        const menu = dropdown.querySelector('.header-dropdown');
+
+        btn?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            dropdown.classList.toggle('is-open');
+            btn.setAttribute('aria-expanded', dropdown.classList.contains('is-open'));
+        });
+
+        // Stäng vid klick utanför
+        document.addEventListener('click', (e) => {
+            if (!dropdown.contains(e.target)) {
+                dropdown.classList.remove('is-open');
+                btn?.setAttribute('aria-expanded', 'false');
+            }
+        });
+    });
+})();
+</script>
