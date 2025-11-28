@@ -137,26 +137,29 @@ $bodyClass = isset($bodyClass) ? $defaultBodyClass . ' ' . $bodyClass : $default
         }
     </style>
 
-    <!-- V2.5 Modern Theme System - Load FIRST -->
-    <!-- 1. Design Tokens -->
+    <!-- V3.5 Design System - Complete Migration (FAS 1) -->
+    <!-- 1. CSS Reset -->
+    <link rel="stylesheet" href="/assets/css/reset.css?v=<?= filemtime(__DIR__ . '/../assets/css/reset.css') ?>">
+
+    <!-- 2. Design Tokens -->
     <link rel="stylesheet" href="/assets/css/tokens.css?v=<?= filemtime(__DIR__ . '/../assets/css/tokens.css') ?>">
 
-    <!-- 2. Theme Variables (Light/Dark Support from V3.5) -->
+    <!-- 3. Theme Variables (Light/Dark/Auto Support) -->
     <link rel="stylesheet" href="/assets/css/theme.css?v=<?= filemtime(__DIR__ . '/../assets/css/theme.css') ?>">
 
-    <!-- 3. Component Styles -->
-    <link rel="stylesheet" href="/assets/css/theme-base.css?v=<?= filemtime(__DIR__ . '/../assets/css/theme-base.css') ?>">
+    <!-- 4. Layout System -->
+    <link rel="stylesheet" href="/assets/css/layout.css?v=<?= filemtime(__DIR__ . '/../assets/css/layout.css') ?>">
 
-    <!-- GravitySeries v4.0 CSS -->
-    <link rel="stylesheet" href="/public/css/gravityseries-main.css?v=<?= filemtime(__DIR__ . '/../public/css/gravityseries-main.css') ?>">
-    <?php if (isset($pageType) && $pageType === 'admin'): ?>
-    <link rel="stylesheet" href="/public/css/gravityseries-admin.css?v=<?= filemtime(__DIR__ . '/../public/css/gravityseries-admin.css') ?>">
-    <?php endif; ?>
+    <!-- 5. UI Components -->
+    <link rel="stylesheet" href="/assets/css/components.css?v=<?= filemtime(__DIR__ . '/../assets/css/components.css') ?>">
 
-    <!-- V2.5 Mobile & Responsive Enhancements -->
-    <link rel="stylesheet" href="/assets/css/responsive.css?v=<?= filemtime(__DIR__ . '/../assets/css/responsive.css') ?>">
+    <!-- 6. Table Styles -->
+    <link rel="stylesheet" href="/assets/css/tables.css?v=<?= filemtime(__DIR__ . '/../assets/css/tables.css') ?>">
 
-    <!-- PWA Support (from V3.5) -->
+    <!-- 7. Utility Classes -->
+    <link rel="stylesheet" href="/assets/css/utilities.css?v=<?= filemtime(__DIR__ . '/../assets/css/utilities.css') ?>">
+
+    <!-- 8. PWA Support -->
     <link rel="stylesheet" href="/assets/css/pwa.css?v=<?= filemtime(__DIR__ . '/../assets/css/pwa.css') ?>">
 
     <!-- PWA Support -->
