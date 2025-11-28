@@ -112,34 +112,38 @@ if ($useSeriesEvents) {
 // Selected class filter
 $selectedClass = $_GET['class'] ?? 'all';
 $searchName = $_GET['search'] ?? '';
+$countBest = $series['count_best_results'] ?? null;
 
-// Get standings - ONLY for classes that award points
-$standings = [];
-if ($useSeriesResults) {
-    // Use series_results table - filter by awards_points
+// Build standings with per-event points (like V2)
+$standingsByClass = [];
+$eventIds = array_column($events, 'id');
+
+if (!empty($eventIds)) {
+    // Get all riders who have results in this series (point-awarding classes only)
+    $placeholders = implode(',', array_fill(0, count($eventIds), '?'));
+
     $sql = "
-        SELECT
+        SELECT DISTINCT
             ri.id as rider_id,
             ri.firstname,
             ri.lastname,
             c.name as club_name,
-            cls.display_name as class_name,
             cls.id as class_id,
-            cls.sort_order as class_sort_order,
-            SUM(sr.points) as total_points,
-            COUNT(sr.id) as events_count
-        FROM series_results sr
-        JOIN riders ri ON sr.cyclist_id = ri.id
+            cls.name as class_name,
+            cls.display_name as class_display_name,
+            cls.sort_order as class_sort_order
+        FROM riders ri
         LEFT JOIN clubs c ON ri.club_id = c.id
-        LEFT JOIN classes cls ON sr.class_id = cls.id
-        WHERE sr.series_id = ?
+        JOIN results r ON ri.id = r.cyclist_id
+        LEFT JOIN classes cls ON r.class_id = cls.id
+        WHERE r.event_id IN ({$placeholders})
           AND COALESCE(cls.series_eligible, 1) = 1
           AND COALESCE(cls.awards_points, 1) = 1
     ";
-    $params = [$seriesId];
+    $params = $eventIds;
 
     if ($selectedClass !== 'all') {
-        $sql .= " AND sr.class_id = ?";
+        $sql .= " AND r.class_id = ?";
         $params[] = $selectedClass;
     }
 
@@ -149,67 +153,95 @@ if ($useSeriesResults) {
         $params[] = "%{$searchName}%";
     }
 
-    $sql .= " GROUP BY ri.id, cls.id ORDER BY cls.sort_order, total_points DESC";
+    $sql .= " ORDER BY cls.sort_order ASC, ri.lastname, ri.firstname";
 
     $stmt = $pdo->prepare($sql);
     $stmt->execute($params);
-    $standings = $stmt->fetchAll(PDO::FETCH_ASSOC);
-} else {
-    // Fallback: use results.points - filter by awards_points
-    $eventIds = array_column($events, 'id');
-    if (!empty($eventIds)) {
-        $placeholders = implode(',', array_fill(0, count($eventIds), '?'));
-        $sql = "
-            SELECT
-                ri.id as rider_id,
-                ri.firstname,
-                ri.lastname,
-                c.name as club_name,
-                cls.display_name as class_name,
-                cls.id as class_id,
-                cls.sort_order as class_sort_order,
-                SUM(r.points) as total_points,
-                COUNT(r.id) as events_count
-            FROM results r
-            JOIN riders ri ON r.cyclist_id = ri.id
-            LEFT JOIN clubs c ON ri.club_id = c.id
-            LEFT JOIN classes cls ON r.class_id = cls.id
-            WHERE r.event_id IN ({$placeholders})
-              AND COALESCE(cls.series_eligible, 1) = 1
-              AND COALESCE(cls.awards_points, 1) = 1
-        ";
-        $params = $eventIds;
+    $riders = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        if ($selectedClass !== 'all') {
-            $sql .= " AND r.class_id = ?";
-            $params[] = $selectedClass;
+    // For each rider, get their points from each event
+    foreach ($riders as $rider) {
+        $riderData = [
+            'rider_id' => $rider['rider_id'],
+            'firstname' => $rider['firstname'],
+            'lastname' => $rider['lastname'],
+            'club_name' => $rider['club_name'],
+            'class_id' => $rider['class_id'],
+            'event_points' => [],
+            'excluded_events' => [],
+            'total_points' => 0
+        ];
+
+        // Get points for each event
+        $allPoints = [];
+        foreach ($events as $event) {
+            if ($useSeriesResults) {
+                $pStmt = $pdo->prepare("
+                    SELECT points FROM series_results
+                    WHERE series_id = ? AND cyclist_id = ? AND event_id = ? AND class_id = ?
+                    LIMIT 1
+                ");
+                $pStmt->execute([$seriesId, $rider['rider_id'], $event['id'], $rider['class_id']]);
+            } else {
+                $pStmt = $pdo->prepare("
+                    SELECT points FROM results
+                    WHERE cyclist_id = ? AND event_id = ? AND class_id = ?
+                    LIMIT 1
+                ");
+                $pStmt->execute([$rider['rider_id'], $event['id'], $rider['class_id']]);
+            }
+            $result = $pStmt->fetch(PDO::FETCH_ASSOC);
+            $points = $result ? (int)$result['points'] : 0;
+            $riderData['event_points'][$event['id']] = $points;
+            if ($points > 0) {
+                $allPoints[] = ['event_id' => $event['id'], 'points' => $points];
+            }
         }
 
-        if ($searchName) {
-            $sql .= " AND (ri.firstname LIKE ? OR ri.lastname LIKE ?)";
-            $params[] = "%{$searchName}%";
-            $params[] = "%{$searchName}%";
+        // Apply count_best_results rule
+        if ($countBest && count($allPoints) > $countBest) {
+            usort($allPoints, function($a, $b) {
+                return $b['points'] - $a['points'];
+            });
+            for ($i = $countBest; $i < count($allPoints); $i++) {
+                $riderData['excluded_events'][$allPoints[$i]['event_id']] = true;
+            }
+            for ($i = 0; $i < $countBest; $i++) {
+                $riderData['total_points'] += $allPoints[$i]['points'];
+            }
+        } else {
+            foreach ($allPoints as $p) {
+                $riderData['total_points'] += $p['points'];
+            }
         }
 
-        $sql .= " GROUP BY ri.id, cls.id ORDER BY cls.sort_order, total_points DESC";
-
-        $stmt = $pdo->prepare($sql);
-        $stmt->execute($params);
-        $standings = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        // Only include riders with points
+        if ($riderData['total_points'] > 0) {
+            $classKey = $rider['class_display_name'] ?? $rider['class_name'] ?? 'Okänd';
+            if (!isset($standingsByClass[$classKey])) {
+                $standingsByClass[$classKey] = [
+                    'class_id' => $rider['class_id'],
+                    'sort_order' => $rider['class_sort_order'],
+                    'riders' => []
+                ];
+            }
+            $standingsByClass[$classKey]['riders'][] = $riderData;
+        }
     }
-}
 
-// Group standings by class for display
-$standingsByClass = [];
-foreach ($standings as $row) {
-    $className = $row['class_name'] ?? 'Okänd';
-    if (!isset($standingsByClass[$className])) {
-        $standingsByClass[$className] = [];
+    // Sort riders within each class by total points
+    foreach ($standingsByClass as &$classData) {
+        usort($classData['riders'], function($a, $b) {
+            return $b['total_points'] - $a['total_points'];
+        });
     }
-    $standingsByClass[$className][] = $row;
-}
+    unset($classData);
 
-$countBest = $series['count_best_results'] ?? 5;
+    // Sort classes by sort_order
+    uasort($standingsByClass, function($a, $b) {
+        return ($a['sort_order'] ?? 999) - ($b['sort_order'] ?? 999);
+    });
+}
 ?>
 
 <div class="page-header">
@@ -294,44 +326,62 @@ $countBest = $series['count_best_results'] ?? 5;
     <!-- Standings -->
     <div class="card">
         <h2 class="card-title">Ställning</h2>
+        <?php if ($countBest): ?>
+            <p class="text-muted" style="margin-top: -0.5rem; margin-bottom: 1rem;">Räknar <?= $countBest ?> bästa resultat</p>
+        <?php endif; ?>
 
-        <?php if (empty($standings)): ?>
+        <?php if (empty($standingsByClass)): ?>
             <p class="text-muted text-center">Ingen ställning ännu.</p>
         <?php else: ?>
-            <?php foreach ($standingsByClass as $className => $classStandings): ?>
+            <?php foreach ($standingsByClass as $className => $classData): ?>
             <div class="standings-class">
-                <h3 class="standings-class-title"><?= htmlspecialchars($className) ?></h3>
+                <h3 class="standings-class-title"><?= htmlspecialchars($className) ?> <span class="rider-count">(<?= count($classData['riders']) ?>)</span></h3>
                 <div class="table-responsive">
-                    <table class="table">
+                    <table class="table standings-table">
                         <thead>
                             <tr>
                                 <th class="col-pos">#</th>
                                 <th class="col-name">Namn</th>
                                 <th class="col-club">Klubb</th>
-                                <th class="col-events">Tävl.</th>
-                                <th class="col-points">Poäng</th>
+                                <?php $eventNum = 1; foreach ($events as $event): ?>
+                                <th class="col-event" title="<?= htmlspecialchars($event['name']) ?>">#<?= $eventNum++ ?></th>
+                                <?php endforeach; ?>
+                                <th class="col-total">Total</th>
                             </tr>
                         </thead>
                         <tbody>
-                            <?php foreach ($classStandings as $pos => $row): ?>
+                            <?php foreach ($classData['riders'] as $pos => $row): ?>
                             <tr>
                                 <td class="col-pos">
                                     <?php if ($pos < 3): ?>
-                                        <span class="medal medal-<?= $pos + 1 ?>">
-                                            <?= ['🥇', '🥈', '🥉'][$pos] ?>
-                                        </span>
+                                        <span class="medal"><?= ['🥇', '🥈', '🥉'][$pos] ?></span>
                                     <?php else: ?>
                                         <?= $pos + 1 ?>
                                     <?php endif; ?>
                                 </td>
                                 <td class="col-name">
-                                    <a href="/v3/rider/<?= $row['rider_id'] ?>">
+                                    <a href="/v3/database/rider/<?= $row['rider_id'] ?>">
                                         <?= htmlspecialchars($row['firstname'] . ' ' . $row['lastname']) ?>
                                     </a>
                                 </td>
-                                <td class="col-club text-muted"><?= htmlspecialchars($row['club_name'] ?? '-') ?></td>
-                                <td class="col-events"><?= $row['events_count'] ?></td>
-                                <td class="col-points"><strong><?= number_format($row['total_points'], 0) ?></strong></td>
+                                <td class="col-club"><?= htmlspecialchars($row['club_name'] ?? '-') ?></td>
+                                <?php foreach ($events as $event):
+                                    $pts = $row['event_points'][$event['id']] ?? 0;
+                                    $isExcluded = isset($row['excluded_events'][$event['id']]);
+                                ?>
+                                <td class="col-event <?= $isExcluded ? 'excluded' : '' ?>">
+                                    <?php if ($pts > 0): ?>
+                                        <?php if ($isExcluded): ?>
+                                            <span class="points-excluded" title="Räknas ej"><?= $pts ?></span>
+                                        <?php else: ?>
+                                            <?= $pts ?>
+                                        <?php endif; ?>
+                                    <?php else: ?>
+                                        <span class="no-points">–</span>
+                                    <?php endif; ?>
+                                </td>
+                                <?php endforeach; ?>
+                                <td class="col-total"><strong><?= $row['total_points'] ?></strong></td>
                             </tr>
                             <?php endforeach; ?>
                         </tbody>
@@ -507,13 +557,50 @@ $countBest = $series['count_best_results'] ?? 5;
     background: var(--color-bg-hover);
 }
 
-.col-pos { width: 50px; text-align: center; }
-.col-events { width: 60px; text-align: center; }
-.col-points { width: 80px; text-align: right; }
-.col-club { color: var(--color-text-secondary); }
+.col-pos { width: 40px; text-align: center; }
+.col-name { white-space: nowrap; }
+.col-club { color: var(--color-text-secondary); white-space: nowrap; }
+.col-event {
+    width: 40px;
+    text-align: center;
+    font-size: var(--text-sm);
+}
+.col-total {
+    width: 60px;
+    text-align: center;
+    background: var(--color-bg-sunken);
+}
+
+.rider-count {
+    font-weight: normal;
+    font-size: var(--text-sm);
+    color: var(--color-text-muted);
+}
+
+.standings-table {
+    font-size: var(--text-sm);
+}
+
+.standings-table th.col-event {
+    font-size: var(--text-xs);
+    padding: var(--space-xs);
+}
+
+.standings-table td.col-event {
+    padding: var(--space-xs);
+}
+
+.points-excluded {
+    text-decoration: line-through;
+    color: var(--color-text-muted);
+}
+
+.no-points {
+    color: var(--color-text-muted);
+}
 
 .medal {
-    font-size: 1.2em;
+    font-size: 1em;
 }
 
 .btn {
