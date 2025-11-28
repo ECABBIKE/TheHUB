@@ -1,140 +1,33 @@
-/**
- * TheHUB Theme System
- * - Default: följer system (auto)
- * - Sparar i localStorage för alla
- * - Synkar med profil för inloggade användare
- */
-const Theme = {
-    STORAGE_KEY: 'thehub-theme',
-
-    init() {
-        // Hämta sparad preferens
-        const saved = this.getSaved();
-
-        // Sätt tema (auto = följ system)
-        this.apply(saved);
-
-        // Lyssna på system-ändringar
-        this.watchSystem();
-
-        // Bind tema-knappar
-        this.bindButtons();
-
-        // Uppdatera aktiva knappar
-        this.updateButtons();
-    },
-
-    getSaved() {
-        // Kolla localStorage först
-        const local = localStorage.getItem(this.STORAGE_KEY);
-        if (local) return local;
-
-        // Default = auto (följ system)
-        return 'auto';
-    },
-
-    getEffective() {
-        const saved = this.getSaved();
-        if (saved === 'auto') {
-            return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-        }
-        return saved;
-    },
-
-    apply(theme) {
-        const effective = theme === 'auto'
-            ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
-            : theme;
-
-        document.documentElement.setAttribute('data-theme', effective);
-
-        // Uppdatera theme-color meta för mobila webbläsare
-        const metaTheme = document.querySelector('meta[name="theme-color"]');
-        if (metaTheme) {
-            metaTheme.content = effective === 'dark' ? '#1E293B' : '#FFFFFF';
-        }
-    },
-
-    set(theme, saveToProfile = true) {
-        // Spara lokalt
-        localStorage.setItem(this.STORAGE_KEY, theme);
-
-        // Applicera
-        this.apply(theme);
-
-        // Uppdatera knappar
-        this.updateButtons();
-
-        // Spara till profil om inloggad
-        if (saveToProfile && window.HUB?.isLoggedIn) {
-            this.saveToProfile(theme);
-        }
-
-        // Event för andra komponenter
-        window.dispatchEvent(new CustomEvent('themechange', {
-            detail: { theme, effective: this.getEffective() }
-        }));
-    },
-
-    saveToProfile(theme) {
-        // AJAX till server för att spara preferens
-        fetch('/api/user/preferences.php', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ theme })
-        }).catch(() => {
-            // Ignorera fel - localStorage är backup
-        });
-    },
-
-    watchSystem() {
-        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
-            if (this.getSaved() === 'auto') {
-                this.apply('auto');
-            }
-        });
-    },
-
-    bindButtons() {
-        document.querySelectorAll('[data-theme-set]').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                this.set(btn.dataset.themeSet);
-            });
-        });
-    },
-
-    updateButtons() {
-        const current = this.getSaved();
-        document.querySelectorAll('[data-theme-set]').forEach(btn => {
-            btn.classList.toggle('is-active', btn.dataset.themeSet === current);
-        });
-    },
-
-    toggle() {
-        const effective = this.getEffective();
-        this.set(effective === 'dark' ? 'light' : 'dark');
-    }
-};
-
-// Auto-init när DOM är redo
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => Theme.init());
-} else {
-    Theme.init();
+const HubTheme=(function(){'use strict';const COOKIE='hub_theme';
+function getSaved(){const m=document.cookie.match(new RegExp('(^| )'+COOKIE+'=([^;]+)'));return m?m[2]:'auto'}
+function save(t){document.cookie=COOKIE+'='+t+'; path=/; max-age=31536000; SameSite=Lax'}
+function getSystem(){return window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'}
+function apply(t){
+  const resolved=t==='auto'?getSystem():t;
+  document.documentElement.setAttribute('data-theme',resolved);
+  document.querySelectorAll('.theme-toggle-btn').forEach(b=>{b.setAttribute('aria-pressed',b.dataset.theme===t?'true':'false')});
 }
-
-// Förhindra flash - körs direkt
-(function() {
-    const saved = localStorage.getItem('thehub-theme') || 'auto';
-    let theme;
-
-    if (saved === 'auto') {
-        theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-    } else {
-        theme = saved;
-    }
-
-    document.documentElement.setAttribute('data-theme', theme);
-})();
+function set(t){if(!['light','dark','auto'].includes(t))t='auto';save(t);apply(t);announce(t)}
+function announce(t){
+  const labels={light:'Ljust tema',dark:'Mörkt tema',auto:'Automatiskt tema'};
+  let el=document.getElementById('theme-announcement');
+  if(!el){el=document.createElement('div');el.id='theme-announcement';el.setAttribute('role','status');el.setAttribute('aria-live','polite');el.className='sr-only';document.body.appendChild(el)}
+  el.textContent=labels[t]+' aktiverat';
+}
+function init(){
+  apply(getSaved());
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>{if(getSaved()==='auto')apply('auto')});
+  // Only listen for clicks on actual theme toggle buttons within the theme toggle container
+  document.querySelectorAll('.theme-toggle').forEach(container=>{
+    container.addEventListener('click',e=>{
+      const b=e.target.closest('.theme-toggle-btn');
+      if(b&&b.dataset.theme){
+        e.preventDefault();
+        e.stopPropagation();
+        set(b.dataset.theme);
+      }
+    });
+  });
+}
+return{init,setTheme:set,getTheme:getSaved}})();
+document.readyState==='loading'?document.addEventListener('DOMContentLoaded',HubTheme.init):HubTheme.init();
