@@ -36,7 +36,7 @@ try {
 
                 // Get rider
                 $stmt = $pdo->prepare("
-                    SELECT r.id, r.first_name, r.last_name, r.birth_year, r.gender,
+                    SELECT r.id, r.firstname, r.lastname, r.birth_year, r.gender,
                            r.license_number, r.license_type, c.name as club_name
                     FROM riders r
                     LEFT JOIN clubs c ON r.club_id = c.id
@@ -72,7 +72,7 @@ try {
                 echo json_encode([
                     'success' => true,
                     'rider' => $rider,
-                    'name' => $rider['first_name'] . ' ' . $rider['last_name'],
+                    'name' => $rider['firstname'] . ' ' . $rider['lastname'],
                     'eligible_classes' => $eligibleClasses,
                     'suggested_class_id' => $suggested['class_id'] ?? null,
                     'suggested_class_name' => $suggested['class_name'] ?? 'Välj klass',
@@ -235,7 +235,7 @@ try {
             foreach ($validRegistrations as $reg) {
                 // Get rider info
                 $riderStmt = $pdo->prepare("
-                    SELECT first_name, last_name, email, birth_year, gender, club_id
+                    SELECT firstname, lastname, email, birth_year, gender, club_id
                     FROM riders WHERE id = ?
                 ");
                 $riderStmt->execute([$reg['rider_id']]);
@@ -264,8 +264,8 @@ try {
                 $insertStmt->execute([
                     $eventId,
                     $reg['rider_id'],
-                    $rider['first_name'],
-                    $rider['last_name'],
+                    $rider['firstname'],
+                    $rider['lastname'],
                     $rider['email'],
                     $rider['birth_year'],
                     $rider['gender'],

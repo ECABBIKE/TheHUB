@@ -31,19 +31,19 @@ $classes = $classStmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Get registrations
 $regStmt = $pdo->prepare("
-    SELECT r.*, ri.first_name, ri.last_name, ri.club_id, c.name as club_name,
+    SELECT r.*, ri.firstname, ri.lastname, ri.club_id, c.name as club_name,
            ec.name as class_name
-    FROM registrations r
+    FROM event_registrations r
     JOIN riders ri ON r.rider_id = ri.id
     LEFT JOIN clubs c ON ri.club_id = c.id
     LEFT JOIN event_classes ec ON r.class_id = ec.id
     WHERE r.event_id = ? AND r.status != 'cancelled'
-    ORDER BY ec.sort_order, ri.last_name, ri.first_name
+    ORDER BY ec.sort_order, ri.lastname, ri.firstname
 ");
 $regStmt->execute([$eventId]);
 $registrations = $regStmt->fetchAll(PDO::FETCH_ASSOC);
 
-$eventDate = strtotime($event['event_date']);
+$eventDate = strtotime($event['date']);
 $isPast = $eventDate < time();
 $isRegistrationOpen = !$isPast && ($event['registration_open'] ?? false);
 ?>
@@ -116,7 +116,7 @@ $isRegistrationOpen = !$isPast && ($event['registration_open'] ?? false);
                             </button>
                             <?php foreach ($linkedChildren as $child): ?>
                                 <button type="button" class="btn btn-outline" data-action="add-rider" data-rider-id="<?= $child['id'] ?>">
-                                    + <?= htmlspecialchars($child['first_name']) ?>
+                                    + <?= htmlspecialchars($child['firstname']) ?>
                                 </button>
                             <?php endforeach; ?>
                         </div>
@@ -170,7 +170,7 @@ $isRegistrationOpen = !$isPast && ($event['registration_open'] ?? false);
                         <?php foreach ($classRegs as $reg): ?>
                             <a href="/v3/database/rider/<?= $reg['rider_id'] ?>" class="participant-item">
                                 <span class="participant-name">
-                                    <?= htmlspecialchars($reg['first_name'] . ' ' . $reg['last_name']) ?>
+                                    <?= htmlspecialchars($reg['firstname'] . ' ' . $reg['lastname']) ?>
                                 </span>
                                 <?php if ($reg['club_name']): ?>
                                     <span class="participant-club"><?= htmlspecialchars($reg['club_name']) ?></span>

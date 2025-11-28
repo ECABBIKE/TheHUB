@@ -15,11 +15,13 @@ $filterFormat = $_GET['format'] ?? '';
 // Get upcoming events
 $sql = "
     SELECT e.*, s.name as series_name, s.id as series_id,
-           COUNT(DISTINCT r.id) as registration_count
+           v.name as venue_name, v.city as venue_city,
+           COUNT(DISTINCT er.id) as registration_count
     FROM events e
     LEFT JOIN series s ON e.series_id = s.id
-    LEFT JOIN registrations r ON e.id = r.event_id
-    WHERE e.event_date >= CURDATE()
+    LEFT JOIN venues v ON e.venue_id = v.id
+    LEFT JOIN event_registrations er ON e.id = er.event_id AND er.status != 'cancelled'
+    WHERE e.date >= CURDATE() AND e.active = 1
 ";
 $params = [];
 
@@ -28,7 +30,7 @@ if ($filterSeries) {
     $params[] = $filterSeries;
 }
 
-$sql .= " GROUP BY e.id ORDER BY e.event_date ASC LIMIT 50";
+$sql .= " GROUP BY e.id ORDER BY e.date ASC LIMIT 50";
 
 $stmt = $pdo->prepare($sql);
 $stmt->execute($params);
@@ -41,7 +43,7 @@ $seriesList = $seriesStmt->fetchAll(PDO::FETCH_ASSOC);
 // Group events by month
 $eventsByMonth = [];
 foreach ($events as $event) {
-    $month = date('Y-m', strtotime($event['event_date']));
+    $month = date('Y-m', strtotime($event['date']));
     $eventsByMonth[$month][] = $event;
 }
 ?>
@@ -86,7 +88,7 @@ foreach ($events as $event) {
                 <div class="event-cards">
                     <?php foreach ($monthEvents as $event): ?>
                         <?php
-                        $eventDate = strtotime($event['event_date']);
+                        $eventDate = strtotime($event['date']);
                         $isRegistrationOpen = $event['registration_open'] ?? false;
                         $dayName = strftime('%a', $eventDate);
                         $dayNum = date('j', $eventDate);
