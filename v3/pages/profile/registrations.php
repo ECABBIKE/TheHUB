@@ -75,7 +75,7 @@ usort($upcoming, fn($a, $b) => strcmp($a['event_date'], $b['event_date']));
                 <a href="/v3/calendar/<?= $reg['event_id'] ?>" class="registration-card">
                     <div class="reg-date">
                         <span class="reg-day"><?= date('j', strtotime($reg['event_date'])) ?></span>
-                        <span class="reg-month"><?= strftime('%b', strtotime($reg['event_date'])) ?></span>
+                        <span class="reg-month"><?= hub_month_short($reg['event_date']) ?></span>
                     </div>
                     <div class="reg-info">
                         <span class="reg-event"><?= htmlspecialchars($reg['event_name']) ?></span>
@@ -114,7 +114,7 @@ usort($upcoming, fn($a, $b) => strcmp($a['event_date'], $b['event_date']));
                 <a href="/v3/results/<?= $reg['event_id'] ?>" class="registration-card past">
                     <div class="reg-date">
                         <span class="reg-day"><?= date('j', strtotime($reg['event_date'])) ?></span>
-                        <span class="reg-month"><?= strftime('%b', strtotime($reg['event_date'])) ?></span>
+                        <span class="reg-month"><?= hub_month_short($reg['event_date']) ?></span>
                     </div>
                     <div class="reg-info">
                         <span class="reg-event"><?= htmlspecialchars($reg['event_name']) ?></span>

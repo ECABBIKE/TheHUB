@@ -52,6 +52,8 @@ $registrations = $regStmt->fetchAll(PDO::FETCH_ASSOC);
 $eventDate = strtotime($event['date']);
 $isPast = $eventDate < time();
 $isRegistrationOpen = !$isPast && ($event['registration_open'] ?? false);
+
+$eventMonth = hub_month_short($eventDate);
 ?>
 
 <div class="page-header">
@@ -67,7 +69,7 @@ $isRegistrationOpen = !$isPast && ($event['registration_open'] ?? false);
     <div class="event-hero">
         <div class="event-date-large">
             <span class="event-day"><?= date('j', $eventDate) ?></span>
-            <span class="event-month"><?= strftime('%b', $eventDate) ?></span>
+            <span class="event-month"><?= $eventMonth ?></span>
             <span class="event-year"><?= date('Y', $eventDate) ?></span>
         </div>
         <div class="event-info">

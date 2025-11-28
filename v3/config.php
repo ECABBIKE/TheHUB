@@ -206,3 +206,50 @@ if (!function_exists('hub_get_admin_clubs')) {
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 }
+
+// ============================================================================
+// DATE FORMATTING (strftime is deprecated in PHP 8.1+)
+// ============================================================================
+
+if (!function_exists('hub_month_short')) {
+    /**
+     * Get short Swedish month name (jan, feb, mar, etc.)
+     */
+    function hub_month_short($date): string {
+        $months = ['jan', 'feb', 'mar', 'apr', 'maj', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'dec'];
+        $timestamp = is_numeric($date) ? $date : strtotime($date);
+        return $months[(int)date('n', $timestamp) - 1];
+    }
+}
+
+if (!function_exists('hub_month_full')) {
+    /**
+     * Get full Swedish month name (januari, februari, etc.)
+     */
+    function hub_month_full($date): string {
+        $months = ['januari', 'februari', 'mars', 'april', 'maj', 'juni', 'juli', 'augusti', 'september', 'oktober', 'november', 'december'];
+        $timestamp = is_numeric($date) ? $date : strtotime($date);
+        return $months[(int)date('n', $timestamp) - 1];
+    }
+}
+
+if (!function_exists('hub_day_short')) {
+    /**
+     * Get short Swedish day name (mån, tis, ons, etc.)
+     */
+    function hub_day_short($date): string {
+        $days = ['sön', 'mån', 'tis', 'ons', 'tor', 'fre', 'lör'];
+        $timestamp = is_numeric($date) ? $date : strtotime($date);
+        return $days[(int)date('w', $timestamp)];
+    }
+}
+
+if (!function_exists('hub_format_month_year')) {
+    /**
+     * Format date as "Januari 2024"
+     */
+    function hub_format_month_year($date): string {
+        $timestamp = is_numeric($date) ? $date : strtotime($date);
+        return ucfirst(hub_month_full($timestamp)) . ' ' . date('Y', $timestamp);
+    }
+}

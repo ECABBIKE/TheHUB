@@ -122,7 +122,7 @@ $recentResults = $resultStmt->fetchAll(PDO::FETCH_ASSOC);
                 <a href="/v3/calendar/<?= $reg['event_id'] ?>" class="upcoming-item">
                     <div class="upcoming-date">
                         <span class="upcoming-day"><?= date('j', strtotime($reg['event_date'])) ?></span>
-                        <span class="upcoming-month"><?= strftime('%b', strtotime($reg['event_date'])) ?></span>
+                        <span class="upcoming-month"><?= hub_month_short($reg['event_date']) ?></span>
                     </div>
                     <div class="upcoming-info">
                         <span class="upcoming-name"><?= htmlspecialchars($reg['event_name']) ?></span>
