@@ -30,13 +30,43 @@ try {
         return;
     }
 
-    // Fetch rider's results with position info (exclude DNS)
+    // Fetch rider's results with calculated class position (exclude DNS)
     $stmt = $db->prepare("
         SELECT
-            res.id, res.finish_time, res.status, res.points, res.position, res.class_position,
+            res.id, res.finish_time, res.status, res.points, res.position,
+            res.event_id, res.class_id,
             e.id as event_id, e.name as event_name, e.date as event_date, e.location,
             s.id as series_id, s.name as series_name,
-            cls.display_name as class_name
+            cls.display_name as class_name,
+            (
+                SELECT COUNT(*) + 1
+                FROM results r2
+                WHERE r2.event_id = res.event_id
+                AND r2.class_id = res.class_id
+                AND r2.status = 'finished'
+                AND r2.id != res.id
+                AND (
+                    CASE
+                        WHEN r2.finish_time LIKE '%:%:%' THEN
+                            CAST(SUBSTRING_INDEX(r2.finish_time, ':', 1) AS DECIMAL(10,2)) * 3600 +
+                            CAST(SUBSTRING_INDEX(SUBSTRING_INDEX(r2.finish_time, ':', 2), ':', -1) AS DECIMAL(10,2)) * 60 +
+                            CAST(SUBSTRING_INDEX(r2.finish_time, ':', -1) AS DECIMAL(10,2))
+                        ELSE
+                            CAST(SUBSTRING_INDEX(r2.finish_time, ':', 1) AS DECIMAL(10,2)) * 60 +
+                            CAST(SUBSTRING_INDEX(r2.finish_time, ':', -1) AS DECIMAL(10,2))
+                    END
+                    <
+                    CASE
+                        WHEN res.finish_time LIKE '%:%:%' THEN
+                            CAST(SUBSTRING_INDEX(res.finish_time, ':', 1) AS DECIMAL(10,2)) * 3600 +
+                            CAST(SUBSTRING_INDEX(SUBSTRING_INDEX(res.finish_time, ':', 2), ':', -1) AS DECIMAL(10,2)) * 60 +
+                            CAST(SUBSTRING_INDEX(res.finish_time, ':', -1) AS DECIMAL(10,2))
+                        ELSE
+                            CAST(SUBSTRING_INDEX(res.finish_time, ':', 1) AS DECIMAL(10,2)) * 60 +
+                            CAST(SUBSTRING_INDEX(res.finish_time, ':', -1) AS DECIMAL(10,2))
+                    END
+                )
+            ) as class_position
         FROM results res
         JOIN events e ON res.event_id = e.id
         LEFT JOIN series s ON e.series_id = s.id
@@ -46,6 +76,14 @@ try {
     ");
     $stmt->execute([$riderId]);
     $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // Fix: class_position only valid for finished results
+    foreach ($results as &$result) {
+        if ($result['status'] !== 'finished') {
+            $result['class_position'] = null;
+        }
+    }
+    unset($result);
 
     // Calculate stats
     $totalStarts = count($results);
@@ -136,20 +174,18 @@ $genderText = match($rider['gender']) {
     <div class="stat-value"><?= $finishedRaces ?></div>
     <div class="stat-label">Fullföljt</div>
   </div>
-  <?php if ($wins > 0): ?>
-  <div class="stat-box stat-box--gold">
+  <?php if ($wins > 0 || $podiums > 0): ?>
+  <div class="stat-box <?= $wins > 0 ? 'stat-box--gold' : '' ?>">
     <div class="stat-value"><?= $wins ?></div>
     <div class="stat-label">Segrar</div>
   </div>
-  <?php endif; ?>
-  <?php if ($podiums > 0): ?>
-  <div class="stat-box stat-box--accent">
+  <div class="stat-box <?= $podiums > 0 ? 'stat-box--accent' : '' ?>">
     <div class="stat-value"><?= $podiums ?></div>
     <div class="stat-label">Pallplatser</div>
   </div>
-  <?php elseif ($bestPosition): ?>
+  <?php else: ?>
   <div class="stat-box">
-    <div class="stat-value">#<?= $bestPosition ?></div>
+    <div class="stat-value"><?= $bestPosition ? '#' . $bestPosition : '-' ?></div>
     <div class="stat-label">Bästa</div>
   </div>
   <?php endif; ?>
