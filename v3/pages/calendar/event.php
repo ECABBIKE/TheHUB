@@ -72,6 +72,16 @@ $stmt = $pdo->prepare("
 $stmt->execute([$eventId]);
 $event = $stmt->fetch(PDO::FETCH_ASSOC);
 
+// DEBUG
+echo "<pre style='background:#ff0;padding:10px;'>";
+echo "eventId: " . $eventId . "\n";
+echo "event found: " . ($event ? 'YES' : 'NO') . "\n";
+if ($event) {
+    echo "event name: " . ($event['name'] ?? 'N/A') . "\n";
+    echo "event date: " . ($event['date'] ?? 'N/A') . "\n";
+}
+echo "</pre>";
+
 if (!$event) {
     ?>
     <div class="card" style="padding:var(--space-xl);text-align:center;">
