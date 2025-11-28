@@ -147,6 +147,9 @@ $bodyClass = isset($bodyClass) ? $defaultBodyClass . ' ' . $bodyClass : $default
     <link rel="stylesheet" href="/public/css/gravityseries-admin.css?v=<?= filemtime(__DIR__ . '/../public/css/gravityseries-admin.css') ?>">
     <?php endif; ?>
 
+    <!-- V2.5 Mobile & Responsive Enhancements -->
+    <link rel="stylesheet" href="/assets/css/responsive.css?v=<?= filemtime(__DIR__ . '/../assets/css/responsive.css') ?>">
+
     <!-- PWA Support -->
     <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#2563EB">
