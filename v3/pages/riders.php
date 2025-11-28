@@ -182,10 +182,12 @@ try {
   display: flex;
   gap: var(--space-sm);
   flex-wrap: wrap;
+  width: 100%;
 }
 .search-input {
   flex: 1;
-  min-width: 200px;
+  min-width: 0;
+  width: 100%;
   padding: var(--space-sm) var(--space-md);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
@@ -200,5 +202,13 @@ try {
 }
 .search-input::placeholder {
   color: var(--color-text-muted);
+}
+@media (max-width: 599px) {
+  .search-form {
+    flex-direction: column;
+  }
+  .search-form .btn {
+    width: 100%;
+  }
 }
 </style>
