@@ -40,6 +40,23 @@ if (!defined('HUB_V2_ROOT')) define('HUB_V2_ROOT', dirname(__DIR__));
 if (!defined('WC_CHECKOUT_URL')) define('WC_CHECKOUT_URL', '/checkout');
 
 // ============================================================================
+// ROLE CONSTANTS (must be defined before functions that use them)
+// ============================================================================
+if (!defined('ROLE_RIDER')) {
+    define('ROLE_RIDER', 1);
+    define('ROLE_PROMOTOR', 2);
+    define('ROLE_ADMIN', 3);
+    define('ROLE_SUPER_ADMIN', 4);
+
+    define('ROLE_NAMES', [
+        ROLE_RIDER => 'Rider',
+        ROLE_PROMOTOR => 'Promotor',
+        ROLE_ADMIN => 'Admin',
+        ROLE_SUPER_ADMIN => 'Super Admin'
+    ]);
+}
+
+// ============================================================================
 // V3.5 NAVIGATION (6 main sections)
 // ============================================================================
 if (!defined('HUB_NAV')) {
@@ -377,21 +394,6 @@ if (!function_exists('hub_require_admin')) {
 // ============================================================================
 // ROLE-BASED PERMISSION SYSTEM
 // ============================================================================
-
-// Role constants
-if (!defined('ROLE_RIDER')) {
-    define('ROLE_RIDER', 1);
-    define('ROLE_PROMOTOR', 2);
-    define('ROLE_ADMIN', 3);
-    define('ROLE_SUPER_ADMIN', 4);
-
-    define('ROLE_NAMES', [
-        ROLE_RIDER => 'Rider',
-        ROLE_PROMOTOR => 'Promotor',
-        ROLE_ADMIN => 'Admin',
-        ROLE_SUPER_ADMIN => 'Super Admin'
-    ]);
-}
 
 if (!function_exists('hub_get_user_role')) {
     /**
