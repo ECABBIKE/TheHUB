@@ -106,6 +106,133 @@ try {
         ? ($currentYear - $rider['birth_year'])
         : null;
 
+    // GravitySeries Total stats
+    $gravityTotalPoints = 0;
+    $gravityTotalPosition = null;
+    $gravityTotalClassTotal = 0;
+    $gravityClassName = null;
+
+    // Find GravitySeries Total series
+    $stmt = $db->prepare("
+        SELECT id, name FROM series
+        WHERE id = 8
+        OR (active = 1 AND (name LIKE '%Total%' OR name LIKE '%GravitySeries%'))
+        ORDER BY (id = 8) DESC, year DESC
+        LIMIT 1
+    ");
+    $stmt->execute();
+    $totalSeries = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if ($totalSeries) {
+        // Get rider's series points (from series_results if exists, otherwise from results)
+        $stmt = $db->prepare("
+            SELECT COALESCE(SUM(sr.points), 0) as total_points
+            FROM series_results sr
+            WHERE sr.series_id = ? AND sr.cyclist_id = ?
+        ");
+        $stmt->execute([$totalSeries['id'], $riderId]);
+        $seriesStats = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if ($seriesStats && $seriesStats['total_points'] > 0) {
+            $gravityTotalPoints = $seriesStats['total_points'];
+        } else {
+            // Fallback: sum from results table
+            $stmt = $db->prepare("
+                SELECT COALESCE(SUM(res.points), 0) as total_points
+                FROM results res
+                JOIN events e ON res.event_id = e.id
+                LEFT JOIN series_events se ON e.id = se.event_id
+                WHERE (e.series_id = ? OR se.series_id = ?)
+                AND res.cyclist_id = ? AND res.status = 'finished'
+            ");
+            $stmt->execute([$totalSeries['id'], $totalSeries['id'], $riderId]);
+            $fallbackStats = $stmt->fetch(PDO::FETCH_ASSOC);
+            $gravityTotalPoints = $fallbackStats['total_points'] ?? 0;
+        }
+
+        // Get rider's most common class in this series
+        $stmt = $db->prepare("
+            SELECT cls.display_name, COUNT(*) as cnt
+            FROM results res
+            JOIN events e ON res.event_id = e.id
+            LEFT JOIN series_events se ON e.id = se.event_id
+            LEFT JOIN classes cls ON res.class_id = cls.id
+            WHERE (e.series_id = ? OR se.series_id = ?)
+            AND res.cyclist_id = ? AND res.status = 'finished' AND cls.id IS NOT NULL
+            GROUP BY cls.id
+            ORDER BY cnt DESC
+            LIMIT 1
+        ");
+        $stmt->execute([$totalSeries['id'], $totalSeries['id'], $riderId]);
+        $classResult = $stmt->fetch(PDO::FETCH_ASSOC);
+        $gravityClassName = $classResult['display_name'] ?? null;
+
+        // Get position in series (by total points)
+        if ($gravityTotalPoints > 0) {
+            $stmt = $db->prepare("
+                SELECT cyclist_id, SUM(points) as total_points
+                FROM series_results
+                WHERE series_id = ?
+                GROUP BY cyclist_id
+                ORDER BY total_points DESC
+            ");
+            $stmt->execute([$totalSeries['id']]);
+            $standings = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            $gravityTotalClassTotal = count($standings);
+            $position = 1;
+            foreach ($standings as $standing) {
+                if ($standing['cyclist_id'] == $riderId) {
+                    $gravityTotalPosition = $position;
+                    break;
+                }
+                $position++;
+            }
+        }
+    }
+
+    // GravitySeries Team stats (club ranking)
+    $gravityTeamPoints = 0;
+    $gravityTeamPosition = null;
+    $gravityTeamTotal = 0;
+
+    if ($totalSeries && $rider['club_id']) {
+        // Get club's total points in this series
+        $stmt = $db->prepare("
+            SELECT COALESCE(SUM(sr.points), 0) as total_points
+            FROM series_results sr
+            JOIN riders r ON sr.cyclist_id = r.id
+            WHERE sr.series_id = ? AND r.club_id = ?
+        ");
+        $stmt->execute([$totalSeries['id'], $rider['club_id']]);
+        $teamStats = $stmt->fetch(PDO::FETCH_ASSOC);
+        $gravityTeamPoints = $teamStats['total_points'] ?? 0;
+
+        // Get team position among all clubs
+        if ($gravityTeamPoints > 0) {
+            $stmt = $db->prepare("
+                SELECT r.club_id, SUM(sr.points) as total_points
+                FROM series_results sr
+                JOIN riders r ON sr.cyclist_id = r.id
+                WHERE sr.series_id = ? AND r.club_id IS NOT NULL
+                GROUP BY r.club_id
+                ORDER BY total_points DESC
+            ");
+            $stmt->execute([$totalSeries['id']]);
+            $teamStandings = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            $gravityTeamTotal = count($teamStandings);
+            $position = 1;
+            foreach ($teamStandings as $team) {
+                if ($team['club_id'] == $rider['club_id']) {
+                    $gravityTeamPosition = $position;
+                    break;
+                }
+                $position++;
+            }
+        }
+    }
+
 } catch (Exception $e) {
     $error = $e->getMessage();
     $rider = null;
@@ -158,23 +285,53 @@ $genderText = match($rider['gender']) {
   </div>
 </section>
 
-<!-- Stats Grid -->
-<section class="stats-grid-4 mb-lg">
+<!-- Stats Grid - Row 1: Race stats -->
+<section class="stats-grid-4 mb-sm">
   <div class="stat-box">
     <div class="stat-value"><?= $totalStarts ?></div>
     <div class="stat-label">Starter</div>
   </div>
   <div class="stat-box">
-    <div class="stat-value"><?= $finishedRaces ?></div>
-    <div class="stat-label">Fullföljt</div>
+    <div class="stat-value"><?= $bestPosition ? $bestPosition : '-' ?></div>
+    <div class="stat-label">Bästa</div>
   </div>
   <div class="stat-box <?= $wins > 0 ? 'stat-box--gold' : '' ?>">
     <div class="stat-value"><?= $wins ?></div>
     <div class="stat-label">Segrar</div>
   </div>
-  <div class="stat-box <?= $podiums > 0 ? 'stat-box--accent' : '' ?>">
+  <div class="stat-box">
     <div class="stat-value"><?= $podiums ?></div>
     <div class="stat-label">Pallplatser</div>
+  </div>
+</section>
+
+<!-- Stats Grid - Row 2: GravitySeries -->
+<section class="stats-grid-2 mb-lg">
+  <div class="stat-box stat-box--series">
+    <div class="stat-value"><?= number_format($gravityTotalPoints) ?></div>
+    <div class="stat-label">GS Total</div>
+    <?php if ($gravityClassName || $gravityTotalPosition): ?>
+    <div class="stat-sub">
+      <?= $gravityClassName ?? '' ?>
+      <?php if ($gravityTotalPosition): ?>
+        <?= $gravityClassName ? ' • ' : '' ?>#<?= $gravityTotalPosition ?>/<?= $gravityTotalClassTotal ?>
+      <?php endif; ?>
+    </div>
+    <?php endif; ?>
+  </div>
+  <div class="stat-box stat-box--team">
+    <div class="stat-value"><?= number_format($gravityTeamPoints) ?></div>
+    <div class="stat-label">GS Team</div>
+    <?php if ($gravityTeamPosition): ?>
+    <div class="stat-sub">
+      <?= htmlspecialchars($rider['club_name'] ?? '') ?>
+      <?php if ($gravityTeamPosition): ?>
+        • #<?= $gravityTeamPosition ?>/<?= $gravityTeamTotal ?>
+      <?php endif; ?>
+    </div>
+    <?php elseif ($rider['club_name']): ?>
+    <div class="stat-sub"><?= htmlspecialchars($rider['club_name']) ?></div>
+    <?php endif; ?>
   </div>
 </section>
 
@@ -302,6 +459,7 @@ $genderText = match($rider['gender']) {
   font-weight: var(--weight-medium);
 }
 
+.mb-sm { margin-bottom: var(--space-sm); }
 .mb-md { margin-bottom: var(--space-md); }
 .mb-lg { margin-bottom: var(--space-lg); }
 .text-muted { color: var(--color-text-muted); }
@@ -376,10 +534,20 @@ $genderText = match($rider['gender']) {
   color: var(--color-text-muted);
 }
 
-/* Stats Grid 4 columns */
+/* Stats Grid layouts */
 .stats-grid-4 {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-sm);
+}
+.stats-grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-sm);
+}
+.stats-grid-2 {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
   gap: var(--space-sm);
 }
 .stat-box {
@@ -402,6 +570,26 @@ $genderText = match($rider['gender']) {
 }
 .stat-box--accent .stat-label {
   color: rgba(255,255,255,0.8);
+}
+.stat-box--series {
+  background: linear-gradient(135deg, var(--color-accent) 0%, #00A3E0 100%);
+  color: var(--color-text-inverse);
+}
+.stat-box--series .stat-label {
+  color: rgba(255,255,255,0.85);
+}
+.stat-box--team {
+  background: linear-gradient(135deg, #6B5B95 0%, #9B59B6 100%);
+  color: var(--color-text-inverse);
+}
+.stat-box--team .stat-label {
+  color: rgba(255,255,255,0.85);
+}
+.stat-sub {
+  font-size: var(--text-xs);
+  color: rgba(255,255,255,0.75);
+  margin-top: var(--space-xs);
+  line-height: 1.3;
 }
 .stat-value {
   font-size: var(--text-2xl);
@@ -495,6 +683,14 @@ $genderText = match($rider['gender']) {
     grid-template-columns: repeat(2, 1fr);
     gap: var(--space-sm);
   }
+  .stats-grid-3 {
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--space-xs);
+  }
+  .stats-grid-2 {
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-xs);
+  }
   .stat-box {
     padding: var(--space-sm);
   }
@@ -502,7 +698,10 @@ $genderText = match($rider['gender']) {
     font-size: var(--text-xl);
   }
   .stat-label {
-    font-size: var(--text-xs);
+    font-size: 10px;
+  }
+  .stat-sub {
+    font-size: 9px;
   }
 }
 </style>
