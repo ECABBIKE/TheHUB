@@ -285,16 +285,17 @@ $genderText = match($rider['gender']) {
   </div>
 </section>
 
-<!-- Stats Grid - Row 1: Race stats -->
-<section class="stats-grid-4 mb-sm">
+<!-- Stats Grid -->
+<section class="stats-grid-4 mb-lg">
   <div class="stat-box">
     <div class="stat-value"><?= $totalStarts ?></div>
     <div class="stat-label">Starter</div>
   </div>
   <div class="stat-box">
-    <div class="stat-value"><?= $bestPosition ? $bestPosition : '-' ?></div>
-    <div class="stat-label">Bästa</div>
+    <div class="stat-value"><?= $finishedRaces ?></div>
+    <div class="stat-label">Fullföljt</div>
   </div>
+  <?php if ($wins > 0 || $podiums > 0): ?>
   <div class="stat-box <?= $wins > 0 ? 'stat-box--gold' : '' ?>">
     <div class="stat-value"><?= $wins ?></div>
     <div class="stat-label">Segrar</div>
@@ -303,40 +304,23 @@ $genderText = match($rider['gender']) {
     <div class="stat-value"><?= $podiums ?></div>
     <div class="stat-label">Pallplatser</div>
   </div>
+  <?php else: ?>
+  <div class="stat-box" style="grid-column: span 2;">
+    <div class="stat-value"><?= $bestPosition ? $bestPosition : '-' ?></div>
+    <div class="stat-label">Bästa placering</div>
+  </div>
+  <?php endif; ?>
 </section>
 
-<!-- Stats Grid - Row 2: GravitySeries -->
-<section class="stats-grid-2 mb-lg">
-  <div class="stat-box stat-box--series">
-    <div class="stat-value"><?= number_format($gravityTotalPoints) ?></div>
-    <div class="stat-label">GS Total</div>
-    <?php if ($gravityClassName || $gravityTotalPosition): ?>
-    <div class="stat-sub">
-      <?= $gravityClassName ?? '' ?>
-      <?php if ($gravityTotalPosition): ?>
-        <?= $gravityClassName ? ' • ' : '' ?>#<?= $gravityTotalPosition ?>/<?= $gravityTotalClassTotal ?>
-      <?php endif; ?>
-    </div>
-    <?php endif; ?>
-  </div>
-  <div class="stat-box stat-box--team">
-    <div class="stat-value"><?= number_format($gravityTeamPoints) ?></div>
-    <div class="stat-label">GS Team</div>
-    <?php if ($gravityTeamPosition): ?>
-    <div class="stat-sub">
-      <?= htmlspecialchars($rider['club_name'] ?? '') ?>
-      <?php if ($gravityTeamPosition): ?>
-        • #<?= $gravityTeamPosition ?>/<?= $gravityTeamTotal ?>
-      <?php endif; ?>
-    </div>
-    <?php elseif ($rider['club_name']): ?>
-    <div class="stat-sub"><?= htmlspecialchars($rider['club_name']) ?></div>
-    <?php endif; ?>
-  </div>
-</section>
+<!-- Tab Navigation -->
+<nav class="tabs mb-md">
+  <button class="tab-btn active" data-tab="resultat">Resultat</button>
+  <button class="tab-btn" data-tab="gs-total">GS Total</button>
+  <button class="tab-btn" data-tab="gs-team">GS Team</button>
+</nav>
 
-<!-- Results -->
-<section class="card">
+<!-- Tab: Resultat -->
+<section class="tab-content active" id="tab-resultat">
   <div class="card-header">
     <div>
       <h2 class="card-title">Resultathistorik</h2>
@@ -440,6 +424,93 @@ $genderText = match($rider['gender']) {
   <?php endif; ?>
 </section>
 
+<!-- Tab: GS Total -->
+<section class="tab-content" id="tab-gs-total">
+  <div class="card">
+    <div class="card-header">
+      <h2 class="card-title">GravitySeries Total</h2>
+      <p class="card-subtitle">Individuell poängställning</p>
+    </div>
+    <div class="gs-stats-card">
+      <div class="gs-main-stat">
+        <div class="gs-points"><?= number_format($gravityTotalPoints) ?></div>
+        <div class="gs-points-label">Poäng</div>
+      </div>
+      <?php if ($gravityTotalPosition): ?>
+      <div class="gs-details">
+        <div class="gs-detail">
+          <span class="gs-detail-value">#<?= $gravityTotalPosition ?></span>
+          <span class="gs-detail-label">Position</span>
+        </div>
+        <div class="gs-detail">
+          <span class="gs-detail-value"><?= $gravityTotalClassTotal ?></span>
+          <span class="gs-detail-label">Deltagare</span>
+        </div>
+        <?php if ($gravityClassName): ?>
+        <div class="gs-detail">
+          <span class="gs-detail-value"><?= htmlspecialchars($gravityClassName) ?></span>
+          <span class="gs-detail-label">Klass</span>
+        </div>
+        <?php endif; ?>
+      </div>
+      <?php endif; ?>
+    </div>
+  </div>
+</section>
+
+<!-- Tab: GS Team -->
+<section class="tab-content" id="tab-gs-team">
+  <div class="card">
+    <div class="card-header">
+      <h2 class="card-title">GravitySeries Team</h2>
+      <p class="card-subtitle">Lagställning</p>
+    </div>
+    <?php if ($rider['club_name']): ?>
+    <div class="gs-stats-card gs-stats-card--team">
+      <div class="gs-team-name"><?= htmlspecialchars($rider['club_name']) ?></div>
+      <div class="gs-main-stat">
+        <div class="gs-points"><?= number_format($gravityTeamPoints) ?></div>
+        <div class="gs-points-label">Lagpoäng</div>
+      </div>
+      <?php if ($gravityTeamPosition): ?>
+      <div class="gs-details">
+        <div class="gs-detail">
+          <span class="gs-detail-value">#<?= $gravityTeamPosition ?></span>
+          <span class="gs-detail-label">Position</span>
+        </div>
+        <div class="gs-detail">
+          <span class="gs-detail-value"><?= $gravityTeamTotal ?></span>
+          <span class="gs-detail-label">Lag totalt</span>
+        </div>
+      </div>
+      <?php endif; ?>
+    </div>
+    <?php else: ?>
+    <div class="empty-state">
+      <div class="empty-state-icon">👥</div>
+      <p>Ingen klubbtillhörighet registrerad</p>
+    </div>
+    <?php endif; ?>
+  </div>
+</section>
+
+<script>
+// Tab switching
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const tabId = btn.dataset.tab;
+
+    // Update buttons
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+
+    // Update content
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    document.getElementById('tab-' + tabId).classList.add('active');
+  });
+});
+</script>
+
 <style>
 .breadcrumb {
   display: flex;
@@ -463,6 +534,98 @@ $genderText = match($rider['gender']) {
 .mb-md { margin-bottom: var(--space-md); }
 .mb-lg { margin-bottom: var(--space-lg); }
 .text-muted { color: var(--color-text-muted); }
+
+/* Tabs */
+.tabs {
+  display: flex;
+  gap: var(--space-xs);
+  background: var(--color-bg-surface);
+  padding: var(--space-xs);
+  border-radius: var(--radius-md);
+  overflow-x: auto;
+}
+.tab-btn {
+  flex: 1;
+  padding: var(--space-sm) var(--space-md);
+  border: none;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all var(--transition-fast);
+}
+.tab-btn:hover {
+  background: var(--color-bg-sunken);
+  color: var(--color-text);
+}
+.tab-btn.active {
+  background: var(--color-accent);
+  color: var(--color-text-inverse);
+}
+.tab-content {
+  display: none;
+}
+.tab-content.active {
+  display: block;
+}
+
+/* GS Stats Card */
+.gs-stats-card {
+  padding: var(--space-lg);
+  text-align: center;
+  background: linear-gradient(135deg, var(--color-accent) 0%, #00A3E0 100%);
+  border-radius: var(--radius-md);
+  margin: var(--space-md);
+  color: var(--color-text-inverse);
+}
+.gs-stats-card--team {
+  background: linear-gradient(135deg, #6B5B95 0%, #9B59B6 100%);
+}
+.gs-team-name {
+  font-size: var(--text-lg);
+  font-weight: var(--weight-bold);
+  margin-bottom: var(--space-md);
+  opacity: 0.9;
+}
+.gs-main-stat {
+  margin-bottom: var(--space-md);
+}
+.gs-points {
+  font-size: 48px;
+  font-weight: var(--weight-bold);
+  line-height: 1;
+}
+.gs-points-label {
+  font-size: var(--text-sm);
+  opacity: 0.8;
+  margin-top: var(--space-xs);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+.gs-details {
+  display: flex;
+  justify-content: center;
+  gap: var(--space-lg);
+  padding-top: var(--space-md);
+  border-top: 1px solid rgba(255,255,255,0.2);
+}
+.gs-detail {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.gs-detail-value {
+  font-size: var(--text-lg);
+  font-weight: var(--weight-bold);
+}
+.gs-detail-label {
+  font-size: var(--text-xs);
+  opacity: 0.7;
+  text-transform: uppercase;
+}
 
 /* Profile Card */
 .profile-card {
