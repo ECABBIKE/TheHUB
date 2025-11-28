@@ -159,7 +159,38 @@ $bodyClass = isset($bodyClass) ? $defaultBodyClass . ' ' . $bodyClass : $default
     <link rel="apple-touch-icon" href="/assets/icons/icon-192.png">
 
     <!-- Theme Prevention Script (prevents flash of wrong theme) -->
+    <?php
+    // Ladda tema från profil för inloggade användare
+    $userTheme = 'auto';
+    $isLoggedIn = false;
+    if (isset($_SESSION['rider_id']) && $_SESSION['rider_id'] > 0) {
+        $isLoggedIn = true;
+        try {
+            if (function_exists('get_current_rider')) {
+                $currentUser = get_current_rider();
+                if (isset($currentUser['theme_preference'])) {
+                    $userTheme = $currentUser['theme_preference'];
+                }
+            }
+        } catch (Exception $e) {
+            // Ignorera fel, använd localStorage istället
+        }
+    }
+    ?>
     <script>
+    // HUB global object
+    window.HUB = window.HUB || {};
+    window.HUB.isLoggedIn = <?= $isLoggedIn ? 'true' : 'false' ?>;
+    <?php if ($isLoggedIn): ?>
+    window.HUB.userTheme = '<?= htmlspecialchars($userTheme) ?>';
+
+    // Synka med localStorage om server har annan preferens
+    if (window.HUB.userTheme !== localStorage.getItem('thehub-theme')) {
+        localStorage.setItem('thehub-theme', window.HUB.userTheme);
+    }
+    <?php endif; ?>
+
+    // Förhindra flash of wrong theme
     (function() {
         const saved = localStorage.getItem('thehub-theme');
         let theme = 'light';

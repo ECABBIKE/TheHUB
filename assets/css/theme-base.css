@@ -119,6 +119,46 @@ a:hover {
     font-size: var(--text-xs);
 }
 
+/* Login-knapp - Enduro Gul */
+.btn--login {
+    background: var(--color-enduro);
+    color: #000;
+    font-weight: var(--weight-semibold);
+    padding: var(--space-sm) var(--space-lg);
+    border-radius: var(--radius-full);
+    border: none;
+    transition: all var(--transition-fast);
+}
+
+.btn--login:hover {
+    background: var(--color-enduro-hover);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
+    color: #000;
+}
+
+/* Mobil - ikon istället för text */
+@media (max-width: 480px) {
+    .btn--login {
+        padding: var(--space-sm);
+        border-radius: var(--radius-full);
+    }
+
+    .btn--login-text {
+        display: none;
+    }
+
+    .btn--login-icon {
+        display: block;
+    }
+}
+
+@media (min-width: 481px) {
+    .btn--login-icon {
+        display: none;
+    }
+}
+
 /* ===== FORMS ===== */
 .form-input,
 .form-select {
@@ -373,16 +413,16 @@ a:hover {
 }
 
 .nav-bottom-item.is-active {
-    color: var(--color-enduro-yellow);
+    color: var(--color-enduro);
 }
 
 .nav-bottom-item.is-active .nav-bottom-icon svg {
-    stroke: var(--color-enduro-yellow);
+    stroke: var(--color-enduro);
 }
 
 /* Dark mode: använd samma gula färg */
 [data-theme="dark"] .nav-bottom-item.is-active {
-    color: var(--color-enduro-yellow);
+    color: var(--color-enduro);
 }
 
 .nav-bottom-icon {
@@ -429,7 +469,7 @@ a:hover {
     z-index: var(--z-sticky);
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    gap: var(--space-lg);
     height: var(--header-height);
     padding: 0 var(--space-md);
     background: var(--color-bg-surface);
@@ -442,6 +482,7 @@ a:hover {
     gap: var(--space-sm);
     text-decoration: none;
     color: inherit;
+    flex-shrink: 0;
 }
 
 .header-logo {
@@ -453,12 +494,65 @@ a:hover {
 .header-title {
     font-weight: var(--weight-bold);
     font-size: var(--text-lg);
+    color: var(--color-text-primary);
+}
+
+/* Desktop navigation */
+.header-nav {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    flex: 1;
+}
+
+.header-nav-item {
+    padding: var(--space-sm) var(--space-md);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    color: var(--color-text-secondary);
+    text-decoration: none;
+    border-radius: var(--radius-md);
+    transition: all var(--transition-fast);
+}
+
+.header-nav-item:hover {
+    color: var(--color-text-primary);
+    background: var(--color-bg-hover);
+}
+
+.header-nav-item.is-active {
+    color: var(--color-enduro);
+    background: rgba(255, 210, 0, 0.1);
 }
 
 .header-actions {
     display: flex;
     align-items: center;
     gap: var(--space-sm);
+    flex-shrink: 0;
+}
+
+/* Theme switcher i header - kompaktare */
+.theme-switcher--header {
+    position: static;
+    bottom: auto;
+    right: auto;
+    box-shadow: none;
+}
+
+/* Dölj desktop nav och header theme switcher på mobil */
+@media (max-width: 768px) {
+    .header-nav {
+        display: none;
+    }
+
+    .header-title {
+        display: none;
+    }
+
+    .theme-switcher--header {
+        display: none;
+    }
 }
 
 .header-icon-btn {
