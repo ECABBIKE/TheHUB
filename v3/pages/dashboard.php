@@ -1,79 +1,234 @@
+<?php
+/**
+ * V3 Dashboard - Overview with real data
+ */
+
+$db = hub_db();
+
+// Get overall stats
+$stats = $db->query("
+    SELECT
+        (SELECT COUNT(*) FROM riders WHERE active = 1) as total_riders,
+        (SELECT COUNT(*) FROM clubs WHERE active = 1) as total_clubs,
+        (SELECT COUNT(*) FROM events WHERE status = 'completed') as total_events,
+        (SELECT COUNT(*) FROM results) as total_results
+")->fetch(PDO::FETCH_ASSOC);
+
+// Get latest event with results
+$latestEvent = $db->query("
+    SELECT e.id, e.name, e.date, e.location, s.name as series_name,
+           COUNT(DISTINCT r.id) as result_count
+    FROM events e
+    LEFT JOIN series s ON e.series_id = s.id
+    INNER JOIN results r ON e.id = r.event_id
+    GROUP BY e.id
+    ORDER BY e.date DESC
+    LIMIT 1
+")->fetch(PDO::FETCH_ASSOC);
+
+// Get top results from latest event
+$topResults = [];
+if ($latestEvent) {
+    $topResults = $db->query("
+        SELECT
+            r.id, r.finish_time, r.status,
+            c.id as rider_id, c.firstname, c.lastname,
+            cl.name as club_name,
+            cls.display_name as class_name
+        FROM results r
+        JOIN riders c ON r.cyclist_id = c.id
+        LEFT JOIN clubs cl ON c.club_id = cl.id
+        LEFT JOIN classes cls ON r.class_id = cls.id
+        WHERE r.event_id = ? AND r.status = 'finished'
+        ORDER BY r.finish_time ASC
+        LIMIT 10
+    ", [$latestEvent['id']])->fetchAll(PDO::FETCH_ASSOC);
+}
+
+// Get active series
+$activeSeries = $db->query("
+    SELECT s.id, s.name, s.year,
+           COUNT(DISTINCT e.id) as event_count
+    FROM series s
+    LEFT JOIN events e ON s.id = e.series_id
+    WHERE s.status = 'active'
+    GROUP BY s.id
+    ORDER BY s.year DESC
+    LIMIT 5
+")->fetchAll(PDO::FETCH_ASSOC);
+
+// Get top riders by results count
+$topRiders = $db->query("
+    SELECT
+        c.id, c.firstname, c.lastname,
+        cl.name as club_name,
+        COUNT(r.id) as race_count,
+        SUM(CASE WHEN r.position <= 3 THEN 1 ELSE 0 END) as podiums
+    FROM riders c
+    LEFT JOIN clubs cl ON c.club_id = cl.id
+    INNER JOIN results r ON c.id = r.cyclist_id
+    WHERE c.active = 1
+    GROUP BY c.id
+    ORDER BY race_count DESC
+    LIMIT 5
+")->fetchAll(PDO::FETCH_ASSOC);
+?>
+
 <h1 class="sr-only">Dashboard</h1>
 <div class="page-grid">
-  <!-- Rider Card -->
-  <section class="card" aria-labelledby="rider-title">
-    <div class="card-header"><div><h2 id="rider-title" class="card-title">Rider Profile</h2><p class="card-subtitle">Exempel-data</p></div></div>
-    <div class="rider-profile">
-      <div class="rider-avatar"></div>
-      <div class="rider-info">
-        <h3 class="rider-name">Paxton Eriksson</h3>
-        <p class="rider-club">Falun MTB Klubb</p>
-        <div class="rider-meta"><span>Herr Junior</span><span>•</span><span>UCI: 1234-5678</span></div>
-      </div>
+  <!-- Stats Overview -->
+  <section class="card grid-full" aria-labelledby="stats-title">
+    <div class="card-header">
+      <h2 id="stats-title" class="card-title">Översikt</h2>
     </div>
     <div class="stats-row">
-      <div class="stat-block"><div class="stat-value">4</div><div class="stat-label">Ranking</div></div>
-      <div class="stat-block"><div class="stat-value">11</div><div class="stat-label">Starter</div></div>
-      <div class="stat-block"><div class="stat-value">4:22</div><div class="stat-label">Bästa tid</div></div>
+      <div class="stat-block">
+        <div class="stat-value"><?= number_format($stats['total_riders']) ?></div>
+        <div class="stat-label">Åkare</div>
+      </div>
+      <div class="stat-block">
+        <div class="stat-value"><?= number_format($stats['total_clubs']) ?></div>
+        <div class="stat-label">Klubbar</div>
+      </div>
+      <div class="stat-block">
+        <div class="stat-value"><?= number_format($stats['total_events']) ?></div>
+        <div class="stat-label">Genomförda</div>
+      </div>
+      <div class="stat-block">
+        <div class="stat-value"><?= number_format($stats['total_results']) ?></div>
+        <div class="stat-label">Resultat</div>
+      </div>
     </div>
   </section>
 
-  <!-- Event Card -->
+  <?php if ($latestEvent): ?>
+  <!-- Latest Event -->
   <section class="card" aria-labelledby="event-title">
-    <div class="card-header"><div><h2 id="event-title" class="card-title">Senaste event</h2><p class="card-subtitle">Gesunda Enduro • Heat 3</p></div></div>
+    <div class="card-header">
+      <div>
+        <h2 id="event-title" class="card-title">Senaste event</h2>
+        <p class="card-subtitle"><?= htmlspecialchars($latestEvent['series_name'] ?? 'Event') ?></p>
+      </div>
+      <a href="/v3/event/<?= $latestEvent['id'] ?>" class="btn btn--ghost text-sm">Visa →</a>
+    </div>
     <div class="card-body">
-      <p><strong>Datum:</strong> 2025-08-23</p>
-      <p class="mt-xs"><strong>Klass:</strong> Herr Junior</p>
-      <div class="flex gap-xs mt-md"><span class="chip chip--enduro">Enduro</span><span class="chip chip--ges">GES</span></div>
+      <p><strong><?= htmlspecialchars($latestEvent['name']) ?></strong></p>
+      <p class="mt-xs text-secondary"><?= htmlspecialchars($latestEvent['location'] ?? '') ?></p>
+      <p class="mt-xs text-muted"><?= date('j M Y', strtotime($latestEvent['date'])) ?></p>
+      <div class="flex gap-xs mt-md">
+        <span class="chip chip--success"><?= $latestEvent['result_count'] ?> resultat</span>
+      </div>
     </div>
   </section>
+  <?php endif; ?>
 
-  <!-- Heat Standings -->
-  <section class="card grid-full" aria-labelledby="standings-title">
-    <div class="card-header"><div><h2 id="standings-title" class="card-title">Heat Standings</h2><p class="card-subtitle">Top 5</p></div></div>
-    <div class="table-wrapper">
-      <table class="table table--striped table--clickable">
-        <thead><tr>
-          <th class="col-place" scope="col">#</th>
-          <th class="col-rider" scope="col">Åkare</th>
-          <th class="col-club table-col-hide-portrait" scope="col">Klubb</th>
-          <th class="col-time" scope="col">Tid</th>
-          <th class="col-diff" scope="col">+Tid</th>
-          <th class="col-split" scope="col">S1</th>
-          <th class="col-split" scope="col">S2</th>
-          <th class="col-split" scope="col">S3</th>
-        </tr></thead>
-        <tbody>
-          <tr data-href="/v3/rider/1"><td class="col-place col-place--1">1</td><td class="col-rider">Paxton Eriksson</td><td class="col-club table-col-hide-portrait">Falun MTB</td><td class="col-time">4:22.31</td><td class="col-diff">-</td><td class="col-split">1:12.4</td><td class="col-split">1:33.2</td><td class="col-split">1:36.7</td></tr>
-          <tr data-href="/v3/rider/2"><td class="col-place col-place--2">2</td><td class="col-rider">Adam Svensson</td><td class="col-club table-col-hide-portrait">Uppsala CK</td><td class="col-time">4:29.87</td><td class="col-diff">+7.56</td><td class="col-split">1:15.1</td><td class="col-split">1:35.8</td><td class="col-split">1:38.9</td></tr>
-          <tr data-href="/v3/rider/3"><td class="col-place col-place--3">3</td><td class="col-rider">Erik Lindqvist</td><td class="col-club table-col-hide-portrait">Göteborg MTB</td><td class="col-time">4:31.22</td><td class="col-diff">+8.91</td><td class="col-split">1:14.8</td><td class="col-split">1:37.4</td><td class="col-split">1:39.0</td></tr>
-          <tr data-href="/v3/rider/4"><td class="col-place">4</td><td class="col-rider">Johan Nilsson</td><td class="col-club table-col-hide-portrait">Malmö CK</td><td class="col-time">4:35.44</td><td class="col-diff">+13.13</td><td class="col-split">1:16.2</td><td class="col-split">1:38.1</td><td class="col-split">1:41.1</td></tr>
-          <tr data-href="/v3/rider/5"><td class="col-place">5</td><td class="col-rider">Viktor Andersson</td><td class="col-club table-col-hide-portrait">Stockholm MTB</td><td class="col-time">4:38.90</td><td class="col-diff">+16.59</td><td class="col-split">1:17.5</td><td class="col-split">1:39.3</td><td class="col-split">1:42.1</td></tr>
-        </tbody>
-      </table>
-    </div>
-  </section>
-
-  <!-- Placement History -->
-  <section class="card" aria-labelledby="history-title">
-    <div class="card-header"><div><h2 id="history-title" class="card-title">Placement History</h2><p class="card-subtitle">Utveckling</p></div></div>
-    <div class="placeholder">Diagram placeholder – ersätt med Chart.js</div>
-  </section>
-
-  <!-- Series Standings -->
+  <!-- Active Series -->
   <section class="card" aria-labelledby="series-title">
-    <div class="card-header"><div><h2 id="series-title" class="card-title">Serie Standings</h2><p class="card-subtitle">GES Enduro 2025</p></div><a href="/v3/series" class="btn btn--ghost text-sm">Visa alla →</a></div>
+    <div class="card-header">
+      <div>
+        <h2 id="series-title" class="card-title">Aktiva serier</h2>
+        <p class="card-subtitle"><?= count($activeSeries) ?> serier</p>
+      </div>
+      <a href="/v3/series" class="btn btn--ghost text-sm">Alla →</a>
+    </div>
+    <?php if (empty($activeSeries)): ?>
+    <p class="text-muted">Inga aktiva serier</p>
+    <?php else: ?>
     <div class="table-wrapper">
       <table class="table table--compact">
-        <thead><tr><th class="col-place" scope="col">#</th><th scope="col">Åkare</th><th class="col-points" scope="col">Poäng</th></tr></thead>
+        <thead>
+          <tr>
+            <th scope="col">Serie</th>
+            <th scope="col" class="text-right">År</th>
+            <th scope="col" class="text-right">Event</th>
+          </tr>
+        </thead>
         <tbody>
-          <tr><td class="col-place">1</td><td>Wilhelm Lund</td><td class="col-points">101</td></tr>
-          <tr><td class="col-place">2</td><td>Markus Nylander</td><td class="col-points">102</td></tr>
-          <tr><td class="col-place">3</td><td>Paxton Eriksson</td><td class="col-points">81</td></tr>
-          <tr><td class="col-place">4</td><td>Theo Sundling</td><td class="col-points">83</td></tr>
-          <tr><td class="col-place">5</td><td>Arvid Blomqvist</td><td class="col-points">87</td></tr>
+          <?php foreach ($activeSeries as $series): ?>
+          <tr>
+            <td><?= htmlspecialchars($series['name']) ?></td>
+            <td class="text-right"><?= $series['year'] ?></td>
+            <td class="text-right"><?= $series['event_count'] ?></td>
+          </tr>
+          <?php endforeach; ?>
         </tbody>
       </table>
     </div>
+    <?php endif; ?>
+  </section>
+
+  <?php if (!empty($topResults)): ?>
+  <!-- Top Results from Latest Event -->
+  <section class="card grid-full" aria-labelledby="results-title">
+    <div class="card-header">
+      <div>
+        <h2 id="results-title" class="card-title">Senaste resultat</h2>
+        <p class="card-subtitle"><?= htmlspecialchars($latestEvent['name']) ?> - Top 10</p>
+      </div>
+      <a href="/v3/event/<?= $latestEvent['id'] ?>" class="btn btn--ghost text-sm">Alla →</a>
+    </div>
+    <div class="table-wrapper">
+      <table class="table table--striped table--clickable">
+        <thead>
+          <tr>
+            <th class="col-place" scope="col">#</th>
+            <th class="col-rider" scope="col">Åkare</th>
+            <th class="col-club table-col-hide-portrait" scope="col">Klubb</th>
+            <th scope="col" class="table-col-hide-portrait">Klass</th>
+            <th class="col-time" scope="col">Tid</th>
+          </tr>
+        </thead>
+        <tbody>
+          <?php foreach ($topResults as $i => $result):
+            $place = $i + 1;
+            $placeClass = $place <= 3 ? "col-place--{$place}" : '';
+          ?>
+          <tr data-href="/v3/rider/<?= $result['rider_id'] ?>">
+            <td class="col-place <?= $placeClass ?>"><?= $place ?></td>
+            <td class="col-rider"><?= htmlspecialchars($result['firstname'] . ' ' . $result['lastname']) ?></td>
+            <td class="col-club table-col-hide-portrait"><?= htmlspecialchars($result['club_name'] ?? '-') ?></td>
+            <td class="table-col-hide-portrait"><?= htmlspecialchars($result['class_name'] ?? '-') ?></td>
+            <td class="col-time"><?= htmlspecialchars($result['finish_time'] ?? '-') ?></td>
+          </tr>
+          <?php endforeach; ?>
+        </tbody>
+      </table>
+    </div>
+  </section>
+  <?php endif; ?>
+
+  <!-- Top Riders -->
+  <section class="card" aria-labelledby="riders-title">
+    <div class="card-header">
+      <div>
+        <h2 id="riders-title" class="card-title">Mest aktiva åkare</h2>
+        <p class="card-subtitle">Top 5</p>
+      </div>
+      <a href="/v3/riders" class="btn btn--ghost text-sm">Alla →</a>
+    </div>
+    <?php if (empty($topRiders)): ?>
+    <p class="text-muted">Inga åkare med resultat</p>
+    <?php else: ?>
+    <div class="table-wrapper">
+      <table class="table table--compact table--clickable">
+        <thead>
+          <tr>
+            <th scope="col">Åkare</th>
+            <th scope="col" class="text-right">Starter</th>
+            <th scope="col" class="text-right">Pall</th>
+          </tr>
+        </thead>
+        <tbody>
+          <?php foreach ($topRiders as $rider): ?>
+          <tr data-href="/v3/rider/<?= $rider['id'] ?>">
+            <td><?= htmlspecialchars($rider['firstname'] . ' ' . $rider['lastname']) ?></td>
+            <td class="text-right"><?= $rider['race_count'] ?></td>
+            <td class="text-right"><?= $rider['podiums'] ?></td>
+          </tr>
+          <?php endforeach; ?>
+        </tbody>
+      </table>
+    </div>
+    <?php endif; ?>
   </section>
 </div>
