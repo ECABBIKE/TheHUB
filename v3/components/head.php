@@ -17,17 +17,17 @@ $themeColor = hub_get_theme() === 'dark' ? '#0A0C14' : '#004A98';
 <meta name="apple-mobile-web-app-title" content="TheHUB">
 
 <!-- iOS Icons -->
-<link rel="apple-touch-icon" href="<?= HUB_V3_URL ?>/assets/icons/icon-152.png">
-<link rel="apple-touch-icon" sizes="180x180" href="<?= HUB_V3_URL ?>/assets/icons/icon-180.png">
-<link rel="apple-touch-icon" sizes="167x167" href="<?= HUB_V3_URL ?>/assets/icons/icon-167.png">
+<link rel="apple-touch-icon" href="/uploads/icons/GSIkon.png">
+<link rel="apple-touch-icon" sizes="180x180" href="/uploads/icons/GSIkon.png">
+<link rel="apple-touch-icon" sizes="167x167" href="/uploads/icons/GSIkon.png">
 
 <!-- Web App Manifest -->
 <link rel="manifest" href="<?= HUB_V3_URL ?>/manifest.json">
 
 <!-- Favicon -->
-<link rel="icon" type="image/png" sizes="32x32" href="<?= HUB_V3_URL ?>/assets/icons/favicon-32.png">
-<link rel="icon" type="image/png" sizes="16x16" href="<?= HUB_V3_URL ?>/assets/icons/favicon-16.png">
-<link rel="icon" type="image/svg+xml" href="<?= HUB_V3_URL ?>/assets/favicon.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="/uploads/icons/GSIkon.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/uploads/icons/GSIkon.png">
+<link rel="icon" type="image/png" href="/uploads/icons/GSIkon.png">
 
 <!-- Preconnect -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
