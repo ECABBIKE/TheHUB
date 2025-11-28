@@ -4,6 +4,12 @@
  * Shows event info, registration form, and participant list
  */
 
+// Prevent direct access - must be loaded via router
+if (!defined('HUB_V3_ROOT')) {
+    header('Location: /v3/calendar');
+    exit;
+}
+
 $pdo = hub_db();
 $eventId = $pageInfo['params']['id'] ?? 0;
 $currentUser = hub_current_user();
