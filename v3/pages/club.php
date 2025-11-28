@@ -22,22 +22,77 @@ try {
         return;
     }
 
-    // Fetch club members with stats
+    // Fetch club members
     $stmt = $db->prepare("
-        SELECT
-            r.id, r.firstname, r.lastname, r.birth_year, r.gender,
-            COUNT(DISTINCT CASE WHEN res.status = 'finished' THEN res.id END) as total_races,
-            COUNT(CASE WHEN res.status = 'finished' AND COALESCE(res.class_position, res.position) <= 3 THEN 1 END) as podiums,
-            SUM(CASE WHEN res.status = 'finished' THEN COALESCE(res.points, 0) ELSE 0 END) as total_points,
-            MIN(CASE WHEN res.status = 'finished' THEN COALESCE(res.class_position, res.position) END) as best_position
-        FROM riders r
-        LEFT JOIN results res ON r.id = res.cyclist_id
-        WHERE r.club_id = ? AND r.active = 1
-        GROUP BY r.id
-        ORDER BY total_points DESC, total_races DESC, r.lastname, r.firstname
+        SELECT id, firstname, lastname, birth_year, gender
+        FROM riders
+        WHERE club_id = ? AND active = 1
+        ORDER BY lastname, firstname
     ");
     $stmt->execute([$clubId]);
     $members = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // Calculate stats for each member with dynamic class_position
+    foreach ($members as &$member) {
+        $stmt = $db->prepare("
+            SELECT
+                res.id,
+                res.status,
+                res.points,
+                (
+                    SELECT COUNT(*) + 1
+                    FROM results r2
+                    WHERE r2.event_id = res.event_id
+                    AND r2.class_id = res.class_id
+                    AND r2.status = 'finished'
+                    AND r2.id != res.id
+                    AND (
+                        CASE
+                            WHEN r2.finish_time LIKE '%:%:%' THEN
+                                CAST(SUBSTRING_INDEX(r2.finish_time, ':', 1) AS DECIMAL(10,2)) * 3600 +
+                                CAST(SUBSTRING_INDEX(SUBSTRING_INDEX(r2.finish_time, ':', 2), ':', -1) AS DECIMAL(10,2)) * 60 +
+                                CAST(SUBSTRING_INDEX(r2.finish_time, ':', -1) AS DECIMAL(10,2))
+                            ELSE
+                                CAST(SUBSTRING_INDEX(r2.finish_time, ':', 1) AS DECIMAL(10,2)) * 60 +
+                                CAST(SUBSTRING_INDEX(r2.finish_time, ':', -1) AS DECIMAL(10,2))
+                        END
+                        <
+                        CASE
+                            WHEN res.finish_time LIKE '%:%:%' THEN
+                                CAST(SUBSTRING_INDEX(res.finish_time, ':', 1) AS DECIMAL(10,2)) * 3600 +
+                                CAST(SUBSTRING_INDEX(SUBSTRING_INDEX(res.finish_time, ':', 2), ':', -1) AS DECIMAL(10,2)) * 60 +
+                                CAST(SUBSTRING_INDEX(res.finish_time, ':', -1) AS DECIMAL(10,2))
+                            ELSE
+                                CAST(SUBSTRING_INDEX(res.finish_time, ':', 1) AS DECIMAL(10,2)) * 60 +
+                                CAST(SUBSTRING_INDEX(res.finish_time, ':', -1) AS DECIMAL(10,2))
+                        END
+                    )
+                ) as class_position
+            FROM results res
+            WHERE res.cyclist_id = ? AND res.status = 'finished'
+        ");
+        $stmt->execute([$member['id']]);
+        $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $member['total_races'] = count($results);
+        $member['total_points'] = array_sum(array_column($results, 'points'));
+        $member['podiums'] = count(array_filter($results, fn($r) => $r['class_position'] && $r['class_position'] <= 3));
+        $member['best_position'] = null;
+        foreach ($results as $r) {
+            if ($r['class_position'] && (!$member['best_position'] || $r['class_position'] < $member['best_position'])) {
+                $member['best_position'] = (int)$r['class_position'];
+            }
+        }
+    }
+    unset($member);
+
+    // Sort by points
+    usort($members, function($a, $b) {
+        if ($b['total_points'] != $a['total_points']) {
+            return $b['total_points'] - $a['total_points'];
+        }
+        return $b['total_races'] - $a['total_races'];
+    });
 
     $totalMembers = count($members);
     $totalRaces = array_sum(array_column($members, 'total_races'));
