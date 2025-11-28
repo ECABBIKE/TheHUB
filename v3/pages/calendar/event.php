@@ -4,6 +4,13 @@
  * Based on V2 event-results.php but with V3.5 design
  */
 
+// DEBUG - ta bort efter felsökning
+echo "<!-- DEBUG: event.php loaded -->";
+echo "<pre style='background:#ff0;padding:10px;'>";
+echo "pageInfo: "; print_r($pageInfo ?? 'NOT SET');
+echo "REQUEST_URI: " . ($_SERVER['REQUEST_URI'] ?? 'NOT SET');
+echo "</pre>";
+
 // Prevent direct access
 if (!defined('HUB_V3_ROOT')) {
     header('Location: /v3/calendar');
