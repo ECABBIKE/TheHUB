@@ -154,20 +154,64 @@ function nav_icon($name, $class = 'sidebar-icon-svg') {
 </aside>
 
 <style>
-/* Admin sidebar icon styles */
+/* Admin sidebar styles */
+.sidebar-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 8px;
+}
+.sidebar-link {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    color: var(--color-text-secondary, #6b7280);
+    text-decoration: none;
+    border-radius: 8px;
+    transition: all 0.15s ease;
+}
+.sidebar-link:hover {
+    background: var(--color-bg-hover, rgba(0,0,0,0.04));
+    color: var(--color-text-primary, #171717);
+}
+.sidebar-link.active,
+.sidebar-link[aria-current="page"] {
+    background: var(--color-accent-light, #e8f0fb);
+    color: var(--color-accent, #004a98);
+}
 .sidebar-icon-svg {
     display: flex;
     align-items: center;
     justify-content: center;
+    flex-shrink: 0;
 }
 .sidebar-icon-svg svg {
-    width: 24px;
-    height: 24px;
+    width: 20px;
+    height: 20px;
     stroke: currentColor;
+}
+.sidebar-label {
+    font-size: 14px;
+    font-weight: 500;
+    white-space: nowrap;
 }
 .sidebar-divider {
     height: 1px;
     background: var(--color-border, #E5E7EB);
-    margin: var(--space-sm, 8px) 0;
+    margin: 8px 0;
+}
+
+/* Desktop: icon-only compact sidebar */
+@media (min-width: 1024px) {
+    .sidebar-link {
+        flex-direction: column;
+        gap: 4px;
+        padding: 8px;
+        text-align: center;
+    }
+    .sidebar-label {
+        font-size: 10px;
+    }
 }
 </style>
