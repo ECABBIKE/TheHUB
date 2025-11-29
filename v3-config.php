@@ -375,29 +375,57 @@ if (!function_exists('hub_attempt_login')) {
 if (!function_exists('hub_set_user_session')) {
     /**
      * Set user session after successful login
+     * Sets both V3 hub_* variables AND admin_* variables for admin panel compatibility
      */
     function hub_set_user_session(array $user): void {
+        $roleId = (int) ($user['role_id'] ?? ROLE_RIDER);
+        $userName = ($user['firstname'] ?? '') . ' ' . ($user['lastname'] ?? '');
+
+        // V3 session variables
         $_SESSION['hub_user_id'] = $user['id'];
         $_SESSION['hub_user_email'] = $user['email'];
-        $_SESSION['hub_user_name'] = ($user['firstname'] ?? '') . ' ' . ($user['lastname'] ?? '');
-        $_SESSION['hub_user_role'] = (int) ($user['role_id'] ?? ROLE_RIDER);
+        $_SESSION['hub_user_name'] = $userName;
+        $_SESSION['hub_user_role'] = $roleId;
         $_SESSION['hub_logged_in_at'] = time();
 
         // Backwards compatibility - is_admin based on role
-        $_SESSION['hub_is_admin'] = $_SESSION['hub_user_role'] >= ROLE_ADMIN;
+        $_SESSION['hub_is_admin'] = $roleId >= ROLE_ADMIN;
 
         // Also set rider_* for backwards compatibility with V2 code
         $_SESSION['rider_id'] = $user['id'];
         $_SESSION['rider_email'] = $user['email'];
-        $_SESSION['rider_name'] = $_SESSION['hub_user_name'];
+        $_SESSION['rider_name'] = $userName;
+
+        // =====================================================================
+        // ADMIN PANEL COMPATIBILITY
+        // Set admin_* session variables so /admin/ pages recognize the login
+        // =====================================================================
+        if ($roleId >= ROLE_ADMIN) {
+            $_SESSION['admin_logged_in'] = true;
+            $_SESSION['admin_id'] = $user['id'];
+            $_SESSION['admin_username'] = $user['email'];
+            $_SESSION['admin_name'] = $userName;
+            $_SESSION['last_activity'] = time();
+
+            // Map role_id to admin role string
+            $roleMap = [
+                ROLE_RIDER => 'rider',
+                ROLE_PROMOTOR => 'promotor',
+                ROLE_ADMIN => 'admin',
+                ROLE_SUPER_ADMIN => 'super_admin'
+            ];
+            $_SESSION['admin_role'] = $roleMap[$roleId] ?? 'rider';
+        }
     }
 }
 
 if (!function_exists('hub_logout')) {
     /**
      * Log out the current user
+     * Clears all session types: V3, V2, and Admin
      */
     function hub_logout(): void {
+        // Clear V3 session
         unset($_SESSION['hub_user_id']);
         unset($_SESSION['hub_user_email']);
         unset($_SESSION['hub_user_name']);
@@ -405,10 +433,18 @@ if (!function_exists('hub_logout')) {
         unset($_SESSION['hub_is_admin']);
         unset($_SESSION['hub_logged_in_at']);
 
-        // Also clear V2 rider session
+        // Clear V2 rider session
         unset($_SESSION['rider_id']);
         unset($_SESSION['rider_email']);
         unset($_SESSION['rider_name']);
+
+        // Clear admin session
+        unset($_SESSION['admin_logged_in']);
+        unset($_SESSION['admin_id']);
+        unset($_SESSION['admin_username']);
+        unset($_SESSION['admin_name']);
+        unset($_SESSION['admin_role']);
+        unset($_SESSION['last_activity']);
     }
 }
 
