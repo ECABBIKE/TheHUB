@@ -47,6 +47,14 @@ RewriteRule ^ - [L]
 # Force SPA routing for V3 sections (override physical directories)
 # These URLs should go to the SPA router even if matching directories exist
 # ============================================================================
+
+# Auth pages
+RewriteRule ^login/?$ index.php?page=login [QSA,L]
+RewriteRule ^logout/?$ index.php?page=logout [QSA,L]
+RewriteRule ^dashboard/?$ index.php?page=dashboard [QSA,L]
+RewriteRule ^welcome/?$ index.php?page=welcome [QSA,L]
+
+# Main sections
 RewriteRule ^database(/.*)?$ index.php?page=database$1 [QSA,L]
 RewriteRule ^ranking(/.*)?$ index.php?page=ranking$1 [QSA,L]
 RewriteRule ^calendar(/.*)?$ index.php?page=calendar$1 [QSA,L]
@@ -56,6 +64,8 @@ RewriteRule ^profile(/.*)?$ index.php?page=profile$1 [QSA,L]
 RewriteRule ^rider(/.*)?$ index.php?page=rider$1 [QSA,L]
 RewriteRule ^club(/.*)?$ index.php?page=club$1 [QSA,L]
 RewriteRule ^event(/.*)?$ index.php?page=event$1 [QSA,L]
+RewriteRule ^riders/?$ index.php?page=riders [QSA,L]
+RewriteRule ^clubs/?$ index.php?page=clubs [QSA,L]
 
 # Skip admin folder - let it handle its own routing
 RewriteRule ^admin(/.*)?$ - [L]

@@ -2,11 +2,34 @@
 /**
  * TheHUB V3.5 Router
  * Handles URL routing for the SPA structure
+ *
+ * AUTHENTICATION: All pages require login except welcome and login
  */
 require_once __DIR__ . '/v3-config.php';
 
+/**
+ * Check if the current page requires authentication
+ * Returns true if user should be redirected to login
+ */
+function hub_requires_auth(string $page): bool {
+    // Public pages that don't require authentication
+    $publicPages = ['', 'welcome', 'login', 'logout', 'index.php'];
+    return !in_array($page, $publicPages);
+}
+
 function hub_get_current_page(): array {
     $raw = trim($_GET['page'] ?? '', '/');
+    $section = explode('/', $raw)[0] ?? '';
+
+    // =========================================================================
+    // AUTHENTICATION CHECK - Require login for all pages except public ones
+    // =========================================================================
+    if (hub_requires_auth($section) && !hub_is_logged_in()) {
+        // Store the requested URL for redirect after login
+        $redirect = '/' . $raw;
+        header('Location: /login?redirect=' . urlencode($redirect));
+        exit;
+    }
 
     // Root route - show welcome for unauthenticated users
     if ($raw === '' || $raw === 'index.php') {

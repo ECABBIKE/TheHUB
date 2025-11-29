@@ -74,26 +74,11 @@ require_once HUB_V3_ROOT . '/components/icons.php';
                 </a>
             </div>
 
-            <!-- Public access info -->
+            <!-- Login required info -->
             <p class="welcome-info">
-                Resultat, kalender och ranking är tillgängliga utan inloggning
+                <?= hub_icon('lock', 'icon-xs') ?>
+                Inloggning krävs för att se innehållet
             </p>
-
-            <!-- Quick links -->
-            <div class="welcome-links">
-                <a href="<?= HUB_V3_URL ?>/calendar">
-                    <?= hub_icon('calendar', 'icon-sm') ?>
-                    Kalender
-                </a>
-                <a href="<?= HUB_V3_URL ?>/results">
-                    <?= hub_icon('flag', 'icon-sm') ?>
-                    Resultat
-                </a>
-                <a href="<?= HUB_V3_URL ?>/ranking">
-                    <?= hub_icon('trending-up', 'icon-sm') ?>
-                    Ranking
-                </a>
-            </div>
         </div>
     </div>
 </div>
@@ -260,38 +245,17 @@ require_once HUB_V3_ROOT . '/components/icons.php';
 
 /* Info */
 .welcome-info {
-    font-size: var(--text-sm);
-    color: var(--color-text-muted);
-    margin: 0 0 var(--space-md);
-}
-
-/* Quick links */
-.welcome-links {
-    display: flex;
-    gap: var(--space-md);
-    justify-content: center;
-    flex-wrap: wrap;
-    padding-top: var(--space-md);
-    border-top: 1px solid var(--color-border);
-}
-
-.welcome-links a {
     display: inline-flex;
     align-items: center;
     gap: var(--space-xs);
-    color: var(--color-accent);
-    text-decoration: none;
     font-size: var(--text-sm);
-    font-weight: var(--weight-medium);
+    color: var(--color-text-muted);
+    margin: 0;
 }
 
-.welcome-links a:hover {
-    text-decoration: underline;
-}
-
-.welcome-links .icon-sm {
-    width: 16px;
-    height: 16px;
+.welcome-info .icon-xs {
+    width: 14px;
+    height: 14px;
 }
 
 @media (max-width: 480px) {
