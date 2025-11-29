@@ -34,6 +34,34 @@ RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
 # Prevent directory listing
 Options -Indexes
 
-# Custom error pages (optional)
-# ErrorDocument 404 /404.php
-# ErrorDocument 500 /500.php
+# ============================================================================
+# SPA ROUTING - Clean URLs without .php extensions
+# ============================================================================
+
+# Skip rewriting for actual files (CSS, JS, images, etc.)
+RewriteCond %{REQUEST_FILENAME} -f
+RewriteRule ^ - [L]
+
+# Skip rewriting for directories
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+
+# Skip admin folder - let it handle its own routing
+RewriteRule ^admin(/.*)?$ - [L]
+
+# Skip API endpoints
+RewriteRule ^api(/.*)?$ - [L]
+
+# Skip V3 folder - it has its own router
+RewriteRule ^v3(/.*)?$ - [L]
+
+# Skip legacy .php files that are accessed directly (for backwards compatibility)
+RewriteCond %{REQUEST_URI} \.(php|html|htm)$
+RewriteRule ^ - [L]
+
+# Route clean URLs through app.php
+# Examples: /results, /series/5, /rider/123, /calendar
+RewriteRule ^(home|calendar|events|results|series|database|riders|clubs|ranking|profile|rider|event|club)(/.*)?$ app.php?page=$1$2 [QSA,L]
+
+# Custom error pages
+ErrorDocument 404 /app.php?page=404
