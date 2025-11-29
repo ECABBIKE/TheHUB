@@ -97,11 +97,11 @@ function get_active_admin_group($current_page, $current_path) {
 $active_group = get_active_admin_group($current_page, $current_path);
 ?>
 
-<nav class="gs-sidebar">
+<nav class="sidebar">
     <!-- PUBLIC MENU -->
-    <div class="gs-menu-section gs-main-menu">
-        <h3 class="gs-menu-title"><a href="<?= SITE_URL ?>" style="color: inherit; text-decoration: none;">TheHUB</a></h3>
-        <ul class="gs-menu">
+    <div class="sidebar-section main-menu">
+        <h3 class="sidebar-title"><a href="<?= SITE_URL ?>" style="color: inherit; text-decoration: none;">TheHUB</a></h3>
+        <ul class="sidebar-nav">
             <li>
                 <a href="<?= SITE_URL ?>" class="<?= $current_page == 'index.php' && strpos($current_path, '/admin/') === false ? 'active' : '' ?>">
                     <i data-lucide="home"></i>
@@ -149,9 +149,9 @@ $active_group = get_active_admin_group($current_page, $current_path);
 
     <?php if ($is_admin): ?>
     <!-- ADMIN MENU v2.1 - 6 GRUPPER -->
-    <div class="gs-menu-section">
-        <h3 class="gs-menu-title">Admin</h3>
-        <ul class="gs-menu">
+    <div class="sidebar-section">
+        <h3 class="sidebar-title">Admin</h3>
+        <ul class="sidebar-nav">
             <li>
                 <a href="/admin/dashboard.php" class="<?= $active_group === 'dashboard' ? 'active' : '' ?>">
                     <i data-lucide="layout-dashboard"></i>
@@ -200,9 +200,9 @@ $active_group = get_active_admin_group($current_page, $current_path);
     </div>
 
     <!-- LOGOUT -->
-    <div class="gs-menu-section" style="margin-top: auto;">
-        <div class="gs-menu-footer">
-            <a href="/admin/logout.php" class="gs-btn gs-btn-sm gs-btn-outline gs-w-full">
+    <div class="sidebar-section" style="margin-top: auto;">
+        <div class="sidebar-footer">
+            <a href="/admin/logout.php" class="btn btn--secondary btn--sm w-full">
                 <i data-lucide="log-out"></i>
                 <span>Logga ut</span>
             </a>
@@ -210,8 +210,8 @@ $active_group = get_active_admin_group($current_page, $current_path);
     </div>
     <?php else: ?>
     <!-- ADMIN LOGIN -->
-    <div class="gs-menu-section gs-admin-login-section" style="margin-top: auto; padding-top: 1rem;">
-        <a href="/admin/login.php" class="gs-btn gs-btn-sm gs-btn-primary gs-w-full">
+    <div class="sidebar-section admin-login-section" style="margin-top: auto; padding-top: 1rem;">
+        <a href="/admin/login.php" class="btn btn--primary btn--sm w-full">
             <i data-lucide="log-in"></i>
             <span>Admin Login</span>
         </a>

@@ -110,28 +110,28 @@ $pageType = 'public';
 include __DIR__ . '/includes/layout-header.php';
 ?>
 
-<main class="gs-content-with-sidebar">
-    <div class="gs-container">
+<main class="main-content">
+    <div class="page-content">
 
         <!-- Hero Section -->
-        <div class="gs-hero gs-text-center">
+        <div class="hero text-center">
             <img src="http://gravityseries.se/wp-content/uploads/2024/03/Gravity-Series-White.png"
                  alt="Gravity Series"
                  style="width: 100%; max-width: 600px; margin-bottom: 1rem;">
-            <h1 class="gs-h1 gs-hero-title-white">
+            <h1 class="hero-title">
                 TheHUB
             </h1>
         </div>
 
         <!-- About TheHUB -->
-        <div class="gs-card gs-mb-xl">
-            <div class="gs-card-header">
-                <h2 class="gs-h2">
+        <div class="card mb-lg">
+            <div class="card-header">
+                <h2>
                     <i data-lucide="zap"></i>
                     En awesome plattform för alla
                 </h2>
             </div>
-            <div class="gs-card-content gs-card-content-large">
+            <div class="card-body">
                 <p>
                     <strong>TheHUB</strong> är det centrala navet för alla som älskar att tävla på cykel i Sverige.
                     Här samlas cyklister, arrangörer och serier under samma tak med allt du behöver för att
@@ -140,7 +140,7 @@ include __DIR__ . '/includes/layout-header.php';
                 <p>
                     Med TheHUB får du tillgång till:
                 </p>
-                <ul class="gs-list-styled">
+                <ul class="list-styled">
                     <li><strong>Live-resultat</strong> från alla stora serier</li>
                     <li><strong>Detaljerade poänglistor</strong> över hela säsongen</li>
                     <li><strong>Enkel anmälan</strong> till kommande events</li>
@@ -152,14 +152,14 @@ include __DIR__ . '/includes/layout-header.php';
         </div>
 
         <!-- About Gravity Series -->
-        <div class="gs-card gs-mb-xl">
-            <div class="gs-card-header">
-                <h2 class="gs-h2">
+        <div class="card mb-lg">
+            <div class="card-header">
+                <h2>
                     <i data-lucide="mountain"></i>
                     Om Gravity Series
                 </h2>
             </div>
-            <div class="gs-card-content gs-card-content-large">
+            <div class="card-body">
                 <p>
                     <strong>Gravity Series</strong> är en fristående tävlingsorganisation som kompletterar
                     Svenska Cykelförbundets SweCup-tävlingar. Huvudfokus ligger på disciplinerna
