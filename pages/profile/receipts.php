@@ -12,21 +12,31 @@ if (!$currentUser) {
 $pdo = hub_db();
 
 // Get payment history (would be from WooCommerce in production)
-// For now, show registrations with payment status
-$stmt = $pdo->prepare("
-    SELECT r.*, e.name as event_name, e.date as event_date,
-           cls.display_name as class_name, epr.base_price as price
-    FROM event_registrations r
-    JOIN events e ON r.event_id = e.id
-    LEFT JOIN classes cls ON r.class_id = cls.id
-    LEFT JOIN event_pricing_rules epr ON r.event_id = epr.event_id AND r.class_id = epr.class_id
-    WHERE r.rider_id = ? AND r.status = 'confirmed'
-    ORDER BY r.registration_date DESC
-");
-$stmt->execute([$currentUser['id']]);
-$payments = $stmt->fetchAll(PDO::FETCH_ASSOC);
+// For now, show registrations with payment status (if table exists)
+$payments = [];
+$totalSpent = 0;
 
-$totalSpent = array_sum(array_column($payments, 'price'));
+try {
+    $tableCheck = $pdo->query("SHOW TABLES LIKE 'event_registrations'");
+    if ($tableCheck->rowCount() > 0) {
+        $stmt = $pdo->prepare("
+            SELECT r.*, e.name as event_name, e.date as event_date,
+                   cls.display_name as class_name, epr.base_price as price
+            FROM event_registrations r
+            JOIN events e ON r.event_id = e.id
+            LEFT JOIN classes cls ON r.class_id = cls.id
+            LEFT JOIN event_pricing_rules epr ON r.event_id = epr.event_id AND r.class_id = epr.class_id
+            WHERE r.rider_id = ? AND r.status = 'confirmed'
+            ORDER BY r.registration_date DESC
+        ");
+        $stmt->execute([$currentUser['id']]);
+        $payments = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $totalSpent = array_sum(array_column($payments, 'price'));
+    }
+} catch (PDOException $e) {
+    $payments = [];
+    $totalSpent = 0;
+}
 ?>
 
 <div class="page-header">

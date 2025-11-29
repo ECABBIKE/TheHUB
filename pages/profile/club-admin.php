@@ -37,10 +37,10 @@ if (!$selectedClub) {
 $membersStmt = $pdo->prepare("
     SELECT r.*, COUNT(res.id) as result_count
     FROM riders r
-    LEFT JOIN results res ON r.id = res.rider_id
+    LEFT JOIN results res ON r.id = res.cyclist_id
     WHERE r.club_id = ?
     GROUP BY r.id
-    ORDER BY r.last_name, r.first_name
+    ORDER BY r.lastname, r.firstname
 ");
 $membersStmt->execute([$selectedClubId]);
 $members = $membersStmt->fetchAll(PDO::FETCH_ASSOC);
@@ -52,7 +52,7 @@ $statsStmt = $pdo->prepare("
         COUNT(DISTINCT res.id) as total_results,
         COUNT(DISTINCT CASE WHEN res.position <= 3 THEN res.id END) as podiums
     FROM riders r
-    LEFT JOIN results res ON r.id = res.rider_id
+    LEFT JOIN results res ON r.id = res.cyclist_id
     WHERE r.club_id = ?
 ");
 $statsStmt->execute([$selectedClubId]);
@@ -127,18 +127,18 @@ $stats = $statsStmt->fetch(PDO::FETCH_ASSOC);
             <?php foreach ($members as $member): ?>
                 <div class="member-card">
                     <div class="member-avatar">
-                        <?= strtoupper(substr($member['first_name'], 0, 1)) ?>
+                        <?= strtoupper(substr($member['firstname'], 0, 1)) ?>
                     </div>
                     <div class="member-info">
                         <a href="/database/rider/<?= $member['id'] ?>" class="member-name">
-                            <?= htmlspecialchars($member['first_name'] . ' ' . $member['last_name']) ?>
+                            <?= htmlspecialchars($member['firstname'] . ' ' . $member['lastname']) ?>
                         </a>
                         <span class="member-stats">
                             <?= $member['result_count'] ?> resultat
                         </span>
                     </div>
                     <button type="button" class="btn btn-sm btn-outline"
-                            onclick="removeMember(<?= $member['id'] ?>, '<?= htmlspecialchars($member['first_name']) ?>')">
+                            onclick="removeMember(<?= $member['id'] ?>, '<?= htmlspecialchars($member['firstname']) ?>')">
                         Ta bort
                     </button>
                 </div>
