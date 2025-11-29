@@ -19,9 +19,9 @@ $currentPath = $_SERVER['PHP_SELF'];
 
 $navItems = [
     ['id' => 'events', 'label' => 'Kalender', 'url' => '/events.php'],
-    ['id' => 'results', 'label' => 'Resultat', 'url' => '/results.php'],
-    ['id' => 'series', 'label' => 'Serier', 'url' => '/series.php'],
-    ['id' => 'ranking', 'label' => 'Ranking', 'url' => '/ranking/'],
+    ['id' => 'results', 'label' => 'Resultat', 'url' => '/v3/results'],
+    ['id' => 'series', 'label' => 'Serier', 'url' => '/v3/series'],
+    ['id' => 'ranking', 'label' => 'Ranking', 'url' => '/v3/ranking'],
     ['id' => 'profile', 'label' => 'Profil', 'url' => '/profile.php'],
 ];
 ?>

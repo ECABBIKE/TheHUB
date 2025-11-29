@@ -115,13 +115,13 @@ $active_group = get_active_admin_group($current_page, $current_path);
                 </a>
             </li>
             <li>
-                <a href="/results.php" class="<?= $current_page == 'results.php' && strpos($current_path, '/admin/') === false ? 'active' : '' ?>">
+                <a href="/v3/results" class="<?= strpos($current_path, '/v3/results') !== false || ($current_page == 'results.php' && strpos($current_path, '/admin/') === false) ? 'active' : '' ?>">
                     <i data-lucide="trophy"></i>
                     <span>Resultat</span>
                 </a>
             </li>
             <li>
-                <a href="/series.php" class="<?= $current_page == 'series.php' && strpos($current_path, '/admin/') === false ? 'active' : '' ?>">
+                <a href="/v3/series" class="<?= strpos($current_path, '/v3/series') !== false || ($current_page == 'series.php' && strpos($current_path, '/admin/') === false) ? 'active' : '' ?>">
                     <i data-lucide="award"></i>
                     <span>Serier</span>
                 </a>
@@ -139,7 +139,7 @@ $active_group = get_active_admin_group($current_page, $current_path);
                 </a>
             </li>
             <li>
-                <a href="/ranking/" class="<?= strpos($current_path, '/ranking/') !== false && strpos($current_path, '/admin/') === false ? 'active' : '' ?>">
+                <a href="/v3/ranking" class="<?= strpos($current_path, '/v3/ranking') !== false || (strpos($current_path, '/ranking/') !== false && strpos($current_path, '/admin/') === false) ? 'active' : '' ?>">
                     <i data-lucide="trending-up"></i>
                     <span>Ranking</span>
                 </a>
