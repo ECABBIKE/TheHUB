@@ -1,0 +1,157 @@
+<?php
+/**
+ * Admin Sidebar Navigation
+ * Main navigation for admin panel with dropdown submenus
+ */
+
+// Define navigation structure
+$admin_nav = [
+    [
+        'id' => 'dashboard',
+        'label' => 'Dashboard',
+        'icon' => '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>',
+        'url' => '/admin/dashboard.php',
+        'active' => $current_admin_page === 'dashboard'
+    ],
+    [
+        'id' => 'events',
+        'label' => 'Events',
+        'icon' => '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg>',
+        'url' => '/admin/events.php',
+        'active' => in_array($current_admin_page, ['events', 'event-create', 'event-edit', 'edit-results']),
+        'submenu' => [
+            ['label' => 'Alla events', 'url' => '/admin/events.php'],
+            ['label' => 'Skapa event', 'url' => '/admin/event-create.php'],
+            ['label' => 'Resultat', 'url' => '/admin/results.php'],
+        ]
+    ],
+    [
+        'id' => 'series',
+        'label' => 'Serier',
+        'icon' => '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>',
+        'url' => '/admin/series.php',
+        'active' => in_array($current_admin_page, ['series', 'series-events', 'series-pricing']),
+        'submenu' => [
+            ['label' => 'Alla serier', 'url' => '/admin/series.php'],
+            ['label' => 'Serie-events', 'url' => '/admin/series-events.php'],
+            ['label' => 'Poängskalor', 'url' => '/admin/point-scales.php'],
+        ]
+    ],
+    [
+        'id' => 'riders',
+        'label' => 'Deltagare',
+        'icon' => '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
+        'url' => '/admin/riders.php',
+        'active' => in_array($current_admin_page, ['riders', 'rider-edit', 'find-duplicates', 'cleanup-duplicates']),
+        'submenu' => [
+            ['label' => 'Alla deltagare', 'url' => '/admin/riders.php'],
+            ['label' => 'Hitta dubbletter', 'url' => '/admin/find-duplicates.php'],
+            ['label' => 'Rensa dubbletter', 'url' => '/admin/cleanup-duplicates.php'],
+        ]
+    ],
+    [
+        'id' => 'clubs',
+        'label' => 'Klubbar',
+        'icon' => '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/><path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/></svg>',
+        'url' => '/admin/clubs.php',
+        'active' => in_array($current_admin_page, ['clubs', 'club-edit', 'cleanup-clubs']),
+        'submenu' => [
+            ['label' => 'Alla klubbar', 'url' => '/admin/clubs.php'],
+            ['label' => 'Rensa klubbar', 'url' => '/admin/cleanup-clubs.php'],
+        ]
+    ],
+    [
+        'id' => 'classes',
+        'label' => 'Klasser',
+        'icon' => '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"/><path d="m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65"/><path d="m22 12.65-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65"/></svg>',
+        'url' => '/admin/classes.php',
+        'active' => $current_admin_page === 'classes'
+    ],
+    [
+        'id' => 'import',
+        'label' => 'Import',
+        'icon' => '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>',
+        'url' => '/admin/import.php',
+        'active' => strpos($current_admin_page, 'import') !== false,
+        'submenu' => [
+            ['label' => 'Import UCI', 'url' => '/admin/import-uci.php'],
+            ['label' => 'Import resultat', 'url' => '/admin/import-results.php'],
+            ['label' => 'Import events', 'url' => '/admin/import-events.php'],
+            ['label' => 'Import klubbar', 'url' => '/admin/import-clubs.php'],
+            ['label' => 'Import-historik', 'url' => '/admin/import-history.php'],
+        ]
+    ],
+    [
+        'id' => 'ranking',
+        'label' => 'Ranking',
+        'icon' => '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m2 20 7-7"/><path d="m17 3 4 4"/><path d="m22 6.3-.3-.3c-1.5-1.5-4-1.5-5.5 0l-9.9 9.9a.5.5 0 0 0 0 .7l2.8 2.8a.5.5 0 0 0 .7 0l9.9-9.9c1.5-1.5 1.5-4 0-5.5l-.3-.3Z"/><path d="M18 8.5 8.5 18"/></svg>',
+        'url' => '/admin/ranking.php',
+        'active' => strpos($current_admin_page, 'ranking') !== false
+    ],
+    [
+        'id' => 'venues',
+        'label' => 'Banor',
+        'icon' => '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>',
+        'url' => '/admin/venues.php',
+        'active' => $current_admin_page === 'venues'
+    ],
+    [
+        'id' => 'settings',
+        'label' => 'Inställningar',
+        'icon' => '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>',
+        'url' => '/admin/settings.php',
+        'active' => in_array($current_admin_page, ['settings', 'public-settings', 'global-texts'])
+    ]
+];
+?>
+
+<aside class="admin-sidebar" id="adminSidebar">
+    <nav class="admin-nav">
+        <?php foreach ($admin_nav as $item): ?>
+            <div class="nav-item-group <?= !empty($item['active']) ? 'active' : '' ?>">
+                <!-- Main nav item -->
+                <?php if (isset($item['submenu'])): ?>
+                    <button
+                        type="button"
+                        class="nav-item <?= !empty($item['active']) ? 'active' : '' ?>"
+                        onclick="toggleSubmenu('<?= $item['id'] ?>')"
+                    >
+                        <?= $item['icon'] ?>
+                        <span><?= htmlspecialchars($item['label']) ?></span>
+                        <svg class="submenu-arrow" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                    </button>
+                <?php else: ?>
+                    <a
+                        href="<?= htmlspecialchars($item['url']) ?>"
+                        class="nav-item <?= !empty($item['active']) ? 'active' : '' ?>"
+                    >
+                        <?= $item['icon'] ?>
+                        <span><?= htmlspecialchars($item['label']) ?></span>
+                    </a>
+                <?php endif; ?>
+
+                <!-- Submenu (dropdown) -->
+                <?php if (isset($item['submenu'])): ?>
+                    <div class="nav-submenu <?= !empty($item['active']) ? 'open' : '' ?>" id="submenu-<?= $item['id'] ?>">
+                        <?php foreach ($item['submenu'] as $subitem): ?>
+                            <a href="<?= htmlspecialchars($subitem['url']) ?>" class="submenu-item">
+                                <?= htmlspecialchars($subitem['label']) ?>
+                            </a>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
+            </div>
+        <?php endforeach; ?>
+    </nav>
+
+    <!-- Sidebar Footer -->
+    <div class="sidebar-footer">
+        <a href="/" class="sidebar-link">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>
+            <span>Tillbaka till sajten</span>
+        </a>
+    </div>
+</aside>
+
+<!-- Sidebar overlay for mobile -->
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="closeAdminSidebar()"></div>
