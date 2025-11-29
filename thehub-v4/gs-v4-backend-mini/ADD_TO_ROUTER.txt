@@ -1,6 +1,6 @@
 Add inside switch(module) in core/Router.php:
 
-case 'events':
-    require_once __DIR__ . '/../modules/events/EventController.php';
-    $controller = new EventController();
+case 'api':
+    require_once __DIR__ . '/../modules/api/ApiController.php';
+    $controller = new ApiController();
     break;
