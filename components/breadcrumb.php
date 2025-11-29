@@ -1,51 +1,27 @@
 <?php
-/**
- * TheHUB Breadcrumb Component
- * Shows current location in the app
- */
+$currentPage = $pageInfo['page'] ?? 'dashboard';
 
-$section = $pageInfo['section'] ?? $pageSection ?? 'home';
-$subpage = $pageInfo['subpage'] ?? null;
-$title = $pageInfo['title'] ?? $pageTitle ?? 'TheHUB';
-
-// Section labels
-$sectionLabels = [
-    'home' => 'Hem',
-    'calendar' => 'Kalender',
-    'events' => 'Kalender',
-    'results' => 'Resultat',
-    'series' => 'Serier',
-    'database' => 'Databas',
-    'riders' => 'Deltagare',
-    'clubs' => 'Klubbar',
-    'ranking' => 'Ranking',
-    'profile' => 'Min Profil'
+// Pages that have their own breadcrumb/navigation (don't show global back link)
+$pagesWithOwnNav = [
+    'calendar-event',
+    'series-show',
+    'database-rider',
+    'database-club',
+    'results-event',
+    'profile-edit',
+    'profile-children',
+    'profile-registrations',
+    'profile-results',
+    'profile-receipts'
 ];
 
-$sectionLabel = $sectionLabels[$section] ?? ucfirst($section);
-$showBreadcrumb = $section !== 'home';
+// Don't show back link on dashboard/home or pages with their own navigation
+if ($currentPage !== 'dashboard' && !in_array($currentPage, $pagesWithOwnNav)):
 ?>
-<?php if ($showBreadcrumb): ?>
-<nav class="breadcrumb" aria-label="Breadcrumb">
-    <ol class="breadcrumb-list">
-        <li class="breadcrumb-item">
-            <a href="/" class="breadcrumb-link">
-                <i data-lucide="home" class="breadcrumb-icon"></i>
-                <span class="sr-only">Hem</span>
-            </a>
-        </li>
-        <?php if ($subpage && $subpage !== 'index'): ?>
-        <li class="breadcrumb-item">
-            <a href="/<?= $section ?>" class="breadcrumb-link"><?= $sectionLabel ?></a>
-        </li>
-        <li class="breadcrumb-item active" aria-current="page">
-            <?= h($title) ?>
-        </li>
-        <?php else: ?>
-        <li class="breadcrumb-item active" aria-current="page">
-            <?= $sectionLabel ?>
-        </li>
-        <?php endif; ?>
-    </ol>
+<nav class="back-nav" aria-label="Navigation">
+  <a href="javascript:history.back()" class="back-link">
+    <span class="back-arrow">←</span>
+    <span>Tillbaka</span>
+  </a>
 </nav>
 <?php endif; ?>

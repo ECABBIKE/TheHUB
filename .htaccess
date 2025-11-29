@@ -26,6 +26,7 @@
 
 # Enable rewrite engine
 RewriteEngine On
+RewriteBase /
 
 # Redirect to HTTPS (enabled for production)
 RewriteCond %{HTTPS} off
@@ -35,70 +36,62 @@ RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
 Options -Indexes
 
 # ============================================================================
-# CLEAN URL ROUTING - URLs without .php extensions
+# V3 SPA ROUTING - All requests go through index.php
 # ============================================================================
 
 # Skip rewriting for actual files (CSS, JS, images, etc.)
 RewriteCond %{REQUEST_FILENAME} -f
 RewriteRule ^ - [L]
 
-# Skip rewriting for directories (except specific ones we want to route)
+# Skip rewriting for directories with index files
 RewriteCond %{REQUEST_FILENAME} -d
-RewriteCond %{REQUEST_URI} !^/(ranking|clubs)/?$
-RewriteRule ^ - [L]
+RewriteCond %{REQUEST_FILENAME}/index.php -f
+RewriteRule ^(.*)/?$ $1/index.php [L]
 
 # Skip admin folder - let it handle its own routing
 RewriteRule ^admin(/.*)?$ - [L]
 
-# Skip API endpoints
-RewriteRule ^api(/.*)?$ - [L]
+# Skip API endpoints (direct PHP files)
+RewriteRule ^api/.*\.php$ - [L]
 
-# Skip V3 folder - it has its own router
-RewriteRule ^v3(/.*)?$ - [L]
+# Skip v2 backup folder
+RewriteRule ^v2(/.*)?$ - [L]
 
-# Skip legacy .php files that are accessed directly (for backwards compatibility)
-RewriteCond %{REQUEST_URI} \.(php|html|htm)$
+# Skip legacy .php files for backwards compatibility
+RewriteCond %{REQUEST_URI} \.(php)$
+RewriteCond %{REQUEST_FILENAME} -f
 RewriteRule ^ - [L]
 
 # ============================================================================
-# Direct rewrites to legacy PHP files (simple, no SPA overhead)
+# Route everything else to V3 SPA index.php
 # ============================================================================
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^(.*)$ index.php?page=$1 [QSA,L]
 
-# Home
-RewriteRule ^home/?$ index.php [L]
+# ============================================================================
+# Cache static assets
+# ============================================================================
+<IfModule mod_expires.c>
+    ExpiresActive On
+    ExpiresByType text/css "access plus 1 week"
+    ExpiresByType application/javascript "access plus 1 week"
+    ExpiresByType image/svg+xml "access plus 1 month"
+    ExpiresByType image/png "access plus 1 month"
+    ExpiresByType image/jpeg "access plus 1 month"
+    ExpiresByType image/webp "access plus 1 month"
+</IfModule>
 
-# Calendar/Events
-RewriteRule ^calendar/?$ events.php [L,QSA]
-RewriteRule ^calendar/([0-9]+)/?$ event.php?id=$1 [L,QSA]
-RewriteRule ^events/?$ events.php [L,QSA]
+# Gzip compression
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/html text/css application/javascript application/json
+</IfModule>
 
-# Results
-RewriteRule ^results/?$ results.php [L,QSA]
-RewriteRule ^results/([0-9]+)/?$ event-results.php?id=$1 [L,QSA]
-
-# Series
-RewriteRule ^series/?$ series.php [L,QSA]
-RewriteRule ^series/([0-9]+)/?$ series-standings.php?id=$1 [L,QSA]
-
-# Riders/Database
-RewriteRule ^riders/?$ riders.php [L,QSA]
-RewriteRule ^rider/([0-9]+)/?$ rider.php?id=$1 [L,QSA]
-RewriteRule ^database/?$ riders.php [L,QSA]
-
-# Clubs
-RewriteRule ^clubs/?$ clubs/leaderboard.php [L,QSA]
-RewriteRule ^club/([0-9]+)/?$ club.php?id=$1 [L,QSA]
-
-# Ranking
-RewriteRule ^ranking/?$ ranking/index.php [L,QSA]
-
-# Profile
-RewriteRule ^profile/?$ profile.php [L,QSA]
-RewriteRule ^profile/login/?$ rider-login.php [L,QSA]
-RewriteRule ^profile/register/?$ rider-register.php [L,QSA]
-
-# Event (alias for results)
-RewriteRule ^event/([0-9]+)/?$ event-results.php?id=$1 [L,QSA]
+# Security headers
+<IfModule mod_headers.c>
+    Header set X-Content-Type-Options "nosniff"
+    Header set X-Frame-Options "SAMEORIGIN"
+</IfModule>
 
 # Custom error pages
-ErrorDocument 404 /404.php
+ErrorDocument 404 /index.php?page=404
