@@ -168,3 +168,43 @@
 .badge--default{background:var(--color-bg-sunken)}
 .badge--light{background:#f5f5f5;color:#333}
 .badge--dark{background:#333;color:#fff}
+
+/* Stat Cards (Admin Dashboard) */
+.stat-card{
+  background:var(--color-bg-surface);
+  border:1px solid var(--color-border);
+  border-radius:var(--radius-lg);
+  padding:var(--space-lg);
+  text-align:center;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:var(--space-sm);
+}
+.stat-number{
+  font-size:var(--text-3xl);
+  font-weight:var(--weight-bold);
+  color:var(--color-text-primary);
+  font-variant-numeric:tabular-nums;
+}
+.stat-label{
+  font-size:var(--text-sm);
+  color:var(--color-text-secondary);
+}
+
+/* Icon colors */
+.text-primary{color:var(--color-accent)}
+.text-success{color:var(--color-success)}
+.text-accent{color:var(--color-accent)}
+.text-warning{color:var(--color-warning)}
+.text-error{color:var(--color-error)}
+
+/* Button sizes */
+.btn--sm{padding:var(--space-xs) var(--space-sm);font-size:var(--text-sm)}
+.btn--lg{padding:var(--space-md) var(--space-lg);font-size:var(--text-md)}
+
+/* Flex utilities for admin */
+.flex{display:flex}
+.flex-wrap{flex-wrap:wrap}
+.gap-md{gap:var(--space-md)}
+.gap-sm{gap:var(--space-sm)}
