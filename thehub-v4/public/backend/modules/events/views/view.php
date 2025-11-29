@@ -1,0 +1,1 @@
+<div>Event view</div>
