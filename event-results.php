@@ -852,6 +852,8 @@ include __DIR__ . '/includes/layout-header.php';
    }
    ?>
    <div class="card-body card-table-container">
+   <!-- Desktop/Landscape Table View -->
+   <div class="table-wrapper">
    <table class="table gs-results-table">
     <thead>
     <tr>
@@ -905,7 +907,7 @@ include __DIR__ . '/includes/layout-header.php';
      </td>
 
      <td>
-      <a href="/rider.php?id=<?= $result['cyclist_id'] ?>" class="gs-rider-link">
+      <a href="/rider/<?= $result['cyclist_id'] ?>" class="gs-rider-link">
       <?= h($result['firstname']) ?> <?= h($result['lastname']) ?>
       </a>
      </td>
@@ -1016,6 +1018,38 @@ include __DIR__ . '/includes/layout-header.php';
     <?php endforeach; ?>
     </tbody>
    </table>
+   </div>
+
+   <!-- Mobile Portrait Card View -->
+   <div class="result-list">
+    <?php foreach ($groupData['results'] as $result): ?>
+    <a href="/rider/<?= $result['cyclist_id'] ?>" class="result-item">
+     <div class="result-place <?= ($result['class_position'] && $result['class_position'] <= 3) ? 'top-3' : '' ?>">
+      <?php if ($result['status'] === 'finished' && $result['class_position']): ?>
+       <?php if ($result['class_position'] == 1): ?>🥇
+       <?php elseif ($result['class_position'] == 2): ?>🥈
+       <?php elseif ($result['class_position'] == 3): ?>🥉
+       <?php else: ?><?= $result['class_position'] ?>
+       <?php endif; ?>
+      <?php elseif ($result['status'] === 'dnf'): ?>DNF
+      <?php elseif ($result['status'] === 'dns'): ?>DNS
+      <?php elseif ($result['status'] === 'dq'): ?>DQ
+      <?php else: ?>-
+      <?php endif; ?>
+     </div>
+     <div class="result-info">
+      <div class="result-name"><?= h($result['firstname']) ?> <?= h($result['lastname']) ?></div>
+      <div class="result-club"><?= h($result['club_name'] ?? '-') ?></div>
+     </div>
+     <div class="result-time">
+      <?php if ($result['status'] === 'finished' && $result['finish_time']): ?>
+       <?= formatDisplayTime($result['finish_time']) ?>
+      <?php endif; ?>
+     </div>
+    </a>
+    <?php endforeach; ?>
+   </div>
+
    </div>
   </div>
   <?php endforeach; ?>
