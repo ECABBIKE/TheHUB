@@ -31,7 +31,7 @@ $icons = [
 <aside class="sidebar" role="navigation" aria-label="Huvudnavigering">
     <nav class="sidebar-nav">
         <!-- PUBLIC NAVIGATION -->
-        <a href="<?= SITE_URL ?>"
+        <a href="/"
            class="sidebar-link<?= $current_page == 'index.php' && strpos($current_path, '/admin/') === false ? ' active' : '' ?>"
            aria-label="Hem"
            <?= $current_page == 'index.php' && strpos($current_path, '/admin/') === false ? 'aria-current="page"' : '' ?>>
@@ -39,7 +39,7 @@ $icons = [
             <span class="sidebar-label">Hem</span>
         </a>
 
-        <a href="/events.php"
+        <a href="/calendar"
            class="sidebar-link<?= $current_page == 'events.php' && strpos($current_path, '/admin/') === false ? ' active' : '' ?>"
            aria-label="Kalender"
            <?= $current_page == 'events.php' && strpos($current_path, '/admin/') === false ? 'aria-current="page"' : '' ?>>
@@ -47,7 +47,7 @@ $icons = [
             <span class="sidebar-label">Kalender</span>
         </a>
 
-        <a href="/results.php"
+        <a href="/results"
            class="sidebar-link<?= $current_page == 'results.php' && strpos($current_path, '/admin/') === false ? ' active' : '' ?>"
            aria-label="Resultat"
            <?= $current_page == 'results.php' && strpos($current_path, '/admin/') === false ? 'aria-current="page"' : '' ?>>
@@ -55,7 +55,7 @@ $icons = [
             <span class="sidebar-label">Resultat</span>
         </a>
 
-        <a href="/series.php"
+        <a href="/series"
            class="sidebar-link<?= $current_page == 'series.php' && strpos($current_path, '/admin/') === false ? ' active' : '' ?>"
            aria-label="Serier"
            <?= $current_page == 'series.php' && strpos($current_path, '/admin/') === false ? 'aria-current="page"' : '' ?>>
@@ -63,7 +63,7 @@ $icons = [
             <span class="sidebar-label">Serier</span>
         </a>
 
-        <a href="/riders.php"
+        <a href="/riders"
            class="sidebar-link<?= $current_page == 'riders.php' && strpos($current_path, '/admin/') === false ? ' active' : '' ?>"
            aria-label="Deltagare"
            <?= $current_page == 'riders.php' && strpos($current_path, '/admin/') === false ? 'aria-current="page"' : '' ?>>
@@ -71,7 +71,7 @@ $icons = [
             <span class="sidebar-label">Deltagare</span>
         </a>
 
-        <a href="/clubs/leaderboard.php"
+        <a href="/clubs"
            class="sidebar-link<?= strpos($current_path, '/clubs/') !== false && strpos($current_path, '/admin/') === false ? ' active' : '' ?>"
            aria-label="Klubbar"
            <?= strpos($current_path, '/clubs/') !== false && strpos($current_path, '/admin/') === false ? 'aria-current="page"' : '' ?>>
@@ -79,7 +79,7 @@ $icons = [
             <span class="sidebar-label">Klubbar</span>
         </a>
 
-        <a href="/ranking/"
+        <a href="/ranking"
            class="sidebar-link<?= strpos($current_path, '/ranking/') !== false && strpos($current_path, '/admin/') === false ? ' active' : '' ?>"
            aria-label="Ranking"
            <?= strpos($current_path, '/ranking/') !== false && strpos($current_path, '/admin/') === false ? 'aria-current="page"' : '' ?>>

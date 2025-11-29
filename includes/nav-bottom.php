@@ -8,11 +8,11 @@ $currentPage = basename($_SERVER['PHP_SELF']);
 $currentPath = $_SERVER['PHP_SELF'];
 
 $navItems = [
-    ['id' => 'events', 'label' => 'Kalender', 'url' => '/events.php', 'icon' => 'calendar'],
-    ['id' => 'results', 'label' => 'Resultat', 'url' => '/v3/results', 'icon' => 'flag'],
-    ['id' => 'series', 'label' => 'Serier', 'url' => '/v3/series', 'icon' => 'trophy'],
-    ['id' => 'ranking', 'label' => 'Ranking', 'url' => '/v3/ranking', 'icon' => 'trending-up'],
-    ['id' => 'profile', 'label' => 'Profil', 'url' => '/profile.php', 'icon' => 'user'],
+    ['id' => 'events', 'label' => 'Kalender', 'url' => '/calendar', 'icon' => 'calendar'],
+    ['id' => 'results', 'label' => 'Resultat', 'url' => '/results', 'icon' => 'flag'],
+    ['id' => 'series', 'label' => 'Serier', 'url' => '/series', 'icon' => 'trophy'],
+    ['id' => 'ranking', 'label' => 'Ranking', 'url' => '/ranking', 'icon' => 'trending-up'],
+    ['id' => 'profile', 'label' => 'Profil', 'url' => '/profile', 'icon' => 'user'],
 ];
 
 // SVG ikoner
