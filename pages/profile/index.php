@@ -421,7 +421,7 @@ $recentResults = $resultStmt->fetchAll(PDO::FETCH_ASSOC);
 </style>
 
 <script>
-// Theme picker functionality
+// Theme picker functionality - saves to both localStorage AND database
 document.addEventListener('DOMContentLoaded', function() {
     const themeOptions = document.querySelectorAll('.theme-option');
     const currentTheme = localStorage.getItem('thehub-theme') || 'auto';
@@ -432,28 +432,33 @@ document.addEventListener('DOMContentLoaded', function() {
             btn.classList.add('active');
         }
 
-        btn.addEventListener('click', function() {
+        btn.addEventListener('click', async function() {
             const theme = this.dataset.theme;
 
             // Update active state
             themeOptions.forEach(b => b.classList.remove('active'));
             this.classList.add('active');
 
-            // Save and apply theme
+            // Save to localStorage (for immediate use)
             localStorage.setItem('thehub-theme', theme);
 
-            // Apply theme
+            // Save to database (for cross-device sync)
+            try {
+                await fetch('/api/user/preferences.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ theme: theme })
+                });
+            } catch (e) {
+                console.log('Could not save theme to server');
+            }
+
+            // Apply theme immediately
             let effectiveTheme = theme;
             if (theme === 'auto') {
                 effectiveTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
             }
             document.documentElement.setAttribute('data-theme', effectiveTheme);
-
-            // Update floating theme toggle if present
-            const floatingBtns = document.querySelectorAll('.theme-toggle .theme-btn');
-            floatingBtns.forEach(b => {
-                b.setAttribute('aria-pressed', b.dataset.theme === theme ? 'true' : 'false');
-            });
         });
     });
 });
