@@ -8,7 +8,13 @@ require_once __DIR__ . '/v3-config.php';
 function hub_get_current_page(): array {
     $raw = trim($_GET['page'] ?? '', '/');
 
+    // Root route - show welcome for unauthenticated users
     if ($raw === '' || $raw === 'index.php') {
+        if (!hub_is_logged_in()) {
+            // Show welcome page for visitors
+            return ['page' => 'welcome', 'section' => null, 'params' => [], 'file' => HUB_V3_ROOT . '/pages/welcome.php'];
+        }
+        // Logged in users go to dashboard
         return ['page' => 'dashboard', 'section' => 'dashboard', 'params' => [], 'file' => HUB_V3_ROOT . '/pages/dashboard.php'];
     }
 
