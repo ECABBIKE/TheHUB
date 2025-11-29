@@ -1,10 +1,12 @@
 <?php
+/**
+ * Admin Venues - V3 Design System
+ */
 require_once __DIR__ . '/../config.php';
 require_admin();
-require_once __DIR__ . '/../includes/admin-layout.php';
 
+global $pdo;
 $db = getDB();
-$current_admin = get_current_admin();
 
 // Initialize message variables
 $message = '';
@@ -12,537 +14,374 @@ $messageType = 'info';
 
 // Handle form submissions
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
- checkCsrf();
+    checkCsrf();
 
- $action = $_POST['action'] ?? '';
+    $action = $_POST['action'] ?? '';
 
- if ($action === 'create' || $action === 'update') {
- // Validate required fields
- $name = trim($_POST['name'] ?? '');
+    if ($action === 'create' || $action === 'update') {
+        $name = trim($_POST['name'] ?? '');
 
- if (empty($name)) {
-  $message = 'Venue namn är obligatoriskt';
-  $messageType = 'error';
- } else {
-  // Prepare venue data
-  $venueData = [
-  'name' => $name,
-  'city' => trim($_POST['city'] ?? ''),
-  'region' => trim($_POST['region'] ?? ''),
-  'country' => trim($_POST['country'] ?? 'Sverige'),
-  'address' => trim($_POST['address'] ?? ''),
-  'description' => trim($_POST['description'] ?? ''),
-  'gps_lat' => !empty($_POST['gps_lat']) ? floatval($_POST['gps_lat']) : null,
-  'gps_lng' => !empty($_POST['gps_lng']) ? floatval($_POST['gps_lng']) : null,
-  'active' => isset($_POST['active']) ? 1 : 0,
-  ];
+        if (empty($name)) {
+            $message = 'Venue namn är obligatoriskt';
+            $messageType = 'error';
+        } else {
+            $venueData = [
+                'name' => $name,
+                'city' => trim($_POST['city'] ?? ''),
+                'region' => trim($_POST['region'] ?? ''),
+                'country' => trim($_POST['country'] ?? 'Sverige'),
+                'address' => trim($_POST['address'] ?? ''),
+                'description' => trim($_POST['description'] ?? ''),
+                'gps_lat' => !empty($_POST['gps_lat']) ? floatval($_POST['gps_lat']) : null,
+                'gps_lng' => !empty($_POST['gps_lng']) ? floatval($_POST['gps_lng']) : null,
+                'active' => isset($_POST['active']) ? 1 : 0,
+            ];
 
-  try {
-  if ($action === 'create') {
-   $db->insert('venues', $venueData);
-   $message = 'Venue skapad!';
-   $messageType = 'success';
-  } else {
-   $id = intval($_POST['id']);
-   $db->update('venues', $venueData, 'id = ?', [$id]);
-   $message = 'Venue uppdaterad!';
-   $messageType = 'success';
-  }
-  } catch (Exception $e) {
-  $message = 'Ett fel uppstod: ' . $e->getMessage();
-  $messageType = 'error';
-  }
- }
- } elseif ($action === 'delete') {
- $id = intval($_POST['id']);
- try {
-  $db->delete('venues', 'id = ?', [$id]);
-  $message = 'Venue borttagen!';
-  $messageType = 'success';
- } catch (Exception $e) {
-  $message = 'Ett fel uppstod: ' . $e->getMessage();
-  $messageType = 'error';
- }
- }
+            try {
+                if ($action === 'create') {
+                    $db->insert('venues', $venueData);
+                    $message = 'Venue skapad!';
+                    $messageType = 'success';
+                } else {
+                    $id = intval($_POST['id']);
+                    $db->update('venues', $venueData, 'id = ?', [$id]);
+                    $message = 'Venue uppdaterad!';
+                    $messageType = 'success';
+                }
+            } catch (Exception $e) {
+                $message = 'Ett fel uppstod: ' . $e->getMessage();
+                $messageType = 'error';
+            }
+        }
+    } elseif ($action === 'delete') {
+        $id = intval($_POST['id']);
+        try {
+            $db->delete('venues', 'id = ?', [$id]);
+            $message = 'Venue borttagen!';
+            $messageType = 'success';
+        } catch (Exception $e) {
+            $message = 'Ett fel uppstod: ' . $e->getMessage();
+            $messageType = 'error';
+        }
+    }
 }
 
-// Check if editing a venue
+// Check if editing
 $editVenue = null;
 if (isset($_GET['edit']) && is_numeric($_GET['edit'])) {
- $editVenue = $db->getRow("SELECT * FROM venues WHERE id = ?", [intval($_GET['edit'])]);
+    $editVenue = $db->getRow("SELECT * FROM venues WHERE id = ?", [intval($_GET['edit'])]);
 }
 
 // Get venues with event count
-$sql ="SELECT
- v.id,
- v.name,
- v.city,
- v.region,
- v.country,
- v.address,
- v.description,
- v.gps_lat,
- v.gps_lng,
- v.active,
- COUNT(DISTINCT e.id) as event_count
+$sql = "SELECT
+    v.id, v.name, v.city, v.region, v.country, v.address, v.description,
+    v.gps_lat, v.gps_lng, v.active,
+    COUNT(DISTINCT e.id) as event_count
 FROM venues v
 LEFT JOIN events e ON v.id = e.venue_id
 GROUP BY v.id
 ORDER BY v.name";
 
 try {
- $venues = $db->getAll($sql);
+    $venues = $db->getAll($sql);
 } catch (Exception $e) {
- $venues = [];
- $error = $e->getMessage();
+    $venues = [];
+    $error = $e->getMessage();
 }
 
-$pageTitle = 'Venues';
-$pageType = 'admin';
-include __DIR__ . '/../includes/layout-header.php';
+// Calculate stats
+$totalVenues = count($venues);
+$activeCount = count(array_filter($venues, fn($v) => $v['active'] == 1));
+$totalEvents = array_sum(array_column($venues, 'event_count'));
+
+// Page config
+$page_title = 'Banor';
+$breadcrumbs = [['label' => 'Banor']];
+$page_actions = '<button onclick="openVenueModal()" class="btn-admin btn-admin-primary">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+    Ny Venue
+</button>';
+
+include __DIR__ . '/components/admin-layout.php';
 ?>
 
-<main class="main-content">
- <div class="container">
- <?php render_admin_header('Deltagare & Klubbar'); ?>
- <div class="mb-lg">
-  <button type="button" class="btn btn--primary" onclick="openVenueModal()">
-  <i data-lucide="plus"></i>
-  Ny Venue
-  </button>
- </div>
+<?php if ($message): ?>
+    <div class="alert alert-<?= $messageType === 'success' ? 'success' : ($messageType === 'error' ? 'error' : 'info') ?>">
+        <?= htmlspecialchars($message) ?>
+    </div>
+<?php endif; ?>
 
- <!-- Messages -->
- <?php if ($message): ?>
-  <div class="alert alert-<?= $messageType ?> mb-lg">
-  <i data-lucide="<?= $messageType === 'success' ? 'check-circle' : ($messageType === 'error' ? 'alert-circle' : 'info') ?>"></i>
-  <?= h($message) ?>
-  </div>
- <?php endif; ?>
+<?php if (isset($error)): ?>
+    <div class="alert alert-error">
+        <strong>Fel:</strong> <?= htmlspecialchars($error) ?>
+    </div>
+<?php endif; ?>
 
- <?php if (isset($error)): ?>
-  <div class="alert alert-danger mb-lg">
-  <strong>Fel:</strong> <?= htmlspecialchars($error) ?>
-  </div>
- <?php endif; ?>
-
- <!-- Venue Modal -->
- <div id="venueModal" class="gs-modal gs-display-none">
-  <div class="gs-modal-overlay" onclick="closeVenueModal()"></div>
-  <div class="gs-modal-content container-max-700">
-  <div class="gs-modal-header">
-   <h2 class="gs-modal-title" id="modalTitle">
-   <i data-lucide="map-pin"></i>
-   <span id="modalTitleText">Ny Venue</span>
-   </h2>
-   <button type="button" class="gs-modal-close" onclick="closeVenueModal()">
-   <i data-lucide="x"></i>
-   </button>
-  </div>
-  <form method="POST" id="venueForm">
-   <?= csrf_field() ?>
-   <input type="hidden" name="action" id="formAction" value="create">
-   <input type="hidden" name="id" id="venueId" value="">
-
-   <div class="gs-modal-body">
-   <div class="grid grid-cols-1 gap-md">
-    <!-- Name (Required) -->
-    <div>
-    <label for="name" class="label">
-     <i data-lucide="map-pin"></i>
-     Namn <span class="text-error">*</span>
-    </label>
-    <input
-     type="text"
-     id="name"
-     name="name"
-     class="input"
-     required
-     placeholder="T.ex. Järvsö Bergscykelpark"
-    >
+<!-- Stats Grid -->
+<div class="admin-stats-grid">
+    <div class="admin-stat-card">
+        <div class="admin-stat-icon" style="background: var(--color-info-light); color: var(--color-info);">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+        </div>
+        <div class="admin-stat-content">
+            <div class="admin-stat-value"><?= $totalVenues ?></div>
+            <div class="admin-stat-label">Totalt venues</div>
+        </div>
     </div>
 
-    <!-- City and Region -->
-    <div class="grid grid-cols-2 gap-md">
-    <div>
-     <label for="city" class="label">
-     <i data-lucide="map-pin"></i>
-     Stad
-     </label>
-     <input
-     type="text"
-     id="city"
-     name="city"
-     class="input"
-     placeholder="T.ex. Järvsö"
-     >
+    <div class="admin-stat-card">
+        <div class="admin-stat-icon" style="background: var(--color-success-light); color: var(--color-success);">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+        </div>
+        <div class="admin-stat-content">
+            <div class="admin-stat-value"><?= $activeCount ?></div>
+            <div class="admin-stat-label">Aktiva</div>
+        </div>
     </div>
 
-    <div>
-     <label for="region" class="label">
-     <i data-lucide="map"></i>
-     Region
-     </label>
-     <input
-     type="text"
-     id="region"
-     name="region"
-     class="input"
-     placeholder="T.ex. Gävleborg"
-     >
+    <div class="admin-stat-card">
+        <div class="admin-stat-icon" style="background: var(--color-accent-light); color: var(--color-accent);">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg>
+        </div>
+        <div class="admin-stat-content">
+            <div class="admin-stat-value"><?= $totalEvents ?></div>
+            <div class="admin-stat-label">Totalt events</div>
+        </div>
     </div>
+</div>
+
+<!-- Venues Table -->
+<div class="admin-card">
+    <div class="admin-card-header">
+        <h2><?= count($venues) ?> venues</h2>
     </div>
-
-    <!-- Country -->
-    <div>
-    <label for="country" class="label">
-     <i data-lucide="globe"></i>
-     Land
-    </label>
-    <input
-     type="text"
-     id="country"
-     name="country"
-     class="input"
-     value="Sverige"
-     placeholder="Sverige"
-    >
+    <div class="admin-card-body" style="padding: 0;">
+        <?php if (empty($venues)): ?>
+            <div class="admin-empty-state">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+                <h3>Inga venues hittades</h3>
+                <p>Skapa en ny venue för att komma igång.</p>
+                <button onclick="openVenueModal()" class="btn-admin btn-admin-primary">Skapa venue</button>
+            </div>
+        <?php else: ?>
+            <div class="admin-table-container">
+                <table class="admin-table">
+                    <thead>
+                        <tr>
+                            <th>Namn</th>
+                            <th>Stad/Region</th>
+                            <th>Land</th>
+                            <th>GPS</th>
+                            <th>Events</th>
+                            <th>Status</th>
+                            <th style="width: 120px;">Åtgärder</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($venues as $venue): ?>
+                            <tr>
+                                <td>
+                                    <a href="?edit=<?= $venue['id'] ?>" style="color: var(--color-accent); text-decoration: none; font-weight: 500;">
+                                        <?= htmlspecialchars($venue['name']) ?>
+                                    </a>
+                                    <?php if (!empty($venue['description'])): ?>
+                                        <div style="font-size: var(--text-xs); color: var(--color-text-secondary); margin-top: 2px;">
+                                            <?= htmlspecialchars(substr($venue['description'], 0, 80)) ?><?= strlen($venue['description']) > 80 ? '...' : '' ?>
+                                        </div>
+                                    <?php endif; ?>
+                                </td>
+                                <td style="color: var(--color-text-secondary);">
+                                    <?php if ($venue['city'] || $venue['region']): ?>
+                                        <?= htmlspecialchars($venue['city']) ?><?= $venue['city'] && $venue['region'] ? ', ' : '' ?><?= htmlspecialchars($venue['region']) ?>
+                                    <?php else: ?>-<?php endif; ?>
+                                </td>
+                                <td style="color: var(--color-text-secondary);"><?= htmlspecialchars($venue['country'] ?? 'Sverige') ?></td>
+                                <td>
+                                    <?php if ($venue['gps_lat'] && $venue['gps_lng']): ?>
+                                        <a href="https://www.google.com/maps?q=<?= $venue['gps_lat'] ?>,<?= $venue['gps_lng'] ?>" target="_blank" style="color: var(--color-accent); text-decoration: none; font-size: var(--text-xs);">
+                                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 12px; height: 12px; vertical-align: middle;"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+                                            Visa karta
+                                        </a>
+                                    <?php else: ?>-<?php endif; ?>
+                                </td>
+                                <td>
+                                    <?php if ($venue['event_count'] > 0): ?>
+                                        <a href="/admin/events?venue_id=<?= $venue['id'] ?>" class="btn-admin btn-admin-sm btn-admin-secondary">
+                                            <?= $venue['event_count'] ?>
+                                        </a>
+                                    <?php else: ?>
+                                        <span style="color: var(--color-text-secondary);">0</span>
+                                    <?php endif; ?>
+                                </td>
+                                <td>
+                                    <span class="admin-badge <?= $venue['active'] ? 'admin-badge-success' : 'admin-badge-secondary' ?>">
+                                        <?= $venue['active'] ? 'Aktiv' : 'Inaktiv' ?>
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="table-actions">
+                                        <a href="?edit=<?= $venue['id'] ?>" class="btn-admin btn-admin-sm btn-admin-secondary" title="Redigera">
+                                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
+                                        </a>
+                                        <button onclick="deleteVenue(<?= $venue['id'] ?>, '<?= addslashes($venue['name']) ?>')" class="btn-admin btn-admin-sm btn-admin-danger" title="Ta bort">
+                                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+        <?php endif; ?>
     </div>
+</div>
 
-    <!-- Address -->
-    <div>
-    <label for="address" class="label">
-     <i data-lucide="home"></i>
-     Adress
-    </label>
-    <input
-     type="text"
-     id="address"
-     name="address"
-     class="input"
-     placeholder="T.ex. Järvsöbacken 10"
-    >
+<!-- Venue Modal -->
+<div id="venueModal" class="admin-modal" style="display: none;">
+    <div class="admin-modal-overlay" onclick="closeVenueModal()"></div>
+    <div class="admin-modal-content" style="max-width: 600px;">
+        <div class="admin-modal-header">
+            <h2 id="modalTitle">Ny Venue</h2>
+            <button type="button" class="admin-modal-close" onclick="closeVenueModal()">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+            </button>
+        </div>
+        <form method="POST" id="venueForm">
+            <?= csrf_field() ?>
+            <input type="hidden" name="action" id="formAction" value="create">
+            <input type="hidden" name="id" id="venueId" value="">
+
+            <div class="admin-modal-body">
+                <div class="admin-form-group">
+                    <label class="admin-form-label">Namn <span style="color: var(--color-error);">*</span></label>
+                    <input type="text" id="name" name="name" class="admin-form-input" required placeholder="T.ex. Järvsö Bergscykelpark">
+                </div>
+
+                <div class="admin-form-row">
+                    <div class="admin-form-group">
+                        <label class="admin-form-label">Stad</label>
+                        <input type="text" id="city" name="city" class="admin-form-input" placeholder="T.ex. Järvsö">
+                    </div>
+                    <div class="admin-form-group">
+                        <label class="admin-form-label">Region</label>
+                        <input type="text" id="region" name="region" class="admin-form-input" placeholder="T.ex. Gävleborg">
+                    </div>
+                </div>
+
+                <div class="admin-form-group">
+                    <label class="admin-form-label">Land</label>
+                    <input type="text" id="country" name="country" class="admin-form-input" value="Sverige" placeholder="Sverige">
+                </div>
+
+                <div class="admin-form-group">
+                    <label class="admin-form-label">Adress</label>
+                    <input type="text" id="address" name="address" class="admin-form-input" placeholder="T.ex. Järvsöbacken 10">
+                </div>
+
+                <div class="admin-form-group">
+                    <label class="admin-form-label">Beskrivning</label>
+                    <textarea id="description" name="description" class="admin-form-textarea" rows="3" placeholder="Information om venue..."></textarea>
+                </div>
+
+                <div class="admin-form-row">
+                    <div class="admin-form-group">
+                        <label class="admin-form-label">GPS Latitud</label>
+                        <input type="number" step="0.0000001" id="gps_lat" name="gps_lat" class="admin-form-input" placeholder="61.7218">
+                    </div>
+                    <div class="admin-form-group">
+                        <label class="admin-form-label">GPS Longitud</label>
+                        <input type="number" step="0.0000001" id="gps_lng" name="gps_lng" class="admin-form-input" placeholder="16.1506">
+                    </div>
+                </div>
+
+                <div class="admin-form-group">
+                    <label class="admin-checkbox-label">
+                        <input type="checkbox" id="active" name="active" checked>
+                        <span>Aktiv</span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="admin-modal-footer">
+                <button type="button" class="btn-admin btn-admin-secondary" onclick="closeVenueModal()">Avbryt</button>
+                <button type="submit" class="btn-admin btn-admin-primary" id="submitButton">Skapa</button>
+            </div>
+        </form>
     </div>
+</div>
 
-    <!-- Description -->
-    <div>
-    <label for="description" class="label">
-     <i data-lucide="file-text"></i>
-     Beskrivning / Information
-    </label>
-    <textarea
-     id="description"
-     name="description"
-     class="input"
-     rows="4"
-     placeholder="Information om venue/bikepark..."
-    ></textarea>
-    </div>
+<script>
+const csrfToken = '<?= htmlspecialchars(generate_csrf_token()) ?>';
 
-    <!-- GPS Coordinates -->
-    <div class="grid grid-cols-2 gap-md">
-    <div>
-     <label for="gps_lat" class="label">
-     <i data-lucide="navigation"></i>
-     GPS Latitud
-     </label>
-     <input
-     type="number"
-     step="0.0000001"
-     id="gps_lat"
-     name="gps_lat"
-     class="input"
-     placeholder="61.7218"
-     >
-    </div>
+function openVenueModal() {
+    document.getElementById('venueModal').style.display = 'flex';
+    document.getElementById('venueForm').reset();
+    document.getElementById('formAction').value = 'create';
+    document.getElementById('venueId').value = '';
+    document.getElementById('modalTitle').textContent = 'Ny Venue';
+    document.getElementById('submitButton').textContent = 'Skapa';
+    document.getElementById('active').checked = true;
+    document.getElementById('country').value = 'Sverige';
+}
 
-    <div>
-     <label for="gps_lng" class="label">
-     <i data-lucide="navigation"></i>
-     GPS Longitud
-     </label>
-     <input
-     type="number"
-     step="0.0000001"
-     id="gps_lng"
-     name="gps_lng"
-     class="input"
-     placeholder="16.1506"
-     >
-    </div>
-    </div>
+function closeVenueModal() {
+    document.getElementById('venueModal').style.display = 'none';
+}
 
-    <!-- Active Status -->
-    <div>
-    <label class="checkbox-label">
-     <input
-     type="checkbox"
-     id="active"
-     name="active"
-     class="checkbox"
-     checked
-     >
-     <span>
-     <i data-lucide="check-circle"></i>
-     Aktiv
-     </span>
-    </label>
-    </div>
-   </div>
-   </div>
+function deleteVenue(id, name) {
+    if (!confirm('Är du säker på att du vill ta bort "' + name + '"?')) return;
 
-   <div class="gs-modal-footer">
-   <button type="button" class="btn btn--secondary" onclick="closeVenueModal()">
-    Avbryt
-   </button>
-   <button type="submit" class="btn btn--primary" id="submitButton">
-    <i data-lucide="check"></i>
-    <span id="submitButtonText">Skapa</span>
-   </button>
-   </div>
-  </form>
-  </div>
- </div>
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.innerHTML = '<input type="hidden" name="action" value="delete">' +
+                     '<input type="hidden" name="id" value="' + id + '">' +
+                     '<input type="hidden" name="csrf_token" value="' + csrfToken + '">';
+    document.body.appendChild(form);
+    form.submit();
+}
 
- <!-- Stats -->
- <div class="grid grid-cols-1 md-grid-cols-3 gap-lg mb-lg">
-  <div class="stat-card">
-  <i data-lucide="map-pin" class="icon-lg text-primary mb-md"></i>
-  <div class="stat-number"><?= count($venues) ?></div>
-  <div class="stat-label">Totalt venues</div>
-  </div>
-  <div class="stat-card">
-  <i data-lucide="check-circle" class="icon-lg text-success mb-md"></i>
-  <div class="stat-number">
-   <?= count(array_filter($venues, fn($v) => $v['active'] == 1)) ?>
-  </div>
-  <div class="stat-label">Aktiva</div>
-  </div>
-  <div class="stat-card">
-  <i data-lucide="calendar" class="icon-lg text-accent mb-md"></i>
-  <div class="stat-number">
-   <?= array_sum(array_column($venues, 'event_count')) ?>
-  </div>
-  <div class="stat-label">Totalt events</div>
-  </div>
- </div>
+// Handle edit mode from URL parameter
+document.addEventListener('DOMContentLoaded', function() {
+    <?php if ($editVenue): ?>
+        document.getElementById('formAction').value = 'update';
+        document.getElementById('venueId').value = '<?= $editVenue['id'] ?>';
+        document.getElementById('name').value = '<?= addslashes($editVenue['name']) ?>';
+        document.getElementById('city').value = '<?= addslashes($editVenue['city'] ?? '') ?>';
+        document.getElementById('region').value = '<?= addslashes($editVenue['region'] ?? '') ?>';
+        document.getElementById('country').value = '<?= addslashes($editVenue['country'] ?? 'Sverige') ?>';
+        document.getElementById('address').value = '<?= addslashes($editVenue['address'] ?? '') ?>';
+        document.getElementById('description').value = '<?= addslashes($editVenue['description'] ?? '') ?>';
+        document.getElementById('gps_lat').value = '<?= $editVenue['gps_lat'] ?? '' ?>';
+        document.getElementById('gps_lng').value = '<?= $editVenue['gps_lng'] ?? '' ?>';
+        document.getElementById('active').checked = <?= $editVenue['active'] ? 'true' : 'false' ?>;
 
- <!-- Venues Table -->
- <?php if (empty($venues)): ?>
-  <div class="card">
-  <div class="card-body text-center py-xl">
-   <i data-lucide="map-pin" class="gs-icon-64-secondary"></i>
-   <p class="text-secondary">Inga venues hittades</p>
-   <button type="button" class="btn btn--primary mt-md" onclick="openVenueModal()">
-   <i data-lucide="plus"></i>
-   Skapa första venue
-   </button>
-  </div>
-  </div>
- <?php else: ?>
-  <div class="card">
-  <div class="table-responsive">
-   <table class="table">
-   <thead>
-    <tr>
-    <th>
-     <i data-lucide="map-pin"></i>
-     Namn
-    </th>
-    <th>Stad/Region</th>
-    <th>Land</th>
-    <th>GPS</th>
-    <th>
-     <i data-lucide="calendar"></i>
-     Events
-    </th>
-    <th>Status</th>
-    <th class="table-col-w-150-right">Åtgärder</th>
-    </tr>
-   </thead>
-   <tbody>
-    <?php foreach ($venues as $venue): ?>
-    <tr>
-     <td>
-     <strong><?= h($venue['name']) ?></strong>
-     <?php if (!empty($venue['description'])): ?>
-      <div class="text-xs text-secondary gs-mt-4px">
-      <?= h(substr($venue['description'], 0, 80)) ?><?= strlen($venue['description']) > 80 ? '...' : '' ?>
-      </div>
-     <?php endif; ?>
-     </td>
-     <td>
-     <?php if ($venue['city'] || $venue['region']): ?>
-      <?= h($venue['city']) ?><?= $venue['city'] && $venue['region'] ? ', ' : '' ?><?= h($venue['region']) ?>
-     <?php else: ?>
-      -
-     <?php endif; ?>
-     </td>
-     <td><?= h($venue['country'] ?? 'Sverige') ?></td>
-     <td>
-     <?php if ($venue['gps_lat'] && $venue['gps_lng']): ?>
-      <a href="https://www.google.com/maps?q=<?= $venue['gps_lat'] ?>,<?= $venue['gps_lng'] ?>"
-      target="_blank"
-      class="link text-xs"
-      title="Öppna i Google Maps">
-      <i data-lucide="map" class="gs-icon-12"></i>
-      Visa karta
-      </a>
-     <?php else: ?>
-      -
-     <?php endif; ?>
-     </td>
-     <td class="text-center">
-     <?php if ($venue['event_count'] > 0): ?>
-      <strong class="text-primary"><?= $venue['event_count'] ?></strong>
-     <?php else: ?>
-      <span class="text-secondary">0</span>
-     <?php endif; ?>
-     </td>
-     <td>
-     <?php if ($venue['active']): ?>
-      <span class="badge badge-success">
-      <i data-lucide="check-circle"></i>
-      Aktiv
-      </span>
-     <?php else: ?>
-      <span class="badge badge-secondary">Inaktiv</span>
-     <?php endif; ?>
-     </td>
-     <td class="text-right">
-     <div class="flex gap-sm gs-justify-end">
-      <?php if ($venue['event_count'] > 0): ?>
-      <a
-       href="/admin/events.php?venue_id=<?= $venue['id'] ?>"
-       class="btn btn--sm btn--secondary"
-       title="Visa events"
-      >
-       <i data-lucide="calendar"></i>
-       <?= $venue['event_count'] ?>
-      </a>
-      <?php endif; ?>
-      <button
-      type="button"
-      class="btn btn--sm btn--secondary"
-      onclick="editVenue(<?= $venue['id'] ?>)"
-      title="Redigera"
-      >
-      <i data-lucide="edit"></i>
-      </button>
-      <button
-      type="button"
-      class="btn btn--sm btn--secondary btn-danger"
-      onclick="deleteVenue(<?= $venue['id'] ?>, '<?= addslashes(h($venue['name'])) ?>')"
-      title="Ta bort"
-      >
-      <i data-lucide="trash-2"></i>
-      </button>
-     </div>
-     </td>
-    </tr>
-    <?php endforeach; ?>
-   </tbody>
-   </table>
-  </div>
-  </div>
- <?php endif; ?>
- </div>
+        document.getElementById('modalTitle').textContent = 'Redigera Venue';
+        document.getElementById('submitButton').textContent = 'Uppdatera';
+        document.getElementById('venueModal').style.display = 'flex';
+    <?php endif; ?>
+});
 
- <script>
- // Open modal for creating new venue
- function openVenueModal() {
-  document.getElementById('venueModal').style.display = 'flex';
-  document.getElementById('venueForm').reset();
-  document.getElementById('formAction').value = 'create';
-  document.getElementById('venueId').value = '';
-  document.getElementById('modalTitleText').textContent = 'Ny Venue';
-  document.getElementById('submitButtonText').textContent = 'Skapa';
-  document.getElementById('active').checked = true;
-  document.getElementById('country').value = 'Sverige';
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeVenueModal();
+});
+</script>
 
-  // Re-initialize Lucide icons
-  if (typeof lucide !== 'undefined') {
-  lucide.createIcons();
-  }
- }
+<style>
+.admin-modal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 1000; display: flex; align-items: center; justify-content: center; }
+.admin-modal-overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.5); }
+.admin-modal-content { position: relative; background: var(--color-bg); border-radius: var(--radius-lg); box-shadow: var(--shadow-xl); width: 90%; max-width: 600px; max-height: 90vh; overflow: hidden; display: flex; flex-direction: column; }
+.admin-modal-header { display: flex; align-items: center; justify-content: space-between; padding: var(--space-lg); border-bottom: 1px solid var(--color-border); }
+.admin-modal-header h2 { margin: 0; font-size: var(--text-xl); }
+.admin-modal-close { background: none; border: none; padding: var(--space-xs); cursor: pointer; color: var(--color-text-secondary); border-radius: var(--radius-sm); }
+.admin-modal-close:hover { background: var(--color-bg-tertiary); color: var(--color-text); }
+.admin-modal-close svg { width: 20px; height: 20px; }
+.admin-modal-body { padding: var(--space-lg); overflow-y: auto; flex: 1; }
+.admin-modal-footer { display: flex; justify-content: flex-end; gap: var(--space-sm); padding: var(--space-lg); border-top: 1px solid var(--color-border); }
+.admin-form-textarea { width: 100%; padding: var(--space-sm) var(--space-md); border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-bg); color: var(--color-text); font-family: inherit; font-size: var(--text-sm); resize: vertical; }
+.admin-form-textarea:focus { outline: none; border-color: var(--color-accent); box-shadow: 0 0 0 3px var(--color-accent-alpha); }
+.admin-checkbox-label { display: flex; align-items: center; gap: var(--space-xs); cursor: pointer; font-size: var(--text-sm); }
+.admin-checkbox-label input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--color-accent); }
+</style>
 
- // Close modal
- function closeVenueModal() {
-  document.getElementById('venueModal').style.display = 'none';
- }
-
- // Edit venue - reload page with edit parameter
- function editVenue(id) {
-  window.location.href = `?edit=${id}`;
- }
-
- // Delete venue
- function deleteVenue(id, name) {
-  if (!confirm(`Är du säker på att du vill ta bort"${name}"?`)) {
-  return;
-  }
-
-  // Create form and submit
-  const form = document.createElement('form');
-  form.method = 'POST';
-  form.innerHTML = `
-  <?= csrf_field() ?>
-  <input type="hidden" name="action" value="delete">
-  <input type="hidden" name="id" value="${id}">
-  `;
-  document.body.appendChild(form);
-  form.submit();
- }
-
- // Close modal when clicking outside
- document.addEventListener('DOMContentLoaded', function() {
-  const modal = document.getElementById('venueModal');
-  if (modal) {
-  modal.addEventListener('click', function(e) {
-   if (e.target === modal) {
-   closeVenueModal();
-   }
-  });
-  }
-
-  // Handle edit mode from URL parameter
-  <?php if ($editVenue): ?>
-  // Populate form with venue data
-  document.getElementById('formAction').value = 'update';
-  document.getElementById('venueId').value = '<?= $editVenue['id'] ?>';
-  document.getElementById('name').value = '<?= addslashes($editVenue['name']) ?>';
-  document.getElementById('city').value = '<?= addslashes($editVenue['city'] ?? '') ?>';
-  document.getElementById('region').value = '<?= addslashes($editVenue['region'] ?? '') ?>';
-  document.getElementById('country').value = '<?= addslashes($editVenue['country'] ?? 'Sverige') ?>';
-  document.getElementById('address').value = '<?= addslashes($editVenue['address'] ?? '') ?>';
-  document.getElementById('description').value = '<?= addslashes($editVenue['description'] ?? '') ?>';
-  document.getElementById('gps_lat').value = '<?= $editVenue['gps_lat'] ?? '' ?>';
-  document.getElementById('gps_lng').value = '<?= $editVenue['gps_lng'] ?? '' ?>';
-  document.getElementById('active').checked = <?= $editVenue['active'] ? 'true' : 'false' ?>;
-
-  // Update modal title and button
-  document.getElementById('modalTitleText').textContent = 'Redigera Venue';
-  document.getElementById('submitButtonText').textContent = 'Uppdatera';
-
-  // Open modal
-  document.getElementById('venueModal').style.display = 'flex';
-
-  // Re-initialize Lucide icons
-  if (typeof lucide !== 'undefined') {
-   lucide.createIcons();
-  }
-  <?php endif; ?>
- });
-
- // Close modal with Escape key
- document.addEventListener('keydown', function(e) {
-  if (e.key === 'Escape') {
-  closeVenueModal();
-  }
- });
- </script>
- <?php render_admin_footer(); ?>
- </div>
-</main>
-
-<?php include __DIR__ . '/../includes/layout-footer.php'; ?>
+<?php include __DIR__ . '/components/admin-footer.php'; ?>
