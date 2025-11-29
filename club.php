@@ -8,7 +8,7 @@ $db = getDB();
 $clubId = isset($_GET['id']) ? (int)$_GET['id'] : 0;
 
 if (!$clubId) {
- header('Location: /riders.php');
+ header('Location: /riders');
  exit;
 }
 
@@ -18,7 +18,7 @@ $club = $db->getRow("
 ", [$clubId]);
 
 if (!$club) {
- header('Location: /riders.php');
+ header('Location: /riders');
  exit;
 }
 
@@ -133,7 +133,7 @@ include __DIR__ . '/includes/layout-header.php';
  <div class="container">
  <!-- Back Button -->
  <div class="mb-lg">
-  <a href="/riders.php" class="btn btn--secondary btn--sm">
+  <a href="/riders" class="btn btn--secondary btn--sm">
   <i data-lucide="arrow-left"></i>
   Tillbaka till deltagare
   </a>
@@ -322,7 +322,7 @@ include __DIR__ . '/includes/layout-header.php';
 
     $hasPoints = $rider['total_points'] > 0;
     ?>
-    <a href="/rider.php?id=<?= $rider['id'] ?>" class="gs-rider-card <?= !$hasPoints ? 'gs-no-points' : '' ?>">
+    <a href="/rider/<?= $rider['id'] ?>" class="gs-rider-card <?= !$hasPoints ? 'gs-no-points' : '' ?>">
     <div class="gs-rider-card-name">
      <?= h($rider['firstname']) ?> <?= h($rider['lastname']) ?>
     </div>
@@ -410,7 +410,7 @@ include __DIR__ . '/includes/layout-header.php';
     <tbody>
     <?php $position = 1; ?>
     <?php foreach ($rankingContributors as $contributor): ?>
-     <tr class="table-row-clickable" onclick="window.location.href='/rider.php?id=<?= $contributor['rider_id'] ?>'">
+     <tr class="table-row-clickable" onclick="window.location.href='/rider/<?= $contributor['rider_id'] ?>'">
      <td><?= $position ?></td>
      <td>
       <strong><?= h($contributor['firstname'] . ' ' . $contributor['lastname']) ?></strong>

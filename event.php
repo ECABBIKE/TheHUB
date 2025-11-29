@@ -9,11 +9,11 @@ require_once __DIR__ . '/config.php';
 $eventId = isset($_GET['id']) ? (int)$_GET['id'] : 0;
 
 if (!$eventId) {
-    header('Location: /events.php');
+    header('Location: /calendar');
     exit;
 }
 
 // Redirect to event-results.php with any tab parameter
 $tab = isset($_GET['tab']) ? '&tab=' . urlencode($_GET['tab']) : '';
-header('Location: /event-results.php?id=' . $eventId . $tab);
+header('Location: /results/' . $eventId . ($tab ? '?tab=' . urlencode($_GET['tab']) : ''));
 exit;

@@ -308,7 +308,7 @@ include __DIR__ . '/../includes/layout-header.php';
   <?php else: ?>
   <div class="scorer-list">
    <?php $rank = 1; foreach ($topScorers as $riderId => $scorer): ?>
-   <a href="/rider.php?id=<?= $riderId ?>" class="scorer-item">
+   <a href="/rider/<?= $riderId ?>" class="scorer-item">
     <div class="scorer-rank"><?= $rank ?></div>
     <div class="scorer-info">
     <div class="scorer-name"><?= h($scorer['name']) ?></div>

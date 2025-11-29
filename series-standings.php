@@ -10,7 +10,7 @@ $seriesId = isset($_GET['id']) ? (int)$_GET['id'] : 0;
 
 if (!$seriesId) {
  // Redirect to series page if no ID provided
- header('Location: /series.php');
+ header('Location: /series');
  exit;
 }
 
@@ -38,7 +38,7 @@ $series = $db->getRow("
 ", [$seriesId]);
 
 if (!$series) {
- header('Location: /series.php');
+ header('Location: /series');
  exit;
 }
 
@@ -355,7 +355,7 @@ function setEventRange(btn, range) {
  <div class="container">
  <!-- Back Button -->
  <div class="mb-lg">
- <a href="/series.php" class="btn btn--secondary btn--sm">
+ <a href="/series" class="btn btn--secondary btn--sm">
  <i data-lucide="arrow-left"></i>
  Tillbaka till serier
  </a>
@@ -438,7 +438,7 @@ function setEventRange(btn, range) {
    </td>
    <td><?= $event['organizer'] ? h($event['organizer']) : '–' ?></td>
    <td class="text-center">
-   <a href="/event.php?id=<?= $event['id'] ?>" class="btn btn--sm btn--primary">
+   <a href="/results/<?= $event['id'] ?>" class="btn btn--sm btn--primary">
    <i data-lucide="list"></i>
    Se resultat (<?= $event['result_count'] ?>)
    </a>
@@ -573,7 +573,7 @@ function setEventRange(btn, range) {
    <?php endif; ?>
    </td>
    <td class="standings-sticky-td-name">
-   <a href="/rider.php?id=<?= $rider['rider_id'] ?>" class="link">
+   <a href="/rider/<?= $rider['rider_id'] ?>" class="link">
    <strong><?= h($rider['firstname']) ?> <?= h($rider['lastname']) ?></strong>
    </a>
    </td>
@@ -688,7 +688,7 @@ function setEventRange(btn, range) {
    <?php endif; ?>
    </td>
    <td class="standings-sticky-td-name">
-   <a href="/rider.php?id=<?= $rider['rider_id'] ?>" class="link">
+   <a href="/rider/<?= $rider['rider_id'] ?>" class="link">
    <strong><?= h($rider['firstname']) ?> <?= h($rider['lastname']) ?></strong>
    </a>
    </td>
