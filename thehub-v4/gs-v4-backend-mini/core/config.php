@@ -1,6 +1,6 @@
 <?php
 // gs-v4-backend-mini · core/config.php
-// Using your real database (u994733455_thehub)
+// Using your real database (adjust if needed)
 
 define('DB_HOST', 'localhost');
 define('DB_NAME', 'u994733455_thehub');

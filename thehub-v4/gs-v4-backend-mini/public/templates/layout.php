@@ -4,15 +4,15 @@ require_once __DIR__ . '/../../core/config.php';
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>GS V4 Backend Mini</title>
+  <title>GS V4 Backend · Riders</title>
   <link rel="stylesheet" href="<?php echo url('css/admin.css'); ?>">
 </head>
 <body>
   <div class="app-shell">
     <header class="app-header">
-      <div class="app-title">GS V4 · Backend Mini</div>
+      <div class="app-title">GS V4 · Backend Test</div>
       <nav class="app-nav">
-        <a href="<?php echo url('?module=cyclists'); ?>">Cyclists</a>
+        <a href="<?php echo url('?module=riders'); ?>">Riders</a>
       </nav>
     </header>
     <main class="app-main">
