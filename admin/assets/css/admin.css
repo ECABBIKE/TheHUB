@@ -310,9 +310,13 @@
     flex-shrink: 0;
 }
 
-/* Hide text labels on desktop */
+/* Hide text labels on desktop - MUST be hidden */
 .nav-label {
-    display: none;
+    display: none !important;
+    visibility: hidden !important;
+    width: 0 !important;
+    height: 0 !important;
+    overflow: hidden !important;
 }
 
 /* Tooltip on hover */
@@ -919,7 +923,11 @@
     }
 
     .admin-sidebar .nav-label {
-        display: block;
+        display: block !important;
+        visibility: visible !important;
+        width: auto !important;
+        height: auto !important;
+        overflow: visible !important;
     }
 
     /* Hide tooltips on mobile (labels are visible) */
