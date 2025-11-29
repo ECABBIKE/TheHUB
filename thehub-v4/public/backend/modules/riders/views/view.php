@@ -1,1 +1,0 @@
-<div>Rider view</div>

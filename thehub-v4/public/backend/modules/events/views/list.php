@@ -1,1 +1,0 @@
-<div>Event list</div>

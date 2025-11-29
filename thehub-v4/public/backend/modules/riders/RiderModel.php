@@ -1,3 +1,0 @@
-<?php
-// rider model
-?>
