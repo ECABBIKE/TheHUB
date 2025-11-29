@@ -83,7 +83,7 @@ include __DIR__ . '/includes/layout-header.php';
  <?php else: ?>
  <div class="gs-series-list">
   <?php foreach ($series as $s): ?>
-  <a href="/series-standings.php?id=<?= $s['id'] ?>" class="link-inherit">
+  <a href="/series/<?= $s['id'] ?>" class="link-inherit">
   <div class="card card-hover gs-series-card gs-transition-card">
   <!-- Logo Left -->
   <div class="gs-series-logo">

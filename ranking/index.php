@@ -158,7 +158,7 @@ include __DIR__ . '/../includes/layout-header.php';
                         elseif ($rider['ranking_position'] == 2) $rankClass = 'rank-2';
                         elseif ($rider['ranking_position'] == 3) $rankClass = 'rank-3';
                         ?>
-                        <a href="/rider.php?id=<?= $rider['rider_id'] ?>" class="gs-ranking-card <?= $rankClass ?>">
+                        <a href="/rider/<?= $rider['rider_id'] ?>" class="gs-ranking-card <?= $rankClass ?>">
                             <div class="gs-rank-badge">
                                 <?php if ($rider['ranking_position'] <= 3): ?>
                                     <span class="gs-medal"><?php
@@ -219,7 +219,7 @@ include __DIR__ . '/../includes/layout-header.php';
                         </thead>
                         <tbody>
                             <?php foreach ($ranking['riders'] as $rider): ?>
-                                <tr class="gs-table-row-clickable" onclick="window.location.href='/rider.php?id=<?= $rider['rider_id'] ?>'">
+                                <tr class="gs-table-row-clickable" onclick="window.location.href='/rider/<?= $rider['rider_id'] ?>'">
                                     <td>
                                         <?php if ($rider['ranking_position'] <= 3): ?>
                                             <span class="gs-medal-badge gs-medal-<?= $rider['ranking_position'] ?>">
@@ -303,7 +303,7 @@ include __DIR__ . '/../includes/layout-header.php';
                         elseif ($club['ranking_position'] == 2) $rankClass = 'rank-2';
                         elseif ($club['ranking_position'] == 3) $rankClass = 'rank-3';
                         ?>
-                        <a href="/club.php?id=<?= $club['club_id'] ?>" class="gs-ranking-card <?= $rankClass ?>">
+                        <a href="/club/<?= $club['club_id'] ?>" class="gs-ranking-card <?= $rankClass ?>">
                             <div class="gs-rank-badge">
                                 <?php if ($club['ranking_position'] <= 3): ?>
                                     <span class="gs-medal"><?php
@@ -368,7 +368,7 @@ include __DIR__ . '/../includes/layout-header.php';
                         </thead>
                         <tbody>
                             <?php foreach ($ranking['clubs'] as $club): ?>
-                                <tr class="gs-table-row-clickable" onclick="window.location.href='/club.php?id=<?= $club['club_id'] ?>'">
+                                <tr class="gs-table-row-clickable" onclick="window.location.href='/club/<?= $club['club_id'] ?>'">
                                     <td>
                                         <?php if ($club['ranking_position'] <= 3): ?>
                                             <span class="gs-medal-badge gs-medal-<?= $club['ranking_position'] ?>">

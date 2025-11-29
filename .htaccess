@@ -35,15 +35,16 @@ RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
 Options -Indexes
 
 # ============================================================================
-# SPA ROUTING - Clean URLs without .php extensions
+# CLEAN URL ROUTING - URLs without .php extensions
 # ============================================================================
 
 # Skip rewriting for actual files (CSS, JS, images, etc.)
 RewriteCond %{REQUEST_FILENAME} -f
 RewriteRule ^ - [L]
 
-# Skip rewriting for directories
+# Skip rewriting for directories (except specific ones we want to route)
 RewriteCond %{REQUEST_FILENAME} -d
+RewriteCond %{REQUEST_URI} !^/(ranking|clubs)/?$
 RewriteRule ^ - [L]
 
 # Skip admin folder - let it handle its own routing
@@ -59,9 +60,45 @@ RewriteRule ^v3(/.*)?$ - [L]
 RewriteCond %{REQUEST_URI} \.(php|html|htm)$
 RewriteRule ^ - [L]
 
-# Route clean URLs through app.php
-# Examples: /results, /series/5, /rider/123, /calendar
-RewriteRule ^(home|calendar|events|results|series|database|riders|clubs|ranking|profile|rider|event|club)(/.*)?$ app.php?page=$1$2 [QSA,L]
+# ============================================================================
+# Direct rewrites to legacy PHP files (simple, no SPA overhead)
+# ============================================================================
+
+# Home
+RewriteRule ^home/?$ index.php [L]
+
+# Calendar/Events
+RewriteRule ^calendar/?$ events.php [L,QSA]
+RewriteRule ^calendar/([0-9]+)/?$ event.php?id=$1 [L,QSA]
+RewriteRule ^events/?$ events.php [L,QSA]
+
+# Results
+RewriteRule ^results/?$ results.php [L,QSA]
+RewriteRule ^results/([0-9]+)/?$ event-results.php?id=$1 [L,QSA]
+
+# Series
+RewriteRule ^series/?$ series.php [L,QSA]
+RewriteRule ^series/([0-9]+)/?$ series-standings.php?id=$1 [L,QSA]
+
+# Riders/Database
+RewriteRule ^riders/?$ riders.php [L,QSA]
+RewriteRule ^rider/([0-9]+)/?$ rider.php?id=$1 [L,QSA]
+RewriteRule ^database/?$ riders.php [L,QSA]
+
+# Clubs
+RewriteRule ^clubs/?$ clubs/leaderboard.php [L,QSA]
+RewriteRule ^club/([0-9]+)/?$ club.php?id=$1 [L,QSA]
+
+# Ranking
+RewriteRule ^ranking/?$ ranking/index.php [L,QSA]
+
+# Profile
+RewriteRule ^profile/?$ profile.php [L,QSA]
+RewriteRule ^profile/login/?$ rider-login.php [L,QSA]
+RewriteRule ^profile/register/?$ rider-register.php [L,QSA]
+
+# Event (alias for results)
+RewriteRule ^event/([0-9]+)/?$ event-results.php?id=$1 [L,QSA]
 
 # Custom error pages
-ErrorDocument 404 /app.php?page=404
+ErrorDocument 404 /404.php

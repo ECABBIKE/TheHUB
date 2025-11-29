@@ -13,7 +13,7 @@ $db = getDB();
 $riderId = isset($_GET['id']) ? (int)$_GET['id'] : 0;
 
 if (!$riderId) {
- header('Location: riders.php');
+ header('Location: /riders');
  exit;
 }
 
@@ -60,7 +60,7 @@ try {
 }
 
 if (!$rider) {
- die("Deltagare med ID {$riderId} finns inte i databasen. <a href='riders.php'>Gå tillbaka till deltagarlistan</a>");
+ die("Deltagare med ID {$riderId} finns inte i databasen. <a href='/riders'>Gå tillbaka till deltagarlistan</a>");
 }
 
 // Fetch rider's results with event details and class position
@@ -684,7 +684,7 @@ try {
 
   <!-- Back Button -->
   <div class="mb-lg">
-  <a href="/riders.php" class="btn btn--secondary btn--sm">
+  <a href="/riders" class="btn btn--secondary btn--sm">
    <i data-lucide="arrow-left"></i>
    Tillbaka till deltagare
   </a>
@@ -776,7 +776,7 @@ try {
      <div class="info-box-label">Klubb</div>
      <div class="info-box-value info-box-value-small">
      <?php if ($rider['club_name'] && $rider['club_id']): ?>
-      <a href="/club.php?id=<?= $rider['club_id'] ?>" class="club-link" title="Se alla medlemmar i <?= h($rider['club_name']) ?>">
+      <a href="/club/<?= $rider['club_id'] ?>" class="club-link" title="Se alla medlemmar i <?= h($rider['club_name']) ?>">
       <?= h($rider['club_name']) ?>
       </a>
      <?php else: ?>
@@ -1691,7 +1691,7 @@ try {
        </td>
        <td>
        <?php if ($result['event_id']): ?>
-        <a href="/event.php?id=<?= $result['event_id'] ?>" class="link">
+        <a href="/results/<?= $result['event_id'] ?>" class="link">
         <strong style="font-size: 0.75rem;"><?= h($result['event_name']) ?></strong>
         </a>
        <?php else: ?>

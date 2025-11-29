@@ -33,51 +33,52 @@ function hub_get_current_page(): array {
     $id = null;
 
     // Section routes - maps URL segments to page files
+    // Uses /pages/ for new modules, root level for legacy pages
     $sectionRoutes = [
         'calendar' => [
-            'index' => '/pages/calendar/index.php',
-            'event' => '/pages/calendar/event.php',
+            'index' => '/events.php',           // Legacy: root level
+            'event' => '/event.php',            // Legacy: root level
             'title' => 'Kalender'
         ],
         'events' => [
-            'index' => '/pages/events.php',
+            'index' => '/events.php',           // Legacy: root level
             'title' => 'Kalender'
         ],
         'results' => [
-            'index' => '/pages/results.php',
-            'event' => '/pages/event-results.php',
+            'index' => '/results.php',          // Legacy: root level
+            'event' => '/event-results.php',    // Legacy: root level
             'title' => 'Resultat'
         ],
         'series' => [
-            'index' => '/pages/series.php',
-            'show' => '/pages/series-standings.php',
+            'index' => '/series.php',           // Legacy: root level
+            'show' => '/series-standings.php',  // Legacy: root level
             'title' => 'Serier'
         ],
         'database' => [
-            'index' => '/pages/database/index.php',
-            'rider' => '/pages/rider.php',
-            'club' => '/pages/club.php',
+            'index' => '/riders.php',           // Legacy: root level
+            'rider' => '/rider.php',            // Legacy: root level
+            'club' => '/club.php',              // Legacy: root level
             'title' => 'Databas'
         ],
         'riders' => [
-            'index' => '/pages/riders.php',
+            'index' => '/riders.php',           // Legacy: root level
             'title' => 'Deltagare'
         ],
         'clubs' => [
-            'index' => '/pages/clubs/index.php',
-            'leaderboard' => '/pages/clubs/leaderboard.php',
-            'detail' => '/pages/clubs/detail.php',
+            'index' => '/clubs/leaderboard.php', // Legacy: in clubs folder
+            'leaderboard' => '/clubs/leaderboard.php',
+            'detail' => '/club.php',            // Legacy: root level
             'title' => 'Klubbar'
         ],
         'ranking' => [
-            'index' => '/pages/ranking/index.php',
-            'rider' => '/pages/ranking/rider.php',
+            'index' => '/ranking/index.php',    // Legacy: in ranking folder
+            'rider' => '/ranking/rider.php',
             'title' => 'Ranking'
         ],
         'profile' => [
-            'index' => '/pages/profile.php',
-            'login' => '/pages/rider-login.php',
-            'register' => '/pages/rider-register.php',
+            'index' => '/profile.php',          // Legacy: root level
+            'login' => '/rider-login.php',      // Legacy: root level
+            'register' => '/rider-register.php', // Legacy: root level
             'title' => 'Min Profil'
         ]
     ];
@@ -123,11 +124,11 @@ function hub_get_current_page(): array {
 
     // Legacy single-item pages (rider/123, event/456, club/789)
     $singlePages = [
-        'rider' => ['section' => 'database', 'file' => '/pages/rider.php', 'title' => 'Cyklist'],
-        'event' => ['section' => 'results', 'file' => '/pages/event.php', 'title' => 'Event'],
-        'club' => ['section' => 'clubs', 'file' => '/pages/club.php', 'title' => 'Klubb'],
-        'event-results' => ['section' => 'results', 'file' => '/pages/event-results.php', 'title' => 'Resultat'],
-        'series-standings' => ['section' => 'series', 'file' => '/pages/series-standings.php', 'title' => 'Serieställning']
+        'rider' => ['section' => 'database', 'file' => '/rider.php', 'title' => 'Cyklist'],
+        'event' => ['section' => 'results', 'file' => '/event-results.php', 'title' => 'Event'],
+        'club' => ['section' => 'clubs', 'file' => '/club.php', 'title' => 'Klubb'],
+        'event-results' => ['section' => 'results', 'file' => '/event-results.php', 'title' => 'Resultat'],
+        'series-standings' => ['section' => 'series', 'file' => '/series-standings.php', 'title' => 'Serieställning']
     ];
 
     if (isset($singlePages[$section])) {

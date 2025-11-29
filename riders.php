@@ -167,7 +167,7 @@ include __DIR__ . '/includes/layout-header.php';
    $licenseCheck = checkLicense($rider);
    $isLicenseActive = $isUciLicense && !empty($rider['license_type']) && $rider['license_type'] !== 'None' && $licenseCheck['valid'];
    ?>
-   <a href="/rider.php?id=<?= $rider['id'] ?>"
+   <a href="/rider/<?= $rider['id'] ?>"
     class="gs-license-card-compact"
     data-search="<?= strtolower(h($rider['firstname'] . ' ' . $rider['lastname'] . ' ' . ($rider['club_name'] ?? '') . ' ' . ($rider['license_number'] ?? ''))) ?>">
 

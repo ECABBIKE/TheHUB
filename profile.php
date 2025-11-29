@@ -206,7 +206,7 @@ include __DIR__ . '/includes/header-modern.php';
             </div>
             <div class="event-list">
                 <?php foreach ($upcomingEvents as $event): ?>
-                <a href="/event.php?id=<?= $event['id'] ?>" class="event-list-item">
+                <a href="/calendar/<?= $event['id'] ?>" class="event-list-item">
                     <div class="event-date">
                         <span class="event-date-day"><?= date('j', strtotime($event['date'])) ?></span>
                         <span class="event-date-month"><?= date('M', strtotime($event['date'])) ?></span>

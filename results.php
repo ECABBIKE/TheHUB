@@ -144,7 +144,7 @@ include __DIR__ . '/includes/layout-header.php';
     <?php if ($filterYear): ?>
     <span class="badge badge-accent"><?= $filterYear ?></span>
     <?php endif; ?>
-    <a href="/results.php" class="btn btn--sm btn--secondary">
+    <a href="/results" class="btn btn--sm btn--secondary">
     <i data-lucide="x"></i>
     Visa alla
     </a>
@@ -166,7 +166,7 @@ include __DIR__ . '/includes/layout-header.php';
   <!-- Events Grid - 2 columns on desktop -->
   <div class="grid grid-cols-1 md-grid-cols-2 gap-md">
   <?php foreach ($events as $event): ?>
-   <a href="/event-results.php?id=<?= $event['id'] ?>" class="gs-event-card-link">
+   <a href="/results/<?= $event['id'] ?>" class="gs-event-card-link">
    <div class="card card-hover gs-result-card gs-event-card-transition">
     <!-- Logo Left -->
     <div class="gs-result-logo">

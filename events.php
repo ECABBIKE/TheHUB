@@ -131,7 +131,7 @@ include __DIR__ . '/includes/layout-header.php';
 
    <!-- Reset Button -->
    <div>
-   <a href="/events.php" class="btn btn--secondary">
+   <a href="/calendar" class="btn btn--secondary">
     <i data-lucide="x"></i>
     Rensa filter
    </a>
@@ -264,7 +264,7 @@ include __DIR__ . '/includes/layout-header.php';
    <?php else: ?>
     <div class="event-list">
     <?php foreach ($upcomingEvents as $event): ?>
-     <a href="/event.php?id=<?= $event['id'] ?>" class="gs-event-card-link">
+     <a href="/calendar/<?= $event['id'] ?>" class="gs-event-card-link">
      <div class="card card-hover event-card-horizontal gs-event-card-transition">
       <!-- Logo Left -->
       <div class="event-logo-container">
@@ -326,7 +326,7 @@ include __DIR__ . '/includes/layout-header.php';
    <?php else: ?>
     <div class="event-list">
     <?php foreach ($completedEvents as $event): ?>
-     <a href="/event.php?id=<?= $event['id'] ?>" class="gs-event-card-link">
+     <a href="/calendar/<?= $event['id'] ?>" class="gs-event-card-link">
      <div class="card card-hover event-card-horizontal gs-event-card-transition">
       <!-- Logo Left -->
       <div class="event-logo-container">
