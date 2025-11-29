@@ -19,7 +19,7 @@ $stmt = $pdo->prepare("
     JOIN events e ON res.event_id = e.id
     LEFT JOIN classes cls ON res.class_id = cls.id
     LEFT JOIN series s ON e.series_id = s.id
-    WHERE res.rider_id = ?
+    WHERE res.cyclist_id = ?
     ORDER BY e.date DESC
 ");
 $stmt->execute([$currentUser['id']]);

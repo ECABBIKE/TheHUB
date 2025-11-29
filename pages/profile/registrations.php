@@ -11,25 +11,35 @@ if (!$currentUser) {
 
 $pdo = hub_db();
 
-// Get all registrations for user and their children
-$childIds = array_column(hub_get_linked_children($currentUser['id']), 'id');
-$allRiderIds = array_merge([$currentUser['id']], $childIds);
-$placeholders = implode(',', array_fill(0, count($allRiderIds), '?'));
+// Check if event_registrations table exists
+$registrations = [];
+try {
+    $tableCheck = $pdo->query("SHOW TABLES LIKE 'event_registrations'");
+    if ($tableCheck->rowCount() > 0) {
+        // Get all registrations for user and their children
+        $childIds = array_column(hub_get_linked_children($currentUser['id']), 'id');
+        $allRiderIds = array_merge([$currentUser['id']], $childIds);
+        $placeholders = implode(',', array_fill(0, count($allRiderIds), '?'));
 
-$stmt = $pdo->prepare("
-    SELECT r.*, ri.firstname, ri.lastname,
-           e.name as event_name, e.date as event_date, e.location,
-           cls.display_name as class_name, s.name as series_name
-    FROM event_registrations r
-    JOIN riders ri ON r.rider_id = ri.id
-    JOIN events e ON r.event_id = e.id
-    LEFT JOIN classes cls ON r.class_id = cls.id
-    LEFT JOIN series s ON e.series_id = s.id
-    WHERE r.rider_id IN ($placeholders) AND r.status != 'cancelled'
-    ORDER BY e.date DESC
-");
-$stmt->execute($allRiderIds);
-$registrations = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $stmt = $pdo->prepare("
+            SELECT r.*, ri.firstname, ri.lastname,
+                   e.name as event_name, e.date as event_date, e.location,
+                   cls.display_name as class_name, s.name as series_name
+            FROM event_registrations r
+            JOIN riders ri ON r.rider_id = ri.id
+            JOIN events e ON r.event_id = e.id
+            LEFT JOIN classes cls ON r.class_id = cls.id
+            LEFT JOIN series s ON e.series_id = s.id
+            WHERE r.rider_id IN ($placeholders) AND r.status != 'cancelled'
+            ORDER BY e.date DESC
+        ");
+        $stmt->execute($allRiderIds);
+        $registrations = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+} catch (PDOException $e) {
+    // Table doesn't exist yet
+    $registrations = [];
+}
 
 // Separate upcoming and past
 $upcoming = [];
@@ -80,7 +90,7 @@ usort($upcoming, fn($a, $b) => strcmp($a['event_date'], $b['event_date']));
                     <div class="reg-info">
                         <span class="reg-event"><?= htmlspecialchars($reg['event_name']) ?></span>
                         <span class="reg-details">
-                            <?= htmlspecialchars($reg['first_name'] . ' ' . $reg['last_name']) ?>
+                            <?= htmlspecialchars($reg['firstname'] . ' ' . $reg['lastname']) ?>
                             <?php if ($reg['class_name']): ?>
                                 • <?= htmlspecialchars($reg['class_name']) ?>
                             <?php endif; ?>
@@ -119,7 +129,7 @@ usort($upcoming, fn($a, $b) => strcmp($a['event_date'], $b['event_date']));
                     <div class="reg-info">
                         <span class="reg-event"><?= htmlspecialchars($reg['event_name']) ?></span>
                         <span class="reg-details">
-                            <?= htmlspecialchars($reg['first_name'] . ' ' . $reg['last_name']) ?>
+                            <?= htmlspecialchars($reg['firstname'] . ' ' . $reg['lastname']) ?>
                         </span>
                     </div>
                 </a>

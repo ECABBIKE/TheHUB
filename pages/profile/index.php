@@ -19,19 +19,27 @@ $linkedChildren = hub_get_linked_children($currentUser['id']);
 // Get admin clubs
 $adminClubs = hub_get_admin_clubs($currentUser['id']);
 
-// Get upcoming registrations
-$regStmt = $pdo->prepare("
-    SELECT r.*, e.name as event_name, e.date as event_date, e.location,
-           cls.display_name as class_name
-    FROM event_registrations r
-    JOIN events e ON r.event_id = e.id
-    LEFT JOIN classes cls ON r.class_id = cls.id
-    WHERE r.rider_id = ? AND e.date >= CURDATE() AND r.status != 'cancelled'
-    ORDER BY e.date ASC
-    LIMIT 5
-");
-$regStmt->execute([$currentUser['id']]);
-$upcomingRegs = $regStmt->fetchAll(PDO::FETCH_ASSOC);
+// Get upcoming registrations (if table exists)
+$upcomingRegs = [];
+try {
+    $tableCheck = $pdo->query("SHOW TABLES LIKE 'event_registrations'");
+    if ($tableCheck->rowCount() > 0) {
+        $regStmt = $pdo->prepare("
+            SELECT r.*, e.name as event_name, e.date as event_date, e.location,
+                   cls.display_name as class_name
+            FROM event_registrations r
+            JOIN events e ON r.event_id = e.id
+            LEFT JOIN classes cls ON r.class_id = cls.id
+            WHERE r.rider_id = ? AND e.date >= CURDATE() AND r.status != 'cancelled'
+            ORDER BY e.date ASC
+            LIMIT 5
+        ");
+        $regStmt->execute([$currentUser['id']]);
+        $upcomingRegs = $regStmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+} catch (PDOException $e) {
+    $upcomingRegs = [];
+}
 
 // Get recent results
 $resultStmt = $pdo->prepare("
@@ -40,7 +48,7 @@ $resultStmt = $pdo->prepare("
     FROM results res
     JOIN events e ON res.event_id = e.id
     LEFT JOIN classes cls ON res.class_id = cls.id
-    WHERE res.rider_id = ?
+    WHERE res.cyclist_id = ?
     ORDER BY e.date DESC
     LIMIT 5
 ");
