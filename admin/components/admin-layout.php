@@ -21,8 +21,18 @@ $current_admin_dir = basename(dirname($_SERVER['PHP_SELF']));
 $admin_user = getCurrentAdmin();
 $admin_name = $admin_user['name'] ?? 'Admin';
 
-// Theme
-$userTheme = $_COOKIE['hub_theme'] ?? 'auto';
+// Get theme from user profile or default to dark
+$userTheme = 'dark';
+if (function_exists('get_current_rider')) {
+    $currentUser = get_current_rider();
+    if (isset($currentUser['theme_preference'])) {
+        $userTheme = $currentUser['theme_preference'];
+    }
+}
+// Resolve 'auto' to actual theme on server side (default dark)
+if ($userTheme === 'auto') {
+    $userTheme = 'dark';
+}
 ?>
 <!DOCTYPE html>
 <html lang="sv" data-theme="<?= htmlspecialchars($userTheme) ?>">
@@ -30,6 +40,24 @@ $userTheme = $_COOKIE['hub_theme'] ?? 'auto';
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= htmlspecialchars($page_title ?? 'Admin') ?> - TheHUB Admin</title>
+
+    <!-- CRITICAL: Anti-FOUC - Must run BEFORE any CSS loads -->
+    <script>
+    (function() {
+        const saved = localStorage.getItem('thehub-theme');
+        let theme = saved || '<?= $userTheme ?>';
+        if (theme === 'auto') {
+            theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        }
+        document.documentElement.setAttribute('data-theme', theme);
+    })();
+    </script>
+
+    <!-- CRITICAL: Inline CSS to prevent white flash -->
+    <style>
+        html { background: #0A0C14; }
+        html[data-theme="light"] { background: #F4F5F7; }
+    </style>
 
     <!-- V3 CSS -->
     <link rel="stylesheet" href="/assets/css/reset.css">
@@ -42,20 +70,6 @@ $userTheme = $_COOKIE['hub_theme'] ?? 'auto';
 
     <!-- Admin-specific CSS -->
     <link rel="stylesheet" href="/admin/assets/css/admin.css">
-
-    <!-- Theme Script (prevent flash) -->
-    <script>
-    (function() {
-        const saved = localStorage.getItem('thehub-theme');
-        let theme = 'light';
-        if (saved === 'dark') {
-            theme = 'dark';
-        } else if (!saved || saved === 'auto') {
-            theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-        }
-        document.documentElement.setAttribute('data-theme', theme);
-    })();
-    </script>
 </head>
 <body class="admin-body">
     <!-- Admin Header -->

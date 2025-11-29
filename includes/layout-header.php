@@ -64,13 +64,51 @@ if (!isset($pageType)) {
 $titleSuffix = ($pageType === 'admin') ? ' - TheHUB Admin' : ' - TheHUB';
 $defaultBodyClass = ($pageType === 'admin') ? 'admin-page' : 'public-page';
 $bodyClass = isset($bodyClass) ? $defaultBodyClass . ' ' . $bodyClass : $defaultBodyClass;
+
+// Get theme from user profile or default to dark
+$userTheme = 'dark';
+$isLoggedIn = isset($_SESSION['rider_id']) && $_SESSION['rider_id'] > 0;
+if ($isLoggedIn && function_exists('get_current_rider')) {
+    try {
+        $currentUser = get_current_rider();
+        if (isset($currentUser['theme_preference'])) {
+            $userTheme = $currentUser['theme_preference'];
+        }
+    } catch (Exception $e) {
+        // Use default
+    }
+}
+// Resolve 'auto' to dark on server side
+if ($userTheme === 'auto') {
+    $userTheme = 'dark';
+}
 ?>
 <!DOCTYPE html>
-<html lang="sv">
+<html lang="sv" data-theme="<?= htmlspecialchars($userTheme) ?>">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title><?= h($pageTitle) ?><?= $titleSuffix ?></title>
+
+    <!-- CRITICAL: Anti-FOUC - Must run BEFORE any CSS loads -->
+    <script>
+    (function() {
+        const saved = localStorage.getItem('thehub-theme');
+        let theme = saved || '<?= $userTheme ?>';
+        if (theme === 'auto') {
+            theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        }
+        document.documentElement.setAttribute('data-theme', theme);
+    })();
+    window.HUB = window.HUB || {};
+    window.HUB.isLoggedIn = <?= $isLoggedIn ? 'true' : 'false' ?>;
+    </script>
+
+    <!-- CRITICAL: Inline CSS to prevent white flash -->
+    <style>
+        html { background: #0A0C14; }
+        html[data-theme="light"] { background: #F4F5F7; }
+    </style>
 
     <!-- CRITICAL CSS - INLINE to ensure it loads FIRST -->
     <style id="critical-sidebar-css">
@@ -219,50 +257,6 @@ $bodyClass = isset($bodyClass) ? $defaultBodyClass . ' ' . $bodyClass : $default
     <meta name="apple-mobile-web-app-title" content="TheHUB">
     <link rel="apple-touch-icon" href="/assets/icons/icon-192.png">
 
-    <!-- Theme Prevention Script (prevents flash of wrong theme) -->
-    <?php
-    // Ladda tema från profil för inloggade användare
-    $userTheme = 'auto';
-    $isLoggedIn = false;
-    if (isset($_SESSION['rider_id']) && $_SESSION['rider_id'] > 0) {
-        $isLoggedIn = true;
-        try {
-            if (function_exists('get_current_rider')) {
-                $currentUser = get_current_rider();
-                if (isset($currentUser['theme_preference'])) {
-                    $userTheme = $currentUser['theme_preference'];
-                }
-            }
-        } catch (Exception $e) {
-            // Ignorera fel, använd localStorage istället
-        }
-    }
-    ?>
-    <script>
-    // HUB global object
-    window.HUB = window.HUB || {};
-    window.HUB.isLoggedIn = <?= $isLoggedIn ? 'true' : 'false' ?>;
-    <?php if ($isLoggedIn): ?>
-    window.HUB.userTheme = '<?= htmlspecialchars($userTheme) ?>';
-
-    // Synka med localStorage om server har annan preferens
-    if (window.HUB.userTheme !== localStorage.getItem('thehub-theme')) {
-        localStorage.setItem('thehub-theme', window.HUB.userTheme);
-    }
-    <?php endif; ?>
-
-    // Förhindra flash of wrong theme
-    (function() {
-        const saved = localStorage.getItem('thehub-theme');
-        let theme = 'light';
-        if (saved === 'dark') {
-            theme = 'dark';
-        } else if (!saved || saved === 'auto') {
-            theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-        }
-        document.documentElement.setAttribute('data-theme', theme);
-    })();
-    </script>
 </head>
 <body class="<?= $bodyClass ?>">
     <!-- Hamburger (hidden on desktop via inline CSS) -->
