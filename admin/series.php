@@ -1,11 +1,12 @@
 <?php
+/**
+ * Admin Series - V3 Design System
+ */
 require_once __DIR__ . '/../config.php';
 require_admin();
-require_once __DIR__ . '/../includes/admin-layout.php';
 
+global $pdo;
 $db = getDB();
-$current_admin = get_current_admin();
-
 
 // Initialize message variables
 $message = '';
@@ -13,99 +14,99 @@ $messageType = 'info';
 
 // Handle form submissions
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
- checkCsrf();
+    checkCsrf();
 
- $action = $_POST['action'] ?? '';
+    $action = $_POST['action'] ?? '';
 
- if ($action === 'create' || $action === 'update') {
- // Validate required fields
- $name = trim($_POST['name'] ?? '');
+    if ($action === 'create' || $action === 'update') {
+        // Validate required fields
+        $name = trim($_POST['name'] ?? '');
 
- if (empty($name)) {
- $message = 'Namn är obligatoriskt';
- $messageType = 'error';
- } else {
- // Handle logo upload
- $logoPath = null;
- if (isset($_FILES['logo']) && $_FILES['logo']['error'] === UPLOAD_ERR_OK) {
- $uploadDir = __DIR__ . '/../uploads/series/';
- if (!is_dir($uploadDir)) {
-  mkdir($uploadDir, 0755, true);
- }
+        if (empty($name)) {
+            $message = 'Namn är obligatoriskt';
+            $messageType = 'error';
+        } else {
+            // Handle logo upload
+            $logoPath = null;
+            if (isset($_FILES['logo']) && $_FILES['logo']['error'] === UPLOAD_ERR_OK) {
+                $uploadDir = __DIR__ . '/../uploads/series/';
+                if (!is_dir($uploadDir)) {
+                    mkdir($uploadDir, 0755, true);
+                }
 
- $fileExtension = strtolower(pathinfo($_FILES['logo']['name'], PATHINFO_EXTENSION));
- $allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'];
+                $fileExtension = strtolower(pathinfo($_FILES['logo']['name'], PATHINFO_EXTENSION));
+                $allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'];
 
- if (in_array($fileExtension, $allowedExtensions)) {
-  $fileName = uniqid('series_') . '.' . $fileExtension;
-  $targetPath = $uploadDir . $fileName;
+                if (in_array($fileExtension, $allowedExtensions)) {
+                    $fileName = uniqid('series_') . '.' . $fileExtension;
+                    $targetPath = $uploadDir . $fileName;
 
-  if (move_uploaded_file($_FILES['logo']['tmp_name'], $targetPath)) {
-  $logoPath = '/uploads/series/' . $fileName;
-  }
- }
- }
+                    if (move_uploaded_file($_FILES['logo']['tmp_name'], $targetPath)) {
+                        $logoPath = '/uploads/series/' . $fileName;
+                    }
+                }
+            }
 
- // Prepare series data
- $seriesData = [
- 'name' => $name,
- 'type' => trim($_POST['type'] ?? ''),
- 'status' => $_POST['status'] ?? 'planning',
- 'start_date' => !empty($_POST['start_date']) ? trim($_POST['start_date']) : null,
- 'end_date' => !empty($_POST['end_date']) ? trim($_POST['end_date']) : null,
- 'description' => trim($_POST['description'] ?? ''),
- 'organizer' => trim($_POST['organizer'] ?? ''),
- ];
+            // Prepare series data
+            $seriesData = [
+                'name' => $name,
+                'type' => trim($_POST['type'] ?? ''),
+                'status' => $_POST['status'] ?? 'planning',
+                'start_date' => !empty($_POST['start_date']) ? trim($_POST['start_date']) : null,
+                'end_date' => !empty($_POST['end_date']) ? trim($_POST['end_date']) : null,
+                'description' => trim($_POST['description'] ?? ''),
+                'organizer' => trim($_POST['organizer'] ?? ''),
+            ];
 
- // Only add format if column exists
- $formatColumnExists = false;
- try {
- $columns = $db->getAll("SHOW COLUMNS FROM series LIKE 'format'");
- $formatColumnExists = !empty($columns);
- } catch (Exception $e) {}
+            // Only add format if column exists
+            $formatColumnExists = false;
+            try {
+                $columns = $db->getAll("SHOW COLUMNS FROM series LIKE 'format'");
+                $formatColumnExists = !empty($columns);
+            } catch (Exception $e) {}
 
- if ($formatColumnExists) {
- $seriesData['format'] = $_POST['format'] ?? 'Championship';
- }
+            if ($formatColumnExists) {
+                $seriesData['format'] = $_POST['format'] ?? 'Championship';
+            }
 
- // Add logo path if uploaded
- if ($logoPath) {
- $seriesData['logo'] = $logoPath;
- }
+            // Add logo path if uploaded
+            if ($logoPath) {
+                $seriesData['logo'] = $logoPath;
+            }
 
- try {
- if ($action === 'create') {
-  $db->insert('series', $seriesData);
-  $message = 'Serie skapad!';
-  $messageType = 'success';
- } else {
-  $id = intval($_POST['id']);
-  $db->update('series', $seriesData, 'id = ?', [$id]);
-  $message = 'Serie uppdaterad!';
-  $messageType = 'success';
- }
- } catch (Exception $e) {
- $message = 'Ett fel uppstod: ' . $e->getMessage();
- $messageType = 'error';
- }
- }
- } elseif ($action === 'delete') {
- $id = intval($_POST['id']);
- try {
- $db->delete('series', 'id = ?', [$id]);
- $message = 'Serie borttagen!';
- $messageType = 'success';
- } catch (Exception $e) {
- $message = 'Ett fel uppstod: ' . $e->getMessage();
- $messageType = 'error';
- }
- }
+            try {
+                if ($action === 'create') {
+                    $db->insert('series', $seriesData);
+                    $message = 'Serie skapad!';
+                    $messageType = 'success';
+                } else {
+                    $id = intval($_POST['id']);
+                    $db->update('series', $seriesData, 'id = ?', [$id]);
+                    $message = 'Serie uppdaterad!';
+                    $messageType = 'success';
+                }
+            } catch (Exception $e) {
+                $message = 'Ett fel uppstod: ' . $e->getMessage();
+                $messageType = 'error';
+            }
+        }
+    } elseif ($action === 'delete') {
+        $id = intval($_POST['id']);
+        try {
+            $db->delete('series', 'id = ?', [$id]);
+            $message = 'Serie borttagen!';
+            $messageType = 'success';
+        } catch (Exception $e) {
+            $message = 'Ett fel uppstod: ' . $e->getMessage();
+            $messageType = 'error';
+        }
+    }
 }
 
 // Check if editing a series
 $editSeries = null;
 if (isset($_GET['edit']) && is_numeric($_GET['edit'])) {
- $editSeries = $db->getRow("SELECT * FROM series WHERE id = ?", [intval($_GET['edit'])]);
+    $editSeries = $db->getRow("SELECT * FROM series WHERE id = ?", [intval($_GET['edit'])]);
 }
 
 // Get filter parameters
@@ -116,8 +117,8 @@ $where = [];
 $params = [];
 
 if ($filterYear) {
- $where[] ="YEAR(start_date) = ?";
- $params[] = $filterYear;
+    $where[] = "YEAR(start_date) = ?";
+    $params[] = $filterYear;
 }
 
 $whereClause = !empty($where) ? 'WHERE ' . implode(' AND ', $where) : '';
@@ -125,32 +126,32 @@ $whereClause = !empty($where) ? 'WHERE ' . implode(' AND ', $where) : '';
 // Check if format column exists
 $formatColumnExists = false;
 try {
- $columns = $db->getAll("SHOW COLUMNS FROM series LIKE 'format'");
- $formatColumnExists = !empty($columns);
+    $columns = $db->getAll("SHOW COLUMNS FROM series LIKE 'format'");
+    $formatColumnExists = !empty($columns);
 } catch (Exception $e) {
- // Column doesn't exist, that's ok
+    // Column doesn't exist, that's ok
 }
 
 // Check if series_events table exists
 $seriesEventsTableExists = false;
 try {
- $tables = $db->getAll("SHOW TABLES LIKE 'series_events'");
- $seriesEventsTableExists = !empty($tables);
+    $tables = $db->getAll("SHOW TABLES LIKE 'series_events'");
+    $seriesEventsTableExists = !empty($tables);
 } catch (Exception $e) {
- // Table doesn't exist, that's ok
+    // Table doesn't exist, that's ok
 }
 
 // Get series from database
-$formatSelect = $formatColumnExists ? ', format' : ',"Championship" as format';
+$formatSelect = $formatColumnExists ? ', format' : ', "Championship" as format';
 $eventsCountSelect = $seriesEventsTableExists
- ? '(SELECT COUNT(*) FROM series_events WHERE series_id = series.id)'
- : '0';
+    ? '(SELECT COUNT(*) FROM series_events WHERE series_id = series.id)'
+    : '0';
 
-$sql ="SELECT id, name, type{$formatSelect}, status, start_date, end_date, logo, organizer,
- {$eventsCountSelect} as events_count
- FROM series
- {$whereClause}
- ORDER BY start_date DESC";
+$sql = "SELECT id, name, type{$formatSelect}, status, start_date, end_date, logo, organizer,
+    {$eventsCountSelect} as events_count
+    FROM series
+    {$whereClause}
+    ORDER BY start_date DESC";
 
 $series = $db->getAll($sql, $params);
 
@@ -160,478 +161,448 @@ $allYears = $db->getAll("SELECT DISTINCT YEAR(start_date) as year FROM series WH
 // Count unique participants in active series
 $uniqueParticipants = 0;
 if ($seriesEventsTableExists) {
- // Count unique riders from results where event is in an active series
- $participantCount = $db->getRow("
- SELECT COUNT(DISTINCT r.cyclist_id) as unique_riders
- FROM results r
- INNER JOIN series_events se ON r.event_id = se.event_id
- INNER JOIN series s ON se.series_id = s.id
- WHERE s.status = 'active'
-");
- $uniqueParticipants = $participantCount['unique_riders'] ?? 0;
+    $participantCount = $db->getRow("
+        SELECT COUNT(DISTINCT r.cyclist_id) as unique_riders
+        FROM results r
+        INNER JOIN series_events se ON r.event_id = se.event_id
+        INNER JOIN series s ON se.series_id = s.id
+        WHERE s.status = 'active'
+    ");
+    $uniqueParticipants = $participantCount['unique_riders'] ?? 0;
 }
 
-$pageTitle = 'Serier';
-$pageType = 'admin';
-include __DIR__ . '/../includes/layout-header.php';
+// Page config
+$page_title = 'Serier';
+$breadcrumbs = [
+    ['label' => 'Serier']
+];
+$page_actions = '<button onclick="openSeriesModal()" class="btn-admin btn-admin-primary">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+    Ny Serie
+</button>';
+
+// Include admin layout
+include __DIR__ . '/components/admin-layout.php';
 ?>
 
- <main class="main-content">
- <div class="container">
- <?php
- render_admin_header('Serier & Poäng', [
- ['label' => 'Ny Serie', 'url' => 'javascript:openSeriesModal()', 'icon' => 'plus', 'class' => 'btn--primary']
- ]);
- ?>
+<?php if ($message): ?>
+    <div class="alert alert-<?= $messageType === 'success' ? 'success' : ($messageType === 'error' ? 'error' : 'info') ?>">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <?php if ($messageType === 'success'): ?>
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>
+            <?php elseif ($messageType === 'error'): ?>
+                <circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/>
+            <?php else: ?>
+                <circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="16" y2="12"/><line x1="12" x2="12.01" y1="8" y2="8"/>
+            <?php endif; ?>
+        </svg>
+        <?= htmlspecialchars($message) ?>
+    </div>
+<?php endif; ?>
 
- <!-- Messages -->
- <?php if ($message): ?>
- <div class="alert alert-<?= $messageType ?> mb-lg">
-  <i data-lucide="<?= $messageType === 'success' ? 'check-circle' : ($messageType === 'error' ? 'alert-circle' : 'info') ?>"></i>
-  <?= h($message) ?>
- </div>
- <?php endif; ?>
+<!-- Stats Grid -->
+<div class="admin-stats-grid">
+    <div class="admin-stat-card">
+        <div class="admin-stat-icon" style="background: var(--color-info-light); color: var(--color-info);">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>
+        </div>
+        <div class="admin-stat-content">
+            <div class="admin-stat-value"><?= count($series) ?></div>
+            <div class="admin-stat-label">Totalt serier</div>
+        </div>
+    </div>
 
- <!-- Filter Section -->
- <div class="card mb-lg">
- <div class="card-body">
-  <form method="GET" class="grid grid-cols-1 md-grid-cols-2 gap-md">
-  <!-- Year Filter -->
-  <div>
-  <label for="year-filter" class="label">
-  <i data-lucide="calendar"></i>
-  År
-  </label>
-  <select id="year-filter" name="year" class="input" onchange="this.form.submit()">
-  <option value="">Alla år</option>
-  <?php foreach ($allYears as $yearRow): ?>
-   <option value="<?= $yearRow['year'] ?>" <?= $filterYear == $yearRow['year'] ? 'selected' : '' ?>>
-   <?= $yearRow['year'] ?>
-   </option>
-  <?php endforeach; ?>
-  </select>
-  </div>
-  </form>
+    <div class="admin-stat-card">
+        <div class="admin-stat-icon" style="background: var(--color-success-light); color: var(--color-success);">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+        </div>
+        <div class="admin-stat-content">
+            <div class="admin-stat-value"><?= count(array_filter($series, fn($s) => $s['status'] === 'active')) ?></div>
+            <div class="admin-stat-label">Aktiva</div>
+        </div>
+    </div>
 
-  <!-- Active Filters Info -->
-  <?php if ($filterYear): ?>
-  <div class="mt-md gs-filter-active">
-  <div class="flex items-center gap-sm flex-wrap">
-  <span class="text-sm text-secondary">Visar:</span>
-  <span class="badge badge-accent"><?= $filterYear ?></span>
-  <a href="/admin/series.php" class="btn btn--sm btn--secondary">
-   <i data-lucide="x"></i>
-   Visa alla
-  </a>
-  </div>
-  </div>
-  <?php endif; ?>
- </div>
- </div>
+    <div class="admin-stat-card">
+        <div class="admin-stat-icon" style="background: var(--color-accent-light); color: var(--color-accent);">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg>
+        </div>
+        <div class="admin-stat-content">
+            <div class="admin-stat-value"><?= array_sum(array_column($series, 'events_count')) ?></div>
+            <div class="admin-stat-label">Totalt events</div>
+        </div>
+    </div>
 
- <!-- Series Modal -->
- <div id="seriesModal" class="gs-modal hidden">
-  <div class="gs-modal-overlay" onclick="closeSeriesModal()"></div>
-  <div class="gs-modal-content gs-modal-md">
-  <div class="gs-modal-header">
-  <h2 class="gs-modal-title" id="modalTitle">
-  <i data-lucide="trophy"></i>
-  <span id="modalTitleText">Ny Serie</span>
-  </h2>
-  <button type="button" class="gs-modal-close" onclick="closeSeriesModal()">
-  <i data-lucide="x"></i>
-  </button>
-  </div>
-  <form method="POST" id="seriesForm" enctype="multipart/form-data">
-  <?= csrf_field() ?>
-  <input type="hidden" name="action" id="formAction" value="create">
-  <input type="hidden" name="id" id="seriesId" value="">
+    <div class="admin-stat-card">
+        <div class="admin-stat-icon" style="background: var(--color-warning-light); color: var(--color-warning);">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        </div>
+        <div class="admin-stat-content">
+            <div class="admin-stat-value"><?= number_format($uniqueParticipants, 0, ',', ' ') ?></div>
+            <div class="admin-stat-label">Unika deltagare</div>
+        </div>
+    </div>
+</div>
 
-  <div class="gs-modal-body">
-  <div class="grid grid-cols-1 gap-md">
-   <!-- Name (Required) -->
-   <div>
-   <label for="name" class="label">
-   <i data-lucide="trophy"></i>
-   Namn <span class="text-error">*</span>
-   </label>
-   <input
-   type="text"
-   id="name"
-   name="name"
-   class="input"
-   required
-   placeholder="T.ex. GravitySeries 2025"
-   >
-   </div>
+<!-- Filter Section -->
+<div class="admin-card">
+    <div class="admin-card-body">
+        <form method="GET" action="/admin/series" class="admin-form-row">
+            <div class="admin-form-group" style="margin-bottom: 0;">
+                <label for="year-filter" class="admin-form-label">År</label>
+                <select id="year-filter" name="year" class="admin-form-select" onchange="this.form.submit()">
+                    <option value="">Alla år</option>
+                    <?php foreach ($allYears as $yearRow): ?>
+                        <option value="<?= $yearRow['year'] ?>" <?= $filterYear == $yearRow['year'] ? 'selected' : '' ?>>
+                            <?= $yearRow['year'] ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+        </form>
 
-   <!-- Type -->
-   <div>
-   <label for="type" class="label">
-   <i data-lucide="flag"></i>
-   Typ
-   </label>
-   <input
-   type="text"
-   id="type"
-   name="type"
-   class="input"
-   placeholder="T.ex. XC, Landsväg, MTB"
-   >
-   </div>
+        <?php if ($filterYear): ?>
+            <div style="margin-top: var(--space-md); padding-top: var(--space-md); border-top: 1px solid var(--color-border); display: flex; align-items: center; gap: var(--space-sm); flex-wrap: wrap;">
+                <span style="font-size: var(--text-sm); color: var(--color-text-secondary);">Visar:</span>
+                <span class="admin-badge admin-badge-warning"><?= $filterYear ?></span>
+                <a href="/admin/series" class="btn-admin btn-admin-sm btn-admin-secondary">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 14px; height: 14px;"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                    Visa alla
+                </a>
+            </div>
+        <?php endif; ?>
+    </div>
+</div>
 
-   <!-- Format -->
-   <div>
-   <label for="format" class="label">
-   <i data-lucide="trophy"></i>
-   Format (Kvalpoäng)
-   </label>
-   <select id="format" name="format" class="input">
-   <option value="Championship">Championship (Individuellt)</option>
-   <option value="Team">Team</option>
-   </select>
-   <p class="text-xs text-secondary gs-mt-xs">
-   Hur kvalificeringspoäng räknas för denna serie
-   </p>
-   </div>
+<!-- Series Table -->
+<div class="admin-card">
+    <div class="admin-card-header">
+        <h2><?= count($series) ?> serier</h2>
+    </div>
+    <div class="admin-card-body" style="padding: 0;">
+        <?php if (empty($series)): ?>
+            <div class="admin-empty-state">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>
+                <h3>Inga serier hittades</h3>
+                <p>Prova att ändra filtren eller skapa en ny serie.</p>
+                <button onclick="openSeriesModal()" class="btn-admin btn-admin-primary">Skapa serie</button>
+            </div>
+        <?php else: ?>
+            <div class="admin-table-container">
+                <table class="admin-table">
+                    <thead>
+                        <tr>
+                            <th>Namn</th>
+                            <th>Typ</th>
+                            <th>Format</th>
+                            <th>Status</th>
+                            <th>Startdatum</th>
+                            <th>Events</th>
+                            <th style="width: 150px;">Åtgärder</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($series as $serie): ?>
+                            <?php
+                            $statusMap = [
+                                'planning' => ['class' => 'admin-badge-secondary', 'text' => 'Planering'],
+                                'active' => ['class' => 'admin-badge-success', 'text' => 'Aktiv'],
+                                'completed' => ['class' => 'admin-badge-info', 'text' => 'Avslutad'],
+                                'cancelled' => ['class' => 'admin-badge-secondary', 'text' => 'Inställd']
+                            ];
+                            $statusInfo = $statusMap[$serie['status']] ?? ['class' => 'admin-badge-secondary', 'text' => ucfirst($serie['status'])];
+                            ?>
+                            <tr>
+                                <td>
+                                    <a href="?edit=<?= $serie['id'] ?>" style="color: var(--color-accent); text-decoration: none; font-weight: 500;">
+                                        <?= htmlspecialchars($serie['name']) ?>
+                                    </a>
+                                </td>
+                                <td><?= htmlspecialchars($serie['type'] ?? '-') ?></td>
+                                <td>
+                                    <span class="admin-badge"><?= htmlspecialchars($serie['format'] ?? 'Championship') ?></span>
+                                </td>
+                                <td>
+                                    <span class="admin-badge <?= $statusInfo['class'] ?>">
+                                        <?= $statusInfo['text'] ?>
+                                    </span>
+                                </td>
+                                <td><?= $serie['start_date'] ? date('Y-m-d', strtotime($serie['start_date'])) : '-' ?></td>
+                                <td><?= $serie['events_count'] ?></td>
+                                <td>
+                                    <div class="table-actions">
+                                        <?php if ($seriesEventsTableExists): ?>
+                                            <a href="/admin/series/events?series_id=<?= $serie['id'] ?>" class="btn-admin btn-admin-sm btn-admin-secondary" title="Hantera events">
+                                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg>
+                                            </a>
+                                        <?php endif; ?>
+                                        <a href="/admin/series/pricing?series_id=<?= $serie['id'] ?>" class="btn-admin btn-admin-sm btn-admin-secondary" title="Priser">
+                                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg>
+                                        </a>
+                                        <a href="?edit=<?= $serie['id'] ?>" class="btn-admin btn-admin-sm btn-admin-secondary" title="Redigera">
+                                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
+                                        </a>
+                                        <button onclick="deleteSeries(<?= $serie['id'] ?>, '<?= addslashes($serie['name']) ?>')" class="btn-admin btn-admin-sm btn-admin-danger" title="Ta bort">
+                                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+        <?php endif; ?>
+    </div>
+</div>
 
-   <!-- Status -->
-   <div>
-   <label for="status" class="label">
-   <i data-lucide="activity"></i>
-   Status
-   </label>
-   <select id="status" name="status" class="input">
-   <option value="planning">Planering</option>
-   <option value="active">Aktiv</option>
-   <option value="completed">Avslutad</option>
-   <option value="cancelled">Inställd</option>
-   </select>
-   </div>
+<!-- Series Modal -->
+<div id="seriesModal" class="admin-modal" style="display: none;">
+    <div class="admin-modal-overlay" onclick="closeSeriesModal()"></div>
+    <div class="admin-modal-content">
+        <div class="admin-modal-header">
+            <h2 id="modalTitle">Ny Serie</h2>
+            <button type="button" class="admin-modal-close" onclick="closeSeriesModal()">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+            </button>
+        </div>
+        <form method="POST" id="seriesForm" enctype="multipart/form-data">
+            <?= csrf_field() ?>
+            <input type="hidden" name="action" id="formAction" value="create">
+            <input type="hidden" name="id" id="seriesId" value="">
 
-   <!-- Start and End Dates -->
-   <div class="grid grid-cols-2 gap-md">
-   <div>
-   <label for="start_date" class="label">
-   <i data-lucide="calendar"></i>
-   Startdatum
-   </label>
-   <input
-   type="date"
-   id="start_date"
-   name="start_date"
-   class="input"
-   >
-   </div>
-   <div>
-   <label for="end_date" class="label">
-   <i data-lucide="calendar"></i>
-   Slutdatum
-   </label>
-   <input
-   type="date"
-   id="end_date"
-   name="end_date"
-   class="input"
-   >
-   </div>
-   </div>
+            <div class="admin-modal-body">
+                <div class="admin-form-group">
+                    <label for="name" class="admin-form-label">Namn <span style="color: var(--color-error);">*</span></label>
+                    <input type="text" id="name" name="name" class="admin-form-input" required placeholder="T.ex. GravitySeries 2025">
+                </div>
 
-   <!-- Description -->
-   <div>
-   <label for="description" class="label">
-   <i data-lucide="file-text"></i>
-   Beskrivning
-   </label>
-   <textarea
-   id="description"
-   name="description"
-   class="input"
-   rows="4"
-   placeholder="Beskriv serien..."
-   ></textarea>
-   </div>
+                <div class="admin-form-row">
+                    <div class="admin-form-group">
+                        <label for="type" class="admin-form-label">Typ</label>
+                        <input type="text" id="type" name="type" class="admin-form-input" placeholder="T.ex. XC, Landsväg, MTB">
+                    </div>
+                    <div class="admin-form-group">
+                        <label for="format" class="admin-form-label">Format</label>
+                        <select id="format" name="format" class="admin-form-select">
+                            <option value="Championship">Championship</option>
+                            <option value="Team">Team</option>
+                        </select>
+                    </div>
+                </div>
 
-   <!-- Organizer -->
-   <div>
-   <label for="organizer" class="label">
-   <i data-lucide="users"></i>
-   Arrangör/Delegat
-   </label>
-   <input
-   type="text"
-   id="organizer"
-   name="organizer"
-   class="input"
-   placeholder="T.ex. Svenska Cykelförbundet, Lokala klubben"
-   >
-   </div>
+                <div class="admin-form-group">
+                    <label for="status" class="admin-form-label">Status</label>
+                    <select id="status" name="status" class="admin-form-select">
+                        <option value="planning">Planering</option>
+                        <option value="active">Aktiv</option>
+                        <option value="completed">Avslutad</option>
+                        <option value="cancelled">Inställd</option>
+                    </select>
+                </div>
 
-   <!-- Logo Upload -->
-   <div>
-   <label for="logo" class="label">
-   <i data-lucide="image"></i>
-   Logotyp
-   </label>
-   <input
-   type="file"
-   id="logo"
-   name="logo"
-   class="input"
-   accept="image/jpeg,image/jpg,image/png,image/gif,image/webp,image/svg+xml"
-   >
-   <small class="text-secondary">
-   Godkända format: JPG, PNG, GIF, WebP, SVG. Max 5MB.
-   </small>
-   <div id="currentLogo" class="gs-logo-preview">
-   <strong>Nuvarande logotyp:</strong><br>
-   <img id="currentLogoImg" src="" alt="Logotyp">
-   </div>
-   </div>
-  </div>
-  </div>
+                <div class="admin-form-row">
+                    <div class="admin-form-group">
+                        <label for="start_date" class="admin-form-label">Startdatum</label>
+                        <input type="date" id="start_date" name="start_date" class="admin-form-input">
+                    </div>
+                    <div class="admin-form-group">
+                        <label for="end_date" class="admin-form-label">Slutdatum</label>
+                        <input type="date" id="end_date" name="end_date" class="admin-form-input">
+                    </div>
+                </div>
 
-  <div class="gs-modal-footer">
-  <button type="button" class="btn btn--secondary" onclick="closeSeriesModal()">
-   Avbryt
-  </button>
-  <button type="submit" class="btn btn--primary" id="submitButton">
-   <i data-lucide="check"></i>
-   <span id="submitButtonText">Skapa</span>
-  </button>
-  </div>
-  </form>
-  </div>
- </div>
+                <div class="admin-form-group">
+                    <label for="organizer" class="admin-form-label">Arrangör</label>
+                    <input type="text" id="organizer" name="organizer" class="admin-form-input" placeholder="T.ex. Svenska Cykelförbundet">
+                </div>
 
- <!-- Stats -->
- <div class="grid grid-cols-2 gs-md-grid-cols-4 gap-md mb-md">
- <div class="stat-card stat-card-content">
-  <i data-lucide="trophy" class="gs-stat-icon-primary"></i>
-  <div class="stat-number stat-number-xl"><?= count($series) ?></div>
-  <div class="stat-label stat-label-sm">Totalt serier</div>
- </div>
- <div class="stat-card stat-card-content">
-  <i data-lucide="check-circle" class="gs-stat-icon-success"></i>
-  <div class="stat-number stat-number-xl">
-  <?= count(array_filter($series, fn($s) => $s['status'] === 'active')) ?>
-  </div>
-  <div class="stat-label stat-label-sm">Aktiva</div>
- </div>
- <div class="stat-card stat-card-content">
-  <i data-lucide="calendar" class="gs-stat-icon-accent"></i>
-  <div class="stat-number stat-number-xl">
-  <?= array_sum(array_column($series, 'events_count')) ?>
-  </div>
-  <div class="stat-label stat-label-sm">Totalt events</div>
- </div>
- <div class="stat-card stat-card-content">
-  <i data-lucide="users" class="gs-stat-icon-warning"></i>
-  <div class="stat-number stat-number-xl">
-  <?= number_format($uniqueParticipants, 0, ',', ' ') ?>
-  </div>
-  <div class="stat-label stat-label-sm">Unika deltagare</div>
- </div>
- </div>
+                <div class="admin-form-group">
+                    <label for="description" class="admin-form-label">Beskrivning</label>
+                    <textarea id="description" name="description" class="admin-form-textarea" rows="3" placeholder="Beskriv serien..."></textarea>
+                </div>
 
- <!-- Series List -->
- <div class="card">
- <div class="card-body">
-  <?php if (empty($series)): ?>
-  <div class="alert alert--warning">
-  <p>Inga serier hittades.</p>
-  </div>
-  <?php else: ?>
-  <div class="table-scrollable">
-  <table class="table">
-  <thead>
-   <tr>
-   <th>Namn</th>
-   <th class="col-tablet">Typ</th>
-   <th class="gs-col-desktop">Format</th>
-   <th class="col-landscape">Status</th>
-   <th class="col-tablet">Startdatum</th>
-   <th class="gs-col-desktop">Slutdatum</th>
-   <th class="gs-col-desktop">Arrangör</th>
-   <th class="col-landscape">Events</th>
-   <th class="gs-actions-col">Åtgärder</th>
-   </tr>
-  </thead>
-  <tbody>
-   <?php foreach ($series as $serie): ?>
-   <?php
-   $statusMap = [
-   'planning' => ['badge' => 'secondary', 'text' => 'Planering'],
-   'active' => ['badge' => 'success', 'text' => 'Aktiv'],
-   'completed' => ['badge' => 'primary', 'text' => 'Avslutad'],
-   'cancelled' => ['badge' => 'secondary', 'text' => 'Inställd']
-   ];
-   $statusInfo = $statusMap[$serie['status']] ?? ['badge' => 'secondary', 'text' => ucfirst($serie['status'])];
-   ?>
-   <tr>
-   <td>
-   <strong><?= h($serie['name']) ?></strong>
-   </td>
-   <td class="col-tablet"><?= h($serie['type'] ?? '-') ?></td>
-   <td class="gs-col-desktop">
-   <span class="badge"><?= h($serie['format'] ?? 'Championship') ?></span>
-   </td>
-   <td class="col-landscape">
-   <span class="badge badge-<?= $statusInfo['badge'] ?>">
-    <?= $statusInfo['text'] ?>
-   </span>
-   </td>
-   <td class="col-tablet"><?= $serie['start_date'] ? date('d M Y', strtotime($serie['start_date'])) : '-' ?></td>
-   <td class="gs-col-desktop"><?= $serie['end_date'] ? date('d M Y', strtotime($serie['end_date'])) : '-' ?></td>
-   <td class="gs-col-desktop"><?= h($serie['organizer'] ?? '-') ?></td>
-   <td class="col-landscape">
-   <span class="text-sm"><?= $serie['events_count'] ?></span>
-   </td>
-   <td class="gs-actions-col">
-   <div class="flex gap-sm">
-    <?php if ($seriesEventsTableExists): ?>
-    <a
-    href="/admin/series-events.php?series_id=<?= $serie['id'] ?>"
-    class="btn btn--sm btn--primary"
-    title="Hantera events"
-    >
-    <i data-lucide="calendar" class="icon-sm"></i>
-    </a>
+                <div class="admin-form-group">
+                    <label for="logo" class="admin-form-label">Logotyp</label>
+                    <input type="file" id="logo" name="logo" class="admin-form-input" accept="image/*">
+                    <div id="currentLogo" style="display: none; margin-top: var(--space-sm);">
+                        <strong>Nuvarande:</strong><br>
+                        <img id="currentLogoImg" src="" alt="Logotyp" style="max-width: 150px; max-height: 80px; margin-top: var(--space-xs);">
+                    </div>
+                </div>
+            </div>
+
+            <div class="admin-modal-footer">
+                <button type="button" class="btn-admin btn-admin-secondary" onclick="closeSeriesModal()">Avbryt</button>
+                <button type="submit" class="btn-admin btn-admin-primary" id="submitButton">Skapa</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+// Store CSRF token from PHP session
+const csrfToken = '<?= htmlspecialchars(generate_csrf_token()) ?>';
+
+function openSeriesModal() {
+    document.getElementById('seriesModal').style.display = 'flex';
+    document.getElementById('seriesForm').reset();
+    document.getElementById('formAction').value = 'create';
+    document.getElementById('seriesId').value = '';
+    document.getElementById('modalTitle').textContent = 'Ny Serie';
+    document.getElementById('submitButton').textContent = 'Skapa';
+    document.getElementById('currentLogo').style.display = 'none';
+}
+
+function closeSeriesModal() {
+    document.getElementById('seriesModal').style.display = 'none';
+}
+
+function deleteSeries(id, name) {
+    if (!confirm('Är du säker på att du vill ta bort "' + name + '"?')) {
+        return;
+    }
+
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.innerHTML = '<input type="hidden" name="action" value="delete">' +
+                     '<input type="hidden" name="id" value="' + id + '">' +
+                     '<input type="hidden" name="csrf_token" value="' + csrfToken + '">';
+    document.body.appendChild(form);
+    form.submit();
+}
+
+// Handle edit mode from URL parameter
+document.addEventListener('DOMContentLoaded', function() {
+    <?php if ($editSeries): ?>
+        document.getElementById('formAction').value = 'update';
+        document.getElementById('seriesId').value = '<?= $editSeries['id'] ?>';
+        document.getElementById('name').value = '<?= addslashes($editSeries['name']) ?>';
+        document.getElementById('type').value = '<?= addslashes($editSeries['type'] ?? '') ?>';
+        document.getElementById('format').value = '<?= $editSeries['format'] ?? 'Championship' ?>';
+        document.getElementById('status').value = '<?= $editSeries['status'] ?? 'planning' ?>';
+        document.getElementById('start_date').value = '<?= $editSeries['start_date'] ?? '' ?>';
+        document.getElementById('end_date').value = '<?= $editSeries['end_date'] ?? '' ?>';
+        document.getElementById('description').value = '<?= addslashes($editSeries['description'] ?? '') ?>';
+        document.getElementById('organizer').value = '<?= addslashes($editSeries['organizer'] ?? '') ?>';
+
+        <?php if (!empty($editSeries['logo'])): ?>
+            document.getElementById('currentLogo').style.display = 'block';
+            document.getElementById('currentLogoImg').src = '<?= $editSeries['logo'] ?>';
+        <?php endif; ?>
+
+        document.getElementById('modalTitle').textContent = 'Redigera Serie';
+        document.getElementById('submitButton').textContent = 'Uppdatera';
+        document.getElementById('seriesModal').style.display = 'flex';
     <?php endif; ?>
-    <a
-    href="/admin/series-pricing.php?series_id=<?= $serie['id'] ?>"
-    class="btn btn--sm btn-accent"
-    title="Priser & Klassregler"
-    >
-    <i data-lucide="credit-card" class="icon-sm"></i>
-    </a>
-    <a
-    href="?edit=<?= $serie['id'] ?>"
-    class="btn btn--sm btn--secondary"
-    title="Redigera"
-    >
-    <i data-lucide="edit" class="icon-sm"></i>
-    </a>
-    <form method="POST" style="display: inline;" onsubmit="return confirm('Är du säker på att du vill ta bort &quot;<?= addslashes(h($serie['name'])) ?>&quot;?');">
-    <?= csrf_field() ?>
-    <input type="hidden" name="action" value="delete">
-    <input type="hidden" name="id" value="<?= $serie['id'] ?>">
-    <button
-    type="submit"
-    class="btn btn--sm btn--secondary btn-danger"
-    title="Ta bort"
-    >
-    <i data-lucide="trash-2" class="icon-sm"></i>
-    </button>
-    </form>
-   </div>
-   </td>
-   </tr>
-   <?php endforeach; ?>
-  </tbody>
-  </table>
-  </div>
-  <?php endif; ?>
- </div>
- </div>
- </div>
+});
 
- <script>
- // Open modal for creating new series
- function openSeriesModal() {
- document.getElementById('seriesModal').style.display = 'flex';
- document.getElementById('seriesForm').reset();
- document.getElementById('formAction').value = 'create';
- document.getElementById('seriesId').value = '';
- document.getElementById('modalTitleText').textContent = 'Ny Serie';
- document.getElementById('submitButtonText').textContent = 'Skapa';
+// Close modal with Escape key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        closeSeriesModal();
+    }
+});
+</script>
 
- // Re-initialize Lucide icons
- if (typeof lucide !== 'undefined') {
-  lucide.createIcons();
- }
- }
+<style>
+/* Modal styles */
+.admin-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
 
- // Close modal
- function closeSeriesModal() {
- document.getElementById('seriesModal').style.display = 'none';
- }
+.admin-modal-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+}
 
- // Edit series - reload page with edit parameter
- function editSeries(id) {
- window.location.href = `?edit=${id}`;
- }
+.admin-modal-content {
+    position: relative;
+    background: var(--color-bg);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-xl);
+    width: 90%;
+    max-width: 600px;
+    max-height: 90vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
 
- // Delete series
- function deleteSeries(id, name) {
- if (!confirm(`Är du säker på att du vill ta bort"${name}"?`)) {
-  return;
- }
+.admin-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--space-lg);
+    border-bottom: 1px solid var(--color-border);
+}
 
- // Create form and submit
- const form = document.createElement('form');
- form.method = 'POST';
- form.innerHTML = `
-  <?= csrf_field() ?>
-  <input type="hidden" name="action" value="delete">
-  <input type="hidden" name="id" value="${id}">
- `;
- document.body.appendChild(form);
- form.submit();
- }
+.admin-modal-header h2 {
+    margin: 0;
+    font-size: var(--text-xl);
+}
 
- // Close modal when clicking outside
- document.addEventListener('DOMContentLoaded', function() {
- const modal = document.getElementById('seriesModal');
- if (modal) {
-  modal.addEventListener('click', function(e) {
-  if (e.target === modal) {
-  closeSeriesModal();
-  }
-  });
- }
+.admin-modal-close {
+    background: none;
+    border: none;
+    padding: var(--space-xs);
+    cursor: pointer;
+    color: var(--color-text-secondary);
+    border-radius: var(--radius-sm);
+}
 
- // Handle edit mode from URL parameter
- <?php if ($editSeries): ?>
-  // Populate form with series data
-  document.getElementById('formAction').value = 'update';
-  document.getElementById('seriesId').value = '<?= $editSeries['id'] ?>';
-  document.getElementById('name').value = '<?= addslashes($editSeries['name']) ?>';
-  document.getElementById('type').value = '<?= addslashes($editSeries['type'] ?? '') ?>';
-  document.getElementById('format').value = '<?= $editSeries['format'] ?? 'Championship' ?>';
-  document.getElementById('status').value = '<?= $editSeries['status'] ?? 'planning' ?>';
-  document.getElementById('start_date').value = '<?= $editSeries['start_date'] ?? '' ?>';
-  document.getElementById('end_date').value = '<?= $editSeries['end_date'] ?? '' ?>';
-  document.getElementById('description').value = '<?= addslashes($editSeries['description'] ?? '') ?>';
-  document.getElementById('organizer').value = '<?= addslashes($editSeries['organizer'] ?? '') ?>';
+.admin-modal-close:hover {
+    background: var(--color-bg-tertiary);
+    color: var(--color-text);
+}
 
-  // Show current logo if exists
-  <?php if (!empty($editSeries['logo'])): ?>
-  document.getElementById('currentLogo').style.display = 'block';
-  document.getElementById('currentLogoImg').src = '<?= $editSeries['logo'] ?>';
-  <?php endif; ?>
+.admin-modal-close svg {
+    width: 20px;
+    height: 20px;
+}
 
-  // Update modal title and button
-  document.getElementById('modalTitleText').textContent = 'Redigera Serie';
-  document.getElementById('submitButtonText').textContent = 'Uppdatera';
+.admin-modal-body {
+    padding: var(--space-lg);
+    overflow-y: auto;
+    flex: 1;
+}
 
-  // Open modal
-  document.getElementById('seriesModal').style.display = 'flex';
+.admin-modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--space-sm);
+    padding: var(--space-lg);
+    border-top: 1px solid var(--color-border);
+}
 
-  // Re-initialize Lucide icons
-  if (typeof lucide !== 'undefined') {
-  lucide.createIcons();
-  }
- <?php endif; ?>
- });
+.admin-form-textarea {
+    width: 100%;
+    padding: var(--space-sm) var(--space-md);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    background: var(--color-bg);
+    color: var(--color-text);
+    font-family: inherit;
+    font-size: var(--text-sm);
+    resize: vertical;
+}
 
- // Close modal with Escape key
- document.addEventListener('keydown', function(e) {
- if (e.key === 'Escape') {
-  closeSeriesModal();
- }
- });
- </script>
+.admin-form-textarea:focus {
+    outline: none;
+    border-color: var(--color-accent);
+    box-shadow: 0 0 0 3px var(--color-accent-alpha);
+}
+</style>
 
-<?php render_admin_footer(); ?>
-<?php include __DIR__ . '/../includes/layout-footer.php'; ?>
+<?php include __DIR__ . '/components/admin-footer.php'; ?>
