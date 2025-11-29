@@ -5,21 +5,6 @@
  */
 require_once __DIR__ . '/config.php';
 
-// =============================================================================
-// LEGACY V2 PARAMETER MAPPING
-// Added: 2025-11-29
-// Purpose: Map old V2 parameter names to V3 equivalents for redirect compatibility
-// =============================================================================
-
-// results.php?series_id=X → /v3/results?series=X
-if (isset($_GET['series_id']) && !isset($_GET['series'])) {
-    $_GET['series'] = $_GET['series_id'];
-}
-
-// series.php?id=X → handled by .htaccess rewrite to /v3/series/X
-
-// =============================================================================
-
 function hub_get_current_page(): array {
     $raw = trim($_GET['page'] ?? '', '/');
 

@@ -142,4 +142,167 @@ include __DIR__ . '/includes/layout-header.php';
  </div>
  <?php endif; ?>
  </div>
+</main>
+
+<style>
+/* V3-style Series CSS with CSS variables for dark mode support */
+.gs-series-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: var(--space-md);
+}
+
+.gs-series-card {
+  display: grid;
+  grid-template-columns: 100px 1fr;
+  gap: var(--space-md);
+  padding: var(--space-md);
+  transition: all var(--transition-fast);
+}
+
+.gs-series-logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-bg-sunken);
+  border-radius: var(--radius-md);
+  padding: var(--space-sm);
+  min-height: 80px;
+}
+
+.gs-series-logo img {
+  max-width: 100%;
+  max-height: 70px;
+  object-fit: contain;
+}
+
+.gs-placeholder-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-muted);
+}
+
+.gs-series-info {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.gs-series-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  flex-wrap: wrap;
+}
+
+.gs-series-title {
+  font-size: var(--text-lg);
+  font-weight: var(--weight-bold);
+  color: var(--color-text-primary);
+  line-height: 1.3;
+}
+
+.gs-series-year {
+  display: inline-flex;
+  padding: var(--space-2xs) var(--space-sm);
+  background: var(--color-accent);
+  color: var(--color-text-inverse);
+  border-radius: var(--radius-full);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+}
+
+.gs-series-description {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.gs-series-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  flex-wrap: wrap;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  margin-top: var(--space-xs);
+}
+
+.gs-text-purple {
+  color: var(--color-accent-text);
+}
+
+.gs-ml-1 {
+  margin-left: var(--space-2xs);
+}
+
+.gs-icon-48 {
+  width: 48px;
+  height: 48px;
+}
+
+.gs-empty-state-container {
+  padding: var(--space-2xl);
+}
+
+.gs-empty-state-icon-lg {
+  width: 64px;
+  height: 64px;
+  color: var(--color-text-muted);
+  margin-bottom: var(--space-md);
+}
+
+.link-inherit {
+  text-decoration: none;
+  color: inherit;
+  display: block;
+}
+
+.link-inherit:hover {
+  text-decoration: none;
+}
+
+.gs-transition-card {
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.gs-transition-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+@media (max-width: 640px) {
+  .gs-series-list {
+    grid-template-columns: 1fr;
+    gap: var(--space-sm);
+  }
+
+  .gs-series-card {
+    grid-template-columns: 70px 1fr;
+    gap: var(--space-sm);
+    padding: var(--space-sm);
+  }
+
+  .gs-series-logo {
+    min-height: 60px;
+  }
+
+  .gs-series-logo img {
+    max-height: 50px;
+  }
+
+  .gs-series-title {
+    font-size: var(--text-md);
+  }
+
+  .gs-series-description {
+    display: none;
+  }
+}
+</style>
+
 <?php include __DIR__ . '/includes/layout-footer.php'; ?>

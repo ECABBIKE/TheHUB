@@ -459,7 +459,7 @@ include __DIR__ . '/../includes/layout-header.php';
 </main>
 
 <style>
-/* Ranking-specific styles */
+/* V3-style Ranking CSS with CSS variables for dark mode support */
 .gs-ranking-container {
     max-width: 900px;
     margin: 0 auto;
@@ -469,53 +469,53 @@ include __DIR__ . '/../includes/layout-header.php';
 .gs-discipline-tabs {
     display: flex;
     justify-content: center;
-    gap: var(--gs-space-xs);
-    background: var(--gs-light);
-    padding: var(--gs-space-xs);
-    border-radius: var(--gs-radius-lg);
+    gap: var(--space-xs);
+    background: var(--color-bg-sunken);
+    padding: var(--space-xs);
+    border-radius: var(--radius-lg);
 }
 
 .gs-discipline-tab {
-    padding: var(--gs-space-sm) var(--gs-space-lg);
-    border-radius: var(--gs-radius-md);
-    font-weight: 500;
-    font-size: 0.875rem;
-    color: var(--gs-text-secondary);
+    padding: var(--space-sm) var(--space-lg);
+    border-radius: var(--radius-md);
+    font-weight: var(--weight-medium);
+    font-size: var(--text-sm);
+    color: var(--color-text-secondary);
     text-decoration: none;
-    transition: all 0.2s;
+    transition: all var(--transition-fast);
 }
 
 .gs-discipline-tab:hover {
-    color: var(--gs-primary);
-    background: var(--gs-white);
+    color: var(--color-accent-text);
+    background: var(--color-bg-surface);
 }
 
 .gs-discipline-tab.active {
-    background: var(--gs-primary);
-    color: var(--gs-white);
-    box-shadow: var(--gs-shadow-sm);
+    background: var(--color-accent);
+    color: var(--color-text-inverse);
+    box-shadow: var(--shadow-sm);
 }
 
 /* View toggle (Riders/Clubs) */
 .gs-view-toggle {
     display: flex;
     justify-content: center;
-    gap: var(--gs-space-xs);
+    gap: var(--space-xs);
 }
 
 .gs-view-btn {
-    padding: var(--gs-space-sm) var(--gs-space-lg);
-    border-radius: var(--gs-radius-md);
-    font-weight: 500;
-    font-size: 0.875rem;
-    color: var(--gs-text-secondary);
+    padding: var(--space-sm) var(--space-lg);
+    border-radius: var(--radius-md);
+    font-weight: var(--weight-medium);
+    font-size: var(--text-sm);
+    color: var(--color-text-secondary);
     text-decoration: none;
-    transition: all 0.2s;
-    background: var(--gs-white);
-    border: 1px solid var(--gs-border);
+    transition: all var(--transition-fast);
+    background: var(--color-bg-surface);
+    border: 1px solid var(--color-border);
     display: flex;
     align-items: center;
-    gap: var(--gs-space-xs);
+    gap: var(--space-xs);
 }
 
 .gs-view-btn i {
@@ -524,25 +524,26 @@ include __DIR__ . '/../includes/layout-header.php';
 }
 
 .gs-view-btn:hover {
-    color: var(--gs-primary);
-    border-color: var(--gs-primary);
+    color: var(--color-accent-text);
+    border-color: var(--color-accent);
 }
 
 .gs-view-btn.active {
-    background: var(--gs-primary);
-    color: var(--gs-white);
-    border-color: var(--gs-primary);
-    box-shadow: var(--gs-shadow-sm);
+    background: var(--color-accent);
+    color: var(--color-text-inverse);
+    border-color: var(--color-accent);
+    box-shadow: var(--shadow-sm);
 }
 
 .gs-ranking-info-banner {
     display: flex;
     align-items: flex-start;
-    gap: var(--gs-space-sm);
-    padding: var(--gs-space-md);
-    background: var(--gs-primary-light);
-    border-radius: var(--gs-radius-md);
-    font-size: 0.875rem;
+    gap: var(--space-sm);
+    padding: var(--space-md);
+    background: var(--color-accent-light);
+    border-radius: var(--radius-md);
+    font-size: var(--text-sm);
+    color: var(--color-text-primary);
 }
 
 .gs-ranking-info-banner i {
@@ -550,33 +551,34 @@ include __DIR__ . '/../includes/layout-header.php';
     width: 16px;
     height: 16px;
     margin-top: 2px;
+    color: var(--color-accent-text);
 }
 
 /* Mobile ranking cards */
 .gs-ranking-cards {
     display: flex;
     flex-direction: column;
-    gap: var(--gs-space-sm);
+    gap: var(--space-sm);
 }
 
 .gs-ranking-card {
     display: grid;
     grid-template-columns: 50px 1fr auto;
     align-items: center;
-    padding: var(--gs-space-sm) var(--gs-space-md);
-    background: var(--gs-white);
-    border-radius: var(--gs-radius-md);
-    box-shadow: var(--gs-shadow-sm);
-    gap: var(--gs-space-md);
+    padding: var(--space-sm) var(--space-md);
+    background: var(--color-bg-surface);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sm);
+    gap: var(--space-md);
     text-decoration: none;
     color: inherit;
-    transition: all 0.2s;
+    transition: all var(--transition-fast);
     cursor: pointer;
 }
 
 .gs-ranking-card:hover {
     transform: translateY(-2px);
-    box-shadow: var(--gs-shadow-md);
+    box-shadow: var(--shadow-md);
 }
 
 .gs-ranking-card:active {
@@ -584,18 +586,18 @@ include __DIR__ . '/../includes/layout-header.php';
 }
 
 .gs-ranking-card.rank-1 {
-    background: linear-gradient(135deg, rgba(255, 215, 0, 0.1), rgba(255, 215, 0, 0.05));
-    border: 1px solid rgba(255, 215, 0, 0.3);
+    background: linear-gradient(135deg, rgba(255, 215, 0, 0.15), rgba(255, 215, 0, 0.05));
+    border: 1px solid rgba(255, 215, 0, 0.4);
 }
 
 .gs-ranking-card.rank-2 {
-    background: linear-gradient(135deg, rgba(192, 192, 192, 0.1), rgba(192, 192, 192, 0.05));
-    border: 1px solid rgba(192, 192, 192, 0.3);
+    background: linear-gradient(135deg, rgba(192, 192, 192, 0.15), rgba(192, 192, 192, 0.05));
+    border: 1px solid rgba(192, 192, 192, 0.4);
 }
 
 .gs-ranking-card.rank-3 {
-    background: linear-gradient(135deg, rgba(205, 127, 50, 0.1), rgba(205, 127, 50, 0.05));
-    border: 1px solid rgba(205, 127, 50, 0.3);
+    background: linear-gradient(135deg, rgba(205, 127, 50, 0.15), rgba(205, 127, 50, 0.05));
+    border: 1px solid rgba(205, 127, 50, 0.4);
 }
 
 .gs-rank-badge {
@@ -604,11 +606,12 @@ include __DIR__ . '/../includes/layout-header.php';
     display: flex;
     align-items: center;
     justify-content: center;
-    font-weight: bold;
-    font-size: 1.125rem;
-    background: var(--gs-light);
-    border-radius: var(--gs-radius-md);
+    font-weight: var(--weight-bold);
+    font-size: var(--text-lg);
+    background: var(--color-bg-sunken);
+    border-radius: var(--radius-md);
     flex-shrink: 0;
+    color: var(--color-text-primary);
 }
 
 .gs-medal {
@@ -620,17 +623,18 @@ include __DIR__ . '/../includes/layout-header.php';
 }
 
 .gs-rider-name {
-    font-weight: 600;
-    font-size: 0.9375rem;
+    font-weight: var(--weight-semibold);
+    font-size: var(--text-base);
     line-height: 1.3;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    color: var(--color-text-primary);
 }
 
 .gs-rider-meta {
-    font-size: 0.75rem;
-    color: var(--gs-text-secondary);
+    font-size: var(--text-xs);
+    color: var(--color-text-secondary);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -646,26 +650,26 @@ include __DIR__ . '/../includes/layout-header.php';
 }
 
 .gs-rider-points {
-    font-weight: bold;
-    font-size: 1.25rem;
-    color: var(--gs-primary);
+    font-weight: var(--weight-bold);
+    font-size: var(--text-xl);
+    color: var(--color-accent-text);
     line-height: 1;
 }
 
 .gs-rider-points-label {
     font-size: 0.625rem;
-    color: var(--gs-text-secondary);
+    color: var(--color-text-muted);
     text-transform: uppercase;
     letter-spacing: 0.5px;
 }
 
 .gs-position-change {
-    font-size: 0.75rem;
-    display: none; /* Hidden in portrait */
+    font-size: var(--text-xs);
+    display: none;
     align-items: center;
     justify-content: flex-end;
     gap: 2px;
-    font-weight: 600;
+    font-weight: var(--weight-semibold);
 }
 
 .gs-position-change i {
@@ -674,20 +678,20 @@ include __DIR__ . '/../includes/layout-header.php';
 }
 
 .gs-position-change.up {
-    color: var(--gs-success);
+    color: var(--color-success);
 }
 
 .gs-position-change.down {
-    color: var(--gs-danger);
+    color: var(--color-danger);
 }
 
 .gs-position-change.same {
-    color: var(--gs-text-secondary);
+    color: var(--color-text-secondary);
 }
 
 .gs-position-change.new {
-    color: var(--gs-accent);
-    font-weight: bold;
+    color: var(--color-accent-text);
+    font-weight: var(--weight-bold);
 }
 
 /* Desktop table */
@@ -698,25 +702,30 @@ include __DIR__ . '/../includes/layout-header.php';
 .gs-ranking-table {
     width: 100%;
     border-collapse: collapse;
-    background: var(--gs-white);
-    border-radius: var(--gs-radius-md);
+    background: var(--color-bg-surface);
+    border-radius: var(--radius-md);
     overflow: hidden;
-    box-shadow: var(--gs-shadow-sm);
+    box-shadow: var(--shadow-sm);
 }
 
 .gs-ranking-table th,
 .gs-ranking-table td {
-    padding: var(--gs-space-sm) var(--gs-space-md);
+    padding: var(--space-sm) var(--space-md);
     text-align: left;
-    border-bottom: 1px solid var(--gs-border);
+    border-bottom: 1px solid var(--color-border);
 }
 
 .gs-ranking-table th {
-    background: var(--gs-light);
-    font-weight: 600;
-    font-size: 0.75rem;
+    background: var(--color-bg-sunken);
+    font-weight: var(--weight-semibold);
+    font-size: var(--text-xs);
     text-transform: uppercase;
     letter-spacing: 0.05em;
+    color: var(--color-text-secondary);
+}
+
+.gs-ranking-table td {
+    color: var(--color-text-primary);
 }
 
 .gs-ranking-table tbody tr:last-child td {
@@ -725,11 +734,11 @@ include __DIR__ . '/../includes/layout-header.php';
 
 .gs-table-row-clickable {
     cursor: pointer;
-    transition: background-color 0.2s;
+    transition: background-color var(--transition-fast);
 }
 
 .gs-table-row-clickable:hover {
-    background-color: var(--gs-primary-light);
+    background-color: var(--color-bg-hover);
 }
 
 .gs-medal-badge {
@@ -738,21 +747,21 @@ include __DIR__ . '/../includes/layout-header.php';
 }
 
 .gs-change-up {
-    color: var(--gs-success);
+    color: var(--color-success);
     display: inline-flex;
     align-items: center;
     gap: 2px;
 }
 
 .gs-change-down {
-    color: var(--gs-danger);
+    color: var(--color-danger);
     display: inline-flex;
     align-items: center;
     gap: 2px;
 }
 
 .gs-change-same {
-    color: var(--gs-text-secondary);
+    color: var(--color-text-secondary);
 }
 
 .gs-change-up i,
@@ -768,17 +777,21 @@ include __DIR__ . '/../includes/layout-header.php';
     align-items: flex-end;
 }
 
+.gs-points-breakdown strong {
+    color: var(--color-text-primary);
+}
+
 /* Pagination */
 .gs-pagination {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: var(--gs-space-md);
+    gap: var(--space-md);
 }
 
 .gs-pagination-info {
-    font-size: 0.875rem;
-    color: var(--gs-text-secondary);
+    font-size: var(--text-sm);
+    color: var(--color-text-secondary);
 }
 
 /* Landscape mobile - show position changes */
@@ -789,19 +802,19 @@ include __DIR__ . '/../includes/layout-header.php';
 
     .gs-ranking-card {
         grid-template-columns: 50px 1fr auto auto;
-        gap: var(--gs-space-sm);
+        gap: var(--space-sm);
     }
 
     .gs-rider-stats {
         flex-direction: row;
-        gap: var(--gs-space-md);
+        gap: var(--space-md);
         align-items: center;
     }
 
     .gs-position-change {
         padding: 4px 8px;
-        background: var(--gs-light);
-        border-radius: var(--gs-radius-sm);
+        background: var(--color-bg-sunken);
+        border-radius: var(--radius-sm);
     }
 }
 
