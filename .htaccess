@@ -31,6 +31,32 @@ RewriteEngine On
 RewriteCond %{HTTPS} off
 RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
 
+# =============================================================================
+# V2 → V3 MIGRATION REDIRECTS
+# Added: 2025-11-29
+# Purpose: Redirect legacy .php files to modern V3 architecture
+# =============================================================================
+
+# Results page redirect (preserve query string)
+# V2: results.php?series_id=X → V3: /v3/results?series_id=X
+RewriteRule ^results\.php$ /v3/results [R=301,L,QSA]
+
+# Series list page redirect
+# V2: series.php → V3: /v3/series
+RewriteRule ^series\.php$ /v3/series [R=301,L,QSA]
+
+# Series standings page redirect
+# V2: series-standings.php?id=X → V3: /v3/series/X
+RewriteCond %{QUERY_STRING} ^id=([0-9]+)
+RewriteRule ^series-standings\.php$ /v3/series/%1? [R=301,L]
+
+# Ranking page redirect (preserve query string)
+# V2: /ranking/ → V3: /v3/ranking
+RewriteRule ^ranking/?$ /v3/ranking [R=301,L,QSA]
+RewriteRule ^ranking/index\.php$ /v3/ranking [R=301,L,QSA]
+
+# =============================================================================
+
 # Prevent directory listing
 Options -Indexes
 
