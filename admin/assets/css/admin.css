@@ -20,6 +20,7 @@
 
 .admin-main {
     padding: var(--space-xl);
+    padding-left: calc(64px + var(--space-xl));
     max-width: 1600px;
     width: 100%;
 }
@@ -244,7 +245,7 @@
 }
 
 /* ========================================================================
-   ADMIN SIDEBAR - Narrow 64px icon-only (like public site)
+   ADMIN SIDEBAR - Icon + label (like public site)
    ======================================================================== */
 
 .admin-sidebar {
@@ -264,21 +265,26 @@
 
 .admin-nav {
     flex: 1;
-    padding: var(--space-md) 0;
+    padding: var(--space-md) var(--space-xs);
     display: flex;
     flex-direction: column;
-    gap: var(--space-xs);
+    gap: var(--space-2xs);
 }
 
+/* Nav item - icon on top, label below (like public site) */
 .nav-item {
     display: flex;
+    flex-direction: column;
     align-items: center;
-    justify-content: center;
-    padding: var(--space-md);
+    gap: 2px;
+    padding: var(--space-sm) var(--space-xs);
     color: rgba(255, 255, 255, 0.6);
     text-decoration: none;
     transition: all 0.2s ease;
     position: relative;
+    border-radius: var(--radius-md);
+    font-size: 9px;
+    text-align: center;
 }
 
 .nav-item:hover {
@@ -305,54 +311,39 @@
 }
 
 .nav-item svg {
-    width: 22px;
-    height: 22px;
+    width: 20px;
+    height: 20px;
     flex-shrink: 0;
 }
 
-/* Hide text labels on desktop - MUST be hidden */
+/* Label under icon - VISIBLE */
 .nav-label {
-    display: none !important;
-    visibility: hidden !important;
-    width: 0 !important;
-    height: 0 !important;
-    overflow: hidden !important;
-}
-
-/* Tooltip on hover */
-.nav-item[data-tooltip]:hover::after {
-    content: attr(data-tooltip);
-    position: absolute;
-    left: 72px;
-    top: 50%;
-    transform: translateY(-50%);
-    background: #1a1a2e;
-    color: #fff;
-    padding: var(--space-sm) var(--space-md);
-    border-radius: var(--radius-md);
-    font-size: var(--text-sm);
+    display: block;
+    font-size: 9px;
     font-weight: var(--weight-medium);
+    line-height: 1.2;
     white-space: nowrap;
-    box-shadow: var(--shadow-lg);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    z-index: 100;
-    pointer-events: none;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
 }
 
 .sidebar-footer {
-    padding: var(--space-md) 0;
+    padding: var(--space-sm) var(--space-xs);
     border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .sidebar-link {
     display: flex;
+    flex-direction: column;
     align-items: center;
-    justify-content: center;
+    gap: 2px;
     color: rgba(255, 255, 255, 0.5);
     text-decoration: none;
-    padding: var(--space-md);
+    padding: var(--space-sm) var(--space-xs);
+    border-radius: var(--radius-md);
     transition: all 0.2s ease;
-    position: relative;
+    font-size: 9px;
 }
 
 .sidebar-link:hover {
@@ -360,29 +351,9 @@
     background: rgba(255, 255, 255, 0.08);
 }
 
-/* Tooltip for sidebar footer link */
-.sidebar-link[data-tooltip]:hover::after {
-    content: attr(data-tooltip);
-    position: absolute;
-    left: 72px;
-    top: 50%;
-    transform: translateY(-50%);
-    background: #1a1a2e;
-    color: #fff;
-    padding: var(--space-sm) var(--space-md);
-    border-radius: var(--radius-md);
-    font-size: var(--text-sm);
-    font-weight: var(--weight-medium);
-    white-space: nowrap;
-    box-shadow: var(--shadow-lg);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    z-index: 100;
-    pointer-events: none;
-}
-
 .sidebar-link svg {
-    width: 20px;
-    height: 20px;
+    width: 18px;
+    height: 18px;
 }
 
 /* Sidebar overlay */
@@ -915,32 +886,25 @@
         transform: translateX(0);
     }
 
-    /* Show labels on mobile sidebar */
+    /* Mobile sidebar - horizontal layout with icons and labels */
     .admin-sidebar .nav-item {
+        flex-direction: row;
         justify-content: flex-start;
         gap: var(--space-md);
         padding: var(--space-md) var(--space-lg);
+        font-size: var(--text-sm);
     }
 
     .admin-sidebar .nav-label {
-        display: block !important;
-        visibility: visible !important;
-        width: auto !important;
-        height: auto !important;
-        overflow: visible !important;
+        font-size: var(--text-sm);
     }
 
-    /* Hide tooltips on mobile (labels are visible) */
-    .admin-sidebar .nav-item[data-tooltip]:hover::after,
-    .admin-sidebar .sidebar-link[data-tooltip]:hover::after {
-        display: none;
-    }
-
-    /* Show sidebar footer label on mobile */
     .admin-sidebar .sidebar-link {
+        flex-direction: row;
         justify-content: flex-start;
         gap: var(--space-md);
         padding: var(--space-md) var(--space-lg);
+        font-size: var(--text-sm);
     }
 
     .admin-layout {
@@ -949,6 +913,7 @@
 
     .admin-main {
         padding: var(--space-lg);
+        padding-left: var(--space-lg);
     }
 
     .admin-page-header {
