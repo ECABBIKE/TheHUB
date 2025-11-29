@@ -1,12 +1,13 @@
 <?php
 // core/config.php
 // Adjust these for your webhotel DB
-define('DB_HOST', env('DB_HOST', 'localhost'));
-define('DB_NAME', env('DB_NAME', 'u994733455_thehub'));
-define('DB_USER', env('DB_USER', 'u994733455_rogerthat'));
-define('DB_PASS', env('DB_PASS', 'staggerMYnagger987!'));
 
-// Base URL relative to document root, e.g. '/gs-v4-backend-mini/public'
+define('DB_HOST', 'localhost');
+define('DB_NAME', 'gs_v4_test');
+define('DB_USER', 'db_user');
+define('DB_PASS', 'db_password');
+define('DB_CHARSET', 'utf8mb4');
+
 define('BASE_URL', '/gs-v4-backend-mini/public');
 
 function url(string $path = ''): string
