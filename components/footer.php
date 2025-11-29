@@ -1,20 +1,6 @@
-<?php
-/**
- * TheHUB Footer Component
- */
-$versionInfo = function_exists('getVersionInfo') ? getVersionInfo() : ['version' => '2.0', 'name' => 'TheHUB', 'build' => '', 'deployment' => 0, 'commit' => ''];
-?>
-<footer class="footer">
-    <div class="container">
-        <p class="footer-version">
-            TheHUB v<?= h($versionInfo['version']) ?>
-            <?php if (!empty($versionInfo['build'])): ?>
-                <strong>[<?= h($versionInfo['build']) ?>.<?= str_pad($versionInfo['deployment'], 3, '0', STR_PAD_LEFT) ?>]</strong>
-            <?php endif; ?>
-            • <?= h($versionInfo['name']) ?>
-            <?php if ($versionInfo['commit']): ?>
-                • <?= h($versionInfo['commit']) ?>
-            <?php endif; ?>
-        </p>
-    </div>
-</footer>
+<?php $currentTheme = hub_get_theme(); ?>
+<div class="theme-toggle" role="group" aria-label="Välj tema">
+  <button type="button" class="theme-toggle-btn" data-theme="light" aria-pressed="<?= $currentTheme==='light'?'true':'false' ?>" aria-label="Ljust tema">☀️</button>
+  <button type="button" class="theme-toggle-btn" data-theme="dark" aria-pressed="<?= $currentTheme==='dark'?'true':'false' ?>" aria-label="Mörkt tema">🌙</button>
+  <button type="button" class="theme-toggle-btn" data-theme="auto" aria-pressed="<?= $currentTheme==='auto'?'true':'false' ?>" aria-label="Automatiskt tema">📱</button>
+</div>

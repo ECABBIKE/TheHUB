@@ -1,215 +1,162 @@
 <?php
 /**
- * TheHUB V2 Router (Modular SPA Architecture)
- * Based on V3's router - handles URL routing for clean URLs and AJAX content loading
+ * TheHUB V3.5 Router
+ * Handles URL routing for the SPA structure
  */
+require_once __DIR__ . '/v3-config.php';
 
-// Define root path
-if (!defined('HUB_ROOT')) {
-    define('HUB_ROOT', __DIR__);
-}
-
-/**
- * Get current page info from URL
- * @return array Page info with 'page', 'section', 'params', 'file' keys
- */
 function hub_get_current_page(): array {
     $raw = trim($_GET['page'] ?? '', '/');
 
-    // Home/Dashboard
-    if ($raw === '' || $raw === 'index.php' || $raw === 'home') {
-        return [
-            'page' => 'home',
-            'section' => 'home',
-            'params' => [],
-            'file' => HUB_ROOT . '/pages/home.php',
-            'title' => 'Hem'
-        ];
+    if ($raw === '' || $raw === 'index.php') {
+        return ['page' => 'dashboard', 'section' => 'dashboard', 'params' => [], 'file' => HUB_V3_ROOT . '/pages/dashboard.php'];
     }
 
     $segments = explode('/', $raw);
     $section = $segments[0];
-    $subpage = $segments[1] ?? null;
-    $id = null;
+    $subpage = $segments[1] ?? 'index';
+    $id = $segments[2] ?? ($segments[1] ?? null);
 
-    // Section routes - maps URL segments to page files
-    // Uses /pages/ for new modules, root level for legacy pages
+    // Simple pages (login, logout, etc.)
+    $simplePages = [
+        'login' => '/pages/login.php',
+        'logout' => '/pages/logout.php',
+    ];
+
+    if (isset($simplePages[$section])) {
+        return [
+            'page' => $section,
+            'section' => $section,
+            'params' => [],
+            'file' => HUB_V3_ROOT . $simplePages[$section]
+        ];
+    }
+
+    // New V3.5 section-based routing
     $sectionRoutes = [
         'calendar' => [
-            'index' => '/events.php',           // Legacy: root level
-            'event' => '/event.php',            // Legacy: root level
-            'title' => 'Kalender'
-        ],
-        'events' => [
-            'index' => '/events.php',           // Legacy: root level
-            'title' => 'Kalender'
+            'index' => '/pages/calendar/index.php',
+            'event' => '/pages/calendar/event.php'
         ],
         'results' => [
-            'index' => '/results.php',          // Legacy: root level
-            'event' => '/event-results.php',    // Legacy: root level
-            'title' => 'Resultat'
+            'index' => '/pages/results.php',  // Legacy - will move to /pages/results/index.php
+            'event' => '/pages/event.php'     // Legacy
         ],
         'series' => [
-            'index' => '/series.php',           // Legacy: root level
-            'show' => '/series-standings.php',  // Legacy: root level
-            'title' => 'Serier'
+            'index' => '/pages/series/index.php',
+            'show' => '/pages/series/show.php'
         ],
         'database' => [
-            'index' => '/riders.php',           // Legacy: root level
-            'rider' => '/rider.php',            // Legacy: root level
-            'club' => '/club.php',              // Legacy: root level
-            'title' => 'Databas'
-        ],
-        'riders' => [
-            'index' => '/riders.php',           // Legacy: root level
-            'title' => 'Deltagare'
-        ],
-        'clubs' => [
-            'index' => '/clubs/leaderboard.php', // Legacy: in clubs folder
-            'leaderboard' => '/clubs/leaderboard.php',
-            'detail' => '/club.php',            // Legacy: root level
-            'title' => 'Klubbar'
+            'index' => '/pages/database/index.php',
+            'rider' => '/pages/rider.php',    // Legacy - will move
+            'club' => '/pages/club.php'       // Legacy
         ],
         'ranking' => [
-            'index' => '/ranking/index.php',    // Legacy: in ranking folder
-            'rider' => '/ranking/rider.php',
-            'title' => 'Ranking'
+            'index' => '/pages/ranking.php',  // Legacy
+            'riders' => '/pages/ranking.php',
+            'clubs' => '/pages/ranking.php',
+            'events' => '/pages/ranking.php'
         ],
         'profile' => [
-            'index' => '/profile.php',          // Legacy: root level
-            'login' => '/rider-login.php',      // Legacy: root level
-            'register' => '/rider-register.php', // Legacy: root level
-            'title' => 'Min Profil'
+            'index' => '/pages/profile/index.php',
+            'edit' => '/pages/profile/edit.php',
+            'children' => '/pages/profile/children.php',
+            'club-admin' => '/pages/profile/club-admin.php',
+            'registrations' => '/pages/profile/registrations.php',
+            'results' => '/pages/profile/results.php',
+            'receipts' => '/pages/profile/receipts.php',
+            'login' => '/pages/profile/login.php'
         ]
     ];
 
-    // Check if this is a section route
+    // Check if this is a V3.5 section route
     if (isset($sectionRoutes[$section])) {
-        $routeInfo = $sectionRoutes[$section];
-        $title = $routeInfo['title'] ?? ucfirst($section);
-
         // If second segment is numeric, it's an ID
         if (isset($segments[1]) && is_numeric($segments[1])) {
-            $id = (int)$segments[1];
+            $id = $segments[1];
             // Determine detail page based on section
             $detailPages = [
                 'calendar' => 'event',
-                'events' => 'event',
                 'results' => 'event',
                 'series' => 'show',
                 'database' => 'rider',
-                'riders' => 'rider',
-                'clubs' => 'detail',
-                'ranking' => 'rider'
+                'ranking' => 'riders'
             ];
             $subpage = $detailPages[$section] ?? 'index';
         } elseif (isset($segments[1]) && !is_numeric($segments[1])) {
             $subpage = $segments[1];
-            $id = isset($segments[2]) && is_numeric($segments[2]) ? (int)$segments[2] : null;
+            $id = $segments[2] ?? null;
         } else {
             $subpage = 'index';
         }
 
-        $file = HUB_ROOT . ($routeInfo[$subpage] ?? $routeInfo['index']);
+        $file = HUB_V3_ROOT . ($sectionRoutes[$section][$subpage] ?? $sectionRoutes[$section]['index']);
 
         return [
-            'page' => $section . ($subpage !== 'index' ? '-' . $subpage : ''),
+            'page' => $section . '-' . $subpage,
             'section' => $section,
             'subpage' => $subpage,
-            'params' => $id !== null ? ['id' => $id] : [],
-            'file' => $file,
-            'title' => $title
+            'params' => $id ? ['id' => $id] : [],
+            'file' => $file
         ];
     }
 
     // Legacy single-item pages (rider/123, event/456, club/789)
-    $singlePages = [
-        'rider' => ['section' => 'database', 'file' => '/rider.php', 'title' => 'Cyklist'],
-        'event' => ['section' => 'results', 'file' => '/event-results.php', 'title' => 'Event'],
-        'club' => ['section' => 'clubs', 'file' => '/club.php', 'title' => 'Klubb'],
-        'event-results' => ['section' => 'results', 'file' => '/event-results.php', 'title' => 'Resultat'],
-        'series-standings' => ['section' => 'series', 'file' => '/series-standings.php', 'title' => 'Serieställning']
-    ];
-
-    if (isset($singlePages[$section])) {
-        $info = $singlePages[$section];
-        $id = isset($segments[1]) && is_numeric($segments[1]) ? (int)$segments[1] : null;
-
+    $singlePages = ['rider', 'event', 'club'];
+    if (in_array($section, $singlePages) && isset($segments[1])) {
         return [
             'page' => $section,
-            'section' => $info['section'],
-            'params' => $id !== null ? ['id' => $id] : [],
-            'file' => HUB_ROOT . $info['file'],
-            'title' => $info['title']
+            'section' => $section === 'rider' || $section === 'club' ? 'database' : 'results',
+            'params' => ['id' => $segments[1]],
+            'file' => HUB_V3_ROOT . '/pages/' . $section . '.php'
         ];
     }
 
-    // Admin routes - redirect to admin folder
-    if ($section === 'admin') {
-        header('Location: /admin/' . ($subpage ?? 'dashboard.php'));
-        exit;
+    // Legacy list pages
+    $legacyPages = [
+        'riders' => ['section' => 'database', 'file' => '/pages/riders.php'],
+        'clubs' => ['section' => 'database', 'file' => '/pages/clubs.php'],
+        'results' => ['section' => 'results', 'file' => '/pages/results.php'],
+        'ranking' => ['section' => 'ranking', 'file' => '/pages/ranking.php']
+    ];
+
+    if (isset($legacyPages[$section])) {
+        return [
+            'page' => $section,
+            'section' => $legacyPages[$section]['section'],
+            'params' => [],
+            'file' => HUB_V3_ROOT . $legacyPages[$section]['file']
+        ];
     }
 
-    // 404 - page not found
-    return [
-        'page' => '404',
-        'section' => null,
-        'params' => ['requested' => $raw],
-        'file' => HUB_ROOT . '/pages/404.php',
-        'title' => 'Sidan hittades inte'
-    ];
+    // Dashboard
+    if ($section === 'dashboard') {
+        return ['page' => 'dashboard', 'section' => 'dashboard', 'params' => [], 'file' => HUB_V3_ROOT . '/pages/dashboard.php'];
+    }
+
+    // 404
+    return ['page' => '404', 'section' => null, 'params' => ['requested' => $raw], 'file' => HUB_V3_ROOT . '/pages/404.php'];
 }
 
-/**
- * Check if current request is AJAX
- * @return bool
- */
 function hub_is_ajax(): bool {
     return !empty($_SERVER['HTTP_X_REQUESTED_WITH']) &&
            strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
 }
 
-/**
- * Check if navigation item is active
- * @param string $navId Navigation ID to check
- * @param string $currentSection Current section from page info
- * @return bool
- */
-function hub_is_nav_active(string $navId, string $currentSection): bool {
-    if ($navId === $currentSection) return true;
+function hub_is_nav_active(string $navId, string $currentPage): bool {
+    // Get section from page info
+    global $pageInfo;
+    $section = $pageInfo['section'] ?? null;
 
-    // Alias mappings
-    $aliases = [
-        'calendar' => ['events'],
-        'results' => ['event-results'],
-        'series' => ['series-standings'],
-        'database' => ['riders', 'rider', 'clubs', 'club']
-    ];
+    if ($section === $navId) return true;
 
-    if (isset($aliases[$navId]) && in_array($currentSection, $aliases[$navId])) {
-        return true;
-    }
+    // Legacy mappings
+    if ($navId === 'calendar' && in_array($currentPage, ['calendar', 'calendar-event', 'calendar-index'])) return true;
+    if ($navId === 'results' && in_array($currentPage, ['results', 'event', 'results-event'])) return true;
+    if ($navId === 'series' && in_array($currentPage, ['series', 'series-index', 'series-show'])) return true;
+    if ($navId === 'database' && in_array($currentPage, ['database', 'riders', 'rider', 'clubs', 'club', 'database-rider', 'database-club'])) return true;
+    if ($navId === 'ranking' && str_starts_with($currentPage, 'ranking')) return true;
+    if ($navId === 'profile' && str_starts_with($currentPage, 'profile')) return true;
 
     return false;
-}
-
-/**
- * Generate URL for a page
- * @param string $page Page/section name
- * @param array $params URL parameters
- * @return string Clean URL
- */
-function hub_url(string $page, array $params = []): string {
-    $url = '/' . ltrim($page, '/');
-
-    if (!empty($params['id'])) {
-        $url .= '/' . $params['id'];
-        unset($params['id']);
-    }
-
-    if (!empty($params)) {
-        $url .= '?' . http_build_query($params);
-    }
-
-    return $url;
 }
