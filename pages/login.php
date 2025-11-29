@@ -12,13 +12,46 @@ if (!defined('HUB_V3_ROOT')) {
 
 require_once HUB_V3_ROOT . '/components/icons.php';
 
+/**
+ * Clean redirect URL - prevent redirect loops to login page
+ */
+function clean_redirect_url(?string $url): string {
+    if (empty($url)) {
+        return '/';
+    }
+
+    // Decode URL if it's encoded
+    $url = urldecode($url);
+
+    // Parse the URL
+    $parsed = parse_url($url);
+    $path = $parsed['path'] ?? '/';
+
+    // Don't redirect to login page (prevent loops)
+    if (strpos($path, '/login') === 0 || $path === '/login') {
+        // Check if there's a nested redirect parameter
+        if (isset($parsed['query'])) {
+            parse_str($parsed['query'], $queryParams);
+            if (isset($queryParams['redirect'])) {
+                return clean_redirect_url($queryParams['redirect']);
+            }
+        }
+        return '/';
+    }
+
+    // Return the path (don't allow external redirects)
+    return $path;
+}
+
 // Already logged in? Redirect
 if (hub_is_logged_in()) {
-    $redirect = $_GET['redirect'] ?? HUB_V3_URL . '/';
-    // If admin, go to admin panel
-    if (hub_is_admin() && empty($_GET['redirect'])) {
-        $redirect = HUB_V3_URL . '/admin';
+    $redirect = clean_redirect_url($_GET['redirect'] ?? '');
+
+    // If admin and no specific redirect, go to admin panel
+    if (hub_is_admin() && $redirect === '/') {
+        $redirect = '/admin';
     }
+
     header('Location: ' . $redirect);
     exit;
 }
@@ -37,11 +70,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $result = hub_attempt_login($email, $password);
 
         if ($result['success']) {
-            $redirect = $_POST['redirect'] ?? $_GET['redirect'] ?? HUB_V3_URL . '/';
+            $redirect = clean_redirect_url($_POST['redirect'] ?? $_GET['redirect'] ?? '');
 
             // If admin and no specific redirect, go to admin panel
-            if (hub_is_admin() && empty($_GET['redirect']) && empty($_POST['redirect'])) {
-                $redirect = HUB_V3_URL . '/admin';
+            if (hub_is_admin() && $redirect === '/') {
+                $redirect = '/admin';
             }
 
             header('Location: ' . $redirect);
@@ -52,7 +85,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-$redirect = $_GET['redirect'] ?? '';
+$redirect = clean_redirect_url($_GET['redirect'] ?? '');
 ?>
 
 <div class="login-page">

@@ -119,11 +119,57 @@ $bodyClass = isset($bodyClass) ? $defaultBodyClass . ' ' . $bodyClass : $default
             }
         }
 
-        /* Mobile behavior unchanged */
+        /* Mobile menu toggle button styling */
+        .mobile-menu-toggle {
+            position: fixed;
+            top: 12px;
+            left: 12px;
+            z-index: 1200;
+            width: 44px;
+            height: 44px;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            background: var(--color-bg-surface, #fff);
+            border: 1px solid var(--color-border, #e5e7eb);
+            border-radius: 8px;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .mobile-menu-toggle svg {
+            width: 24px;
+            height: 24px;
+            stroke: currentColor;
+        }
+
+        /* Sidebar overlay */
+        .sidebar-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 1050;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease;
+        }
+        .sidebar-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        /* Mobile behavior */
         @media (max-width: 1023px) {
             .sidebar {
+                position: fixed;
+                left: 0;
+                top: 0;
+                width: 260px;
+                height: 100vh;
+                background: var(--color-bg-surface, #fff);
                 transform: translateX(-100%);
+                transition: transform 0.3s ease;
                 z-index: 1100;
+                padding-top: 70px;
             }
 
             .sidebar.open {
@@ -221,7 +267,9 @@ $bodyClass = isset($bodyClass) ? $defaultBodyClass . ' ' . $bodyClass : $default
 <body class="<?= $bodyClass ?>">
     <!-- Hamburger (hidden on desktop via inline CSS) -->
     <button class="mobile-menu-toggle" onclick="toggleMenu()" aria-label="Toggle menu">
-        <i data-lucide="menu"></i>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/>
+        </svg>
     </button>
 
     <!-- Navigation -->
