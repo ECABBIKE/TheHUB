@@ -1,7 +1,9 @@
 <?php
+/**
+ * Admin Riders - V3 Design System
+ */
 require_once __DIR__ . '/../config.php';
 require_admin();
-require_once __DIR__ . '/../includes/admin-layout.php';
 
 global $pdo;
 $db = getDB();
@@ -25,15 +27,15 @@ if (!in_array($sortOrder, $allowedOrders)) $sortOrder = 'asc';
 // Build ORDER BY clause
 $orderBy = '';
 if ($sortBy === 'name') {
- $orderBy = $sortOrder === 'asc' ? 'c.lastname ASC, c.firstname ASC' : 'c.lastname DESC, c.firstname DESC';
+    $orderBy = $sortOrder === 'asc' ? 'c.lastname ASC, c.firstname ASC' : 'c.lastname DESC, c.firstname DESC';
 } elseif ($sortBy === 'year') {
- $orderBy = $sortOrder === 'asc' ? 'c.birth_year ASC' : 'c.birth_year DESC';
+    $orderBy = $sortOrder === 'asc' ? 'c.birth_year ASC' : 'c.birth_year DESC';
 } elseif ($sortBy === 'club') {
- $orderBy = $sortOrder === 'asc' ? 'cl.name ASC, c.lastname ASC' : 'cl.name DESC, c.lastname ASC';
+    $orderBy = $sortOrder === 'asc' ? 'cl.name ASC, c.lastname ASC' : 'cl.name DESC, c.lastname ASC';
 } elseif ($sortBy === 'license') {
- $orderBy = $sortOrder === 'asc' ? 'c.license_number ASC' : 'c.license_number DESC';
+    $orderBy = $sortOrder === 'asc' ? 'c.license_number ASC' : 'c.license_number DESC';
 } elseif ($sortBy === 'results') {
- $orderBy = $sortOrder === 'asc' ? 'result_count ASC, c.lastname ASC' : 'result_count DESC, c.lastname ASC';
+    $orderBy = $sortOrder === 'asc' ? 'result_count ASC, c.lastname ASC' : 'result_count DESC, c.lastname ASC';
 }
 
 // Build query filters
@@ -41,31 +43,31 @@ $where = [];
 $params = [];
 
 if ($search) {
- $where[] ="(CONCAT(c.firstname, ' ', c.lastname) LIKE ? OR c.license_number LIKE ?)";
- $params[] ="%$search%";
- $params[] ="%$search%";
+    $where[] = "(CONCAT(c.firstname, ' ', c.lastname) LIKE ? OR c.license_number LIKE ?)";
+    $params[] = "%$search%";
+    $params[] = "%$search%";
 }
 
 if ($club_id) {
- $where[] ="c.club_id = ?";
- $params[] = $club_id;
+    $where[] = "c.club_id = ?";
+    $params[] = $club_id;
 }
 
 if ($onlyWithResults) {
- $where[] ="EXISTS (SELECT 1 FROM results r WHERE r.cyclist_id = c.id)";
+    $where[] = "EXISTS (SELECT 1 FROM results r WHERE r.cyclist_id = c.id)";
 }
 
 if ($onlySweId) {
- $where[] ="c.license_number LIKE 'SWE%'";
+    $where[] = "c.license_number LIKE 'SWE%'";
 }
 
 $whereClause = $where ? 'WHERE ' . implode(' AND ', $where) : '';
 
-$sql ="SELECT
- c.id, c.firstname, c.lastname, c.birth_year, c.gender,
- c.license_number, c.license_type, c.license_category, c.license_valid_until, c.discipline, c.active,
- cl.name as club_name, cl.id as club_id,
- (SELECT COUNT(*) FROM results r WHERE r.cyclist_id = c.id) as result_count
+$sql = "SELECT
+    c.id, c.firstname, c.lastname, c.birth_year, c.gender,
+    c.license_number, c.license_type, c.license_category, c.license_valid_until, c.discipline, c.active,
+    cl.name as club_name, cl.id as club_id,
+    (SELECT COUNT(*) FROM results r WHERE r.cyclist_id = c.id) as result_count
 FROM riders c
 LEFT JOIN clubs cl ON c.club_id = cl.id
 $whereClause
@@ -77,319 +79,372 @@ $riders = $db->getAll($sql, $params);
 // Get selected club info if filtering
 $selectedClub = null;
 if ($club_id) {
- $selectedClub = $db->getRow("SELECT * FROM clubs WHERE id = ?", [$club_id]);
+    $selectedClub = $db->getRow("SELECT * FROM clubs WHERE id = ?", [$club_id]);
 }
 
-$pageTitle = 'Deltagare';
-$pageType = 'admin';
-include __DIR__ . '/../includes/layout-header.php';
+// Helper function for age calculation
+function calculateAge($birthYear) {
+    if (!$birthYear) return null;
+    return date('Y') - $birthYear;
+}
+
+// Page config
+$page_title = 'Deltagare';
+$breadcrumbs = [
+    ['label' => 'Deltagare']
+];
+$page_actions = '<a href="/admin/import/riders" class="btn-admin btn-admin-primary">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
+    Importera
+</a>';
+
+// Build sort URL helper
+function buildSortUrl($field, $currentSort, $currentOrder, $search, $club_id, $onlyWithResults, $onlySweId) {
+    $newOrder = ($currentSort === $field && $currentOrder === 'asc') ? 'desc' : 'asc';
+    $url = "?sort=$field&order=$newOrder";
+    if ($search) $url .= '&search=' . urlencode($search);
+    if ($club_id) $url .= '&club_id=' . $club_id;
+    if ($onlyWithResults) $url .= '&with_results=1';
+    if ($onlySweId) $url .= '&swe_only=1';
+    return $url;
+}
+
+// Include admin layout
+include __DIR__ . '/components/admin-layout.php';
 ?>
 
-<main class="main-content">
- <div class="container">
- <?php
- render_admin_header('Deltagare & Klubbar', [
-  ['label' => 'Importera', 'url' => '/admin/import-riders.php', 'icon' => 'upload', 'class' => 'btn--primary']
- ]);
- ?>
+<?php if ($selectedClub): ?>
+    <div class="alert alert-info">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="16" y2="12"/><line x1="12" x2="12.01" y1="8" y2="8"/></svg>
+        <span>Visar deltagare från <strong><?= htmlspecialchars($selectedClub['name']) ?></strong></span>
+        <a href="/admin/riders" class="btn-admin btn-admin-sm btn-admin-secondary" style="margin-left: auto;">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+            Rensa filter
+        </a>
+    </div>
+<?php endif; ?>
 
- <!-- Filter indicator -->
- <?php if ($selectedClub): ?>
-  <div class="alert alert--info mb-lg">
-  <i data-lucide="filter"></i>
-  Visar deltagare från <strong><?= h($selectedClub['name']) ?></strong>
-  <a href="/admin/riders.php" class="btn btn--sm btn--secondary gs-ml-auto">
-   <i data-lucide="x"></i>
-   Rensa filter
-  </a>
-  </div>
- <?php endif; ?>
+<!-- Search and Filter -->
+<div class="admin-card">
+    <div class="admin-card-body">
+        <form method="GET" id="searchForm" class="admin-form-row" style="align-items: flex-end;">
+            <?php if ($club_id): ?>
+                <input type="hidden" name="club_id" value="<?= $club_id ?>">
+            <?php endif; ?>
 
- <!-- Search -->
- <div class="card mb-lg">
-  <div class="card-body">
-  <form method="GET" id="searchForm" class="flex gap-md items-center flex-wrap">
-   <?php if ($club_id): ?>
-   <input type="hidden" name="club_id" value="<?= $club_id ?>">
-   <?php endif; ?>
-   <div class="flex-1">
-   <div class="input-group">
-    <i data-lucide="search"></i>
-    <input
-    type="text"
-    name="search"
-    id="searchInput"
-    class="input"
-    placeholder="Sök efter namn eller licensnummer..."
-    value="<?= h($search) ?>"
-    autocomplete="off"
-    >
-   </div>
-   </div>
-   <label class="checkbox flex items-center gap-xs">
-   <input type="checkbox" name="with_results" value="1" <?= $onlyWithResults ? 'checked' : '' ?> onchange="this.form.submit()">
-   <span class="text-sm">Endast med resultat</span>
-   </label>
-   <label class="checkbox flex items-center gap-xs">
-   <input type="checkbox" name="swe_only" value="1" <?= $onlySweId ? 'checked' : '' ?> onchange="this.form.submit()">
-   <span class="text-sm">Endast SWE-ID</span>
-   </label>
-   <?php if ($search || $onlyWithResults || $onlySweId): ?>
-   <a href="/admin/riders.php<?= $club_id ? '?club_id=' . $club_id : '' ?>" class="btn btn--secondary btn--sm">
-    <i data-lucide="x"></i>
-    Rensa
-   </a>
-   <?php endif; ?>
-   <span id="searchStatus" class="text-xs text-secondary" style="display: none;">Söker...</span>
-  </form>
-  </div>
- </div>
+            <div class="admin-form-group" style="flex: 1; margin-bottom: 0;">
+                <label for="searchInput" class="admin-form-label">Sök</label>
+                <input
+                    type="text"
+                    name="search"
+                    id="searchInput"
+                    class="admin-form-input"
+                    placeholder="Sök efter namn eller licensnummer..."
+                    value="<?= htmlspecialchars($search) ?>"
+                    autocomplete="off"
+                >
+            </div>
 
- <div class="card">
-  <div class="card-body">
-  <?php if (empty($riders)): ?>
-   <div class="alert alert--warning">
-   <p>Inga deltagare hittades.</p>
-   </div>
-  <?php else: ?>
-   <div class="table-responsive">
-   <table class="table">
-    <thead>
-    <tr>
-     <th>
-     <a href="?sort=name&order=<?= $sortBy === 'name' && $sortOrder === 'asc' ? 'desc' : 'asc' ?><?= $search ? '&search=' . urlencode($search) : '' ?><?= $club_id ? '&club_id=' . $club_id : '' ?><?= $onlyWithResults ? '&with_results=1' : '' ?><?= $onlySweId ? '&swe_only=1' : '' ?>"
-      class="link gs-sortable-header">
-      Namn
-      <?php if ($sortBy === 'name'): ?>
-      <i data-lucide="<?= $sortOrder === 'asc' ? 'arrow-up' : 'arrow-down' ?>" class="icon-sm"></i>
-      <?php endif; ?>
-     </a>
-     </th>
-     <th>
-     <a href="?sort=year&order=<?= $sortBy === 'year' && $sortOrder === 'asc' ? 'desc' : 'asc' ?><?= $search ? '&search=' . urlencode($search) : '' ?><?= $club_id ? '&club_id=' . $club_id : '' ?><?= $onlyWithResults ? '&with_results=1' : '' ?><?= $onlySweId ? '&swe_only=1' : '' ?>"
-      class="link gs-sortable-header">
-      År
-      <?php if ($sortBy === 'year'): ?>
-      <i data-lucide="<?= $sortOrder === 'asc' ? 'arrow-up' : 'arrow-down' ?>" class="icon-sm"></i>
-      <?php endif; ?>
-     </a>
-     </th>
-     <th>
-     <a href="?sort=club&order=<?= $sortBy === 'club' && $sortOrder === 'asc' ? 'desc' : 'asc' ?><?= $search ? '&search=' . urlencode($search) : '' ?><?= $club_id ? '&club_id=' . $club_id : '' ?><?= $onlyWithResults ? '&with_results=1' : '' ?><?= $onlySweId ? '&swe_only=1' : '' ?>"
-      class="link gs-sortable-header">
-      Klubb
-      <?php if ($sortBy === 'club'): ?>
-      <i data-lucide="<?= $sortOrder === 'asc' ? 'arrow-up' : 'arrow-down' ?>" class="icon-sm"></i>
-      <?php endif; ?>
-     </a>
-     </th>
-     <th>
-     <a href="?sort=license&order=<?= $sortBy === 'license' && $sortOrder === 'asc' ? 'desc' : 'asc' ?><?= $search ? '&search=' . urlencode($search) : '' ?><?= $club_id ? '&club_id=' . $club_id : '' ?><?= $onlyWithResults ? '&with_results=1' : '' ?><?= $onlySweId ? '&swe_only=1' : '' ?>"
-      class="link gs-sortable-header">
-      Licensnummer
-      <?php if ($sortBy === 'license'): ?>
-      <i data-lucide="<?= $sortOrder === 'asc' ? 'arrow-up' : 'arrow-down' ?>" class="icon-sm"></i>
-      <?php endif; ?>
-     </a>
-     </th>
-     <th>
-     <a href="?sort=results&order=<?= $sortBy === 'results' && $sortOrder === 'asc' ? 'desc' : 'asc' ?><?= $search ? '&search=' . urlencode($search) : '' ?><?= $club_id ? '&club_id=' . $club_id : '' ?><?= $onlyWithResults ? '&with_results=1' : '' ?><?= $onlySweId ? '&swe_only=1' : '' ?>"
-      class="link gs-sortable-header">
-      Resultat
-      <?php if ($sortBy === 'results'): ?>
-      <i data-lucide="<?= $sortOrder === 'asc' ? 'arrow-up' : 'arrow-down' ?>" class="icon-sm"></i>
-      <?php endif; ?>
-     </a>
-     </th>
-     <th>Licensstatus</th>
-     <th>Disciplin</th>
-     <th class="table-col-actions">Åtgärder</th>
-    </tr>
-    </thead>
-    <tbody>
-    <?php foreach ($riders as $rider): ?>
-     <tr>
-     <td>
-      <a href="/rider.php?id=<?= $rider['id'] ?>" class="link">
-      <strong><?= htmlspecialchars($rider['firstname'] . ' ' . $rider['lastname']) ?></strong>
-      </a>
-     </td>
-     <td>
-      <?php if ($rider['birth_year']): ?>
-      <strong><?= $rider['birth_year'] ?></strong>
-      <span class="text-secondary text-xs"> (<?= calculateAge($rider['birth_year']) ?> år)</span>
-      <?php else: ?>
-      -
-      <?php endif; ?>
-     </td>
-     <td>
-      <?php if ($rider['club_name']): ?>
-      <?php if ($club_id): ?>
-       <!-- Already filtering by club, no need for link -->
-       <?= htmlspecialchars($rider['club_name']) ?>
-      <?php else: ?>
-       <a href="/admin/riders.php?club_id=<?= $rider['club_id'] ?>" class="link">
-       <?= htmlspecialchars($rider['club_name']) ?>
-       </a>
-      <?php endif; ?>
-      <?php else: ?>
-      -
-      <?php endif; ?>
-     </td>
-     <td>
-      <?php if ($rider['license_number']): ?>
-      <span class="badge badge-sm <?= strpos($rider['license_number'], 'SWE') === 0 ? 'badge-warning' : 'badge-primary' ?>">
-       <?= htmlspecialchars($rider['license_number']) ?>
-      </span>
-      <?php else: ?>
-      -
-      <?php endif; ?>
-     </td>
-     <td>
-      <?php if ($rider['result_count'] > 0): ?>
-      <span class="badge badge-sm badge-info"><?= $rider['result_count'] ?></span>
-      <?php else: ?>
-      <span class="text-secondary">0</span>
-      <?php endif; ?>
-     </td>
-     <td>
-      <?php
-      // Check license status
-      $hasValidLicense = false;
-      $licenseStatusMessage = '-';
-      $licenseStatusClass = 'badge-secondary';
+            <div class="admin-form-group" style="margin-bottom: 0;">
+                <label class="admin-checkbox-label">
+                    <input type="checkbox" name="with_results" value="1" <?= $onlyWithResults ? 'checked' : '' ?> onchange="this.form.submit()">
+                    <span>Endast med resultat</span>
+                </label>
+            </div>
 
-      // Check if license number exists and is not a SWE-ID
-      if (!empty($rider['license_number']) && strpos($rider['license_number'], 'SWE') !== 0) {
-      // Has non-SWE license number - check validity
-      if (!empty($rider['license_valid_until'])) {
-       $validUntil = strtotime($rider['license_valid_until']);
-       $today = time();
+            <div class="admin-form-group" style="margin-bottom: 0;">
+                <label class="admin-checkbox-label">
+                    <input type="checkbox" name="swe_only" value="1" <?= $onlySweId ? 'checked' : '' ?> onchange="this.form.submit()">
+                    <span>Endast SWE-ID</span>
+                </label>
+            </div>
 
-       if ($validUntil >= $today) {
-       $hasValidLicense = true;
-       $licenseStatusMessage = '✓ Aktiv';
-       $licenseStatusClass = 'badge-success';
-       } else {
-       $licenseStatusMessage = '✗ Utgången';
-       $licenseStatusClass = 'badge-danger';
-       }
-      } else {
-       // Has license number but no validity date - assume active
-       $hasValidLicense = true;
-       $licenseStatusMessage = '✓ Aktiv';
-       $licenseStatusClass = 'badge-success';
-      }
-      } elseif (!empty($rider['license_number']) && strpos($rider['license_number'], 'SWE') === 0) {
-      // SWE-ID (internal ID, not a real license)
-      $licenseStatusMessage = '✗ Ingen licens (SWE-ID)';
-      $licenseStatusClass = 'badge-danger';
-      }
-      ?>
-      <span class="badge <?= $licenseStatusClass ?>">
-      <?= $licenseStatusMessage ?>
-      </span>
-     </td>
-     <td>
-      <?php if ($rider['discipline']): ?>
-      <span class="badge"><?= htmlspecialchars($rider['discipline']) ?></span>
-      <?php else: ?>
-      -
-      <?php endif; ?>
-     </td>
-     <td>
-      <div class="flex gap-sm">
-      <a href="/admin/rider-edit.php?id=<?= $rider['id'] ?>" class="btn btn--sm btn--secondary" title="Redigera">
-       <i data-lucide="edit" class="icon-sm"></i>
-      </a>
-      <button onclick="deleteRider(<?= $rider['id'] ?>, '<?= addslashes($rider['firstname'] . ' ' . $rider['lastname']) ?>')" class="btn btn--sm btn--secondary btn-danger" title="Ta bort">
-       <i data-lucide="trash-2" class="icon-sm"></i>
-      </button>
-      </div>
-     </td>
-     </tr>
-    <?php endforeach; ?>
-    </tbody>
-   </table>
-   </div>
-  <?php endif; ?>
-  </div>
- </div>
- </div>
-</main>
+            <?php if ($search || $onlyWithResults || $onlySweId): ?>
+                <a href="/admin/riders<?= $club_id ? '?club_id=' . $club_id : '' ?>" class="btn-admin btn-admin-sm btn-admin-secondary">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                    Rensa
+                </a>
+            <?php endif; ?>
+        </form>
+    </div>
+</div>
 
-<script src="https://unpkg.com/lucide@latest"></script>
+<!-- Riders Table -->
+<div class="admin-card">
+    <div class="admin-card-header">
+        <h2><?= count($riders) ?> deltagare</h2>
+    </div>
+    <div class="admin-card-body" style="padding: 0;">
+        <?php if (empty($riders)): ?>
+            <div class="admin-empty-state">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                <h3>Inga deltagare hittades</h3>
+                <p>Prova att ändra sökning eller filter.</p>
+            </div>
+        <?php else: ?>
+            <div class="admin-table-container">
+                <table class="admin-table">
+                    <thead>
+                        <tr>
+                            <th>
+                                <a href="<?= buildSortUrl('name', $sortBy, $sortOrder, $search, $club_id, $onlyWithResults, $onlySweId) ?>" class="admin-sortable">
+                                    Namn
+                                    <?php if ($sortBy === 'name'): ?>
+                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;">
+                                            <?php if ($sortOrder === 'asc'): ?>
+                                                <path d="m18 15-6-6-6 6"/>
+                                            <?php else: ?>
+                                                <path d="m6 9 6 6 6-6"/>
+                                            <?php endif; ?>
+                                        </svg>
+                                    <?php endif; ?>
+                                </a>
+                            </th>
+                            <th>
+                                <a href="<?= buildSortUrl('year', $sortBy, $sortOrder, $search, $club_id, $onlyWithResults, $onlySweId) ?>" class="admin-sortable">
+                                    År
+                                    <?php if ($sortBy === 'year'): ?>
+                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;">
+                                            <?php if ($sortOrder === 'asc'): ?>
+                                                <path d="m18 15-6-6-6 6"/>
+                                            <?php else: ?>
+                                                <path d="m6 9 6 6 6-6"/>
+                                            <?php endif; ?>
+                                        </svg>
+                                    <?php endif; ?>
+                                </a>
+                            </th>
+                            <th>
+                                <a href="<?= buildSortUrl('club', $sortBy, $sortOrder, $search, $club_id, $onlyWithResults, $onlySweId) ?>" class="admin-sortable">
+                                    Klubb
+                                    <?php if ($sortBy === 'club'): ?>
+                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;">
+                                            <?php if ($sortOrder === 'asc'): ?>
+                                                <path d="m18 15-6-6-6 6"/>
+                                            <?php else: ?>
+                                                <path d="m6 9 6 6 6-6"/>
+                                            <?php endif; ?>
+                                        </svg>
+                                    <?php endif; ?>
+                                </a>
+                            </th>
+                            <th>
+                                <a href="<?= buildSortUrl('license', $sortBy, $sortOrder, $search, $club_id, $onlyWithResults, $onlySweId) ?>" class="admin-sortable">
+                                    Licensnummer
+                                    <?php if ($sortBy === 'license'): ?>
+                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;">
+                                            <?php if ($sortOrder === 'asc'): ?>
+                                                <path d="m18 15-6-6-6 6"/>
+                                            <?php else: ?>
+                                                <path d="m6 9 6 6 6-6"/>
+                                            <?php endif; ?>
+                                        </svg>
+                                    <?php endif; ?>
+                                </a>
+                            </th>
+                            <th>
+                                <a href="<?= buildSortUrl('results', $sortBy, $sortOrder, $search, $club_id, $onlyWithResults, $onlySweId) ?>" class="admin-sortable">
+                                    Resultat
+                                    <?php if ($sortBy === 'results'): ?>
+                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;">
+                                            <?php if ($sortOrder === 'asc'): ?>
+                                                <path d="m18 15-6-6-6 6"/>
+                                            <?php else: ?>
+                                                <path d="m6 9 6 6 6-6"/>
+                                            <?php endif; ?>
+                                        </svg>
+                                    <?php endif; ?>
+                                </a>
+                            </th>
+                            <th>Licensstatus</th>
+                            <th>Disciplin</th>
+                            <th style="width: 100px;">Åtgärder</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($riders as $rider): ?>
+                            <?php
+                            // Check license status
+                            $hasValidLicense = false;
+                            $licenseStatusMessage = '-';
+                            $licenseStatusClass = 'admin-badge-secondary';
+
+                            if (!empty($rider['license_number']) && strpos($rider['license_number'], 'SWE') !== 0) {
+                                if (!empty($rider['license_valid_until'])) {
+                                    $validUntil = strtotime($rider['license_valid_until']);
+                                    $today = time();
+                                    if ($validUntil >= $today) {
+                                        $hasValidLicense = true;
+                                        $licenseStatusMessage = 'Aktiv';
+                                        $licenseStatusClass = 'admin-badge-success';
+                                    } else {
+                                        $licenseStatusMessage = 'Utgången';
+                                        $licenseStatusClass = 'admin-badge-error';
+                                    }
+                                } else {
+                                    $hasValidLicense = true;
+                                    $licenseStatusMessage = 'Aktiv';
+                                    $licenseStatusClass = 'admin-badge-success';
+                                }
+                            } elseif (!empty($rider['license_number']) && strpos($rider['license_number'], 'SWE') === 0) {
+                                $licenseStatusMessage = 'SWE-ID';
+                                $licenseStatusClass = 'admin-badge-warning';
+                            }
+                            ?>
+                            <tr>
+                                <td>
+                                    <a href="/rider/<?= $rider['id'] ?>" style="color: var(--color-accent); text-decoration: none; font-weight: 500;">
+                                        <?= htmlspecialchars($rider['firstname'] . ' ' . $rider['lastname']) ?>
+                                    </a>
+                                </td>
+                                <td>
+                                    <?php if ($rider['birth_year']): ?>
+                                        <strong><?= $rider['birth_year'] ?></strong>
+                                        <span style="color: var(--color-text-secondary); font-size: var(--text-xs);"> (<?= calculateAge($rider['birth_year']) ?> år)</span>
+                                    <?php else: ?>
+                                        -
+                                    <?php endif; ?>
+                                </td>
+                                <td>
+                                    <?php if ($rider['club_name']): ?>
+                                        <?php if ($club_id): ?>
+                                            <?= htmlspecialchars($rider['club_name']) ?>
+                                        <?php else: ?>
+                                            <a href="/admin/riders?club_id=<?= $rider['club_id'] ?>" style="color: var(--color-accent); text-decoration: none;">
+                                                <?= htmlspecialchars($rider['club_name']) ?>
+                                            </a>
+                                        <?php endif; ?>
+                                    <?php else: ?>
+                                        -
+                                    <?php endif; ?>
+                                </td>
+                                <td>
+                                    <?php if ($rider['license_number']): ?>
+                                        <span class="admin-badge <?= strpos($rider['license_number'], 'SWE') === 0 ? 'admin-badge-warning' : 'admin-badge-info' ?>">
+                                            <?= htmlspecialchars($rider['license_number']) ?>
+                                        </span>
+                                    <?php else: ?>
+                                        -
+                                    <?php endif; ?>
+                                </td>
+                                <td>
+                                    <?php if ($rider['result_count'] > 0): ?>
+                                        <span class="admin-badge admin-badge-info"><?= $rider['result_count'] ?></span>
+                                    <?php else: ?>
+                                        <span style="color: var(--color-text-secondary);">0</span>
+                                    <?php endif; ?>
+                                </td>
+                                <td>
+                                    <span class="admin-badge <?= $licenseStatusClass ?>">
+                                        <?= $licenseStatusMessage ?>
+                                    </span>
+                                </td>
+                                <td>
+                                    <?php if ($rider['discipline']): ?>
+                                        <span class="admin-badge"><?= htmlspecialchars($rider['discipline']) ?></span>
+                                    <?php else: ?>
+                                        -
+                                    <?php endif; ?>
+                                </td>
+                                <td>
+                                    <div class="table-actions">
+                                        <a href="/admin/riders/edit/<?= $rider['id'] ?>" class="btn-admin btn-admin-sm btn-admin-secondary" title="Redigera">
+                                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
+                                        </a>
+                                        <button onclick="deleteRider(<?= $rider['id'] ?>, '<?= addslashes($rider['firstname'] . ' ' . $rider['lastname']) ?>')" class="btn-admin btn-admin-sm btn-admin-danger" title="Ta bort">
+                                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+        <?php endif; ?>
+    </div>
+</div>
+
 <script>
- lucide.createIcons();
+// Store CSRF token from PHP session
+const csrfToken = '<?= htmlspecialchars(generate_csrf_token()) ?>';
 
- // Store CSRF token from PHP session
- const csrfToken = '<?= htmlspecialchars(generate_csrf_token()) ?>';
+function deleteRider(id, name) {
+    if (!confirm('Är du säker på att du vill ta bort "' + name + '"?')) {
+        return;
+    }
 
- function deleteRider(id, name) {
- if (!confirm('Är du säker på att du vill ta bort"' + name + '"?')) {
-  return;
- }
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = '/admin/rider-delete.php';
+    form.innerHTML = '<input type="hidden" name="id" value="' + id + '">' +
+                     '<input type="hidden" name="csrf_token" value="' + csrfToken + '">';
+    document.body.appendChild(form);
+    form.submit();
+}
 
- // Create form and submit
- const form = document.createElement('form');
- form.method = 'POST';
- form.action = '/admin/rider-delete.php';
- form.innerHTML = '<input type="hidden" name="id" value="' + id + '">' +
-   '<input type="hidden" name="csrf_token" value="' + csrfToken + '">';
- document.body.appendChild(form);
- form.submit();
- }
+// Live search with debouncing
+(function() {
+    const searchInput = document.getElementById('searchInput');
+    const searchForm = document.getElementById('searchForm');
+    let debounceTimer;
+    let lastSearch = searchInput.value;
 
- // Live search with debouncing
- (function() {
- const searchInput = document.getElementById('searchInput');
- const searchForm = document.getElementById('searchForm');
- const searchStatus = document.getElementById('searchStatus');
- let debounceTimer;
- let lastSearch = searchInput.value;
+    searchInput.addEventListener('input', function() {
+        const query = this.value.trim();
+        clearTimeout(debounceTimer);
 
- searchInput.addEventListener('input', function() {
-  const query = this.value.trim();
+        if (query === lastSearch) return;
 
-  // Clear previous timer
-  clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(function() {
+            if (query.length >= 3 || query.length === 0) {
+                lastSearch = query;
+                searchForm.submit();
+            }
+        }, 600);
+    });
 
-  // Don't search if query hasn't changed
-  if (query === lastSearch) return;
+    searchInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+            clearTimeout(debounceTimer);
+            searchForm.submit();
+        }
+    });
 
-  // Show status indicator
-  if (query.length >= 3 || query.length === 0) {
-  searchStatus.style.display = 'inline';
-  }
-
-  // Debounce: wait 600ms after user stops typing
-  debounceTimer = setTimeout(function() {
-  // Only search if at least 3 characters or empty (to clear)
-  if (query.length >= 3 || query.length === 0) {
-   lastSearch = query;
-   searchForm.submit();
-  } else {
-   searchStatus.style.display = 'none';
-  }
-  }, 600);
- });
-
- // Also handle Enter key
- searchInput.addEventListener('keydown', function(e) {
-  if (e.key === 'Enter') {
-  clearTimeout(debounceTimer);
-  searchForm.submit();
-  }
- });
-
- // Auto-focus search field if there's a search query
- if (searchInput.value) {
-  searchInput.focus();
-  // Move cursor to end of text
-  searchInput.setSelectionRange(searchInput.value.length, searchInput.value.length);
- }
- })();
+    if (searchInput.value) {
+        searchInput.focus();
+        searchInput.setSelectionRange(searchInput.value.length, searchInput.value.length);
+    }
+})();
 </script>
 
-<?php render_admin_footer(); ?>
-<?php include __DIR__ . '/../includes/layout-footer.php'; ?>
+<style>
+.admin-sortable {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-xs);
+    color: inherit;
+    text-decoration: none;
+}
+
+.admin-sortable:hover {
+    color: var(--color-accent);
+}
+
+.admin-checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    cursor: pointer;
+    font-size: var(--text-sm);
+    white-space: nowrap;
+}
+
+.admin-checkbox-label input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--color-accent);
+}
+</style>
+
+<?php include __DIR__ . '/components/admin-footer.php'; ?>
