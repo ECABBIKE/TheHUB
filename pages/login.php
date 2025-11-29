@@ -32,7 +32,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $password = $_POST['password'] ?? '';
 
     if (empty($email) || empty($password)) {
-        $error = 'Fyll i både e-post och lösenord.';
+        $error = 'Fyll i både e-post/användarnamn och lösenord.';
     } else {
         $result = hub_attempt_login($email, $password);
 
@@ -84,17 +84,17 @@ $redirect = $_GET['redirect'] ?? '';
                 <?php endif; ?>
 
                 <div class="form-group">
-                    <label for="email" class="form-label">E-postadress</label>
+                    <label for="email" class="form-label">E-post eller användarnamn</label>
                     <div class="input-with-icon">
-                        <?= hub_icon('mail', 'input-icon') ?>
+                        <?= hub_icon('user', 'input-icon') ?>
                         <input
-                            type="email"
+                            type="text"
                             id="email"
                             name="email"
                             class="form-input"
                             value="<?= htmlspecialchars($email) ?>"
-                            placeholder="din@email.se"
-                            autocomplete="email"
+                            placeholder="din@email.se eller användarnamn"
+                            autocomplete="username"
                             autofocus
                             required
                         >
