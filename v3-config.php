@@ -132,8 +132,12 @@ if (!function_exists('hub_is_logged_in')) {
         if (function_exists('is_user_logged_in')) {
             return is_user_logged_in();
         }
-        // Check V3 session
-        if (isset($_SESSION['hub_user_id']) && $_SESSION['hub_user_id'] > 0) {
+        // Check if login timestamp exists (set on successful login)
+        if (isset($_SESSION['hub_logged_in_at']) && $_SESSION['hub_logged_in_at'] > 0) {
+            return true;
+        }
+        // Check V3 session (rider id >= 0, 0 = admin fallback)
+        if (isset($_SESSION['hub_user_id']) && is_numeric($_SESSION['hub_user_id'])) {
             return true;
         }
         // Check V2 rider session (backwards compatibility)
@@ -158,7 +162,22 @@ if (!function_exists('hub_current_user')) {
 
         // Check V3 session first
         if (isset($_SESSION['hub_user_id'])) {
-            return hub_get_rider_by_id($_SESSION['hub_user_id']);
+            $userId = $_SESSION['hub_user_id'];
+
+            // Admin fallback user (id=0) - return session data instead of DB lookup
+            if ($userId === 0 || $userId === '0') {
+                return [
+                    'id' => 0,
+                    'email' => $_SESSION['hub_user_email'] ?? 'admin@thehub.se',
+                    'firstname' => 'Admin',
+                    'lastname' => '',
+                    'role_id' => $_SESSION['hub_user_role'] ?? ROLE_SUPER_ADMIN,
+                    'is_admin' => 1,
+                    'active' => 1
+                ];
+            }
+
+            return hub_get_rider_by_id($userId);
         }
 
         // Check V2 rider session
