@@ -90,7 +90,7 @@ $bodyClass = isset($bodyClass) ? $defaultBodyClass . ' ' . $bodyClass : $default
                 position: fixed !important;
                 left: 0 !important;
                 top: 0 !important;
-                width: 280px !important;
+                width: 72px !important;
                 height: 100vh !important;
                 transform: translateX(0) !important;
                 transition: none !important;
@@ -109,8 +109,8 @@ $bodyClass = isset($bodyClass) ? $defaultBodyClass . ' ' . $bodyClass : $default
 
             /* Offset content for sidebar */
             .main-content {
-                margin-left: 280px !important;
-                width: calc(100% - 280px) !important;
+                margin-left: 72px !important;
+                width: calc(100% - 72px) !important;
             }
 
             /* Prevent body scroll lock */
@@ -225,7 +225,7 @@ $bodyClass = isset($bodyClass) ? $defaultBodyClass . ' ' . $bodyClass : $default
     </button>
 
     <!-- Navigation -->
-    <?php include __DIR__ . '/navigation.php'; ?>
+    <?php include __DIR__ . '/navigation-v3.php'; ?>
 
     <!-- Overlay (hidden on desktop via inline CSS) -->
     <div class="sidebar-overlay" onclick="closeMenu()"></div>
