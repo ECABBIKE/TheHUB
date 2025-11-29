@@ -158,9 +158,7 @@ $redirect = clean_redirect_url($_GET['redirect'] ?? '');
 
             <!-- Footer -->
             <div class="login-footer">
-                <a href="/rider-reset-password.php" class="login-link">Glömt lösenord?</a>
-                <span class="login-divider">|</span>
-                <a href="/rider-register.php" class="login-link">Skapa konto</a>
+                <a href="/forgot-password" class="login-link">Glömt lösenord?</a>
             </div>
 
         </div>

@@ -13,7 +13,7 @@ require_once __DIR__ . '/v3-config.php';
  */
 function hub_requires_auth(string $page): bool {
     // Public pages that don't require authentication
-    $publicPages = ['', 'welcome', 'login', 'logout', 'index.php'];
+    $publicPages = ['', 'welcome', 'login', 'logout', 'forgot-password', 'reset-password', 'index.php'];
     return !in_array($page, $publicPages);
 }
 
@@ -46,10 +46,12 @@ function hub_get_current_page(): array {
     $subpage = $segments[1] ?? 'index';
     $id = $segments[2] ?? ($segments[1] ?? null);
 
-    // Simple pages (login, logout, etc.)
+    // Simple pages (login, logout, password reset, etc.)
     $simplePages = [
         'login' => '/pages/login.php',
         'logout' => '/pages/logout.php',
+        'forgot-password' => '/pages/forgot-password.php',
+        'reset-password' => '/pages/reset-password.php',
     ];
 
     if (isset($simplePages[$section])) {
