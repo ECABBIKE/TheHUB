@@ -10,11 +10,15 @@ if (hub_is_logged_in()) {
     exit;
 }
 
+// Include mail helper
+require_once HUB_V3_ROOT . '/includes/mail.php';
+
 $pdo = hub_db();
 $message = '';
 $messageType = '';
 $showResetLink = false;
 $resetLink = '';
+$emailSent = false;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $email = trim($_POST['email'] ?? '');
@@ -47,18 +51,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                      . '://' . $_SERVER['HTTP_HOST'];
             $resetLink = $baseUrl . '/reset-password?token=' . $token;
 
-            // In production, send email here
-            // For now, show the link directly (or log it)
-            error_log("Password reset for {$email}: {$resetLink}");
+            // Send email
+            $riderName = trim($rider['firstname'] . ' ' . $rider['lastname']);
+            $emailSent = hub_send_password_reset_email($rider['email'], $riderName, $resetLink);
 
-            // Show link directly for now (remove in production with email)
-            $showResetLink = true;
-            $message = 'Återställningslänk skapad för ' . htmlspecialchars($rider['firstname'] . ' ' . $rider['lastname']);
-            $messageType = 'success';
+            if ($emailSent) {
+                $message = 'Ett mail med återställningslänk har skickats till ' . htmlspecialchars($email);
+                $messageType = 'success';
+            } else {
+                // Email failed - show link as fallback (for admin use)
+                $showResetLink = true;
+                $message = 'Kunde inte skicka mail. Här är återställningslänken:';
+                $messageType = 'warning';
+                error_log("Password reset email failed for {$email}: {$resetLink}");
+            }
         } else {
-            // Don't reveal if email exists - but for now, be helpful
-            $message = 'Ingen användare med denna e-postadress hittades i systemet.';
-            $messageType = 'error';
+            // Security: Don't reveal if email exists or not
+            $message = 'Om e-postadressen finns i systemet kommer du få ett mail med instruktioner.';
+            $messageType = 'info';
         }
     }
 }
@@ -77,14 +87,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </div>
         <?php endif; ?>
 
-        <?php if ($showResetLink): ?>
+        <?php if ($emailSent): ?>
+            <!-- Email sent successfully -->
+            <div class="success-info">
+                <p>Kontrollera din inkorg (och skräppost) för att hitta återställningslänken.</p>
+                <p class="note">Länken är giltig i 1 timme.</p>
+            </div>
+            <a href="/login" class="btn btn--primary btn--block mt-md">
+                Tillbaka till inloggning
+            </a>
+        <?php elseif ($showResetLink): ?>
+            <!-- Email failed - show link as fallback -->
             <div class="reset-link-box">
                 <p><strong>Återställningslänk:</strong></p>
                 <div class="reset-link-input">
                     <input type="text" value="<?= htmlspecialchars($resetLink) ?>" readonly id="resetLink">
                     <button type="button" onclick="copyLink()" class="btn btn--primary btn--sm">Kopiera</button>
                 </div>
-                <p class="reset-note">Länken är giltig i 1 timme. Kopiera och skicka till användaren.</p>
+                <p class="reset-note">Länken är giltig i 1 timme.</p>
                 <a href="<?= htmlspecialchars($resetLink) ?>" class="btn btn--primary btn--block mt-md">
                     Gå till återställning
                 </a>
@@ -99,7 +119,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </div>
 
                 <button type="submit" class="btn btn--primary btn--block">
-                    Skapa återställningslänk
+                    Skicka återställningslänk
                 </button>
             </form>
         <?php endif; ?>
@@ -211,6 +231,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     background: var(--color-error-light);
     color: var(--color-error);
     border: 1px solid var(--color-error);
+}
+.alert--warning {
+    background: rgba(245, 158, 11, 0.1);
+    color: #b45309;
+    border: 1px solid rgba(245, 158, 11, 0.3);
+}
+.alert--info {
+    background: rgba(59, 130, 246, 0.1);
+    color: #1d4ed8;
+    border: 1px solid rgba(59, 130, 246, 0.3);
+}
+[data-theme="dark"] .alert--warning {
+    background: rgba(245, 158, 11, 0.15);
+    color: #fbbf24;
+}
+[data-theme="dark"] .alert--info {
+    background: rgba(59, 130, 246, 0.15);
+    color: #93c5fd;
+}
+.success-info {
+    text-align: center;
+    padding: var(--space-md);
+}
+.success-info .note {
+    font-size: var(--text-sm);
+    color: var(--color-text-secondary);
+    margin-top: var(--space-sm);
 }
 .reset-link-box {
     background: var(--color-bg-sunken);
