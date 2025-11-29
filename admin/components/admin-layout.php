@@ -68,8 +68,8 @@ if ($userTheme === 'auto') {
     <link rel="stylesheet" href="/assets/css/tables.css">
     <link rel="stylesheet" href="/assets/css/utilities.css">
 
-    <!-- Admin-specific CSS -->
-    <link rel="stylesheet" href="/admin/assets/css/admin.css">
+    <!-- Admin-specific CSS (cache-busted) -->
+    <link rel="stylesheet" href="/admin/assets/css/admin.css?v=<?= filemtime(__DIR__ . '/../assets/css/admin.css') ?>">
 </head>
 <body class="admin-body">
     <!-- Admin Header -->
