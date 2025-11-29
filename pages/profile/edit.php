@@ -15,8 +15,8 @@ $error = '';
 
 // Handle form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $firstName = trim($_POST['first_name'] ?? '');
-    $lastName = trim($_POST['last_name'] ?? '');
+    $firstName = trim($_POST['firstname'] ?? '');
+    $lastName = trim($_POST['lastname'] ?? '');
     $email = trim($_POST['email'] ?? '');
     $phone = trim($_POST['phone'] ?? '');
     $clubId = intval($_POST['club_id'] ?? 0) ?: null;
@@ -27,7 +27,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         try {
             $stmt = $pdo->prepare("
                 UPDATE riders
-                SET first_name = ?, last_name = ?, email = ?, phone = ?, club_id = ?, updated_at = NOW()
+                SET firstname = ?, lastname = ?, email = ?, phone = ?, club_id = ?
                 WHERE id = ?
             ");
             $stmt->execute([$firstName, $lastName, $email, $phone, $clubId, $currentUser['id']]);
@@ -36,7 +36,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Refresh user data
             $currentUser = hub_get_rider_by_id($currentUser['id']);
         } catch (PDOException $e) {
-            $error = 'Kunde inte uppdatera profilen.';
+            $error = 'Kunde inte uppdatera profilen: ' . $e->getMessage();
+            error_log("Profile update error: " . $e->getMessage());
         }
     }
 }
@@ -68,14 +69,14 @@ $clubs = $pdo->query("SELECT id, name FROM clubs ORDER BY name")->fetchAll(PDO::
 
         <div class="form-row">
             <div class="form-group">
-                <label for="first_name">Förnamn *</label>
-                <input type="text" id="first_name" name="first_name"
-                       value="<?= htmlspecialchars($currentUser['first_name'] ?? '') ?>" required>
+                <label for="firstname">Förnamn *</label>
+                <input type="text" id="firstname" name="firstname"
+                       value="<?= htmlspecialchars($currentUser['firstname'] ?? '') ?>" required>
             </div>
             <div class="form-group">
-                <label for="last_name">Efternamn *</label>
-                <input type="text" id="last_name" name="last_name"
-                       value="<?= htmlspecialchars($currentUser['last_name'] ?? '') ?>" required>
+                <label for="lastname">Efternamn *</label>
+                <input type="text" id="lastname" name="lastname"
+                       value="<?= htmlspecialchars($currentUser['lastname'] ?? '') ?>" required>
             </div>
         </div>
 
