@@ -47,18 +47,18 @@ $icons = [
             <span class="sidebar-label">Kalender</span>
         </a>
 
-        <a href="/v3/results"
-           class="sidebar-link<?= strpos($current_path, '/v3/results') !== false || ($current_page == 'results.php' && strpos($current_path, '/admin/') === false) ? ' active' : '' ?>"
+        <a href="/results.php"
+           class="sidebar-link<?= $current_page == 'results.php' && strpos($current_path, '/admin/') === false ? ' active' : '' ?>"
            aria-label="Resultat"
-           <?= strpos($current_path, '/v3/results') !== false ? 'aria-current="page"' : '' ?>>
+           <?= $current_page == 'results.php' && strpos($current_path, '/admin/') === false ? 'aria-current="page"' : '' ?>>
             <span class="sidebar-icon" aria-hidden="true"><?= $icons['trophy'] ?></span>
             <span class="sidebar-label">Resultat</span>
         </a>
 
-        <a href="/v3/series"
-           class="sidebar-link<?= strpos($current_path, '/v3/series') !== false || ($current_page == 'series.php' && strpos($current_path, '/admin/') === false) ? ' active' : '' ?>"
+        <a href="/series.php"
+           class="sidebar-link<?= $current_page == 'series.php' && strpos($current_path, '/admin/') === false ? ' active' : '' ?>"
            aria-label="Serier"
-           <?= strpos($current_path, '/v3/series') !== false ? 'aria-current="page"' : '' ?>>
+           <?= $current_page == 'series.php' && strpos($current_path, '/admin/') === false ? 'aria-current="page"' : '' ?>>
             <span class="sidebar-icon" aria-hidden="true"><?= $icons['award'] ?></span>
             <span class="sidebar-label">Serier</span>
         </a>
@@ -79,10 +79,10 @@ $icons = [
             <span class="sidebar-label">Klubbar</span>
         </a>
 
-        <a href="/v3/ranking"
-           class="sidebar-link<?= strpos($current_path, '/v3/ranking') !== false || (strpos($current_path, '/ranking/') !== false && strpos($current_path, '/admin/') === false) ? ' active' : '' ?>"
+        <a href="/ranking/"
+           class="sidebar-link<?= strpos($current_path, '/ranking/') !== false && strpos($current_path, '/admin/') === false ? ' active' : '' ?>"
            aria-label="Ranking"
-           <?= strpos($current_path, '/v3/ranking') !== false ? 'aria-current="page"' : '' ?>>
+           <?= strpos($current_path, '/ranking/') !== false && strpos($current_path, '/admin/') === false ? 'aria-current="page"' : '' ?>>
             <span class="sidebar-icon" aria-hidden="true"><?= $icons['trending-up'] ?></span>
             <span class="sidebar-label">Ranking</span>
         </a>

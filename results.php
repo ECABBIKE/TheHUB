@@ -226,100 +226,100 @@ include __DIR__ . '/includes/layout-header.php';
 </main>
 
 <style>
-/* Remove underline from event card links */
+/* V3-style CSS with CSS variables for dark mode support */
 .gs-event-card-link {
- text-decoration: none;
- color: inherit;
- display: block;
+  text-decoration: none;
+  color: inherit;
+  display: block;
 }
 
 .gs-event-card-link:hover {
- text-decoration: none;
+  text-decoration: none;
 }
 
 .gs-result-card {
- display: grid;
- grid-template-columns: 120px 1fr;
- gap: 1rem;
- padding: 1rem;
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  gap: var(--space-md);
+  padding: var(--space-md);
 }
 
 .gs-result-logo {
- display: flex;
- align-items: center;
- justify-content: center;
- background: #f8f9fa;
- border-radius: 6px;
- padding: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-bg-sunken);
+  border-radius: var(--radius-md);
+  padding: var(--space-sm);
 }
 
 .gs-result-logo img {
- max-width: 100%;
- max-height: 70px;
- object-fit: contain;
+  max-width: 100%;
+  max-height: 70px;
+  object-fit: contain;
 }
 
 .gs-result-info {
- display: flex;
- flex-direction: column;
- gap: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
 }
 
 .gs-result-date {
- display: inline-flex;
- align-items: center;
- gap: 0.5rem;
- padding: 0.25rem 0.5rem;
- background: #667eea;
- color: white;
- border-radius: 4px;
- font-size: 0.875rem;
- font-weight: 600;
- width: fit-content;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-xs) var(--space-sm);
+  background: var(--color-accent);
+  color: var(--color-text-inverse);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  width: fit-content;
 }
 
 .gs-result-title {
- font-size: 1.125rem;
- font-weight: 700;
- color: #1a202c;
- line-height: 1.3;
+  font-size: var(--text-lg);
+  font-weight: var(--weight-bold);
+  color: var(--color-text-primary);
+  line-height: 1.3;
 }
 
 .gs-result-meta {
- display: flex;
- flex-wrap: wrap;
- gap: 0.75rem;
- font-size: 0.875rem;
- color: #718096;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
 }
 
 .gs-result-meta span {
- display: flex;
- align-items: center;
- gap: 0.25rem;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2xs);
 }
 
 .gs-result-stats {
- display: flex;
- gap: 1rem;
- font-size: 0.875rem;
- color: #64748b;
+  display: flex;
+  gap: var(--space-md);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
 }
 
 @media (max-width: 640px) {
- .gs-result-card {
- grid-template-columns: 80px 1fr;
- gap: 0.75rem;
- padding: 0.75rem;
- }
+  .gs-result-card {
+    grid-template-columns: 80px 1fr;
+    gap: var(--space-sm);
+    padding: var(--space-sm);
+  }
 
- .gs-result-logo img {
- max-height: 50px;
- }
+  .gs-result-logo img {
+    max-height: 50px;
+  }
 
- .gs-result-title {
- font-size: 1rem;
- }
+  .gs-result-title {
+    font-size: var(--text-md);
+  }
 }
 </style>
 

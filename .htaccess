@@ -31,35 +31,37 @@ RewriteEngine On
 RewriteCond %{HTTPS} off
 RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
 
-# =============================================================================
-# V2 → V3 MIGRATION REDIRECTS
-# Added: 2025-11-29
-# Purpose: Redirect legacy .php files to modern V3 architecture
-# =============================================================================
-
-# Results page redirect (preserve query string)
-# V2: results.php?series_id=X → V3: /v3/results?series_id=X
-RewriteRule ^results\.php$ /v3/results [R=301,L,QSA]
-
-# Series list page redirect
-# V2: series.php → V3: /v3/series
-RewriteRule ^series\.php$ /v3/series [R=301,L,QSA]
-
-# Series standings page redirect
-# V2: series-standings.php?id=X → V3: /v3/series/X
-RewriteCond %{QUERY_STRING} ^id=([0-9]+)
-RewriteRule ^series-standings\.php$ /v3/series/%1? [R=301,L]
-
-# Ranking page redirect (preserve query string)
-# V2: /ranking/ → V3: /v3/ranking
-RewriteRule ^ranking/?$ /v3/ranking [R=301,L,QSA]
-RewriteRule ^ranking/index\.php$ /v3/ranking [R=301,L,QSA]
-
-# =============================================================================
-
 # Prevent directory listing
 Options -Indexes
 
-# Custom error pages (optional)
-# ErrorDocument 404 /404.php
-# ErrorDocument 500 /500.php
+# ============================================================================
+# SPA ROUTING - Clean URLs without .php extensions
+# ============================================================================
+
+# Skip rewriting for actual files (CSS, JS, images, etc.)
+RewriteCond %{REQUEST_FILENAME} -f
+RewriteRule ^ - [L]
+
+# Skip rewriting for directories
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+
+# Skip admin folder - let it handle its own routing
+RewriteRule ^admin(/.*)?$ - [L]
+
+# Skip API endpoints
+RewriteRule ^api(/.*)?$ - [L]
+
+# Skip V3 folder - it has its own router
+RewriteRule ^v3(/.*)?$ - [L]
+
+# Skip legacy .php files that are accessed directly (for backwards compatibility)
+RewriteCond %{REQUEST_URI} \.(php|html|htm)$
+RewriteRule ^ - [L]
+
+# Route clean URLs through app.php
+# Examples: /results, /series/5, /rider/123, /calendar
+RewriteRule ^(home|calendar|events|results|series|database|riders|clubs|ranking|profile|rider|event|club)(/.*)?$ app.php?page=$1$2 [QSA,L]
+
+# Custom error pages
+ErrorDocument 404 /app.php?page=404
