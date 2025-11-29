@@ -1,12 +1,21 @@
-async function runApi(endpoint) {
+function runApi(endpoint) {
+
     const output = document.getElementById('apiOutput');
+
     output.textContent = 'Loading...';
 
-    try {
-        const response = await fetch(endpoint);
-        const data = await response.json();
-        output.textContent = JSON.stringify(data, null, 2);
-    } catch (err) {
-        output.textContent = 'Error: ' + err;
-    }
+    // BASE URL FIX
+    const baseUrl = window.location.origin +
+        '/thehub/thehub-v4/gs-v4-backend-mini/public';
+
+    const url = baseUrl + endpoint;
+
+    fetch(url)
+        .then(r => r.json())
+        .then(data => {
+            output.textContent = JSON.stringify(data, null, 2);
+        })
+        .catch(err => {
+            output.textContent = 'Error: ' + err;
+        });
 }
