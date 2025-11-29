@@ -285,9 +285,38 @@ if (!function_exists('hub_attempt_login')) {
     /**
      * Attempt to log in a user with email/password
      * Works with the riders table using password_hash
+     * Also supports default admin login from config.php
      */
     function hub_attempt_login(string $email, string $password): array {
         $pdo = hub_db();
+
+        // =====================================================================
+        // FALLBACK: Check default admin credentials from config.php
+        // This allows login even if no rider accounts have passwords set
+        // =====================================================================
+        $defaultUsername = defined('DEFAULT_ADMIN_USERNAME') ? DEFAULT_ADMIN_USERNAME : null;
+        $defaultPassword = defined('DEFAULT_ADMIN_PASSWORD') ? DEFAULT_ADMIN_PASSWORD : null;
+
+        if ($defaultUsername && $defaultPassword) {
+            // Admin can log in with username OR email = username
+            if (($email === $defaultUsername || $email === $defaultUsername . '@thehub.se') && $password === $defaultPassword) {
+                // Create admin session
+                $adminUser = [
+                    'id' => 0,
+                    'email' => $defaultUsername . '@thehub.se',
+                    'firstname' => 'Admin',
+                    'lastname' => $defaultUsername,
+                    'is_admin' => 1,
+                    'role_id' => ROLE_SUPER_ADMIN
+                ];
+                hub_set_user_session($adminUser);
+                return ['success' => true, 'user' => $adminUser];
+            }
+        }
+
+        // =====================================================================
+        // Normal rider login from database
+        // =====================================================================
 
         // Find rider by email
         $stmt = $pdo->prepare("
