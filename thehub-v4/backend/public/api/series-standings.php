@@ -56,7 +56,7 @@ try {
     $stmt = $pdo->prepare("
         SELECT id, name, date
         FROM events
-        WHERE type = :series_name
+        WHERE series_id = :series_name
         ORDER BY date ASC
     ");
     $stmt->execute(['series_name' => $seriesName]);
@@ -75,7 +75,7 @@ try {
             e.date AS event_date,
             res.points,
             res.position,
-            res.category
+            res.category_id AS category
         FROM results res
         JOIN events e ON res.event_id = e.id
         JOIN riders r ON res.cyclist_id = r.id
@@ -86,7 +86,7 @@ try {
     $params = ['series_name' => $seriesName];
 
     if ($category) {
-        $query .= " AND res.category_id AS category = :category";
+        $query .= " AND res.category_id = :category";
         $params['category'] = $category;
     }
 
