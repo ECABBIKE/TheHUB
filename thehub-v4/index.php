@@ -11,7 +11,7 @@
     <link rel="stylesheet" href="https://gravityseries.se/branding/fonts.css">
 
     <!-- V3 CSS System -->
-    <link rel="stylesheet" href="/thehub-v4/assets/css/main.css?v=53">
+    <link rel="stylesheet" href="/thehub-v4/assets/css/main.css?v=54">
 
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
@@ -183,6 +183,12 @@
                             <option value="">Alla år</option>
                         </select>
                     </div>
+                    <div class="flex flex-col gap-xs">
+                        <label class="text-sm text-secondary" for="cal-discipline-filter">Disciplin</label>
+                        <select id="cal-discipline-filter" class="form-select">
+                            <option value="">Alla discipliner</option>
+                        </select>
+                    </div>
                 </div>
 
                 <div id="calendar-status" class="text-muted text-sm mt-md">Laddar event…</div>
@@ -310,6 +316,13 @@
                     </button>
                 </div>
 
+                <div class="mt-md" style="background: var(--color-accent-light); border-left: 3px solid var(--color-accent); padding: var(--space-md); border-radius: var(--radius-md);">
+                    <div style="font-size: var(--text-xs); color: var(--color-text-secondary); display: flex; align-items: center; gap: var(--space-xs);">
+                        <i data-lucide="info" style="width: 14px; height: 14px;"></i>
+                        24 månaders rullande ranking. Poäng viktas efter fältstorlek och eventtyp.
+                    </div>
+                </div>
+
                 <div id="ranking-status" class="text-muted text-sm mt-md">Laddar ranking…</div>
                 <div id="ranking-table-wrapper" class="table-wrapper mt-md"></div>
             </div>
@@ -351,7 +364,7 @@
 </div>
 
 <!-- JS -->
-<script src="/thehub-v4/assets/js/theme.js?v=53"></script>
-<script src="/thehub-v4/assets/js/app.js?v=53"></script>
+<script src="/thehub-v4/assets/js/theme.js?v=54"></script>
+<script src="/thehub-v4/assets/js/app.js?v=54"></script>
 </body>
 </html>
