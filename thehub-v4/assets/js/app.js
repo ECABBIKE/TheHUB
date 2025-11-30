@@ -1,13 +1,12 @@
-
 // TheHUB V4 – Dashboard SPA wiring for /thehub-v4/
 // Uses backend/public/api/*.php endpoints
+// Updated for V3 design system compatibility
 
 const BASE = "/thehub-v4";
 const API_BASE = BASE + "/backend/public/api";
 
 document.addEventListener("DOMContentLoaded", () => {
   setupNavigation();
-  setupTheme();
   setupDbTabs();
   setupRankingControls();
   hydrateUI();
@@ -24,85 +23,67 @@ function hydrateUI() {
 // ---------------- NAVIGATION ----------------
 
 function setupNavigation() {
-  const navItems = document.querySelectorAll(".hub-nav-item");
-  const views = document.querySelectorAll(".hub-view");
-  const titleEl = document.getElementById("hub-page-title");
+  const sidebarLinks = document.querySelectorAll('.sidebar-link');
+  const mobileLinks = document.querySelectorAll('.mobile-nav-link');
+  const views = document.querySelectorAll('.page-content');
 
-  function setActive(view) {
-    const id = "view-" + view;
-    views.forEach((v) => {
-      v.classList.toggle("hub-view-active", v.id === id);
+  function switchView(viewName) {
+    // Hide all views, show the selected one
+    views.forEach(view => {
+      if (view.dataset.view === viewName) {
+        view.style.display = 'block';
+      } else {
+        view.style.display = 'none';
+      }
     });
-    navItems.forEach((btn) => {
-      btn.classList.toggle("is-active", btn.dataset.viewTarget === view);
+
+    // Update sidebar active state
+    sidebarLinks.forEach(link => {
+      if (link.dataset.view === viewName) {
+        link.setAttribute('aria-current', 'page');
+      } else {
+        link.removeAttribute('aria-current');
+      }
     });
-    const mapping = {
-      dashboard: "Dashboard",
-      calendar: "Kalender",
-      results: "Resultat",
-      series: "Serier",
-      database: "Databas",
-      ranking: "Ranking & poäng",
-    };
-    if (titleEl && mapping[view]) {
-      titleEl.textContent = mapping[view];
-    }
+
+    // Update mobile nav active state
+    mobileLinks.forEach(link => {
+      if (link.dataset.view === viewName) {
+        link.classList.add('active');
+      } else {
+        link.classList.remove('active');
+      }
+    });
   }
 
-  navItems.forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const target = btn.dataset.viewTarget;
-      if (target) setActive(target);
+  // Attach click handlers to sidebar links
+  sidebarLinks.forEach(link => {
+    link.addEventListener('click', (e) => {
+      e.preventDefault();
+      const view = link.dataset.view;
+      if (view) switchView(view);
     });
   });
 
-  // quick links
+  // Attach click handlers to mobile nav links
+  mobileLinks.forEach(link => {
+    link.addEventListener('click', (e) => {
+      e.preventDefault();
+      const view = link.dataset.view;
+      if (view) switchView(view);
+    });
+  });
+
+  // Quick links (jump to view)
   document.querySelectorAll("[data-jump-view]").forEach((btn) => {
     btn.addEventListener("click", () => {
       const view = btn.dataset.jumpView;
-      if (view) setActive(view);
+      if (view) switchView(view);
     });
   });
 
-  // initial
-  setActive("dashboard");
-}
-
-// ---------------- THEME ----------------
-
-function setupTheme() {
-  const root = document.documentElement;
-  const toggle = document.getElementById("theme-toggle");
-  if (!toggle) return;
-
-  const icons = toggle.querySelectorAll(".hub-theme-icon");
-  const mql = window.matchMedia("(prefers-color-scheme: dark)");
-
-  function setIcon(mode) {
-    icons.forEach((el) => {
-      const t = el.dataset.theme;
-      el.classList.toggle("is-active", t === mode || (mode === "auto" && t === (mql.matches ? "dark" : "light")));
-    });
-  }
-
-  function apply(mode, save = true) {
-    let eff = mode;
-    if (mode === "auto") {
-      eff = mql.matches ? "dark" : "light";
-    }
-    root.dataset.theme = eff;
-    if (save) localStorage.setItem("thehub-v4-theme", mode);
-    setIcon(mode);
-  }
-
-  const stored = localStorage.getItem("thehub-v4-theme") || "dark";
-  apply(stored, false);
-
-  toggle.addEventListener("click", () => {
-    const current = localStorage.getItem("thehub-v4-theme") || "dark";
-    const next = current === "dark" ? "light" : "dark";
-    apply(next, true);
-  });
+  // Initial view
+  switchView("dashboard");
 }
 
 // ---------------- HELPERS ----------------
@@ -180,13 +161,13 @@ async function loadDashboard() {
     emptyEl.textContent = "";
     ranking.slice(0, 5).forEach((r, idx) => {
       const row = document.createElement("div");
-      row.className = "hub-list-item";
+      row.className = "flex justify-between items-center p-sm card mb-sm";
       row.innerHTML = `
-        <div class="hub-list-main">
-          <div class="hub-list-title">#${idx + 1} ${(r.firstname || "")} ${(r.lastname || "")}</div>
-          <div class="hub-list-sub">${r.club_name || "–"} · ${r.gravity_id || ""} · ${r.events_count || 0} event</div>
+        <div>
+          <div class="font-medium">#${idx + 1} ${(r.firstname || "")} ${(r.lastname || "")}</div>
+          <div class="text-sm text-secondary">${r.club_name || "–"} · ${r.gravity_id || ""} · ${r.events_count || 0} event</div>
         </div>
-        <div class="hub-pill">${r.total_points || 0} p</div>
+        <div class="chip">${r.total_points || 0} p</div>
       `;
       listEl.appendChild(row);
     });
@@ -245,27 +226,25 @@ function renderCalendar(events, container, yearFilter) {
     .sort((a, b) => (a.date || "").localeCompare(b.date || ""))
     .forEach((ev) => {
       const row = document.createElement("div");
-      row.className = "hub-event-row";
+      row.className = "flex gap-md items-center p-sm card mb-sm";
       const parts = monthDayParts(ev.date);
       row.innerHTML = `
-        <div class="hub-event-date">
-          <div class="hub-event-date-month">${parts.month}</div>
-          <div class="hub-event-date-day">${parts.day}</div>
+        <div class="text-center" style="min-width:50px;">
+          <div class="text-xs text-muted">${parts.month.toUpperCase()}</div>
+          <div class="text-lg font-bold">${parts.day}</div>
         </div>
-        <div class="hub-event-main">
-          <div class="hub-event-title">${ev.name || "Okänt event"}</div>
-          <div class="hub-event-meta">${ev.location || ""} · ${ev.discipline || ""}</div>
+        <div class="flex-1">
+          <div class="font-medium">${ev.name || "Okänt event"}</div>
+          <div class="text-sm text-secondary">${ev.location || ""} · ${ev.discipline || ""}</div>
         </div>
-        <div class="hub-event-right">
-          ${ev.status || ""}
-        </div>
+        <div class="chip">${ev.status || ""}</div>
       `;
       container.appendChild(row);
     });
 
   if (!filtered.length) {
     const empty = document.createElement("div");
-    empty.className = "hub-empty";
+    empty.className = "text-muted text-sm";
     empty.textContent = "Inga event för valt filter.";
     container.appendChild(empty);
   }
@@ -297,20 +276,18 @@ async function loadResults() {
       .sort((a, b) => (b.date || "").localeCompare(a.date || ""))
       .forEach((ev) => {
         const row = document.createElement("div");
-        row.className = "hub-event-row";
+        row.className = "flex gap-md items-center p-sm card mb-sm";
         const parts = monthDayParts(ev.date);
         row.innerHTML = `
-          <div class="hub-event-date">
-            <div class="hub-event-date-month">${parts.month}</div>
-            <div class="hub-event-date-day">${parts.day}</div>
+          <div class="text-center" style="min-width:50px;">
+            <div class="text-xs text-muted">${parts.month.toUpperCase()}</div>
+            <div class="text-lg font-bold">${parts.day}</div>
           </div>
-          <div class="hub-event-main">
-            <div class="hub-event-title">${ev.name || "Okänt event"}</div>
-            <div class="hub-event-meta">${ev.location || ""} · ${ev.discipline || ""}</div>
+          <div class="flex-1">
+            <div class="font-medium">${ev.name || "Okänt event"}</div>
+            <div class="text-sm text-secondary">${ev.location || ""} · ${ev.discipline || ""}</div>
           </div>
-          <div class="hub-event-right">
-            ${(ev.participants || 0)} starter
-          </div>
+          <div class="chip">${(ev.participants || 0)} starter</div>
         `;
         listEl.appendChild(row);
       });
@@ -328,13 +305,21 @@ let DB_STATE = {
 };
 
 function setupDbTabs() {
-  const buttons = document.querySelectorAll(".hub-tab-button[data-db-tab]");
+  const buttons = document.querySelectorAll("[data-db-tab]");
   const ridersCol = document.getElementById("db-riders-column");
   const clubsCol = document.getElementById("db-clubs-column");
   if (!buttons.length || !ridersCol || !clubsCol) return;
 
   function setTab(tab) {
-    buttons.forEach((b) => b.classList.toggle("hub-tab-active", b.dataset.dbTab === tab));
+    buttons.forEach((b) => {
+      if (b.dataset.dbTab === tab) {
+        b.classList.remove('btn--ghost');
+        b.classList.add('btn--secondary', 'db-tab-active');
+      } else {
+        b.classList.remove('btn--secondary', 'db-tab-active');
+        b.classList.add('btn--ghost');
+      }
+    });
     ridersCol.style.display = tab === "riders" ? "" : "none";
     clubsCol.style.display = tab === "clubs" ? "" : "none";
   }
@@ -349,7 +334,6 @@ function setupDbTabs() {
 }
 
 async function loadDatabase() {
-  const statusEl = document.getElementById("db-status");
   const ridersList = document.getElementById("db-riders-list");
   const clubsList = document.getElementById("db-clubs-list");
   const searchInput = document.getElementById("db-search-input");
@@ -357,7 +341,6 @@ async function loadDatabase() {
   if (!ridersList || !clubsList) return;
 
   try {
-    if (statusEl) statusEl.textContent = "Laddar databas…";
     const riders = await apiGet("riders.php");
     DB_STATE.riders = riders || [];
 
@@ -375,8 +358,6 @@ async function loadDatabase() {
     renderDbRiders(DB_STATE.riders, ridersList);
     renderDbClubs(DB_STATE.clubs, clubsList);
 
-    if (statusEl) statusEl.textContent = "";
-
     // counters
     setText("db-riders-total", DB_STATE.riders.length);
     setText("db-clubs-total", DB_STATE.clubs.length);
@@ -393,21 +374,20 @@ async function loadDatabase() {
     }
   } catch (e) {
     console.error("DB error", e);
-    if (statusEl) statusEl.textContent = "Kunde inte ladda databasen.";
   }
 }
 
 function renderDbRiders(rows, container) {
   container.innerHTML = "";
-  rows.forEach((r) => {
+  rows.slice(0, 50).forEach((r) => {
     const row = document.createElement("div");
-    row.className = "hub-list-item";
+    row.className = "flex justify-between items-center p-sm card mb-sm";
     row.innerHTML = `
-      <div class="hub-list-main">
-        <div class="hub-list-title">${(r.firstname || "")} ${(r.lastname || "")}</div>
-        <div class="hub-list-sub">${r.club_name || "–"} · ${r.gravity_id || ""}</div>
+      <div>
+        <div class="font-medium">${(r.firstname || "")} ${(r.lastname || "")}</div>
+        <div class="text-sm text-secondary">${r.club_name || "–"} · ${r.gravity_id || ""}</div>
       </div>
-      <div class="hub-pill">${r.license_number || ""}</div>
+      <div class="chip">${r.license_number || ""}</div>
     `;
     container.appendChild(row);
   });
@@ -415,13 +395,13 @@ function renderDbRiders(rows, container) {
 
 function renderDbClubs(rows, container) {
   container.innerHTML = "";
-  rows.forEach((c, idx) => {
+  rows.slice(0, 30).forEach((c, idx) => {
     const row = document.createElement("div");
-    row.className = "hub-list-item";
+    row.className = "flex justify-between items-center p-sm card mb-sm";
     row.innerHTML = `
-      <div class="hub-list-main">
-        <div class="hub-list-title">${idx + 1}. ${c.name}</div>
-        <div class="hub-list-sub">${c.count} registrerade åkare</div>
+      <div>
+        <div class="font-medium">${idx + 1}. ${c.name}</div>
+        <div class="text-sm text-secondary">${c.count} registrerade åkare</div>
       </div>
     `;
     container.appendChild(row);
@@ -439,19 +419,37 @@ let RANK_STATE = {
 function setupRankingControls() {
   const discBtns = document.querySelectorAll("[data-rank-discipline]");
   const modeBtns = document.querySelectorAll("[data-rank-mode]");
+
   if (discBtns.length) {
     discBtns.forEach((btn) => {
       btn.addEventListener("click", () => {
-        discBtns.forEach((b) => b.classList.toggle("hub-tab-active", b === btn));
+        discBtns.forEach((b) => {
+          if (b === btn) {
+            b.classList.remove('btn--ghost');
+            b.classList.add('btn--secondary', 'rank-disc-active');
+          } else {
+            b.classList.remove('btn--secondary', 'rank-disc-active');
+            b.classList.add('btn--ghost');
+          }
+        });
         RANK_STATE.discipline = btn.dataset.rankDiscipline || "gravity";
         loadRanking().catch(console.error);
       });
     });
   }
+
   if (modeBtns.length) {
     modeBtns.forEach((btn) => {
       btn.addEventListener("click", () => {
-        modeBtns.forEach((b) => b.classList.toggle("hub-pill-active", b === btn));
+        modeBtns.forEach((b) => {
+          if (b === btn) {
+            b.classList.remove('btn--ghost');
+            b.classList.add('btn--secondary', 'rank-mode-active');
+          } else {
+            b.classList.remove('btn--secondary', 'rank-mode-active');
+            b.classList.add('btn--ghost');
+          }
+        });
         RANK_STATE.mode = btn.dataset.rankMode || "riders";
         renderRankingTable();
       });
@@ -481,7 +479,7 @@ function renderRankingTable() {
   const rows = RANK_STATE.rows || [];
   if (!rows.length) {
     const empty = document.createElement("div");
-    empty.className = "hub-empty";
+    empty.className = "text-muted text-sm";
     empty.textContent = "Ingen rankingdata ännu.";
     wrap.appendChild(empty);
     return;
@@ -502,14 +500,14 @@ function renderRankingTable() {
     const clubs = Array.from(clubMap.values()).sort((a, b) => b.total_points - a.total_points);
 
     const table = document.createElement("table");
-    table.className = "hub-ranking-table";
+    table.className = "table";
     table.innerHTML = `
       <thead>
         <tr>
           <th>#</th>
           <th>Klubb</th>
           <th>Riders</th>
-          <th>Poäng</th>
+          <th class="col-points">Poäng</th>
         </tr>
       </thead>
       <tbody>
@@ -517,10 +515,10 @@ function renderRankingTable() {
           .map(
             (c, idx) => `
           <tr>
-            <td>${idx + 1}</td>
+            <td class="col-place">${idx + 1}</td>
             <td>${c.name}</td>
             <td>${c.riders}</td>
-            <td>${c.total_points}</td>
+            <td class="col-points">${c.total_points}</td>
           </tr>`
           )
           .join("")}
@@ -530,7 +528,7 @@ function renderRankingTable() {
   } else {
     // rider mode
     const table = document.createElement("table");
-    table.className = "hub-ranking-table";
+    table.className = "table";
     table.innerHTML = `
       <thead>
         <tr>
@@ -538,7 +536,7 @@ function renderRankingTable() {
           <th>Åkare</th>
           <th>Klubb</th>
           <th>Event</th>
-          <th>Poäng</th>
+          <th class="col-points">Poäng</th>
         </tr>
       </thead>
       <tbody>
@@ -546,11 +544,11 @@ function renderRankingTable() {
           .map(
             (r, idx) => `
           <tr>
-            <td>${idx + 1}</td>
-            <td>${(r.firstname || "")} ${(r.lastname || "")}</td>
-            <td>${r.club_name || "–"}</td>
+            <td class="col-place">${idx + 1}</td>
+            <td class="col-rider">${(r.firstname || "")} ${(r.lastname || "")}</td>
+            <td class="col-club">${r.club_name || "–"}</td>
             <td>${r.events_count || 0}</td>
-            <td>${r.total_points || 0}</td>
+            <td class="col-points">${r.total_points || 0}</td>
           </tr>`
           )
           .join("")}
