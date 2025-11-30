@@ -57,18 +57,18 @@ try {
     // Query distinct series from events
     $sql = "
         SELECT
-            e.type AS name,
+            e.series_id AS name,
             COUNT(DISTINCT e.id) AS event_count,
             COUNT(DISTINCT res.cyclist_id) AS participant_count,
             MIN(e.date) AS first_event,
             MAX(e.date) AS last_event
         FROM events e
         LEFT JOIN results res ON e.id = res.event_id
-        WHERE e.type IS NOT NULL
-          AND e.type <> ''
+        WHERE e.series_id IS NOT NULL
+          AND e.series_id <> ''
           AND YEAR(e.date) = :year
-        GROUP BY e.type
-        ORDER BY e.type
+        GROUP BY e.series_id
+        ORDER BY e.series_id
     ";
 
     $stmt = $pdo->prepare($sql);

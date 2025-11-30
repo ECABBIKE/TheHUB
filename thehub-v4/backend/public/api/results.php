@@ -22,16 +22,16 @@ try {
                 res.cyclist_id AS rider_id,
                 res.event_id,
                 res.position,
-                res.time,
+                res.finish_time AS time,
                 res.points,
-                res.category,
+                res.category_id AS category,
                 CONCAT(r.firstname, ' ', r.lastname) AS rider_name,
                 r.gravity_id,
                 r.club_id,
                 c.name AS club_name,
                 e.name AS event_name,
                 e.date,
-                e.type AS series,
+                e.series_id AS series,
                 e.discipline
             FROM results res
             LEFT JOIN riders r ON res.cyclist_id = r.id
@@ -39,10 +39,10 @@ try {
             LEFT JOIN events e ON res.event_id = e.id
             WHERE res.event_id = :event_id
             ORDER BY
-                res.category ASC,
+                res.category_id ASC,
                 CASE WHEN res.position IS NULL THEN 1 ELSE 0 END,
                 res.position ASC,
-                res.time ASC
+                res.finish_time ASC
         ";
         $stmt = $pdo->prepare($sql);
         $stmt->execute(['event_id' => $event_id]);
@@ -55,12 +55,12 @@ try {
                 res.cyclist_id AS rider_id,
                 res.event_id,
                 res.position,
-                res.time,
+                res.finish_time AS time,
                 res.points,
-                res.category,
+                res.category_id AS category,
                 e.name AS event_name,
                 e.date,
-                e.type AS series,
+                e.series_id AS series,
                 e.discipline,
                 e.location,
                 c.name AS club_name
@@ -85,7 +85,7 @@ try {
         }
 
         if ($series) {
-            $where[] = "e.type = :series";
+            $where[] = "e.series_id = :series";
             $params[':series'] = $series;
         }
 
@@ -97,15 +97,15 @@ try {
                 res.cyclist_id AS rider_id,
                 res.event_id,
                 res.position,
-                res.time,
+                res.finish_time AS time,
                 res.points,
-                res.category,
+                res.category_id AS category,
                 CONCAT(r.firstname, ' ', r.lastname) AS rider_name,
                 r.gravity_id,
                 c.name AS club_name,
                 e.name AS event_name,
                 e.date,
-                e.type AS series,
+                e.series_id AS series,
                 e.discipline
             FROM results res
             LEFT JOIN riders r ON res.cyclist_id = r.id
