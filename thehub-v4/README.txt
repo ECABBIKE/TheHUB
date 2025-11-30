@@ -1,14 +1,21 @@
-TheHUB V4 – Frontend shell (desktop sidebar + mobile tabbar)
+TheHUB V4 – NeoGlass Dark UI (Dashboard start)
 
-Innehåll:
-- index.php          : ny frontend-layout (sidebar + vyer)
-- assets/css/app.css : komplett mörk tema-styling
-- assets/js/app.js   : navigation + API-kopplingar (riders/events)
+Detta paket innehåller endast frontend-filer:
 
-Installera:
-1. Ladda upp innehållet i denna zip till /public_html/thehub-v4/
+- index.php              : huvudlayout med sidebar, dashboard, resultat, riders m.m.
+- assets/css/app.css     : komplett mörkt tema (NeoGlass-stil)
+- assets/js/app.js       : navigation + API-koppling till backend
+
+Installation:
+1. Ladda upp innehållet i denna mapp till /public_html/thehub-v4/ på servern.
    - index.php skrivs över
    - assets/css/app.css skrivs över
    - assets/js/app.js skrivs över
-2. Backend ligger redan under /thehub-v4/backend/ och används oförändrat.
-3. Gå till https://thehub.gravityseries.se/thehub-v4/ och ladda om (Cmd/Ctrl + Shift + R).
+   Backend-mappen påverkas inte.
+
+2. Öppna https://thehub.gravityseries.se/thehub-v4/ i webbläsaren.
+3. Gör hård reload (Cmd/Ctrl + Shift + R).
+
+Förutsätter att backend-API:erna redan finns:
+- /thehub-v4/backend/public/api/riders.php  (returnerar { ok: true, data: [...] })
+- /thehub-v4/backend/public/api/events.php  (returnerar { ok: true, data: [...] })
