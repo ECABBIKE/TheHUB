@@ -7,8 +7,11 @@
     <title>TheHUB V4 – GravitySeries</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
+    <!-- GravitySeries Branding Fonts -->
+    <link rel="stylesheet" href="https://gravityseries.se/branding/fonts.css">
+
     <!-- V3 CSS System -->
-    <link rel="stylesheet" href="/thehub-v4/assets/css/main.css?v=51">
+    <link rel="stylesheet" href="/thehub-v4/assets/css/main.css?v=52">
 
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
@@ -90,6 +93,23 @@
                     <button class="btn btn--primary" data-jump-view="series">
                         <i data-lucide="trophy"></i> Serier
                     </button>
+                </div>
+            </div>
+
+            <!-- Series Badges Showcase -->
+            <div class="card mt-md">
+                <div class="card-header">
+                    <h2 class="card-title">Tävlingsserier</h2>
+                </div>
+                <div class="flex flex-wrap gap-sm">
+                    <span class="series-badge series-badge--enduro">Enduro</span>
+                    <span class="series-badge series-badge--downhill">Downhill</span>
+                    <span class="series-badge series-badge--xc">XC</span>
+                    <span class="series-badge series-badge--gravel">Gravel</span>
+                    <span class="series-badge series-badge--ges">GES</span>
+                    <span class="series-badge series-badge--ggs">GGS</span>
+                    <span class="series-badge series-badge--gss">GSS</span>
+                    <span class="series-badge series-badge--dual">Dual</span>
                 </div>
             </div>
 
@@ -331,7 +351,7 @@
 </div>
 
 <!-- JS -->
-<script src="/thehub-v4/assets/js/theme.js?v=51"></script>
-<script src="/thehub-v4/assets/js/app.js?v=51"></script>
+<script src="/thehub-v4/assets/js/theme.js?v=52"></script>
+<script src="/thehub-v4/assets/js/app.js?v=52"></script>
 </body>
 </html>
