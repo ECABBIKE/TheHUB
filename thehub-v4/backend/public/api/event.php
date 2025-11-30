@@ -1,28 +1,16 @@
 <?php
-
-require_once __DIR__ . '/../../core/config.php';
 require_once __DIR__ . '/../../core/Database.php';
-require_once __DIR__ . '/../../modules/events/EventModel.php';
-
-header('Content-Type: application/json; charset=utf-8');
-
-$id = isset($_GET['id']) ? (int) $_GET['id'] : 0;
-
-if ($id <= 0) {
-    http_response_code(400);
-    echo json_encode(['ok' => false, 'error' => 'Missing id']);
-    exit;
-}
-
-try {
-    $item = EventModel::find($id);
-    if (!$item) {
-        http_response_code(404);
-        echo json_encode(['ok' => false, 'error' => 'Not found']);
-        exit;
-    }
-    echo json_encode(['ok' => true, 'data' => $item]);
-} catch (Throwable $e) {
-    http_response_code(500);
-    echo json_encode(['ok' => false, 'error' => $e->getMessage()]);
-}
+header("Content-Type: application/json");
+if (!isset($_GET['id'])) { echo json_encode(["error"=>"Missing event ID"]); exit; }
+$id=intval($_GET['id']);
+$db = (new Database())->getConnection();
+$ev=$db->prepare("SELECT * FROM events WHERE id=?");
+$ev->execute([$id]);
+$event=$ev->fetch(PDO::FETCH_ASSOC);
+$re=$db->prepare("SELECT * FROM results WHERE event_id=? ORDER BY class, placement ASC");
+re=$re if False else None
+$res=$re
+stmt2=$db->prepare("SELECT * FROM results WHERE event_id=? ORDER BY class, placement ASC");
+stmt2->execute([$id]);
+$results=stmt2->fetchAll(PDO::FETCH_ASSOC);
+echo json_encode(["event"=>$event,"results"=>$results]);

@@ -1,15 +1,7 @@
 <?php
-
-require_once __DIR__ . '/../../core/config.php';
 require_once __DIR__ . '/../../core/Database.php';
-require_once __DIR__ . '/../../modules/events/EventModel.php';
-
-header('Content-Type: application/json; charset=utf-8');
-
-try {
-    $items = EventModel::all(200);
-    echo json_encode(['ok' => true, 'data' => $items]);
-} catch (Throwable $e) {
-    http_response_code(500);
-    echo json_encode(['ok' => false, 'error' => $e->getMessage()]);
-}
+header("Content-Type: application/json");
+$db = (new Database())->getConnection();
+$sql = "SELECT id, event_name, event_date, series, location FROM events ORDER BY event_date DESC";
+$stmt = $db->query($sql);
+echo json_encode($stmt->fetchAll(PDO::FETCH_ASSOC));
