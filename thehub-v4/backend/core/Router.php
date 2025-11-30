@@ -8,8 +8,10 @@ class Router
         $action = $_GET['action'] ?? 'index';
 
         $controllerMap = [
-            'riders' => 'RiderController.php',
-            'events' => 'EventController.php',
+            'riders'  => 'RiderController.php',
+            'events'  => 'EventController.php',
+            'results' => 'ResultsController.php',
+            'ranking' => 'RankingController.php',
         ];
 
         if (!isset($controllerMap[$module])) {

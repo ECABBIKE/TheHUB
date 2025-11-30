@@ -1,5 +1,6 @@
 <?php
 // TheHUB V4 backend config & DB bootstrap
+// Uses your existing TheHUB database credentials.
 
 if (!function_exists('env')) {
     function env($key, $default = null) {

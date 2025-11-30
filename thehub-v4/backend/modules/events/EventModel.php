@@ -5,8 +5,9 @@ class EventModel
     public static function all(int $limit = 200): array
     {
         $pdo = Database::pdo();
-        // Adjust column names to your real events-table if needed
-        $stmt = $pdo->prepare("SELECT * FROM events ORDER BY date DESC LIMIT :limit");
+        // NOTE: Adjust column names if your table differs.
+        $sql = "SELECT * FROM events ORDER BY event_date DESC LIMIT :limit";
+        $stmt = $pdo->prepare($sql);
         $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
         $stmt->execute();
         return $stmt->fetchAll();
