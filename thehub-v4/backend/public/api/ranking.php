@@ -1,26 +1,11 @@
 <?php
-// backend/public/api/ranking.php
+declare(strict_types=1);
 header('Content-Type: application/json; charset=utf-8');
 
-$ranking = [
-    [
-        'name'   => 'Rider One',
-        'club'   => 'GravitySeries CK',
-        'series' => 'Capital Enduro',
-        'points' => 1340,
-    ],
-    [
-        'name'   => 'Rider Two',
-        'club'   => 'Jämtland Gravity',
-        'series' => 'Götaland Enduro',
-        'points' => 1260,
-    ],
-    [
-        'name'   => 'Rider Three',
-        'club'   => 'Åre Bergcyklister',
-        'series' => 'Jämtland',
-        'points' => 1210,
-    ],
-];
+// Stub endpoint for ranking.php
+// Returnerar tom lista men med ok=true så att frontenden fungerar utan fel.
 
-echo json_encode($ranking);
+echo json_encode([
+    'ok'   => true,
+    'data' => [],
+]);

@@ -1,32 +1,11 @@
 <?php
-// backend/public/api/events.php
+declare(strict_types=1);
 header('Content-Type: application/json; charset=utf-8');
 
-$events = [
-    [
-        'id'       => 1,
-        'name'     => 'Capital Enduro #1',
-        'location' => 'Stockholm',
-        'date'     => '2026-05-10',
-        'series'   => 'Capital Enduro',
-        'status'   => 'Planerad',
-    ],
-    [
-        'id'       => 2,
-        'name'     => 'Götaland Enduro #1',
-        'location' => 'Ulricehamn',
-        'date'     => '2026-05-24',
-        'series'   => 'Götaland Enduro',
-        'status'   => 'Planerad',
-    ],
-    [
-        'id'       => 3,
-        'name'     => 'Jämtland Enduro #1',
-        'location' => 'Åre',
-        'date'     => '2026-06-14',
-        'series'   => 'Jämtland',
-        'status'   => 'Planerad',
-    ],
-];
+// Stub endpoint for events.php
+// Returnerar tom lista men med ok=true så att frontenden fungerar utan fel.
 
-echo json_encode($events);
+echo json_encode([
+    'ok'   => true,
+    'data' => [],
+]);
