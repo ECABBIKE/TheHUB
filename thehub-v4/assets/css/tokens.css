@@ -20,7 +20,24 @@
 
   --transition-fast:150ms ease;--transition-base:250ms ease;
 
-  --series-enduro:#FFE009;--series-downhill:#FF6B35;--series-xc:#2E7D32;
-  --series-ges:#EF761F;--series-ggs:#8A9A5B;--series-gss:#6B4C9A;
-  --series-gravel:#795548;--series-dual:#E91E63;
+  /* GravitySeries Brand Colors */
+  --gs-secondary:#323539;
+  --gs-enduro-yellow:#FFE009;
+  --gs-dh-orange:#FF6B35;
+  --gs-xc-green:#2E7D32;
+  --gs-gravel-brown:#795548;
+  --gs-ges-orange:#EF761F;
+  --gs-ggs-olive:#8A9A5B;
+  --gs-gss-purple:#6B4C9A;
+  --gs-dual-pink:#E91E63;
+
+  /* Legacy series aliases */
+  --series-enduro:var(--gs-enduro-yellow);
+  --series-downhill:var(--gs-dh-orange);
+  --series-xc:var(--gs-xc-green);
+  --series-ges:var(--gs-ges-orange);
+  --series-ggs:var(--gs-ggs-olive);
+  --series-gss:var(--gs-gss-purple);
+  --series-gravel:var(--gs-gravel-brown);
+  --series-dual:var(--gs-dual-pink);
 }
