@@ -281,6 +281,10 @@ async function loadDashboard() {
 
 // ---------------- CALENDAR ----------------
 
+let calendarEvents = [];
+let calendarFilters = { series: '', year: '', discipline: '' };
+let calendarFiltersInitialized = false;
+
 async function loadCalendar() {
   const statusEl = document.getElementById("calendar-status");
   const listEl = document.getElementById("calendar-list");
@@ -289,36 +293,148 @@ async function loadCalendar() {
 
   try {
     statusEl.textContent = "Laddar event…";
-    const events = await apiGet("events.php");
-    statusEl.textContent = "";
-    listEl.innerHTML = "";
+    setLoading("calendar-list", true);
 
-    if (!events || !events.length) {
-      statusEl.textContent = "Inga event hittades.";
+    const events = await apiGet("events.php");
+    calendarEvents = events || [];
+    statusEl.textContent = "";
+
+    if (!calendarEvents.length) {
+      listEl.innerHTML = '<div class="placeholder">Inga event hittades</div>';
       badgeEl.textContent = "0 event";
       return;
     }
 
-    badgeEl.textContent = events.length + " event";
-
-    // Populate year filter
-    const yearSelect = document.getElementById("cal-year-filter");
-    if (yearSelect) {
-      const years = Array.from(new Set(events.map((e) => (e.date || "").slice(0, 4)).filter(Boolean))).sort();
-      yearSelect.innerHTML = '<option value="">Alla år</option>' + years.map((y) => `<option value="${y}">${y}</option>`).join("");
-      yearSelect.addEventListener("change", () => {
-        renderCalendar(events, listEl, yearSelect.value);
-      });
+    // Populate all filter dropdowns (only once)
+    if (!calendarFiltersInitialized) {
+      populateCalendarFilters();
+      setupCalendarFilterListeners();
+      calendarFiltersInitialized = true;
     }
 
-    renderCalendar(events, listEl, "");
+    renderCalendarEvents();
   } catch (e) {
     console.error("Calendar error", e);
-    statusEl.textContent = "Kunde inte ladda kalender.";
+    listEl.innerHTML = '<div class="placeholder" style="color: var(--color-error);">Kunde inte ladda kalender</div>';
+    statusEl.textContent = "";
   }
 }
 
+function populateCalendarFilters() {
+  // Series filter
+  const series = [...new Set(calendarEvents.map(e => e.series).filter(Boolean))].sort();
+  const seriesSelect = document.getElementById("cal-series-filter");
+  if (seriesSelect) {
+    seriesSelect.innerHTML = '<option value="">Alla serier</option>' +
+      series.map(s => `<option value="${s}">${s}</option>`).join("");
+  }
+
+  // Year filter
+  const years = [...new Set(calendarEvents.map(e => (e.date || "").slice(0, 4)).filter(Boolean))].sort().reverse();
+  const yearSelect = document.getElementById("cal-year-filter");
+  if (yearSelect) {
+    yearSelect.innerHTML = '<option value="">Alla år</option>' +
+      years.map(y => `<option value="${y}">${y}</option>`).join("");
+  }
+
+  // Discipline filter
+  const disciplines = [...new Set(calendarEvents.map(e => e.discipline).filter(Boolean))].sort();
+  const discSelect = document.getElementById("cal-discipline-filter");
+  if (discSelect) {
+    discSelect.innerHTML = '<option value="">Alla discipliner</option>' +
+      disciplines.map(d => `<option value="${d}">${d}</option>`).join("");
+  }
+}
+
+function setupCalendarFilterListeners() {
+  const seriesSelect = document.getElementById("cal-series-filter");
+  const yearSelect = document.getElementById("cal-year-filter");
+  const discSelect = document.getElementById("cal-discipline-filter");
+
+  if (seriesSelect) {
+    seriesSelect.addEventListener("change", (e) => {
+      calendarFilters.series = e.target.value;
+      renderCalendarEvents();
+    });
+  }
+  if (yearSelect) {
+    yearSelect.addEventListener("change", (e) => {
+      calendarFilters.year = e.target.value;
+      renderCalendarEvents();
+    });
+  }
+  if (discSelect) {
+    discSelect.addEventListener("change", (e) => {
+      calendarFilters.discipline = e.target.value;
+      renderCalendarEvents();
+    });
+  }
+}
+
+function renderCalendarEvents() {
+  const listEl = document.getElementById("calendar-list");
+  const badgeEl = document.getElementById("calendar-count-badge");
+  if (!listEl) return;
+
+  // Apply filters
+  let filtered = calendarEvents;
+  if (calendarFilters.series) {
+    filtered = filtered.filter(e => e.series === calendarFilters.series);
+  }
+  if (calendarFilters.year) {
+    filtered = filtered.filter(e => (e.date || "").startsWith(calendarFilters.year));
+  }
+  if (calendarFilters.discipline) {
+    filtered = filtered.filter(e => e.discipline === calendarFilters.discipline);
+  }
+
+  // Sort by date (upcoming first)
+  const sorted = filtered.sort((a, b) => (a.date || "").localeCompare(b.date || ""));
+
+  badgeEl.textContent = `${sorted.length} event`;
+
+  if (!sorted.length) {
+    listEl.innerHTML = '<div class="placeholder">Inga event matchar dina filter</div>';
+    return;
+  }
+
+  listEl.innerHTML = sorted.map(ev => {
+    const parts = monthDayParts(ev.date);
+    const seriesClass = getSeriesClass(ev.series || ev.discipline || "");
+    return `
+      <div class="card mb-sm" style="cursor: pointer; transition: transform var(--transition-fast);"
+           onmouseover="this.style.transform='translateX(4px)'"
+           onmouseout="this.style.transform='translateX(0)'">
+        <div class="flex gap-md items-start">
+          <div class="text-center" style="min-width: 50px; background: var(--color-accent); color: white; border-radius: var(--radius-md); padding: var(--space-xs);">
+            <div class="text-xs" style="opacity: 0.9;">${parts.month.toUpperCase()}</div>
+            <div class="text-lg font-bold">${parts.day}</div>
+          </div>
+          <div class="flex-1">
+            <div class="font-medium">${ev.name || "Okänt event"}</div>
+            <div class="flex flex-wrap gap-xs mt-xs">
+              <span class="${seriesClass}">${ev.series || ev.discipline || "Event"}</span>
+              ${ev.discipline && ev.series ? `<span class="chip">${ev.discipline}</span>` : ""}
+              ${ev.location ? `<span class="text-xs text-secondary">${ev.location}</span>` : ""}
+            </div>
+          </div>
+          ${ev.status ? `<div class="chip chip--success">${ev.status}</div>` : ""}
+        </div>
+      </div>
+    `;
+  }).join("");
+
+  initLucideIcons();
+}
+
+// Legacy renderCalendar for backwards compatibility
 function renderCalendar(events, container, yearFilter) {
+  calendarEvents = events;
+  calendarFilters.year = yearFilter;
+  renderCalendarEvents();
+}
+
+function _legacyRenderCalendar(events, container, yearFilter) {
   container.innerHTML = "";
   const filtered = events.filter((e) => {
     if (!yearFilter) return true;
@@ -355,6 +471,10 @@ function renderCalendar(events, container, yearFilter) {
 
 // ---------------- RESULTS ----------------
 
+let resultsEvents = [];
+let resultsFilters = { series: '', year: '' };
+let resultsFiltersInitialized = false;
+
 async function loadResults() {
   const statusEl = document.getElementById("results-status");
   const listEl = document.getElementById("results-list");
@@ -363,41 +483,134 @@ async function loadResults() {
 
   try {
     statusEl.textContent = "Laddar resultat…";
-    const rows = await apiGet("results.php");
-    statusEl.textContent = "";
-    listEl.innerHTML = "";
+    setLoading("results-list", true);
 
-    if (!rows || !rows.length) {
-      statusEl.textContent = "Inga resultat hittades.";
+    // Try results.php first, fallback to events.php
+    let rows;
+    try {
+      rows = await apiGet("results.php");
+    } catch {
+      // Fallback: use events and filter to past events
+      const events = await apiGet("events.php");
+      rows = (events || []).filter(e => new Date(e.date) < new Date());
+    }
+
+    resultsEvents = rows || [];
+    statusEl.textContent = "";
+
+    if (!resultsEvents.length) {
+      listEl.innerHTML = '<div class="placeholder">Inga resultat hittades</div>';
       badgeEl.textContent = "0 tävlingar";
       return;
     }
 
-    badgeEl.textContent = rows.length + " tävlingar";
+    // Populate filters (only once)
+    if (!resultsFiltersInitialized) {
+      populateResultsFilters();
+      setupResultsFilterListeners();
+      resultsFiltersInitialized = true;
+    }
 
-    rows
-      .sort((a, b) => (b.date || "").localeCompare(a.date || ""))
-      .forEach((ev) => {
-        const row = document.createElement("div");
-        row.className = "flex gap-md items-center p-sm card mb-sm";
-        const parts = monthDayParts(ev.date);
-        row.innerHTML = `
-          <div class="text-center" style="min-width:50px;">
-            <div class="text-xs text-muted">${parts.month.toUpperCase()}</div>
-            <div class="text-lg font-bold">${parts.day}</div>
-          </div>
-          <div class="flex-1">
-            <div class="font-medium">${ev.name || "Okänt event"}</div>
-            <div class="text-sm text-secondary">${ev.location || ""} · ${ev.discipline || ""}</div>
-          </div>
-          <div class="chip">${(ev.participants || 0)} starter</div>
-        `;
-        listEl.appendChild(row);
-      });
+    renderResultsEvents();
   } catch (e) {
     console.error("Results error", e);
-    statusEl.textContent = "Kunde inte ladda resultat.";
+    listEl.innerHTML = '<div class="placeholder" style="color: var(--color-error);">Kunde inte ladda resultat</div>';
+    statusEl.textContent = "";
   }
+}
+
+function populateResultsFilters() {
+  // Series filter
+  const series = [...new Set(resultsEvents.map(e => e.series).filter(Boolean))].sort();
+  const seriesSelect = document.getElementById("res-series-filter");
+  if (seriesSelect) {
+    seriesSelect.innerHTML = '<option value="">Alla serier</option>' +
+      series.map(s => `<option value="${s}">${s}</option>`).join("");
+  }
+
+  // Year filter
+  const years = [...new Set(resultsEvents.map(e => (e.date || "").slice(0, 4)).filter(Boolean))].sort().reverse();
+  const yearSelect = document.getElementById("res-year-filter");
+  if (yearSelect) {
+    yearSelect.innerHTML = '<option value="">Alla år</option>' +
+      years.map(y => `<option value="${y}">${y}</option>`).join("");
+  }
+}
+
+function setupResultsFilterListeners() {
+  const seriesSelect = document.getElementById("res-series-filter");
+  const yearSelect = document.getElementById("res-year-filter");
+
+  if (seriesSelect) {
+    seriesSelect.addEventListener("change", (e) => {
+      resultsFilters.series = e.target.value;
+      renderResultsEvents();
+    });
+  }
+  if (yearSelect) {
+    yearSelect.addEventListener("change", (e) => {
+      resultsFilters.year = e.target.value;
+      renderResultsEvents();
+    });
+  }
+}
+
+function renderResultsEvents() {
+  const listEl = document.getElementById("results-list");
+  const badgeEl = document.getElementById("results-count-badge");
+  if (!listEl) return;
+
+  // Apply filters
+  let filtered = resultsEvents;
+  if (resultsFilters.series) {
+    filtered = filtered.filter(e => e.series === resultsFilters.series);
+  }
+  if (resultsFilters.year) {
+    filtered = filtered.filter(e => (e.date || "").startsWith(resultsFilters.year));
+  }
+
+  // Sort by date (newest first)
+  const sorted = filtered.sort((a, b) => (b.date || "").localeCompare(a.date || ""));
+
+  badgeEl.textContent = `${sorted.length} tävlingar`;
+
+  if (!sorted.length) {
+    listEl.innerHTML = '<div class="placeholder">Inga resultat matchar dina filter</div>';
+    return;
+  }
+
+  listEl.innerHTML = sorted.map(ev => {
+    const parts = monthDayParts(ev.date);
+    const seriesClass = getSeriesClass(ev.series || ev.discipline || "");
+    const participants = ev.participants || ev.participants_count || 0;
+    return `
+      <div class="card mb-sm" style="cursor: pointer; transition: transform var(--transition-fast);"
+           onmouseover="this.style.transform='translateX(4px)'"
+           onmouseout="this.style.transform='translateX(0)'">
+        <div class="flex gap-md items-start justify-between">
+          <div class="flex gap-md items-start flex-1">
+            <div class="text-center" style="min-width: 50px; background: var(--color-accent); color: white; border-radius: var(--radius-md); padding: var(--space-xs);">
+              <div class="text-xs" style="opacity: 0.9;">${parts.month.toUpperCase()}</div>
+              <div class="text-lg font-bold">${parts.day}</div>
+            </div>
+            <div class="flex-1">
+              <div class="font-medium">${ev.name || "Okänt event"}</div>
+              <div class="flex flex-wrap gap-xs mt-xs">
+                <span class="${seriesClass}">${ev.series || ev.discipline || "Event"}</span>
+                ${ev.discipline && ev.series ? `<span class="chip">${ev.discipline}</span>` : ""}
+              </div>
+            </div>
+          </div>
+          <div class="text-right">
+            <div class="text-xl font-bold text-accent">${participants}</div>
+            <div class="text-xs text-secondary">deltagare</div>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join("");
+
+  initLucideIcons();
 }
 
 // ---------------- SERIES ----------------
@@ -477,15 +690,19 @@ async function loadSeries() {
 let DB_STATE = {
   riders: [],
   clubs: [],
+  mode: 'riders', // 'riders' or 'clubs'
+  searchInitialized: false
 };
 
 function setupDbTabs() {
   const buttons = document.querySelectorAll("[data-db-tab]");
   const ridersCol = document.getElementById("db-riders-column");
   const clubsCol = document.getElementById("db-clubs-column");
+  const searchInput = document.getElementById("db-search-input");
   if (!buttons.length || !ridersCol || !clubsCol) return;
 
   function setTab(tab) {
+    DB_STATE.mode = tab;
     buttons.forEach((b) => {
       if (b.dataset.dbTab === tab) {
         b.classList.remove('btn--ghost');
@@ -497,6 +714,25 @@ function setupDbTabs() {
     });
     ridersCol.style.display = tab === "riders" ? "" : "none";
     clubsCol.style.display = tab === "clubs" ? "" : "none";
+
+    // Update search placeholder
+    if (searchInput) {
+      searchInput.placeholder = tab === "riders"
+        ? "Skriv namn, klubb eller Gravity ID…"
+        : "Skriv klubbnamn…";
+      // Re-run search with current query
+      const q = searchInput.value.trim().toLowerCase();
+      if (q.length >= 2) {
+        performDbSearch(q);
+      } else {
+        // Show top items
+        if (tab === "riders") {
+          renderDbRiders(DB_STATE.riders.slice(0, 30), document.getElementById("db-riders-list"));
+        } else {
+          renderDbClubs(DB_STATE.clubs.slice(0, 30), document.getElementById("db-clubs-list"));
+        }
+      }
+    }
   }
 
   buttons.forEach((btn) => {
@@ -516,71 +752,139 @@ async function loadDatabase() {
   if (!ridersList || !clubsList) return;
 
   try {
+    setLoading("db-riders-list", true);
+
     const riders = await apiGet("riders.php");
     DB_STATE.riders = riders || [];
 
-    // derive clubs
+    // derive clubs from riders
     const clubMap = new Map();
     DB_STATE.riders.forEach((r) => {
-      const name = r.club_name || "Okänd klubb";
-      if (!clubMap.has(name)) clubMap.set(name, 0);
-      clubMap.set(name, clubMap.get(name) + 1);
+      const name = r.club_name || r.club || "Okänd klubb";
+      if (!clubMap.has(name)) clubMap.set(name, { count: 0, points: 0 });
+      const club = clubMap.get(name);
+      club.count++;
+      club.points += parseInt(r.total_points || 0);
     });
     DB_STATE.clubs = Array.from(clubMap.entries())
-      .map(([name, count]) => ({ name, count }))
+      .map(([name, data]) => ({ name, count: data.count, total_points: data.points }))
       .sort((a, b) => b.count - a.count);
 
-    renderDbRiders(DB_STATE.riders, ridersList);
-    renderDbClubs(DB_STATE.clubs, clubsList);
+    renderDbRiders(DB_STATE.riders.slice(0, 30), ridersList);
+    renderDbClubs(DB_STATE.clubs.slice(0, 30), clubsList);
 
     // counters
     setText("db-riders-total", DB_STATE.riders.length);
     setText("db-clubs-total", DB_STATE.clubs.length);
 
-    if (searchInput) {
+    // Setup search with debounce (only once)
+    if (searchInput && !DB_STATE.searchInitialized) {
+      let debounceTimer;
       searchInput.addEventListener("input", () => {
-        const q = searchInput.value.toLowerCase();
-        const filtered = DB_STATE.riders.filter((r) => {
-          const full = `${r.firstname || ""} ${r.lastname || ""} ${r.gravity_id || ""} ${r.club_name || ""}`.toLowerCase();
-          return full.includes(q);
-        });
-        renderDbRiders(filtered, ridersList);
+        clearTimeout(debounceTimer);
+        const q = searchInput.value.trim().toLowerCase();
+
+        debounceTimer = setTimeout(() => {
+          if (q.length < 2) {
+            // Show top items
+            if (DB_STATE.mode === "riders") {
+              renderDbRiders(DB_STATE.riders.slice(0, 30), ridersList);
+            } else {
+              renderDbClubs(DB_STATE.clubs.slice(0, 30), clubsList);
+            }
+            return;
+          }
+          performDbSearch(q);
+        }, 300);
       });
+      DB_STATE.searchInitialized = true;
     }
   } catch (e) {
     console.error("DB error", e);
+    showToast("Kunde inte ladda databas", "error");
+  }
+}
+
+function performDbSearch(query) {
+  const ridersList = document.getElementById("db-riders-list");
+  const clubsList = document.getElementById("db-clubs-list");
+
+  if (DB_STATE.mode === "riders") {
+    const filtered = DB_STATE.riders.filter((r) => {
+      const full = `${r.firstname || r.first_name || ""} ${r.lastname || r.last_name || ""} ${r.gravity_id || ""} ${r.club_name || r.club || ""}`.toLowerCase();
+      return full.includes(query);
+    });
+    renderDbRiders(filtered, ridersList);
+  } else {
+    const filtered = DB_STATE.clubs.filter((c) => {
+      return (c.name || "").toLowerCase().includes(query);
+    });
+    renderDbClubs(filtered, clubsList);
   }
 }
 
 function renderDbRiders(rows, container) {
-  container.innerHTML = "";
-  rows.slice(0, 50).forEach((r) => {
-    const row = document.createElement("div");
-    row.className = "flex justify-between items-center p-sm card mb-sm";
-    row.innerHTML = `
-      <div>
-        <div class="font-medium">${(r.firstname || "")} ${(r.lastname || "")}</div>
-        <div class="text-sm text-secondary">${r.club_name || "–"} · ${r.gravity_id || ""}</div>
+  if (!rows || rows.length === 0) {
+    container.innerHTML = '<div class="placeholder">Inga åkare hittades</div>';
+    return;
+  }
+
+  container.innerHTML = rows.slice(0, 50).map((r, idx) => {
+    const firstName = r.firstname || r.first_name || "";
+    const lastName = r.lastname || r.last_name || "";
+    const club = r.club_name || r.club || "–";
+    const gravityId = r.gravity_id || "";
+
+    return `
+      <div class="card mb-sm" style="cursor: pointer; transition: transform var(--transition-fast);"
+           onmouseover="this.style.transform='translateX(4px)'"
+           onmouseout="this.style.transform='translateX(0)'">
+        <div class="flex justify-between items-center">
+          <div class="flex items-center gap-md">
+            <div style="width: 32px; height: 32px; border-radius: 50%; background: var(--color-accent-light); color: var(--color-accent-text); display: flex; align-items: center; justify-content: center; font-weight: var(--weight-bold); font-size: var(--text-sm); flex-shrink: 0;">
+              ${idx + 1}
+            </div>
+            <div>
+              <div class="font-medium">${firstName} ${lastName}</div>
+              <div class="text-sm text-secondary">${club} ${gravityId ? '· ' + gravityId : ''}</div>
+            </div>
+          </div>
+          ${r.total_points ? `<div class="chip">${r.total_points} p</div>` : ''}
+        </div>
       </div>
-      <div class="chip">${r.license_number || ""}</div>
     `;
-    container.appendChild(row);
-  });
+  }).join("");
 }
 
 function renderDbClubs(rows, container) {
-  container.innerHTML = "";
-  rows.slice(0, 30).forEach((c, idx) => {
-    const row = document.createElement("div");
-    row.className = "flex justify-between items-center p-sm card mb-sm";
-    row.innerHTML = `
-      <div>
-        <div class="font-medium">${idx + 1}. ${c.name}</div>
-        <div class="text-sm text-secondary">${c.count} registrerade åkare</div>
+  if (!rows || rows.length === 0) {
+    container.innerHTML = '<div class="placeholder">Inga klubbar hittades</div>';
+    return;
+  }
+
+  container.innerHTML = rows.slice(0, 30).map((c, idx) => `
+    <div class="card mb-sm" style="cursor: pointer; transition: transform var(--transition-fast);"
+         onmouseover="this.style.transform='translateX(4px)'"
+         onmouseout="this.style.transform='translateX(0)'">
+      <div class="flex justify-between items-center">
+        <div class="flex items-center gap-md">
+          <div style="width: 32px; height: 32px; border-radius: 50%; background: var(--color-success-light); color: var(--color-success); display: flex; align-items: center; justify-content: center; font-weight: var(--weight-bold); font-size: var(--text-sm); flex-shrink: 0;">
+            ${idx + 1}
+          </div>
+          <div>
+            <div class="font-medium">${c.name}</div>
+            <div class="text-sm text-secondary">${c.count} registrerade åkare</div>
+          </div>
+        </div>
+        ${c.total_points ? `
+          <div class="text-right">
+            <div class="text-lg font-bold text-accent">${c.total_points}</div>
+            <div class="text-xs text-secondary">poäng</div>
+          </div>
+        ` : ''}
       </div>
-    `;
-    container.appendChild(row);
-  });
+    </div>
+  `).join("");
 }
 
 // ---------------- RANKING ----------------
