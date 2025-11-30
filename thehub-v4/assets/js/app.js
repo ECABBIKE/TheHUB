@@ -5,6 +5,9 @@
 const BASE = "/thehub-v4";
 const API_BASE = BASE + "/backend/public/api";
 
+// Track which views have been loaded
+const LOADED_VIEWS = new Set();
+
 document.addEventListener("DOMContentLoaded", () => {
   setupNavigation();
   setupDbTabs();
@@ -22,12 +25,71 @@ function initLucideIcons() {
   }
 }
 
+// Only load dashboard initially - other views load on-demand
 function hydrateUI() {
   loadDashboard().catch(console.error);
-  loadCalendar().catch(console.error);
-  loadResults().catch(console.error);
-  loadDatabase().catch(console.error);
-  loadRanking().catch(console.error);
+  LOADED_VIEWS.add('dashboard');
+}
+
+// ---------------- TOAST NOTIFICATIONS ----------------
+
+function showToast(message, type = 'info') {
+  const toast = document.createElement('div');
+  toast.className = `toast toast--${type}`;
+  toast.textContent = message;
+  toast.style.cssText = `
+    position: fixed;
+    bottom: calc(var(--mobile-nav-height) + var(--space-md));
+    right: var(--space-md);
+    background: var(--color-bg-elevated);
+    color: var(--color-text-primary);
+    padding: var(--space-md);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-lg);
+    z-index: var(--z-toast);
+    min-width: 200px;
+    max-width: 320px;
+    border-left: 3px solid ${type === 'error' ? 'var(--color-error)' : type === 'success' ? 'var(--color-success)' : 'var(--color-accent)'};
+    transition: opacity 0.3s ease, transform 0.3s ease;
+  `;
+
+  document.body.appendChild(toast);
+
+  setTimeout(() => {
+    toast.style.opacity = '0';
+    toast.style.transform = 'translateY(10px)';
+    setTimeout(() => toast.remove(), 300);
+  }, 3000);
+}
+
+// ---------------- LOADING STATES ----------------
+
+function setLoading(elementId, isLoading) {
+  const el = document.getElementById(elementId);
+  if (!el) return;
+
+  if (isLoading) {
+    el.innerHTML = `
+      <div style="display: flex; align-items: center; justify-content: center; padding: var(--space-xl); color: var(--color-text-tertiary);">
+        <div class="spinner"></div>
+        <span style="margin-left: var(--space-sm);">Laddar...</span>
+      </div>
+    `;
+  }
+}
+
+// ---------------- SERIES CLASS HELPER ----------------
+
+function getSeriesClass(seriesName) {
+  if (!seriesName) return 'chip';
+  const name = seriesName.toLowerCase();
+  if (name.includes('enduro')) return 'chip chip--enduro';
+  if (name.includes('downhill') || name.includes('dh')) return 'chip chip--downhill';
+  if (name.includes('xc') || name.includes('cross')) return 'chip chip--xc';
+  if (name.includes('ges')) return 'chip chip--ges';
+  if (name.includes('ggs') || name.includes('götaland')) return 'chip chip--ggs';
+  if (name.includes('gss') || name.includes('stockholm')) return 'chip';
+  return 'chip';
 }
 
 // ---------------- NAVIGATION ----------------
@@ -64,6 +126,31 @@ function setupNavigation() {
         link.classList.remove('active');
       }
     });
+
+    // Load data on-demand (lazy loading)
+    if (!LOADED_VIEWS.has(viewName)) {
+      LOADED_VIEWS.add(viewName);
+      switch(viewName) {
+        case 'dashboard':
+          loadDashboard().catch(console.error);
+          break;
+        case 'calendar':
+          loadCalendar().catch(console.error);
+          break;
+        case 'results':
+          loadResults().catch(console.error);
+          break;
+        case 'series':
+          loadSeries().catch(console.error);
+          break;
+        case 'database':
+          loadDatabase().catch(console.error);
+          break;
+        case 'ranking':
+          loadRanking().catch(console.error);
+          break;
+      }
+    }
 
     // Re-initialize Lucide icons after view change
     setTimeout(() => initLucideIcons(), 50);
@@ -310,6 +397,78 @@ async function loadResults() {
   } catch (e) {
     console.error("Results error", e);
     statusEl.textContent = "Kunde inte ladda resultat.";
+  }
+}
+
+// ---------------- SERIES ----------------
+
+async function loadSeries() {
+  const gridEl = document.getElementById("series-grid");
+  const emptyEl = document.getElementById("series-empty");
+
+  if (!gridEl) return;
+
+  try {
+    if (emptyEl) emptyEl.textContent = "Laddar serier...";
+    setLoading("series-grid", true);
+
+    const events = await apiGet("events.php");
+
+    if (!events || !events.length) {
+      gridEl.innerHTML = "";
+      if (emptyEl) emptyEl.textContent = "Inga serier hittades.";
+      return;
+    }
+
+    // Group events by series
+    const seriesMap = {};
+    events.forEach(event => {
+      const series = event.series || event.discipline || "Övriga";
+      if (!seriesMap[series]) {
+        seriesMap[series] = {
+          name: series,
+          events: [],
+          participants: 0
+        };
+      }
+      seriesMap[series].events.push(event);
+      seriesMap[series].participants += parseInt(event.participants || event.participants_count || 0);
+    });
+
+    const seriesList = Object.values(seriesMap).sort((a, b) => b.events.length - a.events.length);
+    if (emptyEl) emptyEl.textContent = "";
+
+    // Render series grid
+    gridEl.innerHTML = seriesList.map(series => {
+      const seriesClass = getSeriesClass(series.name);
+
+      return `
+        <div class="card card--clickable" style="cursor: pointer;">
+          <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: var(--space-md);">
+            <span class="${seriesClass}">${series.name}</span>
+            <span style="font-size: var(--text-xs); color: var(--color-text-tertiary); background: var(--color-bg-sunken); padding: var(--space-2xs) var(--space-xs); border-radius: var(--radius-sm);">2025</span>
+          </div>
+          <h3 style="margin: 0 0 var(--space-xs) 0; font-size: var(--text-md);">${series.name}</h3>
+          <p style="font-size: var(--text-sm); color: var(--color-text-secondary); margin: 0;">${series.events.length} tävling${series.events.length !== 1 ? 'ar' : ''}</p>
+          <div class="stats-row" style="margin-top: var(--space-md);">
+            <div class="stat-block">
+              <div class="stat-value" style="font-size: var(--text-xl);">${series.events.length}</div>
+              <div class="stat-label">Tävlingar</div>
+            </div>
+            <div class="stat-block">
+              <div class="stat-value" style="font-size: var(--text-xl);">${series.participants || "–"}</div>
+              <div class="stat-label">Deltagare</div>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join("");
+
+  } catch (e) {
+    console.error("Series error", e);
+    gridEl.innerHTML = "";
+    if (emptyEl) emptyEl.textContent = "Kunde inte ladda serier.";
+    showToast("Kunde inte ladda serier", "error");
   }
 }
 

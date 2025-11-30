@@ -11,7 +11,7 @@
     <link rel="stylesheet" href="https://gravityseries.se/branding/fonts.css">
 
     <!-- V3 CSS System -->
-    <link rel="stylesheet" href="/thehub-v4/assets/css/main.css?v=52">
+    <link rel="stylesheet" href="/thehub-v4/assets/css/main.css?v=53">
 
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
@@ -351,7 +351,7 @@
 </div>
 
 <!-- JS -->
-<script src="/thehub-v4/assets/js/theme.js?v=52"></script>
-<script src="/thehub-v4/assets/js/app.js?v=52"></script>
+<script src="/thehub-v4/assets/js/theme.js?v=53"></script>
+<script src="/thehub-v4/assets/js/app.js?v=53"></script>
 </body>
 </html>
