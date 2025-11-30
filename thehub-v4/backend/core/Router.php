@@ -1,3 +1,5 @@
+<?php
+
 class Router
 {
     public function dispatch(): void
@@ -17,6 +19,13 @@ class Router
         }
 
         $modulePath = __DIR__ . '/../modules/' . $module . '/' . $controllerMap[$module];
+
+        if (!file_exists($modulePath)) {
+            http_response_code(404);
+            echo "Module controller missing";
+            return;
+        }
+
         require_once $modulePath;
 
         $className = pathinfo($controllerMap[$module], PATHINFO_FILENAME);
