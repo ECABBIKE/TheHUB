@@ -6,7 +6,7 @@
   <meta charset="UTF-8">
   <title>TheHUB V4 – GravitySeries</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link rel="stylesheet" href="/thehub-v4/assets/css/app.css?v=30">
+  <link rel="stylesheet" href="/thehub-v4/assets/css/app.css?v=40">
 </head>
 <body>
 <div class="app-root">
@@ -130,7 +130,7 @@
           <div>
             <h3>Status</h3>
             <p class="muted">
-              Detta är V4-skalet. Riders hämtas redan via API. Events och ranking kan vi koppla på med dina befintliga tabeller.
+              Detta är V4-skalet. Riders, events, resultat och ranking hämtas via API:t under /backend/public/api/.
             </p>
           </div>
         </div>
@@ -182,7 +182,7 @@
             <span class="badge" id="events-badge">beta</span>
           </div>
           <p class="muted" id="events-status">
-            Här kommer kalendern. API:t finns som /thehub-v4/backend/public/api/events.php.
+            Eventlistan hämtas från /backend/public/api/events.php och visar alla events i databasen.
           </p>
           <div id="events-list" class="card-list"></div>
         </div>
@@ -192,11 +192,22 @@
       <section id="view-ranking" class="view">
         <div class="card">
           <div class="card-header">
-            <h2>Ranking &amp; poäng</h2>
-            <span class="badge">beta</span>
+            <h2>Ranking &amp; poäng (24 mån)</h2>
+            <span class="badge" id="ranking-badge">beta</span>
+          </div>
+          <div class="filter-bar">
+            <div class="filter-group">
+              <label for="ranking-discipline">Disciplin</label>
+              <select id="ranking-discipline">
+                <option value="">Alla</option>
+                <option value="ENDURO">Enduro</option>
+                <option value="DOWNHILL">Downhill</option>
+                <option value="GRAVEL">Gravel</option>
+              </select>
+            </div>
           </div>
           <p class="muted" id="ranking-status">
-            Ranking-API saknas fortfarande. När vi vet exakt vilka tabeller/kolumner som används kan vi räkna serierna här.
+            Ranking hämtas från /backend/public/api/ranking.php, baserad på tabellen ranking_points (24 månader).
           </p>
           <div id="ranking-list" class="card-list"></div>
         </div>
@@ -213,6 +224,6 @@
   </div>
 </div>
 
-<script src="/thehub-v4/assets/js/app.js?v=30"></script>
+<script src="/thehub-v4/assets/js/app.js?v=40"></script>
 </body>
 </html>

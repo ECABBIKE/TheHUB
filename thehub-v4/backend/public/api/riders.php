@@ -8,17 +8,21 @@ require_once __DIR__ . '/../../core/Database.php';
 try {
     $pdo = Database::pdo();
 
-    // Hämta upp till 500 riders. Anpassa kolumner vid behov.
-    $sql = "SELECT
-                id,
-                gravity_id,
-                CONCAT(first_name, ' ', last_name) AS name,
-                club,
-                uci_id,
-                license_number
-            FROM riders
-            ORDER BY id DESC
-            LIMIT 500";
+    $sql = "
+        SELECT
+            r.id,
+            r.gravity_id,
+            r.firstname,
+            r.lastname,
+            r.license_number,
+            c.name AS club_name
+        FROM riders r
+        LEFT JOIN clubs c ON r.club_id = c.id
+        WHERE (r.firstname IS NOT NULL AND r.firstname <> '')
+           OR (r.lastname IS NOT NULL AND r.lastname <> '')
+        ORDER BY r.lastname, r.firstname
+        LIMIT 500
+    ";
 
     $stmt = $pdo->query($sql);
     $rows = $stmt->fetchAll();

@@ -1,4 +1,4 @@
-// TheHUB V4 frontend shell
+// TheHUB V4 frontend shell – SPA + API-integration
 
 const API_BASE = '/thehub-v4/backend/public/api';
 
@@ -51,6 +51,7 @@ function setActiveView(target) {
   if (target === 'riders') loadRiders();
   if (target === 'results') loadResults();
   if (target === 'events') loadEvents();
+  if (target === 'ranking') loadRanking();
 }
 
 function setupNav() {
@@ -92,19 +93,38 @@ async function loadDashboard() {
       const elCount = $('#dash-events-count');
       if (elCount) elCount.textContent = events.length.toString();
 
-      // simple "next event" based on date field if it exists
       const now = new Date();
-      const future = events
+      const parsed = events
         .map(ev => {
-          const d = ev.date || ev.event_date || ev.start_date || null;
-          return { raw: ev, date: d ? new Date(d) : null };
+          const dateStr = ev.date || ev.event_date || ev.start_date || null;
+          const d = dateStr ? new Date(dateStr) : null;
+          return { raw: ev, date: d };
         })
-        .filter(ev => ev.date && ev.date >= now)
+        .filter(ev => ev.date)
         .sort((a, b) => a.date - b.date);
+
+      const future = parsed.filter(ev => ev.date >= now);
+      const past = parsed.filter(ev => ev.date < now);
 
       if (future.length && $('#dash-upcoming-events')) {
         const e = future[0];
-        $('#dash-upcoming-events').textContent = e.raw.name || e.raw.title || 'Nästa event';
+        $('#dash-upcoming-events').textContent =
+          (e.raw.name || e.raw.title || 'Nästa event') +
+          ' · ' +
+          (e.date.toISOString().slice(0, 10));
+      }
+
+      if (past.length && $('#dash-last-event')) {
+        const e = past[past.length - 1];
+        $('#dash-last-event').textContent = e.raw.name || e.raw.title || 'Senaste event';
+        const meta = $('#dash-last-event-meta');
+        if (meta) {
+          meta.textContent = [
+            e.date.toISOString().slice(0, 10),
+            e.raw.location || null,
+            e.raw.discipline || null
+          ].filter(Boolean).join(' · ');
+        }
       }
     }
   } catch (e) {
@@ -148,9 +168,9 @@ function renderRiders() {
   const q = (searchEl?.value || '').toLowerCase().trim();
 
   const filtered = ridersCache.filter(r => {
-    const name = ((r.name || '') + ' ' + (r.first_name || '') + ' ' + (r.last_name || '')).toLowerCase();
+    const name = ((r.name || '') + ' ' + (r.firstname || '') + ' ' + (r.lastname || '')).toLowerCase();
     const id = (r.gravity_id || r.id || '').toString().toLowerCase();
-    const club = (r.club || r.team || '').toLowerCase();
+    const club = (r.club || r.club_name || r.team || '').toLowerCase();
     return !q || name.includes(q) || id.includes(q) || club.includes(q);
   });
 
@@ -167,7 +187,7 @@ function renderRiders() {
     title.className = 'list-title';
     const fullName =
       r.name ||
-      [r.first_name, r.last_name].filter(Boolean).join(' ') ||
+      [r.firstname, r.lastname].filter(Boolean).join(' ') ||
       ('Gravity ID: ' + (r.gravity_id || r.id));
     title.textContent = fullName;
 
@@ -175,8 +195,8 @@ function renderRiders() {
     sub.className = 'list-sub';
     const pieces = [];
     if (r.gravity_id) pieces.push('Gravity ID: ' + r.gravity_id);
-    if (r.club) pieces.push(r.club);
-    if (r.uci_id) pieces.push('UCI: ' + r.uci_id);
+    if (r.club || r.club_name) pieces.push(r.club || r.club_name);
+    if (r.license_number) pieces.push('Licens: ' + r.license_number);
     sub.textContent = pieces.join(' · ');
 
     main.appendChild(title);
@@ -192,27 +212,35 @@ function renderRiders() {
   });
 }
 
-/* RESULTS / EVENTS (stub-friendly) */
+/* RESULTS */
 
 async function loadResults() {
   const statusEl = $('#results-status');
   const listEl = $('#results-list');
   const badgeEl = $('#events-count-badge');
+  const yearEl = $('#results-year');
   if (!statusEl || !listEl) return;
 
   statusEl.textContent = 'Laddar tävlingar…';
   listEl.innerHTML = '';
 
+  const year = yearEl?.value || '';
+
+  let url = API_BASE + '/results.php';
+  if (year) url += '?year=' + encodeURIComponent(year);
+
   try {
-    const data = await fetchJson(API_BASE + '/results.php');
+    const data = await fetchJson(url);
     const rows = normalize(data);
+
     if (badgeEl) badgeEl.textContent = rows.length + ' tävlingar';
 
     if (!rows.length) {
-      statusEl.textContent = 'Inga resultat är kopplade till V4 ännu.';
+      statusEl.textContent = 'Inga resultat hittades för valt filter.';
       return;
     }
 
+    listEl.innerHTML = '';
     rows.forEach(ev => {
       const li = document.createElement('div');
       li.className = 'list-item';
@@ -229,7 +257,7 @@ async function loadResults() {
       const bits = [];
       if (ev.date) bits.push(ev.date);
       if (ev.location) bits.push(ev.location);
-      if (ev.series) bits.push(ev.series);
+      if (ev.discipline) bits.push(ev.discipline);
       sub.textContent = bits.join(' · ');
 
       main.appendChild(title);
@@ -237,7 +265,11 @@ async function loadResults() {
 
       const pill = document.createElement('div');
       pill.className = 'list-meta-pill';
-      pill.textContent = ev.participants ? ev.participants + ' deltagare' : 'Visa';
+      if (ev.participants) {
+        pill.textContent = ev.participants + ' deltagare';
+      } else {
+        pill.textContent = 'Visa';
+      }
 
       li.appendChild(main);
       li.appendChild(pill);
@@ -247,9 +279,11 @@ async function loadResults() {
     statusEl.textContent = '';
   } catch (e) {
     console.error(e);
-    statusEl.textContent = 'Kunde inte ladda events.';
+    statusEl.textContent = 'Kunde inte ladda resultat.';
   }
 }
+
+/* EVENTS */
 
 async function loadEvents() {
   const statusEl = $('#events-status');
@@ -268,6 +302,7 @@ async function loadEvents() {
       return;
     }
 
+    listEl.innerHTML = '';
     rows.forEach(ev => {
       const li = document.createElement('div');
       li.className = 'list-item';
@@ -284,7 +319,7 @@ async function loadEvents() {
       const bits = [];
       if (ev.date) bits.push(ev.date);
       if (ev.location) bits.push(ev.location);
-      if (ev.series) bits.push(ev.series);
+      if (ev.discipline) bits.push(ev.discipline);
       sub.textContent = bits.join(' · ');
 
       main.appendChild(title);
@@ -292,7 +327,7 @@ async function loadEvents() {
 
       const pill = document.createElement('div');
       pill.className = 'list-meta-pill';
-      pill.textContent = 'Visa';
+      pill.textContent = ev.status || 'Event';
 
       li.appendChild(main);
       li.appendChild(pill);
@@ -306,13 +341,95 @@ async function loadEvents() {
   }
 }
 
+/* RANKING */
+
+async function loadRanking() {
+  const statusEl = $('#ranking-status');
+  const listEl = $('#ranking-list');
+  const badgeEl = $('#ranking-badge');
+  const disciplineEl = $('#ranking-discipline');
+  if (!statusEl || !listEl) return;
+
+  statusEl.textContent = 'Laddar ranking…';
+  listEl.innerHTML = '';
+
+  const discipline = disciplineEl?.value || '';
+  let url = API_BASE + '/ranking.php';
+  if (discipline) url += '?discipline=' + encodeURIComponent(discipline);
+
+  try {
+    const data = await fetchJson(url);
+    const rows = normalize(data);
+
+    if (badgeEl) badgeEl.textContent = rows.length + ' riders';
+
+    if (!rows.length) {
+      statusEl.textContent = 'Ingen rankingdata hittades.';
+      return;
+    }
+
+    listEl.innerHTML = '';
+    rows.forEach((r, index) => {
+      const li = document.createElement('div');
+      li.className = 'list-item';
+
+      const main = document.createElement('div');
+      main.className = 'list-main';
+
+      const title = document.createElement('div');
+      title.className = 'list-title';
+      const fullName =
+        [r.firstname, r.lastname].filter(Boolean).join(' ') ||
+        r.name ||
+        ('Rider #' + r.rider_id);
+      title.textContent = (index + 1) + '. ' + fullName;
+
+      const sub = document.createElement('div');
+      sub.className = 'list-sub';
+      const bits = [];
+      if (r.gravity_id) bits.push('Gravity ID: ' + r.gravity_id);
+      if (r.club || r.club_name) bits.push(r.club || r.club_name);
+      if (r.events_count) bits.push(r.events_count + ' events');
+      sub.textContent = bits.join(' · ');
+
+      main.appendChild(title);
+      main.appendChild(sub);
+
+      const pill = document.createElement('div');
+      pill.className = 'list-meta-pill';
+      pill.textContent = (r.total_points ? r.total_points : 0) + ' p';
+
+      li.appendChild(main);
+      li.appendChild(pill);
+      listEl.appendChild(li);
+    });
+
+    statusEl.textContent = '24-månaders ranking baserad på tabellen ranking_points.';
+  } catch (e) {
+    console.error(e);
+    statusEl.textContent = 'Kunde inte ladda ranking.';
+  }
+}
+
 /* INIT */
 
 document.addEventListener('DOMContentLoaded', () => {
   setupNav();
+
   const search = $('#riders-search');
   if (search) {
     search.addEventListener('input', () => renderRiders());
   }
+
+  const resultsYear = $('#results-year');
+  if (resultsYear) {
+    resultsYear.addEventListener('change', () => loadResults());
+  }
+
+  const rankingDiscipline = $('#ranking-discipline');
+  if (rankingDiscipline) {
+    rankingDiscipline.addEventListener('change', () => loadRanking());
+  }
+
   setActiveView('dashboard');
 });
