@@ -40,7 +40,6 @@ try {
         WHERE r.id = :id
         LIMIT 1
     ");
-
     $stmt->execute(['id' => $id]);
     $rider = $stmt->fetch();
 
@@ -58,7 +57,7 @@ try {
             res.position,
             res.finish_time AS time,
             res.points,
-            res.category_id AS category 
+            res.category_id AS category,
             e.name AS event_name,
             e.date,
             e.discipline,

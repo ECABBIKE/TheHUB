@@ -133,13 +133,13 @@ try {
 
     // Get unique categories in this series
     $stmt = $pdo->prepare("
-        SELECT DISTINCT res.category
+        SELECT DISTINCT res.category_id AS category
         FROM results res
         JOIN events e ON res.event_id = e.id
         WHERE e.series_id = :series_name
-          AND res.category_id AS category IS NOT NULL
-          AND res.category_id AS category <> ''
-        ORDER BY res.category
+          AND res.category_id IS NOT NULL
+          AND res.category_id <> ''
+        ORDER BY res.category_id
     ");
     $stmt->execute(['series_name' => $seriesName]);
     $series['categories'] = $stmt->fetchAll(PDO::FETCH_COLUMN);
