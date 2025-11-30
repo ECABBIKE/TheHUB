@@ -1,5 +1,3 @@
-<?php
-
 class Router
 {
     public function dispatch(): void
@@ -7,18 +5,22 @@ class Router
         $module = $_GET['module'] ?? 'riders';
         $action = $_GET['action'] ?? 'index';
 
-        $modulePath = __DIR__ . '/../modules/' . $module . '/' . ucfirst($module) . 'Controller.php';
+        $controllerMap = [
+            'riders' => 'RiderController.php',
+            'events' => 'EventController.php',
+        ];
 
-        if (!file_exists($modulePath)) {
+        if (!isset($controllerMap[$module])) {
             http_response_code(404);
             echo "Module not found";
             return;
         }
 
+        $modulePath = __DIR__ . '/../modules/' . $module . '/' . $controllerMap[$module];
         require_once $modulePath;
 
-        $controllerClass = ucfirst($module) . 'Controller';
-        $controller = new $controllerClass();
+        $className = pathinfo($controllerMap[$module], PATHINFO_FILENAME);
+        $controller = new $className();
 
         if (!method_exists($controller, $action)) {
             http_response_code(404);
