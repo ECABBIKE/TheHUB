@@ -1,0 +1,56 @@
+.table-wrapper{overflow-x:auto;-webkit-overflow-scrolling:touch}
+
+.table{width:100%;border-collapse:collapse;font-size:var(--text-base);font-variant-numeric:tabular-nums;table-layout:auto}
+.table th,.table td{padding:var(--space-sm) var(--space-md);text-align:left;border-bottom:1px solid var(--color-divider)}
+.table thead{background:var(--color-bg-sunken)}
+.table th{font-weight:var(--weight-medium);color:var(--color-text-secondary);font-size:var(--text-sm);position:sticky;top:0;background:var(--color-bg-sunken);white-space:nowrap}
+.table tbody tr{transition:background var(--transition-fast)}
+.table tbody tr:hover{background:var(--color-bg-hover)}
+
+/* Column Types */
+.col-place{width:40px;text-align:center;font-weight:var(--weight-semibold)}
+.col-place--1{color:#FFD700}
+.col-place--2{color:#C0C0C0}
+.col-place--3{color:#CD7F32}
+.col-rider{font-weight:var(--weight-medium)}
+.col-club{color:var(--color-text-secondary)}
+.col-time{text-align:right;font-family:var(--font-mono);white-space:nowrap}
+.col-diff{text-align:right;color:var(--color-text-tertiary);font-family:var(--font-mono);white-space:nowrap}
+.col-points{text-align:right;font-weight:var(--weight-semibold);color:var(--color-accent-text);white-space:nowrap}
+.col-split{text-align:right;font-family:var(--font-mono);color:var(--color-text-secondary);white-space:nowrap}
+
+/* Portrait: Hide extra columns and compact layout */
+@media(orientation:portrait){
+  .col-split,.col-diff,.table-col-hide-portrait{display:none!important}
+  .table th,.table td{padding:var(--space-xs) var(--space-sm);font-size:var(--text-sm)}
+  .col-rider{max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+}
+
+/* Landscape: Show all */
+@media(orientation:landscape){
+  .col-split,.col-diff{display:table-cell!important}
+}
+
+/* Variants */
+.table--compact th,.table--compact td{padding:var(--space-xs) var(--space-sm);font-size:var(--text-sm)}
+.table--striped tbody tr:nth-child(even){background:var(--color-bg-sunken)}
+.table--striped tbody tr:hover{background:var(--color-bg-hover)}
+.table--clickable tbody tr{cursor:pointer}
+.table--clickable tbody tr:active{background:var(--color-bg-active)}
+
+/* Empty State */
+.table-empty{text-align:center;padding:var(--space-2xl);color:var(--color-text-muted)}
+.table-empty-icon{font-size:var(--text-3xl);margin-bottom:var(--space-md)}
+
+/* Mobile Card List */
+.result-list{display:none}
+@media(max-width:599px) and (orientation:portrait){
+  .table-wrapper{display:none}
+  .result-list{display:flex;flex-direction:column;gap:var(--space-xs)}
+  .result-item{display:flex;align-items:center;gap:var(--space-sm);padding:var(--space-sm);background:var(--color-bg-surface);border:1px solid var(--color-border);border-radius:var(--radius-md);max-width:100%;overflow:hidden}
+  .result-place{width:28px;height:28px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:var(--color-bg-sunken);border-radius:var(--radius-sm);font-weight:var(--weight-bold);font-size:var(--text-xs)}
+  .result-info{flex:1;min-width:0;overflow:hidden}
+  .result-name{font-weight:var(--weight-medium);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:var(--text-sm)}
+  .result-club{font-size:var(--text-xs);color:var(--color-text-secondary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .result-time{font-family:var(--font-mono);font-size:var(--text-sm);font-weight:var(--weight-semibold);flex-shrink:0}
+}
