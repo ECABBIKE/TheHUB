@@ -5,13 +5,13 @@
 <head>
     <meta charset="UTF-8">
     <title>TheHUB V4 – GravitySeries</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=5">
 
     <!-- GravitySeries Branding Fonts -->
     <link rel="stylesheet" href="https://gravityseries.se/branding/fonts.css">
 
     <!-- V3 CSS System -->
-    <link rel="stylesheet" href="/thehub-v4/assets/css/main.css?v=56">
+    <link rel="stylesheet" href="/thehub-v4/assets/css/main.css?v=57">
 
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
@@ -644,7 +644,7 @@
 </div>
 
 <!-- JS -->
-<script src="/thehub-v4/assets/js/theme.js?v=56"></script>
-<script src="/thehub-v4/assets/js/app.js?v=56"></script>
+<script src="/thehub-v4/assets/js/theme.js?v=57"></script>
+<script src="/thehub-v4/assets/js/app.js?v=57"></script>
 </body>
 </html>
