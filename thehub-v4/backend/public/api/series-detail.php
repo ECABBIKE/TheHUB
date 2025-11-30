@@ -74,15 +74,15 @@ try {
     // Get series stats
     $stmt = $pdo->prepare("
         SELECT
-            e.type AS name,
+            e.series_id AS name,
             COUNT(DISTINCT e.id) AS event_count,
             COUNT(DISTINCT res.cyclist_id) AS participant_count,
             MIN(YEAR(e.date)) AS first_year,
             MAX(YEAR(e.date)) AS last_year
         FROM events e
         LEFT JOIN results res ON e.id = res.event_id
-        WHERE e.type = :series_name
-        GROUP BY e.type
+        WHERE e.series_id = :series_name
+        GROUP BY e.series_id
     ");
     $stmt->execute(['series_name' => $seriesName]);
     $seriesRow = $stmt->fetch();
@@ -124,7 +124,7 @@ try {
             COUNT(DISTINCT res.cyclist_id) AS participant_count
         FROM events e
         LEFT JOIN results res ON e.id = res.event_id
-        WHERE e.type = :series_name
+        WHERE e.series_id = :series_name
         GROUP BY e.id
         ORDER BY e.date ASC
     ");
@@ -133,13 +133,13 @@ try {
 
     // Get unique categories in this series
     $stmt = $pdo->prepare("
-        SELECT DISTINCT res.category
+        SELECT DISTINCT res.category_id
         FROM results res
         JOIN events e ON res.event_id = e.id
-        WHERE e.type = :series_name
-          AND res.category IS NOT NULL
-          AND res.category <> ''
-        ORDER BY res.category
+        WHERE e.series_id = :series_name
+          AND res.category_id IS NOT NULL
+          AND res.category_id <> ''
+        ORDER BY res.category_id
     ");
     $stmt->execute(['series_name' => $seriesName]);
     $series['categories'] = $stmt->fetchAll(PDO::FETCH_COLUMN);

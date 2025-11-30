@@ -30,7 +30,7 @@ try {
     }
 
     if ($series) {
-        $where[] = "e.type = :series";
+        $where[] = "e.series_id = :series";
         $params[':series'] = $series;
     }
 
@@ -48,14 +48,14 @@ try {
             e.date,
             e.location,
             e.discipline,
-            e.type AS series,
+            e.series_id AS series,
             e.status,
             e.organizer,
             COUNT(DISTINCT res.cyclist_id) AS participants_count
         FROM events e
         LEFT JOIN results res ON e.id = res.event_id
         $whereSql
-        GROUP BY e.id, e.name, e.date, e.location, e.discipline, e.type, e.status, e.organizer
+        GROUP BY e.id, e.name, e.date, e.location, e.discipline, e.series_id, e.status, e.organizer
         ORDER BY e.date DESC
         LIMIT 500
     ";

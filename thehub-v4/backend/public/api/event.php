@@ -24,13 +24,13 @@ try {
             e.name,
             e.date,
             e.discipline,
-            e.type AS series,
+            e.series_id AS series,
             e.location,
             e.organizer,
             e.status,
             COUNT(DISTINCT res.cyclist_id) AS participants_count,
             COUNT(DISTINCT r.club_id) AS clubs_count,
-            COUNT(DISTINCT res.category) AS categories_count
+            COUNT(DISTINCT res.category_id) AS categories_count
         FROM events e
         LEFT JOIN results res ON e.id = res.event_id
         LEFT JOIN riders r ON res.cyclist_id = r.id
@@ -53,9 +53,9 @@ try {
             res.id,
             res.cyclist_id AS rider_id,
             res.position,
-            res.time,
+            res.finish_time AS time,
             res.points,
-            res.category,
+            res.category_id AS category,
             CONCAT(r.firstname, ' ', r.lastname) AS rider_name,
             r.gravity_id,
             c.name AS club_name
@@ -64,10 +64,10 @@ try {
         LEFT JOIN clubs c ON r.club_id = c.id
         WHERE res.event_id = :event_id
         ORDER BY
-            res.category ASC,
+            res.category_id ASC,
             CASE WHEN res.position IS NULL THEN 1 ELSE 0 END,
             res.position ASC,
-            res.time ASC
+            res.finish_time ASC
     ");
     $stmt->execute(['event_id' => $id]);
     $event['results'] = $stmt->fetchAll();

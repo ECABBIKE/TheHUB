@@ -110,7 +110,7 @@ try {
     // Get series participation
     $stmt = $pdo->prepare("
         SELECT
-            e.type AS series,
+            e.series_id AS series,
             COUNT(DISTINCT res.id) AS results_count,
             COUNT(DISTINCT r.id) AS riders_count,
             COALESCE(SUM(res.points), 0) AS total_points
@@ -118,7 +118,7 @@ try {
         JOIN riders r ON res.cyclist_id = r.id
         JOIN events e ON res.event_id = e.id
         WHERE r.club_id = :club_id
-        GROUP BY e.type
+        GROUP BY e.series_id
         ORDER BY total_points DESC
     ");
     $stmt->execute(['club_id' => $club_id]);
