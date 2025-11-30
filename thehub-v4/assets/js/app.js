@@ -622,6 +622,12 @@ function renderResultsEvents() {
 
 // ---------------- SERIES ----------------
 
+let SERIES_STATE = {
+  current: null,
+  standings: [],
+  events: []
+};
+
 async function loadSeries() {
   const gridEl = document.getElementById("series-grid");
   const emptyEl = document.getElementById("series-empty");
@@ -630,59 +636,69 @@ async function loadSeries() {
 
   try {
     if (emptyEl) emptyEl.textContent = "Laddar serier...";
-    setLoading("series-grid", true);
+    gridEl.innerHTML = "";
 
-    const events = await apiGet("events.php");
+    const data = await apiGet("series.php");
 
-    if (!events || !events.length) {
-      gridEl.innerHTML = "";
+    if (!data || !data.length) {
       if (emptyEl) emptyEl.textContent = "Inga serier hittades.";
       return;
     }
 
-    // Group events by series
-    const seriesMap = {};
-    events.forEach(event => {
-      const series = event.series || event.discipline || "Övriga";
-      if (!seriesMap[series]) {
-        seriesMap[series] = {
-          name: series,
-          events: [],
-          participants: 0
-        };
-      }
-      seriesMap[series].events.push(event);
-      seriesMap[series].participants += parseInt(event.participants || event.participants_count || 0);
-    });
-
-    const seriesList = Object.values(seriesMap).sort((a, b) => b.events.length - a.events.length);
     if (emptyEl) emptyEl.textContent = "";
 
     // Render series grid
-    gridEl.innerHTML = seriesList.map(series => {
+    gridEl.innerHTML = data.map(series => {
       const seriesClass = getSeriesClass(series.name);
+      const initials = series.name.split(' ').map(w => w[0]).join('').substring(0, 2);
+      const bestText = series.best_results_count
+        ? `Räknar ${series.best_results_count} bästa`
+        : 'Alla resultat räknas';
 
       return `
-        <div class="card card--clickable" style="cursor: pointer;">
-          <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: var(--space-md);">
-            <span class="${seriesClass}">${series.name}</span>
-            <span style="font-size: var(--text-xs); color: var(--color-text-tertiary); background: var(--color-bg-sunken); padding: var(--space-2xs) var(--space-xs); border-radius: var(--radius-sm);">2025</span>
+        <div class="card" style="cursor: pointer; transition: transform var(--transition-fast), box-shadow var(--transition-fast); position: relative;"
+             onclick="navigateTo('series-detail', '${series.slug}')"
+             onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='var(--shadow-lg)';"
+             onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none';">
+
+          <!-- Year Badge -->
+          <div style="position: absolute; top: var(--space-md); right: var(--space-md); background: var(--color-accent); color: white; padding: var(--space-2xs) var(--space-sm); border-radius: var(--radius-sm); font-size: var(--text-xs); font-weight: var(--weight-bold);">
+            ${series.year}
           </div>
-          <h3 style="margin: 0 0 var(--space-xs) 0; font-size: var(--text-md);">${series.name}</h3>
-          <p style="font-size: var(--text-sm); color: var(--color-text-secondary); margin: 0;">${series.events.length} tävling${series.events.length !== 1 ? 'ar' : ''}</p>
-          <div class="stats-row" style="margin-top: var(--space-md);">
-            <div class="stat-block">
-              <div class="stat-value" style="font-size: var(--text-xl);">${series.events.length}</div>
-              <div class="stat-label">Tävlingar</div>
+
+          <!-- Logo/Initials -->
+          <div style="width: 64px; height: 64px; border-radius: var(--radius-md); background: var(--color-accent-light); color: var(--color-accent-text); display: flex; align-items: center; justify-content: center; font-size: var(--text-xl); font-weight: var(--weight-bold); margin-bottom: var(--space-md);">
+            ${initials}
+          </div>
+
+          <!-- Name & Description -->
+          <h3 style="margin: 0 0 var(--space-xs) 0; font-size: var(--text-md); font-weight: var(--weight-semibold);">${series.name}</h3>
+          <p style="font-size: var(--text-sm); color: var(--color-text-secondary); margin: 0 0 var(--space-xs) 0; min-height: 40px;">${series.description || ''}</p>
+          <p style="font-size: var(--text-xs); color: var(--color-text-tertiary); margin: 0 0 var(--space-md) 0;">
+            <i data-lucide="calculator" style="width: 12px; height: 12px; vertical-align: middle;"></i> ${bestText}
+          </p>
+
+          <!-- Stats -->
+          <div style="display: flex; gap: var(--space-lg); border-top: 1px solid var(--color-divider); padding-top: var(--space-md); margin-top: auto;">
+            <div>
+              <div style="font-size: var(--text-lg); font-weight: var(--weight-bold); color: var(--color-accent-text);">${series.event_count}</div>
+              <div style="font-size: var(--text-xs); color: var(--color-text-tertiary); text-transform: uppercase;">tävlingar</div>
             </div>
-            <div class="stat-block">
-              <div class="stat-value" style="font-size: var(--text-xl);">${series.participants || "–"}</div>
-              <div class="stat-label">Deltagare</div>
+            <div>
+              <div style="font-size: var(--text-lg); font-weight: var(--weight-bold); color: var(--color-accent-text);">${series.participant_count || 0}</div>
+              <div style="font-size: var(--text-xs); color: var(--color-text-tertiary); text-transform: uppercase;">deltagare</div>
             </div>
+          </div>
+
+          <!-- Arrow indicator -->
+          <div style="position: absolute; bottom: var(--space-md); right: var(--space-md); color: var(--color-text-tertiary);">
+            <i data-lucide="chevron-right"></i>
           </div>
         </div>
       `;
     }).join("");
+
+    initLucideIcons();
 
   } catch (e) {
     console.error("Series error", e);
@@ -690,6 +706,279 @@ async function loadSeries() {
     if (emptyEl) emptyEl.textContent = "Kunde inte ladda serier.";
     showToast("Kunde inte ladda serier", "error");
   }
+}
+
+// ============ SERIES DETAIL ============
+
+async function loadSeriesDetail(seriesId) {
+  try {
+    // Load series info and events
+    const data = await apiGet(`series-detail.php?id=${seriesId}`);
+
+    if (!data) {
+      showToast('Serie hittades inte', 'error');
+      return;
+    }
+
+    SERIES_STATE.current = data;
+    SERIES_STATE.events = data.events || [];
+
+    // Populate header
+    document.getElementById('series-detail-name').textContent = data.name;
+    document.getElementById('series-detail-description').textContent = data.description || '';
+    document.getElementById('series-detail-year').textContent = data.year;
+
+    // Logo initials
+    const initials = data.name.split(' ').map(w => w[0]).join('').substring(0, 2);
+    document.getElementById('series-detail-logo').textContent = initials;
+
+    // Stats
+    document.getElementById('series-detail-events').textContent = data.event_count;
+    document.getElementById('series-detail-participants').textContent = data.participant_count;
+    document.getElementById('series-detail-best-count').textContent = data.best_results_count
+      ? `${data.best_results_count} bästa`
+      : 'Alla';
+
+    // Meta info
+    const meta = [];
+    meta.push(`<i data-lucide="tag" style="width: 14px; height: 14px; vertical-align: middle;"></i> ${data.discipline || 'Mixed'}`);
+    if (data.best_results_count) {
+      meta.push(`<i data-lucide="calculator" style="width: 14px; height: 14px; vertical-align: middle;"></i> Räknar ${data.best_results_count} bästa resultat`);
+    }
+    document.getElementById('series-detail-meta').innerHTML = meta.join(' &nbsp;•&nbsp; ');
+
+    // Render events list
+    renderSeriesEvents(data.events || []);
+
+    // Populate category filter
+    const categoryFilter = document.getElementById('series-category-filter');
+    categoryFilter.innerHTML = '<option value="">Alla klasser</option>' +
+      (data.categories || []).map(cat => `<option value="${cat}">${cat}</option>`).join('');
+
+    // Setup category filter change handler
+    categoryFilter.onchange = () => {
+      const category = categoryFilter.value;
+      loadSeriesStandings(seriesId, category || null);
+    };
+
+    // Load standings
+    loadSeriesStandings(seriesId, null);
+
+    // Re-init icons
+    initLucideIcons();
+
+  } catch (error) {
+    console.error('Series detail error:', error);
+    showToast('Kunde inte ladda serie', 'error');
+  }
+}
+
+function renderSeriesEvents(events) {
+  const listEl = document.getElementById('series-events-list');
+
+  if (!events || events.length === 0) {
+    listEl.innerHTML = '<div class="placeholder" style="padding: var(--space-lg); text-align: center;">Inga tävlingar i serien än</div>';
+    return;
+  }
+
+  listEl.innerHTML = events.map((event, index) => {
+    const date = new Date(event.date);
+    const dateStr = date.toLocaleDateString('sv-SE', { day: 'numeric', month: 'short' });
+    const hasResults = (event.participant_count || 0) > 0;
+    const isPast = date < new Date();
+
+    return `
+      <div style="display: flex; justify-content: space-between; align-items: center; padding: var(--space-md); border-bottom: 1px solid var(--color-divider); cursor: pointer; transition: background var(--transition-fast);"
+           onclick="navigateTo('event', '${event.id}')"
+           onmouseover="this.style.background='var(--color-bg-hover)';"
+           onmouseout="this.style.background='transparent';">
+        <div style="display: flex; align-items: center; gap: var(--space-md); flex: 1;">
+          <div style="width: 32px; text-align: center; color: var(--color-accent-text); font-weight: var(--weight-bold); font-size: var(--text-lg);">
+            ${index + 1}
+          </div>
+          <div style="min-width: 80px;">
+            <div style="font-size: var(--text-sm); color: var(--color-text-secondary);">${dateStr}</div>
+          </div>
+          <div style="flex: 1;">
+            <div style="font-weight: var(--weight-semibold);">${event.name}</div>
+            ${event.location ? `<div style="font-size: var(--text-sm); color: var(--color-text-tertiary);">${event.location}</div>` : ''}
+          </div>
+        </div>
+        <div style="display: flex; align-items: center; gap: var(--space-sm);">
+          ${hasResults ?
+            `<span class="chip chip--success">${event.participant_count} deltagare</span>` :
+            isPast ?
+              `<span class="chip">Inväntar resultat</span>` :
+              `<span style="color: var(--color-text-tertiary); font-size: var(--text-sm);">Kommande</span>`
+          }
+          <i data-lucide="chevron-right" style="color: var(--color-text-tertiary); width: 16px; height: 16px;"></i>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  initLucideIcons();
+}
+
+async function loadSeriesStandings(seriesId, category) {
+  const containerEl = document.getElementById('series-standings-container');
+  const infoEl = document.getElementById('series-standings-info');
+
+  try {
+    containerEl.innerHTML = '<div style="text-align: center; padding: var(--space-xl); color: var(--color-text-tertiary);">Laddar ställning...</div>';
+
+    const endpoint = category
+      ? `series-standings.php?id=${seriesId}&category=${encodeURIComponent(category)}`
+      : `series-standings.php?id=${seriesId}`;
+
+    const data = await apiGet(endpoint);
+
+    if (!data || !data.standings || data.standings.length === 0) {
+      containerEl.innerHTML = '<div class="placeholder" style="padding: var(--space-lg); text-align: center;">Ingen ställning ännu - inga resultat registrerade.</div>';
+      infoEl.textContent = '';
+      return;
+    }
+
+    SERIES_STATE.standings = data.standings;
+    const events = data.events || [];
+
+    // Info text
+    const bestCount = data.series.best_results_count;
+    if (bestCount) {
+      infoEl.textContent = `Räknar de ${bestCount} bästa resultaten per åkare`;
+    } else {
+      infoEl.textContent = 'Alla resultat räknas';
+    }
+
+    // Group standings by category
+    const categories = {};
+    data.standings.forEach(rider => {
+      const cat = rider.category || 'Övriga';
+      if (!categories[cat]) categories[cat] = [];
+      categories[cat].push(rider);
+    });
+
+    // Render standings table per category
+    containerEl.innerHTML = Object.entries(categories).map(([catName, riders]) => `
+      <div style="margin-bottom: var(--space-xl);">
+        <h3 style="color: var(--color-accent-text); margin-bottom: var(--space-md); font-size: var(--text-lg);">
+          <i data-lucide="users" style="width: 18px; height: 18px; vertical-align: middle;"></i> ${catName}
+          <span style="font-size: var(--text-sm); font-weight: normal; color: var(--color-text-tertiary);">(${riders.length} åkare)</span>
+        </h3>
+        <div style="overflow-x: auto;">
+          <table style="width: 100%; border-collapse: collapse; font-size: var(--text-sm); min-width: 600px;">
+            <thead>
+              <tr style="border-bottom: 2px solid var(--color-border); background: var(--color-bg-sunken);">
+                <th style="padding: var(--space-sm); text-align: left; width: 50px;">#</th>
+                <th style="padding: var(--space-sm); text-align: left;">Namn</th>
+                <th style="padding: var(--space-sm); text-align: left;">Klubb</th>
+                ${events.map((ev, i) => `<th style="padding: var(--space-sm); text-align: center; min-width: 50px;" title="${ev.name}">#${i + 1}</th>`).join('')}
+                <th style="padding: var(--space-sm); text-align: right; font-weight: var(--weight-bold);">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${riders.map(rider => {
+                const pos = rider.position;
+                const medal = pos === 1 ? '🥇' : pos === 2 ? '🥈' : pos === 3 ? '🥉' : pos;
+
+                return `
+                  <tr style="border-bottom: 1px solid var(--color-divider); cursor: pointer; transition: background var(--transition-fast);"
+                      onclick="navigateTo('rider', '${rider.rider_id}')"
+                      onmouseover="this.style.background='var(--color-bg-hover)';"
+                      onmouseout="this.style.background='transparent';">
+                    <td style="padding: var(--space-md) var(--space-sm); font-weight: var(--weight-bold);">
+                      ${medal}
+                    </td>
+                    <td style="padding: var(--space-md) var(--space-sm);">
+                      <div style="font-weight: var(--weight-medium);">${rider.rider_name}</div>
+                      ${rider.gravity_id ? `<div style="font-size: var(--text-xs); color: var(--color-text-tertiary);">${rider.gravity_id}</div>` : ''}
+                    </td>
+                    <td style="padding: var(--space-md) var(--space-sm); color: var(--color-text-secondary);">
+                      ${rider.club_name || '–'}
+                    </td>
+                    ${events.map(ev => {
+                      const points = rider.event_points && rider.event_points[ev.id];
+                      const isCounted = rider.counted_event_ids && rider.counted_event_ids.includes(ev.id);
+                      const style = isCounted
+                        ? 'font-weight: var(--weight-bold); color: var(--color-accent-text);'
+                        : 'color: var(--color-text-tertiary);';
+                      return `<td style="padding: var(--space-md) var(--space-sm); text-align: center; ${style}">${points || '–'}</td>`;
+                    }).join('')}
+                    <td style="padding: var(--space-md) var(--space-sm); text-align: right; font-weight: var(--weight-bold); color: var(--color-accent-text); font-size: var(--text-md);">
+                      ${rider.total_points}
+                    </td>
+                  </tr>
+                `;
+              }).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `).join('');
+
+    initLucideIcons();
+
+  } catch (error) {
+    console.error('Series standings error:', error);
+    containerEl.innerHTML = '<div class="placeholder" style="color: var(--color-error); padding: var(--space-lg); text-align: center;">Kunde inte ladda ställning</div>';
+  }
+}
+
+function filterSeriesStandings() {
+  const searchTerm = document.getElementById('series-search-input').value.toLowerCase().trim();
+  const category = document.getElementById('series-category-filter').value;
+
+  if (!SERIES_STATE.current) return;
+
+  // If search term, filter locally
+  if (searchTerm && SERIES_STATE.standings.length > 0) {
+    const filtered = SERIES_STATE.standings.filter(rider => {
+      const name = (rider.rider_name || '').toLowerCase();
+      const club = (rider.club_name || '').toLowerCase();
+      const gravityId = (rider.gravity_id || '').toLowerCase();
+      return name.includes(searchTerm) || club.includes(searchTerm) || gravityId.includes(searchTerm);
+    });
+
+    // Re-render with filtered data
+    const containerEl = document.getElementById('series-standings-container');
+    if (filtered.length === 0) {
+      containerEl.innerHTML = `<div class="placeholder" style="padding: var(--space-lg); text-align: center;">Inga åkare matchar "${searchTerm}"</div>`;
+      return;
+    }
+
+    // Simplified render for search results
+    containerEl.innerHTML = `
+      <div style="overflow-x: auto;">
+        <table style="width: 100%; border-collapse: collapse; font-size: var(--text-sm);">
+          <thead>
+            <tr style="border-bottom: 2px solid var(--color-border); background: var(--color-bg-sunken);">
+              <th style="padding: var(--space-sm); text-align: left; width: 50px;">#</th>
+              <th style="padding: var(--space-sm); text-align: left;">Namn</th>
+              <th style="padding: var(--space-sm); text-align: left;">Klubb</th>
+              <th style="padding: var(--space-sm); text-align: left;">Klass</th>
+              <th style="padding: var(--space-sm); text-align: right;">Poäng</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${filtered.map(rider => `
+              <tr style="border-bottom: 1px solid var(--color-divider); cursor: pointer;"
+                  onclick="navigateTo('rider', '${rider.rider_id}')">
+                <td style="padding: var(--space-md) var(--space-sm); font-weight: var(--weight-bold);">${rider.position}</td>
+                <td style="padding: var(--space-md) var(--space-sm); font-weight: var(--weight-medium);">${rider.rider_name}</td>
+                <td style="padding: var(--space-md) var(--space-sm); color: var(--color-text-secondary);">${rider.club_name || '–'}</td>
+                <td style="padding: var(--space-md) var(--space-sm);"><span class="chip">${rider.category || '–'}</span></td>
+                <td style="padding: var(--space-md) var(--space-sm); text-align: right; font-weight: var(--weight-bold); color: var(--color-accent-text);">${rider.total_points}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    `;
+    return;
+  }
+
+  // Otherwise reload from API with category filter
+  loadSeriesStandings(SERIES_STATE.current.slug || SERIES_STATE.current.id, category || null);
 }
 
 // ---------------- DATABASE (Riders + Clubs) ----------------
@@ -1084,6 +1373,10 @@ function handleURLRouting() {
       case 'event':
         showView('event');
         loadEventDetail(params.id);
+        break;
+      case 'series-detail':
+        showView('series-detail');
+        loadSeriesDetail(params.id);
         break;
       default:
         showView('dashboard');

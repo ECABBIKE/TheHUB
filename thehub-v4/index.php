@@ -11,7 +11,7 @@
     <link rel="stylesheet" href="https://gravityseries.se/branding/fonts.css">
 
     <!-- V3 CSS System -->
-    <link rel="stylesheet" href="/thehub-v4/assets/css/main.css?v=55">
+    <link rel="stylesheet" href="/thehub-v4/assets/css/main.css?v=56">
 
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
@@ -234,9 +234,91 @@
                     <h2 class="card-title">
                         <i data-lucide="trophy" class="icon-sm"></i> Tävlingsserier
                     </h2>
+                    <p style="color: var(--color-text-secondary); font-size: var(--text-sm); margin-top: var(--space-xs);">
+                        Alla GravitySeries och andra tävlingsserier
+                    </p>
                 </div>
-                <div id="series-grid" class="page-grid mt-md"></div>
-                <div id="series-empty" class="text-muted text-sm">Laddar serier…</div>
+            </div>
+            <!-- Series Grid -->
+            <div class="page-grid page-grid--3col" id="series-grid" style="margin-top: var(--space-lg);"></div>
+            <div id="series-empty" class="text-muted text-center" style="padding: var(--space-xl);">Laddar serier…</div>
+        </section>
+
+        <!-- SERIES DETAIL VIEW -->
+        <section class="page-content" id="view-series-detail" data-view="series-detail" style="display:none;">
+            <!-- Back Navigation -->
+            <div style="margin-bottom: var(--space-lg);">
+                <button class="btn btn--ghost" onclick="navigateTo('series')">
+                    <i data-lucide="arrow-left"></i> Tillbaka till Serier
+                </button>
+            </div>
+
+            <!-- Series Header -->
+            <div class="card">
+                <div style="display: flex; gap: var(--space-lg); align-items: start; flex-wrap: wrap;">
+                    <!-- Logo -->
+                    <div id="series-detail-logo" style="width: 100px; height: 100px; border-radius: var(--radius-lg); background: var(--color-accent); display: flex; align-items: center; justify-content: center; font-size: var(--text-2xl); font-weight: var(--weight-bold); color: white; flex-shrink: 0;">
+                        GS
+                    </div>
+
+                    <!-- Info -->
+                    <div style="flex: 1; min-width: 200px;">
+                        <h1 id="series-detail-name" style="margin: 0; font-size: var(--text-2xl); font-weight: var(--weight-bold);">Laddar...</h1>
+                        <p id="series-detail-description" style="color: var(--color-text-secondary); margin: var(--space-sm) 0;"></p>
+                        <div id="series-detail-meta" style="display: flex; gap: var(--space-lg); margin-top: var(--space-md); color: var(--color-text-tertiary); font-size: var(--text-sm); flex-wrap: wrap;"></div>
+                    </div>
+
+                    <!-- Year Badge -->
+                    <div style="background: var(--color-accent); color: white; padding: var(--space-sm) var(--space-md); border-radius: var(--radius-md); font-weight: var(--weight-bold); font-size: var(--text-lg);">
+                        <span id="series-detail-year">2025</span>
+                    </div>
+                </div>
+
+                <!-- Stats Row -->
+                <div class="stats-row" style="margin-top: var(--space-lg);">
+                    <div class="stat-block">
+                        <div class="stat-value" id="series-detail-events">0</div>
+                        <div class="stat-label">TÄVLINGAR</div>
+                    </div>
+                    <div class="stat-block">
+                        <div class="stat-value" id="series-detail-participants">0</div>
+                        <div class="stat-label">DELTAGARE</div>
+                    </div>
+                    <div class="stat-block">
+                        <div class="stat-value" id="series-detail-best-count">–</div>
+                        <div class="stat-label">RÄKNAS</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Events in Series -->
+            <div class="card" style="margin-top: var(--space-lg);">
+                <div class="card-header">
+                    <h2 class="card-title">
+                        <i data-lucide="calendar" class="icon-sm"></i> Tävlingar i serien
+                    </h2>
+                </div>
+                <div id="series-events-list"></div>
+            </div>
+
+            <!-- Category Filter & Search -->
+            <div class="card" style="margin-top: var(--space-lg);">
+                <div class="card-header">
+                    <h2 class="card-title">
+                        <i data-lucide="list-ordered" class="icon-sm"></i> Serieställning
+                    </h2>
+                </div>
+                <div style="display: flex; gap: var(--space-md); padding: var(--space-md) 0; flex-wrap: wrap; align-items: center;">
+                    <select id="series-category-filter" class="form-select" style="min-width: 150px;">
+                        <option value="">Alla klasser</option>
+                    </select>
+                    <input type="text" id="series-search-input" class="form-input" placeholder="Sök namn..." style="flex: 1; min-width: 150px; max-width: 300px;">
+                    <button class="btn btn--primary" onclick="filterSeriesStandings()">
+                        <i data-lucide="search"></i> Sök
+                    </button>
+                </div>
+                <div id="series-standings-info" style="font-size: var(--text-sm); color: var(--color-text-tertiary); margin-bottom: var(--space-md);"></div>
+                <div id="series-standings-container"></div>
             </div>
         </section>
 
@@ -562,7 +644,7 @@
 </div>
 
 <!-- JS -->
-<script src="/thehub-v4/assets/js/theme.js?v=55"></script>
-<script src="/thehub-v4/assets/js/app.js?v=55"></script>
+<script src="/thehub-v4/assets/js/theme.js?v=56"></script>
+<script src="/thehub-v4/assets/js/app.js?v=56"></script>
 </body>
 </html>
