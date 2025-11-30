@@ -1,5 +1,5 @@
 <?php
-// TheHUB V4 – dashboard shell (frontend only).
+// TheHUB V4 – Gravity admin UI (light/dark)
 ?><!DOCTYPE html>
 <html lang="sv">
 <head>
@@ -9,221 +9,288 @@
   <link rel="stylesheet" href="/thehub-v4/assets/css/app.css?v=40">
 </head>
 <body>
-<div class="app-root">
-  <!-- SIDEBAR -->
-  <aside class="sidebar">
-    <div class="sidebar-logo">
-      <div class="sidebar-logo-mark">HUB</div>
-      <div class="sidebar-logo-text">
-        <span class="sidebar-title">TheHUB V4</span>
-        <span class="sidebar-sub">GravitySeries</span>
+  <div class="layout-root">
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+      <div class="sidebar-logo">
+        <div class="sidebar-logo-mark">HUB</div>
+        <div class="sidebar-logo-text">
+          <span class="sidebar-logo-title">TheHUB</span>
+          <span class="sidebar-logo-sub">GravitySeries</span>
+        </div>
       </div>
-    </div>
 
-    <nav class="sidebar-nav">
-      <button class="sidebar-link is-active" data-target="dashboard">
-        <span class="icon">🏠</span><span>Översikt</span>
-      </button>
-      <button class="sidebar-link" data-target="results">
-        <span class="icon">🏁</span><span>Resultat</span>
-      </button>
-      <button class="sidebar-link" data-target="riders">
-        <span class="icon">🚴‍♀️</span><span>Riders</span>
-      </button>
-      <button class="sidebar-link" data-target="events">
-        <span class="icon">📅</span><span>Events</span>
-      </button>
-      <button class="sidebar-link" data-target="ranking">
-        <span class="icon">📊</span><span>Ranking</span>
-      </button>
-    </nav>
+      <nav class="sidebar-nav">
+        <button class="sidebar-link is-active" data-view="dashboard">
+          <span class="sidebar-icon">📊</span>
+          <span>Dashboard</span>
+        </button>
+        <button class="sidebar-link" data-view="calendar">
+          <span class="sidebar-icon">📅</span>
+          <span>Kalender</span>
+        </button>
+        <button class="sidebar-link" data-view="results">
+          <span class="sidebar-icon">🏁</span>
+          <span>Resultat</span>
+        </button>
+        <button class="sidebar-link" data-view="series">
+          <span class="sidebar-icon">🥇</span>
+          <span>Serier</span>
+        </button>
+        <button class="sidebar-link" data-view="database">
+          <span class="sidebar-icon">📚</span>
+          <span>Databas</span>
+        </button>
+        <button class="sidebar-link" data-view="ranking">
+          <span class="sidebar-icon">📈</span>
+          <span>Ranking</span>
+        </button>
+      </nav>
 
-    <div class="sidebar-footer">
-      <a class="sidebar-link sidebar-link-secondary" href="/thehub-v4/backend/">
-        <span class="icon">🛠️</span><span>Backend</span>
-      </a>
-      <div class="sidebar-meta">
-        <span>V4 · API-driven</span>
+      <div class="sidebar-footer">
+        <div class="sidebar-footer-text">V4 · API-driven</div>
       </div>
-    </div>
-  </aside>
+    </aside>
 
-  <!-- MAIN -->
-  <div class="app-shell">
-    <header class="topbar">
-      <div>
-        <div class="topbar-eyebrow">TheHUB V4</div>
-        <h1 class="topbar-title" id="topbar-title">Dashboard</h1>
-      </div>
-      <div class="topbar-actions">
-        <span class="topbar-pill">Beta</span>
-      </div>
-    </header>
-
-    <main class="app-main">
-      <!-- DASHBOARD -->
-      <section id="view-dashboard" class="view view-active">
-        <div class="card hero-card hero-grid">
-          <div class="hero-main">
-            <h2>Gravity Series Dashboard</h2>
-            <p>Snabb överblick över säsongen. Data kommer från din befintliga TheHUB-databas.</p>
-            <div class="hero-meta-row">
-              <div class="hero-pill">
-                <span class="pill-label">Aktiva riders</span>
-                <span class="pill-value" id="dash-riders-count">–</span>
-              </div>
-              <div class="hero-pill">
-                <span class="pill-label">Tävlingsdagar</span>
-                <span class="pill-value" id="dash-events-count">–</span>
-              </div>
-              <div class="hero-pill">
-                <span class="pill-label">Serier</span>
-                <span class="pill-value">Capital · Götaland · Jämtland · GS Total</span>
-              </div>
-            </div>
-          </div>
-          <div class="hero-secondary">
-            <div class="mini-chart-card">
-              <div class="mini-chart-header">
-                <span>Säsongspuls</span>
-                <span class="dot-live">● Live</span>
-              </div>
-              <div class="mini-chart-placeholder">
-                <div class="sparkline">
-                  <span></span><span></span><span></span><span></span><span></span>
-                </div>
-                <div class="sparkline-labels">
-                  <span>Maj</span><span>Jun</span><span>Jul</span><span>Aug</span><span>Sep</span>
-                </div>
-              </div>
-            </div>
+    <!-- MAIN AREA -->
+    <div class="main-shell">
+      <header class="topbar">
+        <div class="topbar-left">
+          <button class="topbar-back" data-action="back">
+            ← <span>Tillbaka</span>
+          </button>
+          <div>
+            <div class="topbar-eyebrow" id="topbar-eyebrow">TheHUB V4</div>
+            <h1 class="topbar-title" id="topbar-title">Dashboard</h1>
           </div>
         </div>
 
-        <div class="card grid-three">
-          <div class="stat-card">
-            <div class="stat-label">Kommande event</div>
-            <div class="stat-value" id="dash-upcoming-events">–</div>
-            <div class="stat-sub">Nästa 30 dagar</div>
+        <div class="topbar-right">
+          <div class="theme-toggle" aria-label="Färgtema">
+            <button class="theme-btn" data-theme="light" title="Ljust läge">☀️</button>
+            <button class="theme-btn" data-theme="auto" title="Följ system" aria-pressed="true">🌓</button>
+            <button class="theme-btn" data-theme="dark" title="Mörkt läge">🌙</button>
           </div>
-          <div class="stat-card">
-            <div class="stat-label">Senaste event</div>
-            <div class="stat-value" id="dash-last-event">–</div>
-            <div class="stat-sub" id="dash-last-event-meta"></div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-label">Databas</div>
-            <div class="stat-value">V4</div>
-            <div class="stat-sub">Kopplad till befintlig MySQL</div>
+          <div class="topbar-user">
+            <span class="topbar-user-name">Admin</span>
+            <span class="topbar-user-avatar">A</span>
           </div>
         </div>
+      </header>
 
-        <div class="card grid-two">
-          <div>
-            <h3>Snabb åtkomst</h3>
-            <div class="quick-links">
-              <button class="quick-link" data-goto="results">Visa alla resultat</button>
-              <button class="quick-link" data-goto="riders">Rider-databasen</button>
-              <button class="quick-link" data-goto="events">Tävlingskalender</button>
+      <main class="main-content">
+        <!-- DASHBOARD -->
+        <section id="view-dashboard" class="view view-active" data-title="Dashboard" data-eyebrow="Översikt">
+          <div class="card quick-links-card">
+            <div class="card-header-row">
+              <h2>Snabblänkar</h2>
+            </div>
+            <div class="quick-link-row">
+              <button class="quick-chip" data-goto="database" data-chip="riders">
+                <span class="chip-icon">🚴</span> <span>Åkare</span>
+              </button>
+              <button class="quick-chip" data-goto="database" data-chip="clubs">
+                <span class="chip-icon">🏟</span> <span>Klubbar</span>
+              </button>
+              <button class="quick-chip" data-goto="results">
+                <span class="chip-icon">🏁</span> <span>Resultat</span>
+              </button>
+              <button class="quick-chip" data-goto="series">
+                <span class="chip-icon">🥇</span> <span>Serier</span>
+              </button>
             </div>
           </div>
-          <div>
-            <h3>Status</h3>
-            <p class="muted">
-              Detta är V4-skalet. Riders, events, resultat och ranking hämtas via API:t under /backend/public/api/.
+
+          <div class="card kpi-card">
+            <h2>Översikt</h2>
+            <div class="kpi-grid">
+              <div class="kpi-tile">
+                <div class="kpi-value" id="kpi-riders">–</div>
+                <div class="kpi-label">Åkare</div>
+              </div>
+              <div class="kpi-tile">
+                <div class="kpi-value" id="kpi-clubs">–</div>
+                <div class="kpi-label">Klubbar</div>
+              </div>
+              <div class="kpi-tile">
+                <div class="kpi-value" id="kpi-events">–</div>
+                <div class="kpi-label">Event</div>
+              </div>
+              <div class="kpi-tile">
+                <div class="kpi-value" id="kpi-results">–</div>
+                <div class="kpi-label">Resultat</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card-grid-2">
+            <div class="card">
+              <div class="card-header-row">
+                <h2>Aktiva serier</h2>
+                <button class="link-button" data-goto="series">Visa alla</button>
+              </div>
+              <div id="dashboard-series-list" class="table-like small">
+                <!-- fylls via JS -->
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-header-row">
+                <h2>Mest aktiva åkare</h2>
+                <button class="link-button" data-goto="database">Visa databas</button>
+              </div>
+              <div id="dashboard-riders-list" class="table-like small">
+                <!-- fylls via JS -->
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- KALENDER -->
+        <section id="view-calendar" class="view" data-title="Kalender" data-eyebrow="Kommande tävlingar">
+          <div class="card">
+            <div class="card-header-row">
+              <h2>Kalender</h2>
+            </div>
+            <div class="filter-row">
+              <div class="filter-group">
+                <label for="cal-series">Serie</label>
+                <select id="cal-series">
+                  <option value="">Alla serier</option>
+                </select>
+              </div>
+            </div>
+            <div id="calendar-status" class="status-text">Laddar inte än…</div>
+            <div id="calendar-list" class="list-stack">
+              <!-- event grupperas per månad via JS -->
+            </div>
+          </div>
+        </section>
+
+        <!-- RESULTAT -->
+        <section id="view-results" class="view" data-title="Resultat" data-eyebrow="Alla tävlingar">
+          <div class="card">
+            <div class="card-header-row">
+              <h2>Resultat</h2>
+              <span class="badge" id="results-count-badge">0 tävlingar</span>
+            </div>
+
+            <div class="filter-row">
+              <div class="filter-group">
+                <label for="res-series">Serie</label>
+                <select id="res-series">
+                  <option value="">Alla serier</option>
+                </select>
+              </div>
+              <div class="filter-group">
+                <label for="res-year">År</label>
+                <select id="res-year">
+                  <option value="">Alla år</option>
+                </select>
+              </div>
+            </div>
+
+            <div id="results-status" class="status-text">Välj filter eller klicka på en tävling.</div>
+            <div id="results-list" class="event-card-list">
+              <!-- fylls via JS -->
+            </div>
+          </div>
+        </section>
+
+        <!-- SERIER -->
+        <section id="view-series" class="view" data-title="Tävlingsserier" data-eyebrow="Alla GravitySeries och SweCup">
+          <div class="card">
+            <div class="card-header-row">
+              <h2>Tävlingsserier</h2>
+            </div>
+            <div id="series-grid" class="series-grid">
+              <!-- serie-kort fylls via JS -->
+            </div>
+          </div>
+        </section>
+
+        <!-- DATABAS -->
+        <section id="view-database" class="view" data-title="Databas" data-eyebrow="Åkare & klubbar">
+          <div class="card">
+            <div class="card-header-row">
+              <h2>Databas</h2>
+            </div>
+
+            <div class="kpi-grid">
+              <div class="kpi-tile small">
+                <div class="kpi-value" id="db-riders">–</div>
+                <div class="kpi-label">Åkare</div>
+              </div>
+              <div class="kpi-tile small">
+                <div class="kpi-value" id="db-clubs">–</div>
+                <div class="kpi-label">Klubbar</div>
+              </div>
+              <div class="kpi-tile small">
+                <div class="kpi-value" id="db-results">–</div>
+                <div class="kpi-label">Resultat</div>
+              </div>
+            </div>
+
+            <div class="db-toggle-row">
+              <button class="chip-toggle is-active" data-db-mode="riders">👥 Sök åkare</button>
+              <button class="chip-toggle" data-db-mode="clubs">🏟 Sök klubbar</button>
+            </div>
+
+            <div class="search-row">
+              <input id="db-search" type="text" placeholder="Skriv namn för att söka…">
+              <span class="help-text">Skriv minst 2 tecken för att söka</span>
+            </div>
+
+            <div class="card-grid-2">
+              <div>
+                <h3 class="subheading">Topp-presterande åkare</h3>
+                <div id="db-top-riders" class="table-like">
+                  <!-- fylls via JS -->
+                </div>
+              </div>
+              <div>
+                <h3 class="subheading">Toppklubbar</h3>
+                <div id="db-top-clubs" class="table-like">
+                  <!-- fylls via JS -->
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- RANKING -->
+        <section id="view-ranking" class="view" data-title="GravitySeries Ranking" data-eyebrow="24 månaders rullande ranking">
+          <div class="card">
+            <div class="card-header-row">
+              <h2>GravitySeries Ranking</h2>
+              <span class="badge badge-soft">beta</span>
+            </div>
+
+            <div class="tabs-row">
+              <button class="tab-pill is-active" data-rank-scope="gravity">Gravity</button>
+              <button class="tab-pill" data-rank-scope="enduro">Enduro</button>
+              <button class="tab-pill" data-rank-scope="dh">Downhill</button>
+            </div>
+
+            <div class="tabs-row second">
+              <button class="tab-pill is-active" data-rank-mode="riders">Åkare</button>
+              <button class="tab-pill" data-rank-mode="clubs">Klubbar</button>
+            </div>
+
+            <p class="muted rank-help">
+              24 månaders rullande ranking. Poäng viktas efter startfält och eventtyp (kommer kopplas mot dina poängmatriser).
             </p>
-          </div>
-        </div>
-      </section>
 
-      <!-- RESULTS -->
-      <section id="view-results" class="view">
-        <div class="card">
-          <div class="card-header">
-            <h2>Resultat / Tävlingar</h2>
-            <span class="badge" id="events-count-badge">0 tävlingar</span>
-          </div>
-          <div class="filter-bar">
-            <div class="filter-group">
-              <label for="results-year">År</label>
-              <select id="results-year">
-                <option value="">Alla år</option>
-              </select>
+            <div id="ranking-status" class="status-text status-info">
+              Rankingsystemet är inte konfigurerat än. Detta är en ren UI-placeholder som vi kopplar mot ditt
+              RankingEngine-API när allt är bestämt.
             </div>
           </div>
-          <div id="results-status" class="status-text">Klicka Resultat i menyn för att ladda.</div>
-          <div id="results-list" class="card-list"></div>
-        </div>
-      </section>
-
-      <!-- RIDERS -->
-      <section id="view-riders" class="view">
-        <div class="card">
-          <div class="card-header">
-            <h2>Riders</h2>
-            <span class="badge" id="riders-count-badge">0 riders</span>
-          </div>
-          <div class="filter-bar">
-            <div class="filter-group wide">
-              <label for="riders-search">Sök</label>
-              <input type="text" id="riders-search" placeholder="Namn, Gravity ID, klubb…">
-            </div>
-          </div>
-          <div id="riders-status" class="status-text">Klicka Riders i menyn för att ladda.</div>
-          <div id="riders-list" class="card-list"></div>
-        </div>
-      </section>
-
-      <!-- EVENTS -->
-      <section id="view-events" class="view">
-        <div class="card">
-          <div class="card-header">
-            <h2>Events (kalender)</h2>
-            <span class="badge" id="events-badge">beta</span>
-          </div>
-          <p class="muted" id="events-status">
-            Eventlistan hämtas från /backend/public/api/events.php och visar alla events i databasen.
-          </p>
-          <div id="events-list" class="card-list"></div>
-        </div>
-      </section>
-
-      <!-- RANKING -->
-      <section id="view-ranking" class="view">
-        <div class="card">
-          <div class="card-header">
-            <h2>Ranking &amp; poäng (24 mån)</h2>
-            <span class="badge" id="ranking-badge">beta</span>
-          </div>
-          <div class="filter-bar">
-            <div class="filter-group">
-              <label for="ranking-discipline">Disciplin</label>
-              <select id="ranking-discipline">
-                <option value="">Alla</option>
-                <option value="ENDURO">Enduro</option>
-                <option value="DOWNHILL">Downhill</option>
-                <option value="GRAVEL">Gravel</option>
-              </select>
-            </div>
-          </div>
-          <p class="muted" id="ranking-status">
-            Ranking hämtas från /backend/public/api/ranking.php, baserad på tabellen ranking_points (24 månader).
-          </p>
-          <div id="ranking-list" class="card-list"></div>
-        </div>
-      </section>
-    </main>
-
-    <!-- MOBILE TABBAR -->
-    <nav class="tabbar">
-      <button class="tab-btn tab-active" data-target="dashboard"><span class="tab-label">Start</span></button>
-      <button class="tab-btn" data-target="results"><span class="tab-label">Resultat</span></button>
-      <button class="tab-btn" data-target="riders"><span class="tab-label">Riders</span></button>
-      <button class="tab-btn" data-target="events"><span class="tab-label">Events</span></button>
-    </nav>
+        </section>
+      </main>
+    </div>
   </div>
-</div>
 
-<script src="/thehub-v4/assets/js/app.js?v=40"></script>
+  <script src="/thehub-v4/assets/js/app.js?v=40"></script>
 </body>
 </html>
