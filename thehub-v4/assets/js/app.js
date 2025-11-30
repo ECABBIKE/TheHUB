@@ -1,9 +1,6 @@
 
-// TheHUB V4 – UI shell JS with real data wiring for /thehub-v4/
-//
-// All paths are hard-wired to /thehub-v4 and /thehub-v4/backend/public/api/*
-// so you can just drop the `thehub-v4` folder in /public_html and browse to:
-//   https://thehub.gravityseries.se/thehub-v4/
+// TheHUB V4 – Dashboard SPA wiring for /thehub-v4/
+// Uses backend/public/api/*.php endpoints
 
 const BASE = "/thehub-v4";
 const API_BASE = BASE + "/backend/public/api";
@@ -11,93 +8,100 @@ const API_BASE = BASE + "/backend/public/api";
 document.addEventListener("DOMContentLoaded", () => {
   setupNavigation();
   setupTheme();
+  setupDbTabs();
+  setupRankingControls();
   hydrateUI();
 });
 
 function hydrateUI() {
-  loadDashboard();
-  loadResults();
-  loadEvents();
-  loadRiders();
-  loadRanking();
+  loadDashboard().catch(console.error);
+  loadCalendar().catch(console.error);
+  loadResults().catch(console.error);
+  loadDatabase().catch(console.error);
+  loadRanking().catch(console.error);
 }
 
 // ---------------- NAVIGATION ----------------
 
 function setupNavigation() {
-  const links = document.querySelectorAll(".sidebar-link");
-  const views = document.querySelectorAll(".view");
-  const titleEl = document.getElementById("topbar-title");
-  const eyebrowEl = document.getElementById("topbar-eyebrow");
+  const navItems = document.querySelectorAll(".hub-nav-item");
+  const views = document.querySelectorAll(".hub-view");
+  const titleEl = document.getElementById("hub-page-title");
 
-  links.forEach((btn) => {
+  function setActive(view) {
+    const id = "view-" + view;
+    views.forEach((v) => {
+      v.classList.toggle("hub-view-active", v.id === id);
+    });
+    navItems.forEach((btn) => {
+      btn.classList.toggle("is-active", btn.dataset.viewTarget === view);
+    });
+    const mapping = {
+      dashboard: "Dashboard",
+      calendar: "Kalender",
+      results: "Resultat",
+      series: "Serier",
+      database: "Databas",
+      ranking: "Ranking & poäng",
+    };
+    if (titleEl && mapping[view]) {
+      titleEl.textContent = mapping[view];
+    }
+  }
+
+  navItems.forEach((btn) => {
     btn.addEventListener("click", () => {
-      const viewId = btn.dataset.view;
-
-      links.forEach((b) => b.classList.remove("is-active"));
-      btn.classList.add("is-active");
-
-      views.forEach((v) => v.classList.remove("view-active"));
-      const view = document.getElementById(`view-${viewId}`);
-      if (view) {
-        view.classList.add("view-active");
-        if (titleEl && view.dataset.title) titleEl.textContent = view.dataset.title;
-        if (eyebrowEl && view.dataset.eyebrow) eyebrowEl.textContent = view.dataset.eyebrow;
-      }
-
-      // lazy-load per vy om vi vill:
-      if (viewId === "results") loadResults();
-      if (viewId === "events") loadEvents();
-      if (viewId === "riders") loadRiders();
-      if (viewId === "ranking") loadRanking();
+      const target = btn.dataset.viewTarget;
+      if (target) setActive(target);
     });
   });
 
-  // snabblänkar på dashboard
-  document.querySelectorAll("[data-goto]").forEach((el) => {
-    el.addEventListener("click", () => {
-      const target = el.getAttribute("data-goto");
-      const sidebarBtn = document.querySelector(
-        `.sidebar-link[data-view="${target}"]`
-      );
-      if (sidebarBtn) sidebarBtn.click();
+  // quick links
+  document.querySelectorAll("[data-jump-view]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const view = btn.dataset.jumpView;
+      if (view) setActive(view);
     });
   });
+
+  // initial
+  setActive("dashboard");
 }
 
 // ---------------- THEME ----------------
 
 function setupTheme() {
   const root = document.documentElement;
-  const buttons = document.querySelectorAll(".theme-btn");
+  const toggle = document.getElementById("theme-toggle");
+  if (!toggle) return;
+
+  const icons = toggle.querySelectorAll(".hub-theme-icon");
   const mql = window.matchMedia("(prefers-color-scheme: dark)");
 
-  function apply(mode, save = true) {
-    let effective = mode;
-    if (mode === "auto") {
-      effective = mql.matches ? "dark" : "light";
-    }
-    root.dataset.theme = effective;
-    if (save) localStorage.setItem("thehub-theme", mode);
-
-    buttons.forEach((b) => b.classList.remove("is-active"));
-    const activeBtn = document.querySelector(`.theme-btn[data-theme="${mode}"]`);
-    if (activeBtn) activeBtn.classList.add("is-active");
+  function setIcon(mode) {
+    icons.forEach((el) => {
+      const t = el.dataset.theme;
+      el.classList.toggle("is-active", t === mode || (mode === "auto" && t === (mql.matches ? "dark" : "light")));
+    });
   }
 
-  const stored = localStorage.getItem("thehub-theme") || "auto";
+  function apply(mode, save = true) {
+    let eff = mode;
+    if (mode === "auto") {
+      eff = mql.matches ? "dark" : "light";
+    }
+    root.dataset.theme = eff;
+    if (save) localStorage.setItem("thehub-v4-theme", mode);
+    setIcon(mode);
+  }
+
+  const stored = localStorage.getItem("thehub-v4-theme") || "dark";
   apply(stored, false);
 
-  mql.addEventListener("change", () => {
-    const current = localStorage.getItem("thehub-theme") || "auto";
-    if (current === "auto") apply("auto", false);
-  });
-
-  buttons.forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const mode = btn.dataset.theme || "auto";
-      apply(mode, true);
-    });
+  toggle.addEventListener("click", () => {
+    const current = localStorage.getItem("thehub-v4-theme") || "dark";
+    const next = current === "dark" ? "light" : "dark";
+    apply(next, true);
   });
 }
 
@@ -106,21 +110,16 @@ function setupTheme() {
 async function apiGet(endpoint, params = {}) {
   const url = new URL(API_BASE + "/" + endpoint, window.location.origin);
   Object.entries(params).forEach(([k, v]) => {
-    if (v !== null && v !== undefined && v !== "") url.searchParams.set(k, v);
+    if (v !== undefined && v !== null && v !== "") {
+      url.searchParams.set(k, v);
+    }
   });
-
-  const res = await fetch(url.toString(), {
-    headers: { "Accept": "application/json" },
-    cache: "no-store",
-  });
-
-  if (!res.ok) {
-    throw new Error(`HTTP ${res.status}`);
-  }
-
+  const res = await fetch(url.toString(), { headers: { "Accept": "application/json" } });
+  if (!res.ok) throw new Error("API " + endpoint + " failed: " + res.status);
   const json = await res.json();
-  if (json && json.ok === false) {
-    throw new Error(json.error || "API error");
+  if (json && typeof json === "object" && "ok" in json && "data" in json) {
+    if (!json.ok) throw new Error(json.error || "API error");
+    return json.data;
   }
   return json;
 }
@@ -130,29 +129,20 @@ function setText(id, value) {
   if (el) el.textContent = value;
 }
 
-function safeDate(str) {
-  if (!str) return "";
-  const d = new Date(str);
-  if (isNaN(d.getTime())) return str;
-  return d.toLocaleDateString("sv-SE", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
+function fmtDate(iso) {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return iso;
+  return d.toLocaleDateString("sv-SE", { year: "numeric", month: "short", day: "numeric" });
 }
 
-function safeDay(str) {
-  if (!str) return "";
-  const d = new Date(str);
-  if (isNaN(d.getTime())) return "";
-  return String(d.getDate()).padStart(2, "0");
-}
-
-function safeMonth(str) {
-  if (!str) return "";
-  const d = new Date(str);
-  if (isNaN(d.getTime())) return "";
-  return d.toLocaleDateString("sv-SE", { month: "short" });
+function monthDayParts(iso) {
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return { month: "", day: "" };
+  return {
+    month: d.toLocaleDateString("sv-SE", { month: "short" }).replace(".", ""),
+    day: d.getDate().toString().padStart(2, "0"),
+  };
 }
 
 // ---------------- DASHBOARD ----------------
@@ -160,335 +150,412 @@ function safeMonth(str) {
 async function loadDashboard() {
   try {
     const stats = await apiGet("stats.php");
-    const s = stats || {};
-
-    if (s.total_riders != null) setText("kpi-riders", s.total_riders);
-    if (s.total_clubs != null) setText("kpi-clubs", s.total_clubs);
-    if (s.total_events != null) {
-      setText("kpi-events", s.total_events);
-      setText("db-results", s.total_events);
+    if (stats.total_riders != null) {
+      setText("stat-riders-total", stats.total_riders);
+      setText("db-riders-total", stats.total_riders);
     }
-    setText("kpi-results", "–");
+    if (stats.total_clubs != null) {
+      setText("stat-clubs-total", stats.total_clubs);
+      setText("db-clubs-total", stats.total_clubs);
+    }
+    if (stats.total_events != null) {
+      setText("stat-events-total", stats.total_events);
+      setText("db-results-total", stats.total_events);
+    }
+    if (stats.total_results != null) {
+      setText("stat-results-total", stats.total_results);
+    }
 
-    if (s.total_riders != null) setText("db-riders", s.total_riders);
-    if (s.total_clubs != null) setText("db-clubs", s.total_clubs);
+    // dashboard riders list – fallback: use ranking API for "mest aktiva"
+    const ranking = await apiGet("ranking.php", { discipline: "gravity" });
+    const listEl = document.getElementById("dash-riders-list");
+    const emptyEl = document.getElementById("dash-riders-empty");
+    if (!listEl || !emptyEl) return;
 
-  } catch (e) {
-    console.error("Dashboard stats error", e);
-  }
-
-  // Dashboard eventlista
-  try {
-    const res = await apiGet("results.php");
-    const list = document.getElementById("dashboard-series-list");
-    if (!list || !res || !Array.isArray(res.data)) return;
-
-    list.innerHTML = "";
-    res.data.slice(0, 6).forEach((ev) => {
+    listEl.innerHTML = "";
+    if (!ranking || !ranking.length) {
+      emptyEl.textContent = "Ingen ranking hittades ännu.";
+      return;
+    }
+    emptyEl.textContent = "";
+    ranking.slice(0, 5).forEach((r, idx) => {
       const row = document.createElement("div");
-      row.className = "table-row";
-      const d = safeDate(ev.date);
-      const part = ev.participants ?? "";
+      row.className = "hub-list-item";
       row.innerHTML = `
-        <div class="table-label-soft">${d}</div>
-        <div>${ev.name || ""}</div>
-        <div>${part ? part + " åkare" : ""}</div>
+        <div class="hub-list-main">
+          <div class="hub-list-title">#${idx + 1} ${(r.firstname || "")} ${(r.lastname || "")}</div>
+          <div class="hub-list-sub">${r.club_name || "–"} · ${r.gravity_id || ""} · ${r.events_count || 0} event</div>
+        </div>
+        <div class="hub-pill">${r.total_points || 0} p</div>
       `;
-      list.appendChild(row);
+      listEl.appendChild(row);
     });
   } catch (e) {
-    console.error("Dashboard events error", e);
-  }
-
-  // Dashboard riders via ranking
-  try {
-    const res = await apiGet("ranking.php");
-    const list = document.getElementById("dashboard-riders-list");
-    if (!list || !res || !Array.isArray(res.data)) return;
-    list.innerHTML = "";
-    res.data.slice(0, 6).forEach((r, idx) => {
-      const row = document.createElement("div");
-      row.className = "table-row";
-      row.innerHTML = `
-        <div class="table-label-soft">${idx + 1}</div>
-        <div>${(r.firstname || "")} ${(r.lastname || "")}</div>
-        <div>${r.total_points ?? 0} p</div>
-      `;
-      list.appendChild(row);
-    });
-  } catch (e) {
-    console.error("Dashboard ranking error", e);
+    console.error("Dashboard error", e);
   }
 }
 
-// ---------------- RESULTAT ----------------
+// ---------------- CALENDAR ----------------
 
-let _resultsCache = null;
+async function loadCalendar() {
+  const statusEl = document.getElementById("calendar-status");
+  const listEl = document.getElementById("calendar-list");
+  const badgeEl = document.getElementById("calendar-count-badge");
+  if (!statusEl || !listEl || !badgeEl) return;
+
+  try {
+    statusEl.textContent = "Laddar event…";
+    const events = await apiGet("events.php");
+    statusEl.textContent = "";
+    listEl.innerHTML = "";
+
+    if (!events || !events.length) {
+      statusEl.textContent = "Inga event hittades.";
+      badgeEl.textContent = "0 event";
+      return;
+    }
+
+    badgeEl.textContent = events.length + " event";
+
+    // Populate year filter
+    const yearSelect = document.getElementById("cal-year-filter");
+    if (yearSelect) {
+      const years = Array.from(new Set(events.map((e) => (e.date || "").slice(0, 4)).filter(Boolean))).sort();
+      yearSelect.innerHTML = '<option value="">Alla år</option>' + years.map((y) => `<option value="${y}">${y}</option>`).join("");
+      yearSelect.addEventListener("change", () => {
+        renderCalendar(events, listEl, yearSelect.value);
+      });
+    }
+
+    renderCalendar(events, listEl, "");
+  } catch (e) {
+    console.error("Calendar error", e);
+    statusEl.textContent = "Kunde inte ladda kalender.";
+  }
+}
+
+function renderCalendar(events, container, yearFilter) {
+  container.innerHTML = "";
+  const filtered = events.filter((e) => {
+    if (!yearFilter) return true;
+    return (e.date || "").startsWith(yearFilter);
+  });
+
+  filtered
+    .sort((a, b) => (a.date || "").localeCompare(b.date || ""))
+    .forEach((ev) => {
+      const row = document.createElement("div");
+      row.className = "hub-event-row";
+      const parts = monthDayParts(ev.date);
+      row.innerHTML = `
+        <div class="hub-event-date">
+          <div class="hub-event-date-month">${parts.month}</div>
+          <div class="hub-event-date-day">${parts.day}</div>
+        </div>
+        <div class="hub-event-main">
+          <div class="hub-event-title">${ev.name || "Okänt event"}</div>
+          <div class="hub-event-meta">${ev.location || ""} · ${ev.discipline || ""}</div>
+        </div>
+        <div class="hub-event-right">
+          ${ev.status || ""}
+        </div>
+      `;
+      container.appendChild(row);
+    });
+
+  if (!filtered.length) {
+    const empty = document.createElement("div");
+    empty.className = "hub-empty";
+    empty.textContent = "Inga event för valt filter.";
+    container.appendChild(empty);
+  }
+}
+
+// ---------------- RESULTS ----------------
 
 async function loadResults() {
   const statusEl = document.getElementById("results-status");
   const listEl = document.getElementById("results-list");
-  if (!statusEl || !listEl) return;
-
-  statusEl.textContent = "Laddar…";
+  const badgeEl = document.getElementById("results-count-badge");
+  if (!statusEl || !listEl || !badgeEl) return;
 
   try {
-    if (!_resultsCache) {
-      const res = await apiGet("results.php");
-      _resultsCache = Array.isArray(res.data) ? res.data : [];
-    }
-
-    const events = _resultsCache;
-    setText("results-count-badge", events.length + " tävlingar");
-
-    if (!events.length) {
-      statusEl.textContent = "Inga resultat hittades.";
-      listEl.innerHTML = "";
-      return;
-    }
-
+    statusEl.textContent = "Laddar resultat…";
+    const rows = await apiGet("results.php");
     statusEl.textContent = "";
     listEl.innerHTML = "";
 
-    events.forEach((ev) => {
-      const card = document.createElement("article");
-      card.className = "event-card";
+    if (!rows || !rows.length) {
+      statusEl.textContent = "Inga resultat hittades.";
+      badgeEl.textContent = "0 tävlingar";
+      return;
+    }
 
-      const date = safeDate(ev.date);
-      const day = safeDay(ev.date);
-      const month = safeMonth(ev.date);
-      const participants = ev.participants ?? "";
+    badgeEl.textContent = rows.length + " tävlingar";
 
-      card.innerHTML = `
-        <div class="event-card-main">
-          <div class="event-badge">
-            <div class="event-badge-day">${day}</div>
-            <div>${month}</div>
+    rows
+      .sort((a, b) => (b.date || "").localeCompare(a.date || ""))
+      .forEach((ev) => {
+        const row = document.createElement("div");
+        row.className = "hub-event-row";
+        const parts = monthDayParts(ev.date);
+        row.innerHTML = `
+          <div class="hub-event-date">
+            <div class="hub-event-date-month">${parts.month}</div>
+            <div class="hub-event-date-day">${parts.day}</div>
           </div>
-          <div class="event-meta">
-            <div class="event-title">${ev.name || ""}</div>
-            <div class="event-sub">${date} · ${ev.location || ""}</div>
-            <div class="event-sub">${ev.discipline || ""}</div>
+          <div class="hub-event-main">
+            <div class="hub-event-title">${ev.name || "Okänt event"}</div>
+            <div class="hub-event-meta">${ev.location || ""} · ${ev.discipline || ""}</div>
           </div>
-        </div>
-        <div class="event-card-right">
-          <div class="event-count">${participants ? participants + " åkare" : ""}</div>
-          <div class="event-arrow">Visa »</div>
-        </div>
-      `;
-
-      listEl.appendChild(card);
-    });
+          <div class="hub-event-right">
+            ${(ev.participants || 0)} starter
+          </div>
+        `;
+        listEl.appendChild(row);
+      });
   } catch (e) {
     console.error("Results error", e);
     statusEl.textContent = "Kunde inte ladda resultat.";
   }
 }
 
-// ---------------- EVENTS ----------------
+// ---------------- DATABASE (Riders + Clubs) ----------------
 
-let _eventsCache = null;
+let DB_STATE = {
+  riders: [],
+  clubs: [],
+};
 
-async function loadEvents() {
-  const statusEl = document.getElementById("events-status");
-  const listEl = document.getElementById("events-list");
-  if (!statusEl || !listEl) return;
+function setupDbTabs() {
+  const buttons = document.querySelectorAll(".hub-tab-button[data-db-tab]");
+  const ridersCol = document.getElementById("db-riders-column");
+  const clubsCol = document.getElementById("db-clubs-column");
+  if (!buttons.length || !ridersCol || !clubsCol) return;
 
-  statusEl.textContent = "Laddar…";
-
-  try {
-    if (!_eventsCache) {
-      const res = await apiGet("events.php");
-      _eventsCache = Array.isArray(res.data) ? res.data : [];
-    }
-
-    const events = _eventsCache;
-    setText("events-count-badge", events.length + " st");
-
-    if (!events.length) {
-      statusEl.textContent = "Inga event hittades.";
-      listEl.innerHTML = "";
-      return;
-    }
-
-    statusEl.textContent = "";
-    listEl.innerHTML = "";
-
-    events.forEach((ev) => {
-      const card = document.createElement("article");
-      card.className = "event-card";
-
-      const date = safeDate(ev.date);
-      const day = safeDay(ev.date);
-      const month = safeMonth(ev.date);
-
-      card.innerHTML = `
-        <div class="event-card-main">
-          <div class="event-badge">
-            <div class="event-badge-day">${day}</div>
-            <div>${month}</div>
-          </div>
-          <div class="event-meta">
-            <div class="event-title">${ev.name || ""}</div>
-            <div class="event-sub">${date} · ${ev.location || ""}</div>
-            <div class="event-sub">${ev.discipline || ""} · ${ev.type || ""}</div>
-          </div>
-        </div>
-        <div class="event-card-right">
-          <div class="event-arrow">Detaljer »</div>
-        </div>
-      `;
-
-      listEl.appendChild(card);
-    });
-  } catch (e) {
-    console.error("Events error", e);
-    statusEl.textContent = "Kunde inte ladda events.";
+  function setTab(tab) {
+    buttons.forEach((b) => b.classList.toggle("hub-tab-active", b.dataset.dbTab === tab));
+    ridersCol.style.display = tab === "riders" ? "" : "none";
+    clubsCol.style.display = tab === "clubs" ? "" : "none";
   }
+
+  buttons.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      setTab(btn.dataset.dbTab);
+    });
+  });
+
+  setTab("riders");
 }
 
-// ---------------- RIDERS ----------------
+async function loadDatabase() {
+  const statusEl = document.getElementById("db-status");
+  const ridersList = document.getElementById("db-riders-list");
+  const clubsList = document.getElementById("db-clubs-list");
+  const searchInput = document.getElementById("db-search-input");
 
-let _ridersCache = null;
-
-async function loadRiders() {
-  const statusEl = document.getElementById("riders-status");
-  const listEl = document.getElementById("riders-list");
-  const countBadge = document.getElementById("riders-count-badge");
-  if (!statusEl || !listEl) return;
-
-  statusEl.textContent = "Laddar…";
+  if (!ridersList || !clubsList) return;
 
   try {
-    if (!_ridersCache) {
-      const res = await apiGet("riders.php");
-      _ridersCache = Array.isArray(res.data) ? res.data : [];
-    }
+    if (statusEl) statusEl.textContent = "Laddar databas…";
+    const riders = await apiGet("riders.php");
+    DB_STATE.riders = riders || [];
 
-    const riders = _ridersCache;
-    if (countBadge) countBadge.textContent = riders.length + " riders";
-
-    if (!riders.length) {
-      statusEl.textContent = "Inga riders hittades.";
-      listEl.innerHTML = "";
-      return;
-    }
-
-    statusEl.textContent = "";
-    listEl.innerHTML = "";
-
-    riders.slice(0, 200).forEach((r) => {
-      const item = document.createElement("div");
-      item.className = "list-item";
-      item.innerHTML = `
-        <div class="list-item-main">
-          <div class="list-item-name">${(r.firstname || "")} ${(r.lastname || "")}</div>
-          <div class="list-item-sub">
-            ${r.club_name || "–"} · ${r.gravity_id || ""} ${r.license_number ? "· " + r.license_number : ""}
-          </div>
-        </div>
-      `;
-      listEl.appendChild(item);
+    // derive clubs
+    const clubMap = new Map();
+    DB_STATE.riders.forEach((r) => {
+      const name = r.club_name || "Okänd klubb";
+      if (!clubMap.has(name)) clubMap.set(name, 0);
+      clubMap.set(name, clubMap.get(name) + 1);
     });
+    DB_STATE.clubs = Array.from(clubMap.entries())
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count);
 
-    setupRiderSearch();
+    renderDbRiders(DB_STATE.riders, ridersList);
+    renderDbClubs(DB_STATE.clubs, clubsList);
 
-  } catch (e) {
-    console.error("Riders error", e);
-    statusEl.textContent = "Kunde inte ladda riders.";
-  }
-}
+    if (statusEl) statusEl.textContent = "";
 
-function setupRiderSearch() {
-  const input = document.getElementById("riders-search");
-  const listEl = document.getElementById("riders-list");
-  const statusEl = document.getElementById("riders-status");
-  if (!input || !listEl) return;
-  if (!Array.isArray(_ridersCache)) return;
+    // counters
+    setText("db-riders-total", DB_STATE.riders.length);
+    setText("db-clubs-total", DB_STATE.clubs.length);
 
-  input.addEventListener("input", () => {
-    const q = input.value.toLowerCase().trim();
-    const riders = _ridersCache;
-    listEl.innerHTML = "";
-
-    let filtered = riders;
-    if (q.length >= 2) {
-      filtered = riders.filter((r) => {
-        const s = `${r.firstname || ""} ${r.lastname || ""} ${r.club_name || ""} ${r.gravity_id || ""}`.toLowerCase();
-        return s.includes(q);
+    if (searchInput) {
+      searchInput.addEventListener("input", () => {
+        const q = searchInput.value.toLowerCase();
+        const filtered = DB_STATE.riders.filter((r) => {
+          const full = `${r.firstname || ""} ${r.lastname || ""} ${r.gravity_id || ""} ${r.club_name || ""}`.toLowerCase();
+          return full.includes(q);
+        });
+        renderDbRiders(filtered, ridersList);
       });
     }
+  } catch (e) {
+    console.error("DB error", e);
+    if (statusEl) statusEl.textContent = "Kunde inte ladda databasen.";
+  }
+}
 
-    if (!filtered.length) {
-      if (statusEl) statusEl.textContent = "Inga träffar.";
-      return;
-    } else {
-      if (statusEl) statusEl.textContent = "";
-    }
+function renderDbRiders(rows, container) {
+  container.innerHTML = "";
+  rows.forEach((r) => {
+    const row = document.createElement("div");
+    row.className = "hub-list-item";
+    row.innerHTML = `
+      <div class="hub-list-main">
+        <div class="hub-list-title">${(r.firstname || "")} ${(r.lastname || "")}</div>
+        <div class="hub-list-sub">${r.club_name || "–"} · ${r.gravity_id || ""}</div>
+      </div>
+      <div class="hub-pill">${r.license_number || ""}</div>
+    `;
+    container.appendChild(row);
+  });
+}
 
-    filtered.slice(0, 200).forEach((r) => {
-      const item = document.createElement("div");
-      item.className = "list-item";
-      item.innerHTML = `
-        <div class="list-item-main">
-          <div class="list-item-name">${(r.firstname || "")} ${(r.lastname || "")}</div>
-          <div class="list-item-sub">
-            ${r.club_name || "–"} · ${r.gravity_id || ""} ${r.license_number ? "· " + r.license_number : ""}
-          </div>
-        </div>
-      `;
-      listEl.appendChild(item);
-    });
+function renderDbClubs(rows, container) {
+  container.innerHTML = "";
+  rows.forEach((c, idx) => {
+    const row = document.createElement("div");
+    row.className = "hub-list-item";
+    row.innerHTML = `
+      <div class="hub-list-main">
+        <div class="hub-list-title">${idx + 1}. ${c.name}</div>
+        <div class="hub-list-sub">${c.count} registrerade åkare</div>
+      </div>
+    `;
+    container.appendChild(row);
   });
 }
 
 // ---------------- RANKING ----------------
 
-let _rankingCache = null;
+let RANK_STATE = {
+  discipline: "gravity",
+  mode: "riders",
+  rows: [],
+};
+
+function setupRankingControls() {
+  const discBtns = document.querySelectorAll("[data-rank-discipline]");
+  const modeBtns = document.querySelectorAll("[data-rank-mode]");
+  if (discBtns.length) {
+    discBtns.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        discBtns.forEach((b) => b.classList.toggle("hub-tab-active", b === btn));
+        RANK_STATE.discipline = btn.dataset.rankDiscipline || "gravity";
+        loadRanking().catch(console.error);
+      });
+    });
+  }
+  if (modeBtns.length) {
+    modeBtns.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        modeBtns.forEach((b) => b.classList.toggle("hub-pill-active", b === btn));
+        RANK_STATE.mode = btn.dataset.rankMode || "riders";
+        renderRankingTable();
+      });
+    });
+  }
+}
 
 async function loadRanking() {
   const statusEl = document.getElementById("ranking-status");
-  const listEl = document.getElementById("ranking-list");
-  if (!statusEl || !listEl) return;
-
-  statusEl.textContent = "Laddar ranking…";
-
+  if (statusEl) statusEl.textContent = "Laddar ranking…";
   try {
-    if (!_rankingCache) {
-      const res = await apiGet("ranking.php");
-      _rankingCache = Array.isArray(res.data) ? res.data : [];
-    }
-
-    const rows = _rankingCache;
-    if (!rows.length) {
-      statusEl.textContent = "Ingen ranking hittades.";
-      listEl.innerHTML = "";
-      return;
-    }
-
-    statusEl.textContent = "";
-    listEl.innerHTML = "";
-
-    rows.slice(0, 50).forEach((r, idx) => {
-      const item = document.createElement("div");
-      item.className = "list-item";
-      item.innerHTML = `
-        <div class="list-item-main">
-          <div class="list-item-name">
-            #${idx + 1} ${(r.firstname || "")} ${(r.lastname || "")}
-          </div>
-          <div class="list-item-sub">
-            ${r.club_name || "–"} · ${r.gravity_id || ""} · ${r.events_count || 0} event
-          </div>
-        </div>
-        <div class="list-item-pill">
-          ${r.total_points || 0} p
-        </div>
-      `;
-      listEl.appendChild(item);
-    });
+    const rows = await apiGet("ranking.php", { discipline: RANK_STATE.discipline });
+    RANK_STATE.rows = rows || [];
+    if (statusEl) statusEl.textContent = "";
+    renderRankingTable();
   } catch (e) {
     console.error("Ranking error", e);
-    statusEl.textContent = "Kunde inte ladda ranking.";
+    if (statusEl) statusEl.textContent = "Kunde inte ladda ranking.";
+  }
+}
+
+function renderRankingTable() {
+  const wrap = document.getElementById("ranking-table-wrapper");
+  if (!wrap) return;
+  wrap.innerHTML = "";
+
+  const rows = RANK_STATE.rows || [];
+  if (!rows.length) {
+    const empty = document.createElement("div");
+    empty.className = "hub-empty";
+    empty.textContent = "Ingen rankingdata ännu.";
+    wrap.appendChild(empty);
+    return;
+  }
+
+  if (RANK_STATE.mode === "clubs") {
+    // aggregate by club
+    const clubMap = new Map();
+    rows.forEach((r) => {
+      const name = r.club_name || "Okänd klubb";
+      if (!clubMap.has(name)) {
+        clubMap.set(name, { name, total_points: 0, riders: 0 });
+      }
+      const obj = clubMap.get(name);
+      obj.total_points += Number(r.total_points || 0);
+      obj.riders += 1;
+    });
+    const clubs = Array.from(clubMap.values()).sort((a, b) => b.total_points - a.total_points);
+
+    const table = document.createElement("table");
+    table.className = "hub-ranking-table";
+    table.innerHTML = `
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Klubb</th>
+          <th>Riders</th>
+          <th>Poäng</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${clubs
+          .map(
+            (c, idx) => `
+          <tr>
+            <td>${idx + 1}</td>
+            <td>${c.name}</td>
+            <td>${c.riders}</td>
+            <td>${c.total_points}</td>
+          </tr>`
+          )
+          .join("")}
+      </tbody>
+    `;
+    wrap.appendChild(table);
+  } else {
+    // rider mode
+    const table = document.createElement("table");
+    table.className = "hub-ranking-table";
+    table.innerHTML = `
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Åkare</th>
+          <th>Klubb</th>
+          <th>Event</th>
+          <th>Poäng</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${rows
+          .map(
+            (r, idx) => `
+          <tr>
+            <td>${idx + 1}</td>
+            <td>${(r.firstname || "")} ${(r.lastname || "")}</td>
+            <td>${r.club_name || "–"}</td>
+            <td>${r.events_count || 0}</td>
+            <td>${r.total_points || 0}</td>
+          </tr>`
+          )
+          .join("")}
+      </tbody>
+    `;
+    wrap.appendChild(table);
   }
 }
