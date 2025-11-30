@@ -11,7 +11,7 @@
     <link rel="stylesheet" href="https://gravityseries.se/branding/fonts.css">
 
     <!-- V3 CSS System -->
-    <link rel="stylesheet" href="/thehub-v4/assets/css/main.css?v=54">
+    <link rel="stylesheet" href="/thehub-v4/assets/css/main.css?v=55">
 
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
@@ -32,10 +32,11 @@
     </div>
     <div class="header-actions">
         <span class="header-version">V4 Beta</span>
-        <div style="margin-left: var(--space-md); display: flex; align-items: center; gap: var(--space-sm);">
-            <span class="text-sm text-secondary">Admin</span>
-            <div style="width: 32px; height: 32px; border-radius: 50%; background: var(--color-accent); color: white; display: flex; align-items: center; justify-content: center; font-weight: var(--weight-semibold);">A</div>
-        </div>
+        <a href="/admin/" class="btn btn--ghost btn--sm" id="admin-link" style="margin-left: var(--space-sm);">
+            <i data-lucide="settings"></i>
+            <span>Admin</span>
+        </a>
+        <div style="width: 32px; height: 32px; border-radius: 50%; background: var(--color-accent); color: white; display: flex; align-items: center; justify-content: center; font-weight: var(--weight-semibold); margin-left: var(--space-sm);">A</div>
     </div>
 </header>
 
@@ -328,6 +329,203 @@
             </div>
         </section>
 
+        <!-- RIDER PROFILE VIEW -->
+        <section class="page-content" id="view-rider" data-view="rider" style="display:none;">
+            <!-- Back Navigation -->
+            <div style="margin-bottom: var(--space-lg);">
+                <button class="btn btn--ghost" onclick="history.back()">
+                    <i data-lucide="arrow-left"></i> Tillbaka
+                </button>
+            </div>
+
+            <!-- Rider Header -->
+            <div class="card">
+                <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: var(--space-lg); flex-wrap: wrap; gap: var(--space-md);">
+                    <div style="display: flex; gap: var(--space-lg); align-items: start;">
+                        <!-- Avatar -->
+                        <div style="width: 80px; height: 80px; border-radius: 50%; background: var(--color-accent-light); color: var(--color-accent-text); display: flex; align-items: center; justify-content: center; font-size: var(--text-2xl); font-weight: var(--weight-bold); flex-shrink: 0;">
+                            <span id="rider-avatar">–</span>
+                        </div>
+
+                        <!-- Info -->
+                        <div>
+                            <h1 id="rider-name" style="margin: 0; font-size: var(--text-2xl); font-weight: var(--weight-bold);">Laddar...</h1>
+                            <div id="rider-club" style="font-size: var(--text-base); color: var(--color-text-secondary); margin-top: var(--space-2xs);"></div>
+                            <div id="rider-meta" style="display: flex; gap: var(--space-md); margin-top: var(--space-xs); font-size: var(--text-sm); color: var(--color-text-tertiary); flex-wrap: wrap;"></div>
+                        </div>
+                    </div>
+
+                    <!-- Ranking Badge -->
+                    <div id="rider-ranking-badge" style="background: var(--color-success); color: white; border-radius: var(--radius-md); padding: var(--space-md); text-align: center; min-width: 80px;">
+                        <div style="font-size: var(--text-xs); opacity: 0.9;">RANKING</div>
+                        <div style="font-size: var(--text-3xl); font-weight: var(--weight-bold);">#–</div>
+                    </div>
+                </div>
+
+                <!-- Stats Tiles -->
+                <div class="stats-row">
+                    <div class="stat-block">
+                        <div class="stat-value" id="rider-stat-starts">–</div>
+                        <div class="stat-label">STARTER</div>
+                    </div>
+                    <div class="stat-block">
+                        <div class="stat-value" id="rider-stat-completed">–</div>
+                        <div class="stat-label">FULLFÖLJT</div>
+                    </div>
+                    <div class="stat-block">
+                        <div class="stat-value" id="rider-stat-wins">–</div>
+                        <div class="stat-label">SEGRAR</div>
+                    </div>
+                    <div class="stat-block">
+                        <div class="stat-value" id="rider-stat-podiums">–</div>
+                        <div class="stat-label">PALLPLATSER</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tabs -->
+            <div style="display: flex; gap: var(--space-xs); margin: var(--space-lg) 0; border-bottom: 1px solid var(--color-border); padding-bottom: var(--space-xs);">
+                <button class="btn btn--ghost rider-tab-btn active" data-tab="results">Resultat</button>
+                <button class="btn btn--ghost rider-tab-btn" data-tab="ranking">Ranking</button>
+                <button class="btn btn--ghost rider-tab-btn" data-tab="stats">Statistik</button>
+            </div>
+
+            <!-- Tab Content -->
+            <div id="rider-tab-results" class="rider-tab-content">
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">Resultathistorik</h2>
+                    </div>
+                    <div id="rider-results-list"></div>
+                </div>
+            </div>
+
+            <div id="rider-tab-ranking" class="rider-tab-content" style="display:none">
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">Ranking Utveckling</h2>
+                    </div>
+                    <div id="rider-ranking-chart" class="placeholder">Rankinghistorik kommer snart</div>
+                </div>
+            </div>
+
+            <div id="rider-tab-stats" class="rider-tab-content" style="display:none">
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">Detaljerad Statistik</h2>
+                    </div>
+                    <div id="rider-stats-detail" class="placeholder">Statistik kommer snart</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- CLUB PROFILE VIEW -->
+        <section class="page-content" id="view-club" data-view="club" style="display:none;">
+            <!-- Back Navigation -->
+            <div style="margin-bottom: var(--space-lg);">
+                <button class="btn btn--ghost" onclick="history.back()">
+                    <i data-lucide="arrow-left"></i> Tillbaka
+                </button>
+            </div>
+
+            <!-- Club Header -->
+            <div class="card">
+                <div style="display: flex; justify-content: space-between; align-items: start; flex-wrap: wrap; gap: var(--space-md);">
+                    <div>
+                        <h1 id="club-name" style="margin: 0; font-size: var(--text-2xl); font-weight: var(--weight-bold);">Laddar...</h1>
+                        <div id="club-location" style="font-size: var(--text-base); color: var(--color-text-secondary); margin-top: var(--space-xs);"></div>
+                    </div>
+
+                    <!-- Logo placeholder -->
+                    <div style="width: 80px; height: 80px; border-radius: var(--radius-md); background: var(--color-bg-sunken); display: flex; align-items: center; justify-content: center; color: var(--color-text-muted); font-size: var(--text-xs); flex-shrink: 0;">
+                        <i data-lucide="shield" style="width: 32px; height: 32px;"></i>
+                    </div>
+                </div>
+
+                <!-- Stats -->
+                <div class="stats-row" style="margin-top: var(--space-lg);">
+                    <div class="stat-block">
+                        <div class="stat-value" id="club-stat-members">–</div>
+                        <div class="stat-label">MEDLEMMAR</div>
+                    </div>
+                    <div class="stat-block">
+                        <div class="stat-value" id="club-stat-active">–</div>
+                        <div class="stat-label">AKTIVA</div>
+                    </div>
+                    <div class="stat-block">
+                        <div class="stat-value" id="club-stat-starts">–</div>
+                        <div class="stat-label">TOTALA STARTER</div>
+                    </div>
+                    <div class="stat-block">
+                        <div class="stat-value" id="club-stat-points">–</div>
+                        <div class="stat-label">KLUBBPOÄNG</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Members Grid -->
+            <div class="page-grid page-grid--2col" style="margin-top: var(--space-lg);">
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">Toppåkare</h2>
+                    </div>
+                    <div id="club-top-riders"></div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">Senaste Resultat</h2>
+                    </div>
+                    <div id="club-recent-results"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- EVENT DETAIL VIEW -->
+        <section class="page-content" id="view-event" data-view="event" style="display:none;">
+            <!-- Back Navigation -->
+            <div style="margin-bottom: var(--space-lg);">
+                <button class="btn btn--ghost" onclick="history.back()">
+                    <i data-lucide="arrow-left"></i> Tillbaka
+                </button>
+            </div>
+
+            <!-- Event Header -->
+            <div class="card">
+                <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: var(--space-md); flex-wrap: wrap; gap: var(--space-md);">
+                    <div style="flex: 1; min-width: 200px;">
+                        <h1 id="event-name" style="margin: 0; font-size: var(--text-2xl); font-weight: var(--weight-bold);">Laddar...</h1>
+                        <div id="event-meta" style="display: flex; gap: var(--space-md); margin-top: var(--space-md); flex-wrap: wrap;"></div>
+                    </div>
+
+                    <!-- Date Badge -->
+                    <div id="event-date-badge" style="flex-shrink: 0; text-align: center; background: var(--color-accent); color: white; border-radius: var(--radius-md); padding: var(--space-md); min-width: 80px;">
+                        <div style="font-size: var(--text-xs); opacity: 0.9;">–</div>
+                        <div style="font-size: var(--text-3xl); font-weight: var(--weight-bold);">–</div>
+                    </div>
+                </div>
+
+                <!-- Event Info Grid -->
+                <div class="stats-row">
+                    <div class="stat-block">
+                        <div class="stat-value" id="event-stat-participants">–</div>
+                        <div class="stat-label">DELTAGARE</div>
+                    </div>
+                    <div class="stat-block">
+                        <div class="stat-value" id="event-stat-categories">–</div>
+                        <div class="stat-label">KATEGORIER</div>
+                    </div>
+                    <div class="stat-block">
+                        <div class="stat-value" id="event-stat-clubs">–</div>
+                        <div class="stat-label">KLUBBAR</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Results by Category -->
+            <div id="event-results-container" style="margin-top: var(--space-lg);"></div>
+        </section>
+
     </main>
 </div>
 
@@ -364,7 +562,7 @@
 </div>
 
 <!-- JS -->
-<script src="/thehub-v4/assets/js/theme.js?v=54"></script>
-<script src="/thehub-v4/assets/js/app.js?v=54"></script>
+<script src="/thehub-v4/assets/js/theme.js?v=55"></script>
+<script src="/thehub-v4/assets/js/app.js?v=55"></script>
 </body>
 </html>
