@@ -6,21 +6,29 @@
   <meta charset="UTF-8">
   <title>TheHUB V4</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link rel="stylesheet" href="assets/css/app.css">
+
+  <!-- IMPORTANT: ABSOLUTE PATHS TO FIX CSS/JS NOT LOADING -->
+  <link rel="stylesheet" href="/thehub-v4/assets/css/app.css?v=3">
 </head>
 <body>
   <div class="app-shell">
+
+    <!-- HEADER -->
     <header class="app-header">
-      <div class="logo">TheHUB V4</div>
-      <div class="logo-sub">GravitySeries · Resultat & Statistik</div>
+      <div>
+        <div class="logo">TheHUB V4</div>
+        <div class="logo-sub">GravitySeries · Resultat & Statistik</div>
+      </div>
     </header>
 
+    <!-- MAIN APP CONTENT -->
     <main class="app-main">
+
       <!-- HOME / DASHBOARD -->
       <section id="view-home" class="view view-active">
         <div class="card hero-card">
           <h1>TheHUB V4 – Grundstruktur</h1>
-          <p>Detta är en V4-webbapp som använder din befintliga databas och ett nytt modulärt backend.</p>
+          <p>Detta är den nya V4-webbappen: mobiloptimerad, modulariserad och API-driven.</p>
           <p>Välj flik längst ned för att visa Riders, Events m.m.</p>
         </div>
 
@@ -28,13 +36,13 @@
           <h2>Snabbinfo</h2>
           <ul class="meta-list">
             <li><span>Backend:</span> /thehub-v4/backend/</li>
-            <li><span>Riders API:</span> backend/public/api/riders.php</li>
-            <li><span>Events API:</span> backend/public/api/events.php</li>
+            <li><span>Riders API:</span> /thehub-v4/backend/public/api/riders.php</li>
+            <li><span>Events API:</span> /thehub-v4/backend/public/api/events.php</li>
           </ul>
         </div>
       </section>
 
-      <!-- RIDERS -->
+      <!-- RIDERS VIEW -->
       <section id="view-riders" class="view">
         <div class="card">
           <div class="card-header">
@@ -49,12 +57,12 @@
             </div>
           </div>
 
-          <div id="riders-status" class="status-text">Laddar inte än…</div>
+          <div id="riders-status" class="status-text">Laddar…</div>
           <div id="riders-list" class="list"></div>
         </div>
       </section>
 
-      <!-- EVENTS -->
+      <!-- EVENTS VIEW -->
       <section id="view-events" class="view">
         <div class="card">
           <div class="card-header">
@@ -62,13 +70,14 @@
             <span class="badge" id="events-count">0 st</span>
           </div>
 
-          <div id="events-status" class="status-text">Laddar inte än…</div>
+          <div id="events-status" class="status-text">Laddar…</div>
           <div id="events-list" class="list"></div>
         </div>
       </section>
+
     </main>
 
-    <!-- BOTTOM TABS (som app) -->
+    <!-- BOTTOM TABBAR -->
     <nav class="tabbar">
       <button class="tab-btn tab-active" data-target="home">
         <span class="tab-label">Start</span>
@@ -79,12 +88,14 @@
       <button class="tab-btn" data-target="events">
         <span class="tab-label">Events</span>
       </button>
-      <button class="tab-btn" data-target="backend">
+      <button class="tab-btn" data-target="backend" onclick="window.location='/thehub-v4/backend/'">
         <span class="tab-label">Backend</span>
       </button>
     </nav>
+
   </div>
 
-  <script src="assets/js/app.js"></script>
+  <!-- IMPORTANT: ABSOLUTE PATH JS -->
+  <script src="/thehub-v4/assets/js/app.js?v=3"></script>
 </body>
 </html>
