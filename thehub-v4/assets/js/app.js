@@ -12,7 +12,9 @@ document.addEventListener("DOMContentLoaded", () => {
   setupNavigation();
   setupDbTabs();
   setupRankingControls();
-  hydrateUI();
+
+  // Handle URL routing (replaces hydrateUI)
+  handleURLRouting();
 
   // Initialize Lucide icons
   initLucideIcons();
@@ -401,8 +403,10 @@ function renderCalendarEvents() {
   listEl.innerHTML = sorted.map(ev => {
     const parts = monthDayParts(ev.date);
     const seriesClass = getSeriesClass(ev.series || ev.discipline || "");
+    const eventId = ev.id || ev.event_id || "";
     return `
       <div class="card mb-sm" style="cursor: pointer; transition: transform var(--transition-fast);"
+           onclick="navigateTo('event', '${eventId}')"
            onmouseover="this.style.transform='translateX(4px)'"
            onmouseout="this.style.transform='translateX(0)'">
         <div class="flex gap-md items-start">
@@ -418,7 +422,10 @@ function renderCalendarEvents() {
               ${ev.location ? `<span class="text-xs text-secondary">${ev.location}</span>` : ""}
             </div>
           </div>
-          ${ev.status ? `<div class="chip chip--success">${ev.status}</div>` : ""}
+          <div class="flex items-center gap-sm">
+            ${ev.status ? `<div class="chip chip--success">${ev.status}</div>` : ""}
+            <i data-lucide="chevron-right" style="color: var(--color-text-tertiary);"></i>
+          </div>
         </div>
       </div>
     `;
@@ -834,9 +841,11 @@ function renderDbRiders(rows, container) {
     const lastName = r.lastname || r.last_name || "";
     const club = r.club_name || r.club || "–";
     const gravityId = r.gravity_id || "";
+    const riderId = r.gravity_id || r.id || "";
 
     return `
       <div class="card mb-sm" style="cursor: pointer; transition: transform var(--transition-fast);"
+           onclick="navigateTo('rider', '${riderId}')"
            onmouseover="this.style.transform='translateX(4px)'"
            onmouseout="this.style.transform='translateX(0)'">
         <div class="flex justify-between items-center">
@@ -849,11 +858,15 @@ function renderDbRiders(rows, container) {
               <div class="text-sm text-secondary">${club} ${gravityId ? '· ' + gravityId : ''}</div>
             </div>
           </div>
-          ${r.total_points ? `<div class="chip">${r.total_points} p</div>` : ''}
+          <div class="flex items-center gap-sm">
+            ${r.total_points ? `<div class="chip">${r.total_points} p</div>` : ''}
+            <i data-lucide="chevron-right" style="color: var(--color-text-tertiary);"></i>
+          </div>
         </div>
       </div>
     `;
   }).join("");
+  initLucideIcons();
 }
 
 function renderDbClubs(rows, container) {
@@ -862,8 +875,11 @@ function renderDbClubs(rows, container) {
     return;
   }
 
-  container.innerHTML = rows.slice(0, 30).map((c, idx) => `
+  container.innerHTML = rows.slice(0, 30).map((c, idx) => {
+    const clubId = encodeURIComponent(c.name || "");
+    return `
     <div class="card mb-sm" style="cursor: pointer; transition: transform var(--transition-fast);"
+         onclick="navigateTo('club', '${clubId}')"
          onmouseover="this.style.transform='translateX(4px)'"
          onmouseout="this.style.transform='translateX(0)'">
       <div class="flex justify-between items-center">
@@ -876,15 +892,19 @@ function renderDbClubs(rows, container) {
             <div class="text-sm text-secondary">${c.count} registrerade åkare</div>
           </div>
         </div>
-        ${c.total_points ? `
-          <div class="text-right">
-            <div class="text-lg font-bold text-accent">${c.total_points}</div>
-            <div class="text-xs text-secondary">poäng</div>
-          </div>
-        ` : ''}
+        <div class="flex items-center gap-sm">
+          ${c.total_points ? `
+            <div class="text-right">
+              <div class="text-lg font-bold text-accent">${c.total_points}</div>
+              <div class="text-xs text-secondary">poäng</div>
+            </div>
+          ` : ''}
+          <i data-lucide="chevron-right" style="color: var(--color-text-tertiary);"></i>
+        </div>
       </div>
     </div>
-  `).join("");
+  `}).join("");
+  initLucideIcons();
 }
 
 // ---------------- RANKING ----------------
@@ -1035,4 +1055,545 @@ function renderRankingTable() {
     `;
     wrap.appendChild(table);
   }
+}
+
+// ============ URL ROUTING ============
+
+function getURLParams() {
+  const params = new URLSearchParams(window.location.search);
+  return {
+    view: params.get('view'),
+    id: params.get('id')
+  };
+}
+
+function handleURLRouting() {
+  const params = getURLParams();
+
+  if (params.view && params.id) {
+    // Special views with IDs
+    switch(params.view) {
+      case 'rider':
+        showView('rider');
+        loadRiderProfile(params.id);
+        break;
+      case 'club':
+        showView('club');
+        loadClubProfile(params.id);
+        break;
+      case 'event':
+        showView('event');
+        loadEventDetail(params.id);
+        break;
+      default:
+        showView('dashboard');
+        loadDashboard().catch(console.error);
+    }
+  } else if (params.view) {
+    // Regular views
+    showView(params.view);
+  } else {
+    // Default to dashboard
+    showView('dashboard');
+    loadDashboard().catch(console.error);
+  }
+}
+
+function showView(viewName) {
+  // Hide all views
+  document.querySelectorAll('.page-content').forEach(view => {
+    view.style.display = 'none';
+  });
+
+  // Show target view
+  const targetView = document.getElementById(`view-${viewName}`);
+  if (targetView) {
+    targetView.style.display = 'block';
+  }
+
+  // Update sidebar
+  document.querySelectorAll('.sidebar-link').forEach(link => {
+    if (link.dataset.view === viewName) {
+      link.setAttribute('aria-current', 'page');
+    } else {
+      link.removeAttribute('aria-current');
+    }
+  });
+
+  // Update mobile nav
+  document.querySelectorAll('.mobile-nav-link').forEach(link => {
+    if (link.dataset.view === viewName) {
+      link.classList.add('active');
+    } else {
+      link.classList.remove('active');
+    }
+  });
+
+  // Load view data (if not a special profile view)
+  if (!['rider', 'club', 'event'].includes(viewName) && !LOADED_VIEWS.has(viewName)) {
+    LOADED_VIEWS.add(viewName);
+    switch(viewName) {
+      case 'dashboard':
+        loadDashboard().catch(console.error);
+        break;
+      case 'calendar':
+        loadCalendar().catch(console.error);
+        break;
+      case 'results':
+        loadResults().catch(console.error);
+        break;
+      case 'series':
+        loadSeries().catch(console.error);
+        break;
+      case 'database':
+        loadDatabase().catch(console.error);
+        break;
+      case 'ranking':
+        loadRanking().catch(console.error);
+        break;
+    }
+  }
+
+  // Re-init Lucide
+  setTimeout(() => initLucideIcons(), 100);
+}
+
+function navigateTo(viewName, id = null) {
+  const url = id ? `?view=${viewName}&id=${id}` : `?view=${viewName}`;
+  window.history.pushState({}, '', url);
+  if (id) {
+    showView(viewName);
+    switch(viewName) {
+      case 'rider':
+        loadRiderProfile(id);
+        break;
+      case 'club':
+        loadClubProfile(id);
+        break;
+      case 'event':
+        loadEventDetail(id);
+        break;
+    }
+  } else {
+    showView(viewName);
+  }
+}
+
+// Handle browser back/forward
+window.addEventListener('popstate', handleURLRouting);
+
+// ============ RIDER PROFILE ============
+
+async function loadRiderProfile(riderId) {
+  try {
+    setLoading('rider-results-list', true);
+
+    // Try to find rider in cached data first, or fetch from API
+    let rider = DB_STATE.riders.find(r => r.id == riderId || r.gravity_id == riderId);
+
+    if (!rider) {
+      // Try fetching from API
+      try {
+        rider = await apiGet(`rider.php?id=${riderId}`);
+      } catch {
+        // Fallback: search in riders list
+        const riders = await apiGet('riders.php');
+        rider = (riders || []).find(r => r.id == riderId || r.gravity_id == riderId);
+      }
+    }
+
+    if (!rider) {
+      showToast('Åkare hittades inte', 'error');
+      document.getElementById('rider-name').textContent = 'Åkare hittades inte';
+      return;
+    }
+
+    // Populate header
+    const firstName = rider.firstname || rider.first_name || '';
+    const lastName = rider.lastname || rider.last_name || '';
+    const initials = `${firstName[0] || ''}${lastName[0] || ''}`.toUpperCase();
+
+    document.getElementById('rider-avatar').textContent = initials || '?';
+    document.getElementById('rider-name').textContent = `${firstName} ${lastName}`;
+    document.getElementById('rider-club').textContent = rider.club_name || rider.club || 'Ingen klubb';
+
+    // Meta info
+    const metaParts = [];
+    if (rider.birth_year) metaParts.push(`f. ${rider.birth_year}`);
+    if (rider.gender) metaParts.push(rider.gender === 'M' ? 'Man' : 'Kvinna');
+    if (rider.gravity_id) metaParts.push(`GID: ${rider.gravity_id}`);
+    document.getElementById('rider-meta').innerHTML = metaParts.map(p => `<span>${p}</span>`).join(' • ');
+
+    // Try to load results
+    let results = [];
+    try {
+      results = await apiGet(`results.php?rider_id=${riderId}`);
+    } catch {
+      // Results API might not exist
+    }
+
+    // Calculate stats from results or use rider data
+    const stats = calculateRiderStats(results, rider);
+    document.getElementById('rider-stat-starts').textContent = stats.starts;
+    document.getElementById('rider-stat-completed').textContent = stats.completed;
+    document.getElementById('rider-stat-wins').textContent = stats.wins;
+    document.getElementById('rider-stat-podiums').textContent = stats.podiums;
+
+    // Ranking badge
+    if (rider.ranking_position || rider.total_points) {
+      const badge = document.getElementById('rider-ranking-badge');
+      if (rider.ranking_position) {
+        badge.querySelector('div:last-child').textContent = `#${rider.ranking_position}`;
+      } else if (rider.total_points) {
+        badge.querySelector('div:first-child').textContent = 'POÄNG';
+        badge.querySelector('div:last-child').textContent = rider.total_points;
+      }
+    }
+
+    // Setup tabs
+    setupRiderTabs();
+
+    // Render results
+    renderRiderResults(results);
+
+    initLucideIcons();
+
+  } catch (error) {
+    console.error('Rider profile error:', error);
+    showToast('Kunde inte ladda åkarprofil', 'error');
+  }
+}
+
+function calculateRiderStats(results, rider) {
+  if (results && results.length > 0) {
+    return {
+      starts: results.length,
+      completed: results.filter(r => r.position).length,
+      wins: results.filter(r => r.position === 1).length,
+      podiums: results.filter(r => r.position && r.position <= 3).length
+    };
+  }
+
+  // Fallback to rider object data
+  return {
+    starts: rider.events_count || rider.race_count || 0,
+    completed: rider.events_count || 0,
+    wins: rider.wins || 0,
+    podiums: rider.podiums || 0
+  };
+}
+
+function setupRiderTabs() {
+  document.querySelectorAll('.rider-tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.rider-tab-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+
+      const tab = btn.dataset.tab;
+      document.querySelectorAll('.rider-tab-content').forEach(content => {
+        content.style.display = content.id === `rider-tab-${tab}` ? 'block' : 'none';
+      });
+    });
+  });
+}
+
+function renderRiderResults(results) {
+  const listEl = document.getElementById('rider-results-list');
+
+  if (!results || results.length === 0) {
+    listEl.innerHTML = '<div class="placeholder">Inga resultat registrerade</div>';
+    return;
+  }
+
+  // Sort by date (newest first)
+  const sorted = results.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+  listEl.innerHTML = sorted.map(result => {
+    const position = result.position || '–';
+    const positionEmoji = position === 1 ? '🥇' : position === 2 ? '🥈' : position === 3 ? '🥉' : position;
+    const seriesClass = getSeriesClass(result.series || '');
+    const date = new Date(result.date);
+
+    return `
+      <div style="display: flex; justify-content: space-between; align-items: center; padding: var(--space-md) 0; border-bottom: 1px solid var(--color-divider);">
+        <div style="display: flex; align-items: center; gap: var(--space-md); flex: 1;">
+          <div style="font-size: var(--text-xl); width: 40px; text-align: center;">
+            ${positionEmoji}
+          </div>
+          <div style="flex: 1;">
+            <div style="font-weight: var(--weight-semibold);">${result.event_name || result.name || 'Event'}</div>
+            <div style="display: flex; gap: var(--space-xs); margin-top: var(--space-2xs); flex-wrap: wrap;">
+              ${result.series ? `<span class="${seriesClass}" style="font-size: var(--text-xs);">${result.series}</span>` : ''}
+              ${result.category ? `<span class="chip" style="font-size: var(--text-xs);">${result.category}</span>` : ''}
+            </div>
+          </div>
+        </div>
+        <div style="text-align: right;">
+          <div style="font-size: var(--text-sm); color: var(--color-text-tertiary);">
+            ${date.toLocaleDateString('sv-SE')}
+          </div>
+          ${result.points ? `<div style="font-weight: var(--weight-bold); color: var(--color-accent-text);">${result.points} p</div>` : ''}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+// ============ CLUB PROFILE ============
+
+async function loadClubProfile(clubId) {
+  try {
+    // Find club in cached data
+    let club = DB_STATE.clubs.find(c => c.id == clubId || c.name === clubId);
+
+    if (!club) {
+      // Search by name in riders
+      const clubName = decodeURIComponent(clubId);
+      const clubRiders = DB_STATE.riders.filter(r =>
+        (r.club_name || r.club || '').toLowerCase() === clubName.toLowerCase()
+      );
+
+      if (clubRiders.length > 0) {
+        club = {
+          name: clubRiders[0].club_name || clubRiders[0].club,
+          count: clubRiders.length,
+          riders: clubRiders
+        };
+      }
+    }
+
+    if (!club) {
+      showToast('Klubb hittades inte', 'error');
+      document.getElementById('club-name').textContent = 'Klubb hittades inte';
+      return;
+    }
+
+    // Populate header
+    document.getElementById('club-name').textContent = club.name;
+    document.getElementById('club-location').textContent = club.location || '';
+
+    // Get riders for this club
+    const clubRiders = club.riders || DB_STATE.riders.filter(r =>
+      (r.club_name || r.club || '') === club.name
+    );
+
+    // Stats
+    document.getElementById('club-stat-members').textContent = club.count || clubRiders.length;
+    document.getElementById('club-stat-active').textContent = clubRiders.filter(r => r.events_count > 0).length || clubRiders.length;
+
+    const totalStarts = clubRiders.reduce((sum, r) => sum + (r.events_count || 0), 0);
+    const totalPoints = clubRiders.reduce((sum, r) => sum + (parseInt(r.total_points) || 0), 0);
+
+    document.getElementById('club-stat-starts').textContent = totalStarts || '–';
+    document.getElementById('club-stat-points').textContent = totalPoints || '–';
+
+    // Top riders
+    renderClubTopRiders(clubRiders);
+
+    // Recent results (placeholder - would need results API)
+    document.getElementById('club-recent-results').innerHTML = '<div class="placeholder">Resultat laddas från tävlingar</div>';
+
+    initLucideIcons();
+
+  } catch (error) {
+    console.error('Club profile error:', error);
+    showToast('Kunde inte ladda klubbprofil', 'error');
+  }
+}
+
+function renderClubTopRiders(riders) {
+  const listEl = document.getElementById('club-top-riders');
+
+  if (!riders || riders.length === 0) {
+    listEl.innerHTML = '<div class="placeholder">Inga åkare registrerade</div>';
+    return;
+  }
+
+  // Sort by points or events
+  const sorted = riders.sort((a, b) => (b.total_points || 0) - (a.total_points || 0));
+
+  listEl.innerHTML = sorted.slice(0, 10).map((rider, index) => {
+    const firstName = rider.firstname || rider.first_name || '';
+    const lastName = rider.lastname || rider.last_name || '';
+    const riderId = rider.id || rider.gravity_id;
+
+    return `
+      <div style="display: flex; justify-content: space-between; align-items: center; padding: var(--space-sm) 0; border-bottom: 1px solid var(--color-divider); cursor: pointer;"
+           onclick="navigateTo('rider', '${riderId}')">
+        <div style="display: flex; align-items: center; gap: var(--space-sm);">
+          <div style="width: 24px; height: 24px; border-radius: 50%; background: var(--color-accent-light); color: var(--color-accent-text); display: flex; align-items: center; justify-content: center; font-weight: var(--weight-semibold); font-size: var(--text-xs);">
+            ${index + 1}
+          </div>
+          <div>
+            <div style="font-weight: var(--weight-medium);">${firstName} ${lastName}</div>
+            <div style="font-size: var(--text-xs); color: var(--color-text-tertiary);">${rider.events_count || 0} starter</div>
+          </div>
+        </div>
+        ${rider.total_points ? `<div style="font-weight: var(--weight-bold); color: var(--color-accent-text);">${rider.total_points}p</div>` : ''}
+      </div>
+    `;
+  }).join('');
+}
+
+// ============ EVENT DETAIL ============
+
+async function loadEventDetail(eventId) {
+  try {
+    setLoading('event-results-container', true);
+
+    // Find event in calendar data or fetch
+    let event = calendarEvents.find(e => e.id == eventId);
+
+    if (!event) {
+      try {
+        event = await apiGet(`event.php?id=${eventId}`);
+      } catch {
+        // Try to find in events list
+        const events = await apiGet('events.php');
+        event = (events || []).find(e => e.id == eventId);
+      }
+    }
+
+    if (!event) {
+      showToast('Event hittades inte', 'error');
+      document.getElementById('event-name').textContent = 'Event hittades inte';
+      return;
+    }
+
+    // Populate header
+    document.getElementById('event-name').textContent = event.name;
+
+    // Date badge
+    const date = new Date(event.date);
+    const dateBadge = document.getElementById('event-date-badge');
+    dateBadge.querySelector('div:first-child').textContent = date.toLocaleDateString('sv-SE', {month: 'short'}).toUpperCase();
+    dateBadge.querySelector('div:last-child').textContent = date.getDate();
+
+    // Meta info
+    const metaEl = document.getElementById('event-meta');
+    const metaItems = [];
+    if (event.series) metaItems.push(`<span class="${getSeriesClass(event.series)}">${event.series}</span>`);
+    if (event.discipline) metaItems.push(`<span class="chip">${event.discipline}</span>`);
+    if (event.location) metaItems.push(`<span style="color: var(--color-text-secondary);"><i data-lucide="map-pin" style="width: 14px; height: 14px;"></i> ${event.location}</span>`);
+    metaEl.innerHTML = metaItems.join('');
+
+    // Try to load results
+    let results = [];
+    try {
+      results = await apiGet(`results.php?event_id=${eventId}`);
+    } catch {
+      // Results API might not exist
+    }
+
+    // Stats
+    const stats = calculateEventStats(results, event);
+    document.getElementById('event-stat-participants').textContent = stats.participants;
+    document.getElementById('event-stat-categories').textContent = stats.categories;
+    document.getElementById('event-stat-clubs').textContent = stats.clubs;
+
+    // Render results by category
+    renderEventResults(results);
+
+    initLucideIcons();
+
+  } catch (error) {
+    console.error('Event detail error:', error);
+    showToast('Kunde inte ladda event', 'error');
+  }
+}
+
+function calculateEventStats(results, event) {
+  if (results && results.length > 0) {
+    const uniqueClubs = new Set(results.map(r => r.club_id || r.club_name).filter(Boolean));
+    const uniqueCategories = new Set(results.map(r => r.category).filter(Boolean));
+
+    return {
+      participants: results.length,
+      categories: uniqueCategories.size || '–',
+      clubs: uniqueClubs.size || '–'
+    };
+  }
+
+  // Fallback to event data
+  return {
+    participants: event.participants || event.participants_count || '–',
+    categories: event.categories_count || '–',
+    clubs: event.clubs_count || '–'
+  };
+}
+
+function renderEventResults(results) {
+  const containerEl = document.getElementById('event-results-container');
+
+  if (!results || results.length === 0) {
+    containerEl.innerHTML = '<div class="card"><div class="placeholder">Resultat publiceras efter tävling</div></div>';
+    return;
+  }
+
+  // Group by category
+  const byCategory = {};
+  results.forEach(r => {
+    const cat = r.category || 'Alla';
+    if (!byCategory[cat]) byCategory[cat] = [];
+    byCategory[cat].push(r);
+  });
+
+  // Sort each category by position
+  Object.values(byCategory).forEach(cat => {
+    cat.sort((a, b) => (a.position || 999) - (b.position || 999));
+  });
+
+  // Render each category
+  containerEl.innerHTML = Object.entries(byCategory).map(([category, categoryResults]) => `
+    <div class="card" style="margin-bottom: var(--space-md);">
+      <div class="card-header">
+        <h3 class="card-title">${category}</h3>
+        <span class="chip">${categoryResults.length} deltagare</span>
+      </div>
+      <div style="overflow-x: auto;">
+        <table style="width: 100%; border-collapse: collapse;">
+          <thead>
+            <tr style="border-bottom: 2px solid var(--color-border);">
+              <th style="padding: var(--space-sm); text-align: left; font-size: var(--text-xs); color: var(--color-text-tertiary); text-transform: uppercase; width: 60px;">#</th>
+              <th style="padding: var(--space-sm); text-align: left; font-size: var(--text-xs); color: var(--color-text-tertiary); text-transform: uppercase;">Åkare</th>
+              <th style="padding: var(--space-sm); text-align: left; font-size: var(--text-xs); color: var(--color-text-tertiary); text-transform: uppercase;">Klubb</th>
+              <th style="padding: var(--space-sm); text-align: right; font-size: var(--text-xs); color: var(--color-text-tertiary); text-transform: uppercase;">Tid</th>
+              <th style="padding: var(--space-sm); text-align: right; font-size: var(--text-xs); color: var(--color-text-tertiary); text-transform: uppercase;">Poäng</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${categoryResults.map(result => {
+              const position = result.position || '–';
+              const positionDisplay = position === 1 ? '🥇' : position === 2 ? '🥈' : position === 3 ? '🥉' : position;
+              const riderName = result.rider_name || `${result.firstname || ''} ${result.lastname || ''}`.trim() || 'Okänd';
+              const riderId = result.rider_id || result.id;
+
+              return `
+                <tr style="border-bottom: 1px solid var(--color-divider); cursor: pointer;"
+                    onclick="navigateTo('rider', '${riderId}')"
+                    onmouseover="this.style.background='var(--color-bg-hover)'"
+                    onmouseout="this.style.background='transparent'">
+                  <td style="padding: var(--space-md) var(--space-sm); font-weight: var(--weight-bold);">
+                    ${positionDisplay}
+                  </td>
+                  <td style="padding: var(--space-md) var(--space-sm);">
+                    <div style="font-weight: var(--weight-semibold);">${riderName}</div>
+                  </td>
+                  <td style="padding: var(--space-md) var(--space-sm); color: var(--color-text-secondary);">
+                    ${result.club_name || '–'}
+                  </td>
+                  <td style="padding: var(--space-md) var(--space-sm); text-align: right; font-family: var(--font-mono);">
+                    ${result.time || '–'}
+                  </td>
+                  <td style="padding: var(--space-md) var(--space-sm); text-align: right; font-weight: var(--weight-bold); color: var(--color-accent-text);">
+                    ${result.points || '–'}
+                  </td>
+                </tr>
+              `;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `).join('');
 }
