@@ -19,9 +19,8 @@ class Router
         }
 
         $modulePath = __DIR__ . '/../modules/' . $module . '/' . $controllerMap[$module];
-
         if (!file_exists($modulePath)) {
-            http_response_code(404);
+            http_response_code(500);
             echo "Module controller missing";
             return;
         }
@@ -29,6 +28,12 @@ class Router
         require_once $modulePath;
 
         $className = pathinfo($controllerMap[$module], PATHINFO_FILENAME);
+        if (!class_exists($className)) {
+            http_response_code(500);
+            echo "Controller class not found";
+            return;
+        }
+
         $controller = new $className();
 
         if (!method_exists($controller, $action)) {
