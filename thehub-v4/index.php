@@ -1,5 +1,5 @@
 <?php
-// TheHUB V4 – frontend shell (PHP, mobil-first)
+// TheHUB V4 – frontend app (API-baserad)
 ?><!DOCTYPE html>
 <html lang="sv">
 <head>
@@ -12,25 +12,77 @@
   <div class="app-shell">
     <header class="app-header">
       <div class="logo">TheHUB V4</div>
-      <nav class="main-nav">
-        <a href="./">Start</a>
-        <a href="backend/?module=riders">Riders</a>
-        <a href="backend/?module=events">Events</a>
-        <a href="backend/?module=api">API Explorer</a>
-      </nav>
+      <div class="logo-sub">GravitySeries · Resultat & Statistik</div>
     </header>
 
     <main class="app-main">
-      <section class="hero">
-        <h1>TheHUB V4 – Grundstruktur</h1>
-        <p>Detta är en ren V4-installation som använder din befintliga databas men ett nytt modulärt backend.</p>
-        <p>Backend ligger under <code>/thehub-v4/backend/</code>.</p>
+      <!-- HOME / DASHBOARD -->
+      <section id="view-home" class="view view-active">
+        <div class="card hero-card">
+          <h1>TheHUB V4 – Grundstruktur</h1>
+          <p>Detta är en V4-webbapp som använder din befintliga databas och ett nytt modulärt backend.</p>
+          <p>Välj flik längst ned för att visa Riders, Events m.m.</p>
+        </div>
+
+        <div class="card">
+          <h2>Snabbinfo</h2>
+          <ul class="meta-list">
+            <li><span>Backend:</span> /thehub-v4/backend/</li>
+            <li><span>Riders API:</span> backend/public/api/riders.php</li>
+            <li><span>Events API:</span> backend/public/api/events.php</li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- RIDERS -->
+      <section id="view-riders" class="view">
+        <div class="card">
+          <div class="card-header">
+            <h1>Riders</h1>
+            <span class="badge" id="riders-count">0 st</span>
+          </div>
+
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Sök</label>
+              <input type="text" id="riders-search" placeholder="Namn, Gravity ID, licens…">
+            </div>
+          </div>
+
+          <div id="riders-status" class="status-text">Laddar inte än…</div>
+          <div id="riders-list" class="list"></div>
+        </div>
+      </section>
+
+      <!-- EVENTS -->
+      <section id="view-events" class="view">
+        <div class="card">
+          <div class="card-header">
+            <h1>Events</h1>
+            <span class="badge" id="events-count">0 st</span>
+          </div>
+
+          <div id="events-status" class="status-text">Laddar inte än…</div>
+          <div id="events-list" class="list"></div>
+        </div>
       </section>
     </main>
 
-    <footer class="app-footer">
-      GravitySeries · TheHUB V4 · <?php echo date('Y'); ?>
-    </footer>
+    <!-- BOTTOM TABS (som app) -->
+    <nav class="tabbar">
+      <button class="tab-btn tab-active" data-target="home">
+        <span class="tab-label">Start</span>
+      </button>
+      <button class="tab-btn" data-target="riders">
+        <span class="tab-label">Riders</span>
+      </button>
+      <button class="tab-btn" data-target="events">
+        <span class="tab-label">Events</span>
+      </button>
+      <button class="tab-btn" data-target="backend">
+        <span class="tab-label">Backend</span>
+      </button>
+    </nav>
   </div>
 
   <script src="assets/js/app.js"></script>
