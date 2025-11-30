@@ -10,7 +10,17 @@ document.addEventListener("DOMContentLoaded", () => {
   setupDbTabs();
   setupRankingControls();
   hydrateUI();
+
+  // Initialize Lucide icons
+  initLucideIcons();
 });
+
+// Initialize Lucide icons (call after DOM changes)
+function initLucideIcons() {
+  if (typeof lucide !== 'undefined') {
+    lucide.createIcons();
+  }
+}
 
 function hydrateUI() {
   loadDashboard().catch(console.error);
@@ -54,6 +64,9 @@ function setupNavigation() {
         link.classList.remove('active');
       }
     });
+
+    // Re-initialize Lucide icons after view change
+    setTimeout(() => initLucideIcons(), 50);
   }
 
   // Attach click handlers to sidebar links
@@ -171,6 +184,9 @@ async function loadDashboard() {
       `;
       listEl.appendChild(row);
     });
+
+    // Re-initialize icons after dynamic content
+    initLucideIcons();
   } catch (e) {
     console.error("Dashboard error", e);
   }

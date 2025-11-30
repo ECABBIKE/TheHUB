@@ -7,19 +7,32 @@
     <title>TheHUB V4 – GravitySeries</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
-    <!-- CSS (V3 design system) -->
-    <link rel="stylesheet" href="/thehub-v4/assets/css/main.css?v=50">
+    <!-- V3 CSS System -->
+    <link rel="stylesheet" href="/thehub-v4/assets/css/main.css?v=51">
+
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 <body>
+
+<!-- Skip Link (Accessibility) -->
+<a href="#main-content" class="skip-link">Hoppa till huvudinnehåll</a>
 
 <!-- Header -->
 <header class="header">
     <div class="header-brand">
-        <span>TheHUB</span>
-        <span class="header-version">V4</span>
+        <a href="/thehub/" class="back-link">
+            <i data-lucide="arrow-left"></i>
+            <span>Tillbaka</span>
+        </a>
+        <span style="margin-left: var(--space-md);">TheHUB V4</span>
     </div>
     <div class="header-actions">
-        <a href="/thehub/" class="btn btn--ghost">← Tillbaka till V3</a>
+        <span class="header-version">V4 Beta</span>
+        <div style="margin-left: var(--space-md); display: flex; align-items: center; gap: var(--space-sm);">
+            <span class="text-sm text-secondary">Admin</span>
+            <div style="width: 32px; height: 32px; border-radius: 50%; background: var(--color-accent); color: white; display: flex; align-items: center; justify-content: center; font-weight: var(--weight-semibold);">A</div>
+        </div>
     </div>
 </header>
 
@@ -28,27 +41,27 @@
     <aside class="sidebar">
         <nav class="sidebar-nav">
             <a class="sidebar-link" href="#" data-view="dashboard" aria-current="page">
-                <span class="sidebar-icon">🏠</span>
+                <span class="sidebar-icon"><i data-lucide="home"></i></span>
                 <span>Dashboard</span>
             </a>
             <a class="sidebar-link" href="#" data-view="calendar">
-                <span class="sidebar-icon">📅</span>
+                <span class="sidebar-icon"><i data-lucide="calendar"></i></span>
                 <span>Kalender</span>
             </a>
             <a class="sidebar-link" href="#" data-view="results">
-                <span class="sidebar-icon">🏁</span>
+                <span class="sidebar-icon"><i data-lucide="flag"></i></span>
                 <span>Resultat</span>
             </a>
             <a class="sidebar-link" href="#" data-view="series">
-                <span class="sidebar-icon">🏆</span>
+                <span class="sidebar-icon"><i data-lucide="trophy"></i></span>
                 <span>Serier</span>
             </a>
             <a class="sidebar-link" href="#" data-view="database">
-                <span class="sidebar-icon">🔍</span>
+                <span class="sidebar-icon"><i data-lucide="search"></i></span>
                 <span>Databas</span>
             </a>
             <a class="sidebar-link" href="#" data-view="ranking">
-                <span class="sidebar-icon">📊</span>
+                <span class="sidebar-icon"><i data-lucide="trending-up"></i></span>
                 <span>Ranking</span>
             </a>
         </nav>
@@ -65,10 +78,18 @@
                     <h2 class="card-title">Snabblänkar</h2>
                 </div>
                 <div class="flex flex-wrap gap-sm">
-                    <button class="btn btn--secondary" data-jump-view="database" data-jump-tab="riders">🚴‍♂️ Åkare</button>
-                    <button class="btn btn--secondary" data-jump-view="database" data-jump-tab="clubs">🏅 Klubbar</button>
-                    <button class="btn btn--secondary" data-jump-view="results">🏁 Resultat</button>
-                    <button class="btn btn--secondary" data-jump-view="series">🏆 Serier</button>
+                    <button class="btn btn--primary" data-jump-view="database" data-jump-tab="riders">
+                        <i data-lucide="users"></i> Åkare
+                    </button>
+                    <button class="btn btn--primary" data-jump-view="database" data-jump-tab="clubs">
+                        <i data-lucide="shield"></i> Klubbar
+                    </button>
+                    <button class="btn btn--primary" data-jump-view="results">
+                        <i data-lucide="flag"></i> Resultat
+                    </button>
+                    <button class="btn btn--primary" data-jump-view="series">
+                        <i data-lucide="trophy"></i> Serier
+                    </button>
                 </div>
             </div>
 
@@ -80,19 +101,19 @@
                 <div class="stats-row">
                     <div class="stat-block">
                         <div class="stat-value" id="stat-riders-total">–</div>
-                        <div class="stat-label">Åkare</div>
+                        <div class="stat-label">ÅKARE</div>
                     </div>
                     <div class="stat-block">
                         <div class="stat-value" id="stat-clubs-total">–</div>
-                        <div class="stat-label">Klubbar</div>
+                        <div class="stat-label">KLUBBAR</div>
                     </div>
                     <div class="stat-block">
                         <div class="stat-value" id="stat-events-total">–</div>
-                        <div class="stat-label">Event</div>
+                        <div class="stat-label">EVENT</div>
                     </div>
                     <div class="stat-block">
                         <div class="stat-value" id="stat-results-total">–</div>
-                        <div class="stat-label">Resultat</div>
+                        <div class="stat-label">RESULTAT</div>
                     </div>
                 </div>
             </div>
@@ -123,7 +144,9 @@
         <section class="page-content" id="view-calendar" data-view="calendar" style="display:none;">
             <div class="card">
                 <div class="card-header">
-                    <h2 class="card-title">Kalender</h2>
+                    <h2 class="card-title">
+                        <i data-lucide="calendar" class="icon-sm"></i> Kalender
+                    </h2>
                     <span class="chip" id="calendar-count-badge">0 event</span>
                 </div>
 
@@ -151,7 +174,9 @@
         <section class="page-content" id="view-results" data-view="results" style="display:none;">
             <div class="card">
                 <div class="card-header">
-                    <h2 class="card-title">Resultat</h2>
+                    <h2 class="card-title">
+                        <i data-lucide="flag" class="icon-sm"></i> Resultat
+                    </h2>
                     <span class="chip" id="results-count-badge">0 tävlingar</span>
                 </div>
 
@@ -179,7 +204,9 @@
         <section class="page-content" id="view-series" data-view="series" style="display:none;">
             <div class="card">
                 <div class="card-header">
-                    <h2 class="card-title">Tävlingsserier</h2>
+                    <h2 class="card-title">
+                        <i data-lucide="trophy" class="icon-sm"></i> Tävlingsserier
+                    </h2>
                 </div>
                 <div id="series-grid" class="page-grid mt-md"></div>
                 <div id="series-empty" class="text-muted text-sm">Laddar serier…</div>
@@ -190,31 +217,40 @@
         <section class="page-content" id="view-database" data-view="database" style="display:none;">
             <div class="card">
                 <div class="card-header">
-                    <h2 class="card-title">Databas</h2>
+                    <h2 class="card-title">
+                        <i data-lucide="database" class="icon-sm"></i> Databas
+                    </h2>
                 </div>
 
                 <div class="stats-row">
                     <div class="stat-block">
                         <div class="stat-value" id="db-riders-total">–</div>
-                        <div class="stat-label">Åkare</div>
+                        <div class="stat-label">ÅKARE</div>
                     </div>
                     <div class="stat-block">
                         <div class="stat-value" id="db-clubs-total">–</div>
-                        <div class="stat-label">Klubbar</div>
+                        <div class="stat-label">KLUBBAR</div>
                     </div>
                     <div class="stat-block">
                         <div class="stat-value" id="db-results-total">–</div>
-                        <div class="stat-label">Resultat</div>
+                        <div class="stat-label">RESULTAT</div>
                     </div>
                 </div>
 
                 <div class="flex gap-sm mt-md">
-                    <button class="btn btn--secondary db-tab-active" data-db-tab="riders">👥 Åkare</button>
-                    <button class="btn btn--ghost" data-db-tab="clubs">🏅 Klubbar</button>
+                    <button class="btn btn--secondary db-tab-active" data-db-tab="riders">
+                        <i data-lucide="users"></i> Åkare
+                    </button>
+                    <button class="btn btn--ghost" data-db-tab="clubs">
+                        <i data-lucide="shield"></i> Klubbar
+                    </button>
                 </div>
 
                 <div class="mt-md">
-                    <input id="db-search-input" type="text" class="form-input" placeholder="Skriv namn, klubb eller Gravity ID…" style="width:100%;max-width:400px;">
+                    <div class="flex gap-sm items-center">
+                        <i data-lucide="search" class="text-muted"></i>
+                        <input id="db-search-input" type="text" class="form-input" placeholder="Skriv namn, klubb eller Gravity ID…" style="flex:1;max-width:400px;">
+                    </div>
                     <div class="text-muted text-xs mt-xs">Skriv minst 2 tecken för att söka.</div>
                 </div>
 
@@ -235,7 +271,9 @@
         <section class="page-content" id="view-ranking" data-view="ranking" style="display:none;">
             <div class="card">
                 <div class="card-header">
-                    <h2 class="card-title">GravitySeries Ranking</h2>
+                    <h2 class="card-title">
+                        <i data-lucide="trending-up" class="icon-sm"></i> GravitySeries Ranking
+                    </h2>
                     <div class="flex gap-xs">
                         <button class="btn btn--secondary btn--sm rank-disc-active" data-rank-discipline="gravity">Gravity</button>
                         <button class="btn btn--ghost btn--sm" data-rank-discipline="enduro">Enduro</button>
@@ -244,8 +282,12 @@
                 </div>
 
                 <div class="flex gap-sm mt-md">
-                    <button class="btn btn--secondary rank-mode-active" data-rank-mode="riders">Åkare</button>
-                    <button class="btn btn--ghost" data-rank-mode="clubs">Klubbar</button>
+                    <button class="btn btn--secondary rank-mode-active" data-rank-mode="riders">
+                        <i data-lucide="users"></i> Åkare
+                    </button>
+                    <button class="btn btn--ghost" data-rank-mode="clubs">
+                        <i data-lucide="shield"></i> Klubbar
+                    </button>
                 </div>
 
                 <div id="ranking-status" class="text-muted text-sm mt-md">Laddar ranking…</div>
@@ -260,19 +302,19 @@
 <nav class="mobile-nav">
     <div class="mobile-nav-inner">
         <a class="mobile-nav-link active" href="#" data-view="dashboard">
-            <span class="mobile-nav-icon">🏠</span>
+            <span class="mobile-nav-icon"><i data-lucide="home"></i></span>
             <span>Start</span>
         </a>
         <a class="mobile-nav-link" href="#" data-view="calendar">
-            <span class="mobile-nav-icon">📅</span>
+            <span class="mobile-nav-icon"><i data-lucide="calendar"></i></span>
             <span>Kalender</span>
         </a>
         <a class="mobile-nav-link" href="#" data-view="results">
-            <span class="mobile-nav-icon">🏁</span>
+            <span class="mobile-nav-icon"><i data-lucide="flag"></i></span>
             <span>Resultat</span>
         </a>
         <a class="mobile-nav-link" href="#" data-view="database">
-            <span class="mobile-nav-icon">🔍</span>
+            <span class="mobile-nav-icon"><i data-lucide="search"></i></span>
             <span>Databas</span>
         </a>
     </div>
@@ -280,12 +322,16 @@
 
 <!-- Theme Toggle (V3 component) -->
 <div class="theme-toggle">
-    <button class="theme-toggle-btn" data-theme="light" aria-pressed="false">☀️</button>
-    <button class="theme-toggle-btn" data-theme="dark" aria-pressed="true">🌙</button>
+    <button class="theme-toggle-btn" data-theme="light" aria-pressed="false">
+        <i data-lucide="sun"></i>
+    </button>
+    <button class="theme-toggle-btn" data-theme="dark" aria-pressed="true">
+        <i data-lucide="moon"></i>
+    </button>
 </div>
 
 <!-- JS -->
-<script src="/thehub-v4/assets/js/theme.js?v=50"></script>
-<script src="/thehub-v4/assets/js/app.js?v=50"></script>
+<script src="/thehub-v4/assets/js/theme.js?v=51"></script>
+<script src="/thehub-v4/assets/js/app.js?v=51"></script>
 </body>
 </html>
