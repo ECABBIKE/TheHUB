@@ -1,66 +1,64 @@
-// TheHUB V4 – frontend app (API-baserad)
-
-// API endpoints (relativt från /thehub-v4/)
-const API_RIDERS = "backend/public/api/riders.php";
-const API_EVENTS = "backend/public/api/events.php";
+const API_RIDERS = "/thehub-v4/backend/public/api/riders.php";
+const API_EVENTS = "/thehub-v4/backend/public/api/events.php";
 
 let ridersCache = null;
 let eventsCache = null;
 
-function selectView(name) {
+function setActiveView(target) {
   const views = document.querySelectorAll(".view");
   views.forEach(v => v.classList.remove("view-active"));
+  const active = document.getElementById("view-" + target);
+  if (active) active.classList.add("view-active");
 
-  const target = document.getElementById("view-" + name);
-  if (target) target.classList.add("view-active");
+  document.querySelectorAll(".sidebar-link[data-target]").forEach(btn => {
+    btn.classList.toggle("is-active", btn.getAttribute("data-target") === target);
+  });
 
-  const tabs = document.querySelectorAll(".tab-btn");
-  tabs.forEach(t => t.classList.remove("tab-active"));
-  const active = document.querySelector('.tab-btn[data-target="' + name + '"]');
-  if (active) active.classList.add("tab-active");
+  document.querySelectorAll(".tab-btn[data-target]").forEach(btn => {
+    btn.classList.toggle("tab-active", btn.getAttribute("data-target") === target);
+  });
+
+  const titles = {
+    home: "Översikt",
+    calendar: "Kalender",
+    results: "Resultat",
+    series: "Serier",
+    database: "Rider-databas",
+    ranking: "Ranking"
+  };
+  const topTitle = document.getElementById("topbar-title");
+  if (topTitle && titles[target]) topTitle.textContent = titles[target];
+
+  if (target === "database") loadRiders();
+  if (target === "results") loadEvents();
 }
 
 async function loadRiders() {
   const statusEl = document.getElementById("riders-status");
   const listEl = document.getElementById("riders-list");
-  const countEl = document.getElementById("riders-count");
-
+  const countEl = document.getElementById("riders-count-badge");
+  const searchEl = document.getElementById("riders-search");
   if (!statusEl || !listEl || !countEl) return;
 
-  if (ridersCache) {
-    renderRiders(ridersCache);
-    return;
-  }
-
-  statusEl.textContent = "Laddar riders…";
-
-  try {
-    const res = await fetch(API_RIDERS);
-    const json = await res.json();
-
-    if (!json.ok) {
-      statusEl.textContent = "Fel: " + (json.error || "Okänt fel");
+  if (!ridersCache) {
+    statusEl.textContent = "Laddar rider-databas…";
+    try {
+      const res = await fetch(API_RIDERS);
+      const json = await res.json();
+      if (!json.ok) {
+        statusEl.textContent = "Fel: " + (json.error || "Okänt fel");
+        return;
+      }
+      ridersCache = json.data || [];
+    } catch (err) {
+      console.error(err);
+      statusEl.textContent = "Tekniskt fel vid hämtning av riders.";
       return;
     }
-
-    ridersCache = json.data || [];
-    countEl.textContent = ridersCache.length + " st";
-    renderRiders(ridersCache);
-    statusEl.textContent = "Visar " + ridersCache.length + " riders.";
-  } catch (err) {
-    statusEl.textContent = "Tekniskt fel vid hämtning av riders.";
-    console.error(err);
   }
-}
-
-function renderRiders(data) {
-  const listEl = document.getElementById("riders-list");
-  const searchEl = document.getElementById("riders-search");
-  if (!listEl) return;
 
   const query = (searchEl?.value || "").toLowerCase().trim();
-
-  const filtered = data.filter(r => {
+  const filtered = ridersCache.filter(r => {
     if (!query) return true;
     const fields = [
       r.firstname || "",
@@ -71,133 +69,182 @@ function renderRiders(data) {
     return fields.includes(query);
   });
 
-  listEl.innerHTML = "";
+  countEl.textContent = filtered.length + " riders";
+  statusEl.textContent = "Visar " + filtered.length + " riders.";
 
+  listEl.innerHTML = "";
   filtered.forEach(r => {
-    const item = document.createElement("div");
-    item.className = "list-item";
+    const card = document.createElement("div");
+    card.className = "rider-card";
 
     const main = document.createElement("div");
-    main.className = "list-item-main";
+    main.className = "rider-main";
 
     const name = document.createElement("div");
-    name.className = "list-item-name";
-    name.textContent = `${r.firstname ?? ""} ${r.lastname ?? ""}`.trim();
+    name.className = "rider-name";
+    name.textContent = ((r.firstname || "") + " " + (r.lastname || "")).trim();
 
-    const sub = document.createElement("div");
-    sub.className = "list-item-sub";
+    const meta = document.createElement("div");
+    meta.className = "rider-meta";
     const club = r.club_id ? `Klubb: ${r.club_id}` : "Ingen klubb";
-    const gid = r.gravity_id ? `· GID: ${r.gravity_id}` : "";
-    sub.textContent = `${club} ${gid}`.trim();
+    const gid = r.gravity_id ? ` · GID: ${r.gravity_id}` : "";
+    meta.textContent = club + gid;
 
     main.appendChild(name);
-    main.appendChild(sub);
+    main.appendChild(meta);
 
-    const pill = document.createElement("div");
-    pill.className = "list-item-pill";
-    pill.textContent = r.active ? "Aktiv" : "Inaktiv";
+    const tag = document.createElement("div");
+    tag.className = "rider-tag";
+    tag.textContent = r.active ? "Aktiv" : "Inaktiv";
 
-    item.appendChild(main);
-    item.appendChild(pill);
-    listEl.appendChild(item);
+    card.appendChild(main);
+    card.appendChild(tag);
+    listEl.appendChild(card);
   });
 }
 
 async function loadEvents() {
   const statusEl = document.getElementById("events-status");
   const listEl = document.getElementById("events-list");
-  const countEl = document.getElementById("events-count");
+  const countBadge = document.getElementById("events-count-badge");
+  const seriesSelect = document.getElementById("results-series");
+  const yearSelect = document.getElementById("results-year");
+  if (!statusEl || !listEl || !countBadge) return;
 
-  if (!statusEl || !listEl || !countEl) return;
-
-  if (eventsCache) {
-    renderEvents(eventsCache);
-    return;
-  }
-
-  statusEl.textContent = "Laddar events…";
-
-  try {
-    const res = await fetch(API_EVENTS);
-    const json = await res.json();
-
-    if (!json.ok) {
-      statusEl.textContent = "Fel: " + (json.error || "Okänt fel");
+  if (!eventsCache) {
+    statusEl.textContent = "Laddar tävlingar…";
+    try {
+      const res = await fetch(API_EVENTS);
+      const json = await res.json();
+      if (!json.ok) {
+        statusEl.textContent = "Fel: " + (json.error || "Okänt fel");
+        return;
+      }
+      eventsCache = json.data || [];
+    } catch (err) {
+      console.error(err);
+      statusEl.textContent = "Tekniskt fel vid hämtning av events.";
       return;
     }
-
-    eventsCache = json.data || [];
-    countEl.textContent = eventsCache.length + " st";
-    renderEvents(eventsCache);
-    statusEl.textContent = "Visar " + eventsCache.length + " events.";
-  } catch (err) {
-    statusEl.textContent = "Tekniskt fel vid hämtning av events.";
-    console.error(err);
   }
-}
 
-function renderEvents(data) {
-  const listEl = document.getElementById("events-list");
-  if (!listEl) return;
+  if (seriesSelect && seriesSelect.options.length === 1) {
+    const seriesSet = new Set();
+    const yearSet = new Set();
+    eventsCache.forEach(ev => {
+      if (ev.series) seriesSet.add(ev.series);
+      const dateStr = ev.date || ev.start_date || "";
+      const y = dateStr.slice(0,4);
+      if (y) yearSet.add(y);
+    });
+    [...seriesSet].sort().forEach(s => {
+      const opt = document.createElement("option");
+      opt.value = s;
+      opt.textContent = s;
+      seriesSelect.appendChild(opt);
+    });
+    [...yearSet].sort().forEach(y => {
+      const opt = document.createElement("option");
+      opt.value = y;
+      opt.textContent = y;
+      yearSelect.appendChild(opt);
+    });
+  }
+
+  const seriesFilter = (seriesSelect?.value || "").trim();
+  const yearFilter = (yearSelect?.value || "").trim();
+
+  const filtered = eventsCache.filter(ev => {
+    let ok = true;
+    if (seriesFilter) ok = ok && ev.series === seriesFilter;
+    if (yearFilter) {
+      const dateStr = ev.date || ev.start_date || "";
+      if (!dateStr.startsWith(yearFilter)) ok = false;
+    }
+    return ok;
+  });
+
+  countBadge.textContent = filtered.length + " tävlingar";
+  statusEl.textContent = "Visar " + filtered.length + " tävlingar.";
 
   listEl.innerHTML = "";
+  filtered.forEach(ev => {
+    const card = document.createElement("div");
+    card.className = "result-card";
 
-  data.forEach(ev => {
-    const item = document.createElement("div");
-    item.className = "list-item";
+    const dateEl = document.createElement("div");
+    dateEl.className = "result-date";
+    const d = (ev.date || ev.start_date || "").slice(8,10) || "--";
+    const m = (ev.date || ev.start_date || "").slice(5,7) || "--";
+    const months = ["JAN","FEB","MAR","APR","MAJ","JUN","JUL","AUG","SEP","OKT","NOV","DEC"];
+    const monthText = months[parseInt(m,10)-1] || "";
+    const dayEl = document.createElement("div");
+    dayEl.className = "result-date-day";
+    dayEl.textContent = d;
+    const monthEl = document.createElement("div");
+    monthEl.className = "result-date-month";
+    monthEl.textContent = monthText;
+    dateEl.appendChild(dayEl);
+    dateEl.appendChild(monthEl);
 
     const main = document.createElement("div");
-    main.className = "list-item-main";
+    main.className = "result-main";
+    const title = document.createElement("div");
+    title.className = "result-title";
+    title.textContent = ev.name || ("Event #" + ev.id);
+    const meta = document.createElement("div");
+    meta.className = "result-meta";
+    const series = ev.series ? `<span class="result-series">${ev.series}</span>` : "";
+    const venue = ev.location || ev.venue || "";
+    meta.innerHTML = [series, venue ? `<span class="result-venue">${venue}</span>` : ""]
+      .filter(Boolean).join(" · ");
+    main.appendChild(title);
+    main.appendChild(meta);
 
-    const name = document.createElement("div");
-    name.className = "list-item-name";
-    name.textContent = ev.name || `Event #${ev.id}`;
+    const aside = document.createElement("div");
+    aside.className = "result-aside";
+    const strong = document.createElement("strong");
+    strong.textContent = ev.participants || "";
+    aside.appendChild(strong);
+    const small = document.createElement("span");
+    small.textContent = ev.participants ? "deltagare" : "";
+    aside.appendChild(small);
 
-    const sub = document.createElement("div");
-    sub.className = "list-item-sub";
-    const date = ev.date || ev.start_date || "";
-    const loc = ev.location || ev.venue || "";
-    sub.textContent = [date, loc].filter(Boolean).join(" · ");
+    card.appendChild(dateEl);
+    card.appendChild(main);
+    card.appendChild(aside);
 
-    main.appendChild(name);
-    main.appendChild(sub);
-
-    const pill = document.createElement("div");
-    pill.className = "list-item-pill";
-    pill.textContent = ev.series || "Event";
-
-    item.appendChild(main);
-    item.appendChild(pill);
-    listEl.appendChild(item);
+    listEl.appendChild(card);
   });
 }
 
-/* INIT */
-
 document.addEventListener("DOMContentLoaded", () => {
-  // Tab navigation
-  document.querySelectorAll(".tab-btn").forEach(btn => {
-    btn.addEventListener("click", () => {
+  document.querySelectorAll(".sidebar-link[data-target]").forEach(btn => {
+    btn.addEventListener("click", (e) => {
+      e.preventDefault();
       const target = btn.getAttribute("data-target");
       if (!target) return;
-
-      if (target === "backend") {
-        window.location.href = "backend/";
-        return;
-      }
-
-      selectView(target);
-
-      if (target === "riders") loadRiders();
-      if (target === "events") loadEvents();
+      setActiveView(target);
     });
   });
 
-  // Live filter for riders
-  const searchEl = document.getElementById("riders-search");
-  if (searchEl) {
-    searchEl.addEventListener("input", () => {
-      if (ridersCache) renderRiders(ridersCache);
+  document.querySelectorAll(".tab-btn[data-target]").forEach(btn => {
+    btn.addEventListener("click", (e) => {
+      e.preventDefault();
+      const target = btn.getAttribute("data-target");
+      if (!target) return;
+      if (target === "menu") {
+        setActiveView("home");
+        return;
+      }
+      setActiveView(target);
+    });
+  });
+
+  const search = document.getElementById("riders-search");
+  if (search) {
+    search.addEventListener("input", () => {
+      if (ridersCache) loadRiders();
     });
   }
 });
