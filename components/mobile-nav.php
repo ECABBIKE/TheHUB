@@ -3,6 +3,7 @@
  * TheHUB V3.5 Bottom Navigation
  * Uses SVG icons (Lucide-style)
  */
+require_once __DIR__ . '/../v3-config.php';
 require_once __DIR__ . '/icons.php';
 
 $currentPage = $pageInfo['page'] ?? 'dashboard';
