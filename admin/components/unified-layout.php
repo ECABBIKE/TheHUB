@@ -55,6 +55,7 @@ $pageInfo = [
     <link rel="stylesheet" href="<?= hub_asset('css/components.css') ?>">
     <link rel="stylesheet" href="<?= hub_asset('css/tables.css') ?>">
     <link rel="stylesheet" href="<?= hub_asset('css/utilities.css') ?>">
+    <link rel="stylesheet" href="<?= hub_asset('css/grid.css') ?>">
 
     <!-- Admin-specific CSS -->
     <link rel="stylesheet" href="/admin/assets/css/admin.css?v=<?= filemtime(__DIR__ . '/../assets/css/admin.css') ?>">
