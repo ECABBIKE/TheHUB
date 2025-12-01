@@ -166,13 +166,17 @@ function normalizeClubName($name) {
  return $name;
 }
 
-$pageTitle = 'Rensa Klubbdubbletter';
-$pageType = 'admin';
-include __DIR__ . '/../includes/layout-header.php';
+// Page config for unified layout
+$page_title = 'Rensa Klubbdubbletter';
+$breadcrumbs = [
+    ['label' => 'Verktyg', 'url' => '/admin/tools'],
+    ['label' => 'Rensa Klubbdubbletter']
+];
+include __DIR__ . '/components/unified-layout.php';
 ?>
 
-<main class="main-content">
- <div class="container">
+
+ 
 
  <!-- Header -->
  <div class="flex justify-between items-center mb-lg">
@@ -383,10 +387,10 @@ include __DIR__ . '/../includes/layout-header.php';
  <?php endif; ?>
 
  </div>
-</main>
+
 
 <div class="container gs-py-sm">
  <small class="text-secondary">Cleanup Clubs v1.0.2 [2025-11-22-003]</small>
 </div>
 
-<?php include __DIR__ . '/../includes/layout-footer.php'; ?>
+<?php include __DIR__ . '/components/unified-layout-footer.php'; ?>

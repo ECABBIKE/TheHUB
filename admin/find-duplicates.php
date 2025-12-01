@@ -8,7 +8,6 @@ error_reporting(E_ALL);
 
 require_once __DIR__ . '/../config.php';
 require_admin();
-require_once __DIR__ . '/../includes/admin-layout.php';
 
 $db = getDB();
 $message = '';
@@ -287,14 +286,15 @@ foreach ($duplicateGroups as $group) {
  }
 }
 
-$pageTitle = 'Hitta Dubbletter';
-$pageType = 'admin';
-include __DIR__ . '/../includes/layout-header.php';
-?>
+// Page config for unified layout
+$page_title = 'Hitta Dubbletter';
+$breadcrumbs = [
+    ['label' => 'Verktyg', 'url' => '/admin/tools'],
+    ['label' => 'Hitta Dubbletter']
+];
 
-<main class="main-content">
- <div class="container">
- <?php render_admin_header('Hitta Dubbletter', 'settings'); ?>
+include __DIR__ . '/components/unified-layout.php';
+?>
 
  <?php if ($message): ?>
   <div class="alert alert-<?= $messageType ?> mb-lg">
@@ -388,8 +388,4 @@ include __DIR__ . '/../includes/layout-header.php';
   </div>
  </div>
 
- <?php render_admin_footer(); ?>
- </div>
-</main>
-
-<?php include __DIR__ . '/../includes/layout-footer.php'; ?>
+<?php include __DIR__ . '/components/unified-layout-footer.php'; ?>

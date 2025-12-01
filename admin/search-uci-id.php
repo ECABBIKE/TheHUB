@@ -389,13 +389,17 @@ function normalizeString($str) {
  return $str;
 }
 
-$pageTitle = 'Sök License Number (UCI-ID)';
-$pageType = 'admin';
-include __DIR__ . '/../includes/layout-header.php';
+// Page config for unified layout
+$page_title = 'Sök License Number (UCI-ID)';
+$breadcrumbs = [
+    ['label' => 'Verktyg', 'url' => '/admin/tools'],
+    ['label' => 'Sök UCI-ID']
+];
+include __DIR__ . '/components/unified-layout.php';
 ?>
 
-<main class="main-content">
- <div class="container">
+
+ 
 
  <!-- Header -->
  <div class="flex justify-between items-center mb-lg">
@@ -640,7 +644,7 @@ include __DIR__ . '/../includes/layout-header.php';
  <?php endif; ?>
 
  </div>
-</main>
+
 
 <?php if (!empty($results)): ?>
 <script>
@@ -699,4 +703,4 @@ function selectByType(type) {
  <small class="text-secondary">Search UCI-ID v1.3.0 [2025-11-22-004]</small>
 </div>
 
-<?php include __DIR__ . '/../includes/layout-footer.php'; ?>
+<?php include __DIR__ . '/components/unified-layout-footer.php'; ?>

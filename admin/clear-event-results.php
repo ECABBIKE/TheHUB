@@ -110,13 +110,17 @@ $orphanCount = $db->getRow("
  WHERE id NOT IN (SELECT DISTINCT cyclist_id FROM results)
 ");
 
-$pageTitle = 'Rensa event-resultat';
-$pageType = 'admin';
-include __DIR__ . '/../includes/layout-header.php';
+// Page config for unified layout
+$page_title = 'Rensa event-resultat';
+$breadcrumbs = [
+    ['label' => 'Verktyg', 'url' => '/admin/tools'],
+    ['label' => 'Rensa resultat']
+];
+include __DIR__ . '/components/unified-layout.php';
 ?>
 
-<main class="main-content">
- <div class="container">
+
+ 
  <h1 class="text-primary mb-lg">
   <i data-lucide="trash-2"></i>
   Rensa event-resultat
@@ -276,6 +280,6 @@ include __DIR__ . '/../includes/layout-header.php';
   </a>
  </div>
  </div>
-</main>
 
-<?php include __DIR__ . '/../includes/layout-footer.php'; ?>
+
+<?php include __DIR__ . '/components/unified-layout-footer.php'; ?>

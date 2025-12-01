@@ -641,13 +641,17 @@ if (!empty($searchQuery)) {
 ", [$searchTerm, $searchTerm, $searchTerm, $searchTerm]);
 }
 
-$pageTitle = 'Rensa dubbletter';
-$pageType = 'admin';
-include __DIR__ . '/../includes/layout-header.php';
+// Page config for unified layout
+$page_title = 'Rensa dubbletter';
+$breadcrumbs = [
+    ['label' => 'Verktyg', 'url' => '/admin/tools'],
+    ['label' => 'Rensa dubbletter']
+];
+include __DIR__ . '/components/unified-layout.php';
 ?>
 
-<main class="main-content">
- <div class="container">
+
+ 
  <h1 class="text-primary mb-lg">
  <i data-lucide="copy-x"></i>
  Rensa dubbletter
@@ -1222,6 +1226,6 @@ include __DIR__ . '/../includes/layout-header.php';
  </a>
  </div>
  </div>
-</main>
 
-<?php include __DIR__ . '/../includes/layout-footer.php'; ?>
+
+<?php include __DIR__ . '/components/unified-layout-footer.php'; ?>
