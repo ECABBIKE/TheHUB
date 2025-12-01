@@ -159,7 +159,13 @@ $limit = min(intval($_GET['limit'] ?? 10), 20);
     $pdo = null;
     try {
         echo '<div class="debug-box">';
-        echo 'Attempting to connect to database...<br>';
+        echo 'Checking $GLOBALS[\'pdo\'] state...<br>';
+        echo 'isset($GLOBALS[\'pdo\']): ' . (isset($GLOBALS['pdo']) ? 'YES' : 'NO') . '<br>';
+        if (isset($GLOBALS['pdo'])) {
+            echo 'is PDO instance: ' . ($GLOBALS['pdo'] instanceof PDO ? 'YES' : 'NO') . '<br>';
+            echo 'PDO type: ' . gettype($GLOBALS['pdo']) . '<br>';
+        }
+        echo 'Attempting to connect via hub_db()...<br>';
         flush();
 
         $pdo = hub_db();
