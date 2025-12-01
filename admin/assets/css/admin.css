@@ -19,10 +19,12 @@
 
 .admin-main {
     padding: var(--space-xl);
+    padding-top: calc(var(--space-xl) + 60px); /* Account for fixed header */
     max-width: 1600px;
     width: 100%;
-    margin-left: 80px; /* Space for fixed sidebar */
+    margin-left: 70px; /* Space for fixed sidebar */
     flex: 1;
+    min-height: 100vh;
 }
 
 /* ========================================================================
@@ -30,15 +32,17 @@
    ======================================================================== */
 
 .admin-header {
-    height: 64px;
+    height: 60px;
     background: #16162a;
     border-bottom: 1px solid rgba(255, 255, 255, 0.08);
     display: flex;
     align-items: center;
     justify-content: space-between;
     padding: 0 var(--space-lg);
-    position: sticky;
+    position: fixed;
     top: 0;
+    left: 0;
+    right: 0;
     z-index: 100;
 }
 
@@ -247,21 +251,21 @@
 }
 
 /* ========================================================================
-   ADMIN SIDEBAR - Icon + label (like public site)
+   ADMIN SIDEBAR - Icon-only with tooltips (70px)
    ======================================================================== */
 
 .admin-sidebar {
-    width: 80px;
+    width: 70px;
     background: #1a1a2e;
     border-right: 1px solid rgba(255, 255, 255, 0.08);
     display: flex;
     flex-direction: column;
     position: fixed;
-    top: 64px;
+    top: 60px;
     left: 0;
     bottom: 0;
     overflow-y: auto;
-    overflow-x: hidden;
+    overflow-x: visible;
     z-index: 90;
 }
 
@@ -273,20 +277,19 @@
     gap: var(--space-2xs);
 }
 
-/* Nav item - icon on top, label below (like public site) */
+/* Nav item - Icon-only with tooltip */
 .nav-item {
     display: flex;
-    flex-direction: column;
     align-items: center;
-    gap: 2px;
-    padding: var(--space-sm) var(--space-xs);
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    margin: 0 auto;
     color: rgba(255, 255, 255, 0.6);
     text-decoration: none;
     transition: all 0.2s ease;
     position: relative;
     border-radius: var(--radius-md);
-    font-size: 9px;
-    text-align: center;
 }
 
 .nav-item:hover {
@@ -303,7 +306,7 @@
 .nav-item.active::before {
     content: '';
     position: absolute;
-    left: 0;
+    left: -11px;
     top: 50%;
     transform: translateY(-50%);
     width: 3px;
@@ -313,19 +316,47 @@
 }
 
 .nav-item svg {
-    width: 20px;
-    height: 20px;
+    width: 22px;
+    height: 22px;
     flex-shrink: 0;
 }
 
-/* Label under icon - VISIBLE */
+/* Hide label by default - show in tooltip */
 .nav-label {
-    display: block;
-    font-size: 10px;
+    display: none;
+}
+
+/* Tooltip on hover */
+.nav-item::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    left: 100%;
+    top: 50%;
+    transform: translateY(-50%);
+    margin-left: 12px;
+    padding: var(--space-xs) var(--space-sm);
+    background: #1a1a2e;
+    color: #fff;
+    font-size: var(--text-sm);
     font-weight: var(--weight-medium);
-    line-height: 1.2;
-    text-align: center;
-    word-break: break-word;
+    white-space: nowrap;
+    border-radius: var(--radius-md);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.15s ease;
+    z-index: 1000;
+    pointer-events: none;
+}
+
+/* Tooltip arrow */
+.nav-item::before {
+    z-index: 1001;
+}
+
+.nav-item:hover::after {
+    opacity: 1;
+    visibility: visible;
 }
 
 .sidebar-footer {
@@ -335,15 +366,16 @@
 
 .sidebar-link {
     display: flex;
-    flex-direction: column;
     align-items: center;
-    gap: 2px;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    margin: 0 auto;
     color: rgba(255, 255, 255, 0.5);
     text-decoration: none;
-    padding: var(--space-sm) var(--space-xs);
     border-radius: var(--radius-md);
     transition: all 0.2s ease;
-    font-size: 9px;
+    position: relative;
 }
 
 .sidebar-link:hover {
@@ -352,8 +384,36 @@
 }
 
 .sidebar-link svg {
-    width: 18px;
-    height: 18px;
+    width: 20px;
+    height: 20px;
+}
+
+/* Sidebar link tooltip */
+.sidebar-link::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    left: 100%;
+    top: 50%;
+    transform: translateY(-50%);
+    margin-left: 12px;
+    padding: var(--space-xs) var(--space-sm);
+    background: #1a1a2e;
+    color: #fff;
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    white-space: nowrap;
+    border-radius: var(--radius-md);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.15s ease;
+    z-index: 1000;
+    pointer-events: none;
+}
+
+.sidebar-link:hover::after {
+    opacity: 1;
+    visibility: visible;
 }
 
 /* Sidebar overlay */
@@ -880,6 +940,7 @@
         transform: translateX(-100%);
         transition: transform 0.3s ease;
         width: 280px;
+        top: 60px;
     }
 
     .admin-sidebar.open {
@@ -890,25 +951,39 @@
     .admin-sidebar .nav-item {
         flex-direction: row;
         justify-content: flex-start;
+        width: 100%;
+        height: auto;
         gap: var(--space-md);
         padding: var(--space-md) var(--space-lg);
         font-size: var(--text-sm);
+        margin: 0;
     }
 
     .admin-sidebar .nav-label {
+        display: block;
         font-size: var(--text-sm);
+    }
+
+    /* Hide tooltips on mobile - show labels instead */
+    .admin-sidebar .nav-item::after,
+    .admin-sidebar .sidebar-link::after {
+        display: none;
     }
 
     .admin-sidebar .sidebar-link {
         flex-direction: row;
         justify-content: flex-start;
+        width: 100%;
+        height: auto;
         gap: var(--space-md);
         padding: var(--space-md) var(--space-lg);
         font-size: var(--text-sm);
+        margin: 0;
     }
 
     .admin-main {
         padding: var(--space-lg);
+        padding-top: calc(var(--space-lg) + 60px);
         margin-left: 0; /* No sidebar margin on mobile */
     }
 
