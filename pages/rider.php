@@ -253,19 +253,27 @@ try {
  $gsEventBreakdown = $stmt->fetchAll(PDO::FETCH_ASSOC);
  }
 
- // Ranking stats (24 months rolling) - USE CORRECT RANKING FORMULA!
- require_once HUB_V3_ROOT . '/includes/ranking_functions.php';
-
- $rankingMonths = 24;
- $cutoffDate = date('Y-m-d', strtotime("-{$rankingMonths} months"));
-
- // Calculate ranking using CORRECT formula with multipliers
- // Create DatabaseWrapper from PDO connection
- $rankingDb = new DatabaseWrapper($db);
- $rankingData = calculateSingleRiderRanking($rankingDb, $riderId, 'GRAVITY');
- $rankingPoints = round($rankingData['total_weighted_points'] ?? 0);
+ // Ranking stats (24 months rolling)
+ $rankingPoints = 0;
  $rankingPosition = null;
  $rankingTotal = 0;
+ $rankingMonths = 24;
+
+ $cutoffDate = date('Y-m-d', strtotime("-{$rankingMonths} months"));
+
+ // Get rider's ranking points (sum of all points in last 24 months)
+ $stmt = $db->prepare("
+ SELECT COALESCE(SUM(res.points), 0) as total_points
+ FROM results res
+ JOIN events e ON res.event_id = e.id
+ WHERE res.cyclist_id = ?
+ AND res.status = 'finished'
+ AND res.points > 0
+ AND e.date >= ?
+");
+ $stmt->execute([$riderId, $cutoffDate]);
+ $rankingStats = $stmt->fetch(PDO::FETCH_ASSOC);
+ $rankingPoints = $rankingStats['total_points'] ?? 0;
 
  // Get ranking position among all riders
  if ($rankingPoints > 0) {
@@ -292,9 +300,6 @@ try {
   $position++;
  }
  }
-
- // Get events that contribute to ranking (with correct weighted points)
- $rankingEvents = $rankingData['events'] ?? [];
 
 } catch (Exception $e) {
  $error = $e->getMessage();
@@ -414,6 +419,7 @@ $genderText = match($rider['gender']) {
   <th class="table-col-hide-portrait">Klass</th>
   <th class="table-col-hide-portrait">Datum</th>
   <th class="col-time">Tid</th>
+  <th class="col-points table-col-hide-portrait">Poäng</th>
  </tr>
  </thead>
  <tbody>
@@ -447,6 +453,13 @@ $genderText = match($rider['gender']) {
   <td class="table-col-hide-portrait"><?= htmlspecialchars($result['class_name'] ?? '-') ?></td>
   <td class="table-col-hide-portrait"><?= $result['event_date'] ? date('j M Y', strtotime($result['event_date'])) : '-' ?></td>
   <td class="col-time"><?= htmlspecialchars($result['finish_time'] ?? '-') ?></td>
+  <td class="col-points table-col-hide-portrait">
+  <?php if ($result['points']): ?>
+  <span class="points-value"><?= $result['points'] ?></span>
+  <?php else: ?>
+  -
+  <?php endif; ?>
+  </td>
  </tr>
  <?php endforeach; ?>
  </tbody>
@@ -476,6 +489,9 @@ $genderText = match($rider['gender']) {
  </div>
  <div class="result-time-col">
  <div class="time-value"><?= htmlspecialchars($result['finish_time'] ?? '-') ?></div>
+ <?php if ($result['points']): ?>
+  <div class="points-small"><?= $result['points'] ?> p</div>
+ <?php endif; ?>
  </div>
  </a>
  <?php endforeach; ?>
@@ -508,50 +524,6 @@ $genderText = match($rider['gender']) {
  </div>
  <?php endif; ?>
  </div>
-
- <!-- How It Works -->
- <div class="card-section">
- <h3 class="section-title">📋 Hur beräknas ranking?</h3>
- <div class="info-box">
-  <p><strong>Formel:</strong> Rankingpoäng = Originalpoäng × Fältstorlek × Eventnivå × Tidsmultiplikator</p>
-  <p><strong>Period:</strong> Rullande 24 månader (<?= date('j M Y', strtotime($cutoffDate)) ?> - <?= date('j M Y') ?>)</p>
-  <p><strong>Fältstorlek:</strong> 0.75-1.00 baserat på antal deltagare i klassen (1-15+ deltagare)</p>
-  <p><strong>Eventnivå:</strong> Nationella event = 100%, Sportmotion = 50%</p>
-  <p><strong>Tidsviktning:</strong> Senaste 12 mån = 100%, Mån 13-24 = 50%, Äldre = 0%</p>
-  <p><strong>Viktigt:</strong> Motion Kids, Motion Kort/Mellan och Sportmotion Lång ger ALDRIG rankingpoäng</p>
- </div>
- </div>
-
- <!-- Events Contributing to Ranking -->
- <?php if (!empty($rankingEvents)): ?>
- <div class="card-section">
- <h3 class="section-title">🏁 Lopp som räknas (<?= count($rankingEvents) ?>)</h3>
- <div class="event-breakdown">
-  <?php foreach ($rankingEvents as $event): ?>
-  <a href="/event/<?= $event['event_id'] ?>" class="event-breakdown-item">
-  <div class="event-breakdown-info">
-   <div class="event-breakdown-name"><?= htmlspecialchars($event['event_name']) ?></div>
-   <div class="event-breakdown-meta">
-   <?= date('j M Y', strtotime($event['event_date'])) ?>
-   • Original: <?= round($event['original_points']) ?>p
-   • Fält: <?= $event['field_size'] ?> (×<?= number_format($event['field_multiplier'], 2) ?>)
-   • Nivå: ×<?= number_format($event['event_level_multiplier'], 2) ?>
-   • Tid: ×<?= number_format($event['time_multiplier'], 2) ?>
-   </div>
-  </div>
-  <div class="event-breakdown-points">
-   <strong><?= round($event['weighted_points']) ?> p</strong>
-   <small style="display: block; font-size: 10px; opacity: 0.7;">(<?= round($event['ranking_points']) ?> oviktat)</small>
-  </div>
-  </a>
-  <?php endforeach; ?>
- </div>
- </div>
- <?php else: ?>
- <div class="empty-state">
-  <p>Inga lopp de senaste <?= $rankingMonths ?> månaderna gav poäng</p>
- </div>
- <?php endif; ?>
  </div>
 </section>
 
@@ -939,83 +911,6 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
  color: var(--color-accent-text);
  flex-shrink: 0;
  margin-left: var(--space-sm);
-}
-
-/* Ranking Tab Sections */
-.card-section {
- padding: var(--space-lg);
- border-top: 1px solid var(--color-border);
-}
-
-.card-section:first-of-type {
- border-top: none;
-}
-
-.section-title {
- font-size: var(--text-base);
- font-weight: var(--weight-semibold);
- margin: 0 0 var(--space-md) 0;
-}
-
-.info-box {
- background: var(--color-bg-sunken);
- border-left: 3px solid var(--color-accent);
- padding: var(--space-md);
- border-radius: var(--radius-sm);
-}
-
-.info-box p {
- margin: 0 0 var(--space-sm) 0;
- font-size: var(--text-sm);
- line-height: 1.6;
-}
-
-.info-box p:last-child {
- margin-bottom: 0;
-}
-
-/* Event Breakdown for Ranking Tab */
-.event-breakdown-item {
- display: flex;
- justify-content: space-between;
- align-items: center;
- padding: var(--space-sm) var(--space-md);
- background: var(--color-bg-surface);
- border-radius: var(--radius-sm);
- text-decoration: none;
- color: inherit;
- transition: all var(--transition-fast);
- margin-bottom: var(--space-xs);
- border: 1px solid var(--color-border);
-}
-
-.event-breakdown-item:hover {
- background: var(--color-bg-hover);
- border-color: var(--color-accent);
- transform: translateX(4px);
-}
-
-.event-breakdown-info {
- flex: 1;
- min-width: 0;
-}
-
-.event-breakdown-name {
- font-weight: var(--weight-medium);
- margin-bottom: 2px;
-}
-
-.event-breakdown-meta {
- font-size: var(--text-xs);
- color: var(--color-text-muted);
-}
-
-.event-breakdown-points {
- font-weight: var(--weight-bold);
- color: var(--color-accent-text);
- font-size: var(--text-sm);
- flex-shrink: 0;
- margin-left: var(--space-md);
 }
 
 /* Stats Grid layouts */
