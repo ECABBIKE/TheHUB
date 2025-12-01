@@ -84,59 +84,29 @@ if ($userTheme === 'auto') {
 }
 ?>
 <!DOCTYPE html>
-<html lang="sv" data-theme="<?= htmlspecialchars($userTheme) ?>">
+<html lang="sv" data-theme="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title><?= h($pageTitle) ?><?= $titleSuffix ?></title>
 
-    <!-- CRITICAL: Anti-FOUC - Must run BEFORE any CSS loads -->
+    <!-- Force light theme always - no switcher to prevent flash -->
     <script>
     (function() {
-        // Try localStorage first
-        let theme = null;
-        try {
-            theme = localStorage.getItem('thehub-theme');
-        } catch(e) {}
-
-        // Fallback to cookie
-        if (!theme) {
-            const match = document.cookie.match(/(^|; )hub_theme=([^;]+)/);
-            theme = match ? match[2] : null;
-        }
-
-        // Fallback to server default
-        if (!theme) {
-            theme = '<?= $userTheme ?>';
-        }
-
-        // Resolve auto theme
-        if (theme === 'auto') {
-            theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-        }
-
-        // Apply immediately - BEFORE any CSS loads
-        document.documentElement.setAttribute('data-theme', theme);
+        // Always use light theme
+        document.documentElement.setAttribute('data-theme', 'light');
     })();
     window.HUB = window.HUB || {};
     window.HUB.isLoggedIn = <?= $isLoggedIn ? 'true' : 'false' ?>;
     </script>
 
-    <!-- CRITICAL: Inline CSS to prevent white flash -->
+    <!-- CRITICAL: Inline CSS for light theme only -->
     <style>
         html, body {
-            background: #0A0C14;
-            color: #E8E8E8;
-            margin: 0;
-            padding: 0;
-        }
-        html[data-theme="light"], html[data-theme="light"] body {
             background: #F4F5F7;
             color: #1A1A1A;
-        }
-        /* Prevent flash of wrong colors */
-        * {
-            transition: none !important;
+            margin: 0;
+            padding: 0;
         }
     </style>
 

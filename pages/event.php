@@ -384,7 +384,7 @@ if (!$event) {
               <?= htmlspecialchars($result['firstname'] . ' ' . $result['lastname']) ?>
             </a>
           </td>
-          <td class="table-col-hide-portrait text-muted">
+          <td class="table-col-hide-portrait text-muted col-club">
             <?php if ($result['club_id']): ?>
               <a href="/club/<?= $result['club_id'] ?>"><?= htmlspecialchars($result['club_name'] ?? '-') ?></a>
             <?php else: ?>
@@ -613,6 +613,15 @@ function filterResults() {
 .col-rider {
   width: 30%;
   min-width: 150px;
+}
+
+.col-club {
+  width: 20%;
+  min-width: 100px;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .col-time {
