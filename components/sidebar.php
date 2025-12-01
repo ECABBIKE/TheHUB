@@ -89,77 +89,41 @@ function isAdminPageActive($itemId, $requestUri) {
 </aside>
 
 <style>
-/* Sidebar icon styling for Lucide SVGs */
+/* Sidebar icon styling for Lucide SVGs - uses compact vertical layout from layout.css */
 .sidebar-icon-svg {
     width: 20px;
     height: 20px;
-    flex-shrink: 0;
-    transition: color var(--transition-fast);
 }
 
-.sidebar-link {
-    display: flex;
-    align-items: center;
-    gap: var(--space-sm);
-    padding: var(--space-sm) var(--space-md);
-    color: var(--color-text-secondary);
-    text-decoration: none;
-    border-radius: var(--radius-md);
-    transition: all var(--transition-fast);
-}
-
-.sidebar-link:hover {
-    background: var(--color-bg-hover);
-    color: var(--color-text-primary);
-}
-
+/* Active state for is-active class */
 .sidebar-link.is-active {
-    background: var(--color-accent-bg);
-    color: var(--color-accent);
-}
-
-.sidebar-link.is-active .sidebar-icon-svg {
-    color: var(--color-accent);
-}
-
-.sidebar-icon {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.sidebar-label {
-    font-size: var(--text-sm);
-    font-weight: var(--weight-medium);
+    background: var(--color-accent-light);
+    color: var(--color-accent-text);
 }
 
 /* Sidebar Sections */
 .sidebar-section {
-    margin-bottom: var(--space-sm);
+    margin-bottom: var(--space-xs);
 }
 
 .sidebar-section-title {
-    font-size: var(--text-xs);
+    font-size: 9px;
     font-weight: var(--weight-semibold);
     color: var(--color-text-muted);
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    padding: var(--space-sm) var(--space-md);
-    margin-bottom: var(--space-xs);
+    padding: var(--space-xs) var(--space-sm);
+    text-align: center;
 }
 
 .sidebar-divider {
     height: 1px;
     background: var(--color-border);
-    margin: var(--space-sm) var(--space-md);
+    margin: var(--space-xs) var(--space-sm);
 }
 
 /* Admin link styling */
 .sidebar-link--admin {
-    color: var(--color-accent);
-}
-
-.sidebar-link--admin:hover {
-    background: var(--color-accent-bg);
+    color: var(--color-accent-text) !important;
 }
 </style>
