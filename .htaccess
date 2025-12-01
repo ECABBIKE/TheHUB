@@ -112,6 +112,17 @@ RewriteRule ^admin/sponsors/?$ admin/sponsors.php [QSA,L]
 RewriteRule ^admin/recalculate-all-points/?$ admin/recalculate-all-points.php [QSA,L]
 RewriteRule ^admin/force-zero-motion-kids/?$ admin/force-zero-motion-kids.php [QSA,L]
 
+# Admin tools (from tools.php)
+RewriteRule ^admin/find-duplicates/?$ admin/find-duplicates.php [QSA,L]
+RewriteRule ^admin/cleanup-duplicates/?$ admin/cleanup-duplicates.php [QSA,L]
+RewriteRule ^admin/cleanup-clubs/?$ admin/cleanup-clubs.php [QSA,L]
+RewriteRule ^admin/search-uci-id/?$ admin/search-uci-id.php [QSA,L]
+RewriteRule ^admin/import-gravity-id/?$ admin/import-gravity-id.php [QSA,L]
+RewriteRule ^admin/clear-event-results/?$ admin/clear-event-results.php [QSA,L]
+RewriteRule ^admin/clear-cache/?$ admin/clear-cache.php [QSA,L]
+RewriteRule ^admin/point-scales/?$ admin/point-scales.php [QSA,L]
+RewriteRule ^admin/tools/?$ admin/tools.php [QSA,L]
+
 # Skip remaining admin files (direct PHP access)
 RewriteRule ^admin/.*\.php$ - [L]
 
