@@ -105,8 +105,7 @@
         <?php endif; ?>
     </script>
 
-    <!-- V2.5 Modern Theme System Scripts -->
-    <script src="/assets/js/theme.js?v=<?= filemtime(__DIR__ . '/../assets/js/theme.js') ?>"></script>
+    <!-- Theme script removed - always light theme -->
     <script src="/assets/js/dropdown.js?v=<?= filemtime(__DIR__ . '/../assets/js/dropdown.js') ?>"></script>
 </body>
 </html>
