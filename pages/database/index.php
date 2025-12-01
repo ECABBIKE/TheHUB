@@ -50,18 +50,37 @@ $ridersWithPodiums = $pdo->query("
 ")->fetchColumn();
 
 // Get riders with results (top performers)
+// Ranking based on: avg_participants / avg_position (higher is better)
+// This favors riders with low avg position in large competitive fields
 $topRiders = $pdo->query("
-    SELECT r.id, r.firstname, r.lastname, c.name as club_name,
-           COUNT(DISTINCT res.id) as total_races,
-           COUNT(CASE WHEN res.position = 1 THEN 1 END) as wins,
-           COUNT(CASE WHEN res.position <= 3 THEN 1 END) as podiums
+    SELECT
+        r.id,
+        r.firstname,
+        r.lastname,
+        c.name as club_name,
+        AVG(res.position) as avg_position,
+        AVG(field_size.participants) as avg_participants,
+        (AVG(field_size.participants) / AVG(res.position)) as ranking_score,
+        COUNT(DISTINCT res.id) as total_races,
+        COUNT(CASE WHEN res.position = 1 THEN 1 END) as wins,
+        COUNT(CASE WHEN res.position <= 3 THEN 1 END) as podiums
     FROM riders r
     LEFT JOIN clubs c ON r.club_id = c.id
     INNER JOIN results res ON r.id = res.cyclist_id
+    INNER JOIN (
+        SELECT event_id, category_id, COUNT(*) as participants
+        FROM results
+        WHERE status = 'finished' AND is_ebike = 0 AND position IS NOT NULL
+        GROUP BY event_id, category_id
+    ) field_size ON res.event_id = field_size.event_id
+                 AND res.category_id = field_size.category_id
     WHERE r.active = 1
+      AND res.status = 'finished'
+      AND res.is_ebike = 0
+      AND res.position IS NOT NULL
     GROUP BY r.id
     HAVING total_races >= 3
-    ORDER BY podiums DESC, wins DESC, total_races DESC
+    ORDER BY ranking_score DESC, avg_position ASC
     LIMIT 10
 ")->fetchAll(PDO::FETCH_ASSOC);
 
