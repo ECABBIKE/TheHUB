@@ -64,6 +64,7 @@ if (hub_is_ajax()) {
     <script src="<?= hub_asset('js/search.js') ?>"></script>
     <script src="<?= hub_asset('js/registration.js') ?>"></script>
     <script src="<?= hub_asset('js/woocommerce.js') ?>"></script>
+    <script src="<?= hub_asset('js/badge-system.js') ?>"></script>
     <script src="<?= hub_asset('js/pwa.js') ?>"></script>
 </body>
 </html>

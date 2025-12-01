@@ -42,4 +42,5 @@ $themeColor = hub_get_theme() === 'dark' ? '#0A0C14' : '#004A98';
 <link rel="stylesheet" href="<?= hub_asset('css/components.css') ?>">
 <link rel="stylesheet" href="<?= hub_asset('css/tables.css') ?>">
 <link rel="stylesheet" href="<?= hub_asset('css/utilities.css') ?>">
+<link rel="stylesheet" href="<?= hub_asset('css/badge-system.css') ?>">
 <link rel="stylesheet" href="<?= hub_asset('css/pwa.css') ?>">
