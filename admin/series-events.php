@@ -96,6 +96,47 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
  $message = 'Kunde inte hitta eventet';
  $messageType = 'error';
  }
+ } elseif ($action === 'bulk_update_templates') {
+ $seriesEventIds = $_POST['series_event_ids'] ?? [];
+ $templateId = !empty($_POST['bulk_template_id']) ? intval($_POST['bulk_template_id']) : null;
+
+ if (empty($seriesEventIds)) {
+  $message = 'Inga event valda';
+  $messageType = 'error';
+ } else {
+  $updatedCount = 0;
+  $recalculatedCount = 0;
+
+  foreach ($seriesEventIds as $seriesEventId) {
+   $seriesEventId = intval($seriesEventId);
+
+   // Get the event_id for this series_event
+   $seriesEvent = $db->getRow(
+    "SELECT event_id FROM series_events WHERE id = ? AND series_id = ?",
+    [$seriesEventId, $seriesId]
+   );
+
+   if ($seriesEvent) {
+    $eventId = $seriesEvent['event_id'];
+
+    // Update series_events template
+    $db->update('series_events', [
+     'template_id' => $templateId
+    ], 'id = ? AND series_id = ?', [$seriesEventId, $seriesId]);
+
+    $updatedCount++;
+
+    // Recalculate series points using new template
+    if ($templateId) {
+     $stats = recalculateSeriesEventPoints($db, $seriesId, $eventId);
+     $recalculatedCount += $stats['inserted'] + $stats['updated'];
+    }
+   }
+  }
+
+  $message = "{$updatedCount} event uppdaterade! {$recalculatedCount} seriepoäng omräknade.";
+  $messageType = 'success';
+ }
  } elseif ($action === 'remove_event') {
  $seriesEventId = intval($_POST['series_event_id']);
 
@@ -202,7 +243,7 @@ $templates = $db->getAll("SELECT id, name FROM point_scales WHERE active = 1 ORD
 
 $pageTitle = 'Hantera Events - ' . $series['name'];
 $pageType = 'admin';
-include __DIR__ . '/../includes/layout-header.php';
+include __DIR__ . '/components/unified-layout.php';
 ?>
 
 <main class="main-content">
@@ -336,10 +377,35 @@ include __DIR__ . '/../includes/layout-header.php';
   <p>Inga events har lagts till i denna serie än.</p>
   </div>
   <?php else: ?>
+  <!-- Bulk Edit Form -->
+  <div class="alert alert--info mb-md">
+   <form method="POST" id="bulkForm">
+    <?= csrf_field() ?>
+    <input type="hidden" name="action" value="bulk_update_templates">
+    <div class="flex items-center gap-md">
+     <label class="font-semibold">Bulk-redigera valda event:</label>
+     <select name="bulk_template_id" class="input input-sm" style="min-width: 200px;">
+      <option value="">-- Välj poängmall --</option>
+      <?php foreach ($templates as $template): ?>
+       <option value="<?= $template['id'] ?>"><?= h($template['name']) ?></option>
+      <?php endforeach; ?>
+     </select>
+     <button type="submit" class="btn btn-sm btn--primary" id="bulkSubmit" disabled>
+      <i data-lucide="check-square"></i>
+      Uppdatera valda
+     </button>
+     <span class="text-sm text-secondary" id="selectedCount">0 valda</span>
+    </div>
+   </form>
+  </div>
+
   <div class="table-responsive">
   <table class="table">
    <thead>
    <tr>
+   <th class="table-col-w-60">
+    <input type="checkbox" id="selectAll" title="Markera alla">
+   </th>
    <th class="table-col-w-80">Ordning</th>
    <th>Event</th>
    <th>Datum</th>
@@ -352,6 +418,9 @@ include __DIR__ . '/../includes/layout-header.php';
    <?php $eventNumber = 1; $totalEvents = count($seriesEvents); ?>
    <?php foreach ($seriesEvents as $se): ?>
    <tr>
+   <td>
+    <input type="checkbox" class="event-checkbox" name="series_event_ids[]" value="<?= $se['id'] ?>" form="bulkForm">
+   </td>
    <td>
     <div class="flex items-center gap-xs">
     <span class="badge badge-primary badge-sm">#<?= $eventNumber ?></span>
@@ -429,4 +498,56 @@ include __DIR__ . '/../includes/layout-header.php';
  </div>
 </main>
 
-<?php include __DIR__ . '/../includes/layout-footer.php'; ?>
+<script>
+// Bulk edit functionality
+document.addEventListener('DOMContentLoaded', function() {
+ const selectAll = document.getElementById('selectAll');
+ const checkboxes = document.querySelectorAll('.event-checkbox');
+ const bulkSubmit = document.getElementById('bulkSubmit');
+ const selectedCount = document.getElementById('selectedCount');
+
+ if (!selectAll || !bulkSubmit || !selectedCount) return;
+
+ // Update selected count and button state
+ function updateBulkState() {
+  const checkedCount = document.querySelectorAll('.event-checkbox:checked').length;
+  selectedCount.textContent = checkedCount + ' valda';
+  bulkSubmit.disabled = checkedCount === 0;
+ }
+
+ // Select all checkbox
+ selectAll.addEventListener('change', function() {
+  checkboxes.forEach(cb => cb.checked = this.checked);
+  updateBulkState();
+ });
+
+ // Individual checkboxes
+ checkboxes.forEach(cb => {
+  cb.addEventListener('change', function() {
+   // Update select all state
+   selectAll.checked = document.querySelectorAll('.event-checkbox:checked').length === checkboxes.length;
+   updateBulkState();
+  });
+ });
+
+ // Form submission confirmation
+ document.getElementById('bulkForm').addEventListener('submit', function(e) {
+  const checkedCount = document.querySelectorAll('.event-checkbox:checked').length;
+  const templateSelect = document.querySelector('select[name="bulk_template_id"]');
+  const templateName = templateSelect.options[templateSelect.selectedIndex].text;
+
+  if (!templateSelect.value) {
+   e.preventDefault();
+   alert('Välj en poängmall först!');
+   return false;
+  }
+
+  if (!confirm(`Är du säker på att du vill uppdatera ${checkedCount} event med poängmallen "${templateName}"?\n\nDetta kommer omberäkna seriepoängen för alla valda event.`)) {
+   e.preventDefault();
+   return false;
+  }
+ });
+});
+</script>
+
+<?php include __DIR__ . '/components/unified-layout-footer.php'; ?>
