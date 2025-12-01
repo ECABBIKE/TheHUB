@@ -16,6 +16,8 @@ $adminNav = [
     ['id' => 'classes', 'label' => 'Klasser', 'icon' => 'layers', 'url' => '/admin/classes'],
     ['id' => 'import', 'label' => 'Import', 'icon' => 'upload', 'url' => '/admin/import'],
     ['id' => 'ranking', 'label' => 'Ranking', 'icon' => 'bar-chart-2', 'url' => '/admin/ranking'],
+    ['id' => 'media', 'label' => 'Media', 'icon' => 'image', 'url' => '/admin/media'],
+    ['id' => 'sponsors', 'label' => 'Sponsorer', 'icon' => 'heart', 'url' => '/admin/sponsors'],
     ['id' => 'users', 'label' => 'Användare', 'icon' => 'user-cog', 'url' => '/admin/users'],
     ['id' => 'settings', 'label' => 'Inst.', 'icon' => 'settings', 'url' => '/admin/settings'],
 ];
