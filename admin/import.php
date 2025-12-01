@@ -121,28 +121,27 @@ if ($tab === 'history') {
  $imports = getImportHistory($db, 100, $type ?: null);
 }
 
-$pageTitle = 'Import Data';
-$pageType = 'admin';
-include __DIR__ . '/../includes/layout-header.php';
+// Page config for unified layout
+$page_title = 'Import & Data';
+$breadcrumbs = [
+    ['label' => 'Import']
+];
+
+// Include unified layout
+include __DIR__ . '/components/unified-layout.php';
 ?>
 
-<main class="main-content">
- <div class="container">
- <?php
- render_admin_header('Import & Data');
- ?>
-
- <!-- Tabs -->
- <div class="gs-tabs mb-lg">
-  <a href="?tab=import" class="tab <?= $tab === 'import' ? 'active' : '' ?>">
-  <i data-lucide="upload" class="icon-sm"></i>
-  Import
-  </a>
-  <a href="?tab=history" class="tab <?= $tab === 'history' ? 'active' : '' ?>">
-  <i data-lucide="history" class="icon-sm"></i>
-  Historik
-  </a>
- </div>
+<!-- Tabs -->
+<div class="admin-tabs">
+    <a href="?tab=import" class="admin-tab <?= $tab === 'import' ? 'active' : '' ?>">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
+        Import
+    </a>
+    <a href="?tab=history" class="admin-tab <?= $tab === 'history' ? 'active' : '' ?>">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px;"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg>
+        Historik
+    </a>
+</div>
 
  <!-- Messages -->
  <?php if ($message): ?>
@@ -680,12 +679,8 @@ include __DIR__ . '/../includes/layout-header.php';
   </script>
 
  <?php endif; ?>
- </div>
-</main>
 
-
-<?php render_admin_footer(); ?>
-<?php include __DIR__ . '/../includes/layout-footer.php'; ?>
+<?php include __DIR__ . '/components/unified-layout-footer.php'; ?>
 
 <?php
 // Helper function for import type icons
