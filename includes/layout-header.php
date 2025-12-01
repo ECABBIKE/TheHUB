@@ -93,11 +93,29 @@ if ($userTheme === 'auto') {
     <!-- CRITICAL: Anti-FOUC - Must run BEFORE any CSS loads -->
     <script>
     (function() {
-        const saved = localStorage.getItem('thehub-theme');
-        let theme = saved || '<?= $userTheme ?>';
+        // Try localStorage first
+        let theme = null;
+        try {
+            theme = localStorage.getItem('thehub-theme');
+        } catch(e) {}
+
+        // Fallback to cookie
+        if (!theme) {
+            const match = document.cookie.match(/(^|; )hub_theme=([^;]+)/);
+            theme = match ? match[2] : null;
+        }
+
+        // Fallback to server default
+        if (!theme) {
+            theme = '<?= $userTheme ?>';
+        }
+
+        // Resolve auto theme
         if (theme === 'auto') {
             theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
         }
+
+        // Apply immediately - BEFORE any CSS loads
         document.documentElement.setAttribute('data-theme', theme);
     })();
     window.HUB = window.HUB || {};
@@ -106,8 +124,20 @@ if ($userTheme === 'auto') {
 
     <!-- CRITICAL: Inline CSS to prevent white flash -->
     <style>
-        html { background: #0A0C14; }
-        html[data-theme="light"] { background: #F4F5F7; }
+        html, body {
+            background: #0A0C14;
+            color: #E8E8E8;
+            margin: 0;
+            padding: 0;
+        }
+        html[data-theme="light"], html[data-theme="light"] body {
+            background: #F4F5F7;
+            color: #1A1A1A;
+        }
+        /* Prevent flash of wrong colors */
+        * {
+            transition: none !important;
+        }
     </style>
 
     <!-- CRITICAL CSS - INLINE to ensure it loads FIRST -->

@@ -48,9 +48,9 @@ if ($type === 'all' || $type === 'riders') {
         $results[] = [
             'id' => $row['id'],
             'type' => 'rider',
-            'name' => $row['firstname'] . ' ' . $row['lastname'],
-            'meta' => $row['club_name'] ?? '',
-            'initials' => strtoupper(substr($row['firstname'], 0, 1))
+            'firstname' => $row['firstname'],
+            'lastname' => $row['lastname'],
+            'club_name' => $row['club_name'] ?? ''
         ];
     }
 }
@@ -80,8 +80,7 @@ if ($type === 'all' || $type === 'clubs') {
                 'id' => $row['id'],
                 'type' => 'club',
                 'name' => $row['name'],
-                'meta' => $row['member_count'] . ' medlemmar',
-                'initials' => strtoupper(substr($row['name'], 0, 2))
+                'member_count' => $row['member_count']
             ];
         }
     }
