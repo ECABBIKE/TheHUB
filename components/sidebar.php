@@ -112,6 +112,15 @@ function isAdminPageActive($itemId, $requestUri) {
     color: var(--color-text-secondary);
 }
 
+.sidebar-link:hover {
+    color: var(--color-text-primary);
+    background: var(--color-bg-hover);
+}
+
+.sidebar-link:hover .sidebar-icon-svg {
+    color: var(--color-text-primary);
+}
+
 .sidebar-icon svg {
     color: inherit;
     stroke: currentColor;
