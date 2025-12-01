@@ -10,19 +10,25 @@ require_admin();
 $db = getDB();
 
 if (isset($_GET['execute'])) {
+    // Count before
+    $before = $db->getRow("
+        SELECT COUNT(*) as cnt
+        FROM results r
+        INNER JOIN classes c ON r.class_id = c.id
+        WHERE (c.awards_points = 0 OR c.series_eligible = 0)
+        AND r.points > 0
+    ")['cnt'] ?? 0;
+
     // FORCE UPDATE: Set ALL Motion Kids/non-eligible class results to 0 points
-    $sql = "
+    $db->query("
         UPDATE results r
         INNER JOIN classes c ON r.class_id = c.id
         SET r.points = 0
         WHERE (c.awards_points = 0 OR c.series_eligible = 0)
-    ";
+        AND r.points > 0
+    ");
 
-    $db->query($sql);
-
-    $affected = $db->getRow("SELECT ROW_COUNT() as cnt")['cnt'] ?? 0;
-
-    header('Location: /admin/force-zero-motion-kids?done=' . $affected);
+    header('Location: /admin/force-zero-motion-kids?done=' . $before);
     exit;
 }
 
