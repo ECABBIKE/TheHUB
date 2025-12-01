@@ -40,14 +40,14 @@ $error = null;
 
 try {
     if ($hasRankingSystem && function_exists('rankingTablesExist')) {
-        // Use parent getDB function if available
-        $parentDb = function_exists('getDB') ? getDB() : null;
+        // Create DatabaseWrapper from PDO connection
+        $wrappedDb = new DatabaseWrapper($db);
 
-        if ($parentDb && rankingTablesExist($parentDb)) {
+        if (rankingTablesExist($wrappedDb)) {
             if ($view === 'clubs' && function_exists('getCurrentClubRanking')) {
-                $ranking = getCurrentClubRanking($parentDb, $discipline, $perPage, $offset);
+                $ranking = getCurrentClubRanking($wrappedDb, $discipline, $perPage, $offset);
             } elseif (function_exists('getCurrentRanking')) {
-                $ranking = getCurrentRanking($parentDb, $discipline, $perPage, $offset);
+                $ranking = getCurrentRanking($wrappedDb, $discipline, $perPage, $offset);
             }
         }
     }
