@@ -88,6 +88,11 @@ if (!function_exists('hub_db')) {
         return $GLOBALS['pdo'];
     }
 }
+// CREATE $db OBJECT
+require_once __DIR__ . '/includes/db.php';
+$db = Database::getInstance();
+$GLOBALS['db'] = $db;
+error_log('DEBUG: $db object created from Database singleton');
 
 require_once __DIR__ . '/includes/helpers.php';
 require_once __DIR__ . '/includes/auth.php';
