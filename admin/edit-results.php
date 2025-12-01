@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/../config.php';
+require_once __DIR__ . '/../includes/point-calculations.php';
 require_admin();
 
 $db = getDB();
@@ -78,6 +79,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   $messageType = 'success';
  } catch (Exception $e) {
   $message = 'Fel vid borttagning: ' . $e->getMessage();
+  $messageType = 'error';
+ }
+ } elseif ($action === 'recalculate') {
+ // Recalculate points for this event
+ try {
+  $stats = recalculateEventPoints($db, $eventId);
+  if ($stats) {
+   $message = "Poäng omräknade! Uppdaterade: {$stats['updated']}, Fel: {$stats['failed']}";
+   $messageType = $stats['failed'] > 0 ? 'warning' : 'success';
+  } else {
+   $message = 'Kunde inte räkna om poäng. Kontrollera att poängskalan är konfigurerad.';
+   $messageType = 'error';
+  }
+ } catch (Exception $e) {
+  $message = 'Fel vid omräkning av poäng: ' . $e->getMessage();
   $messageType = 'error';
  }
  }
@@ -159,10 +175,20 @@ include __DIR__ . '/../includes/layout-header.php';
    <?= h($event['name']) ?> - <?= date('Y-m-d', strtotime($event['date'])) ?>
   </h2>
   </div>
+  <div class="flex gap-sm">
+  <form method="POST" style="display: inline;">
+   <?= csrf_field() ?>
+   <input type="hidden" name="action" value="recalculate">
+   <button type="submit" class="btn btn--primary" onclick="return confirm('Räkna om poäng för alla resultat i detta event?')">
+   <i data-lucide="calculator"></i>
+   Räkna om poäng
+   </button>
+  </form>
   <a href="/admin/results.php" class="btn btn--secondary">
-  <i data-lucide="arrow-left"></i>
-  Tillbaka
+   <i data-lucide="arrow-left"></i>
+   Tillbaka
   </a>
+  </div>
  </div>
 
  <!-- Message -->
