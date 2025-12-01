@@ -5,6 +5,18 @@ require_once __DIR__ . '/router.php';
 $pageInfo = hub_get_current_page();
 $theme = hub_get_theme();
 
+// TEMPORARY DEBUG - Remove after fixing
+if (isset($_GET['debug'])) {
+    header('Content-Type: text/plain');
+    echo "=== INDEX.PHP DEBUG ===\n\n";
+    echo "GET page: " . var_export($_GET['page'] ?? null, true) . "\n";
+    echo "hub_is_logged_in(): " . (hub_is_logged_in() ? 'TRUE' : 'FALSE') . "\n";
+    echo "pageInfo:\n";
+    print_r($pageInfo);
+    echo "\nFile exists: " . (file_exists($pageInfo['file']) ? 'YES' : 'NO') . "\n";
+    exit;
+}
+
 // AJAX request = return only content
 if (hub_is_ajax()) {
     header('Content-Type: text/html; charset=utf-8');
