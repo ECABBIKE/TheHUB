@@ -168,6 +168,8 @@ function importRidersFromCSV($filepath, $db) {
   'ålder' => 'birthyear',
   'alder' => 'birthyear',
   'age' => 'birthyear',
+  // Note: personnummer column is parsed to extract birth_year only
+  // The personnummer itself is NOT stored in the database
   'personnummer' => 'personnummer',
   'pnr' => 'personnummer',
   'ssn' => 'personnummer',
@@ -272,7 +274,8 @@ function importRidersFromCSV($filepath, $db) {
  }
 
  try {
-  // Parse personnummer to birth_year if provided
+  // Extract birth_year from personnummer if provided
+  // Note: personnummer is ONLY used to extract birth_year - it is NOT stored in DB
   $birthYear = null;
   if (!empty($data['personnummer'])) {
   $birthYear = parsePersonnummer($data['personnummer']);

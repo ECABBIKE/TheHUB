@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Changed - Privacy Improvements (2025-12-01)
+
+- **Removed personnummer column from database**
+  - The `personnummer` column has been dropped from the `riders` table
+  - Personnummer in CSV imports is still parsed to extract `birth_year` only
+  - The personnummer value itself is NOT stored in the database
+  - This improves privacy and GDPR compliance
+  - Updated all import files, validators, and documentation to reflect this change
+  - Migration files updated with deprecation notes
+
 ### Added - Major Features (Overnight Rebuild - 2025-01-13)
 
 #### **PRIORITY 1: Critical Fixes**

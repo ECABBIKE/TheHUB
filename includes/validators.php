@@ -28,7 +28,10 @@ function validateEmail($email) {
 }
 
 /**
- * Validate personnummer (Swedish personal identity number)
+ * Parse personnummer (Swedish personal identity number) to extract birth_year
+ *
+ * NOTE: This function is used during CSV import to extract birth_year from
+ * personnummer strings. The personnummer itself is NOT stored in the database.
  *
  * @param string $personnummer Personnummer in format YYYYMMDD-XXXX or YYMMDD-XXXX
  * @return array ['valid' => bool, 'error' => string|null, 'birth_year' => int|null]

@@ -190,7 +190,8 @@ function parseUCIForPreview($filepath, $db) {
   $row = array_map('trim', $row);
 
   // Extract data
-  $personnummer = $row[0];
+  // Note: personnummer from CSV is only used to extract birth_year - NOT stored in database
+  $personnummer = $row[0]; // Used to extract birth_year only
   $firstname = $row[1];
   $lastname = $row[2];
   $email = $row[4];

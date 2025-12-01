@@ -1,14 +1,22 @@
 <?php
 /**
- * V3 Series Page - All competition series with links to standings
+ * V3 Series Page - All competition series with badge design
+ *
+ * Uses the TheHUB Badge Design System for a bold, modern display.
  */
+
+// Include badge component
+require_once HUB_V3_ROOT . '/components/series-badge.php';
 
 $db = hub_db();
 
 try {
-    // Get all series with event and participant counts
+    // Get all series with event and participant counts (including badge styling fields)
     $series = $db->query("
-        SELECT s.id, s.name, s.description, s.year, s.status, s.logo,
+        SELECT s.id, s.name, s.slug, s.description, s.year, s.status,
+               s.type, s.discipline,
+               s.logo, s.logo_light, s.logo_dark,
+               s.gradient_start, s.gradient_end, s.accent_color,
                COUNT(DISTINCT e.id) as event_count,
                (SELECT COUNT(DISTINCT r.cyclist_id)
                 FROM results r
@@ -83,34 +91,14 @@ try {
 </section>
 <?php else: ?>
 
-<div class="series-grid">
-  <?php foreach ($series as $s): ?>
-  <a href="/series/<?= $s['id'] ?>" class="series-card">
-    <div class="series-header">
-      <div class="series-title"><?= htmlspecialchars($s['name']) ?></div>
-      <div class="series-year"><?= $s['year'] ?></div>
-    </div>
-    <?php if ($s['description']): ?>
-    <p class="series-description"><?= htmlspecialchars($s['description']) ?></p>
-    <?php endif; ?>
-    <div class="series-stats">
-      <span class="series-stat">
-        <span class="stat-icon">📅</span>
-        <?= $s['event_count'] ?> <?= $s['event_count'] == 1 ? 'tävling' : 'tävlingar' ?>
-      </span>
-      <?php if ($s['participant_count'] > 0): ?>
-      <span class="series-stat">
-        <span class="stat-icon">👥</span>
-        <?= number_format($s['participant_count']) ?> deltagare
-      </span>
-      <?php endif; ?>
-    </div>
-    <div class="series-action">
-      Visa ställning →
-    </div>
-  </a>
-  <?php endforeach; ?>
-</div>
+<!-- Badge Grid -->
+<?php render_series_badge_grid($series, [
+    'badge_options' => [
+        'show_discipline' => true,
+        'show_cta' => true,
+        'cta_text' => 'Visa ställning'
+    ]
+]); ?>
 
 <?php endif; ?>
 
@@ -164,76 +152,11 @@ try {
   color: var(--color-text-muted);
 }
 
-.series-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
-  gap: var(--space-lg);
-}
-
-.series-card {
-  display: flex;
-  flex-direction: column;
-  background: var(--color-bg-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  padding: var(--space-lg);
-  transition: all var(--transition-fast);
-}
-.series-card:hover {
-  border-color: var(--color-accent);
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-lg);
-}
-
-.series-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: var(--space-sm);
-  margin-bottom: var(--space-sm);
-}
-.series-title {
-  font-size: var(--text-lg);
-  font-weight: var(--weight-semibold);
-  color: var(--color-text);
-}
-.series-year {
-  font-size: var(--text-sm);
-  font-weight: var(--weight-medium);
-  padding: var(--space-2xs) var(--space-sm);
-  background: var(--color-accent);
-  color: var(--color-text-inverse);
-  border-radius: var(--radius-full);
-}
-
-.series-description {
-  font-size: var(--text-sm);
-  color: var(--color-text-secondary);
-  margin: 0 0 var(--space-md) 0;
-  flex: 1;
-}
-
-.series-stats {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-md);
-  font-size: var(--text-sm);
-  color: var(--color-text-secondary);
-  margin-bottom: var(--space-md);
-}
-.series-stat {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2xs);
-}
-.stat-icon {
-  font-size: var(--text-base);
-}
-
-.series-action {
-  font-size: var(--text-sm);
-  font-weight: var(--weight-medium);
-  color: var(--color-accent-text);
+/* Badge grid empty state */
+.badge-grid-empty {
+  text-align: center;
+  padding: var(--space-2xl);
+  color: var(--color-text-muted);
 }
 
 @media (max-width: 599px) {
@@ -245,9 +168,6 @@ try {
   }
   .page-title {
     font-size: var(--text-xl);
-  }
-  .series-card {
-    padding: var(--space-md);
   }
 }
 </style>
