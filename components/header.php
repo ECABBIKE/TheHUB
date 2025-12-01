@@ -1,11 +1,13 @@
 <?php
-$currentUser = hub_current_user();
-$isLoggedIn = hub_is_logged_in();
-$isAdmin = hub_is_admin();
+// Defensive checks for functions
+$currentUser = function_exists('hub_current_user') ? hub_current_user() : null;
+$isLoggedIn = function_exists('hub_is_logged_in') ? hub_is_logged_in() : false;
+$isAdmin = function_exists('hub_is_admin') ? hub_is_admin() : false;
+$hubUrl = defined('HUB_V3_URL') ? HUB_V3_URL : '';
 ?>
 
 <header class="header" role="banner">
-    <a href="<?= HUB_V3_URL ?>/" class="header-brand" aria-label="TheHUB - Gå till startsidan">
+    <a href="<?= $hubUrl ?>/" class="header-brand" aria-label="TheHUB - Gå till startsidan">
         <svg class="header-logo" viewBox="0 0 40 40" aria-hidden="true">
             <circle cx="20" cy="20" r="18" fill="currentColor" opacity="0.1"/>
             <circle cx="20" cy="20" r="18" fill="none" stroke="currentColor" stroke-width="2"/>
@@ -18,7 +20,7 @@ $isAdmin = hub_is_admin();
         <?php if ($isLoggedIn && $currentUser): ?>
 
             <?php if ($isAdmin): ?>
-            <a href="<?= HUB_V3_URL ?>/admin" class="header-admin-link" title="Admin">
+            <a href="<?= $hubUrl ?>/admin" class="header-admin-link" title="Admin">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
                     <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
                     <circle cx="12" cy="12" r="3"/>
@@ -42,7 +44,7 @@ $isAdmin = hub_is_admin();
 
                     <div class="header-dropdown-divider"></div>
 
-                    <a href="<?= HUB_V3_URL ?>/profile" class="header-dropdown-item">
+                    <a href="<?= $hubUrl ?>/profile" class="header-dropdown-item">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
                             <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
                             <circle cx="12" cy="7" r="4"/>
@@ -50,7 +52,7 @@ $isAdmin = hub_is_admin();
                         Min profil
                     </a>
 
-                    <a href="<?= HUB_V3_URL ?>/profile/registrations" class="header-dropdown-item">
+                    <a href="<?= $hubUrl ?>/profile/registrations" class="header-dropdown-item">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
                             <rect x="3" y="4" width="18" height="18" rx="2"/>
                             <line x1="16" y1="2" x2="16" y2="6"/>
@@ -60,7 +62,7 @@ $isAdmin = hub_is_admin();
                         Mina anmälningar
                     </a>
 
-                    <a href="<?= HUB_V3_URL ?>/profile/results" class="header-dropdown-item">
+                    <a href="<?= $hubUrl ?>/profile/results" class="header-dropdown-item">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
                             <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/>
                             <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/>
@@ -75,7 +77,7 @@ $isAdmin = hub_is_admin();
                     <div class="header-dropdown-divider"></div>
 
                     <?php if ($isAdmin): ?>
-                    <a href="<?= HUB_V3_URL ?>/admin" class="header-dropdown-item">
+                    <a href="<?= $hubUrl ?>/admin" class="header-dropdown-item">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
                             <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
                             <circle cx="12" cy="12" r="3"/>
@@ -85,7 +87,7 @@ $isAdmin = hub_is_admin();
                     <div class="header-dropdown-divider"></div>
                     <?php endif; ?>
 
-                    <a href="<?= HUB_V3_URL ?>/logout" class="header-dropdown-item text-error">
+                    <a href="<?= $hubUrl ?>/logout" class="header-dropdown-item text-error">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
                             <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
                             <polyline points="16 17 21 12 16 7"/>
@@ -97,7 +99,7 @@ $isAdmin = hub_is_admin();
             </div>
 
         <?php else: ?>
-            <a href="<?= HUB_V3_URL ?>/login?redirect=<?= urlencode($_SERVER['REQUEST_URI']) ?>" class="btn btn-primary btn-sm">
+            <a href="<?= $hubUrl ?>/login?redirect=<?= urlencode($_SERVER['REQUEST_URI']) ?>" class="btn btn-primary btn-sm">
                 <?php require_once HUB_V3_ROOT . '/components/icons.php'; ?>
                 <?= hub_icon('log-in', 'icon-sm') ?>
                 <span class="header-login-text">Logga in</span>
