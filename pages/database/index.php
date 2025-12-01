@@ -630,7 +630,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
         searchTimeout = setTimeout(() => {
             fetch('/api/search.php?type=' + currentType + '&q=' + encodeURIComponent(query))
-                .then(r => r.json())
+                .then(r => {
+                    if (!r.ok) {
+                        throw new Error('HTTP ' + r.status);
+                    }
+                    return r.json();
+                })
                 .then(data => {
                     searchHint.style.display = 'none';
 
@@ -657,8 +662,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                 })
                 .catch(err => {
+                    console.error('Search error:', err);
                     searchHint.style.display = 'block';
-                    searchHint.textContent = 'Fel vid sökning';
+                    searchHint.textContent = 'Fel vid sökning: ' + err.message;
                 });
         }, 300);
     });
