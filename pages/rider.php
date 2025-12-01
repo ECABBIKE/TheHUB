@@ -260,8 +260,15 @@ try {
  $cutoffDate = date('Y-m-d', strtotime("-{$rankingMonths} months"));
 
  // Calculate ranking using CORRECT formula with multipliers
- $rankingData = calculateSingleRiderRanking($db, $riderId, 'GRAVITY');
- $rankingPoints = round($rankingData['total_weighted_points'] ?? 0);
+ // Use getDB() for DatabaseWrapper (ranking functions need it)
+ $rankingDb = function_exists('getDB') ? getDB() : null;
+ if ($rankingDb) {
+     $rankingData = calculateSingleRiderRanking($rankingDb, $riderId, 'GRAVITY');
+     $rankingPoints = round($rankingData['total_weighted_points'] ?? 0);
+ } else {
+     $rankingData = ['total_weighted_points' => 0, 'events' => []];
+     $rankingPoints = 0;
+ }
  $rankingPosition = null;
  $rankingTotal = 0;
 
