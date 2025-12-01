@@ -13,7 +13,6 @@ Before using the extended import, you must add the new database fields:
 1. Log in to TheHUB admin
 2. Navigate to: `/admin/run-migration-extended-riders.php`
 3. The migration will add these fields:
-   - `personnummer` - Swedish personal number
    - `address` - Street address
    - `postal_code` - Postal code
    - `country` - Country
@@ -58,7 +57,7 @@ See `example_extended_import.csv` for a complete example file.
 
 | Column | Description | Example |
 |--------|-------------|---------|
-| **Födelsedatum** | Personal number (YYYYMMDD-XXXX) | 19400525-0651 |
+| **Födelsedatum** | Personal number (YYYYMMDD-XXXX) - **Parsed to birth_year only, NOT stored** | 19400525-0651 |
 | **Postadress** | Street address | När Andarve 358 |
 | **Postnummer** | Postal code | 62348 |
 | **Ort** | City | Stånga |
@@ -108,11 +107,12 @@ Mark disciplines with any value (leave empty for no):
 
 The following fields are **STRICTLY CONFIDENTIAL** and must never be exposed publicly:
 
-- Personnummer (Personal number)
 - Postadress (Address)
 - Postnummer (Postal code)
 - Telefon (Phone)
 - Emergency contact
+
+**Note:** Personnummer is **NOT stored** in the database. It is only used during import to extract the birth_year.
 
 ### Allowed Uses
 
@@ -124,7 +124,6 @@ Private data may ONLY be used for:
 ### Public Display
 
 Public pages (riders.php, rider.php) will NEVER show:
-- Personal numbers
 - Addresses
 - Phone numbers
 - Emergency contacts
@@ -135,8 +134,7 @@ These fields are only visible to authenticated administrators.
 
 The import will check for duplicates using:
 1. **UCI Code** (if provided)
-2. **Personnummer** (if provided)
-3. **Name + Birth year** (as fallback)
+2. **Name + Birth year** (as fallback)
 
 If a duplicate is found, the existing rider record will be **updated** with new data.
 
@@ -150,7 +148,7 @@ If a duplicate is found, the existing rider record will be **updated** with new 
 
 4. **Disciplines:** To mark a discipline as active, put any non-empty value in the column. The exact value doesn't matter.
 
-5. **Personnummer:** The birth year will be automatically extracted from personnummer if provided
+5. **Personnummer:** The birth year will be automatically extracted from personnummer if provided. **Note: Only birth_year is stored - personnummer is NOT stored in the database.**
 
 6. **Testing:** Start with a small test file (2-3 riders) before importing large datasets
 
@@ -162,7 +160,7 @@ If a duplicate is found, the existing rider record will be **updated** with new 
 
 ### Duplicate errors
 - Check for duplicate rows in your CSV file
-- Look for riders with the same UCI Code or personnummer
+- Look for riders with the same UCI Code or name+birth_year combination
 
 ### Wrong separator detected
 - Ensure consistent use of separator throughout the file
@@ -185,5 +183,8 @@ See `docs/example_extended_import.csv` for a complete example file with 3 sample
 
 ---
 
-**Last Updated:** 2025-11-15
-**Version:** 1.0
+**Last Updated:** 2025-12-01
+**Version:** 1.1
+
+### Changelog
+- 2025-12-01: Removed personnummer storage - only birth_year is extracted and stored

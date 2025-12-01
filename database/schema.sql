@@ -35,7 +35,6 @@ CREATE TABLE IF NOT EXISTS riders (
     firstname VARCHAR(100) NOT NULL,
     lastname VARCHAR(100) NOT NULL,
     birth_year INT,
-    personnummer VARCHAR(15), -- [PRIVATE] Swedish personal number
     gender ENUM('M', 'F', 'K', 'Other') DEFAULT 'M',
 
     -- Club and Team
@@ -85,12 +84,11 @@ CREATE TABLE IF NOT EXISTS riders (
     INDEX idx_active (active),
     INDEX idx_email (email),
     INDEX idx_reset_token (password_reset_token),
-    INDEX idx_personnummer (personnummer),
     INDEX idx_postal_code (postal_code),
     INDEX idx_district (district),
     UNIQUE KEY unique_license (license_number)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
-COMMENT='PRIVACY: Fields personnummer, address, postal_code, phone, emergency_contact are PRIVATE';
+COMMENT='PRIVACY: Fields address, postal_code, phone, emergency_contact are PRIVATE';
 
 -- ============================================================================
 -- CATEGORIES TABLE - DEPRECATED

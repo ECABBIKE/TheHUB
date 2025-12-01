@@ -128,7 +128,7 @@ Markera grenar genom att fylla i kolumnen (tomt = ingen, valfritt värde = ja).
 - **Efternamn**: `Efternamn`, `Last Name`, `Lastname`, `Surname`
 
 ### Personuppgifter
-- **Personnummer**: `Födelsedatum`, `Personnummer`, `PNR`, `SSN`, `Date of Birth`
+- **Personnummer**: `Födelsedatum`, `Personnummer`, `PNR`, `SSN`, `Date of Birth` — **Note: Parsed to extract birth_year only, NOT stored in database**
 - **Födelseår**: `Födelseår`, `Birth Year`, `Year`, `Ålder`, `Age`
 - **Kön**: `Kön`, `Gender`, `Sex`
 
@@ -168,11 +168,12 @@ Markera grenar genom att fylla i kolumnen (tomt = ingen, valfritt värde = ja).
 ## 🔒 Sekretess
 
 Följande fält är **PRIVATA** och visas ALDRIG publikt:
-- Personnummer
 - Adress
 - Postnummer
 - Telefon
 - Nödkontakt
+
+**Obs:** Personnummer lagras INTE i databasen. Det används endast vid import för att extrahera födelseår.
 
 Dessa fält används endast för:
 - Intern administration
@@ -194,8 +195,7 @@ Den första kolumnen används. Exempel: Om du har både `Förnamn` och `First Na
 ### Kan jag importera samma fil flera gånger?
 Ja! Systemet uppdaterar befintliga deltagare baserat på:
 1. UCI-kod (om finns)
-2. Personnummer (om finns)
-3. Namn + födelseår (fallback)
+2. Namn + födelseår (fallback)
 
 ### Vad händer med tomma fält?
 Tomma fält sätts till `NULL` i databasen och påverkar inte befintliga data vid uppdatering.
@@ -217,5 +217,8 @@ För mer hjälp, se `/docs/EXTENDED_IMPORT_GUIDE.md`
 
 ---
 
-**Last Updated:** 2025-11-15
-**Version:** 1.0
+**Last Updated:** 2025-12-01
+**Version:** 1.1
+
+### Changelog
+- 2025-12-01: Updated to clarify personnummer is NOT stored (only birth_year is extracted)

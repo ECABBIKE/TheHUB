@@ -216,7 +216,9 @@ function importUCIRiders($filepath, $db, $importId = null) {
  }
 
  // Extract data according to UCI format position
- $personnummer = $row[0];
+ // Note: Column 0 contains personnummer which is parsed to extract birth_year only
+ // The personnummer itself is NOT stored in the database
+ $personnummer_raw = $row[0]; // Used only to extract birth_year
  $firstname = $row[1];
  $lastname = $row[2];
  $country = $row[3]; // Ignore, always Sweden
@@ -235,11 +237,11 @@ function importUCIRiders($filepath, $db, $importId = null) {
  continue;
  }
 
- // 1. Personnummer → birth_year
- $birth_year = parsePersonnummer($personnummer);
+ // Parse personnummer to extract birth_year (personnummer is NOT stored)
+ $birth_year = parsePersonnummer($personnummer_raw);
  if (!$birth_year) {
  $stats['failed']++;
- $errors[] ="Rad {$lineNumber}: {$firstname} {$lastname} - Ogiltigt personnummer '{$personnummer}'";
+ $errors[] ="Rad {$lineNumber}: {$firstname} {$lastname} - Ogiltigt födelsedatum '{$personnummer_raw}'";
  continue;
  }
 
@@ -478,7 +480,7 @@ include __DIR__ . '/../includes/layout-header.php';
 
   <h4 class="mb-sm text-primary">📋 Kolumner (ingen header behövs):</h4>
   <ol class="gs-list-ml-1-5 gs-list-ml-lg-lh-1-8">
-  <li><strong>Födelsedatum</strong> (YYYYMMDD-XXXX) → parsas till birth_year</li>
+  <li><strong>Personnummer</strong> (YYYYMMDD-XXXX) → parsas till birth_year (personnummer sparas EJ)</li>
   <li><strong>Förnamn</strong> → first_name</li>
   <li><strong>Efternamn</strong> → last_name</li>
   <li><strong>Land</strong> → ignoreras</li>
@@ -501,7 +503,8 @@ include __DIR__ . '/../includes/layout-header.php';
   <div class="mt-md p-md gs-bg-success">
   <p class="text-sm">
   <strong>✨ Automatiska funktioner:</strong><br>
-  • Personnummer parsas automatiskt (både YYYYMMDD-XXXX och YYMMDD-XXXX format)<br>
+  • Födelsedatum parsas automatiskt från personnummer (både YYYYMMDD-XXXX och YYMMDD-XXXX format)<br>
+  • <strong>OBS: Endast födelseår (birth_year) sparas - personnummer lagras EJ</strong><br>
   • Klubbar skapas automatiskt om de inte finns<br>
   • UCI-koder sparas exakt med mellanslag (t.ex."101 637 581 11")<br>
   • Befintliga riders uppdateras om de hittas (via license_number eller namn+födelseår)<br>

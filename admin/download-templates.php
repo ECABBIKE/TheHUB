@@ -15,10 +15,12 @@ if ($template === 'riders') {
     fprintf($output, chr(0xEF).chr(0xBB).chr(0xBF));
 
     // Headers
+    // Note: personnummer column is supported for import but only birth_year is extracted and stored
+    // The personnummer itself is NOT stored in the database
     fputcsv($output, [
         'first_name',
         'last_name',
-        'personnummer',
+        'personnummer',  // Parsed to extract birth_year only - NOT stored
         'birth_year',
         'uci_id',
         'swe_id',

@@ -9,11 +9,12 @@ TheHUB stores sensitive personal information about riders for administrative pur
 The following fields in the `riders` table contain **STRICTLY CONFIDENTIAL** information:
 
 ### High Sensitivity (NEVER expose publicly)
-- `personnummer` - Swedish personal number (YYYYMMDD-XXXX)
 - `address` - Street address
 - `postal_code` - Postal code
 - `phone` - Phone number
 - `emergency_contact` - Emergency contact information
+
+**Note:** The `personnummer` column has been removed from the database (2025-12-01). Personnummer is only used during CSV import to extract birth_year - it is never stored.
 
 ### Medium Sensitivity (Internal use only)
 - `email` - Email address (only show to authenticated admins or rider themselves)
@@ -117,5 +118,8 @@ Contact system administrator or data protection officer if unsure about data han
 
 ---
 
-**Last Updated:** 2025-11-15
-**Version:** 1.0
+**Last Updated:** 2025-12-01
+**Version:** 1.1
+
+### Changelog
+- 2025-12-01: Removed personnummer from private fields list (column dropped from database)

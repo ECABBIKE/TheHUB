@@ -63,8 +63,10 @@ try {
 
 // Run each migration step
 $migrations = [
- // Step 1: Add personnummer field
-"ALTER TABLE riders ADD COLUMN personnummer VARCHAR(15) AFTER birth_year" =>"Add personnummer field",
+ // Step 1: DEPRECATED - personnummer column was dropped 2025-12-01
+ // Only birth_year is stored now, personnummer is NOT stored in the database
+ // This migration step kept for backwards compatibility (will skip if column doesn't exist)
+"ALTER TABLE riders ADD COLUMN personnummer VARCHAR(15) AFTER birth_year" =>"Add personnummer field (DEPRECATED - will be skipped)",
 
  // Step 2: Add address fields
 "ALTER TABLE riders ADD COLUMN address VARCHAR(255) AFTER city" =>"Add address field",

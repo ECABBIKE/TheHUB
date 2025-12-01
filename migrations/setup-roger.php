@@ -21,11 +21,12 @@ echo "<h1>Setup: Roger Edvinsson</h1>";
 $pdo = hub_db();
 
 // User data
+// NOTE: personnummer is no longer stored - only birth_year is used
 $userData = [
     'firstname' => 'Roger',
     'lastname' => 'Edvinsson',
     'birth_year' => 1975,
-    'personnummer' => '750702',
+    // personnummer removed 2025-12-01 - no longer stored in database
     'email' => 'roger@ecab.bike',
     'license_number' => '10079720543', // UCI-ID
     'gender' => 'M',
@@ -85,10 +86,7 @@ if ($existingRider) {
         $insertFields[] = 'birth_year';
         $insertValues[] = $userData['birth_year'];
     }
-    if (in_array('personnummer', $columns)) {
-        $insertFields[] = 'personnummer';
-        $insertValues[] = $userData['personnummer'];
-    }
+    // NOTE: personnummer column removed 2025-12-01 - no longer stored
     if (in_array('license_number', $columns)) {
         $insertFields[] = 'license_number';
         $insertValues[] = $userData['license_number'];
