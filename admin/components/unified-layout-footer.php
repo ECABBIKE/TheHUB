@@ -2,7 +2,7 @@
         </main>
     </div>
 
-    <?php include HUB_V3_ROOT . '/components/mobile-nav.php'; ?>
+    <?php include __DIR__ . '/admin-mobile-nav.php'; ?>
     <?php include HUB_V3_ROOT . '/components/footer.php'; ?>
 
     <!-- Toast Container -->
