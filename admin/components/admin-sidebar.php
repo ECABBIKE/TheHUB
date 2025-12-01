@@ -63,6 +63,20 @@ $admin_nav = [
         'url' => '/admin/ranking',
         'active' => strpos($current_admin_page, 'ranking') !== false
     ],
+    [
+        'id' => 'media',
+        'label' => 'Media',
+        'icon' => '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>',
+        'url' => '/admin/media',
+        'active' => $current_admin_page === 'media'
+    ],
+    [
+        'id' => 'sponsors',
+        'label' => 'Sponsorer',
+        'icon' => '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.42 4.58a5.4 5.4 0 0 0-7.65 0l-.77.78-.77-.78a5.4 5.4 0 0 0-7.65 0C1.46 6.7 1.33 10.28 4 13l8 8 8-8c2.67-2.72 2.54-6.3.42-8.42z"/></svg>',
+        'url' => '/admin/sponsors',
+        'active' => $current_admin_page === 'sponsors'
+    ],
     // Venues temporarily hidden - TODO: Re-enable when venues functionality is complete
     // [
     //     'id' => 'venues',
