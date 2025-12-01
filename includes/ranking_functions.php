@@ -9,16 +9,18 @@
  */
 
 // ============================================================================
-// DATABASE WRAPPER CLASS - Required by ranking system
+// DATABASE WRAPPER CLASS - REQUIRED BY RANKING SYSTEM
 // ============================================================================
 class DatabaseWrapper {
     private $pdo;
+
     public function __construct($pdo) {
         if (!($pdo instanceof PDO)) {
             throw new Exception('DatabaseWrapper requires PDO instance');
         }
         $this->pdo = $pdo;
     }
+
     public function query($sql, $params = []) {
         try {
             $stmt = $this->pdo->prepare($sql);
@@ -29,22 +31,26 @@ class DatabaseWrapper {
             return false;
         }
     }
+
     public function getRow($sql, $params = []) {
         $stmt = $this->query($sql, $params);
         if (!$stmt) return [];
         $result = $stmt->fetch(PDO::FETCH_ASSOC);
         return $result ?: [];
     }
+
     public function getAll($sql, $params = []) {
         $stmt = $this->query($sql, $params);
         if (!$stmt) return [];
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
+
     public function getValue($sql, $params = []) {
         $stmt = $this->query($sql, $params);
         if (!$stmt) return null;
         return $stmt->fetchColumn();
     }
+
     public function insert($table, $data) {
         $fields = array_keys($data);
         $values = array_values($data);
@@ -54,6 +60,7 @@ class DatabaseWrapper {
         if (!$stmt) return 0;
         return $this->pdo->lastInsertId();
     }
+
     public function update($table, $data, $where, $whereParams = []) {
         $fields = [];
         foreach (array_keys($data) as $field) {
@@ -65,20 +72,27 @@ class DatabaseWrapper {
         if (!$stmt) return 0;
         return $stmt->rowCount();
     }
+
     public function delete($table, $where, $params = []) {
         $sql = "DELETE FROM {$table} WHERE {$where}";
         $stmt = $this->query($sql, $params);
         if (!$stmt) return 0;
         return $stmt->rowCount();
     }
-    public function beginTransaction() { return $this->pdo->beginTransaction(); }
-    public function commit() { return $this->pdo->commit(); }
-    public function rollback() { return $this->pdo->rollBack(); }
+
+    public function beginTransaction() {
+        return $this->pdo->beginTransaction();
+    }
+
+    public function commit() {
+        return $this->pdo->commit();
+    }
+
+    public function rollback() {
+        return $this->pdo->rollBack();
+    }
 }
 // ============================================================================
-
-// Valid disciplines for ranking
-define('RANKING_DISCIPLINES', ['ENDURO', 'DH', 'GRAVITY']);
 
 // Valid disciplines for ranking
 define('RANKING_DISCIPLINES', ['ENDURO', 'DH', 'GRAVITY']);
@@ -1251,6 +1265,7 @@ function insertRankingPointsBatch($db, $batch) {
     $db->query($sql, $params);
 
     return count($batch);
+}
 }
 
 /**
