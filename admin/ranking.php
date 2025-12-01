@@ -133,7 +133,8 @@ $page_actions = '<a href="/ranking/" target="_blank" class="btn-admin btn-admin-
     Publik vy
 </a>';
 
-include __DIR__ . '/components/admin-layout.php';
+// Include unified layout (uses same layout as public site)
+include __DIR__ . '/components/unified-layout.php';
 ?>
 
 <?php if ($message): ?>
@@ -387,4 +388,4 @@ function updateBar(index, value) {
 }
 </script>
 
-<?php include __DIR__ . '/components/admin-footer.php'; ?>
+<?php include __DIR__ . '/components/unified-layout-footer.php'; ?>

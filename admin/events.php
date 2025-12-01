@@ -84,8 +84,8 @@ $page_actions = '<a href="/admin/events/create" class="btn-admin btn-admin-prima
     Nytt Event
 </a>';
 
-// Include admin layout
-include __DIR__ . '/components/admin-layout.php';
+// Include unified layout (uses same layout as public site)
+include __DIR__ . '/components/unified-layout.php';
 ?>
 
 <?php if (isset($error)): ?>
@@ -267,4 +267,4 @@ async function updateDiscipline(eventId, discipline) {
 }
 </script>
 
-<?php include __DIR__ . '/components/admin-footer.php'; ?>
+<?php include __DIR__ . '/components/unified-layout-footer.php'; ?>

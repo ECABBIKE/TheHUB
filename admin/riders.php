@@ -109,8 +109,8 @@ function buildSortUrl($field, $currentSort, $currentOrder, $search, $club_id, $o
     return $url;
 }
 
-// Include admin layout
-include __DIR__ . '/components/admin-layout.php';
+// Include unified layout (uses same layout as public site)
+include __DIR__ . '/components/unified-layout.php';
 ?>
 
 <?php if ($selectedClub): ?>
@@ -447,4 +447,4 @@ function deleteRider(id, name) {
 }
 </style>
 
-<?php include __DIR__ . '/components/admin-footer.php'; ?>
+<?php include __DIR__ . '/components/unified-layout-footer.php'; ?>
