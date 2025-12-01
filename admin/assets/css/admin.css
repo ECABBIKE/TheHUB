@@ -1037,15 +1037,20 @@
    IMPORT SECTIONS - COMPACT LAYOUT
    ======================================================================== */
 
+.admin-import-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: var(--space-md);
+}
+
 .admin-import-section {
     background: var(--color-bg-surface);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-lg);
-    padding: var(--space-lg);
+    padding: var(--space-md);
     display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: var(--space-lg);
+    flex-direction: column;
+    gap: var(--space-sm);
     transition: all 0.2s ease;
 }
 
@@ -1056,14 +1061,13 @@
 
 .admin-import-section-header {
     display: flex;
-    gap: var(--space-md);
-    align-items: flex-start;
-    flex: 1;
+    gap: var(--space-sm);
+    align-items: center;
 }
 
 .admin-import-section-icon {
-    width: 48px;
-    height: 48px;
+    width: 36px;
+    height: 36px;
     border-radius: var(--radius-md);
     display: flex;
     align-items: center;
@@ -1072,8 +1076,8 @@
 }
 
 .admin-import-section-icon svg {
-    width: 24px;
-    height: 24px;
+    width: 18px;
+    height: 18px;
     stroke: currentColor;
     fill: none;
     stroke-width: 2;
@@ -1081,25 +1085,44 @@
 
 .admin-import-section-content {
     flex: 1;
+    min-width: 0;
 }
 
 .admin-import-section-title {
-    font-size: var(--text-lg);
+    font-size: var(--text-sm);
     font-weight: var(--weight-semibold);
     color: var(--color-text-primary);
-    margin: 0 0 var(--space-xs) 0;
+    margin: 0;
+    line-height: 1.2;
 }
 
 .admin-import-section-description {
-    font-size: var(--text-sm);
+    font-size: var(--text-xs);
     color: var(--color-text-secondary);
-    margin: 0;
+    margin: var(--space-2xs) 0 0 0;
+    line-height: 1.3;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
 }
 
 .admin-import-section-actions {
     display: flex;
-    gap: var(--space-sm);
-    flex-shrink: 0;
+    gap: var(--space-xs);
+    margin-top: auto;
+}
+
+.admin-import-section-actions .btn-admin {
+    flex: 1;
+    justify-content: center;
+    padding: var(--space-xs) var(--space-sm);
+    font-size: var(--text-xs);
+}
+
+.admin-import-section-actions .btn-admin svg {
+    width: 14px;
+    height: 14px;
 }
 
 /* Button color variants */
@@ -1133,20 +1156,89 @@
     transform: translateY(-1px);
 }
 
-/* Mobile responsive */
-@media (max-width: 768px) {
-    .admin-import-section {
-        flex-direction: column;
-        align-items: stretch;
+/* Desktop large: 4 columns */
+@media (min-width: 1200px) {
+    .admin-import-grid {
+        grid-template-columns: repeat(4, 1fr);
+    }
+}
+
+/* Desktop: 3 columns */
+@media (min-width: 900px) and (max-width: 1199px) {
+    .admin-import-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+/* Tablet landscape: 2 columns */
+@media (min-width: 600px) and (max-width: 899px) {
+    .admin-import-grid {
+        grid-template-columns: repeat(2, 1fr);
     }
 
-    .admin-import-section-actions {
-        justify-content: stretch;
+    .admin-import-section-description {
+        -webkit-line-clamp: 1;
+    }
+}
+
+/* Mobile/Tablet portrait: 2 columns compact */
+@media (min-width: 400px) and (max-width: 599px) {
+    .admin-import-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: var(--space-sm);
+    }
+
+    .admin-import-section {
+        padding: var(--space-sm);
+    }
+
+    .admin-import-section-icon {
+        width: 32px;
+        height: 32px;
+    }
+
+    .admin-import-section-icon svg {
+        width: 16px;
+        height: 16px;
+    }
+
+    .admin-import-section-description {
+        display: none;
     }
 
     .admin-import-section-actions .btn-admin {
+        padding: var(--space-xs);
+    }
+
+    .admin-import-section-actions .btn-admin span {
+        display: none;
+    }
+}
+
+/* Small mobile: 1 column */
+@media (max-width: 399px) {
+    .admin-import-grid {
+        grid-template-columns: 1fr;
+        gap: var(--space-sm);
+    }
+
+    .admin-import-section {
+        flex-direction: row;
+        align-items: center;
+        padding: var(--space-sm);
+    }
+
+    .admin-import-section-header {
         flex: 1;
-        justify-content: center;
+    }
+
+    .admin-import-section-description {
+        display: none;
+    }
+
+    .admin-import-section-actions {
+        margin-top: 0;
+        flex-shrink: 0;
     }
 }
 
