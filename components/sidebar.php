@@ -4,12 +4,40 @@
  * Uses Lucide-style SVG icons
  * Includes admin navigation for admin users
  */
-require_once HUB_V3_ROOT . '/components/icons.php';
+
+// Ensure v3-config is loaded
+if (!defined('HUB_V3_ROOT')) {
+    $v3Config = __DIR__ . '/../v3-config.php';
+    if (file_exists($v3Config)) {
+        require_once $v3Config;
+    } else {
+        // Fallback definition
+        define('HUB_V3_ROOT', dirname(__DIR__));
+    }
+}
+
+require_once __DIR__ . '/icons.php';
 
 $currentPage = $pageInfo['page'] ?? 'dashboard';
 $currentSection = $pageInfo['section'] ?? '';
-$isAdminUser = hub_is_admin();
+$isAdminUser = function_exists('hub_is_admin') ? hub_is_admin() : false;
 $isAdminSection = strpos($_SERVER['REQUEST_URI'], '/admin') === 0;
+
+// Fallback for hub_is_nav_active if not defined
+if (!function_exists('hub_is_nav_active')) {
+    function hub_is_nav_active($navId, $currentPage) {
+        return $navId === $currentPage;
+    }
+}
+
+// Fallback nav items if HUB_NAV not defined
+$sidebarNav = defined('HUB_NAV') ? HUB_NAV : [
+    ['id' => 'calendar', 'label' => 'Kalender', 'icon' => 'calendar', 'url' => '/calendar', 'aria' => 'Kalender'],
+    ['id' => 'results', 'label' => 'Resultat', 'icon' => 'flag', 'url' => '/results', 'aria' => 'Resultat'],
+    ['id' => 'series', 'label' => 'Serier', 'icon' => 'trophy', 'url' => '/series', 'aria' => 'Serier'],
+    ['id' => 'database', 'label' => 'Databas', 'icon' => 'search', 'url' => '/database', 'aria' => 'Databas'],
+    ['id' => 'ranking', 'label' => 'Ranking', 'icon' => 'trending-up', 'url' => '/ranking', 'aria' => 'Ranking'],
+];
 
 // Admin navigation items
 $adminNav = [
@@ -60,7 +88,7 @@ function isAdminPageActive($itemId, $requestUri) {
     <?php endif; ?>
 
     <!-- Public Navigation -->
-    <?php foreach (HUB_NAV as $item): ?>
+    <?php foreach ($sidebarNav as $item): ?>
       <?php $isActive = !$isAdminSection && hub_is_nav_active($item['id'], $currentPage); ?>
       <a href="<?= htmlspecialchars($item['url']) ?>"
          class="sidebar-link<?= $isActive ? ' is-active' : '' ?>"
