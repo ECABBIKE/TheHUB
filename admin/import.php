@@ -168,203 +168,193 @@ include __DIR__ . '/components/unified-layout.php';
   <div class="grid grid-cols-1 md-grid-cols-2 gap-md mb-lg">
 
   <!-- Deltagare -->
-  <div class="card" style="border-left: 4px solid var(--gs-success);">
-   <div class="card-header">
-   <h2 class="">
-    <i data-lucide="users"></i>
-    Deltagare
-   </h2>
+  <div class="admin-import-section" style="border-left: 4px solid var(--color-success);">
+   <div class="admin-import-section-header">
+    <div class="admin-import-section-icon" style="background: rgba(34, 197, 94, 0.1); color: var(--color-success);">
+     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+    </div>
+    <div class="admin-import-section-content">
+     <h3 class="admin-import-section-title">Deltagare</h3>
+     <p class="admin-import-section-description">Importera cyklister med klubb, licens och personuppgifter.</p>
+    </div>
    </div>
-   <div class="card-body">
-   <p class="text-sm text-secondary mb-md">
-    Importera cyklister med klubb, licens och personuppgifter.
-   </p>
-   <div class="flex gap-sm">
-    <a href="/admin/download-templates.php?template=riders" class="btn btn--secondary btn--sm">
-    <i data-lucide="download"></i>
-    Mall
+   <div class="admin-import-section-actions">
+    <a href="/admin/download-templates.php?template=riders" class="btn-admin btn-admin-secondary btn-admin-sm">
+     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+     Mall
     </a>
-    <a href="/admin/import-riders.php" class="btn btn-success btn--sm flex-1">
-    <i data-lucide="upload"></i>
-    Importera
+    <a href="/admin/import-riders.php" class="btn-admin btn-admin-success btn-admin-sm">
+     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+     Importera
     </a>
-   </div>
    </div>
   </div>
 
   <!-- Resultat -->
-  <div class="card" style="border-left: 4px solid var(--gs-warning);">
-   <div class="card-header">
-   <h2 class="">
-    <i data-lucide="flag"></i>
-    Resultat
-   </h2>
+  <div class="admin-import-section" style="border-left: 4px solid var(--color-accent);">
+   <div class="admin-import-section-header">
+    <div class="admin-import-section-icon" style="background: rgba(245, 158, 11, 0.1); color: var(--color-accent);">
+     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+    </div>
+    <div class="admin-import-section-content">
+     <h3 class="admin-import-section-title">Resultat</h3>
+     <p class="admin-import-section-description">Importera Enduro (SS1-SS15) eller Downhill (Run1, Run2) resultat.</p>
+    </div>
    </div>
-   <div class="card-body">
-   <p class="text-sm text-secondary mb-md">
-    Importera Enduro (SS1-SS15) eller Downhill (Run1, Run2) resultat.
-   </p>
-   <div class="flex gap-sm">
-    <a href="/admin/import-results.php?template=enduro" class="btn btn--secondary btn--sm">
-    <i data-lucide="download"></i>
-    Mall
+   <div class="admin-import-section-actions">
+    <a href="/admin/import-results.php?template=enduro" class="btn-admin btn-admin-secondary btn-admin-sm">
+     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+     Mall
     </a>
-    <a href="/admin/import-results.php" class="btn btn-warning btn--sm flex-1">
-    <i data-lucide="upload"></i>
-    Importera
+    <a href="/admin/import-results.php" class="btn-admin btn-admin-warning btn-admin-sm">
+     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+     Importera
     </a>
-   </div>
    </div>
   </div>
 
   <!-- Events -->
-  <div class="card" style="border-left: 4px solid var(--gs-info);">
-   <div class="card-header">
-   <h2 class="">
-    <i data-lucide="calendar"></i>
-    Events
-   </h2>
+  <div class="admin-import-section" style="border-left: 4px solid var(--color-info);">
+   <div class="admin-import-section-header">
+    <div class="admin-import-section-icon" style="background: rgba(59, 130, 246, 0.1); color: var(--color-info);">
+     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+    </div>
+    <div class="admin-import-section-content">
+     <h3 class="admin-import-section-title">Events</h3>
+     <p class="admin-import-section-description">Importera events med datum, plats, arrangör och mer.</p>
+    </div>
    </div>
-   <div class="card-body">
-   <p class="text-sm text-secondary mb-md">
-    Importera events med datum, plats, arrangör och mer.
-   </p>
-   <div class="flex gap-sm">
-    <a href="/admin/import-events.php?template=1" class="btn btn--secondary btn--sm">
-    <i data-lucide="download"></i>
-    Mall
+   <div class="admin-import-section-actions">
+    <a href="/admin/import-events.php?template=1" class="btn-admin btn-admin-secondary btn-admin-sm">
+     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+     Mall
     </a>
-    <a href="/admin/import-events.php" class="btn btn-info btn--sm flex-1">
-    <i data-lucide="upload"></i>
-    Importera
+    <a href="/admin/import-events.php" class="btn-admin btn-admin-info btn-admin-sm">
+     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+     Importera
     </a>
-   </div>
    </div>
   </div>
 
   <!-- Poängmallar -->
-  <div class="card" style="border-left: 4px solid var(--primary);">
-   <div class="card-header">
-   <h2 class="">
-    <i data-lucide="trophy"></i>
-    Poängmallar
-   </h2>
+  <div class="admin-import-section" style="border-left: 4px solid var(--color-accent);">
+   <div class="admin-import-section-header">
+    <div class="admin-import-section-icon" style="background: rgba(245, 158, 11, 0.1); color: var(--color-accent);">
+     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+    </div>
+    <div class="admin-import-section-content">
+     <h3 class="admin-import-section-title">Poängmallar</h3>
+     <p class="admin-import-section-description">Importera poängskala för serier och tävlingar.</p>
+    </div>
    </div>
-   <div class="card-body">
-   <p class="text-sm text-secondary mb-md">
-    Importera poängskala för serier och tävlingar.
-   </p>
-   <div class="flex gap-sm">
-    <a href="/templates/poangmall-standard.csv" class="btn btn--secondary btn--sm" download>
-    <i data-lucide="download"></i>
-    Mall
+   <div class="admin-import-section-actions">
+    <a href="/templates/poangmall-standard.csv" class="btn-admin btn-admin-secondary btn-admin-sm" download>
+     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+     Mall
     </a>
-    <a href="/admin/point-scales.php" class="btn btn--primary btn--sm flex-1">
-    <i data-lucide="settings"></i>
-    Hantera
+    <a href="/admin/point-scales.php" class="btn-admin btn-admin-primary btn-admin-sm">
+     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+     Hantera
     </a>
-   </div>
    </div>
   </div>
 
   <!-- Gravity ID -->
-  <div class="card" style="border-left: 4px solid #764ba2;">
-   <div class="card-header">
-   <h2 class="">
-    <i data-lucide="id-card"></i>
-    Gravity ID
-   </h2>
+  <div class="admin-import-section" style="border-left: 4px solid #764ba2;">
+   <div class="admin-import-section-header">
+    <div class="admin-import-section-icon" style="background: rgba(118, 75, 162, 0.1); color: #764ba2;">
+     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><polyline points="17 11 19 13 23 9"/></svg>
+    </div>
+    <div class="admin-import-section-content">
+     <h3 class="admin-import-section-title">Gravity ID</h3>
+     <p class="admin-import-section-description">Tilldela Gravity ID för medlemsrabatter vid eventanmälan.</p>
+    </div>
    </div>
-   <div class="card-body">
-   <p class="text-sm text-secondary mb-md">
-    Tilldela Gravity ID för medlemsrabatter vid eventanmälan.
-   </p>
-   <div class="flex gap-sm">
-    <a href="/admin/import-gravity-id.php?template=1" class="btn btn--secondary btn--sm">
-    <i data-lucide="download"></i>
-    Mall
+   <div class="admin-import-section-actions">
+    <a href="/admin/import-gravity-id.php?template=1" class="btn-admin btn-admin-secondary btn-admin-sm">
+     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+     Mall
     </a>
-    <a href="/admin/import-gravity-id.php" class="btn btn--sm flex-1" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
-    <i data-lucide="upload"></i>
-    Importera
+    <a href="/admin/import-gravity-id.php" class="btn-admin btn-admin-sm" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+     Importera
     </a>
-   </div>
    </div>
   </div>
   </div>
 
   <!-- Import Tools -->
-  <h3 class="mb-md mt-lg">
-  <i data-lucide="wrench"></i>
-  Verktyg
+  <h3 style="margin-bottom: var(--space-md); margin-top: var(--space-lg); display: flex; align-items: center; gap: var(--space-sm);">
+   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 20px; height: 20px;"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+   Verktyg
   </h3>
   <div class="grid grid-cols-1 md-grid-cols-2 gap-md mb-lg">
-  <!-- Berika Ryttardata -->
-  <div class="card" style="border-left: 4px solid var(--gs-success);">
-   <div class="card-header">
-   <h2 class="">
-    <i data-lucide="user-plus"></i>
-    Berika Ryttardata
-   </h2>
+   <!-- Berika Ryttardata -->
+   <div class="admin-import-section" style="border-left: 4px solid var(--color-success);">
+    <div class="admin-import-section-header">
+     <div class="admin-import-section-icon" style="background: rgba(34, 197, 94, 0.1); color: var(--color-success);">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
+     </div>
+     <div class="admin-import-section-content">
+      <h3 class="admin-import-section-title">Berika Ryttardata</h3>
+      <p class="admin-import-section-description">Uppdatera SWE ID-ryttare med saknad data från gamla anmälningar.</p>
+     </div>
+    </div>
+    <div class="admin-import-section-actions">
+     <a href="/admin/enrich-riders.php" class="btn-admin btn-admin-success btn-admin-sm">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      Berika data
+     </a>
+    </div>
    </div>
-   <div class="card-body">
-   <p class="text-sm text-secondary mb-md">
-    Uppdatera SWE ID-ryttare med saknad data från gamla anmälningar.
-   </p>
-   <a href="/admin/enrich-riders.php" class="btn btn-success btn--sm">
-    <i data-lucide="upload"></i>
-    Berika data
-   </a>
-   </div>
-  </div>
 
-  <!-- Kontrollera License Numbers -->
-  <div class="card" style="border-left: 4px solid var(--gs-warning);">
-   <div class="card-header">
-   <h2 class="">
-    <i data-lucide="shield-check"></i>
-    Kontrollera License Numbers
-   </h2>
+   <!-- Kontrollera License Numbers -->
+   <div class="admin-import-section" style="border-left: 4px solid var(--color-accent);">
+    <div class="admin-import-section-header">
+     <div class="admin-import-section-icon" style="background: rgba(245, 158, 11, 0.1); color: var(--color-accent);">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>
+     </div>
+     <div class="admin-import-section-content">
+      <h3 class="admin-import-section-title">Kontrollera License Numbers</h3>
+      <p class="admin-import-section-description">Hitta och konvertera ogiltiga license numbers till SWE ID.</p>
+     </div>
+    </div>
+    <div class="admin-import-section-actions">
+     <a href="/admin/check-license-numbers.php" class="btn-admin btn-admin-warning btn-admin-sm">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      Kontrollera
+     </a>
+    </div>
    </div>
-   <div class="card-body">
-   <p class="text-sm text-secondary mb-md">
-    Hitta och konvertera ogiltiga license numbers till SWE ID.
-   </p>
-   <a href="/admin/check-license-numbers.php" class="btn btn-warning btn--sm">
-    <i data-lucide="search"></i>
-    Kontrollera
-   </a>
-   </div>
-  </div>
 
-  <!-- Hitta Dubbletter -->
-  <div class="card" style="border-left: 4px solid var(--gs-danger);">
-   <div class="card-header">
-   <h2 class="">
-    <i data-lucide="users"></i>
-    Hitta Dubbletter
-   </h2>
+   <!-- Hitta Dubbletter -->
+   <div class="admin-import-section" style="border-left: 4px solid var(--color-error);">
+    <div class="admin-import-section-header">
+     <div class="admin-import-section-icon" style="background: rgba(239, 68, 68, 0.1); color: var(--color-error);">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+     </div>
+     <div class="admin-import-section-content">
+      <h3 class="admin-import-section-title">Hitta Dubbletter</h3>
+      <p class="admin-import-section-description">Smart sökning efter dubbletter med fuzzy name matching.</p>
+     </div>
+    </div>
+    <div class="admin-import-section-actions">
+     <a href="/admin/find-duplicates.php" class="btn-admin btn-admin-danger btn-admin-sm">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M6 21V9a9 9 0 0 0 9 9"/></svg>
+      Hitta
+     </a>
+    </div>
    </div>
-   <div class="card-body">
-   <p class="text-sm text-secondary mb-md">
-    Smart sökning efter dubbletter med fuzzy name matching.
-   </p>
-   <a href="/admin/find-duplicates.php" class="btn btn-danger btn--sm">
-    <i data-lucide="git-merge"></i>
-    Hitta
-   </a>
-   </div>
-  </div>
   </div>
 
   <!-- Format Guide -->
-  <div class="card">
-  <div class="card-header">
-   <h2 class="">
-   <i data-lucide="info"></i>
-   Format-guide
-   </h2>
-  </div>
+  <div class="admin-card">
+   <div class="admin-card-header">
+    <h2 style="display: flex; align-items: center; gap: var(--space-sm);">
+     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 20px; height: 20px;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+     Format-guide
+    </h2>
+   </div>
   <div class="card-body">
    <div class="grid grid-cols-1 md-grid-cols-2 gap-md">
    <details class="gs-details">

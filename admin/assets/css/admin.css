@@ -590,7 +590,9 @@
     box-shadow: var(--shadow-md);
 }
 
-.admin-stat-card .stat-icon {
+/* Stat icon - supports both .stat-icon and .admin-stat-icon class names */
+.admin-stat-card .stat-icon,
+.admin-stat-card .admin-stat-icon {
     width: 48px;
     height: 48px;
     display: flex;
@@ -599,11 +601,16 @@
     background: rgba(245, 158, 11, 0.1);
     border-radius: var(--radius-md);
     color: var(--color-accent);
+    flex-shrink: 0;
 }
 
-.admin-stat-card .stat-icon svg {
+.admin-stat-card .stat-icon svg,
+.admin-stat-card .admin-stat-icon svg {
     width: 24px;
     height: 24px;
+    stroke: currentColor;
+    fill: none;
+    stroke-width: 2;
 }
 
 .admin-stat-card .stat-value {
@@ -783,6 +790,60 @@
 .admin-table .table-actions {
     display: flex;
     gap: var(--space-xs);
+    justify-content: flex-end;
+}
+
+/* ========================================================================
+   ACTION BUTTON ICONS - VISIBILITY FIX
+   ======================================================================== */
+
+.table-actions .btn-admin {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 32px;
+    min-height: 32px;
+    padding: var(--space-xs);
+}
+
+.table-actions .btn-admin svg {
+    width: 16px !important;
+    height: 16px !important;
+    display: block !important;
+    flex-shrink: 0;
+    stroke: currentColor;
+    fill: none;
+}
+
+/* Ensure SVG paths are visible */
+.btn-admin svg path,
+.btn-admin svg line,
+.btn-admin svg polyline,
+.btn-admin svg circle,
+.btn-admin svg rect {
+    stroke: currentColor;
+    stroke-width: 2;
+}
+
+/* Action button color variants */
+.btn-admin-view {
+    color: #0066CC;
+}
+
+.btn-admin-view:hover {
+    background: rgba(0, 102, 204, 0.1);
+    border-color: #0066CC;
+    color: #0066CC;
+}
+
+.btn-admin-edit {
+    color: #0EA5E9;
+}
+
+.btn-admin-edit:hover {
+    background: rgba(14, 165, 233, 0.1);
+    border-color: #0EA5E9;
+    color: #0EA5E9;
 }
 
 /* ========================================================================
@@ -969,6 +1030,123 @@
 
     .admin-form-row {
         grid-template-columns: 1fr;
+    }
+}
+
+/* ========================================================================
+   IMPORT SECTIONS - COMPACT LAYOUT
+   ======================================================================== */
+
+.admin-import-section {
+    background: var(--color-bg-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    padding: var(--space-lg);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--space-lg);
+    transition: all 0.2s ease;
+}
+
+.admin-import-section:hover {
+    border-color: var(--color-accent);
+    box-shadow: var(--shadow-md);
+}
+
+.admin-import-section-header {
+    display: flex;
+    gap: var(--space-md);
+    align-items: flex-start;
+    flex: 1;
+}
+
+.admin-import-section-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.admin-import-section-icon svg {
+    width: 24px;
+    height: 24px;
+    stroke: currentColor;
+    fill: none;
+    stroke-width: 2;
+}
+
+.admin-import-section-content {
+    flex: 1;
+}
+
+.admin-import-section-title {
+    font-size: var(--text-lg);
+    font-weight: var(--weight-semibold);
+    color: var(--color-text-primary);
+    margin: 0 0 var(--space-xs) 0;
+}
+
+.admin-import-section-description {
+    font-size: var(--text-sm);
+    color: var(--color-text-secondary);
+    margin: 0;
+}
+
+.admin-import-section-actions {
+    display: flex;
+    gap: var(--space-sm);
+    flex-shrink: 0;
+}
+
+/* Button color variants */
+.btn-admin-success {
+    background: var(--color-success);
+    color: white;
+}
+
+.btn-admin-success:hover {
+    background: #16a34a;
+    transform: translateY(-1px);
+}
+
+.btn-admin-warning {
+    background: var(--color-accent);
+    color: white;
+}
+
+.btn-admin-warning:hover {
+    background: var(--color-accent-hover);
+    transform: translateY(-1px);
+}
+
+.btn-admin-info {
+    background: var(--color-info);
+    color: white;
+}
+
+.btn-admin-info:hover {
+    background: #2563eb;
+    transform: translateY(-1px);
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+    .admin-import-section {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .admin-import-section-actions {
+        justify-content: stretch;
+    }
+
+    .admin-import-section-actions .btn-admin {
+        flex: 1;
+        justify-content: center;
     }
 }
 
