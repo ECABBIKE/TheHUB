@@ -8,7 +8,7 @@
     <!-- Toast Container -->
     <div id="toast-container" class="toast-container"></div>
 
-    <script src="<?= hub_asset('js/theme.js') ?>"></script>
+    <!-- Theme.js removed - always light theme -->
     <script src="<?= hub_asset('js/app.js') ?>"></script>
 </body>
 </html>
