@@ -6,6 +6,10 @@
 $db = hub_db();
 $clubId = intval($pageInfo['params']['id'] ?? 0);
 
+// Load filter setting from admin configuration
+$publicSettings = require HUB_V3_ROOT . '/config/public_settings.php';
+$filter = $publicSettings['public_riders_display'] ?? 'all';
+
 if (!$clubId) {
     header('Location: /riders');
     exit;
@@ -22,14 +26,25 @@ try {
         return;
     }
 
-    // Fetch club members WITH RESULTS ONLY
-    $stmt = $db->prepare("
-        SELECT DISTINCT r.id, r.firstname, r.lastname, r.birth_year, r.gender
-        FROM riders r
-        INNER JOIN results res ON r.id = res.cyclist_id
-        WHERE r.club_id = ? AND r.active = 1
-        ORDER BY r.lastname, r.firstname
-    ");
+    // Fetch club members based on admin filter setting
+    if ($filter === 'with_results') {
+        // Show only riders with results
+        $stmt = $db->prepare("
+            SELECT DISTINCT r.id, r.firstname, r.lastname, r.birth_year, r.gender
+            FROM riders r
+            INNER JOIN results res ON r.id = res.cyclist_id
+            WHERE r.club_id = ? AND r.active = 1
+            ORDER BY r.lastname, r.firstname
+        ");
+    } else {
+        // Show all active members
+        $stmt = $db->prepare("
+            SELECT id, firstname, lastname, birth_year, gender
+            FROM riders
+            WHERE club_id = ? AND active = 1
+            ORDER BY lastname, firstname
+        ");
+    }
     $stmt->execute([$clubId]);
     $members = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
