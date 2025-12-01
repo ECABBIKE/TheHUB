@@ -82,10 +82,12 @@ if ($club_id) {
     $selectedClub = $db->getRow("SELECT * FROM clubs WHERE id = ?", [$club_id]);
 }
 
-// Helper function for age calculation
-function calculateAge($birthYear) {
-    if (!$birthYear) return null;
-    return date('Y') - $birthYear;
+// Helper function for age calculation (use existing if available)
+if (!function_exists('calculateAge')) {
+    function calculateAge($birthYear) {
+        if (!$birthYear) return null;
+        return date('Y') - $birthYear;
+    }
 }
 
 // Page config
