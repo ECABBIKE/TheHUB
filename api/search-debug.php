@@ -7,8 +7,26 @@
 // Enable ALL error reporting
 error_reporting(E_ALL);
 ini_set('display_errors', '1');
+ini_set('display_startup_errors', '1');
 
-require_once dirname(__DIR__) . '/config.php';
+// Catch fatal errors
+register_shutdown_function(function() {
+    $error = error_get_last();
+    if ($error && in_array($error['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR])) {
+        echo '<div class="debug-box error">';
+        echo '<strong>❌ FATAL PHP ERROR!</strong><br>';
+        echo '<strong>Type:</strong> ' . $error['type'] . '<br>';
+        echo '<strong>Message:</strong> ' . htmlspecialchars($error['message']) . '<br>';
+        echo '<strong>File:</strong> ' . htmlspecialchars($error['file']) . ':' . $error['line'] . '<br>';
+        echo '</div>';
+    }
+});
+
+try {
+    require_once dirname(__DIR__) . '/config.php';
+} catch (Exception $e) {
+    die('<div class="debug-box error"><strong>❌ Config load failed!</strong><br>' . htmlspecialchars($e->getMessage()) . '</div>');
+}
 
 header('Content-Type: text/html; charset=utf-8');
 
@@ -138,8 +156,15 @@ $limit = min(intval($_GET['limit'] ?? 10), 20);
 
     <h2>🔌 Database Connection</h2>
     <?php
+    $pdo = null;
     try {
+        echo '<div class="debug-box">';
+        echo 'Attempting to connect to database...<br>';
+        flush();
+
         $pdo = hub_db();
+
+        echo '</div>';
         echo '<div class="debug-box success">';
         echo '<strong>✅ Database connected successfully!</strong><br>';
         echo 'Driver: ' . $pdo->getAttribute(PDO::ATTR_DRIVER_NAME) . '<br>';
@@ -149,15 +174,34 @@ $limit = min(intval($_GET['limit'] ?? 10), 20);
         echo '<div class="debug-box error">';
         echo '<strong>❌ Database connection failed!</strong><br>';
         echo 'Error: ' . htmlspecialchars($e->getMessage()) . '<br>';
+        echo 'Type: ' . get_class($e) . '<br>';
+        echo 'Code: ' . $e->getCode() . '<br>';
         echo '</div>';
+        exit;
+    } catch (Throwable $e) {
+        echo '<div class="debug-box error">';
+        echo '<strong>❌ Fatal error during database connection!</strong><br>';
+        echo 'Error: ' . htmlspecialchars($e->getMessage()) . '<br>';
+        echo 'Type: ' . get_class($e) . '<br>';
+        echo '</div>';
+        exit;
+    }
+
+    if (!$pdo) {
+        echo '<div class="debug-box error">❌ PDO is null after connection attempt!</div>';
         exit;
     }
     ?>
 
     <h2>👥 Riders Search</h2>
     <?php
+    echo '<div class="debug-box">Starting riders search section...</div>';
+    flush();
+
     if ($type === 'all' || $type === 'riders') {
         try {
+            echo '<div class="debug-box">Preparing riders query...</div>';
+            flush();
             $sql = "
                 SELECT r.id, r.firstname, r.lastname, c.name as club_name
                 FROM riders r
