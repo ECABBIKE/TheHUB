@@ -21,7 +21,7 @@
     padding: var(--space-xl);
     max-width: 1600px;
     width: 100%;
-    margin-left: 64px; /* Space for fixed sidebar */
+    margin-left: 80px; /* Space for fixed sidebar */
     flex: 1;
 }
 
@@ -88,15 +88,16 @@
     gap: var(--space-sm);
 }
 
+/* Header action buttons - explicit colors for dark header */
 .header-action {
     display: flex;
     align-items: center;
     gap: var(--space-sm);
     padding: var(--space-sm) var(--space-md);
-    background: none;
-    border: 1px solid var(--color-border);
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
     border-radius: var(--radius-md);
-    color: var(--color-text-primary);
+    color: #fff;
     cursor: pointer;
     transition: all 0.2s ease;
     text-decoration: none;
@@ -104,7 +105,7 @@
 }
 
 .header-action:hover {
-    background: var(--color-bg-sunken);
+    background: rgba(255, 255, 255, 0.15);
     border-color: var(--color-accent);
     color: var(--color-accent);
 }
@@ -148,21 +149,22 @@
     position: relative;
 }
 
+/* User menu trigger - explicit colors for dark header */
 .user-menu-trigger {
     display: flex;
     align-items: center;
     gap: var(--space-sm);
     padding: var(--space-sm) var(--space-md);
-    background: none;
-    border: 1px solid var(--color-border);
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
     border-radius: var(--radius-md);
-    color: var(--color-text-primary);
+    color: #fff;
     cursor: pointer;
     transition: all 0.2s ease;
 }
 
 .user-menu-trigger:hover {
-    background: var(--color-bg-sunken);
+    background: rgba(255, 255, 255, 0.15);
 }
 
 .user-menu-trigger svg {
@@ -249,7 +251,7 @@
    ======================================================================== */
 
 .admin-sidebar {
-    width: 64px;
+    width: 80px;
     background: #1a1a2e;
     border-right: 1px solid rgba(255, 255, 255, 0.08);
     display: flex;
@@ -319,13 +321,11 @@
 /* Label under icon - VISIBLE */
 .nav-label {
     display: block;
-    font-size: 9px;
+    font-size: 10px;
     font-weight: var(--weight-medium);
     line-height: 1.2;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 100%;
+    text-align: center;
+    word-break: break-word;
 }
 
 .sidebar-footer {
