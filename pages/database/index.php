@@ -12,11 +12,29 @@ if (!defined('HUB_V3_ROOT')) {
 
 $pdo = hub_db();
 $tab = $_GET['tab'] ?? 'riders';
+$filter = $_GET['filter'] ?? 'all'; // 'all' or 'with_results'
 
-// Get stats
-$riderCount = $pdo->query("SELECT COUNT(*) FROM riders WHERE active = 1")->fetchColumn();
-$clubCount = $pdo->query("SELECT COUNT(*) FROM clubs")->fetchColumn();
-$resultCount = $pdo->query("SELECT COUNT(*) FROM results")->fetchColumn();
+// Get stats based on filter
+if ($filter === 'with_results') {
+    $riderCount = $pdo->query("
+        SELECT COUNT(DISTINCT r.id)
+        FROM riders r
+        INNER JOIN results res ON r.id = res.cyclist_id
+        WHERE r.active = 1
+    ")->fetchColumn();
+    $clubCount = $pdo->query("
+        SELECT COUNT(DISTINCT c.id)
+        FROM clubs c
+        INNER JOIN riders r ON c.id = r.club_id
+        INNER JOIN results res ON r.id = res.cyclist_id
+    ")->fetchColumn();
+} else {
+    $riderCount = $pdo->query("SELECT COUNT(*) FROM riders WHERE active = 1")->fetchColumn();
+    $clubCount = $pdo->query("SELECT COUNT(*) FROM clubs")->fetchColumn();
+}
+
+$winsCount = $pdo->query("SELECT COUNT(*) FROM results WHERE position = 1")->fetchColumn();
+$podiumsCount = $pdo->query("SELECT COUNT(*) FROM results WHERE position <= 3")->fetchColumn();
 
 // Get riders with results (top performers)
 $topRiders = $pdo->query("
@@ -70,6 +88,15 @@ $recentRiders = $pdo->query("
     <p class="page-subtitle">Sök bland åkare och klubbar</p>
 </div>
 
+<!-- Filter Toggle -->
+<div class="filter-bar">
+    <span class="filter-label">Visa statistik för:</span>
+    <div class="filter-buttons">
+        <a href="/database?filter=all" class="filter-btn <?= $filter === 'all' ? 'active' : '' ?>">Alla</a>
+        <a href="/database?filter=with_results" class="filter-btn <?= $filter === 'with_results' ? 'active' : '' ?>">Med resultat</a>
+    </div>
+</div>
+
 <!-- Stats Cards -->
 <div class="stats-grid">
     <div class="stat-card">
@@ -81,8 +108,12 @@ $recentRiders = $pdo->query("
         <span class="stat-label">Klubbar</span>
     </div>
     <div class="stat-card">
-        <span class="stat-value"><?= number_format($resultCount) ?></span>
-        <span class="stat-label">Resultat</span>
+        <span class="stat-value"><?= number_format($winsCount) ?></span>
+        <span class="stat-label">Vinster</span>
+    </div>
+    <div class="stat-card">
+        <span class="stat-value"><?= number_format($podiumsCount) ?></span>
+        <span class="stat-label">Pallplatser</span>
     </div>
 </div>
 
@@ -188,9 +219,55 @@ $recentRiders = $pdo->query("
 </div>
 
 <style>
+.filter-bar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-md);
+    margin-bottom: var(--space-lg);
+    padding: var(--space-md);
+    background: var(--color-bg-card);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--color-border);
+}
+
+.filter-label {
+    font-weight: var(--weight-medium);
+    color: var(--color-text-secondary);
+    font-size: var(--text-sm);
+}
+
+.filter-buttons {
+    display: flex;
+    gap: var(--space-xs);
+    background: var(--color-bg-surface);
+    padding: 4px;
+    border-radius: var(--radius-md);
+}
+
+.filter-btn {
+    padding: var(--space-xs) var(--space-md);
+    border-radius: var(--radius-sm);
+    text-decoration: none;
+    color: var(--color-text-secondary);
+    font-weight: var(--weight-medium);
+    font-size: var(--text-sm);
+    transition: all var(--transition-fast);
+}
+
+.filter-btn:hover {
+    background: var(--color-bg-hover);
+    color: var(--color-text-primary);
+}
+
+.filter-btn.active {
+    background: var(--color-accent);
+    color: white;
+}
+
 .stats-grid {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(4, 1fr);
     gap: var(--space-md);
     margin-bottom: var(--space-xl);
 }
@@ -532,8 +609,12 @@ $recentRiders = $pdo->query("
 }
 
 @media (max-width: 768px) {
+    .filter-bar {
+        flex-direction: column;
+        gap: var(--space-sm);
+    }
     .stats-grid {
-        grid-template-columns: repeat(3, 1fr);
+        grid-template-columns: repeat(2, 1fr);
         gap: var(--space-sm);
     }
     .stat-card {

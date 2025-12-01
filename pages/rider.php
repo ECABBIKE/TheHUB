@@ -301,6 +301,29 @@ try {
  }
  }
 
+ // Get events that contribute to ranking
+ $rankingEvents = [];
+ $stmt = $db->prepare("
+ SELECT
+  res.points,
+  e.id as event_id,
+  e.name as event_name,
+  e.date as event_date,
+  cls.display_name as class_name,
+  res.position,
+  res.class_id
+ FROM results res
+ JOIN events e ON res.event_id = e.id
+ LEFT JOIN classes cls ON res.class_id = cls.id
+ WHERE res.cyclist_id = ?
+  AND res.status = 'finished'
+  AND res.points > 0
+  AND e.date >= ?
+ ORDER BY e.date DESC
+ ");
+ $stmt->execute([$riderId, $cutoffDate]);
+ $rankingEvents = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
 } catch (Exception $e) {
  $error = $e->getMessage();
  $rider = null;
@@ -524,6 +547,42 @@ $genderText = match($rider['gender']) {
  </div>
  <?php endif; ?>
  </div>
+
+ <!-- How It Works -->
+ <div class="card-section">
+ <h3 class="section-title">📋 Hur beräknas ranking?</h3>
+ <div class="info-box">
+  <p><strong>Formel:</strong> Summan av alla poäng från lopp de senaste <?= $rankingMonths ?> månaderna.</p>
+  <p><strong>Period:</strong> <?= date('j M Y', strtotime($cutoffDate)) ?> - <?= date('j M Y') ?></p>
+  <p><strong>Inkluderade lopp:</strong> Endast fullföljda lopp där du fått poäng.</p>
+ </div>
+ </div>
+
+ <!-- Events Contributing to Ranking -->
+ <?php if (!empty($rankingEvents)): ?>
+ <div class="card-section">
+ <h3 class="section-title">🏁 Lopp som räknas (<?= count($rankingEvents) ?>)</h3>
+ <div class="event-breakdown">
+  <?php foreach ($rankingEvents as $event): ?>
+  <a href="/event/<?= $event['event_id'] ?>" class="event-breakdown-item">
+  <div class="event-breakdown-info">
+   <div class="event-breakdown-name"><?= htmlspecialchars($event['event_name']) ?></div>
+   <div class="event-breakdown-meta">
+   <?= date('j M Y', strtotime($event['event_date'])) ?>
+   <?php if ($event['class_name']): ?>• <?= htmlspecialchars($event['class_name']) ?><?php endif; ?>
+   <?php if ($event['position']): ?>• #<?= $event['position'] ?><?php endif; ?>
+   </div>
+  </div>
+  <div class="event-breakdown-points"><?= $event['points'] ?> p</div>
+  </a>
+  <?php endforeach; ?>
+ </div>
+ </div>
+ <?php else: ?>
+ <div class="empty-state">
+  <p>Inga lopp de senaste <?= $rankingMonths ?> månaderna gav poäng</p>
+ </div>
+ <?php endif; ?>
  </div>
 </section>
 
@@ -911,6 +970,83 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
  color: var(--color-accent-text);
  flex-shrink: 0;
  margin-left: var(--space-sm);
+}
+
+/* Ranking Tab Sections */
+.card-section {
+ padding: var(--space-lg);
+ border-top: 1px solid var(--color-border);
+}
+
+.card-section:first-of-type {
+ border-top: none;
+}
+
+.section-title {
+ font-size: var(--text-base);
+ font-weight: var(--weight-semibold);
+ margin: 0 0 var(--space-md) 0;
+}
+
+.info-box {
+ background: var(--color-bg-sunken);
+ border-left: 3px solid var(--color-accent);
+ padding: var(--space-md);
+ border-radius: var(--radius-sm);
+}
+
+.info-box p {
+ margin: 0 0 var(--space-sm) 0;
+ font-size: var(--text-sm);
+ line-height: 1.6;
+}
+
+.info-box p:last-child {
+ margin-bottom: 0;
+}
+
+/* Event Breakdown for Ranking Tab */
+.event-breakdown-item {
+ display: flex;
+ justify-content: space-between;
+ align-items: center;
+ padding: var(--space-sm) var(--space-md);
+ background: var(--color-bg-surface);
+ border-radius: var(--radius-sm);
+ text-decoration: none;
+ color: inherit;
+ transition: all var(--transition-fast);
+ margin-bottom: var(--space-xs);
+ border: 1px solid var(--color-border);
+}
+
+.event-breakdown-item:hover {
+ background: var(--color-bg-hover);
+ border-color: var(--color-accent);
+ transform: translateX(4px);
+}
+
+.event-breakdown-info {
+ flex: 1;
+ min-width: 0;
+}
+
+.event-breakdown-name {
+ font-weight: var(--weight-medium);
+ margin-bottom: 2px;
+}
+
+.event-breakdown-meta {
+ font-size: var(--text-xs);
+ color: var(--color-text-muted);
+}
+
+.event-breakdown-points {
+ font-weight: var(--weight-bold);
+ color: var(--color-accent-text);
+ font-size: var(--text-sm);
+ flex-shrink: 0;
+ margin-left: var(--space-md);
 }
 
 /* Stats Grid layouts */

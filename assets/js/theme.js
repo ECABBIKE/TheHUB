@@ -1,6 +1,16 @@
-const HubTheme=(function(){'use strict';const COOKIE='hub_theme';
-function getSaved(){const m=document.cookie.match(new RegExp('(^| )'+COOKIE+'=([^;]+)'));return m?m[2]:'auto'}
-function save(t){document.cookie=COOKIE+'='+t+'; path=/; max-age=31536000; SameSite=Lax'}
+const HubTheme=(function(){'use strict';const STORAGE_KEY='thehub-theme';const COOKIE='hub_theme';
+function getSaved(){
+  // Try localStorage first (faster, better)
+  try{const ls=localStorage.getItem(STORAGE_KEY);if(ls)return ls;}catch(e){}
+  // Fallback to cookie
+  const m=document.cookie.match(new RegExp('(^| )'+COOKIE+'=([^;]+)'));
+  return m?m[2]:'auto';
+}
+function save(t){
+  // Save to both localStorage and cookie for compatibility
+  try{localStorage.setItem(STORAGE_KEY,t);}catch(e){}
+  document.cookie=COOKIE+'='+t+'; path=/; max-age=31536000; SameSite=Lax';
+}
 function getSystem(){return window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'}
 function apply(t){
   const resolved=t==='auto'?getSystem():t;

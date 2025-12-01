@@ -357,9 +357,6 @@ if (!$event) {
           <?php if ($isTimeRanked): ?>
           <th class="col-gap table-col-hide-portrait">+Tid</th>
           <?php endif; ?>
-          <?php if ($showPoints): ?>
-          <th class="col-points table-col-hide-portrait">Poäng</th>
-          <?php endif; ?>
         </tr>
       </thead>
       <tbody>
@@ -411,15 +408,6 @@ if (!$event) {
             <?= $result['time_behind'] ?? '-' ?>
           </td>
           <?php endif; ?>
-          <?php if ($showPoints): ?>
-          <td class="col-points table-col-hide-portrait">
-            <?php if ($result['points']): ?>
-              <span class="points-value"><?= $result['points'] ?></span>
-            <?php else: ?>
-              -
-            <?php endif; ?>
-          </td>
-          <?php endif; ?>
         </tr>
         <?php endforeach; ?>
       </tbody>
@@ -457,9 +445,6 @@ if (!$event) {
           <?php if ($isTimeRanked && !empty($result['time_behind'])): ?>
             <div class="time-behind-small"><?= $result['time_behind'] ?></div>
           <?php endif; ?>
-        <?php endif; ?>
-        <?php if ($showPoints && $result['points']): ?>
-          <div class="points-small"><?= $result['points'] ?> p</div>
         <?php endif; ?>
       </div>
     </a>
@@ -641,13 +626,6 @@ function filterResults() {
   white-space: nowrap;
   color: var(--color-text-secondary);
 }
-.col-points {
-  text-align: right;
-}
-.points-value {
-  font-weight: var(--weight-semibold);
-  color: var(--color-accent-text);
-}
 
 .status-badge {
   font-size: var(--text-xs);
@@ -696,10 +674,6 @@ function filterResults() {
   font-size: var(--text-xs);
   color: var(--color-text-muted);
 }
-.points-small {
-  font-size: var(--text-xs);
-  color: var(--color-accent-text);
-}
 
 .empty-state {
   text-align: center;
@@ -728,13 +702,6 @@ function filterResults() {
   .filter-row {
     grid-template-columns: 1fr;
     gap: var(--space-sm);
-  }
-}
-
-/* Hide points in portrait mode on mobile */
-@media (max-width: 599px) and (orientation: portrait) {
-  .points-small {
-    display: none;
   }
 }
 </style>
