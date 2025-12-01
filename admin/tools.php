@@ -422,6 +422,86 @@ include __DIR__ . '/components/unified-layout.php';
     </div>
 </div>
 
+<h3 class="section-title">Databasmigrationer</h3>
+
+<div class="tools-grid">
+    <!-- Run Migrations -->
+    <div class="tool-card">
+        <div class="tool-card-header">
+            <div class="tool-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5V19A9 3 0 0 0 21 19V5"/><path d="M3 12A9 3 0 0 0 21 12"/></svg>
+            </div>
+            <div>
+                <h4 class="tool-title">Databasmigrationer</h4>
+                <p class="tool-description">Kör databasmigrationer och uppdatera schema</p>
+            </div>
+        </div>
+        <div class="tool-actions">
+            <a href="/admin/migrations/safe-migration" class="btn-admin btn-admin-secondary" style="flex: 1;">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px;"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5V19A9 3 0 0 0 21 19V5"/></svg>
+                Kör migrationer
+            </a>
+        </div>
+    </div>
+
+    <!-- Debug Migration -->
+    <div class="tool-card">
+        <div class="tool-card-header">
+            <div class="tool-icon warning">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m18 16 4-4-4-4"/><path d="m6 8-4 4 4 4"/><path d="m14.5 4-5 16"/></svg>
+            </div>
+            <div>
+                <h4 class="tool-title">Debug migrering</h4>
+                <p class="tool-description">Felsök och testa databasmigrationer</p>
+            </div>
+        </div>
+        <div class="tool-actions">
+            <a href="/admin/migrations/debug-migration" class="btn-admin btn-admin-secondary" style="flex: 1;">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px;"><path d="m18 16 4-4-4-4"/><path d="m6 8-4 4 4 4"/></svg>
+                Debug migrering
+            </a>
+        </div>
+    </div>
+
+    <!-- Manual SQL -->
+    <div class="tool-card">
+        <div class="tool-card-header">
+            <div class="tool-icon warning">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><path d="M10 12a1 1 0 0 0-1 1v1a1 1 0 0 1-1 1 1 1 0 0 1 1 1v1a1 1 0 0 0 1 1"/><path d="M14 18a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1 1 1 0 0 1-1-1v-1a1 1 0 0 0-1-1"/></svg>
+            </div>
+            <div>
+                <h4 class="tool-title">Manuella SQL-instruktioner</h4>
+                <p class="tool-description">Visa SQL-kommandon för manuell körning</p>
+            </div>
+        </div>
+        <div class="tool-actions">
+            <a href="/admin/migrations/manual-sql-instructions" class="btn-admin btn-admin-secondary" style="flex: 1;">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px;"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/></svg>
+                Visa SQL
+            </a>
+        </div>
+    </div>
+
+    <!-- Populate Series Results -->
+    <div class="tool-card">
+        <div class="tool-card-header">
+            <div class="tool-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>
+            </div>
+            <div>
+                <h4 class="tool-title">Fyll i serieresultat</h4>
+                <p class="tool-description">Beräkna och fyll i serieresultat från eventdata</p>
+            </div>
+        </div>
+        <div class="tool-actions">
+            <a href="/admin/migrations/populate-series-results" class="btn-admin btn-admin-secondary" style="flex: 1;">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px;"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/></svg>
+                Beräkna resultat
+            </a>
+        </div>
+    </div>
+</div>
+
 <!-- Warning Box -->
 <div class="alert alert-warning" style="margin-top: var(--space-xl);">
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
