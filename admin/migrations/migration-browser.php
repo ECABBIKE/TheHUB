@@ -5,7 +5,7 @@
  *
  * Lists all SQL migrations and lets admin choose which to run
  */
-require_once __DIR__ . '/../config.php';
+require_once __DIR__ . '/../../config.php';
 require_admin();
 
 $db = getDB();
@@ -113,7 +113,7 @@ $breadcrumbs = [
     ['label' => 'Migrationer']
 ];
 
-include __DIR__ . '/components/unified-layout.php';
+include __DIR__ . '/../components/unified-layout.php';
 ?>
 
 <style>
@@ -390,4 +390,4 @@ include __DIR__ . '/components/unified-layout.php';
     <?php endif; ?>
 </div>
 
-<?php include __DIR__ . '/components/unified-layout-footer.php'; ?>
+<?php include __DIR__ . '/../components/unified-layout-footer.php'; ?>
