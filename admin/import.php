@@ -1,7 +1,9 @@
 <?php
+/**
+ * Admin Import - V3 Unified Design System
+ */
 require_once __DIR__ . '/../config.php';
 require_admin();
-require_once __DIR__ . '/../includes/admin-layout.php';
 
 $db = getDB();
 $current_admin = get_current_admin();
