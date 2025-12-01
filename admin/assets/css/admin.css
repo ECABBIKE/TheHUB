@@ -1019,13 +1019,22 @@
     }
 }
 
-@media (max-width: 640px) {
+/* Tablet: 3 columns */
+@media (min-width: 640px) and (max-width: 1023px) {
+    .admin-stats-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+/* Mobile: 2 columns */
+@media (max-width: 639px) {
     .admin-main {
         padding: var(--space-md);
     }
 
     .admin-stats-grid {
-        grid-template-columns: 1fr;
+        grid-template-columns: repeat(2, 1fr);
+        gap: var(--space-md);
     }
 
     .admin-form-row {
