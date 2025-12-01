@@ -198,20 +198,22 @@ function hub_is_ajax(): bool {
            strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
 }
 
-function hub_is_nav_active(string $navId, string $currentPage): bool {
-    // Get section from page info
-    global $pageInfo;
-    $section = $pageInfo['section'] ?? null;
+if (!function_exists('hub_is_nav_active')) {
+    function hub_is_nav_active(string $navId, string $currentPage): bool {
+        // Get section from page info
+        global $pageInfo;
+        $section = $pageInfo['section'] ?? null;
 
-    if ($section === $navId) return true;
+        if ($section === $navId) return true;
 
-    // Legacy mappings
-    if ($navId === 'calendar' && in_array($currentPage, ['calendar', 'calendar-event', 'calendar-index'])) return true;
-    if ($navId === 'results' && in_array($currentPage, ['results', 'event', 'results-event'])) return true;
-    if ($navId === 'series' && in_array($currentPage, ['series', 'series-index', 'series-show'])) return true;
-    if ($navId === 'database' && in_array($currentPage, ['database', 'riders', 'rider', 'clubs', 'club', 'database-rider', 'database-club'])) return true;
-    if ($navId === 'ranking' && str_starts_with($currentPage, 'ranking')) return true;
-    if ($navId === 'profile' && str_starts_with($currentPage, 'profile')) return true;
+        // Legacy mappings
+        if ($navId === 'calendar' && in_array($currentPage, ['calendar', 'calendar-event', 'calendar-index'])) return true;
+        if ($navId === 'results' && in_array($currentPage, ['results', 'event', 'results-event'])) return true;
+        if ($navId === 'series' && in_array($currentPage, ['series', 'series-index', 'series-show'])) return true;
+        if ($navId === 'database' && in_array($currentPage, ['database', 'riders', 'rider', 'clubs', 'club', 'database-rider', 'database-club'])) return true;
+        if ($navId === 'ranking' && str_starts_with($currentPage, 'ranking')) return true;
+        if ($navId === 'profile' && str_starts_with($currentPage, 'profile')) return true;
 
-    return false;
+        return false;
+    }
 }
