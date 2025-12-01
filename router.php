@@ -5,7 +5,24 @@
  *
  * AUTHENTICATION: All pages require login except welcome and login
  */
-require_once __DIR__ . '/v3-config.php';
+
+// Ensure v3-config is loaded
+$v3ConfigPath = __DIR__ . '/v3-config.php';
+if (file_exists($v3ConfigPath)) {
+    require_once $v3ConfigPath;
+}
+
+// Fallback for hub_is_logged_in if not defined
+if (!function_exists('hub_is_logged_in')) {
+    function hub_is_logged_in() {
+        return isset($_SESSION['rider_id']) && $_SESSION['rider_id'] > 0;
+    }
+}
+
+// Ensure HUB_V3_ROOT is defined
+if (!defined('HUB_V3_ROOT')) {
+    define('HUB_V3_ROOT', __DIR__);
+}
 
 /**
  * Check if the current page requires authentication
