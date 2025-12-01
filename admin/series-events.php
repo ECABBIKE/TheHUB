@@ -457,21 +457,23 @@ include __DIR__ . '/components/unified-layout.php';
    <td><?= $se['event_date'] ? date('Y-m-d', strtotime($se['event_date'])) : '-' ?></td>
    <td><?= h($se['location'] ?? '-') ?></td>
    <td>
-    <form method="POST" class="flex gap-xs items-center gs-display-inline-block">
+    <form method="POST" class="template-form" style="display: inline-block;">
     <?= csrf_field() ?>
     <input type="hidden" name="action" value="update_template">
     <input type="hidden" name="series_event_id" value="<?= $se['id'] ?>">
-    <select name="template_id"
-    class="input input-sm input-min-w-150"
-    onchange="this.form.submit()">
-    <option value="">-- Ingen mall --</option>
-    <?php foreach ($templates as $template): ?>
-    <option value="<?= $template['id'] ?>"
-     <?= $se['template_id'] == $template['id'] ? 'selected' : '' ?>>
-     <?= h($template['name']) ?>
-    </option>
-    <?php endforeach; ?>
-    </select>
+    <div style="display: flex; align-items: center; gap: 4px;">
+     <select name="template_id" class="input input-sm" style="min-width: 150px;">
+      <option value="">-- Ingen mall --</option>
+      <?php foreach ($templates as $template): ?>
+       <option value="<?= $template['id'] ?>" <?= $se['template_id'] == $template['id'] ? 'selected' : '' ?>>
+        <?= h($template['name']) ?>
+       </option>
+      <?php endforeach; ?>
+     </select>
+     <button type="submit" class="btn btn-xs btn--primary" title="Spara">
+      <i data-lucide="save" style="width: 14px; height: 14px;"></i>
+     </button>
+    </div>
     </form>
    </td>
    <td>
