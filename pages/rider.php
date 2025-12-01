@@ -71,7 +71,7 @@ try {
  JOIN events e ON res.event_id = e.id
  LEFT JOIN series s ON e.series_id = s.id
  LEFT JOIN classes cls ON res.class_id = cls.id
- WHERE res.cyclist_id = ? AND res.status != 'dns'
+ WHERE res.rider_id = ? AND res.status != 'dns'
  ORDER BY e.date DESC
 ");
  $stmt->execute([$riderId]);
@@ -128,7 +128,7 @@ try {
  $stmt = $db->prepare("
   SELECT COALESCE(SUM(sr.points), 0) as total_points
   FROM series_results sr
-  WHERE sr.series_id = ? AND sr.cyclist_id = ?
+  WHERE sr.series_id = ? AND sr.rider_id = ?
  ");
  $stmt->execute([$totalSeries['id'], $riderId]);
  $seriesStats = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -143,7 +143,7 @@ try {
   JOIN events e ON res.event_id = e.id
   LEFT JOIN series_events se ON e.id = se.event_id
   WHERE (e.series_id = ? OR se.series_id = ?)
-  AND res.cyclist_id = ? AND res.status = 'finished'
+  AND res.rider_id = ? AND res.status = 'finished'
  ");
   $stmt->execute([$totalSeries['id'], $totalSeries['id'], $riderId]);
   $fallbackStats = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -158,7 +158,7 @@ try {
   LEFT JOIN series_events se ON e.id = se.event_id
   LEFT JOIN classes cls ON res.class_id = cls.id
   WHERE (e.series_id = ? OR se.series_id = ?)
-  AND res.cyclist_id = ? AND res.status = 'finished' AND cls.id IS NOT NULL
+  AND res.rider_id = ? AND res.status = 'finished' AND cls.id IS NOT NULL
   GROUP BY cls.id
   ORDER BY cnt DESC
   LIMIT 1
@@ -170,10 +170,10 @@ try {
  // Get position in series (by total points)
  if ($gravityTotalPoints > 0) {
   $stmt = $db->prepare("
-  SELECT cyclist_id, SUM(points) as total_points
+  SELECT rider_id, SUM(points) as total_points
   FROM series_results
   WHERE series_id = ?
-  GROUP BY cyclist_id
+  GROUP BY rider_id
   ORDER BY total_points DESC
  ");
   $stmt->execute([$totalSeries['id']]);
@@ -182,7 +182,7 @@ try {
   $gravityTotalClassTotal = count($standings);
   $position = 1;
   foreach ($standings as $standing) {
-  if ($standing['cyclist_id'] == $riderId) {
+  if ($standing['rider_id'] == $riderId) {
    $gravityTotalPosition = $position;
    break;
   }
@@ -201,7 +201,7 @@ try {
  $stmt = $db->prepare("
   SELECT COALESCE(SUM(sr.points), 0) as total_points
   FROM series_results sr
-  JOIN riders r ON sr.cyclist_id = r.id
+  JOIN riders r ON sr.rider_id = r.id
   WHERE sr.series_id = ? AND r.club_id = ?
  ");
  $stmt->execute([$totalSeries['id'], $rider['club_id']]);
@@ -213,7 +213,7 @@ try {
   $stmt = $db->prepare("
   SELECT r.club_id, SUM(sr.points) as total_points
   FROM series_results sr
-  JOIN riders r ON sr.cyclist_id = r.id
+  JOIN riders r ON sr.rider_id = r.id
   WHERE sr.series_id = ? AND r.club_id IS NOT NULL
   GROUP BY r.club_id
   ORDER BY total_points DESC
@@ -246,7 +246,7 @@ try {
   FROM series_results sr
   JOIN events e ON sr.event_id = e.id
   LEFT JOIN classes cls ON sr.class_id = cls.id
-  WHERE sr.series_id = ? AND sr.cyclist_id = ? AND sr.points > 0
+  WHERE sr.series_id = ? AND sr.rider_id = ? AND sr.points > 0
   ORDER BY e.date DESC
  ");
  $stmt->execute([$totalSeries['id'], $riderId]);
@@ -270,13 +270,13 @@ try {
  // Get ranking position among all riders
  if ($rankingPoints > 0) {
  $stmt = $db->prepare("
-  SELECT res.cyclist_id, SUM(res.points) as total_points
+  SELECT res.rider_id, SUM(res.points) as total_points
   FROM results res
   JOIN events e ON res.event_id = e.id
   WHERE res.status = 'finished'
   AND res.points > 0
   AND e.date >= ?
-  GROUP BY res.cyclist_id
+  GROUP BY res.rider_id
   ORDER BY total_points DESC
  ");
  $stmt->execute([$cutoffDate]);
@@ -285,7 +285,7 @@ try {
  $rankingTotal = count($allRankings);
  $position = 1;
  foreach ($allRankings as $ranking) {
-  if ($ranking['cyclist_id'] == $riderId) {
+  if ($ranking['rider_id'] == $riderId) {
   $rankingPosition = $position;
   break;
   }
