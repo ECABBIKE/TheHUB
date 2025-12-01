@@ -67,17 +67,18 @@ $topRiders = $pdo->query("
     FROM riders r
     LEFT JOIN clubs c ON r.club_id = c.id
     INNER JOIN results res ON r.id = res.cyclist_id
-    INNER JOIN (
+    LEFT JOIN (
         SELECT event_id, category_id, COUNT(*) as participants
         FROM results
         WHERE status = 'finished' AND is_ebike = 0 AND position IS NOT NULL
         GROUP BY event_id, category_id
     ) field_size ON res.event_id = field_size.event_id
-                 AND res.category_id = field_size.category_id
+                 AND (res.category_id = field_size.category_id OR (res.category_id IS NULL AND field_size.category_id IS NULL))
     WHERE r.active = 1
       AND res.status = 'finished'
       AND res.is_ebike = 0
       AND res.position IS NOT NULL
+      AND field_size.participants IS NOT NULL
     GROUP BY r.id
     HAVING total_races >= 3
     ORDER BY ranking_score DESC, avg_position ASC
@@ -89,15 +90,16 @@ $clubRankings = [];
 try {
     $clubRankings = $pdo->query("
         SELECT c.id, c.name, c.city,
-               COUNT(DISTINCT r.id) as member_count,
+               COUNT(DISTINCT CASE WHEN res.points > 0 THEN r.id END) as riders_with_points,
                COUNT(DISTINCT res.id) as total_starts,
-               COUNT(CASE WHEN res.position <= 3 THEN 1 END) as podiums
+               COUNT(CASE WHEN res.position <= 3 THEN 1 END) as podiums,
+               SUM(res.points) as total_points
         FROM clubs c
         LEFT JOIN riders r ON c.id = r.club_id AND r.active = 1
         LEFT JOIN results res ON r.id = res.cyclist_id
         GROUP BY c.id
         HAVING total_starts > 0
-        ORDER BY podiums DESC, total_starts DESC
+        ORDER BY podiums DESC, total_points DESC, total_starts DESC
         LIMIT 10
     ")->fetchAll(PDO::FETCH_ASSOC);
 } catch (Exception $e) {
@@ -203,11 +205,11 @@ $recentRiders = $pdo->query("
                 </span>
                 <div class="ranking-info">
                     <span class="ranking-name"><?= htmlspecialchars($club['name']) ?></span>
-                    <span class="ranking-meta"><?= $club['member_count'] ?> medlemmar</span>
+                    <span class="ranking-meta"><?= $club['riders_with_points'] ?> åkare med poäng</span>
                 </div>
                 <div class="ranking-stats">
                     <span class="stat"><?= $club['podiums'] ?> 🏆</span>
-                    <span class="stat"><?= $club['total_starts'] ?> starter</span>
+                    <span class="stat"><?= number_format($club['total_points']) ?> poäng</span>
                 </div>
             </a>
             <?php endforeach; ?>

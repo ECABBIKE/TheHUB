@@ -22,12 +22,13 @@ try {
         return;
     }
 
-    // Fetch club members
+    // Fetch club members WITH RESULTS ONLY
     $stmt = $db->prepare("
-        SELECT id, firstname, lastname, birth_year, gender
-        FROM riders
-        WHERE club_id = ? AND active = 1
-        ORDER BY lastname, firstname
+        SELECT DISTINCT r.id, r.firstname, r.lastname, r.birth_year, r.gender
+        FROM riders r
+        INNER JOIN results res ON r.id = res.cyclist_id
+        WHERE r.club_id = ? AND r.active = 1
+        ORDER BY r.lastname, r.firstname
     ");
     $stmt->execute([$clubId]);
     $members = $stmt->fetchAll(PDO::FETCH_ASSOC);
