@@ -70,6 +70,44 @@ if (!defined('HUB_NAV')) {
     ]);
 }
 
+// ============================================================================
+// NAVIGATION HELPER
+// ============================================================================
+if (!function_exists('hub_is_nav_active')) {
+    /**
+     * Check if a navigation item should be marked as active
+     *
+     * @param string $navId The navigation item ID (calendar, results, series, etc.)
+     * @param string $currentPage The current page identifier
+     * @return bool True if this nav item should be active
+     */
+    function hub_is_nav_active(string $navId, string $currentPage): bool {
+        // Get section from page info if available
+        global $pageInfo;
+        $section = $pageInfo['section'] ?? null;
+
+        if ($section === $navId) return true;
+
+        // Legacy mappings for backwards compatibility
+        switch ($navId) {
+            case 'calendar':
+                return in_array($currentPage, ['calendar', 'calendar-event', 'calendar-index']);
+            case 'results':
+                return in_array($currentPage, ['results', 'event', 'results-event']);
+            case 'series':
+                return in_array($currentPage, ['series', 'series-index', 'series-show']);
+            case 'database':
+                return in_array($currentPage, ['database', 'riders', 'rider', 'clubs', 'club', 'database-rider', 'database-club']);
+            case 'ranking':
+                return str_starts_with($currentPage, 'ranking');
+            case 'profile':
+                return str_starts_with($currentPage, 'profile');
+            default:
+                return false;
+        }
+    }
+}
+
 // Valid pages/routes
 if (!defined('HUB_VALID_PAGES')) {
     define('HUB_VALID_PAGES', [
