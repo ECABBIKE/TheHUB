@@ -66,6 +66,19 @@ if (session_status() === PHP_SESSION_NONE) {
 
 date_default_timezone_set('Europe/Stockholm');
 
+// ============================================================================
+// DATABASE HELPER FUNCTION
+// ============================================================================
+if (!function_exists('hub_db')) {
+    /**
+     * Get the PDO database connection
+     * @return PDO Database connection
+     */
+    function hub_db(): PDO {
+        return $GLOBALS['pdo'];
+    }
+}
+
 require_once __DIR__ . '/includes/helpers.php';
 require_once __DIR__ . '/includes/auth.php';
 ?>
