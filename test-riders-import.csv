@@ -1,6 +1,0 @@
-first_name,last_name,personnummer,birth_year,uci_id,swe_id,club_name,gender,license_type,license_category,discipline,license_valid_until
-Anders,Testsson,19850615-1234,,SWE19850615,,Uppsala CK,M,Elite,Elite Men,MTB,2025-12-31
-Lisa,Testsson,19920824-5678,,SWE19920824,,Göteborg MTB,F,Elite,Elite Women,Road,2025-12-31
-Erik,Juniorsson,20050310-9012,,SWE20050310,,Stockholm CK,M,Youth,U19 Men,MTB,2025-12-31
-Sara,Ungdomen,,,SWE20061015,,Luleå CK,F,Youth,U19 Women,CX,2025-12-31
-Magnus,Veteranen,650520-3456,,SWE19650520,,Malmö CK,M,Elite,Master Men 55+,MTB,2025-12-31
