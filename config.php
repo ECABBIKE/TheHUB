@@ -89,6 +89,40 @@ if (!function_exists('hub_db')) {
     }
 }
 
+// ============================================================================
+// CREATE $db OBJECT - THIS IS THE FIX!
+// ============================================================================
+// Many pages expect a $db object, not just $GLOBALS['pdo']
+// This creates the Database wrapper that provides getRow(), getAll(), etc.
+
+try {
+    error_log('DEBUG: Loading Database class from includes/db.php');
+    require_once __DIR__ . '/includes/db.php';
+    
+    error_log('DEBUG: Creating $db object wrapper');
+    $db = new Database($GLOBALS['pdo']);
+    
+    error_log('DEBUG: $db object created successfully');
+    
+    // Make it global so all pages can access it
+    $GLOBALS['db'] = $db;
+    
+    error_log('DEBUG: Database initialization complete - both $GLOBALS[pdo] and $db available');
+    
+} catch (Exception $e) {
+    error_log('ERROR: Failed to create $db object: ' . $e->getMessage());
+    error_log('ERROR: Stack trace: ' . $e->getTraceAsString());
+    die('Database wrapper initialization failed: ' . $e->getMessage());
+}
+
+// ============================================================================
+// LOAD ADDITIONAL INCLUDES
+// ============================================================================
 require_once __DIR__ . '/includes/helpers.php';
 require_once __DIR__ . '/includes/auth.php';
+
+// Optional: Load ranking functions if they exist
+if (file_exists(__DIR__ . '/includes/ranking_functions.php')) {
+    require_once __DIR__ . '/includes/ranking_functions.php';
+}
 ?>
