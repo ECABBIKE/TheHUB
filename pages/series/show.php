@@ -411,7 +411,7 @@ if (!empty($eventIds)) {
     display: flex;
     align-items: center;
     justify-content: center;
-    background: var(--color-bg-sunken);
+    background: #E8EAED; /* Fixed light theme color to prevent flash */
     border-radius: var(--radius-md);
 }
 
@@ -625,7 +625,8 @@ if (!empty($eventIds)) {
     font-size: var(--text-xs);
 }
 
-@media (max-width: 768px) {
+/* Mobile Portrait: Only show position, name, and total - hide club and events */
+@media (max-width: 767px) and (orientation: portrait) {
     .series-hero {
         flex-direction: column;
         text-align: center;
@@ -652,6 +653,82 @@ if (!empty($eventIds)) {
     .filter-group select,
     .filter-group input {
         width: 100%;
+    }
+
+    /* Hide club column and all event columns in portrait */
+    .standings-table .col-club,
+    .standings-table th.col-club,
+    .standings-table .col-event,
+    .standings-table th.col-event {
+        display: none;
+    }
+
+    /* Make name column flexible */
+    .col-name {
+        white-space: normal;
+        word-break: break-word;
+    }
+}
+
+/* Mobile Landscape: Show events but hide club */
+@media (max-width: 1023px) and (min-width: 768px),
+       (max-width: 767px) and (orientation: landscape) {
+    .series-hero {
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .series-hero-logo {
+        margin: 0 auto;
+    }
+
+    .series-meta {
+        justify-content: center;
+    }
+
+    .event-row {
+        grid-template-columns: 1fr;
+        gap: var(--space-xs);
+    }
+
+    .series-filters {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .filter-group select,
+    .filter-group input {
+        width: 100%;
+    }
+
+    /* Hide club column in landscape but show events */
+    .standings-table .col-club,
+    .standings-table th.col-club {
+        display: none;
+    }
+
+    /* Reduce event column width for space */
+    .col-event {
+        width: 35px;
+        padding: var(--space-xs) 2px;
+    }
+
+    .standings-table th.col-event {
+        padding: var(--space-xs) 2px;
+    }
+
+    /* Allow name to wrap if needed */
+    .col-name {
+        white-space: normal;
+        word-break: break-word;
+    }
+}
+
+/* Tablet and small desktop: Hide club if too many events */
+@media (min-width: 768px) and (max-width: 1023px) {
+    .standings-table .col-club,
+    .standings-table th.col-club {
+        display: none;
     }
 }
 </style>
