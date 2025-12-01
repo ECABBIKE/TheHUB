@@ -5,12 +5,28 @@
 
 $db = hub_db();
 
+// Load filter setting from admin configuration
+$publicSettings = require HUB_V3_ROOT . '/config/public_settings.php';
+$filter = $publicSettings['public_riders_display'] ?? 'all';
+
 // Get search query
 $search = isset($_GET['q']) ? trim($_GET['q']) : '';
 
 try {
-    // Count total active riders
-    $totalCount = $db->query("SELECT COUNT(*) FROM riders WHERE active = 1")->fetchColumn();
+    // Count total active riders based on filter
+    if ($filter === 'with_results') {
+        $totalCount = $db->query("
+            SELECT COUNT(DISTINCT r.id)
+            FROM riders r
+            INNER JOIN results res ON r.id = res.cyclist_id
+            WHERE r.active = 1
+        ")->fetchColumn();
+    } else {
+        $totalCount = $db->query("SELECT COUNT(*) FROM riders WHERE active = 1")->fetchColumn();
+    }
+
+    // Determine JOIN type based on filter
+    $joinType = ($filter === 'with_results') ? 'INNER' : 'LEFT';
 
     // Fetch riders with stats - matching v2 structure
     if ($search !== '') {
@@ -32,7 +48,7 @@ try {
                 SUM(COALESCE(r.points, 0)) as total_points
             FROM riders c
             LEFT JOIN clubs cl ON c.club_id = cl.id
-            LEFT JOIN results r ON c.id = r.cyclist_id
+            {$joinType} JOIN results r ON c.id = r.cyclist_id
             WHERE c.active = 1
               AND (c.firstname LIKE ? OR c.lastname LIKE ? OR cl.name LIKE ?
                    OR CONCAT(c.firstname, ' ', c.lastname) LIKE ?
@@ -60,7 +76,7 @@ try {
                 SUM(COALESCE(r.points, 0)) as total_points
             FROM riders c
             LEFT JOIN clubs cl ON c.club_id = cl.id
-            LEFT JOIN results r ON c.id = r.cyclist_id
+            {$joinType} JOIN results r ON c.id = r.cyclist_id
             WHERE c.active = 1
             GROUP BY c.id
             ORDER BY total_races DESC, c.lastname, c.firstname

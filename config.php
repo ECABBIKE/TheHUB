@@ -45,6 +45,7 @@ define('APP_BUILD', '2025-11-26');
 define('DEPLOYMENT_OFFSET', 119); // Deployments before git repo
 
 try {
+    error_log('DEBUG: Attempting PDO connection to ' . DB_HOST . '/' . DB_NAME);
     $pdo = new PDO(
         'mysql:host=' . DB_HOST . ';dbname=' . DB_NAME . ';charset=utf8mb4',
         DB_USER,
@@ -55,7 +56,9 @@ try {
             PDO::ATTR_EMULATE_PREPARES => false
         )
     );
+    error_log('DEBUG: PDO connection successful, setting $GLOBALS[pdo]');
     $GLOBALS['pdo'] = $pdo;
+    error_log('DEBUG: $GLOBALS[pdo] is now ' . (isset($GLOBALS['pdo']) ? 'SET' : 'NOT SET'));
 } catch (PDOException $e) {
     error_log('PDO Connection Error: ' . $e->getMessage());
     error_log('Connection String: mysql:host=' . DB_HOST . ';dbname=' . DB_NAME);
