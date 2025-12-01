@@ -173,26 +173,8 @@ $recentResults = $resultStmt->fetchAll(PDO::FETCH_ASSOC);
     </div>
 <?php endif; ?>
 
-<!-- Theme Settings -->
-<div class="section">
-    <div class="section-header">
-        <h2>Utseende</h2>
-    </div>
-    <div class="theme-picker">
-        <button type="button" class="theme-option" data-theme="light" aria-label="Ljust tema">
-            <span class="theme-icon">☀️</span>
-            <span class="theme-label">Ljust</span>
-        </button>
-        <button type="button" class="theme-option" data-theme="dark" aria-label="Mörkt tema">
-            <span class="theme-icon">🌙</span>
-            <span class="theme-label">Mörkt</span>
-        </button>
-        <button type="button" class="theme-option" data-theme="auto" aria-label="Automatiskt tema">
-            <span class="theme-icon">💻</span>
-            <span class="theme-label">Auto</span>
-        </button>
-    </div>
-</div>
+<!-- Theme Settings - DISABLED: Always light theme -->
+<!-- Theme selector removed to prevent issues -->
 
 <!-- Logout -->
 <div class="logout-section">
@@ -372,45 +354,7 @@ $recentResults = $resultStmt->fetchAll(PDO::FETCH_ASSOC);
     transition: all var(--transition-fast);
 }
 
-/* Theme Picker */
-.theme-picker {
-    display: flex;
-    gap: var(--space-sm);
-    background: var(--color-bg-card);
-    padding: var(--space-md);
-    border-radius: var(--radius-lg);
-}
-.theme-option {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: var(--space-xs);
-    padding: var(--space-md);
-    background: transparent;
-    border: 2px solid transparent;
-    border-radius: var(--radius-md);
-    cursor: pointer;
-    transition: all var(--transition-fast);
-}
-.theme-option:hover {
-    background: var(--color-bg-hover);
-}
-.theme-option.active {
-    border-color: var(--color-accent);
-    background: var(--color-accent-light);
-}
-.theme-icon {
-    font-size: var(--text-2xl);
-}
-.theme-label {
-    font-size: var(--text-sm);
-    font-weight: var(--weight-medium);
-    color: var(--color-text-secondary);
-}
-.theme-option.active .theme-label {
-    color: var(--color-accent);
-}
+/* Theme Picker - REMOVED: Always light theme */
 
 @media (max-width: 600px) {
     .profile-card {
@@ -421,40 +365,7 @@ $recentResults = $resultStmt->fetchAll(PDO::FETCH_ASSOC);
 </style>
 
 <script>
-// Theme picker functionality
-document.addEventListener('DOMContentLoaded', function() {
-    const themeOptions = document.querySelectorAll('.theme-option');
-    const currentTheme = localStorage.getItem('thehub-theme') || 'auto';
-
-    // Mark current theme as active
-    themeOptions.forEach(btn => {
-        if (btn.dataset.theme === currentTheme) {
-            btn.classList.add('active');
-        }
-
-        btn.addEventListener('click', function() {
-            const theme = this.dataset.theme;
-
-            // Update active state
-            themeOptions.forEach(b => b.classList.remove('active'));
-            this.classList.add('active');
-
-            // Save and apply theme
-            localStorage.setItem('thehub-theme', theme);
-
-            // Apply theme
-            let effectiveTheme = theme;
-            if (theme === 'auto') {
-                effectiveTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-            }
-            document.documentElement.setAttribute('data-theme', effectiveTheme);
-
-            // Update floating theme toggle if present
-            const floatingBtns = document.querySelectorAll('.theme-toggle .theme-btn');
-            floatingBtns.forEach(b => {
-                b.setAttribute('aria-pressed', b.dataset.theme === theme ? 'true' : 'false');
-            });
-        });
-    });
-});
+// Theme picker - DISABLED: Always light theme
+// Force light theme on this page
+document.documentElement.setAttribute('data-theme', 'light');
 </script>
