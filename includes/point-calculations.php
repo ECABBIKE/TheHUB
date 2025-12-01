@@ -17,9 +17,10 @@
  * @param int $run2_position Position in run 2
  * @param string $status Result status (finished, dnf, dns, dq)
  * @param bool $use_swecup_dh Use SweCUP DH format (both runs award points)
+ * @param int $class_id Class ID (optional, for class eligibility check)
  * @return array ['run_1_points' => int, 'run_2_points' => int, 'total_points' => int]
  */
-function calculateDHPoints($db, $event_id, $position, $run1_position, $run2_position, $status = 'finished', $use_swecup_dh = false) {
+function calculateDHPoints($db, $event_id, $position, $run1_position, $run2_position, $status = 'finished', $use_swecup_dh = false, $class_id = null) {
     // No points for DNF, DNS, or DQ
     if (in_array($status, ['dnf', 'dns', 'dq'])) {
         return [
@@ -83,7 +84,7 @@ function calculateDHPoints($db, $event_id, $position, $run1_position, $run2_posi
         ];
     } else {
         // Standard DH: Only fastest run counts (position based on best time)
-        $points = calculatePoints($db, $event_id, $position, $status);
+        $points = calculatePoints($db, $event_id, $position, $status, $class_id);
 
         error_log("✅ DH Standard Points: Position {$position} = {$points} points");
 
@@ -102,9 +103,10 @@ function calculateDHPoints($db, $event_id, $position, $run1_position, $run2_posi
  * @param int $event_id Event ID
  * @param int $position Rider's position (1-based)
  * @param string $status Result status (finished, dnf, dns, dq)
+ * @param int $class_id Class ID (optional, but required to check class eligibility)
  * @return float Points earned
  */
-function calculatePoints($db, $event_id, $position, $status = 'finished') {
+function calculatePoints($db, $event_id, $position, $status = 'finished', $class_id = null) {
     // No points for DNF, DNS, or DQ
     if (in_array($status, ['dnf', 'dns', 'dq'])) {
         return 0;
@@ -113,6 +115,22 @@ function calculatePoints($db, $event_id, $position, $status = 'finished') {
     // No points if no position
     if (!$position || $position < 1) {
         return 0;
+    }
+
+    // CRITICAL: Check if class is eligible for points
+    if ($class_id) {
+        $class = $db->getRow(
+            "SELECT awards_points, series_eligible FROM classes WHERE id = ?",
+            [$class_id]
+        );
+
+        if ($class) {
+            // No points if class doesn't award points OR is not series eligible
+            if (!$class['awards_points'] || !$class['series_eligible']) {
+                error_log("⚠️  Class {$class_id} not eligible for points (awards_points={$class['awards_points']}, series_eligible={$class['series_eligible']})");
+                return 0;
+            }
+        }
     }
 
     // Get event's point scale
@@ -351,14 +369,14 @@ function getSeriesStandings($db, $series_id, $category_id = null, $limit = 50) {
  */
 function recalculateEventPoints($db, $event_id) {
     $results = $db->getAll(
-        "SELECT id, position, status FROM results WHERE event_id = ?",
+        "SELECT id, position, status, class_id FROM results WHERE event_id = ?",
         [$event_id]
     );
 
     $stats = ['updated' => 0, 'failed' => 0];
 
     foreach ($results as $result) {
-        $points = calculatePoints($db, $event_id, $result['position'], $result['status']);
+        $points = calculatePoints($db, $event_id, $result['position'], $result['status'], $result['class_id']);
 
         try {
             $db->update('results', ['points' => $points], 'id = ?', [$result['id']]);
@@ -522,7 +540,8 @@ function recalculateDHEventResults($db, $event_id, $new_scale_id = null, $use_sw
                         $run1Pos,
                         $run2Pos,
                         $result['status'],
-                        $use_swecup_dh
+                        $use_swecup_dh,
+                        $result['class_id']
                     );
                 }
 
@@ -630,7 +649,7 @@ function recalculateEventResults($db, $event_id, $new_scale_id = null) {
                     $newPosition = $position;
                     $position++;
                     // Calculate points based on new position
-                    $newPoints = calculatePoints($db, $event_id, $newPosition, $result['status']);
+                    $newPoints = calculatePoints($db, $event_id, $newPosition, $result['status'], $result['class_id']);
                 }
 
                 // Update result

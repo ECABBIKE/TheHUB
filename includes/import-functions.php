@@ -599,7 +599,8 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
             // Only calculate points if not E-BIKE and class awards points
             if (!$isEBike && $status === 'finished' && $position && $awardsPoints) {
                 // Use the event's point scale from point_scales table
-                $points = calculatePoints($db, $eventId, $position, $status);
+                // Pass class_id so calculatePoints can double-check class eligibility
+                $points = calculatePoints($db, $eventId, $position, $status, $classId);
             }
 
             $resultData = [
