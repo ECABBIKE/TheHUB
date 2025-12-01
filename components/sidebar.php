@@ -21,6 +21,7 @@ $adminNav = [
     ['id' => 'admin-classes', 'label' => 'Klasser', 'icon' => 'layers', 'url' => '/admin/classes', 'aria' => 'Hantera klasser'],
     ['id' => 'admin-import', 'label' => 'Import', 'icon' => 'upload', 'url' => '/admin/import', 'aria' => 'Importera data'],
     ['id' => 'admin-ranking', 'label' => 'Ranking', 'icon' => 'bar-chart-2', 'url' => '/admin/ranking', 'aria' => 'Hantera ranking'],
+    ['id' => 'admin-users', 'label' => 'Användare', 'icon' => 'user-cog', 'url' => '/admin/users', 'aria' => 'Hantera användare'],
     ['id' => 'admin-settings', 'label' => 'Inställningar', 'icon' => 'settings', 'url' => '/admin/settings', 'aria' => 'Systeminställningar'],
 ];
 
