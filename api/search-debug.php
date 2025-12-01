@@ -22,8 +22,16 @@ register_shutdown_function(function() {
     }
 });
 
+$configPath = dirname(__DIR__) . '/config.php';
+echo '<div class="debug-box">Config path: ' . htmlspecialchars($configPath) . '<br>';
+echo 'Config exists: ' . (file_exists($configPath) ? 'YES' : 'NO') . '<br>';
+echo 'Loading config.php...</div>';
+flush();
+
 try {
-    require_once dirname(__DIR__) . '/config.php';
+    require_once $configPath;
+    echo '<div class="debug-box success">Config loaded successfully!</div>';
+    flush();
 } catch (Exception $e) {
     die('<div class="debug-box error"><strong>❌ Config load failed!</strong><br>' . htmlspecialchars($e->getMessage()) . '</div>');
 }
