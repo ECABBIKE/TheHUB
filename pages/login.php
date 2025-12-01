@@ -17,7 +17,7 @@ require_once HUB_V3_ROOT . '/components/icons.php';
  */
 function clean_redirect_url(?string $url): string {
     if (empty($url)) {
-        return '/';
+        return '/dashboard';  // Default to dashboard instead of /
     }
 
     // Decode URL if it's encoded
@@ -25,7 +25,7 @@ function clean_redirect_url(?string $url): string {
 
     // Parse the URL
     $parsed = parse_url($url);
-    $path = $parsed['path'] ?? '/';
+    $path = $parsed['path'] ?? '/dashboard';
 
     // Don't redirect to login page (prevent loops)
     if (strpos($path, '/login') === 0 || $path === '/login') {
@@ -36,7 +36,12 @@ function clean_redirect_url(?string $url): string {
                 return clean_redirect_url($queryParams['redirect']);
             }
         }
-        return '/';
+        return '/dashboard';
+    }
+
+    // Don't redirect to root - go to dashboard
+    if ($path === '/' || $path === '') {
+        return '/dashboard';
     }
 
     // Return the path (don't allow external redirects)

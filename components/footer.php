@@ -1,6 +1,29 @@
-<?php $currentTheme = hub_get_theme(); ?>
-<div class="theme-toggle" role="group" aria-label="Välj tema">
-  <button type="button" class="theme-toggle-btn" data-theme="light" aria-pressed="<?= $currentTheme==='light'?'true':'false' ?>" aria-label="Ljust tema">☀️</button>
-  <button type="button" class="theme-toggle-btn" data-theme="dark" aria-pressed="<?= $currentTheme==='dark'?'true':'false' ?>" aria-label="Mörkt tema">🌙</button>
-  <button type="button" class="theme-toggle-btn" data-theme="auto" aria-pressed="<?= $currentTheme==='auto'?'true':'false' ?>" aria-label="Automatiskt tema">📱</button>
-</div>
+<?php
+/**
+ * TheHUB V3.5 - Footer
+ * Theme toggle removed - users can change theme in profile settings
+ */
+?>
+<footer class="site-footer">
+    <div class="footer-content">
+        <p class="footer-copyright">&copy; <?= date('Y') ?> TheHUB</p>
+    </div>
+</footer>
+
+<style>
+.site-footer {
+    padding: var(--space-lg) var(--space-md);
+    text-align: center;
+    color: var(--color-text-secondary);
+    font-size: var(--text-sm);
+    border-top: 1px solid var(--color-border);
+    margin-top: auto;
+}
+.footer-content {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+.footer-copyright {
+    margin: 0;
+}
+</style>
