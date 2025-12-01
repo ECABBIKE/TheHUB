@@ -437,7 +437,7 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
         <div class="tool-actions">
-            <a href="/admin/migrations/safe-migration" class="btn-admin btn-admin-secondary" style="flex: 1;">
+            <a href="/admin/migrations/safe-migration.php" class="btn-admin btn-admin-secondary" style="flex: 1;">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px;"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5V19A9 3 0 0 0 21 19V5"/></svg>
                 Kör migrationer
             </a>
@@ -456,7 +456,7 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
         <div class="tool-actions">
-            <a href="/admin/migrations/debug-migration" class="btn-admin btn-admin-secondary" style="flex: 1;">
+            <a href="/admin/migrations/debug-migration.php" class="btn-admin btn-admin-secondary" style="flex: 1;">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px;"><path d="m18 16 4-4-4-4"/><path d="m6 8-4 4 4 4"/></svg>
                 Debug migrering
             </a>
@@ -475,7 +475,7 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
         <div class="tool-actions">
-            <a href="/admin/migrations/manual-sql-instructions" class="btn-admin btn-admin-secondary" style="flex: 1;">
+            <a href="/admin/migrations/manual-sql-instructions.php" class="btn-admin btn-admin-secondary" style="flex: 1;">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px;"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/></svg>
                 Visa SQL
             </a>
@@ -494,7 +494,7 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
         <div class="tool-actions">
-            <a href="/admin/migrations/populate-series-results" class="btn-admin btn-admin-secondary" style="flex: 1;">
+            <a href="/admin/migrations/populate-series-results.php" class="btn-admin btn-admin-secondary" style="flex: 1;">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px;"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/></svg>
                 Beräkna resultat
             </a>
