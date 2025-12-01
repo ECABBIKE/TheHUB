@@ -156,10 +156,10 @@ class Database {
 
         $fields = [];
         foreach (array_keys($data) as $field) {
-            $fields[] = "{$field} = ?";
+            $fields[] = $field . " = ?";
         }
 
-        $sql = "UPDATE {$table} SET " . implode(', ', $fields) . " WHERE {$where}";
+        $sql = "UPDATE " . $table . " SET " . implode(', ', $fields) . " WHERE " . $where;
         $params = array_merge(array_values($data), $whereParams);
 
         $stmt = $this->query($sql, $params);

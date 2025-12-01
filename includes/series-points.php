@@ -24,9 +24,10 @@
  * @param int $templateId The point_scales.id to use
  * @param int $position The rider's position (1-based)
  * @param string $status Result status (finished, dnf, dns, dq)
+ * @param string $eventLevel Event level (national or sportmotion) - for 50% multiplier
  * @return int Points earned (0 if no points for this position)
  */
-function calculateSeriesPointsForPosition($db, $templateId, $position, $status = 'finished') {
+function calculateSeriesPointsForPosition($db, $templateId, $position, $status = 'finished', $eventLevel = 'national') {
     // No points for DNF, DNS, or DQ
     if (in_array($status, ['dnf', 'dns', 'dq'])) {
         return 0;
@@ -52,7 +53,14 @@ function calculateSeriesPointsForPosition($db, $templateId, $position, $status =
     );
 
     if ($pointValue) {
-        return (int)$pointValue['points'];
+        $points = (int)$pointValue['points'];
+
+        // Apply 50% multiplier for sportmotion events
+        if ($eventLevel === 'sportmotion') {
+            $points = (int)($points * 0.5);
+        }
+
+        return $points;
     }
 
     // Position not in template = 0 points
@@ -83,20 +91,31 @@ function recalculateSeriesEventPoints($db, $seriesId, $eventId) {
 
     $templateId = $seriesEvent['template_id'];
 
-    // Get all results for this event
+    // Get event_level for sportmotion multiplier
+    $event = $db->getRow(
+        "SELECT COALESCE(event_level, 'national') as event_level FROM events WHERE id = ?",
+        [$eventId]
+    );
+    $eventLevel = $event ? $event['event_level'] : 'national';
+
+    // Get all results for this event - ONLY classes that award points AND are series eligible
     $results = $db->getAll("
         SELECT r.id, r.cyclist_id, r.class_id, r.position, r.status
         FROM results r
+        INNER JOIN classes cl ON r.class_id = cl.id
         WHERE r.event_id = ?
+          AND COALESCE(cl.awards_points, 1) = 1
+          AND COALESCE(cl.series_eligible, 1) = 1
     ", [$eventId]);
 
     foreach ($results as $result) {
-        // Calculate points using series template
+        // Calculate points using series template with event_level multiplier
         $points = calculateSeriesPointsForPosition(
             $db,
             $templateId,
             $result['position'],
-            $result['status']
+            $result['status'],
+            $eventLevel
         );
 
         // Check if series_result already exists
