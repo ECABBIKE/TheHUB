@@ -107,6 +107,9 @@ RewriteRule ^admin/import-riders/?$ admin/import-riders.php [QSA,L]
 RewriteRule ^admin/import-results/?$ admin/import-results.php [QSA,L]
 RewriteRule ^admin/import-events/?$ admin/import-events.php [QSA,L]
 RewriteRule ^admin/import-uci/?$ admin/import-uci.php [QSA,L]
+RewriteRule ^admin/media/?$ admin/media.php [QSA,L]
+RewriteRule ^admin/sponsors/?$ admin/sponsors.php [QSA,L]
+RewriteRule ^admin/recalculate-all-points/?$ admin/recalculate-all-points.php [QSA,L]
 
 # Skip remaining admin files (direct PHP access)
 RewriteRule ^admin/.*\.php$ - [L]
