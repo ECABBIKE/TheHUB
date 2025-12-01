@@ -37,33 +37,21 @@ try {
         exit(1);
     }
 
-    // Step 1: Calculate all ranking points
-    echo "[$logDate] Calculating ranking points...\n";
-    $calcStats = calculateAllRankingPoints($db);
-    echo "[$logDate] Processed {$calcStats['events_processed']} events, {$calcStats['riders_processed']} results\n";
+    // Run full ranking update (calculates all disciplines and creates snapshots)
+    echo "[$logDate] Running full ranking update...\n";
+    $stats = runFullRankingUpdate($db, false); // false = no debug output
 
-    // Step 2: Create rider snapshot for current month
-    $snapshotDate = date('Y-m-01'); // First of current month
-    echo "[$logDate] Creating rider snapshot for $snapshotDate...\n";
-    $snapshotStats = createRankingSnapshot($db, $snapshotDate);
-    echo "[$logDate] Ranked riders - Enduro: {$snapshotStats['enduro']}, DH: {$snapshotStats['dh']}, Gravity: {$snapshotStats['gravity']}\n";
-
-    // Step 3: Create club snapshot for current month
-    echo "[$logDate] Creating club snapshot for $snapshotDate...\n";
-    $clubSnapshotStats = createClubRankingSnapshot($db, $snapshotDate);
-    echo "[$logDate] Ranked clubs - Enduro: {$clubSnapshotStats['enduro']}, DH: {$clubSnapshotStats['dh']}, Gravity: {$clubSnapshotStats['gravity']}\n";
-
-    // Step 4: Cleanup old data (older than 26 months)
-    echo "[$logDate] Cleaning up old data...\n";
-    cleanupOldRankingData($db, 26);
-    echo "[$logDate] Cleanup complete\n";
+    echo "[$logDate] Ranking update completed:\n";
+    echo "  - Enduro: {$stats['enduro']['riders']} riders, {$stats['enduro']['clubs']} clubs\n";
+    echo "  - Downhill: {$stats['dh']['riders']} riders, {$stats['dh']['clubs']} clubs\n";
+    echo "  - Gravity: {$stats['gravity']['riders']} riders, {$stats['gravity']['clubs']} clubs\n";
+    echo "  - Total time: {$stats['total_time']}s\n";
 
     // Calculate execution time
     $endTime = microtime(true);
     $duration = round($endTime - $startTime, 2);
 
     echo "[$logDate] Ranking update completed successfully in {$duration}s\n";
-    echo "[$logDate] Summary: {$calcStats['events_processed']} events, {$calcStats['riders_processed']} results, {$snapshotStats['riders_ranked']} riders ranked, {$clubSnapshotStats['clubs_ranked']} clubs ranked\n";
 
 } catch (Exception $e) {
     echo "[$logDate] ERROR: " . $e->getMessage() . "\n";
