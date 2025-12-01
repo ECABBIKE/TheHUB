@@ -1,4 +1,7 @@
 <?php
+// Start output buffering to allow redirects from included pages (like login.php)
+ob_start();
+
 require_once __DIR__ . '/v3-config.php';
 require_once __DIR__ . '/router.php';
 
