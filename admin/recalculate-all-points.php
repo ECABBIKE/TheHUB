@@ -43,15 +43,15 @@ include __DIR__ . '/components/unified-layout.php';
 
                 <?php
                 // Get statistics
-                $totalEvents = $db->getOne("SELECT COUNT(*) FROM events WHERE active = 1");
-                $totalResults = $db->getOne("SELECT COUNT(*) FROM results");
-                $motionKidsResults = $db->getOne("
-                    SELECT COUNT(*)
+                $totalEvents = $db->getRow("SELECT COUNT(*) as cnt FROM events WHERE active = 1")['cnt'] ?? 0;
+                $totalResults = $db->getRow("SELECT COUNT(*) as cnt FROM results")['cnt'] ?? 0;
+                $motionKidsResults = $db->getRow("
+                    SELECT COUNT(*) as cnt
                     FROM results r
                     INNER JOIN classes c ON r.class_id = c.id
                     WHERE (c.awards_points = 0 OR c.series_eligible = 0)
                     AND r.points > 0
-                ");
+                ")['cnt'] ?? 0;
                 ?>
 
                 <div class="stats-grid mb-lg" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem;">
@@ -110,14 +110,14 @@ include __DIR__ . '/components/unified-layout.php';
                     $stats = recalculateEventPoints($db, $event['id']);
 
                     // Count how many were set to zero
-                    $zeroedResults = $db->getOne("
-                        SELECT COUNT(*)
+                    $zeroedResults = $db->getRow("
+                        SELECT COUNT(*) as cnt
                         FROM results r
                         INNER JOIN classes c ON r.class_id = c.id
                         WHERE r.event_id = ?
                         AND (c.awards_points = 0 OR c.series_eligible = 0)
                         AND r.points = 0
-                    ", [$event['id']]);
+                    ", [$event['id']])['cnt'] ?? 0;
 
                     echo "✅ Uppdaterade: {$stats['updated']} resultat | ";
                     echo "🚫 Nollställda: {$zeroedResults} Motion Kids<br>";
