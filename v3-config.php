@@ -132,6 +132,10 @@ if (!function_exists('hub_is_logged_in')) {
         if (function_exists('is_user_logged_in')) {
             return is_user_logged_in();
         }
+        // Check admin login (from includes/auth.php)
+        if (isset($_SESSION['admin_logged_in']) && $_SESSION['admin_logged_in'] === true) {
+            return true;
+        }
         // Check if login timestamp exists (set on successful login)
         if (isset($_SESSION['hub_logged_in_at']) && $_SESSION['hub_logged_in_at'] > 0) {
             return true;
@@ -158,6 +162,19 @@ if (!function_exists('hub_current_user')) {
         if (function_exists('wp_get_current_user')) {
             $wp_user = wp_get_current_user();
             return hub_get_rider_by_email($wp_user->user_email);
+        }
+
+        // Check admin session (from includes/auth.php)
+        if (isset($_SESSION['admin_logged_in']) && $_SESSION['admin_logged_in'] === true) {
+            return [
+                'id' => $_SESSION['admin_id'] ?? 0,
+                'email' => 'admin@thehub.se',
+                'firstname' => $_SESSION['admin_name'] ?? 'Admin',
+                'lastname' => '',
+                'role_id' => ROLE_SUPER_ADMIN,
+                'is_admin' => 1,
+                'active' => 1
+            ];
         }
 
         // Check V3 session first
@@ -267,6 +284,11 @@ if (!function_exists('hub_is_admin')) {
      * Check if current user is an admin (role level 3+)
      */
     function hub_is_admin(?int $userId = null): bool {
+        // Check legacy admin session (from includes/auth.php)
+        if ($userId === null && isset($_SESSION['admin_logged_in']) && $_SESSION['admin_logged_in'] === true) {
+            return true;
+        }
+
         // Check session role first
         if ($userId === null && isset($_SESSION['hub_user_role'])) {
             return $_SESSION['hub_user_role'] >= ROLE_ADMIN;
