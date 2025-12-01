@@ -1,6 +1,15 @@
 <?php
 $pageTitle = ucfirst($pageInfo['page'] ?? 'Dashboard') . ' – TheHUB';
-$themeColor = hub_get_theme() === 'dark' ? '#0A0C14' : '#004A98';
+$currentTheme = function_exists('hub_get_theme') ? hub_get_theme() : 'dark';
+$themeColor = $currentTheme === 'dark' ? '#0A0C14' : '#004A98';
+$hubUrl = defined('HUB_V3_URL') ? HUB_V3_URL : '';
+
+// Fallback for hub_asset if not defined
+if (!function_exists('hub_asset')) {
+    function hub_asset($path) {
+        return '/assets/' . ltrim($path, '/');
+    }
+}
 ?>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
@@ -22,7 +31,7 @@ $themeColor = hub_get_theme() === 'dark' ? '#0A0C14' : '#004A98';
 <link rel="apple-touch-icon" sizes="167x167" href="/uploads/icons/GSIkon.png">
 
 <!-- Web App Manifest -->
-<link rel="manifest" href="<?= HUB_V3_URL ?>/manifest.json">
+<link rel="manifest" href="<?= $hubUrl ?>/manifest.json">
 
 <!-- Favicon -->
 <link rel="icon" type="image/png" sizes="32x32" href="/uploads/icons/GSIkon.png">
