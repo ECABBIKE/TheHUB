@@ -9,11 +9,26 @@
     <div id="toast-container" class="toast-container"></div>
 
     <!-- Lucide Icons -->
-    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            lucide.createIcons();
-        });
+        // Initialize icons - handle async loading
+        function initLucideIcons() {
+            if (typeof lucide !== 'undefined') {
+                lucide.createIcons();
+            } else {
+                // Retry after a short delay if lucide hasn't loaded yet
+                setTimeout(initLucideIcons, 50);
+            }
+        }
+
+        // Initialize immediately
+        initLucideIcons();
+
+        // Re-initialize on DOMContentLoaded
+        document.addEventListener('DOMContentLoaded', initLucideIcons);
+
+        // Re-initialize after full page load
+        window.addEventListener('load', initLucideIcons);
     </script>
 
     <!-- Theme.js removed - always light theme -->

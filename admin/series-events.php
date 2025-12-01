@@ -246,8 +246,8 @@ $pageType = 'admin';
 include __DIR__ . '/components/unified-layout.php';
 ?>
 
-<main class="main-content">
- <div class="container">
+<!-- Content starts here (unified-layout already opened <main>) -->
+<div class="container">
  <!-- Header -->
  <div class="flex items-center justify-between mb-lg">
  <div>
@@ -495,8 +495,8 @@ include __DIR__ . '/components/unified-layout.php';
  </div>
  </div>
  </div>
- </div>
-</main>
+</div>
+<!-- End container (unified-layout-footer will close <main>) -->
 
 <script>
 // Bulk edit functionality
