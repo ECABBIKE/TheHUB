@@ -73,8 +73,12 @@ if (!function_exists('hub_db')) {
     /**
      * Get the PDO database connection
      * @return PDO Database connection
+     * @throws Exception if database connection is not available
      */
     function hub_db(): PDO {
+        if (!isset($GLOBALS['pdo']) || !($GLOBALS['pdo'] instanceof PDO)) {
+            throw new Exception('Database connection not available');
+        }
         return $GLOBALS['pdo'];
     }
 }
