@@ -9,43 +9,50 @@ require_admin();
 $db = getDB();
 
 // Get statistics for tools
-$stats = [];
+$stats = [
+    'potential_duplicates' => 0,
+    'riders_without_uci' => 0,
+    'empty_clubs' => 0,
+    'total_riders' => 0,
+    'total_results' => 0
+];
+
 try {
     // Count potential duplicate riders
-    $stats['potential_duplicates'] = $db->query("
+    $result = $db->query("
         SELECT COUNT(*) FROM (
             SELECT first_name, last_name, birth_year
             FROM riders
             GROUP BY first_name, last_name, birth_year
             HAVING COUNT(*) > 1
         ) as dups
-    ")->fetchColumn();
+    ");
+    if ($result) $stats['potential_duplicates'] = $result->fetchColumn() ?: 0;
 
     // Count riders without UCI ID
-    $stats['riders_without_uci'] = $db->query("
+    $result = $db->query("
         SELECT COUNT(*) FROM riders WHERE uci_id IS NULL OR uci_id = ''
-    ")->fetchColumn();
+    ");
+    if ($result) $stats['riders_without_uci'] = $result->fetchColumn() ?: 0;
 
     // Count clubs without members
-    $stats['empty_clubs'] = $db->query("
+    $result = $db->query("
         SELECT COUNT(*) FROM clubs c
         WHERE NOT EXISTS (SELECT 1 FROM riders r WHERE r.club_id = c.id)
-    ")->fetchColumn();
+    ");
+    if ($result) $stats['empty_clubs'] = $result->fetchColumn() ?: 0;
 
     // Total riders
-    $stats['total_riders'] = $db->query("SELECT COUNT(*) FROM riders")->fetchColumn();
+    $result = $db->query("SELECT COUNT(*) FROM riders");
+    if ($result) $stats['total_riders'] = $result->fetchColumn() ?: 0;
 
     // Total results
-    $stats['total_results'] = $db->query("SELECT COUNT(*) FROM results")->fetchColumn();
+    $result = $db->query("SELECT COUNT(*) FROM results");
+    if ($result) $stats['total_results'] = $result->fetchColumn() ?: 0;
 
 } catch (Exception $e) {
-    $stats = [
-        'potential_duplicates' => 0,
-        'riders_without_uci' => 0,
-        'empty_clubs' => 0,
-        'total_riders' => 0,
-        'total_results' => 0
-    ];
+    // Stats already initialized to zero above
+    error_log("Tools stats error: " . $e->getMessage());
 }
 
 // Page config
