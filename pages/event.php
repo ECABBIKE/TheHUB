@@ -601,6 +601,8 @@ function filterResults() {
 
 .col-place {
   width: 50px;
+  min-width: 50px;
+  max-width: 50px;
   text-align: center;
   font-weight: var(--weight-bold);
 }
@@ -608,23 +610,43 @@ function filterResults() {
 .col-place--2 { color: #C0C0C0; }
 .col-place--3 { color: #CD7F32; }
 
+.col-rider {
+  width: 30%;
+  min-width: 150px;
+}
+
 .col-time {
+  width: 100px;
+  min-width: 100px;
+  max-width: 100px;
   text-align: right;
   font-family: var(--font-mono);
   white-space: nowrap;
 }
 .col-gap {
+  width: 80px;
+  min-width: 80px;
+  max-width: 80px;
   text-align: right;
   font-family: var(--font-mono);
   font-size: var(--text-sm);
   white-space: nowrap;
 }
 .col-split {
+  width: 70px;
+  min-width: 70px;
+  max-width: 70px;
   text-align: right;
   font-family: var(--font-mono);
   font-size: var(--text-xs);
   white-space: nowrap;
   color: var(--color-text-secondary);
+}
+
+/* Ensure table uses fixed layout for consistent column widths */
+.table {
+  table-layout: fixed;
+  width: 100%;
 }
 
 .status-badge {
