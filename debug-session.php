@@ -1,7 +1,6 @@
 <?php
 /**
  * Debug file - DELETE AFTER USE
- * Check session status, login state, and router output
  */
 require_once __DIR__ . '/config.php';
 require_once __DIR__ . '/v3-config.php';
@@ -9,40 +8,29 @@ require_once __DIR__ . '/router.php';
 
 header('Content-Type: text/plain; charset=utf-8');
 
-echo "=== SESSION DEBUG ===\n\n";
+echo "=== FULL REQUEST DEBUG ===\n\n";
 
-echo "Session ID: " . session_id() . "\n";
-echo "Session Status: " . session_status() . " (1=disabled, 2=active)\n\n";
+echo "=== RAW REQUEST ===\n";
+echo "REQUEST_URI: " . ($_SERVER['REQUEST_URI'] ?? 'not set') . "\n";
+echo "QUERY_STRING: " . ($_SERVER['QUERY_STRING'] ?? 'not set') . "\n";
+echo "\$_GET['page']: " . var_export($_GET['page'] ?? null, true) . "\n";
+echo "Full \$_GET: ";
+print_r($_GET);
 
-echo "=== LOGIN CHECK ===\n";
+echo "\n=== LOGIN CHECK ===\n";
 echo "hub_is_logged_in(): " . (hub_is_logged_in() ? 'TRUE' : 'FALSE') . "\n";
-echo "hub_is_admin(): " . (hub_is_admin() ? 'TRUE' : 'FALSE') . "\n";
 
-echo "\n=== ROUTER TEST ===\n";
-// Simulate visiting the root
-$_GET['page'] = '';
+echo "\n=== ROUTER TEST (with actual \$_GET) ===\n";
+// Don't override $_GET, use what's actually there
 $pageInfo = hub_get_current_page();
-echo "Router output for '/':\n";
+echo "Router output:\n";
 print_r($pageInfo);
 
 echo "\n=== FILE CHECK ===\n";
-echo "Dashboard file exists: " . (file_exists(HUB_V3_ROOT . '/pages/dashboard.php') ? 'YES' : 'NO') . "\n";
-echo "Dashboard file path: " . HUB_V3_ROOT . '/pages/dashboard.php' . "\n";
-echo "Dashboard file readable: " . (is_readable(HUB_V3_ROOT . '/pages/dashboard.php') ? 'YES' : 'NO') . "\n";
+echo "File exists: " . (file_exists($pageInfo['file']) ? 'YES' : 'NO') . "\n";
+echo "File path: " . $pageInfo['file'] . "\n";
 
-echo "\n=== TRY LOADING DASHBOARD ===\n";
-ob_start();
-try {
-    include HUB_V3_ROOT . '/pages/dashboard.php';
-    $content = ob_get_clean();
-    echo "Dashboard loaded successfully!\n";
-    echo "Content length: " . strlen($content) . " bytes\n";
-    echo "First 500 chars:\n" . substr($content, 0, 500) . "\n";
-} catch (Exception $e) {
-    ob_end_clean();
-    echo "ERROR loading dashboard: " . $e->getMessage() . "\n";
-    echo "File: " . $e->getFile() . "\n";
-    echo "Line: " . $e->getLine() . "\n";
-}
+echo "\n\nNow try visiting: https://thehub.gravityseries.se/?debug=1\n";
+echo "And paste the output here.\n\n";
 
-echo "\n\nDELETE THIS FILE AFTER DEBUGGING!\n";
+echo "DELETE THIS FILE AFTER DEBUGGING!\n";
