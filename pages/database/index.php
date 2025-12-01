@@ -163,7 +163,7 @@ $recentRiders = $pdo->query("
                 </div>
                 <div class="ranking-stats">
                     <?php if ($rider['wins'] > 0): ?>
-                        <span class="stat gold"><?= $rider['wins'] ?> 🥇</span>
+                        <span class="stat gold"><?= $rider['wins'] ?> Vinster</span>
                     <?php endif; ?>
                     <span class="stat"><?= $rider['podiums'] ?> pallplatser</span>
                 </div>
