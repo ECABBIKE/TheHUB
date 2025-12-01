@@ -93,12 +93,28 @@ function isAdminPageActive($itemId, $requestUri) {
 .sidebar-icon-svg {
     width: 20px;
     height: 20px;
+    color: var(--color-text-secondary);
+    stroke: currentColor;
 }
 
 /* Active state for is-active class */
 .sidebar-link.is-active {
     background: var(--color-accent-light);
     color: var(--color-accent-text);
+}
+
+.sidebar-link.is-active .sidebar-icon-svg {
+    color: var(--color-accent-text);
+}
+
+/* Ensure all sidebar icons have proper color */
+.sidebar-link {
+    color: var(--color-text-secondary);
+}
+
+.sidebar-icon svg {
+    color: inherit;
+    stroke: currentColor;
 }
 
 /* Sidebar Sections */
