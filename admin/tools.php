@@ -437,9 +437,9 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
         <div class="tool-actions">
-            <a href="/admin/migrations/safe-migration.php" class="btn-admin btn-admin-secondary" style="flex: 1;">
+            <a href="/admin/migrations/migration-browser.php" class="btn-admin btn-admin-secondary" style="flex: 1;">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px;"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5V19A9 3 0 0 0 21 19V5"/></svg>
-                Kör migrationer
+                Visa alla migrationer
             </a>
         </div>
     </div>
