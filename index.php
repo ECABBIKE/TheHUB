@@ -2,8 +2,48 @@
 // Start output buffering to allow redirects from included pages (like login.php)
 ob_start();
 
-require_once __DIR__ . '/v3-config.php';
-require_once __DIR__ . '/router.php';
+// Start session if not started
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+// Load config files
+$v3ConfigPath = __DIR__ . '/v3-config.php';
+if (file_exists($v3ConfigPath)) {
+    require_once $v3ConfigPath;
+}
+
+$routerPath = __DIR__ . '/router.php';
+if (file_exists($routerPath)) {
+    require_once $routerPath;
+}
+
+// Fallback for hub_get_theme
+if (!function_exists('hub_get_theme')) {
+    function hub_get_theme() {
+        return 'dark';
+    }
+}
+
+// Fallback for hub_is_ajax
+if (!function_exists('hub_is_ajax')) {
+    function hub_is_ajax() {
+        return !empty($_SERVER['HTTP_X_REQUESTED_WITH']) &&
+               strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
+    }
+}
+
+// Fallback for hub_get_current_page
+if (!function_exists('hub_get_current_page')) {
+    function hub_get_current_page() {
+        return [
+            'page' => 'welcome',
+            'section' => null,
+            'params' => [],
+            'file' => __DIR__ . '/pages/welcome.php'
+        ];
+    }
+}
 
 $pageInfo = hub_get_current_page();
 $theme = hub_get_theme();
