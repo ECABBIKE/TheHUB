@@ -253,27 +253,17 @@ try {
  $gsEventBreakdown = $stmt->fetchAll(PDO::FETCH_ASSOC);
  }
 
- // Ranking stats (24 months rolling)
- $rankingPoints = 0;
- $rankingPosition = null;
- $rankingTotal = 0;
- $rankingMonths = 24;
+ // Ranking stats (24 months rolling) - USE CORRECT RANKING FORMULA!
+ require_once HUB_V3_ROOT . '/includes/ranking_functions.php';
 
+ $rankingMonths = 24;
  $cutoffDate = date('Y-m-d', strtotime("-{$rankingMonths} months"));
 
- // Get rider's ranking points (sum of all points in last 24 months)
- $stmt = $db->prepare("
- SELECT COALESCE(SUM(res.points), 0) as total_points
- FROM results res
- JOIN events e ON res.event_id = e.id
- WHERE res.cyclist_id = ?
- AND res.status = 'finished'
- AND res.points > 0
- AND e.date >= ?
-");
- $stmt->execute([$riderId, $cutoffDate]);
- $rankingStats = $stmt->fetch(PDO::FETCH_ASSOC);
- $rankingPoints = $rankingStats['total_points'] ?? 0;
+ // Calculate ranking using CORRECT formula with multipliers
+ $rankingData = calculateSingleRiderRanking($db, $riderId, 'GRAVITY');
+ $rankingPoints = round($rankingData['total_weighted_points'] ?? 0);
+ $rankingPosition = null;
+ $rankingTotal = 0;
 
  // Get ranking position among all riders
  if ($rankingPoints > 0) {
@@ -301,28 +291,8 @@ try {
  }
  }
 
- // Get events that contribute to ranking
- $rankingEvents = [];
- $stmt = $db->prepare("
- SELECT
-  res.points,
-  e.id as event_id,
-  e.name as event_name,
-  e.date as event_date,
-  cls.display_name as class_name,
-  res.position,
-  res.class_id
- FROM results res
- JOIN events e ON res.event_id = e.id
- LEFT JOIN classes cls ON res.class_id = cls.id
- WHERE res.cyclist_id = ?
-  AND res.status = 'finished'
-  AND res.points > 0
-  AND e.date >= ?
- ORDER BY e.date DESC
- ");
- $stmt->execute([$riderId, $cutoffDate]);
- $rankingEvents = $stmt->fetchAll(PDO::FETCH_ASSOC);
+ // Get events that contribute to ranking (with correct weighted points)
+ $rankingEvents = $rankingData['events'] ?? [];
 
 } catch (Exception $e) {
  $error = $e->getMessage();
@@ -442,7 +412,6 @@ $genderText = match($rider['gender']) {
   <th class="table-col-hide-portrait">Klass</th>
   <th class="table-col-hide-portrait">Datum</th>
   <th class="col-time">Tid</th>
-  <th class="col-points table-col-hide-portrait">Poäng</th>
  </tr>
  </thead>
  <tbody>
@@ -476,13 +445,6 @@ $genderText = match($rider['gender']) {
   <td class="table-col-hide-portrait"><?= htmlspecialchars($result['class_name'] ?? '-') ?></td>
   <td class="table-col-hide-portrait"><?= $result['event_date'] ? date('j M Y', strtotime($result['event_date'])) : '-' ?></td>
   <td class="col-time"><?= htmlspecialchars($result['finish_time'] ?? '-') ?></td>
-  <td class="col-points table-col-hide-portrait">
-  <?php if ($result['points']): ?>
-  <span class="points-value"><?= $result['points'] ?></span>
-  <?php else: ?>
-  -
-  <?php endif; ?>
-  </td>
  </tr>
  <?php endforeach; ?>
  </tbody>
@@ -512,9 +474,6 @@ $genderText = match($rider['gender']) {
  </div>
  <div class="result-time-col">
  <div class="time-value"><?= htmlspecialchars($result['finish_time'] ?? '-') ?></div>
- <?php if ($result['points']): ?>
-  <div class="points-small"><?= $result['points'] ?> p</div>
- <?php endif; ?>
  </div>
  </a>
  <?php endforeach; ?>
@@ -552,9 +511,12 @@ $genderText = match($rider['gender']) {
  <div class="card-section">
  <h3 class="section-title">📋 Hur beräknas ranking?</h3>
  <div class="info-box">
-  <p><strong>Formel:</strong> Summan av alla poäng från lopp de senaste <?= $rankingMonths ?> månaderna.</p>
-  <p><strong>Period:</strong> <?= date('j M Y', strtotime($cutoffDate)) ?> - <?= date('j M Y') ?></p>
-  <p><strong>Inkluderade lopp:</strong> Endast fullföljda lopp där du fått poäng.</p>
+  <p><strong>Formel:</strong> Rankingpoäng = Originalpoäng × Fältstorlek × Eventnivå × Tidsmultiplikator</p>
+  <p><strong>Period:</strong> Rullande 24 månader (<?= date('j M Y', strtotime($cutoffDate)) ?> - <?= date('j M Y') ?>)</p>
+  <p><strong>Fältstorlek:</strong> 0.75-1.00 baserat på antal deltagare i klassen (1-15+ deltagare)</p>
+  <p><strong>Eventnivå:</strong> Nationella event = 100%, Sportmotion = 50%</p>
+  <p><strong>Tidsviktning:</strong> Senaste 12 mån = 100%, Mån 13-24 = 50%, Äldre = 0%</p>
+  <p><strong>Viktigt:</strong> Motion Kids, Motion Kort/Mellan och Sportmotion Lång ger ALDRIG rankingpoäng</p>
  </div>
  </div>
 
@@ -569,11 +531,16 @@ $genderText = match($rider['gender']) {
    <div class="event-breakdown-name"><?= htmlspecialchars($event['event_name']) ?></div>
    <div class="event-breakdown-meta">
    <?= date('j M Y', strtotime($event['event_date'])) ?>
-   <?php if ($event['class_name']): ?>• <?= htmlspecialchars($event['class_name']) ?><?php endif; ?>
-   <?php if ($event['position']): ?>• #<?= $event['position'] ?><?php endif; ?>
+   • Original: <?= round($event['original_points']) ?>p
+   • Fält: <?= $event['field_size'] ?> (×<?= number_format($event['field_multiplier'], 2) ?>)
+   • Nivå: ×<?= number_format($event['event_level_multiplier'], 2) ?>
+   • Tid: ×<?= number_format($event['time_multiplier'], 2) ?>
    </div>
   </div>
-  <div class="event-breakdown-points"><?= $event['points'] ?> p</div>
+  <div class="event-breakdown-points">
+   <strong><?= round($event['weighted_points']) ?> p</strong>
+   <small style="display: block; font-size: 10px; opacity: 0.7;">(<?= round($event['ranking_points']) ?> oviktat)</small>
+  </div>
   </a>
   <?php endforeach; ?>
  </div>
