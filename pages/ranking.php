@@ -6,8 +6,11 @@
 
 $db = hub_db();
 
-// Include ranking functions from parent
-$rankingFunctions = dirname(dirname(__DIR__)) . '/includes/ranking_functions.php';
+// Include ranking functions - use HUB_V3_ROOT or calculate from current file
+$rankingFunctions = defined('HUB_V3_ROOT')
+    ? HUB_V3_ROOT . '/includes/ranking_functions.php'
+    : dirname(__DIR__) . '/includes/ranking_functions.php';
+
 if (file_exists($rankingFunctions)) {
     require_once $rankingFunctions;
     $hasRankingSystem = true;
