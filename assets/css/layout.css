@@ -19,24 +19,29 @@
 .back-link:hover{color:var(--color-accent-text)}
 .back-arrow{font-size:var(--text-lg)}
 
-/* App Layout */
+/* App Layout - Fixed sidebar, scrollable content */
 .app-layout{
-  display:grid;
-  grid-template-columns:var(--sidebar-width) 1fr;
+  display:block;
   min-height:calc(100vh - var(--header-height));
   min-height:calc(100dvh - var(--header-height));
+  padding-left:var(--sidebar-width);
 }
 
-/* Sidebar */
+/* Sidebar - Fixed position */
 .sidebar{
-  position:sticky;top:var(--header-height);
+  position:fixed;
+  top:var(--header-height);
+  left:0;
+  width:var(--sidebar-width);
   height:calc(100vh - var(--header-height));
   height:calc(100dvh - var(--header-height));
   background:var(--color-bg-surface);
   border-right:1px solid var(--color-border);
   display:flex;flex-direction:column;
   padding:var(--space-md) 0;
-  overflow-y:auto;z-index:var(--z-sticky);
+  overflow-y:auto;
+  overflow-x:visible;
+  z-index:var(--z-sticky);
 }
 
 .sidebar-nav{display:flex;flex-direction:column;gap:var(--space-2xs);padding:0 var(--space-sm)}
@@ -92,7 +97,7 @@
 
 /* Responsive */
 @media(max-width:899px){
-  .app-layout{grid-template-columns:1fr}
+  .app-layout{padding-left:0}
   .sidebar{display:none}
   .mobile-nav{display:block}
   .main-content{

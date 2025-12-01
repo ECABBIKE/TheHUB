@@ -42,6 +42,7 @@ function isAdminPageActive($itemId, $requestUri) {
           <a href="<?= htmlspecialchars($item['url']) ?>"
              class="sidebar-link<?= $isActive ? ' is-active' : '' ?>"
              data-nav="<?= htmlspecialchars($item['id']) ?>"
+             data-tooltip="<?= htmlspecialchars($item['label']) ?>"
              <?= $isActive ? 'aria-current="page"' : '' ?>
              aria-label="<?= htmlspecialchars($item['aria']) ?>">
             <span class="sidebar-icon" aria-hidden="true"><?= hub_icon($item['icon'], 'sidebar-icon-svg') ?></span>
@@ -64,6 +65,7 @@ function isAdminPageActive($itemId, $requestUri) {
       <a href="<?= htmlspecialchars($item['url']) ?>"
          class="sidebar-link<?= $isActive ? ' is-active' : '' ?>"
          data-nav="<?= htmlspecialchars($item['id']) ?>"
+         data-tooltip="<?= htmlspecialchars($item['label']) ?>"
          <?= $isActive ? 'aria-current="page"' : '' ?>
          aria-label="<?= htmlspecialchars($item['aria']) ?>">
         <span class="sidebar-icon" aria-hidden="true"><?= hub_icon($item['icon'], 'sidebar-icon-svg') ?></span>
@@ -81,6 +83,7 @@ function isAdminPageActive($itemId, $requestUri) {
       <a href="/admin/dashboard"
          class="sidebar-link sidebar-link--admin"
          data-nav="admin"
+         data-tooltip="Admin"
          aria-label="Gå till admin">
         <span class="sidebar-icon" aria-hidden="true"><?= hub_icon('settings', 'sidebar-icon-svg') ?></span>
         <span class="sidebar-label">Admin</span>
@@ -90,12 +93,40 @@ function isAdminPageActive($itemId, $requestUri) {
 </aside>
 
 <style>
-/* Sidebar icon styling for Lucide SVGs - uses compact vertical layout from layout.css */
+/* ========================================================================
+   SIDEBAR - Icon-only with tooltips (70px wide)
+   ======================================================================== */
+
+/* Sidebar icon styling for Lucide SVGs */
 .sidebar-icon-svg {
-    width: 20px;
-    height: 20px;
-    color: var(--color-text-secondary);
+    width: 22px;
+    height: 22px;
+    color: inherit;
     stroke: currentColor;
+}
+
+/* Sidebar link - icon only */
+.sidebar-link {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    margin: 0 auto;
+    color: var(--color-text-secondary);
+    text-decoration: none;
+    border-radius: var(--radius-md);
+    transition: all 0.2s ease;
+    position: relative;
+}
+
+.sidebar-link:hover {
+    color: var(--color-text-primary);
+    background: var(--color-bg-hover);
+}
+
+.sidebar-link:hover .sidebar-icon-svg {
+    color: var(--color-text-primary);
 }
 
 /* Active state for is-active class */
@@ -108,23 +139,55 @@ function isAdminPageActive($itemId, $requestUri) {
     color: var(--color-accent-text);
 }
 
-/* Ensure all sidebar icons have proper color */
-.sidebar-link {
-    color: var(--color-text-secondary);
-}
-
-.sidebar-link:hover {
-    color: var(--color-text-primary);
-    background: var(--color-bg-hover);
-}
-
-.sidebar-link:hover .sidebar-icon-svg {
-    color: var(--color-text-primary);
+/* Active indicator bar */
+.sidebar-link.is-active::before {
+    content: '';
+    position: absolute;
+    left: -12px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 3px;
+    height: 24px;
+    background: var(--color-accent);
+    border-radius: 0 2px 2px 0;
 }
 
 .sidebar-icon svg {
     color: inherit;
     stroke: currentColor;
+}
+
+/* Hide label - show only icon */
+.sidebar-label {
+    display: none;
+}
+
+/* Tooltip on hover */
+.sidebar-link::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    left: 100%;
+    top: 50%;
+    transform: translateY(-50%);
+    margin-left: 12px;
+    padding: var(--space-xs) var(--space-sm);
+    background: var(--color-bg-elevated, #1a1a2e);
+    color: var(--color-text-primary);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    white-space: nowrap;
+    border-radius: var(--radius-md);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.15s ease;
+    z-index: 1000;
+    pointer-events: none;
+}
+
+.sidebar-link:hover::after {
+    opacity: 1;
+    visibility: visible;
 }
 
 /* Sidebar Sections */
@@ -151,5 +214,33 @@ function isAdminPageActive($itemId, $requestUri) {
 /* Admin link styling */
 .sidebar-link--admin {
     color: var(--color-accent-text) !important;
+}
+
+/* ========================================================================
+   MOBILE - Show labels, hide tooltips
+   ======================================================================== */
+@media (max-width: 899px) {
+    .sidebar-link {
+        flex-direction: row;
+        justify-content: flex-start;
+        width: 100%;
+        height: auto;
+        gap: var(--space-md);
+        padding: var(--space-md) var(--space-lg);
+        margin: 0;
+    }
+
+    .sidebar-label {
+        display: block;
+        font-size: var(--text-sm);
+    }
+
+    .sidebar-link::after {
+        display: none;
+    }
+
+    .sidebar-link.is-active::before {
+        left: 0;
+    }
 }
 </style>
