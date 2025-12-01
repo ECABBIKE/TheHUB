@@ -13,7 +13,14 @@ require_once __DIR__ . '/v3-config.php';
  */
 function hub_requires_auth(string $page): bool {
     // Public pages that don't require authentication
-    $publicPages = ['', 'welcome', 'login', 'logout', 'forgot-password', 'reset-password', 'index.php'];
+    $publicPages = [
+        // Auth pages
+        '', 'welcome', 'login', 'logout', 'forgot-password', 'reset-password', 'index.php',
+        // Public content sections (viewable without login)
+        'calendar', 'results', 'series', 'database', 'ranking',
+        // Legacy public pages
+        'rider', 'club', 'event', 'riders', 'clubs'
+    ];
     return !in_array($page, $publicPages);
 }
 
