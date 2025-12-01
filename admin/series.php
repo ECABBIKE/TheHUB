@@ -181,8 +181,8 @@ $page_actions = '<button onclick="openSeriesModal()" class="btn-admin btn-admin-
     Ny Serie
 </button>';
 
-// Include admin layout
-include __DIR__ . '/components/admin-layout.php';
+// Include unified layout (uses same layout as public site)
+include __DIR__ . '/components/unified-layout.php';
 ?>
 
 <?php if ($message): ?>
@@ -605,4 +605,4 @@ document.addEventListener('keydown', function(e) {
 }
 </style>
 
-<?php include __DIR__ . '/components/admin-footer.php'; ?>
+<?php include __DIR__ . '/components/unified-layout-footer.php'; ?>

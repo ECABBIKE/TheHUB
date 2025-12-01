@@ -152,7 +152,7 @@ $page_actions = '<a href="/admin/import/classes" class="btn-admin btn-admin-seco
     Ny Klass
 </button>';
 
-include __DIR__ . '/components/admin-layout.php';
+include __DIR__ . '/components/unified-layout.php';
 ?>
 
 <?php if ($message): ?>
@@ -484,4 +484,4 @@ document.addEventListener('keydown', function(e) {
 .admin-checkbox-label input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--color-accent); }
 </style>
 
-<?php include __DIR__ . '/components/admin-footer.php'; ?>
+<?php include __DIR__ . '/components/unified-layout-footer.php'; ?>

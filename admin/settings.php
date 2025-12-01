@@ -49,8 +49,8 @@ $breadcrumbs = [
     ['label' => 'Inställningar']
 ];
 
-// Include V3 admin layout
-include __DIR__ . '/components/admin-layout.php';
+// Include unified layout (uses same layout as public site)
+include __DIR__ . '/components/unified-layout.php';
 ?>
 
 <?php if ($message): ?>
@@ -143,4 +143,4 @@ include __DIR__ . '/components/admin-layout.php';
     </div>
 </div>
 
-<?php include __DIR__ . '/components/admin-footer.php'; ?>
+<?php include __DIR__ . '/components/unified-layout-footer.php'; ?>
