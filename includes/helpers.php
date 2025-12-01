@@ -168,51 +168,81 @@ class DatabaseWrapper {
   }
 
   public function query($sql, $params = array()) {
-    $stmt = $this->pdo->prepare($sql);
-    $stmt->execute($params);
-    return $stmt;
+    try {
+      $stmt = $this->pdo->prepare($sql);
+      $stmt->execute($params);
+      return $stmt;
+    } catch (PDOException $e) {
+      error_log("Query failed: " . $e->getMessage() . " | SQL: " . $sql);
+      return false;
+    }
   }
 
   public function getAll($sql, $params = array()) {
-    $stmt = $this->pdo->prepare($sql);
-    $stmt->execute($params);
-    return $stmt->fetchAll();
+    $stmt = $this->query($sql, $params);
+    if (!$stmt) return [];
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
   }
 
   public function getRow($sql, $params = array()) {
-    $stmt = $this->pdo->prepare($sql);
-    $stmt->execute($params);
-    return $stmt->fetch();
+    $stmt = $this->query($sql, $params);
+    if (!$stmt) return [];
+    $result = $stmt->fetch(PDO::FETCH_ASSOC);
+    return $result ?: [];
   }
-  
+
+  public function getValue($sql, $params = array()) {
+    $stmt = $this->query($sql, $params);
+    if (!$stmt) return null;
+    return $stmt->fetchColumn();
+  }
+
+  public function getOne($sql, $params = array()) {
+    return $this->getValue($sql, $params);
+  }
+
   public function insert($table, $data) {
     $fields = array_keys($data);
     $placeholders = array_fill(0, count($fields), '?');
 
-    $sql ="INSERT INTO" . $table ." (" . implode(', ', $fields) .") VALUES (" . implode(', ', $placeholders) .")";
-    $stmt = $this->pdo->prepare($sql);
-    $stmt->execute(array_values($data));
+    $sql = "INSERT INTO " . $table . " (" . implode(', ', $fields) . ") VALUES (" . implode(', ', $placeholders) . ")";
+    $stmt = $this->query($sql, array_values($data));
+    if (!$stmt) return 0;
     return $this->pdo->lastInsertId();
   }
-  
+
   public function update($table, $data, $where, $params = array()) {
     $sets = array();
     $values = array();
-    
+
     foreach ($data as $key => $value) {
-      $sets[] = $key ." = ?";
+      $sets[] = $key . " = ?";
       $values[] = $value;
     }
-    
-    $sql ="UPDATE" . $table ." SET" . implode(', ', $sets) ." WHERE" . $where;
-    $stmt = $this->pdo->prepare($sql);
-    return $stmt->execute(array_merge($values, $params));
+
+    $sql = "UPDATE " . $table . " SET " . implode(', ', $sets) . " WHERE " . $where;
+    $stmt = $this->query($sql, array_merge($values, $params));
+    if (!$stmt) return 0;
+    return $stmt->rowCount();
   }
-  
+
   public function delete($table, $where, $params = array()) {
-    $sql ="DELETE FROM" . $table ." WHERE" . $where;
-    $stmt = $this->pdo->prepare($sql);
-    return $stmt->execute($params);
+    $sql = "DELETE FROM " . $table . " WHERE " . $where;
+    $stmt = $this->query($sql, $params);
+    if (!$stmt) return 0;
+    return $stmt->rowCount();
+  }
+
+  public function beginTransaction() {
+    return $this->pdo->beginTransaction();
+  }
+
+  public function commit() {
+    return $this->pdo->commit();
+  }
+
+  public function rollback() {
+    return $this->pdo->rollBack();
   }
 }
 
