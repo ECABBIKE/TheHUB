@@ -47,6 +47,8 @@ $adminNav = [
     ['id' => 'admin-riders', 'label' => 'Deltagare', 'icon' => 'users', 'url' => '/admin/riders', 'aria' => 'Hantera deltagare'],
     ['id' => 'admin-clubs', 'label' => 'Klubbar', 'icon' => 'building', 'url' => '/admin/clubs', 'aria' => 'Hantera klubbar'],
     ['id' => 'admin-classes', 'label' => 'Klasser', 'icon' => 'layers', 'url' => '/admin/classes', 'aria' => 'Hantera klasser'],
+    ['id' => 'admin-media', 'label' => 'Media', 'icon' => 'image', 'url' => '/admin/media', 'aria' => 'Hantera media'],
+    ['id' => 'admin-sponsors', 'label' => 'Sponsorer', 'icon' => 'award', 'url' => '/admin/sponsors', 'aria' => 'Hantera sponsorer'],
     ['id' => 'admin-import', 'label' => 'Import', 'icon' => 'upload', 'url' => '/admin/import', 'aria' => 'Importera data'],
     ['id' => 'admin-ranking', 'label' => 'Ranking', 'icon' => 'bar-chart-2', 'url' => '/admin/ranking', 'aria' => 'Hantera ranking'],
     ['id' => 'admin-users', 'label' => 'Användare', 'icon' => 'user-cog', 'url' => '/admin/users', 'aria' => 'Hantera användare'],
