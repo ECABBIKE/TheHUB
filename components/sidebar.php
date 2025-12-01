@@ -105,13 +105,14 @@ function isAdminPageActive($itemId, $requestUri) {
     stroke: currentColor;
 }
 
-/* Sidebar link - icon only */
+/* Sidebar link - icon with label below */
 .sidebar-link {
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
-    width: 48px;
-    height: 48px;
+    gap: 2px;
+    padding: var(--space-sm) var(--space-xs);
     margin: 0 auto;
     color: var(--color-text-secondary);
     text-decoration: none;
@@ -157,37 +158,19 @@ function isAdminPageActive($itemId, $requestUri) {
     stroke: currentColor;
 }
 
-/* Hide label - show only icon */
+/* Label under icon */
 .sidebar-label {
-    display: none;
-}
-
-/* Tooltip on hover */
-.sidebar-link::after {
-    content: attr(data-tooltip);
-    position: absolute;
-    left: 100%;
-    top: 50%;
-    transform: translateY(-50%);
-    margin-left: 12px;
-    padding: var(--space-xs) var(--space-sm);
-    background: var(--color-bg-elevated, #1a1a2e);
-    color: var(--color-text-primary);
-    font-size: var(--text-sm);
+    display: block;
+    font-size: 10px;
     font-weight: var(--weight-medium);
-    white-space: nowrap;
-    border-radius: var(--radius-md);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-    opacity: 0;
-    visibility: hidden;
-    transition: all 0.15s ease;
-    z-index: 1000;
-    pointer-events: none;
+    line-height: 1.2;
+    text-align: center;
+    margin-top: 2px;
 }
 
-.sidebar-link:hover::after {
-    opacity: 1;
-    visibility: visible;
+/* Tooltip disabled - labels are visible */
+.sidebar-link::after {
+    display: none;
 }
 
 /* Sidebar Sections */
