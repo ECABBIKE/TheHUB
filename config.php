@@ -57,7 +57,10 @@ try {
     );
     $GLOBALS['pdo'] = $pdo;
 } catch (PDOException $e) {
-    die('Database connection failed');
+    error_log('PDO Connection Error: ' . $e->getMessage());
+    error_log('Connection String: mysql:host=' . DB_HOST . ';dbname=' . DB_NAME);
+    error_log('DB User: ' . DB_USER);
+    die('Database connection failed: ' . $e->getMessage());
 }
 
 if (session_status() === PHP_SESSION_NONE) {
