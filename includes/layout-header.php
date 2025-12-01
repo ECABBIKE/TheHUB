@@ -242,7 +242,10 @@ if ($userTheme === 'auto') {
     <!-- 7. Utility Classes -->
     <link rel="stylesheet" href="/assets/css/utilities.css?v=<?= filemtime(__DIR__ . '/../assets/css/utilities.css') ?>">
 
-    <!-- 8. PWA Support -->
+    <!-- 8. Grid System -->
+    <link rel="stylesheet" href="/assets/css/grid.css?v=<?= filemtime(__DIR__ . '/../assets/css/grid.css') ?>">
+
+    <!-- 9. PWA Support -->
     <link rel="stylesheet" href="/assets/css/pwa.css?v=<?= filemtime(__DIR__ . '/../assets/css/pwa.css') ?>">
 
     <!-- 9. GS Compatibility Layer (maps old gs-* classes to V3.5) -->

@@ -448,7 +448,7 @@ include __DIR__ . '/components/unified-layout.php';
   </div>
 
   <!-- Stats -->
-  <div class="grid grid-cols-2 gs-md-grid-cols-4 gap-lg mb-lg">
+  <div class="grid grid-stats grid-gap-md" style="margin-bottom: var(--space-lg);">
   <div class="stat-card">
    <i data-lucide="database" class="icon-lg text-primary mb-md"></i>
    <div class="stat-number"><?= count($imports) ?></div>
