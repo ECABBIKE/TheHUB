@@ -80,7 +80,7 @@ if (!$event) {
 $eventDate = strtotime($event['date']);
 $isPast = $eventDate < time();
 
-// Fetch registered participants (same as V2)
+// Fetch registered participants
 $regStmt = $pdo->prepare("
     SELECT
         reg.*,
@@ -88,14 +88,12 @@ $regStmt = $pdo->prepare("
         r.firstname,
         r.lastname,
         c.name as club_name,
-        cls.name as class_name,
-        cls.display_name as class_display_name
+        reg.category as class_name
     FROM event_registrations reg
     LEFT JOIN riders r ON reg.rider_id = r.id
     LEFT JOIN clubs c ON r.club_id = c.id
-    LEFT JOIN classes cls ON reg.class_id = cls.id
     WHERE reg.event_id = ?
-    ORDER BY cls.sort_order, r.lastname, r.firstname
+    ORDER BY reg.category, r.lastname, r.firstname
 ");
 $regStmt->execute([$eventId]);
 $registrations = $regStmt->fetchAll(PDO::FETCH_ASSOC);
@@ -105,7 +103,7 @@ $totalRegistrations = count($registrations);
 // Group by class
 $regByClass = [];
 foreach ($registrations as $reg) {
-    $className = $reg['class_display_name'] ?? $reg['class_name'] ?? 'Okänd klass';
+    $className = $reg['class_name'] ?? 'Okänd klass';
     if (!isset($regByClass[$className])) {
         $regByClass[$className] = [];
     }
