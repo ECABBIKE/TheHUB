@@ -69,7 +69,7 @@ include __DIR__ . '/components/unified-layout.php';
 .media-layout {
     display: grid;
     grid-template-columns: 250px 1fr;
-    gap: var(--spacing-lg);
+    gap: var(--space-lg);
 }
 
 @media (max-width: 768px) {
@@ -80,10 +80,10 @@ include __DIR__ . '/components/unified-layout.php';
 
 /* Sidebar */
 .media-sidebar {
-    background: var(--surface);
-    border-radius: var(--radius);
-    padding: var(--spacing-md);
-    border: 1px solid var(--border);
+    background: var(--color-bg-surface);
+    border-radius: var(--radius-md);
+    padding: var(--space-md);
+    border: 1px solid var(--color-border);
     height: fit-content;
 }
 
@@ -96,7 +96,7 @@ include __DIR__ . '/components/unified-layout.php';
 .folder-item {
     display: flex;
     align-items: center;
-    padding: var(--spacing-sm) var(--spacing-md);
+    padding: var(--space-sm) var(--space-md);
     border-radius: var(--radius-sm);
     cursor: pointer;
     transition: background 0.15s;
@@ -106,18 +106,18 @@ include __DIR__ . '/components/unified-layout.php';
 }
 
 .folder-item:hover {
-    background: var(--hover);
+    background: var(--color-bg-hover);
 }
 
 .folder-item.active {
-    background: var(--primary);
+    background: var(--color-accent);
     color: white;
 }
 
 .folder-icon {
     width: 20px;
     height: 20px;
-    margin-right: var(--spacing-sm);
+    margin-right: var(--space-sm);
     opacity: 0.7;
 }
 
@@ -132,10 +132,10 @@ include __DIR__ . '/components/unified-layout.php';
 
 .folder-count {
     font-size: 0.75rem;
-    background: var(--muted);
+    background: var(--color-bg-sunken);
     padding: 2px 6px;
     border-radius: 10px;
-    color: var(--text-muted);
+    color: var(--color-text-secondary);
 }
 
 .folder-item.active .folder-count {
@@ -145,37 +145,37 @@ include __DIR__ . '/components/unified-layout.php';
 
 /* Upload area */
 .upload-zone {
-    background: var(--surface);
-    border: 2px dashed var(--border);
-    border-radius: var(--radius);
-    padding: var(--spacing-xl);
+    background: var(--color-bg-surface);
+    border: 2px dashed var(--color-border);
+    border-radius: var(--radius-md);
+    padding: var(--space-xl);
     text-align: center;
     cursor: pointer;
     transition: all 0.2s;
-    margin-bottom: var(--spacing-lg);
+    margin-bottom: var(--space-lg);
 }
 
 .upload-zone:hover,
 .upload-zone.dragover {
-    border-color: var(--primary);
-    background: var(--hover);
+    border-color: var(--color-accent);
+    background: var(--color-bg-hover);
 }
 
 .upload-zone-icon {
     width: 48px;
     height: 48px;
-    margin: 0 auto var(--spacing-md);
-    color: var(--text-muted);
+    margin: 0 auto var(--space-md);
+    color: var(--color-text-secondary);
 }
 
 .upload-zone-text {
-    color: var(--text-muted);
-    margin-bottom: var(--spacing-xs);
+    color: var(--color-text-secondary);
+    margin-bottom: var(--space-xs);
 }
 
 .upload-zone-hint {
     font-size: 0.75rem;
-    color: var(--text-muted);
+    color: var(--color-text-secondary);
     opacity: 0.7;
 }
 
@@ -183,13 +183,13 @@ include __DIR__ . '/components/unified-layout.php';
 .media-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-    gap: var(--spacing-md);
+    gap: var(--space-md);
 }
 
 .media-item {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
+    background: var(--color-bg-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
     overflow: hidden;
     cursor: pointer;
     transition: all 0.15s;
@@ -199,17 +199,17 @@ include __DIR__ . '/components/unified-layout.php';
 .media-item:hover {
     transform: translateY(-2px);
     box-shadow: var(--shadow-lg);
-    border-color: var(--primary);
+    border-color: var(--color-accent);
 }
 
 .media-item.selected {
-    border-color: var(--primary);
-    box-shadow: 0 0 0 2px var(--primary);
+    border-color: var(--color-accent);
+    box-shadow: 0 0 0 2px var(--color-accent);
 }
 
 .media-thumbnail {
     aspect-ratio: 1;
-    background: var(--bg);
+    background: var(--color-bg-sunken);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -225,11 +225,11 @@ include __DIR__ . '/components/unified-layout.php';
 .media-thumbnail-icon {
     width: 48px;
     height: 48px;
-    color: var(--text-muted);
+    color: var(--color-text-secondary);
 }
 
 .media-info {
-    padding: var(--spacing-sm);
+    padding: var(--space-sm);
 }
 
 .media-filename {
@@ -242,18 +242,18 @@ include __DIR__ . '/components/unified-layout.php';
 
 .media-meta {
     font-size: 0.65rem;
-    color: var(--text-muted);
+    color: var(--color-text-secondary);
     margin-top: 2px;
 }
 
 .media-checkbox {
     position: absolute;
-    top: var(--spacing-xs);
-    left: var(--spacing-xs);
+    top: var(--space-xs);
+    left: var(--space-xs);
     width: 20px;
     height: 20px;
-    background: var(--surface);
-    border: 2px solid var(--border);
+    background: var(--color-bg-surface);
+    border: 2px solid var(--color-border);
     border-radius: 4px;
     cursor: pointer;
     opacity: 0;
@@ -266,16 +266,16 @@ include __DIR__ . '/components/unified-layout.php';
 }
 
 .media-item.selected .media-checkbox {
-    background: var(--primary);
-    border-color: var(--primary);
+    background: var(--color-accent);
+    border-color: var(--color-accent);
 }
 
 /* Toolbar */
 .media-toolbar {
     display: flex;
-    gap: var(--spacing-md);
+    gap: var(--space-md);
     align-items: center;
-    margin-bottom: var(--spacing-lg);
+    margin-bottom: var(--space-lg);
     flex-wrap: wrap;
 }
 
@@ -286,22 +286,22 @@ include __DIR__ . '/components/unified-layout.php';
 
 .media-search input {
     width: 100%;
-    padding: var(--spacing-sm) var(--spacing-md);
-    border: 1px solid var(--border);
+    padding: var(--space-sm) var(--space-md);
+    border: 1px solid var(--color-border);
     border-radius: var(--radius-sm);
-    background: var(--surface);
-    color: var(--text);
+    background: var(--color-bg-surface);
+    color: var(--color-text-primary);
 }
 
 /* Stats bar */
 .media-stats {
     display: flex;
-    gap: var(--spacing-lg);
-    padding: var(--spacing-sm) 0;
-    margin-bottom: var(--spacing-md);
-    border-bottom: 1px solid var(--border);
+    gap: var(--space-lg);
+    padding: var(--space-sm) 0;
+    margin-bottom: var(--space-md);
+    border-bottom: 1px solid var(--color-border);
     font-size: 0.875rem;
-    color: var(--text-muted);
+    color: var(--color-text-secondary);
 }
 
 /* Modal */
@@ -311,7 +311,7 @@ include __DIR__ . '/components/unified-layout.php';
     inset: 0;
     background: rgba(0,0,0,0.8);
     z-index: 1000;
-    padding: var(--spacing-lg);
+    padding: var(--space-lg);
     overflow-y: auto;
 }
 
@@ -322,7 +322,7 @@ include __DIR__ . '/components/unified-layout.php';
 }
 
 .media-modal-content {
-    background: var(--surface);
+    background: var(--color-bg-surface);
     border-radius: var(--radius-lg);
     max-width: 900px;
     width: 100%;
@@ -334,23 +334,23 @@ include __DIR__ . '/components/unified-layout.php';
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: var(--spacing-md) var(--spacing-lg);
-    border-bottom: 1px solid var(--border);
+    padding: var(--space-md) var(--space-lg);
+    border-bottom: 1px solid var(--color-border);
 }
 
 .media-modal-close {
     background: none;
     border: none;
-    padding: var(--spacing-xs);
+    padding: var(--space-xs);
     cursor: pointer;
-    color: var(--text-muted);
+    color: var(--color-text-secondary);
 }
 
 .media-modal-body {
     display: grid;
     grid-template-columns: 1fr 300px;
-    gap: var(--spacing-lg);
-    padding: var(--spacing-lg);
+    gap: var(--space-lg);
+    padding: var(--space-lg);
 }
 
 @media (max-width: 768px) {
@@ -360,9 +360,9 @@ include __DIR__ . '/components/unified-layout.php';
 }
 
 .media-preview {
-    background: var(--bg);
-    border-radius: var(--radius);
-    padding: var(--spacing-md);
+    background: var(--color-bg-sunken);
+    border-radius: var(--radius-md);
+    padding: var(--space-md);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -378,19 +378,19 @@ include __DIR__ . '/components/unified-layout.php';
 .media-details {
     display: flex;
     flex-direction: column;
-    gap: var(--spacing-md);
+    gap: var(--space-md);
 }
 
 .media-detail-group {
     display: flex;
     flex-direction: column;
-    gap: var(--spacing-xs);
+    gap: var(--space-xs);
 }
 
 .media-detail-label {
     font-size: 0.75rem;
     text-transform: uppercase;
-    color: var(--text-muted);
+    color: var(--color-text-secondary);
     font-weight: 600;
 }
 
@@ -399,31 +399,31 @@ include __DIR__ . '/components/unified-layout.php';
 }
 
 .media-detail-input {
-    padding: var(--spacing-sm);
-    border: 1px solid var(--border);
+    padding: var(--space-sm);
+    border: 1px solid var(--color-border);
     border-radius: var(--radius-sm);
-    background: var(--bg);
-    color: var(--text);
+    background: var(--color-bg-sunken);
+    color: var(--color-text-primary);
 }
 
 /* Empty state */
 .media-empty {
     text-align: center;
-    padding: var(--spacing-2xl);
-    color: var(--text-muted);
+    padding: var(--space-2xl);
+    color: var(--color-text-secondary);
 }
 
 .media-empty-icon {
     width: 64px;
     height: 64px;
-    margin: 0 auto var(--spacing-md);
+    margin: 0 auto var(--space-md);
     opacity: 0.5;
 }
 
 /* Progress bar for uploads */
 .upload-progress {
     display: none;
-    margin-top: var(--spacing-md);
+    margin-top: var(--space-md);
 }
 
 .upload-progress.active {
@@ -432,33 +432,33 @@ include __DIR__ . '/components/unified-layout.php';
 
 .progress-bar {
     height: 4px;
-    background: var(--border);
+    background: var(--color-border);
     border-radius: 2px;
     overflow: hidden;
 }
 
 .progress-fill {
     height: 100%;
-    background: var(--primary);
+    background: var(--color-accent);
     width: 0;
     transition: width 0.3s;
 }
 
 .progress-text {
     font-size: 0.75rem;
-    color: var(--text-muted);
-    margin-top: var(--spacing-xs);
+    color: var(--color-text-secondary);
+    margin-top: var(--space-xs);
 }
 </style>
 
 <div class="media-layout">
     <!-- Sidebar -->
     <aside class="media-sidebar">
-        <h3 style="margin: 0 0 var(--spacing-md); font-size: 0.875rem; text-transform: uppercase; color: var(--text-muted);">Mappar</h3>
+        <h3 style="margin: 0 0 var(--space-md); font-size: 0.875rem; text-transform: uppercase; color: var(--color-text-secondary);">Mappar</h3>
 
         <ul class="folder-list">
             <li>
-                <a href="?page=admin/media" class="folder-item <?= $currentFolder === null ? 'active' : '' ?>">
+                <a href="/admin/media" class="folder-item <?= $currentFolder === null ? 'active' : '' ?>">
                     <svg class="folder-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
                     <span class="folder-name">Alla filer</span>
                     <span class="folder-count"><?= $totalFiles ?></span>
@@ -466,7 +466,7 @@ include __DIR__ . '/components/unified-layout.php';
             </li>
             <?php foreach ($folders as $folder): ?>
             <li>
-                <a href="?page=admin/media&folder=<?= $folder['id'] ?>" class="folder-item <?= $currentFolder === $folder['id'] ? 'active' : '' ?>">
+                <a href="/admin/media?folder=<?= $folder['id'] ?>" class="folder-item <?= $currentFolder === $folder['id'] ? 'active' : '' ?>">
                     <svg class="folder-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
                     <span class="folder-name"><?= htmlspecialchars($folder['name']) ?></span>
                     <span class="folder-count"><?= $folder['count'] ?></span>
@@ -475,7 +475,7 @@ include __DIR__ . '/components/unified-layout.php';
             <?php endforeach; ?>
         </ul>
 
-        <div style="margin-top: var(--spacing-lg); padding-top: var(--spacing-md); border-top: 1px solid var(--border); font-size: 0.75rem; color: var(--text-muted);">
+        <div style="margin-top: var(--space-lg); padding-top: var(--space-md); border-top: 1px solid var(--color-border); font-size: 0.75rem; color: var(--color-text-secondary);">
             <strong>Totalt:</strong> <?= $totalFiles ?> filer<br>
             <strong>Storlek:</strong> <?= format_file_size($totalSize) ?>
         </div>
@@ -505,8 +505,7 @@ include __DIR__ . '/components/unified-layout.php';
         <!-- Toolbar -->
         <div class="media-toolbar">
             <div class="media-search">
-                <form method="get" style="display: flex; gap: var(--spacing-sm);">
-                    <input type="hidden" name="page" value="admin/media">
+                <form method="get" action="/admin/media" style="display: flex; gap: var(--space-sm);">
                     <?php if ($currentFolder): ?>
                     <input type="hidden" name="folder" value="<?= htmlspecialchars($currentFolder) ?>">
                     <?php endif; ?>
@@ -527,7 +526,7 @@ include __DIR__ . '/components/unified-layout.php';
         <?php if ($searchQuery): ?>
         <div class="media-stats">
             <span>Sökresultat för "<?= htmlspecialchars($searchQuery) ?>": <?= count($mediaFiles) ?> filer</span>
-            <a href="?page=admin/media<?= $currentFolder ? '&folder=' . $currentFolder : '' ?>">Rensa sökning</a>
+            <a href="/admin/media<?= $currentFolder ? '?folder=' . $currentFolder : '' ?>">Rensa sökning</a>
         </div>
         <?php endif; ?>
 
@@ -628,10 +627,10 @@ include __DIR__ . '/components/unified-layout.php';
 
                 <div id="detailUsage" style="display: none;">
                     <span class="media-detail-label">Används i</span>
-                    <ul id="usageList" style="font-size: 0.875rem; margin: var(--spacing-xs) 0; padding-left: var(--spacing-md);"></ul>
+                    <ul id="usageList" style="font-size: 0.875rem; margin: var(--space-xs) 0; padding-left: var(--space-md);"></ul>
                 </div>
 
-                <div style="display: flex; gap: var(--spacing-sm); margin-top: auto;">
+                <div style="display: flex; gap: var(--space-sm); margin-top: auto;">
                     <button class="btn btn-primary" onclick="saveMedia()">Spara</button>
                     <button class="btn btn-danger" id="deleteBtn" onclick="deleteMedia()">Radera</button>
                 </div>
@@ -884,4 +883,4 @@ document.getElementById('mediaModal').addEventListener('click', (e) => {
 });
 </script>
 
-<?php include __DIR__ . '/components/unified-footer.php'; ?>
+<?php include __DIR__ . '/components/unified-layout-footer.php'; ?>

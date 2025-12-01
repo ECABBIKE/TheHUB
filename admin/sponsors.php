@@ -52,14 +52,14 @@ include __DIR__ . '/components/unified-layout.php';
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: var(--spacing-lg);
+    margin-bottom: var(--space-lg);
     flex-wrap: wrap;
-    gap: var(--spacing-md);
+    gap: var(--space-md);
 }
 
 .sponsor-stats {
     display: flex;
-    gap: var(--spacing-lg);
+    gap: var(--space-lg);
 }
 
 .sponsor-stat {
@@ -69,38 +69,38 @@ include __DIR__ . '/components/unified-layout.php';
 .sponsor-stat-value {
     font-size: 1.5rem;
     font-weight: 700;
-    color: var(--primary);
+    color: var(--color-accent);
 }
 
 .sponsor-stat-label {
     font-size: 0.75rem;
-    color: var(--text-muted);
+    color: var(--color-text-secondary);
     text-transform: uppercase;
 }
 
 /* Filters */
 .sponsor-filters {
     display: flex;
-    gap: var(--spacing-md);
-    margin-bottom: var(--spacing-lg);
+    gap: var(--space-md);
+    margin-bottom: var(--space-lg);
     flex-wrap: wrap;
     align-items: center;
 }
 
 .sponsor-filters form {
     display: flex;
-    gap: var(--spacing-sm);
+    gap: var(--space-sm);
     flex: 1;
     min-width: 200px;
 }
 
 .sponsor-filters input,
 .sponsor-filters select {
-    padding: var(--spacing-sm) var(--spacing-md);
-    border: 1px solid var(--border);
+    padding: var(--space-sm) var(--space-md);
+    border: 1px solid var(--color-border);
     border-radius: var(--radius-sm);
-    background: var(--surface);
-    color: var(--text);
+    background: var(--color-bg-surface);
+    color: var(--color-text-primary);
 }
 
 .sponsor-filters input {
@@ -109,27 +109,27 @@ include __DIR__ . '/components/unified-layout.php';
 
 .tier-filter {
     display: flex;
-    gap: var(--spacing-xs);
+    gap: var(--space-xs);
 }
 
 .tier-filter-btn {
-    padding: var(--spacing-xs) var(--spacing-sm);
-    border: 1px solid var(--border);
+    padding: var(--space-xs) var(--space-sm);
+    border: 1px solid var(--color-border);
     border-radius: var(--radius-sm);
-    background: var(--surface);
-    color: var(--text-muted);
+    background: var(--color-bg-surface);
+    color: var(--color-text-secondary);
     cursor: pointer;
     font-size: 0.75rem;
     text-decoration: none;
 }
 
 .tier-filter-btn:hover {
-    background: var(--hover);
+    background: var(--color-bg-hover);
 }
 
 .tier-filter-btn.active {
-    background: var(--primary);
-    border-color: var(--primary);
+    background: var(--color-accent);
+    border-color: var(--color-accent);
     color: white;
 }
 
@@ -137,13 +137,13 @@ include __DIR__ . '/components/unified-layout.php';
 .sponsor-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    gap: var(--spacing-lg);
+    gap: var(--space-lg);
 }
 
 .sponsor-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
+    background: var(--color-bg-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
     overflow: hidden;
     transition: all 0.15s;
 }
@@ -156,16 +156,16 @@ include __DIR__ . '/components/unified-layout.php';
 .sponsor-card-header {
     display: flex;
     align-items: center;
-    gap: var(--spacing-md);
-    padding: var(--spacing-md);
-    border-bottom: 1px solid var(--border);
+    gap: var(--space-md);
+    padding: var(--space-md);
+    border-bottom: 1px solid var(--color-border);
 }
 
 .sponsor-logo {
     width: 60px;
     height: 60px;
     border-radius: var(--radius-sm);
-    background: var(--bg);
+    background: var(--color-bg-sunken);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -180,7 +180,7 @@ include __DIR__ . '/components/unified-layout.php';
 }
 
 .sponsor-logo-placeholder {
-    color: var(--text-muted);
+    color: var(--color-text-secondary);
     font-size: 24px;
     font-weight: 700;
 }
@@ -193,7 +193,7 @@ include __DIR__ . '/components/unified-layout.php';
 .sponsor-name {
     font-weight: 600;
     font-size: 1rem;
-    margin: 0 0 var(--spacing-2xs);
+    margin: 0 0 var(--space-2xs);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -212,29 +212,29 @@ include __DIR__ . '/components/unified-layout.php';
     width: 8px;
     height: 8px;
     border-radius: 50%;
-    background: var(--danger);
+    background: var(--color-error);
 }
 
 .sponsor-status.active {
-    background: var(--success);
+    background: var(--color-success);
 }
 
 .sponsor-card-body {
-    padding: var(--spacing-md);
+    padding: var(--space-md);
 }
 
 .sponsor-meta {
     display: flex;
     flex-direction: column;
-    gap: var(--spacing-xs);
+    gap: var(--space-xs);
     font-size: 0.875rem;
-    color: var(--text-muted);
+    color: var(--color-text-secondary);
 }
 
 .sponsor-meta-item {
     display: flex;
     align-items: center;
-    gap: var(--spacing-sm);
+    gap: var(--space-sm);
 }
 
 .sponsor-meta-item svg {
@@ -246,10 +246,10 @@ include __DIR__ . '/components/unified-layout.php';
 .sponsor-card-footer {
     display: flex;
     justify-content: flex-end;
-    gap: var(--spacing-sm);
-    padding: var(--spacing-sm) var(--spacing-md);
-    background: var(--bg);
-    border-top: 1px solid var(--border);
+    gap: var(--space-sm);
+    padding: var(--space-sm) var(--space-md);
+    background: var(--color-bg-sunken);
+    border-top: 1px solid var(--color-border);
 }
 
 /* Modal styles */
@@ -259,7 +259,7 @@ include __DIR__ . '/components/unified-layout.php';
     inset: 0;
     background: rgba(0,0,0,0.8);
     z-index: 1000;
-    padding: var(--spacing-lg);
+    padding: var(--space-lg);
     overflow-y: auto;
 }
 
@@ -270,41 +270,41 @@ include __DIR__ . '/components/unified-layout.php';
 }
 
 .modal-content {
-    background: var(--surface);
+    background: var(--color-bg-surface);
     border-radius: var(--radius-lg);
     max-width: 600px;
     width: 100%;
-    margin-top: var(--spacing-xl);
+    margin-top: var(--space-xl);
 }
 
 .modal-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: var(--spacing-md) var(--spacing-lg);
-    border-bottom: 1px solid var(--border);
+    padding: var(--space-md) var(--space-lg);
+    border-bottom: 1px solid var(--color-border);
 }
 
 .modal-close {
     background: none;
     border: none;
-    padding: var(--spacing-xs);
+    padding: var(--space-xs);
     cursor: pointer;
-    color: var(--text-muted);
+    color: var(--color-text-secondary);
 }
 
 .modal-body {
-    padding: var(--spacing-lg);
+    padding: var(--space-lg);
 }
 
 .form-group {
-    margin-bottom: var(--spacing-md);
+    margin-bottom: var(--space-md);
 }
 
 .form-label {
     display: block;
     font-weight: 500;
-    margin-bottom: var(--spacing-xs);
+    margin-bottom: var(--space-xs);
     font-size: 0.875rem;
 }
 
@@ -312,11 +312,11 @@ include __DIR__ . '/components/unified-layout.php';
 .form-select,
 .form-textarea {
     width: 100%;
-    padding: var(--spacing-sm) var(--spacing-md);
-    border: 1px solid var(--border);
+    padding: var(--space-sm) var(--space-md);
+    border: 1px solid var(--color-border);
     border-radius: var(--radius-sm);
-    background: var(--bg);
-    color: var(--text);
+    background: var(--color-bg-sunken);
+    color: var(--color-text-primary);
 }
 
 .form-textarea {
@@ -327,31 +327,31 @@ include __DIR__ . '/components/unified-layout.php';
 .form-row {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
-    gap: var(--spacing-md);
+    gap: var(--space-md);
 }
 
 .modal-footer {
     display: flex;
     justify-content: flex-end;
-    gap: var(--spacing-sm);
-    padding: var(--spacing-md) var(--spacing-lg);
-    background: var(--bg);
-    border-top: 1px solid var(--border);
+    gap: var(--space-sm);
+    padding: var(--space-md) var(--space-lg);
+    background: var(--color-bg-sunken);
+    border-top: 1px solid var(--color-border);
 }
 
 /* Logo picker */
 .logo-picker {
     display: flex;
     align-items: center;
-    gap: var(--spacing-md);
+    gap: var(--space-md);
 }
 
 .logo-preview {
     width: 80px;
     height: 80px;
-    background: var(--bg);
-    border: 2px dashed var(--border);
-    border-radius: var(--radius);
+    background: var(--color-bg-sunken);
+    border: 2px dashed var(--color-border);
+    border-radius: var(--radius-md);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -365,20 +365,20 @@ include __DIR__ . '/components/unified-layout.php';
 }
 
 .logo-preview:hover {
-    border-color: var(--primary);
+    border-color: var(--color-accent);
 }
 
 /* Empty state */
 .empty-state {
     text-align: center;
-    padding: var(--spacing-2xl);
-    color: var(--text-muted);
+    padding: var(--space-2xl);
+    color: var(--color-text-secondary);
 }
 
 .empty-state-icon {
     width: 64px;
     height: 64px;
-    margin: 0 auto var(--spacing-md);
+    margin: 0 auto var(--space-md);
     opacity: 0.5;
 }
 </style>
@@ -404,16 +404,15 @@ include __DIR__ . '/components/unified-layout.php';
 
 <!-- Filters -->
 <div class="sponsor-filters">
-    <form method="get" action="">
-        <input type="hidden" name="page" value="admin/sponsors">
+    <form method="get" action="/admin/sponsors">
         <input type="text" name="search" placeholder="Sök sponsorer..." value="<?= htmlspecialchars($searchQuery) ?>">
         <button type="submit" class="btn btn-secondary">Sök</button>
     </form>
 
     <div class="tier-filter">
-        <a href="?page=admin/sponsors" class="tier-filter-btn <?= !$filterTier ? 'active' : '' ?>">Alla</a>
+        <a href="/admin/sponsors" class="tier-filter-btn <?= !$filterTier ? 'active' : '' ?>">Alla</a>
         <?php foreach ($tiers as $tierKey => $tier): ?>
-        <a href="?page=admin/sponsors&tier=<?= $tierKey ?>" class="tier-filter-btn <?= $filterTier === $tierKey ? 'active' : '' ?>" style="<?= $filterTier === $tierKey ? "background: {$tier['color']}; border-color: {$tier['color']};" : '' ?>">
+        <a href="/admin/sponsors?tier=<?= $tierKey ?>" class="tier-filter-btn <?= $filterTier === $tierKey ? 'active' : '' ?>" style="<?= $filterTier === $tierKey ? "background: {$tier['color']}; border-color: {$tier['color']};" : '' ?>">
             <?= $tier['name'] ?>
         </a>
         <?php endforeach; ?>
@@ -547,9 +546,9 @@ include __DIR__ . '/components/unified-layout.php';
                     </div>
                 </div>
 
-                <hr style="margin: var(--spacing-lg) 0; border: none; border-top: 1px solid var(--border);">
+                <hr style="margin: var(--space-lg) 0; border: none; border-top: 1px solid var(--color-border);">
 
-                <h4 style="margin-bottom: var(--spacing-md);">Kontaktperson</h4>
+                <h4 style="margin-bottom: var(--space-md);">Kontaktperson</h4>
 
                 <div class="form-group">
                     <label class="form-label">Namn</label>
@@ -749,4 +748,4 @@ document.getElementById('sponsorModal').addEventListener('click', (e) => {
 });
 </script>
 
-<?php include __DIR__ . '/components/unified-footer.php'; ?>
+<?php include __DIR__ . '/components/unified-layout-footer.php'; ?>
