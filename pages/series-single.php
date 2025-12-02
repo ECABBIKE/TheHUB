@@ -120,7 +120,7 @@ try {
         $params[] = $selectedClass;
     }
 
-    // Get all riders who have results in this series
+    // Get all riders who have results in this series (check both events.series_id AND series_events table)
     $stmt = $db->prepare("
         SELECT DISTINCT
             riders.id,
@@ -136,14 +136,20 @@ try {
         LEFT JOIN clubs c ON riders.club_id = c.id
         JOIN results r ON riders.id = r.cyclist_id
         JOIN events e ON r.event_id = e.id
+        LEFT JOIN series_events se ON e.id = se.event_id AND se.series_id = ?
         LEFT JOIN classes cls ON r.class_id = cls.id
-        WHERE e.series_id = ?
+        WHERE (e.series_id = ? OR se.series_id = ?)
           AND COALESCE(cls.series_eligible, 1) = 1
           AND COALESCE(cls.awards_points, 1) = 1
           {$classFilter}
         ORDER BY cls.sort_order ASC, riders.lastname, riders.firstname
     ");
-    $stmt->execute($params);
+    // Add extra params for the series_id checks
+    $queryParams = [$seriesId, $seriesId, $seriesId];
+    if ($selectedClass !== 'all' && is_numeric($selectedClass)) {
+        $queryParams[] = $selectedClass;
+    }
+    $stmt->execute($queryParams);
     $ridersInSeries = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     // For each rider, get their points from each event

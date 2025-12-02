@@ -863,7 +863,8 @@ function getRiderRankingDetails($db, $riderId, $discipline = 'GRAVITY') {
             e.location,
             e.event_level,
             cl.name as class_name,
-            cl.display_name as class_display_name
+            cl.display_name as class_display_name,
+            (SELECT COUNT(*) FROM results r2 WHERE r2.event_id = r.event_id AND r2.class_id = r.class_id AND r2.status = 'finished') as field_size
         FROM results r
         JOIN events e ON r.event_id = e.id
         JOIN classes cl ON r.class_id = cl.id
@@ -875,10 +876,52 @@ function getRiderRankingDetails($db, $riderId, $discipline = 'GRAVITY') {
         ORDER BY e.date DESC
     ", $params);
 
+    // Get multipliers
+    $fieldMultipliers = getRankingFieldMultipliers($db);
+    $timeDecay = getRankingTimeDecay($db);
+    $eventLevelMultipliers = getEventLevelMultipliers($db);
+
+    // Calculate weighted points for each event
+    $totalRankingPoints = 0;
+    foreach ($events as &$event) {
+        $fieldSize = (int)($event['field_size'] ?? 1);
+        $fieldMult = $fieldMultipliers[min($fieldSize, 15)] ?? 1.00;
+
+        $eventLevel = $event['event_level'] ?? 'national';
+        $eventLevelMult = ($eventLevel === 'sportmotion')
+            ? ($eventLevelMultipliers['sportmotion'] ?? 0.50)
+            : ($eventLevelMultipliers['national'] ?? 1.00);
+
+        // Time decay based on event date
+        $eventDate = $event['event_date'] ?? date('Y-m-d');
+        $monthsAgo = (int)((time() - strtotime($eventDate)) / (30.44 * 24 * 3600));
+        if ($monthsAgo <= 12) {
+            $timeMult = $timeDecay['months_1_12'] ?? 1.00;
+        } elseif ($monthsAgo <= 24) {
+            $timeMult = $timeDecay['months_13_24'] ?? 0.50;
+        } else {
+            $timeMult = $timeDecay['months_25_plus'] ?? 0.00;
+        }
+
+        $basePoints = (float)($event['original_points'] ?? 0);
+        $weightedPoints = $basePoints * $fieldMult * $eventLevelMult * $timeMult;
+
+        $event['field_multiplier'] = $fieldMult;
+        $event['event_level_multiplier'] = $eventLevelMult;
+        $event['time_multiplier'] = $timeMult;
+        $event['weighted_points'] = $weightedPoints;
+        $event['class_name'] = $event['class_display_name'] ?: $event['class_name'];
+
+        $totalRankingPoints += $weightedPoints;
+    }
+    unset($event);
+
     return [
         'rider' => $rider,
         'ranking' => $ranking,
         'events' => $events,
-        'discipline' => $discipline
+        'discipline' => $discipline,
+        'total_ranking_points' => $totalRankingPoints,
+        'ranking_position' => $ranking['ranking_position'] ?? null
     ];
 }
