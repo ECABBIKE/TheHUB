@@ -45,7 +45,6 @@ define('APP_BUILD', '2025-11-26');
 define('DEPLOYMENT_OFFSET', 119); // Deployments before git repo
 
 try {
-    error_log('DEBUG: Attempting PDO connection to ' . DB_HOST . '/' . DB_NAME);
     $pdo = new PDO(
         'mysql:host=' . DB_HOST . ';dbname=' . DB_NAME . ';charset=utf8mb4',
         DB_USER,
@@ -56,14 +55,9 @@ try {
             PDO::ATTR_EMULATE_PREPARES => false
         )
     );
-    error_log('DEBUG: PDO connection successful, setting $GLOBALS[pdo]');
     $GLOBALS['pdo'] = $pdo;
-    error_log('DEBUG: $GLOBALS[pdo] is now ' . (isset($GLOBALS['pdo']) ? 'SET' : 'NOT SET'));
 } catch (PDOException $e) {
-    error_log('PDO Connection Error: ' . $e->getMessage());
-    error_log('Connection String: mysql:host=' . DB_HOST . ';dbname=' . DB_NAME);
-    error_log('DB User: ' . DB_USER);
-    die('Database connection failed: ' . $e->getMessage());
+    die('Database connection failed');
 }
 
 if (session_status() === PHP_SESSION_NONE) {
@@ -71,23 +65,6 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 
 date_default_timezone_set('Europe/Stockholm');
-
-// ============================================================================
-// DATABASE HELPER FUNCTION
-// ============================================================================
-if (!function_exists('hub_db')) {
-    /**
-     * Get the PDO database connection
-     * @return PDO Database connection
-     * @throws Exception if database connection is not available
-     */
-    function hub_db(): PDO {
-        if (!isset($GLOBALS['pdo']) || !($GLOBALS['pdo'] instanceof PDO)) {
-            throw new Exception('Database connection not available');
-        }
-        return $GLOBALS['pdo'];
-    }
-}
 
 require_once __DIR__ . '/includes/helpers.php';
 require_once __DIR__ . '/includes/auth.php';
