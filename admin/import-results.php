@@ -336,4 +336,21 @@ Herrar Elite,2,Erik,SVENSSON,Göteborg MTB,,DNF,DNF,1:55.34,1:39.21,DNF</pre>
  </div>
  </div>
 
+<!-- Tools Section -->
+<div class="card mt-lg">
+ <div class="card-header">
+ <h3 class="text-primary">
+  <i data-lucide="wrench"></i>
+  Verktyg
+ </h3>
+ </div>
+ <div class="card-body">
+ <a href="/admin/fix-time-format.php" class="btn btn--secondary">
+  <i data-lucide="clock"></i>
+  Fixa tidsformat
+ </a>
+ <span class="text-secondary text-sm ml-sm">Korrigerar tider med fel format (t.ex. 0:04:17.45 → 4:17.45)</span>
+ </div>
+</div>
+
 <?php include __DIR__ . '/components/unified-layout-footer.php'; ?>
