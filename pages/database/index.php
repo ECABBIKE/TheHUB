@@ -229,15 +229,6 @@ if (empty($clubRankings)) {
     }
 }
 
-// Recent active riders
-$recentRiders = $pdo->query("
-    SELECT r.id, r.firstname, r.lastname, c.name as club_name
-    FROM riders r
-    LEFT JOIN clubs c ON r.club_id = c.id
-    WHERE r.active = 1
-    ORDER BY r.updated_at DESC
-    LIMIT 12
-")->fetchAll(PDO::FETCH_ASSOC);
 ?>
 
 <div class="page-header">
@@ -337,32 +328,6 @@ $recentRiders = $pdo->query("
             </a>
             <?php endforeach; ?>
         </div>
-    </div>
-</div>
-
-<!-- Recent Activity -->
-<div class="card">
-    <h2 class="card-title">Senast uppdaterade</h2>
-    <div class="recent-grid">
-        <?php foreach ($recentRiders as $rider): ?>
-        <a href="/rider/<?= $rider['id'] ?>" class="recent-item">
-            <span class="recent-avatar"><?= strtoupper(mb_substr($rider['firstname'], 0, 1)) ?></span>
-            <span class="recent-name"><?= htmlspecialchars($rider['firstname'] . ' ' . $rider['lastname']) ?></span>
-        </a>
-        <?php endforeach; ?>
-    </div>
-</div>
-
-<!-- Alphabet Browse -->
-<div class="card">
-    <h2 class="card-title">Bläddra A-Ö</h2>
-    <div class="alphabet-grid">
-        <?php foreach (range('A', 'Z') as $letter): ?>
-            <a href="/riders?letter=<?= $letter ?>" class="letter-btn"><?= $letter ?></a>
-        <?php endforeach; ?>
-        <a href="/riders?letter=Å" class="letter-btn">Å</a>
-        <a href="/riders?letter=Ä" class="letter-btn">Ä</a>
-        <a href="/riders?letter=Ö" class="letter-btn">Ö</a>
     </div>
 </div>
 
@@ -635,79 +600,6 @@ $recentRiders = $pdo->query("
 .ranking-stats .stat.gold {
     background: #fef3c7;
     color: #92400e;
-}
-
-.recent-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-    gap: var(--space-sm);
-}
-
-.recent-item {
-    display: flex;
-    align-items: center;
-    gap: var(--space-sm);
-    padding: var(--space-sm);
-    background: var(--color-bg-surface);
-    border-radius: var(--radius-md);
-    text-decoration: none;
-    color: inherit;
-    transition: all var(--transition-fast);
-}
-
-.recent-item:hover {
-    background: var(--color-bg-hover);
-    transform: translateX(4px);
-}
-
-.recent-avatar {
-    width: 36px;
-    height: 36px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: var(--color-accent);
-    color: white;
-    border-radius: var(--radius-full);
-    font-weight: var(--weight-bold);
-    font-size: var(--text-sm);
-    flex-shrink: 0;
-}
-
-.recent-name {
-    font-weight: var(--weight-medium);
-    font-size: var(--text-sm);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.alphabet-grid {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--space-xs);
-}
-
-.letter-btn {
-    width: 36px;
-    height: 36px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: var(--color-bg-surface);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-md);
-    text-decoration: none;
-    color: var(--color-text-primary);
-    font-weight: var(--weight-medium);
-    transition: all var(--transition-fast);
-}
-
-.letter-btn:hover {
-    background: var(--color-accent);
-    border-color: var(--color-accent);
-    color: white;
-    transform: scale(1.1);
 }
 
 @media (max-width: 768px) {
