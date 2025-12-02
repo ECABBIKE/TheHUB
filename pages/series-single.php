@@ -357,7 +357,7 @@ if (!$series) {
   </div>
 </section>
 
-<!-- Collapsible Events Section (slim, at top) -->
+<!-- Collapsible Events Section -->
 <details class="events-dropdown mb-md">
   <summary class="events-dropdown-header">
     <span class="events-dropdown-icon">📅</span>
