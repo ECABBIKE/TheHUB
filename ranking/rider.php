@@ -150,7 +150,7 @@ include __DIR__ . '/../includes/layout-header.php';
     <i data-lucide="target"></i>
    </div>
    <div>
-    <div class="stat-value"><?= number_format($riderRanking['total_points'], 1) ?></div>
+    <div class="stat-value"><?= number_format($riderRanking['total_ranking_points'], 1) ?></div>
     <div class="stat-label">Totala poäng</div>
    </div>
    </div>
@@ -202,7 +202,7 @@ include __DIR__ . '/../includes/layout-header.php';
      <i data-lucide="trophy" style="width: 18px; height: 18px;"></i>
      Totala rankingpoäng
     </span>
-    <span class="gs-points-value text-primary font-bold text-xl"><?= number_format($riderRanking['total_points'], 1) ?></span>
+    <span class="gs-points-value text-primary font-bold text-xl"><?= number_format($riderRanking['total_ranking_points'], 1) ?></span>
     </div>
    </div>
    </div>

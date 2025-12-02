@@ -1,24 +1,29 @@
 <?php
 /**
- * Lightweight Ranking System Functions for TheHUB
+ * TheHUB Ranking System - Complete Implementation
  *
- * Calculates ranking on-the-fly from results table without intermediate storage.
- * Only saves monthly snapshots to ranking_snapshots for historical tracking.
+ * 24-month rolling ranking with:
+ * - Field size weighting (more riders = higher value)
+ * - Time decay (0-12mo = 100%, 13-24mo = 50%, 25+ = 0%)
+ * - Event level multiplier (national = 100%, sportmotion = 50%)
+ * - Both individual rider AND club rankings
  *
- * Formula: Ranking Points = Original Points × Field Multiplier × Event Level Multiplier × Time Multiplier
+ * Club Ranking: Per event/class, best rider per club = 100%, second best = 50%, others = 0%
  */
 
-// Valid disciplines for ranking
-define('RANKING_DISCIPLINES', ['ENDURO', 'DH', 'GRAVITY']);
+// Valid disciplines
+if (!defined('RANKING_DISCIPLINES')) {
+    define('RANKING_DISCIPLINES', ['ENDURO', 'DH', 'GRAVITY']);
+}
 
 /**
- * Get default field size multipliers
+ * Get default field size multipliers (1-15+)
  */
 function getDefaultFieldMultipliers() {
     return [
         1 => 0.75, 2 => 0.77, 3 => 0.79, 4 => 0.81, 5 => 0.83,
-        6 => 0.85, 7 => 0.87, 8 => 0.89, 9 => 0.91, 10 => 0.93,
-        11 => 0.95, 12 => 0.97, 13 => 0.98, 14 => 0.99, 15 => 1.00
+        6 => 0.85, 7 => 0.86, 8 => 0.87, 9 => 0.88, 10 => 0.89,
+        11 => 0.90, 12 => 0.91, 13 => 0.92, 14 => 0.93, 15 => 1.00
     ];
 }
 
@@ -44,11 +49,25 @@ function getDefaultEventLevelMultipliers() {
 }
 
 /**
- * Get field multipliers from database settings
- * TEMPORARY: Bypassing database due to table lock - using hardcoded defaults
+ * Get field multipliers from database
  */
 function getRankingFieldMultipliers($db) {
-    // HARDCODED: Return correct 15-item scale directly
+    try {
+        $result = $db->getRow("SELECT setting_value FROM ranking_settings WHERE setting_key = 'field_multipliers'");
+        if ($result && $result['setting_value']) {
+            $decoded = json_decode($result['setting_value'], true);
+            if ($decoded) {
+                // Convert string keys to int
+                $multipliers = [];
+                foreach ($decoded as $k => $v) {
+                    $multipliers[(int)$k] = (float)$v;
+                }
+                return $multipliers;
+            }
+        }
+    } catch (Exception $e) {
+        // Fall through to default
+    }
     return getDefaultFieldMultipliers();
 }
 
@@ -56,17 +75,13 @@ function getRankingFieldMultipliers($db) {
  * Get time decay settings from database
  */
 function getRankingTimeDecay($db) {
-    $result = $db->getRow(
-        "SELECT setting_value FROM ranking_settings WHERE setting_key = 'time_decay'"
-    );
-
-    if ($result && $result['setting_value']) {
-        $decoded = json_decode($result['setting_value'], true);
-        if ($decoded) {
-            return $decoded;
+    try {
+        $result = $db->getRow("SELECT setting_value FROM ranking_settings WHERE setting_key = 'time_decay'");
+        if ($result && $result['setting_value']) {
+            $decoded = json_decode($result['setting_value'], true);
+            if ($decoded) return $decoded;
         }
-    }
-
+    } catch (Exception $e) {}
     return getDefaultTimeDecay();
 }
 
@@ -74,95 +89,103 @@ function getRankingTimeDecay($db) {
  * Get event level multipliers from database
  */
 function getEventLevelMultipliers($db) {
-    $result = $db->getRow(
-        "SELECT setting_value FROM ranking_settings WHERE setting_key = 'event_level_multipliers'"
-    );
-
-    if ($result && $result['setting_value']) {
-        $decoded = json_decode($result['setting_value'], true);
-        if ($decoded) {
-            return $decoded;
+    try {
+        $result = $db->getRow("SELECT setting_value FROM ranking_settings WHERE setting_key = 'event_level_multipliers'");
+        if ($result && $result['setting_value']) {
+            $decoded = json_decode($result['setting_value'], true);
+            if ($decoded) return $decoded;
         }
-    }
-
+    } catch (Exception $e) {}
     return getDefaultEventLevelMultipliers();
 }
 
 /**
- * Get field multiplier for a specific field size
+ * Save field multipliers to database
+ */
+function saveFieldMultipliers($db, $multipliers) {
+    $json = json_encode($multipliers);
+    $db->query("INSERT INTO ranking_settings (setting_key, setting_value, description)
+                VALUES ('field_multipliers', ?, 'Fältstorlek-multiplikatorer')
+                ON DUPLICATE KEY UPDATE setting_value = ?", [$json, $json]);
+}
+
+/**
+ * Save time decay to database
+ */
+function saveTimeDecay($db, $timeDecay) {
+    $json = json_encode($timeDecay);
+    $db->query("INSERT INTO ranking_settings (setting_key, setting_value, description)
+                VALUES ('time_decay', ?, 'Tidsviktning')
+                ON DUPLICATE KEY UPDATE setting_value = ?", [$json, $json]);
+}
+
+/**
+ * Save event level multipliers to database
+ */
+function saveEventLevelMultipliers($db, $eventLevel) {
+    $json = json_encode($eventLevel);
+    $db->query("INSERT INTO ranking_settings (setting_key, setting_value, description)
+                VALUES ('event_level_multipliers', ?, 'Eventtyp-multiplikatorer')
+                ON DUPLICATE KEY UPDATE setting_value = ?", [$json, $json]);
+}
+
+/**
+ * Get field multiplier for specific field size
  */
 function getFieldMultiplier($fieldSize, $multipliers) {
     $fieldSize = max(1, (int)$fieldSize);
-
-    if ($fieldSize >= 15) {
-        return $multipliers[15] ?? 1.00;
-    }
-
+    if ($fieldSize >= 15) return $multipliers[15] ?? 1.00;
     return $multipliers[$fieldSize] ?? 0.75;
 }
 
 /**
- * Normalize discipline name for consistency
+ * Check if ranking tables exist
  */
-function normalizeDiscipline($discipline) {
-    $discipline = strtoupper(trim($discipline));
-
-    // Map variations to standard names
-    $mapping = [
-        'ENDURO' => 'ENDURO',
-        'DH' => 'DH',
-        'DOWNHILL' => 'DH',
-        'XC' => 'XC',
-        'XCO' => 'XC',
-        'XCM' => 'XC',
-    ];
-
-    return $mapping[$discipline] ?? $discipline;
+function rankingTablesExist($db) {
+    try {
+        $tables = $db->getAll("SHOW TABLES LIKE 'ranking_snapshots'");
+        return !empty($tables);
+    } catch (Exception $e) {
+        return false;
+    }
 }
 
 /**
- * Calculate ranking data on-the-fly from results table
- *
- * @param object $db Database connection
- * @param string $discipline Discipline to calculate (ENDURO, DH, or GRAVITY)
- * @param bool $debug Enable debug output
- * @return array Ranking data with riders sorted by total points
+ * Get discipline display name
  */
-function calculateRankingData($db, $discipline = null, $debug = false) {
+function getDisciplineDisplayName($discipline) {
+    $names = [
+        'ENDURO' => 'Enduro',
+        'DH' => 'Downhill',
+        'GRAVITY' => 'Gravity'
+    ];
+    return $names[$discipline] ?? $discipline;
+}
+
+/**
+ * Calculate ranking data on-the-fly from results
+ * Returns array of riders with their ranking points
+ */
+function calculateRankingData($db, $discipline = 'GRAVITY', $debug = false) {
     $cutoffDate = date('Y-m-d', strtotime('-24 months'));
-    $month12Cutoff = date('Y-m-d', strtotime('-12 months'));
 
     $fieldMultipliers = getRankingFieldMultipliers($db);
     $eventLevelMultipliers = getEventLevelMultipliers($db);
     $timeDecay = getRankingTimeDecay($db);
 
-    if ($debug) {
-        echo "<p>📅 Cutoff dates: 24mo={$cutoffDate}, 12mo={$month12Cutoff}</p>";
-        flush();
-    }
-
     // Build discipline filter
     $disciplineFilter = '';
     $params = [$cutoffDate];
 
-    if ($discipline && $discipline !== 'GRAVITY') {
+    if ($discipline === 'GRAVITY') {
+        $disciplineFilter = "AND e.discipline IN ('ENDURO', 'DH')";
+    } elseif ($discipline) {
         $disciplineFilter = 'AND e.discipline = ?';
         $params[] = $discipline;
-    } elseif ($discipline === 'GRAVITY') {
-        $disciplineFilter = "AND e.discipline IN ('ENDURO', 'DH')";
-    } else {
-        $disciplineFilter = "AND e.discipline IN ('ENDURO', 'DH')";
     }
 
-    // Get all ranking-eligible results
-    if ($debug) {
-        echo "<p>⏱️ Step 2: Executing query now...</p>";
-        flush();
-        $queryStart = microtime(true);
-    }
-
-    try {
-        $results = $db->getAll("
+    // Get all qualifying results
+    $results = $db->getAll("
         SELECT
             r.cyclist_id as rider_id,
             r.event_id,
@@ -179,8 +202,8 @@ function calculateRankingData($db, $discipline = null, $debug = false) {
             e.discipline,
             COALESCE(e.event_level, 'national') as event_level
         FROM results r
-        STRAIGHT_JOIN events e ON r.event_id = e.id
-        STRAIGHT_JOIN classes cl ON r.class_id = cl.id
+        JOIN events e ON r.event_id = e.id
+        JOIN classes cl ON r.class_id = cl.id
         WHERE r.status = 'finished'
         AND (r.points > 0 OR COALESCE(r.run_1_points, 0) > 0 OR COALESCE(r.run_2_points, 0) > 0)
         AND e.date >= ?
@@ -188,41 +211,17 @@ function calculateRankingData($db, $discipline = null, $debug = false) {
         AND COALESCE(cl.series_eligible, 1) = 1
         AND COALESCE(cl.awards_points, 1) = 1
     ", $params);
-    } catch (Exception $e) {
-        if ($debug) {
-            echo "<p style='color:red;'>❌ Query failed: " . htmlspecialchars($e->getMessage()) . "</p>";
-            flush();
-        }
-        throw $e;
-    }
 
-    if ($debug) {
-        $queryTime = round(microtime(true) - $queryStart, 2);
-        echo "<p>✅ Query completed! Found " . count($results) . " results (took {$queryTime}s)</p>";
-        flush();
-    }
+    if (empty($results)) return [];
 
-    // Calculate field sizes per event/class combination
-    if ($debug) {
-        echo "<p>📊 Calculating field sizes...</p>";
-        flush();
-    }
-
+    // Calculate field sizes per event/class
     $fieldSizes = [];
     foreach ($results as $result) {
         $key = $result['event_id'] . '_' . $result['class_id'];
-        if (!isset($fieldSizes[$key])) {
-            $fieldSizes[$key] = 0;
-        }
-        $fieldSizes[$key]++;
+        $fieldSizes[$key] = ($fieldSizes[$key] ?? 0) + 1;
     }
 
-    // Get rider info separately (more efficient)
-    if ($debug) {
-        echo "<p>👥 Fetching rider information...</p>";
-        flush();
-    }
-
+    // Get rider info
     $riderIds = array_values(array_unique(array_column($results, 'rider_id')));
     $riderInfo = [];
     if (!empty($riderIds)) {
@@ -233,19 +232,14 @@ function calculateRankingData($db, $discipline = null, $debug = false) {
             LEFT JOIN clubs c ON r.club_id = c.id
             WHERE r.id IN ($placeholders)
         ", $riderIds);
-
         foreach ($riders as $rider) {
             $riderInfo[$rider['id']] = $rider;
         }
     }
 
-    if ($debug) {
-        echo "<p>🧮 Processing " . count($results) . " results...</p>";
-        flush();
-    }
-
-    // Calculate ranking points for each result
+    // Calculate points per rider
     $riderData = [];
+    $today = new DateTime();
 
     foreach ($results as $result) {
         $riderId = $result['rider_id'];
@@ -256,12 +250,11 @@ function calculateRankingData($db, $discipline = null, $debug = false) {
         $fieldMult = getFieldMultiplier($fieldSize, $fieldMultipliers);
         $eventLevelMult = $eventLevelMultipliers[$result['event_level']] ?? 1.00;
 
-        // Calculate time decay
+        // Time decay
         $eventDate = new DateTime($result['event_date']);
-        $today = new DateTime();
-        $monthsDiff = $eventDate->diff($today)->m + ($eventDate->diff($today)->y * 12);
+        $monthsDiff = ($today->format('Y') - $eventDate->format('Y')) * 12 +
+                      ($today->format('n') - $eventDate->format('n'));
 
-        $timeMult = 0;
         if ($monthsDiff < 12) {
             $timeMult = $timeDecay['months_1_12'];
         } elseif ($monthsDiff < 24) {
@@ -270,446 +263,553 @@ function calculateRankingData($db, $discipline = null, $debug = false) {
             $timeMult = $timeDecay['months_25_plus'];
         }
 
-        // Calculate final ranking points
-        $rankingPoints = $result['original_points'] * $fieldMult * $eventLevelMult;
+        // Calculate ranking points
+        $basePoints = (float)$result['original_points'];
+        $rankingPoints = $basePoints * $fieldMult * $eventLevelMult;
         $weightedPoints = $rankingPoints * $timeMult;
 
-        // Initialize rider data if needed
+        // Aggregate per rider
         if (!isset($riderData[$riderId])) {
-            $info = $riderInfo[$riderId] ?? ['firstname' => '', 'lastname' => '', 'club_id' => null, 'club_name' => null];
+            $info = $riderInfo[$riderId] ?? [];
             $riderData[$riderId] = [
                 'rider_id' => $riderId,
-                'firstname' => $info['firstname'],
-                'lastname' => $info['lastname'],
-                'club_id' => $info['club_id'],
-                'club_name' => $info['club_name'],
-                'total_points' => 0,
+                'firstname' => $info['firstname'] ?? '',
+                'lastname' => $info['lastname'] ?? '',
+                'club_id' => $info['club_id'] ?? null,
+                'club_name' => $info['club_name'] ?? '',
+                'total_ranking_points' => 0,
                 'points_12' => 0,
                 'points_13_24' => 0,
-                'events_count' => 0,
-                'events' => []
-            ];
-        }
-
-        // Add to totals
-        $riderData[$riderId]['total_points'] += $weightedPoints;
-
-        if ($monthsDiff < 12) {
-            $riderData[$riderId]['points_12'] += $rankingPoints;
-        } elseif ($monthsDiff < 24) {
-            $riderData[$riderId]['points_13_24'] += $rankingPoints;
-        }
-
-        // Track unique events
-        if (!in_array($result['event_id'], $riderData[$riderId]['events'])) {
-            $riderData[$riderId]['events'][] = $result['event_id'];
-            $riderData[$riderId]['events_count']++;
-        }
-    }
-
-    // Sort by total points descending
-    usort($riderData, function($a, $b) {
-        return $b['total_points'] <=> $a['total_points'];
-    });
-
-    // Assign ranking positions with tie handling
-    $rank = 1;
-    $prevPoints = null;
-    $prevRank = 1;
-
-    foreach ($riderData as &$rider) {
-        if ($prevPoints !== null && abs($rider['total_points'] - $prevPoints) < 0.01) {
-            $rider['ranking_position'] = $prevRank;
-        } else {
-            $rider['ranking_position'] = $rank;
-            $prevRank = $rank;
-        }
-        $prevPoints = $rider['total_points'];
-        $rank++;
-    }
-
-    if ($debug) {
-        echo "<p>✅ Calculated ranking for " . count($riderData) . " riders</p>";
-        flush();
-    }
-
-    return $riderData;
-}
-
-/**
- * Create ranking snapshot for a specific discipline
- * Saves calculated ranking data to database with small pauses for shared hosting
- *
- * @param object $db Database connection
- * @param string $discipline Discipline to snapshot
- * @param string $snapshotDate Date for snapshot (YYYY-MM-DD)
- * @param bool $debug Enable debug output
- * @return int Number of riders ranked
- */
-function createRankingSnapshot($db, $discipline = 'gravity', $snapshotDate = null, $debug = false) {
-    if (!$snapshotDate) {
-        $snapshotDate = date('Y-m-01');
-    }
-
-    $discipline = strtoupper($discipline);
-
-    if ($debug) {
-        echo "<p>🔍 Getting previous snapshot for comparison...</p>";
-        flush();
-    }
-
-    // Get previous snapshot for position comparison
-    $previousSnapshotDate = date('Y-m-01', strtotime("$snapshotDate -1 month"));
-    $previousRankings = [];
-    $previousData = $db->getAll(
-        "SELECT rider_id, ranking_position FROM ranking_snapshots WHERE discipline = ? AND snapshot_date = ?",
-        [$discipline, $previousSnapshotDate]
-    );
-    foreach ($previousData as $row) {
-        $previousRankings[$row['rider_id']] = $row['ranking_position'];
-    }
-
-    if ($debug) {
-        echo "<p>🧮 Starting ranking calculation (skipping DELETE to avoid timeout)...</p>";
-        echo "<p>⏱️ Step 1: About to fetch results from database...</p>";
-        flush();
-    }
-
-    // Calculate ranking data
-    $riderData = calculateRankingData($db, $discipline, $debug);
-
-    if ($debug) {
-        echo "<p>⚠️ SKIPPING snapshot save - ranking_snapshots table is blocked/locked</p>";
-        echo "<p>✅ Successfully calculated ranking for " . count($riderData) . " riders</p>";
-        echo "<p>💡 Rankings will work using live calculation (no snapshot storage needed)</p>";
-        flush();
-    }
-
-    // TEMPORARILY SKIP snapshot saving - table appears to be locked/corrupted
-    // The ranking display will use getCurrentRanking() which does live calculation
-    // Just return the calculated count to indicate success
-    return count($riderData);
-}
-
-/**
- * Get current ranking for a specific discipline
- * Returns from snapshot if available, otherwise calculates live
- *
- * @param object $db Database connection
- * @param string $discipline Discipline to get ranking for
- * @param int $limit Number of results to return
- * @param int $offset Offset for pagination
- * @param bool $useLive Force live calculation instead of snapshot
- * @return array Ranking data with metadata
- */
-function getCurrentRanking($db, $discipline = 'gravity', $limit = 100, $offset = 0, $useLive = false) {
-    $discipline = strtoupper($discipline);
-
-    // TEMPORARY: Force live calculation since ranking_snapshots table is locked
-    // Skip snapshot reading entirely to avoid timeouts
-
-    // Calculate live ranking
-    $riderData = calculateRankingData($db, $discipline, false);
-
-    // Map field names to match what frontend expects
-    foreach ($riderData as &$rider) {
-        $rider['total_ranking_points'] = $rider['total_points'];
-        $rider['points_last_12_months'] = $rider['points_12'];
-        // points_months_13_24 is already correct
-        // events_count is already correct
-        // ranking_position is already correct
-
-        // Add missing fields that frontend might expect
-        $rider['previous_position'] = null;
-        $rider['position_change'] = null;
-    }
-    unset($rider);
-
-    // Apply pagination
-    $total = count($riderData);
-    $riders = array_slice($riderData, $offset, $limit);
-
-    return [
-        'riders' => $riders,
-        'total' => $total,
-        'snapshot_date' => null,
-        'discipline' => $discipline,
-        'source' => 'live'
-    ];
-}
-
-/**
- * Calculate club ranking by aggregating rider points
- *
- * @param object $db Database connection
- * @param string $discipline Discipline to calculate
- * @return array Club ranking data
- */
-function calculateClubRanking($db, $discipline = 'gravity') {
-    $riderData = calculateRankingData($db, $discipline, false);
-
-    // Aggregate by club
-    $clubData = [];
-    foreach ($riderData as $rider) {
-        if (!$rider['club_id']) {
-            continue;
-        }
-
-        $clubId = $rider['club_id'];
-
-        if (!isset($clubData[$clubId])) {
-            $clubData[$clubId] = [
-                'club_id' => $clubId,
-                'club_name' => $rider['club_name'],
-                'total_points' => 0,
-                'points_12' => 0,
-                'points_13_24' => 0,
-                'riders_count' => 0,
                 'events_count' => 0
             ];
         }
 
-        $clubData[$clubId]['total_points'] += $rider['total_points'];
-        $clubData[$clubId]['points_12'] += $rider['points_12'];
-        $clubData[$clubId]['points_13_24'] += $rider['points_13_24'];
-        $clubData[$clubId]['riders_count']++;
-        $clubData[$clubId]['events_count'] = max($clubData[$clubId]['events_count'], $rider['events_count']);
-    }
+        $riderData[$riderId]['total_ranking_points'] += $weightedPoints;
+        $riderData[$riderId]['events_count']++;
 
-    // Fetch city information for all clubs
-    if (!empty($clubData)) {
-        $clubIds = array_keys($clubData);
-        $placeholders = implode(',', array_fill(0, count($clubIds), '?'));
-        $clubDetails = $db->getAll("
-            SELECT id, city
-            FROM clubs
-            WHERE id IN ($placeholders)
-        ", $clubIds);
-
-        foreach ($clubDetails as $detail) {
-            if (isset($clubData[$detail['id']])) {
-                $clubData[$detail['id']]['city'] = $detail['city'];
-            }
+        if ($monthsDiff < 12) {
+            $riderData[$riderId]['points_12'] += $rankingPoints;
+        } else {
+            $riderData[$riderId]['points_13_24'] += $rankingPoints;
         }
     }
 
     // Sort by total points
-    usort($clubData, function($a, $b) {
-        return $b['total_points'] <=> $a['total_points'];
+    usort($riderData, function($a, $b) {
+        return $b['total_ranking_points'] <=> $a['total_ranking_points'];
     });
 
-    // Assign rankings
-    $rank = 1;
+    // Add ranking positions
+    $position = 1;
     $prevPoints = null;
-    $prevRank = 1;
+    $actualPosition = 1;
 
-    foreach ($clubData as &$club) {
-        if ($prevPoints !== null && abs($club['total_points'] - $prevPoints) < 0.01) {
-            $club['ranking_position'] = $prevRank;
-        } else {
-            $club['ranking_position'] = $rank;
-            $prevRank = $rank;
+    foreach ($riderData as &$rider) {
+        if ($prevPoints !== null && $rider['total_ranking_points'] < $prevPoints) {
+            $position = $actualPosition;
         }
-        $prevPoints = $club['total_points'];
-        $rank++;
+        $rider['ranking_position'] = $position;
+        $prevPoints = $rider['total_ranking_points'];
+        $actualPosition++;
     }
 
-    return $clubData;
+    return array_values($riderData);
 }
 
 /**
- * Create club ranking snapshot
+ * Calculate CLUB ranking data - GLOBAL 24-month rolling
  *
- * @param object $db Database connection
- * @param string $discipline Discipline to snapshot
- * @param string $snapshotDate Date for snapshot
- * @param bool $debug Enable debug output
- * @return int Number of clubs ranked
+ * Per event/class: Best rider per club = 100%, second best = 50%, others = 0%
+ * Same time decay as individual ranking (0-12mo = 100%, 13-24mo = 50%)
+ * Same field size weighting
  */
-function createClubRankingSnapshot($db, $discipline = 'gravity', $snapshotDate = null, $debug = false) {
-    if (!$snapshotDate) {
-        $snapshotDate = date('Y-m-01');
+function calculateClubRankingData($db, $discipline = 'GRAVITY', $debug = false) {
+    $cutoffDate = date('Y-m-d', strtotime('-24 months'));
+
+    $fieldMultipliers = getRankingFieldMultipliers($db);
+    $eventLevelMultipliers = getEventLevelMultipliers($db);
+    $timeDecay = getRankingTimeDecay($db);
+
+    // Build discipline filter
+    $disciplineFilter = '';
+    $params = [$cutoffDate];
+
+    if ($discipline === 'GRAVITY') {
+        $disciplineFilter = "AND e.discipline IN ('ENDURO', 'DH')";
+    } elseif ($discipline) {
+        $disciplineFilter = 'AND e.discipline = ?';
+        $params[] = $discipline;
     }
 
-    $discipline = strtoupper($discipline);
+    // Get all qualifying results with club info, sorted by points for club position calculation
+    $results = $db->getAll("
+        SELECT
+            r.cyclist_id as rider_id,
+            r.event_id,
+            r.class_id,
+            rd.club_id,
+            c.name as club_name,
+            COALESCE(
+                CASE
+                    WHEN COALESCE(r.run_1_points, 0) > 0 OR COALESCE(r.run_2_points, 0) > 0
+                    THEN COALESCE(r.run_1_points, 0) + COALESCE(r.run_2_points, 0)
+                    ELSE r.points
+                END,
+                r.points
+            ) as original_points,
+            e.date as event_date,
+            e.discipline,
+            COALESCE(e.event_level, 'national') as event_level
+        FROM results r
+        JOIN events e ON r.event_id = e.id
+        JOIN classes cl ON r.class_id = cl.id
+        JOIN riders rd ON r.cyclist_id = rd.id
+        LEFT JOIN clubs c ON rd.club_id = c.id
+        WHERE r.status = 'finished'
+        AND rd.club_id IS NOT NULL
+        AND (r.points > 0 OR COALESCE(r.run_1_points, 0) > 0 OR COALESCE(r.run_2_points, 0) > 0)
+        AND e.date >= ?
+        {$disciplineFilter}
+        AND COALESCE(cl.series_eligible, 1) = 1
+        AND COALESCE(cl.awards_points, 1) = 1
+        ORDER BY e.id, cl.id, rd.club_id, original_points DESC
+    ", $params);
 
-    if ($debug) {
-        echo "<p>🏛️ Getting previous club rankings...</p>";
-        flush();
+    if (empty($results)) return [];
+
+    // Calculate field sizes per event/class
+    $fieldSizes = [];
+    foreach ($results as $result) {
+        $key = $result['event_id'] . '_' . $result['class_id'];
+        $fieldSizes[$key] = ($fieldSizes[$key] ?? 0) + 1;
     }
 
-    // Get previous snapshot for position comparison
-    $previousSnapshotDate = date('Y-m-01', strtotime("$snapshotDate -1 month"));
-    $previousRankings = [];
-    $previousData = $db->getAll(
-        "SELECT club_id, ranking_position FROM club_ranking_snapshots WHERE discipline = ? AND snapshot_date = ?",
-        [$discipline, $previousSnapshotDate]
-    );
-    foreach ($previousData as $row) {
-        $previousRankings[$row['club_id']] = $row['ranking_position'];
+    $today = new DateTime();
+    $clubData = [];
+
+    // Group results by event/class/club to determine 1st and 2nd best
+    $eventClassClub = [];
+    foreach ($results as $result) {
+        $key = $result['event_id'] . '_' . $result['class_id'] . '_' . $result['club_id'];
+        if (!isset($eventClassClub[$key])) {
+            $eventClassClub[$key] = [];
+        }
+        $eventClassClub[$key][] = $result;
     }
 
-    if ($debug) {
-        echo "<p>🧮 Calculating club rankings (skipping DELETE)...</p>";
-        flush();
+    // Process each event/class/club group
+    foreach ($eventClassClub as $key => $riders) {
+        // Riders are already sorted by points DESC from query
+        $rank = 1;
+        foreach ($riders as $rider) {
+            // Only 1st (100%) and 2nd (50%) count
+            if ($rank > 2) break;
+
+            $clubId = $rider['club_id'];
+            $fieldKey = $rider['event_id'] . '_' . $rider['class_id'];
+            $fieldSize = $fieldSizes[$fieldKey] ?? 1;
+
+            // Calculate multipliers
+            $fieldMult = getFieldMultiplier($fieldSize, $fieldMultipliers);
+            $eventLevelMult = $eventLevelMultipliers[$rider['event_level']] ?? 1.00;
+
+            // Club position multiplier: 1st = 100%, 2nd = 50%
+            $clubPositionMult = ($rank === 1) ? 1.00 : 0.50;
+
+            // Time decay
+            $eventDate = new DateTime($rider['event_date']);
+            $monthsDiff = ($today->format('Y') - $eventDate->format('Y')) * 12 +
+                          ($today->format('n') - $eventDate->format('n'));
+
+            if ($monthsDiff < 12) {
+                $timeMult = $timeDecay['months_1_12'];
+            } elseif ($monthsDiff < 24) {
+                $timeMult = $timeDecay['months_13_24'];
+            } else {
+                $timeMult = $timeDecay['months_25_plus'];
+            }
+
+            // Calculate ranking points for this rider's contribution to club
+            $basePoints = (float)$rider['original_points'];
+            $rankingPoints = $basePoints * $fieldMult * $eventLevelMult * $clubPositionMult;
+            $weightedPoints = $rankingPoints * $timeMult;
+
+            // Aggregate to club
+            if (!isset($clubData[$clubId])) {
+                $clubData[$clubId] = [
+                    'club_id' => $clubId,
+                    'club_name' => $rider['club_name'],
+                    'total_ranking_points' => 0,
+                    'points_12' => 0,
+                    'points_13_24' => 0,
+                    'riders_count' => 0,
+                    'events_count' => 0,
+                    'scoring_riders' => [] // Track unique riders who scored
+                ];
+            }
+
+            $clubData[$clubId]['total_ranking_points'] += $weightedPoints;
+            $clubData[$clubId]['events_count']++;
+
+            if ($monthsDiff < 12) {
+                $clubData[$clubId]['points_12'] += $rankingPoints;
+            } else {
+                $clubData[$clubId]['points_13_24'] += $rankingPoints;
+            }
+
+            // Track unique scoring riders
+            if (!in_array($rider['rider_id'], $clubData[$clubId]['scoring_riders'])) {
+                $clubData[$clubId]['scoring_riders'][] = $rider['rider_id'];
+            }
+
+            $rank++;
+        }
     }
 
-    // Calculate club ranking
-    $clubData = calculateClubRanking($db, $discipline);
-
-    if ($debug) {
-        echo "<p>⚠️ SKIPPING club snapshot save - club_ranking_snapshots table is blocked/locked</p>";
-        echo "<p>✅ Successfully calculated ranking for " . count($clubData) . " clubs</p>";
-        echo "<p>💡 Club rankings will work using live calculation (no snapshot storage needed)</p>";
-        flush();
+    // Convert scoring_riders array to count
+    foreach ($clubData as &$club) {
+        $club['riders_count'] = count($club['scoring_riders']);
+        unset($club['scoring_riders']);
     }
 
-    // TEMPORARILY SKIP snapshot saving - table appears to be locked/corrupted
-    // Just return the calculated count to indicate success
-    return count($clubData);
+    // Sort by total points
+    usort($clubData, function($a, $b) {
+        return $b['total_ranking_points'] <=> $a['total_ranking_points'];
+    });
+
+    // Add ranking positions
+    $position = 1;
+    $prevPoints = null;
+    $actualPosition = 1;
+
+    foreach ($clubData as &$club) {
+        if ($prevPoints !== null && $club['total_ranking_points'] < $prevPoints) {
+            $position = $actualPosition;
+        }
+        $club['ranking_position'] = $position;
+        $prevPoints = $club['total_ranking_points'];
+        $actualPosition++;
+    }
+
+    return array_values($clubData);
+}
+
+/**
+ * Save ranking snapshots for a specific discipline
+ */
+function saveRankingSnapshots($db, $discipline, $debug = false) {
+    $snapshotDate = date('Y-m-d');
+
+    // Get previous snapshot for position changes
+    $previousSnapshot = $db->getAll("
+        SELECT rider_id, ranking_position FROM ranking_snapshots
+        WHERE discipline = ? AND snapshot_date = (
+            SELECT MAX(snapshot_date) FROM ranking_snapshots
+            WHERE discipline = ? AND snapshot_date < ?
+        )
+    ", [$discipline, $discipline, $snapshotDate]);
+
+    $previousPositions = [];
+    foreach ($previousSnapshot as $row) {
+        $previousPositions[$row['rider_id']] = $row['ranking_position'];
+    }
+
+    // Calculate current ranking
+    $riderData = calculateRankingData($db, $discipline, $debug);
+
+    // Delete old snapshot for today (if re-running)
+    $db->query("DELETE FROM ranking_snapshots WHERE discipline = ? AND snapshot_date = ?",
+               [$discipline, $snapshotDate]);
+
+    $count = 0;
+    foreach ($riderData as $rider) {
+        $prevPos = $previousPositions[$rider['rider_id']] ?? null;
+        $posChange = $prevPos !== null ? ($prevPos - $rider['ranking_position']) : null;
+
+        $db->query("INSERT INTO ranking_snapshots
+            (rider_id, discipline, snapshot_date, total_ranking_points,
+             points_last_12_months, points_months_13_24, events_count,
+             ranking_position, previous_position, position_change)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", [
+            $rider['rider_id'],
+            $discipline,
+            $snapshotDate,
+            $rider['total_ranking_points'],
+            $rider['points_12'],
+            $rider['points_13_24'],
+            $rider['events_count'],
+            $rider['ranking_position'],
+            $prevPos,
+            $posChange
+        ]);
+        $count++;
+    }
+
+    return $count;
+}
+
+/**
+ * Save CLUB ranking snapshots for a specific discipline
+ */
+function saveClubRankingSnapshots($db, $discipline, $debug = false) {
+    $snapshotDate = date('Y-m-d');
+
+    // Get previous snapshot
+    $previousSnapshot = $db->getAll("
+        SELECT club_id, ranking_position FROM club_ranking_snapshots
+        WHERE discipline = ? AND snapshot_date = (
+            SELECT MAX(snapshot_date) FROM club_ranking_snapshots
+            WHERE discipline = ? AND snapshot_date < ?
+        )
+    ", [$discipline, $discipline, $snapshotDate]);
+
+    $previousPositions = [];
+    foreach ($previousSnapshot as $row) {
+        $previousPositions[$row['club_id']] = $row['ranking_position'];
+    }
+
+    // Calculate current club ranking
+    $clubData = calculateClubRankingData($db, $discipline, $debug);
+
+    // Delete old snapshot for today
+    $db->query("DELETE FROM club_ranking_snapshots WHERE discipline = ? AND snapshot_date = ?",
+               [$discipline, $snapshotDate]);
+
+    $count = 0;
+    foreach ($clubData as $club) {
+        $prevPos = $previousPositions[$club['club_id']] ?? null;
+        $posChange = $prevPos !== null ? ($prevPos - $club['ranking_position']) : null;
+
+        $db->query("INSERT INTO club_ranking_snapshots
+            (club_id, discipline, snapshot_date, total_ranking_points,
+             points_last_12_months, points_months_13_24, riders_count, events_count,
+             ranking_position, previous_position, position_change)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", [
+            $club['club_id'],
+            $discipline,
+            $snapshotDate,
+            $club['total_ranking_points'],
+            $club['points_12'],
+            $club['points_13_24'],
+            $club['riders_count'],
+            $club['events_count'],
+            $club['ranking_position'],
+            $prevPos,
+            $posChange
+        ]);
+        $count++;
+    }
+
+    return $count;
 }
 
 /**
  * Run full ranking update for all disciplines
- * Creates snapshots for riders and clubs
- *
- * @param object $db Database connection
- * @param bool $debug Enable debug output
- * @return array Statistics about the update
+ * Updates both rider and club rankings
  */
 function runFullRankingUpdate($db, $debug = false) {
+    $startTime = microtime(true);
     $stats = [
         'enduro' => ['riders' => 0, 'clubs' => 0],
         'dh' => ['riders' => 0, 'clubs' => 0],
-        'gravity' => ['riders' => 0, 'clubs' => 0],
-        'total_time' => 0
+        'gravity' => ['riders' => 0, 'clubs' => 0]
     ];
 
-    $startTime = microtime(true);
-
-    if ($debug) {
-        echo "<p style='background: #e3f2fd; padding: 10px; border-left: 4px solid #2196f3;'>";
-        echo "<strong>🔄 Version: 2025-11-25-011</strong><br>";
-        echo "Lightweight Ranking System - Debug Mode Active";
-        echo "</p>";
-        echo "<h3>Creating Ranking Snapshots</h3>";
-        flush();
-    }
-
-    // Create rider snapshots for each discipline
     foreach (['ENDURO', 'DH', 'GRAVITY'] as $discipline) {
-        if ($debug) {
-            echo "<p>📊 Processing {$discipline} riders...</p>";
-            flush();
-        }
+        $key = strtolower($discipline);
 
-        $count = createRankingSnapshot($db, $discipline, null, $debug);
-        $stats[strtolower($discipline)]['riders'] = $count;
+        if ($debug) echo "<p>Calculating $discipline riders...</p>";
+        $stats[$key]['riders'] = saveRankingSnapshots($db, $discipline, $debug);
 
-        if ($debug) {
-            echo "<p>✅ {$count} riders ranked</p>";
-            flush();
-        }
-    }
-
-    // Create club snapshots for each discipline
-    foreach (['ENDURO', 'DH', 'GRAVITY'] as $discipline) {
-        if ($debug) {
-            echo "<p>🏛️ Processing {$discipline} clubs...</p>";
-            flush();
-        }
-
-        $count = createClubRankingSnapshot($db, $discipline, null, $debug);
-        $stats[strtolower($discipline)]['clubs'] = $count;
-
-        if ($debug) {
-            echo "<p>✅ {$count} clubs ranked</p>";
-            flush();
-        }
+        if ($debug) echo "<p>Calculating $discipline clubs...</p>";
+        $stats[$key]['clubs'] = saveClubRankingSnapshots($db, $discipline, $debug);
     }
 
     $stats['total_time'] = round(microtime(true) - $startTime, 2);
 
-    // Update last calculation timestamp (with timeout protection)
-    try {
-        $calcData = json_encode([
-            'date' => date('Y-m-d H:i:s'),
-            'stats' => $stats
-        ]);
+    // Save last calculation info
+    $db->query("INSERT INTO ranking_settings (setting_key, setting_value, description)
+                VALUES ('last_calculation', ?, 'Senaste beräkning')
+                ON DUPLICATE KEY UPDATE setting_value = ?", [
+        json_encode(['date' => date('Y-m-d H:i:s'), 'stats' => $stats]),
+        json_encode(['date' => date('Y-m-d H:i:s'), 'stats' => $stats])
+    ]);
 
-        // Set a short timeout for this query
-        $db->query("SET SESSION max_execution_time = 2000");
+    return $stats;
+}
 
-        $db->query("
-            INSERT INTO ranking_settings (setting_key, setting_value, description)
-            VALUES ('last_calculation', ?, 'Timestamp of last ranking calculation')
-            ON DUPLICATE KEY UPDATE setting_value = ?, updated_at = NOW()
-        ", [$calcData, $calcData]);
+/**
+ * Get current rider ranking from snapshots (with pagination)
+ */
+function getCurrentRanking($db, $discipline = 'GRAVITY', $limit = 50, $offset = 0) {
+    // Get latest snapshot date
+    $latest = $db->getRow("SELECT MAX(snapshot_date) as snapshot_date FROM ranking_snapshots WHERE discipline = ?", [$discipline]);
+    $snapshotDate = $latest['snapshot_date'] ?? null;
 
-    } catch (Exception $e) {
-        // Don't fail the whole calculation if metadata save fails
-        error_log("Failed to save last_calculation: " . $e->getMessage());
+    if (!$snapshotDate) {
+        // Fall back to live calculation
+        $data = calculateRankingData($db, $discipline);
+        return [
+            'riders' => array_slice($data, $offset, $limit),
+            'total' => count($data),
+            'snapshot_date' => null,
+            'discipline' => $discipline
+        ];
+    }
+
+    // Get total count
+    $countResult = $db->getRow("SELECT COUNT(*) as cnt FROM ranking_snapshots WHERE discipline = ? AND snapshot_date = ?",
+                               [$discipline, $snapshotDate]);
+    $total = $countResult['cnt'] ?? 0;
+
+    // Get paginated results
+    $riders = $db->getAll("
+        SELECT
+            rs.*,
+            r.firstname,
+            r.lastname,
+            c.name as club_name
+        FROM ranking_snapshots rs
+        JOIN riders r ON rs.rider_id = r.id
+        LEFT JOIN clubs c ON r.club_id = c.id
+        WHERE rs.discipline = ? AND rs.snapshot_date = ?
+        ORDER BY rs.ranking_position ASC
+        LIMIT ? OFFSET ?
+    ", [$discipline, $snapshotDate, $limit, $offset]);
+
+    return [
+        'riders' => $riders,
+        'total' => $total,
+        'snapshot_date' => $snapshotDate,
+        'discipline' => $discipline
+    ];
+}
+
+/**
+ * Get current CLUB ranking from snapshots (with pagination)
+ */
+function getCurrentClubRanking($db, $discipline = 'GRAVITY', $limit = 50, $offset = 0) {
+    // Get latest snapshot date
+    $latest = $db->getRow("SELECT MAX(snapshot_date) as snapshot_date FROM club_ranking_snapshots WHERE discipline = ?", [$discipline]);
+    $snapshotDate = $latest['snapshot_date'] ?? null;
+
+    if (!$snapshotDate) {
+        // Fall back to live calculation
+        $data = calculateClubRankingData($db, $discipline);
+        return [
+            'clubs' => array_slice($data, $offset, $limit),
+            'total' => count($data),
+            'snapshot_date' => null,
+            'discipline' => $discipline
+        ];
+    }
+
+    // Get total count
+    $countResult = $db->getRow("SELECT COUNT(*) as cnt FROM club_ranking_snapshots WHERE discipline = ? AND snapshot_date = ?",
+                               [$discipline, $snapshotDate]);
+    $total = $countResult['cnt'] ?? 0;
+
+    // Get paginated results
+    $clubs = $db->getAll("
+        SELECT
+            crs.*,
+            c.name as club_name,
+            c.short_name,
+            c.city,
+            c.region,
+            c.logo
+        FROM club_ranking_snapshots crs
+        JOIN clubs c ON crs.club_id = c.id
+        WHERE crs.discipline = ? AND crs.snapshot_date = ?
+        ORDER BY crs.ranking_position ASC
+        LIMIT ? OFFSET ?
+    ", [$discipline, $snapshotDate, $limit, $offset]);
+
+    return [
+        'clubs' => $clubs,
+        'total' => $total,
+        'snapshot_date' => $snapshotDate,
+        'discipline' => $discipline
+    ];
+}
+
+/**
+ * Get ranking statistics per discipline
+ */
+function getRankingStats($db) {
+    $stats = [];
+
+    foreach (['ENDURO', 'DH', 'GRAVITY'] as $discipline) {
+        $riderCount = $db->getRow("
+            SELECT COUNT(*) as cnt FROM ranking_snapshots
+            WHERE discipline = ? AND snapshot_date = (
+                SELECT MAX(snapshot_date) FROM ranking_snapshots WHERE discipline = ?
+            )
+        ", [$discipline, $discipline]);
+
+        $clubCount = $db->getRow("
+            SELECT COUNT(*) as cnt FROM club_ranking_snapshots
+            WHERE discipline = ? AND snapshot_date = (
+                SELECT MAX(snapshot_date) FROM club_ranking_snapshots WHERE discipline = ?
+            )
+        ", [$discipline, $discipline]);
+
+        // Count unique events in last 24 months
+        $cutoff = date('Y-m-d', strtotime('-24 months'));
+        $discFilter = $discipline === 'GRAVITY' ? "IN ('ENDURO', 'DH')" : "= '$discipline'";
+        $eventCount = $db->getRow("SELECT COUNT(DISTINCT id) as cnt FROM events WHERE discipline $discFilter AND date >= ?", [$cutoff]);
+
+        $stats[$discipline] = [
+            'riders' => $riderCount['cnt'] ?? 0,
+            'clubs' => $clubCount['cnt'] ?? 0,
+            'events' => $eventCount['cnt'] ?? 0
+        ];
     }
 
     return $stats;
 }
 
 /**
- * Get current club ranking for a specific discipline
+ * Get last calculation info
  */
-function getCurrentClubRanking($db, $discipline = 'GRAVITY', $limit = 50, $offset = 0) {
-    // TEMPORARY: Force live calculation since club_ranking_snapshots table is locked
-    // Skip snapshot reading entirely to avoid timeouts
-
-    // Calculate live club ranking
-    $clubData = calculateClubRanking($db, $discipline);
-
-    // Map field names to match what frontend expects
-    foreach ($clubData as &$club) {
-        $club['total_ranking_points'] = $club['total_points'];
-        $club['points_last_12_months'] = $club['points_12'];
-        // points_months_13_24 is already correct
-        // events_count is already correct
-        // riders_count is already correct
-        // ranking_position is already correct
-
-        // Add missing fields that frontend might expect
-        $club['previous_position'] = null;
-        $club['position_change'] = null;
-    }
-    unset($club);
-
-    $total = count($clubData);
-    $clubs = array_slice($clubData, $offset, $limit);
-
-    return [
-        'clubs' => $clubs,
-        'total' => $total,
-        'snapshot_date' => null,
-        'discipline' => $discipline,
-        'source' => 'live'
-    ];
+function getLastRankingCalculation($db) {
+    try {
+        $result = $db->getRow("SELECT setting_value FROM ranking_settings WHERE setting_key = 'last_calculation'");
+        if ($result && $result['setting_value']) {
+            return json_decode($result['setting_value'], true) ?: ['date' => null, 'stats' => []];
+        }
+    } catch (Exception $e) {}
+    return ['date' => null, 'stats' => []];
 }
 
 /**
- * Get ranking history for a specific rider and discipline
+ * Calculate single rider ranking
  */
-function getRiderRankingHistory($db, $riderId, $discipline = 'GRAVITY', $months = 12) {
-    return $db->getAll("
-        SELECT
-            month_date,
-            ranking_position,
-            total_points
-        FROM ranking_history
-        WHERE rider_id = ? AND discipline = ?
-        ORDER BY month_date DESC
-        LIMIT ?
-    ", [$riderId, $discipline, $months]);
+function calculateSingleRiderRanking($db, $riderId, $discipline = 'GRAVITY') {
+    $data = calculateRankingData($db, $discipline);
+    foreach ($data as $rider) {
+        if ($rider['rider_id'] == $riderId) {
+            return $rider;
+        }
+    }
+    return null;
+}
+
+/**
+ * Get single club ranking
+ */
+function getSingleClubRanking($db, $clubId, $discipline = 'GRAVITY') {
+    $data = calculateClubRankingData($db, $discipline);
+    foreach ($data as $club) {
+        if ($club['club_id'] == $clubId) {
+            return $club;
+        }
+    }
+    return null;
 }
 
 /**
  * Get detailed ranking breakdown for a rider
- * Returns live calculation of current ranking data
  */
 function getRiderRankingDetails($db, $riderId, $discipline = 'GRAVITY') {
     // Get rider info
@@ -737,7 +837,7 @@ function getRiderRankingDetails($db, $riderId, $discipline = 'GRAVITY') {
         ", [$riderId, $discipline, $latestSnapshot['snapshot_date']]);
     }
 
-    // Get event breakdown - calculate from results
+    // Get event breakdown
     $cutoffDate = date('Y-m-d', strtotime('-24 months'));
     $disciplineFilter = $discipline === 'GRAVITY' ? "AND e.discipline IN ('ENDURO', 'DH')" : "AND e.discipline = ?";
     $params = [$riderId, $cutoffDate];
@@ -781,402 +881,4 @@ function getRiderRankingDetails($db, $riderId, $discipline = 'GRAVITY') {
         'events' => $events,
         'discipline' => $discipline
     ];
-}
-
-/**
- * Save field multipliers to database
- */
-function saveFieldMultipliers($db, $multipliers) {
-    $json = json_encode($multipliers);
-
-    if ($json === false) {
-        error_log("Failed to encode field multipliers: " . json_last_error_msg());
-        throw new Exception("Failed to encode multipliers: " . json_last_error_msg());
-    }
-
-    try {
-        // Use simple UPDATE instead of INSERT ON DUPLICATE KEY to avoid locks
-        $exists = $db->getOne("SELECT COUNT(*) FROM ranking_settings WHERE setting_key = 'field_multipliers'");
-
-        if ($exists) {
-            return $db->query("
-                UPDATE ranking_settings
-                SET setting_value = ?, updated_at = NOW()
-                WHERE setting_key = 'field_multipliers'
-            ", [$json]);
-        } else {
-            return $db->query("
-                INSERT INTO ranking_settings (setting_key, setting_value, description)
-                VALUES ('field_multipliers', ?, 'Field size multipliers (1-15+ riders)')
-            ", [$json]);
-        }
-    } catch (Exception $e) {
-        error_log("Failed to save field multipliers: " . $e->getMessage());
-        throw $e;
-    }
-}
-
-/**
- * Save time decay settings to database
- */
-function saveTimeDecay($db, $timeDecay) {
-    $json = json_encode($timeDecay);
-
-    return $db->query("
-        INSERT INTO ranking_settings (setting_key, setting_value, description)
-        VALUES ('time_decay', ?, 'Time decay multipliers by period')
-        ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value), updated_at = NOW()
-    ", [$json]);
-}
-
-/**
- * Save event level multipliers to database
- */
-function saveEventLevelMultipliers($db, $multipliers) {
-    $json = json_encode($multipliers);
-
-    return $db->query("
-        INSERT INTO ranking_settings (setting_key, setting_value, description)
-        VALUES ('event_level_multipliers', ?, 'Multipliers for event level (national vs sportmotion)')
-        ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value), updated_at = NOW()
-    ", [$json]);
-}
-
-/**
- * Check if ranking tables exist
- */
-function rankingTablesExist($db) {
-    try {
-        $tables = $db->getAll("SHOW TABLES LIKE 'ranking_settings'");
-        return !empty($tables);
-    } catch (Exception $e) {
-        return false;
-    }
-}
-
-/**
- * Get last calculation info
- */
-function getLastRankingCalculation($db) {
-    $result = $db->getRow(
-        "SELECT setting_value FROM ranking_settings WHERE setting_key = 'last_calculation'"
-    );
-
-    if ($result && $result['setting_value']) {
-        return json_decode($result['setting_value'], true);
-    }
-
-    return ['date' => null, 'stats' => []];
-}
-
-/**
- * Get discipline display name
- */
-function getDisciplineDisplayName($discipline) {
-    $names = [
-        'ENDURO' => 'Enduro',
-        'DH' => 'Downhill',
-        'GRAVITY' => 'Gravity'
-    ];
-    return $names[$discipline] ?? $discipline;
-}
-
-/**
- * Get ranking statistics per discipline
- */
-function getRankingStats($db) {
-    // TEMPORARY: Calculate stats from live data since snapshot tables are locked
-    $stats = [
-        'ENDURO' => ['riders' => 0, 'events' => 0, 'clubs' => 0],
-        'DH' => ['riders' => 0, 'events' => 0, 'clubs' => 0],
-        'GRAVITY' => ['riders' => 0, 'events' => 0, 'clubs' => 0]
-    ];
-
-    $cutoffDate = date('Y-m-d', strtotime('-24 months'));
-
-    // Get rider and event counts from live data for each discipline
-    foreach (['ENDURO', 'DH', 'GRAVITY'] as $discipline) {
-        $disciplineFilter = '';
-        $params = [$cutoffDate];
-
-        if ($discipline !== 'GRAVITY') {
-            $disciplineFilter = 'AND e.discipline = ?';
-            $params[] = $discipline;
-        }
-
-        // Count unique riders with results
-        $riderCount = $db->getRow("
-            SELECT COUNT(DISTINCT r.cyclist_id) as count
-            FROM results r
-            JOIN events e ON r.event_id = e.id
-            JOIN classes cl ON r.class_id = cl.id
-            WHERE r.status = 'finished'
-            AND (r.points > 0 OR COALESCE(r.run_1_points, 0) > 0 OR COALESCE(r.run_2_points, 0) > 0)
-            AND e.date >= ?
-            {$disciplineFilter}
-            AND COALESCE(cl.series_eligible, 1) = 1
-            AND COALESCE(cl.awards_points, 1) = 1
-        ", $params);
-        $stats[$discipline]['riders'] = $riderCount ? (int)$riderCount['count'] : 0;
-
-        // Count unique clubs
-        $clubCount = $db->getRow("
-            SELECT COUNT(DISTINCT riders.club_id) as count
-            FROM (
-                SELECT DISTINCT r.cyclist_id
-                FROM results r
-                JOIN events e ON r.event_id = e.id
-                JOIN classes cl ON r.class_id = cl.id
-                WHERE r.status = 'finished'
-                AND (r.points > 0 OR COALESCE(r.run_1_points, 0) > 0 OR COALESCE(r.run_2_points, 0) > 0)
-                AND e.date >= ?
-                {$disciplineFilter}
-                AND COALESCE(cl.series_eligible, 1) = 1
-                AND COALESCE(cl.awards_points, 1) = 1
-            ) as unique_riders
-            JOIN riders ON unique_riders.cyclist_id = riders.id
-            WHERE riders.club_id IS NOT NULL
-        ", $params);
-        $stats[$discipline]['clubs'] = $clubCount ? (int)$clubCount['count'] : 0;
-
-        // Count events
-        $eventParams = [$cutoffDate];
-        if ($discipline !== 'GRAVITY') {
-            $eventParams[] = $discipline;
-        }
-
-        $eventCount = $db->getRow("
-            SELECT COUNT(DISTINCT e.id) as count
-            FROM events e
-            WHERE e.date >= ? " . ($discipline !== 'GRAVITY' ? 'AND e.discipline = ?' : '') . "
-        ", $eventParams);
-        $stats[$discipline]['events'] = $eventCount ? (int)$eventCount['count'] : 0;
-    }
-
-    return $stats;
-}
-
-/**
- * Populate ranking_points table with calculated weighted points
- *
- * This function:
- * 1. Fetches all results from last 24 months
- * 2. Calculates field size, multipliers, and time decay for each result
- * 3. Saves to ranking_points table for fast retrieval
- *
- * @param object $db Database connection
- * @param bool $debug Enable debug output
- * @return array Statistics about the population process
- */
-function populateRankingPoints($db, $debug = false) {
-    $startTime = microtime(true);
-    $stats = [
-        'total_processed' => 0,
-        'total_inserted' => 0,
-        'total_updated' => 0,
-        'errors' => []
-    ];
-
-    if ($debug) {
-        echo "<p>🔄 Starting ranking_points population...</p>";
-        flush();
-    }
-
-    // Get multiplier settings
-    $fieldMultipliers = getRankingFieldMultipliers($db);
-    $eventLevelMultipliers = getEventLevelMultipliers($db);
-    $timeDecay = getRankingTimeDecay($db);
-
-    // Cutoff dates
-    $cutoffDate = date('Y-m-d', strtotime('-24 months'));
-    $month12Cutoff = date('Y-m-d', strtotime('-12 months'));
-
-    if ($debug) {
-        echo "<p>📅 Processing results from {$cutoffDate} to today</p>";
-        echo "<p>📊 12-month cutoff: {$month12Cutoff}</p>";
-        flush();
-    }
-
-    // Clear existing data
-    if ($debug) {
-        echo "<p>🗑️ Clearing existing ranking_points...</p>";
-        flush();
-    }
-    $db->query("TRUNCATE TABLE ranking_points");
-
-    // Get all results from last 24 months with finished status and points > 0
-    $results = $db->getAll("
-        SELECT
-            r.id as result_id,
-            r.cyclist_id as rider_id,
-            r.event_id,
-            r.class_id,
-            r.position,
-            r.points as original_points,
-            e.name as event_name,
-            e.date as event_date,
-            e.discipline,
-            e.event_level,
-            COUNT(*) OVER (PARTITION BY r.event_id, r.class_id) as field_size
-        FROM results r
-        JOIN events e ON r.event_id = e.id
-        WHERE r.status = 'finished'
-        AND r.points > 0
-        AND e.date >= ?
-        AND e.discipline IN ('ENDURO', 'DH')
-        ORDER BY e.date DESC, r.cyclist_id
-    ", [$cutoffDate]);
-
-    if ($debug) {
-        echo "<p>✅ Found " . count($results) . " results to process</p>";
-        flush();
-    }
-
-    // Process each result
-    $batch = [];
-    $batchSize = 100;
-
-    foreach ($results as $idx => $result) {
-        try {
-            $discipline = normalizeDiscipline($result['discipline']);
-            $eventDate = $result['event_date'];
-            $originalPoints = (float)$result['original_points'];
-            $fieldSize = (int)$result['field_size'];
-
-            // Calculate field multiplier
-            $fieldMultiplier = getFieldMultiplier($fieldSize, $fieldMultipliers);
-
-            // Get event level multiplier
-            $eventLevel = $result['event_level'] ?? 'national';
-            $eventLevelMultiplier = $eventLevelMultipliers[$eventLevel] ?? 1.00;
-
-            // Calculate time multiplier
-            $monthsAgo = (strtotime('now') - strtotime($eventDate)) / (30 * 24 * 60 * 60);
-            if ($monthsAgo <= 12) {
-                $timeMultiplier = $timeDecay['months_1_12'];
-            } elseif ($monthsAgo <= 24) {
-                $timeMultiplier = $timeDecay['months_13_24'];
-            } else {
-                $timeMultiplier = $timeDecay['months_25_plus'];
-            }
-
-            // Calculate final ranking points
-            $rankingPoints = $originalPoints * $fieldMultiplier * $eventLevelMultiplier * $timeMultiplier;
-
-            // Add to batch
-            $batch[] = [
-                'rider_id' => $result['rider_id'],
-                'event_id' => $result['event_id'],
-                'class_id' => $result['class_id'],
-                'discipline' => $discipline,
-                'original_points' => $originalPoints,
-                'position' => $result['position'],
-                'field_size' => $fieldSize,
-                'field_multiplier' => $fieldMultiplier,
-                'event_level_multiplier' => $eventLevelMultiplier,
-                'time_multiplier' => $timeMultiplier,
-                'ranking_points' => $rankingPoints,
-                'event_date' => $eventDate
-            ];
-
-            $stats['total_processed']++;
-
-            // Insert batch when full
-            if (count($batch) >= $batchSize) {
-                $inserted = insertRankingPointsBatch($db, $batch);
-                $stats['total_inserted'] += $inserted;
-                $batch = [];
-
-                if ($debug && $stats['total_processed'] % 100 == 0) {
-                    echo "<p>⏳ Processed {$stats['total_processed']} / " . count($results) . " results...</p>";
-                    flush();
-                }
-            }
-
-        } catch (Exception $e) {
-            $stats['errors'][] = "Result ID {$result['result_id']}: " . $e->getMessage();
-            if ($debug) {
-                echo "<p style='color: orange;'>⚠️ Error processing result {$result['result_id']}: " . htmlspecialchars($e->getMessage()) . "</p>";
-                flush();
-            }
-        }
-    }
-
-    // Insert remaining batch
-    if (!empty($batch)) {
-        $inserted = insertRankingPointsBatch($db, $batch);
-        $stats['total_inserted'] += $inserted;
-    }
-
-    $stats['elapsed_time'] = round(microtime(true) - $startTime, 2);
-
-    if ($debug) {
-        echo "<hr>";
-        echo "<p><strong>📊 Population Complete</strong></p>";
-        echo "<ul>";
-        echo "<li>Results processed: {$stats['total_processed']}</li>";
-        echo "<li>Records inserted: {$stats['total_inserted']}</li>";
-        echo "<li>Errors: " . count($stats['errors']) . "</li>";
-        echo "<li>Time: {$stats['elapsed_time']}s</li>";
-        echo "</ul>";
-        flush();
-    }
-
-    return $stats;
-}
-
-/**
- * Insert a batch of ranking points records
- *
- * @param object $db Database connection
- * @param array $batch Array of ranking point records
- * @return int Number of records inserted
- */
-function insertRankingPointsBatch($db, $batch) {
-    if (empty($batch)) {
-        return 0;
-    }
-
-    $values = [];
-    $params = [];
-
-    foreach ($batch as $record) {
-        $values[] = "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-        $params = array_merge($params, [
-            $record['rider_id'],
-            $record['event_id'],
-            $record['class_id'],
-            $record['discipline'],
-            $record['original_points'],
-            $record['position'],
-            $record['field_size'],
-            $record['field_multiplier'],
-            $record['event_level_multiplier'],
-            $record['time_multiplier'],
-            $record['ranking_points'],
-            $record['event_date']
-        ]);
-    }
-
-    $sql = "
-        INSERT INTO ranking_points (
-            rider_id, event_id, class_id, discipline,
-            original_points, position, field_size,
-            field_multiplier, event_level_multiplier, time_multiplier,
-            ranking_points, event_date
-        ) VALUES " . implode(', ', $values) . "
-        ON DUPLICATE KEY UPDATE
-            original_points = VALUES(original_points),
-            position = VALUES(position),
-            field_size = VALUES(field_size),
-            field_multiplier = VALUES(field_multiplier),
-            event_level_multiplier = VALUES(event_level_multiplier),
-            time_multiplier = VALUES(time_multiplier),
-            ranking_points = VALUES(ranking_points),
-            updated_at = NOW()
-    ";
-
-    $db->query($sql, $params);
-
-    return count($batch);
 }
