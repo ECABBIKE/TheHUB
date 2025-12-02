@@ -36,7 +36,7 @@ if ($filter === 'with_results') {
     $clubCount = $pdo->query("SELECT COUNT(*) FROM clubs")->fetchColumn();
 }
 
-// Count unique riders with wins and podiums (exclude motion classes)
+// Count unique riders with wins and podiums (exclude motion classes by name pattern)
 $ridersWithWins = $pdo->query("
     SELECT COUNT(DISTINCT res.cyclist_id)
     FROM results res
@@ -44,6 +44,8 @@ $ridersWithWins = $pdo->query("
     WHERE res.position = 1
       AND res.status = 'finished'
       AND COALESCE(cls.awards_points, 1) = 1
+      AND LOWER(COALESCE(cls.display_name, cls.name, '')) NOT LIKE '%motion%'
+      AND LOWER(COALESCE(cls.display_name, cls.name, '')) NOT LIKE '%sport%'
 ")->fetchColumn();
 
 $ridersWithPodiums = $pdo->query("
@@ -53,17 +55,25 @@ $ridersWithPodiums = $pdo->query("
     WHERE res.position <= 3
       AND res.status = 'finished'
       AND COALESCE(cls.awards_points, 1) = 1
+      AND LOWER(COALESCE(cls.display_name, cls.name, '')) NOT LIKE '%motion%'
+      AND LOWER(COALESCE(cls.display_name, cls.name, '')) NOT LIKE '%sport%'
 ")->fetchColumn();
 
 // Get top riders from ranking snapshots or calculate from recent events
 // Only count competitive classes (awards_points = 1), exclude motion classes
 $topRiders = [];
 
+// Motion class name patterns to exclude (backup filter until migration runs)
+$motionClassFilter = "
+    AND LOWER(COALESCE(cls.display_name, cls.name, '')) NOT LIKE '%motion%'
+    AND LOWER(COALESCE(cls.display_name, cls.name, '')) NOT LIKE '%sport%'
+";
+
 // Try to get from ranking snapshots first
 try {
     $snapshotCheck = $pdo->query("SELECT COUNT(*) FROM ranking_snapshots WHERE discipline = 'GRAVITY'")->fetchColumn();
     if ($snapshotCheck > 0) {
-        // Use ranking snapshots
+        // Use ranking snapshots - but filter out riders who only have motion class results
         $topRiders = $pdo->query("
             SELECT
                 rs.rider_id as id,
@@ -75,16 +85,31 @@ try {
                 (SELECT COUNT(*) FROM results res2
                  INNER JOIN classes cls ON res2.class_id = cls.id
                  WHERE res2.cyclist_id = rs.rider_id AND res2.position = 1
-                   AND res2.status = 'finished' AND COALESCE(cls.awards_points, 1) = 1) as wins,
+                   AND res2.status = 'finished'
+                   AND COALESCE(cls.awards_points, 1) = 1
+                   AND LOWER(COALESCE(cls.display_name, cls.name, '')) NOT LIKE '%motion%'
+                   AND LOWER(COALESCE(cls.display_name, cls.name, '')) NOT LIKE '%sport%') as wins,
                 (SELECT COUNT(*) FROM results res2
                  INNER JOIN classes cls ON res2.class_id = cls.id
                  WHERE res2.cyclist_id = rs.rider_id AND res2.position <= 3
-                   AND res2.status = 'finished' AND COALESCE(cls.awards_points, 1) = 1) as podiums
+                   AND res2.status = 'finished'
+                   AND COALESCE(cls.awards_points, 1) = 1
+                   AND LOWER(COALESCE(cls.display_name, cls.name, '')) NOT LIKE '%motion%'
+                   AND LOWER(COALESCE(cls.display_name, cls.name, '')) NOT LIKE '%sport%') as podiums
             FROM ranking_snapshots rs
             INNER JOIN riders r ON rs.rider_id = r.id
             LEFT JOIN clubs c ON r.club_id = c.id
             WHERE rs.discipline = 'GRAVITY'
               AND rs.snapshot_date = (SELECT MAX(snapshot_date) FROM ranking_snapshots WHERE discipline = 'GRAVITY')
+              AND EXISTS (
+                  SELECT 1 FROM results res3
+                  INNER JOIN classes cls3 ON res3.class_id = cls3.id
+                  WHERE res3.cyclist_id = rs.rider_id
+                    AND res3.status = 'finished'
+                    AND COALESCE(cls3.awards_points, 1) = 1
+                    AND LOWER(COALESCE(cls3.display_name, cls3.name, '')) NOT LIKE '%motion%'
+                    AND LOWER(COALESCE(cls3.display_name, cls3.name, '')) NOT LIKE '%sport%'
+              )
             ORDER BY rs.ranking_position ASC
             LIMIT 10
         ")->fetchAll(PDO::FETCH_ASSOC);
@@ -111,8 +136,16 @@ if (empty($topRiders)) {
                 c.name as club_name,
                 SUM(res.points) as ranking_score,
                 COUNT(DISTINCT res.id) as total_races,
-                COUNT(CASE WHEN res.position = 1 AND COALESCE(cls.awards_points, 1) = 1 THEN 1 END) as wins,
-                COUNT(CASE WHEN res.position <= 3 AND COALESCE(cls.awards_points, 1) = 1 THEN 1 END) as podiums
+                COUNT(CASE WHEN res.position = 1
+                    AND COALESCE(cls.awards_points, 1) = 1
+                    AND LOWER(COALESCE(cls.display_name, cls.name, '')) NOT LIKE '%motion%'
+                    AND LOWER(COALESCE(cls.display_name, cls.name, '')) NOT LIKE '%sport%'
+                    THEN 1 END) as wins,
+                COUNT(CASE WHEN res.position <= 3
+                    AND COALESCE(cls.awards_points, 1) = 1
+                    AND LOWER(COALESCE(cls.display_name, cls.name, '')) NOT LIKE '%motion%'
+                    AND LOWER(COALESCE(cls.display_name, cls.name, '')) NOT LIKE '%sport%'
+                    THEN 1 END) as podiums
             FROM riders r
             LEFT JOIN clubs c ON r.club_id = c.id
             INNER JOIN results res ON r.id = res.cyclist_id
@@ -121,6 +154,8 @@ if (empty($topRiders)) {
               AND res.status = 'finished'
               AND res.event_id IN ({$eventIdList})
               AND COALESCE(cls.awards_points, 1) = 1
+              AND LOWER(COALESCE(cls.display_name, cls.name, '')) NOT LIKE '%motion%'
+              AND LOWER(COALESCE(cls.display_name, cls.name, '')) NOT LIKE '%sport%'
             GROUP BY r.id
             HAVING total_races >= 1
             ORDER BY ranking_score DESC
@@ -147,7 +182,10 @@ try {
                  INNER JOIN riders r2 ON res2.cyclist_id = r2.id
                  INNER JOIN classes cls ON res2.class_id = cls.id
                  WHERE r2.club_id = crs.club_id AND res2.position <= 3
-                   AND res2.status = 'finished' AND COALESCE(cls.awards_points, 1) = 1) as podiums
+                   AND res2.status = 'finished'
+                   AND COALESCE(cls.awards_points, 1) = 1
+                   AND LOWER(COALESCE(cls.display_name, cls.name, '')) NOT LIKE '%motion%'
+                   AND LOWER(COALESCE(cls.display_name, cls.name, '')) NOT LIKE '%sport%') as podiums
             FROM club_ranking_snapshots crs
             INNER JOIN clubs c ON crs.club_id = c.id
             WHERE crs.discipline = 'GRAVITY'
@@ -167,13 +205,20 @@ if (empty($clubRankings)) {
             SELECT c.id, c.name, c.city,
                    COUNT(DISTINCT CASE WHEN res.points > 0 THEN r.id END) as riders_with_points,
                    COUNT(DISTINCT res.id) as total_starts,
-                   COUNT(CASE WHEN res.position <= 3 AND COALESCE(cls.awards_points, 1) = 1 THEN 1 END) as podiums,
+                   COUNT(CASE WHEN res.position <= 3
+                       AND COALESCE(cls.awards_points, 1) = 1
+                       AND LOWER(COALESCE(cls.display_name, cls.name, '')) NOT LIKE '%motion%'
+                       AND LOWER(COALESCE(cls.display_name, cls.name, '')) NOT LIKE '%sport%'
+                       THEN 1 END) as podiums,
                    SUM(res.points) as total_points
             FROM clubs c
             LEFT JOIN riders r ON c.id = r.club_id AND r.active = 1
             LEFT JOIN results res ON r.id = res.cyclist_id
             LEFT JOIN classes cls ON res.class_id = cls.id
-            WHERE COALESCE(cls.awards_points, 1) = 1 OR cls.id IS NULL
+            WHERE (COALESCE(cls.awards_points, 1) = 1
+                   AND LOWER(COALESCE(cls.display_name, cls.name, '')) NOT LIKE '%motion%'
+                   AND LOWER(COALESCE(cls.display_name, cls.name, '')) NOT LIKE '%sport%')
+                  OR cls.id IS NULL
             GROUP BY c.id
             HAVING total_starts > 0
             ORDER BY podiums DESC, total_points DESC, total_starts DESC
