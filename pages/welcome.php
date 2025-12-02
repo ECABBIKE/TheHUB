@@ -14,22 +14,30 @@ require_once HUB_V3_ROOT . '/components/icons.php';
 
 $pdo = hub_db();
 
+// Load filter setting from admin configuration
+$publicSettings = @include(HUB_V3_ROOT . '/config/public_settings.php');
+$filter = $publicSettings['public_riders_display'] ?? 'all';
+
 // Get current statistics
 try {
-    // Total riders with results
-    $riderCount = $pdo->query("
-        SELECT COUNT(DISTINCT r.id)
-        FROM riders r
-        INNER JOIN results res ON r.id = res.cyclist_id
-    ")->fetchColumn();
+    // Total riders - respects admin filter setting
+    if ($filter === 'with_results') {
+        $riderCount = $pdo->query("
+            SELECT COUNT(DISTINCT r.id)
+            FROM riders r
+            INNER JOIN results res ON r.id = res.cyclist_id
+        ")->fetchColumn();
 
-    // Total clubs with active riders
-    $clubCount = $pdo->query("
-        SELECT COUNT(DISTINCT c.id)
-        FROM clubs c
-        INNER JOIN riders r ON c.id = r.club_id
-        INNER JOIN results res ON r.id = res.cyclist_id
-    ")->fetchColumn();
+        $clubCount = $pdo->query("
+            SELECT COUNT(DISTINCT c.id)
+            FROM clubs c
+            INNER JOIN riders r ON c.id = r.club_id
+            INNER JOIN results res ON r.id = res.cyclist_id
+        ")->fetchColumn();
+    } else {
+        $riderCount = $pdo->query("SELECT COUNT(*) FROM riders WHERE active = 1")->fetchColumn();
+        $clubCount = $pdo->query("SELECT COUNT(*) FROM clubs")->fetchColumn();
+    }
 
     // Total events with results
     $eventCount = $pdo->query("
