@@ -19,7 +19,8 @@ if (strlen($query) < 2) {
 }
 
 try {
-    $pdo = hub_db();
+    // Use global $pdo from config.php (hub_db() is only in v3-config.php)
+    global $pdo;
     $results = [];
 
     // Search riders
