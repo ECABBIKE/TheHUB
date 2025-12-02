@@ -6,6 +6,20 @@
 $db = hub_db();
 $riderId = intval($pageInfo['params']['id'] ?? 0);
 
+// Include ranking functions for weighted ranking display
+$rankingFunctionsLoaded = false;
+$rankingPaths = [
+    dirname(__DIR__) . '/includes/ranking_functions.php',
+    __DIR__ . '/../includes/ranking_functions.php',
+];
+foreach ($rankingPaths as $path) {
+    if (file_exists($path)) {
+        require_once $path;
+        $rankingFunctionsLoaded = true;
+        break;
+    }
+}
+
 if (!$riderId) {
  header('Location: /riders');
  exit;
@@ -253,52 +267,72 @@ try {
  $gsEventBreakdown = $stmt->fetchAll(PDO::FETCH_ASSOC);
  }
 
- // Ranking stats (24 months rolling)
+ // Ranking stats (24 months rolling) - using weighted ranking system
  $rankingPoints = 0;
  $rankingPosition = null;
  $rankingTotal = 0;
  $rankingMonths = 24;
+ $rankingEventBreakdown = [];
 
- $cutoffDate = date('Y-m-d', strtotime("-{$rankingMonths} months"));
+ // Get parent db for ranking functions
+ $parentDb = function_exists('getDB') ? getDB() : null;
 
- // Get rider's ranking points (sum of all points in last 24 months)
- $stmt = $db->prepare("
- SELECT COALESCE(SUM(res.points), 0) as total_points
- FROM results res
- JOIN events e ON res.event_id = e.id
- WHERE res.cyclist_id = ?
- AND res.status = 'finished'
- AND res.points > 0
- AND e.date >= ?
-");
- $stmt->execute([$riderId, $cutoffDate]);
- $rankingStats = $stmt->fetch(PDO::FETCH_ASSOC);
- $rankingPoints = $rankingStats['total_points'] ?? 0;
+ if ($rankingFunctionsLoaded && $parentDb && function_exists('getRiderRankingDetails')) {
+     // Use the weighted ranking system
+     $riderRankingDetails = getRiderRankingDetails($parentDb, $riderId, 'GRAVITY');
 
- // Get ranking position among all riders
- if ($rankingPoints > 0) {
- $stmt = $db->prepare("
-  SELECT res.cyclist_id, SUM(res.points) as total_points
-  FROM results res
-  JOIN events e ON res.event_id = e.id
-  WHERE res.status = 'finished'
-  AND res.points > 0
-  AND e.date >= ?
-  GROUP BY res.cyclist_id
-  ORDER BY total_points DESC
- ");
- $stmt->execute([$cutoffDate]);
- $allRankings = $stmt->fetchAll(PDO::FETCH_ASSOC);
+     if ($riderRankingDetails) {
+         $rankingPoints = $riderRankingDetails['total_ranking_points'] ?? 0;
+         $rankingPosition = $riderRankingDetails['ranking_position'] ?? null;
+         $rankingEventBreakdown = $riderRankingDetails['events'] ?? [];
 
- $rankingTotal = count($allRankings);
- $position = 1;
- foreach ($allRankings as $ranking) {
-  if ($ranking['cyclist_id'] == $riderId) {
-  $rankingPosition = $position;
-  break;
-  }
-  $position++;
- }
+         // Get total riders count from ranking stats
+         if (function_exists('getRankingStats')) {
+             $stats = getRankingStats($parentDb);
+             $rankingTotal = $stats['GRAVITY']['riders'] ?? 0;
+         }
+     }
+ } else {
+     // Fallback: Simple sum (no weighting)
+     $cutoffDate = date('Y-m-d', strtotime("-{$rankingMonths} months"));
+
+     $stmt = $db->prepare("
+         SELECT COALESCE(SUM(res.points), 0) as total_points
+         FROM results res
+         JOIN events e ON res.event_id = e.id
+         WHERE res.cyclist_id = ?
+         AND res.status = 'finished'
+         AND res.points > 0
+         AND e.date >= ?
+     ");
+     $stmt->execute([$riderId, $cutoffDate]);
+     $rankingStats = $stmt->fetch(PDO::FETCH_ASSOC);
+     $rankingPoints = $rankingStats['total_points'] ?? 0;
+
+     if ($rankingPoints > 0) {
+         $stmt = $db->prepare("
+             SELECT res.cyclist_id, SUM(res.points) as total_points
+             FROM results res
+             JOIN events e ON res.event_id = e.id
+             WHERE res.status = 'finished'
+             AND res.points > 0
+             AND e.date >= ?
+             GROUP BY res.cyclist_id
+             ORDER BY total_points DESC
+         ");
+         $stmt->execute([$cutoffDate]);
+         $allRankings = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+         $rankingTotal = count($allRankings);
+         $position = 1;
+         foreach ($allRankings as $ranking) {
+             if ($ranking['cyclist_id'] == $riderId) {
+                 $rankingPosition = $position;
+                 break;
+             }
+             $position++;
+         }
+     }
  }
 
 } catch (Exception $e) {
@@ -419,7 +453,6 @@ $genderText = match($rider['gender']) {
   <th class="table-col-hide-portrait">Klass</th>
   <th class="table-col-hide-portrait">Datum</th>
   <th class="col-time">Tid</th>
-  <th class="col-points table-col-hide-portrait">Poäng</th>
  </tr>
  </thead>
  <tbody>
@@ -453,13 +486,6 @@ $genderText = match($rider['gender']) {
   <td class="table-col-hide-portrait"><?= htmlspecialchars($result['class_name'] ?? '-') ?></td>
   <td class="table-col-hide-portrait"><?= $result['event_date'] ? date('j M Y', strtotime($result['event_date'])) : '-' ?></td>
   <td class="col-time"><?= htmlspecialchars($result['finish_time'] ?? '-') ?></td>
-  <td class="col-points table-col-hide-portrait">
-  <?php if ($result['points']): ?>
-  <span class="points-value"><?= $result['points'] ?></span>
-  <?php else: ?>
-  -
-  <?php endif; ?>
-  </td>
  </tr>
  <?php endforeach; ?>
  </tbody>
@@ -489,9 +515,6 @@ $genderText = match($rider['gender']) {
  </div>
  <div class="result-time-col">
  <div class="time-value"><?= htmlspecialchars($result['finish_time'] ?? '-') ?></div>
- <?php if ($result['points']): ?>
-  <div class="points-small"><?= $result['points'] ?> p</div>
- <?php endif; ?>
  </div>
  </a>
  <?php endforeach; ?>
@@ -504,12 +527,12 @@ $genderText = match($rider['gender']) {
  <div class="card">
  <div class="card-header">
  <h2 class="card-title">Ranking</h2>
- <p class="card-subtitle">Poäng senaste <?= $rankingMonths ?> månaderna</p>
+ <p class="card-subtitle">Viktade poäng senaste <?= $rankingMonths ?> månaderna</p>
  </div>
  <div class="gs-stats-card gs-stats-card--ranking">
  <div class="gs-main-stat">
- <div class="gs-points"><?= number_format($rankingPoints) ?></div>
- <div class="points-label">Poäng</div>
+ <div class="gs-points"><?= number_format($rankingPoints, 1) ?></div>
+ <div class="points-label">Rankingpoäng</div>
  </div>
  <?php if ($rankingPosition): ?>
  <div class="gs-details">
@@ -524,6 +547,73 @@ $genderText = match($rider['gender']) {
  </div>
  <?php endif; ?>
  </div>
+
+ <?php if (!empty($rankingEventBreakdown)): ?>
+ <div class="ranking-breakdown">
+ <h3 class="breakdown-title">Poängberäkning per event</h3>
+ <p class="breakdown-help">Poäng viktas efter: fältstorlek (0.75-1.00), eventtyp (nationell 100%, sportmotion 50%), och ålder (0-12 mån = 100%, 13-24 mån = 50%)</p>
+
+ <div class="table-wrapper">
+  <table class="table table--striped ranking-breakdown-table">
+  <thead>
+  <tr>
+   <th>Event</th>
+   <th class="table-col-hide-portrait">Klass</th>
+   <th class="table-col-hide-portrait">Datum</th>
+   <th class="text-right">Bas</th>
+   <th class="text-right table-col-hide-portrait">Fält</th>
+   <th class="text-right table-col-hide-portrait">Typ</th>
+   <th class="text-right table-col-hide-portrait">Tid</th>
+   <th class="text-right">Viktat</th>
+  </tr>
+  </thead>
+  <tbody>
+  <?php foreach ($rankingEventBreakdown as $evt): ?>
+  <tr onclick="window.location='/event/<?= $evt['event_id'] ?>'" style="cursor:pointer">
+   <td>
+   <a href="/event/<?= $evt['event_id'] ?>" class="event-link">
+    <?= htmlspecialchars($evt['event_name'] ?? 'Okänt event') ?>
+   </a>
+   </td>
+   <td class="table-col-hide-portrait text-muted"><?= htmlspecialchars($evt['class_name'] ?? '-') ?></td>
+   <td class="table-col-hide-portrait text-muted"><?= isset($evt['event_date']) ? date('j M Y', strtotime($evt['event_date'])) : '-' ?></td>
+   <td class="text-right"><?= number_format($evt['original_points'] ?? 0, 0) ?></td>
+   <td class="text-right table-col-hide-portrait text-muted">×<?= number_format($evt['field_multiplier'] ?? 1, 2) ?></td>
+   <td class="text-right table-col-hide-portrait text-muted">×<?= number_format($evt['event_level_multiplier'] ?? 1, 2) ?></td>
+   <td class="text-right table-col-hide-portrait text-muted">×<?= number_format($evt['time_multiplier'] ?? 1, 2) ?></td>
+   <td class="text-right"><strong class="text-accent"><?= number_format($evt['weighted_points'] ?? 0, 1) ?></strong></td>
+  </tr>
+  <?php endforeach; ?>
+  </tbody>
+  <tfoot>
+  <tr>
+   <td colspan="7" class="text-right"><strong>Totalt:</strong></td>
+   <td class="text-right"><strong class="text-accent"><?= number_format($rankingPoints, 1) ?></strong></td>
+  </tr>
+  </tfoot>
+  </table>
+ </div>
+
+ <!-- Mobile Card View -->
+ <div class="ranking-breakdown-cards">
+  <?php foreach ($rankingEventBreakdown as $evt): ?>
+  <a href="/event/<?= $evt['event_id'] ?>" class="breakdown-card">
+  <div class="breakdown-card-main">
+   <div class="breakdown-card-name"><?= htmlspecialchars($evt['event_name'] ?? 'Okänt event') ?></div>
+   <div class="breakdown-card-meta">
+   <?= isset($evt['event_date']) ? date('j M Y', strtotime($evt['event_date'])) : '' ?>
+   <?php if (!empty($evt['class_name'])): ?> • <?= htmlspecialchars($evt['class_name']) ?><?php endif; ?>
+   </div>
+  </div>
+  <div class="breakdown-card-points">
+   <div class="breakdown-card-weighted"><?= number_format($evt['weighted_points'] ?? 0, 1) ?></div>
+   <div class="breakdown-card-calc"><?= number_format($evt['original_points'] ?? 0, 0) ?> × <?= number_format(($evt['field_multiplier'] ?? 1) * ($evt['event_level_multiplier'] ?? 1) * ($evt['time_multiplier'] ?? 1), 2) ?></div>
+  </div>
+  </a>
+  <?php endforeach; ?>
+ </div>
+ </div>
+ <?php endif; ?>
  </div>
 </section>
 
@@ -1081,6 +1171,94 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
  }
  .stat-sub {
  font-size: 9px;
+ }
+}
+
+/* Ranking Breakdown Styles */
+.ranking-breakdown {
+ padding: var(--space-md);
+ border-top: 1px solid var(--color-border);
+}
+.breakdown-title {
+ font-size: var(--text-base);
+ font-weight: var(--weight-semibold);
+ margin: 0 0 var(--space-xs) 0;
+}
+.breakdown-help {
+ font-size: var(--text-xs);
+ color: var(--color-text-muted);
+ margin: 0 0 var(--space-md) 0;
+}
+.ranking-breakdown-table {
+ font-size: var(--text-sm);
+}
+.ranking-breakdown-table th {
+ font-size: var(--text-xs);
+ text-transform: uppercase;
+ color: var(--color-text-muted);
+}
+.ranking-breakdown-table tfoot td {
+ border-top: 2px solid var(--color-border);
+ padding-top: var(--space-sm);
+}
+.text-accent {
+ color: var(--color-accent-text);
+}
+
+/* Mobile ranking breakdown cards */
+.ranking-breakdown-cards {
+ display: none;
+ flex-direction: column;
+ gap: var(--space-xs);
+}
+.breakdown-card {
+ display: flex;
+ justify-content: space-between;
+ align-items: center;
+ padding: var(--space-sm);
+ background: var(--color-bg-sunken);
+ border-radius: var(--radius-sm);
+ text-decoration: none;
+ color: inherit;
+}
+.breakdown-card:hover {
+ background: var(--color-bg-hover);
+}
+.breakdown-card-main {
+ flex: 1;
+ min-width: 0;
+}
+.breakdown-card-name {
+ font-weight: var(--weight-medium);
+ white-space: nowrap;
+ overflow: hidden;
+ text-overflow: ellipsis;
+}
+.breakdown-card-meta {
+ font-size: var(--text-xs);
+ color: var(--color-text-muted);
+}
+.breakdown-card-points {
+ text-align: right;
+ flex-shrink: 0;
+ margin-left: var(--space-sm);
+}
+.breakdown-card-weighted {
+ font-size: var(--text-lg);
+ font-weight: var(--weight-bold);
+ color: var(--color-accent-text);
+}
+.breakdown-card-calc {
+ font-size: var(--text-xs);
+ color: var(--color-text-muted);
+}
+
+@media (max-width: 599px) {
+ .ranking-breakdown .table-wrapper {
+  display: none;
+ }
+ .ranking-breakdown-cards {
+  display: flex;
  }
 }
 </style>
