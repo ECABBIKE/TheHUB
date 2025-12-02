@@ -234,19 +234,19 @@ include __DIR__ . '/components/unified-layout.php';
 
             <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--space-lg);">
                 <div class="admin-form-group">
-                    <label class="admin-label">Nationell tävling</label>
+                    <label class="admin-form-label">Nationell tävling</label>
                     <input type="number" name="level_national"
                         value="<?= number_format($eventLevelMultipliers['national'], 2) ?>"
                         min="0" max="1" step="0.01"
-                        class="admin-input">
+                        class="admin-form-input">
                     <small style="color: var(--color-text-secondary);">Officiella tävlingar (standard 100%)</small>
                 </div>
                 <div class="admin-form-group">
-                    <label class="admin-label">Sportmotion</label>
+                    <label class="admin-form-label">Sportmotion</label>
                     <input type="number" name="level_sportmotion"
                         value="<?= number_format($eventLevelMultipliers['sportmotion'], 2) ?>"
                         min="0" max="1" step="0.01"
-                        class="admin-input">
+                        class="admin-form-input">
                     <small style="color: var(--color-text-secondary);">Breddtävlingar (standard 50%)</small>
                 </div>
             </div>
@@ -297,7 +297,7 @@ include __DIR__ . '/components/unified-layout.php';
                         id="mult_<?= $i ?>"
                         value="<?= number_format($multipliers[$i] ?? 0.75, 2) ?>"
                         min="0" max="1" step="0.01"
-                        class="admin-input"
+                        class="admin-form-input"
                         style="padding: 4px; text-align: center; font-size: 0.75rem;"
                         oninput="updateBar(<?= $i ?>, this.value)">
                 </div>
@@ -324,27 +324,27 @@ include __DIR__ . '/components/unified-layout.php';
 
             <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-lg);">
                 <div class="admin-form-group">
-                    <label class="admin-label">Månad 1-12</label>
+                    <label class="admin-form-label">Månad 1-12</label>
                     <input type="number" name="decay_1_12"
                         value="<?= number_format($timeDecay['months_1_12'], 2) ?>"
                         min="0" max="1" step="0.01"
-                        class="admin-input">
+                        class="admin-form-input">
                     <small style="color: var(--color-text-secondary);">Senaste 12 månaderna</small>
                 </div>
                 <div class="admin-form-group">
-                    <label class="admin-label">Månad 13-24</label>
+                    <label class="admin-form-label">Månad 13-24</label>
                     <input type="number" name="decay_13_24"
                         value="<?= number_format($timeDecay['months_13_24'], 2) ?>"
                         min="0" max="1" step="0.01"
-                        class="admin-input">
+                        class="admin-form-input">
                     <small style="color: var(--color-text-secondary);">Förra årets resultat</small>
                 </div>
                 <div class="admin-form-group">
-                    <label class="admin-label">Månad 25+</label>
+                    <label class="admin-form-label">Månad 25+</label>
                     <input type="number" name="decay_25_plus"
                         value="<?= number_format($timeDecay['months_25_plus'], 2) ?>"
                         min="0" max="1" step="0.01"
-                        class="admin-input">
+                        class="admin-form-input">
                     <small style="color: var(--color-text-secondary);">Äldre resultat (förfaller)</small>
                 </div>
             </div>
