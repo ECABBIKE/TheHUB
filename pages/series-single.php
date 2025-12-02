@@ -2,7 +2,10 @@
 /**
  * V3 Series Single Page - Series standings with per-event points
  * Uses series_results table for series-specific points (matches V2)
+ * Club standings use 100%/50% rule from club-points-system.php
  */
+
+require_once HUB_V3_ROOT . '/includes/club-points-system.php';
 
 $db = hub_db();
 $seriesId = intval($pageInfo['params']['id'] ?? 0);
@@ -261,41 +264,157 @@ try {
 
     $totalParticipants = count($ridersInSeries);
 
-    // Calculate club standings (aggregate points by club)
+    // Calculate club standings with 100%/50% rule
+    // Best rider per club/class/event = 100%, second best = 50%, others = 0%
     $clubStandings = [];
-    foreach ($standingsByClass as $classData) {
-        foreach ($classData['riders'] as $rider) {
-            $clubName = $rider['club_name'] ?? 'Klubblös';
-            if (!isset($clubStandings[$clubName])) {
-                $clubStandings[$clubName] = [
-                    'club_name' => $clubName,
-                    'riders' => [],
-                    'total_points' => 0,
-                    'event_points' => [],
-                    'rider_count' => 0
-                ];
-                // Initialize event points
-                foreach ($seriesEvents as $event) {
-                    $clubStandings[$clubName]['event_points'][$event['id']] = 0;
-                }
+    $clubRiderContributions = []; // Track individual rider contributions
+
+    foreach ($seriesEvents as $event) {
+        $eventId = $event['id'];
+
+        // Get all results for this event with series points, grouped by club and class
+        // Only include riders with clubs and classes that award points
+        if ($useSeriesResults) {
+            $stmt = $db->prepare("
+                SELECT
+                    sr.cyclist_id,
+                    sr.class_id,
+                    sr.points,
+                    rd.firstname,
+                    rd.lastname,
+                    c.id as club_id,
+                    c.name as club_name,
+                    cls.name as class_name,
+                    cls.display_name as class_display_name
+                FROM series_results sr
+                JOIN riders rd ON sr.cyclist_id = rd.id
+                LEFT JOIN clubs c ON rd.club_id = c.id
+                LEFT JOIN classes cls ON sr.class_id = cls.id
+                WHERE sr.series_id = ? AND sr.event_id = ?
+                AND c.id IS NOT NULL
+                AND sr.points > 0
+                AND COALESCE(cls.series_eligible, 1) = 1
+                AND COALESCE(cls.awards_points, 1) = 1
+                ORDER BY c.id, sr.class_id, sr.points DESC
+            ");
+            $stmt->execute([$seriesId, $eventId]);
+        } else {
+            // Fallback to results table
+            $stmt = $db->prepare("
+                SELECT
+                    r.cyclist_id,
+                    r.class_id,
+                    r.points,
+                    rd.firstname,
+                    rd.lastname,
+                    c.id as club_id,
+                    c.name as club_name,
+                    cls.name as class_name,
+                    cls.display_name as class_display_name
+                FROM results r
+                JOIN riders rd ON r.cyclist_id = rd.id
+                LEFT JOIN clubs c ON rd.club_id = c.id
+                LEFT JOIN classes cls ON r.class_id = cls.id
+                WHERE r.event_id = ?
+                AND r.status = 'finished'
+                AND c.id IS NOT NULL
+                AND r.points > 0
+                AND COALESCE(cls.series_eligible, 1) = 1
+                AND COALESCE(cls.awards_points, 1) = 1
+                ORDER BY c.id, r.class_id, r.points DESC
+            ");
+            $stmt->execute([$eventId]);
+        }
+        $eventResults = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Group by club and class
+        $clubClassResults = [];
+        foreach ($eventResults as $result) {
+            $key = $result['club_id'] . '_' . $result['class_id'];
+            if (!isset($clubClassResults[$key])) {
+                $clubClassResults[$key] = [];
             }
-            // Add rider to club
-            $clubStandings[$clubName]['riders'][] = [
-                'name' => $rider['firstname'] . ' ' . $rider['lastname'],
-                'rider_id' => $rider['rider_id'],
-                'class_name' => $rider['class_name'],
-                'points' => $rider['total_points']
-            ];
-            $clubStandings[$clubName]['total_points'] += $rider['total_points'];
-            $clubStandings[$clubName]['rider_count']++;
-            // Sum event points
-            foreach ($rider['event_points'] as $eventId => $pts) {
-                if (!isset($rider['excluded_events'][$eventId])) {
-                    $clubStandings[$clubName]['event_points'][$eventId] += $pts;
+            $clubClassResults[$key][] = $result;
+        }
+
+        // Apply 100%/50% rule for each club/class combo
+        foreach ($clubClassResults as $riders) {
+            $rank = 1;
+            foreach ($riders as $rider) {
+                $clubId = $rider['club_id'];
+                $clubName = $rider['club_name'];
+                $originalPoints = (float)$rider['points'];
+                $clubPoints = 0;
+                $percentage = 0;
+
+                if ($rank === 1) {
+                    $clubPoints = $originalPoints;
+                    $percentage = 100;
+                } elseif ($rank === 2) {
+                    $clubPoints = round($originalPoints * 0.5, 0);
+                    $percentage = 50;
                 }
+
+                // Initialize club if not exists
+                if (!isset($clubStandings[$clubId])) {
+                    $clubStandings[$clubId] = [
+                        'club_id' => $clubId,
+                        'club_name' => $clubName,
+                        'riders' => [],
+                        'total_points' => 0,
+                        'event_points' => [],
+                        'rider_count' => 0,
+                        'scoring_riders' => 0
+                    ];
+                    foreach ($seriesEvents as $e) {
+                        $clubStandings[$clubId]['event_points'][$e['id']] = 0;
+                    }
+                }
+
+                // Add club points for this event
+                $clubStandings[$clubId]['event_points'][$eventId] += $clubPoints;
+                $clubStandings[$clubId]['total_points'] += $clubPoints;
+
+                // Track rider contribution
+                $riderId = $rider['cyclist_id'];
+                $riderKey = $clubId . '_' . $riderId;
+                if (!isset($clubRiderContributions[$riderKey])) {
+                    $clubRiderContributions[$riderKey] = [
+                        'rider_id' => $riderId,
+                        'club_id' => $clubId,
+                        'name' => $rider['firstname'] . ' ' . $rider['lastname'],
+                        'class_name' => $rider['class_display_name'] ?? $rider['class_name'],
+                        'total_club_points' => 0,
+                        'events_scored' => 0
+                    ];
+                }
+                $clubRiderContributions[$riderKey]['total_club_points'] += $clubPoints;
+                if ($clubPoints > 0) {
+                    $clubRiderContributions[$riderKey]['events_scored']++;
+                }
+
+                $rank++;
             }
         }
     }
+
+    // Add riders to their clubs and count
+    foreach ($clubRiderContributions as $riderData) {
+        $clubId = $riderData['club_id'];
+        if (isset($clubStandings[$clubId])) {
+            $clubStandings[$clubId]['riders'][] = [
+                'rider_id' => $riderData['rider_id'],
+                'name' => $riderData['name'],
+                'class_name' => $riderData['class_name'],
+                'points' => $riderData['total_club_points']
+            ];
+            $clubStandings[$clubId]['rider_count']++;
+            if ($riderData['total_club_points'] > 0) {
+                $clubStandings[$clubId]['scoring_riders']++;
+            }
+        }
+    }
+
     // Sort clubs by total points
     uasort($clubStandings, function($a, $b) {
         return $b['total_points'] - $a['total_points'];
@@ -540,7 +659,7 @@ if (!$series) {
   <div class="card-header">
     <div>
       <h2 class="card-title">🛡️ Klubbmästerskap</h2>
-      <p class="card-subtitle"><?= count($clubStandings) ?> klubbar</p>
+      <p class="card-subtitle"><?= count($clubStandings) ?> klubbar • Bästa åkare per klass: 100%, näst bästa: 50%</p>
     </div>
   </div>
 
