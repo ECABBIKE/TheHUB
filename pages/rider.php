@@ -52,6 +52,7 @@ try {
   e.id as event_id, e.name as event_name, e.date as event_date, e.location,
   s.id as series_id, s.name as series_name,
   cls.display_name as class_name,
+  COALESCE(cls.awards_points, 1) as awards_podiums,
   (
   SELECT COUNT(*) + 1
   FROM results r2
@@ -99,15 +100,17 @@ try {
  }
  unset($result);
 
- // Calculate stats
+ // Calculate stats - only count podiums/wins from competitive classes (awards_points = 1)
  $totalStarts = count($results);
  $finishedRaces = count(array_filter($results, fn($r) => $r['status'] === 'finished'));
  $totalPoints = array_sum(array_column($results, 'points'));
- $podiums = count(array_filter($results, fn($r) => $r['class_position'] && $r['class_position'] <= 3));
- $wins = count(array_filter($results, fn($r) => $r['class_position'] == 1));
+ // Motion/Sportmotion classes don't count for podiums/wins (awards_points = 0)
+ $podiums = count(array_filter($results, fn($r) => $r['class_position'] && $r['class_position'] <= 3 && $r['awards_podiums']));
+ $wins = count(array_filter($results, fn($r) => $r['class_position'] == 1 && $r['awards_podiums']));
+ // Best position also only counts competitive classes
  $bestPosition = null;
  foreach ($results as $r) {
- if ($r['class_position'] && $r['status'] === 'finished') {
+ if ($r['class_position'] && $r['status'] === 'finished' && $r['awards_podiums']) {
   if (!$bestPosition || $r['class_position'] < $bestPosition) {
   $bestPosition = (int)$r['class_position'];
   }
