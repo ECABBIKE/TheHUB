@@ -55,12 +55,9 @@ function calculateSeriesPointsForPosition($db, $templateId, $position, $status =
 
     if ($pointValue) {
         $points = (int)$pointValue['points'];
-
-        // Apply 50% multiplier for sportmotion events
-        if ($eventLevel === 'sportmotion') {
-            $points = (int)($points * 0.5);
-        }
-
+        // NOTE: NO event_level multiplier for series points!
+        // event_level (sportmotion/national) only affects RANKING points, not series.
+        // Series points are determined solely by the template_id in series_events.
         return $points;
     }
 
