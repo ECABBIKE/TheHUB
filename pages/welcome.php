@@ -82,222 +82,199 @@ try {
 ?>
 
 <div class="welcome-page">
-    <!-- Hero Section -->
-    <div class="welcome-hero">
-        <div class="welcome-hero-content">
-            <div class="welcome-logo">
-                <svg viewBox="0 0 80 80" class="welcome-logo-icon">
-                    <circle cx="40" cy="40" r="36" fill="currentColor" opacity="0.1"/>
-                    <circle cx="40" cy="40" r="36" fill="none" stroke="currentColor" stroke-width="3"/>
-                    <text x="40" y="48" text-anchor="middle" fill="currentColor" font-size="20" font-weight="bold">HUB</text>
-                </svg>
-            </div>
-            <h1 class="welcome-title">TheHUB</h1>
-            <p class="welcome-subtitle">GravitySeries Competition Platform</p>
+    <!-- Header with Logo -->
+    <div class="welcome-header">
+        <img src="/uploads/icons/GSIkon.png" alt="TheHUB" class="welcome-logo" onerror="this.style.display='none'">
+        <h1 class="welcome-title">TheHUB</h1>
+        <p class="welcome-subtitle">GravitySeries Competition Platform</p>
+    </div>
 
-            <!-- Stats Grid -->
-            <div class="welcome-stats">
-                <div class="welcome-stat">
-                    <span class="stat-value"><?= number_format($riderCount) ?></span>
-                    <span class="stat-label">Åkare</span>
-                </div>
-                <div class="welcome-stat">
-                    <span class="stat-value"><?= number_format($clubCount) ?></span>
-                    <span class="stat-label">Klubbar</span>
-                </div>
-                <div class="welcome-stat">
-                    <span class="stat-value"><?= number_format($eventCount) ?></span>
-                    <span class="stat-label">Tävlingar</span>
-                </div>
-                <div class="welcome-stat">
-                    <span class="stat-value"><?= number_format($seriesCount) ?></span>
-                    <span class="stat-label">Serier</span>
-                </div>
-            </div>
+    <!-- Stats Row -->
+    <div class="welcome-stats">
+        <div class="welcome-stat">
+            <span class="stat-value"><?= number_format($riderCount) ?></span>
+            <span class="stat-label">Åkare</span>
+        </div>
+        <div class="welcome-stat">
+            <span class="stat-value"><?= number_format($clubCount) ?></span>
+            <span class="stat-label">Klubbar</span>
+        </div>
+        <div class="welcome-stat">
+            <span class="stat-value"><?= number_format($eventCount) ?></span>
+            <span class="stat-label">Tävlingar</span>
+        </div>
+        <div class="welcome-stat">
+            <span class="stat-value"><?= number_format($seriesCount) ?></span>
+            <span class="stat-label">Serier</span>
         </div>
     </div>
 
-    <!-- Quick Links -->
-    <div class="welcome-container">
-        <div class="welcome-nav-grid">
-            <a href="/calendar" class="welcome-nav-card">
-                <?= hub_icon('calendar', 'welcome-nav-icon') ?>
-                <h3>Kalender</h3>
-                <p>Kommande tävlingar och event</p>
-            </a>
-            <a href="/results" class="welcome-nav-card">
-                <?= hub_icon('trophy', 'welcome-nav-icon') ?>
-                <h3>Resultat</h3>
-                <p>Se alla tävlingsresultat</p>
-            </a>
-            <a href="/series" class="welcome-nav-card">
-                <?= hub_icon('award', 'welcome-nav-icon') ?>
-                <h3>Serier</h3>
-                <p>Tävlingsserier och ställningar</p>
-            </a>
-            <a href="/ranking" class="welcome-nav-card">
-                <?= hub_icon('trending-up', 'welcome-nav-icon') ?>
-                <h3>Ranking</h3>
-                <p>24 månaders rullande ranking</p>
-            </a>
-            <a href="/database" class="welcome-nav-card">
-                <?= hub_icon('database', 'welcome-nav-icon') ?>
-                <h3>Databas</h3>
-                <p>Sök åkare och klubbar</p>
-            </a>
-            <a href="/login" class="welcome-nav-card welcome-nav-card--login">
-                <?= hub_icon('log-in', 'welcome-nav-icon') ?>
-                <h3>Logga in</h3>
-                <p>Åtkomst till din profil</p>
-            </a>
-        </div>
-
-        <?php if (!empty($upcomingEvents)): ?>
-        <!-- Upcoming Events -->
-        <div class="welcome-section">
-            <h2 class="welcome-section-title">
-                <?= hub_icon('calendar', 'section-icon') ?>
-                Kommande tävlingar
-            </h2>
-            <div class="welcome-event-list">
-                <?php foreach ($upcomingEvents as $event): ?>
-                <a href="/calendar/<?= $event['id'] ?>" class="welcome-event-item">
-                    <div class="event-date-badge">
-                        <span class="event-day"><?= date('j', strtotime($event['date'])) ?></span>
-                        <span class="event-month"><?= date('M', strtotime($event['date'])) ?></span>
-                    </div>
-                    <div class="event-info">
-                        <h4><?= htmlspecialchars($event['name']) ?></h4>
-                        <p>
-                            <?php if ($event['series_name']): ?>
-                                <span class="event-series"><?= htmlspecialchars($event['series_name']) ?></span>
-                            <?php endif; ?>
-                            <?php if ($event['location']): ?>
-                                <span class="event-location"><?= hub_icon('map-pin', 'icon-xs') ?> <?= htmlspecialchars($event['location']) ?></span>
-                            <?php endif; ?>
-                        </p>
-                    </div>
-                    <?= hub_icon('chevron-right', 'event-arrow') ?>
-                </a>
-                <?php endforeach; ?>
-            </div>
-            <a href="/calendar" class="welcome-more-link">
-                Visa alla kommande event <?= hub_icon('arrow-right', 'icon-sm') ?>
-            </a>
-        </div>
-        <?php endif; ?>
-
-        <?php if (!empty($recentResults)): ?>
-        <!-- Recent Results -->
-        <div class="welcome-section">
-            <h2 class="welcome-section-title">
-                <?= hub_icon('trophy', 'section-icon') ?>
-                Senaste resultat
-            </h2>
-            <div class="welcome-event-list">
-                <?php foreach ($recentResults as $event): ?>
-                <a href="/event/<?= $event['id'] ?>" class="welcome-event-item">
-                    <div class="event-date-badge event-date-badge--results">
-                        <span class="event-day"><?= date('j', strtotime($event['date'])) ?></span>
-                        <span class="event-month"><?= date('M', strtotime($event['date'])) ?></span>
-                    </div>
-                    <div class="event-info">
-                        <h4><?= htmlspecialchars($event['name']) ?></h4>
-                        <p>
-                            <span class="event-participants"><?= hub_icon('users', 'icon-xs') ?> <?= $event['participant_count'] ?> deltagare</span>
-                            <?php if ($event['location']): ?>
-                                <span class="event-location"><?= hub_icon('map-pin', 'icon-xs') ?> <?= htmlspecialchars($event['location']) ?></span>
-                            <?php endif; ?>
-                        </p>
-                    </div>
-                    <?= hub_icon('chevron-right', 'event-arrow') ?>
-                </a>
-                <?php endforeach; ?>
-            </div>
-            <a href="/results" class="welcome-more-link">
-                Visa alla resultat <?= hub_icon('arrow-right', 'icon-sm') ?>
-            </a>
-        </div>
-        <?php endif; ?>
+    <!-- Navigation Grid -->
+    <div class="welcome-nav-grid">
+        <a href="/calendar" class="welcome-nav-card">
+            <?= hub_icon('calendar', 'welcome-nav-icon') ?>
+            <h3>Kalender</h3>
+            <p>Kommande tävlingar och event</p>
+        </a>
+        <a href="/results" class="welcome-nav-card">
+            <?= hub_icon('trophy', 'welcome-nav-icon') ?>
+            <h3>Resultat</h3>
+            <p>Se alla tävlingsresultat</p>
+        </a>
+        <a href="/series" class="welcome-nav-card">
+            <?= hub_icon('award', 'welcome-nav-icon') ?>
+            <h3>Serier</h3>
+            <p>Tävlingsserier och ställningar</p>
+        </a>
+        <a href="/ranking" class="welcome-nav-card">
+            <?= hub_icon('trending-up', 'welcome-nav-icon') ?>
+            <h3>Ranking</h3>
+            <p>24 månaders rullande ranking</p>
+        </a>
+        <a href="/database" class="welcome-nav-card">
+            <?= hub_icon('database', 'welcome-nav-icon') ?>
+            <h3>Databas</h3>
+            <p>Sök åkare och klubbar</p>
+        </a>
+        <a href="/login" class="welcome-nav-card welcome-nav-card--login">
+            <?= hub_icon('log-in', 'welcome-nav-icon') ?>
+            <h3>Logga in</h3>
+            <p>Åtkomst till din profil</p>
+        </a>
     </div>
+
+    <?php if (!empty($upcomingEvents)): ?>
+    <!-- Upcoming Events -->
+    <div class="welcome-section">
+        <h2 class="welcome-section-title">
+            <?= hub_icon('calendar', 'section-icon') ?>
+            Kommande tävlingar
+        </h2>
+        <div class="welcome-event-list">
+            <?php foreach ($upcomingEvents as $event): ?>
+            <a href="/calendar/<?= $event['id'] ?>" class="welcome-event-item">
+                <div class="event-date-badge">
+                    <span class="event-day"><?= date('j', strtotime($event['date'])) ?></span>
+                    <span class="event-month"><?= date('M', strtotime($event['date'])) ?></span>
+                </div>
+                <div class="event-info">
+                    <h4><?= htmlspecialchars($event['name']) ?></h4>
+                    <p>
+                        <?php if ($event['series_name']): ?>
+                            <span class="event-series"><?= htmlspecialchars($event['series_name']) ?></span>
+                        <?php endif; ?>
+                        <?php if ($event['location']): ?>
+                            <span class="event-location"><?= hub_icon('map-pin', 'icon-xs') ?> <?= htmlspecialchars($event['location']) ?></span>
+                        <?php endif; ?>
+                    </p>
+                </div>
+                <?= hub_icon('chevron-right', 'event-arrow') ?>
+            </a>
+            <?php endforeach; ?>
+        </div>
+        <a href="/calendar" class="welcome-more-link">
+            Visa alla kommande event <?= hub_icon('arrow-right', 'icon-sm') ?>
+        </a>
+    </div>
+    <?php endif; ?>
+
+    <?php if (!empty($recentResults)): ?>
+    <!-- Recent Results -->
+    <div class="welcome-section">
+        <h2 class="welcome-section-title">
+            <?= hub_icon('trophy', 'section-icon') ?>
+            Senaste resultat
+        </h2>
+        <div class="welcome-event-list">
+            <?php foreach ($recentResults as $event): ?>
+            <a href="/event/<?= $event['id'] ?>" class="welcome-event-item">
+                <div class="event-date-badge event-date-badge--results">
+                    <span class="event-day"><?= date('j', strtotime($event['date'])) ?></span>
+                    <span class="event-month"><?= date('M', strtotime($event['date'])) ?></span>
+                </div>
+                <div class="event-info">
+                    <h4><?= htmlspecialchars($event['name']) ?></h4>
+                    <p>
+                        <span class="event-participants"><?= hub_icon('users', 'icon-xs') ?> <?= $event['participant_count'] ?> deltagare</span>
+                        <?php if ($event['location']): ?>
+                            <span class="event-location"><?= hub_icon('map-pin', 'icon-xs') ?> <?= htmlspecialchars($event['location']) ?></span>
+                        <?php endif; ?>
+                    </p>
+                </div>
+                <?= hub_icon('chevron-right', 'event-arrow') ?>
+            </a>
+            <?php endforeach; ?>
+        </div>
+        <a href="/results" class="welcome-more-link">
+            Visa alla resultat <?= hub_icon('arrow-right', 'icon-sm') ?>
+        </a>
+    </div>
+    <?php endif; ?>
 </div>
 
 <style>
-/* ===== WELCOME PAGE ===== */
+/* ===== WELCOME PAGE - Clean Design ===== */
 .welcome-page {
-    min-height: 100%;
-}
-
-/* Hero Section */
-.welcome-hero {
-    background: linear-gradient(135deg, var(--color-accent) 0%, var(--color-accent-dark, #2563eb) 100%);
-    padding: var(--space-2xl) var(--space-lg);
-    text-align: center;
-    margin: calc(var(--space-lg) * -1);
-    margin-bottom: var(--space-xl);
-}
-
-.welcome-hero-content {
-    max-width: 600px;
+    max-width: 900px;
     margin: 0 auto;
+    padding: var(--space-md);
+}
+
+/* Header */
+.welcome-header {
+    text-align: center;
+    padding: var(--space-xl) 0;
 }
 
 .welcome-logo {
+    width: 80px;
+    height: 80px;
+    border-radius: var(--radius-lg);
     margin-bottom: var(--space-md);
-}
-
-.welcome-logo-icon {
-    width: 64px;
-    height: 64px;
-    color: white;
 }
 
 .welcome-title {
     font-size: var(--text-3xl);
     font-weight: var(--weight-bold);
-    color: white;
+    color: var(--color-text-primary);
     margin: 0 0 var(--space-xs);
 }
 
 .welcome-subtitle {
     font-size: var(--text-md);
-    color: rgba(255, 255, 255, 0.9);
-    margin: 0 0 var(--space-xl);
+    color: var(--color-text-secondary);
+    margin: 0;
 }
 
 /* Stats */
 .welcome-stats {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
-    gap: var(--space-md);
+    gap: var(--space-sm);
+    margin-bottom: var(--space-xl);
 }
 
 .welcome-stat {
-    background: rgba(255, 255, 255, 0.15);
+    background: var(--color-bg-card);
+    border: 1px solid var(--color-border);
     border-radius: var(--radius-lg);
     padding: var(--space-md);
+    text-align: center;
 }
 
 .welcome-stat .stat-value {
     display: block;
     font-size: var(--text-2xl);
     font-weight: var(--weight-bold);
-    color: white;
+    color: var(--color-accent);
     line-height: 1.2;
 }
 
 .welcome-stat .stat-label {
     font-size: var(--text-xs);
-    color: rgba(255, 255, 255, 0.8);
+    color: var(--color-text-secondary);
     text-transform: uppercase;
     letter-spacing: 0.05em;
-}
-
-/* Container */
-.welcome-container {
-    max-width: 900px;
-    margin: 0 auto;
-    padding: 0 var(--space-md);
 }
 
 /* Navigation Grid */
@@ -511,13 +488,35 @@ try {
 
 /* Responsive */
 @media (max-width: 768px) {
-    .welcome-hero {
-        padding: var(--space-xl) var(--space-md);
+    .welcome-stats {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .welcome-nav-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 480px) {
+    .welcome-page {
+        padding: var(--space-sm);
+    }
+
+    .welcome-header {
+        padding: var(--space-lg) 0;
+    }
+
+    .welcome-logo {
+        width: 64px;
+        height: 64px;
+    }
+
+    .welcome-title {
+        font-size: var(--text-2xl);
     }
 
     .welcome-stats {
-        grid-template-columns: repeat(2, 1fr);
-        gap: var(--space-sm);
+        gap: var(--space-xs);
     }
 
     .welcome-stat {
@@ -529,23 +528,6 @@ try {
     }
 
     .welcome-nav-grid {
-        grid-template-columns: repeat(2, 1fr);
-    }
-}
-
-@media (max-width: 480px) {
-    .welcome-hero {
-        padding: var(--space-lg) var(--space-sm);
-        margin: calc(var(--space-md) * -1);
-        margin-bottom: var(--space-lg);
-    }
-
-    .welcome-title {
-        font-size: var(--text-2xl);
-    }
-
-    .welcome-nav-grid {
-        grid-template-columns: 1fr 1fr;
         gap: var(--space-sm);
     }
 
