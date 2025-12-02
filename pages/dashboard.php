@@ -3,16 +3,38 @@
  * V3 Dashboard - Overview with real data
  */
 
+// Load filter setting from admin configuration
+$publicSettings = @include(HUB_V3_ROOT . '/config/public_settings.php');
+$filter = $publicSettings['public_riders_display'] ?? 'all';
+
 try {
     $db = hub_db();
 
-    // Get overall stats with separate queries for safety
-    $stats = [
-        'total_riders' => $db->query("SELECT COUNT(*) FROM riders WHERE active = 1")->fetchColumn() ?: 0,
-        'total_clubs' => $db->query("SELECT COUNT(*) FROM clubs WHERE active = 1")->fetchColumn() ?: 0,
-        'total_events' => $db->query("SELECT COUNT(*) FROM events")->fetchColumn() ?: 0,
-        'total_results' => $db->query("SELECT COUNT(*) FROM results")->fetchColumn() ?: 0,
-    ];
+    // Get overall stats - respects admin filter setting
+    if ($filter === 'with_results') {
+        $stats = [
+            'total_riders' => $db->query("
+                SELECT COUNT(DISTINCT r.id)
+                FROM riders r
+                INNER JOIN results res ON r.id = res.cyclist_id
+            ")->fetchColumn() ?: 0,
+            'total_clubs' => $db->query("
+                SELECT COUNT(DISTINCT c.id)
+                FROM clubs c
+                INNER JOIN riders r ON c.id = r.club_id
+                INNER JOIN results res ON r.id = res.cyclist_id
+            ")->fetchColumn() ?: 0,
+            'total_events' => $db->query("SELECT COUNT(DISTINCT event_id) FROM results")->fetchColumn() ?: 0,
+            'total_results' => $db->query("SELECT COUNT(*) FROM results")->fetchColumn() ?: 0,
+        ];
+    } else {
+        $stats = [
+            'total_riders' => $db->query("SELECT COUNT(*) FROM riders WHERE active = 1")->fetchColumn() ?: 0,
+            'total_clubs' => $db->query("SELECT COUNT(*) FROM clubs WHERE active = 1")->fetchColumn() ?: 0,
+            'total_events' => $db->query("SELECT COUNT(*) FROM events")->fetchColumn() ?: 0,
+            'total_results' => $db->query("SELECT COUNT(*) FROM results")->fetchColumn() ?: 0,
+        ];
+    }
 
     // Get active series
     $activeSeries = $db->query("
