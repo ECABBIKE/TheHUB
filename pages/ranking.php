@@ -6,13 +6,20 @@
 
 $db = hub_db();
 
-// Include ranking functions from parent
-$rankingFunctions = dirname(dirname(__DIR__)) . '/includes/ranking_functions.php';
-if (file_exists($rankingFunctions)) {
-    require_once $rankingFunctions;
-    $hasRankingSystem = true;
-} else {
-    $hasRankingSystem = false;
+// Include ranking functions - try multiple paths for V3 routing compatibility
+$hasRankingSystem = false;
+$possiblePaths = [
+    dirname(__DIR__) . '/includes/ranking_functions.php',
+    __DIR__ . '/../includes/ranking_functions.php',
+    $_SERVER['DOCUMENT_ROOT'] . '/includes/ranking_functions.php',
+];
+
+foreach ($possiblePaths as $path) {
+    if (file_exists($path)) {
+        require_once $path;
+        $hasRankingSystem = true;
+        break;
+    }
 }
 
 // Get selected discipline
@@ -37,8 +44,8 @@ $error = null;
 
 try {
     if ($hasRankingSystem && function_exists('rankingTablesExist')) {
-        // Use parent getDB function if available
-        $parentDb = function_exists('getDB') ? getDB() : null;
+        // Use parent getDB function if available, otherwise use hub_db()
+        $parentDb = function_exists('getDB') ? getDB() : $db;
 
         if ($parentDb && rankingTablesExist($parentDb)) {
             if ($view === 'clubs' && function_exists('getCurrentClubRanking')) {
