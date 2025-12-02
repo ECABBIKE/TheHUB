@@ -40,6 +40,7 @@ function calculateSeriesPointsForPosition($db, $templateId, $position, $status =
 
     // No template = no points
     if (!$templateId) {
+        error_log("Series points: No template_id provided");
         return 0;
     }
 
@@ -61,6 +62,11 @@ function calculateSeriesPointsForPosition($db, $templateId, $position, $status =
         }
 
         return $points;
+    }
+
+    // Log when no points found for debugging
+    if ($position <= 10) {
+        error_log("Series points: No points found for template_id={$templateId}, position={$position}");
     }
 
     // Position not in template = 0 points
