@@ -258,10 +258,10 @@ $disciplineNames = [
             </a>
           </td>
           <td class="text-center table-col-hide-portrait">
-            <?= $club['rider_count'] ?? 0 ?>
+            <?= $club['riders_count'] ?? 0 ?>
           </td>
           <td class="text-right">
-            <span class="points-value"><?= number_format($club['total_points'] ?? 0, 1) ?></span>
+            <span class="points-value"><?= number_format($club['total_ranking_points'] ?? 0, 1) ?></span>
           </td>
         </tr>
         <?php endforeach; ?>
@@ -282,10 +282,10 @@ $disciplineNames = [
       </div>
       <div class="result-info">
         <div class="result-name"><?= htmlspecialchars($club['club_name'] ?? '') ?></div>
-        <div class="result-club"><?= $club['rider_count'] ?? 0 ?> åkare</div>
+        <div class="result-club"><?= $club['riders_count'] ?? 0 ?> åkare</div>
       </div>
       <div class="result-points">
-        <div class="points-big"><?= number_format($club['total_points'] ?? 0, 1) ?></div>
+        <div class="points-big"><?= number_format($club['total_ranking_points'] ?? 0, 1) ?></div>
         <div class="points-label">poäng</div>
       </div>
     </a>
