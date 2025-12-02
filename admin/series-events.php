@@ -178,7 +178,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
  $message = 'Fel: ' . $e->getMessage() . ' - Kör migration 018_add_count_best_results.sql';
  $messageType = 'error';
  }
- } elseif ($action === 'move_up' || $action === 'move_down') {
+ } elseif ($action === 'recalculate_all') {
+ // Recalculate all series points
+ $totalStats = recalculateAllSeriesPoints($db, $seriesId);
+ $totalChanged = $totalStats['inserted'] + $totalStats['updated'];
+ $message = "Alla poäng omräknade! {$totalStats['events']} events, {$totalChanged} resultat uppdaterade.";
+ $messageType = 'success';
+
+} elseif ($action === 'move_up' || $action === 'move_down') {
  $seriesEventId = intval($_POST['series_event_id']);
 
  // Get current event and all events sorted
@@ -257,10 +264,20 @@ include __DIR__ . '/components/unified-layout.php';
  </h1>
  <p class="text-secondary">Hantera events och poängmallar</p>
  </div>
- <a href="/admin/series.php" class="btn btn--secondary">
- <i data-lucide="arrow-left"></i>
- Tillbaka
- </a>
+ <div class="flex gap-sm">
+  <form method="POST" class="inline">
+   <?= csrf_field() ?>
+   <input type="hidden" name="action" value="recalculate_all">
+   <button type="submit" class="btn btn--primary" onclick="return confirm('Beräkna om alla seriepoäng för alla events?')">
+    <i data-lucide="refresh-cw"></i>
+    Beräkna om poäng
+   </button>
+  </form>
+  <a href="/admin/series.php" class="btn btn--secondary">
+   <i data-lucide="arrow-left"></i>
+   Tillbaka
+  </a>
+ </div>
  </div>
 
  <!-- Messages -->
