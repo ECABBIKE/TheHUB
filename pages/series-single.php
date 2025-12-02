@@ -261,6 +261,53 @@ try {
 
     $totalParticipants = count($ridersInSeries);
 
+    // Calculate club standings (aggregate points by club)
+    $clubStandings = [];
+    foreach ($standingsByClass as $classData) {
+        foreach ($classData['riders'] as $rider) {
+            $clubName = $rider['club_name'] ?? 'Klubblös';
+            if (!isset($clubStandings[$clubName])) {
+                $clubStandings[$clubName] = [
+                    'club_name' => $clubName,
+                    'riders' => [],
+                    'total_points' => 0,
+                    'event_points' => [],
+                    'rider_count' => 0
+                ];
+                // Initialize event points
+                foreach ($seriesEvents as $event) {
+                    $clubStandings[$clubName]['event_points'][$event['id']] = 0;
+                }
+            }
+            // Add rider to club
+            $clubStandings[$clubName]['riders'][] = [
+                'name' => $rider['firstname'] . ' ' . $rider['lastname'],
+                'rider_id' => $rider['rider_id'],
+                'class_name' => $rider['class_name'],
+                'points' => $rider['total_points']
+            ];
+            $clubStandings[$clubName]['total_points'] += $rider['total_points'];
+            $clubStandings[$clubName]['rider_count']++;
+            // Sum event points
+            foreach ($rider['event_points'] as $eventId => $pts) {
+                if (!isset($rider['excluded_events'][$eventId])) {
+                    $clubStandings[$clubName]['event_points'][$eventId] += $pts;
+                }
+            }
+        }
+    }
+    // Sort clubs by total points
+    uasort($clubStandings, function($a, $b) {
+        return $b['total_points'] - $a['total_points'];
+    });
+    // Sort riders within each club by points
+    foreach ($clubStandings as &$club) {
+        usort($club['riders'], function($a, $b) {
+            return $b['points'] - $a['points'];
+        });
+    }
+    unset($club);
+
 } catch (Exception $e) {
     $error = $e->getMessage();
     $series = null;
@@ -280,7 +327,7 @@ if (!$series) {
 <?php endif; ?>
 
 <!-- Series Info Card -->
-<section class="info-card mb-lg">
+<section class="info-card mb-md">
   <div class="info-card-stripe"></div>
   <div class="info-card-content">
     <div class="info-card-main">
@@ -309,6 +356,41 @@ if (!$series) {
     </div>
   </div>
 </section>
+
+<!-- Collapsible Events Section (slim, at top) -->
+<details class="events-dropdown mb-md">
+  <summary class="events-dropdown-header">
+    <span class="events-dropdown-icon">📅</span>
+    <span class="events-dropdown-title">Tävlingar i serien</span>
+    <span class="events-dropdown-count"><?= count($seriesEvents) ?> st</span>
+    <span class="events-dropdown-arrow">▾</span>
+  </summary>
+  <div class="events-dropdown-content">
+    <?php $eventNum = 1; ?>
+    <?php foreach ($seriesEvents as $event): ?>
+    <a href="/event/<?= $event['id'] ?>" class="event-dropdown-item">
+      <span class="event-item-num">#<?= $eventNum ?></span>
+      <span class="event-item-date"><?= $event['date'] ? date('j M', strtotime($event['date'])) : '-' ?></span>
+      <span class="event-item-name"><?= htmlspecialchars($event['name']) ?></span>
+      <span class="event-item-results"><?= $event['result_count'] ?> resultat</span>
+    </a>
+    <?php $eventNum++; ?>
+    <?php endforeach; ?>
+  </div>
+</details>
+
+<!-- Standings Type Tabs -->
+<div class="standings-tabs mb-md">
+  <button class="standings-tab active" data-tab="individual" onclick="switchStandingsTab('individual')">
+    👤 Individuellt
+  </button>
+  <button class="standings-tab" data-tab="club" onclick="switchStandingsTab('club')">
+    🛡️ Klubbmästerskap
+  </button>
+</div>
+
+<!-- Individual Standings Section -->
+<div id="individual-standings">
 
 <!-- Filters: Class + Search -->
 <div class="filter-row mb-lg">
@@ -440,26 +522,136 @@ if (!$series) {
 
 <?php endif; ?>
 
-<!-- Events in Series (compact list at bottom) -->
-<section class="card events-section">
-  <details class="events-details">
-    <summary class="events-summary">
-      <span class="events-title">Tävlingar i serien</span>
-      <span class="events-count"><?= count($seriesEvents) ?> st</span>
-    </summary>
-    <div class="events-compact">
-      <?php $eventNum = 1; ?>
-      <?php foreach ($seriesEvents as $event): ?>
-      <a href="/event/<?= $event['id'] ?>" class="event-compact-row">
-        <span class="event-compact-num">#<?= $eventNum ?></span>
-        <span class="event-compact-date"><?= $event['date'] ? date('j M', strtotime($event['date'])) : '-' ?></span>
-        <span class="event-compact-name"><?= htmlspecialchars($event['name']) ?></span>
-      </a>
-      <?php $eventNum++; ?>
-      <?php endforeach; ?>
-    </div>
-  </details>
+</div><!-- End individual-standings -->
+
+<!-- Club Standings Section -->
+<div id="club-standings" style="display: none;">
+
+<?php if (empty($clubStandings)): ?>
+<section class="card">
+  <div class="empty-state">
+    <div class="empty-state-icon">🛡️</div>
+    <p>Inga klubbresultat ännu</p>
+  </div>
 </section>
+<?php else: ?>
+
+<section class="card mb-lg standings-card">
+  <div class="card-header">
+    <div>
+      <h2 class="card-title">🛡️ Klubbmästerskap</h2>
+      <p class="card-subtitle"><?= count($clubStandings) ?> klubbar</p>
+    </div>
+  </div>
+
+  <div class="table-wrapper">
+    <table class="table table--striped standings-table">
+      <thead>
+        <tr>
+          <th class="col-place">#</th>
+          <th class="col-club-name">Klubb</th>
+          <th class="col-riders table-col-hide-portrait">Åkare</th>
+          <?php $eventNum = 1; ?>
+          <?php foreach ($eventsWithPoints as $event): ?>
+          <th class="col-event table-col-hide-portrait" title="<?= htmlspecialchars($event['name']) ?>">
+            #<?= $eventNum ?>
+          </th>
+          <?php $eventNum++; ?>
+          <?php endforeach; ?>
+          <th class="col-total">Totalt</th>
+        </tr>
+      </thead>
+      <tbody>
+        <?php $clubPos = 0; ?>
+        <?php foreach ($clubStandings as $club): $clubPos++; ?>
+        <tr class="result-row club-row" data-club="<?= htmlspecialchars($club['club_name']) ?>">
+          <td class="col-place <?= $clubPos <= 3 ? 'col-place--' . $clubPos : '' ?>">
+            <?php if ($clubPos == 1): ?>🥇
+            <?php elseif ($clubPos == 2): ?>🥈
+            <?php elseif ($clubPos == 3): ?>🥉
+            <?php else: ?><?= $clubPos ?>
+            <?php endif; ?>
+          </td>
+          <td class="col-club-name">
+            <div class="club-info">
+              <span class="club-name-text"><?= htmlspecialchars($club['club_name']) ?></span>
+              <button class="club-expand-btn" onclick="toggleClubRiders(this, event)">▸</button>
+            </div>
+          </td>
+          <td class="col-riders table-col-hide-portrait text-muted">
+            <?= $club['rider_count'] ?>
+          </td>
+          <?php foreach ($eventsWithPoints as $event): ?>
+          <?php $pts = $club['event_points'][$event['id']] ?? 0; ?>
+          <td class="col-event table-col-hide-portrait <?= $pts > 0 ? 'has-points' : '' ?>">
+            <?= $pts > 0 ? $pts : '–' ?>
+          </td>
+          <?php endforeach; ?>
+          <td class="col-total">
+            <strong><?= $club['total_points'] ?></strong>
+          </td>
+        </tr>
+        <!-- Hidden club riders sub-rows -->
+        <?php foreach ($club['riders'] as $rIdx => $clubRider): ?>
+        <tr class="club-rider-row" data-parent-club="<?= htmlspecialchars($club['club_name']) ?>" style="display: none;">
+          <td class="col-place"></td>
+          <td class="col-club-name" colspan="2">
+            <a href="/rider/<?= $clubRider['rider_id'] ?>" class="club-rider-link">
+              ↳ <?= htmlspecialchars($clubRider['name']) ?>
+              <span class="club-rider-class">(<?= htmlspecialchars($clubRider['class_name']) ?>)</span>
+            </a>
+          </td>
+          <?php foreach ($eventsWithPoints as $event): ?>
+          <td class="col-event table-col-hide-portrait"></td>
+          <?php endforeach; ?>
+          <td class="col-total text-muted"><?= $clubRider['points'] ?> p</td>
+        </tr>
+        <?php endforeach; ?>
+        <?php endforeach; ?>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Mobile Card View for Clubs -->
+  <div class="result-list">
+    <?php $clubPos = 0; ?>
+    <?php foreach ($clubStandings as $club): $clubPos++; ?>
+    <div class="club-result-item">
+      <div class="result-place <?= $clubPos <= 3 ? 'top-3' : '' ?>">
+        <?php if ($clubPos == 1): ?>🥇
+        <?php elseif ($clubPos == 2): ?>🥈
+        <?php elseif ($clubPos == 3): ?>🥉
+        <?php else: ?><?= $clubPos ?>
+        <?php endif; ?>
+      </div>
+      <div class="result-info">
+        <div class="result-name"><?= htmlspecialchars($club['club_name']) ?></div>
+        <div class="result-club"><?= $club['rider_count'] ?> åkare</div>
+      </div>
+      <div class="result-points">
+        <div class="points-big"><?= $club['total_points'] ?></div>
+        <div class="points-label">poäng</div>
+      </div>
+    </div>
+    <!-- Mobile club riders -->
+    <div class="club-riders-mobile" data-mobile-club="<?= htmlspecialchars($club['club_name']) ?>">
+      <?php foreach (array_slice($club['riders'], 0, 5) as $clubRider): ?>
+      <a href="/rider/<?= $clubRider['rider_id'] ?>" class="club-rider-mobile">
+        <span class="club-rider-mobile-name"><?= htmlspecialchars($clubRider['name']) ?></span>
+        <span class="club-rider-mobile-pts"><?= $clubRider['points'] ?> p</span>
+      </a>
+      <?php endforeach; ?>
+      <?php if (count($club['riders']) > 5): ?>
+      <div class="club-rider-mobile more">+<?= count($club['riders']) - 5 ?> fler</div>
+      <?php endif; ?>
+    </div>
+    <?php endforeach; ?>
+  </div>
+</section>
+
+<?php endif; ?>
+
+</div><!-- End club-standings -->
 
 <script>
 function applyFilters() {
@@ -480,6 +672,29 @@ function applyFilters() {
     }
   });
 }
+
+function switchStandingsTab(tab) {
+  // Update tab buttons
+  document.querySelectorAll('.standings-tab').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.tab === tab);
+  });
+  // Show/hide sections
+  document.getElementById('individual-standings').style.display = tab === 'individual' ? '' : 'none';
+  document.getElementById('club-standings').style.display = tab === 'club' ? '' : 'none';
+}
+
+function toggleClubRiders(btn, event) {
+  event.stopPropagation();
+  const row = btn.closest('tr');
+  const clubName = row.dataset.club;
+  const isExpanded = btn.textContent === '▾';
+
+  btn.textContent = isExpanded ? '▸' : '▾';
+
+  document.querySelectorAll(`tr[data-parent-club="${clubName}"]`).forEach(subRow => {
+    subRow.style.display = isExpanded ? 'none' : '';
+  });
+}
 </script>
 
 <style>
@@ -487,6 +702,195 @@ function applyFilters() {
 .mb-lg { margin-bottom: var(--space-lg); }
 .text-secondary { color: var(--color-text-secondary); }
 .text-muted { color: var(--color-text-muted); }
+
+/* Events Dropdown (slim, collapsible) */
+.events-dropdown {
+  background: var(--color-bg-surface);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  overflow: hidden;
+}
+.events-dropdown-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-md);
+  cursor: pointer;
+  user-select: none;
+  list-style: none;
+  font-size: var(--text-sm);
+}
+.events-dropdown-header::-webkit-details-marker {
+  display: none;
+}
+.events-dropdown-icon {
+  font-size: 1em;
+}
+.events-dropdown-title {
+  font-weight: var(--weight-medium);
+  flex: 1;
+}
+.events-dropdown-count {
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+}
+.events-dropdown-arrow {
+  color: var(--color-text-muted);
+  transition: transform var(--transition-fast);
+}
+.events-dropdown[open] .events-dropdown-arrow {
+  transform: rotate(180deg);
+}
+.events-dropdown-content {
+  border-top: 1px solid var(--color-border);
+  max-height: 300px;
+  overflow-y: auto;
+}
+.event-dropdown-item {
+  display: flex;
+  gap: var(--space-sm);
+  padding: var(--space-xs) var(--space-md);
+  font-size: var(--text-sm);
+  border-bottom: 1px solid var(--color-border-light);
+  text-decoration: none;
+  color: inherit;
+  transition: background var(--transition-fast);
+}
+.event-dropdown-item:last-child {
+  border-bottom: none;
+}
+.event-dropdown-item:hover {
+  background: var(--color-bg-hover);
+}
+.event-item-num {
+  color: var(--color-accent-text);
+  font-weight: var(--weight-medium);
+  min-width: 28px;
+}
+.event-item-date {
+  color: var(--color-text-muted);
+  min-width: 50px;
+}
+.event-item-name {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.event-item-results {
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+}
+
+/* Standings Tabs */
+.standings-tabs {
+  display: flex;
+  gap: var(--space-xs);
+  background: var(--color-bg-surface);
+  padding: var(--space-xs);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+}
+.standings-tab {
+  flex: 1;
+  padding: var(--space-sm) var(--space-md);
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-weight: var(--weight-medium);
+  font-size: var(--text-sm);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+.standings-tab:hover {
+  background: var(--color-bg-hover);
+  color: var(--color-text);
+}
+.standings-tab.active {
+  background: var(--color-accent);
+  color: white;
+}
+
+/* Club Standings specific */
+.col-club-name {
+  min-width: 150px;
+}
+.club-info {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+.club-name-text {
+  font-weight: var(--weight-medium);
+}
+.club-expand-btn {
+  background: none;
+  border: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  padding: 2px 6px;
+  font-size: var(--text-xs);
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-fast);
+}
+.club-expand-btn:hover {
+  background: var(--color-bg-hover);
+  color: var(--color-text);
+}
+.club-rider-row {
+  background: var(--color-bg-sunken);
+}
+.club-rider-row td {
+  padding-top: var(--space-2xs);
+  padding-bottom: var(--space-2xs);
+  font-size: var(--text-sm);
+}
+.club-rider-link {
+  color: var(--color-text-secondary);
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+.club-rider-link:hover {
+  color: var(--color-accent-text);
+}
+.club-rider-class {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+
+/* Mobile club cards */
+.club-result-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-sm) var(--space-md);
+  border-bottom: 1px solid var(--color-border-light);
+}
+.club-riders-mobile {
+  display: none;
+  padding: var(--space-xs) var(--space-md) var(--space-sm);
+  padding-left: calc(var(--space-md) + 40px);
+  background: var(--color-bg-sunken);
+  border-bottom: 1px solid var(--color-border-light);
+}
+.club-rider-mobile {
+  display: flex;
+  justify-content: space-between;
+  padding: var(--space-2xs) 0;
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  text-decoration: none;
+}
+.club-rider-mobile:hover {
+  color: var(--color-accent-text);
+}
+.club-rider-mobile.more {
+  color: var(--color-text-muted);
+  font-style: italic;
+}
 
 /* Info Card */
 .info-card {
@@ -595,76 +999,6 @@ function applyFilters() {
 .filter-input::placeholder {
   color: var(--color-text-muted);
 }
-
-/* Compact events section */
-.events-section {
-  margin-top: var(--space-xl);
-}
-.events-details {
-  cursor: pointer;
-}
-.events-summary {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: var(--space-sm) var(--space-md);
-  list-style: none;
-  user-select: none;
-}
-.events-summary::-webkit-details-marker {
-  display: none;
-}
-.events-summary::before {
-  content: '▸';
-  margin-right: var(--space-sm);
-  transition: transform var(--transition-fast);
-}
-details[open] .events-summary::before {
-  transform: rotate(90deg);
-}
-.events-title {
-  font-weight: var(--weight-medium);
-  font-size: var(--text-sm);
-}
-.events-count {
-  font-size: var(--text-sm);
-  color: var(--color-text-muted);
-}
-.events-compact {
-  display: flex;
-  flex-direction: column;
-  border-top: 1px solid var(--color-border);
-}
-.event-compact-row {
-  display: flex;
-  gap: var(--space-sm);
-  padding: var(--space-xs) var(--space-md);
-  font-size: var(--text-sm);
-  border-bottom: 1px solid var(--color-border);
-  transition: background var(--transition-fast);
-}
-.event-compact-row:last-child {
-  border-bottom: none;
-}
-.event-compact-row:hover {
-  background: var(--color-bg-hover);
-}
-.event-compact-num {
-  color: var(--color-accent-text);
-  font-weight: var(--weight-medium);
-  min-width: 24px;
-}
-.event-compact-date {
-  color: var(--color-text-muted);
-  min-width: 50px;
-}
-.event-compact-name {
-  flex: 1;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
 
 .standings-table .col-event {
   text-align: center;
