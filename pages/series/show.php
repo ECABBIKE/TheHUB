@@ -1,7 +1,7 @@
 <?php
 /**
  * TheHUB V3.5 - Series Detail View
- * Shows series info, events, and standings
+ * Shows series info, events, and standings (Individual + Club with 100%/50% rule)
  */
 
 // Prevent direct access
@@ -127,6 +127,7 @@ if (!empty($eventIds)) {
             ri.id as rider_id,
             ri.firstname,
             ri.lastname,
+            ri.club_id,
             c.name as club_name,
             cls.id as class_id,
             cls.name as class_name,
@@ -165,6 +166,7 @@ if (!empty($eventIds)) {
             'rider_id' => $rider['rider_id'],
             'firstname' => $rider['firstname'],
             'lastname' => $rider['lastname'],
+            'club_id' => $rider['club_id'],
             'club_name' => $rider['club_name'],
             'class_id' => $rider['class_id'],
             'event_points' => [],
@@ -217,7 +219,7 @@ if (!empty($eventIds)) {
 
         // Only include riders with points
         if ($riderData['total_points'] > 0) {
-            $classKey = $rider['class_display_name'] ?? $rider['class_name'] ?? 'Okänd';
+            $classKey = $rider['class_display_name'] ?? $rider['class_name'] ?? 'Okand';
             if (!isset($standingsByClass[$classKey])) {
                 $standingsByClass[$classKey] = [
                     'class_id' => $rider['class_id'],
@@ -242,12 +244,165 @@ if (!empty($eventIds)) {
         return ($a['sort_order'] ?? 999) - ($b['sort_order'] ?? 999);
     });
 }
+
+// ============================================================================
+// CLUB STANDINGS with 100%/50% rule
+// Best rider per club/class/event = 100%, second best = 50%, others = 0%
+// ============================================================================
+$clubStandings = [];
+$clubRiderContributions = [];
+
+foreach ($events as $event) {
+    $eventId = $event['id'];
+
+    // Get all results for this event with series points, grouped by club and class
+    if ($useSeriesResults) {
+        $stmt = $pdo->prepare("
+            SELECT
+                sr.cyclist_id,
+                sr.class_id,
+                sr.points,
+                rd.firstname,
+                rd.lastname,
+                c.id as club_id,
+                c.name as club_name,
+                cls.name as class_name,
+                cls.display_name as class_display_name
+            FROM series_results sr
+            JOIN riders rd ON sr.cyclist_id = rd.id
+            LEFT JOIN clubs c ON rd.club_id = c.id
+            LEFT JOIN classes cls ON sr.class_id = cls.id
+            WHERE sr.series_id = ? AND sr.event_id = ?
+            AND c.id IS NOT NULL
+            AND sr.points > 0
+            AND COALESCE(cls.series_eligible, 1) = 1
+            AND COALESCE(cls.awards_points, 1) = 1
+            ORDER BY c.id, sr.class_id, sr.points DESC
+        ");
+        $stmt->execute([$seriesId, $eventId]);
+    } else {
+        $stmt = $pdo->prepare("
+            SELECT
+                r.cyclist_id,
+                r.class_id,
+                r.points,
+                rd.firstname,
+                rd.lastname,
+                c.id as club_id,
+                c.name as club_name,
+                cls.name as class_name,
+                cls.display_name as class_display_name
+            FROM results r
+            JOIN riders rd ON r.cyclist_id = rd.id
+            LEFT JOIN clubs c ON rd.club_id = c.id
+            LEFT JOIN classes cls ON r.class_id = cls.id
+            WHERE r.event_id = ?
+            AND r.status = 'finished'
+            AND c.id IS NOT NULL
+            AND r.points > 0
+            AND COALESCE(cls.series_eligible, 1) = 1
+            AND COALESCE(cls.awards_points, 1) = 1
+            ORDER BY c.id, r.class_id, r.points DESC
+        ");
+        $stmt->execute([$eventId]);
+    }
+    $eventResults = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // Group by club and class
+    $clubClassResults = [];
+    foreach ($eventResults as $result) {
+        $key = $result['club_id'] . '_' . $result['class_id'];
+        if (!isset($clubClassResults[$key])) {
+            $clubClassResults[$key] = [];
+        }
+        $clubClassResults[$key][] = $result;
+    }
+
+    // Apply 100%/50% rule for each club/class combo
+    foreach ($clubClassResults as $clubRiders) {
+        $rank = 1;
+        foreach ($clubRiders as $rider) {
+            $clubId = $rider['club_id'];
+            $clubName = $rider['club_name'];
+            $originalPoints = (float)$rider['points'];
+            $clubPoints = 0;
+
+            if ($rank === 1) {
+                $clubPoints = $originalPoints;
+            } elseif ($rank === 2) {
+                $clubPoints = round($originalPoints * 0.5, 0);
+            }
+
+            // Initialize club if not exists
+            if (!isset($clubStandings[$clubId])) {
+                $clubStandings[$clubId] = [
+                    'club_id' => $clubId,
+                    'club_name' => $clubName,
+                    'riders' => [],
+                    'total_points' => 0,
+                    'event_points' => [],
+                    'rider_count' => 0
+                ];
+                foreach ($events as $e) {
+                    $clubStandings[$clubId]['event_points'][$e['id']] = 0;
+                }
+            }
+
+            // Add club points for this event
+            $clubStandings[$clubId]['event_points'][$eventId] += $clubPoints;
+            $clubStandings[$clubId]['total_points'] += $clubPoints;
+
+            // Track rider contribution
+            $riderId = $rider['cyclist_id'];
+            $riderKey = $clubId . '_' . $riderId;
+            if (!isset($clubRiderContributions[$riderKey])) {
+                $clubRiderContributions[$riderKey] = [
+                    'rider_id' => $riderId,
+                    'club_id' => $clubId,
+                    'name' => $rider['firstname'] . ' ' . $rider['lastname'],
+                    'class_name' => $rider['class_display_name'] ?? $rider['class_name'],
+                    'total_club_points' => 0
+                ];
+            }
+            $clubRiderContributions[$riderKey]['total_club_points'] += $clubPoints;
+
+            $rank++;
+        }
+    }
+}
+
+// Add riders to their clubs
+foreach ($clubRiderContributions as $riderData) {
+    $clubId = $riderData['club_id'];
+    if (isset($clubStandings[$clubId])) {
+        $clubStandings[$clubId]['riders'][] = [
+            'rider_id' => $riderData['rider_id'],
+            'name' => $riderData['name'],
+            'class_name' => $riderData['class_name'],
+            'points' => $riderData['total_club_points']
+        ];
+        $clubStandings[$clubId]['rider_count']++;
+    }
+}
+
+// Sort clubs by total points
+uasort($clubStandings, function($a, $b) {
+    return $b['total_points'] - $a['total_points'];
+});
+
+// Sort riders within each club by points
+foreach ($clubStandings as &$club) {
+    usort($club['riders'], function($a, $b) {
+        return $b['points'] - $a['points'];
+    });
+}
+unset($club);
 ?>
 
 <div class="page-header">
     <nav class="breadcrumb">
         <a href="/series">Serier</a>
-        <span class="breadcrumb-sep">›</span>
+        <span class="breadcrumb-sep">></span>
         <span><?= htmlspecialchars($series['name']) ?></span>
     </nav>
 </div>
@@ -268,81 +423,160 @@ if (!empty($eventIds)) {
                 <p class="series-description"><?= htmlspecialchars($series['description']) ?></p>
             <?php endif; ?>
             <div class="series-meta">
-                <span><?= count($events) ?> tävlingar</span>
-                <span>Räknar <?= $countBest ?> bästa resultat</span>
+                <span><?= count($events) ?> tavlingar</span>
+                <?php if ($countBest): ?>
+                <span>Raknar <?= $countBest ?> basta resultat</span>
+                <?php endif; ?>
             </div>
         </div>
     </div>
 
-    <!-- Events in Series -->
-    <div class="card">
-        <h2 class="card-title">Tävlingar i serien</h2>
-        <?php if (empty($events)): ?>
-            <p class="text-muted">Inga tävlingar i serien ännu.</p>
-        <?php else: ?>
-            <div class="events-list">
+    <!-- Collapsible Events Section -->
+    <details class="events-dropdown">
+        <summary class="events-dropdown-header">
+            <span>📅 Tavlingar i serien</span>
+            <span class="events-count"><?= count($events) ?> st</span>
+            <span class="dropdown-arrow">▾</span>
+        </summary>
+        <div class="events-dropdown-content">
+            <?php if (empty($events)): ?>
+                <p class="text-muted">Inga tavlingar i serien annu.</p>
+            <?php else: ?>
                 <?php foreach ($events as $i => $event):
                     $eventDate = strtotime($event['date']);
                     $hasResults = $eventDate < time() && $event['result_count'] > 0;
                 ?>
-                <div class="event-row">
+                <a href="/event/<?= $event['id'] ?>" class="event-dropdown-item">
                     <span class="event-num">#<?= $i + 1 ?></span>
-                    <span class="event-date"><?= date('Y-m-d', $eventDate) ?></span>
+                    <span class="event-date"><?= date('j M', $eventDate) ?></span>
                     <span class="event-name"><?= htmlspecialchars($event['name']) ?></span>
-                    <span class="event-location"><?= htmlspecialchars($event['location'] ?? $event['venue_city'] ?? '-') ?></span>
-                    <?php if ($hasResults): ?>
-                        <a href="/event/<?= $event['id'] ?>" class="btn btn-sm">Resultat (<?= $event['result_count'] ?>)</a>
-                    <?php else: ?>
-                        <span class="text-muted">Kommande</span>
-                    <?php endif; ?>
+                    <span class="event-results"><?= $hasResults ? $event['result_count'] . ' resultat' : 'Kommande' ?></span>
+                </a>
+                <?php endforeach; ?>
+            <?php endif; ?>
+        </div>
+    </details>
+
+    <!-- Toggle Buttons: Individual / Clubs -->
+    <div class="standings-tabs">
+        <button class="standings-tab active" data-tab="individual" onclick="switchTab('individual')">
+            👤 Individuellt
+        </button>
+        <button class="standings-tab" data-tab="club" onclick="switchTab('club')">
+            🛡️ Klubbmastarskap
+        </button>
+    </div>
+
+    <!-- Individual Standings Section -->
+    <div id="individual-standings">
+        <!-- Filters -->
+        <div class="card filters-card">
+            <form method="get" class="series-filters">
+                <div class="filter-group">
+                    <label for="class-filter">Klass</label>
+                    <select name="class" id="class-filter" onchange="this.form.submit()">
+                        <option value="all" <?= $selectedClass === 'all' ? 'selected' : '' ?>>Alla klasser</option>
+                        <?php foreach ($classes as $cls): ?>
+                            <option value="<?= $cls['id'] ?>" <?= $selectedClass == $cls['id'] ? 'selected' : '' ?>>
+                                <?= htmlspecialchars($cls['display_name'] ?? $cls['name']) ?> (<?= $cls['rider_count'] ?>)
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="name-search">Sok namn</label>
+                    <input type="search" name="search" id="name-search" value="<?= htmlspecialchars($searchName) ?>" placeholder="Skriv namn...">
+                </div>
+                <button type="submit" class="btn btn-primary">Sok</button>
+            </form>
+        </div>
+
+        <!-- Individual Standings -->
+        <div class="card">
+            <h2 class="card-title">Individuell stallning</h2>
+            <?php if ($countBest): ?>
+                <p class="text-muted standings-note">Raknar <?= $countBest ?> basta resultat</p>
+            <?php endif; ?>
+
+            <?php if (empty($standingsByClass)): ?>
+                <p class="text-muted text-center">Ingen stallning annu.</p>
+            <?php else: ?>
+                <?php foreach ($standingsByClass as $className => $classData): ?>
+                <div class="standings-class">
+                    <h3 class="standings-class-title"><?= htmlspecialchars($className) ?> <span class="rider-count">(<?= count($classData['riders']) ?>)</span></h3>
+                    <div class="table-responsive">
+                        <table class="table standings-table">
+                            <thead>
+                                <tr>
+                                    <th class="col-pos">#</th>
+                                    <th class="col-name">Namn</th>
+                                    <th class="col-club">Klubb</th>
+                                    <?php $eventNum = 1; foreach ($events as $event): ?>
+                                    <th class="col-event" title="<?= htmlspecialchars($event['name']) ?>">#<?= $eventNum++ ?></th>
+                                    <?php endforeach; ?>
+                                    <th class="col-total">Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($classData['riders'] as $pos => $row): ?>
+                                <tr>
+                                    <td class="col-pos">
+                                        <?php if ($pos < 3): ?>
+                                            <span class="medal"><?= ['🥇', '🥈', '🥉'][$pos] ?></span>
+                                        <?php else: ?>
+                                            <?= $pos + 1 ?>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td class="col-name">
+                                        <a href="/rider/<?= $row['rider_id'] ?>">
+                                            <?= htmlspecialchars($row['firstname'] . ' ' . $row['lastname']) ?>
+                                        </a>
+                                    </td>
+                                    <td class="col-club"><?= htmlspecialchars($row['club_name'] ?? '-') ?></td>
+                                    <?php foreach ($events as $event):
+                                        $pts = $row['event_points'][$event['id']] ?? 0;
+                                        $isExcluded = isset($row['excluded_events'][$event['id']]);
+                                    ?>
+                                    <td class="col-event <?= $isExcluded ? 'excluded' : '' ?>">
+                                        <?php if ($pts > 0): ?>
+                                            <?php if ($isExcluded): ?>
+                                                <span class="points-excluded" title="Raknas ej"><?= $pts ?></span>
+                                            <?php else: ?>
+                                                <?= $pts ?>
+                                            <?php endif; ?>
+                                        <?php else: ?>
+                                            <span class="no-points">-</span>
+                                        <?php endif; ?>
+                                    </td>
+                                    <?php endforeach; ?>
+                                    <td class="col-total"><strong><?= $row['total_points'] ?></strong></td>
+                                </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
                 <?php endforeach; ?>
-            </div>
-        <?php endif; ?>
+            <?php endif; ?>
+        </div>
     </div>
 
-    <!-- Filters -->
-    <div class="card">
-        <form method="get" class="series-filters">
-            <div class="filter-group">
-                <label for="class-filter">Klass</label>
-                <select name="class" id="class-filter" onchange="this.form.submit()">
-                    <option value="all" <?= $selectedClass === 'all' ? 'selected' : '' ?>>Alla klasser</option>
-                    <?php foreach ($classes as $cls): ?>
-                        <option value="<?= $cls['id'] ?>" <?= $selectedClass == $cls['id'] ? 'selected' : '' ?>>
-                            <?= htmlspecialchars($cls['display_name'] ?? $cls['name']) ?> (<?= $cls['rider_count'] ?>)
-                        </option>
-                    <?php endforeach; ?>
-                </select>
-            </div>
-            <div class="filter-group">
-                <label for="name-search">Sök namn</label>
-                <input type="search" name="search" id="name-search" value="<?= htmlspecialchars($searchName) ?>" placeholder="Skriv namn...">
-            </div>
-            <button type="submit" class="btn btn-primary">Sök</button>
-        </form>
-    </div>
+    <!-- Club Standings Section -->
+    <div id="club-standings" style="display: none;">
+        <div class="card">
+            <h2 class="card-title">🛡️ Klubbmastarskap</h2>
+            <p class="text-muted standings-note"><?= count($clubStandings) ?> klubbar - Basta akare per klass: 100%, nast basta: 50%</p>
 
-    <!-- Standings -->
-    <div class="card">
-        <h2 class="card-title">Ställning</h2>
-        <?php if ($countBest): ?>
-            <p class="text-muted" style="margin-top: -0.5rem; margin-bottom: 1rem;">Räknar <?= $countBest ?> bästa resultat</p>
-        <?php endif; ?>
-
-        <?php if (empty($standingsByClass)): ?>
-            <p class="text-muted text-center">Ingen ställning ännu.</p>
-        <?php else: ?>
-            <?php foreach ($standingsByClass as $className => $classData): ?>
-            <div class="standings-class">
-                <h3 class="standings-class-title"><?= htmlspecialchars($className) ?> <span class="rider-count">(<?= count($classData['riders']) ?>)</span></h3>
+            <?php if (empty($clubStandings)): ?>
+                <p class="text-muted text-center">Inga klubbresultat annu.</p>
+            <?php else: ?>
                 <div class="table-responsive">
-                    <table class="table standings-table">
+                    <table class="table standings-table club-table">
                         <thead>
                             <tr>
                                 <th class="col-pos">#</th>
-                                <th class="col-name">Namn</th>
-                                <th class="col-club">Klubb</th>
+                                <th class="col-club-name">Klubb</th>
+                                <th class="col-riders">Akare</th>
                                 <?php $eventNum = 1; foreach ($events as $event): ?>
                                 <th class="col-event" title="<?= htmlspecialchars($event['name']) ?>">#<?= $eventNum++ ?></th>
                                 <?php endforeach; ?>
@@ -350,49 +584,73 @@ if (!empty($eventIds)) {
                             </tr>
                         </thead>
                         <tbody>
-                            <?php foreach ($classData['riders'] as $pos => $row): ?>
-                            <tr>
+                            <?php $clubPos = 0; foreach ($clubStandings as $club): $clubPos++; ?>
+                            <tr class="club-row" data-club="<?= $club['club_id'] ?>">
                                 <td class="col-pos">
-                                    <?php if ($pos < 3): ?>
-                                        <span class="medal"><?= ['🥇', '🥈', '🥉'][$pos] ?></span>
+                                    <?php if ($clubPos <= 3): ?>
+                                        <span class="medal"><?= ['🥇', '🥈', '🥉'][$clubPos - 1] ?></span>
                                     <?php else: ?>
-                                        <?= $pos + 1 ?>
+                                        <?= $clubPos ?>
                                     <?php endif; ?>
                                 </td>
-                                <td class="col-name">
-                                    <a href="/database/rider/<?= $row['rider_id'] ?>">
-                                        <?= htmlspecialchars($row['firstname'] . ' ' . $row['lastname']) ?>
-                                    </a>
+                                <td class="col-club-name">
+                                    <div class="club-info">
+                                        <span class="club-name-text"><?= htmlspecialchars($club['club_name']) ?></span>
+                                        <button class="club-expand-btn" onclick="toggleClubRiders(this, event)">▸</button>
+                                    </div>
                                 </td>
-                                <td class="col-club"><?= htmlspecialchars($row['club_name'] ?? '-') ?></td>
+                                <td class="col-riders"><?= $club['rider_count'] ?></td>
                                 <?php foreach ($events as $event):
-                                    $pts = $row['event_points'][$event['id']] ?? 0;
-                                    $isExcluded = isset($row['excluded_events'][$event['id']]);
+                                    $pts = $club['event_points'][$event['id']] ?? 0;
                                 ?>
-                                <td class="col-event <?= $isExcluded ? 'excluded' : '' ?>">
-                                    <?php if ($pts > 0): ?>
-                                        <?php if ($isExcluded): ?>
-                                            <span class="points-excluded" title="Räknas ej"><?= $pts ?></span>
-                                        <?php else: ?>
-                                            <?= $pts ?>
-                                        <?php endif; ?>
-                                    <?php else: ?>
-                                        <span class="no-points">–</span>
-                                    <?php endif; ?>
-                                </td>
+                                <td class="col-event"><?= $pts > 0 ? $pts : '-' ?></td>
                                 <?php endforeach; ?>
-                                <td class="col-total"><strong><?= $row['total_points'] ?></strong></td>
+                                <td class="col-total"><strong><?= $club['total_points'] ?></strong></td>
                             </tr>
+                            <?php foreach ($club['riders'] as $clubRider): ?>
+                            <tr class="club-rider-row" data-parent="<?= $club['club_id'] ?>" style="display: none;">
+                                <td></td>
+                                <td colspan="2" class="club-rider-cell">
+                                    <a href="/rider/<?= $clubRider['rider_id'] ?>">
+                                        ↳ <?= htmlspecialchars($clubRider['name']) ?>
+                                    </a>
+                                    <span class="rider-class">(<?= htmlspecialchars($clubRider['class_name']) ?>)</span>
+                                </td>
+                                <?php foreach ($events as $event): ?>
+                                <td class="col-event"></td>
+                                <?php endforeach; ?>
+                                <td class="col-total text-muted"><?= $clubRider['points'] ?> p</td>
+                            </tr>
+                            <?php endforeach; ?>
                             <?php endforeach; ?>
                         </tbody>
                     </table>
                 </div>
-            </div>
-            <?php endforeach; ?>
-        <?php endif; ?>
+            <?php endif; ?>
+        </div>
     </div>
-
 </div>
+
+<script>
+function switchTab(tab) {
+    document.querySelectorAll('.standings-tab').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.tab === tab);
+    });
+    document.getElementById('individual-standings').style.display = tab === 'individual' ? '' : 'none';
+    document.getElementById('club-standings').style.display = tab === 'club' ? '' : 'none';
+}
+
+function toggleClubRiders(btn, e) {
+    e.stopPropagation();
+    const row = btn.closest('tr');
+    const clubId = row.dataset.club;
+    const isExpanded = btn.textContent === '▾';
+    btn.textContent = isExpanded ? '▸' : '▾';
+    document.querySelectorAll(`tr[data-parent="${clubId}"]`).forEach(r => {
+        r.style.display = isExpanded ? 'none' : '';
+    });
+}
+</script>
 
 <style>
 .series-hero {
@@ -403,7 +661,6 @@ if (!empty($eventIds)) {
     border-radius: var(--radius-lg);
     margin-bottom: var(--space-lg);
 }
-
 .series-hero-logo {
     width: 100px;
     height: 100px;
@@ -411,30 +668,25 @@ if (!empty($eventIds)) {
     display: flex;
     align-items: center;
     justify-content: center;
-    background: #E8EAED; /* Fixed light theme color to prevent flash */
+    background: #E8EAED;
     border-radius: var(--radius-md);
 }
-
 .series-hero-logo img {
     max-width: 100%;
     max-height: 100%;
     object-fit: contain;
 }
-
 .series-logo-placeholder {
     font-size: 3rem;
 }
-
 .series-title {
     font-size: var(--text-2xl);
     margin: 0 0 var(--space-xs);
 }
-
 .series-description {
     color: var(--color-text-secondary);
     margin: 0 0 var(--space-sm);
 }
-
 .series-meta {
     display: flex;
     gap: var(--space-lg);
@@ -442,69 +694,135 @@ if (!empty($eventIds)) {
     color: var(--color-text-muted);
 }
 
+/* Collapsible Events */
+.events-dropdown {
+    background: var(--color-bg-card);
+    border-radius: var(--radius-lg);
+    margin-bottom: var(--space-lg);
+    overflow: hidden;
+}
+.events-dropdown-header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    padding: var(--space-md) var(--space-lg);
+    cursor: pointer;
+    font-weight: var(--weight-medium);
+    list-style: none;
+}
+.events-dropdown-header::-webkit-details-marker { display: none; }
+.events-count {
+    color: var(--color-text-muted);
+    font-size: var(--text-sm);
+    margin-left: auto;
+}
+.dropdown-arrow {
+    transition: transform 0.2s;
+}
+.events-dropdown[open] .dropdown-arrow {
+    transform: rotate(180deg);
+}
+.events-dropdown-content {
+    border-top: 1px solid var(--color-border);
+    max-height: 300px;
+    overflow-y: auto;
+}
+.event-dropdown-item {
+    display: flex;
+    gap: var(--space-sm);
+    padding: var(--space-sm) var(--space-lg);
+    text-decoration: none;
+    color: inherit;
+    border-bottom: 1px solid var(--color-border-light);
+    transition: background 0.15s;
+}
+.event-dropdown-item:hover {
+    background: var(--color-bg-hover);
+}
+.event-dropdown-item:last-child {
+    border-bottom: none;
+}
+.event-num {
+    color: var(--color-accent);
+    font-weight: var(--weight-medium);
+    min-width: 30px;
+}
+.event-date {
+    color: var(--color-text-muted);
+    min-width: 50px;
+}
+.event-name {
+    flex: 1;
+}
+.event-results {
+    color: var(--color-text-muted);
+    font-size: var(--text-sm);
+}
+
+/* Toggle Tabs */
+.standings-tabs {
+    display: flex;
+    gap: var(--space-xs);
+    background: var(--color-bg-card);
+    padding: var(--space-xs);
+    border-radius: var(--radius-lg);
+    margin-bottom: var(--space-lg);
+}
+.standings-tab {
+    flex: 1;
+    padding: var(--space-sm) var(--space-md);
+    border: none;
+    border-radius: var(--radius-md);
+    background: transparent;
+    color: var(--color-text-secondary);
+    font-weight: var(--weight-medium);
+    font-size: var(--text-sm);
+    cursor: pointer;
+    transition: all 0.15s;
+}
+.standings-tab:hover {
+    background: var(--color-bg-hover);
+}
+.standings-tab.active {
+    background: var(--color-accent);
+    color: white;
+}
+
+/* Cards */
 .card {
     background: var(--color-bg-card);
     border-radius: var(--radius-lg);
     padding: var(--space-lg);
     margin-bottom: var(--space-lg);
 }
-
+.filters-card {
+    padding: var(--space-md) var(--space-lg);
+}
 .card-title {
     font-size: var(--text-lg);
     margin: 0 0 var(--space-md);
 }
-
-.events-list {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-xs);
+.standings-note {
+    margin-top: -0.5rem;
+    margin-bottom: 1rem;
 }
 
-.event-row {
-    display: grid;
-    grid-template-columns: 50px 100px 1fr 150px 120px;
-    gap: var(--space-md);
-    align-items: center;
-    padding: var(--space-sm);
-    border-radius: var(--radius-md);
-    background: var(--color-bg-sunken);
-}
-
-.event-num {
-    font-weight: var(--weight-medium);
-    color: var(--color-text-muted);
-}
-
-.event-date {
-    font-size: var(--text-sm);
-}
-
-.event-name {
-    font-weight: var(--weight-medium);
-}
-
-.event-location {
-    color: var(--color-text-secondary);
-    font-size: var(--text-sm);
-}
-
+/* Filters */
 .series-filters {
     display: flex;
     gap: var(--space-md);
     align-items: flex-end;
+    flex-wrap: wrap;
 }
-
 .filter-group {
     display: flex;
     flex-direction: column;
     gap: var(--space-xs);
 }
-
 .filter-group label {
     font-size: var(--text-sm);
     font-weight: var(--weight-medium);
 }
-
 .filter-group select,
 .filter-group input {
     padding: var(--space-sm) var(--space-md);
@@ -515,14 +833,13 @@ if (!empty($eventIds)) {
     min-width: 180px;
 }
 
+/* Standings Tables */
 .standings-class {
     margin-bottom: var(--space-xl);
 }
-
 .standings-class:last-child {
     margin-bottom: 0;
 }
-
 .standings-class-title {
     font-size: var(--text-md);
     color: var(--color-accent);
@@ -530,36 +847,35 @@ if (!empty($eventIds)) {
     padding-bottom: var(--space-xs);
     border-bottom: 2px solid var(--color-accent);
 }
-
+.rider-count {
+    font-weight: normal;
+    font-size: var(--text-sm);
+    color: var(--color-text-muted);
+}
 .table {
     width: 100%;
     border-collapse: collapse;
 }
-
-.table th,
-.table td {
+.table th, .table td {
     padding: var(--space-sm);
     text-align: left;
 }
-
 .table th {
     font-size: var(--text-sm);
     font-weight: var(--weight-medium);
     color: var(--color-text-secondary);
     border-bottom: 1px solid var(--color-border);
 }
-
 .table td {
     border-bottom: 1px solid var(--color-border-light);
 }
-
 .table tbody tr:hover {
     background: var(--color-bg-hover);
 }
-
 .col-pos { width: 40px; text-align: center; }
 .col-name { white-space: nowrap; }
-.col-club { color: var(--color-text-secondary); white-space: nowrap; }
+.col-club, .col-riders { color: var(--color-text-secondary); }
+.col-club-name { min-width: 150px; }
 .col-event {
     width: 40px;
     text-align: center;
@@ -570,39 +886,64 @@ if (!empty($eventIds)) {
     text-align: center;
     background: var(--color-bg-sunken);
 }
-
-.rider-count {
-    font-weight: normal;
-    font-size: var(--text-sm);
-    color: var(--color-text-muted);
-}
-
 .standings-table {
     font-size: var(--text-sm);
 }
-
 .standings-table th.col-event {
     font-size: var(--text-xs);
     padding: var(--space-xs);
 }
-
-.standings-table td.col-event {
-    padding: var(--space-xs);
-}
-
 .points-excluded {
     text-decoration: line-through;
     color: var(--color-text-muted);
 }
-
 .no-points {
     color: var(--color-text-muted);
 }
+.medal { font-size: 1em; }
 
-.medal {
-    font-size: 1em;
+/* Club-specific */
+.club-info {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+}
+.club-name-text {
+    font-weight: var(--weight-medium);
+}
+.club-expand-btn {
+    background: none;
+    border: none;
+    color: var(--color-text-muted);
+    cursor: pointer;
+    padding: 2px 6px;
+    font-size: var(--text-xs);
+    border-radius: var(--radius-sm);
+}
+.club-expand-btn:hover {
+    background: var(--color-bg-hover);
+}
+.club-rider-row {
+    background: var(--color-bg-sunken);
+}
+.club-rider-row td {
+    padding-top: var(--space-2xs);
+    padding-bottom: var(--space-2xs);
+    font-size: var(--text-sm);
+}
+.club-rider-cell a {
+    color: var(--color-text-secondary);
+    text-decoration: none;
+}
+.club-rider-cell a:hover {
+    color: var(--color-accent);
+}
+.rider-class {
+    color: var(--color-text-muted);
+    font-size: var(--text-xs);
 }
 
+/* Buttons */
 .btn {
     padding: var(--space-xs) var(--space-sm);
     border: 1px solid var(--color-border);
@@ -613,122 +954,43 @@ if (!empty($eventIds)) {
     font-size: var(--text-sm);
     cursor: pointer;
 }
-
 .btn-primary {
     background: var(--color-accent);
     border-color: var(--color-accent);
     color: white;
 }
 
-.btn-sm {
-    padding: var(--space-xs) var(--space-sm);
-    font-size: var(--text-xs);
-}
-
-/* Mobile Portrait: Only show position, name, and total - hide club and events */
-@media (max-width: 767px) and (orientation: portrait) {
+/* Mobile */
+@media (max-width: 767px) {
     .series-hero {
         flex-direction: column;
         text-align: center;
     }
-
     .series-hero-logo {
         margin: 0 auto;
     }
-
     .series-meta {
         justify-content: center;
     }
-
-    .event-row {
-        grid-template-columns: 1fr;
-        gap: var(--space-xs);
-    }
-
     .series-filters {
         flex-direction: column;
         align-items: stretch;
     }
-
     .filter-group select,
     .filter-group input {
         width: 100%;
     }
-
-    /* Hide club column and all event columns in portrait */
     .standings-table .col-club,
     .standings-table th.col-club,
+    .standings-table .col-riders,
+    .standings-table th.col-riders,
     .standings-table .col-event,
     .standings-table th.col-event {
         display: none;
     }
-
-    /* Make name column flexible */
-    .col-name {
+    .col-name, .col-club-name {
         white-space: normal;
         word-break: break-word;
-    }
-}
-
-/* Mobile Landscape: Show events but hide club */
-@media (max-width: 1023px) and (min-width: 768px),
-       (max-width: 767px) and (orientation: landscape) {
-    .series-hero {
-        flex-direction: column;
-        text-align: center;
-    }
-
-    .series-hero-logo {
-        margin: 0 auto;
-    }
-
-    .series-meta {
-        justify-content: center;
-    }
-
-    .event-row {
-        grid-template-columns: 1fr;
-        gap: var(--space-xs);
-    }
-
-    .series-filters {
-        flex-direction: column;
-        align-items: stretch;
-    }
-
-    .filter-group select,
-    .filter-group input {
-        width: 100%;
-    }
-
-    /* Hide club column in landscape but show events */
-    .standings-table .col-club,
-    .standings-table th.col-club {
-        display: none;
-    }
-
-    /* Reduce event column width for space */
-    .col-event {
-        width: 35px;
-        padding: var(--space-xs) 2px;
-    }
-
-    .standings-table th.col-event {
-        padding: var(--space-xs) 2px;
-    }
-
-    /* Allow name to wrap if needed */
-    .col-name {
-        white-space: normal;
-        word-break: break-word;
-    }
-}
-
-/* Tablet and small desktop: Hide club if too many events */
-@media (min-width: 768px) and (max-width: 1023px) {
-    .standings-table .col-club,
-    .standings-table th.col-club {
-        display: none;
     }
 }
 </style>
