@@ -19,27 +19,32 @@ if (isset($_GET['recalculate']) && $_GET['recalculate'] == '1') {
         $eventId = $se['event_id'];
         $templateId = $se['template_id'];
 
-        $eventInfo = $db->getRow("SELECT name FROM events WHERE id = ?", [$eventId]);
+        $eventInfo = $db->getRow("SELECT name, event_level FROM events WHERE id = ?", [$eventId]);
         $eventLog = [
             'event_id' => $eventId,
             'event_name' => $eventInfo['name'] ?? 'Unknown',
+            'event_level' => $eventInfo['event_level'] ?? 'NULL',
             'template_id' => $templateId,
             'results_found' => 0,
             'points_calculated' => []
         ];
 
-        // Get results for this event
+        // Get results for this event - join with series_results to compare
         $results = $db->getAll("
-            SELECT r.id, r.cyclist_id, r.class_id, r.position, r.status,
+            SELECT r.id, r.cyclist_id, r.class_id, r.position, r.status, r.points as results_points,
                    ri.firstname, ri.lastname,
-                   cl.name as class_name, cl.awards_points, cl.series_eligible
+                   cl.name as class_name, cl.awards_points, cl.series_eligible,
+                   sr.points as series_results_points
             FROM results r
             LEFT JOIN riders ri ON r.cyclist_id = ri.id
             LEFT JOIN classes cl ON r.class_id = cl.id
+            LEFT JOIN series_results sr ON sr.cyclist_id = r.cyclist_id
+                AND sr.event_id = r.event_id
+                AND sr.series_id = ?
             WHERE r.event_id = ?
-            ORDER BY r.position
-            LIMIT 20
-        ", [$eventId]);
+            ORDER BY r.position, r.points DESC
+            LIMIT 30
+        ", [$seriesId, $eventId]);
 
         $eventLog['results_found'] = count($results);
 
@@ -61,6 +66,8 @@ if (isset($_GET['recalculate']) && $_GET['recalculate'] == '1') {
                 'awards_points' => $r['awards_points'],
                 'series_eligible' => $r['series_eligible'],
                 'calculated_points' => $points,
+                'results_points' => $r['results_points'],
+                'series_results_points' => $r['series_results_points'],
                 'status' => $r['status']
             ];
         }
@@ -110,23 +117,34 @@ if (!empty($recalcLog)) {
     echo "<div class='card' style='border-color: #ff9800;'><h2>Testberäkning Resultat</h2>";
     foreach ($recalcLog as $eventLog) {
         echo "<h3>{$eventLog['event_name']} (Event #{$eventLog['event_id']})</h3>";
-        echo "<p>Template ID: <strong>{$eventLog['template_id']}</strong> | Resultat hittade: <strong>{$eventLog['results_found']}</strong></p>";
+        $levelClass = $eventLog['event_level'] === 'sportmotion' ? 'warning' : 'success';
+        echo "<p>Template ID: <strong>{$eventLog['template_id']}</strong> | ";
+        echo "event_level: <span class='{$levelClass}'><strong>{$eventLog['event_level']}</strong></span> | ";
+        echo "Resultat hittade: <strong>{$eventLog['results_found']}</strong></p>";
+
+        if ($eventLog['event_level'] === 'sportmotion') {
+            echo "<p class='warning'>⚠️ event_level = 'sportmotion' → 50% multiplikator appliceras!</p>";
+        }
 
         if (empty($eventLog['points_calculated'])) {
             echo "<p class='warning'>Inga resultat att beräkna!</p>";
         } else {
-            echo "<table><tr><th>Åkare</th><th>Pos</th><th>Klass</th><th>awards_points</th><th>series_eligible</th><th>Beräknad poäng</th></tr>";
+            echo "<table><tr><th>Åkare</th><th>Pos</th><th>Klass</th><th>awards_points</th><th>series_elig</th><th>results.points</th><th>series_results</th><th>Beräknat</th></tr>";
             foreach ($eventLog['points_calculated'] as $pc) {
-                $pointsClass = $pc['calculated_points'] > 0 ? 'success' : 'error';
+                $calcClass = $pc['calculated_points'] > 0 ? 'success' : 'error';
                 $apClass = $pc['awards_points'] == 1 ? 'success' : 'error';
                 $seClass = $pc['series_eligible'] == 1 ? 'success' : 'error';
+                $rpClass = $pc['results_points'] > 0 ? 'info' : '';
+                $srpClass = $pc['series_results_points'] > 0 ? 'success' : 'warning';
                 echo "<tr>
                     <td>{$pc['rider']}</td>
                     <td>{$pc['position']}</td>
                     <td>{$pc['class']}</td>
                     <td class='{$apClass}'>{$pc['awards_points']}</td>
                     <td class='{$seClass}'>{$pc['series_eligible']}</td>
-                    <td class='{$pointsClass}'>{$pc['calculated_points']}</td>
+                    <td class='{$rpClass}'>{$pc['results_points']}</td>
+                    <td class='{$srpClass}'>" . ($pc['series_results_points'] ?? 'NULL') . "</td>
+                    <td class='{$calcClass}'>{$pc['calculated_points']}</td>
                 </tr>";
             }
             echo "</table>";
