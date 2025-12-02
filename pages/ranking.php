@@ -69,11 +69,15 @@ $disciplineNames = [
 
 <div class="page-header">
   <h1 class="page-title">
-    📈 GravitySeries Ranking
+    <i data-lucide="trending-up" class="page-icon"></i>
+    Ranking
   </h1>
-  <?php if (!empty($ranking['snapshot_date'])): ?>
-    <p class="page-subtitle">Uppdaterad <?= date('j F Y', strtotime($ranking['snapshot_date'])) ?></p>
-  <?php endif; ?>
+  <p class="page-subtitle">
+    GravitySeries 24 månaders rullande ranking
+    <?php if (!empty($ranking['snapshot_date'])): ?>
+      <span class="subtitle-meta">· Uppdaterad <?= date('j F Y', strtotime($ranking['snapshot_date'])) ?></span>
+    <?php endif; ?>
+  </p>
 </div>
 
 <!-- Discipline Tabs -->
@@ -320,17 +324,30 @@ $disciplineNames = [
 
 <style>
 .page-header {
-  margin-bottom: var(--space-lg);
+  margin-bottom: var(--space-xl);
 }
 .page-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
   font-size: var(--text-2xl);
   font-weight: var(--weight-bold);
-  margin: 0;
+  margin: 0 0 var(--space-xs) 0;
+  color: var(--color-text-primary);
+}
+.page-icon {
+  width: 32px;
+  height: 32px;
+  color: var(--color-accent);
 }
 .page-subtitle {
-  font-size: var(--text-sm);
+  font-size: var(--text-md);
   color: var(--color-text-secondary);
-  margin-top: var(--space-xs);
+  margin: 0;
+}
+.subtitle-meta {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
 }
 
 .discipline-tabs {
