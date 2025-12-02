@@ -36,74 +36,197 @@ if ($filter === 'with_results') {
     $clubCount = $pdo->query("SELECT COUNT(*) FROM clubs")->fetchColumn();
 }
 
-// Count unique riders with wins and podiums
+// Count unique riders with wins and podiums (exclude motion classes by name pattern)
 $ridersWithWins = $pdo->query("
-    SELECT COUNT(DISTINCT cyclist_id)
-    FROM results
-    WHERE position = 1
+    SELECT COUNT(DISTINCT res.cyclist_id)
+    FROM results res
+    INNER JOIN classes cls ON res.class_id = cls.id
+    WHERE res.position = 1
+      AND res.status = 'finished'
+      AND COALESCE(cls.awards_points, 1) = 1
+      AND LOWER(COALESCE(cls.display_name, cls.name, '')) NOT LIKE '%motion%'
+      AND LOWER(COALESCE(cls.display_name, cls.name, '')) NOT LIKE '%sport%'
 ")->fetchColumn();
 
 $ridersWithPodiums = $pdo->query("
-    SELECT COUNT(DISTINCT cyclist_id)
-    FROM results
-    WHERE position <= 3
+    SELECT COUNT(DISTINCT res.cyclist_id)
+    FROM results res
+    INNER JOIN classes cls ON res.class_id = cls.id
+    WHERE res.position <= 3
+      AND res.status = 'finished'
+      AND COALESCE(cls.awards_points, 1) = 1
+      AND LOWER(COALESCE(cls.display_name, cls.name, '')) NOT LIKE '%motion%'
+      AND LOWER(COALESCE(cls.display_name, cls.name, '')) NOT LIKE '%sport%'
 ")->fetchColumn();
 
-// Get riders with results (top performers)
-// Ranking based on: avg_participants / avg_position (higher is better)
-// This favors riders with low avg position in large competitive fields
-$topRiders = $pdo->query("
-    SELECT
-        r.id,
-        r.firstname,
-        r.lastname,
-        c.name as club_name,
-        AVG(res.position) as avg_position,
-        AVG(field_size.participants) as avg_participants,
-        (AVG(field_size.participants) / AVG(res.position)) as ranking_score,
-        COUNT(DISTINCT res.id) as total_races,
-        COUNT(CASE WHEN res.position = 1 THEN 1 END) as wins,
-        COUNT(CASE WHEN res.position <= 3 THEN 1 END) as podiums
-    FROM riders r
-    LEFT JOIN clubs c ON r.club_id = c.id
-    INNER JOIN results res ON r.id = res.cyclist_id
-    LEFT JOIN (
-        SELECT event_id, category_id, COUNT(*) as participants
-        FROM results
-        WHERE status = 'finished' AND is_ebike = 0 AND position IS NOT NULL
-        GROUP BY event_id, category_id
-    ) field_size ON res.event_id = field_size.event_id
-                 AND (res.category_id = field_size.category_id OR (res.category_id IS NULL AND field_size.category_id IS NULL))
-    WHERE r.active = 1
-      AND res.status = 'finished'
-      AND res.is_ebike = 0
-      AND res.position IS NOT NULL
-      AND field_size.participants IS NOT NULL
-    GROUP BY r.id
-    HAVING total_races >= 3
-    ORDER BY ranking_score DESC, avg_position ASC
-    LIMIT 10
-")->fetchAll(PDO::FETCH_ASSOC);
+// Get top riders from ranking snapshots or calculate from recent events
+// Only count competitive classes (awards_points = 1), exclude motion classes
+$topRiders = [];
 
-// Get club rankings
-$clubRankings = [];
+// Motion class name patterns to exclude (backup filter until migration runs)
+$motionClassFilter = "
+    AND LOWER(COALESCE(cls.display_name, cls.name, '')) NOT LIKE '%motion%'
+    AND LOWER(COALESCE(cls.display_name, cls.name, '')) NOT LIKE '%sport%'
+";
+
+// Try to get from ranking snapshots first
 try {
-    $clubRankings = $pdo->query("
-        SELECT c.id, c.name, c.city,
-               COUNT(DISTINCT CASE WHEN res.points > 0 THEN r.id END) as riders_with_points,
-               COUNT(DISTINCT res.id) as total_starts,
-               COUNT(CASE WHEN res.position <= 3 THEN 1 END) as podiums,
-               SUM(res.points) as total_points
-        FROM clubs c
-        LEFT JOIN riders r ON c.id = r.club_id AND r.active = 1
-        LEFT JOIN results res ON r.id = res.cyclist_id
-        GROUP BY c.id
-        HAVING total_starts > 0
-        ORDER BY podiums DESC, total_points DESC, total_starts DESC
-        LIMIT 10
-    ")->fetchAll(PDO::FETCH_ASSOC);
+    $snapshotCheck = $pdo->query("SELECT COUNT(*) FROM ranking_snapshots WHERE discipline = 'GRAVITY'")->fetchColumn();
+    if ($snapshotCheck > 0) {
+        // Use ranking snapshots - but filter out riders who only have motion class results
+        $topRiders = $pdo->query("
+            SELECT
+                rs.rider_id as id,
+                r.firstname,
+                r.lastname,
+                c.name as club_name,
+                rs.total_ranking_points as ranking_score,
+                rs.events_count as total_races,
+                (SELECT COUNT(*) FROM results res2
+                 INNER JOIN classes cls ON res2.class_id = cls.id
+                 WHERE res2.cyclist_id = rs.rider_id AND res2.position = 1
+                   AND res2.status = 'finished'
+                   AND COALESCE(cls.awards_points, 1) = 1
+                   AND LOWER(COALESCE(cls.display_name, cls.name, '')) NOT LIKE '%motion%'
+                   AND LOWER(COALESCE(cls.display_name, cls.name, '')) NOT LIKE '%sport%') as wins,
+                (SELECT COUNT(*) FROM results res2
+                 INNER JOIN classes cls ON res2.class_id = cls.id
+                 WHERE res2.cyclist_id = rs.rider_id AND res2.position <= 3
+                   AND res2.status = 'finished'
+                   AND COALESCE(cls.awards_points, 1) = 1
+                   AND LOWER(COALESCE(cls.display_name, cls.name, '')) NOT LIKE '%motion%'
+                   AND LOWER(COALESCE(cls.display_name, cls.name, '')) NOT LIKE '%sport%') as podiums
+            FROM ranking_snapshots rs
+            INNER JOIN riders r ON rs.rider_id = r.id
+            LEFT JOIN clubs c ON r.club_id = c.id
+            WHERE rs.discipline = 'GRAVITY'
+              AND rs.snapshot_date = (SELECT MAX(snapshot_date) FROM ranking_snapshots WHERE discipline = 'GRAVITY')
+              AND EXISTS (
+                  SELECT 1 FROM results res3
+                  INNER JOIN classes cls3 ON res3.class_id = cls3.id
+                  WHERE res3.cyclist_id = rs.rider_id
+                    AND res3.status = 'finished'
+                    AND COALESCE(cls3.awards_points, 1) = 1
+                    AND LOWER(COALESCE(cls3.display_name, cls3.name, '')) NOT LIKE '%motion%'
+                    AND LOWER(COALESCE(cls3.display_name, cls3.name, '')) NOT LIKE '%sport%'
+              )
+            ORDER BY rs.ranking_position ASC
+            LIMIT 10
+        ")->fetchAll(PDO::FETCH_ASSOC);
+    }
 } catch (Exception $e) {
-    // Table might not exist
+    // Table doesn't exist, fallback below
+}
+
+// Fallback: Calculate from 10 most recent events with competitive classes
+if (empty($topRiders)) {
+    // Get 10 most recent events
+    $recentEventIds = $pdo->query("
+        SELECT id FROM events WHERE date <= CURDATE() ORDER BY date DESC LIMIT 10
+    ")->fetchAll(PDO::FETCH_COLUMN);
+
+    if (!empty($recentEventIds)) {
+        $eventIdList = implode(',', array_map('intval', $recentEventIds));
+
+        $topRiders = $pdo->query("
+            SELECT
+                r.id,
+                r.firstname,
+                r.lastname,
+                c.name as club_name,
+                SUM(res.points) as ranking_score,
+                COUNT(DISTINCT res.id) as total_races,
+                COUNT(CASE WHEN res.position = 1
+                    AND COALESCE(cls.awards_points, 1) = 1
+                    AND LOWER(COALESCE(cls.display_name, cls.name, '')) NOT LIKE '%motion%'
+                    AND LOWER(COALESCE(cls.display_name, cls.name, '')) NOT LIKE '%sport%'
+                    THEN 1 END) as wins,
+                COUNT(CASE WHEN res.position <= 3
+                    AND COALESCE(cls.awards_points, 1) = 1
+                    AND LOWER(COALESCE(cls.display_name, cls.name, '')) NOT LIKE '%motion%'
+                    AND LOWER(COALESCE(cls.display_name, cls.name, '')) NOT LIKE '%sport%'
+                    THEN 1 END) as podiums
+            FROM riders r
+            LEFT JOIN clubs c ON r.club_id = c.id
+            INNER JOIN results res ON r.id = res.cyclist_id
+            LEFT JOIN classes cls ON res.class_id = cls.id
+            WHERE r.active = 1
+              AND res.status = 'finished'
+              AND res.event_id IN ({$eventIdList})
+              AND COALESCE(cls.awards_points, 1) = 1
+              AND LOWER(COALESCE(cls.display_name, cls.name, '')) NOT LIKE '%motion%'
+              AND LOWER(COALESCE(cls.display_name, cls.name, '')) NOT LIKE '%sport%'
+            GROUP BY r.id
+            HAVING total_races >= 1
+            ORDER BY ranking_score DESC
+            LIMIT 10
+        ")->fetchAll(PDO::FETCH_ASSOC);
+    }
+}
+
+// Get club rankings from snapshots or fallback
+$clubRankings = [];
+
+// Try to get from club ranking snapshots first
+try {
+    $clubSnapshotCheck = $pdo->query("SELECT COUNT(*) FROM club_ranking_snapshots WHERE discipline = 'GRAVITY'")->fetchColumn();
+    if ($clubSnapshotCheck > 0) {
+        $clubRankings = $pdo->query("
+            SELECT
+                crs.club_id as id,
+                c.name,
+                c.city,
+                crs.riders_count as riders_with_points,
+                crs.total_ranking_points as total_points,
+                (SELECT COUNT(*) FROM results res2
+                 INNER JOIN riders r2 ON res2.cyclist_id = r2.id
+                 INNER JOIN classes cls ON res2.class_id = cls.id
+                 WHERE r2.club_id = crs.club_id AND res2.position <= 3
+                   AND res2.status = 'finished'
+                   AND COALESCE(cls.awards_points, 1) = 1
+                   AND LOWER(COALESCE(cls.display_name, cls.name, '')) NOT LIKE '%motion%'
+                   AND LOWER(COALESCE(cls.display_name, cls.name, '')) NOT LIKE '%sport%') as podiums
+            FROM club_ranking_snapshots crs
+            INNER JOIN clubs c ON crs.club_id = c.id
+            WHERE crs.discipline = 'GRAVITY'
+              AND crs.snapshot_date = (SELECT MAX(snapshot_date) FROM club_ranking_snapshots WHERE discipline = 'GRAVITY')
+            ORDER BY crs.ranking_position ASC
+            LIMIT 10
+        ")->fetchAll(PDO::FETCH_ASSOC);
+    }
+} catch (Exception $e) {
+    // Table doesn't exist
+}
+
+// Fallback: Calculate clubs with competitive results only
+if (empty($clubRankings)) {
+    try {
+        $clubRankings = $pdo->query("
+            SELECT c.id, c.name, c.city,
+                   COUNT(DISTINCT CASE WHEN res.points > 0 THEN r.id END) as riders_with_points,
+                   COUNT(DISTINCT res.id) as total_starts,
+                   COUNT(CASE WHEN res.position <= 3
+                       AND COALESCE(cls.awards_points, 1) = 1
+                       AND LOWER(COALESCE(cls.display_name, cls.name, '')) NOT LIKE '%motion%'
+                       AND LOWER(COALESCE(cls.display_name, cls.name, '')) NOT LIKE '%sport%'
+                       THEN 1 END) as podiums,
+                   SUM(res.points) as total_points
+            FROM clubs c
+            LEFT JOIN riders r ON c.id = r.club_id AND r.active = 1
+            LEFT JOIN results res ON r.id = res.cyclist_id
+            LEFT JOIN classes cls ON res.class_id = cls.id
+            WHERE (COALESCE(cls.awards_points, 1) = 1
+                   AND LOWER(COALESCE(cls.display_name, cls.name, '')) NOT LIKE '%motion%'
+                   AND LOWER(COALESCE(cls.display_name, cls.name, '')) NOT LIKE '%sport%')
+                  OR cls.id IS NULL
+            GROUP BY c.id
+            HAVING total_starts > 0
+            ORDER BY podiums DESC, total_points DESC, total_starts DESC
+            LIMIT 10
+        ")->fetchAll(PDO::FETCH_ASSOC);
+    } catch (Exception $e) {
+        // Table might not exist
+    }
 }
 
 // Recent active riders
@@ -171,7 +294,7 @@ $recentRiders = $pdo->query("
 <div class="database-grid">
     <!-- Top Riders -->
     <div class="card">
-        <h2 class="card-title">🏆 Toppresterande</h2>
+        <h2 class="card-title">🏆 Topprankade</h2>
         <div class="ranking-list">
             <?php foreach ($topRiders as $i => $rider): ?>
             <a href="/rider/<?= $rider['id'] ?>" class="ranking-item">

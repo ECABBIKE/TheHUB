@@ -93,9 +93,15 @@ try {
  $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
  // Fix: class_position only valid for finished results
+ // Also check class name for motion/sport patterns (backup until migration runs)
  foreach ($results as &$result) {
  if ($result['status'] !== 'finished') {
   $result['class_position'] = null;
+ }
+ // Override awards_podiums based on class name pattern (motion/sport = non-competitive)
+ $className = strtolower($result['class_name'] ?? '');
+ if (strpos($className, 'motion') !== false || strpos($className, 'sport') !== false) {
+  $result['awards_podiums'] = 0;
  }
  }
  unset($result);
@@ -104,7 +110,7 @@ try {
  $totalStarts = count($results);
  $finishedRaces = count(array_filter($results, fn($r) => $r['status'] === 'finished'));
  $totalPoints = array_sum(array_column($results, 'points'));
- // Motion/Sportmotion classes don't count for podiums/wins (awards_points = 0)
+ // Motion/Sportmotion classes don't count for podiums/wins (awards_points = 0 or name contains motion/sport)
  $podiums = count(array_filter($results, fn($r) => $r['class_position'] && $r['class_position'] <= 3 && $r['awards_podiums']));
  $wins = count(array_filter($results, fn($r) => $r['class_position'] == 1 && $r['awards_podiums']));
  // Best position also only counts competitive classes
