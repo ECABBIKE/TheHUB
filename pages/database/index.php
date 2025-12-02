@@ -232,7 +232,10 @@ if (empty($clubRankings)) {
 ?>
 
 <div class="page-header">
-    <h1 class="page-title">Databas</h1>
+    <h1 class="page-title">
+        <i data-lucide="database" class="page-icon"></i>
+        Databas
+    </h1>
     <p class="page-subtitle">Sök bland åkare och klubbar</p>
 </div>
 
@@ -332,6 +335,28 @@ if (empty($clubRankings)) {
 </div>
 
 <style>
+.page-header {
+    margin-bottom: var(--space-xl);
+}
+.page-title {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    font-size: var(--text-2xl);
+    font-weight: var(--weight-bold);
+    margin: 0 0 var(--space-xs) 0;
+    color: var(--color-text-primary);
+}
+.page-icon {
+    width: 32px;
+    height: 32px;
+    color: var(--color-accent);
+}
+.page-subtitle {
+    font-size: var(--text-md);
+    color: var(--color-text-secondary);
+    margin: 0;
+}
 .stats-grid {
     display: grid;
     grid-template-columns: repeat(4, 1fr);

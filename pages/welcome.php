@@ -11,12 +11,72 @@ if (!defined('HUB_V3_ROOT')) {
 }
 
 require_once HUB_V3_ROOT . '/components/icons.php';
+
+$pdo = hub_db();
+
+// Get current statistics
+try {
+    // Total riders with results
+    $riderCount = $pdo->query("
+        SELECT COUNT(DISTINCT r.id)
+        FROM riders r
+        INNER JOIN results res ON r.id = res.cyclist_id
+    ")->fetchColumn();
+
+    // Total clubs with active riders
+    $clubCount = $pdo->query("
+        SELECT COUNT(DISTINCT c.id)
+        FROM clubs c
+        INNER JOIN riders r ON c.id = r.club_id
+        INNER JOIN results res ON r.id = res.cyclist_id
+    ")->fetchColumn();
+
+    // Total events with results
+    $eventCount = $pdo->query("
+        SELECT COUNT(DISTINCT e.id)
+        FROM events e
+        INNER JOIN results r ON e.id = r.event_id
+    ")->fetchColumn();
+
+    // Active series
+    $seriesCount = $pdo->query("SELECT COUNT(*) FROM series WHERE status = 'active'")->fetchColumn();
+
+    // Upcoming events
+    $upcomingEvents = $pdo->query("
+        SELECT e.id, e.name, e.date, e.location, s.name as series_name
+        FROM events e
+        LEFT JOIN series s ON e.series_id = s.id
+        WHERE e.date >= CURDATE() AND e.active = 1
+        ORDER BY e.date ASC
+        LIMIT 3
+    ")->fetchAll(PDO::FETCH_ASSOC);
+
+    // Recent results (events with results from last 30 days)
+    $recentResults = $pdo->query("
+        SELECT e.id, e.name, e.date, e.location,
+               COUNT(DISTINCT r.cyclist_id) as participant_count
+        FROM events e
+        INNER JOIN results r ON e.id = r.event_id
+        WHERE e.date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+        GROUP BY e.id
+        ORDER BY e.date DESC
+        LIMIT 3
+    ")->fetchAll(PDO::FETCH_ASSOC);
+
+} catch (Exception $e) {
+    $riderCount = 0;
+    $clubCount = 0;
+    $eventCount = 0;
+    $seriesCount = 0;
+    $upcomingEvents = [];
+    $recentResults = [];
+}
 ?>
 
 <div class="welcome-page">
-    <div class="welcome-container">
-        <div class="welcome-card">
-            <!-- Logo -->
+    <!-- Hero Section -->
+    <div class="welcome-hero">
+        <div class="welcome-hero-content">
             <div class="welcome-logo">
                 <svg viewBox="0 0 80 80" class="welcome-logo-icon">
                     <circle cx="40" cy="40" r="36" fill="currentColor" opacity="0.1"/>
@@ -24,256 +84,491 @@ require_once HUB_V3_ROOT . '/components/icons.php';
                     <text x="40" y="48" text-anchor="middle" fill="currentColor" font-size="20" font-weight="bold">HUB</text>
                 </svg>
             </div>
-
-            <h1 class="welcome-title">Välkommen till TheHUB</h1>
+            <h1 class="welcome-title">TheHUB</h1>
             <p class="welcome-subtitle">GravitySeries Competition Platform</p>
 
-            <!-- Launch message -->
-            <div class="welcome-message">
-                <div class="welcome-message-icon">
-                    <?= hub_icon('info', 'icon-md') ?>
+            <!-- Stats Grid -->
+            <div class="welcome-stats">
+                <div class="welcome-stat">
+                    <span class="stat-value"><?= number_format($riderCount) ?></span>
+                    <span class="stat-label">Åkare</span>
                 </div>
-                <div class="welcome-message-content">
-                    <h3>V3.5 är under utveckling</h3>
-                    <p>
-                        Plattformen uppdateras till version 3.5 med förbättrad design,
-                        snabbare prestanda och nya funktioner.
-                    </p>
+                <div class="welcome-stat">
+                    <span class="stat-value"><?= number_format($clubCount) ?></span>
+                    <span class="stat-label">Klubbar</span>
                 </div>
-            </div>
-
-            <!-- Features -->
-            <div class="welcome-features">
-                <div class="welcome-feature">
-                    <?= hub_icon('calendar', 'welcome-feature-icon') ?>
-                    <span>Eventkalender</span>
+                <div class="welcome-stat">
+                    <span class="stat-value"><?= number_format($eventCount) ?></span>
+                    <span class="stat-label">Tävlingar</span>
                 </div>
-                <div class="welcome-feature">
-                    <?= hub_icon('trophy', 'welcome-feature-icon') ?>
-                    <span>Resultat & Serier</span>
-                </div>
-                <div class="welcome-feature">
-                    <?= hub_icon('trending-up', 'welcome-feature-icon') ?>
-                    <span>Ranking</span>
-                </div>
-                <div class="welcome-feature">
-                    <?= hub_icon('users', 'welcome-feature-icon') ?>
-                    <span>Åkardatabas</span>
+                <div class="welcome-stat">
+                    <span class="stat-value"><?= number_format($seriesCount) ?></span>
+                    <span class="stat-label">Serier</span>
                 </div>
             </div>
-
-            <!-- Actions -->
-            <div class="welcome-actions">
-                <a href="<?= HUB_V3_URL ?>/login" class="btn btn--primary btn--lg">
-                    <?= hub_icon('log-in', 'icon-sm') ?>
-                    Logga in
-                </a>
-                <a href="https://gravityseries.se" class="btn btn--secondary btn--lg" target="_blank" rel="noopener">
-                    <?= hub_icon('external-link', 'icon-sm') ?>
-                    Om GravitySeries
-                </a>
-            </div>
-
-            <!-- Login required info -->
-            <p class="welcome-info">
-                <?= hub_icon('lock', 'icon-xs') ?>
-                Inloggning krävs för att se innehållet
-            </p>
         </div>
+    </div>
+
+    <!-- Quick Links -->
+    <div class="welcome-container">
+        <div class="welcome-nav-grid">
+            <a href="/calendar" class="welcome-nav-card">
+                <?= hub_icon('calendar', 'welcome-nav-icon') ?>
+                <h3>Kalender</h3>
+                <p>Kommande tävlingar och event</p>
+            </a>
+            <a href="/results" class="welcome-nav-card">
+                <?= hub_icon('trophy', 'welcome-nav-icon') ?>
+                <h3>Resultat</h3>
+                <p>Se alla tävlingsresultat</p>
+            </a>
+            <a href="/series" class="welcome-nav-card">
+                <?= hub_icon('award', 'welcome-nav-icon') ?>
+                <h3>Serier</h3>
+                <p>Tävlingsserier och ställningar</p>
+            </a>
+            <a href="/ranking" class="welcome-nav-card">
+                <?= hub_icon('trending-up', 'welcome-nav-icon') ?>
+                <h3>Ranking</h3>
+                <p>24 månaders rullande ranking</p>
+            </a>
+            <a href="/database" class="welcome-nav-card">
+                <?= hub_icon('database', 'welcome-nav-icon') ?>
+                <h3>Databas</h3>
+                <p>Sök åkare och klubbar</p>
+            </a>
+            <a href="/login" class="welcome-nav-card welcome-nav-card--login">
+                <?= hub_icon('log-in', 'welcome-nav-icon') ?>
+                <h3>Logga in</h3>
+                <p>Åtkomst till din profil</p>
+            </a>
+        </div>
+
+        <?php if (!empty($upcomingEvents)): ?>
+        <!-- Upcoming Events -->
+        <div class="welcome-section">
+            <h2 class="welcome-section-title">
+                <?= hub_icon('calendar', 'section-icon') ?>
+                Kommande tävlingar
+            </h2>
+            <div class="welcome-event-list">
+                <?php foreach ($upcomingEvents as $event): ?>
+                <a href="/calendar/<?= $event['id'] ?>" class="welcome-event-item">
+                    <div class="event-date-badge">
+                        <span class="event-day"><?= date('j', strtotime($event['date'])) ?></span>
+                        <span class="event-month"><?= date('M', strtotime($event['date'])) ?></span>
+                    </div>
+                    <div class="event-info">
+                        <h4><?= htmlspecialchars($event['name']) ?></h4>
+                        <p>
+                            <?php if ($event['series_name']): ?>
+                                <span class="event-series"><?= htmlspecialchars($event['series_name']) ?></span>
+                            <?php endif; ?>
+                            <?php if ($event['location']): ?>
+                                <span class="event-location"><?= hub_icon('map-pin', 'icon-xs') ?> <?= htmlspecialchars($event['location']) ?></span>
+                            <?php endif; ?>
+                        </p>
+                    </div>
+                    <?= hub_icon('chevron-right', 'event-arrow') ?>
+                </a>
+                <?php endforeach; ?>
+            </div>
+            <a href="/calendar" class="welcome-more-link">
+                Visa alla kommande event <?= hub_icon('arrow-right', 'icon-sm') ?>
+            </a>
+        </div>
+        <?php endif; ?>
+
+        <?php if (!empty($recentResults)): ?>
+        <!-- Recent Results -->
+        <div class="welcome-section">
+            <h2 class="welcome-section-title">
+                <?= hub_icon('trophy', 'section-icon') ?>
+                Senaste resultat
+            </h2>
+            <div class="welcome-event-list">
+                <?php foreach ($recentResults as $event): ?>
+                <a href="/event/<?= $event['id'] ?>" class="welcome-event-item">
+                    <div class="event-date-badge event-date-badge--results">
+                        <span class="event-day"><?= date('j', strtotime($event['date'])) ?></span>
+                        <span class="event-month"><?= date('M', strtotime($event['date'])) ?></span>
+                    </div>
+                    <div class="event-info">
+                        <h4><?= htmlspecialchars($event['name']) ?></h4>
+                        <p>
+                            <span class="event-participants"><?= hub_icon('users', 'icon-xs') ?> <?= $event['participant_count'] ?> deltagare</span>
+                            <?php if ($event['location']): ?>
+                                <span class="event-location"><?= hub_icon('map-pin', 'icon-xs') ?> <?= htmlspecialchars($event['location']) ?></span>
+                            <?php endif; ?>
+                        </p>
+                    </div>
+                    <?= hub_icon('chevron-right', 'event-arrow') ?>
+                </a>
+                <?php endforeach; ?>
+            </div>
+            <a href="/results" class="welcome-more-link">
+                Visa alla resultat <?= hub_icon('arrow-right', 'icon-sm') ?>
+            </a>
+        </div>
+        <?php endif; ?>
     </div>
 </div>
 
 <style>
 /* ===== WELCOME PAGE ===== */
 .welcome-page {
-    min-height: 80vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: var(--space-lg);
+    min-height: 100%;
 }
 
-.welcome-container {
-    width: 100%;
-    max-width: 500px;
-}
-
-.welcome-card {
-    background: var(--color-bg-card);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-xl);
-    padding: var(--space-xl);
+/* Hero Section */
+.welcome-hero {
+    background: linear-gradient(135deg, var(--color-accent) 0%, var(--color-accent-dark, #2563eb) 100%);
+    padding: var(--space-2xl) var(--space-lg);
     text-align: center;
-    box-shadow: var(--shadow-lg);
+    margin: calc(var(--space-lg) * -1);
+    margin-bottom: var(--space-xl);
 }
 
-/* Logo */
+.welcome-hero-content {
+    max-width: 600px;
+    margin: 0 auto;
+}
+
 .welcome-logo {
-    margin-bottom: var(--space-lg);
+    margin-bottom: var(--space-md);
 }
 
 .welcome-logo-icon {
-    width: 80px;
-    height: 80px;
-    color: var(--color-accent);
+    width: 64px;
+    height: 64px;
+    color: white;
 }
 
-/* Title */
 .welcome-title {
-    font-size: var(--text-2xl);
+    font-size: var(--text-3xl);
     font-weight: var(--weight-bold);
-    color: var(--color-text-primary);
+    color: white;
     margin: 0 0 var(--space-xs);
 }
 
 .welcome-subtitle {
     font-size: var(--text-md);
-    color: var(--color-text-secondary);
+    color: rgba(255, 255, 255, 0.9);
     margin: 0 0 var(--space-xl);
 }
 
-/* Message */
-.welcome-message {
-    display: flex;
-    gap: var(--space-md);
-    align-items: flex-start;
-    background: var(--color-bg-surface);
-    border: 1px solid var(--color-border);
-    border-left: 4px solid var(--color-accent);
-    border-radius: var(--radius-md);
-    padding: var(--space-md);
-    margin-bottom: var(--space-xl);
-    text-align: left;
-}
-
-.welcome-message-icon {
-    color: var(--color-accent);
-    flex-shrink: 0;
-}
-
-.welcome-message-icon .icon-md {
-    width: 24px;
-    height: 24px;
-}
-
-.welcome-message h3 {
-    font-size: var(--text-sm);
-    font-weight: var(--weight-semibold);
-    color: var(--color-text-primary);
-    margin: 0 0 var(--space-xs);
-}
-
-.welcome-message p {
-    font-size: var(--text-sm);
-    color: var(--color-text-secondary);
-    margin: 0;
-    line-height: 1.5;
-}
-
-/* Features */
-.welcome-features {
+/* Stats */
+.welcome-stats {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: var(--space-sm);
+    grid-template-columns: repeat(4, 1fr);
+    gap: var(--space-md);
+}
+
+.welcome-stat {
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: var(--radius-lg);
+    padding: var(--space-md);
+}
+
+.welcome-stat .stat-value {
+    display: block;
+    font-size: var(--text-2xl);
+    font-weight: var(--weight-bold);
+    color: white;
+    line-height: 1.2;
+}
+
+.welcome-stat .stat-label {
+    font-size: var(--text-xs);
+    color: rgba(255, 255, 255, 0.8);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+/* Container */
+.welcome-container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 0 var(--space-md);
+}
+
+/* Navigation Grid */
+.welcome-nav-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--space-md);
     margin-bottom: var(--space-xl);
 }
 
-.welcome-feature {
+.welcome-nav-card {
     display: flex;
+    flex-direction: column;
     align-items: center;
-    gap: var(--space-xs);
-    font-size: var(--text-sm);
-    color: var(--color-text-secondary);
-}
-
-.welcome-feature-icon {
-    width: 18px;
-    height: 18px;
-    color: var(--color-accent);
-}
-
-/* Actions */
-.welcome-actions {
-    display: flex;
     gap: var(--space-sm);
-    justify-content: center;
-    flex-wrap: wrap;
-    margin-bottom: var(--space-lg);
-}
-
-.btn--lg {
-    padding: var(--space-sm) var(--space-lg);
-    font-size: var(--text-md);
-}
-
-.btn--primary {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--space-xs);
-    background: var(--color-accent);
-    color: white;
-    border: none;
-    border-radius: var(--radius-md);
-    font-weight: var(--weight-medium);
-    text-decoration: none;
-    cursor: pointer;
-    transition: opacity var(--transition-fast);
-}
-
-.btn--primary:hover {
-    opacity: 0.9;
-}
-
-.btn--secondary {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--space-xs);
-    background: transparent;
-    color: var(--color-text-primary);
+    padding: var(--space-lg);
+    background: var(--color-bg-card);
     border: 1px solid var(--color-border);
-    border-radius: var(--radius-md);
-    font-weight: var(--weight-medium);
+    border-radius: var(--radius-lg);
     text-decoration: none;
-    cursor: pointer;
+    text-align: center;
     transition: all var(--transition-fast);
 }
 
-.btn--secondary:hover {
+.welcome-nav-card:hover {
     border-color: var(--color-accent);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+.welcome-nav-card--login {
+    background: var(--color-accent-light);
+    border-color: var(--color-accent);
+}
+
+.welcome-nav-card--login:hover {
+    background: var(--color-accent);
+}
+
+.welcome-nav-card--login:hover h3,
+.welcome-nav-card--login:hover p {
+    color: white;
+}
+
+.welcome-nav-card--login:hover .welcome-nav-icon {
+    color: white;
+}
+
+.welcome-nav-icon {
+    width: 32px;
+    height: 32px;
     color: var(--color-accent);
 }
 
-/* Info */
-.welcome-info {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--space-xs);
-    font-size: var(--text-sm);
-    color: var(--color-text-muted);
+.welcome-nav-card h3 {
+    font-size: var(--text-md);
+    font-weight: var(--weight-semibold);
+    color: var(--color-text-primary);
     margin: 0;
 }
 
-.welcome-info .icon-xs {
+.welcome-nav-card p {
+    font-size: var(--text-sm);
+    color: var(--color-text-secondary);
+    margin: 0;
+}
+
+/* Sections */
+.welcome-section {
+    background: var(--color-bg-card);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    padding: var(--space-lg);
+    margin-bottom: var(--space-lg);
+}
+
+.welcome-section-title {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    font-size: var(--text-lg);
+    font-weight: var(--weight-semibold);
+    color: var(--color-text-primary);
+    margin: 0 0 var(--space-md);
+}
+
+.section-icon {
+    width: 24px;
+    height: 24px;
+    color: var(--color-accent);
+}
+
+/* Event List */
+.welcome-event-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+}
+
+.welcome-event-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    padding: var(--space-sm);
+    border-radius: var(--radius-md);
+    text-decoration: none;
+    transition: background var(--transition-fast);
+}
+
+.welcome-event-item:hover {
+    background: var(--color-bg-hover);
+}
+
+.event-date-badge {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-width: 48px;
+    height: 48px;
+    background: var(--color-accent);
+    border-radius: var(--radius-md);
+    color: white;
+}
+
+.event-date-badge--results {
+    background: var(--color-success, #10b981);
+}
+
+.event-date-badge .event-day {
+    font-size: var(--text-lg);
+    font-weight: var(--weight-bold);
+    line-height: 1;
+}
+
+.event-date-badge .event-month {
+    font-size: var(--text-xs);
+    text-transform: uppercase;
+    opacity: 0.9;
+}
+
+.event-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.event-info h4 {
+    font-size: var(--text-md);
+    font-weight: var(--weight-medium);
+    color: var(--color-text-primary);
+    margin: 0 0 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.event-info p {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-sm);
+    font-size: var(--text-sm);
+    color: var(--color-text-secondary);
+    margin: 0;
+}
+
+.event-series {
+    color: var(--color-accent);
+}
+
+.event-location,
+.event-participants {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+}
+
+.event-arrow {
+    width: 20px;
+    height: 20px;
+    color: var(--color-text-muted);
+}
+
+.welcome-more-link {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-xs);
+    margin-top: var(--space-md);
+    padding-top: var(--space-md);
+    border-top: 1px solid var(--color-border);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    color: var(--color-accent);
+    text-decoration: none;
+}
+
+.welcome-more-link:hover {
+    text-decoration: underline;
+}
+
+/* Icon sizes */
+.icon-xs {
     width: 14px;
     height: 14px;
 }
 
+.icon-sm {
+    width: 16px;
+    height: 16px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .welcome-hero {
+        padding: var(--space-xl) var(--space-md);
+    }
+
+    .welcome-stats {
+        grid-template-columns: repeat(2, 1fr);
+        gap: var(--space-sm);
+    }
+
+    .welcome-stat {
+        padding: var(--space-sm);
+    }
+
+    .welcome-stat .stat-value {
+        font-size: var(--text-xl);
+    }
+
+    .welcome-nav-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
 @media (max-width: 480px) {
-    .welcome-card {
-        padding: var(--space-lg);
+    .welcome-hero {
+        padding: var(--space-lg) var(--space-sm);
+        margin: calc(var(--space-md) * -1);
+        margin-bottom: var(--space-lg);
     }
 
-    .welcome-features {
-        grid-template-columns: 1fr;
+    .welcome-title {
+        font-size: var(--text-2xl);
     }
 
-    .welcome-actions {
+    .welcome-nav-grid {
+        grid-template-columns: 1fr 1fr;
+        gap: var(--space-sm);
+    }
+
+    .welcome-nav-card {
+        padding: var(--space-md);
+    }
+
+    .welcome-nav-icon {
+        width: 24px;
+        height: 24px;
+    }
+
+    .welcome-nav-card h3 {
+        font-size: var(--text-sm);
+    }
+
+    .welcome-nav-card p {
+        display: none;
+    }
+
+    .welcome-section {
+        padding: var(--space-md);
+    }
+
+    .event-info h4 {
+        font-size: var(--text-sm);
+    }
+
+    .event-info p {
         flex-direction: column;
-    }
-
-    .welcome-actions .btn--lg {
-        width: 100%;
-        justify-content: center;
+        gap: 2px;
     }
 }
 </style>

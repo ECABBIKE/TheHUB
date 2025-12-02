@@ -75,10 +75,11 @@ try {
 ?>
 
 <div class="page-header">
-  <h1 class="page-title">Resultat</h1>
-  <div class="page-meta">
-    <span class="chip chip--primary"><?= $totalEvents ?> tävlingar</span>
-  </div>
+  <h1 class="page-title">
+    <i data-lucide="trophy" class="page-icon"></i>
+    Resultat
+  </h1>
+  <p class="page-subtitle"><?= $totalEvents ?> tävlingar med publicerade resultat</p>
 </div>
 
 <!-- Filters -->
@@ -163,21 +164,26 @@ try {
 
 <style>
 .page-header {
-  margin-bottom: var(--space-lg);
+  margin-bottom: var(--space-xl);
 }
 .page-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
   font-size: var(--text-2xl);
   font-weight: var(--weight-bold);
-  margin: 0 0 var(--space-sm) 0;
+  margin: 0 0 var(--space-xs) 0;
+  color: var(--color-text-primary);
 }
-.page-meta {
-  display: flex;
-  gap: var(--space-sm);
-  flex-wrap: wrap;
+.page-icon {
+  width: 32px;
+  height: 32px;
+  color: var(--color-accent);
 }
-.chip--primary {
-  background: var(--color-accent);
-  color: var(--color-text-inverse);
+.page-subtitle {
+  font-size: var(--text-md);
+  color: var(--color-text-secondary);
+  margin: 0;
 }
 
 .filter-bar {
