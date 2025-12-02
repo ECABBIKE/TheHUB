@@ -1807,3 +1807,164 @@
         grid-template-columns: 1fr;
     }
 }
+
+/* ========================================================================
+   GLOBAL TEXTS PAGE - TEXTAREA FIX
+   ======================================================================== */
+
+.global-text-card {
+    margin-bottom: var(--space-lg);
+}
+
+.global-text-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: var(--space-md);
+    margin-bottom: var(--space-md);
+}
+
+.global-text-meta {
+    display: flex;
+    gap: var(--space-xs);
+    margin-top: var(--space-xs);
+}
+
+.global-text-content {
+    width: 100%;
+}
+
+.global-text-textarea {
+    width: 100% !important;
+    min-height: 150px !important;
+    padding: var(--space-md) !important;
+    font-family: inherit;
+    font-size: var(--text-sm);
+    line-height: 1.6;
+    resize: vertical;
+}
+
+/* Category tabs for global texts */
+.gs-category-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-xs);
+    margin-bottom: var(--space-xl);
+}
+
+.gs-category-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-xs);
+    padding: var(--space-sm) var(--space-md);
+    background: var(--color-bg-sunken);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    color: var(--color-text-secondary);
+    text-decoration: none;
+    font-size: var(--text-sm);
+    transition: all 0.2s ease;
+}
+
+.gs-category-tab:hover {
+    border-color: var(--color-accent);
+    color: var(--color-accent);
+}
+
+.gs-category-tab.active {
+    background: var(--color-accent);
+    border-color: var(--color-accent);
+    color: white;
+}
+
+/* ========================================================================
+   MODAL / POPUP FIX - BACKGROUND
+   ======================================================================== */
+
+.gs-modal {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: var(--space-lg);
+}
+
+.gs-modal-overlay,
+.gs-modal-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+}
+
+.gs-modal-content {
+    position: relative;
+    background: var(--color-bg-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-lg);
+    max-width: 600px;
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+    z-index: 1;
+}
+
+.gs-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--space-lg);
+    border-bottom: 1px solid var(--color-border);
+}
+
+.gs-modal-title {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    font-size: var(--text-lg);
+    font-weight: var(--weight-semibold);
+    color: var(--color-text-primary);
+    margin: 0;
+}
+
+.gs-modal-title i,
+.gs-modal-title svg {
+    width: 20px;
+    height: 20px;
+    color: var(--color-accent);
+}
+
+.gs-modal-close {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    background: var(--color-bg-sunken);
+    border: none;
+    border-radius: var(--radius-md);
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.gs-modal-close:hover {
+    background: var(--color-bg-hover);
+    color: var(--color-text-primary);
+}
+
+.gs-modal-body {
+    padding: var(--space-lg);
+}
+
+.gs-modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--space-sm);
+    padding: var(--space-lg);
+    border-top: 1px solid var(--color-border);
+    background: var(--color-bg-sunken);
+}
