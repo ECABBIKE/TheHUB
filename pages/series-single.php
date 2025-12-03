@@ -1185,6 +1185,11 @@ function toggleClubRiders(btn, event) {
   margin-bottom: var(--space-md);
 }
 
+/* Default: hide result-list (mobile card view) */
+.result-list {
+  display: none;
+}
+
 @media (max-width: 599px) {
   .info-card-content {
     flex-direction: column;
@@ -1202,6 +1207,38 @@ function toggleClubRiders(btn, event) {
   .filter-row {
     grid-template-columns: 1fr;
     gap: var(--space-sm);
+  }
+}
+
+/* Mobile portrait: hide table, show cards, hide event columns */
+@media (max-width: 599px) and (orientation: portrait) {
+  .standings-card .table-wrapper {
+    display: none;
+  }
+  .standings-card .result-list {
+    display: block;
+  }
+  .table-col-hide-portrait {
+    display: none;
+  }
+}
+
+/* Mobile landscape: show table with event columns, hide cards */
+@media (max-width: 900px) and (orientation: landscape) {
+  .standings-card .table-wrapper {
+    display: block;
+  }
+  .standings-card .result-list {
+    display: none;
+  }
+  .table-col-hide-portrait {
+    display: table-cell;
+  }
+  /* Make event columns slightly smaller in landscape */
+  .standings-table .col-event {
+    min-width: 32px;
+    font-size: var(--text-xs);
+    padding: var(--space-xs);
   }
 }
 </style>
