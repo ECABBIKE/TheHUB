@@ -133,13 +133,15 @@ try {
     $stmt->execute([$eventId]);
     $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // Check for split times (up to 15)
+    // Check for split times (up to 15) - calculate globally for all classes
     $hasSplitTimes = false;
-    foreach ($results as $result) {
-        for ($i = 1; $i <= 15; $i++) {
+    $eventSplits = []; // Global splits for consistent columns across all classes
+    for ($i = 1; $i <= 15; $i++) {
+        foreach ($results as $result) {
             if (!empty($result['ss' . $i])) {
+                $eventSplits[] = $i;
                 $hasSplitTimes = true;
-                break 2;
+                break; // Found this split, move to next
             }
         }
     }
@@ -525,19 +527,6 @@ if (!$event) {
 
 <?php foreach ($resultsByClass as $classKey => $classData):
     $isTimeRanked = ($classData['ranking_type'] ?? 'time') === 'time';
-
-    // Check which splits this class has
-    $classSplits = [];
-    if ($hasSplitTimes && !$isDH) {
-        for ($ss = 1; $ss <= 15; $ss++) {
-            foreach ($classData['results'] as $r) {
-                if (!empty($r['ss' . $ss])) {
-                    $classSplits[] = $ss;
-                    break;
-                }
-            }
-        }
-    }
 ?>
 <section class="card mb-lg class-section" id="class-<?= $classKey ?>" data-class="<?= $classKey ?>">
     <div class="card-header">
@@ -564,9 +553,11 @@ if (!$event) {
                     <?php if ($isTimeRanked): ?>
                     <th class="col-gap table-col-hide-mobile">+Tid</th>
                     <?php endif; ?>
-                    <?php foreach ($classSplits as $ss): ?>
+                    <?php if ($hasSplitTimes && !$isDH): ?>
+                    <?php foreach ($eventSplits as $ss): ?>
                     <th class="col-split split-time-col table-col-hide-mobile"><?= $stageNames[$ss] ?? 'SS' . $ss ?></th>
                     <?php endforeach; ?>
+                    <?php endif; ?>
                     <?php endif; ?>
                 </tr>
             </thead>
@@ -629,7 +620,8 @@ if (!$event) {
                     <?php if ($isTimeRanked): ?>
                     <td class="col-gap table-col-hide-mobile"><?= $result['time_behind'] ?? '-' ?></td>
                     <?php endif; ?>
-                    <?php foreach ($classSplits as $ss):
+                    <?php if ($hasSplitTimes && !$isDH): ?>
+                    <?php foreach ($eventSplits as $ss):
                         $splitTime = $result['ss' . $ss] ?? '';
                         $splitClass = '';
                         if (!empty($splitTime) && isset($classData['split_stats'][$ss])) {
@@ -646,6 +638,7 @@ if (!$event) {
                         <?= !empty($splitTime) ? formatDisplayTime($splitTime) : '-' ?>
                     </td>
                     <?php endforeach; ?>
+                    <?php endif; ?>
                     <?php endif; ?>
                 </tr>
                 <?php endforeach; ?>
@@ -1313,6 +1306,12 @@ function toggleSplitColors(enabled) {
     color: var(--color-text-secondary);
 }
 
+/* Results table - fixed layout for consistent columns */
+.results-table {
+    table-layout: fixed;
+    width: 100%;
+}
+
 /* Results table columns */
 .col-place {
     width: 50px;
@@ -1349,18 +1348,28 @@ td.col-place {
     margin: 0 auto;
 }
 
-.col-rider { min-width: 150px; }
-.col-club { min-width: 100px; }
+.col-rider {
+    width: 180px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.col-club {
+    width: 160px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
 
 .col-time {
-    min-width: 80px;
+    width: 75px;
     text-align: right;
     font-family: var(--font-mono);
     white-space: nowrap;
 }
 
 .col-gap {
-    min-width: 70px;
+    width: 70px;
     text-align: right;
     font-family: var(--font-mono);
     font-size: var(--text-sm);
@@ -1368,10 +1377,12 @@ td.col-place {
 }
 
 .col-split {
-    min-width: 65px;
+    width: 65px;
     text-align: right;
     font-family: var(--font-mono);
     font-size: var(--text-xs);
+    white-space: nowrap;
+    overflow: hidden;
 }
 
 .result-row {
