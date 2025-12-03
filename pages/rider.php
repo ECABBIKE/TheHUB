@@ -30,7 +30,7 @@ try {
  $stmt = $db->prepare("
  SELECT
   r.id, r.firstname, r.lastname, r.birth_year, r.gender,
-  r.license_number, r.license_type, r.license_valid_until, r.gravity_id, r.city, r.active,
+  r.license_number, r.license_type, r.license_year, r.license_valid_until, r.gravity_id, r.city, r.active,
   c.id as club_id, c.name as club_name, c.city as club_city
  FROM riders r
  LEFT JOIN clubs c ON r.club_id = c.id
@@ -359,8 +359,25 @@ $fullName = htmlspecialchars($rider['firstname'] . ' ' . $rider['lastname']);
 // Check license status
 $hasLicense = !empty($rider['license_type']);
 $licenseActive = false;
-if ($hasLicense && !empty($rider['license_valid_until']) && $rider['license_valid_until'] !== '0000-00-00') {
-    $licenseActive = strtotime($rider['license_valid_until']) >= strtotime('today');
+if ($hasLicense) {
+    // Check license_year first (e.g., 2025 = active if current year <= 2025)
+    if (!empty($rider['license_year']) && $rider['license_year'] >= date('Y')) {
+        $licenseActive = true;
+    }
+    // Fallback to license_valid_until
+    elseif (!empty($rider['license_valid_until']) && $rider['license_valid_until'] !== '0000-00-00') {
+        $licenseActive = strtotime($rider['license_valid_until']) >= strtotime('today');
+    }
+}
+
+// Extract Gravity ID number (e.g., "GID-034" -> "34")
+$gravityIdNumber = null;
+if (!empty($rider['gravity_id'])) {
+    if (preg_match('/(\d+)$/', $rider['gravity_id'], $matches)) {
+        $gravityIdNumber = intval($matches[1]);
+    } else {
+        $gravityIdNumber = $rider['gravity_id'];
+    }
 }
 ?>
 
@@ -405,7 +422,7 @@ if ($hasLicense && !empty($rider['license_valid_until']) && $rider['license_vali
   </span>
  <?php endif; ?>
  <?php if (!empty($rider['gravity_id'])): ?>
-  <span class="gravity-badge"><i data-lucide="zap"></i> Gravity ID: <?= intval($rider['gravity_id']) ?></span>
+  <span class="gravity-badge"><i data-lucide="zap"></i> Gravity ID: <?= $gravityIdNumber ?></span>
  <?php endif; ?>
  </div>
  </div>
