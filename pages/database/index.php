@@ -293,7 +293,15 @@ if (empty($clubRankings)) {
             <?php foreach ($topRiders as $i => $rider): ?>
             <a href="/rider/<?= $rider['id'] ?>" class="ranking-item">
                 <span class="ranking-pos <?= $i < 3 ? 'top-' . ($i + 1) : '' ?>">
-                    <?php if ($i === 0): ?>🥇<?php elseif ($i === 1): ?>🥈<?php elseif ($i === 2): ?>🥉<?php else: ?><?= $i + 1 ?><?php endif; ?>
+                    <?php if ($i === 0): ?>
+                        <img src="/assets/icons/medal-1st.svg" alt="1:a" class="medal-icon">
+                    <?php elseif ($i === 1): ?>
+                        <img src="/assets/icons/medal-2nd.svg" alt="2:a" class="medal-icon">
+                    <?php elseif ($i === 2): ?>
+                        <img src="/assets/icons/medal-3rd.svg" alt="3:e" class="medal-icon">
+                    <?php else: ?>
+                        <?= $i + 1 ?>
+                    <?php endif; ?>
                 </span>
                 <div class="ranking-info">
                     <span class="ranking-name"><?= htmlspecialchars($rider['firstname'] . ' ' . $rider['lastname']) ?></span>
@@ -318,7 +326,15 @@ if (empty($clubRankings)) {
             <?php foreach ($clubRankings as $i => $club): ?>
             <a href="/club/<?= $club['id'] ?>" class="ranking-item">
                 <span class="ranking-pos <?= $i < 3 ? 'top-' . ($i + 1) : '' ?>">
-                    <?php if ($i === 0): ?>🥇<?php elseif ($i === 1): ?>🥈<?php elseif ($i === 2): ?>🥉<?php else: ?><?= $i + 1 ?><?php endif; ?>
+                    <?php if ($i === 0): ?>
+                        <img src="/assets/icons/medal-1st.svg" alt="1:a" class="medal-icon">
+                    <?php elseif ($i === 1): ?>
+                        <img src="/assets/icons/medal-2nd.svg" alt="2:a" class="medal-icon">
+                    <?php elseif ($i === 2): ?>
+                        <img src="/assets/icons/medal-3rd.svg" alt="3:e" class="medal-icon">
+                    <?php else: ?>
+                        <?= $i + 1 ?>
+                    <?php endif; ?>
                 </span>
                 <div class="ranking-info">
                     <span class="ranking-name"><?= htmlspecialchars($club['name']) ?></span>
@@ -586,9 +602,18 @@ if (empty($clubRankings)) {
     color: var(--color-text-muted);
 }
 
-.ranking-pos.top-1 { font-size: 1.2em; }
-.ranking-pos.top-2 { font-size: 1.1em; }
-.ranking-pos.top-3 { font-size: 1em; }
+.ranking-pos.top-1,
+.ranking-pos.top-2,
+.ranking-pos.top-3 {
+    font-size: inherit;
+}
+
+.medal-icon {
+    width: 24px;
+    height: 24px;
+    vertical-align: middle;
+    display: inline-block;
+}
 
 .ranking-info {
     flex: 1;

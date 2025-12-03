@@ -156,8 +156,12 @@ $recentResults = $resultStmt->fetchAll(PDO::FETCH_ASSOC);
             <?php foreach ($recentResults as $result): ?>
                 <a href="/results/<?= $result['event_id'] ?>" class="result-item">
                     <div class="result-position">
-                        <?php if ($result['position'] <= 3): ?>
-                            <?= ['🥇', '🥈', '🥉'][$result['position'] - 1] ?>
+                        <?php if ($result['position'] == 1): ?>
+                            <img src="/assets/icons/medal-1st.svg" alt="1:a" class="medal-icon">
+                        <?php elseif ($result['position'] == 2): ?>
+                            <img src="/assets/icons/medal-2nd.svg" alt="2:a" class="medal-icon">
+                        <?php elseif ($result['position'] == 3): ?>
+                            <img src="/assets/icons/medal-3rd.svg" alt="3:e" class="medal-icon">
                         <?php else: ?>
                             #<?= $result['position'] ?>
                         <?php endif; ?>
@@ -325,6 +329,12 @@ $recentResults = $resultStmt->fetchAll(PDO::FETCH_ASSOC);
     font-weight: var(--weight-bold);
     min-width: 48px;
     text-align: center;
+}
+.medal-icon {
+    width: 24px;
+    height: 24px;
+    vertical-align: middle;
+    display: inline-block;
 }
 .result-date {
     font-size: var(--text-sm);

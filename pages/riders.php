@@ -208,11 +208,11 @@ try {
           <td class="text-center">
             <?php if ($rider['best_position']): ?>
               <?php if ($rider['best_position'] == 1): ?>
-                <span class="position-badge position--1">🥇</span>
+                <img src="/assets/icons/medal-1st.svg" alt="1:a" class="medal-icon">
               <?php elseif ($rider['best_position'] == 2): ?>
-                <span class="position-badge position--2">🥈</span>
+                <img src="/assets/icons/medal-2nd.svg" alt="2:a" class="medal-icon">
               <?php elseif ($rider['best_position'] == 3): ?>
-                <span class="position-badge position--3">🥉</span>
+                <img src="/assets/icons/medal-3rd.svg" alt="3:e" class="medal-icon">
               <?php else: ?>
                 <span class="position-badge">#<?= $rider['best_position'] ?></span>
               <?php endif; ?>
@@ -239,7 +239,13 @@ try {
     <a href="/rider/<?= $rider['id'] ?>" class="result-item">
       <div class="result-place">
         <?php if ($rider['best_position'] && $rider['best_position'] <= 3): ?>
-          <?= $rider['best_position'] == 1 ? '🥇' : ($rider['best_position'] == 2 ? '🥈' : '🥉') ?>
+          <?php if ($rider['best_position'] == 1): ?>
+            <img src="/assets/icons/medal-1st.svg" alt="1:a" class="medal-icon">
+          <?php elseif ($rider['best_position'] == 2): ?>
+            <img src="/assets/icons/medal-2nd.svg" alt="2:a" class="medal-icon">
+          <?php else: ?>
+            <img src="/assets/icons/medal-3rd.svg" alt="3:e" class="medal-icon">
+          <?php endif; ?>
         <?php else: ?>
           <?= $rider['total_races'] ?: 0 ?>
         <?php endif; ?>
@@ -343,6 +349,12 @@ try {
 }
 .position-badge {
   font-weight: var(--weight-semibold);
+}
+.medal-icon {
+  width: 24px;
+  height: 24px;
+  vertical-align: middle;
+  display: inline-block;
 }
 .points-value {
   font-weight: var(--weight-semibold);

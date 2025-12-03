@@ -178,11 +178,11 @@ $disciplineNames = [
         <tr onclick="window.location='/rider/<?= $rider['rider_id'] ?>'" style="cursor:pointer">
           <td class="text-center">
             <?php if ($rider['ranking_position'] == 1): ?>
-              <span class="medal">🥇</span>
+              <img src="/assets/icons/medal-1st.svg" alt="1:a" class="medal-icon">
             <?php elseif ($rider['ranking_position'] == 2): ?>
-              <span class="medal">🥈</span>
+              <img src="/assets/icons/medal-2nd.svg" alt="2:a" class="medal-icon">
             <?php elseif ($rider['ranking_position'] == 3): ?>
-              <span class="medal">🥉</span>
+              <img src="/assets/icons/medal-3rd.svg" alt="3:e" class="medal-icon">
             <?php else: ?>
               <span class="rank-number"><?= $rider['ranking_position'] ?></span>
             <?php endif; ?>
@@ -212,10 +212,14 @@ $disciplineNames = [
     <?php foreach ($ranking['riders'] as $rider): ?>
     <a href="/rider/<?= $rider['rider_id'] ?>" class="result-item">
       <div class="result-place <?= $rider['ranking_position'] <= 3 ? 'top-3' : '' ?>">
-        <?php if ($rider['ranking_position'] == 1): ?>🥇
-        <?php elseif ($rider['ranking_position'] == 2): ?>🥈
-        <?php elseif ($rider['ranking_position'] == 3): ?>🥉
-        <?php else: ?><?= $rider['ranking_position'] ?>
+        <?php if ($rider['ranking_position'] == 1): ?>
+          <img src="/assets/icons/medal-1st.svg" alt="1:a" class="medal-icon">
+        <?php elseif ($rider['ranking_position'] == 2): ?>
+          <img src="/assets/icons/medal-2nd.svg" alt="2:a" class="medal-icon">
+        <?php elseif ($rider['ranking_position'] == 3): ?>
+          <img src="/assets/icons/medal-3rd.svg" alt="3:e" class="medal-icon">
+        <?php else: ?>
+          <?= $rider['ranking_position'] ?>
         <?php endif; ?>
       </div>
       <div class="result-info">
@@ -254,11 +258,11 @@ $disciplineNames = [
         <tr onclick="window.location='/club/<?= $club['club_id'] ?>'" style="cursor:pointer">
           <td class="text-center">
             <?php if ($club['ranking_position'] == 1): ?>
-              <span class="medal">🥇</span>
+              <img src="/assets/icons/medal-1st.svg" alt="1:a" class="medal-icon">
             <?php elseif ($club['ranking_position'] == 2): ?>
-              <span class="medal">🥈</span>
+              <img src="/assets/icons/medal-2nd.svg" alt="2:a" class="medal-icon">
             <?php elseif ($club['ranking_position'] == 3): ?>
-              <span class="medal">🥉</span>
+              <img src="/assets/icons/medal-3rd.svg" alt="3:e" class="medal-icon">
             <?php else: ?>
               <span class="rank-number"><?= $club['ranking_position'] ?></span>
             <?php endif; ?>
@@ -285,10 +289,14 @@ $disciplineNames = [
     <?php foreach ($ranking['clubs'] as $club): ?>
     <a href="/club/<?= $club['club_id'] ?>" class="result-item">
       <div class="result-place <?= $club['ranking_position'] <= 3 ? 'top-3' : '' ?>">
-        <?php if ($club['ranking_position'] == 1): ?>🥇
-        <?php elseif ($club['ranking_position'] == 2): ?>🥈
-        <?php elseif ($club['ranking_position'] == 3): ?>🥉
-        <?php else: ?><?= $club['ranking_position'] ?>
+        <?php if ($club['ranking_position'] == 1): ?>
+          <img src="/assets/icons/medal-1st.svg" alt="1:a" class="medal-icon">
+        <?php elseif ($club['ranking_position'] == 2): ?>
+          <img src="/assets/icons/medal-2nd.svg" alt="2:a" class="medal-icon">
+        <?php elseif ($club['ranking_position'] == 3): ?>
+          <img src="/assets/icons/medal-3rd.svg" alt="3:e" class="medal-icon">
+        <?php else: ?>
+          <?= $club['ranking_position'] ?>
         <?php endif; ?>
       </div>
       <div class="result-info">
@@ -436,8 +444,11 @@ $disciplineNames = [
   margin-top: var(--space-2xs);
 }
 
-.medal {
-  font-size: var(--text-lg);
+.medal-icon {
+  width: 24px;
+  height: 24px;
+  vertical-align: middle;
+  display: inline-block;
 }
 .rank-number {
   font-weight: var(--weight-semibold);

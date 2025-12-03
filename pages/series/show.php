@@ -521,8 +521,12 @@ unset($club);
                                 <?php foreach ($classData['riders'] as $pos => $row): ?>
                                 <tr>
                                     <td class="col-pos">
-                                        <?php if ($pos < 3): ?>
-                                            <span class="medal"><?= ['🥇', '🥈', '🥉'][$pos] ?></span>
+                                        <?php if ($pos == 0): ?>
+                                            <img src="/assets/icons/medal-1st.svg" alt="1:a" class="medal-icon">
+                                        <?php elseif ($pos == 1): ?>
+                                            <img src="/assets/icons/medal-2nd.svg" alt="2:a" class="medal-icon">
+                                        <?php elseif ($pos == 2): ?>
+                                            <img src="/assets/icons/medal-3rd.svg" alt="3:e" class="medal-icon">
                                         <?php else: ?>
                                             <?= $pos + 1 ?>
                                         <?php endif; ?>
@@ -587,8 +591,12 @@ unset($club);
                             <?php $clubPos = 0; foreach ($clubStandings as $club): $clubPos++; ?>
                             <tr class="club-row" data-club="<?= $club['club_id'] ?>">
                                 <td class="col-pos">
-                                    <?php if ($clubPos <= 3): ?>
-                                        <span class="medal"><?= ['🥇', '🥈', '🥉'][$clubPos - 1] ?></span>
+                                    <?php if ($clubPos == 1): ?>
+                                        <img src="/assets/icons/medal-1st.svg" alt="1:a" class="medal-icon">
+                                    <?php elseif ($clubPos == 2): ?>
+                                        <img src="/assets/icons/medal-2nd.svg" alt="2:a" class="medal-icon">
+                                    <?php elseif ($clubPos == 3): ?>
+                                        <img src="/assets/icons/medal-3rd.svg" alt="3:e" class="medal-icon">
                                     <?php else: ?>
                                         <?= $clubPos ?>
                                     <?php endif; ?>
@@ -872,22 +880,52 @@ function toggleClubRiders(btn, e) {
 .table tbody tr:hover {
     background: var(--color-bg-hover);
 }
-.col-pos { width: 40px; text-align: center; }
-.col-name { white-space: nowrap; }
-.col-club, .col-riders { color: var(--color-text-secondary); }
-.col-club-name { min-width: 150px; }
+/* Standardized column widths */
+.standings-table {
+    table-layout: fixed;
+    width: 100%;
+    font-size: var(--text-sm);
+}
+.col-pos {
+    width: 48px;
+    text-align: center;
+}
+.col-name {
+    width: auto;
+    min-width: 140px;
+    white-space: nowrap;
+}
+.col-club {
+    width: auto;
+    min-width: 100px;
+    color: var(--color-text-secondary);
+}
+.col-riders {
+    width: 60px;
+    text-align: center;
+    color: var(--color-text-secondary);
+}
+.col-club-name {
+    width: auto;
+    min-width: 150px;
+}
 .col-event {
-    width: 40px;
+    width: 44px;
     text-align: center;
     font-size: var(--text-sm);
 }
 .col-total {
-    width: 60px;
+    width: 64px;
     text-align: center;
     background: var(--color-bg-sunken);
 }
-.standings-table {
-    font-size: var(--text-sm);
+
+/* Medal icons */
+.medal-icon {
+    width: 24px;
+    height: 24px;
+    vertical-align: middle;
+    display: inline-block;
 }
 .standings-table th.col-event {
     font-size: var(--text-xs);
@@ -900,7 +938,6 @@ function toggleClubRiders(btn, e) {
 .no-points {
     color: var(--color-text-muted);
 }
-.medal { font-size: 1em; }
 
 /* Club-specific */
 .club-info {
