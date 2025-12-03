@@ -28,7 +28,7 @@
 
 /* Landscape: Show all */
 @media(orientation:landscape){
-  .col-split,.col-diff{display:table-cell!important}
+  .col-split,.col-diff,.table-col-hide-portrait{display:table-cell!important}
 }
 
 /* Variants */
