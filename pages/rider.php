@@ -30,7 +30,7 @@ try {
  $stmt = $db->prepare("
  SELECT
   r.id, r.firstname, r.lastname, r.birth_year, r.gender,
-  r.license_number, r.license_type, r.gravity_id, r.city, r.active,
+  r.license_number, r.license_type, r.license_valid_until, r.gravity_id, r.city, r.active,
   c.id as club_id, c.name as club_name, c.city as club_city
  FROM riders r
  LEFT JOIN clubs c ON r.club_id = c.id
@@ -355,6 +355,13 @@ if (!$rider) {
 }
 
 $fullName = htmlspecialchars($rider['firstname'] . ' ' . $rider['lastname']);
+
+// Check license status
+$hasLicense = !empty($rider['license_type']);
+$licenseActive = false;
+if ($hasLicense && !empty($rider['license_valid_until']) && $rider['license_valid_until'] !== '0000-00-00') {
+    $licenseActive = strtotime($rider['license_valid_until']) >= strtotime('today');
+}
 ?>
 
 <?php if (isset($error)): ?>
@@ -367,38 +374,41 @@ $fullName = htmlspecialchars($rider['firstname'] . ' ' . $rider['lastname']);
 <!-- Profile Card with Ranking -->
 <section class="profile-card mb-lg">
  <div class="profile-stripe"></div>
- <div class="profile-content">
- <div class="profile-photo">
- <div class="photo-placeholder">👤</div>
- </div>
- <div class="profile-info">
- <h1 class="profile-name"><?= $fullName ?></h1>
- <?php if ($rider['club_name']): ?>
- <a href="/club/<?= $rider['club_id'] ?>" class="profile-club"><?= htmlspecialchars($rider['club_name']) ?></a>
- <?php endif; ?>
- <div class="profile-details">
- <?php if ($age): ?>
-  <span class="profile-detail"><i data-lucide="calendar"></i> <?= $age ?> år</span>
- <?php endif; ?>
- <?php if ($rider['license_type']): ?>
-  <span class="profile-detail"><i data-lucide="award"></i> <?= htmlspecialchars($rider['license_type']) ?></span>
- <?php endif; ?>
- <?php if ($rider['license_number']): ?>
-  <span class="profile-detail"><i data-lucide="hash"></i> UCI <?= htmlspecialchars($rider['license_number']) ?></span>
- <?php endif; ?>
- </div>
- <?php if (!empty($rider['gravity_id'])): ?>
- <div class="profile-badges">
-  <span class="gravity-badge"><i data-lucide="zap"></i> Gravity ID</span>
- </div>
- <?php endif; ?>
- </div>
  <?php if ($rankingPosition): ?>
  <div class="profile-ranking">
  <div class="ranking-position">#<?= $rankingPosition ?></div>
  <div class="ranking-label">Ranking</div>
  </div>
  <?php endif; ?>
+ <div class="profile-content">
+ <div class="profile-photo">
+ <div class="photo-placeholder">👤</div>
+ </div>
+ <div class="profile-info">
+ <div class="profile-name-row">
+ <h1 class="profile-name"><?= $fullName ?></h1>
+ <?php if ($age): ?><span class="profile-age"><?= $age ?> år</span><?php endif; ?>
+ </div>
+ <?php if ($rider['club_name']): ?>
+ <a href="/club/<?= $rider['club_id'] ?>" class="profile-club"><?= htmlspecialchars($rider['club_name']) ?></a>
+ <?php endif; ?>
+ <?php if ($rider['license_number']): ?>
+ <div class="profile-details">
+  <span class="profile-detail"><i data-lucide="hash"></i> UCI <?= htmlspecialchars($rider['license_number']) ?></span>
+ </div>
+ <?php endif; ?>
+ <div class="profile-badges">
+ <?php if ($hasLicense): ?>
+  <span class="license-badge <?= $licenseActive ? 'license-active' : 'license-inactive' ?>">
+  <i data-lucide="<?= $licenseActive ? 'check-circle' : 'x-circle' ?>"></i>
+  <?= htmlspecialchars($rider['license_type']) ?>
+  </span>
+ <?php endif; ?>
+ <?php if (!empty($rider['gravity_id'])): ?>
+  <span class="gravity-badge"><i data-lucide="zap"></i> Gravity ID: <?= intval($rider['gravity_id']) ?></span>
+ <?php endif; ?>
+ </div>
+ </div>
  </div>
 </section>
 
@@ -873,6 +883,7 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
 
 /* Profile Card */
 .profile-card {
+ position: relative;
  background: var(--color-bg-surface);
  border-radius: var(--radius-lg);
  overflow: hidden;
@@ -951,41 +962,67 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
  gap: var(--space-xs);
  margin-top: var(--space-xs);
 }
-.gravity-badge {
+.profile-name-row {
+ display: flex;
+ align-items: baseline;
+ gap: var(--space-sm);
+ flex-wrap: wrap;
+}
+.profile-age {
+ font-size: var(--text-sm);
+ color: var(--color-text-muted);
+ font-weight: var(--weight-normal);
+}
+.gravity-badge,
+.license-badge {
  display: inline-flex;
  align-items: center;
  gap: var(--space-2xs);
  padding: var(--space-2xs) var(--space-sm);
- background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
- color: #1a1a1a;
  font-size: var(--text-xs);
  font-weight: var(--weight-semibold);
  border-radius: var(--radius-sm);
 }
-.gravity-badge i {
+.gravity-badge {
+ background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+ color: #1a1a1a;
+}
+.license-badge.license-active {
+ background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+ color: #fff;
+}
+.license-badge.license-inactive {
+ background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%);
+ color: #fff;
+}
+.gravity-badge i,
+.license-badge i {
  width: 12px;
  height: 12px;
 }
 
 /* Profile Ranking Badge */
 .profile-ranking {
- flex-shrink: 0;
+ position: absolute;
+ top: var(--space-md);
+ right: var(--space-md);
  text-align: center;
- padding: var(--space-sm) var(--space-md);
+ padding: var(--space-xs) var(--space-sm);
  background: linear-gradient(135deg, #2ECC71 0%, #27AE60 100%);
  border-radius: var(--radius-md);
  color: #fff;
+ z-index: 1;
 }
 .ranking-position {
- font-size: var(--text-2xl);
+ font-size: var(--text-lg);
  font-weight: var(--weight-bold);
  line-height: 1;
 }
 .ranking-label {
- font-size: var(--text-xs);
+ font-size: 9px;
  opacity: 0.85;
  text-transform: uppercase;
- margin-top: var(--space-2xs);
+ margin-top: 2px;
 }
 
 /* Event Breakdown */
@@ -1172,7 +1209,7 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
 @media (max-width: 599px) {
  .profile-content {
  padding: var(--space-md);
- flex-wrap: wrap;
+ padding-right: var(--space-xl);
  }
  .profile-photo {
  width: 64px;
@@ -1182,7 +1219,10 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
  font-size: 32px;
  }
  .profile-name {
- font-size: var(--text-lg);
+ font-size: var(--text-md);
+ }
+ .profile-age {
+ font-size: var(--text-xs);
  }
  .profile-details {
  flex-direction: column;
@@ -1192,8 +1232,18 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
  display: none;
  }
  .profile-ranking {
- margin-top: var(--space-sm);
- width: 100%;
+ top: var(--space-sm);
+ right: var(--space-sm);
+ padding: var(--space-2xs) var(--space-xs);
+ }
+ .ranking-position {
+ font-size: var(--text-sm);
+ }
+ .ranking-label {
+ font-size: 8px;
+ }
+ .profile-badges {
+ flex-wrap: wrap;
  }
  .stats-grid-4 {
  grid-template-columns: repeat(2, 1fr);
