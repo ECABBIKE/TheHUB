@@ -498,11 +498,11 @@ if (!empty($rider['gravity_id'])) {
   <?php if ($result['status'] !== 'finished'): ?>
   <span class="status-mini"><?= strtoupper(substr($result['status'], 0, 3)) ?></span>
   <?php elseif ($result['class_position'] == 1): ?>
-  🥇
+  <img src="/assets/icons/medal-1st.svg" alt="1:a" class="medal-icon">
   <?php elseif ($result['class_position'] == 2): ?>
-  🥈
+  <img src="/assets/icons/medal-2nd.svg" alt="2:a" class="medal-icon">
   <?php elseif ($result['class_position'] == 3): ?>
-  🥉
+  <img src="/assets/icons/medal-3rd.svg" alt="3:e" class="medal-icon">
   <?php else: ?>
   <?= $result['class_position'] ?? '-' ?>
   <?php endif; ?>
@@ -536,11 +536,11 @@ if (!empty($rider['gravity_id'])) {
  <?php if ($result['status'] !== 'finished'): ?>
   <span class="status-mini"><?= strtoupper(substr($result['status'], 0, 3)) ?></span>
  <?php elseif ($result['class_position'] == 1): ?>
-  🥇
+  <img src="/assets/icons/medal-1st.svg" alt="1:a" class="medal-icon-mobile">
  <?php elseif ($result['class_position'] == 2): ?>
-  🥈
+  <img src="/assets/icons/medal-2nd.svg" alt="2:a" class="medal-icon-mobile">
  <?php elseif ($result['class_position'] == 3): ?>
-  🥉
+  <img src="/assets/icons/medal-3rd.svg" alt="3:e" class="medal-icon-mobile">
  <?php else: ?>
   <?= $result['class_position'] ?? '-' ?>
  <?php endif; ?>
@@ -1170,6 +1170,19 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
 .col-place--1 { color: #FFD700; }
 .col-place--2 { color: #C0C0C0; }
 .col-place--3 { color: #CD7F32; }
+
+.medal-icon {
+ width: 28px;
+ height: 28px;
+ display: block;
+ margin: 0 auto;
+}
+.medal-icon-mobile {
+ width: 32px;
+ height: 32px;
+ display: block;
+ margin: 0 auto;
+}
 
 .col-time {
  text-align: right;

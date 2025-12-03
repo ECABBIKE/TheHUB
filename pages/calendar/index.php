@@ -137,28 +137,6 @@ function applyFilters() {
 </script>
 
 <style>
-.page-header {
-    margin-bottom: var(--space-xl);
-}
-.page-title {
-    display: flex;
-    align-items: center;
-    gap: var(--space-sm);
-    font-size: var(--text-2xl);
-    font-weight: var(--weight-bold);
-    margin: 0 0 var(--space-xs) 0;
-    color: var(--color-text-primary);
-}
-.page-icon {
-    width: 32px;
-    height: 32px;
-    color: var(--color-accent);
-}
-.page-subtitle {
-    font-size: var(--text-md);
-    color: var(--color-text-secondary);
-    margin: 0;
-}
 .calendar-month {
     margin-bottom: var(--space-xl);
 }
