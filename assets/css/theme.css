@@ -75,8 +75,43 @@ html[data-theme="light"]{
 body{
   background-color:var(--color-bg-page);
   color:var(--color-text-primary);
+  font-family:var(--font-body);
   transition:background-color var(--transition-base),color var(--transition-base);
 }
+
+/* Typography - Headings */
+h1, .h1 {
+  font-family: var(--font-heading);
+  font-weight: var(--weight-bold);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+h2, .h2, h3, .h3 {
+  font-family: var(--font-heading-secondary);
+  font-weight: var(--weight-semibold);
+}
+
+h4, .h4, h5, .h5, h6, .h6 {
+  font-family: var(--font-body);
+  font-weight: var(--weight-semibold);
+}
+
+/* Typography - Links */
+a {
+  font-family: var(--font-link);
+}
+
+/* Typography - Body text inherits from body */
+p, span, div, li, td, th, label, input, select, textarea, button {
+  font-family: inherit;
+}
+
+/* Utility classes for fonts */
+.font-heading { font-family: var(--font-heading); }
+.font-heading-secondary { font-family: var(--font-heading-secondary); }
+.font-body { font-family: var(--font-body); }
+.font-link { font-family: var(--font-link); }
 
 ::selection{background-color:var(--color-accent);color:var(--color-text-inverse)}
 
