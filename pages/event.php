@@ -497,19 +497,6 @@ if (!$event) {
 </section>
 <?php else: ?>
 
-<?php if ($hasSplitTimes && !$isDH): ?>
-<div class="split-toggles mb-md">
-    <label class="toggle-label">
-        <input type="checkbox" id="globalSplitToggle" onchange="toggleAllSplitTimes(this.checked)">
-        <span>Visa sträcktider</span>
-    </label>
-    <label class="toggle-label">
-        <input type="checkbox" id="colorToggle" checked onchange="toggleSplitColors(this.checked)">
-        <span>Färgkodning</span>
-    </label>
-</div>
-<?php endif; ?>
-
 <!-- Filters -->
 <div class="filter-row mb-lg">
     <div class="filter-field">
@@ -992,26 +979,6 @@ function filterResults() {
     });
 }
 
-function toggleAllSplitTimes(show) {
-    document.querySelectorAll('.split-time-col').forEach(col => {
-        col.style.display = show ? '' : 'none';
-    });
-}
-
-function toggleSplitColors(enabled) {
-    document.querySelectorAll('.split-time-col').forEach(col => {
-        if (enabled) {
-            col.classList.remove('no-color');
-        } else {
-            col.classList.add('no-color');
-        }
-    });
-}
-
-// Initialize: hide split times by default
-document.addEventListener('DOMContentLoaded', function() {
-    toggleAllSplitTimes(false);
-});
 </script>
 
 <style>
@@ -1233,22 +1200,6 @@ document.addEventListener('DOMContentLoaded', function() {
 .event-tab.active .tab-badge--secondary {
     background: rgba(255,255,255,0.2);
     color: white;
-}
-
-/* Split time toggles */
-.split-toggles {
-    display: flex;
-    justify-content: flex-end;
-    gap: var(--space-md);
-}
-
-.toggle-label {
-    display: flex;
-    align-items: center;
-    gap: var(--space-xs);
-    font-size: var(--text-sm);
-    color: var(--color-text-secondary);
-    cursor: pointer;
 }
 
 /* Filter Row */
@@ -1634,7 +1585,8 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 }
 
-@media (max-width: 599px) {
+/* Mobile portrait: hide table, show cards, hide splits */
+@media (max-width: 599px) and (orientation: portrait) {
     .table-wrapper {
         display: none;
     }
@@ -1643,12 +1595,38 @@ document.addEventListener('DOMContentLoaded', function() {
         display: block;
     }
 
-    .split-toggles {
+    .event-title {
+        font-size: var(--text-lg);
+    }
+}
+
+/* Mobile landscape: show table with splits */
+@media (max-width: 900px) and (orientation: landscape) {
+    .result-list {
         display: none;
+    }
+
+    .table-wrapper {
+        display: block;
+    }
+
+    .table-col-hide-mobile {
+        display: table-cell;
+    }
+
+    .split-time-col {
+        display: table-cell;
     }
 
     .event-title {
         font-size: var(--text-lg);
+    }
+}
+
+/* Small screens in portrait: hide splits in table too */
+@media (max-width: 900px) and (orientation: portrait) {
+    .split-time-col {
+        display: none;
     }
 }
 </style>
