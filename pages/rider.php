@@ -30,7 +30,7 @@ try {
  $stmt = $db->prepare("
  SELECT
   r.id, r.firstname, r.lastname, r.birth_year, r.gender,
-  r.license_number, r.license_type, r.city, r.active,
+  r.license_number, r.license_type, r.gravity_id, r.city, r.active,
   c.id as club_id, c.name as club_name, c.city as club_city
  FROM riders r
  LEFT JOIN clubs c ON r.club_id = c.id
@@ -355,11 +355,6 @@ if (!$rider) {
 }
 
 $fullName = htmlspecialchars($rider['firstname'] . ' ' . $rider['lastname']);
-$genderText = match($rider['gender']) {
- 'M' => 'Man',
- 'F', 'K' => 'Kvinna',
- default => null
-};
 ?>
 
 <?php if (isset($error)): ?>
@@ -383,15 +378,20 @@ $genderText = match($rider['gender']) {
  <?php endif; ?>
  <div class="profile-details">
  <?php if ($age): ?>
-  <span class="profile-detail"><?= $age ?> år</span>
+  <span class="profile-detail"><i data-lucide="calendar"></i> <?= $age ?> år</span>
  <?php endif; ?>
- <?php if ($genderText): ?>
-  <span class="profile-detail"><?= $genderText ?></span>
+ <?php if ($rider['license_type']): ?>
+  <span class="profile-detail"><i data-lucide="award"></i> <?= htmlspecialchars($rider['license_type']) ?></span>
  <?php endif; ?>
- <?php if ($rider['birth_year']): ?>
-  <span class="profile-detail">f. <?= $rider['birth_year'] ?></span>
+ <?php if ($rider['license_number']): ?>
+  <span class="profile-detail"><i data-lucide="hash"></i> UCI <?= htmlspecialchars($rider['license_number']) ?></span>
  <?php endif; ?>
  </div>
+ <?php if (!empty($rider['gravity_id'])): ?>
+ <div class="profile-badges">
+  <span class="gravity-badge"><i data-lucide="zap"></i> Gravity ID</span>
+ </div>
+ <?php endif; ?>
  </div>
  <?php if ($rankingPosition): ?>
  <div class="profile-ranking">
@@ -940,6 +940,32 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
  margin-left: var(--space-sm);
  color: var(--color-text-muted);
 }
+.profile-detail i {
+ width: 14px;
+ height: 14px;
+ color: var(--color-accent);
+ flex-shrink: 0;
+}
+.profile-badges {
+ display: flex;
+ gap: var(--space-xs);
+ margin-top: var(--space-xs);
+}
+.gravity-badge {
+ display: inline-flex;
+ align-items: center;
+ gap: var(--space-2xs);
+ padding: var(--space-2xs) var(--space-sm);
+ background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+ color: #1a1a1a;
+ font-size: var(--text-xs);
+ font-weight: var(--weight-semibold);
+ border-radius: var(--radius-sm);
+}
+.gravity-badge i {
+ width: 12px;
+ height: 12px;
+}
 
 /* Profile Ranking Badge */
 .profile-ranking {
@@ -1146,6 +1172,7 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
 @media (max-width: 599px) {
  .profile-content {
  padding: var(--space-md);
+ flex-wrap: wrap;
  }
  .profile-photo {
  width: 64px;
@@ -1156,6 +1183,17 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
  }
  .profile-name {
  font-size: var(--text-lg);
+ }
+ .profile-details {
+ flex-direction: column;
+ gap: var(--space-xs);
+ }
+ .profile-detail:not(:last-child)::after {
+ display: none;
+ }
+ .profile-ranking {
+ margin-top: var(--space-sm);
+ width: 100%;
  }
  .stats-grid-4 {
  grid-template-columns: repeat(2, 1fr);
