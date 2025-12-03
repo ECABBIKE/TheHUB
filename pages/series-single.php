@@ -1119,6 +1119,53 @@ function toggleClubRiders(btn, event) {
   color: var(--color-text-muted);
 }
 
+/* Horizontal scroll for tables with many columns */
+.standings-card .table-wrapper {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.standings-table {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+/* Sticky columns for place and rider name */
+.standings-table .col-place {
+  position: sticky;
+  left: 0;
+  background: var(--color-bg-card);
+  z-index: 2;
+}
+
+.standings-table .col-rider,
+.standings-table .col-club-name {
+  position: sticky;
+  left: 40px;
+  background: var(--color-bg-card);
+  z-index: 2;
+}
+
+.standings-table thead .col-place,
+.standings-table thead .col-rider,
+.standings-table thead .col-club-name {
+  background: var(--color-bg-surface);
+  z-index: 3;
+}
+
+/* Add shadow to indicate scrollable content */
+.standings-table .col-rider::after,
+.standings-table .col-club-name::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: -8px;
+  bottom: 0;
+  width: 8px;
+  background: linear-gradient(to right, rgba(0,0,0,0.08), transparent);
+  pointer-events: none;
+}
+
 .standings-table .col-event {
   text-align: center;
   font-size: var(--text-sm);

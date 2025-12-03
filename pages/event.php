@@ -1736,8 +1736,49 @@ function sortTotalBySplit(headerEl, splitNum) {
 }
 
 /* Results table */
+/* Horizontal scroll for tables with split times */
+.table-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
 .results-table {
     width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+/* Sticky columns for place and rider name */
+.results-table .col-place {
+    position: sticky;
+    left: 0;
+    background: var(--color-bg-card);
+    z-index: 2;
+}
+
+.results-table .col-rider {
+    position: sticky;
+    left: 50px;
+    background: var(--color-bg-card);
+    z-index: 2;
+}
+
+.results-table thead .col-place,
+.results-table thead .col-rider {
+    background: var(--color-bg-surface);
+    z-index: 3;
+}
+
+/* Add shadow to indicate scrollable content */
+.results-table .col-rider::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: -8px;
+    bottom: 0;
+    width: 8px;
+    background: linear-gradient(to right, rgba(0,0,0,0.08), transparent);
+    pointer-events: none;
 }
 
 /* Results table columns */
