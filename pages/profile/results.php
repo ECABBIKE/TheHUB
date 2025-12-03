@@ -85,8 +85,12 @@ $totalPoints = array_sum(array_column($results, 'points'));
 
             <a href="/results/<?= $result['event_id'] ?>" class="result-card">
                 <div class="result-position">
-                    <?php if ($result['position'] <= 3): ?>
-                        <?= ['🥇', '🥈', '🥉'][$result['position'] - 1] ?>
+                    <?php if ($result['position'] == 1): ?>
+                        <img src="/assets/icons/medal-1st.svg" alt="1:a" class="medal-icon">
+                    <?php elseif ($result['position'] == 2): ?>
+                        <img src="/assets/icons/medal-2nd.svg" alt="2:a" class="medal-icon">
+                    <?php elseif ($result['position'] == 3): ?>
+                        <img src="/assets/icons/medal-3rd.svg" alt="3:e" class="medal-icon">
                     <?php else: ?>
                         <span class="position-number">#<?= $result['position'] ?></span>
                     <?php endif; ?>
@@ -171,6 +175,12 @@ $totalPoints = array_sum(array_column($results, 'points'));
 .position-number {
     font-weight: var(--weight-bold);
     color: var(--color-text-secondary);
+}
+.medal-icon {
+    width: 24px;
+    height: 24px;
+    vertical-align: middle;
+    display: inline-block;
 }
 .result-info {
     flex: 1;
