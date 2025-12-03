@@ -246,63 +246,76 @@ try {
         }
         unset($result);
 
-        // Calculate split time statistics for color coding
-        for ($ss = 1; $ss <= 15; $ss++) {
-            $times = [];
-            foreach ($classData['results'] as $result) {
-                if (!empty($result['ss' . $ss]) && $result['status'] === 'finished') {
-                    $times[] = timeToSeconds($result['ss' . $ss]);
-                }
-            }
-            if (count($times) >= 2) {
-                sort($times);
-                $min = $times[0];
-                $max = $times[count($times) - 1];
-                if (count($times) >= 3) {
-                    $p90Index = (int) floor(count($times) * 0.9);
-                    $p90 = $times[$p90Index];
-                    if ($max > $p90 * 1.3) {
-                        $max = $p90;
+        // Check if this is a motion/kids class - skip split comparisons for these
+        $rankingType = $classData['ranking_type'] ?? 'time';
+        $className = strtolower($classData['class_name'] ?? '');
+        $isMotionOrKids = ($rankingType !== 'time') ||
+                          strpos($className, 'kids') !== false ||
+                          strpos($className, 'barn') !== false ||
+                          strpos($className, 'motion') !== false;
+
+        $classData['is_motion_or_kids'] = $isMotionOrKids;
+
+        // Only calculate split stats and rankings for competitive classes
+        if (!$isMotionOrKids) {
+            // Calculate split time statistics for color coding
+            for ($ss = 1; $ss <= 15; $ss++) {
+                $times = [];
+                foreach ($classData['results'] as $result) {
+                    if (!empty($result['ss' . $ss]) && $result['status'] === 'finished') {
+                        $times[] = timeToSeconds($result['ss' . $ss]);
                     }
                 }
-                $classData['split_stats'][$ss] = [
-                    'min' => $min,
-                    'max' => $max,
-                    'range' => $max - $min
-                ];
-            }
-        }
-
-        // Calculate split rankings and +time for each rider in this class
-        for ($ss = 1; $ss <= 15; $ss++) {
-            // Collect all valid split times with rider index
-            $splitTimes = [];
-            foreach ($classData['results'] as $idx => $result) {
-                if (!empty($result['ss' . $ss]) && $result['status'] === 'finished') {
-                    $splitTimes[] = [
-                        'idx' => $idx,
-                        'time' => timeToSeconds($result['ss' . $ss])
+                if (count($times) >= 2) {
+                    sort($times);
+                    $min = $times[0];
+                    $max = $times[count($times) - 1];
+                    if (count($times) >= 3) {
+                        $p90Index = (int) floor(count($times) * 0.9);
+                        $p90 = $times[$p90Index];
+                        if ($max > $p90 * 1.3) {
+                            $max = $p90;
+                        }
+                    }
+                    $classData['split_stats'][$ss] = [
+                        'min' => $min,
+                        'max' => $max,
+                        'range' => $max - $min
                     ];
                 }
             }
 
-            if (count($splitTimes) > 0) {
-                // Sort by time to calculate rankings
-                usort($splitTimes, function($a, $b) {
-                    return $a['time'] <=> $b['time'];
-                });
+            // Calculate split rankings and +time for each rider in this class
+            for ($ss = 1; $ss <= 15; $ss++) {
+                // Collect all valid split times with rider index
+                $splitTimes = [];
+                foreach ($classData['results'] as $idx => $result) {
+                    if (!empty($result['ss' . $ss]) && $result['status'] === 'finished') {
+                        $splitTimes[] = [
+                            'idx' => $idx,
+                            'time' => timeToSeconds($result['ss' . $ss])
+                        ];
+                    }
+                }
 
-                $bestTime = $splitTimes[0]['time'];
+                if (count($splitTimes) > 0) {
+                    // Sort by time to calculate rankings
+                    usort($splitTimes, function($a, $b) {
+                        return $a['time'] <=> $b['time'];
+                    });
 
-                // Assign rankings
-                foreach ($splitTimes as $rank => $entry) {
-                    $ridx = $entry['idx'];
-                    $classData['results'][$ridx]['split_rank_' . $ss] = $rank + 1;
-                    $diff = $entry['time'] - $bestTime;
-                    if ($diff > 0) {
-                        $classData['results'][$ridx]['split_diff_' . $ss] = '+' . number_format($diff, 2);
-                    } else {
-                        $classData['results'][$ridx]['split_diff_' . $ss] = '';
+                    $bestTime = $splitTimes[0]['time'];
+
+                    // Assign rankings
+                    foreach ($splitTimes as $rank => $entry) {
+                        $ridx = $entry['idx'];
+                        $classData['results'][$ridx]['split_rank_' . $ss] = $rank + 1;
+                        $diff = $entry['time'] - $bestTime;
+                        if ($diff > 0) {
+                            $classData['results'][$ridx]['split_diff_' . $ss] = '+' . number_format($diff, 2);
+                        } else {
+                            $classData['results'][$ridx]['split_diff_' . $ss] = '';
+                        }
                     }
                 }
             }
@@ -667,6 +680,7 @@ if (!$event) {
 
 <?php foreach ($resultsByClass as $classKey => $classData):
     $isTimeRanked = ($classData['ranking_type'] ?? 'time') === 'time';
+    $isMotionOrKids = $classData['is_motion_or_kids'] ?? false;
 
     // Calculate which splits this class has
     $classSplits = [];
@@ -707,7 +721,11 @@ if (!$event) {
                     <th class="col-gap table-col-hide-mobile">+Tid</th>
                     <?php endif; ?>
                     <?php foreach ($classSplits as $ss): ?>
+                    <?php if ($isMotionOrKids): ?>
+                    <th class="col-split split-time-col table-col-hide-mobile"><?= $stageNames[$ss] ?? 'SS' . $ss ?></th>
+                    <?php else: ?>
                     <th class="col-split split-time-col table-col-hide-mobile sortable-header" data-sort="ss<?= $ss ?>" onclick="sortBySplit(this, '<?= $classKey ?>', <?= $ss ?>)"><?= $stageNames[$ss] ?? 'SS' . $ss ?> <span class="sort-icon"></span></th>
+                    <?php endif; ?>
                     <?php endforeach; ?>
                     <?php endif; ?>
                 </tr>
@@ -774,23 +792,31 @@ if (!$event) {
                     <?php foreach ($classSplits as $ss):
                         $splitTime = $result['ss' . $ss] ?? '';
                         $splitClass = '';
-                        $splitRank = $result['split_rank_' . $ss] ?? null;
-                        $splitDiff = $result['split_diff_' . $ss] ?? '';
+                        $splitRank = null;
+                        $splitDiff = '';
                         $splitSeconds = !empty($splitTime) ? timeToSeconds($splitTime) : PHP_INT_MAX;
-                        if (!empty($splitTime) && isset($classData['split_stats'][$ss])) {
-                            $stats = $classData['split_stats'][$ss];
-                            $timeSeconds = timeToSeconds($splitTime);
-                            if ($stats['range'] > 0.5) {
-                                $position = ($timeSeconds - $stats['min']) / $stats['range'];
-                                $level = min(10, max(1, floor($position * 9) + 1));
-                                $splitClass = 'split-' . $level;
+
+                        // Only show colors and rankings for competitive classes
+                        if (!$isMotionOrKids) {
+                            $splitRank = $result['split_rank_' . $ss] ?? null;
+                            $splitDiff = $result['split_diff_' . $ss] ?? '';
+                            if (!empty($splitTime) && isset($classData['split_stats'][$ss])) {
+                                $stats = $classData['split_stats'][$ss];
+                                $timeSeconds = timeToSeconds($splitTime);
+                                if ($stats['range'] > 0.5) {
+                                    $position = ($timeSeconds - $stats['min']) / $stats['range'];
+                                    $level = min(10, max(1, floor($position * 9) + 1));
+                                    $splitClass = 'split-' . $level;
+                                }
                             }
                         }
                     ?>
                     <td class="col-split split-time-col table-col-hide-mobile <?= $splitClass ?>" data-sort-value="<?= $splitSeconds ?>">
                         <?php if (!empty($splitTime)): ?>
                         <div class="split-time-main"><?= formatDisplayTime($splitTime) ?></div>
+                        <?php if (!$isMotionOrKids && ($splitDiff || $splitRank)): ?>
                         <div class="split-time-details"><?= $splitDiff ?: '' ?><?= $splitDiff && $splitRank ? ' ' : '' ?><?= $splitRank ? '(' . $splitRank . ')' : '' ?></div>
+                        <?php endif; ?>
                         <?php else: ?>
                         -
                         <?php endif; ?>
