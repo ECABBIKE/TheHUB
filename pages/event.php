@@ -272,6 +272,41 @@ try {
                 ];
             }
         }
+
+        // Calculate split rankings and +time for each rider in this class
+        for ($ss = 1; $ss <= 15; $ss++) {
+            // Collect all valid split times with rider index
+            $splitTimes = [];
+            foreach ($classData['results'] as $idx => $result) {
+                if (!empty($result['ss' . $ss]) && $result['status'] === 'finished') {
+                    $splitTimes[] = [
+                        'idx' => $idx,
+                        'time' => timeToSeconds($result['ss' . $ss])
+                    ];
+                }
+            }
+
+            if (count($splitTimes) > 0) {
+                // Sort by time to calculate rankings
+                usort($splitTimes, function($a, $b) {
+                    return $a['time'] <=> $b['time'];
+                });
+
+                $bestTime = $splitTimes[0]['time'];
+
+                // Assign rankings
+                foreach ($splitTimes as $rank => $entry) {
+                    $ridx = $entry['idx'];
+                    $classData['results'][$ridx]['split_rank_' . $ss] = $rank + 1;
+                    $diff = $entry['time'] - $bestTime;
+                    if ($diff > 0) {
+                        $classData['results'][$ridx]['split_diff_' . $ss] = '+' . number_format($diff, 2);
+                    } else {
+                        $classData['results'][$ridx]['split_diff_' . $ss] = '';
+                    }
+                }
+            }
+        }
     }
     unset($classData);
 
@@ -279,6 +314,104 @@ try {
     uasort($resultsByClass, function($a, $b) {
         return $a['sort_order'] - $b['sort_order'];
     });
+
+    // Calculate global split stats for "Sträcktider Total" view
+    // Combines all time-ranked classes (excluding motion/kids)
+    $globalSplitResults = [];
+    $globalSplitStats = [];
+    $globalSplits = [];
+
+    if ($hasSplitTimes && !$isDH) {
+        // Collect all results from time-ranked classes
+        foreach ($resultsByClass as $classKey => $classData) {
+            $rankingType = $classData['ranking_type'] ?? 'time';
+            $className = strtolower($classData['class_name'] ?? '');
+
+            // Skip motion classes and kids classes
+            if ($rankingType !== 'time') continue;
+            if (strpos($className, 'kids') !== false || strpos($className, 'barn') !== false) continue;
+
+            foreach ($classData['results'] as $result) {
+                if ($result['status'] === 'finished') {
+                    $globalSplitResults[] = array_merge($result, [
+                        'original_class' => $classData['display_name']
+                    ]);
+                }
+            }
+        }
+
+        // Determine which splits exist globally
+        for ($ss = 1; $ss <= 15; $ss++) {
+            foreach ($globalSplitResults as $r) {
+                if (!empty($r['ss' . $ss])) {
+                    $globalSplits[] = $ss;
+                    break;
+                }
+            }
+        }
+
+        // Calculate global split stats and rankings
+        for ($ss = 1; $ss <= 15; $ss++) {
+            $splitTimes = [];
+            foreach ($globalSplitResults as $idx => $result) {
+                if (!empty($result['ss' . $ss])) {
+                    $splitTimes[] = [
+                        'idx' => $idx,
+                        'time' => timeToSeconds($result['ss' . $ss])
+                    ];
+                }
+            }
+
+            if (count($splitTimes) > 0) {
+                usort($splitTimes, function($a, $b) {
+                    return $a['time'] <=> $b['time'];
+                });
+
+                $bestTime = $splitTimes[0]['time'];
+                $times = array_column($splitTimes, 'time');
+                $min = min($times);
+                $max = max($times);
+
+                // Cap outliers at 90th percentile + 30%
+                if (count($times) >= 3) {
+                    $p90Index = (int) floor(count($times) * 0.9);
+                    sort($times);
+                    $p90 = $times[$p90Index];
+                    if ($max > $p90 * 1.3) {
+                        $max = $p90;
+                    }
+                }
+
+                $globalSplitStats[$ss] = [
+                    'min' => $min,
+                    'max' => $max,
+                    'range' => $max - $min
+                ];
+
+                // Assign global rankings
+                foreach ($splitTimes as $rank => $entry) {
+                    $ridx = $entry['idx'];
+                    $globalSplitResults[$ridx]['global_split_rank_' . $ss] = $rank + 1;
+                    $diff = $entry['time'] - $bestTime;
+                    if ($diff > 0) {
+                        $globalSplitResults[$ridx]['global_split_diff_' . $ss] = '+' . number_format($diff, 2);
+                    } else {
+                        $globalSplitResults[$ridx]['global_split_diff_' . $ss] = '';
+                    }
+                }
+            }
+        }
+
+        // Sort global results by first split time by default
+        if (count($globalSplits) > 0) {
+            $firstSplit = $globalSplits[0];
+            usort($globalSplitResults, function($a, $b) use ($firstSplit) {
+                $aTime = !empty($a['ss' . $firstSplit]) ? timeToSeconds($a['ss' . $firstSplit]) : PHP_INT_MAX;
+                $bTime = !empty($b['ss' . $firstSplit]) ? timeToSeconds($b['ss' . $firstSplit]) : PHP_INT_MAX;
+                return $aTime <=> $bTime;
+            });
+        }
+    }
 
     // Fetch registrations
     $registrations = $db->prepare("
@@ -520,6 +653,15 @@ if (!$event) {
             <span class="toggle-text">Färgkodning</span>
         </label>
     </div>
+    <?php if (count($globalSplitResults) > 0): ?>
+    <div class="filter-field filter-field--toggle">
+        <label class="toggle-label">
+            <input type="checkbox" id="totalViewToggle" onchange="toggleTotalView(this.checked)">
+            <span class="toggle-switch"></span>
+            <span class="toggle-text">Sträcktider Total</span>
+        </label>
+    </div>
+    <?php endif; ?>
     <?php endif; ?>
 </div>
 
@@ -565,7 +707,7 @@ if (!$event) {
                     <th class="col-gap table-col-hide-mobile">+Tid</th>
                     <?php endif; ?>
                     <?php foreach ($classSplits as $ss): ?>
-                    <th class="col-split split-time-col table-col-hide-mobile"><?= $stageNames[$ss] ?? 'SS' . $ss ?></th>
+                    <th class="col-split split-time-col table-col-hide-mobile sortable-header" data-sort="ss<?= $ss ?>" onclick="sortBySplit(this, '<?= $classKey ?>', <?= $ss ?>)"><?= $stageNames[$ss] ?? 'SS' . $ss ?> <span class="sort-icon"></span></th>
                     <?php endforeach; ?>
                     <?php endif; ?>
                 </tr>
@@ -632,6 +774,9 @@ if (!$event) {
                     <?php foreach ($classSplits as $ss):
                         $splitTime = $result['ss' . $ss] ?? '';
                         $splitClass = '';
+                        $splitRank = $result['split_rank_' . $ss] ?? null;
+                        $splitDiff = $result['split_diff_' . $ss] ?? '';
+                        $splitSeconds = !empty($splitTime) ? timeToSeconds($splitTime) : PHP_INT_MAX;
                         if (!empty($splitTime) && isset($classData['split_stats'][$ss])) {
                             $stats = $classData['split_stats'][$ss];
                             $timeSeconds = timeToSeconds($splitTime);
@@ -642,8 +787,13 @@ if (!$event) {
                             }
                         }
                     ?>
-                    <td class="col-split split-time-col table-col-hide-mobile <?= $splitClass ?>">
-                        <?= !empty($splitTime) ? formatDisplayTime($splitTime) : '-' ?>
+                    <td class="col-split split-time-col table-col-hide-mobile <?= $splitClass ?>" data-sort-value="<?= $splitSeconds ?>">
+                        <?php if (!empty($splitTime)): ?>
+                        <div class="split-time-main"><?= formatDisplayTime($splitTime) ?></div>
+                        <div class="split-time-details"><?= $splitDiff ?: '' ?><?= $splitDiff && $splitRank ? ' ' : '' ?><?= $splitRank ? '(' . $splitRank . ')' : '' ?></div>
+                        <?php else: ?>
+                        -
+                        <?php endif; ?>
                     </td>
                     <?php endforeach; ?>
                     <?php endif; ?>
@@ -691,6 +841,101 @@ if (!$event) {
     </div>
 </section>
 <?php endforeach; ?>
+
+<!-- Total Split Times Section (hidden by default, shown when toggle is active) -->
+<?php if ($hasSplitTimes && !$isDH && count($globalSplitResults) > 0): ?>
+<section class="card mb-lg total-split-section" id="total-split-section" style="display: none;">
+    <div class="card-header">
+        <div>
+            <h2 class="card-title">Sträcktider Total</h2>
+            <p class="card-subtitle"><?= count($globalSplitResults) ?> deltagare från alla klasser (exkl. Kids/Motion)</p>
+        </div>
+    </div>
+
+    <!-- Desktop Table -->
+    <div class="table-wrapper">
+        <table class="table table--striped table--hover results-table" id="total-split-table">
+            <thead>
+                <tr>
+                    <th class="col-place">#</th>
+                    <th class="col-rider">Åkare</th>
+                    <th class="col-club table-col-hide-mobile">Klubb</th>
+                    <th class="col-class table-col-hide-mobile">Klass</th>
+                    <?php foreach ($globalSplits as $ss): ?>
+                    <th class="col-split split-time-col table-col-hide-mobile sortable-header" data-sort="ss<?= $ss ?>" onclick="sortTotalBySplit(this, <?= $ss ?>)"><?= $stageNames[$ss] ?? 'SS' . $ss ?> <span class="sort-icon"></span></th>
+                    <?php endforeach; ?>
+                </tr>
+            </thead>
+            <tbody>
+                <?php foreach ($globalSplitResults as $gIdx => $result):
+                    $searchData = strtolower($result['firstname'] . ' ' . $result['lastname'] . ' ' . ($result['club_name'] ?? ''));
+                ?>
+                <tr class="result-row" onclick="window.location='/rider/<?= $result['rider_id'] ?>'" data-search="<?= h($searchData) ?>">
+                    <td class="col-place total-position"><?= $gIdx + 1 ?></td>
+                    <td class="col-rider">
+                        <a href="/rider/<?= $result['rider_id'] ?>" class="rider-link">
+                            <?= h($result['firstname'] . ' ' . $result['lastname']) ?>
+                        </a>
+                    </td>
+                    <td class="col-club table-col-hide-mobile">
+                        <?php if ($result['club_id']): ?>
+                            <a href="/club/<?= $result['club_id'] ?>"><?= h($result['club_name'] ?? '-') ?></a>
+                        <?php else: ?>
+                            -
+                        <?php endif; ?>
+                    </td>
+                    <td class="col-class table-col-hide-mobile">
+                        <span class="class-badge"><?= h($result['original_class'] ?? '-') ?></span>
+                    </td>
+                    <?php foreach ($globalSplits as $ss):
+                        $splitTime = $result['ss' . $ss] ?? '';
+                        $splitClass = '';
+                        $splitRank = $result['global_split_rank_' . $ss] ?? null;
+                        $splitDiff = $result['global_split_diff_' . $ss] ?? '';
+                        $splitSeconds = !empty($splitTime) ? timeToSeconds($splitTime) : PHP_INT_MAX;
+                        if (!empty($splitTime) && isset($globalSplitStats[$ss])) {
+                            $stats = $globalSplitStats[$ss];
+                            $timeSeconds = timeToSeconds($splitTime);
+                            if ($stats['range'] > 0.5) {
+                                $position = ($timeSeconds - $stats['min']) / $stats['range'];
+                                $level = min(10, max(1, floor($position * 9) + 1));
+                                $splitClass = 'split-' . $level;
+                            }
+                        }
+                    ?>
+                    <td class="col-split split-time-col table-col-hide-mobile <?= $splitClass ?>" data-sort-value="<?= $splitSeconds ?>">
+                        <?php if (!empty($splitTime)): ?>
+                        <div class="split-time-main"><?= formatDisplayTime($splitTime) ?></div>
+                        <div class="split-time-details"><?= $splitDiff ?: '' ?><?= $splitDiff && $splitRank ? ' ' : '' ?><?= $splitRank ? '(' . $splitRank . ')' : '' ?></div>
+                        <?php else: ?>
+                        -
+                        <?php endif; ?>
+                    </td>
+                    <?php endforeach; ?>
+                </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Mobile Card View -->
+    <div class="result-list">
+        <?php foreach ($globalSplitResults as $gIdx => $result):
+            $searchData = strtolower($result['firstname'] . ' ' . $result['lastname'] . ' ' . ($result['club_name'] ?? ''));
+        ?>
+        <a href="/rider/<?= $result['rider_id'] ?>" class="result-item" data-search="<?= h($searchData) ?>">
+            <div class="result-place">
+                <?= $gIdx + 1 ?>
+            </div>
+            <div class="result-info">
+                <div class="result-name"><?= h($result['firstname'] . ' ' . $result['lastname']) ?></div>
+                <div class="result-club"><?= h($result['club_name'] ?? '-') ?> &middot; <?= h($result['original_class'] ?? '') ?></div>
+            </div>
+        </a>
+        <?php endforeach; ?>
+    </div>
+</section>
+<?php endif; ?>
 
 <?php endif; ?>
 
@@ -972,6 +1217,20 @@ if (!$event) {
 function filterResults() {
     const classFilter = document.getElementById('classFilter')?.value || 'all';
     const searchFilter = (document.getElementById('searchFilter')?.value || '').toLowerCase().trim();
+    const totalViewEnabled = document.getElementById('totalViewToggle')?.checked || false;
+
+    // If total view is enabled, only filter within total section
+    if (totalViewEnabled) {
+        const totalSection = document.getElementById('total-split-section');
+        if (totalSection) {
+            totalSection.querySelectorAll('.result-row, .result-item').forEach(row => {
+                const searchData = row.dataset.search || '';
+                const matchesSearch = !searchFilter || searchData.includes(searchFilter);
+                row.style.display = matchesSearch ? '' : 'none';
+            });
+        }
+        return;
+    }
 
     document.querySelectorAll('.class-section').forEach(section => {
         const classId = section.dataset.class;
@@ -995,6 +1254,141 @@ function toggleSplitColors(enabled) {
         } else {
             cell.classList.add('no-color');
         }
+    });
+}
+
+function toggleTotalView(enabled) {
+    const classSections = document.querySelectorAll('.class-section');
+    const totalSection = document.getElementById('total-split-section');
+    const classFilter = document.getElementById('classFilter');
+
+    if (enabled) {
+        // Hide class sections, show total section
+        classSections.forEach(section => section.style.display = 'none');
+        if (totalSection) totalSection.style.display = '';
+        // Disable class filter when in total view
+        if (classFilter) {
+            classFilter.disabled = true;
+            classFilter.style.opacity = '0.5';
+        }
+    } else {
+        // Show class sections, hide total section
+        classSections.forEach(section => section.style.display = '');
+        if (totalSection) totalSection.style.display = 'none';
+        // Re-enable class filter
+        if (classFilter) {
+            classFilter.disabled = false;
+            classFilter.style.opacity = '1';
+        }
+        // Re-apply filters
+        filterResults();
+    }
+}
+
+// Sort class section by split time
+function sortBySplit(headerEl, classKey, splitNum) {
+    const section = document.getElementById('class-' + classKey);
+    if (!section) return;
+
+    const table = section.querySelector('.results-table');
+    if (!table) return;
+
+    const tbody = table.querySelector('tbody');
+    const rows = Array.from(tbody.querySelectorAll('tr.result-row'));
+
+    // Get the column index for this split
+    const headers = table.querySelectorAll('thead th');
+    let colIndex = -1;
+    headers.forEach((th, idx) => {
+        if (th.dataset.sort === 'ss' + splitNum) {
+            colIndex = idx;
+        }
+    });
+
+    if (colIndex === -1) return;
+
+    // Determine sort direction
+    const isAscending = !headerEl.classList.contains('sort-asc');
+
+    // Remove sort classes from all headers in this table
+    table.querySelectorAll('.sortable-header').forEach(th => {
+        th.classList.remove('sort-asc', 'sort-desc');
+    });
+
+    // Add sort class to clicked header
+    headerEl.classList.add(isAscending ? 'sort-asc' : 'sort-desc');
+
+    // Sort rows
+    rows.sort((a, b) => {
+        const aCell = a.cells[colIndex];
+        const bCell = b.cells[colIndex];
+        const aVal = parseFloat(aCell?.dataset.sortValue) || Infinity;
+        const bVal = parseFloat(bCell?.dataset.sortValue) || Infinity;
+
+        return isAscending ? aVal - bVal : bVal - aVal;
+    });
+
+    // Update position numbers and re-append rows
+    rows.forEach((row, idx) => {
+        const posCell = row.querySelector('.col-place');
+        if (posCell && !posCell.querySelector('.status-badge') && !posCell.querySelector('.medal-icon') && posCell.textContent.trim() !== '✓') {
+            // Only update numeric positions, not medals/status badges
+            const pos = posCell.textContent.trim();
+            if (!isNaN(parseInt(pos))) {
+                // Keep original position, don't change
+            }
+        }
+        tbody.appendChild(row);
+    });
+}
+
+// Sort total section by split time
+function sortTotalBySplit(headerEl, splitNum) {
+    const table = document.getElementById('total-split-table');
+    if (!table) return;
+
+    const tbody = table.querySelector('tbody');
+    const rows = Array.from(tbody.querySelectorAll('tr.result-row'));
+
+    // Get the column index for this split
+    const headers = table.querySelectorAll('thead th');
+    let colIndex = -1;
+    headers.forEach((th, idx) => {
+        if (th.dataset.sort === 'ss' + splitNum) {
+            colIndex = idx;
+        }
+    });
+
+    if (colIndex === -1) return;
+
+    // Determine sort direction
+    const isAscending = !headerEl.classList.contains('sort-asc');
+
+    // Remove sort classes from all headers
+    table.querySelectorAll('.sortable-header').forEach(th => {
+        th.classList.remove('sort-asc', 'sort-desc');
+    });
+
+    // Add sort class to clicked header
+    headerEl.classList.add(isAscending ? 'sort-asc' : 'sort-desc');
+
+    // Sort rows
+    rows.sort((a, b) => {
+        const aCell = a.cells[colIndex];
+        const bCell = b.cells[colIndex];
+        const aVal = parseFloat(aCell?.dataset.sortValue) || Infinity;
+        const bVal = parseFloat(bCell?.dataset.sortValue) || Infinity;
+
+        return isAscending ? aVal - bVal : bVal - aVal;
+    });
+
+    // Update position numbers and re-append rows
+    rows.forEach((row, idx) => {
+        const posCell = row.querySelector('.total-position');
+        if (posCell) {
+            posCell.textContent = idx + 1;
+        }
+        tbody.appendChild(row);
     });
 }
 
@@ -1375,10 +1769,73 @@ td.col-place {
 }
 
 .col-split {
-    min-width: 60px;
+    min-width: 80px;
     text-align: right;
     font-family: var(--font-mono);
     font-size: var(--text-xs);
+    vertical-align: middle;
+}
+
+/* Split time display with +time and ranking */
+.split-time-main {
+    font-weight: var(--weight-medium);
+}
+
+.split-time-details {
+    font-size: 10px;
+    color: var(--color-text-muted);
+    margin-top: 1px;
+    opacity: 0.85;
+}
+
+/* Sortable column headers */
+.sortable-header {
+    cursor: pointer;
+    user-select: none;
+    position: relative;
+    transition: background var(--transition-fast);
+}
+
+.sortable-header:hover {
+    background: var(--color-bg-hover);
+}
+
+.sortable-header .sort-icon {
+    display: inline-block;
+    width: 0;
+    height: 0;
+    margin-left: 4px;
+    vertical-align: middle;
+    opacity: 0.3;
+}
+
+.sortable-header.sort-asc .sort-icon {
+    opacity: 1;
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+    border-bottom: 5px solid currentColor;
+}
+
+.sortable-header.sort-desc .sort-icon {
+    opacity: 1;
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+    border-top: 5px solid currentColor;
+}
+
+/* Class badge for total view */
+.col-class {
+    min-width: 100px;
+}
+
+.class-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    font-size: var(--text-xs);
+    font-weight: var(--weight-medium);
+    background: var(--color-bg-sunken);
+    border-radius: var(--radius-sm);
+    color: var(--color-text-secondary);
 }
 
 .result-row {
