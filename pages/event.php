@@ -12,56 +12,58 @@ if (!$eventId) {
     exit;
 }
 
-// Helper functions
-function timeToSeconds($time) {
-    if (empty($time)) return PHP_INT_MAX;
-    $decimal = 0;
-    if (preg_match('/(\.\d+)$/', $time, $matches)) {
-        $decimal = floatval($matches[1]);
-        $time = preg_replace('/\.\d+$/', '', $time);
-    }
-    $parts = explode(':', $time);
-    $seconds = 0;
-    if (count($parts) === 3) {
-        $seconds = (int)$parts[0] * 3600 + (int)$parts[1] * 60 + (int)$parts[2];
-    } elseif (count($parts) === 2) {
-        $seconds = (int)$parts[0] * 60 + (int)$parts[1];
-    } elseif (count($parts) === 1) {
-        $seconds = (int)$parts[0];
-    }
-    return $seconds + $decimal;
-}
-
-function formatDisplayTime($time) {
-    if (empty($time)) return null;
-    $decimal = '';
-    if (preg_match('/(\.\d+)$/', $time, $matches)) {
-        $decimal = $matches[1];
-        $time = preg_replace('/\.\d+$/', '', $time);
-    }
-    $parts = explode(':', $time);
-    if (count($parts) === 3) {
-        $hours = (int)$parts[0];
-        $minutes = (int)$parts[1];
-        $seconds = (int)$parts[2];
-        if ($hours > 0) {
-            return $hours . ':' . sprintf('%02d', $minutes) . ':' . sprintf('%02d', $seconds) . $decimal;
-        } else {
-            return $minutes . ':' . sprintf('%02d', $seconds) . $decimal;
+// Helper functions (only define if not already defined)
+if (!function_exists('timeToSeconds')) {
+    function timeToSeconds($time) {
+        if (empty($time)) return PHP_INT_MAX;
+        $decimal = 0;
+        if (preg_match('/(\.\d+)$/', $time, $matches)) {
+            $decimal = floatval($matches[1]);
+            $time = preg_replace('/\.\d+$/', '', $time);
         }
+        $parts = explode(':', $time);
+        $seconds = 0;
+        if (count($parts) === 3) {
+            $seconds = (int)$parts[0] * 3600 + (int)$parts[1] * 60 + (int)$parts[2];
+        } elseif (count($parts) === 2) {
+            $seconds = (int)$parts[0] * 60 + (int)$parts[1];
+        } elseif (count($parts) === 1) {
+            $seconds = (int)$parts[0];
+        }
+        return $seconds + $decimal;
     }
-    return $time . $decimal;
 }
 
-function getEventContent($event, $field, $useGlobalField, $globalTextMap) {
-    if (!empty($event[$useGlobalField]) && !empty($globalTextMap[$field])) {
-        return $globalTextMap[$field];
+if (!function_exists('formatDisplayTime')) {
+    function formatDisplayTime($time) {
+        if (empty($time)) return null;
+        $decimal = '';
+        if (preg_match('/(\.\d+)$/', $time, $matches)) {
+            $decimal = $matches[1];
+            $time = preg_replace('/\.\d+$/', '', $time);
+        }
+        $parts = explode(':', $time);
+        if (count($parts) === 3) {
+            $hours = (int)$parts[0];
+            $minutes = (int)$parts[1];
+            $seconds = (int)$parts[2];
+            if ($hours > 0) {
+                return $hours . ':' . sprintf('%02d', $minutes) . ':' . sprintf('%02d', $seconds) . $decimal;
+            } else {
+                return $minutes . ':' . sprintf('%02d', $seconds) . $decimal;
+            }
+        }
+        return $time . $decimal;
     }
-    return $event[$field] ?? '';
 }
 
-function h($str) {
-    return htmlspecialchars($str ?? '', ENT_QUOTES, 'UTF-8');
+if (!function_exists('getEventContent')) {
+    function getEventContent($event, $field, $useGlobalField, $globalTextMap) {
+        if (!empty($event[$useGlobalField]) && !empty($globalTextMap[$field])) {
+            return $globalTextMap[$field];
+        }
+        return $event[$field] ?? '';
+    }
 }
 
 try {
