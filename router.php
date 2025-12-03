@@ -91,7 +91,7 @@ function hub_get_current_page(): array {
     $sectionRoutes = [
         'calendar' => [
             'index' => '/pages/calendar/index.php',
-            'event' => '/pages/calendar/event.php'
+            'event' => '/pages/event.php'  // Use full event page for calendar too
         ],
         'results' => [
             'index' => '/pages/results.php',  // Legacy - will move to /pages/results/index.php
