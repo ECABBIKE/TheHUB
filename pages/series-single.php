@@ -1271,7 +1271,7 @@ function toggleClubRiders(btn, event) {
 }
 
 /* Mobile landscape: show table with event columns, hide cards */
-@media (max-width: 900px) and (orientation: landscape) {
+@media (orientation: landscape) {
   .standings-card .table-wrapper {
     display: block !important;
   }
