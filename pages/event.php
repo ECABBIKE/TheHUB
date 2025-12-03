@@ -512,6 +512,15 @@ if (!$event) {
         <label class="filter-label">Sök åkare</label>
         <input type="text" class="filter-input" id="searchFilter" placeholder="Namn eller klubb..." oninput="filterResults()">
     </div>
+    <?php if ($hasSplitTimes && !$isDH): ?>
+    <div class="filter-field filter-field--toggle">
+        <label class="toggle-label">
+            <input type="checkbox" id="colorToggle" checked onchange="toggleSplitColors(this.checked)">
+            <span class="toggle-switch"></span>
+            <span class="toggle-text">Färgkodning</span>
+        </label>
+    </div>
+    <?php endif; ?>
 </div>
 
 <?php foreach ($resultsByClass as $classKey => $classData):
@@ -979,6 +988,16 @@ function filterResults() {
     });
 }
 
+function toggleSplitColors(enabled) {
+    document.querySelectorAll('.col-split').forEach(cell => {
+        if (enabled) {
+            cell.classList.remove('no-color');
+        } else {
+            cell.classList.add('no-color');
+        }
+    });
+}
+
 </script>
 
 <style>
@@ -1205,8 +1224,9 @@ function filterResults() {
 /* Filter Row */
 .filter-row {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr 1fr auto;
     gap: var(--space-md);
+    align-items: end;
 }
 
 .filter-field {
@@ -1237,11 +1257,78 @@ function filterResults() {
     border-color: var(--color-accent);
 }
 
+.filter-field--toggle {
+    display: flex;
+    align-items: flex-end;
+    padding-bottom: var(--space-sm);
+}
+
+.toggle-label {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    cursor: pointer;
+    user-select: none;
+}
+
+.toggle-label input[type="checkbox"] {
+    display: none;
+}
+
+.toggle-switch {
+    position: relative;
+    width: 44px;
+    height: 24px;
+    background: var(--color-bg-sunken);
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+    transition: all var(--transition-fast);
+}
+
+.toggle-switch::after {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 18px;
+    height: 18px;
+    background: white;
+    border-radius: 50%;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+    transition: all var(--transition-fast);
+}
+
+.toggle-label input:checked + .toggle-switch {
+    background: var(--color-accent);
+    border-color: var(--color-accent);
+}
+
+.toggle-label input:checked + .toggle-switch::after {
+    left: 22px;
+}
+
+.toggle-text {
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    color: var(--color-text-secondary);
+}
+
 /* Results table columns */
 .col-place {
     width: 50px;
     text-align: center;
     font-weight: var(--weight-bold);
+}
+
+td.col-place {
+    vertical-align: middle;
+}
+
+td.col-place img,
+td.col-place span,
+td.col-place {
+    display: table-cell;
+    text-align: center;
 }
 
 .col-place--1 { color: #FFD700; }
@@ -1252,12 +1339,14 @@ function filterResults() {
 .medal-icon {
     width: 28px;
     height: 28px;
-    display: inline-block;
-    vertical-align: middle;
+    display: block;
+    margin: 0 auto;
 }
 .medal-icon-mobile {
     width: 36px;
     height: 36px;
+    display: block;
+    margin: 0 auto;
 }
 
 .col-rider { min-width: 150px; }
@@ -1586,6 +1675,11 @@ function filterResults() {
 
     .filter-row {
         grid-template-columns: 1fr;
+    }
+
+    .filter-field--toggle {
+        padding-bottom: 0;
+        padding-top: var(--space-xs);
     }
 
     .info-grid {
