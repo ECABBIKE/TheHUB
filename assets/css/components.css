@@ -21,6 +21,21 @@ body{
   background:var(--color-bg-sunken);border-radius:var(--radius-sm);
 }
 
+/* Page Header */
+.page-header{margin-bottom:var(--space-xl)}
+.page-title{
+  display:flex;align-items:center;gap:var(--space-sm);
+  font-size:var(--text-2xl);font-weight:var(--weight-bold);
+  margin:0 0 var(--space-xs) 0;color:var(--color-text-primary);
+}
+.page-icon{width:32px;height:32px;color:var(--color-accent);flex-shrink:0}
+.page-subtitle{font-size:var(--text-md);color:var(--color-text-secondary);margin:0}
+.page-subtitle .subtitle-meta{font-size:var(--text-sm);color:var(--color-text-muted)}
+@media(max-width:599px){
+  .page-title{font-size:var(--text-xl)}
+  .page-icon{width:24px;height:24px}
+}
+
 /* Cards */
 .card{
   background:var(--color-bg-surface);

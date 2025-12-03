@@ -111,5 +111,12 @@ if (hub_is_ajax()) {
     <script src="<?= hub_asset('js/woocommerce.js') ?>"></script>
     <script src="<?= hub_asset('js/badge-system.js') ?>"></script>
     <script src="<?= hub_asset('js/pwa.js') ?>"></script>
+
+    <!-- Initialize Lucide icons -->
+    <script>
+        lucide.createIcons();
+        // Re-initialize icons after AJAX page loads
+        document.addEventListener('hub:contentloaded', () => lucide.createIcons());
+    </script>
 </body>
 </html>
