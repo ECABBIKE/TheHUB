@@ -1273,13 +1273,13 @@ function toggleClubRiders(btn, event) {
 /* Mobile landscape: show table with event columns, hide cards */
 @media (max-width: 900px) and (orientation: landscape) {
   .standings-card .table-wrapper {
-    display: block;
+    display: block !important;
   }
   .standings-card .result-list {
-    display: none;
+    display: none !important;
   }
   .table-col-hide-portrait {
-    display: table-cell;
+    display: table-cell !important;
   }
   /* Make event columns slightly smaller in landscape */
   .standings-table .col-event {
