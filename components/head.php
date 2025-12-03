@@ -38,8 +38,10 @@ if (!function_exists('hub_asset')) {
 <link rel="icon" type="image/png" sizes="16x16" href="/uploads/icons/GSIkon.png">
 <link rel="icon" type="image/png" href="/uploads/icons/GSIkon.png">
 
-<!-- Preconnect -->
+<!-- Preconnect & Google Fonts -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cabin+Condensed:wght@400;500;600;700&family=Manrope:wght@300;400;500;600;700&family=Oswald:wght@400;500;600;700&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
 
 <title><?= htmlspecialchars($pageTitle) ?></title>
 

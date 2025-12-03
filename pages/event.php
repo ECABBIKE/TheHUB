@@ -293,13 +293,23 @@ try {
     $registrations = $registrations->fetchAll(PDO::FETCH_ASSOC);
     $totalRegistrations = count($registrations);
 
-    // Determine active tab
-    $hasResults = !empty($results);
-    $defaultTab = $hasResults ? 'resultat' : 'info';
-    $activeTab = isset($_GET['tab']) ? $_GET['tab'] : $defaultTab;
+    // Check if event is in the past
+    $eventDate = strtotime($event['date']);
+    $isPastEvent = $eventDate < strtotime('today');
 
     // Check registration status
     $registrationOpen = !empty($event['registration_deadline']) && strtotime($event['registration_deadline']) >= time();
+
+    // Determine active tab based on event state
+    $hasResults = !empty($results);
+    if ($registrationOpen) {
+        $defaultTab = 'anmalan';
+    } elseif ($hasResults) {
+        $defaultTab = 'resultat';
+    } else {
+        $defaultTab = 'info';
+    }
+    $activeTab = isset($_GET['tab']) ? $_GET['tab'] : $defaultTab;
 
     // Ticketing info
     $ticketingEnabled = !empty($event['ticketing_enabled']);
@@ -402,6 +412,13 @@ if (!$event) {
 <!-- Tab Navigation -->
 <div class="event-tabs-wrapper mb-lg">
     <div class="event-tabs">
+        <?php if ($registrationOpen): ?>
+        <a href="?id=<?= $eventId ?>&tab=anmalan" class="event-tab <?= $activeTab === 'anmalan' ? 'active' : '' ?>">
+            <i data-lucide="edit-3"></i>
+            Anmälan
+        </a>
+        <?php endif; ?>
+
         <?php if ($hasResults): ?>
         <a href="?id=<?= $eventId ?>&tab=resultat" class="event-tab <?= $activeTab === 'resultat' ? 'active' : '' ?>">
             <i data-lucide="trophy"></i>
@@ -417,14 +434,14 @@ if (!$event) {
 
         <?php if (!empty($event['pm_content']) || !empty($event['pm_use_global'])): ?>
         <a href="?id=<?= $eventId ?>&tab=pm" class="event-tab <?= $activeTab === 'pm' ? 'active' : '' ?>">
-            <i data-lucide="clipboard-list"></i>
+            <i data-lucide="file-text"></i>
             PM
         </a>
         <?php endif; ?>
 
         <?php if (!empty($event['jury_communication']) || !empty($event['jury_use_global'])): ?>
         <a href="?id=<?= $eventId ?>&tab=jury" class="event-tab <?= $activeTab === 'jury' ? 'active' : '' ?>">
-            <i data-lucide="gavel"></i>
+            <i data-lucide="scale"></i>
             Jury
         </a>
         <?php endif; ?>
@@ -438,35 +455,30 @@ if (!$event) {
 
         <?php if (!empty($event['start_times']) || !empty($event['start_times_use_global'])): ?>
         <a href="?id=<?= $eventId ?>&tab=starttider" class="event-tab <?= $activeTab === 'starttider' ? 'active' : '' ?>">
-            <i data-lucide="clock"></i>
+            <i data-lucide="list-ordered"></i>
             Starttider
         </a>
         <?php endif; ?>
 
         <?php if (!empty($event['map_content']) || !empty($event['map_image_url']) || !empty($event['map_use_global'])): ?>
         <a href="?id=<?= $eventId ?>&tab=karta" class="event-tab <?= $activeTab === 'karta' ? 'active' : '' ?>">
-            <i data-lucide="map"></i>
+            <i data-lucide="map-pin"></i>
             Karta
         </a>
         <?php endif; ?>
 
+        <?php if (!$isPastEvent): ?>
         <a href="?id=<?= $eventId ?>&tab=anmalda" class="event-tab <?= $activeTab === 'anmalda' ? 'active' : '' ?>">
             <i data-lucide="users"></i>
             Anmälda
             <span class="tab-badge tab-badge--secondary"><?= $totalRegistrations ?></span>
         </a>
+        <?php endif; ?>
 
         <?php if ($ticketingEnabled): ?>
         <a href="?id=<?= $eventId ?>&tab=biljetter" class="event-tab <?= $activeTab === 'biljetter' ? 'active' : '' ?>">
             <i data-lucide="ticket"></i>
             Biljetter
-        </a>
-        <?php endif; ?>
-
-        <?php if ($registrationOpen): ?>
-        <a href="?id=<?= $eventId ?>&tab=anmalan" class="event-tab <?= $activeTab === 'anmalan' ? 'active' : '' ?>">
-            <i data-lucide="user-plus"></i>
-            Anmälan
         </a>
         <?php endif; ?>
     </div>
@@ -484,19 +496,6 @@ if (!$event) {
     </div>
 </section>
 <?php else: ?>
-
-<?php if ($hasSplitTimes && !$isDH): ?>
-<div class="split-toggles mb-md">
-    <label class="toggle-label">
-        <input type="checkbox" id="globalSplitToggle" onchange="toggleAllSplitTimes(this.checked)">
-        <span>Visa sträcktider</span>
-    </label>
-    <label class="toggle-label">
-        <input type="checkbox" id="colorToggle" checked onchange="toggleSplitColors(this.checked)">
-        <span>Färgkodning</span>
-    </label>
-</div>
-<?php endif; ?>
 
 <!-- Filters -->
 <div class="filter-row mb-lg">
@@ -980,26 +979,6 @@ function filterResults() {
     });
 }
 
-function toggleAllSplitTimes(show) {
-    document.querySelectorAll('.split-time-col').forEach(col => {
-        col.style.display = show ? '' : 'none';
-    });
-}
-
-function toggleSplitColors(enabled) {
-    document.querySelectorAll('.split-time-col').forEach(col => {
-        if (enabled) {
-            col.classList.remove('no-color');
-        } else {
-            col.classList.add('no-color');
-        }
-    });
-}
-
-// Initialize: hide split times by default
-document.addEventListener('DOMContentLoaded', function() {
-    toggleAllSplitTimes(false);
-});
 </script>
 
 <style>
@@ -1223,22 +1202,6 @@ document.addEventListener('DOMContentLoaded', function() {
     color: white;
 }
 
-/* Split time toggles */
-.split-toggles {
-    display: flex;
-    justify-content: flex-end;
-    gap: var(--space-md);
-}
-
-.toggle-label {
-    display: flex;
-    align-items: center;
-    gap: var(--space-xs);
-    font-size: var(--text-sm);
-    color: var(--color-text-secondary);
-    cursor: pointer;
-}
-
 /* Filter Row */
 .filter-row {
     display: grid;
@@ -1431,27 +1394,46 @@ document.addEventListener('DOMContentLoaded', function() {
 .info-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
-    gap: var(--space-lg);
+    gap: var(--space-md);
+}
+
+.info-block {
+    background: var(--color-bg-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    padding: var(--space-md);
+    transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.info-block:hover {
+    border-color: var(--color-accent);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
 .info-block h3 {
     display: flex;
     align-items: center;
-    gap: var(--space-xs);
+    gap: var(--space-sm);
     font-size: var(--text-md);
     font-weight: var(--weight-semibold);
-    color: var(--color-accent);
-    margin-bottom: var(--space-sm);
+    color: var(--color-text-primary);
+    margin: 0 0 var(--space-sm);
+    padding-bottom: var(--space-sm);
+    border-bottom: 1px solid var(--color-border);
 }
 
 .info-block h3 i {
-    width: 18px;
-    height: 18px;
+    width: 20px;
+    height: 20px;
+    color: var(--color-accent);
+    flex-shrink: 0;
 }
 
 .info-block p {
     color: var(--color-text-secondary);
     line-height: 1.6;
+    margin: 0;
+    font-size: var(--text-sm);
 }
 
 /* Map image */
@@ -1603,7 +1585,8 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 }
 
-@media (max-width: 599px) {
+/* Mobile portrait: hide table, show cards, hide splits */
+@media (max-width: 599px) and (orientation: portrait) {
     .table-wrapper {
         display: none;
     }
@@ -1612,12 +1595,38 @@ document.addEventListener('DOMContentLoaded', function() {
         display: block;
     }
 
-    .split-toggles {
+    .event-title {
+        font-size: var(--text-lg);
+    }
+}
+
+/* Mobile landscape: show table with splits */
+@media (max-width: 900px) and (orientation: landscape) {
+    .result-list {
         display: none;
+    }
+
+    .table-wrapper {
+        display: block;
+    }
+
+    .table-col-hide-mobile {
+        display: table-cell;
+    }
+
+    .split-time-col {
+        display: table-cell;
     }
 
     .event-title {
         font-size: var(--text-lg);
+    }
+}
+
+/* Small screens in portrait: hide splits in table too */
+@media (max-width: 900px) and (orientation: portrait) {
+    .split-time-col {
+        display: none;
     }
 }
 </style>
