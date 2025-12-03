@@ -649,16 +649,16 @@ if (!$event) {
     <div class="filter-field filter-field--toggle">
         <label class="toggle-label">
             <input type="checkbox" id="colorToggle" checked onchange="toggleSplitColors(this.checked)">
-            <span class="toggle-switch"></span>
             <span class="toggle-text">Färgkodning</span>
+            <span class="toggle-switch"></span>
         </label>
     </div>
     <?php if (count($globalSplitResults) > 0): ?>
     <div class="filter-field filter-field--toggle">
         <label class="toggle-label">
             <input type="checkbox" id="totalViewToggle" onchange="toggleTotalView(this.checked)">
-            <span class="toggle-switch"></span>
             <span class="toggle-text">Sträcktider Total</span>
+            <span class="toggle-switch"></span>
         </label>
     </div>
     <?php endif; ?>
@@ -1694,12 +1694,12 @@ function sortTotalBySplit(headerEl, splitNum) {
     transition: all var(--transition-fast);
 }
 
-.toggle-label input:checked + .toggle-switch {
+.toggle-label input:checked ~ .toggle-switch {
     background: var(--color-accent);
     border-color: var(--color-accent);
 }
 
-.toggle-label input:checked + .toggle-switch::after {
+.toggle-label input:checked ~ .toggle-switch::after {
     left: 22px;
 }
 
