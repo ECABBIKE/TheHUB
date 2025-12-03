@@ -386,6 +386,28 @@ function validateFileUpload($file, $allowedTypes = ['text/csv'], $maxSize = 1048
         return ['valid' => false, 'error' => "Filen är för stor (max {$maxMB}MB)"];
     }
 
+    // SECURITY: Validate file extension first
+    $filename = strtolower($file['name']);
+    $extension = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
+
+    // Check for dangerous double extensions (e.g., evil.php.csv)
+    if (preg_match('/\.(php|phtml|php[0-9]|phar|phps|pht|phpt|exe|sh|bat|cmd)\./i', $filename)) {
+        return ['valid' => false, 'error' => 'Ogiltigt filnamn. Misstänkt dubbel filändelse.'];
+    }
+
+    // Check for executable extensions in the filename
+    if (preg_match('/\.(php|phtml|php[0-9]|phar|phps|pht|phpt|exe|sh|bat|cmd|js|jsp|asp|aspx)$/i', $filename)) {
+        return ['valid' => false, 'error' => 'Körbar filtyp är inte tillåten.'];
+    }
+
+    // Whitelist allowed extensions
+    $allowedExtensions = ['csv', 'xlsx', 'xls', 'txt'];
+    if (!in_array($extension, $allowedExtensions)) {
+        $allowedStr = implode(', ', array_map('strtoupper', $allowedExtensions));
+        return ['valid' => false, 'error' => "Ogiltig filändelse. Tillåtna: $allowedStr"];
+    }
+
+    // Validate MIME type as additional check
     $finfo = new finfo(FILEINFO_MIME_TYPE);
     $mimeType = $finfo->file($file['tmp_name']);
 
@@ -415,4 +437,40 @@ function batchValidate($validations) {
     }
 
     return ['valid' => $allValid, 'errors' => $errors];
+}
+
+/**
+ * Validate password strength
+ *
+ * @param string $password Password to validate
+ * @return array ['valid' => bool, 'error' => string|null]
+ */
+function validatePasswordStrength($password) {
+    if (strlen($password) < 8) {
+        return ['valid' => false, 'error' => 'Lösenordet måste vara minst 8 tecken'];
+    }
+
+    // Check password complexity
+    $strength = 0;
+    if (preg_match('/[a-z]/', $password)) $strength++; // lowercase
+    if (preg_match('/[A-Z]/', $password)) $strength++; // uppercase
+    if (preg_match('/[0-9]/', $password)) $strength++; // numbers
+    if (preg_match('/[^a-zA-Z0-9]/', $password)) $strength++; // special chars
+
+    if ($strength < 3) {
+        return ['valid' => false, 'error' => 'Lösenordet måste innehålla minst 3 av: gemener, versaler, siffror, specialtecken'];
+    }
+
+    // Check for common weak passwords
+    $commonPasswords = [
+        'password', 'password123', '12345678', 'qwerty123', 'abc123456',
+        'letmein', 'welcome', 'monkey', '1234567890', 'password1',
+        'qwerty', 'dragon', 'master', 'sunshine', 'princess'
+    ];
+
+    if (in_array(strtolower($password), $commonPasswords)) {
+        return ['valid' => false, 'error' => 'Välj ett mer unikt lösenord'];
+    }
+
+    return ['valid' => true, 'error' => null];
 }

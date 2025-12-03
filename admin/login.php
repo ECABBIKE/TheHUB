@@ -15,17 +15,22 @@ if (isset($_GET['timeout'])) {
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
- $username = $_POST['username'] ?? '';
- $password = $_POST['password'] ?? '';
+    // Verify CSRF token
+    if (!verify_csrf_token($_POST['csrf_token'] ?? '')) {
+        $error = 'Ogiltig förfrågan. Försök igen.';
+    } else {
+        $username = $_POST['username'] ?? '';
+        $password = $_POST['password'] ?? '';
 
- // Check rate limiting before attempting login
- if (isLoginRateLimited($username)) {
- $error = 'För många inloggningsförsök. Vänta 15 minuter och försök igen.';
- } elseif (login_admin($username, $password)) {
- redirect('/admin/dashboard.php');
- } else {
- $error = 'Felaktigt användarnamn eller lösenord';
- }
+        // Check rate limiting before attempting login
+        if (isLoginRateLimited($username)) {
+            $error = 'För många inloggningsförsök. Vänta 15 minuter och försök igen.';
+        } elseif (login_admin($username, $password)) {
+            redirect('/admin/dashboard.php');
+        } else {
+            $error = 'Felaktigt användarnamn eller lösenord';
+        }
+    }
 }
 
 $pageTitle = 'Logga in';
@@ -55,6 +60,7 @@ $pageTitle = 'Logga in';
  <?php endif; ?>
 
  <form method="POST" class="gs-login-form">
+  <?= csrf_field() ?>
   <div class="form-group">
   <label for="username" class="label">Användarnamn</label>
   <input
@@ -86,6 +92,9 @@ $pageTitle = 'Logga in';
  </form>
 
  <div class="gs-login-footer">
+  <p class="gs-text-sm gs-text-secondary">
+   TheHUB v<?= APP_VERSION ?>
+  </p>
  </div>
  </div>
 </div>

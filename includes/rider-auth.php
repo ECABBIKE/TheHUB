@@ -5,6 +5,48 @@
  */
 
 /**
+ * Check if rider login is rate limited
+ */
+function is_rider_login_rate_limited($email) {
+    $key = 'rider_login_' . md5($email . $_SERVER['REMOTE_ADDR']);
+
+    if (!isset($_SESSION[$key])) {
+        $_SESSION[$key] = ['count' => 0, 'first_attempt' => time()];
+    }
+
+    $attempts = &$_SESSION[$key];
+
+    // Reset after 15 minutes
+    if (time() - $attempts['first_attempt'] > 900) {
+        $attempts = ['count' => 0, 'first_attempt' => time()];
+    }
+
+    // Allow max 5 attempts per 15 minutes
+    return $attempts['count'] >= 5;
+}
+
+/**
+ * Record a failed rider login attempt
+ */
+function record_failed_rider_login($email) {
+    $key = 'rider_login_' . md5($email . $_SERVER['REMOTE_ADDR']);
+
+    if (!isset($_SESSION[$key])) {
+        $_SESSION[$key] = ['count' => 0, 'first_attempt' => time()];
+    }
+
+    $_SESSION[$key]['count']++;
+}
+
+/**
+ * Clear rider login attempts after successful login
+ */
+function clear_rider_login_attempts($email) {
+    $key = 'rider_login_' . md5($email . $_SERVER['REMOTE_ADDR']);
+    unset($_SESSION[$key]);
+}
+
+/**
  * Check if rider is logged in
  */
 function is_rider_logged_in() {
@@ -46,6 +88,11 @@ function require_rider() {
  * Login rider with email and password
  */
 function rider_login($email, $password) {
+    // Check rate limiting first
+    if (is_rider_login_rate_limited($email)) {
+        return ['success' => false, 'message' => 'För många inloggningsförsök. Vänta 15 minuter och försök igen.'];
+    }
+
     $db = getDB();
 
     // Find rider by email
@@ -55,6 +102,7 @@ function rider_login($email, $password) {
     );
 
     if (!$rider) {
+        record_failed_rider_login($email);
         return ['success' => false, 'message' => 'Ogiltig e-post eller lösenord'];
     }
 
@@ -65,13 +113,20 @@ function rider_login($email, $password) {
 
     // Verify password
     if (!password_verify($password, $rider['password'])) {
+        record_failed_rider_login($email);
         return ['success' => false, 'message' => 'Ogiltig e-post eller lösenord'];
     }
 
-    // Login successful - create session
+    // Login successful - regenerate session ID to prevent session fixation
+    session_regenerate_id(true);
+
+    // Create session
     $_SESSION['rider_id'] = $rider['id'];
     $_SESSION['rider_name'] = $rider['firstname'] . ' ' . $rider['lastname'];
     $_SESSION['rider_email'] = $rider['email'];
+
+    // Clear rate limiting
+    clear_rider_login_attempts($email);
 
     // Update last login
     $db->update('riders', ['last_login' => date('Y-m-d H:i:s')], 'id = ?', [$rider['id']]);

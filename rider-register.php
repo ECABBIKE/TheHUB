@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/config.php';
 require_once __DIR__ . '/includes/rider-auth.php';
+require_once __DIR__ . '/includes/validators.php';
 
 // If already logged in, redirect to profile
 if (is_rider_logged_in()) {
@@ -25,19 +26,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
  } elseif ($password !== $confirmPassword) {
  $message = 'Lösenorden matchar inte';
  $messageType = 'error';
- } elseif (strlen($password) < 8) {
- $message = 'Lösenordet måste vara minst 8 tecken';
- $messageType = 'error';
  } else {
- $result = rider_register($email, $password);
+ // Validate password strength
+ $passwordValidation = validatePasswordStrength($password);
+ if (!$passwordValidation['valid']) {
+  $message = $passwordValidation['error'];
+  $messageType = 'error';
+ } else {
+  $result = rider_register($email, $password);
 
- if ($result['success']) {
+  if ($result['success']) {
   // Redirect to profile after successful registration
   header('Location: /rider-profile.php?welcome=1');
   exit;
- } else {
+  } else {
   $message = $result['message'];
   $messageType = 'error';
+  }
  }
  }
 }

@@ -3,8 +3,6 @@
  * Safe Migration - Works around InfinityFree limitations
  */
 
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
 @ini_set('max_execution_time', 300); // Try to extend time limit
 
 echo "<!DOCTYPE html><html><head><meta charset='UTF-8'><title>Safe Migration</title>";

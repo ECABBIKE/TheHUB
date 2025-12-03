@@ -42,16 +42,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reset_password'])) {
  } elseif ($newPassword !== $confirmPassword) {
  $message = 'Lösenorden matchar inte';
  $messageType = 'error';
- } elseif (strlen($newPassword) < 8) {
- $message = 'Lösenordet måste vara minst 8 tecken';
- $messageType = 'error';
  } else {
- $result = rider_reset_password($token, $newPassword);
- $message = $result['message'];
- $messageType = $result['success'] ? 'success' : 'error';
+ // Validate new password strength
+ require_once __DIR__ . '/includes/validators.php';
+ $passwordValidation = validatePasswordStrength($newPassword);
+ if (!$passwordValidation['valid']) {
+  $message = $passwordValidation['error'];
+  $messageType = 'error';
+ } else {
+  $result = rider_reset_password($token, $newPassword);
+  $message = $result['message'];
+  $messageType = $result['success'] ? 'success' : 'error';
 
- if ($result['success']) {
+  if ($result['success']) {
   $step = 'success';
+  }
  }
  }
 }

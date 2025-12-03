@@ -35,7 +35,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
 
                 $fileExtension = strtolower(pathinfo($_FILES['logo']['name'], PATHINFO_EXTENSION));
-                $allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'];
+                // SVG removed due to XSS risk - SVG files can contain JavaScript
+                $allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
 
                 if (in_array($fileExtension, $allowedExtensions)) {
                     $fileName = uniqid('series_') . '.' . $fileExtension;

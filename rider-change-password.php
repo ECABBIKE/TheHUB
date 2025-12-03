@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/config.php';
 require_once __DIR__ . '/includes/rider-auth.php';
+require_once __DIR__ . '/includes/validators.php';
 
 // Require authentication
 require_rider();
@@ -23,13 +24,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
  } elseif ($newPassword !== $confirmPassword) {
  $message = 'De nya lösenorden matchar inte';
  $messageType = 'error';
- } elseif (strlen($newPassword) < 8) {
- $message = 'Lösenordet måste vara minst 8 tecken';
- $messageType = 'error';
  } else {
- $result = rider_change_password($rider['id'], $currentPassword, $newPassword);
- $message = $result['message'];
- $messageType = $result['success'] ? 'success' : 'error';
+ // Validate new password strength
+ $passwordValidation = validatePasswordStrength($newPassword);
+ if (!$passwordValidation['valid']) {
+  $message = $passwordValidation['error'];
+  $messageType = 'error';
+ } else {
+  $result = rider_change_password($rider['id'], $currentPassword, $newPassword);
+  $message = $result['message'];
+  $messageType = $result['success'] ? 'success' : 'error';
+ }
  }
 }
 
