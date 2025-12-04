@@ -26,9 +26,15 @@
   .col-rider{max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 }
 
-/* Landscape: Show all */
+/* Landscape: Show all hidden columns */
 @media(orientation:landscape){
-  .col-split,.col-diff,.table-col-hide-portrait{display:table-cell!important}
+  .col-split,.col-diff,.table-col-hide-portrait,
+  th.table-col-hide-portrait,td.table-col-hide-portrait,
+  .table th.table-col-hide-portrait,.table td.table-col-hide-portrait{
+    display:table-cell!important;
+    visibility:visible!important;
+    opacity:1!important
+  }
 }
 
 /* Variants */

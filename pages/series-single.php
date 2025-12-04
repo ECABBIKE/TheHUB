@@ -1270,7 +1270,7 @@ function toggleClubRiders(btn, event) {
   }
 }
 
-/* Mobile landscape: show table with event columns, hide cards */
+/* Landscape: show table with ALL event columns */
 @media (orientation: landscape) {
   .standings-card .table-wrapper {
     display: block !important;
@@ -1278,8 +1278,18 @@ function toggleClubRiders(btn, event) {
   .standings-card .result-list {
     display: none !important;
   }
-  .table-col-hide-portrait {
+  /* Force show all columns with table-col-hide-portrait */
+  .table-col-hide-portrait,
+  th.table-col-hide-portrait,
+  td.table-col-hide-portrait,
+  .standings-table th.table-col-hide-portrait,
+  .standings-table td.table-col-hide-portrait,
+  .standings-table .col-event,
+  .standings-table th.col-event,
+  .standings-table td.col-event {
     display: table-cell !important;
+    visibility: visible !important;
+    opacity: 1 !important;
   }
   /* Make event columns slightly smaller in landscape */
   .standings-table .col-event {
