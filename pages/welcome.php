@@ -87,6 +87,7 @@ try {
         <img src="/uploads/icons/GSIkon.png" alt="TheHUB" class="welcome-logo" onerror="this.style.display='none'">
         <h1 class="welcome-title">TheHUB</h1>
         <p class="welcome-subtitle">GravitySeries Competition Platform</p>
+        <p class="welcome-version">Beta <?= APP_VERSION ?> • Build <?= APP_BUILD ?></p>
     </div>
 
     <!-- Stats Row -->
@@ -244,6 +245,13 @@ try {
     font-size: var(--text-md);
     color: var(--color-text-secondary);
     margin: 0;
+}
+
+.welcome-version {
+    font-size: var(--text-sm);
+    color: var(--color-accent);
+    margin: var(--space-xs) 0 0;
+    font-weight: var(--weight-medium);
 }
 
 /* Stats */

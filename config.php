@@ -39,9 +39,9 @@ define('MAX_UPLOAD_SIZE', 10 * 1024 * 1024); // 10MB
 define('EVENTS_PER_PAGE', 20);
 
 // Version info
-define('APP_VERSION', '2.5.2');
-define('APP_VERSION_NAME', 'Mobile Optimization');
-define('APP_BUILD', '2025-11-26');
+define('APP_VERSION', '3.5');
+define('APP_VERSION_NAME', 'Beta');
+define('APP_BUILD', '2025-12-04');
 define('DEPLOYMENT_OFFSET', 119); // Deployments before git repo
 
 try {
