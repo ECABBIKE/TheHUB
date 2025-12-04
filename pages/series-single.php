@@ -1257,43 +1257,36 @@ function toggleClubRiders(btn, event) {
   }
 }
 
-/* Default: hide extra columns on mobile */
-.table-col-hide-mobile {
-  display: none;
-}
+/*
+ * Default: SHOW event columns always (they scroll horizontally)
+ * Only hide them + show card view in portrait on small screens
+ */
 
-/* Mobile portrait: hide table, show cards */
+/* Mobile portrait ONLY: hide table, show cards */
 @media (max-width: 599px) and (orientation: portrait) {
   .standings-card .table-wrapper {
-    display: none;
+    display: none !important;
   }
   .standings-card .result-list {
-    display: block;
+    display: block !important;
+  }
+  .table-col-hide-mobile {
+    display: none !important;
   }
 }
 
-/* Mobile landscape: show table with all columns */
-@media (max-width: 900px) and (orientation: landscape) {
-  .standings-card .result-list {
-    display: none;
-  }
-  .standings-card .table-wrapper {
-    display: block;
-  }
-  .table-col-hide-mobile {
-    display: table-cell;
-  }
-  .standings-table .col-event {
-    min-width: 32px;
-    font-size: var(--text-xs);
-    padding: var(--space-xs);
-  }
+/* Everything else: show table with all columns */
+.standings-card .table-wrapper {
+  display: block;
 }
-
-/* Desktop/tablet: show all columns */
-@media (min-width: 900px) {
-  .table-col-hide-mobile {
-    display: table-cell;
-  }
+.standings-card .result-list {
+  display: none;
+}
+.table-col-hide-mobile {
+  display: table-cell;
+}
+.standings-table .col-event {
+  min-width: 40px;
+  font-size: var(--text-sm);
 }
 </style>
