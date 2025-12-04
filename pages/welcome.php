@@ -87,7 +87,8 @@ try {
         <img src="/uploads/icons/GSIkon.png" alt="TheHUB" class="welcome-logo" onerror="this.style.display='none'">
         <h1 class="welcome-title">TheHUB</h1>
         <p class="welcome-subtitle">GravitySeries Competition Platform</p>
-        <p class="welcome-version">Beta <?= APP_VERSION ?> • Build <?= APP_BUILD ?></p>
+<?php $versionInfo = function_exists('getVersionInfo') ? getVersionInfo() : null; ?>
+        <p class="welcome-version">Beta <?= APP_VERSION ?><?php if ($versionInfo && $versionInfo['deployment']): ?> [<?= APP_BUILD ?>.<?= str_pad($versionInfo['deployment'], 3, '0', STR_PAD_LEFT) ?>]<?php endif; ?></p>
     </div>
 
     <!-- Stats Row -->
