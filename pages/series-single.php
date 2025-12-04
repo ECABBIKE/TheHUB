@@ -558,7 +558,7 @@ if (!$series) {
           <th class="col-club table-col-hide-portrait">Klubb</th>
           <?php $eventNum = 1; ?>
           <?php foreach ($eventsWithPoints as $event): ?>
-          <th class="col-event table-col-hide-portrait" title="<?= htmlspecialchars($event['name']) ?>">
+          <th class="col-event table-col-hide-mobile" title="<?= htmlspecialchars($event['name']) ?>">
             #<?= $eventNum ?>
           </th>
           <?php $eventNum++; ?>
@@ -591,7 +591,7 @@ if (!$series) {
           $pts = $rider['event_points'][$event['id']] ?? 0;
           $isExcluded = isset($rider['excluded_events'][$event['id']]);
           ?>
-          <td class="col-event table-col-hide-portrait <?= $pts > 0 ? 'has-points' : '' ?> <?= $isExcluded ? 'excluded' : '' ?>">
+          <td class="col-event table-col-hide-mobile <?= $pts > 0 ? 'has-points' : '' ?> <?= $isExcluded ? 'excluded' : '' ?>">
             <?php if ($pts > 0): ?>
               <?php if ($isExcluded): ?>
                 <span class="excluded-points" title="Räknas ej"><?= $pts ?></span>
@@ -672,7 +672,7 @@ if (!$series) {
           <th class="col-riders table-col-hide-portrait">Åkare</th>
           <?php $eventNum = 1; ?>
           <?php foreach ($eventsWithPoints as $event): ?>
-          <th class="col-event table-col-hide-portrait" title="<?= htmlspecialchars($event['name']) ?>">
+          <th class="col-event table-col-hide-mobile" title="<?= htmlspecialchars($event['name']) ?>">
             #<?= $eventNum ?>
           </th>
           <?php $eventNum++; ?>
@@ -702,7 +702,7 @@ if (!$series) {
           </td>
           <?php foreach ($eventsWithPoints as $event): ?>
           <?php $pts = $club['event_points'][$event['id']] ?? 0; ?>
-          <td class="col-event table-col-hide-portrait <?= $pts > 0 ? 'has-points' : '' ?>">
+          <td class="col-event table-col-hide-mobile <?= $pts > 0 ? 'has-points' : '' ?>">
             <?= $pts > 0 ? $pts : '–' ?>
           </td>
           <?php endforeach; ?>
@@ -721,7 +721,7 @@ if (!$series) {
             </a>
           </td>
           <?php foreach ($eventsWithPoints as $event): ?>
-          <td class="col-event table-col-hide-portrait"></td>
+          <td class="col-event table-col-hide-mobile"></td>
           <?php endforeach; ?>
           <td class="col-total text-muted"><?= $clubRider['points'] ?> p</td>
         </tr>
@@ -1257,7 +1257,12 @@ function toggleClubRiders(btn, event) {
   }
 }
 
-/* Mobile portrait: hide table, show cards, hide event columns */
+/* Default: hide extra columns on mobile */
+.table-col-hide-mobile {
+  display: none;
+}
+
+/* Mobile portrait: hide table, show cards */
 @media (max-width: 599px) and (orientation: portrait) {
   .standings-card .table-wrapper {
     display: none;
@@ -1265,31 +1270,18 @@ function toggleClubRiders(btn, event) {
   .standings-card .result-list {
     display: block;
   }
-  .table-col-hide-portrait {
+}
+
+/* Mobile landscape: show table with all columns */
+@media (max-width: 900px) and (orientation: landscape) {
+  .standings-card .result-list {
     display: none;
   }
-}
-
-/* Landscape: show table with ALL event columns */
-/* Using multiple approaches for iOS Safari compatibility */
-@media (orientation: landscape) {
   .standings-card .table-wrapper {
-    display: block !important;
+    display: block;
   }
-  .standings-card .result-list {
-    display: none !important;
-  }
-  .table-col-hide-portrait,
-  th.table-col-hide-portrait,
-  td.table-col-hide-portrait,
-  .standings-table th.table-col-hide-portrait,
-  .standings-table td.table-col-hide-portrait,
-  .standings-table .col-event,
-  .standings-table th.col-event,
-  .standings-table td.col-event {
-    display: table-cell !important;
-    visibility: visible !important;
-    opacity: 1 !important;
+  .table-col-hide-mobile {
+    display: table-cell;
   }
   .standings-table .col-event {
     min-width: 32px;
@@ -1298,88 +1290,10 @@ function toggleClubRiders(btn, event) {
   }
 }
 
-/* Fallback: aspect-ratio based (iOS Safari compatibility) */
-@media (min-aspect-ratio: 1/1) {
-  .standings-card .table-wrapper {
-    display: block !important;
+/* Desktop/tablet: show all columns */
+@media (min-width: 900px) {
+  .table-col-hide-mobile {
+    display: table-cell;
   }
-  .standings-card .result-list {
-    display: none !important;
-  }
-  .table-col-hide-portrait,
-  th.table-col-hide-portrait,
-  td.table-col-hide-portrait,
-  .standings-table th.table-col-hide-portrait,
-  .standings-table td.table-col-hide-portrait,
-  .standings-table .col-event,
-  .standings-table th.col-event,
-  .standings-table td.col-event {
-    display: table-cell !important;
-    visibility: visible !important;
-    opacity: 1 !important;
-  }
-  .standings-table .col-event {
-    min-width: 32px;
-    font-size: var(--text-xs);
-    padding: var(--space-xs);
-  }
-}
-
-/* Additional fallback: width > 500px (catches most landscape phones) */
-@media (min-width: 500px) and (max-height: 500px) {
-  .standings-card .table-wrapper {
-    display: block !important;
-  }
-  .standings-card .result-list {
-    display: none !important;
-  }
-  .table-col-hide-portrait,
-  th.table-col-hide-portrait,
-  td.table-col-hide-portrait,
-  .standings-table th.table-col-hide-portrait,
-  .standings-table td.table-col-hide-portrait,
-  .standings-table .col-event,
-  .standings-table th.col-event,
-  .standings-table td.col-event {
-    display: table-cell !important;
-    visibility: visible !important;
-    opacity: 1 !important;
-  }
-  .standings-table .col-event {
-    min-width: 32px;
-    font-size: var(--text-xs);
-    padding: var(--space-xs);
-  }
-}
-
-/* JavaScript-based landscape detection (fallback for iOS) */
-body.is-landscape .standings-card .table-wrapper {
-  display: block !important;
-}
-body.is-landscape .standings-card .result-list {
-  display: none !important;
-}
-body.is-landscape .table-col-hide-portrait,
-body.is-landscape th.table-col-hide-portrait,
-body.is-landscape td.table-col-hide-portrait,
-body.is-landscape .standings-table .col-event {
-  display: table-cell !important;
-  visibility: visible !important;
-  opacity: 1 !important;
 }
 </style>
-
-<script>
-// Detect landscape orientation and add class to body
-function checkOrientation() {
-  const isLandscape = window.innerWidth > window.innerHeight;
-  document.body.classList.toggle('is-landscape', isLandscape);
-}
-
-// Check on load and orientation change
-checkOrientation();
-window.addEventListener('resize', checkOrientation);
-window.addEventListener('orientationchange', function() {
-  setTimeout(checkOrientation, 100);
-});
-</script>
