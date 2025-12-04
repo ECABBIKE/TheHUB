@@ -3,10 +3,27 @@
  * TheHUB V3.5 - Footer
  * Theme toggle removed - users can change theme in profile settings
  */
+
+// Get version info
+$versionInfo = null;
+if (function_exists('getVersionInfo')) {
+    $versionInfo = getVersionInfo();
+}
 ?>
 <footer class="site-footer">
     <div class="footer-content">
-        <p class="footer-copyright">&copy; <?= date('Y') ?> TheHUB</p>
+        <p class="footer-copyright">
+            &copy; <?= date('Y') ?> TheHUB
+            <?php if ($versionInfo): ?>
+            <span class="footer-version">
+                v<?= htmlspecialchars($versionInfo['version']) ?>
+                <?php if (!empty($versionInfo['build'])): ?>
+                [<?= htmlspecialchars($versionInfo['build']) ?>.<?= str_pad($versionInfo['deployment'], 3, '0', STR_PAD_LEFT) ?>]
+                <?php endif; ?>
+                • <?= htmlspecialchars($versionInfo['name']) ?>
+            </span>
+            <?php endif; ?>
+        </p>
     </div>
 </footer>
 
@@ -25,5 +42,18 @@
 }
 .footer-copyright {
     margin: 0;
+}
+.footer-version {
+    display: block;
+    font-size: var(--text-xs);
+    color: var(--color-text-muted);
+    margin-top: var(--space-xs);
+}
+@media (min-width: 600px) {
+    .footer-version {
+        display: inline;
+        margin-top: 0;
+        margin-left: var(--space-sm);
+    }
 }
 </style>
