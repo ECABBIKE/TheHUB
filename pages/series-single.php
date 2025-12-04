@@ -1351,4 +1351,35 @@ function toggleClubRiders(btn, event) {
     padding: var(--space-xs);
   }
 }
+
+/* JavaScript-based landscape detection (fallback for iOS) */
+body.is-landscape .standings-card .table-wrapper {
+  display: block !important;
+}
+body.is-landscape .standings-card .result-list {
+  display: none !important;
+}
+body.is-landscape .table-col-hide-portrait,
+body.is-landscape th.table-col-hide-portrait,
+body.is-landscape td.table-col-hide-portrait,
+body.is-landscape .standings-table .col-event {
+  display: table-cell !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
 </style>
+
+<script>
+// Detect landscape orientation and add class to body
+function checkOrientation() {
+  const isLandscape = window.innerWidth > window.innerHeight;
+  document.body.classList.toggle('is-landscape', isLandscape);
+}
+
+// Check on load and orientation change
+checkOrientation();
+window.addEventListener('resize', checkOrientation);
+window.addEventListener('orientationchange', function() {
+  setTimeout(checkOrientation, 100);
+});
+</script>
