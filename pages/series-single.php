@@ -1271,6 +1271,7 @@ function toggleClubRiders(btn, event) {
 }
 
 /* Landscape: show table with ALL event columns */
+/* Using multiple approaches for iOS Safari compatibility */
 @media (orientation: landscape) {
   .standings-card .table-wrapper {
     display: block !important;
@@ -1278,7 +1279,6 @@ function toggleClubRiders(btn, event) {
   .standings-card .result-list {
     display: none !important;
   }
-  /* Force show all columns with table-col-hide-portrait */
   .table-col-hide-portrait,
   th.table-col-hide-portrait,
   td.table-col-hide-portrait,
@@ -1291,7 +1291,60 @@ function toggleClubRiders(btn, event) {
     visibility: visible !important;
     opacity: 1 !important;
   }
-  /* Make event columns slightly smaller in landscape */
+  .standings-table .col-event {
+    min-width: 32px;
+    font-size: var(--text-xs);
+    padding: var(--space-xs);
+  }
+}
+
+/* Fallback: aspect-ratio based (iOS Safari compatibility) */
+@media (min-aspect-ratio: 1/1) {
+  .standings-card .table-wrapper {
+    display: block !important;
+  }
+  .standings-card .result-list {
+    display: none !important;
+  }
+  .table-col-hide-portrait,
+  th.table-col-hide-portrait,
+  td.table-col-hide-portrait,
+  .standings-table th.table-col-hide-portrait,
+  .standings-table td.table-col-hide-portrait,
+  .standings-table .col-event,
+  .standings-table th.col-event,
+  .standings-table td.col-event {
+    display: table-cell !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+  }
+  .standings-table .col-event {
+    min-width: 32px;
+    font-size: var(--text-xs);
+    padding: var(--space-xs);
+  }
+}
+
+/* Additional fallback: width > 500px (catches most landscape phones) */
+@media (min-width: 500px) and (max-height: 500px) {
+  .standings-card .table-wrapper {
+    display: block !important;
+  }
+  .standings-card .result-list {
+    display: none !important;
+  }
+  .table-col-hide-portrait,
+  th.table-col-hide-portrait,
+  td.table-col-hide-portrait,
+  .standings-table th.table-col-hide-portrait,
+  .standings-table td.table-col-hide-portrait,
+  .standings-table .col-event,
+  .standings-table th.col-event,
+  .standings-table td.col-event {
+    display: table-cell !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+  }
   .standings-table .col-event {
     min-width: 32px;
     font-size: var(--text-xs);
