@@ -30,7 +30,7 @@ try {
  $stmt = $db->prepare("
  SELECT
   r.id, r.firstname, r.lastname, r.birth_year, r.gender,
-  r.license_number, r.license_type, r.license_year, r.license_valid_until, r.gravity_id, r.city, r.active,
+  r.license_number, r.license_type, r.license_year, r.license_valid_until, r.gravity_id, r.active,
   c.id as club_id, c.name as club_name, c.city as club_city
  FROM riders r
  LEFT JOIN clubs c ON r.club_id = c.id

@@ -36,6 +36,7 @@ CREATE TABLE IF NOT EXISTS riders (
     lastname VARCHAR(100) NOT NULL,
     birth_year INT,
     gender ENUM('M', 'F', 'K', 'Other') DEFAULT 'M',
+    nationality VARCHAR(3) DEFAULT 'SWE', -- ISO 3166-1 alpha-3 country code
 
     -- Club and Team
     club_id INT,
@@ -57,16 +58,9 @@ CREATE TABLE IF NOT EXISTS riders (
     password_reset_expires DATETIME DEFAULT NULL,
     last_login DATETIME DEFAULT NULL,
 
-    -- Contact Information [PRIVATE]
-    phone VARCHAR(20), -- [PRIVATE]
-    emergency_contact VARCHAR(255), -- [PRIVATE] Emergency contact name and phone
-
-    -- Address Information [PRIVATE]
-    city VARCHAR(100),
-    address VARCHAR(255), -- [PRIVATE] Street address
-    postal_code VARCHAR(10), -- [PRIVATE] Postal code
+    -- Regional Information (for statistics)
     country VARCHAR(100) DEFAULT 'Sverige',
-    district VARCHAR(100), -- District/Region
+    district VARCHAR(100), -- District/Region for regional statistics
 
     -- Status and Metadata
     active BOOLEAN DEFAULT 1,
@@ -84,11 +78,11 @@ CREATE TABLE IF NOT EXISTS riders (
     INDEX idx_active (active),
     INDEX idx_email (email),
     INDEX idx_reset_token (password_reset_token),
-    INDEX idx_postal_code (postal_code),
     INDEX idx_district (district),
+    INDEX idx_nationality (nationality),
     UNIQUE KEY unique_license (license_number)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
-COMMENT='PRIVACY: Fields address, postal_code, phone, emergency_contact are PRIVATE';
+COMMENT='Rider profiles. District field used for regional statistics.';
 
 -- ============================================================================
 -- CATEGORIES TABLE - DEPRECATED

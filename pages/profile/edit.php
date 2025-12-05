@@ -18,7 +18,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $firstName = trim($_POST['firstname'] ?? '');
     $lastName = trim($_POST['lastname'] ?? '');
     $email = trim($_POST['email'] ?? '');
-    $phone = trim($_POST['phone'] ?? '');
     $clubId = intval($_POST['club_id'] ?? 0) ?: null;
 
     if (empty($firstName) || empty($lastName)) {
@@ -27,10 +26,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         try {
             $stmt = $pdo->prepare("
                 UPDATE riders
-                SET firstname = ?, lastname = ?, email = ?, phone = ?, club_id = ?
+                SET firstname = ?, lastname = ?, email = ?, club_id = ?
                 WHERE id = ?
             ");
-            $stmt->execute([$firstName, $lastName, $email, $phone, $clubId, $currentUser['id']]);
+            $stmt->execute([$firstName, $lastName, $email, $clubId, $currentUser['id']]);
             $message = 'Profilen har uppdaterats!';
 
             // Refresh user data
@@ -84,12 +83,6 @@ $clubs = $pdo->query("SELECT id, name FROM clubs ORDER BY name")->fetchAll(PDO::
             <label for="email">E-post</label>
             <input type="email" id="email" name="email"
                    value="<?= htmlspecialchars($currentUser['email'] ?? '') ?>">
-        </div>
-
-        <div class="form-group">
-            <label for="phone">Telefon</label>
-            <input type="tel" id="phone" name="phone"
-                   value="<?= htmlspecialchars($currentUser['phone'] ?? '') ?>">
         </div>
     </div>
 

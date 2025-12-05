@@ -14,6 +14,7 @@
  * Column I: Club (Klubb)
  * Column J: Time (Tid: HH:MM:SS)
  * Column K: Category (Kategori)
+ * Column L: Nationality (Nationalitet: ISO 3166-1 alpha-3, default SWE)
  */
 
 require_once __DIR__ . '/../vendor/autoload.php';
@@ -64,7 +65,8 @@ class ResultImporter {
                     'birth_year' => $worksheet->getCell("H{$row}")->getValue(),
                     'club_name' => trim($worksheet->getCell("I{$row}")->getValue()),
                     'time' => trim($worksheet->getCell("J{$row}")->getValue()),
-                    'category' => trim($worksheet->getCell("K{$row}")->getValue())
+                    'category' => trim($worksheet->getCell("K{$row}")->getValue()),
+                    'nationality' => strtoupper(trim($worksheet->getCell("L{$row}")->getValue())) ?: 'SWE'
                 ];
 
                 // Validate required fields
@@ -215,11 +217,12 @@ class ResultImporter {
             $clubId = $this->getOrCreateClub($data['club_name']);
         }
 
-        return $this->db->insert('cyclists', [
+        return $this->db->insert('riders', [
             'firstname' => $data['firstname'],
             'lastname' => $data['lastname'],
             'birth_year' => $data['birth_year'],
             'club_id' => $clubId,
+            'nationality' => $data['nationality'] ?? 'SWE',
             'active' => 1
         ]);
     }
