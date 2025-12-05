@@ -271,7 +271,7 @@ include __DIR__ . '/../includes/layout-header.php';
 
  <!-- Message -->
  <?php if ($message): ?>
- <div class="alert alert-<?= h($messageType) ?> mb-lg">
+ <div class="alert alert--<?= h($messageType) ?> mb-lg">
  <i data-lucide="<?= $messageType === 'success' ? 'check-circle' : 'alert-circle' ?>"></i>
  <?= h($message) ?>
  </div>
