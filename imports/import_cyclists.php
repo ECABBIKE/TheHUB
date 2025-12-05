@@ -10,8 +10,6 @@
  * Column E: Club (Klubb)
  * Column F: License Number (Licensnummer)
  * Column G: Email
- * Column H: Phone (Telefon)
- * Column I: City (Ort)
  */
 
 require_once __DIR__ . '/../vendor/autoload.php';
@@ -57,9 +55,7 @@ class CyclistImporter {
                     'gender' => strtoupper(trim($worksheet->getCell("D{$row}")->getValue())),
                     'club_name' => trim($worksheet->getCell("E{$row}")->getValue()),
                     'license_number' => trim($worksheet->getCell("F{$row}")->getValue()),
-                    'email' => trim($worksheet->getCell("G{$row}")->getValue()),
-                    'phone' => trim($worksheet->getCell("H{$row}")->getValue()),
-                    'city' => trim($worksheet->getCell("I{$row}")->getValue())
+                    'email' => trim($worksheet->getCell("G{$row}")->getValue())
                 ];
 
                 // Validate required fields
@@ -92,9 +88,7 @@ class CyclistImporter {
                             'birth_year' => $data['birth_year'],
                             'gender' => $data['gender'],
                             'club_id' => $clubId,
-                            'email' => $data['email'],
-                            'phone' => $data['phone'],
-                            'city' => $data['city']
+                            'email' => $data['email']
                         ];
 
                         if (!empty($data['license_number'])) {
@@ -114,8 +108,6 @@ class CyclistImporter {
                             'club_id' => $clubId,
                             'license_number' => $data['license_number'] ?: null,
                             'email' => $data['email'] ?: null,
-                            'phone' => $data['phone'] ?: null,
-                            'city' => $data['city'] ?: null,
                             'active' => 1
                         ];
 
