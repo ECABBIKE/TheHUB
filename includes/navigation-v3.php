@@ -118,11 +118,11 @@ function nav_icon($name, $class = 'sidebar-icon-svg') {
         </a>
 
         <a href="/admin/riders.php"
-           class="sidebar-link<?= strpos($current_path, '/admin/riders') !== false || strpos($current_path, '/admin/clubs') !== false ? ' active' : '' ?>"
-           aria-label="Deltagare"
-           <?= strpos($current_path, '/admin/riders') !== false ? 'aria-current="page"' : '' ?>>
+           class="sidebar-link<?= strpos($current_path, '/admin/riders') !== false || strpos($current_path, '/admin/clubs') !== false || strpos($current_path, '/admin/find-duplicates') !== false || strpos($current_path, '/admin/cleanup-') !== false ? ' active' : '' ?>"
+           aria-label="Databas"
+           <?= strpos($current_path, '/admin/riders') !== false || strpos($current_path, '/admin/clubs') !== false ? 'aria-current="page"' : '' ?>>
             <?= nav_icon('users') ?>
-            <span class="sidebar-label">Deltagare</span>
+            <span class="sidebar-label">Databas</span>
         </a>
 
         <a href="/admin/classes.php"
