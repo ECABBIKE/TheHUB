@@ -558,7 +558,7 @@ if (!$series) {
           <th class="col-club table-col-hide-portrait">Klubb</th>
           <?php $eventNum = 1; ?>
           <?php foreach ($eventsWithPoints as $event): ?>
-          <th class="col-event table-col-hide-mobile" title="<?= htmlspecialchars($event['name']) ?>">
+          <th class="col-event" title="<?= htmlspecialchars($event['name']) ?>">
             #<?= $eventNum ?>
           </th>
           <?php $eventNum++; ?>
@@ -591,7 +591,7 @@ if (!$series) {
           $pts = $rider['event_points'][$event['id']] ?? 0;
           $isExcluded = isset($rider['excluded_events'][$event['id']]);
           ?>
-          <td class="col-event table-col-hide-mobile <?= $pts > 0 ? 'has-points' : '' ?> <?= $isExcluded ? 'excluded' : '' ?>">
+          <td class="col-event <?= $pts > 0 ? 'has-points' : '' ?> <?= $isExcluded ? 'excluded' : '' ?>">
             <?php if ($pts > 0): ?>
               <?php if ($isExcluded): ?>
                 <span class="excluded-points" title="Räknas ej"><?= $pts ?></span>
@@ -672,7 +672,7 @@ if (!$series) {
           <th class="col-riders table-col-hide-portrait">Åkare</th>
           <?php $eventNum = 1; ?>
           <?php foreach ($eventsWithPoints as $event): ?>
-          <th class="col-event table-col-hide-mobile" title="<?= htmlspecialchars($event['name']) ?>">
+          <th class="col-event" title="<?= htmlspecialchars($event['name']) ?>">
             #<?= $eventNum ?>
           </th>
           <?php $eventNum++; ?>
@@ -702,7 +702,7 @@ if (!$series) {
           </td>
           <?php foreach ($eventsWithPoints as $event): ?>
           <?php $pts = $club['event_points'][$event['id']] ?? 0; ?>
-          <td class="col-event table-col-hide-mobile <?= $pts > 0 ? 'has-points' : '' ?>">
+          <td class="col-event <?= $pts > 0 ? 'has-points' : '' ?>">
             <?= $pts > 0 ? $pts : '–' ?>
           </td>
           <?php endforeach; ?>
@@ -721,7 +721,7 @@ if (!$series) {
             </a>
           </td>
           <?php foreach ($eventsWithPoints as $event): ?>
-          <td class="col-event table-col-hide-mobile"></td>
+          <td class="col-event"></td>
           <?php endforeach; ?>
           <td class="col-total text-muted"><?= $clubRider['points'] ?> p</td>
         </tr>
@@ -1258,35 +1258,33 @@ function toggleClubRiders(btn, event) {
 }
 
 /*
- * Default: SHOW event columns always (they scroll horizontally)
- * Only hide them + show card view in portrait on small screens
+ * V2 APPROACH: Event columns (.col-event) are ALWAYS visible.
+ * Table scrolls horizontally. Only hide table in portrait on small screens.
  */
 
-/* Mobile portrait ONLY: hide table, show cards */
-@media (max-width: 599px) and (orientation: portrait) {
-  .standings-card .table-wrapper {
-    display: none !important;
-  }
-  .standings-card .result-list {
-    display: block !important;
-  }
-  .table-col-hide-mobile {
-    display: none !important;
-  }
-}
-
-/* Everything else: show table with all columns */
+/* Default: Table visible, cards hidden, event columns ALWAYS visible */
 .standings-card .table-wrapper {
   display: block;
 }
 .standings-card .result-list {
   display: none;
 }
-.table-col-hide-mobile {
-  display: table-cell;
-}
+
+/* Event columns - always visible, compact for mobile */
 .standings-table .col-event {
-  min-width: 40px;
-  font-size: var(--text-sm);
+  min-width: 36px;
+  text-align: center;
+  font-size: var(--text-xs);
+  padding: var(--space-xs);
+}
+
+/* Mobile portrait: hide table, show cards */
+@media (max-width: 599px) and (orientation: portrait) {
+  .standings-card .table-wrapper {
+    display: none;
+  }
+  .standings-card .result-list {
+    display: block;
+  }
 }
 </style>
