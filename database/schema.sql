@@ -36,6 +36,7 @@ CREATE TABLE IF NOT EXISTS riders (
     lastname VARCHAR(100) NOT NULL,
     birth_year INT,
     gender ENUM('M', 'F', 'K', 'Other') DEFAULT 'M',
+    nationality VARCHAR(3) DEFAULT 'SWE', -- ISO 3166-1 alpha-3 country code
 
     -- Club and Team
     club_id INT,
@@ -78,6 +79,7 @@ CREATE TABLE IF NOT EXISTS riders (
     INDEX idx_email (email),
     INDEX idx_reset_token (password_reset_token),
     INDEX idx_district (district),
+    INDEX idx_nationality (nationality),
     UNIQUE KEY unique_license (license_number)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
 COMMENT='Rider profiles. District field used for regional statistics.';
