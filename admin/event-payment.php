@@ -203,50 +203,55 @@ include __DIR__ . '/../includes/layout-header.php';
 
 <main class="main-content">
     <div class="container">
+        <!-- Header -->
+        <div class="flex items-center justify-between mb-lg">
+            <div>
+                <h1>
+                    <i data-lucide="credit-card"></i>
+                    Betalningsinställningar
+                </h1>
+            </div>
+            <a href="/admin/event-orders.php?id=<?= $eventId ?>" class="btn btn--secondary">
+                <i data-lucide="list"></i>
+                Visa ordrar
+            </a>
+        </div>
+
+        <!-- Message -->
         <?php if ($message): ?>
-        <div class="alert alert-<?= $messageType ?> mb-lg">
+        <div class="alert alert-<?= h($messageType) ?> mb-lg">
             <i data-lucide="<?= $messageType === 'success' ? 'check-circle' : 'alert-circle' ?>"></i>
-            <?= htmlspecialchars($message) ?>
+            <?= h($message) ?>
         </div>
         <?php endif; ?>
 
-        <!-- Order Statistics -->
-        <?php if ($orderStats['total_orders'] > 0): ?>
-        <div class="card mb-lg">
-            <div class="card-header">
-                <h2>
-                    <i data-lucide="bar-chart-2"></i>
-                    Orderstatistik
-                </h2>
-            </div>
-            <div class="card-body">
-                <div class="grid grid-cols-2 gs-md-grid-cols-4 gap-md">
-                    <div class="stat-card">
-                        <div class="stat-value text-warning"><?= $orderStats['pending_orders'] ?></div>
-                        <div class="stat-label">Väntande</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-value text-success"><?= $orderStats['paid_orders'] ?></div>
-                        <div class="stat-label">Betalda</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-value text-secondary"><?= $orderStats['cancelled_orders'] ?></div>
-                        <div class="stat-label">Avbrutna</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-value"><?= number_format($orderStats['total_revenue'], 0, ',', ' ') ?> kr</div>
-                        <div class="stat-label">Intäkter</div>
-                    </div>
+        <!-- Stats -->
+        <div class="grid grid-cols-1 md-grid-cols-4 gap-md mb-lg">
+            <div class="card">
+                <div class="card-body text-center">
+                    <div class="text-3xl font-bold text-warning"><?= $orderStats['pending_orders'] ?? 0 ?></div>
+                    <div class="text-sm text-secondary">Väntar på betalning</div>
                 </div>
-                <div class="mt-md">
-                    <a href="/admin/event-orders.php?id=<?= $eventId ?>" class="btn btn--secondary btn--sm">
-                        <i data-lucide="list"></i>
-                        Visa alla ordrar
-                    </a>
+            </div>
+            <div class="card">
+                <div class="card-body text-center">
+                    <div class="text-3xl font-bold text-success"><?= $orderStats['paid_orders'] ?? 0 ?></div>
+                    <div class="text-sm text-secondary">Betalda ordrar</div>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-body text-center">
+                    <div class="text-3xl font-bold text-secondary"><?= $orderStats['cancelled_orders'] ?? 0 ?></div>
+                    <div class="text-sm text-secondary">Avbrutna</div>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-body text-center">
+                    <div class="text-3xl font-bold"><?= number_format($orderStats['total_revenue'] ?? 0, 0, ',', ' ') ?> kr</div>
+                    <div class="text-sm text-secondary">Totalt inbetalt</div>
                 </div>
             </div>
         </div>
-        <?php endif; ?>
 
         <!-- Basic Settings -->
         <div class="card mb-lg">
@@ -512,36 +517,28 @@ include __DIR__ . '/../includes/layout-header.php';
 </main>
 
 <style>
-.stat-card {
-    text-align: center;
-    padding: var(--space-md);
-    background: var(--color-bg-base);
-    border-radius: var(--radius-md);
-}
-
-.stat-value {
-    font-size: var(--text-2xl);
-    font-weight: var(--weight-bold);
-    line-height: 1.2;
-}
-
-.stat-label {
-    font-size: var(--text-sm);
-    color: var(--color-text-secondary);
-    margin-top: var(--space-xs);
-}
-
+/* Match orders.php styling */
 .bg-muted {
-    background: var(--color-bg-base);
+    background: var(--color-bg-card);
 }
-
 .hidden {
     display: none !important;
 }
-
 .input--sm {
     padding: var(--space-xs) var(--space-sm);
     font-size: var(--text-sm);
+}
+.badge-warning {
+    background: rgba(234, 179, 8, 0.2);
+    color: #ca8a04;
+}
+.badge-success {
+    background: rgba(34, 197, 94, 0.2);
+    color: #16a34a;
+}
+.badge-info {
+    background: rgba(59, 130, 246, 0.2);
+    color: #2563eb;
 }
 </style>
 

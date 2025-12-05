@@ -26,35 +26,6 @@ if ($current_page === 'dashboard.php') {
     return;
 }
 
-// ============================================================================
-// EVENT-SPECIFIC PAGES - Show event context menu instead
-// ============================================================================
-$event_specific_pages = [
-    'event-edit.php',
-    'event-ticketing.php',
-    'event-pricing.php',
-    'event-tickets.php',
-    'event-payment.php',
-    'event-orders.php',
-    'event-registrations.php',
-];
-
-// Check if this is an event-specific page with an event ID
-$eventId = isset($_GET['id']) ? intval($_GET['id']) : 0;
-if ($eventId > 0 && in_array($current_page, $event_specific_pages)) {
-    // Show event-specific submenu instead
-    include __DIR__ . '/event-admin-submenu.php';
-    return;
-}
-
-// Also check edit-results.php with event_id parameter
-if ($current_page === 'edit-results.php' && isset($_GET['event_id'])) {
-    $eventId = intval($_GET['event_id']);
-    if ($eventId > 0) {
-        include __DIR__ . '/event-admin-submenu.php';
-        return;
-    }
-}
 
 // Find which group this page belongs to
 $current_group = get_group_for_page($current_page);

@@ -132,37 +132,52 @@ include __DIR__ . '/../includes/layout-header.php';
 
 <main class="main-content">
     <div class="container">
+        <!-- Header -->
+        <div class="flex items-center justify-between mb-lg">
+            <div>
+                <h1>
+                    <i data-lucide="receipt"></i>
+                    Ordrar
+                </h1>
+            </div>
+            <a href="/admin/event-payment.php?id=<?= $eventId ?>" class="btn btn--secondary">
+                <i data-lucide="settings"></i>
+                Betalningsinställningar
+            </a>
+        </div>
+
+        <!-- Message -->
         <?php if ($message): ?>
-        <div class="alert alert-<?= $messageType ?> mb-lg">
+        <div class="alert alert-<?= h($messageType) ?> mb-lg">
             <i data-lucide="<?= $messageType === 'success' ? 'check-circle' : 'alert-circle' ?>"></i>
-            <?= htmlspecialchars($message) ?>
+            <?= h($message) ?>
         </div>
         <?php endif; ?>
 
         <!-- Stats -->
-        <div class="grid grid-cols-2 gs-md-grid-cols-4 gap-md mb-lg">
+        <div class="grid grid-cols-1 md-grid-cols-4 gap-md mb-lg">
             <div class="card">
                 <div class="card-body text-center">
-                    <div class="text-2xl font-bold"><?= $stats['total'] ?? 0 ?></div>
+                    <div class="text-3xl font-bold"><?= $stats['total'] ?? 0 ?></div>
                     <div class="text-sm text-secondary">Totalt</div>
                 </div>
             </div>
             <div class="card">
                 <div class="card-body text-center">
-                    <div class="text-2xl font-bold text-warning"><?= $stats['pending'] ?? 0 ?></div>
-                    <div class="text-sm text-secondary">Väntande</div>
+                    <div class="text-3xl font-bold text-warning"><?= $stats['pending'] ?? 0 ?></div>
+                    <div class="text-sm text-secondary">Väntar på betalning</div>
                 </div>
             </div>
             <div class="card">
                 <div class="card-body text-center">
-                    <div class="text-2xl font-bold text-success"><?= $stats['paid'] ?? 0 ?></div>
-                    <div class="text-sm text-secondary">Betalda</div>
+                    <div class="text-3xl font-bold text-success"><?= $stats['paid'] ?? 0 ?></div>
+                    <div class="text-sm text-secondary">Betalda ordrar</div>
                 </div>
             </div>
             <div class="card">
                 <div class="card-body text-center">
-                    <div class="text-2xl font-bold"><?= number_format($stats['revenue'] ?? 0, 0, ',', ' ') ?> kr</div>
-                    <div class="text-sm text-secondary">Intäkter</div>
+                    <div class="text-3xl font-bold"><?= number_format($stats['revenue'] ?? 0, 0, ',', ' ') ?> kr</div>
+                    <div class="text-sm text-secondary">Totalt inbetalt</div>
                 </div>
             </div>
         </div>
@@ -170,27 +185,27 @@ include __DIR__ . '/../includes/layout-header.php';
         <!-- Filters -->
         <div class="card mb-lg">
             <div class="card-body">
-                <form method="GET" class="flex gap-md flex-wrap items-end">
+                <form method="GET" class="flex flex-wrap gap-md items-end">
                     <input type="hidden" name="id" value="<?= $eventId ?>">
 
-                    <div class="form-group" style="min-width: 150px;">
+                    <div class="form-group mb-0">
                         <label class="label">Status</label>
                         <select name="status" class="input" onchange="this.form.submit()">
                             <option value="all" <?= $filterStatus === 'all' ? 'selected' : '' ?>>Alla</option>
-                            <option value="pending" <?= $filterStatus === 'pending' ? 'selected' : '' ?>>Väntande</option>
+                            <option value="pending" <?= $filterStatus === 'pending' ? 'selected' : '' ?>>Väntar</option>
                             <option value="paid" <?= $filterStatus === 'paid' ? 'selected' : '' ?>>Betalda</option>
                             <option value="cancelled" <?= $filterStatus === 'cancelled' ? 'selected' : '' ?>>Avbrutna</option>
                         </select>
                     </div>
 
-                    <div class="form-group" style="flex: 1; min-width: 200px;">
+                    <div class="form-group mb-0">
                         <label class="label">Sök</label>
                         <input type="text" name="search" class="input"
-                               value="<?= htmlspecialchars($search) ?>"
-                               placeholder="Ordernr, namn, Swish-meddelande...">
+                               value="<?= h($search) ?>"
+                               placeholder="Ordernummer, namn, Swish-ref...">
                     </div>
 
-                    <button type="submit" class="btn btn--secondary">
+                    <button type="submit" class="btn btn--primary">
                         <i data-lucide="search"></i>
                         Sök
                     </button>
