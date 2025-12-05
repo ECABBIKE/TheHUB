@@ -134,7 +134,7 @@ try {
             <p>24 månaders rullande ranking</p>
         </a>
         <a href="/database" class="welcome-nav-card">
-            <?= hub_icon('database', 'welcome-nav-icon') ?>
+            <?= hub_icon('users', 'welcome-nav-icon') ?>
             <h3>Databas</h3>
             <p>Sök åkare och klubbar</p>
         </a>
