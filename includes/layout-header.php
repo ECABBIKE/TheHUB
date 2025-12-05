@@ -198,24 +198,33 @@ if ($userTheme === 'auto') {
         /* Mobile behavior */
         @media (max-width: 1023px) {
             .sidebar {
-                position: fixed;
-                left: 0;
-                top: 0;
-                width: 260px;
-                height: 100vh;
-                background: var(--color-bg-surface, #fff);
-                transform: translateX(-100%);
-                transition: transform 0.3s ease;
-                z-index: 1100;
-                padding-top: 70px;
+                position: fixed !important;
+                left: 0 !important;
+                top: 0 !important;
+                width: 260px !important;
+                height: 100vh !important;
+                height: 100dvh !important;
+                background: var(--color-bg-surface, #fff) !important;
+                transform: translateX(-100%) !important;
+                transition: transform 0.3s ease !important;
+                z-index: 1100 !important;
+                padding-top: 70px !important;
+                display: flex !important;
+                flex-direction: column !important;
             }
 
             .sidebar.open {
-                transform: translateX(0);
+                transform: translateX(0) !important;
             }
 
             .mobile-menu-toggle {
                 display: flex !important;
+            }
+
+            /* Ensure main content has no sidebar offset on mobile */
+            .main-content {
+                margin-left: 0 !important;
+                width: 100% !important;
             }
         }
     </style>

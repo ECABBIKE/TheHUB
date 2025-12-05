@@ -356,6 +356,17 @@ if (!$rider) {
 
 $fullName = htmlspecialchars($rider['firstname'] . ' ' . $rider['lastname']);
 
+// Check for profile image
+$profileImage = null;
+$profileImageDir = dirname(__DIR__) . '/uploads/riders/';
+$profileImageUrl = '/uploads/riders/';
+foreach (['jpg', 'jpeg', 'png', 'webp'] as $ext) {
+    if (file_exists($profileImageDir . $riderId . '.' . $ext)) {
+        $profileImage = $profileImageUrl . $riderId . '.' . $ext . '?v=' . filemtime($profileImageDir . $riderId . '.' . $ext);
+        break;
+    }
+}
+
 // Check license status
 $hasLicense = !empty($rider['license_type']);
 $licenseActive = false;
@@ -399,7 +410,11 @@ if (!empty($rider['gravity_id'])) {
  <?php endif; ?>
  <div class="profile-content">
  <div class="profile-photo">
+ <?php if ($profileImage): ?>
+ <img src="<?= htmlspecialchars($profileImage) ?>" alt="<?= $fullName ?>" class="profile-photo-img">
+ <?php else: ?>
  <div class="photo-placeholder">👤</div>
+ <?php endif; ?>
  </div>
  <div class="profile-info">
  <div class="profile-name-row">
@@ -930,6 +945,12 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
 .photo-placeholder {
  font-size: 40px;
  opacity: 0.5;
+}
+.profile-photo-img {
+ width: 100%;
+ height: 100%;
+ object-fit: cover;
+ border-radius: var(--radius-md);
 }
 .profile-info {
  flex: 1;
