@@ -147,11 +147,19 @@ try {
             <h3>Databas</h3>
             <p>Sök åkare och klubbar</p>
         </a>
+        <?php if (hub_is_logged_in()): ?>
+        <a href="/profile" class="welcome-nav-card welcome-nav-card--login">
+            <?= hub_icon('user', 'welcome-nav-icon') ?>
+            <h3>Min Profil</h3>
+            <p>Dina uppgifter & resultat</p>
+        </a>
+        <?php else: ?>
         <a href="/login" class="welcome-nav-card welcome-nav-card--login">
             <?= hub_icon('log-in', 'welcome-nav-icon') ?>
             <h3>Logga in</h3>
             <p>Åtkomst till din profil</p>
         </a>
+        <?php endif; ?>
     </div>
 
     <?php if (!empty($upcomingEvents)): ?>
