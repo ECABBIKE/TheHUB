@@ -56,37 +56,54 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
  $action = $_POST['action'] ?? 'save_rider';
 
  // Handle profile image upload
- if ($action === 'upload_image' && isset($_FILES['profile_image']) && $_FILES['profile_image']['error'] === UPLOAD_ERR_OK) {
+ if ($action === 'upload_image') {
+ if (!isset($_FILES['profile_image']) || $_FILES['profile_image']['error'] === UPLOAD_ERR_NO_FILE) {
+ $message = 'Ingen fil vald. Välj en bild att ladda upp.';
+ $messageType = 'error';
+ } elseif ($_FILES['profile_image']['error'] !== UPLOAD_ERR_OK) {
+ $uploadErrors = [
+  UPLOAD_ERR_INI_SIZE => 'Filen är för stor (server-gräns).',
+  UPLOAD_ERR_FORM_SIZE => 'Filen är för stor.',
+  UPLOAD_ERR_PARTIAL => 'Filen laddades bara upp delvis.',
+  UPLOAD_ERR_NO_TMP_DIR => 'Ingen temp-mapp konfigurerad.',
+  UPLOAD_ERR_CANT_WRITE => 'Kunde inte skriva filen till disk.',
+  UPLOAD_ERR_EXTENSION => 'Uppladdning stoppad av PHP-tillägg.',
+ ];
+ $message = $uploadErrors[$_FILES['profile_image']['error']] ?? 'Okänt uppladdningsfel.';
+ $messageType = 'error';
+ } else {
  $allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
  $maxSize = 5 * 1024 * 1024; // 5MB
 
  $file = $_FILES['profile_image'];
 
  if (!in_array($file['type'], $allowedTypes)) {
- $message = 'Endast JPG, PNG och WebP är tillåtna.';
- $messageType = 'error';
+  $message = 'Endast JPG, PNG och WebP är tillåtna. Du valde: ' . h($file['type']);
+  $messageType = 'error';
  } elseif ($file['size'] > $maxSize) {
- $message = 'Bilden får max vara 5MB.';
- $messageType = 'error';
+  $message = 'Bilden får max vara 5MB. Din fil var ' . round($file['size'] / 1024 / 1024, 1) . 'MB.';
+  $messageType = 'error';
  } else {
- // Remove old images
- foreach (['jpg', 'jpeg', 'png', 'webp'] as $ext) {
+  // Remove old images
+  foreach (['jpg', 'jpeg', 'png', 'webp'] as $ext) {
   $oldFile = $profileImageDir . $id . '.' . $ext;
-  if (file_exists($oldFile)) unlink($oldFile);
- }
+  if (file_exists($oldFile)) @unlink($oldFile);
+  }
 
- // Save new image
- $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION)) ?: 'jpg';
- if ($ext === 'jpeg') $ext = 'jpg';
- $newPath = $profileImageDir . $id . '.' . $ext;
+  // Save new image
+  $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION)) ?: 'jpg';
+  if ($ext === 'jpeg') $ext = 'jpg';
+  $newPath = $profileImageDir . $id . '.' . $ext;
 
- if (move_uploaded_file($file['tmp_name'], $newPath)) {
+  if (move_uploaded_file($file['tmp_name'], $newPath)) {
   $message = 'Profilbild uppladdad!';
   $messageType = 'success';
   $profileImage = $profileImageUrl . $id . '.' . $ext . '?v=' . time();
- } else {
-  $message = 'Kunde inte spara bilden.';
+  } else {
+  $message = 'Kunde inte spara bilden. Kontrollera att mappen uploads/riders/ har skrivbehörighet.';
   $messageType = 'error';
+  error_log("Failed to move uploaded file to: $newPath");
+  }
  }
  }
  } elseif ($action === 'delete_image') {
