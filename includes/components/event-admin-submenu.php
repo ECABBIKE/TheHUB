@@ -17,16 +17,16 @@ if (empty($eventId)) {
     return;
 }
 
-// Get event info
-$db = getDB();
-$event = $db->getRow("
+// Get event info for submenu (use unique var name to avoid collision)
+$_submenu_db = getDB();
+$_submenu_event = $_submenu_db->getRow("
     SELECT e.*, s.name as series_name
     FROM events e
     LEFT JOIN series s ON e.series_id = s.id
     WHERE e.id = ?
 ", [$eventId]);
 
-if (!$event) {
+if (!$_submenu_event) {
     return;
 }
 
@@ -90,7 +90,7 @@ if (!$active_tab) {
 }
 
 // Format date
-$eventDate = date('j M Y', strtotime($event['date']));
+$_submenu_eventDate = date('j M Y', strtotime($_submenu_event['date']));
 ?>
 <!-- Event Admin Submenu -->
 <div class="event-admin-submenu">
@@ -101,11 +101,11 @@ $eventDate = date('j M Y', strtotime($event['date']));
                 <i data-lucide="arrow-left"></i>
             </a>
             <div class="event-admin-info">
-                <h2 class="event-admin-title"><?= htmlspecialchars($event['name']) ?></h2>
+                <h2 class="event-admin-title"><?= htmlspecialchars($_submenu_event['name']) ?></h2>
                 <div class="event-admin-meta">
-                    <span><?= $eventDate ?></span>
-                    <?php if ($event['series_name']): ?>
-                        <span class="event-admin-series"><?= htmlspecialchars($event['series_name']) ?></span>
+                    <span><?= $_submenu_eventDate ?></span>
+                    <?php if ($_submenu_event['series_name']): ?>
+                        <span class="event-admin-series"><?= htmlspecialchars($_submenu_event['series_name']) ?></span>
                     <?php endif; ?>
                 </div>
             </div>
