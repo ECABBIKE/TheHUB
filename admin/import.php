@@ -157,7 +157,7 @@ include __DIR__ . '/components/unified-layout.php';
 
  <!-- Messages -->
  <?php if ($message): ?>
-  <div class="alert alert-<?= $messageType ?> mb-lg">
+  <div class="alert alert--<?= $messageType ?> mb-lg">
   <i data-lucide="<?= $messageType === 'success' ? 'check-circle' : ($messageType === 'error' ? 'alert-circle' : 'info') ?>"></i>
   <?= h($message) ?>
   </div>
@@ -539,7 +539,7 @@ include __DIR__ . '/components/unified-layout.php';
       </span>
      </td>
      <td>
-      <span class="badge badge-primary">
+      <span class="badge badge--primary">
       <i data-lucide="<?= getImportIcon($import['import_type']) ?>"></i>
       <?= h(ucfirst($import['import_type'])) ?>
       </span>
@@ -579,12 +579,12 @@ include __DIR__ . '/components/unified-layout.php';
       <?php
       $statusMap = [
       'completed' => ['badge' => 'success', 'icon' => 'check-circle', 'text' => 'Lyckad'],
-      'failed' => ['badge' => 'danger', 'icon' => 'x-circle', 'text' => 'Misslyckad'],
+      'failed' => ['badge' => 'error', 'icon' => 'x-circle', 'text' => 'Misslyckad'],
       'rolled_back' => ['badge' => 'warning', 'icon' => 'rotate-ccw', 'text' => 'Återställd']
       ];
       $statusInfo = $statusMap[$import['status']] ?? ['badge' => 'secondary', 'icon' => 'help-circle', 'text' => $import['status']];
       ?>
-      <span class="badge badge-<?= $statusInfo['badge'] ?>">
+      <span class="badge badge--<?= $statusInfo['badge'] ?>">
       <i data-lucide="<?= $statusInfo['icon'] ?>"></i>
       <?= $statusInfo['text'] ?>
       </span>
