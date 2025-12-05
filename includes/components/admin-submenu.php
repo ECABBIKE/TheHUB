@@ -38,6 +38,11 @@ $active_tab = get_active_tab($current_group, $current_page);
 if (isset($group['super_admin_only']) && $group['super_admin_only'] && !hasRole('super_admin')) {
     return;
 }
+
+// Don't show submenu for single-page sections (they have their own sidebar entry)
+if (isset($group['single_page']) && $group['single_page']) {
+    return;
+}
 ?>
 <!-- Admin Submenu -->
 <div class="admin-submenu">

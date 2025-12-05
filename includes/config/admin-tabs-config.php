@@ -91,19 +91,31 @@ $ADMIN_TABS = [
     ],
 
     // ========================================
-    // DELTAGARE
+    // DELTAGARE (Riders only - has own sidebar entry)
     // ========================================
-    'participants' => [
+    'riders' => [
         'title' => 'Deltagare',
         'icon' => 'users',
+        'single_page' => true, // Don't show tabs for single-page sections
         'tabs' => [
             [
                 'id' => 'riders',
                 'label' => 'Deltagare',
                 'icon' => 'user',
                 'url' => '/admin/riders.php',
-                'pages' => ['riders.php', 'rider-edit.php', 'rider-delete.php']
-            ],
+                'pages' => ['riders.php', 'rider-edit.php', 'rider-delete.php', 'find-duplicates.php', 'cleanup-duplicates.php']
+            ]
+        ]
+    ],
+
+    // ========================================
+    // KLUBBAR (Clubs only - has own sidebar entry)
+    // ========================================
+    'clubs' => [
+        'title' => 'Klubbar',
+        'icon' => 'building-2',
+        'single_page' => true, // Don't show tabs for single-page sections
+        'tabs' => [
             [
                 'id' => 'clubs',
                 'label' => 'Klubbar',
