@@ -84,11 +84,20 @@ try {
 <div class="welcome-page">
     <!-- Header with Logo -->
     <div class="welcome-header">
-        <img src="/uploads/icons/GSIkon.png" alt="TheHUB" class="welcome-logo" onerror="this.style.display='none'">
+        <div class="welcome-logo">
+            <svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect width="80" height="80" rx="16" fill="var(--color-accent, #004a98)"/>
+                <path d="M20 25 L40 15 L60 25 L60 55 L40 65 L20 55 Z" fill="none" stroke="white" stroke-width="2.5" stroke-linejoin="round"/>
+                <path d="M40 15 L40 65" stroke="white" stroke-width="2" stroke-linecap="round"/>
+                <path d="M20 25 L60 55" stroke="white" stroke-width="2" stroke-linecap="round"/>
+                <path d="M60 25 L20 55" stroke="white" stroke-width="2" stroke-linecap="round"/>
+                <circle cx="40" cy="40" r="8" fill="white"/>
+            </svg>
+        </div>
         <h1 class="welcome-title">TheHUB</h1>
         <p class="welcome-subtitle">GravitySeries Competition Platform</p>
 <?php $versionInfo = function_exists('getVersionInfo') ? getVersionInfo() : null; ?>
-        <p class="welcome-version">Beta <?= APP_VERSION ?><?php if ($versionInfo && $versionInfo['deployment']): ?> [<?= APP_BUILD ?>.<?= str_pad($versionInfo['deployment'], 3, '0', STR_PAD_LEFT) ?>]<?php endif; ?></p>
+        <p class="welcome-version">v<?= APP_VERSION ?><?php if ($versionInfo && $versionInfo['deployment']): ?> [<?= APP_BUILD ?>.<?= str_pad($versionInfo['deployment'], 3, '0', STR_PAD_LEFT) ?>]<?php endif; ?></p>
     </div>
 
     <!-- Stats Row -->

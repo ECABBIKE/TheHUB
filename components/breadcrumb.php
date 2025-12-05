@@ -15,8 +15,8 @@ $pagesWithOwnNav = [
     'profile-receipts'
 ];
 
-// Don't show back link on dashboard/home or pages with their own navigation
-if ($currentPage !== 'dashboard' && !in_array($currentPage, $pagesWithOwnNav)):
+// Don't show back link on dashboard/home/welcome or pages with their own navigation
+if ($currentPage !== 'dashboard' && $currentPage !== 'welcome' && !in_array($currentPage, $pagesWithOwnNav)):
 ?>
 <nav class="back-nav" aria-label="Navigation">
   <a href="javascript:history.back()" class="back-link">

@@ -283,3 +283,10 @@ if ($userTheme === 'auto') {
 
     <!-- Overlay (hidden on desktop via inline CSS) -->
     <div class="sidebar-overlay" onclick="closeMenu()"></div>
+
+    <!-- Admin Submenu (automatic based on current page) -->
+    <?php
+    if ($pageType === 'admin') {
+        include __DIR__ . '/components/admin-submenu.php';
+    }
+    ?>
