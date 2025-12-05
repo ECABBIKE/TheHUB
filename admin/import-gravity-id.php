@@ -245,7 +245,7 @@ include __DIR__ . '/../includes/layout-header.php';
  <?php render_admin_header('Import & Data'); ?>
 
  <?php if ($message): ?>
- <div class="alert alert-<?= h($messageType) ?> mb-lg">
+ <div class="alert alert--<?= h($messageType) ?> mb-lg">
  <i data-lucide="<?= $messageType === 'success' ? 'check-circle' : ($messageType === 'warning' ? 'alert-triangle' : 'alert-circle') ?>"></i>
  <?= h($message) ?>
  </div>
@@ -342,7 +342,7 @@ include __DIR__ . '/../includes/layout-header.php';
   </thead>
   <tbody>
   <?php foreach ($results as $result): ?>
-   <tr class="<?= $result['status'] === 'not_found' ? 'gs-bg-danger-light' : '' ?>">
+   <tr class="<?= $result['status'] === 'not_found' ? 'bg-error-light' : '' ?>">
    <td><code class="text-primary"><?= h($result['gravity_id']) ?></code></td>
    <td>
    <strong><?= h($result['input_name']) ?></strong>
@@ -364,16 +364,16 @@ include __DIR__ . '/../includes/layout-header.php';
    </td>
    <td>
    <?php if ($result['match_method']): ?>
-   <span class="badge badge-info"><?= h($result['match_method']) ?></span>
+   <span class="badge badge--primary"><?= h($result['match_method']) ?></span>
    <?php else: ?>
    -
    <?php endif; ?>
    </td>
    <td>
    <?php if ($result['status'] === 'updated'): ?>
-   <span class="badge badge-success">Tilldelad</span>
+   <span class="badge badge--success">Tilldelad</span>
    <?php else: ?>
-   <span class="badge badge-danger">Ej matchad</span>
+   <span class="badge badge--error">Ej matchad</span>
    <?php endif; ?>
    </td>
    </tr>

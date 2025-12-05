@@ -491,6 +491,12 @@
 .gs-bg-primary { background: var(--color-accent); color: white; }
 .gs-bg-dark { background: var(--color-bg-sunken); }
 
+/* Background utilities for tables */
+.bg-error-light,
+.bg-danger-light { background: var(--color-error-light, rgba(239, 68, 68, 0.1)); }
+.bg-success-light { background: var(--color-success-light, rgba(34, 197, 94, 0.1)); }
+.bg-warning-light { background: var(--color-warning-light, rgba(245, 158, 11, 0.1)); }
+
 .gs-rounded-sm { border-radius: 0.25rem; }
 .gs-rounded-md { border-radius: 0.5rem; }
 .gs-rounded-lg { border-radius: 0.75rem; }
