@@ -256,7 +256,7 @@ include __DIR__ . '/../includes/layout-header.php';
 ?>
 
 <main class="main-content">
- <div class="container" class="gs-max-w-900">
+ <div class="container" style="max-width: 900px;">
  <!-- Header -->
  <div class="flex items-center justify-between mb-lg">
  <h1 class="text-primary">
@@ -323,9 +323,9 @@ include __DIR__ . '/../includes/layout-header.php';
  <?= csrf_field() ?>
 
  <div class="card-body">
- <div class="grid grid-cols-1 md-grid-cols-2 gap-lg">
+ <div class="grid gap-lg" style="grid-template-columns: repeat(2, 1fr);">
   <!-- Personal Information -->
-  <div class="gs-md-col-span-2">
+  <div style="grid-column: span 2;">
   <h2 class="text-primary mb-md">
   <i data-lucide="user"></i>
   Personuppgifter
@@ -395,7 +395,7 @@ include __DIR__ . '/../includes/layout-header.php';
   </div>
 
   <!-- License Information -->
-  <div class="gs-md-col-span-2 mt-lg">
+  <div style="grid-column: span 2; margin-top: var(--space-lg);">
   <h2 class="text-primary mb-md">
   <i data-lucide="award"></i>
   Licensinformation
@@ -449,21 +449,6 @@ include __DIR__ . '/../includes/layout-header.php';
   <small class="text-secondary">Importeras från SCF</small>
   </div>
 
-  <!-- License Valid Until (read-only) -->
-  <div>
-  <label class="label">
-  <i data-lucide="calendar-check"></i>
-  Licens giltig till
-  </label>
-  <input
-  type="text"
-  class="input"
-  value="<?= $rider['license_valid_until'] && $rider['license_valid_until'] !== '0000-00-00' ? date('Y-m-d', strtotime($rider['license_valid_until'])) : '-' ?>"
-  disabled
-  >
-  <small class="text-secondary">Importeras från SCF</small>
-  </div>
-
   <!-- Nationality -->
   <div>
   <label for="nationality" class="label">
@@ -496,7 +481,7 @@ include __DIR__ . '/../includes/layout-header.php';
   </div>
 
   <!-- Read-only Fields -->
-  <div class="gs-md-col-span-2 mt-lg">
+  <div style="grid-column: span 2; margin-top: var(--space-lg);">
   <h2 class="text-primary mb-md">
   <i data-lucide="database"></i>
   Systemdata (endast läsning)
@@ -548,23 +533,40 @@ include __DIR__ . '/../includes/layout-header.php';
   <small class="text-secondary">Importeras från SCF</small>
   </div>
 
-  <!-- Disciplines JSON (read-only) -->
-  <div>
+  <!-- Disciplines Checkboxes (read-only from license) -->
+  <div style="grid-column: span 2;">
   <label class="label">
   <i data-lucide="list"></i>
-  Alla discipliner
+  Licensierade discipliner
   </label>
-  <input
-  type="text"
-  class="input"
-  value="<?= h($rider['disciplines'] ? implode(', ', json_decode($rider['disciplines'], true) ?: []) : '-') ?>"
-  disabled
-  >
-  <small class="text-secondary">Importeras från SCF</small>
+  <?php
+  $allDisciplines = [
+  'DH' => 'Downhill',
+  'END' => 'Enduro',
+  'XCO' => 'Cross Country Olympic',
+  'XCM' => 'Cross Country Marathon',
+  'BMX' => 'BMX',
+  'ROAD' => 'Landsväg',
+  'TRACK' => 'Bana',
+  'GRAVEL' => 'Gravel',
+  'CX' => 'Cyclocross'
+  ];
+  $riderDisciplines = $rider['disciplines'] ? json_decode($rider['disciplines'], true) ?: [] : [];
+  ?>
+  <div style="display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 0.5rem;">
+  <?php foreach ($allDisciplines as $code => $name): ?>
+  <?php $isChecked = in_array($code, $riderDisciplines); ?>
+  <label style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.75rem; background: <?= $isChecked ? 'rgba(245, 158, 11, 0.15)' : 'var(--color-bg-sunken)' ?>; border: 1px solid <?= $isChecked ? 'var(--color-accent)' : 'var(--color-border)' ?>; border-radius: var(--radius-md); cursor: not-allowed; opacity: <?= $isChecked ? '1' : '0.5' ?>;">
+  <input type="checkbox" <?= $isChecked ? 'checked' : '' ?> disabled style="accent-color: var(--color-accent);">
+  <span style="font-size: var(--text-sm); color: <?= $isChecked ? 'var(--color-accent)' : 'var(--color-text-secondary)' ?>;"><?= h($name) ?></span>
+  </label>
+  <?php endforeach; ?>
+  </div>
+  <small class="text-secondary" style="display: block; margin-top: 0.5rem;">Importeras från SCF. Används för framtida anmälan.</small>
   </div>
 
   <!-- Contact Information -->
-  <div class="gs-md-col-span-2 mt-lg">
+  <div style="grid-column: span 2; margin-top: var(--space-lg);">
   <h2 class="text-primary mb-md">
   <i data-lucide="mail"></i>
   Kontaktuppgifter
@@ -604,7 +606,7 @@ include __DIR__ . '/../includes/layout-header.php';
   </div>
 
   <!-- Notes -->
-  <div class="gs-md-col-span-2">
+  <div style="grid-column: span 2;">
   <label for="notes" class="label">
   <i data-lucide="file-text"></i>
   Anteckningar
@@ -620,7 +622,7 @@ include __DIR__ . '/../includes/layout-header.php';
  </div>
 
  <div class="card-footer">
- <div class="flex gs-justify-end gap-md">
+ <div class="flex gap-md" style="justify-content: flex-end;">
   <a href="/admin/riders.php" class="btn btn--secondary">
   <i data-lucide="x"></i>
   Avbryt
@@ -649,8 +651,8 @@ include __DIR__ . '/../includes/layout-header.php';
   <?= csrf_field() ?>
   <input type="hidden" name="action" value="update_account">
 
-  <div class="grid grid-cols-1 md-grid-cols-2 gap-lg">
-  <div class="gs-md-col-span-2">
+  <div class="grid gap-lg" style="grid-template-columns: repeat(2, 1fr);">
+  <div style="grid-column: span 2;">
   <div class="alert alert--info">
    <i data-lucide="user-check"></i>
    <span>Denna deltagare har ett användarkonto: <strong><?= h($riderUser['username']) ?></strong></span>
@@ -701,7 +703,7 @@ include __DIR__ . '/../includes/layout-header.php';
   <input type="text" class="input" value="<?= $riderUser['last_login'] ? date('Y-m-d H:i', strtotime($riderUser['last_login'])) : 'Aldrig' ?>" disabled>
   </div>
 
-  <div class="gs-md-col-span-2">
+  <div style="grid-column: span 2;">
   <label class="label">Behörigheter</label>
   <div class="flex gap-lg flex-wrap">
    <label class="checkbox flex items-center gap-sm">
@@ -747,7 +749,7 @@ include __DIR__ . '/../includes/layout-header.php';
   <span>Denna deltagare har inget användarkonto. Skapa ett för att låta dem logga in.</span>
   </div>
 
-  <div class="grid grid-cols-1 md-grid-cols-2 gap-lg">
+  <div class="grid gap-lg" style="grid-template-columns: repeat(2, 1fr);">
   <div>
   <label for="new_username" class="label">
    <i data-lucide="at-sign"></i>
@@ -796,7 +798,7 @@ include __DIR__ . '/../includes/layout-header.php';
   >
   </div>
 
-  <div class="flex gs-items-end">
+  <div class="flex" style="align-items: flex-end;">
   <button type="submit" class="btn btn--primary">
    <i data-lucide="user-plus"></i>
    Skapa användarkonto
@@ -810,6 +812,17 @@ include __DIR__ . '/../includes/layout-header.php';
  <?php endif; ?>
  </div>
 </main>
+
+<style>
+@media (max-width: 768px) {
+ .grid[style*="grid-template-columns: repeat(2, 1fr)"] {
+  grid-template-columns: 1fr !important;
+ }
+ .grid [style*="grid-column: span 2"] {
+  grid-column: span 1 !important;
+ }
+}
+</style>
 
 <script>
 function confirmDeleteAccount() {
