@@ -26,45 +26,29 @@ $active_tab = $active_group ? get_active_tab($active_group, $current_page) : nul
  * @param array $actions Knappar att visa i headern
  */
 function render_admin_header($title = null, $actions = []) {
-  global $ADMIN_TABS, $active_group, $active_tab;
-
-  // Använd gruppens titel om ingen titel angetts
-  if (!$title && $active_group && isset($ADMIN_TABS[$active_group])) {
-    $title = $ADMIN_TABS[$active_group]['title'];
-  }
-  ?>
-
-  <?php if ($title): ?>
-  <div class="admin-page-header">
-    <h1 class="admin-page-header__title"><?= htmlspecialchars($title) ?></h1>
-    <?php if (!empty($actions)): ?>
-    <div class="admin-page-header__actions">
-      <?php foreach ($actions as $action): ?>
-        <a href="<?= htmlspecialchars($action['url']) ?>"
-          class="btn <?= $action['class'] ?? 'btn--primary' ?>">
-          <?php if (isset($action['icon'])): ?>
-            <i data-lucide="<?= htmlspecialchars($action['icon']) ?>"></i>
-          <?php endif; ?>
-          <?= htmlspecialchars($action['label']) ?>
-        </a>
-      <?php endforeach; ?>
-    </div>
-    <?php endif; ?>
+  // Note: Page title and tabs are now handled by unified-layout.php / admin-submenu.php
+  // This function is kept for backward compatibility but only renders actions if provided
+  if (!empty($actions)): ?>
+  <div class="admin-page-header__actions mb-lg">
+    <?php foreach ($actions as $action): ?>
+      <a href="<?= htmlspecialchars($action['url']) ?>"
+        class="btn <?= $action['class'] ?? 'btn--primary' ?>">
+        <?php if (isset($action['icon'])): ?>
+          <i data-lucide="<?= htmlspecialchars($action['icon']) ?>"></i>
+        <?php endif; ?>
+        <?= htmlspecialchars($action['label']) ?>
+      </a>
+    <?php endforeach; ?>
   </div>
-  <?php endif; ?>
-
-  <!-- Note: Tabs are now handled automatically by admin-submenu.php in layout-header.php -->
-  <div class="admin-tab-content">
-  <?php
+  <?php endif;
 }
 
 /**
  * Stäng admin content
+ * Note: Kept for backward compatibility, does nothing now
  */
 function render_admin_footer() {
-  ?>
-  </div><!-- /.admin-tab-content -->
-  <?php
+  // No-op - content wrapper is now handled by unified-layout.php
 }
 
 /**
