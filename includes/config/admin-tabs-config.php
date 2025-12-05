@@ -47,14 +47,14 @@ $ADMIN_TABS = [
                 'label' => 'Biljetter',
                 'icon' => 'ticket',
                 'url' => '/admin/ticketing.php',
-                'pages' => ['ticketing.php', 'event-pricing.php', 'event-tickets.php', 'event-ticketing.php', 'refund-requests.php', 'pricing-templates.php']
+                'pages' => ['ticketing.php', 'event-tickets.php', 'refund-requests.php', 'pricing-templates.php']
             ],
             [
                 'id' => 'payments',
                 'label' => 'Betalningar',
                 'icon' => 'credit-card',
                 'url' => '/admin/orders.php',
-                'pages' => ['orders.php', 'payment-settings.php', 'event-payment.php', 'event-orders.php', 'event-registrations.php']
+                'pages' => ['orders.php', 'payment-settings.php', 'event-payment.php', 'event-orders.php', 'event-registrations.php', 'event-ticketing.php', 'event-pricing.php']
             ]
         ]
     ],
