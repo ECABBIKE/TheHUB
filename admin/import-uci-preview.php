@@ -6,7 +6,6 @@
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/../includes/helpers.php';
 require_admin();
-require_once __DIR__ . '/../includes/admin-layout.php';
 
 $db = getDB();
 $current_admin = get_current_admin();
@@ -445,14 +444,10 @@ function savePreviewedData($preview_data, $db, $importId) {
 }
 
 // Page title
-$pageTitle = 'UCI Import med Förhandsgranskning';
-$pageType = 'admin';
-include __DIR__ . '/../includes/layout-header.php';
+$page_title = 'UCI Import med Förhandsgranskning';
+$page_group = 'import';
+include __DIR__ . '/components/unified-layout.php';
 ?>
-
-<main class="main-content">
- <div class="container">
- <?php render_admin_header('Import & Data'); ?>
 
  <!-- Messages -->
  <?php if ($message): ?>
@@ -682,8 +677,4 @@ include __DIR__ . '/../includes/layout-header.php';
   </a>
  </div>
 
- </div>
- <?php render_admin_footer(); ?>
-</main>
-
-<?php include __DIR__ . '/../includes/layout-footer.php'; ?>
+<?php include __DIR__ . '/components/unified-layout-footer.php'; ?>
