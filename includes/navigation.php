@@ -27,12 +27,13 @@ function get_active_admin_group($current_page, $current_path) {
         return 'dashboard';
     }
 
-    // Tävlingar (Events, Resultat, Venues, Biljetter)
+    // Tävlingar (Events, Resultat, Venues, Biljetter, Betalningar)
     $competition_pages = [
         'events.php', 'event-create.php', 'event-edit.php', 'event-delete.php',
         'results.php', 'edit-results.php', 'recalculate-results.php', 'clear-event-results.php', 'reset-results.php',
         'venues.php',
-        'ticketing.php', 'event-pricing.php', 'event-tickets.php', 'event-ticketing.php', 'refund-requests.php', 'pricing-templates.php'
+        'ticketing.php', 'event-pricing.php', 'event-tickets.php', 'event-ticketing.php', 'refund-requests.php', 'pricing-templates.php',
+        'orders.php', 'payment-settings.php'
     ];
     if (in_array($current_page, $competition_pages) && strpos($current_path, '/admin/') !== false) {
         return 'competitions';
