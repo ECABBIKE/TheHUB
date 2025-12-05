@@ -558,7 +558,7 @@ if (!$series) {
           <th class="col-club table-col-hide-portrait">Klubb</th>
           <?php $eventNum = 1; ?>
           <?php foreach ($eventsWithPoints as $event): ?>
-          <th class="col-event" title="<?= htmlspecialchars($event['name']) ?>">
+          <th class="col-event" style="display:table-cell !important;visibility:visible !important;" title="<?= htmlspecialchars($event['name']) ?>">
             #<?= $eventNum ?>
           </th>
           <?php $eventNum++; ?>
@@ -591,7 +591,7 @@ if (!$series) {
           $pts = $rider['event_points'][$event['id']] ?? 0;
           $isExcluded = isset($rider['excluded_events'][$event['id']]);
           ?>
-          <td class="col-event <?= $pts > 0 ? 'has-points' : '' ?> <?= $isExcluded ? 'excluded' : '' ?>">
+          <td class="col-event <?= $pts > 0 ? 'has-points' : '' ?> <?= $isExcluded ? 'excluded' : '' ?>" style="display:table-cell !important;visibility:visible !important;">
             <?php if ($pts > 0): ?>
               <?php if ($isExcluded): ?>
                 <span class="excluded-points" title="Räknas ej"><?= $pts ?></span>
@@ -672,7 +672,7 @@ if (!$series) {
           <th class="col-riders table-col-hide-portrait">Åkare</th>
           <?php $eventNum = 1; ?>
           <?php foreach ($eventsWithPoints as $event): ?>
-          <th class="col-event" title="<?= htmlspecialchars($event['name']) ?>">
+          <th class="col-event" style="display:table-cell !important;visibility:visible !important;" title="<?= htmlspecialchars($event['name']) ?>">
             #<?= $eventNum ?>
           </th>
           <?php $eventNum++; ?>
@@ -702,7 +702,7 @@ if (!$series) {
           </td>
           <?php foreach ($eventsWithPoints as $event): ?>
           <?php $pts = $club['event_points'][$event['id']] ?? 0; ?>
-          <td class="col-event <?= $pts > 0 ? 'has-points' : '' ?>">
+          <td class="col-event <?= $pts > 0 ? 'has-points' : '' ?>" style="display:table-cell !important;visibility:visible !important;">
             <?= $pts > 0 ? $pts : '–' ?>
           </td>
           <?php endforeach; ?>
@@ -721,7 +721,7 @@ if (!$series) {
             </a>
           </td>
           <?php foreach ($eventsWithPoints as $event): ?>
-          <td class="col-event"></td>
+          <td class="col-event" style="display:table-cell !important;visibility:visible !important;"></td>
           <?php endforeach; ?>
           <td class="col-total text-muted"><?= $clubRider['points'] ?> p</td>
         </tr>
@@ -1287,4 +1287,88 @@ function toggleClubRiders(btn, event) {
     display: block;
   }
 }
+
+/* LANDSCAPE MODE - Force table and all columns visible */
+@media (orientation: landscape) {
+  .standings-card .table-wrapper {
+    display: block !important;
+  }
+  .standings-card .result-list {
+    display: none !important;
+  }
+  .col-event,
+  .standings-table .col-event,
+  th.col-event,
+  td.col-event {
+    display: table-cell !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+  }
+}
+
+/* Fallback: Aspect ratio based landscape detection */
+@media (min-aspect-ratio: 1/1) {
+  .standings-card .table-wrapper {
+    display: block !important;
+  }
+  .standings-card .result-list {
+    display: none !important;
+  }
+  .col-event,
+  .standings-table .col-event,
+  th.col-event,
+  td.col-event {
+    display: table-cell !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+  }
+}
+
+/* Fallback: Screen width > height detection for iOS */
+@media screen and (min-width: 500px) and (max-height: 500px) {
+  .standings-card .table-wrapper {
+    display: block !important;
+  }
+  .standings-card .result-list {
+    display: none !important;
+  }
+  .col-event,
+  .standings-table .col-event,
+  th.col-event,
+  td.col-event {
+    display: table-cell !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+  }
+}
+
+/* JavaScript landscape class fallback */
+body.is-landscape .standings-card .table-wrapper {
+  display: block !important;
+}
+body.is-landscape .standings-card .result-list {
+  display: none !important;
+}
+body.is-landscape .col-event,
+body.is-landscape .standings-table .col-event,
+body.is-landscape th.col-event,
+body.is-landscape td.col-event {
+  display: table-cell !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
 </style>
+
+<script>
+// JavaScript landscape detection for iOS Safari
+function updateLandscapeClass() {
+  const isLandscape = window.innerWidth > window.innerHeight;
+  document.body.classList.toggle('is-landscape', isLandscape);
+  document.body.classList.toggle('is-portrait', !isLandscape);
+}
+updateLandscapeClass();
+window.addEventListener('resize', updateLandscapeClass);
+window.addEventListener('orientationchange', function() {
+  setTimeout(updateLandscapeClass, 100);
+});
+</script>
