@@ -151,6 +151,7 @@ if ($isSuperAdmin) {
 
 $pageTitle = 'Betalningsinställningar';
 $pageType = 'admin';
+$active_tab = 'payments';
 include __DIR__ . '/../includes/layout-header.php';
 ?>
 

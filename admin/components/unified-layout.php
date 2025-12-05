@@ -57,6 +57,9 @@ $pageInfo = [
         <?php include HUB_V3_ROOT . '/components/sidebar.php'; ?>
 
         <main id="main-content" class="main-content" role="main">
+            <!-- Admin Submenu (automatic based on current page) -->
+            <?php include __DIR__ . '/../../includes/components/admin-submenu.php'; ?>
+
             <!-- Breadcrumbs -->
             <?php if (isset($breadcrumbs) && !empty($breadcrumbs)): ?>
                 <nav class="admin-breadcrumbs">

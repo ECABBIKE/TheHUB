@@ -140,6 +140,7 @@ $stats = $db->getRow("
 
 $pageTitle = 'Ordrar & Betalningar';
 $pageType = 'admin';
+$active_tab = 'payments';
 include __DIR__ . '/../includes/layout-header.php';
 ?>
 
