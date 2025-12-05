@@ -53,10 +53,7 @@ function render_admin_header($title = null, $actions = []) {
   </div>
   <?php endif; ?>
 
-  <?php if ($active_group && isset($ADMIN_TABS[$active_group])): ?>
-    <?php render_admin_tabs($ADMIN_TABS[$active_group]['tabs'], $active_tab); ?>
-  <?php endif; ?>
-
+  <!-- Note: Tabs are now handled automatically by admin-submenu.php in layout-header.php -->
   <div class="admin-tab-content">
   <?php
 }

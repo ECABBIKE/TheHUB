@@ -27,8 +27,15 @@ if (!$isSuperAdmin && $userId !== $currentAdmin['id']) {
 // Get user info
 $user = $db->getRow("SELECT * FROM admin_users WHERE id = ?", [$userId]);
 if (!$user) {
-    header('Location: /admin/users.php');
-    exit;
+    // If user not found, try to get the current logged in admin's info from session
+    $user = [
+        'id' => $currentAdmin['id'],
+        'username' => $currentAdmin['username'] ?? '',
+        'name' => $currentAdmin['name'] ?? $currentAdmin['username'] ?? 'Admin',
+        'role' => $currentAdmin['role'] ?? 'admin',
+        'swish_number' => null,
+        'swish_name' => null
+    ];
 }
 
 $message = '';
