@@ -62,6 +62,26 @@ function hub_send_password_reset_email(string $email, string $name, string $rese
 }
 
 /**
+ * Send account activation email
+ *
+ * @param string $email Recipient email
+ * @param string $name Recipient name
+ * @param string $activationLink Full activation URL with token
+ * @return bool True if email was sent
+ */
+function hub_send_account_activation_email(string $email, string $name, string $activationLink): bool {
+    $subject = 'Aktivera ditt konto - TheHUB';
+
+    $body = hub_email_template('account_activation', [
+        'name' => $name,
+        'activation_link' => $activationLink,
+        'expires' => '24 timmar'
+    ]);
+
+    return hub_send_email($email, $subject, $body);
+}
+
+/**
  * Get email template with variables replaced
  *
  * @param string $template Template name
@@ -114,6 +134,22 @@ function hub_email_template(string $template, array $vars = []): string {
             <p style="text-align: center;">
                 <a href="{{login_link}}" class="btn">Logga in</a>
             </p>
+        ',
+
+        'account_activation' => '
+            <div class="header">
+                <div class="logo">🏆 TheHUB</div>
+            </div>
+            <h1>Aktivera ditt konto</h1>
+            <p>Hej {{name}},</p>
+            <p>Vi har hittat ditt konto i TheHUB - plattformen för gravity racing i Sverige.</p>
+            <p>För att aktivera ditt konto och skapa ett lösenord, klicka på knappen nedan:</p>
+            <p style="text-align: center;">
+                <a href="{{activation_link}}" class="btn">Aktivera konto</a>
+            </p>
+            <p class="note">Eller kopiera och klistra in denna länk i din webbläsare:</p>
+            <div class="link">{{activation_link}}</div>
+            <p class="note">Länken är giltig i {{expires}}. Om du inte begärde denna aktivering kan du ignorera detta mail.</p>
         '
     ];
 

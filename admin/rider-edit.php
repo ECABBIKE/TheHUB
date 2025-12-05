@@ -31,13 +31,74 @@ $riderUser = $db->getRow("
 $message = '';
 $messageType = 'info';
 
+// Profile image path
+$profileImageDir = __DIR__ . '/../uploads/riders/';
+$profileImageUrl = '/uploads/riders/';
+$profileImage = null;
+
+// Create directory if not exists
+if (!is_dir($profileImageDir)) {
+ mkdir($profileImageDir, 0755, true);
+}
+
+// Check for existing profile image
+foreach (['jpg', 'jpeg', 'png', 'webp'] as $ext) {
+ if (file_exists($profileImageDir . $id . '.' . $ext)) {
+ $profileImage = $profileImageUrl . $id . '.' . $ext . '?v=' . filemtime($profileImageDir . $id . '.' . $ext);
+ break;
+ }
+}
+
 // Handle form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
  checkCsrf();
 
  $action = $_POST['action'] ?? 'save_rider';
 
- if ($action === 'save_rider') {
+ // Handle profile image upload
+ if ($action === 'upload_image' && isset($_FILES['profile_image']) && $_FILES['profile_image']['error'] === UPLOAD_ERR_OK) {
+ $allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
+ $maxSize = 5 * 1024 * 1024; // 5MB
+
+ $file = $_FILES['profile_image'];
+
+ if (!in_array($file['type'], $allowedTypes)) {
+ $message = 'Endast JPG, PNG och WebP är tillåtna.';
+ $messageType = 'error';
+ } elseif ($file['size'] > $maxSize) {
+ $message = 'Bilden får max vara 5MB.';
+ $messageType = 'error';
+ } else {
+ // Remove old images
+ foreach (['jpg', 'jpeg', 'png', 'webp'] as $ext) {
+  $oldFile = $profileImageDir . $id . '.' . $ext;
+  if (file_exists($oldFile)) unlink($oldFile);
+ }
+
+ // Save new image
+ $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION)) ?: 'jpg';
+ if ($ext === 'jpeg') $ext = 'jpg';
+ $newPath = $profileImageDir . $id . '.' . $ext;
+
+ if (move_uploaded_file($file['tmp_name'], $newPath)) {
+  $message = 'Profilbild uppladdad!';
+  $messageType = 'success';
+  $profileImage = $profileImageUrl . $id . '.' . $ext . '?v=' . time();
+ } else {
+  $message = 'Kunde inte spara bilden.';
+  $messageType = 'error';
+ }
+ }
+ } elseif ($action === 'delete_image') {
+ // Delete profile image
+ foreach (['jpg', 'jpeg', 'png', 'webp'] as $ext) {
+ $oldFile = $profileImageDir . $id . '.' . $ext;
+ if (file_exists($oldFile)) unlink($oldFile);
+ }
+ $profileImage = null;
+ $message = 'Profilbild borttagen!';
+ $messageType = 'success';
+ } elseif ($action === 'save_rider') {
  // Validate required fields
  $firstname = trim($_POST['firstname'] ?? '');
  $lastname = trim($_POST['lastname'] ?? '');
@@ -46,7 +107,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
  $message = 'Förnamn och efternamn är obligatoriska';
  $messageType = 'error';
  } else {
- // Prepare rider data
+ // Prepare rider data (read-only fields excluded: license_type, license_category, license_valid_until, discipline)
  $riderData = [
  'firstname' => $firstname,
  'lastname' => $lastname,
@@ -54,13 +115,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
  'gender' => trim($_POST['gender'] ?? ''),
  'club_id' => !empty($_POST['club_id']) ? intval($_POST['club_id']) : null,
  'license_number' => trim($_POST['license_number'] ?? ''),
- 'license_type' => trim($_POST['license_type'] ?? ''),
- 'license_category' => trim($_POST['license_category'] ?? ''),
- 'license_valid_until' => !empty($_POST['license_valid_until']) ? trim($_POST['license_valid_until']) : null,
- 'discipline' => trim($_POST['discipline'] ?? ''),
  'email' => trim($_POST['email'] ?? ''),
- 'phone' => trim($_POST['phone'] ?? ''),
- 'city' => trim($_POST['city'] ?? ''),
+ 'nationality' => trim($_POST['nationality'] ?? 'SWE'),
+ 'team' => trim($_POST['team'] ?? ''),
  'notes' => trim($_POST['notes'] ?? ''),
  'active' => isset($_POST['active']) ? 1 : 0,
  ];
@@ -199,7 +256,7 @@ include __DIR__ . '/../includes/layout-header.php';
 ?>
 
 <main class="main-content">
- <div class="container" class="gs-max-w-900">
+ <div class="container" style="max-width: 900px;">
  <!-- Header -->
  <div class="flex items-center justify-between mb-lg">
  <h1 class="text-primary">
@@ -220,14 +277,55 @@ include __DIR__ . '/../includes/layout-header.php';
  </div>
  <?php endif; ?>
 
+ <!-- Profile Image -->
+ <div class="card mb-lg">
+ <div class="card-body">
+ <h2 class="text-primary mb-md">
+  <i data-lucide="camera"></i>
+  Profilbild
+ </h2>
+ <div class="flex items-center gap-lg">
+  <div class="profile-image-preview" style="width: 120px; height: 120px; border-radius: 50%; background: var(--color-bg-sunken); display: flex; align-items: center; justify-content: center; overflow: hidden;">
+  <?php if ($profileImage): ?>
+  <img src="<?= h($profileImage) ?>" alt="Profilbild" style="width: 100%; height: 100%; object-fit: cover;">
+  <?php else: ?>
+  <i data-lucide="user" style="width: 48px; height: 48px; opacity: 0.3;"></i>
+  <?php endif; ?>
+  </div>
+  <div class="flex flex-col gap-sm">
+  <form method="POST" enctype="multipart/form-data" style="display: flex; gap: 0.5rem; align-items: center;">
+  <?= csrf_field() ?>
+  <input type="hidden" name="action" value="upload_image">
+  <input type="file" name="profile_image" accept="image/jpeg,image/png,image/webp" class="input" style="max-width: 200px;">
+  <button type="submit" class="btn btn--primary btn--sm">
+   <i data-lucide="upload"></i>
+   Ladda upp
+  </button>
+  </form>
+  <?php if ($profileImage): ?>
+  <form method="POST" style="display: inline;">
+  <?= csrf_field() ?>
+  <input type="hidden" name="action" value="delete_image">
+  <button type="submit" class="btn btn--secondary btn--sm" onclick="return confirm('Ta bort profilbilden?')">
+   <i data-lucide="trash-2"></i>
+   Ta bort bild
+  </button>
+  </form>
+  <?php endif; ?>
+  <small class="text-secondary">Max 5MB. JPG, PNG eller WebP.</small>
+  </div>
+ </div>
+ </div>
+ </div>
+
  <!-- Edit Form -->
  <form method="POST" class="card">
  <?= csrf_field() ?>
 
  <div class="card-body">
- <div class="grid grid-cols-1 md-grid-cols-2 gap-lg">
+ <div class="grid gap-lg" style="grid-template-columns: repeat(2, 1fr);">
   <!-- Personal Information -->
-  <div class="gs-md-col-span-2">
+  <div style="grid-column: span 2;">
   <h2 class="text-primary mb-md">
   <i data-lucide="user"></i>
   Personuppgifter
@@ -297,7 +395,7 @@ include __DIR__ . '/../includes/layout-header.php';
   </div>
 
   <!-- License Information -->
-  <div class="gs-md-col-span-2 mt-lg">
+  <div style="grid-column: span 2; margin-top: var(--space-lg);">
   <h2 class="text-primary mb-md">
   <i data-lucide="award"></i>
   Licensinformation
@@ -336,69 +434,139 @@ include __DIR__ . '/../includes/layout-header.php';
   >
   </div>
 
-  <!-- License Type -->
+  <!-- License Category (read-only) -->
   <div>
-  <label for="license_type" class="label">
-  <i data-lucide="shield"></i>
-  Licenstyp
-  </label>
-  <select id="license_type" name="license_type" class="input">
-  <option value="">Ingen</option>
-  <option value="Elite" <?= $rider['license_type'] === 'Elite' ? 'selected' : '' ?>>Elite</option>
-  <option value="Sport" <?= $rider['license_type'] === 'Sport' ? 'selected' : '' ?>>Sport</option>
-  <option value="Motion" <?= $rider['license_type'] === 'Motion' ? 'selected' : '' ?>>Motion</option>
-  <option value="Youth" <?= $rider['license_type'] === 'Youth' ? 'selected' : '' ?>>Ungdom</option>
-  </select>
-  </div>
-
-  <!-- License Category -->
-  <div>
-  <label for="license_category" class="label">
+  <label class="label">
   <i data-lucide="tag"></i>
   Licenskategori
   </label>
   <input
   type="text"
-  id="license_category"
-  name="license_category"
   class="input"
-  value="<?= h($rider['license_category']) ?>"
+  value="<?= h($rider['license_category'] ?: '-') ?>"
+  disabled
   >
+  <small class="text-secondary">Importeras från SCF</small>
   </div>
 
-  <!-- License Valid Until -->
+  <!-- Nationality -->
   <div>
-  <label for="license_valid_until" class="label">
-  <i data-lucide="calendar-check"></i>
-  Licens giltig till
+  <label for="nationality" class="label">
+  <i data-lucide="flag"></i>
+  Nationalitet
   </label>
-  <input
-  type="date"
-  id="license_valid_until"
-  name="license_valid_until"
-  class="input"
-  value="<?= $rider['license_valid_until'] && $rider['license_valid_until'] !== '0000-00-00' ? h($rider['license_valid_until']) : '' ?>"
-  >
-  </div>
-
-  <!-- Discipline -->
-  <div>
-  <label for="discipline" class="label">
-  <i data-lucide="bike"></i>
-  Disciplin
-  </label>
-  <select id="discipline" name="discipline" class="input">
-  <option value="">Välj...</option>
-  <option value="MTB" <?= $rider['discipline'] === 'MTB' ? 'selected' : '' ?>>MTB</option>
-  <option value="Road" <?= $rider['discipline'] === 'Road' ? 'selected' : '' ?>>Road</option>
-  <option value="Cyclocross" <?= $rider['discipline'] === 'Cyclocross' ? 'selected' : '' ?>>Cyclocross</option>
-  <option value="Track" <?= $rider['discipline'] === 'Track' ? 'selected' : '' ?>>Track</option>
-  <option value="BMX" <?= $rider['discipline'] === 'BMX' ? 'selected' : '' ?>>BMX</option>
+  <select id="nationality" name="nationality" class="input">
+  <option value="SWE" <?= ($rider['nationality'] ?? 'SWE') === 'SWE' ? 'selected' : '' ?>>🇸🇪 Sverige</option>
+  <option value="NOR" <?= ($rider['nationality'] ?? '') === 'NOR' ? 'selected' : '' ?>>🇳🇴 Norge</option>
+  <option value="DEN" <?= ($rider['nationality'] ?? '') === 'DEN' ? 'selected' : '' ?>>🇩🇰 Danmark</option>
+  <option value="FIN" <?= ($rider['nationality'] ?? '') === 'FIN' ? 'selected' : '' ?>>🇫🇮 Finland</option>
+  <option value="GBR" <?= ($rider['nationality'] ?? '') === 'GBR' ? 'selected' : '' ?>>🇬🇧 Storbritannien</option>
   </select>
   </div>
 
+  <!-- Team -->
+  <div>
+  <label for="team" class="label">
+  <i data-lucide="users"></i>
+  Lagnamn
+  </label>
+  <input
+  type="text"
+  id="team"
+  name="team"
+  class="input"
+  value="<?= h($rider['team'] ?? '') ?>"
+  placeholder="Separat från klubb"
+  >
+  </div>
+
+  <!-- Read-only Fields -->
+  <div style="grid-column: span 2; margin-top: var(--space-lg);">
+  <h2 class="text-primary mb-md">
+  <i data-lucide="database"></i>
+  Systemdata (endast läsning)
+  </h2>
+  </div>
+
+  <!-- License Year (read-only) -->
+  <div>
+  <label class="label">
+  <i data-lucide="calendar"></i>
+  Licensår
+  </label>
+  <input
+  type="text"
+  class="input"
+  value="<?= h($rider['license_year'] ?? '-') ?>"
+  disabled
+  >
+  <small class="text-secondary">Importeras från SCF</small>
+  </div>
+
+  <!-- Gravity ID (read-only) -->
+  <div>
+  <label class="label">
+  <i data-lucide="zap"></i>
+  Gravity ID
+  </label>
+  <input
+  type="text"
+  class="input"
+  value="<?= h($rider['gravity_id'] ?? '-') ?>"
+  disabled
+  >
+  <small class="text-secondary">Tilldelas av systemet</small>
+  </div>
+
+  <!-- Discipline (read-only) -->
+  <div>
+  <label class="label">
+  <i data-lucide="bike"></i>
+  Huvuddisciplin
+  </label>
+  <input
+  type="text"
+  class="input"
+  value="<?= h($rider['discipline'] ?: '-') ?>"
+  disabled
+  >
+  <small class="text-secondary">Importeras från SCF</small>
+  </div>
+
+  <!-- Disciplines Checkboxes (read-only from license) -->
+  <div style="grid-column: span 2;">
+  <label class="label">
+  <i data-lucide="list"></i>
+  Licensierade discipliner
+  </label>
+  <?php
+  $allDisciplines = [
+  'DH' => 'Downhill',
+  'END' => 'Enduro',
+  'XCO' => 'Cross Country Olympic',
+  'XCM' => 'Cross Country Marathon',
+  'BMX' => 'BMX',
+  'ROAD' => 'Landsväg',
+  'TRACK' => 'Bana',
+  'GRAVEL' => 'Gravel',
+  'CX' => 'Cyclocross'
+  ];
+  $riderDisciplines = $rider['disciplines'] ? json_decode($rider['disciplines'], true) ?: [] : [];
+  ?>
+  <div style="display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 0.5rem;">
+  <?php foreach ($allDisciplines as $code => $name): ?>
+  <?php $isChecked = in_array($code, $riderDisciplines); ?>
+  <label style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.75rem; background: <?= $isChecked ? 'rgba(245, 158, 11, 0.15)' : 'var(--color-bg-sunken)' ?>; border: 1px solid <?= $isChecked ? 'var(--color-accent)' : 'var(--color-border)' ?>; border-radius: var(--radius-md); cursor: not-allowed; opacity: <?= $isChecked ? '1' : '0.5' ?>;">
+  <input type="checkbox" <?= $isChecked ? 'checked' : '' ?> disabled style="accent-color: var(--color-accent);">
+  <span style="font-size: var(--text-sm); color: <?= $isChecked ? 'var(--color-accent)' : 'var(--color-text-secondary)' ?>;"><?= h($name) ?></span>
+  </label>
+  <?php endforeach; ?>
+  </div>
+  <small class="text-secondary" style="display: block; margin-top: 0.5rem;">Importeras från SCF. Används för framtida anmälan.</small>
+  </div>
+
   <!-- Contact Information -->
-  <div class="gs-md-col-span-2 mt-lg">
+  <div style="grid-column: span 2; margin-top: var(--space-lg);">
   <h2 class="text-primary mb-md">
   <i data-lucide="mail"></i>
   Kontaktuppgifter
@@ -420,36 +588,6 @@ include __DIR__ . '/../includes/layout-header.php';
   >
   </div>
 
-  <!-- Phone -->
-  <div>
-  <label for="phone" class="label">
-  <i data-lucide="phone"></i>
-  Telefon
-  </label>
-  <input
-  type="tel"
-  id="phone"
-  name="phone"
-  class="input"
-  value="<?= h($rider['phone']) ?>"
-  >
-  </div>
-
-  <!-- City -->
-  <div>
-  <label for="city" class="label">
-  <i data-lucide="map-pin"></i>
-  Stad
-  </label>
-  <input
-  type="text"
-  id="city"
-  name="city"
-  class="input"
-  value="<?= h($rider['city']) ?>"
-  >
-  </div>
-
   <!-- Active Status -->
   <div>
   <label class="checkbox-label">
@@ -468,7 +606,7 @@ include __DIR__ . '/../includes/layout-header.php';
   </div>
 
   <!-- Notes -->
-  <div class="gs-md-col-span-2">
+  <div style="grid-column: span 2;">
   <label for="notes" class="label">
   <i data-lucide="file-text"></i>
   Anteckningar
@@ -484,7 +622,7 @@ include __DIR__ . '/../includes/layout-header.php';
  </div>
 
  <div class="card-footer">
- <div class="flex gs-justify-end gap-md">
+ <div class="flex gap-md" style="justify-content: flex-end;">
   <a href="/admin/riders.php" class="btn btn--secondary">
   <i data-lucide="x"></i>
   Avbryt
@@ -513,8 +651,8 @@ include __DIR__ . '/../includes/layout-header.php';
   <?= csrf_field() ?>
   <input type="hidden" name="action" value="update_account">
 
-  <div class="grid grid-cols-1 md-grid-cols-2 gap-lg">
-  <div class="gs-md-col-span-2">
+  <div class="grid gap-lg" style="grid-template-columns: repeat(2, 1fr);">
+  <div style="grid-column: span 2;">
   <div class="alert alert--info">
    <i data-lucide="user-check"></i>
    <span>Denna deltagare har ett användarkonto: <strong><?= h($riderUser['username']) ?></strong></span>
@@ -565,7 +703,7 @@ include __DIR__ . '/../includes/layout-header.php';
   <input type="text" class="input" value="<?= $riderUser['last_login'] ? date('Y-m-d H:i', strtotime($riderUser['last_login'])) : 'Aldrig' ?>" disabled>
   </div>
 
-  <div class="gs-md-col-span-2">
+  <div style="grid-column: span 2;">
   <label class="label">Behörigheter</label>
   <div class="flex gap-lg flex-wrap">
    <label class="checkbox flex items-center gap-sm">
@@ -611,7 +749,7 @@ include __DIR__ . '/../includes/layout-header.php';
   <span>Denna deltagare har inget användarkonto. Skapa ett för att låta dem logga in.</span>
   </div>
 
-  <div class="grid grid-cols-1 md-grid-cols-2 gap-lg">
+  <div class="grid gap-lg" style="grid-template-columns: repeat(2, 1fr);">
   <div>
   <label for="new_username" class="label">
    <i data-lucide="at-sign"></i>
@@ -660,7 +798,7 @@ include __DIR__ . '/../includes/layout-header.php';
   >
   </div>
 
-  <div class="flex gs-items-end">
+  <div class="flex" style="align-items: flex-end;">
   <button type="submit" class="btn btn--primary">
    <i data-lucide="user-plus"></i>
    Skapa användarkonto
@@ -674,6 +812,17 @@ include __DIR__ . '/../includes/layout-header.php';
  <?php endif; ?>
  </div>
 </main>
+
+<style>
+@media (max-width: 768px) {
+ .grid[style*="grid-template-columns: repeat(2, 1fr)"] {
+  grid-template-columns: 1fr !important;
+ }
+ .grid [style*="grid-column: span 2"] {
+  grid-column: span 1 !important;
+ }
+}
+</style>
 
 <script>
 function confirmDeleteAccount() {

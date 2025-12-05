@@ -164,6 +164,8 @@ $redirect = clean_redirect_url($_GET['redirect'] ?? '');
             <!-- Footer -->
             <div class="login-footer">
                 <a href="/forgot-password" class="login-link">Glömt lösenord?</a>
+                <span class="login-divider">|</span>
+                <a href="/activate-account" class="login-link">Aktivera konto</a>
             </div>
 
         </div>

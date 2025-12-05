@@ -32,7 +32,7 @@ function hub_requires_auth(string $page): bool {
     // Public pages that don't require authentication
     $publicPages = [
         // Auth pages
-        '', 'welcome', 'login', 'logout', 'forgot-password', 'reset-password', 'index.php',
+        '', 'welcome', 'login', 'logout', 'forgot-password', 'reset-password', 'activate-account', 'index.php',
         // Public content sections (viewable without login)
         'calendar', 'results', 'series', 'database', 'ranking',
         // Legacy public pages
@@ -76,6 +76,7 @@ function hub_get_current_page(): array {
         'logout' => '/pages/logout.php',
         'forgot-password' => '/pages/forgot-password.php',
         'reset-password' => '/pages/reset-password.php',
+        'activate-account' => '/pages/activate-account.php',
     ];
 
     if (isset($simplePages[$section])) {
