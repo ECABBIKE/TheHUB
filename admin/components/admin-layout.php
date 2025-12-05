@@ -82,20 +82,8 @@ if ($userTheme === 'auto') {
 
         <!-- Main Content Area -->
         <main class="admin-main">
-            <!-- Breadcrumbs -->
-            <?php if (isset($breadcrumbs) && !empty($breadcrumbs)): ?>
-                <nav class="admin-breadcrumbs">
-                    <a href="/admin/dashboard.php">Admin</a>
-                    <?php foreach ($breadcrumbs as $crumb): ?>
-                        <span class="separator">/</span>
-                        <?php if (isset($crumb['url'])): ?>
-                            <a href="<?= htmlspecialchars($crumb['url']) ?>"><?= htmlspecialchars($crumb['label']) ?></a>
-                        <?php else: ?>
-                            <span class="current"><?= htmlspecialchars($crumb['label']) ?></span>
-                        <?php endif; ?>
-                    <?php endforeach; ?>
-                </nav>
-            <?php endif; ?>
+            <!-- Admin Submenu (automatic based on current page) -->
+            <?php include __DIR__ . '/../../includes/components/admin-submenu.php'; ?>
 
             <!-- Page Header -->
             <div class="admin-page-header">

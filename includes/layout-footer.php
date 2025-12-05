@@ -29,8 +29,13 @@
         </div>
     </footer>
 
-    <!-- Bottom Navigation (V2.5 - visible on mobile only) -->
-    <?php include __DIR__ . '/nav-bottom.php'; ?>
+    <!-- Bottom Navigation (V2.5 - visible on mobile only, NOT on admin pages) -->
+    <?php
+    $isAdminPage = strpos($_SERVER['PHP_SELF'], '/admin/') !== false;
+    if (!$isAdminPage) {
+        include __DIR__ . '/nav-bottom.php';
+    }
+    ?>
 
     <!-- Theme switcher removed - always light theme to prevent flash -->
 

@@ -6,7 +6,6 @@
 
 require_once __DIR__ . '/../config.php';
 require_admin();
-require_once __DIR__ . '/../includes/admin-layout.php';
 
 $db = getDB();
 
@@ -35,16 +34,11 @@ foreach ($events as $event) {
  }
 }
 
-$pageTitle = 'Ticketing';
-$pageType = 'admin';
-include __DIR__ . '/../includes/layout-header.php';
+$page_title = 'Biljetter';
+include __DIR__ . '/components/unified-layout.php';
 ?>
 
-<main class="main-content">
- <div class="container">
- <?php render_admin_header('Tävlingar'); ?>
-
- <div class="alert alert--info mb-lg">
+<div class="alert alert--info mb-lg">
  <i data-lucide="info"></i>
  <strong>Info:</strong> Ticketing-funktioner kräver att databasmigreringarna körs för att aktivera kolumner som ticketing_enabled, woo_product_id, etc.
  </div>
@@ -125,8 +119,5 @@ include __DIR__ . '/../includes/layout-header.php';
  </div>
  </div>
  <?php endif; ?>
- <?php render_admin_footer(); ?>
- </div>
-</main>
 
-<?php include __DIR__ . '/../includes/layout-footer.php'; ?>
+<?php include __DIR__ . '/components/unified-layout-footer.php'; ?>

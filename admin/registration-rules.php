@@ -8,7 +8,6 @@
 
 require_once __DIR__ . '/../config.php';
 require_admin();
-require_once __DIR__ . '/../includes/admin-layout.php';
 
 require_once __DIR__ . '/../includes/registration-rules.php';
 require_once __DIR__ . '/../includes/registration-validator.php';
@@ -171,14 +170,10 @@ if ($selectedEventId) {
 $allClasses = getAllClasses($pdo);
 
 // Page setup
-$pageTitle = 'Registreringsregler';
-$pageType = 'admin';
-include __DIR__ . '/../includes/layout-header.php';
+$page_title = 'Registreringsregler';
+$page_group = 'config';
+include __DIR__ . '/components/unified-layout.php';
 ?>
-
-<main class="main-content">
- <div class="container">
- <?php render_admin_header('Tävlingar'); ?>
 
  <!-- Messages -->
  <?php if ($message): ?>
@@ -476,9 +471,6 @@ include __DIR__ . '/../includes/layout-header.php';
  </div>
  <?php endif; ?>
  <?php endif; ?>
- <?php render_admin_footer(); ?>
- </div>
-</main>
 
 <!-- Add/Edit Class Rule Modal -->
 <div id="classRuleModal" class="gs-modal hidden">
@@ -862,4 +854,4 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 </script>
 
-<?php include __DIR__ . '/../includes/layout-footer.php'; ?>
+<?php include __DIR__ . '/components/unified-layout-footer.php'; ?>

@@ -91,18 +91,18 @@ $ADMIN_TABS = [
     ],
 
     // ========================================
-    // DELTAGARE
+    // DATABAS (Riders + Clubs under one section)
     // ========================================
-    'participants' => [
-        'title' => 'Deltagare',
-        'icon' => 'users',
+    'database' => [
+        'title' => 'Databas',
+        'icon' => 'database',
         'tabs' => [
             [
                 'id' => 'riders',
                 'label' => 'Deltagare',
                 'icon' => 'user',
                 'url' => '/admin/riders.php',
-                'pages' => ['riders.php', 'rider-edit.php', 'rider-delete.php']
+                'pages' => ['riders.php', 'rider-edit.php', 'rider-delete.php', 'find-duplicates.php', 'cleanup-duplicates.php']
             ],
             [
                 'id' => 'clubs',

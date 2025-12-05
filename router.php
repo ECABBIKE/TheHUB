@@ -55,14 +55,10 @@ function hub_get_current_page(): array {
         exit;
     }
 
-    // Root route - show welcome for unauthenticated users
+    // Root route - show welcome page for ALL users (same great design for everyone)
+    // Welcome page adapts content based on login status
     if ($raw === '' || $raw === 'index.php') {
-        if (!hub_is_logged_in()) {
-            // Show welcome page for visitors
-            return ['page' => 'welcome', 'section' => null, 'params' => [], 'file' => HUB_V3_ROOT . '/pages/welcome.php'];
-        }
-        // Logged in users go to dashboard
-        return ['page' => 'dashboard', 'section' => 'dashboard', 'params' => [], 'file' => HUB_V3_ROOT . '/pages/dashboard.php'];
+        return ['page' => 'welcome', 'section' => null, 'params' => [], 'file' => HUB_V3_ROOT . '/pages/welcome.php'];
     }
 
     $segments = explode('/', $raw);

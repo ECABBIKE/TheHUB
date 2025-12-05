@@ -96,13 +96,12 @@ $totalEvents = array_sum(array_column($venues, 'event_count'));
 
 // Page config
 $page_title = 'Banor';
-$breadcrumbs = [['label' => 'Banor']];
 $page_actions = '<button onclick="openVenueModal()" class="btn-admin btn-admin-primary">
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
     Ny Venue
 </button>';
 
-include __DIR__ . '/components/admin-layout.php';
+include __DIR__ . '/components/unified-layout.php';
 ?>
 
 <?php if ($message): ?>
@@ -384,4 +383,4 @@ document.addEventListener('keydown', function(e) {
 .admin-checkbox-label input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--color-accent); }
 </style>
 
-<?php include __DIR__ . '/components/admin-footer.php'; ?>
+<?php include __DIR__ . '/components/unified-layout-footer.php'; ?>

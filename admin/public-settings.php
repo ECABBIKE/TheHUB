@@ -1,7 +1,6 @@
 <?php
 require_once __DIR__ . '/../config.php';
 require_admin();
-require_once __DIR__ . '/../includes/admin-layout.php';
 
 $db = getDB();
 $current_admin = get_current_admin();
@@ -75,14 +74,12 @@ $riders_with_results = $db->getRow("
 ")['count'] ?? 0;
 $riders_without_results = $total_riders - $riders_with_results;
 
-$pageTitle = 'Publika Inställningar';
-$pageType = 'admin';
-include __DIR__ . '/../includes/layout-header.php';
+$page_title = 'Publika Inställningar';
+$page_group = 'config';
+include __DIR__ . '/components/unified-layout.php';
 ?>
 
-<main class="main-content">
- <div class="container gs-max-w-900">
- <?php render_admin_header('Inställningar'); ?>
+<div class="gs-max-w-900">
 
  <!-- Messages -->
  <?php if ($message): ?>
@@ -251,9 +248,7 @@ include __DIR__ . '/../includes/layout-header.php';
   </a>
   </div>
  </div>
- <?php render_admin_footer(); ?>
- </div>
-</main>
+</div>
 
 
 <script>
@@ -280,4 +275,4 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 
-<?php include __DIR__ . '/../includes/layout-footer.php'; ?>
+<?php include __DIR__ . '/components/unified-layout-footer.php'; ?>

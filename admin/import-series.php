@@ -1,7 +1,6 @@
 <?php
 require_once __DIR__ . '/../config.php';
 require_admin();
-require_once __DIR__ . '/../includes/admin-layout.php';
 
 $db = getDB();
 $current_admin = get_current_admin();
@@ -211,14 +210,10 @@ function importSeriesFromCSV($filePath, $db) {
  ];
 }
 
-$pageTitle = 'Importera Serier';
-$pageType = 'admin';
-include __DIR__ . '/../includes/layout-header.php';
+$page_title = 'Importera Serier';
+$page_group = 'import';
+include __DIR__ . '/components/unified-layout.php';
 ?>
-
-<main class="main-content">
- <div class="container">
- <?php render_admin_header('Import & Data'); ?>
 
  <?php if ($message): ?>
   <div class="alert alert-<?= h($messageType) ?> mb-lg">
@@ -396,8 +391,4 @@ include __DIR__ . '/../includes/layout-header.php';
   </table>
   </div>
  </div>
- </div>
- <?php render_admin_footer(); ?>
-</main>
-
-<?php include __DIR__ . '/../includes/layout-footer.php'; ?>
+<?php include __DIR__ . '/components/unified-layout-footer.php'; ?>
