@@ -54,7 +54,7 @@ $ADMIN_TABS = [
                 'label' => 'Betalningar',
                 'icon' => 'credit-card',
                 'url' => '/admin/orders.php',
-                'pages' => ['orders.php', 'payment-settings.php']
+                'pages' => ['orders.php', 'payment-settings.php', 'event-payment.php', 'event-orders.php', 'event-registrations.php']
             ]
         ]
     ],
