@@ -1968,3 +1968,158 @@
     border-top: 1px solid var(--color-border);
     background: var(--color-bg-sunken);
 }
+
+/* ========================================================================
+   LUCIDE ICON SIZE FIX - GLOBAL CONSTRAINTS
+   Ensures all Lucide icons have consistent sizing across admin pages
+   ======================================================================== */
+
+/* Base Lucide icon size - SVG elements created by lucide.createIcons() */
+svg.lucide,
+[data-lucide] svg,
+i[data-lucide] + svg {
+    width: 20px !important;
+    height: 20px !important;
+    min-width: 20px;
+    min-height: 20px;
+    max-width: 100%;
+    flex-shrink: 0;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    fill: none;
+    vertical-align: middle;
+}
+
+/* Hide empty i elements after Lucide replaces them */
+i[data-lucide]:empty {
+    display: none;
+}
+
+/* Icons in buttons - slightly smaller */
+.btn svg.lucide,
+.btn-admin svg.lucide,
+button svg.lucide {
+    width: 18px !important;
+    height: 18px !important;
+    min-width: 18px;
+    min-height: 18px;
+}
+
+/* Icons in small buttons */
+.btn-sm svg.lucide,
+.btn-admin-sm svg.lucide {
+    width: 16px !important;
+    height: 16px !important;
+    min-width: 16px;
+    min-height: 16px;
+}
+
+/* Icons in stat cards - larger */
+.admin-stat-card svg.lucide,
+.stat-card svg.lucide {
+    width: 24px !important;
+    height: 24px !important;
+    min-width: 24px;
+    min-height: 24px;
+}
+
+/* Icons in page headers - larger */
+.page-header svg.lucide,
+h1 svg.lucide,
+h2 svg.lucide {
+    width: 24px !important;
+    height: 24px !important;
+    min-width: 24px;
+    min-height: 24px;
+}
+
+/* Empty state icons - intentionally larger */
+.admin-empty-state svg.lucide,
+.empty-state svg.lucide {
+    width: 64px !important;
+    height: 64px !important;
+    min-width: 64px;
+    min-height: 64px;
+    opacity: 0.3;
+}
+
+/* Table action icons - small */
+.table-actions svg.lucide {
+    width: 16px !important;
+    height: 16px !important;
+    min-width: 16px;
+    min-height: 16px;
+}
+
+/* Alert icons */
+.alert svg.lucide {
+    width: 20px !important;
+    height: 20px !important;
+    min-width: 20px;
+    min-height: 20px;
+    flex-shrink: 0;
+}
+
+/* Form input icons */
+.admin-form-group svg.lucide,
+.form-group svg.lucide {
+    width: 18px !important;
+    height: 18px !important;
+}
+
+/* Mobile nav icons */
+.admin-mobile-nav svg.lucide {
+    width: 20px !important;
+    height: 20px !important;
+}
+
+/* Sidebar nav icons */
+.admin-sidebar svg.lucide,
+.nav-item svg.lucide {
+    width: 22px !important;
+    height: 22px !important;
+}
+
+/* Quick action icons */
+.admin-quick-action-icon svg.lucide {
+    width: 20px !important;
+    height: 20px !important;
+}
+
+/* Activity timeline icons */
+.admin-activity-icon svg.lucide {
+    width: 16px !important;
+    height: 16px !important;
+}
+
+/* Badge icons */
+.admin-badge svg.lucide {
+    width: 14px !important;
+    height: 14px !important;
+}
+
+/* Toast icons */
+.admin-toast-icon svg.lucide {
+    width: 20px !important;
+    height: 20px !important;
+}
+
+/* Import section icons */
+.admin-import-section-icon svg.lucide {
+    width: 18px !important;
+    height: 18px !important;
+}
+
+/* Card header icons */
+.admin-card-header svg.lucide {
+    width: 20px !important;
+    height: 20px !important;
+}
+
+/* Dropdown menu icons */
+.user-dropdown svg.lucide {
+    width: 16px !important;
+    height: 16px !important;
+}
