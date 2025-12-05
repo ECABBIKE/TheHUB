@@ -140,11 +140,14 @@ $stats = $db->getRow("
 
 $pageTitle = 'Ordrar & Betalningar';
 $pageType = 'admin';
+$active_tab = 'payments';
 include __DIR__ . '/../includes/layout-header.php';
 ?>
 
 <main class="main-content">
     <div class="container">
+        <?php include __DIR__ . '/components/competition-tabs.php'; ?>
+
         <!-- Header -->
         <div class="flex items-center justify-between mb-lg">
             <div>
