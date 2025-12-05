@@ -130,6 +130,17 @@
 
 ---
 
+#### 💳 Betalningar
+
+> **Meny-highlight:** Aktiv på 2 sidor (`orders.php`, `payment-settings.php`)
+
+| Huvudsida | Undersidor |
+|-----------|------------|
+| `/admin/orders.php` | → Ordrar & betalningsbekräftelse |
+| `/admin/payment-settings.php` | → Swish-inställningar per event/serie |
+
+---
+
 #### 🎖️ Serier
 
 | Huvudsida | Undersidor |
@@ -352,9 +363,9 @@ Systemet använder **Lucide Icons** via `data-lucide` attribut.
 ```
 ADMIN SIDEBAR v2.0
 ├── 📊 Dashboard
-├── 📅 Tävlingar         → [Events] [Resultat] [Biljetter] [Regler]
+├── 📅 Tävlingar         → [Events] [Resultat] [Venues] [Biljetter] [Betalningar]
 ├── 🎖️ Serier & Poäng    → [Serier] [Ranking] [Klubbpoäng] [Poängskalor]
-├── 👥 Deltagare & Klubbar → [Deltagare] [Klubbar] [Venues] [Klasser]
+├── 👥 Deltagare & Klubbar → [Deltagare] [Klubbar] [Klasser]
 ├── 📤 Import & Data     → [Översikt] [Riders] [Resultat] [Events] [UCI] [Historik]
 └── ⚙️ Inställningar     → [Användare] [Behörigheter] [Publikt] [System]
 ```
@@ -378,4 +389,4 @@ ADMIN SIDEBAR v2.0
 
 ---
 
-*Senast uppdaterad: 2025-11-27*
+*Senast uppdaterad: 2025-12-05*
