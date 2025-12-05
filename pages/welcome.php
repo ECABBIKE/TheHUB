@@ -119,12 +119,12 @@ try {
             <p>Kommande tävlingar och event</p>
         </a>
         <a href="/results" class="welcome-nav-card">
-            <?= hub_icon('trophy', 'welcome-nav-icon') ?>
+            <?= hub_icon('flag', 'welcome-nav-icon') ?>
             <h3>Resultat</h3>
             <p>Se alla tävlingsresultat</p>
         </a>
         <a href="/series" class="welcome-nav-card">
-            <?= hub_icon('award', 'welcome-nav-icon') ?>
+            <?= hub_icon('trophy', 'welcome-nav-icon') ?>
             <h3>Serier</h3>
             <p>Tävlingsserier och ställningar</p>
         </a>
