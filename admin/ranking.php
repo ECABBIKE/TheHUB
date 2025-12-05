@@ -106,10 +106,7 @@ $lastSnapshotDate = $latestSnapshot ? $latestSnapshot['snapshot_date'] : null;
 
 // Page config
 $page_title = 'Ranking';
-$breadcrumbs = [
-    ['label' => 'Serier', 'url' => '/admin/series'],
-    ['label' => 'Ranking']
-];
+$page_group = 'standings';
 $page_actions = '<a href="/ranking/" class="btn-admin btn-admin-secondary" target="_blank">
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
     Publik vy
@@ -117,22 +114,6 @@ $page_actions = '<a href="/ranking/" class="btn-admin btn-admin-secondary" targe
 
 include __DIR__ . '/components/unified-layout.php';
 ?>
-
-<!-- Series Tabs -->
-<div class="admin-tabs">
-    <a href="/admin/series" class="admin-tab">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px;"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>
-        Serier
-    </a>
-    <a href="/admin/point-scales" class="admin-tab">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px;"><line x1="18" x2="18" y1="20" y2="10"/><line x1="12" x2="12" y1="20" y2="4"/><line x1="6" x2="6" y1="20" y2="14"/></svg>
-        Poängmallar
-    </a>
-    <a href="/admin/ranking" class="admin-tab active">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px;"><path d="M8.21 13.89 7 23l5-3 5 3-1.21-9.12"/><path d="M15 7a2 2 0 1 0 4 0a2 2 0 1 0-4 0"/><path d="M17 2h.01"/><path d="M3 7a2 2 0 1 0 4 0a2 2 0 1 0-4 0"/><path d="M5 2h.01"/><path d="M9 12a2 2 0 1 0 4 0a2 2 0 1 0-4 0"/><path d="M11 7h.01"/></svg>
-        Ranking
-    </a>
-</div>
 
 <?php if ($message): ?>
 <div class="admin-alert admin-alert-<?= $messageType ?>">
