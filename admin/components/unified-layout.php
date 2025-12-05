@@ -60,21 +60,6 @@ $pageInfo = [
             <!-- Admin Submenu (automatic based on current page) -->
             <?php include __DIR__ . '/../../includes/components/admin-submenu.php'; ?>
 
-            <!-- Breadcrumbs -->
-            <?php if (isset($breadcrumbs) && !empty($breadcrumbs)): ?>
-                <nav class="admin-breadcrumbs">
-                    <a href="/admin/dashboard">Admin</a>
-                    <?php foreach ($breadcrumbs as $crumb): ?>
-                        <span class="separator">/</span>
-                        <?php if (isset($crumb['url'])): ?>
-                            <a href="<?= htmlspecialchars($crumb['url']) ?>"><?= htmlspecialchars($crumb['label']) ?></a>
-                        <?php else: ?>
-                            <span class="current"><?= htmlspecialchars($crumb['label']) ?></span>
-                        <?php endif; ?>
-                    <?php endforeach; ?>
-                </nav>
-            <?php endif; ?>
-
             <!-- Page Header -->
             <div class="page-header">
                 <h1 class="page-title"><?= htmlspecialchars($page_title ?? 'Admin') ?></h1>
