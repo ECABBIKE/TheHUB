@@ -257,7 +257,17 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
 <section class="profile-hero">
     <div class="hero-accent-bar"></div>
     <div class="hero-content">
-        <!-- Top row: Photo + Name + Social -->
+        <?php if ($rider['gravity_id']):
+            $gidNumber = preg_replace('/^.*?-?(\d+)$/', '$1', $rider['gravity_id']);
+            $gidNumber = ltrim($gidNumber, '0') ?: '0';
+        ?>
+        <div class="gravity-id-badge">
+            <span class="gid-label">G-ID</span>
+            <span class="gid-number">#<?= htmlspecialchars($gidNumber) ?></span>
+        </div>
+        <?php endif; ?>
+
+        <!-- Top row: Photo + Name -->
         <div class="hero-top">
             <div class="hero-left">
                 <div class="profile-photo-container">
@@ -288,17 +298,7 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
                 <?php endif; ?>
             </div>
 
-            <div class="hero-right">
-                <?php if ($rider['gravity_id']):
-                    $gidNumber = preg_replace('/^.*?-?(\d+)$/', '$1', $rider['gravity_id']);
-                    $gidNumber = ltrim($gidNumber, '0') ?: '0';
-                ?>
-                <div class="profile-gravity-id">
-                    <span class="gid-label">Gravity ID</span>
-                    <span class="gid-number"><?= htmlspecialchars($gidNumber) ?></span>
-                </div>
-                <?php endif; ?>
-            </div>
+            <div class="hero-right"></div>
         </div>
 
         <!-- Bottom row: Badges + Social -->
@@ -667,6 +667,40 @@ document.querySelectorAll('.series-tab').forEach(tab => {
 
 .hero-content {
     padding: var(--space-lg);
+    position: relative;
+}
+
+/* Gravity ID Badge - Top Right Corner */
+.gravity-id-badge {
+    position: absolute;
+    top: var(--space-md);
+    right: var(--space-md);
+    display: flex;
+    align-items: center;
+    gap: 0;
+    background: linear-gradient(135deg, #1a1a2e, #16213e);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    z-index: 10;
+}
+
+.gravity-id-badge .gid-label {
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.8);
+    padding: 8px 10px;
+    background: rgba(0, 0, 0, 0.3);
+    letter-spacing: 0.5px;
+}
+
+.gravity-id-badge .gid-number {
+    font-family: var(--font-mono);
+    font-size: 1.1rem;
+    font-weight: 800;
+    color: #FFD700;
+    padding: 8px 12px;
+    text-shadow: 0 0 10px rgba(255, 215, 0, 0.4);
 }
 
 /* Hero Top Row - Three columns */
@@ -793,34 +827,6 @@ document.querySelectorAll('.series-tab').forEach(tab => {
 }
 
 .profile-club:hover { text-decoration: underline; }
-
-.profile-gravity-id {
-    display: inline-flex;
-    align-items: center;
-    gap: 0;
-    background: linear-gradient(135deg, #1a1a2e, #16213e);
-    border-radius: var(--radius-md);
-    overflow: hidden;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.1);
-}
-
-.profile-gravity-id .gid-label {
-    font-size: 0.65rem;
-    font-weight: 600;
-    color: rgba(255, 255, 255, 0.7);
-    padding: 6px 10px;
-    background: rgba(0, 0, 0, 0.2);
-    letter-spacing: 0.5px;
-}
-
-.profile-gravity-id .gid-number {
-    font-family: var(--font-mono);
-    font-size: 1rem;
-    font-weight: 800;
-    color: #FFD700;
-    padding: 6px 12px;
-    text-shadow: 0 0 10px rgba(255, 215, 0, 0.3);
-}
 
 .uci-badge {
     font-family: var(--font-mono);
@@ -1395,11 +1401,28 @@ document.querySelectorAll('.series-tab').forEach(tab => {
 
 /* Responsive - Mobile */
 @media (max-width: 599px) {
+    /* Gravity ID Badge */
+    .gravity-id-badge {
+        top: var(--space-sm);
+        right: var(--space-sm);
+    }
+
+    .gravity-id-badge .gid-label {
+        font-size: 0.55rem;
+        padding: 5px 6px;
+    }
+
+    .gravity-id-badge .gid-number {
+        font-size: 0.85rem;
+        padding: 5px 8px;
+    }
+
     /* Hero Section */
     .hero-top {
         grid-template-columns: 1fr;
         text-align: center;
         gap: var(--space-md);
+        padding-top: var(--space-xl);
     }
 
     .hero-left {
@@ -1407,7 +1430,7 @@ document.querySelectorAll('.series-tab').forEach(tab => {
     }
 
     .hero-right {
-        justify-content: center;
+        display: none;
     }
 
     .hero-bottom {
@@ -1446,16 +1469,6 @@ document.querySelectorAll('.series-tab').forEach(tab => {
 
     .ranking-badge .rank-label {
         display: none;
-    }
-
-    .profile-gravity-id .gid-label {
-        font-size: 0.6rem;
-        padding: 4px 8px;
-    }
-
-    .profile-gravity-id .gid-number {
-        font-size: 0.85rem;
-        padding: 4px 10px;
     }
 
     /* Stats Grid */
