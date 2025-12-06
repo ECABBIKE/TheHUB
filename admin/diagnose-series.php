@@ -452,7 +452,33 @@ include __DIR__ . '/components/unified-layout.php';
 
         // Debug: Check if champions have club_id
         if (!empty($existingChampions)) {
-            echo '<h4 class="mt-md mb-sm">Klubb-koppling för mästare:</h4>';
+            // Count how many have clubs vs not
+            $clubStats = $db->getAll("
+                SELECT
+                    COUNT(*) as total,
+                    SUM(CASE WHEN r.club_id IS NOT NULL THEN 1 ELSE 0 END) as with_club,
+                    SUM(CASE WHEN r.club_id IS NULL THEN 1 ELSE 0 END) as without_club
+                FROM rider_achievements ra
+                JOIN riders r ON ra.rider_id = r.id
+                WHERE ra.achievement_type = 'series_champion'
+            ");
+            $stats = $clubStats[0];
+
+            echo '<h4 class="mt-md mb-sm">🏢 Klubb-koppling för mästare:</h4>';
+
+            // Show summary
+            if ((int)$stats['without_club'] > 0) {
+                echo '<div class="alert alert-warning mb-md">';
+                echo '<strong>⚠️ ' . $stats['without_club'] . ' av ' . $stats['total'] . ' seriemästare saknar klubb-koppling!</strong><br>';
+                echo 'Dessa mästare kommer INTE visas under sina klubbars achievements.<br>';
+                echo '<small>För att fixa: Redigera åkarna och sätt deras klubb.</small>';
+                echo '</div>';
+            } else {
+                echo '<div class="alert alert-success mb-md">';
+                echo '<strong>✓ Alla ' . $stats['total'] . ' seriemästare har klubb-koppling</strong>';
+                echo '</div>';
+            }
+
             $champWithClub = $db->getAll("
                 SELECT ra.rider_id, CONCAT(r.first_name, ' ', r.last_name) as name,
                        ra.achievement_value as series_name, ra.season_year,
@@ -462,13 +488,14 @@ include __DIR__ . '/components/unified-layout.php';
                 LEFT JOIN clubs c ON r.club_id = c.id
                 WHERE ra.achievement_type = 'series_champion'
                 ORDER BY ra.season_year DESC
-                LIMIT 10
+                LIMIT 20
             ");
             echo '<table class="table table--striped" style="font-size: 0.85em;">';
-            echo '<thead><tr><th>Åkare</th><th>Serie</th><th>År</th><th>Klubb</th></tr></thead><tbody>';
+            echo '<thead><tr><th>Åkare</th><th>Serie</th><th>År</th><th>Klubb</th><th>Åtgärd</th></tr></thead><tbody>';
             foreach ($champWithClub as $ch) {
-                $clubCell = $ch['club_id'] ? htmlspecialchars($ch['club_name']) : '<span class="text-error">Ingen klubb!</span>';
-                echo "<tr><td>{$ch['name']}</td><td>{$ch['series_name']}</td><td>{$ch['season_year']}</td><td>{$clubCell}</td></tr>";
+                $clubCell = $ch['club_id'] ? htmlspecialchars($ch['club_name']) : '<span class="text-error">❌ Ingen klubb!</span>';
+                $actionCell = $ch['club_id'] ? '✓' : '<a href="/admin/riders/edit/' . $ch['rider_id'] . '" class="btn btn--sm btn--secondary">Redigera</a>';
+                echo "<tr><td><a href=\"/admin/riders/edit/{$ch['rider_id']}\">{$ch['name']}</a></td><td>{$ch['series_name']}</td><td>{$ch['season_year']}</td><td>{$clubCell}</td><td>{$actionCell}</td></tr>";
             }
             echo '</tbody></table>';
         }
