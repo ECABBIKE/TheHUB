@@ -6,6 +6,12 @@
 $db = hub_db();
 $clubId = intval($pageInfo['params']['id'] ?? 0);
 
+// Include club achievements system
+$achievementsClubPath = dirname(__DIR__) . '/includes/achievements-club.php';
+if (file_exists($achievementsClubPath)) {
+    require_once $achievementsClubPath;
+}
+
 // Load filter setting from admin configuration
 $publicSettings = require HUB_V3_ROOT . '/config/public_settings.php';
 $filter = $publicSettings['public_riders_display'] ?? 'all';
@@ -184,6 +190,14 @@ if (!$club) {
     </div>
   </div>
 </section>
+
+<!-- Club Achievements -->
+<?php if (function_exists('renderClubAchievements')): ?>
+<link rel="stylesheet" href="/assets/css/achievements.css?v=<?= file_exists(dirname(__DIR__) . '/assets/css/achievements.css') ? filemtime(dirname(__DIR__) . '/assets/css/achievements.css') : time() ?>">
+<section class="mb-lg">
+  <?= renderClubAchievements($db, $clubId) ?>
+</section>
+<?php endif; ?>
 
 <!-- Members -->
 <section class="card">
