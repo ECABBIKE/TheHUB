@@ -506,16 +506,19 @@ function calculateFinishRates($pdo, $rider_id) {
 /**
  * Hittar seriesegrar (seriemästare för avslutade serier)
  *
- * Kollar både:
- * 1. Serier markerade som 'completed' (oavsett år)
- * 2. Serier från tidigare år (för bakåtkompatibilitet)
+ * Kvalificerar som avslutad serie:
+ * 1. Serier där end_date har passerat (automatisk)
+ * 2. Serier markerade som 'completed' (manuell)
+ * 3. Serier från tidigare år (bakåtkompatibilitet)
  */
 function calculateSeriesChampionships($pdo, $rider_id) {
     $currentYear = (int)date('Y');
 
     // Hämta alla serier där åkaren har resultat och serien är avslutad
-    // (antingen status='completed' ELLER från tidigare år)
-    // Using COALESCE in SELECT to properly handle NULL series.year
+    // Serien räknas som avslutad om:
+    // - end_date har passerat (mest användbara kriteriet)
+    // - status = 'completed'
+    // - events är från tidigare år
     $stmt = $pdo->prepare("
         SELECT
             s.id as series_id,
@@ -528,7 +531,11 @@ function calculateSeriesChampionships($pdo, $rider_id) {
         JOIN series s ON e.series_id = s.id
         WHERE r.cyclist_id = ?
           AND r.status = 'finished'
-          AND (s.status = 'completed' OR YEAR(e.date) < ?)
+          AND (
+              s.status = 'completed'
+              OR (s.end_date IS NOT NULL AND s.end_date < CURDATE())
+              OR YEAR(e.date) < ?
+          )
         GROUP BY s.id, COALESCE(s.year, YEAR(e.date)), r.class_id
     ");
     $stmt->execute([$rider_id, $currentYear]);
