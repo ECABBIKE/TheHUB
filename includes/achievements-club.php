@@ -178,17 +178,36 @@ function getBadgeLevel(int $value, array $thresholds): string {
 }
 
 /**
+ * Generate hexagonal badge base for club badges
+ * Uses CSS variable for theme compatibility
+ */
+function getClubHexagonBase(string $accentColor, string $uniqueId = ''): string {
+    $glowId = $uniqueId ? "club-glow-{$uniqueId}" : 'club-glow-' . uniqid();
+    return <<<SVG
+    <defs>
+        <filter id="{$glowId}">
+            <feGaussianBlur stdDeviation="1" result="blur"/>
+            <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+    </defs>
+    <circle cx="24" cy="24" r="22" fill="none" stroke="{$accentColor}" stroke-width="1" opacity="0.4"/>
+    <path class="hex-bg" d="M24 3 L43 14 L43 34 L24 45 L5 34 L5 14 Z" fill="var(--badge-hex-bg, #171717)" stroke="{$accentColor}" stroke-width="1.5"/>
+    <path d="M24 7 L39 16 L39 32 L24 41 L9 32 L9 16 Z" fill="none" stroke="{$accentColor}" stroke-width="0.5" opacity="0.4"/>
+SVG;
+}
+
+/**
  * Render club starter badge SVG
  */
 function renderClubStarterBadge(): string {
+    $base = getClubHexagonBase('#61CE70', 'starter');
     return <<<SVG
 <svg class="badge-svg" viewBox="0 0 48 48">
-    <circle cx="24" cy="24" r="22" fill="none" stroke="#61CE70" stroke-width="1" opacity="0.4"/>
-    <path d="M24 3 L43 14 L43 34 L24 45 L5 34 L5 14 Z" fill="#171717" stroke="#61CE70" stroke-width="1.5"/>
+    {$base}
     <g transform="translate(24, 24)">
         <circle cx="0" cy="-4" r="6" fill="#61CE70"/>
         <path d="M0 2 L-8 14 L8 14 Z" fill="#61CE70"/>
-        <text x="0" y="-1" text-anchor="middle" fill="#171717" font-size="7" font-weight="bold" font-family="system-ui, sans-serif">GO</text>
+        <text x="0" y="-1" text-anchor="middle" fill="var(--badge-hex-bg, #171717)" font-size="7" font-weight="bold" font-family="system-ui, sans-serif">GO</text>
     </g>
 </svg>
 SVG;
@@ -198,10 +217,10 @@ SVG;
  * Render club active members badge SVG
  */
 function renderClubActiveBadge(): string {
+    $base = getClubHexagonBase('#004a98', 'active');
     return <<<SVG
 <svg class="badge-svg" viewBox="0 0 48 48">
-    <circle cx="24" cy="24" r="22" fill="none" stroke="#004a98" stroke-width="1" opacity="0.4"/>
-    <path d="M24 3 L43 14 L43 34 L24 45 L5 34 L5 14 Z" fill="#171717" stroke="#004a98" stroke-width="1.5"/>
+    {$base}
     <g transform="translate(24, 24)">
         <circle cx="-6" cy="-4" r="4" fill="#004a98"/>
         <circle cx="6" cy="-4" r="4" fill="#004a98"/>
@@ -218,13 +237,13 @@ SVG;
  * Render club gold badge SVG
  */
 function renderClubGoldBadge(): string {
+    $base = getClubHexagonBase('#FFD700', 'clubgold');
     return <<<SVG
 <svg class="badge-svg" viewBox="0 0 48 48">
-    <circle cx="24" cy="24" r="22" fill="none" stroke="#FFD700" stroke-width="1" opacity="0.4"/>
-    <path d="M24 3 L43 14 L43 34 L24 45 L5 34 L5 14 Z" fill="#171717" stroke="#FFD700" stroke-width="1.5"/>
+    {$base}
     <g transform="translate(24, 22)">
         <polygon points="0,-12 3,-4 12,-4 5,2 7,11 0,6 -7,11 -5,2 -12,-4 -3,-4" fill="#FFD700"/>
-        <polygon points="0,-8 2,-3 8,-3 3,1 5,7 0,4 -5,7 -3,1 -8,-3 -2,-3" fill="#171717" opacity="0.2"/>
+        <polygon points="0,-8 2,-3 8,-3 3,1 5,7 0,4 -5,7 -3,1 -8,-3 -2,-3" fill="var(--badge-hex-bg, #171717)" opacity="0.2"/>
     </g>
 </svg>
 SVG;
@@ -234,17 +253,23 @@ SVG;
  * Render club podium badge SVG
  */
 function renderClubPodiumBadge(): string {
+    $glowId = 'club-podium-' . uniqid();
     return <<<SVG
 <svg class="badge-svg" viewBox="0 0 48 48">
     <defs>
-        <linearGradient id="podium-grad-club" x1="0%" y1="0%" x2="100%" y2="0%">
+        <linearGradient id="{$glowId}-grad" x1="0%" y1="0%" x2="100%" y2="0%">
             <stop offset="0%" stop-color="#FFD700"/>
             <stop offset="50%" stop-color="#C0C0C0"/>
             <stop offset="100%" stop-color="#CD7F32"/>
         </linearGradient>
+        <filter id="{$glowId}">
+            <feGaussianBlur stdDeviation="1" result="blur"/>
+            <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
     </defs>
-    <circle cx="24" cy="24" r="22" fill="none" stroke="url(#podium-grad-club)" stroke-width="1" opacity="0.6"/>
-    <path d="M24 3 L43 14 L43 34 L24 45 L5 34 L5 14 Z" fill="#171717" stroke="url(#podium-grad-club)" stroke-width="1.5"/>
+    <circle cx="24" cy="24" r="22" fill="none" stroke="url(#{$glowId}-grad)" stroke-width="1" opacity="0.6"/>
+    <path class="hex-bg" d="M24 3 L43 14 L43 34 L24 45 L5 34 L5 14 Z" fill="var(--badge-hex-bg, #171717)" stroke="url(#{$glowId}-grad)" stroke-width="1.5"/>
+    <path d="M24 7 L39 16 L39 32 L24 41 L9 32 L9 16 Z" fill="none" stroke="url(#{$glowId}-grad)" stroke-width="0.5" opacity="0.4"/>
     <g transform="translate(24, 24)">
         <rect x="-12" y="2" width="7" height="10" rx="1" fill="#C0C0C0"/>
         <rect x="-3" y="-4" width="7" height="16" rx="1" fill="#FFD700"/>
@@ -258,10 +283,10 @@ SVG;
  * Render club series wins badge SVG
  */
 function renderClubSeriesWinsBadge(): string {
+    $base = getClubHexagonBase('#FFD700', 'serieswins');
     return <<<SVG
 <svg class="badge-svg" viewBox="0 0 48 48">
-    <circle cx="24" cy="24" r="22" fill="none" stroke="#FFD700" stroke-width="1" opacity="0.4"/>
-    <path d="M24 3 L43 14 L43 34 L24 45 L5 34 L5 14 Z" fill="#171717" stroke="#FFD700" stroke-width="1.5"/>
+    {$base}
     <g transform="translate(24, 22)">
         <path d="M-6 -8 L6 -8 L5 0 L3 6 L-3 6 L-5 0 Z" fill="#FFD700"/>
         <path d="M-6 -6 Q-10 -6 -10 -2 Q-10 2 -5 1" fill="none" stroke="#FFD700" stroke-width="2"/>
@@ -277,10 +302,10 @@ SVG;
  * Render club SM medals badge SVG
  */
 function renderClubSmMedalsBadge(): string {
+    $base = getClubHexagonBase('#004a98', 'smmedals');
     return <<<SVG
 <svg class="badge-svg" viewBox="0 0 48 48">
-    <circle cx="24" cy="24" r="22" fill="none" stroke="#004a98" stroke-width="1" opacity="0.4"/>
-    <path d="M24 3 L43 14 L43 34 L24 45 L5 34 L5 14 Z" fill="#171717" stroke="#004a98" stroke-width="1.5"/>
+    {$base}
     <g transform="translate(24, 24)">
         <rect x="-12" y="-10" width="24" height="14" rx="2" fill="#004a98"/>
         <rect x="-4" y="-10" width="3" height="14" fill="#FFE009"/>
@@ -296,14 +321,14 @@ SVG;
  * Render club ranking badge SVG
  */
 function renderClubRankingBadge(?int $ranking = null): string {
+    $base = getClubHexagonBase('#5F1D67', 'ranking');
     $rankText = $ranking ? "#$ranking" : "–";
     return <<<SVG
 <svg class="badge-svg" viewBox="0 0 48 48">
-    <circle cx="24" cy="24" r="22" fill="none" stroke="#5F1D67" stroke-width="1" opacity="0.4"/>
-    <path d="M24 3 L43 14 L43 34 L24 45 L5 34 L5 14 Z" fill="#171717" stroke="#5F1D67" stroke-width="1.5"/>
+    {$base}
     <g transform="translate(24, 24)">
         <path d="M0 -12 L3 -3 L12 0 L3 3 L0 12 L-3 3 L-12 0 L-3 -3 Z" fill="#5F1D67"/>
-        <circle cx="0" cy="0" r="6" fill="#171717"/>
+        <circle cx="0" cy="0" r="6" fill="var(--badge-hex-bg, #171717)"/>
         <text x="0" y="4" text-anchor="middle" fill="#5F1D67" font-size="8" font-weight="bold" font-family="system-ui, sans-serif">$rankText</text>
     </g>
 </svg>
@@ -314,17 +339,17 @@ SVG;
  * Render club champions badge SVG
  */
 function renderClubChampionsBadge(): string {
+    $base = getClubHexagonBase('#FFE009', 'champions');
     return <<<SVG
 <svg class="badge-svg" viewBox="0 0 48 48">
-    <circle cx="24" cy="24" r="22" fill="none" stroke="#FFE009" stroke-width="1" opacity="0.4"/>
-    <path d="M24 3 L43 14 L43 34 L24 45 L5 34 L5 14 Z" fill="#171717" stroke="#FFE009" stroke-width="1.5"/>
+    {$base}
     <g transform="translate(24, 24)">
         <path d="M-8 2 L-4 -10 L0 2 L4 -10 L8 2" fill="none" stroke="#FFE009" stroke-width="2" stroke-linecap="round"/>
         <circle cx="-4" cy="8" r="4" fill="#FFE009"/>
         <circle cx="4" cy="8" r="4" fill="#FFE009"/>
-        <path d="M-4 8 L-4 6 M4 8 L4 6" stroke="#171717" stroke-width="1"/>
-        <circle cx="-4" cy="5" r="1" fill="#171717"/>
-        <circle cx="4" cy="5" r="1" fill="#171717"/>
+        <path d="M-4 8 L-4 6 M4 8 L4 6" stroke="var(--badge-hex-bg, #171717)" stroke-width="1"/>
+        <circle cx="-4" cy="5" r="1" fill="var(--badge-hex-bg, #171717)"/>
+        <circle cx="4" cy="5" r="1" fill="var(--badge-hex-bg, #171717)"/>
     </g>
 </svg>
 SVG;
