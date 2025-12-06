@@ -159,38 +159,6 @@ include __DIR__ . '/components/unified-layout.php';
             $seriesEventsExists = !empty($check);
         } catch (Exception $e) {}
 
-        // Debug: Show connection method and test each join step by step
-        echo '<div class="alert alert-info mb-md">';
-        echo '<strong>Debug:</strong> Använder ' . ($seriesEventsExists ? 'series_events' : 'events.series_id') . ' för koppling<br>';
-
-        // Test each join step
-        $test1 = $db->getRow("SELECT COUNT(*) as cnt FROM results WHERE status = 'finished'");
-        echo "1. Results (finished): " . ($test1['cnt'] ?? 0) . "<br>";
-
-        $test2 = $db->getRow("SELECT COUNT(*) as cnt FROM results r JOIN events e ON r.event_id = e.id WHERE r.status = 'finished'");
-        echo "2. + events: " . ($test2['cnt'] ?? 0) . "<br>";
-
-        $test3 = $db->getRow("SELECT COUNT(*) as cnt FROM results r JOIN events e ON r.event_id = e.id JOIN series_events se ON se.event_id = e.id WHERE r.status = 'finished'");
-        echo "3. + series_events: " . ($test3['cnt'] ?? 0) . "<br>";
-
-        $test4 = $db->getRow("SELECT COUNT(*) as cnt FROM results r JOIN events e ON r.event_id = e.id JOIN series_events se ON se.event_id = e.id JOIN series s ON se.series_id = s.id WHERE r.status = 'finished'");
-        echo "4. + series: " . ($test4['cnt'] ?? 0) . "<br>";
-
-        $test5 = $db->getRow("SELECT COUNT(*) as cnt FROM results r JOIN events e ON r.event_id = e.id JOIN series_events se ON se.event_id = e.id JOIN series s ON se.series_id = s.id JOIN riders rd ON r.cyclist_id = rd.id WHERE r.status = 'finished'");
-        echo "5. + riders: " . ($test5['cnt'] ?? 0) . "<br>";
-
-        // Test simple GROUP BY
-        try {
-            $testGrouped = $db->getAll("SELECT s.id, r.class_id, r.cyclist_id, SUM(r.points) as pts FROM results r JOIN events e ON r.event_id = e.id JOIN series_events se ON se.event_id = e.id JOIN series s ON se.series_id = s.id JOIN riders rd ON r.cyclist_id = rd.id WHERE r.status = 'finished' GROUP BY s.id, r.class_id, r.cyclist_id LIMIT 5");
-            echo "6. Med GROUP BY: " . count($testGrouped) . " rader<br>";
-            if (count($testGrouped) > 0) {
-                echo "Första: " . json_encode($testGrouped[0]) . "<br>";
-            }
-        } catch (Exception $e) {
-            echo "6. GROUP BY FEL: " . $e->getMessage() . "<br>";
-        }
-
-        echo '</div>';
 
         // Find potential series champions - use simple query that works, then enrich in PHP
         try {
@@ -211,13 +179,6 @@ include __DIR__ . '/components/unified-layout.php';
                 ORDER BY s.id, r.class_id, total_points DESC
             ");
 
-            // Debug: Show query result count
-            echo '<div class="alert alert-info mb-md">';
-            echo '<strong>Debug:</strong> Hittade ' . count($allTotals) . ' rader från frågan';
-            if (count($allTotals) > 0) {
-                echo '<br>Första raden: ' . json_encode($allTotals[0]);
-            }
-            echo '</div>';
 
             // Enrich with series, class, and rider info (cast ids to int for reliable lookup)
             $seriesInfo = [];
