@@ -39,6 +39,21 @@
 
     <!-- Theme switcher removed - always light theme to prevent flash -->
 
+    <!-- FOUC Prevention: Reveal content after CSS is ready -->
+    <script>
+        (function() {
+            var main = document.querySelector('.main-content');
+            if (main) {
+                // Use double rAF to ensure CSS is computed
+                requestAnimationFrame(function() {
+                    requestAnimationFrame(function() {
+                        main.classList.add('css-ready');
+                    });
+                });
+            }
+        })();
+    </script>
+
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
     <script>

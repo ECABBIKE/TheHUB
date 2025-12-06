@@ -518,132 +518,152 @@ function calculateFinishRates($pdo, $rider_id) {
 function calculateSeriesChampionships($pdo, $rider_id, $debug = false) {
     $currentYear = (int)date('Y');
     $debugLog = [];
+    $MIN_RACES_FOR_CHAMPIONSHIP = 2; // Minimum races required to be eligible
 
     // Check if series_events junction table exists
     $stmt = $pdo->query("SHOW TABLES LIKE 'series_events'");
     $useSeriesEvents = $stmt->fetch() !== false;
     if ($debug) $debugLog[] = "useSeriesEvents: " . ($useSeriesEvents ? 'JA' : 'NEJ');
+    if ($debug) $debugLog[] = "Minimikrav: {$MIN_RACES_FOR_CHAMPIONSHIP} starter";
 
-    // Get series info for looking up names later
+    // Get series info including count_best_results
     $seriesInfo = [];
-    $seriesStmt = $pdo->query("SELECT id, name, year, status, end_date FROM series");
+    $seriesStmt = $pdo->query("SELECT id, name, year, status, end_date, count_best_results FROM series");
     while ($s = $seriesStmt->fetch(PDO::FETCH_ASSOC)) {
         $seriesInfo[(int)$s['id']] = $s;
     }
-    if ($debug) $debugLog[] = "Antal serier i seriesInfo: " . count($seriesInfo);
+    if ($debug) $debugLog[] = "Antal serier: " . count($seriesInfo);
 
-    // Hämta alla serier där åkaren har resultat och serien är avslutad
-    // Use simple query that works, then filter in PHP
+    // Get all series/class combinations where rider has results
     if ($useSeriesEvents) {
         $stmt = $pdo->prepare("
-            SELECT
-                s.id as series_id,
-                r.class_id,
-                SUM(r.points) as total_points
+            SELECT DISTINCT s.id as series_id, r.class_id
             FROM results r
             JOIN events e ON r.event_id = e.id
             JOIN series_events se ON se.event_id = e.id
             JOIN series s ON se.series_id = s.id
-            WHERE r.cyclist_id = ?
-              AND r.status = 'finished'
-            GROUP BY s.id, r.class_id
+            WHERE r.cyclist_id = ? AND r.status = 'finished'
         ");
     } else {
         $stmt = $pdo->prepare("
-            SELECT
-                s.id as series_id,
-                r.class_id,
-                SUM(r.points) as total_points
+            SELECT DISTINCT s.id as series_id, r.class_id
             FROM results r
             JOIN events e ON r.event_id = e.id
             JOIN series s ON e.series_id = s.id
-            WHERE r.cyclist_id = ?
-              AND r.status = 'finished'
-            GROUP BY s.id, r.class_id
+            WHERE r.cyclist_id = ? AND r.status = 'finished'
         ");
     }
     $stmt->execute([$rider_id]);
-    $allRiderResults = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    if ($debug) $debugLog[] = "allRiderResults: " . count($allRiderResults) . " rader";
+    $riderSeriesClasses = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    if ($debug) $debugLog[] = "Åkarens serie/klass-kombinationer: " . count($riderSeriesClasses);
 
-    // Filter to only qualifying series:
-    // 1. status='completed' (manually marked by admin)
-    // 2. Previous year series (backwards compatibility)
-    // NOTE: end_date is NOT used automatically anymore to avoid false champions
-    $riderSeasons = [];
-    foreach ($allRiderResults as $row) {
-        $sid = (int)$row['series_id'];
-        $series = $seriesInfo[$sid] ?? null;
+    $championships = [];
+
+    foreach ($riderSeriesClasses as $sc) {
+        $seriesId = (int)$sc['series_id'];
+        $classId = (int)$sc['class_id'];
+        $series = $seriesInfo[$seriesId] ?? null;
+
         if (!$series) {
-            if ($debug) $debugLog[] = "  - Serie {$sid} saknas i seriesInfo!";
+            if ($debug) $debugLog[] = "  - Serie {$seriesId} saknas!";
             continue;
         }
 
         $effectiveYear = (int)($series['year'] ?? $currentYear);
         $isCompleted = ($series['status'] ?? '') === 'completed';
         $isPastYear = $effectiveYear < $currentYear;
+        $countBest = $series['count_best_results'] ? (int)$series['count_best_results'] : null;
 
         if ($debug) {
-            $debugLog[] = "  - Serie {$sid} ({$series['name']}): year={$effectiveYear}, status={$series['status']}, isCompleted=" . ($isCompleted?'J':'N') . ", isPastYear=" . ($isPastYear?'J':'N');
+            $debugLog[] = "  Serie {$seriesId} ({$series['name']}): completed=" . ($isCompleted?'J':'N') . ", pastYear=" . ($isPastYear?'J':'N') . ", countBest=" . ($countBest ?? 'alla');
         }
 
-        if ($isCompleted || $isPastYear) {
-            $riderSeasons[] = [
-                'series_id' => $sid,
-                'series_name' => $series['name'],
-                'effective_year' => $effectiveYear,
-                'class_id' => (int)$row['class_id'],
-                'total_points' => (int)$row['total_points']
-            ];
+        // Only qualifying series (completed OR past year)
+        if (!$isCompleted && !$isPastYear) {
+            if ($debug) $debugLog[] = "    -> Ej kvalificerad";
+            continue;
         }
-    }
-    if ($debug) $debugLog[] = "Kvalificerande riderSeasons: " . count($riderSeasons);
 
-    $championships = [];
-
-    foreach ($riderSeasons as $season) {
-        $year = $season['effective_year'];
-
-        // Kolla om denna åkare hade flest poäng i denna serie/klass
+        // Get ALL riders' individual race results in this series/class
         if ($useSeriesEvents) {
-            $stmt = $pdo->prepare("
-                SELECT MAX(total) as max_points FROM (
-                    SELECT SUM(r.points) as total
-                    FROM results r
-                    JOIN events e ON r.event_id = e.id
-                    JOIN series_events se ON se.event_id = e.id
-                    WHERE se.series_id = ?
-                      AND r.class_id = ?
-                      AND r.status = 'finished'
-                    GROUP BY r.cyclist_id
-                ) as subq
+            $allResultsStmt = $pdo->prepare("
+                SELECT r.cyclist_id, r.points
+                FROM results r
+                JOIN events e ON r.event_id = e.id
+                JOIN series_events se ON se.event_id = e.id
+                WHERE se.series_id = ? AND r.class_id = ? AND r.status = 'finished'
+                ORDER BY r.cyclist_id, r.points DESC
             ");
         } else {
-            $stmt = $pdo->prepare("
-                SELECT MAX(total) as max_points FROM (
-                    SELECT SUM(r.points) as total
-                    FROM results r
-                    JOIN events e ON r.event_id = e.id
-                    WHERE e.series_id = ?
-                      AND r.class_id = ?
-                      AND r.status = 'finished'
-                    GROUP BY r.cyclist_id
-                ) as subq
+            $allResultsStmt = $pdo->prepare("
+                SELECT r.cyclist_id, r.points
+                FROM results r
+                JOIN events e ON r.event_id = e.id
+                WHERE e.series_id = ? AND r.class_id = ? AND r.status = 'finished'
+                ORDER BY r.cyclist_id, r.points DESC
             ");
         }
-        $stmt->execute([$season['series_id'], $season['class_id']]);
-        $maxPoints = (int)$stmt->fetchColumn();
+        $allResultsStmt->execute([$seriesId, $classId]);
+        $allResults = $allResultsStmt->fetchAll(PDO::FETCH_ASSOC);
 
-        if ($debug) {
-            $debugLog[] = "  Koll serie {$season['series_id']}/klass {$season['class_id']}: rider={$season['total_points']}, max={$maxPoints}, match=" . ($season['total_points'] == $maxPoints ? 'JA' : 'NEJ');
+        // Group by rider and calculate counted points (best X of Y)
+        $riderTotals = [];
+        $currentRiderId = null;
+        $currentPoints = [];
+
+        foreach ($allResults as $row) {
+            if ($row['cyclist_id'] !== $currentRiderId) {
+                if ($currentRiderId !== null) {
+                    // Only include riders with minimum races
+                    if (count($currentPoints) >= $MIN_RACES_FOR_CHAMPIONSHIP) {
+                        usort($currentPoints, function($a, $b) { return $b - $a; });
+                        $counted = $countBest ? array_slice($currentPoints, 0, $countBest) : $currentPoints;
+                        $riderTotals[$currentRiderId] = [
+                            'counted' => array_sum($counted),
+                            'race_count' => count($currentPoints)
+                        ];
+                    }
+                }
+                $currentRiderId = $row['cyclist_id'];
+                $currentPoints = [];
+            }
+            $currentPoints[] = (int)$row['points'];
+        }
+        // Don't forget last rider
+        if ($currentRiderId !== null && count($currentPoints) >= $MIN_RACES_FOR_CHAMPIONSHIP) {
+            usort($currentPoints, function($a, $b) { return $b - $a; });
+            $counted = $countBest ? array_slice($currentPoints, 0, $countBest) : $currentPoints;
+            $riderTotals[$currentRiderId] = [
+                'counted' => array_sum($counted),
+                'race_count' => count($currentPoints)
+            ];
         }
 
-        if ($season['total_points'] == $maxPoints && $maxPoints > 0) {
+        if (empty($riderTotals)) {
+            if ($debug) $debugLog[] = "    -> Inga med minst {$MIN_RACES_FOR_CHAMPIONSHIP} starter";
+            continue;
+        }
+
+        // Find max counted points among eligible riders
+        $maxCounted = max(array_column($riderTotals, 'counted'));
+
+        // Check if this rider is the champion
+        $riderData = $riderTotals[$rider_id] ?? null;
+
+        if ($debug) {
+            $riderCounted = $riderData ? $riderData['counted'] : 0;
+            $riderRaces = $riderData ? $riderData['race_count'] : 0;
+            $eligible = $riderData ? 'JA' : 'NEJ (för få starter)';
+            $debugLog[] = "    -> Åkare: {$riderCounted}p ({$riderRaces} starter), Max: {$maxCounted}p, Kvalificerad: {$eligible}";
+        }
+
+        if ($riderData && $riderData['counted'] == $maxCounted && $maxCounted > 0) {
             $championships[] = [
-                'series_id' => $season['series_id'],
-                'series_name' => $season['series_name'],
-                'year' => $year
+                'series_id' => $seriesId,
+                'series_name' => $series['name'],
+                'year' => $effectiveYear
             ];
+            if ($debug) $debugLog[] = "    -> MÄSTARE!";
         }
     }
 

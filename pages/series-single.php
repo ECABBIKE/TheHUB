@@ -1371,4 +1371,5 @@ window.addEventListener('resize', updateLandscapeClass);
 window.addEventListener('orientationchange', function() {
   setTimeout(updateLandscapeClass, 100);
 });
+
 </script>
