@@ -159,9 +159,26 @@ include __DIR__ . '/components/unified-layout.php';
             $seriesEventsExists = !empty($check);
         } catch (Exception $e) {}
 
-        // Debug: Show connection method
+        // Debug: Show connection method and test each join step by step
         echo '<div class="alert alert-info mb-md">';
-        echo '<strong>Debug:</strong> Använder ' . ($seriesEventsExists ? 'series_events' : 'events.series_id') . ' för koppling';
+        echo '<strong>Debug:</strong> Använder ' . ($seriesEventsExists ? 'series_events' : 'events.series_id') . ' för koppling<br>';
+
+        // Test each join step
+        $test1 = $db->getRow("SELECT COUNT(*) as cnt FROM results WHERE status = 'finished'");
+        echo "1. Results (finished): " . ($test1['cnt'] ?? 0) . "<br>";
+
+        $test2 = $db->getRow("SELECT COUNT(*) as cnt FROM results r JOIN events e ON r.event_id = e.id WHERE r.status = 'finished'");
+        echo "2. + events: " . ($test2['cnt'] ?? 0) . "<br>";
+
+        $test3 = $db->getRow("SELECT COUNT(*) as cnt FROM results r JOIN events e ON r.event_id = e.id JOIN series_events se ON se.event_id = e.id WHERE r.status = 'finished'");
+        echo "3. + series_events: " . ($test3['cnt'] ?? 0) . "<br>";
+
+        $test4 = $db->getRow("SELECT COUNT(*) as cnt FROM results r JOIN events e ON r.event_id = e.id JOIN series_events se ON se.event_id = e.id JOIN series s ON se.series_id = s.id WHERE r.status = 'finished'");
+        echo "4. + series: " . ($test4['cnt'] ?? 0) . "<br>";
+
+        $test5 = $db->getRow("SELECT COUNT(*) as cnt FROM results r JOIN events e ON r.event_id = e.id JOIN series_events se ON se.event_id = e.id JOIN series s ON se.series_id = s.id JOIN riders rd ON r.cyclist_id = rd.id WHERE r.status = 'finished'");
+        echo "5. + riders: " . ($test5['cnt'] ?? 0) . "<br>";
+
         echo '</div>';
 
         // Find potential series champions using a simpler two-step approach
