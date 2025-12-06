@@ -179,6 +179,17 @@ include __DIR__ . '/components/unified-layout.php';
         $test5 = $db->getRow("SELECT COUNT(*) as cnt FROM results r JOIN events e ON r.event_id = e.id JOIN series_events se ON se.event_id = e.id JOIN series s ON se.series_id = s.id JOIN riders rd ON r.cyclist_id = rd.id WHERE r.status = 'finished'");
         echo "5. + riders: " . ($test5['cnt'] ?? 0) . "<br>";
 
+        // Test simple GROUP BY
+        try {
+            $testGrouped = $db->getAll("SELECT s.id, r.class_id, r.cyclist_id, SUM(r.points) as pts FROM results r JOIN events e ON r.event_id = e.id JOIN series_events se ON se.event_id = e.id JOIN series s ON se.series_id = s.id JOIN riders rd ON r.cyclist_id = rd.id WHERE r.status = 'finished' GROUP BY s.id, r.class_id, r.cyclist_id LIMIT 5");
+            echo "6. Med GROUP BY: " . count($testGrouped) . " rader<br>";
+            if (count($testGrouped) > 0) {
+                echo "Första: " . json_encode($testGrouped[0]) . "<br>";
+            }
+        } catch (Exception $e) {
+            echo "6. GROUP BY FEL: " . $e->getMessage() . "<br>";
+        }
+
         echo '</div>';
 
         // Find potential series champions using a simpler two-step approach
