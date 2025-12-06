@@ -613,6 +613,164 @@ include __DIR__ . '/components/unified-layout.php';
     </div>
 </div>
 
+<!-- Rider Comparison Tool -->
+<div class="card mb-lg">
+    <div class="card-header">
+        <h2>🔍 Jämför Åkare (Duplicat-kontroll)</h2>
+    </div>
+    <div class="card-body">
+        <form method="GET" class="flex gap-md mb-md" style="flex-wrap: wrap; align-items: flex-end;">
+            <div class="form-group" style="margin: 0;">
+                <label class="form-label">Åkare 1 (ID)</label>
+                <input type="number" name="rider1" value="<?= htmlspecialchars($_GET['rider1'] ?? '') ?>" class="form-input" placeholder="t.ex. 10670" style="width: 120px;">
+            </div>
+            <div class="form-group" style="margin: 0;">
+                <label class="form-label">Åkare 2 (ID)</label>
+                <input type="number" name="rider2" value="<?= htmlspecialchars($_GET['rider2'] ?? '') ?>" class="form-input" placeholder="t.ex. 7374" style="width: 120px;">
+            </div>
+            <button type="submit" class="btn btn--secondary">Jämför</button>
+        </form>
+
+        <?php
+        if (!empty($_GET['rider1']) || !empty($_GET['rider2'])) {
+            $r1 = (int)($_GET['rider1'] ?? 0);
+            $r2 = (int)($_GET['rider2'] ?? 0);
+            $riders = [];
+
+            foreach ([$r1, $r2] as $rid) {
+                if ($rid <= 0) continue;
+
+                // Get rider info
+                $riderInfo = $db->getAll("SELECT id, firstname, lastname, club_id, birth_year FROM riders WHERE id = ?", [$rid]);
+                if (empty($riderInfo)) {
+                    $riders[$rid] = ['error' => 'Åkare saknas'];
+                    continue;
+                }
+                $r = $riderInfo[0];
+
+                // Get club name
+                $clubName = '(ingen klubb)';
+                if ($r['club_id']) {
+                    $club = $db->getAll("SELECT name FROM clubs WHERE id = ?", [$r['club_id']]);
+                    $clubName = $club[0]['name'] ?? '(okänd klubb)';
+                }
+
+                // Get series results (sum per series/class)
+                $seriesResults = $db->getAll("
+                    SELECT s.id as series_id, s.name as series_name, s.year, s.status,
+                           c.display_name as class_name,
+                           SUM(res.points) as total_points,
+                           COUNT(*) as race_count
+                    FROM results res
+                    JOIN events e ON res.event_id = e.id
+                    JOIN series_events se ON se.event_id = e.id
+                    JOIN series s ON se.series_id = s.id
+                    LEFT JOIN classes c ON res.class_id = c.id
+                    WHERE res.cyclist_id = ? AND res.status = 'finished'
+                    GROUP BY s.id, res.class_id
+                    ORDER BY s.year DESC, total_points DESC
+                ", [$rid]);
+
+                // Get achievements
+                $achievements = $db->getAll("
+                    SELECT achievement_type, achievement_value, season_year
+                    FROM rider_achievements WHERE rider_id = ?
+                ", [$rid]);
+
+                $riders[$rid] = [
+                    'info' => $r,
+                    'name' => $r['firstname'] . ' ' . $r['lastname'],
+                    'club' => $clubName,
+                    'series' => $seriesResults,
+                    'achievements' => $achievements
+                ];
+            }
+
+            // Display comparison
+            echo '<div class="table-responsive">';
+            echo '<table class="table table--striped" style="font-size: 0.85em;">';
+            echo '<thead><tr><th>Egenskap</th>';
+            foreach ($riders as $rid => $data) {
+                echo '<th>Åkare #' . $rid . '</th>';
+            }
+            echo '</tr></thead><tbody>';
+
+            // Basic info
+            echo '<tr><td><strong>Namn</strong></td>';
+            foreach ($riders as $data) {
+                echo '<td>' . (isset($data['error']) ? $data['error'] : htmlspecialchars($data['name'])) . '</td>';
+            }
+            echo '</tr>';
+
+            echo '<tr><td><strong>Klubb</strong></td>';
+            foreach ($riders as $data) {
+                echo '<td>' . (isset($data['error']) ? '-' : htmlspecialchars($data['club'])) . '</td>';
+            }
+            echo '</tr>';
+
+            echo '<tr><td><strong>Födelseår</strong></td>';
+            foreach ($riders as $data) {
+                echo '<td>' . (isset($data['error']) ? '-' : ($data['info']['birth_year'] ?? '-')) . '</td>';
+            }
+            echo '</tr>';
+
+            // Achievements
+            echo '<tr><td><strong>Seriemästarskap</strong></td>';
+            foreach ($riders as $data) {
+                if (isset($data['error'])) {
+                    echo '<td>-</td>';
+                } else {
+                    $champs = array_filter($data['achievements'], fn($a) => $a['achievement_type'] === 'series_champion');
+                    if (empty($champs)) {
+                        echo '<td class="text-error">Inga</td>';
+                    } else {
+                        $list = array_map(fn($c) => $c['achievement_value'] . ' (' . $c['season_year'] . ')', $champs);
+                        echo '<td class="text-success">' . implode('<br>', $list) . '</td>';
+                    }
+                }
+            }
+            echo '</tr>';
+
+            // Series results
+            echo '<tr><td><strong>Serieresultat</strong></td>';
+            foreach ($riders as $data) {
+                if (isset($data['error'])) {
+                    echo '<td>-</td>';
+                } elseif (empty($data['series'])) {
+                    echo '<td class="text-error">Inga resultat</td>';
+                } else {
+                    echo '<td>';
+                    foreach ($data['series'] as $s) {
+                        $statusBadge = $s['status'] === 'completed' ? '✓' : '';
+                        echo htmlspecialchars($s['series_name']) . ' ' . $statusBadge . '<br>';
+                        echo '<small>' . htmlspecialchars($s['class_name'] ?? 'Okänd klass') . ': ' . $s['total_points'] . ' poäng (' . $s['race_count'] . ' starter)</small><br>';
+                    }
+                    echo '</td>';
+                }
+            }
+            echo '</tr>';
+
+            echo '</tbody></table></div>';
+
+            // Show merge suggestion
+            if (count($riders) == 2 && !isset($riders[$r1]['error']) && !isset($riders[$r2]['error'])) {
+                $name1 = $riders[$r1]['name'];
+                $name2 = $riders[$r2]['name'];
+                if (strtolower($name1) === strtolower($name2) || similar_text(strtolower($name1), strtolower($name2)) > strlen($name1) * 0.7) {
+                    echo '<div class="alert alert-warning mt-md">';
+                    echo '<strong>⚠️ Möjlig duplicat!</strong> Namnen liknar varandra.<br>';
+                    echo 'Om detta är samma person bör resultaten slås samman genom att:<br>';
+                    echo '1. Uppdatera alla <code>results</code> med <code>cyclist_id = ' . $r1 . '</code> till <code>cyclist_id = ' . $r2 . '</code> (eller tvärtom)<br>';
+                    echo '2. Ta bort den duplicerade åkaren<br>';
+                    echo '3. Kör rebuild på den kvarvarande åkaren';
+                    echo '</div>';
+                }
+            }
+        }
+        ?>
+    </div>
+</div>
+
 <div class="card">
     <div class="card-header">
         <h2>📋 Snabbåtgärder</h2>
