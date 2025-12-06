@@ -295,8 +295,8 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
                     </div>
                     <?php if ($rankingPosition): ?>
                     <div class="ranking-badge">
+                        <span class="rank-label">Ranking</span>
                         <span class="rank-number">#<?= $rankingPosition ?></span>
-                        <span class="rank-label">Rank</span>
                     </div>
                     <?php endif; ?>
                 </div>
