@@ -25,8 +25,13 @@ include __DIR__ . '/components/unified-layout.php';
     </div>
     <div class="card-body">
         <p class="text-secondary mb-md">
-            <strong>Krav för seriemästare:</strong> Serien måste ha <code>status='completed'</code> ELLER ha events från tidigare år (före <?= $currentYear ?>).
+            <strong>Krav för seriemästare:</strong> Serien kvalificerar om minst ett av följande är sant:
         </p>
+        <ul class="text-secondary mb-md" style="margin-left: 1.5rem;">
+            <li><code>end_date</code> har passerat (automatiskt! ✨)</li>
+            <li><code>status = 'completed'</code></li>
+            <li>Events från tidigare år (före <?= $currentYear ?>)</li>
+        </ul>
 
         <?php
         // Get all series with their status and year info
@@ -36,6 +41,7 @@ include __DIR__ . '/components/unified-layout.php';
                 s.name,
                 s.year as series_year,
                 s.status,
+                s.end_date,
                 MIN(YEAR(e.date)) as first_event_year,
                 MAX(YEAR(e.date)) as last_event_year,
                 COUNT(DISTINCT e.id) as event_count,
@@ -46,15 +52,16 @@ include __DIR__ . '/components/unified-layout.php';
             GROUP BY s.id
             ORDER BY s.year DESC, s.name
         ");
+        $today = date('Y-m-d');
         ?>
 
         <table class="table table--striped">
             <thead>
                 <tr>
                     <th>Serie</th>
-                    <th>År (serie)</th>
+                    <th>År</th>
+                    <th>End Date</th>
                     <th>Status</th>
-                    <th>Events år</th>
                     <th>Events</th>
                     <th>Åkare</th>
                     <th>Kvalificerar?</th>
@@ -63,12 +70,25 @@ include __DIR__ . '/components/unified-layout.php';
             <tbody>
                 <?php foreach ($series as $s):
                     $isCompleted = $s['status'] === 'completed';
+                    $endDatePassed = $s['end_date'] && $s['end_date'] < $today;
                     $hasPastEvents = $s['last_event_year'] && $s['last_event_year'] < $currentYear;
-                    $qualifies = $isCompleted || $hasPastEvents;
+                    $qualifies = $isCompleted || $endDatePassed || $hasPastEvents;
                 ?>
                 <tr class="<?= $qualifies ? 'bg-success-light' : '' ?>">
                     <td><strong><?= h($s['name']) ?></strong></td>
-                    <td><?= $s['series_year'] ?? '<span class="text-warning">NULL</span>' ?></td>
+                    <td><?= $s['series_year'] ?? '<span class="text-warning">-</span>' ?></td>
+                    <td>
+                        <?php if ($s['end_date']): ?>
+                            <?= $s['end_date'] ?>
+                            <?php if ($endDatePassed): ?>
+                                <span class="text-success">✓ passerat</span>
+                            <?php else: ?>
+                                <span class="text-warning">⏳ framtid</span>
+                            <?php endif; ?>
+                        <?php else: ?>
+                            <span class="text-secondary">-</span>
+                        <?php endif; ?>
+                    </td>
                     <td>
                         <?php if ($isCompleted): ?>
                             <span class="admin-badge admin-badge-success">completed ✓</span>
@@ -76,24 +96,15 @@ include __DIR__ . '/components/unified-layout.php';
                             <span class="admin-badge admin-badge-secondary"><?= h($s['status'] ?? 'N/A') ?></span>
                         <?php endif; ?>
                     </td>
-                    <td>
-                        <?php if ($s['first_event_year']): ?>
-                            <?= $s['first_event_year'] ?><?= $s['first_event_year'] != $s['last_event_year'] ? ' - ' . $s['last_event_year'] : '' ?>
-                            <?php if ($hasPastEvents): ?>
-                                <span class="text-success">✓ historiskt</span>
-                            <?php endif; ?>
-                        <?php else: ?>
-                            <span class="text-secondary">Inga events</span>
-                        <?php endif; ?>
-                    </td>
                     <td><?= $s['event_count'] ?></td>
                     <td><?= $s['rider_count'] ?></td>
                     <td>
                         <?php if ($qualifies): ?>
                             <span class="text-success"><strong>JA</strong></span>
+                            <?php if ($endDatePassed): ?><br><small>via end_date</small><?php endif; ?>
                         <?php else: ?>
                             <span class="text-error">NEJ</span>
-                            <br><small class="text-secondary">Sätt status='completed' eller vänta tills nästa år</small>
+                            <br><small class="text-secondary">Sätt end_date eller status='completed'</small>
                         <?php endif; ?>
                     </td>
                 </tr>
@@ -109,7 +120,7 @@ include __DIR__ . '/components/unified-layout.php';
     </div>
     <div class="card-body">
         <p class="text-secondary mb-md">
-            Visar ledare per serie/klass som <strong>skulle bli seriemästare</strong> om serien markerades som 'completed'.
+            Visar ledare per serie/klass. De som kvalificerar (grönmarkerade) räknas automatiskt som seriemästare vid rebuild.
         </p>
 
         <?php
@@ -120,6 +131,7 @@ include __DIR__ . '/components/unified-layout.php';
                 s.name as series_name,
                 COALESCE(s.year, YEAR(MAX(e.date))) as effective_year,
                 s.status,
+                s.end_date,
                 r.class_id,
                 c.display_name as class_name,
                 r.cyclist_id,
@@ -156,22 +168,32 @@ include __DIR__ . '/components/unified-layout.php';
                 <tr>
                     <th>Serie</th>
                     <th>År</th>
+                    <th>End Date</th>
                     <th>Status</th>
                     <th>Klass</th>
                     <th>Ledare</th>
                     <th>Poäng</th>
-                    <th>Skulle bli mästare?</th>
+                    <th>Kvalificerar?</th>
                 </tr>
             </thead>
             <tbody>
                 <?php foreach ($potentialChampions as $pc):
                     $isCompleted = $pc['status'] === 'completed';
+                    $endDatePassed = $pc['end_date'] && $pc['end_date'] < $today;
                     $isPast = $pc['effective_year'] < $currentYear;
-                    $wouldQualify = $isCompleted || $isPast;
+                    $wouldQualify = $isCompleted || $endDatePassed || $isPast;
                 ?>
                 <tr class="<?= $wouldQualify ? 'bg-success-light' : '' ?>">
                     <td><?= h($pc['series_name']) ?></td>
                     <td><?= $pc['effective_year'] ?></td>
+                    <td>
+                        <?php if ($pc['end_date']): ?>
+                            <?= $pc['end_date'] ?>
+                            <?= $endDatePassed ? '<span class="text-success">✓</span>' : '' ?>
+                        <?php else: ?>
+                            <span class="text-secondary">-</span>
+                        <?php endif; ?>
+                    </td>
                     <td>
                         <span class="admin-badge <?= $isCompleted ? 'admin-badge-success' : 'admin-badge-secondary' ?>">
                             <?= h($pc['status']) ?>
@@ -186,9 +208,9 @@ include __DIR__ . '/components/unified-layout.php';
                     <td><strong><?= $pc['total_points'] ?></strong></td>
                     <td>
                         <?php if ($wouldQualify): ?>
-                            <span class="text-success">✓ JA - räknas som mästare</span>
+                            <span class="text-success">✓ JA</span>
                         <?php else: ?>
-                            <span class="text-warning">⏳ Väntar på 'completed' eller nästa år</span>
+                            <span class="text-warning">⏳ Nej</span>
                         <?php endif; ?>
                     </td>
                 </tr>
@@ -223,18 +245,21 @@ include __DIR__ . '/components/unified-layout.php';
         ?>
             <div class="alert alert-warning">
                 <strong>Inga seriemästare registrerade!</strong><br>
-                Detta beror troligen på att ingen serie har <code>status='completed'</code>.
+                Serier behöver ha <code>end_date</code> som passerat för automatisk mästare-beräkning.
             </div>
 
             <h4 class="mt-lg mb-md">Åtgärd:</h4>
             <ol>
                 <li>Gå till <a href="/admin/series">/admin/series</a></li>
                 <li>Klicka på en avslutad serie för att redigera</li>
-                <li>Ändra <strong>Status</strong> till <code>Avslutad</code> (completed)</li>
+                <li>Sätt <strong>Slutdatum</strong> till seriens sista dag</li>
                 <li>Spara</li>
                 <li>Gå till <a href="/admin/rebuild-stats">/admin/rebuild-stats</a></li>
                 <li>Kör <strong>Rebuild alla åkare</strong></li>
             </ol>
+            <p class="text-secondary mt-md">
+                <strong>Tips:</strong> Så länge <code>end_date</code> har passerat räknas mästare automatiskt!
+            </p>
         <?php else: ?>
         <table class="table table--striped">
             <thead>

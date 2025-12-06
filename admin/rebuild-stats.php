@@ -183,6 +183,7 @@ function debugRiderAchievements($pdo, $rider_id) {
             s.name,
             s.year as series_year,
             s.status,
+            s.end_date,
             YEAR(e.date) as event_year,
             COUNT(r.id) as result_count,
             SUM(r.points) as total_points
@@ -198,12 +199,14 @@ function debugRiderAchievements($pdo, $rider_id) {
     $debug['series_data'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     // Check series championships calculation
+    // Series qualifies if: status='completed' OR end_date < today OR events from previous year
     $stmt = $pdo->prepare("
         SELECT
             s.id as series_id,
             s.name as series_name,
             s.year as series_year,
             s.status as series_status,
+            s.end_date,
             COALESCE(s.year, YEAR(e.date)) as effective_year,
             r.class_id,
             SUM(r.points) as total_points
@@ -212,7 +215,11 @@ function debugRiderAchievements($pdo, $rider_id) {
         JOIN series s ON e.series_id = s.id
         WHERE r.cyclist_id = ?
           AND r.status = 'finished'
-          AND (s.status = 'completed' OR YEAR(e.date) < ?)
+          AND (
+              s.status = 'completed'
+              OR (s.end_date IS NOT NULL AND s.end_date < CURDATE())
+              OR YEAR(e.date) < ?
+          )
         GROUP BY s.id, COALESCE(s.year, YEAR(e.date)), r.class_id
     ");
     $stmt->execute([$rider_id, $currentYear]);
@@ -247,6 +254,7 @@ function debugRiderAchievements($pdo, $rider_id) {
             'year' => $year,
             'series_year' => $season['series_year'],
             'series_status' => $season['series_status'],
+            'end_date' => $season['end_date'] ?? null,
             'class_id' => $classId,
             'rider_points' => $season['total_points'],
             'max_points' => $maxPoints,
@@ -458,14 +466,14 @@ include __DIR__ . '/components/unified-layout.php';
                     <div class="debug-section">
                         <strong>Seriemästare-beräkning:</strong>
                         <?php if (empty($results['debug']['series_championships'])): ?>
-                            <p class="text-warning">Inga kvalificerande serier hittades (kräver status='completed' eller event från tidigare år)</p>
+                            <p class="text-warning">Inga kvalificerande serier hittades (kräver end_date passerat, status='completed', eller events från tidigare år)</p>
                         <?php else: ?>
                         <table class="table table--striped table--sm mt-sm">
                             <thead>
                                 <tr>
                                     <th>Serie</th>
                                     <th>År</th>
-                                    <th>Serie-år</th>
+                                    <th>End Date</th>
                                     <th>Status</th>
                                     <th>Åkarens poäng</th>
                                     <th>Max poäng</th>
@@ -477,7 +485,7 @@ include __DIR__ . '/components/unified-layout.php';
                                 <tr class="<?= $sc['is_champion'] ? 'bg-success-light' : '' ?>">
                                     <td><?= h($sc['series']) ?></td>
                                     <td><?= $sc['year'] ?></td>
-                                    <td><?= $sc['series_year'] ?? '<span class="text-warning">NULL</span>' ?></td>
+                                    <td><?= $sc['end_date'] ?? '<span class="text-secondary">-</span>' ?></td>
                                     <td><?= $sc['series_status'] ?? 'N/A' ?></td>
                                     <td><?= $sc['rider_points'] ?></td>
                                     <td><?= $sc['max_points'] ?></td>
