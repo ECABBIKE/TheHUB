@@ -20,7 +20,8 @@ define('EXPERIENCE_LEVELS', [
     2 => ['name' => '2nd Year', 'icon' => '⭐'],
     3 => ['name' => 'Experienced', 'icon' => '⭐'],
     4 => ['name' => 'Expert', 'icon' => '🌟'],
-    5 => ['name' => 'Veteran', 'icon' => '👑']
+    5 => ['name' => 'Veteran', 'icon' => '👑'],
+    6 => ['name' => 'Legend', 'icon' => '🏆']  // Kräver 5+ säsonger OCH minst 1 serieseger
 ]);
 
 define('HOT_STREAK_MINIMUM', 3); // Minst 3 raka topp-3 för achievement
@@ -102,6 +103,13 @@ function rebuildRiderStats($pdo, $rider_id) {
         $multiSeries = calculateMultiSeriesSeasons($pdo, $rider_id);
         foreach ($multiSeries as $year) {
             insertAchievement($pdo, $rider_id, 'multi_series', null, null, $year);
+            $stats['achievements_added']++;
+        }
+
+        // Svensk Mästare (vunnit mästerskapstävling)
+        $championships = calculateSwedishChampionships($pdo, $rider_id);
+        foreach ($championships as $champ) {
+            insertAchievement($pdo, $rider_id, 'swedish_champion', $champ['event_name'], null, $champ['year']);
             $stats['achievements_added']++;
         }
 
@@ -576,6 +584,28 @@ function calculateMultiSeriesSeasons($pdo, $rider_id) {
 }
 
 /**
+ * Hittar Svensk Mästare-titlar (vunnit event markerat som mästerskap)
+ */
+function calculateSwedishChampionships($pdo, $rider_id) {
+    $stmt = $pdo->prepare("
+        SELECT
+            e.id as event_id,
+            e.name as event_name,
+            YEAR(e.date) as year,
+            r.class_id
+        FROM results r
+        JOIN events e ON r.event_id = e.id
+        WHERE r.cyclist_id = ?
+          AND r.position = 1
+          AND r.status = 'finished'
+          AND e.is_championship = 1
+        ORDER BY e.date DESC
+    ");
+    $stmt->execute([$rider_id]);
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
+
+/**
  * Beräknar trend (positionsförändring efter senaste event)
  */
 function calculateTrend($pdo, $series_id, $rider_id, $class_id, $year) {
@@ -716,6 +746,7 @@ function updateRiderCachedStats($pdo, $rider_id, $results) {
 
 /**
  * Beräknar och uppdaterar experience level
+ * Legend (6) kräver: 5+ säsonger OCH minst 1 serieseger
  */
 function updateExperienceLevel($pdo, $rider_id) {
     // Hitta första säsongen
@@ -732,7 +763,23 @@ function updateExperienceLevel($pdo, $rider_id) {
 
     $currentYear = (int)date('Y');
     $yearsActive = $currentYear - $firstSeason + 1;
-    $experienceLevel = min($yearsActive, 5); // Max 5 (Veteran)
+
+    // Börja med max 5 (Veteran)
+    $experienceLevel = min($yearsActive, 5);
+
+    // Kolla om Legend-status (kräver 5+ år OCH serieseger)
+    if ($yearsActive >= 5) {
+        $stmt = $pdo->prepare("
+            SELECT COUNT(*) FROM rider_achievements
+            WHERE rider_id = ? AND achievement_type = 'series_champion'
+        ");
+        $stmt->execute([$rider_id]);
+        $seriesWins = (int)$stmt->fetchColumn();
+
+        if ($seriesWins > 0) {
+            $experienceLevel = 6; // Legend!
+        }
+    }
 
     $stmt = $pdo->prepare("
         UPDATE riders SET
@@ -820,7 +867,8 @@ function getExperienceLevelInfo($level) {
         2 => ['name' => '2nd Year', 'icon' => '⭐', 'next' => 'Experienced'],
         3 => ['name' => 'Experienced', 'icon' => '⭐', 'next' => 'Expert'],
         4 => ['name' => 'Expert', 'icon' => '🌟', 'next' => 'Veteran'],
-        5 => ['name' => 'Veteran', 'icon' => '👑', 'next' => null]
+        5 => ['name' => 'Veteran', 'icon' => '👑', 'next' => 'Legend (kräver serieseger)'],
+        6 => ['name' => 'Legend', 'icon' => '🏆', 'next' => null]
     ];
     return $levels[$level] ?? $levels[1];
 }

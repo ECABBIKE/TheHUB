@@ -176,7 +176,8 @@ try {
         2 => ['name' => '2nd Year', 'icon' => '⭐'],
         3 => ['name' => 'Experienced', 'icon' => '⭐'],
         4 => ['name' => 'Expert', 'icon' => '🌟'],
-        5 => ['name' => 'Veteran', 'icon' => '👑']
+        5 => ['name' => 'Veteran', 'icon' => '👑'],
+        6 => ['name' => 'Legend', 'icon' => '🏆']
     ];
     $expInfo = $experienceInfo[$experienceLevel] ?? $experienceInfo[1];
 
@@ -235,6 +236,8 @@ $fullName = htmlspecialchars($rider['firstname'] . ' ' . $rider['lastname']);
 $achievementCounts = ['gold' => 0, 'silver' => 0, 'bronze' => 0, 'hot_streak' => 0];
 $isSeriesLeader = false;
 $isSeriesChampion = false;
+$isSwedishChampion = false;
+$swedishChampionCount = 0;
 $finisher100 = false;
 
 foreach ($achievements as $ach) {
@@ -245,6 +248,10 @@ foreach ($achievements as $ach) {
         case 'hot_streak': $achievementCounts['hot_streak'] = (int)$ach['achievement_value']; break;
         case 'series_leader': $isSeriesLeader = true; break;
         case 'series_champion': $isSeriesChampion = true; break;
+        case 'swedish_champion':
+            $isSwedishChampion = true;
+            $swedishChampionCount = (int)$ach['achievement_value'];
+            break;
         case 'finisher_100': $finisher100 = true; break;
     }
 }
@@ -537,7 +544,7 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
                 </div>
 
                 <!-- Stats Row -->
-                <div class="achievement-stats">
+                <div class="achievement-stats <?= $isSwedishChampion ? 'has-sm' : '' ?>">
                     <div class="achievement-stat <?= $finishRate == 100 ? 'perfect' : '' ?>">
                         <span class="stat-label">Fullföljt</span>
                         <span class="stat-value"><?= $finishRate ?>%</span>
@@ -547,9 +554,15 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
                         <span class="stat-value"><?= $isSeriesLeader ? '✓' : '−' ?></span>
                     </div>
                     <div class="achievement-stat <?= $isSeriesChampion ? 'champion' : '' ?>">
-                        <span class="stat-label">Mästare</span>
+                        <span class="stat-label">Seriemästare</span>
                         <span class="stat-value"><?= $isSeriesChampion ? '👑' : '−' ?></span>
                     </div>
+                    <?php if ($isSwedishChampion): ?>
+                    <div class="achievement-stat swedish-champion">
+                        <span class="stat-label">🇸🇪 SM-Guld</span>
+                        <span class="stat-value"><?= $swedishChampionCount ?></span>
+                    </div>
+                    <?php endif; ?>
                 </div>
 
                 <!-- Experience Level -->
@@ -561,8 +574,8 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
                         <?php endif; ?>
                     </div>
                     <div class="experience-bar">
-                        <?php for ($i = 1; $i <= 5; $i++): ?>
-                        <div class="exp-segment <?= $i < $experienceLevel ? 'filled' : ($i == $experienceLevel ? 'current' : '') ?>"></div>
+                        <?php for ($i = 1; $i <= 6; $i++): ?>
+                        <div class="exp-segment <?= $i < $experienceLevel ? 'filled' : ($i == $experienceLevel ? 'current' : '') ?> <?= $i == 6 ? 'legend' : '' ?>"></div>
                         <?php endfor; ?>
                     </div>
                 </div>
@@ -1323,6 +1336,20 @@ document.querySelectorAll('.series-tab').forEach(tab => {
     background: linear-gradient(135deg, rgba(255,215,0,0.15), rgba(255,165,0,0.08));
 }
 
+.achievement-stat.swedish-champion {
+    background: linear-gradient(135deg, rgba(0,106,167,0.2), rgba(254,205,0,0.15));
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.3);
+}
+.achievement-stat.swedish-champion .stat-value {
+    color: #006aa7;
+    font-weight: 800;
+}
+
+/* Grid adjustment when Swedish Champion is shown */
+.achievement-stats.has-sm {
+    grid-template-columns: repeat(4, 1fr);
+}
+
 /* Experience Section */
 .experience-section {
     padding-top: 0;
@@ -1378,6 +1405,16 @@ document.querySelectorAll('.series-tab').forEach(tab => {
     inset: 0;
     background: linear-gradient(90deg, #FFD700, #FFA500);
     animation: pulse 2s ease-in-out infinite;
+}
+
+.exp-segment.legend {
+    background: linear-gradient(90deg, rgba(255, 215, 0, 0.3), rgba(255, 165, 0, 0.2));
+}
+
+.exp-segment.legend.filled::after,
+.exp-segment.legend.current::after {
+    background: linear-gradient(90deg, #FFD700, #FF8C00, #FF6B00);
+    box-shadow: 0 0 8px rgba(255, 165, 0, 0.5);
 }
 
 @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }

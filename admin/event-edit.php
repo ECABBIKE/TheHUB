@@ -70,6 +70,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'website' => trim($_POST['website'] ?? ''),
             'registration_deadline' => !empty($_POST['registration_deadline']) ? trim($_POST['registration_deadline']) : null,
             'active' => isset($_POST['active']) ? 1 : 0,
+            'is_championship' => isset($_POST['is_championship']) ? 1 : 0,
             'contact_email' => trim($_POST['contact_email'] ?? ''),
             'contact_phone' => trim($_POST['contact_phone'] ?? ''),
             // Extended fields
@@ -470,6 +471,11 @@ include __DIR__ . '/components/unified-layout.php';
                 <label style="display: flex; align-items: center; gap: var(--space-sm); cursor: pointer;">
                     <input type="checkbox" name="active" <?= $event['active'] ? 'checked' : '' ?>>
                     <span>Aktivt event</span>
+                </label>
+
+                <label style="display: flex; align-items: center; gap: var(--space-sm); cursor: pointer;">
+                    <input type="checkbox" name="is_championship" <?= !empty($event['is_championship']) ? 'checked' : '' ?>>
+                    <span>🏆 Svenskt Mästerskap</span>
                 </label>
 
                 <div style="display: flex; gap: var(--space-sm);">
