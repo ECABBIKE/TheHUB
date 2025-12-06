@@ -435,11 +435,11 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
                                     <?php if ($result['status'] !== 'finished'): ?>
                                         <?= strtoupper(substr($result['status'], 0, 3)) ?>
                                     <?php elseif ($result['position'] == 1): ?>
-                                        🥇
+                                        <img src="/assets/icons/medal-1st.svg" alt="1:a" class="medal-icon">
                                     <?php elseif ($result['position'] == 2): ?>
-                                        🥈
+                                        <img src="/assets/icons/medal-2nd.svg" alt="2:a" class="medal-icon">
                                     <?php elseif ($result['position'] == 3): ?>
-                                        🥉
+                                        <img src="/assets/icons/medal-3rd.svg" alt="3:e" class="medal-icon">
                                     <?php else: ?>
                                         <?= $result['position'] ?>
                                     <?php endif; ?>
@@ -485,11 +485,11 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
                             <?php if ($result['status'] !== 'finished'): ?>
                                 <?= strtoupper(substr($result['status'], 0, 3)) ?>
                             <?php elseif ($result['position'] == 1): ?>
-                                🥇
+                                <img src="/assets/icons/medal-1st.svg" alt="1:a" class="medal-icon">
                             <?php elseif ($result['position'] == 2): ?>
-                                🥈
+                                <img src="/assets/icons/medal-2nd.svg" alt="2:a" class="medal-icon">
                             <?php elseif ($result['position'] == 3): ?>
-                                🥉
+                                <img src="/assets/icons/medal-3rd.svg" alt="3:e" class="medal-icon">
                             <?php else: ?>
                                 <?= $result['position'] ?>
                             <?php endif; ?>
@@ -555,17 +555,17 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
                 <!-- Achievement Badges -->
                 <div class="achievements-grid">
                     <div class="achievement <?= $achievementCounts['gold'] > 0 ? 'gold' : 'locked' ?>">
-                        <div class="achievement-icon">🥇</div>
+                        <div class="achievement-icon"><img src="/assets/icons/medal-1st.svg" alt="Guld" class="achievement-medal"></div>
                         <span class="achievement-name">Guld</span>
                         <span class="achievement-count"><?= $achievementCounts['gold'] > 0 ? '×' . $achievementCounts['gold'] : 'Låst' ?></span>
                     </div>
                     <div class="achievement <?= $achievementCounts['silver'] > 0 ? 'silver' : 'locked' ?>">
-                        <div class="achievement-icon">🥈</div>
+                        <div class="achievement-icon"><img src="/assets/icons/medal-2nd.svg" alt="Silver" class="achievement-medal"></div>
                         <span class="achievement-name">Silver</span>
                         <span class="achievement-count"><?= $achievementCounts['silver'] > 0 ? '×' . $achievementCounts['silver'] : 'Låst' ?></span>
                     </div>
                     <div class="achievement <?= $achievementCounts['bronze'] > 0 ? 'bronze' : 'locked' ?>">
-                        <div class="achievement-icon">🥉</div>
+                        <div class="achievement-icon"><img src="/assets/icons/medal-3rd.svg" alt="Brons" class="achievement-medal"></div>
                         <span class="achievement-name">Brons</span>
                         <span class="achievement-count"><?= $achievementCounts['bronze'] > 0 ? '×' . $achievementCounts['bronze'] : 'Låst' ?></span>
                     </div>
@@ -1075,6 +1075,13 @@ document.querySelectorAll('.series-tab').forEach(tab => {
 .result-position.p2 { background: linear-gradient(135deg, #f3f4f6, #e5e7eb); border-color: #C0C0C0; color: #4b5563; }
 .result-position.p3 { background: linear-gradient(135deg, #fed7aa, #fdba74); border-color: #CD7F32; color: #9a3412; }
 
+.medal-icon {
+    width: 28px;
+    height: 28px;
+    display: block;
+    margin: 0 auto;
+}
+
 .result-info { min-width: 0; }
 .result-event-name { font-weight: 600; color: var(--color-text); font-size: 0.9rem; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .result-meta { display: flex; flex-wrap: wrap; gap: var(--space-sm); font-size: 0.75rem; color: var(--color-text-muted); }
@@ -1179,6 +1186,17 @@ document.querySelectorAll('.series-tab').forEach(tab => {
 .achievement.silver .achievement-icon { background: linear-gradient(135deg, rgba(192,192,192,0.2), rgba(169,169,169,0.1)); }
 .achievement.bronze .achievement-icon { background: linear-gradient(135deg, rgba(205,127,50,0.2), rgba(184,115,51,0.1)); }
 .achievement.fire .achievement-icon { background: linear-gradient(135deg, rgba(239,68,68,0.15), rgba(249,115,22,0.1)); }
+
+.achievement-medal {
+    width: 32px;
+    height: 32px;
+    display: block;
+}
+
+.achievement.locked .achievement-medal {
+    opacity: 0.5;
+    filter: grayscale(1);
+}
 
 .achievement-name { font-size: 0.7rem; color: var(--color-text-muted); font-weight: 600; }
 .achievement-count { font-family: var(--font-mono); font-size: 0.65rem; color: var(--color-text-muted); margin-top: 2px; }
