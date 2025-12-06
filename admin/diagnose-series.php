@@ -501,12 +501,74 @@ include __DIR__ . '/components/unified-layout.php';
         <h2>📋 Snabbåtgärder</h2>
     </div>
     <div class="card-body">
-        <div class="flex gap-md" style="flex-wrap: wrap;">
-            <a href="/admin/series" class="btn btn--primary">
+        <?php
+        // Check if rebuild was requested
+        if (isset($_POST['rebuild_completed_series']) && isset($_POST['csrf_token'])) {
+            if (verify_csrf_token($_POST['csrf_token'])) {
+                require_once __DIR__ . '/../includes/rebuild-rider-stats.php';
+                $pdo = $db->getPdo();
+
+                // Get all completed series
+                $completedSeries = $db->getAll("SELECT id, name FROM series WHERE status = 'completed'");
+
+                if (empty($completedSeries)) {
+                    echo '<div class="alert alert-warning mb-md">Inga serier markerade som completed.</div>';
+                } else {
+                    $totalRiders = 0;
+                    $totalChampions = 0;
+
+                    foreach ($completedSeries as $cs) {
+                        // Get all riders in this series
+                        $ridersStmt = $pdo->prepare("
+                            SELECT DISTINCT r.cyclist_id
+                            FROM results r
+                            JOIN events e ON r.event_id = e.id
+                            JOIN series_events se ON se.event_id = e.id
+                            WHERE se.series_id = ? AND r.cyclist_id IS NOT NULL
+                        ");
+                        $ridersStmt->execute([$cs['id']]);
+                        $riderIds = $ridersStmt->fetchAll(PDO::FETCH_COLUMN);
+
+                        foreach ($riderIds as $riderId) {
+                            rebuildRiderStats($pdo, $riderId);
+                            $totalRiders++;
+                        }
+
+                        // Count champions for this series
+                        $champCount = $pdo->prepare("
+                            SELECT COUNT(*) FROM rider_achievements
+                            WHERE achievement_type = 'series_champion' AND series_id = ?
+                        ");
+                        $champCount->execute([$cs['id']]);
+                        $totalChampions += (int)$champCount->fetchColumn();
+                    }
+
+                    echo '<div class="alert alert-success mb-md">';
+                    echo "<strong>Klar!</strong> Bearbetade {$totalRiders} åkare i " . count($completedSeries) . " serier.<br>";
+                    echo "Totalt {$totalChampions} seriemästare registrerade.";
+                    echo '</div>';
+
+                    // Refresh the page to show updated data
+                    echo '<script>setTimeout(function() { window.location.reload(); }, 2000);</script>';
+                }
+            }
+        }
+        ?>
+
+        <form method="POST" style="display: inline;">
+            <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(generate_csrf_token()) ?>">
+            <button type="submit" name="rebuild_completed_series" class="btn btn--primary"
+                    onclick="return confirm('Detta kommer beräkna seriemästare för alla completed serier.\n\nFortsätt?');">
+                🏆 Beräkna Seriemästare Nu
+            </button>
+        </form>
+
+        <div class="flex gap-md mt-md" style="flex-wrap: wrap;">
+            <a href="/admin/series" class="btn btn--secondary">
                 → Hantera Serier
             </a>
             <a href="/admin/rebuild-stats" class="btn btn--secondary">
-                → Rebuild Stats
+                → Rebuild Stats (alla)
             </a>
         </div>
     </div>
