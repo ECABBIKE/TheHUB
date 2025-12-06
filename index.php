@@ -112,6 +112,20 @@ if (hub_is_ajax()) {
     <script src="<?= hub_asset('js/badge-system.js') ?>"></script>
     <script src="<?= hub_asset('js/pwa.js') ?>"></script>
 
+    <!-- FOUC Prevention: Reveal content after CSS loaded -->
+    <script>
+        (function() {
+            var main = document.querySelector('.main-content');
+            if (main) {
+                requestAnimationFrame(function() {
+                    requestAnimationFrame(function() {
+                        main.classList.add('css-ready');
+                    });
+                });
+            }
+        })();
+    </script>
+
     <!-- Initialize Lucide icons -->
     <script>
         lucide.createIcons();
