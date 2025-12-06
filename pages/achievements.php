@@ -1,9 +1,9 @@
 <?php
 /**
- * TheHUB Achievements - Explanation Page
- * Shows all available badges with requirements and descriptions
+ * TheHUB Achievements - Förklaringssida
+ * Visar alla tillgängliga badges med krav och beskrivningar
  *
- * @version 2.0
+ * @version 2.1
  * @package TheHUB
  */
 
@@ -21,6 +21,19 @@ if (file_exists($achievementsClubPath)) {
 // Get achievement definitions
 $riderAchievements = getRiderAchievementDefinitions();
 $clubAchievements = getClubAchievementDefinitions();
+
+// Count visible badges (exclude hidden)
+function countVisibleBadges($categories) {
+    $count = 0;
+    foreach ($categories as $cat) {
+        foreach ($cat['badges'] as $badge) {
+            if (!isset($badge['hidden']) || !$badge['hidden']) {
+                $count++;
+            }
+        }
+    }
+    return $count;
+}
 ?>
 
 <main class="main-content">
@@ -31,12 +44,12 @@ $clubAchievements = getClubAchievementDefinitions();
             <!-- Page Header -->
             <div class="achievements-page-header">
                 <h1 class="achievements-page-title">
-                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 8px; color: var(--color-accent, #61CE70);">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--color-accent, #61CE70);">
                         <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/>
                     </svg>
-                    Achievements
+                    Dina Achievements
                 </h1>
-                <p class="achievements-page-subtitle">Samla badges och visa dina prestationer i GravitySeries</p>
+                <p class="achievements-page-subtitle">Samla badges och fira dina prestationer i GravitySeries!</p>
             </div>
 
             <!-- RIDER ACHIEVEMENTS SECTION -->
@@ -46,18 +59,23 @@ $clubAchievements = getClubAchievementDefinitions();
                         <circle cx="12" cy="8" r="4"/>
                         <path d="M20 21a8 8 0 1 0-16 0"/>
                     </svg>
-                    <h2 class="achievements-category-title">Rider Achievements</h2>
-                    <span class="achievements-category-badge"><?= array_sum(array_map(fn($cat) => count($cat['badges']), $riderAchievements)) ?> badges</span>
+                    <h2 class="achievements-category-title">Åkarbadges</h2>
+                    <span class="achievements-category-badge"><?= countVisibleBadges($riderAchievements) ?> st</span>
                 </div>
 
                 <?php foreach ($riderAchievements as $categoryId => $category): ?>
+                    <?php
+                    // Filter out hidden badges
+                    $visibleBadges = array_filter($category['badges'], fn($b) => !isset($b['hidden']) || !$b['hidden']);
+                    if (empty($visibleBadges)) continue;
+                    ?>
                     <div class="achievements-subcategory" style="margin-bottom: var(--space-xl, 32px);">
-                        <h3 style="font-size: 16px; font-weight: 600; margin-bottom: var(--space-md, 16px); color: var(--color-text-primary, #171717);">
+                        <h3 style="font-size: 14px; font-weight: 600; margin-bottom: var(--space-md, 16px); color: var(--achievement-text-primary, #171717);">
                             <?= htmlspecialchars($category['title']) ?>
                         </h3>
                         <div class="achievements-list">
-                            <?php foreach ($category['badges'] as $badge): ?>
-                                <div class="achievement-explain-card<?= isset($badge['hidden']) && $badge['hidden'] ? ' locked' : '' ?>">
+                            <?php foreach ($visibleBadges as $badge): ?>
+                                <div class="achievement-explain-card">
                                     <div class="achievement-explain-icon">
                                         <?php if (isset($badge['svg_function']) && function_exists($badge['svg_function'])): ?>
                                             <?= call_user_func($badge['svg_function']) ?>
@@ -73,23 +91,14 @@ $clubAchievements = getClubAchievementDefinitions();
                                         <h4 class="achievement-explain-name"><?= htmlspecialchars($badge['name']) ?></h4>
                                         <p class="achievement-explain-requirement"><?= htmlspecialchars($badge['requirement']) ?></p>
                                         <p class="achievement-explain-description"><?= htmlspecialchars($badge['description']) ?></p>
+                                        <?php if ($badge['has_counter'] ?? false): ?>
                                         <div class="achievement-explain-type">
-                                            <?php if ($badge['has_counter'] ?? false): ?>
-                                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                                    <path d="M5 12h14M12 5l7 7-7 7"/>
-                                                </svg>
-                                                Med räknare
-                                            <?php else: ?>
-                                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-                                                    <polyline points="22 4 12 14.01 9 11.01"/>
-                                                </svg>
-                                                Engångs
-                                            <?php endif; ?>
-                                            <?php if (isset($badge['hidden']) && $badge['hidden']): ?>
-                                                • <span style="color: var(--color-warning, #f59e0b);">Dold</span>
-                                            <?php endif; ?>
+                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                <path d="M5 12h14M12 5l7 7-7 7"/>
+                                            </svg>
+                                            Kan samlas flera gånger
                                         </div>
+                                        <?php endif; ?>
                                     </div>
                                 </div>
                             <?php endforeach; ?>
@@ -107,18 +116,23 @@ $clubAchievements = getClubAchievementDefinitions();
                         <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
                         <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
                     </svg>
-                    <h2 class="achievements-category-title">Klubb Achievements</h2>
-                    <span class="achievements-category-badge"><?= array_sum(array_map(fn($cat) => count($cat['badges']), $clubAchievements)) ?> badges</span>
+                    <h2 class="achievements-category-title">Klubbbadges</h2>
+                    <span class="achievements-category-badge"><?= countVisibleBadges($clubAchievements) ?> st</span>
                 </div>
 
                 <?php foreach ($clubAchievements as $categoryId => $category): ?>
+                    <?php
+                    // Filter out hidden badges
+                    $visibleBadges = array_filter($category['badges'], fn($b) => !isset($b['hidden']) || !$b['hidden']);
+                    if (empty($visibleBadges)) continue;
+                    ?>
                     <div class="achievements-subcategory" style="margin-bottom: var(--space-xl, 32px);">
-                        <h3 style="font-size: 16px; font-weight: 600; margin-bottom: var(--space-md, 16px); color: var(--color-text-primary, #171717);">
+                        <h3 style="font-size: 14px; font-weight: 600; margin-bottom: var(--space-md, 16px); color: var(--achievement-text-primary, #171717);">
                             <?= htmlspecialchars($category['title']) ?>
                         </h3>
                         <div class="achievements-list">
-                            <?php foreach ($category['badges'] as $badge): ?>
-                                <div class="achievement-explain-card<?= isset($badge['hidden']) && $badge['hidden'] ? ' locked' : '' ?>">
+                            <?php foreach ($visibleBadges as $badge): ?>
+                                <div class="achievement-explain-card">
                                     <div class="achievement-explain-icon">
                                         <?php if (isset($badge['svg_function']) && function_exists($badge['svg_function'])): ?>
                                             <?= call_user_func($badge['svg_function']) ?>
@@ -134,29 +148,21 @@ $clubAchievements = getClubAchievementDefinitions();
                                         <h4 class="achievement-explain-name"><?= htmlspecialchars($badge['name']) ?></h4>
                                         <p class="achievement-explain-requirement"><?= htmlspecialchars($badge['requirement']) ?></p>
                                         <p class="achievement-explain-description"><?= htmlspecialchars($badge['description']) ?></p>
+                                        <?php if ($badge['has_counter'] ?? false): ?>
                                         <div class="achievement-explain-type">
-                                            <?php if ($badge['has_counter'] ?? false): ?>
-                                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                                    <path d="M5 12h14M12 5l7 7-7 7"/>
-                                                </svg>
-                                                Med räknare
-                                            <?php elseif ($badge['has_levels'] ?? false): ?>
-                                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                                    <path d="M2 20h.01M7 20v-4M12 20v-8M17 20V8M22 4v16"/>
-                                                </svg>
-                                                Med nivåer
-                                            <?php else: ?>
-                                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-                                                    <polyline points="22 4 12 14.01 9 11.01"/>
-                                                </svg>
-                                                Engångs
-                                            <?php endif; ?>
-                                            <?php if (isset($badge['hidden']) && $badge['hidden']): ?>
-                                                • <span style="color: var(--color-warning, #f59e0b);">Dold</span>
-                                            <?php endif; ?>
-                                            • <span style="opacity: 0.6;">Klubb</span>
+                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                <path d="M5 12h14M12 5l7 7-7 7"/>
+                                            </svg>
+                                            Kan samlas flera gånger
                                         </div>
+                                        <?php elseif ($badge['has_levels'] ?? false): ?>
+                                        <div class="achievement-explain-type">
+                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                <path d="M2 20h.01M7 20v-4M12 20v-8M17 20V8M22 4v16"/>
+                                            </svg>
+                                            Brons → Silver → Guld → Diamant
+                                        </div>
+                                        <?php endif; ?>
                                     </div>
                                 </div>
                             <?php endforeach; ?>
@@ -166,34 +172,18 @@ $clubAchievements = getClubAchievementDefinitions();
             </section>
 
             <!-- Info Section -->
-            <section class="achievements-info" style="margin-top: var(--space-2xl, 48px); padding: var(--space-lg, 24px); background: var(--achievement-card-bg, #fff); border-radius: var(--radius-lg, 12px); border: 1px solid var(--achievement-border, #e0e0e0);">
-                <h3 style="font-size: 16px; font-weight: 600; margin-bottom: var(--space-md, 16px); display: flex; align-items: center; gap: 8px;">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <section class="achievements-info" style="margin-top: var(--space-xl, 32px); padding: var(--space-md, 16px); background: var(--achievement-badge-bg, #f9f9f9); border-radius: var(--radius-md, 10px);">
+                <h3 style="font-size: 14px; font-weight: 600; margin-bottom: var(--space-sm, 8px); display: flex; align-items: center; gap: 8px; color: var(--achievement-text-primary, #171717);">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <circle cx="12" cy="12" r="10"/>
                         <path d="M12 16v-4M12 8h.01"/>
                     </svg>
-                    Hur fungerar achievements?
+                    Så funkar det
                 </h3>
-                <div style="display: grid; gap: var(--space-md, 16px); color: var(--achievement-text-muted, #8a8a8a); font-size: 14px; line-height: 1.6;">
-                    <p>
-                        <strong style="color: var(--achievement-text-primary, #171717);">Automatisk tilldelning:</strong>
-                        Badges tilldelas automatiskt när du uppfyller kraven. Du behöver inte göra något speciellt.
-                    </p>
-                    <p>
-                        <strong style="color: var(--achievement-text-primary, #171717);">Räknare:</strong>
-                        Badges markerade med "Med räknare" kan uppnås flera gånger. Räknaren visar totalt antal gånger.
-                    </p>
-                    <p>
-                        <strong style="color: var(--achievement-text-primary, #171717);">Nivåer:</strong>
-                        Vissa badges har nivåer (Brons, Silver, Guld, Diamant) baserat på prestationer.
-                    </p>
-                    <p>
-                        <strong style="color: var(--achievement-text-primary, #171717);">Dolda badges:</strong>
-                        Några speciella badges visas inte förrän de uppnåtts. De markeras med "Dold" ovan.
-                    </p>
-                    <p>
-                        <strong style="color: var(--achievement-text-primary, #171717);">Experience-nivå:</strong>
-                        Din erfarenhetsnivå ökar med antal säsonger och prestationer. Den 6:e nivån är dold!
+                <div style="color: var(--achievement-text-muted, #7a7a7a); font-size: 13px; line-height: 1.5;">
+                    <p style="margin: 0;">
+                        Badges tilldelas automatiskt när du tävlar och uppfyller kraven.
+                        Kolla din profil för att se vilka du har samlat!
                     </p>
                 </div>
             </section>
