@@ -115,16 +115,13 @@ $classes = $db->getAll("
     SELECT DISTINCT category FROM event_registrations WHERE event_id = ? ORDER BY category
 ", [$eventId]);
 
-// Set page variables
-$active_event_tab = 'registrations';
-$pageTitle = 'Anmälda - ' . $event['name'];
-$pageType = 'admin';
+// Set page variables for unified layout
+$page_title = 'Anmälda - ' . $event['name'];
+$page_actions = '<a href="/admin/event-payment.php?id=' . $eventId . '" class="btn btn--secondary"><i data-lucide="credit-card"></i> Betalning</a>';
 
-include __DIR__ . '/../includes/layout-header.php';
+include __DIR__ . '/components/unified-layout.php';
 ?>
 
-<main class="main-content">
-    <div class="container">
         <?php if ($message): ?>
         <div class="alert alert-<?= $messageType ?> mb-lg">
             <i data-lucide="<?= $messageType === 'success' ? 'check-circle' : 'alert-circle' ?>"></i>
@@ -305,8 +302,6 @@ include __DIR__ . '/../includes/layout-header.php';
                 <?php endif; ?>
             </div>
         </div>
-    </div>
-</main>
 
 <style>
 .icon-xl {
@@ -319,4 +314,4 @@ include __DIR__ . '/../includes/layout-header.php';
 }
 </style>
 
-<?php include __DIR__ . '/../includes/layout-footer.php'; ?>
+<?php include __DIR__ . '/components/unified-layout-footer.php'; ?>

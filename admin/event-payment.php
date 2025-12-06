@@ -193,29 +193,12 @@ $eventDate = new DateTime($event['date']);
 $defaultEarlyBirdEnd = clone $eventDate;
 $defaultEarlyBirdEnd->modify('-14 days');
 
-// Set page variables for layout
-$active_event_tab = 'payment';
-$pageTitle = 'Betalning - ' . $event['name'];
-$pageType = 'admin';
+// Set page variables for unified layout
+$page_title = 'Betalning - ' . $event['name'];
+$page_actions = '<a href="/admin/event-orders.php?id=' . $eventId . '" class="btn btn--secondary"><i data-lucide="list"></i> Visa ordrar</a>';
 
-include __DIR__ . '/../includes/layout-header.php';
+include __DIR__ . '/components/unified-layout.php';
 ?>
-
-<main class="main-content">
-    <div class="container">
-        <!-- Header -->
-        <div class="flex items-center justify-between mb-lg">
-            <div>
-                <h1>
-                    <i data-lucide="credit-card"></i>
-                    Betalningsinställningar
-                </h1>
-            </div>
-            <a href="/admin/event-orders.php?id=<?= $eventId ?>" class="btn btn--secondary">
-                <i data-lucide="list"></i>
-                Visa ordrar
-            </a>
-        </div>
 
         <!-- Message -->
         <?php if ($message): ?>
@@ -513,8 +496,6 @@ include __DIR__ . '/../includes/layout-header.php';
                 </div>
             </div>
         </div>
-    </div>
-</main>
 
 <style>
 /* Match orders.php styling */
@@ -562,4 +543,4 @@ if (typeof lucide !== 'undefined') {
 }
 </script>
 
-<?php include __DIR__ . '/../includes/layout-footer.php'; ?>
+<?php include __DIR__ . '/components/unified-layout-footer.php'; ?>
