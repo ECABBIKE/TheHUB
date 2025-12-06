@@ -1,6 +1,6 @@
 <?php
 /**
- * TheHUB V3.5 - Edit Profile
+ * TheHUB V3.5 - Edit Profile with Social Profiles
  */
 
 $currentUser = hub_current_user();
@@ -13,6 +13,12 @@ $pdo = hub_db();
 $message = '';
 $error = '';
 
+// Include social profile sanitizer
+$rebuildPath = dirname(dirname(__DIR__)) . '/includes/rebuild-rider-stats.php';
+if (file_exists($rebuildPath)) {
+    require_once $rebuildPath;
+}
+
 // Handle form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $firstName = trim($_POST['firstname'] ?? '');
@@ -20,16 +26,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $email = trim($_POST['email'] ?? '');
     $clubId = intval($_POST['club_id'] ?? 0) ?: null;
 
+    // Social profiles
+    $socialInstagram = trim($_POST['social_instagram'] ?? '');
+    $socialStrava = trim($_POST['social_strava'] ?? '');
+    $socialFacebook = trim($_POST['social_facebook'] ?? '');
+    $socialYoutube = trim($_POST['social_youtube'] ?? '');
+    $socialTiktok = trim($_POST['social_tiktok'] ?? '');
+
+    // Sanitize social handles if function exists
+    if (function_exists('sanitizeSocialHandle')) {
+        $socialInstagram = sanitizeSocialHandle($socialInstagram, 'instagram');
+        $socialStrava = sanitizeSocialHandle($socialStrava, 'strava');
+        $socialFacebook = sanitizeSocialHandle($socialFacebook, 'facebook');
+        $socialYoutube = sanitizeSocialHandle($socialYoutube, 'youtube');
+        $socialTiktok = sanitizeSocialHandle($socialTiktok, 'tiktok');
+    }
+
     if (empty($firstName) || empty($lastName)) {
         $error = 'Förnamn och efternamn krävs.';
     } else {
         try {
             $stmt = $pdo->prepare("
                 UPDATE riders
-                SET firstname = ?, lastname = ?, email = ?, club_id = ?
+                SET firstname = ?, lastname = ?, email = ?, club_id = ?,
+                    social_instagram = ?, social_strava = ?, social_facebook = ?,
+                    social_youtube = ?, social_tiktok = ?
                 WHERE id = ?
             ");
-            $stmt->execute([$firstName, $lastName, $email, $clubId, $currentUser['id']]);
+            $stmt->execute([
+                $firstName, $lastName, $email, $clubId,
+                $socialInstagram ?: null, $socialStrava ?: null, $socialFacebook ?: null,
+                $socialYoutube ?: null, $socialTiktok ?: null,
+                $currentUser['id']
+            ]);
             $message = 'Profilen har uppdaterats!';
 
             // Refresh user data
@@ -99,6 +128,56 @@ $clubs = $pdo->query("SELECT id, name FROM clubs ORDER BY name")->fetchAll(PDO::
                     </option>
                 <?php endforeach; ?>
             </select>
+        </div>
+    </div>
+
+    <div class="form-section">
+        <h2>Sociala profiler</h2>
+        <p class="form-help">Länka dina sociala profiler så att andra kan hitta dig.</p>
+
+        <div class="form-group">
+            <label for="social_instagram">
+                <span class="social-icon instagram">📷</span> Instagram
+            </label>
+            <input type="text" id="social_instagram" name="social_instagram"
+                   value="<?= htmlspecialchars($currentUser['social_instagram'] ?? '') ?>"
+                   placeholder="användarnamn (utan @)">
+        </div>
+
+        <div class="form-group">
+            <label for="social_strava">
+                <span class="social-icon strava">🚴</span> Strava
+            </label>
+            <input type="text" id="social_strava" name="social_strava"
+                   value="<?= htmlspecialchars($currentUser['social_strava'] ?? '') ?>"
+                   placeholder="athlete ID eller profil-URL">
+        </div>
+
+        <div class="form-group">
+            <label for="social_facebook">
+                <span class="social-icon facebook">👤</span> Facebook
+            </label>
+            <input type="text" id="social_facebook" name="social_facebook"
+                   value="<?= htmlspecialchars($currentUser['social_facebook'] ?? '') ?>"
+                   placeholder="profil-URL eller användarnamn">
+        </div>
+
+        <div class="form-group">
+            <label for="social_youtube">
+                <span class="social-icon youtube">🎬</span> YouTube
+            </label>
+            <input type="text" id="social_youtube" name="social_youtube"
+                   value="<?= htmlspecialchars($currentUser['social_youtube'] ?? '') ?>"
+                   placeholder="@kanal eller kanal-ID">
+        </div>
+
+        <div class="form-group">
+            <label for="social_tiktok">
+                <span class="social-icon tiktok">🎵</span> TikTok
+            </label>
+            <input type="text" id="social_tiktok" name="social_tiktok"
+                   value="<?= htmlspecialchars($currentUser['social_tiktok'] ?? '') ?>"
+                   placeholder="användarnamn (utan @)">
         </div>
     </div>
 
@@ -186,6 +265,14 @@ $clubs = $pdo->query("SELECT id, name FROM clubs ORDER BY name")->fetchAll(PDO::
 .alert-error {
     background: var(--color-error-bg, rgba(239, 68, 68, 0.1));
     color: var(--color-error, #ef4444);
+}
+.form-help {
+    font-size: var(--text-sm);
+    color: var(--color-text-muted, #666);
+    margin-bottom: var(--space-md);
+}
+.social-icon {
+    margin-right: var(--space-xs);
 }
 @media (max-width: 600px) {
     .form-row { grid-template-columns: 1fr; }
