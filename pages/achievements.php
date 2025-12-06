@@ -7,19 +7,16 @@
  * @package TheHUB
  */
 
-// Include required files
-require_once __DIR__ . '/../config/database.php';
-require_once __DIR__ . '/../includes/functions.php';
-require_once __DIR__ . '/../includes/achievements.php';
-require_once __DIR__ . '/../includes/achievements-club.php';
+// Include achievements system
+$achievementsPath = dirname(__DIR__) . '/includes/achievements.php';
+if (file_exists($achievementsPath)) {
+    require_once $achievementsPath;
+}
 
-// Page setup
-$pageTitle = 'Achievements';
-$pageType = 'public';
-$bodyClass = 'achievements-page-body';
-
-// Include layout header
-include __DIR__ . '/../includes/layout-header.php';
+$achievementsClubPath = dirname(__DIR__) . '/includes/achievements-club.php';
+if (file_exists($achievementsClubPath)) {
+    require_once $achievementsClubPath;
+}
 
 // Get achievement definitions
 $riderAchievements = getRiderAchievementDefinitions();
@@ -203,8 +200,4 @@ $clubAchievements = getClubAchievementDefinitions();
 
         </div>
     </div>
-
-<?php
-// Include layout footer
-include __DIR__ . '/../includes/layout-footer.php';
-?>
+</main>
