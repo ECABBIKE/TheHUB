@@ -100,13 +100,28 @@ if ($userTheme === 'auto') {
     window.HUB.isLoggedIn = <?= $isLoggedIn ? 'true' : 'false' ?>;
     </script>
 
-    <!-- CRITICAL: Inline CSS for light theme only -->
+    <!-- CRITICAL: Inline CSS for light theme and FOUC prevention -->
     <style>
         html, body {
             background: #F4F5F7;
             color: #1A1A1A;
             margin: 0;
             padding: 0;
+        }
+        /* FOUC Prevention: Hide main content until CSS is loaded */
+        .main-content {
+            opacity: 0;
+            transition: opacity 0.1s ease-out;
+        }
+        .main-content.css-ready {
+            opacity: 1;
+        }
+        /* Fallback: Show content after 500ms even if JS fails */
+        @keyframes fouc-fallback {
+            to { opacity: 1; }
+        }
+        .main-content {
+            animation: fouc-fallback 0.1s ease-out 0.5s forwards;
         }
     </style>
 

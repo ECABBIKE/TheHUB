@@ -438,39 +438,6 @@ if (!$series) {
 }
 ?>
 
-<!-- CRITICAL: Prevent FOUC by hiding content until CSS is ready -->
-<style>
-/* Inline critical CSS to prevent layout shift */
-.series-page-content {
-  opacity: 0;
-  transition: opacity 0.15s ease-out;
-}
-.series-page-content.ready {
-  opacity: 1;
-}
-/* Critical dimensions to prevent layout shift */
-.info-card {
-  min-height: 80px;
-  background: var(--color-bg-surface, #fff);
-  border-radius: var(--radius-md, 10px);
-  overflow: hidden;
-}
-.info-card-title {
-  font-size: var(--text-lg, 1.125rem);
-  font-weight: var(--weight-bold, 700);
-  margin: 0;
-  line-height: 1.3;
-}
-.standings-tabs {
-  min-height: 44px;
-}
-.filter-row {
-  min-height: 60px;
-}
-</style>
-
-<div class="series-page-content">
-
 <?php if (isset($error)): ?>
 <section class="card mb-lg">
   <div class="card-title" style="color: var(--color-error)">Fel</div>
@@ -1405,18 +1372,4 @@ window.addEventListener('orientationchange', function() {
   setTimeout(updateLandscapeClass, 100);
 });
 
-// FOUC Prevention: Show content after styles are applied
-(function() {
-  var content = document.querySelector('.series-page-content');
-  if (content) {
-    // Use requestAnimationFrame to ensure styles are computed
-    requestAnimationFrame(function() {
-      requestAnimationFrame(function() {
-        content.classList.add('ready');
-      });
-    });
-  }
-})();
 </script>
-
-</div><!-- End series-page-content -->
