@@ -450,6 +450,29 @@ include __DIR__ . '/components/unified-layout.php';
             echo '</div>';
         }
 
+        // Debug: Check if champions have club_id
+        if (!empty($existingChampions)) {
+            echo '<h4 class="mt-md mb-sm">Klubb-koppling för mästare:</h4>';
+            $champWithClub = $db->getAll("
+                SELECT ra.rider_id, CONCAT(r.first_name, ' ', r.last_name) as name,
+                       ra.achievement_value as series_name, ra.season_year,
+                       r.club_id, c.name as club_name
+                FROM rider_achievements ra
+                JOIN riders r ON ra.rider_id = r.id
+                LEFT JOIN clubs c ON r.club_id = c.id
+                WHERE ra.achievement_type = 'series_champion'
+                ORDER BY ra.season_year DESC
+                LIMIT 10
+            ");
+            echo '<table class="table table--striped" style="font-size: 0.85em;">';
+            echo '<thead><tr><th>Åkare</th><th>Serie</th><th>År</th><th>Klubb</th></tr></thead><tbody>';
+            foreach ($champWithClub as $ch) {
+                $clubCell = $ch['club_id'] ? htmlspecialchars($ch['club_name']) : '<span class="text-error">Ingen klubb!</span>';
+                echo "<tr><td>{$ch['name']}</td><td>{$ch['series_name']}</td><td>{$ch['season_year']}</td><td>{$clubCell}</td></tr>";
+            }
+            echo '</tbody></table>';
+        }
+
         if (empty($existingChampions)):
         ?>
             <div class="alert alert-warning">
