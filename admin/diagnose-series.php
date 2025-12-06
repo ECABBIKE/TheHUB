@@ -219,34 +219,36 @@ include __DIR__ . '/components/unified-layout.php';
             }
             echo '</div>';
 
-            // Enrich with series, class, and rider info
+            // Enrich with series, class, and rider info (cast ids to int for reliable lookup)
             $seriesInfo = [];
             $seriesData = $db->getAll("SELECT id, name, year, status, end_date FROM series");
             foreach ($seriesData as $s) {
-                $seriesInfo[$s['id']] = $s;
+                $seriesInfo[(int)$s['id']] = $s;
             }
 
             $classInfo = [];
             $classData = $db->getAll("SELECT id, display_name FROM classes");
             foreach ($classData as $c) {
-                $classInfo[$c['id']] = $c['display_name'];
+                $classInfo[(int)$c['id']] = $c['display_name'];
             }
 
             $riderInfo = [];
             $riderData = $db->getAll("SELECT id, first_name, last_name FROM riders");
             foreach ($riderData as $r) {
-                $riderInfo[$r['id']] = $r['first_name'] . ' ' . $r['last_name'];
+                $riderInfo[(int)$r['id']] = $r['first_name'] . ' ' . $r['last_name'];
             }
 
             // Add enriched data to results
             foreach ($allTotals as &$row) {
-                $sid = $row['series_id'];
+                $sid = (int)$row['series_id'];
+                $cid = (int)$row['class_id'];
+                $rid = (int)$row['cyclist_id'];
                 $row['series_name'] = $seriesInfo[$sid]['name'] ?? 'Okänd';
                 $row['effective_year'] = $seriesInfo[$sid]['year'] ?? date('Y');
                 $row['status'] = $seriesInfo[$sid]['status'] ?? 'active';
                 $row['end_date'] = $seriesInfo[$sid]['end_date'] ?? null;
-                $row['class_name'] = $classInfo[$row['class_id']] ?? 'Okänd';
-                $row['rider_name'] = $riderInfo[$row['cyclist_id']] ?? 'Okänd';
+                $row['class_name'] = $classInfo[$cid] ?? 'Okänd';
+                $row['rider_name'] = $riderInfo[$rid] ?? 'Okänd';
             }
             unset($row);
 
