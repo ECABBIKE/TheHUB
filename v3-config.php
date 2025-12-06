@@ -377,8 +377,10 @@ if (!function_exists('hub_attempt_login')) {
         $defaultPassword = defined('DEFAULT_ADMIN_PASSWORD') ? DEFAULT_ADMIN_PASSWORD : null;
 
         if ($defaultUsername && $defaultPassword) {
-            // Admin can log in with username OR email = username
-            if (($email === $defaultUsername || $email === $defaultUsername . '@thehub.se') && $password === $defaultPassword) {
+            // Admin can log in with username OR email = username (case-insensitive)
+            $emailLower = strtolower($email);
+            $usernameLower = strtolower($defaultUsername);
+            if (($emailLower === $usernameLower || $emailLower === $usernameLower . '@thehub.se') && $password === $defaultPassword) {
                 // Create admin session
                 $adminUser = [
                     'id' => 0,
