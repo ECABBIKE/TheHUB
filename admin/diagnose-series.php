@@ -192,59 +192,24 @@ include __DIR__ . '/components/unified-layout.php';
 
         echo '</div>';
 
-        // Find potential series champions using a simpler two-step approach
-        // Step 1: Get all rider totals per series/class (using both connection methods)
+        // Find potential series champions - use simple query that works, then enrich in PHP
         try {
-            if ($seriesEventsExists) {
-                // Use series_events junction table
-                // Note: Using MAX() for non-grouped columns to satisfy ONLY_FULL_GROUP_BY
-                $allTotals = $db->getAll("
-                    SELECT
-                        s.id as series_id,
-                        MAX(s.name) as series_name,
-                        COALESCE(MAX(s.year), YEAR(MAX(e.date))) as effective_year,
-                        MAX(s.status) as status,
-                        MAX(s.end_date) as end_date,
-                        r.class_id,
-                        MAX(c.display_name) as class_name,
-                        r.cyclist_id,
-                        MAX(CONCAT(rd.first_name, ' ', rd.last_name)) as rider_name,
-                        SUM(r.points) as total_points
-                    FROM results r
-                    JOIN events e ON r.event_id = e.id
-                    JOIN series_events se ON se.event_id = e.id
-                    JOIN series s ON se.series_id = s.id
-                    LEFT JOIN classes c ON r.class_id = c.id
-                    JOIN riders rd ON r.cyclist_id = rd.id
-                    WHERE r.status = 'finished'
-                    GROUP BY s.id, r.class_id, r.cyclist_id
-                    ORDER BY series_name, class_name, total_points DESC
-                ");
-            } else {
-                // Fallback: use events.series_id
-                $allTotals = $db->getAll("
-                    SELECT
-                        s.id as series_id,
-                        MAX(s.name) as series_name,
-                        COALESCE(MAX(s.year), YEAR(MAX(e.date))) as effective_year,
-                        MAX(s.status) as status,
-                        MAX(s.end_date) as end_date,
-                        r.class_id,
-                        MAX(c.display_name) as class_name,
-                        r.cyclist_id,
-                        MAX(CONCAT(rd.first_name, ' ', rd.last_name)) as rider_name,
-                        SUM(r.points) as total_points
-                    FROM results r
-                    JOIN events e ON r.event_id = e.id
-                    JOIN series s ON e.series_id = s.id
-                    LEFT JOIN classes c ON r.class_id = c.id
-                    JOIN riders rd ON r.cyclist_id = rd.id
-                    WHERE r.status = 'finished'
-                      AND e.series_id IS NOT NULL
-                    GROUP BY s.id, r.class_id, r.cyclist_id
-                    ORDER BY series_name, class_name, total_points DESC
-                ");
-            }
+            // Simple query that we know works from test #6
+            $allTotals = $db->getAll("
+                SELECT
+                    s.id as series_id,
+                    r.class_id,
+                    r.cyclist_id,
+                    SUM(r.points) as total_points
+                FROM results r
+                JOIN events e ON r.event_id = e.id
+                JOIN series_events se ON se.event_id = e.id
+                JOIN series s ON se.series_id = s.id
+                JOIN riders rd ON r.cyclist_id = rd.id
+                WHERE r.status = 'finished'
+                GROUP BY s.id, r.class_id, r.cyclist_id
+                ORDER BY s.id, r.class_id, total_points DESC
+            ");
 
             // Debug: Show query result count
             echo '<div class="alert alert-info mb-md">';
@@ -253,6 +218,37 @@ include __DIR__ . '/components/unified-layout.php';
                 echo '<br>Första raden: ' . json_encode($allTotals[0]);
             }
             echo '</div>';
+
+            // Enrich with series, class, and rider info
+            $seriesInfo = [];
+            $seriesData = $db->getAll("SELECT id, name, year, status, end_date FROM series");
+            foreach ($seriesData as $s) {
+                $seriesInfo[$s['id']] = $s;
+            }
+
+            $classInfo = [];
+            $classData = $db->getAll("SELECT id, display_name FROM classes");
+            foreach ($classData as $c) {
+                $classInfo[$c['id']] = $c['display_name'];
+            }
+
+            $riderInfo = [];
+            $riderData = $db->getAll("SELECT id, first_name, last_name FROM riders");
+            foreach ($riderData as $r) {
+                $riderInfo[$r['id']] = $r['first_name'] . ' ' . $r['last_name'];
+            }
+
+            // Add enriched data to results
+            foreach ($allTotals as &$row) {
+                $sid = $row['series_id'];
+                $row['series_name'] = $seriesInfo[$sid]['name'] ?? 'Okänd';
+                $row['effective_year'] = $seriesInfo[$sid]['year'] ?? date('Y');
+                $row['status'] = $seriesInfo[$sid]['status'] ?? 'active';
+                $row['end_date'] = $seriesInfo[$sid]['end_date'] ?? null;
+                $row['class_name'] = $classInfo[$row['class_id']] ?? 'Okänd';
+                $row['rider_name'] = $riderInfo[$row['cyclist_id']] ?? 'Okänd';
+            }
+            unset($row);
 
         } catch (Exception $e) {
             echo '<div class="alert alert-danger mb-md">';
