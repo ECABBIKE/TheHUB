@@ -35,13 +35,13 @@ includes/admin-sidebar.php # Admin navigation
   --color-danger: #ef4444;
   --color-warning: #f59e0b;
   --color-success: #61CE70;
-  
+
   /* Serie-färger */
   --color-gs-green: #61CE70;
   --color-gs-blue: #004a98;
   --color-ges-orange: #EF761F;
   --color-ggs-green: #8A9A5B;
-  
+
   /* Spacing - ANVÄND ENDAST DESSA */
   --space-xs: 4px;
   --space-sm: 8px;
@@ -49,13 +49,13 @@ includes/admin-sidebar.php # Admin navigation
   --space-lg: 24px;
   --space-xl: 32px;
   --space-2xl: 48px;
-  
+
   /* Radius */
   --radius-sm: 6px;
   --radius-md: 10px;
   --radius-lg: 16px;
   --radius-full: 9999px;
-  
+
   /* Shadows */
   --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
   --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
@@ -103,9 +103,7 @@ include __DIR__ . '/../includes/admin-header.php';
     <div class="page-header">
         <h1><?= $pageTitle ?></h1>
     </div>
-    
-    <!-- DITT INNEHÅLL HÄR -->
-    
+
 </div>
 
 <?php include __DIR__ . '/../includes/admin-footer.php'; ?>
