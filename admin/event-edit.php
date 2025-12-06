@@ -8,10 +8,14 @@ require_admin();
 $db = getDB();
 
 // Ensure is_championship column exists (safe to run multiple times)
-try {
+$columnExists = $db->getValue("
+    SELECT COUNT(*) FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE()
+    AND TABLE_NAME = 'events'
+    AND COLUMN_NAME = 'is_championship'
+");
+if (!$columnExists) {
     $db->query("ALTER TABLE events ADD COLUMN is_championship TINYINT(1) DEFAULT 0");
-} catch (Exception $e) {
-    // Column already exists - ignore
 }
 
 // Get event ID from URL (supports both /admin/events/edit/123 and ?id=123)
@@ -50,6 +54,9 @@ $messageType = 'info';
 // Handle form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     checkCsrf();
+
+    // Debug: Log is_championship value
+    error_log("EVENT EDIT DEBUG: is_championship POST value = " . (isset($_POST['is_championship']) ? 'SET' : 'NOT SET'));
 
     $name = trim($_POST['name'] ?? '');
     $date = trim($_POST['date'] ?? '');
@@ -144,7 +151,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         ];
 
         try {
-            $db->update('events', $eventData, 'id = ?', [$id]);
+            $rowsAffected = $db->update('events', $eventData, 'id = ?', [$id]);
+            error_log("EVENT EDIT DEBUG: Update returned {$rowsAffected} rows, is_championship value was: " . $eventData['is_championship']);
             $_SESSION['message'] = 'Event uppdaterat!';
             $_SESSION['messageType'] = 'success';
             header('Location: /admin/events');
