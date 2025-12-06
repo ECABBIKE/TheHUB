@@ -1,24 +1,17 @@
 <?php
 /**
  * Event Payment Setup
- * Consolidated page for all payment/ticketing configuration for an event
- *
- * Includes:
- * - Enable/disable ticketing
- * - Payment methods (Swish, Card)
- * - Swish recipient configuration (event-specific or inherited)
- * - Pricing per class with early bird
- * - Order statistics
+ * Consolidated page for payment/ticketing configuration
+ * Uses Economy Tab System
  */
 
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/../includes/payment.php';
-require_admin();
 
 $db = getDB();
 
-// Get event ID
-$eventId = isset($_GET['id']) ? intval($_GET['id']) : 0;
+// Get event ID (supports both 'id' and 'event_id')
+$eventId = isset($_GET['id']) ? intval($_GET['id']) : (isset($_GET['event_id']) ? intval($_GET['event_id']) : 0);
 
 if ($eventId <= 0) {
     $_SESSION['flash_message'] = 'Ogiltigt event-ID';
@@ -193,11 +186,10 @@ $eventDate = new DateTime($event['date']);
 $defaultEarlyBirdEnd = clone $eventDate;
 $defaultEarlyBirdEnd->modify('-14 days');
 
-// Set page variables for unified layout
-$page_title = 'Betalning - ' . $event['name'];
-$page_actions = '<a href="/admin/event-orders.php?id=' . $eventId . '" class="btn btn--secondary"><i data-lucide="list"></i> Visa ordrar</a>';
+// Set page variables for economy layout
+$economy_page_title = 'Betalning';
 
-include __DIR__ . '/components/unified-layout.php';
+include __DIR__ . '/components/economy-layout.php';
 ?>
 
         <!-- Message -->
@@ -543,4 +535,4 @@ if (typeof lucide !== 'undefined') {
 }
 </script>
 
-<?php include __DIR__ . '/components/unified-layout-footer.php'; ?>
+<?php include __DIR__ . '/components/economy-layout-footer.php'; ?>

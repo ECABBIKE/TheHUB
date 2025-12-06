@@ -1,15 +1,15 @@
 <?php
 /**
  * Event Registrations - View registrations for a specific event
+ * Uses Economy Tab System
  */
 
 require_once __DIR__ . '/../config.php';
-require_admin();
 
 $db = getDB();
 
-// Get event ID
-$eventId = isset($_GET['id']) ? intval($_GET['id']) : 0;
+// Get event ID (supports both 'id' and 'event_id')
+$eventId = isset($_GET['id']) ? intval($_GET['id']) : (isset($_GET['event_id']) ? intval($_GET['event_id']) : 0);
 
 if ($eventId <= 0) {
     $_SESSION['flash_message'] = 'Ogiltigt event-ID';
@@ -115,11 +115,10 @@ $classes = $db->getAll("
     SELECT DISTINCT category FROM event_registrations WHERE event_id = ? ORDER BY category
 ", [$eventId]);
 
-// Set page variables for unified layout
-$page_title = 'Anmälda - ' . $event['name'];
-$page_actions = '<a href="/admin/event-payment.php?id=' . $eventId . '" class="btn btn--secondary"><i data-lucide="credit-card"></i> Betalning</a>';
+// Set page variables for economy layout
+$economy_page_title = 'Anmälningar';
 
-include __DIR__ . '/components/unified-layout.php';
+include __DIR__ . '/components/economy-layout.php';
 ?>
 
         <?php if ($message): ?>
@@ -314,4 +313,4 @@ include __DIR__ . '/components/unified-layout.php';
 }
 </style>
 
-<?php include __DIR__ . '/components/unified-layout-footer.php'; ?>
+<?php include __DIR__ . '/components/economy-layout-footer.php'; ?>
