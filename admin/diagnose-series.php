@@ -568,11 +568,9 @@ include __DIR__ . '/components/unified-layout.php';
 
                     echo '<div class="alert alert-success mb-md">';
                     echo "<strong>Klar!</strong> Bearbetade {$totalRiders} åkare i " . count($completedSeries) . " serier.<br>";
-                    echo "Totalt {$totalChampions} seriemästare registrerade.";
+                    echo "Totalt {$totalChampions} seriemästare registrerade.<br>";
+                    echo '<a href="/admin/diagnose-series.php" class="btn btn--secondary mt-sm" style="display:inline-block;">Ladda om sidan</a>';
                     echo '</div>';
-
-                    // Refresh the page to show updated data
-                    echo '<script>setTimeout(function() { window.location.reload(); }, 2000);</script>';
                 }
             }
         }
