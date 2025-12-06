@@ -158,13 +158,14 @@ function runStatsMigration($pdo) {
     return $results;
 }
 
-$pageTitle = 'Rebuild Rider Stats';
-$pageType = 'admin';
-include __DIR__ . '/../includes/layout-header.php';
+$page_title = 'Rebuild Rider Stats';
+$breadcrumbs = [
+    ['label' => 'Inställningar', 'url' => '/admin/tools.php'],
+    ['label' => 'Rebuild Stats']
+];
+include __DIR__ . '/components/unified-layout.php';
 ?>
 
-<main class="main-content">
-    <div class="container">
         <!-- Header -->
         <div class="flex items-center justify-between mb-lg">
             <div>
@@ -176,7 +177,7 @@ include __DIR__ . '/../includes/layout-header.php';
                     Räkna om statistik och achievements efter resultatimport
                 </p>
             </div>
-            <a href="/admin" class="btn btn--secondary">
+            <a href="/admin/tools.php" class="btn btn--secondary">
                 <i data-lucide="arrow-left"></i>
                 Tillbaka
             </a>
@@ -340,8 +341,6 @@ include __DIR__ . '/../includes/layout-header.php';
                 </ol>
             </div>
         </div>
-    </div>
-</main>
 
 <style>
 /* Mobile first - base styles */
@@ -470,4 +469,4 @@ form.flex .form-control {
 }
 </style>
 
-<?php include __DIR__ . '/../includes/layout-footer.php'; ?>
+<?php include __DIR__ . '/components/unified-layout-footer.php'; ?>

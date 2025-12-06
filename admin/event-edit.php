@@ -7,6 +7,13 @@ require_admin();
 
 $db = getDB();
 
+// Ensure is_championship column exists (safe to run multiple times)
+try {
+    $db->query("ALTER TABLE events ADD COLUMN is_championship TINYINT(1) DEFAULT 0");
+} catch (Exception $e) {
+    // Column already exists - ignore
+}
+
 // Get event ID from URL (supports both /admin/events/edit/123 and ?id=123)
 $id = 0;
 if (isset($_GET['id'])) {
