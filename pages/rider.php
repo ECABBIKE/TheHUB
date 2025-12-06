@@ -87,7 +87,21 @@ try {
     }
 
     if (!$rider) {
-        include HUB_V3_ROOT . '/pages/404.php';
+        // Show rider-specific not found page
+        http_response_code(404);
+        ?>
+        <div class="page-grid">
+            <section class="card grid-full text-center p-lg">
+                <div style="font-size:4rem;margin-bottom:var(--space-md)">🚴‍♂️❓</div>
+                <h1 class="text-2xl font-bold mb-sm">Åkare hittades inte</h1>
+                <p class="text-secondary mb-lg">Åkare med ID <code style="background:var(--color-bg-sunken);padding:2px 6px;border-radius:4px"><?= $riderId ?></code> finns inte i databasen.</p>
+                <div class="flex justify-center gap-md">
+                    <a href="/database" class="btn btn--primary">Sök åkare</a>
+                    <a href="/riders" class="btn btn--secondary">Visa alla åkare</a>
+                </div>
+            </section>
+        </div>
+        <?php
         return;
     }
 
@@ -190,7 +204,24 @@ try {
 }
 
 if (!$rider) {
-    include HUB_V3_ROOT . '/pages/404.php';
+    // Show rider-specific error page
+    http_response_code(404);
+    ?>
+    <div class="page-grid">
+        <section class="card grid-full text-center p-lg">
+            <div style="font-size:4rem;margin-bottom:var(--space-md)">🚴‍♂️❓</div>
+            <h1 class="text-2xl font-bold mb-sm">Åkare hittades inte</h1>
+            <p class="text-secondary mb-lg">Åkare med ID <code style="background:var(--color-bg-sunken);padding:2px 6px;border-radius:4px"><?= $riderId ?></code> finns inte i databasen.</p>
+            <?php if (isset($error)): ?>
+            <p class="text-secondary mb-md" style="font-size:0.8rem;color:var(--color-danger)">Fel: <?= htmlspecialchars($error) ?></p>
+            <?php endif; ?>
+            <div class="flex justify-center gap-md">
+                <a href="/database" class="btn btn--primary">Sök åkare</a>
+                <a href="/riders" class="btn btn--secondary">Visa alla åkare</a>
+            </div>
+        </section>
+    </div>
+    <?php
     return;
 }
 
