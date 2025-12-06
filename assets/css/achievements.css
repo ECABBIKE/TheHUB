@@ -1,13 +1,13 @@
 /**
  * TheHUB Achievements System
- * Hexagonal badge design with theme support
+ * Mobile-first hexagonal badge design with theme support
  *
- * @version 2.0
+ * @version 2.1 - Mobile First
  * @author TheHUB Development Team
  */
 
 /* ==========================================================================
-   CSS VARIABLES
+   CSS VARIABLES - Using TheHUB design system
    ========================================================================== */
 
 :root {
@@ -15,17 +15,16 @@
     --achievement-gold: #FFD700;
     --achievement-silver: #C0C0C0;
     --achievement-bronze: #CD7F32;
-    --achievement-green: #61CE70;
-    --achievement-orange: #EF761F;
-    --achievement-blue: #004a98;
+    --achievement-green: var(--color-accent, #61CE70);
+    --achievement-orange: var(--color-ges-orange, #EF761F);
+    --achievement-blue: var(--color-gs-blue, #004a98);
     --achievement-yellow: #FFE009;
     --achievement-purple: #5F1D67;
     --achievement-steel: #607D8B;
-    --achievement-olive: #8A9A5B;
+    --achievement-olive: var(--color-ggs-green, #8A9A5B);
 
-    /* Badge background */
-    --badge-bg: #171717;
-    --badge-inner-opacity: 0.4;
+    /* Badge background - for SVG hexagons */
+    --badge-hex-bg: #171717;
 
     /* Transitions */
     --badge-transition: 0.25s ease;
@@ -35,69 +34,99 @@
    THEME SUPPORT
    ========================================================================== */
 
-/* Light theme */
+/* Light theme (default) */
+:root,
 [data-theme="light"] {
-    --achievement-card-bg: #FFFFFF;
-    --achievement-badge-bg: #F0F2F5;
-    --achievement-text-primary: #171717;
-    --achievement-text-muted: #8A8A8A;
-    --achievement-border: #E0E0E0;
+    --achievement-card-bg: var(--color-star, #FDFDFD);
+    --achievement-badge-bg: var(--color-star-fade, #F9F9F9);
+    --achievement-text-primary: var(--color-primary, #171717);
+    --achievement-text-muted: var(--color-text, #7A7A7A);
+    --achievement-border: var(--color-border, #e5e7eb);
     --achievement-slider-inactive: #E5E7EB;
+    --badge-hex-bg: #171717;
 }
 
 /* Dark theme */
 [data-theme="dark"] {
     --achievement-card-bg: #1E1E1E;
     --achievement-badge-bg: #252525;
-    --achievement-text-primary: #FDFDFD;
-    --achievement-text-muted: #666666;
+    --achievement-text-primary: var(--color-star, #FDFDFD);
+    --achievement-text-muted: #888888;
     --achievement-border: #333333;
     --achievement-slider-inactive: #404040;
+    --badge-hex-bg: #2a2a2a;
 }
 
 /* ==========================================================================
-   ACHIEVEMENT CARD CONTAINER
+   ACHIEVEMENT CARD CONTAINER - Mobile First
    ========================================================================== */
 
 .achievements-card {
-    background: var(--achievement-card-bg, var(--color-bg-surface, #fff));
-    border-radius: var(--radius-lg, 12px);
-    padding: var(--space-lg, 20px);
-    border: 1px solid var(--achievement-border, var(--color-border, #e0e0e0));
-    margin-bottom: var(--space-md, 16px);
+    background: var(--achievement-card-bg);
+    border-radius: var(--radius-md);
+    padding: var(--space-md);
+    border: 1px solid var(--achievement-border);
+    margin-bottom: var(--space-md);
+}
+
+@media (min-width: 600px) {
+    .achievements-card {
+        padding: var(--space-lg);
+        border-radius: var(--radius-lg);
+    }
 }
 
 .achievements-card-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: var(--space-md, 16px);
+    margin-bottom: var(--space-sm);
+    gap: var(--space-sm);
+}
+
+@media (min-width: 600px) {
+    .achievements-card-header {
+        margin-bottom: var(--space-md);
+    }
 }
 
 .achievements-card-title {
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 600;
     display: flex;
     align-items: center;
-    gap: 8px;
-    color: var(--achievement-text-primary, var(--color-text-primary, #171717));
+    gap: var(--space-sm);
+    color: var(--achievement-text-primary);
+    margin: 0;
 }
 
 .achievements-card-title::before {
     content: '';
     width: 3px;
-    height: 16px;
-    background: var(--color-accent, #61CE70);
+    height: 14px;
+    background: var(--color-accent);
     border-radius: 2px;
+    flex-shrink: 0;
+}
+
+@media (min-width: 600px) {
+    .achievements-card-title {
+        font-size: 14px;
+    }
+
+    .achievements-card-title::before {
+        height: 16px;
+    }
 }
 
 .achievements-info-link {
-    font-size: 12px;
-    color: var(--color-accent, #61CE70);
+    font-size: 11px;
+    color: var(--color-accent);
     text-decoration: none;
     display: flex;
     align-items: center;
-    gap: 4px;
+    gap: var(--space-xs);
+    white-space: nowrap;
     transition: opacity var(--badge-transition);
 }
 
@@ -106,61 +135,97 @@
 }
 
 /* ==========================================================================
-   EXPERIENCE SLIDER
+   EXPERIENCE SLIDER - Mobile First
    ========================================================================== */
 
 .exp-section {
-    margin-bottom: var(--space-lg, 20px);
-    padding-bottom: var(--space-md, 16px);
-    border-bottom: 1px solid var(--achievement-border, var(--color-border, #e0e0e0));
+    margin-bottom: var(--space-md);
+    padding-bottom: var(--space-sm);
+    border-bottom: 1px solid var(--achievement-border);
+}
+
+@media (min-width: 600px) {
+    .exp-section {
+        margin-bottom: var(--space-lg);
+        padding-bottom: var(--space-md);
+    }
 }
 
 .exp-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 12px;
+    margin-bottom: var(--space-sm);
+    gap: var(--space-sm);
 }
 
 .exp-label {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: var(--space-xs);
 }
 
 .exp-icon {
-    width: 20px;
-    height: 20px;
+    width: 16px;
+    height: 16px;
     color: var(--achievement-yellow);
+    flex-shrink: 0;
+}
+
+@media (min-width: 600px) {
+    .exp-icon {
+        width: 20px;
+        height: 20px;
+    }
 }
 
 .exp-title {
     font-weight: 600;
-    font-size: 14px;
-    color: var(--achievement-text-primary, var(--color-text-primary, #171717));
+    font-size: 12px;
+    color: var(--achievement-text-primary);
+}
+
+@media (min-width: 600px) {
+    .exp-title {
+        font-size: 14px;
+    }
 }
 
 .exp-since {
-    font-size: 12px;
-    color: var(--achievement-text-muted, var(--color-text-muted, #8a8a8a));
+    font-size: 10px;
+    color: var(--achievement-text-muted);
+}
+
+@media (min-width: 600px) {
+    .exp-since {
+        font-size: 12px;
+    }
 }
 
 .exp-slider {
     display: flex;
-    gap: 4px;
-    height: 6px;
-    margin-bottom: 8px;
+    gap: 3px;
+    height: 5px;
+    margin-bottom: var(--space-xs);
+}
+
+@media (min-width: 600px) {
+    .exp-slider {
+        gap: 4px;
+        height: 6px;
+        margin-bottom: var(--space-sm);
+    }
 }
 
 .exp-step {
     flex: 1;
-    background: var(--achievement-slider-inactive, #e5e7eb);
-    border-radius: 3px;
+    background: var(--achievement-slider-inactive);
+    border-radius: var(--radius-full);
     transition: background var(--badge-transition);
 }
 
 .exp-step.active {
-    background: var(--color-accent, #61CE70);
+    background: var(--color-accent);
 }
 
 .exp-step.hidden {
@@ -170,16 +235,31 @@
 .exp-labels {
     display: flex;
     justify-content: space-between;
-    font-size: 10px;
-    color: var(--achievement-text-muted, var(--color-text-muted, #8a8a8a));
+    font-size: 8px;
+    color: var(--achievement-text-muted);
+    gap: 2px;
+}
+
+@media (min-width: 400px) {
+    .exp-labels {
+        font-size: 9px;
+    }
+}
+
+@media (min-width: 600px) {
+    .exp-labels {
+        font-size: 10px;
+    }
 }
 
 .exp-labels span {
     transition: color var(--badge-transition);
+    text-align: center;
+    flex: 1;
 }
 
 .exp-labels span.active {
-    color: var(--color-accent, #61CE70);
+    color: var(--color-accent);
     font-weight: 600;
 }
 
@@ -188,59 +268,56 @@
 }
 
 /* ==========================================================================
-   BADGE GRID
+   BADGE GRID - Mobile First (2 columns base)
    ========================================================================== */
 
 .badge-grid {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 12px;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-sm);
 }
 
-/* Tablet */
-@media (max-width: 768px) {
-    .badge-grid {
-        grid-template-columns: repeat(4, 1fr);
-        gap: 10px;
-    }
-}
-
-/* Mobile */
-@media (max-width: 599px) {
+@media (min-width: 400px) {
     .badge-grid {
         grid-template-columns: repeat(3, 1fr);
-        gap: 8px;
     }
 }
 
-/* Small mobile */
-@media (max-width: 400px) {
+@media (min-width: 600px) {
     .badge-grid {
-        grid-template-columns: repeat(2, 1fr);
-        gap: 8px;
+        grid-template-columns: repeat(4, 1fr);
+        gap: var(--space-md);
     }
 }
 
 /* ==========================================================================
-   BADGE ITEM
+   BADGE ITEM - Mobile First
    ========================================================================== */
 
 .badge-item {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 4px;
-    padding: 12px 8px;
-    background: var(--achievement-badge-bg, #f0f2f5);
-    border-radius: var(--radius-md, 8px);
+    gap: 2px;
+    padding: var(--space-sm);
+    background: var(--achievement-badge-bg);
+    border-radius: var(--radius-sm);
     transition: transform var(--badge-transition), box-shadow var(--badge-transition);
     cursor: pointer;
     position: relative;
 }
 
+@media (min-width: 600px) {
+    .badge-item {
+        gap: var(--space-xs);
+        padding: var(--space-md) var(--space-sm);
+        border-radius: var(--radius-md);
+    }
+}
+
 .badge-item:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    box-shadow: var(--shadow-md);
 }
 
 .badge-item:hover .badge-svg {
@@ -267,193 +344,251 @@
 }
 
 /* ==========================================================================
-   BADGE SVG
+   BADGE SVG - Mobile First
    ========================================================================== */
 
 .badge-svg {
-    width: 48px;
-    height: 48px;
+    width: 36px;
+    height: 36px;
     transition: transform var(--badge-transition);
 }
 
-/* Mobile: smaller badges */
-@media (max-width: 599px) {
+@media (min-width: 400px) {
     .badge-svg {
         width: 40px;
         height: 40px;
     }
 }
 
+@media (min-width: 600px) {
+    .badge-svg {
+        width: 48px;
+        height: 48px;
+    }
+}
+
 /* ==========================================================================
-   BADGE VALUE & LABEL
+   BADGE VALUE & LABEL - Mobile First
    ========================================================================== */
 
 .badge-value {
-    font-size: 16px;
+    font-size: 12px;
     font-weight: 700;
-    color: var(--achievement-text-primary, var(--color-text-primary, #171717));
+    color: var(--achievement-text-primary);
     line-height: 1;
 }
 
+@media (min-width: 600px) {
+    .badge-value {
+        font-size: 16px;
+    }
+}
+
 .badge-value.empty {
-    color: var(--achievement-text-muted, var(--color-text-muted, #8a8a8a));
+    color: var(--achievement-text-muted);
 }
 
 .badge-label {
-    font-size: 10px;
-    color: var(--achievement-text-muted, var(--color-text-muted, #8a8a8a));
+    font-size: 8px;
+    color: var(--achievement-text-muted);
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.3px;
     text-align: center;
     line-height: 1.2;
 }
 
-/* Mobile: smaller text */
-@media (max-width: 599px) {
-    .badge-value {
-        font-size: 14px;
-    }
-
+@media (min-width: 400px) {
     .badge-label {
         font-size: 9px;
     }
 }
 
+@media (min-width: 600px) {
+    .badge-label {
+        font-size: 10px;
+        letter-spacing: 0.5px;
+    }
+}
+
 /* ==========================================================================
-   BADGE TOOLTIP
+   BADGE TOOLTIP - Touch friendly
    ========================================================================== */
 
 .badge-item[data-tooltip] {
     position: relative;
 }
 
-.badge-item[data-tooltip]::after {
-    content: attr(data-tooltip);
-    position: absolute;
-    bottom: 100%;
-    left: 50%;
-    transform: translateX(-50%);
-    background: var(--badge-bg, #171717);
-    color: #fff;
-    padding: 6px 10px;
-    border-radius: 6px;
-    font-size: 11px;
-    white-space: nowrap;
-    opacity: 0;
-    visibility: hidden;
-    transition: opacity 0.2s, visibility 0.2s;
-    pointer-events: none;
-    z-index: 10;
-    margin-bottom: 6px;
-}
+/* Tooltips only on hover devices */
+@media (hover: hover) {
+    .badge-item[data-tooltip]::after {
+        content: attr(data-tooltip);
+        position: absolute;
+        bottom: 100%;
+        left: 50%;
+        transform: translateX(-50%);
+        background: var(--color-primary);
+        color: var(--color-star);
+        padding: var(--space-xs) var(--space-sm);
+        border-radius: var(--radius-sm);
+        font-size: 11px;
+        white-space: nowrap;
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity 0.2s, visibility 0.2s;
+        pointer-events: none;
+        z-index: 10;
+        margin-bottom: var(--space-xs);
+        max-width: 200px;
+        text-align: center;
+    }
 
-.badge-item[data-tooltip]:hover::after {
-    opacity: 1;
-    visibility: visible;
+    .badge-item[data-tooltip]:hover::after {
+        opacity: 1;
+        visibility: visible;
+    }
 }
 
 /* ==========================================================================
-   BADGE COUNTER (for multiple achievements)
+   BADGE COUNTER
    ========================================================================== */
 
 .badge-counter {
     position: absolute;
-    top: 4px;
-    right: 4px;
-    background: var(--color-accent, #61CE70);
+    top: 2px;
+    right: 2px;
+    background: var(--color-accent);
     color: #fff;
-    font-size: 10px;
+    font-size: 9px;
     font-weight: 600;
-    padding: 2px 5px;
-    border-radius: 10px;
-    min-width: 18px;
+    padding: 1px 4px;
+    border-radius: var(--radius-full);
+    min-width: 16px;
     text-align: center;
-    line-height: 1.2;
+    line-height: 1.3;
+}
+
+@media (min-width: 600px) {
+    .badge-counter {
+        top: var(--space-xs);
+        right: var(--space-xs);
+        font-size: 10px;
+        padding: 2px 5px;
+        min-width: 18px;
+    }
 }
 
 /* ==========================================================================
-   STATS ROW (for boolean achievements)
+   STATS ROW
    ========================================================================== */
 
 .achievement-stats-row {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 12px;
-    margin-top: var(--space-md, 16px);
-    padding-top: var(--space-md, 16px);
-    border-top: 1px solid var(--achievement-border, var(--color-border, #e0e0e0));
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-sm);
+    margin-top: var(--space-sm);
+    padding-top: var(--space-sm);
+    border-top: 1px solid var(--achievement-border);
+}
+
+@media (min-width: 400px) {
+    .achievement-stats-row {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+@media (min-width: 600px) {
+    .achievement-stats-row {
+        gap: var(--space-md);
+        margin-top: var(--space-md);
+        padding-top: var(--space-md);
+    }
 }
 
 .achievement-stat {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 4px;
-    padding: 12px 8px;
-    background: var(--achievement-badge-bg, #f0f2f5);
-    border-radius: var(--radius-md, 8px);
+    gap: 2px;
+    padding: var(--space-sm);
+    background: var(--achievement-badge-bg);
+    border-radius: var(--radius-sm);
+}
+
+@media (min-width: 600px) {
+    .achievement-stat {
+        gap: var(--space-xs);
+        padding: var(--space-md) var(--space-sm);
+        border-radius: var(--radius-md);
+    }
 }
 
 .achievement-stat-icon {
-    width: 24px;
-    height: 24px;
-    color: var(--color-accent, #61CE70);
+    width: 20px;
+    height: 20px;
+    color: var(--color-accent);
+}
+
+@media (min-width: 600px) {
+    .achievement-stat-icon {
+        width: 24px;
+        height: 24px;
+    }
 }
 
 .achievement-stat-icon.inactive {
-    color: var(--achievement-text-muted, #8a8a8a);
+    color: var(--achievement-text-muted);
     opacity: 0.5;
 }
 
 .achievement-stat-label {
-    font-size: 10px;
-    color: var(--achievement-text-muted, var(--color-text-muted, #8a8a8a));
+    font-size: 8px;
+    color: var(--achievement-text-muted);
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.3px;
     text-align: center;
 }
 
-.achievement-stat-value {
-    font-size: 12px;
-    font-weight: 600;
-    color: var(--achievement-text-primary, var(--color-text-primary, #171717));
+@media (min-width: 600px) {
+    .achievement-stat-label {
+        font-size: 10px;
+        letter-spacing: 0.5px;
+    }
 }
 
-/* Mobile: 2 columns on small screens */
-@media (max-width: 400px) {
-    .achievement-stats-row {
-        grid-template-columns: repeat(2, 1fr);
+.achievement-stat-value {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--achievement-text-primary);
+}
+
+@media (min-width: 600px) {
+    .achievement-stat-value {
+        font-size: 12px;
     }
 }
 
 /* ==========================================================================
-   CLUB BADGES - Extended Grid
+   CLUB BADGES
    ========================================================================== */
 
 .club-badge-grid {
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(2, 1fr);
 }
 
-@media (max-width: 768px) {
-    .club-badge-grid {
-        grid-template-columns: repeat(4, 1fr);
-    }
-}
-
-@media (max-width: 599px) {
+@media (min-width: 400px) {
     .club-badge-grid {
         grid-template-columns: repeat(3, 1fr);
     }
 }
 
-@media (max-width: 400px) {
+@media (min-width: 600px) {
     .club-badge-grid {
-        grid-template-columns: repeat(2, 1fr);
+        grid-template-columns: repeat(4, 1fr);
     }
 }
 
 /* ==========================================================================
-   ACHIEVEMENT LEVELS (tiered badges)
+   ACHIEVEMENT LEVELS
    ========================================================================== */
 
 .badge-item[data-level="bronze"] .badge-svg {
@@ -473,123 +608,200 @@
 }
 
 /* ==========================================================================
-   FUN BADGES CATEGORIES
-   ========================================================================== */
-
-/* Category colors for fun badges */
-.badge-item[data-category="loyalty"] {
-    --category-accent: var(--achievement-blue);
-}
-
-.badge-item[data-category="exploration"] {
-    --category-accent: var(--achievement-olive);
-}
-
-.badge-item[data-category="performance"] {
-    --category-accent: var(--achievement-green);
-}
-
-.badge-item[data-category="social"] {
-    --category-accent: var(--achievement-purple);
-}
-
-.badge-item[data-category="milestone"] {
-    --category-accent: var(--achievement-yellow);
-}
-
-.badge-item[data-category="seasonal"] {
-    --category-accent: var(--achievement-orange);
-}
-
-.badge-item[data-category="class"] {
-    --category-accent: var(--achievement-steel);
-}
-
-/* ==========================================================================
-   ACHIEVEMENTS EXPLANATION PAGE
+   ACHIEVEMENTS EXPLANATION PAGE - Mobile First
    ========================================================================== */
 
 .achievements-page {
     max-width: 900px;
     margin: 0 auto;
-    padding: var(--space-lg, 24px);
+    padding: var(--space-md);
+}
+
+@media (min-width: 600px) {
+    .achievements-page {
+        padding: var(--space-lg);
+    }
+}
+
+@media (min-width: 768px) {
+    .achievements-page {
+        padding: var(--space-xl);
+    }
 }
 
 .achievements-page-header {
     text-align: center;
-    margin-bottom: var(--space-2xl, 48px);
+    margin-bottom: var(--space-lg);
+}
+
+@media (min-width: 600px) {
+    .achievements-page-header {
+        margin-bottom: var(--space-2xl);
+    }
 }
 
 .achievements-page-title {
-    font-size: 28px;
+    font-size: 22px;
     font-weight: 700;
-    color: var(--achievement-text-primary, var(--color-text-primary, #171717));
-    margin-bottom: 8px;
+    color: var(--achievement-text-primary);
+    margin: 0 0 var(--space-xs) 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-sm);
+}
+
+@media (min-width: 600px) {
+    .achievements-page-title {
+        font-size: 28px;
+    }
 }
 
 .achievements-page-subtitle {
-    font-size: 14px;
-    color: var(--achievement-text-muted, var(--color-text-muted, #8a8a8a));
+    font-size: 13px;
+    color: var(--achievement-text-muted);
+    margin: 0;
+}
+
+@media (min-width: 600px) {
+    .achievements-page-subtitle {
+        font-size: 14px;
+    }
 }
 
 .achievements-category {
-    margin-bottom: var(--space-2xl, 48px);
+    margin-bottom: var(--space-xl);
+}
+
+@media (min-width: 600px) {
+    .achievements-category {
+        margin-bottom: var(--space-2xl);
+    }
 }
 
 .achievements-category-header {
     display: flex;
     align-items: center;
-    gap: 12px;
-    margin-bottom: var(--space-lg, 24px);
-    padding-bottom: 12px;
-    border-bottom: 2px solid var(--color-accent, #61CE70);
+    gap: var(--space-sm);
+    margin-bottom: var(--space-md);
+    padding-bottom: var(--space-sm);
+    border-bottom: 2px solid var(--color-accent);
+    flex-wrap: wrap;
+}
+
+@media (min-width: 600px) {
+    .achievements-category-header {
+        gap: var(--space-md);
+        margin-bottom: var(--space-lg);
+        padding-bottom: var(--space-md);
+    }
 }
 
 .achievements-category-icon {
-    width: 32px;
-    height: 32px;
-    color: var(--color-accent, #61CE70);
+    width: 24px;
+    height: 24px;
+    color: var(--color-accent);
+    flex-shrink: 0;
+}
+
+@media (min-width: 600px) {
+    .achievements-category-icon {
+        width: 32px;
+        height: 32px;
+    }
 }
 
 .achievements-category-title {
-    font-size: 20px;
+    font-size: 16px;
     font-weight: 600;
-    color: var(--achievement-text-primary, var(--color-text-primary, #171717));
+    color: var(--achievement-text-primary);
+    margin: 0;
+}
+
+@media (min-width: 600px) {
+    .achievements-category-title {
+        font-size: 20px;
+    }
 }
 
 .achievements-category-badge {
-    background: var(--color-accent, #61CE70);
+    background: var(--color-accent);
     color: #fff;
-    font-size: 11px;
+    font-size: 10px;
     font-weight: 600;
-    padding: 2px 8px;
-    border-radius: 12px;
+    padding: 2px 6px;
+    border-radius: var(--radius-full);
     margin-left: auto;
 }
 
+@media (min-width: 600px) {
+    .achievements-category-badge {
+        font-size: 11px;
+        padding: 2px 8px;
+    }
+}
+
+/* Achievement explanation cards - Single column on mobile */
 .achievements-list {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: var(--space-md, 16px);
+    grid-template-columns: 1fr;
+    gap: var(--space-sm);
+}
+
+@media (min-width: 500px) {
+    .achievements-list {
+        grid-template-columns: repeat(2, 1fr);
+        gap: var(--space-md);
+    }
+}
+
+@media (min-width: 800px) {
+    .achievements-list {
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    }
 }
 
 .achievement-explain-card {
-    background: var(--achievement-card-bg, #fff);
-    border: 1px solid var(--achievement-border, #e0e0e0);
-    border-radius: var(--radius-md, 10px);
-    padding: var(--space-md, 16px);
+    background: var(--achievement-card-bg);
+    border: 1px solid var(--achievement-border);
+    border-radius: var(--radius-md);
+    padding: var(--space-sm);
     display: flex;
-    gap: var(--space-md, 16px);
+    gap: var(--space-sm);
     transition: box-shadow var(--badge-transition), transform var(--badge-transition);
 }
 
+@media (min-width: 600px) {
+    .achievement-explain-card {
+        padding: var(--space-md);
+        gap: var(--space-md);
+        border-radius: var(--radius-lg);
+    }
+}
+
 .achievement-explain-card:hover {
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+    box-shadow: var(--shadow-md);
     transform: translateY(-2px);
+}
+
+.achievement-explain-card.locked {
+    opacity: 0.5;
 }
 
 .achievement-explain-icon {
     flex-shrink: 0;
+}
+
+.achievement-explain-icon .badge-svg {
+    width: 40px;
+    height: 40px;
+}
+
+@media (min-width: 600px) {
+    .achievement-explain-icon .badge-svg {
+        width: 48px;
+        height: 48px;
+    }
 }
 
 .achievement-explain-content {
@@ -598,72 +810,111 @@
 }
 
 .achievement-explain-name {
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 600;
-    color: var(--achievement-text-primary, var(--color-text-primary, #171717));
-    margin-bottom: 4px;
+    color: var(--achievement-text-primary);
+    margin: 0 0 2px 0;
+}
+
+@media (min-width: 600px) {
+    .achievement-explain-name {
+        font-size: 14px;
+        margin-bottom: var(--space-xs);
+    }
 }
 
 .achievement-explain-requirement {
-    font-size: 12px;
-    color: var(--color-accent, #61CE70);
-    margin-bottom: 6px;
+    font-size: 11px;
+    color: var(--color-accent);
+    margin: 0 0 var(--space-xs) 0;
+}
+
+@media (min-width: 600px) {
+    .achievement-explain-requirement {
+        font-size: 12px;
+        margin-bottom: var(--space-sm);
+    }
 }
 
 .achievement-explain-description {
-    font-size: 12px;
-    color: var(--achievement-text-muted, var(--color-text-muted, #8a8a8a));
+    font-size: 11px;
+    color: var(--achievement-text-muted);
     line-height: 1.4;
+    margin: 0;
+}
+
+@media (min-width: 600px) {
+    .achievement-explain-description {
+        font-size: 12px;
+    }
 }
 
 .achievement-explain-type {
     display: inline-flex;
     align-items: center;
-    gap: 4px;
-    font-size: 10px;
-    color: var(--achievement-text-muted, #8a8a8a);
-    background: var(--achievement-badge-bg, #f0f2f5);
-    padding: 2px 6px;
-    border-radius: 4px;
-    margin-top: 8px;
+    gap: 3px;
+    font-size: 9px;
+    color: var(--achievement-text-muted);
+    background: var(--achievement-badge-bg);
+    padding: 2px 5px;
+    border-radius: var(--radius-sm);
+    margin-top: var(--space-xs);
+}
+
+@media (min-width: 600px) {
+    .achievement-explain-type {
+        font-size: 10px;
+        gap: var(--space-xs);
+        padding: 2px 6px;
+        margin-top: var(--space-sm);
+    }
 }
 
 /* ==========================================================================
-   PROGRESS INDICATOR (for "next badge" feature)
+   PROGRESS INDICATOR
    ========================================================================== */
 
 .badge-progress {
     width: 100%;
     height: 3px;
-    background: var(--achievement-slider-inactive, #e5e7eb);
-    border-radius: 2px;
-    margin-top: 4px;
+    background: var(--achievement-slider-inactive);
+    border-radius: var(--radius-full);
+    margin-top: 3px;
     overflow: hidden;
 }
 
 .badge-progress-fill {
     height: 100%;
-    background: var(--color-accent, #61CE70);
-    border-radius: 2px;
+    background: var(--color-accent);
+    border-radius: var(--radius-full);
     transition: width 0.5s ease;
 }
 
 /* ==========================================================================
-   NOTIFICATION BADGE (new achievement)
+   NOTIFICATION BADGE
    ========================================================================== */
 
 .badge-item.new::before {
     content: 'NY!';
     position: absolute;
-    top: -4px;
-    right: -4px;
-    background: var(--color-danger, #ef4444);
+    top: -2px;
+    right: -2px;
+    background: var(--color-danger);
     color: #fff;
-    font-size: 8px;
+    font-size: 7px;
     font-weight: 700;
-    padding: 2px 4px;
-    border-radius: 4px;
+    padding: 1px 3px;
+    border-radius: var(--radius-sm);
     animation: pulse 2s infinite;
+}
+
+@media (min-width: 600px) {
+    .badge-item.new::before {
+        top: -4px;
+        right: -4px;
+        font-size: 8px;
+        padding: 2px 4px;
+    }
 }
 
 @keyframes pulse {
@@ -699,7 +950,7 @@
     animation: badgeUnlock 0.6s ease-out;
 }
 
-/* Glow effect for active/special badges */
+/* Glow effect */
 @keyframes badgeGlow {
     0%, 100% {
         filter: drop-shadow(0 0 4px var(--glow-color, #61CE70));
