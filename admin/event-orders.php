@@ -155,7 +155,7 @@ include __DIR__ . '/../includes/layout-header.php';
         <?php endif; ?>
 
         <!-- Stats -->
-        <div class="grid grid-cols-1 md-grid-cols-4 gap-md mb-lg">
+        <div class="grid grid-4 gap-md mb-lg">
             <div class="card">
                 <div class="card-body text-center">
                     <div class="text-3xl font-bold"><?= $stats['total'] ?? 0 ?></div>

@@ -133,28 +133,28 @@ include __DIR__ . '/../includes/layout-header.php';
         <?php endif; ?>
 
         <!-- Stats -->
-        <div class="grid grid-cols-2 gs-md-grid-cols-4 gap-md mb-lg">
+        <div class="grid grid-4 gap-md mb-lg">
             <div class="card">
                 <div class="card-body text-center">
-                    <div class="text-2xl font-bold"><?= $stats['total'] ?? 0 ?></div>
+                    <div class="text-3xl font-bold"><?= $stats['total'] ?? 0 ?></div>
                     <div class="text-sm text-secondary">Totalt</div>
                 </div>
             </div>
             <div class="card">
                 <div class="card-body text-center">
-                    <div class="text-2xl font-bold text-warning"><?= $stats['pending'] ?? 0 ?></div>
+                    <div class="text-3xl font-bold text-warning"><?= $stats['pending'] ?? 0 ?></div>
                     <div class="text-sm text-secondary">Väntande</div>
                 </div>
             </div>
             <div class="card">
                 <div class="card-body text-center">
-                    <div class="text-2xl font-bold text-success"><?= $stats['confirmed'] ?? 0 ?></div>
+                    <div class="text-3xl font-bold text-success"><?= $stats['confirmed'] ?? 0 ?></div>
                     <div class="text-sm text-secondary">Bekräftade</div>
                 </div>
             </div>
             <div class="card">
                 <div class="card-body text-center">
-                    <div class="text-2xl font-bold text-secondary"><?= $stats['cancelled'] ?? 0 ?></div>
+                    <div class="text-3xl font-bold text-secondary"><?= $stats['cancelled'] ?? 0 ?></div>
                     <div class="text-sm text-secondary">Avbrutna</div>
                 </div>
             </div>

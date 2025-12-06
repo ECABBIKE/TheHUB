@@ -33,7 +33,7 @@ $ADMIN_TABS = [
                 'label' => 'Resultat',
                 'icon' => 'trophy',
                 'url' => '/admin/results.php',
-                'pages' => ['results.php', 'edit-results.php', 'recalculate-results.php', 'clear-event-results.php', 'reset-results.php']
+                'pages' => ['results.php', 'edit-results.php', 'clear-event-results.php']
             ],
             [
                 'id' => 'venues',
@@ -43,18 +43,27 @@ $ADMIN_TABS = [
                 'pages' => ['venues.php']
             ],
             [
-                'id' => 'ticketing',
-                'label' => 'Biljetter',
-                'icon' => 'ticket',
-                'url' => '/admin/ticketing.php',
-                'pages' => ['ticketing.php', 'event-pricing.php', 'event-tickets.php', 'event-ticketing.php', 'refund-requests.php', 'pricing-templates.php']
-            ],
-            [
-                'id' => 'payments',
-                'label' => 'Betalningar',
-                'icon' => 'credit-card',
+                // EKONOMI - Samlar allt betalningsrelaterat på ett ställe
+                'id' => 'economy',
+                'label' => 'Ekonomi',
+                'icon' => 'wallet',
                 'url' => '/admin/orders.php',
-                'pages' => ['orders.php', 'payment-settings.php', 'event-payment.php', 'event-orders.php', 'event-registrations.php']
+                'pages' => [
+                    // Ordrar & betalningar
+                    'orders.php',
+                    'payment-settings.php',
+                    // Event-specifika
+                    'event-payment.php',
+                    'event-orders.php',
+                    'event-registrations.php',
+                    'event-ticketing.php',
+                    'event-pricing.php',
+                    // Biljetter & prismallar
+                    'ticketing.php',
+                    'event-tickets.php',
+                    'refund-requests.php',
+                    'pricing-templates.php'
+                ]
             ]
         ]
     ],
@@ -78,7 +87,7 @@ $ADMIN_TABS = [
                 'label' => 'Ranking',
                 'icon' => 'trending-up',
                 'url' => '/admin/ranking.php',
-                'pages' => ['ranking.php', 'ranking-debug.php', 'ranking-minimal.php', 'setup-ranking-system.php']
+                'pages' => ['ranking.php', 'ranking-minimal.php']
             ],
             [
                 'id' => 'club-points',
@@ -102,7 +111,7 @@ $ADMIN_TABS = [
                 'label' => 'Deltagare',
                 'icon' => 'user',
                 'url' => '/admin/riders.php',
-                'pages' => ['riders.php', 'rider-edit.php', 'rider-delete.php', 'find-duplicates.php', 'cleanup-duplicates.php']
+                'pages' => ['riders.php', 'rider-edit.php', 'rider-delete.php', 'find-duplicates.php', 'cleanup-duplicates.php', 'enrich-riders.php', 'check-license-numbers.php']
             ],
             [
                 'id' => 'clubs',
@@ -126,7 +135,7 @@ $ADMIN_TABS = [
                 'label' => 'Klasser',
                 'icon' => 'layers',
                 'url' => '/admin/classes.php',
-                'pages' => ['classes.php', 'reassign-classes.php', 'reset-classes.php', 'move-class-results.php']
+                'pages' => ['classes.php']
             ],
             [
                 'id' => 'license-matrix',
@@ -185,7 +194,7 @@ $ADMIN_TABS = [
                 'label' => 'Deltagare',
                 'icon' => 'user-plus',
                 'url' => '/admin/import-riders.php',
-                'pages' => ['import-riders.php', 'import-riders-flexible.php', 'import-riders-extended.php', 'import-gravity-id.php']
+                'pages' => ['import-riders.php', 'import-gravity-id.php']
             ],
             [
                 'id' => 'results',
@@ -205,8 +214,15 @@ $ADMIN_TABS = [
                 'id' => 'uci',
                 'label' => 'UCI',
                 'icon' => 'globe',
-                'url' => '/admin/import-uci-simple.php',
-                'pages' => ['import-uci-preview.php', 'import-uci-simple.php']
+                'url' => '/admin/import-uci.php',
+                'pages' => ['import-uci.php', 'import-uci-preview.php']
+            ],
+            [
+                'id' => 'venues',
+                'label' => 'Venues',
+                'icon' => 'mountain',
+                'url' => '/admin/import-venues.php',
+                'pages' => ['import-venues.php']
             ],
             [
                 'id' => 'history',
@@ -245,14 +261,14 @@ $ADMIN_TABS = [
                 'label' => 'Databas',
                 'icon' => 'server',
                 'url' => '/admin/system-settings.php',
-                'pages' => ['system-settings.php', 'settings.php', 'setup-database.php', 'run-migrations.php']
+                'pages' => ['system-settings.php', 'settings.php', 'run-migrations.php', 'tools.php', 'recalculate-all-points.php', 'fix-time-format.php', 'debug-series-points.php', 'clear-cache.php']
             ],
             [
-                'id' => 'debug',
-                'label' => 'Debug',
-                'icon' => 'bug',
-                'url' => '/admin/debug.php',
-                'pages' => ['debug.php']
+                'id' => 'media',
+                'label' => 'Media',
+                'icon' => 'image',
+                'url' => '/admin/media.php',
+                'pages' => ['media.php', 'sponsors.php']
             ]
         ]
     ]

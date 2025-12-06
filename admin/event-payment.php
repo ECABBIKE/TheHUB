@@ -226,7 +226,7 @@ include __DIR__ . '/../includes/layout-header.php';
         <?php endif; ?>
 
         <!-- Stats -->
-        <div class="grid grid-cols-1 md-grid-cols-4 gap-md mb-lg">
+        <div class="grid grid-4 gap-md mb-lg">
             <div class="card">
                 <div class="card-body text-center">
                     <div class="text-3xl font-bold text-warning"><?= $orderStats['pending_orders'] ?? 0 ?></div>
@@ -266,7 +266,7 @@ include __DIR__ . '/../includes/layout-header.php';
                     <?= csrf_field() ?>
                     <input type="hidden" name="action" value="save_settings">
 
-                    <div class="grid grid-cols-1 md-grid-cols-2 gap-lg">
+                    <div class="grid grid-2 gap-lg">
                         <div class="form-group">
                             <label class="checkbox-label">
                                 <input type="checkbox" name="ticketing_enabled" value="1"
@@ -339,7 +339,7 @@ include __DIR__ . '/../includes/layout-header.php';
                                 <i data-lucide="smartphone"></i>
                                 Swish
                             </h3>
-                            <div class="grid grid-cols-1 md-grid-cols-3 gap-md mb-lg">
+                            <div class="grid grid-3 gap-md mb-lg">
                                 <div class="form-group">
                                     <label class="checkbox-label">
                                         <input type="checkbox" name="swish_enabled" value="1"
@@ -366,7 +366,7 @@ include __DIR__ . '/../includes/layout-header.php';
                                 <i data-lucide="credit-card"></i>
                                 Kortbetalning
                             </h3>
-                            <div class="grid grid-cols-1 md-grid-cols-2 gap-md">
+                            <div class="grid grid-2 gap-md">
                                 <div class="form-group">
                                     <label class="checkbox-label">
                                         <input type="checkbox" name="card_enabled" value="1"
@@ -388,7 +388,7 @@ include __DIR__ . '/../includes/layout-header.php';
                     <?php if (!$eventPaymentConfig && $paymentConfig): ?>
                     <div id="inherited-config-display" class="p-md bg-muted rounded-md mb-lg">
                         <h4 class="text-sm font-medium text-secondary mb-sm">Ärvda inställningar:</h4>
-                        <div class="grid grid-cols-2 gap-sm text-sm">
+                        <div class="grid grid-2 gap-sm text-sm">
                             <div>
                                 <span class="text-secondary">Swish:</span>
                                 <?= $paymentConfig['swish_enabled'] ? '<span class="badge badge-success">Aktivt</span>' : '<span class="badge badge-secondary">Inaktivt</span>' ?>
