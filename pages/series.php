@@ -10,9 +10,26 @@ require_once HUB_V3_ROOT . '/components/series-badge.php';
 
 $db = hub_db();
 
+// Get selected year from query string (default to current year)
+$currentYear = (int)date('Y');
+$selectedYear = isset($_GET['year']) ? (int)$_GET['year'] : $currentYear;
+
 try {
-    // Get all series with event and participant counts (including badge styling fields)
-    $series = $db->query("
+    // Get all available years that have series
+    $availableYears = $db->query("
+        SELECT DISTINCT year
+        FROM series
+        WHERE status IN ('active', 'completed') AND year IS NOT NULL
+        ORDER BY year DESC
+    ")->fetchAll(PDO::FETCH_COLUMN);
+
+    // If selected year not in available years, default to most recent
+    if (!in_array($selectedYear, $availableYears) && !empty($availableYears)) {
+        $selectedYear = $availableYears[0];
+    }
+
+    // Get series for selected year
+    $stmt = $db->prepare("
         SELECT s.id, s.name, s.slug, s.description, s.year, s.status,
                s.type, s.discipline,
                s.logo, s.logo_light, s.logo_dark,
@@ -24,26 +41,31 @@ try {
                 WHERE e2.series_id = s.id) as participant_count
         FROM series s
         LEFT JOIN events e ON s.id = e.series_id
-        WHERE s.status IN ('active', 'completed')
+        WHERE s.status IN ('active', 'completed') AND s.year = ?
         GROUP BY s.id
-        ORDER BY s.year DESC, s.name ASC
-    ")->fetchAll(PDO::FETCH_ASSOC);
+        ORDER BY s.name ASC
+    ");
+    $stmt->execute([$selectedYear]);
+    $series = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     $totalSeries = count($series);
     $totalEvents = array_sum(array_column($series, 'event_count'));
 
-    // Count unique participants across all series
-    $uniqueParticipants = $db->query("
+    // Count unique participants for selected year
+    $stmt = $db->prepare("
         SELECT COUNT(DISTINCT r.cyclist_id) as total
         FROM results r
         JOIN events e ON r.event_id = e.id
         JOIN series s ON e.series_id = s.id
-        WHERE s.status IN ('active', 'completed')
-    ")->fetch(PDO::FETCH_ASSOC);
+        WHERE s.status IN ('active', 'completed') AND s.year = ?
+    ");
+    $stmt->execute([$selectedYear]);
+    $uniqueParticipants = $stmt->fetch(PDO::FETCH_ASSOC);
     $totalParticipants = $uniqueParticipants['total'] ?? 0;
 
 } catch (Exception $e) {
     $series = [];
+    $availableYears = [$currentYear];
     $totalSeries = 0;
     $totalEvents = 0;
     $totalParticipants = 0;
@@ -52,8 +74,22 @@ try {
 ?>
 
 <div class="page-header">
-  <h1 class="page-title">Tävlingsserier</h1>
-  <p class="page-subtitle">Alla GravitySeries och andra tävlingsserier</p>
+  <div class="page-header-row">
+    <div>
+      <h1 class="page-title">Tävlingsserier <?= $selectedYear ?></h1>
+      <p class="page-subtitle">Alla GravitySeries och andra tävlingsserier</p>
+    </div>
+    <?php if (count($availableYears) > 1): ?>
+    <div class="year-selector">
+      <label for="year-select" class="sr-only">Välj år</label>
+      <select id="year-select" class="year-select" onchange="window.location.href='?year=' + this.value">
+        <?php foreach ($availableYears as $year): ?>
+          <option value="<?= $year ?>" <?= $year == $selectedYear ? 'selected' : '' ?>><?= $year ?></option>
+        <?php endforeach; ?>
+      </select>
+    </div>
+    <?php endif; ?>
+  </div>
 </div>
 
 <!-- Stats -->
@@ -106,6 +142,12 @@ try {
 .page-header {
   margin-bottom: var(--space-lg);
 }
+.page-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--space-md);
+}
 .page-title {
   font-size: var(--text-2xl);
   font-weight: var(--weight-bold);
@@ -114,6 +156,44 @@ try {
 .page-subtitle {
   color: var(--color-text-secondary);
   margin: 0;
+}
+
+/* Year Selector */
+.year-selector {
+  flex-shrink: 0;
+}
+.year-select {
+  appearance: none;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-sm) var(--space-xl) var(--space-sm) var(--space-md);
+  font-size: var(--text-base);
+  font-weight: var(--weight-semibold);
+  color: var(--color-text);
+  cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%237A7A7A' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right var(--space-sm) center;
+  min-width: 100px;
+}
+.year-select:hover {
+  border-color: var(--color-accent);
+}
+.year-select:focus {
+  outline: none;
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 2px rgba(97, 206, 112, 0.2);
+}
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
 }
 
 .mb-lg { margin-bottom: var(--space-lg); }
@@ -160,6 +240,13 @@ try {
 }
 
 @media (max-width: 599px) {
+  .page-header-row {
+    flex-direction: column;
+    gap: var(--space-sm);
+  }
+  .year-selector {
+    align-self: flex-start;
+  }
   .stats-row {
     gap: var(--space-md);
   }
