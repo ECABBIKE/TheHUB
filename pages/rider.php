@@ -32,21 +32,59 @@ if (!$riderId) {
 }
 
 try {
-    // Fetch rider details with new fields
-    $stmt = $db->prepare("
-        SELECT
-            r.id, r.firstname, r.lastname, r.birth_year, r.gender,
-            r.license_number, r.license_type, r.license_year, r.license_valid_until, r.gravity_id, r.active,
-            r.social_instagram, r.social_facebook, r.social_strava, r.social_youtube, r.social_tiktok,
-            r.stats_total_starts, r.stats_total_finished, r.stats_total_wins, r.stats_total_podiums,
-            r.first_season, r.experience_level,
-            c.id as club_id, c.name as club_name, c.city as club_city
-        FROM riders r
-        LEFT JOIN clubs c ON r.club_id = c.id
-        WHERE r.id = ?
-    ");
-    $stmt->execute([$riderId]);
-    $rider = $stmt->fetch(PDO::FETCH_ASSOC);
+    // Try to fetch rider with new profile fields first
+    $rider = null;
+    $hasNewColumns = true;
+
+    try {
+        $stmt = $db->prepare("
+            SELECT
+                r.id, r.firstname, r.lastname, r.birth_year, r.gender,
+                r.license_number, r.license_type, r.license_year, r.license_valid_until, r.gravity_id, r.active,
+                r.social_instagram, r.social_facebook, r.social_strava, r.social_youtube, r.social_tiktok,
+                r.stats_total_starts, r.stats_total_finished, r.stats_total_wins, r.stats_total_podiums,
+                r.first_season, r.experience_level,
+                c.id as club_id, c.name as club_name, c.city as club_city
+            FROM riders r
+            LEFT JOIN clubs c ON r.club_id = c.id
+            WHERE r.id = ?
+        ");
+        $stmt->execute([$riderId]);
+        $rider = $stmt->fetch(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        // New columns don't exist yet - use basic query
+        $hasNewColumns = false;
+    }
+
+    // Fallback to basic query if new columns don't exist
+    if (!$rider && !$hasNewColumns) {
+        $stmt = $db->prepare("
+            SELECT
+                r.id, r.firstname, r.lastname, r.birth_year, r.gender,
+                r.license_number, r.license_type, r.license_year, r.license_valid_until, r.gravity_id, r.active,
+                c.id as club_id, c.name as club_name, c.city as club_city
+            FROM riders r
+            LEFT JOIN clubs c ON r.club_id = c.id
+            WHERE r.id = ?
+        ");
+        $stmt->execute([$riderId]);
+        $rider = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        // Set defaults for missing columns
+        if ($rider) {
+            $rider['social_instagram'] = null;
+            $rider['social_facebook'] = null;
+            $rider['social_strava'] = null;
+            $rider['social_youtube'] = null;
+            $rider['social_tiktok'] = null;
+            $rider['stats_total_starts'] = 0;
+            $rider['stats_total_finished'] = 0;
+            $rider['stats_total_wins'] = 0;
+            $rider['stats_total_podiums'] = 0;
+            $rider['first_season'] = null;
+            $rider['experience_level'] = 1;
+        }
+    }
 
     if (!$rider) {
         include HUB_V3_ROOT . '/pages/404.php';
