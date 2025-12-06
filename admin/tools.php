@@ -448,6 +448,29 @@ include __DIR__ . '/components/unified-layout.php';
     </div>
 </div>
 
+<h3 class="section-title">Statistik & Utmärkelser</h3>
+
+<div class="tools-grid">
+    <!-- Rebuild Stats -->
+    <div class="tool-card">
+        <div class="tool-card-header">
+            <div class="tool-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/></svg>
+            </div>
+            <div>
+                <h4 class="tool-title">Räkna om statistik</h4>
+                <p class="tool-description">Uppdatera åkarstatistik och utmärkelser efter resultatimport</p>
+            </div>
+        </div>
+        <div class="tool-actions">
+            <a href="/admin/rebuild-stats" class="btn-admin btn-admin-primary" style="flex: 1;">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px;"><path d="M21.5 2v6h-6M2.5 22v-6h6"/></svg>
+                Rebuild statistik
+            </a>
+        </div>
+    </div>
+</div>
+
 <h3 class="section-title">Cache & System</h3>
 
 <div class="tools-grid">
