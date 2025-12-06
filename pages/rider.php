@@ -1,12 +1,18 @@
 <?php
 /**
- * V3 Single Rider Page - Rider profile with results and ranking
+ * V3 Single Rider Page - Redesigned Profile with Achievements & Series Standings
  */
 
 $db = hub_db();
 $riderId = intval($pageInfo['params']['id'] ?? 0);
 
-// Include ranking functions for weighted ranking display
+// Include rebuild functions for achievements
+$rebuildPath = dirname(__DIR__) . '/includes/rebuild-rider-stats.php';
+if (file_exists($rebuildPath)) {
+    require_once $rebuildPath;
+}
+
+// Include ranking functions
 $rankingFunctionsLoaded = false;
 $rankingPaths = [
     dirname(__DIR__) . '/includes/ranking_functions.php',
@@ -21,1392 +27,1105 @@ foreach ($rankingPaths as $path) {
 }
 
 if (!$riderId) {
- header('Location: /riders');
- exit;
+    header('Location: /riders');
+    exit;
 }
 
 try {
- // Fetch rider details
- $stmt = $db->prepare("
- SELECT
-  r.id, r.firstname, r.lastname, r.birth_year, r.gender,
-  r.license_number, r.license_type, r.license_year, r.license_valid_until, r.gravity_id, r.active,
-  c.id as club_id, c.name as club_name, c.city as club_city
- FROM riders r
- LEFT JOIN clubs c ON r.club_id = c.id
- WHERE r.id = ?
-");
- $stmt->execute([$riderId]);
- $rider = $stmt->fetch(PDO::FETCH_ASSOC);
+    // Fetch rider details with new fields
+    $stmt = $db->prepare("
+        SELECT
+            r.id, r.firstname, r.lastname, r.birth_year, r.gender,
+            r.license_number, r.license_type, r.license_year, r.license_valid_until, r.gravity_id, r.active,
+            r.social_instagram, r.social_facebook, r.social_strava, r.social_youtube, r.social_tiktok,
+            r.stats_total_starts, r.stats_total_finished, r.stats_total_wins, r.stats_total_podiums,
+            r.first_season, r.experience_level,
+            c.id as club_id, c.name as club_name, c.city as club_city
+        FROM riders r
+        LEFT JOIN clubs c ON r.club_id = c.id
+        WHERE r.id = ?
+    ");
+    $stmt->execute([$riderId]);
+    $rider = $stmt->fetch(PDO::FETCH_ASSOC);
 
- if (!$rider) {
- include HUB_V3_ROOT . '/pages/404.php';
- return;
- }
+    if (!$rider) {
+        include HUB_V3_ROOT . '/pages/404.php';
+        return;
+    }
 
- // Fetch rider's results with calculated class position (exclude DNS)
- $stmt = $db->prepare("
- SELECT
-  res.id, res.finish_time, res.status, res.points, res.position,
-  res.event_id, res.class_id,
-  e.id as event_id, e.name as event_name, e.date as event_date, e.location,
-  s.id as series_id, s.name as series_name,
-  cls.display_name as class_name,
-  COALESCE(cls.awards_points, 1) as awards_podiums,
-  (
-  SELECT COUNT(*) + 1
-  FROM results r2
-  WHERE r2.event_id = res.event_id
-  AND r2.class_id = res.class_id
-  AND r2.status = 'finished'
-  AND r2.id != res.id
-  AND (
-   CASE
-   WHEN r2.finish_time LIKE '%:%:%' THEN
-    CAST(SUBSTRING_INDEX(r2.finish_time, ':', 1) AS DECIMAL(10,2)) * 3600 +
-    CAST(SUBSTRING_INDEX(SUBSTRING_INDEX(r2.finish_time, ':', 2), ':', -1) AS DECIMAL(10,2)) * 60 +
-    CAST(SUBSTRING_INDEX(r2.finish_time, ':', -1) AS DECIMAL(10,2))
-   ELSE
-    CAST(SUBSTRING_INDEX(r2.finish_time, ':', 1) AS DECIMAL(10,2)) * 60 +
-    CAST(SUBSTRING_INDEX(r2.finish_time, ':', -1) AS DECIMAL(10,2))
-   END
-   <
-   CASE
-   WHEN res.finish_time LIKE '%:%:%' THEN
-    CAST(SUBSTRING_INDEX(res.finish_time, ':', 1) AS DECIMAL(10,2)) * 3600 +
-    CAST(SUBSTRING_INDEX(SUBSTRING_INDEX(res.finish_time, ':', 2), ':', -1) AS DECIMAL(10,2)) * 60 +
-    CAST(SUBSTRING_INDEX(res.finish_time, ':', -1) AS DECIMAL(10,2))
-   ELSE
-    CAST(SUBSTRING_INDEX(res.finish_time, ':', 1) AS DECIMAL(10,2)) * 60 +
-    CAST(SUBSTRING_INDEX(res.finish_time, ':', -1) AS DECIMAL(10,2))
-   END
-  )
-  ) as class_position
- FROM results res
- JOIN events e ON res.event_id = e.id
- LEFT JOIN series s ON e.series_id = s.id
- LEFT JOIN classes cls ON res.class_id = cls.id
- WHERE res.cyclist_id = ? AND res.status != 'dns'
- ORDER BY e.date DESC
-");
- $stmt->execute([$riderId]);
- $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    // Fetch rider's results
+    $stmt = $db->prepare("
+        SELECT
+            res.id, res.finish_time, res.status, res.points, res.position,
+            res.event_id, res.class_id,
+            e.id as event_id, e.name as event_name, e.date as event_date, e.location,
+            s.id as series_id, s.name as series_name,
+            cls.display_name as class_name,
+            COALESCE(cls.awards_points, 1) as awards_podiums
+        FROM results res
+        JOIN events e ON res.event_id = e.id
+        LEFT JOIN series s ON e.series_id = s.id
+        LEFT JOIN classes c ON res.class_id = c.id
+        LEFT JOIN classes cls ON res.class_id = cls.id
+        WHERE res.cyclist_id = ? AND res.status != 'dns'
+        ORDER BY e.date DESC
+    ");
+    $stmt->execute([$riderId]);
+    $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
- // Fix: class_position only valid for finished results
- // Also check class name for motion/sport patterns (backup until migration runs)
- foreach ($results as &$result) {
- if ($result['status'] !== 'finished') {
-  $result['class_position'] = null;
- }
- // Override awards_podiums based on class name pattern (motion/sport = non-competitive)
- $className = strtolower($result['class_name'] ?? '');
- if (strpos($className, 'motion') !== false || strpos($className, 'sport') !== false) {
-  $result['awards_podiums'] = 0;
- }
- }
- unset($result);
+    // Calculate stats from results if not cached
+    $totalStarts = $rider['stats_total_starts'] ?: count($results);
+    $finishedRaces = $rider['stats_total_finished'] ?: count(array_filter($results, fn($r) => $r['status'] === 'finished'));
+    $wins = $rider['stats_total_wins'] ?: count(array_filter($results, fn($r) => $r['position'] == 1 && $r['status'] === 'finished'));
+    $podiums = $rider['stats_total_podiums'] ?: count(array_filter($results, fn($r) => $r['position'] <= 3 && $r['status'] === 'finished'));
 
- // Calculate stats - only count podiums/wins from competitive classes (awards_points = 1)
- $totalStarts = count($results);
- $finishedRaces = count(array_filter($results, fn($r) => $r['status'] === 'finished'));
- $totalPoints = array_sum(array_column($results, 'points'));
- // Motion/Sportmotion classes don't count for podiums/wins (awards_points = 0 or name contains motion/sport)
- $podiums = count(array_filter($results, fn($r) => $r['class_position'] && $r['class_position'] <= 3 && $r['awards_podiums']));
- $wins = count(array_filter($results, fn($r) => $r['class_position'] == 1 && $r['awards_podiums']));
- // Best position also only counts competitive classes
- $bestPosition = null;
- foreach ($results as $r) {
- if ($r['class_position'] && $r['status'] === 'finished' && $r['awards_podiums']) {
-  if (!$bestPosition || $r['class_position'] < $bestPosition) {
-  $bestPosition = (int)$r['class_position'];
-  }
- }
- }
+    // Calculate age
+    $currentYear = date('Y');
+    $age = ($rider['birth_year'] && $rider['birth_year'] > 0) ? ($currentYear - $rider['birth_year']) : null;
 
- // Calculate age
- $currentYear = date('Y');
- $age = ($rider['birth_year'] && $rider['birth_year'] > 0)
- ? ($currentYear - $rider['birth_year'])
- : null;
+    // Get achievements
+    $achievements = [];
+    if (function_exists('getRiderAchievements')) {
+        $achievements = getRiderAchievements($db, $riderId);
+    }
 
- // GravitySeries Total stats
- $gravityTotalPoints = 0;
- $gravityTotalPosition = null;
- $gravityTotalClassTotal = 0;
- $gravityClassName = null;
+    // Get social profiles
+    $socialProfiles = [];
+    if (function_exists('getRiderSocialProfiles')) {
+        $socialProfiles = getRiderSocialProfiles($db, $riderId);
+    }
 
- // Find GravitySeries Total series
- $stmt = $db->prepare("
- SELECT id, name FROM series
- WHERE id = 8
- OR (active = 1 AND (name LIKE '%Total%' OR name LIKE '%GravitySeries%'))
- ORDER BY (id = 8) DESC, year DESC
- LIMIT 1
-");
- $stmt->execute();
- $totalSeries = $stmt->fetch(PDO::FETCH_ASSOC);
+    // Get series standings
+    $seriesStandings = [];
+    if (function_exists('getRiderSeriesStandings')) {
+        $seriesStandings = getRiderSeriesStandings($db, $riderId);
+    }
 
- if ($totalSeries) {
- // Get rider's series points (from series_results if exists, otherwise from results)
- $stmt = $db->prepare("
-  SELECT COALESCE(SUM(sr.points), 0) as total_points
-  FROM series_results sr
-  WHERE sr.series_id = ? AND sr.cyclist_id = ?
- ");
- $stmt->execute([$totalSeries['id'], $riderId]);
- $seriesStats = $stmt->fetch(PDO::FETCH_ASSOC);
+    // Get ranking position
+    $rankingPosition = null;
+    $rankingPoints = 0;
+    $parentDb = function_exists('getDB') ? getDB() : null;
+    if ($rankingFunctionsLoaded && $parentDb && function_exists('getRiderRankingDetails')) {
+        $riderRankingDetails = getRiderRankingDetails($parentDb, $riderId, 'GRAVITY');
+        if ($riderRankingDetails) {
+            $rankingPoints = $riderRankingDetails['total_ranking_points'] ?? 0;
+            $rankingPosition = $riderRankingDetails['ranking_position'] ?? null;
+        }
+    }
 
- if ($seriesStats && $seriesStats['total_points'] > 0) {
-  $gravityTotalPoints = $seriesStats['total_points'];
- } else {
-  // Fallback: sum from results table
-  $stmt = $db->prepare("
-  SELECT COALESCE(SUM(res.points), 0) as total_points
-  FROM results res
-  JOIN events e ON res.event_id = e.id
-  LEFT JOIN series_events se ON e.id = se.event_id
-  WHERE (e.series_id = ? OR se.series_id = ?)
-  AND res.cyclist_id = ? AND res.status = 'finished'
- ");
-  $stmt->execute([$totalSeries['id'], $totalSeries['id'], $riderId]);
-  $fallbackStats = $stmt->fetch(PDO::FETCH_ASSOC);
-  $gravityTotalPoints = $fallbackStats['total_points'] ?? 0;
- }
+    // Experience level info
+    $experienceLevel = $rider['experience_level'] ?? 1;
+    $experienceInfo = [
+        1 => ['name' => '1st Year', 'icon' => '⭐'],
+        2 => ['name' => '2nd Year', 'icon' => '⭐'],
+        3 => ['name' => 'Experienced', 'icon' => '⭐'],
+        4 => ['name' => 'Expert', 'icon' => '🌟'],
+        5 => ['name' => 'Veteran', 'icon' => '👑']
+    ];
+    $expInfo = $experienceInfo[$experienceLevel] ?? $experienceInfo[1];
 
- // Get rider's most common class in this series
- $stmt = $db->prepare("
-  SELECT cls.display_name, COUNT(*) as cnt
-  FROM results res
-  JOIN events e ON res.event_id = e.id
-  LEFT JOIN series_events se ON e.id = se.event_id
-  LEFT JOIN classes cls ON res.class_id = cls.id
-  WHERE (e.series_id = ? OR se.series_id = ?)
-  AND res.cyclist_id = ? AND res.status = 'finished' AND cls.id IS NOT NULL
-  GROUP BY cls.id
-  ORDER BY cnt DESC
-  LIMIT 1
- ");
- $stmt->execute([$totalSeries['id'], $totalSeries['id'], $riderId]);
- $classResult = $stmt->fetch(PDO::FETCH_ASSOC);
- $gravityClassName = $classResult['display_name'] ?? null;
+    // Check for profile image
+    $profileImage = null;
+    $profileImageDir = dirname(__DIR__) . '/uploads/riders/';
+    $profileImageUrl = '/uploads/riders/';
+    foreach (['jpg', 'jpeg', 'png', 'webp'] as $ext) {
+        if (file_exists($profileImageDir . $riderId . '.' . $ext)) {
+            $profileImage = $profileImageUrl . $riderId . '.' . $ext . '?v=' . filemtime($profileImageDir . $riderId . '.' . $ext);
+            break;
+        }
+    }
 
- // Get position in series (by total points)
- if ($gravityTotalPoints > 0) {
-  $stmt = $db->prepare("
-  SELECT cyclist_id, SUM(points) as total_points
-  FROM series_results
-  WHERE series_id = ?
-  GROUP BY cyclist_id
-  ORDER BY total_points DESC
- ");
-  $stmt->execute([$totalSeries['id']]);
-  $standings = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-  $gravityTotalClassTotal = count($standings);
-  $position = 1;
-  foreach ($standings as $standing) {
-  if ($standing['cyclist_id'] == $riderId) {
-   $gravityTotalPosition = $position;
-   break;
-  }
-  $position++;
-  }
- }
- }
-
- // GravitySeries Team stats (club ranking)
- $gravityTeamPoints = 0;
- $gravityTeamPosition = null;
- $gravityTeamTotal = 0;
-
- if ($totalSeries && $rider['club_id']) {
- // Get club's total points in this series
- $stmt = $db->prepare("
-  SELECT COALESCE(SUM(sr.points), 0) as total_points
-  FROM series_results sr
-  JOIN riders r ON sr.cyclist_id = r.id
-  WHERE sr.series_id = ? AND r.club_id = ?
- ");
- $stmt->execute([$totalSeries['id'], $rider['club_id']]);
- $teamStats = $stmt->fetch(PDO::FETCH_ASSOC);
- $gravityTeamPoints = $teamStats['total_points'] ?? 0;
-
- // Get team position among all clubs
- if ($gravityTeamPoints > 0) {
-  $stmt = $db->prepare("
-  SELECT r.club_id, SUM(sr.points) as total_points
-  FROM series_results sr
-  JOIN riders r ON sr.cyclist_id = r.id
-  WHERE sr.series_id = ? AND r.club_id IS NOT NULL
-  GROUP BY r.club_id
-  ORDER BY total_points DESC
- ");
-  $stmt->execute([$totalSeries['id']]);
-  $teamStandings = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-  $gravityTeamTotal = count($teamStandings);
-  $position = 1;
-  foreach ($teamStandings as $team) {
-  if ($team['club_id'] == $rider['club_id']) {
-   $gravityTeamPosition = $position;
-   break;
-  }
-  $position++;
-  }
- }
- }
-
- // GS Total - Event breakdown (which events gave points)
- $gsEventBreakdown = [];
- if ($totalSeries) {
- $stmt = $db->prepare("
-  SELECT
-  sr.points,
-  e.id as event_id,
-  e.name as event_name,
-  e.date as event_date,
-  cls.display_name as class_name
-  FROM series_results sr
-  JOIN events e ON sr.event_id = e.id
-  LEFT JOIN classes cls ON sr.class_id = cls.id
-  WHERE sr.series_id = ? AND sr.cyclist_id = ? AND sr.points > 0
-  ORDER BY e.date DESC
- ");
- $stmt->execute([$totalSeries['id'], $riderId]);
- $gsEventBreakdown = $stmt->fetchAll(PDO::FETCH_ASSOC);
- }
-
- // Ranking stats (24 months rolling) - using weighted ranking system
- $rankingPoints = 0;
- $rankingPosition = null;
- $rankingTotal = 0;
- $rankingMonths = 24;
- $rankingEventBreakdown = [];
-
- // Get parent db for ranking functions
- $parentDb = function_exists('getDB') ? getDB() : null;
-
- if ($rankingFunctionsLoaded && $parentDb && function_exists('getRiderRankingDetails')) {
-     // Use the weighted ranking system
-     $riderRankingDetails = getRiderRankingDetails($parentDb, $riderId, 'GRAVITY');
-
-     if ($riderRankingDetails) {
-         $rankingPoints = $riderRankingDetails['total_ranking_points'] ?? 0;
-         $rankingPosition = $riderRankingDetails['ranking_position'] ?? null;
-         $rankingEventBreakdown = $riderRankingDetails['events'] ?? [];
-
-         // Get total riders count from ranking stats
-         if (function_exists('getRankingStats')) {
-             $stats = getRankingStats($parentDb);
-             $rankingTotal = $stats['GRAVITY']['riders'] ?? 0;
-         }
-     }
- } else {
-     // Fallback: Simple sum (no weighting)
-     $cutoffDate = date('Y-m-d', strtotime("-{$rankingMonths} months"));
-
-     $stmt = $db->prepare("
-         SELECT COALESCE(SUM(res.points), 0) as total_points
-         FROM results res
-         JOIN events e ON res.event_id = e.id
-         WHERE res.cyclist_id = ?
-         AND res.status = 'finished'
-         AND res.points > 0
-         AND e.date >= ?
-     ");
-     $stmt->execute([$riderId, $cutoffDate]);
-     $rankingStats = $stmt->fetch(PDO::FETCH_ASSOC);
-     $rankingPoints = $rankingStats['total_points'] ?? 0;
-
-     if ($rankingPoints > 0) {
-         $stmt = $db->prepare("
-             SELECT res.cyclist_id, SUM(res.points) as total_points
-             FROM results res
-             JOIN events e ON res.event_id = e.id
-             WHERE res.status = 'finished'
-             AND res.points > 0
-             AND e.date >= ?
-             GROUP BY res.cyclist_id
-             ORDER BY total_points DESC
-         ");
-         $stmt->execute([$cutoffDate]);
-         $allRankings = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-         $rankingTotal = count($allRankings);
-         $position = 1;
-         foreach ($allRankings as $ranking) {
-             if ($ranking['cyclist_id'] == $riderId) {
-                 $rankingPosition = $position;
-                 break;
-             }
-             $position++;
-         }
-     }
- }
+    // Check license status
+    $hasLicense = !empty($rider['license_type']);
+    $licenseActive = false;
+    if ($hasLicense) {
+        if (!empty($rider['license_year']) && $rider['license_year'] >= date('Y')) {
+            $licenseActive = true;
+        } elseif (!empty($rider['license_valid_until']) && $rider['license_valid_until'] !== '0000-00-00') {
+            $licenseActive = strtotime($rider['license_valid_until']) >= strtotime('today');
+        }
+    }
 
 } catch (Exception $e) {
- $error = $e->getMessage();
- $rider = null;
+    $error = $e->getMessage();
+    $rider = null;
 }
 
 if (!$rider) {
- include HUB_V3_ROOT . '/pages/404.php';
- return;
+    include HUB_V3_ROOT . '/pages/404.php';
+    return;
 }
 
 $fullName = htmlspecialchars($rider['firstname'] . ' ' . $rider['lastname']);
 
-// Check for profile image
-$profileImage = null;
-$profileImageDir = dirname(__DIR__) . '/uploads/riders/';
-$profileImageUrl = '/uploads/riders/';
-foreach (['jpg', 'jpeg', 'png', 'webp'] as $ext) {
-    if (file_exists($profileImageDir . $riderId . '.' . $ext)) {
-        $profileImage = $profileImageUrl . $riderId . '.' . $ext . '?v=' . filemtime($profileImageDir . $riderId . '.' . $ext);
-        break;
+// Process achievements for display
+$achievementCounts = ['gold' => 0, 'silver' => 0, 'bronze' => 0, 'hot_streak' => 0];
+$isSeriesLeader = false;
+$isSeriesChampion = false;
+$finisher100 = false;
+
+foreach ($achievements as $ach) {
+    switch ($ach['achievement_type']) {
+        case 'gold': $achievementCounts['gold'] = (int)$ach['achievement_value']; break;
+        case 'silver': $achievementCounts['silver'] = (int)$ach['achievement_value']; break;
+        case 'bronze': $achievementCounts['bronze'] = (int)$ach['achievement_value']; break;
+        case 'hot_streak': $achievementCounts['hot_streak'] = (int)$ach['achievement_value']; break;
+        case 'series_leader': $isSeriesLeader = true; break;
+        case 'series_champion': $isSeriesChampion = true; break;
+        case 'finisher_100': $finisher100 = true; break;
     }
 }
 
-// Check license status
-$hasLicense = !empty($rider['license_type']);
-$licenseActive = false;
-if ($hasLicense) {
-    // Check license_year first (e.g., 2025 = active if current year <= 2025)
-    if (!empty($rider['license_year']) && $rider['license_year'] >= date('Y')) {
-        $licenseActive = true;
-    }
-    // Fallback to license_valid_until
-    elseif (!empty($rider['license_valid_until']) && $rider['license_valid_until'] !== '0000-00-00') {
-        $licenseActive = strtotime($rider['license_valid_until']) >= strtotime('today');
-    }
-}
-
-// Extract Gravity ID number (e.g., "GID-034" -> "34")
-$gravityIdNumber = null;
-if (!empty($rider['gravity_id'])) {
-    if (preg_match('/(\d+)$/', $rider['gravity_id'], $matches)) {
-        $gravityIdNumber = intval($matches[1]);
-    } else {
-        $gravityIdNumber = $rider['gravity_id'];
-    }
-}
+// Calculate finish rate
+$finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 0;
 ?>
 
-<?php if (isset($error)): ?>
-<section class="card mb-lg">
- <div class="card-title" style="color: var(--color-error)">Fel</div>
- <p><?= htmlspecialchars($error) ?></p>
-</section>
-<?php endif; ?>
+<!-- Profile Hero -->
+<section class="profile-hero">
+    <div class="hero-accent-bar"></div>
+    <div class="hero-content">
+        <div class="hero-main">
+            <div class="profile-photo-container">
+                <div class="profile-photo">
+                    <?php if ($profileImage): ?>
+                        <img src="<?= htmlspecialchars($profileImage) ?>" alt="<?= $fullName ?>">
+                    <?php else: ?>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                            <circle cx="12" cy="7" r="4"/>
+                        </svg>
+                    <?php endif; ?>
+                </div>
+                <?php if ($rankingPosition): ?>
+                <div class="ranking-badge">
+                    <span class="rank-number">#<?= $rankingPosition ?></span>
+                    <span class="rank-label">Rank</span>
+                </div>
+                <?php endif; ?>
+            </div>
 
-<!-- Profile Card with Ranking -->
-<section class="profile-card mb-lg">
- <div class="profile-stripe"></div>
- <?php if ($rankingPosition): ?>
- <div class="profile-ranking">
- <div class="ranking-position">#<?= $rankingPosition ?></div>
- <div class="ranking-label">Ranking</div>
- </div>
- <?php endif; ?>
- <div class="profile-content">
- <div class="profile-photo">
- <?php if ($profileImage): ?>
- <img src="<?= htmlspecialchars($profileImage) ?>" alt="<?= $fullName ?>" class="profile-photo-img">
- <?php else: ?>
- <div class="photo-placeholder">👤</div>
- <?php endif; ?>
- </div>
- <div class="profile-info">
- <div class="profile-name-row">
- <h1 class="profile-name"><?= $fullName ?></h1>
- <?php if ($age): ?><span class="profile-age"><?= $age ?> år</span><?php endif; ?>
- </div>
- <?php if ($rider['club_name']): ?>
- <a href="/club/<?= $rider['club_id'] ?>" class="profile-club"><?= htmlspecialchars($rider['club_name']) ?></a>
- <?php endif; ?>
- <?php if ($rider['license_number']): ?>
- <div class="profile-details">
-  <span class="profile-detail"><i data-lucide="hash"></i> UCI <?= htmlspecialchars($rider['license_number']) ?></span>
- </div>
- <?php endif; ?>
- <div class="profile-badges">
- <?php if ($hasLicense): ?>
-  <span class="license-badge <?= $licenseActive ? 'license-active' : 'license-inactive' ?>">
-  <i data-lucide="<?= $licenseActive ? 'check-circle' : 'x-circle' ?>"></i>
-  <?= htmlspecialchars($rider['license_type']) ?>
-  </span>
- <?php endif; ?>
- <?php if (!empty($rider['gravity_id'])): ?>
-  <span class="gravity-badge"><i data-lucide="zap"></i> Gravity ID: <?= $gravityIdNumber ?></span>
- <?php endif; ?>
- </div>
- </div>
- </div>
+            <div class="profile-info">
+                <div class="profile-name-row">
+                    <h1 class="profile-name"><?= $fullName ?></h1>
+                    <?php if ($age): ?><span class="profile-age"><?= $age ?> år</span><?php endif; ?>
+                </div>
+
+                <?php if ($rider['club_name']): ?>
+                <a href="/club/<?= $rider['club_id'] ?>" class="profile-club"><?= htmlspecialchars($rider['club_name']) ?></a>
+                <?php endif; ?>
+
+                <?php if ($rider['license_number']): ?>
+                <div class="profile-uci">
+                    <span>#</span> UCI <?= htmlspecialchars($rider['license_number']) ?>
+                </div>
+                <?php endif; ?>
+
+                <div class="profile-meta">
+                    <?php if ($hasLicense): ?>
+                    <span class="class-badge"><?= $licenseActive ? '✓' : '✗' ?> <?= htmlspecialchars($rider['license_type']) ?></span>
+                    <?php endif; ?>
+                    <?php if ($experienceLevel > 1): ?>
+                    <span class="experience-badge"><?= $expInfo['icon'] ?> <?= $expInfo['name'] ?></span>
+                    <?php endif; ?>
+                    <?php if ($licenseActive): ?>
+                    <span class="license-badge">Licens <?= date('Y') ?> ✓</span>
+                    <?php endif; ?>
+                </div>
+            </div>
+        </div>
+
+        <!-- Social Links -->
+        <div class="hero-social">
+            <a href="<?= $socialProfiles['instagram']['url'] ?? '#' ?>" class="social-link instagram <?= empty($socialProfiles['instagram']) ? 'empty' : '' ?>" title="Instagram" <?= !empty($socialProfiles['instagram']) ? 'target="_blank"' : '' ?>>
+                <svg viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
+            </a>
+            <a href="<?= $socialProfiles['strava']['url'] ?? '#' ?>" class="social-link strava <?= empty($socialProfiles['strava']) ? 'empty' : '' ?>" title="Strava" <?= !empty($socialProfiles['strava']) ? 'target="_blank"' : '' ?>>
+                <svg viewBox="0 0 24 24"><path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169"/></svg>
+            </a>
+            <a href="<?= $socialProfiles['facebook']['url'] ?? '#' ?>" class="social-link facebook <?= empty($socialProfiles['facebook']) ? 'empty' : '' ?>" title="Facebook" <?= !empty($socialProfiles['facebook']) ? 'target="_blank"' : '' ?>>
+                <svg viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+            </a>
+            <a href="<?= $socialProfiles['youtube']['url'] ?? '#' ?>" class="social-link youtube <?= empty($socialProfiles['youtube']) ? 'empty' : '' ?>" title="YouTube" <?= !empty($socialProfiles['youtube']) ? 'target="_blank"' : '' ?>>
+                <svg viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+            </a>
+            <a href="<?= $socialProfiles['tiktok']['url'] ?? '#' ?>" class="social-link tiktok <?= empty($socialProfiles['tiktok']) ? 'empty' : '' ?>" title="TikTok" <?= !empty($socialProfiles['tiktok']) ? 'target="_blank"' : '' ?>>
+                <svg viewBox="0 0 24 24"><path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z"/></svg>
+            </a>
+        </div>
+    </div>
 </section>
 
 <!-- Stats Grid -->
-<section class="stats-grid-4 mb-lg">
- <div class="stat-box">
- <div class="stat-value"><?= $totalStarts ?></div>
- <div class="stat-label">Starter</div>
- </div>
- <div class="stat-box">
- <div class="stat-value"><?= $finishedRaces ?></div>
- <div class="stat-label">Fullföljt</div>
- </div>
- <?php if ($wins > 0 || $podiums > 0): ?>
- <div class="stat-box <?= $wins > 0 ? 'stat-box--gold' : '' ?>">
- <div class="stat-value"><?= $wins ?></div>
- <div class="stat-label">Segrar</div>
- </div>
- <div class="stat-box">
- <div class="stat-value"><?= $podiums ?></div>
- <div class="stat-label">Pallplatser</div>
- </div>
- <?php else: ?>
- <div class="stat-box" style="grid-column: span 2;">
- <div class="stat-value"><?= $bestPosition ? $bestPosition : '-' ?></div>
- <div class="stat-label">Bästa placering</div>
- </div>
- <?php endif; ?>
-</section>
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-value"><?= $totalStarts ?></div>
+        <div class="stat-label">Starter</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value"><?= $finishedRaces ?></div>
+        <div class="stat-label">Fullföljt</div>
+    </div>
+    <div class="stat-card <?= $wins > 0 ? 'highlight' : '' ?>">
+        <div class="stat-value"><?= $wins ?></div>
+        <div class="stat-label">Segrar</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value"><?= $podiums ?></div>
+        <div class="stat-label">Pallplatser</div>
+    </div>
+</div>
 
-<!-- Tab Navigation -->
-<nav class="tabs mb-md">
- <button class="tab-btn active" data-tab="resultat">Resultat</button>
- <button class="tab-btn" data-tab="ranking">Ranking</button>
- <button class="tab-btn" data-tab="gs-total">GS Total</button>
- <button class="tab-btn" data-tab="gs-team">GS Team</button>
-</nav>
+<div class="content-layout">
+    <div class="content-main">
+        <!-- Series Standings -->
+        <?php if (!empty($seriesStandings)): ?>
+        <section class="section">
+            <div class="section-header">
+                <h2 class="section-title">Serieställning</h2>
+            </div>
 
-<!-- Tab: Resultat -->
-<section class="tab-content active" id="tab-resultat">
- <div class="card-header">
- <div>
- <h2 class="card-title">Resultathistorik</h2>
- <p class="card-subtitle"><?= $totalStarts ?> registrerade starter</p>
- </div>
- </div>
+            <div class="series-tabs">
+                <nav class="series-nav">
+                    <?php foreach ($seriesStandings as $idx => $standing): ?>
+                    <button class="series-tab <?= $idx === 0 ? 'active' : '' ?>" data-target="series-panel-<?= $idx ?>">
+                        <span class="series-dot" style="background: <?= htmlspecialchars($standing['series_color'] ?? 'var(--color-accent)') ?>"></span>
+                        <?= htmlspecialchars($standing['series_name']) ?>
+                    </button>
+                    <?php endforeach; ?>
+                </nav>
 
- <?php if (empty($results)): ?>
- <div class="empty-state">
- <div class="empty-state-icon">🏁</div>
- <p>Inga resultat registrerade</p>
- </div>
- <?php else: ?>
- <div class="table-wrapper">
- <table class="table table--striped table--hover">
- <thead>
- <tr>
-  <th class="col-place">#</th>
-  <th>Event</th>
-  <th class="table-col-hide-portrait">Serie</th>
-  <th class="table-col-hide-portrait">Klass</th>
-  <th class="table-col-hide-portrait">Datum</th>
-  <th class="col-time">Tid</th>
- </tr>
- </thead>
- <tbody>
- <?php foreach ($results as $result): ?>
- <tr onclick="window.location='/event/<?= $result['event_id'] ?>'" style="cursor:pointer">
-  <td class="col-place <?= $result['class_position'] && $result['class_position'] <= 3 ? 'col-place--' . $result['class_position'] : '' ?>">
-  <?php if ($result['status'] !== 'finished'): ?>
-  <span class="status-mini"><?= strtoupper(substr($result['status'], 0, 3)) ?></span>
-  <?php elseif ($result['class_position'] == 1): ?>
-  <img src="/assets/icons/medal-1st.svg" alt="1:a" class="medal-icon">
-  <?php elseif ($result['class_position'] == 2): ?>
-  <img src="/assets/icons/medal-2nd.svg" alt="2:a" class="medal-icon">
-  <?php elseif ($result['class_position'] == 3): ?>
-  <img src="/assets/icons/medal-3rd.svg" alt="3:e" class="medal-icon">
-  <?php else: ?>
-  <?= $result['class_position'] ?? '-' ?>
-  <?php endif; ?>
-  </td>
-  <td>
-  <a href="/event/<?= $result['event_id'] ?>" class="event-link">
-  <?= htmlspecialchars($result['event_name']) ?>
-  </a>
-  </td>
-  <td class="table-col-hide-portrait text-muted">
-  <?php if ($result['series_id']): ?>
-  <a href="/series/<?= $result['series_id'] ?>"><?= htmlspecialchars($result['series_name']) ?></a>
-  <?php else: ?>
-  -
-  <?php endif; ?>
-  </td>
-  <td class="table-col-hide-portrait"><?= htmlspecialchars($result['class_name'] ?? '-') ?></td>
-  <td class="table-col-hide-portrait"><?= $result['event_date'] ? date('j M Y', strtotime($result['event_date'])) : '-' ?></td>
-  <td class="col-time"><?= htmlspecialchars($result['finish_time'] ?? '-') ?></td>
- </tr>
- <?php endforeach; ?>
- </tbody>
- </table>
- </div>
+                <div class="series-content">
+                    <?php foreach ($seriesStandings as $idx => $standing): ?>
+                    <div class="series-panel <?= $idx === 0 ? 'active' : '' ?>" id="series-panel-<?= $idx ?>">
+                        <div class="standings-header">
+                            <div class="standings-info">
+                                <div class="standings-rank">
+                                    <span class="rank-position"><?= $standing['ranking'] ?></span>
+                                    <span class="rank-suffix"><?= $standing['ranking'] == 1 ? ':a' : ':e' ?></span>
+                                </div>
+                                <div class="standings-meta">
+                                    av <?= $standing['total_riders'] ?> i <?= htmlspecialchars($standing['class_name']) ?>
+                                </div>
+                            </div>
+                            <?php if ($standing['trend']): ?>
+                            <div class="standings-trend <?= $standing['trend']['direction'] ?>">
+                                <?php if ($standing['trend']['direction'] === 'up'): ?>
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 15l-6-6-6 6"/></svg>
+                                +<?= $standing['trend']['change'] ?> efter senaste
+                                <?php elseif ($standing['trend']['direction'] === 'down'): ?>
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
+                                -<?= $standing['trend']['change'] ?> efter senaste
+                                <?php else: ?>
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14"/></svg>
+                                Oförändrad
+                                <?php endif; ?>
+                            </div>
+                            <?php endif; ?>
+                        </div>
 
- <!-- Mobile Card View -->
- <div class="result-list">
- <?php foreach ($results as $result): ?>
- <a href="/event/<?= $result['event_id'] ?>" class="result-item">
- <div class="result-place <?= $result['class_position'] && $result['class_position'] <= 3 ? 'top-3' : '' ?>">
- <?php if ($result['status'] !== 'finished'): ?>
-  <span class="status-mini"><?= strtoupper(substr($result['status'], 0, 3)) ?></span>
- <?php elseif ($result['class_position'] == 1): ?>
-  <img src="/assets/icons/medal-1st.svg" alt="1:a" class="medal-icon-mobile">
- <?php elseif ($result['class_position'] == 2): ?>
-  <img src="/assets/icons/medal-2nd.svg" alt="2:a" class="medal-icon-mobile">
- <?php elseif ($result['class_position'] == 3): ?>
-  <img src="/assets/icons/medal-3rd.svg" alt="3:e" class="medal-icon-mobile">
- <?php else: ?>
-  <?= $result['class_position'] ?? '-' ?>
- <?php endif; ?>
- </div>
- <div class="result-info">
- <div class="result-name"><?= htmlspecialchars($result['event_name']) ?></div>
- <div class="result-club"><?= $result['event_date'] ? date('j M Y', strtotime($result['event_date'])) : '' ?> • <?= htmlspecialchars($result['class_name'] ?? '') ?></div>
- </div>
- <div class="result-time-col">
- <div class="time-value"><?= htmlspecialchars($result['finish_time'] ?? '-') ?></div>
- </div>
- </a>
- <?php endforeach; ?>
- </div>
- <?php endif; ?>
-</section>
+                        <?php if ($standing['gap_to_podium'] !== null): ?>
+                        <div class="podium-progress">
+                            <div class="progress-header">
+                                <span class="progress-label"><?= $standing['ranking'] <= 3 ? ($standing['ranking'] == 1 ? 'Försprång till 2:a' : 'Till ' . ($standing['ranking'] - 1) . ':a plats') : 'Till pallplats' ?></span>
+                                <span class="progress-value"><?= $standing['ranking'] == 1 ? '+' : '-' ?><?= abs($standing['gap_to_podium']) ?> poäng</span>
+                            </div>
+                            <div class="progress-bar">
+                                <div class="progress-fill" style="width: <?= $standing['ranking'] == 1 ? 100 : min(95, max(10, 100 - abs($standing['gap_to_podium']))) ?>%; background: <?= htmlspecialchars($standing['series_color'] ?? 'var(--color-accent)') ?>"></div>
+                            </div>
+                        </div>
+                        <?php endif; ?>
 
-<!-- Tab: Ranking -->
-<section class="tab-content" id="tab-ranking">
- <div class="card">
- <div class="card-header">
- <h2 class="card-title">Ranking</h2>
- <p class="card-subtitle">Viktade poäng senaste <?= $rankingMonths ?> månaderna</p>
- </div>
- <div class="gs-stats-card gs-stats-card--ranking">
- <div class="gs-main-stat">
- <div class="gs-points"><?= number_format($rankingPoints, 1) ?></div>
- <div class="points-label">Rankingpoäng</div>
- </div>
- <?php if ($rankingPosition): ?>
- <div class="gs-details">
- <div class="gs-detail">
-  <span class="gs-detail-value">#<?= $rankingPosition ?></span>
-  <span class="gs-detail-label">Position</span>
- </div>
- <div class="gs-detail">
-  <span class="gs-detail-value"><?= $rankingTotal ?></span>
-  <span class="gs-detail-label">Totalt</span>
- </div>
- </div>
- <?php endif; ?>
- </div>
+                        <div class="series-stats">
+                            <div class="series-stat">
+                                <div class="series-stat-value"><?= $standing['total_points'] ?></div>
+                                <div class="series-stat-label">Poäng</div>
+                            </div>
+                            <div class="series-stat">
+                                <div class="series-stat-value"><?= $standing['events_count'] ?></div>
+                                <div class="series-stat-label">Deltävl.</div>
+                            </div>
+                            <div class="series-stat">
+                                <div class="series-stat-value"><?= $standing['wins'] ?></div>
+                                <div class="series-stat-label">Segrar</div>
+                            </div>
+                            <div class="series-stat">
+                                <div class="series-stat-value"><?= $standing['podiums'] ?></div>
+                                <div class="series-stat-label">Pallplatser</div>
+                            </div>
+                        </div>
 
- <?php if (!empty($rankingEventBreakdown)): ?>
- <div class="ranking-breakdown">
- <h3 class="breakdown-title">Poängberäkning per event</h3>
- <p class="breakdown-help">Poäng viktas efter: fältstorlek (0.75-1.00), eventtyp (nationell 100%, sportmotion 50%), och ålder (0-12 mån = 100%, 13-24 mån = 50%)</p>
+                        <?php if (!empty($standing['results'])): ?>
+                        <div class="results-header">
+                            <span class="results-title">Resultat i serien</span>
+                            <span class="results-count"><?= count($standing['results']) ?> starter</span>
+                        </div>
+                        <div class="results-list">
+                            <?php foreach ($standing['results'] as $result): ?>
+                            <a href="/event/<?= $result['event_id'] ?? '' ?>" class="result-item">
+                                <div class="result-position <?= $result['position'] <= 3 ? 'p' . $result['position'] : '' ?>">
+                                    <?php if ($result['status'] !== 'finished'): ?>
+                                        <?= strtoupper(substr($result['status'], 0, 3)) ?>
+                                    <?php elseif ($result['position'] == 1): ?>
+                                        🥇
+                                    <?php elseif ($result['position'] == 2): ?>
+                                        🥈
+                                    <?php elseif ($result['position'] == 3): ?>
+                                        🥉
+                                    <?php else: ?>
+                                        <?= $result['position'] ?>
+                                    <?php endif; ?>
+                                </div>
+                                <div class="result-info">
+                                    <div class="result-event-name"><?= htmlspecialchars($result['event_name']) ?></div>
+                                    <div class="result-meta">
+                                        <span><?= date('j M Y', strtotime($result['event_date'])) ?></span>
+                                        <span>•</span>
+                                        <span><?= htmlspecialchars($result['class_name']) ?></span>
+                                    </div>
+                                </div>
+                                <div class="result-time">
+                                    <div class="result-time-value"><?= htmlspecialchars($result['time'] ?? '-') ?></div>
+                                </div>
+                            </a>
+                            <?php endforeach; ?>
+                        </div>
+                        <?php endif; ?>
+                    </div>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+        </section>
+        <?php endif; ?>
 
- <div class="table-wrapper">
-  <table class="table table--striped ranking-breakdown-table">
-  <thead>
-  <tr>
-   <th>Event</th>
-   <th class="table-col-hide-portrait">Klass</th>
-   <th class="table-col-hide-portrait">Datum</th>
-   <th class="text-right">Bas</th>
-   <th class="text-right table-col-hide-portrait">Fält</th>
-   <th class="text-right table-col-hide-portrait">Typ</th>
-   <th class="text-right table-col-hide-portrait">Tid</th>
-   <th class="text-right">Viktat</th>
-  </tr>
-  </thead>
-  <tbody>
-  <?php foreach ($rankingEventBreakdown as $evt): ?>
-  <tr onclick="window.location='/event/<?= $evt['event_id'] ?>'" style="cursor:pointer">
-   <td>
-   <a href="/event/<?= $evt['event_id'] ?>" class="event-link">
-    <?= htmlspecialchars($evt['event_name'] ?? 'Okänt event') ?>
-   </a>
-   </td>
-   <td class="table-col-hide-portrait text-muted"><?= htmlspecialchars($evt['class_name'] ?? '-') ?></td>
-   <td class="table-col-hide-portrait text-muted"><?= isset($evt['event_date']) ? date('j M Y', strtotime($evt['event_date'])) : '-' ?></td>
-   <td class="text-right"><?= number_format($evt['original_points'] ?? 0, 0) ?></td>
-   <td class="text-right table-col-hide-portrait text-muted">×<?= number_format($evt['field_multiplier'] ?? 1, 2) ?></td>
-   <td class="text-right table-col-hide-portrait text-muted">×<?= number_format($evt['event_level_multiplier'] ?? 1, 2) ?></td>
-   <td class="text-right table-col-hide-portrait text-muted">×<?= number_format($evt['time_multiplier'] ?? 1, 2) ?></td>
-   <td class="text-right"><strong class="text-accent"><?= number_format($evt['weighted_points'] ?? 0, 1) ?></strong></td>
-  </tr>
-  <?php endforeach; ?>
-  </tbody>
-  <tfoot>
-  <tr>
-   <td colspan="7" class="text-right"><strong>Totalt:</strong></td>
-   <td class="text-right"><strong class="text-accent"><?= number_format($rankingPoints, 1) ?></strong></td>
-  </tr>
-  </tfoot>
-  </table>
- </div>
+        <!-- All Results -->
+        <section class="section">
+            <div class="section-header">
+                <h2 class="section-title">Alla resultat</h2>
+            </div>
+            <div class="card">
+                <?php if (empty($results)): ?>
+                <div class="empty-state">
+                    <div class="empty-icon">🏁</div>
+                    <p>Inga resultat registrerade</p>
+                </div>
+                <?php else: ?>
+                <div class="results-list">
+                    <?php foreach (array_slice($results, 0, 10) as $result): ?>
+                    <a href="/event/<?= $result['event_id'] ?>" class="result-item">
+                        <div class="result-position <?= $result['position'] <= 3 && $result['status'] === 'finished' ? 'p' . $result['position'] : '' ?>">
+                            <?php if ($result['status'] !== 'finished'): ?>
+                                <?= strtoupper(substr($result['status'], 0, 3)) ?>
+                            <?php elseif ($result['position'] == 1): ?>
+                                🥇
+                            <?php elseif ($result['position'] == 2): ?>
+                                🥈
+                            <?php elseif ($result['position'] == 3): ?>
+                                🥉
+                            <?php else: ?>
+                                <?= $result['position'] ?>
+                            <?php endif; ?>
+                        </div>
+                        <div class="result-info">
+                            <div class="result-event-name"><?= htmlspecialchars($result['event_name']) ?></div>
+                            <div class="result-meta">
+                                <span><?= date('j M Y', strtotime($result['event_date'])) ?></span>
+                                <?php if ($result['series_name']): ?>
+                                <span>•</span>
+                                <span><?= htmlspecialchars($result['series_name']) ?></span>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                        <div class="result-time">
+                            <div class="result-time-value"><?= htmlspecialchars($result['finish_time'] ?? '-') ?></div>
+                        </div>
+                    </a>
+                    <?php endforeach; ?>
+                </div>
+                <?php endif; ?>
+            </div>
+        </section>
+    </div>
 
- <!-- Mobile Card View -->
- <div class="ranking-breakdown-cards">
-  <?php foreach ($rankingEventBreakdown as $evt): ?>
-  <a href="/event/<?= $evt['event_id'] ?>" class="breakdown-card">
-  <div class="breakdown-card-main">
-   <div class="breakdown-card-name"><?= htmlspecialchars($evt['event_name'] ?? 'Okänt event') ?></div>
-   <div class="breakdown-card-meta">
-   <?= isset($evt['event_date']) ? date('j M Y', strtotime($evt['event_date'])) : '' ?>
-   <?php if (!empty($evt['class_name'])): ?> • <?= htmlspecialchars($evt['class_name']) ?><?php endif; ?>
-   </div>
-  </div>
-  <div class="breakdown-card-points">
-   <div class="breakdown-card-weighted"><?= number_format($evt['weighted_points'] ?? 0, 1) ?></div>
-   <div class="breakdown-card-calc"><?= number_format($evt['original_points'] ?? 0, 0) ?> × <?= number_format(($evt['field_multiplier'] ?? 1) * ($evt['event_level_multiplier'] ?? 1) * ($evt['time_multiplier'] ?? 1), 2) ?></div>
-  </div>
-  </a>
-  <?php endforeach; ?>
- </div>
- </div>
- <?php endif; ?>
- </div>
-</section>
+    <!-- Sidebar: Achievements -->
+    <aside class="content-sidebar">
+        <section class="section">
+            <div class="section-header">
+                <h2 class="section-title">Achievements</h2>
+            </div>
 
-<!-- Tab: GS Total -->
-<section class="tab-content" id="tab-gs-total">
- <div class="card">
- <div class="card-header">
- <h2 class="card-title">GravitySeries Total</h2>
- <p class="card-subtitle">Individuell poängställning</p>
- </div>
- <div class="gs-stats-card">
- <div class="gs-main-stat">
- <div class="gs-points"><?= number_format($gravityTotalPoints) ?></div>
- <div class="points-label">Poäng</div>
- </div>
- <?php if ($gravityTotalPosition): ?>
- <div class="gs-details">
- <div class="gs-detail">
-  <span class="gs-detail-value">#<?= $gravityTotalPosition ?></span>
-  <span class="gs-detail-label">Position</span>
- </div>
- <div class="gs-detail">
-  <span class="gs-detail-value"><?= $gravityTotalClassTotal ?></span>
-  <span class="gs-detail-label">Deltagare</span>
- </div>
- <?php if ($gravityClassName): ?>
- <div class="gs-detail">
-  <span class="gs-detail-value"><?= htmlspecialchars($gravityClassName) ?></span>
-  <span class="gs-detail-label">Klass</span>
- </div>
- <?php endif; ?>
- </div>
- <?php endif; ?>
- </div>
+            <div class="achievements-card">
+                <!-- Experience Level -->
+                <div class="experience-section">
+                    <div class="experience-header">
+                        <div class="experience-level">
+                            <span class="experience-icon"><?= $expInfo['icon'] ?></span>
+                            <div>
+                                <div class="experience-title"><?= $expInfo['name'] ?></div>
+                                <div class="experience-subtitle"><?= $experienceLevel < 5 ? 'På väg mot nästa nivå!' : 'Maxnivå uppnådd!' ?></div>
+                            </div>
+                        </div>
+                        <?php if ($rider['first_season']): ?>
+                        <span class="experience-year">Sedan <?= $rider['first_season'] ?></span>
+                        <?php endif; ?>
+                    </div>
 
- <?php if (!empty($gsEventBreakdown)): ?>
- <div class="event-breakdown">
- <h3 class="breakdown-title">Poäng per event</h3>
- <div class="breakdown-list">
- <?php foreach ($gsEventBreakdown as $event): ?>
- <a href="/event/<?= $event['event_id'] ?>" class="breakdown-item">
-  <div class="breakdown-info">
-  <div class="breakdown-name"><?= htmlspecialchars($event['event_name']) ?></div>
-  <div class="breakdown-meta">
-  <?= $event['event_date'] ? date('j M Y', strtotime($event['event_date'])) : '' ?>
-  <?php if ($event['class_name']): ?> • <?= htmlspecialchars($event['class_name']) ?><?php endif; ?>
-  </div>
-  </div>
-  <div class="breakdown-points">+<?= $event['points'] ?></div>
- </a>
- <?php endforeach; ?>
- </div>
- </div>
- <?php endif; ?>
- </div>
-</section>
+                    <div class="experience-bar">
+                        <?php for ($i = 1; $i <= 5; $i++): ?>
+                        <div class="exp-segment <?= $i < $experienceLevel ? 'filled' : ($i == $experienceLevel ? 'current' : '') ?>"></div>
+                        <?php endfor; ?>
+                    </div>
+                    <div class="experience-labels">
+                        <span>1st</span>
+                        <span>2nd</span>
+                        <span>Exp</span>
+                        <span>Expert</span>
+                        <span>Veteran</span>
+                    </div>
+                </div>
 
-<!-- Tab: GS Team -->
-<section class="tab-content" id="tab-gs-team">
- <div class="card">
- <div class="card-header">
- <h2 class="card-title">GravitySeries Team</h2>
- <p class="card-subtitle">Lagställning</p>
- </div>
- <?php if ($rider['club_name']): ?>
- <div class="gs-stats-card gs-stats-card--team">
- <div class="gs-team-name"><?= htmlspecialchars($rider['club_name']) ?></div>
- <div class="gs-main-stat">
- <div class="gs-points"><?= number_format($gravityTeamPoints) ?></div>
- <div class="points-label">Lagpoäng</div>
- </div>
- <?php if ($gravityTeamPosition): ?>
- <div class="gs-details">
- <div class="gs-detail">
-  <span class="gs-detail-value">#<?= $gravityTeamPosition ?></span>
-  <span class="gs-detail-label">Position</span>
- </div>
- <div class="gs-detail">
-  <span class="gs-detail-value"><?= $gravityTeamTotal ?></span>
-  <span class="gs-detail-label">Lag totalt</span>
- </div>
- </div>
- <?php endif; ?>
- </div>
-
- <?php if (!empty($gsEventBreakdown)): ?>
- <div class="event-breakdown">
- <h3 class="breakdown-title">Ditt bidrag till laget</h3>
- <div class="breakdown-list">
- <?php foreach ($gsEventBreakdown as $event): ?>
- <a href="/event/<?= $event['event_id'] ?>" class="breakdown-item">
-  <div class="breakdown-info">
-  <div class="breakdown-name"><?= htmlspecialchars($event['event_name']) ?></div>
-  <div class="breakdown-meta">
-  <?= $event['event_date'] ? date('j M Y', strtotime($event['event_date'])) : '' ?>
-  </div>
-  </div>
-  <div class="breakdown-points">+<?= $event['points'] ?></div>
- </a>
- <?php endforeach; ?>
- </div>
- </div>
- <?php endif; ?>
- <?php else: ?>
- <div class="empty-state">
- <div class="empty-state-icon">👥</div>
- <p>Ingen klubbtillhörighet registrerad</p>
- </div>
- <?php endif; ?>
- </div>
-</section>
+                <!-- Achievement Badges -->
+                <div class="achievements-grid">
+                    <div class="achievement <?= $achievementCounts['gold'] > 0 ? 'gold' : 'locked' ?>">
+                        <div class="achievement-icon">🥇</div>
+                        <span class="achievement-name">Guld</span>
+                        <span class="achievement-count"><?= $achievementCounts['gold'] > 0 ? '×' . $achievementCounts['gold'] : 'Låst' ?></span>
+                    </div>
+                    <div class="achievement <?= $achievementCounts['silver'] > 0 ? 'silver' : 'locked' ?>">
+                        <div class="achievement-icon">🥈</div>
+                        <span class="achievement-name">Silver</span>
+                        <span class="achievement-count"><?= $achievementCounts['silver'] > 0 ? '×' . $achievementCounts['silver'] : 'Låst' ?></span>
+                    </div>
+                    <div class="achievement <?= $achievementCounts['bronze'] > 0 ? 'bronze' : 'locked' ?>">
+                        <div class="achievement-icon">🥉</div>
+                        <span class="achievement-name">Brons</span>
+                        <span class="achievement-count"><?= $achievementCounts['bronze'] > 0 ? '×' . $achievementCounts['bronze'] : 'Låst' ?></span>
+                    </div>
+                    <div class="achievement <?= $achievementCounts['hot_streak'] >= 3 ? 'fire' : 'locked' ?>">
+                        <div class="achievement-icon">🔥</div>
+                        <span class="achievement-name">Hot Streak</span>
+                        <span class="achievement-count"><?= $achievementCounts['hot_streak'] >= 3 ? $achievementCounts['hot_streak'] . ' raka' : 'Låst' ?></span>
+                    </div>
+                    <div class="achievement <?= $finishRate == 100 ? '' : 'locked' ?>">
+                        <div class="achievement-icon">💯</div>
+                        <span class="achievement-name">Fullföljare</span>
+                        <span class="achievement-count"><?= $finishRate ?>%</span>
+                    </div>
+                    <div class="achievement <?= $isSeriesLeader ? '' : 'locked' ?>">
+                        <div class="achievement-icon">🎯</div>
+                        <span class="achievement-name">Serieledare</span>
+                        <span class="achievement-count"><?= $isSeriesLeader ? 'Aktiv' : 'Låst' ?></span>
+                    </div>
+                    <div class="achievement <?= $isSeriesChampion ? '' : 'locked' ?>">
+                        <div class="achievement-icon">👑</div>
+                        <span class="achievement-name">Seriemästare</span>
+                        <span class="achievement-count"><?= $isSeriesChampion ? 'Vunnen' : 'Låst' ?></span>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </aside>
+</div>
 
 <script>
-// Tab switching
-document.querySelectorAll('.tab-btn').forEach(btn => {
- btn.addEventListener('click', () => {
- const tabId = btn.dataset.tab;
+// Series Tab Switching
+document.querySelectorAll('.series-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+        document.querySelectorAll('.series-tab').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
 
- // Update buttons
- document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
- btn.classList.add('active');
-
- // Update content
- document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
- document.getElementById('tab-' + tabId).classList.add('active');
- });
+        const targetId = tab.dataset.target;
+        document.querySelectorAll('.series-panel').forEach(panel => {
+            panel.classList.remove('active');
+        });
+        document.getElementById(targetId).classList.add('active');
+    });
 });
 </script>
 
 <style>
-.breadcrumb {
- display: flex;
- align-items: center;
- gap: var(--space-xs);
- font-size: var(--text-sm);
- color: var(--color-text-muted);
-}
-.breadcrumb-link {
- color: var(--color-text-secondary);
-}
-.breadcrumb-link:hover {
- color: var(--color-accent-text);
-}
-.breadcrumb-current {
- color: var(--color-text);
- font-weight: var(--weight-medium);
+/* Profile Hero */
+.profile-hero {
+    background: var(--color-bg-surface);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-md);
+    overflow: hidden;
+    margin-bottom: var(--space-lg);
 }
 
-.mb-sm { margin-bottom: var(--space-sm); }
-.mb-md { margin-bottom: var(--space-md); }
-.mb-lg { margin-bottom: var(--space-lg); }
-.text-muted { color: var(--color-text-muted); }
-
-/* Tabs */
-.tabs {
- display: flex;
- gap: var(--space-xs);
- background: var(--color-bg-surface);
- padding: var(--space-xs);
- border-radius: var(--radius-md);
- overflow-x: auto;
-}
-.tab-btn {
- flex: 1;
- padding: var(--space-sm) var(--space-md);
- border: none;
- background: transparent;
- color: var(--color-text-secondary);
- font-size: var(--text-sm);
- font-weight: var(--weight-medium);
- border-radius: var(--radius-sm);
- cursor: pointer;
- white-space: nowrap;
- transition: all var(--transition-fast);
-}
-.tab-btn:hover {
- background: var(--color-bg-sunken);
- color: var(--color-text);
-}
-.tab-btn.active {
- background: var(--color-accent);
- color: var(--color-text-inverse);
-}
-.tab-content {
- display: none;
-}
-.tab-content.active {
- display: block;
+.hero-accent-bar {
+    height: 4px;
+    background: linear-gradient(90deg, var(--color-accent), #004a98);
 }
 
-/* GS Stats Card */
-.gs-stats-card {
- padding: var(--space-lg);
- text-align: center;
- background: linear-gradient(135deg, var(--color-accent) 0%, #00A3E0 100%);
- border-radius: var(--radius-md);
- margin: var(--space-md);
- color: var(--color-text-inverse);
-}
-.gs-stats-card--team {
- background: linear-gradient(135deg, #6B5B95 0%, #9B59B6 100%);
-}
-.gs-stats-card--ranking {
- background: linear-gradient(135deg, #2ECC71 0%, #27AE60 100%);
-}
-.gs-team-name {
- font-size: var(--text-lg);
- font-weight: var(--weight-bold);
- margin-bottom: var(--space-md);
- opacity: 0.9;
-}
-.gs-main-stat {
- margin-bottom: var(--space-md);
-}
-.gs-points {
- font-size: 48px;
- font-weight: var(--weight-bold);
- line-height: 1;
-}
-.points-label {
- font-size: var(--text-sm);
- opacity: 0.8;
- margin-top: var(--space-xs);
- text-transform: uppercase;
- letter-spacing: 1px;
-}
-.gs-details {
- display: flex;
- justify-content: center;
- gap: var(--space-lg);
- padding-top: var(--space-md);
- border-top: 1px solid rgba(255,255,255,0.2);
-}
-.gs-detail {
- display: flex;
- flex-direction: column;
- align-items: center;
-}
-.gs-detail-value {
- font-size: var(--text-lg);
- font-weight: var(--weight-bold);
-}
-.gs-detail-label {
- font-size: var(--text-xs);
- opacity: 0.7;
- text-transform: uppercase;
+.hero-content {
+    padding: var(--space-lg);
 }
 
-/* Profile Card */
-.profile-card {
- position: relative;
- background: var(--color-bg-surface);
- border-radius: var(--radius-lg);
- overflow: hidden;
- box-shadow: var(--shadow-md);
+.hero-main {
+    display: flex;
+    gap: var(--space-lg);
+    align-items: flex-start;
+    margin-bottom: var(--space-lg);
 }
-.profile-stripe {
- height: 6px;
- background: linear-gradient(90deg, var(--color-accent) 0%, #00A3E0 100%);
+
+.profile-photo-container {
+    position: relative;
+    flex-shrink: 0;
 }
-.profile-content {
- display: flex;
- gap: var(--space-md);
- padding: var(--space-lg);
- align-items: center;
-}
+
 .profile-photo {
- flex-shrink: 0;
- width: 80px;
- height: 80px;
- border-radius: var(--radius-md);
- background: var(--color-bg-sunken);
- display: flex;
- align-items: center;
- justify-content: center;
- overflow: hidden;
+    width: 100px;
+    height: 100px;
+    border-radius: var(--radius-lg);
+    background: linear-gradient(135deg, var(--color-secondary, #323539), var(--color-primary, #171717));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 3px solid var(--color-bg-surface);
+    box-shadow: var(--shadow-lg);
+    overflow: hidden;
 }
-.photo-placeholder {
- font-size: 40px;
- opacity: 0.5;
+
+.profile-photo img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
 }
-.profile-photo-img {
- width: 100%;
- height: 100%;
- object-fit: cover;
- border-radius: var(--radius-md);
+
+.profile-photo svg {
+    width: 45%;
+    height: 45%;
+    stroke: var(--color-text-muted);
 }
-.profile-info {
- flex: 1;
- min-width: 0;
+
+.ranking-badge {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    background: linear-gradient(135deg, #FFD700, #FFA500);
+    color: var(--color-primary, #171717);
+    width: 44px;
+    height: 44px;
+    border-radius: var(--radius-md);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    box-shadow: var(--shadow-lg);
+    border: 2px solid var(--color-bg-surface);
 }
-.profile-name {
- font-size: var(--text-xl);
- font-weight: var(--weight-bold);
- margin: 0 0 var(--space-2xs) 0;
- line-height: 1.2;
+
+.ranking-badge .rank-number {
+    font-size: 1.125rem;
+    line-height: 1;
 }
-.profile-club {
- display: inline-block;
- color: var(--color-accent-text);
- font-size: var(--text-sm);
- font-weight: var(--weight-medium);
- margin-bottom: var(--space-xs);
+
+.ranking-badge .rank-label {
+    font-size: 0.5rem;
+    text-transform: uppercase;
+    opacity: 0.8;
 }
-.profile-club:hover {
- text-decoration: underline;
-}
-.profile-details {
- display: flex;
- flex-wrap: wrap;
- gap: var(--space-sm);
- font-size: var(--text-sm);
- color: var(--color-text-secondary);
-}
-.profile-detail {
- display: flex;
- align-items: center;
- gap: var(--space-2xs);
-}
-.profile-detail:not(:last-child)::after {
- content: '•';
- margin-left: var(--space-sm);
- color: var(--color-text-muted);
-}
-.profile-detail i {
- width: 14px;
- height: 14px;
- color: var(--color-accent);
- flex-shrink: 0;
-}
-.profile-badges {
- display: flex;
- gap: var(--space-xs);
- margin-top: var(--space-xs);
-}
+
+.profile-info { flex: 1; min-width: 0; }
+
 .profile-name-row {
- display: flex;
- align-items: baseline;
- gap: var(--space-sm);
- flex-wrap: wrap;
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-sm);
+    flex-wrap: wrap;
+    margin-bottom: var(--space-xs);
 }
+
+.profile-name {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: var(--color-text);
+    letter-spacing: -0.02em;
+    margin: 0;
+}
+
 .profile-age {
- font-size: var(--text-sm);
- color: var(--color-text-muted);
- font-weight: var(--weight-normal);
+    font-size: 1rem;
+    color: var(--color-text-muted);
 }
-.gravity-badge,
+
+.profile-club {
+    color: #004a98;
+    font-weight: 600;
+    text-decoration: none;
+    font-size: 0.95rem;
+    display: inline-block;
+    margin-bottom: var(--space-sm);
+}
+
+.profile-club:hover { text-decoration: underline; }
+
+.profile-uci {
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    color: var(--color-text-muted);
+    margin-bottom: var(--space-md);
+}
+
+.profile-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-sm);
+}
+
+.class-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    background: var(--color-accent);
+    color: var(--color-primary, #171717);
+    font-size: 0.8rem;
+    font-weight: 700;
+    border-radius: var(--radius-full);
+}
+
+.experience-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background: rgba(255, 215, 0, 0.15);
+    color: #92400e;
+    font-size: 0.75rem;
+    font-weight: 600;
+    border-radius: var(--radius-full);
+}
+
 .license-badge {
- display: inline-flex;
- align-items: center;
- gap: var(--space-2xs);
- padding: var(--space-2xs) var(--space-sm);
- font-size: var(--text-xs);
- font-weight: var(--weight-semibold);
- border-radius: var(--radius-sm);
-}
-.gravity-badge {
- background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
- color: #1a1a1a;
-}
-.license-badge.license-active {
- background: linear-gradient(135deg, #10B981 0%, #059669 100%);
- color: #fff;
-}
-.license-badge.license-inactive {
- background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%);
- color: #fff;
-}
-.gravity-badge i,
-.license-badge i {
- width: 12px;
- height: 12px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 12px;
+    background: rgba(97, 206, 112, 0.15);
+    color: #166534;
+    font-size: 0.75rem;
+    font-weight: 600;
+    border-radius: var(--radius-full);
 }
 
-/* Profile Ranking Badge */
-.profile-ranking {
- position: absolute;
- top: var(--space-md);
- right: var(--space-md);
- text-align: center;
- padding: var(--space-xs) var(--space-sm);
- background: linear-gradient(135deg, #2ECC71 0%, #27AE60 100%);
- border-radius: var(--radius-md);
- color: #fff;
- z-index: 1;
-}
-.ranking-position {
- font-size: var(--text-lg);
- font-weight: var(--weight-bold);
- line-height: 1;
-}
-.ranking-label {
- font-size: 9px;
- opacity: 0.85;
- text-transform: uppercase;
- margin-top: 2px;
+/* Social Links */
+.hero-social {
+    display: flex;
+    gap: var(--space-sm);
+    padding-top: var(--space-md);
+    border-top: 1px solid var(--color-border);
+    flex-wrap: wrap;
 }
 
-/* Event Breakdown */
-.event-breakdown {
- padding: var(--space-md);
- border-top: 1px solid var(--color-border);
-}
-.breakdown-title {
- font-size: var(--text-sm);
- font-weight: var(--weight-semibold);
- color: var(--color-text-secondary);
- margin: 0 0 var(--space-sm) 0;
-}
-.breakdown-list {
- display: flex;
- flex-direction: column;
- gap: var(--space-xs);
-}
-.breakdown-item {
- display: flex;
- justify-content: space-between;
- align-items: center;
- padding: var(--space-sm);
- background: var(--color-bg-sunken);
- border-radius: var(--radius-sm);
- text-decoration: none;
- color: inherit;
- transition: background var(--transition-fast);
-}
-.breakdown-item:hover {
- background: var(--color-bg-hover);
-}
-.breakdown-info {
- min-width: 0;
-}
-.breakdown-name {
- font-weight: var(--weight-medium);
- white-space: nowrap;
- overflow: hidden;
- text-overflow: ellipsis;
-}
-.breakdown-meta {
- font-size: var(--text-xs);
- color: var(--color-text-muted);
-}
-.breakdown-points {
- font-weight: var(--weight-bold);
- color: var(--color-accent-text);
- flex-shrink: 0;
- margin-left: var(--space-sm);
+.social-link {
+    width: 40px;
+    height: 40px;
+    border-radius: var(--radius-md);
+    background: var(--color-bg-sunken);
+    border: 1px solid var(--color-border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    transition: all 0.2s ease;
 }
 
-/* Stats Grid layouts */
-.stats-grid-4 {
- display: grid;
- grid-template-columns: repeat(4, 1fr);
- gap: var(--space-sm);
+.social-link:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
 }
-.stats-grid-3 {
- display: grid;
- grid-template-columns: repeat(3, 1fr);
- gap: var(--space-sm);
+
+.social-link svg { width: 18px; height: 18px; }
+.social-link.instagram svg { fill: #E4405F; }
+.social-link.strava svg { fill: #FC4C02; }
+.social-link.facebook svg { fill: #1877F2; }
+.social-link.youtube svg { fill: #FF0000; }
+.social-link.tiktok svg { fill: #000000; }
+.social-link.empty { opacity: 0.4; pointer-events: none; }
+.social-link.empty svg { fill: var(--color-text-muted); }
+
+/* Stats Grid */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: var(--space-sm);
+    margin-bottom: var(--space-lg);
 }
-.stats-grid-2 {
- display: grid;
- grid-template-columns: repeat(2, 1fr);
- gap: var(--space-sm);
+
+.stat-card {
+    background: var(--color-bg-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    padding: var(--space-lg) var(--space-md);
+    text-align: center;
+    transition: all 0.2s ease;
 }
-.stat-box {
- text-align: center;
- padding: var(--space-md) var(--space-xs);
- background: var(--color-bg-surface);
- border-radius: var(--radius-md);
- box-shadow: var(--shadow-sm);
+
+.stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
 }
-.stat-box--gold {
- background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
- color: #000;
+
+.stat-card.highlight {
+    background: linear-gradient(135deg, rgba(255,215,0,0.15), rgba(255,215,0,0.05));
+    border-color: rgba(255, 215, 0, 0.3);
 }
-.stat-box--gold .stat-label {
- color: rgba(0,0,0,0.7);
-}
-.stat-box--accent {
- background: var(--color-accent);
- color: var(--color-text-inverse);
-}
-.stat-box--accent .stat-label {
- color: rgba(255,255,255,0.8);
-}
-.stat-box--series {
- background: linear-gradient(135deg, var(--color-accent) 0%, #00A3E0 100%);
- color: var(--color-text-inverse);
-}
-.stat-box--series .stat-label {
- color: rgba(255,255,255,0.85);
-}
-.stat-box--team {
- background: linear-gradient(135deg, #6B5B95 0%, #9B59B6 100%);
- color: var(--color-text-inverse);
-}
-.stat-box--team .stat-label {
- color: rgba(255,255,255,0.85);
-}
-.stat-sub {
- font-size: var(--text-xs);
- color: rgba(255,255,255,0.75);
- margin-top: var(--space-xs);
- line-height: 1.3;
-}
+
+.stat-card.highlight .stat-value { color: #b45309; }
+
 .stat-value {
- font-size: var(--text-2xl);
- font-weight: var(--weight-bold);
- line-height: 1;
+    font-family: var(--font-mono);
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--color-text);
+    line-height: 1;
+    margin-bottom: var(--space-xs);
 }
+
 .stat-label {
- font-size: var(--text-xs);
- color: var(--color-text-muted);
- margin-top: var(--space-2xs);
- text-transform: uppercase;
- letter-spacing: 0.5px;
+    font-size: 0.7rem;
+    color: var(--color-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 600;
 }
 
-.col-place {
- width: 50px;
- text-align: center;
- font-weight: var(--weight-bold);
-}
-.col-place--1 { color: #FFD700; }
-.col-place--2 { color: #C0C0C0; }
-.col-place--3 { color: #CD7F32; }
-
-.medal-icon {
- width: 28px;
- height: 28px;
- display: block;
- margin: 0 auto;
-}
-.medal-icon-mobile {
- width: 32px;
- height: 32px;
- display: block;
- margin: 0 auto;
+/* Content Layout */
+.content-layout {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--space-xl);
 }
 
-.col-time {
- text-align: right;
- font-family: var(--font-mono);
- white-space: nowrap;
-}
-.col-points {
- text-align: right;
-}
-.points-value {
- font-weight: var(--weight-semibold);
- color: var(--color-accent-text);
+@media (min-width: 1024px) {
+    .content-layout {
+        grid-template-columns: 1fr 380px;
+    }
+    .content-sidebar {
+        position: sticky;
+        top: 80px;
+    }
 }
 
-.event-link {
- color: var(--color-text);
- font-weight: var(--weight-medium);
-}
-.event-link:hover {
- color: var(--color-accent-text);
+/* Sections */
+.section { margin-bottom: var(--space-lg); }
+
+.section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--space-md);
 }
 
-.status-mini {
- font-size: var(--text-xs);
- font-weight: var(--weight-bold);
- color: var(--color-text-muted);
+.section-title {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--color-text);
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    margin: 0;
 }
 
-.result-place.top-3 {
- background: var(--color-accent-light);
-}
-.result-time-col {
- text-align: right;
-}
-.time-value {
- font-family: var(--font-mono);
- font-size: var(--text-sm);
-}
-.points-small {
- font-size: var(--text-xs);
- color: var(--color-accent-text);
+.section-title::before {
+    content: '';
+    width: 4px;
+    height: 18px;
+    background: var(--color-accent);
+    border-radius: 2px;
 }
 
-.empty-state {
- text-align: center;
- padding: var(--space-2xl);
- color: var(--color-text-muted);
-}
-.empty-state-icon {
- font-size: 48px;
- margin-bottom: var(--space-md);
+/* Series Tabs */
+.series-tabs {
+    background: var(--color-bg-surface);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-md);
+    overflow: hidden;
 }
 
-@media (max-width: 599px) {
- .profile-content {
- padding: var(--space-md);
- padding-right: var(--space-xl);
- }
- .profile-photo {
- width: 64px;
- height: 64px;
- }
- .photo-placeholder {
- font-size: 32px;
- }
- .profile-name {
- font-size: var(--text-md);
- }
- .profile-age {
- font-size: var(--text-xs);
- }
- .profile-details {
- flex-direction: column;
- gap: var(--space-xs);
- }
- .profile-detail:not(:last-child)::after {
- display: none;
- }
- .profile-ranking {
- top: var(--space-sm);
- right: var(--space-sm);
- padding: var(--space-2xs) var(--space-xs);
- }
- .ranking-position {
- font-size: var(--text-sm);
- }
- .ranking-label {
- font-size: 8px;
- }
- .profile-badges {
- flex-wrap: wrap;
- }
- .stats-grid-4 {
- grid-template-columns: repeat(2, 1fr);
- gap: var(--space-sm);
- }
- .stats-grid-3 {
- grid-template-columns: repeat(3, 1fr);
- gap: var(--space-xs);
- }
- .stats-grid-2 {
- grid-template-columns: repeat(2, 1fr);
- gap: var(--space-xs);
- }
- .stat-box {
- padding: var(--space-sm);
- }
- .stat-value {
- font-size: var(--text-xl);
- }
- .stat-label {
- font-size: 10px;
- }
- .stat-sub {
- font-size: 9px;
- }
+.series-nav {
+    display: flex;
+    border-bottom: 1px solid var(--color-border);
+    overflow-x: auto;
 }
 
-/* Ranking Breakdown Styles */
-.ranking-breakdown {
- padding: var(--space-md);
- border-top: 1px solid var(--color-border);
-}
-.breakdown-title {
- font-size: var(--text-base);
- font-weight: var(--weight-semibold);
- margin: 0 0 var(--space-xs) 0;
-}
-.breakdown-help {
- font-size: var(--text-xs);
- color: var(--color-text-muted);
- margin: 0 0 var(--space-md) 0;
-}
-.ranking-breakdown-table {
- font-size: var(--text-sm);
-}
-.ranking-breakdown-table th {
- font-size: var(--text-xs);
- text-transform: uppercase;
- color: var(--color-text-muted);
-}
-.ranking-breakdown-table tfoot td {
- border-top: 2px solid var(--color-border);
- padding-top: var(--space-sm);
-}
-.text-accent {
- color: var(--color-accent-text);
+.series-tab {
+    flex: 1;
+    min-width: max-content;
+    padding: var(--space-md) var(--space-lg);
+    background: none;
+    border: none;
+    font-family: inherit;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--color-text-muted);
+    cursor: pointer;
+    position: relative;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-sm);
 }
 
-/* Mobile ranking breakdown cards */
-.ranking-breakdown-cards {
- display: none;
- flex-direction: column;
- gap: var(--space-xs);
-}
-.breakdown-card {
- display: flex;
- justify-content: space-between;
- align-items: center;
- padding: var(--space-sm);
- background: var(--color-bg-sunken);
- border-radius: var(--radius-sm);
- text-decoration: none;
- color: inherit;
-}
-.breakdown-card:hover {
- background: var(--color-bg-hover);
-}
-.breakdown-card-main {
- flex: 1;
- min-width: 0;
-}
-.breakdown-card-name {
- font-weight: var(--weight-medium);
- white-space: nowrap;
- overflow: hidden;
- text-overflow: ellipsis;
-}
-.breakdown-card-meta {
- font-size: var(--text-xs);
- color: var(--color-text-muted);
-}
-.breakdown-card-points {
- text-align: right;
- flex-shrink: 0;
- margin-left: var(--space-sm);
-}
-.breakdown-card-weighted {
- font-size: var(--text-lg);
- font-weight: var(--weight-bold);
- color: var(--color-accent-text);
-}
-.breakdown-card-calc {
- font-size: var(--text-xs);
- color: var(--color-text-muted);
+.series-tab:hover { color: var(--color-text); background: var(--color-bg-sunken); }
+.series-tab.active { color: var(--color-text); }
+.series-tab.active::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: var(--color-accent);
+    border-radius: 3px 3px 0 0;
 }
 
-@media (max-width: 599px) {
- .ranking-breakdown .table-wrapper {
-  display: none;
- }
- .ranking-breakdown-cards {
-  display: flex;
- }
+.series-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--color-accent);
+}
+
+.series-content { padding: var(--space-lg); }
+.series-panel { display: none; }
+.series-panel.active { display: block; }
+
+/* Standings */
+.standings-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--space-lg);
+    flex-wrap: wrap;
+    gap: var(--space-md);
+}
+
+.standings-info { display: flex; align-items: center; gap: var(--space-md); }
+
+.standings-rank { display: flex; align-items: baseline; gap: 4px; }
+
+.rank-position {
+    font-family: var(--font-mono);
+    font-size: 2.5rem;
+    font-weight: 800;
+    color: var(--color-text);
+    line-height: 1;
+}
+
+.rank-suffix {
+    font-size: 1rem;
+    color: var(--color-text-muted);
+    font-weight: 600;
+}
+
+.standings-meta {
+    font-size: 0.85rem;
+    color: var(--color-text-muted);
+}
+
+.standings-trend {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    padding: var(--space-sm) var(--space-md);
+    border-radius: var(--radius-full);
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.standings-trend.up { background: rgba(34, 197, 94, 0.1); color: #22c55e; }
+.standings-trend.down { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
+.standings-trend.same { background: var(--color-bg-sunken); color: var(--color-text-muted); }
+.standings-trend svg { width: 16px; height: 16px; }
+
+/* Progress */
+.podium-progress { margin-bottom: var(--space-lg); }
+.progress-header { display: flex; justify-content: space-between; margin-bottom: var(--space-sm); font-size: 0.8rem; }
+.progress-label { color: var(--color-text-muted); }
+.progress-value { font-family: var(--font-mono); font-weight: 600; color: var(--color-text); }
+.progress-bar { height: 10px; background: var(--color-bg-sunken); border-radius: var(--radius-full); overflow: hidden; }
+.progress-fill { height: 100%; border-radius: var(--radius-full); transition: width 0.6s ease; }
+
+/* Series Stats */
+.series-stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: var(--space-md);
+    padding: var(--space-md);
+    background: var(--color-bg-sunken);
+    border-radius: var(--radius-lg);
+    margin-bottom: var(--space-lg);
+}
+
+.series-stat { text-align: center; }
+.series-stat-value { font-family: var(--font-mono); font-size: 1.25rem; font-weight: 700; color: var(--color-text); }
+.series-stat-label { font-size: 0.65rem; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.3px; }
+
+/* Results */
+.results-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-md); }
+.results-title { font-size: 0.9rem; font-weight: 700; color: var(--color-text); }
+.results-count { font-size: 0.8rem; color: var(--color-text-muted); }
+
+.results-list { display: flex; flex-direction: column; gap: var(--space-sm); }
+
+.result-item {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: var(--space-md);
+    align-items: center;
+    padding: var(--space-md);
+    background: var(--color-bg-sunken);
+    border-radius: var(--radius-md);
+    text-decoration: none;
+    color: inherit;
+    transition: all 0.2s ease;
+}
+
+.result-item:hover { background: var(--color-bg-surface); box-shadow: var(--shadow-sm); }
+
+.result-position {
+    width: 40px;
+    height: 40px;
+    border-radius: var(--radius-sm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-mono);
+    font-size: 0.9rem;
+    font-weight: 700;
+    background: var(--color-bg-surface);
+    color: var(--color-text-muted);
+    border: 1px solid var(--color-border);
+}
+
+.result-position.p1 { background: linear-gradient(135deg, #fef3c7, #fde68a); border-color: #FFD700; color: #92400e; }
+.result-position.p2 { background: linear-gradient(135deg, #f3f4f6, #e5e7eb); border-color: #C0C0C0; color: #4b5563; }
+.result-position.p3 { background: linear-gradient(135deg, #fed7aa, #fdba74); border-color: #CD7F32; color: #9a3412; }
+
+.result-info { min-width: 0; }
+.result-event-name { font-weight: 600; color: var(--color-text); font-size: 0.9rem; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.result-meta { display: flex; flex-wrap: wrap; gap: var(--space-sm); font-size: 0.75rem; color: var(--color-text-muted); }
+.result-time { text-align: right; }
+.result-time-value { font-family: var(--font-mono); font-size: 0.95rem; font-weight: 600; color: var(--color-text); }
+
+/* Achievements */
+.achievements-card {
+    background: var(--color-bg-surface);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-md);
+    padding: var(--space-lg);
+}
+
+.experience-section {
+    margin-bottom: var(--space-lg);
+    padding-bottom: var(--space-lg);
+    border-bottom: 1px solid var(--color-border);
+}
+
+.experience-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--space-md);
+}
+
+.experience-level { display: flex; align-items: center; gap: var(--space-sm); }
+.experience-icon { font-size: 1.5rem; }
+.experience-title { font-weight: 700; color: var(--color-text); }
+.experience-subtitle { font-size: 0.8rem; color: var(--color-text-muted); }
+.experience-year { font-family: var(--font-mono); font-size: 0.85rem; color: var(--color-text-muted); background: var(--color-bg-sunken); padding: 4px 10px; border-radius: var(--radius-full); }
+
+.experience-bar { display: flex; gap: var(--space-xs); }
+
+.exp-segment {
+    flex: 1;
+    height: 8px;
+    background: var(--color-bg-sunken);
+    border-radius: var(--radius-full);
+    position: relative;
+    overflow: hidden;
+}
+
+.exp-segment.filled::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, var(--color-accent), #8FE89D);
+    border-radius: var(--radius-full);
+}
+
+.exp-segment.current::after {
+    background: linear-gradient(90deg, #FFD700, #FFA500);
+    animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
+
+.experience-labels {
+    display: flex;
+    justify-content: space-between;
+    margin-top: var(--space-xs);
+    font-size: 0.65rem;
+    color: var(--color-text-muted);
+}
+
+.achievements-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+    gap: var(--space-md);
+}
+
+.achievement {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: var(--space-md);
+    background: var(--color-bg-sunken);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    transition: all 0.2s ease;
+}
+
+.achievement:hover { transform: translateY(-4px); box-shadow: var(--shadow-md); }
+.achievement.locked { opacity: 0.4; filter: grayscale(1); }
+
+.achievement-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    margin-bottom: var(--space-sm);
+    background: var(--color-bg-surface);
+}
+
+.achievement.gold .achievement-icon { background: linear-gradient(135deg, rgba(255,215,0,0.2), rgba(255,165,0,0.1)); box-shadow: 0 0 20px rgba(255,215,0,0.15); }
+.achievement.silver .achievement-icon { background: linear-gradient(135deg, rgba(192,192,192,0.2), rgba(169,169,169,0.1)); }
+.achievement.bronze .achievement-icon { background: linear-gradient(135deg, rgba(205,127,50,0.2), rgba(184,115,51,0.1)); }
+.achievement.fire .achievement-icon { background: linear-gradient(135deg, rgba(239,68,68,0.15), rgba(249,115,22,0.1)); }
+
+.achievement-name { font-size: 0.7rem; color: var(--color-text-muted); font-weight: 600; }
+.achievement-count { font-family: var(--font-mono); font-size: 0.65rem; color: var(--color-text-muted); margin-top: 2px; }
+
+/* Card & Empty State */
+.card { background: var(--color-bg-surface); border-radius: var(--radius-lg); box-shadow: var(--shadow-md); padding: var(--space-lg); }
+.empty-state { text-align: center; padding: var(--space-2xl); color: var(--color-text-muted); }
+.empty-icon { font-size: 48px; margin-bottom: var(--space-md); }
+
+/* Responsive */
+@media (max-width: 640px) {
+    .stats-grid { grid-template-columns: repeat(2, 1fr); }
+    .series-stats { grid-template-columns: repeat(2, 1fr); }
+    .hero-main { flex-direction: column; align-items: center; text-align: center; }
+    .profile-info { text-align: center; }
+    .profile-meta { justify-content: center; }
+    .profile-photo { width: 80px; height: 80px; }
 }
 </style>
