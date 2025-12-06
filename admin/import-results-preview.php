@@ -8,6 +8,7 @@ require_once __DIR__ . '/../includes/class-calculations.php';
 require_once __DIR__ . '/../includes/point-calculations.php';
 require_once __DIR__ . '/../includes/import-functions.php';
 require_once __DIR__ . '/../includes/series-points.php'; // For syncing series results
+require_once __DIR__ . '/../includes/rebuild-rider-stats.php'; // For automatic stats rebuild
 require_admin();
 
 $db = getDB();
@@ -162,6 +163,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_import'])) {
  $seriesStats = syncEventResultsToAllSeries($db, $selectedEventId);
  $seriesSynced = count($seriesStats);
 
+ // Rebuild rider stats and achievements for all riders in this event
+ $rebuildStats = rebuildEventRiderStats($db->getPdo(), $selectedEventId);
+ $achievementsRebuilt = $rebuildStats['processed'] ?? 0;
+
  // Clean up
  @unlink($_SESSION['import_preview_file']);
  unset($_SESSION['import_preview_file']);
@@ -218,7 +223,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_import'])) {
   $unchangedInfo =" ({$stats['skipped']} oförändrade)";
  }
 
- set_flash('success',"Import klar! {$stats['success']} nya, {$stats['updated']} uppdaterade{$unchangedInfo} av {$stats['total']} resultat.{$matchingInfo}{$changelogInfo}{$recalcMsg}");
+ // Achievements info
+ $achievementsInfo = "";
+ if ($achievementsRebuilt > 0) {
+  $achievementsInfo = " Utmärkelser uppdaterade för {$achievementsRebuilt} åkare.";
+ }
+
+ set_flash('success',"Import klar! {$stats['success']} nya, {$stats['updated']} uppdaterade{$unchangedInfo} av {$stats['total']} resultat.{$matchingInfo}{$changelogInfo}{$recalcMsg}{$achievementsInfo}");
  header('Location: /admin/event-edit.php?id=' . $selectedEventId . '&tab=results');
  exit;
 

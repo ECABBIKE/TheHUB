@@ -504,24 +504,32 @@ function calculateFinishRates($pdo, $rider_id) {
 }
 
 /**
- * Hittar seriesegrar (historiska seriemästare)
+ * Hittar seriesegrar (seriemästare för avslutade serier)
+ *
+ * Kollar både:
+ * 1. Serier markerade som 'completed' (oavsett år)
+ * 2. Serier från tidigare år (för bakåtkompatibilitet)
  */
 function calculateSeriesChampionships($pdo, $rider_id) {
-    // Simplified version - checks if rider had most points in completed seasons
     $currentYear = date('Y');
 
+    // Hämta alla serier där åkaren har resultat och serien är avslutad
+    // (antingen status='completed' ELLER från tidigare år)
     $stmt = $pdo->prepare("
         SELECT
             s.id as series_id,
             s.name as series_name,
-            YEAR(e.date) as year,
+            s.year as series_year,
+            YEAR(e.date) as event_year,
             r.class_id,
             SUM(r.points) as total_points
         FROM results r
         JOIN events e ON r.event_id = e.id
         JOIN series s ON e.series_id = s.id
-        WHERE r.cyclist_id = ? AND YEAR(e.date) < ? AND r.status = 'finished'
-        GROUP BY s.id, YEAR(e.date), r.class_id
+        WHERE r.cyclist_id = ?
+          AND r.status = 'finished'
+          AND (s.status = 'completed' OR YEAR(e.date) < ?)
+        GROUP BY s.id, COALESCE(s.year, YEAR(e.date)), r.class_id
     ");
     $stmt->execute([$rider_id, $currentYear]);
     $riderSeasons = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -529,24 +537,30 @@ function calculateSeriesChampionships($pdo, $rider_id) {
     $championships = [];
 
     foreach ($riderSeasons as $season) {
-        // Check if this rider had the most points
+        $year = $season['series_year'] ?? $season['event_year'];
+
+        // Kolla om denna åkare hade flest poäng i denna serie/klass
         $stmt = $pdo->prepare("
             SELECT MAX(total) as max_points FROM (
                 SELECT SUM(r.points) as total
                 FROM results r
                 JOIN events e ON r.event_id = e.id
-                WHERE e.series_id = ? AND r.class_id = ? AND YEAR(e.date) = ? AND r.status = 'finished'
+                JOIN series s ON e.series_id = s.id
+                WHERE e.series_id = ?
+                  AND r.class_id = ?
+                  AND (s.year = ? OR YEAR(e.date) = ?)
+                  AND r.status = 'finished'
                 GROUP BY r.cyclist_id
             ) as subq
         ");
-        $stmt->execute([$season['series_id'], $season['class_id'], $season['year']]);
+        $stmt->execute([$season['series_id'], $season['class_id'], $year, $year]);
         $maxPoints = $stmt->fetchColumn();
 
         if ($season['total_points'] == $maxPoints && $maxPoints > 0) {
             $championships[] = [
                 'series_id' => $season['series_id'],
                 'series_name' => $season['series_name'],
-                'year' => $season['year']
+                'year' => $year
             ];
         }
     }
@@ -895,6 +909,61 @@ function getSeriesColor($seriesName) {
 
     // Default accent color
     return '#61CE70';
+}
+
+/**
+ * Bygger om statistik för alla åkare i ett specifikt event
+ * Anropas automatiskt efter resultatimport
+ */
+function rebuildEventRiderStats($pdo, $eventId) {
+    // Hämta alla åkare som har resultat i detta event
+    $stmt = $pdo->prepare("
+        SELECT DISTINCT cyclist_id as rider_id
+        FROM results
+        WHERE event_id = ? AND cyclist_id IS NOT NULL
+    ");
+    $stmt->execute([$eventId]);
+    $riderIds = $stmt->fetchAll(PDO::FETCH_COLUMN);
+
+    if (empty($riderIds)) {
+        return [
+            'event_id' => $eventId,
+            'processed' => 0,
+            'failed' => 0,
+            'message' => 'Inga åkare hittades för detta event'
+        ];
+    }
+
+    $startTime = microtime(true);
+    $processed = 0;
+    $failed = 0;
+
+    foreach ($riderIds as $riderId) {
+        $result = rebuildRiderStats($pdo, $riderId);
+
+        if (!isset($result['success']) || !$result['success']) {
+            $failed++;
+        }
+        $processed++;
+    }
+
+    // Uppdatera serieledare om eventet tillhör en serie
+    $eventInfo = $pdo->prepare("SELECT series_id FROM events WHERE id = ?");
+    $eventInfo->execute([$eventId]);
+    $seriesId = $eventInfo->fetchColumn();
+
+    if ($seriesId) {
+        updateCurrentSeriesLeaders($pdo);
+    }
+
+    $endTime = microtime(true);
+
+    return [
+        'event_id' => $eventId,
+        'processed' => $processed,
+        'failed' => $failed,
+        'duration_seconds' => round($endTime - $startTime, 2)
+    ];
 }
 
 /**

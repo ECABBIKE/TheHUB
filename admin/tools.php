@@ -435,7 +435,7 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
         <div class="tool-actions">
-            <a href="/admin/rebuild-stats" class="btn-admin btn-admin-primary" style="flex: 1;">
+            <a href="/admin/rebuild-stats.php" class="btn-admin btn-admin-primary" style="flex: 1;">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px;"><path d="M21.5 2v6h-6M2.5 22v-6h6"/></svg>
                 Rebuild statistik
             </a>
