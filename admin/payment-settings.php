@@ -156,34 +156,11 @@ if ($isSuperAdmin) {
     ");
 }
 
-$pageTitle = 'Betalningsinställningar';
-$pageType = 'admin';
-$active_tab = 'payments';
-include __DIR__ . '/../includes/layout-header.php';
+// Page settings for unified layout
+$page_title = 'Betalningsinställningar';
+$page_actions = $isSuperAdmin ? '<a href="/admin/users.php" class="btn btn--secondary"><i data-lucide="arrow-left"></i> Tillbaka</a>' : '';
+include __DIR__ . '/components/unified-layout.php';
 ?>
-
-<main class="main-content">
-    <div class="container">
-        <!-- Header -->
-        <div class="flex items-center justify-between mb-lg">
-            <div>
-                <h1 class="">
-                    <i data-lucide="credit-card"></i>
-                    Betalningsinställningar
-                </h1>
-                <?php if ($isSuperAdmin && $userId !== $currentAdmin['id']): ?>
-                <p class="text-secondary">
-                    För <strong><?= h($user['full_name'] ?: $user['username']) ?></strong>
-                </p>
-                <?php endif; ?>
-            </div>
-            <?php if ($isSuperAdmin): ?>
-            <a href="/admin/users.php" class="btn btn--secondary">
-                <i data-lucide="arrow-left"></i>
-                Tillbaka
-            </a>
-            <?php endif; ?>
-        </div>
 
         <!-- Message -->
         <?php if ($message): ?>
@@ -209,7 +186,7 @@ include __DIR__ . '/../includes/layout-header.php';
                     <?= csrf_field() ?>
                     <input type="hidden" name="action" value="save_profile_swish">
 
-                    <div class="grid grid-cols-1 md-grid-cols-2 gap-md">
+                    <div class="grid grid-2 gap-md">
                         <div class="form-group">
                             <label class="label">Swish-nummer</label>
                             <input type="text" name="swish_number" class="input"
@@ -367,8 +344,6 @@ include __DIR__ . '/../includes/layout-header.php';
                 </p>
             </div>
         </div>
-    </div>
-</main>
 
 <!-- Event Modal -->
 <div id="event-modal" class="modal hidden">
@@ -532,4 +507,4 @@ document.addEventListener('keydown', function(e) {
 });
 </script>
 
-<?php include __DIR__ . '/../includes/layout-footer.php'; ?>
+<?php include __DIR__ . '/components/unified-layout-footer.php'; ?>
