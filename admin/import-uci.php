@@ -89,34 +89,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['uci_file'])) {
 }
 
 /**
- * Map discipline name to code for JSON storage
- */
-function mapDisciplineToCode($disciplineName) {
- $mappings = [
- 'downhill' => 'DH',
- 'dh' => 'DH',
- 'enduro' => 'END',
- 'cross country olympic' => 'XCO',
- 'xco' => 'XCO',
- 'cross country marathon' => 'XCM',
- 'xcm' => 'XCM',
- 'bmx' => 'BMX',
- 'landsväg' => 'ROAD',
- 'road' => 'ROAD',
- 'bana' => 'TRACK',
- 'track' => 'TRACK',
- 'gravel' => 'GRAVEL',
- 'cyclocross' => 'CX',
- 'cx' => 'CX',
- 'mtb' => 'DH', // Default MTB to DH
- 'mountain bike' => 'DH'
- ];
-
- $normalized = strtolower(trim($disciplineName));
- return $mappings[$normalized] ?? null;
-}
-
-/**
  * Auto-detect CSV separator with improved logic
  */
 function detectCsvSeparator($file_path) {
@@ -361,10 +333,6 @@ function importUCIRiders($filepath, $db, $importId = null) {
  );
  }
 
- // Map discipline to code for JSON storage
- $disciplineCode = mapDisciplineToCode($discipline);
- $disciplinesJson = $disciplineCode ? json_encode([$disciplineCode]) : null;
-
  // Prepare rider data
  $riderData = [
  'firstname' => $firstname,
@@ -376,7 +344,6 @@ function importUCIRiders($filepath, $db, $importId = null) {
  'license_type' => $license_type,
  'license_category' => $license_category,
  'discipline' => $discipline,
- 'disciplines' => $disciplinesJson,
  'license_valid_until' => $license_valid_until,
  'license_year' => !empty($license_year) && is_numeric($license_year) ? (int)$license_year : null,
  'email' => !empty($email) ? $email : null,
