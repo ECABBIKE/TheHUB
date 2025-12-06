@@ -511,16 +511,16 @@ function calculateFinishRates($pdo, $rider_id) {
  * 2. Serier från tidigare år (för bakåtkompatibilitet)
  */
 function calculateSeriesChampionships($pdo, $rider_id) {
-    $currentYear = date('Y');
+    $currentYear = (int)date('Y');
 
     // Hämta alla serier där åkaren har resultat och serien är avslutad
     // (antingen status='completed' ELLER från tidigare år)
+    // Using COALESCE in SELECT to properly handle NULL series.year
     $stmt = $pdo->prepare("
         SELECT
             s.id as series_id,
             s.name as series_name,
-            s.year as series_year,
-            YEAR(e.date) as event_year,
+            COALESCE(s.year, YEAR(e.date)) as effective_year,
             r.class_id,
             SUM(r.points) as total_points
         FROM results r
@@ -537,9 +537,10 @@ function calculateSeriesChampionships($pdo, $rider_id) {
     $championships = [];
 
     foreach ($riderSeasons as $season) {
-        $year = $season['series_year'] ?? $season['event_year'];
+        $year = (int)$season['effective_year'];
 
         // Kolla om denna åkare hade flest poäng i denna serie/klass
+        // Using COALESCE to handle NULL series.year in comparison
         $stmt = $pdo->prepare("
             SELECT MAX(total) as max_points FROM (
                 SELECT SUM(r.points) as total
@@ -548,12 +549,12 @@ function calculateSeriesChampionships($pdo, $rider_id) {
                 JOIN series s ON e.series_id = s.id
                 WHERE e.series_id = ?
                   AND r.class_id = ?
-                  AND (s.year = ? OR YEAR(e.date) = ?)
+                  AND COALESCE(s.year, YEAR(e.date)) = ?
                   AND r.status = 'finished'
                 GROUP BY r.cyclist_id
             ) as subq
         ");
-        $stmt->execute([$season['series_id'], $season['class_id'], $year, $year]);
+        $stmt->execute([$season['series_id'], $season['class_id'], $year]);
         $maxPoints = $stmt->fetchColumn();
 
         if ($season['total_points'] == $maxPoints && $maxPoints > 0) {
