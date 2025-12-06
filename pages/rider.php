@@ -287,9 +287,14 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
                 <a href="/club/<?= $rider['club_id'] ?>" class="profile-club"><?= htmlspecialchars($rider['club_name']) ?></a>
                 <?php endif; ?>
 
-                <?php if ($rider['gravity_id']): ?>
+                <?php if ($rider['gravity_id']):
+                    // Extract just the number from GID-XXX format
+                    $gidNumber = preg_replace('/^.*?-?(\d+)$/', '$1', $rider['gravity_id']);
+                    $gidNumber = ltrim($gidNumber, '0') ?: '0';
+                ?>
                 <div class="profile-gravity-id">
-                    <span>GS</span> <?= htmlspecialchars($rider['gravity_id']) ?>
+                    <span class="gid-label">Gravity ID</span>
+                    <span class="gid-number"><?= htmlspecialchars($gidNumber) ?></span>
                 </div>
                 <?php endif; ?>
 
@@ -769,22 +774,32 @@ document.querySelectorAll('.series-tab').forEach(tab => {
 .profile-club:hover { text-decoration: underline; }
 
 .profile-gravity-id {
-    font-family: var(--font-mono);
-    font-size: 0.85rem;
-    color: var(--color-text);
-    margin-bottom: var(--space-xs);
-    display: flex;
+    display: inline-flex;
     align-items: center;
-    gap: var(--space-xs);
+    gap: 0;
+    margin-bottom: var(--space-sm);
+    background: linear-gradient(135deg, #1a1a2e, #16213e);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
-.profile-gravity-id span {
-    background: var(--color-accent);
-    color: white;
-    font-size: 0.65rem;
-    font-weight: 700;
-    padding: 2px 6px;
-    border-radius: var(--radius-sm);
+.profile-gravity-id .gid-label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.7);
+    padding: 6px 10px;
+    background: rgba(0, 0, 0, 0.2);
+    letter-spacing: 0.5px;
+}
+
+.profile-gravity-id .gid-number {
+    font-family: var(--font-mono);
+    font-size: 1rem;
+    font-weight: 800;
+    color: #FFD700;
+    padding: 6px 12px;
+    text-shadow: 0 0 10px rgba(255, 215, 0, 0.3);
 }
 
 .profile-uci {
@@ -814,11 +829,12 @@ document.querySelectorAll('.series-tab').forEach(tab => {
     align-items: center;
     gap: 6px;
     padding: 6px 14px;
-    background: var(--color-gs-blue, #004a98);
+    background: linear-gradient(135deg, #0056b3, #004a98);
     color: white;
     font-size: 0.8rem;
     font-weight: 700;
     border-radius: var(--radius-full);
+    box-shadow: 0 2px 6px rgba(0, 74, 152, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 
 .experience-badge {
@@ -826,11 +842,12 @@ document.querySelectorAll('.series-tab').forEach(tab => {
     align-items: center;
     gap: 6px;
     padding: 6px 12px;
-    background: rgba(255, 215, 0, 0.15);
+    background: linear-gradient(135deg, rgba(255, 215, 0, 0.25), rgba(255, 180, 0, 0.15));
     color: #92400e;
     font-size: 0.75rem;
     font-weight: 600;
     border-radius: var(--radius-full);
+    box-shadow: 0 2px 6px rgba(255, 215, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.4);
 }
 
 .license-badge {
@@ -838,11 +855,12 @@ document.querySelectorAll('.series-tab').forEach(tab => {
     align-items: center;
     gap: 4px;
     padding: 6px 12px;
-    background: var(--color-accent, #61CE70);
+    background: linear-gradient(135deg, #6ed67e, #61CE70);
     color: white;
     font-size: 0.75rem;
     font-weight: 600;
     border-radius: var(--radius-full);
+    box-shadow: 0 2px 6px rgba(97, 206, 112, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.25);
 }
 
 /* Social Links */
