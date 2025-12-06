@@ -36,11 +36,11 @@ function getClubAchievementStats(PDO $pdo, int $club_id): array {
         $stmt = $pdo->prepare("
             SELECT
                 COUNT(*) as total_starts,
-                COUNT(DISTINCT r.id) as active_members,
+                COUNT(DISTINCT res.cyclist_id) as active_members,
                 SUM(CASE WHEN res.position = 1 THEN 1 ELSE 0 END) as total_gold,
                 SUM(CASE WHEN res.position <= 3 THEN 1 ELSE 0 END) as total_podiums
             FROM results res
-            JOIN riders r ON res.rider_id = r.id
+            JOIN riders r ON res.cyclist_id = r.id
             JOIN events e ON res.event_id = e.id
             WHERE r.club_id = ?
             AND e.date > DATE_SUB(NOW(), INTERVAL 12 MONTH)
@@ -62,7 +62,7 @@ function getClubAchievementStats(PDO $pdo, int $club_id): array {
 
         // Get series wins (from rider_achievements)
         $stmt = $pdo->prepare("
-            SELECT COUNT(*) as wins, r.firstname, r.lastname
+            SELECT COUNT(*) as wins, r.first_name, r.last_name
             FROM rider_achievements ra
             JOIN riders r ON ra.rider_id = r.id
             WHERE r.club_id = ?
@@ -76,7 +76,7 @@ function getClubAchievementStats(PDO $pdo, int $club_id): array {
         $stats['champion_names'] = [];
         foreach ($champions as $champ) {
             $stats['series_wins'] += (int)$champ['wins'];
-            $stats['champion_names'][] = $champ['firstname'] . ' ' . $champ['lastname'];
+            $stats['champion_names'][] = $champ['first_name'] . ' ' . $champ['last_name'];
         }
         $stats['unique_champions'] = count($champions);
 
