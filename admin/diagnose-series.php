@@ -452,7 +452,33 @@ include __DIR__ . '/components/unified-layout.php';
 
         // Debug: Check if champions have club_id
         if (!empty($existingChampions)) {
-            echo '<h4 class="mt-md mb-sm">Klubb-koppling för mästare:</h4>';
+            // Count how many have clubs vs not
+            $clubStats = $db->getAll("
+                SELECT
+                    COUNT(*) as total,
+                    SUM(CASE WHEN r.club_id IS NOT NULL THEN 1 ELSE 0 END) as with_club,
+                    SUM(CASE WHEN r.club_id IS NULL THEN 1 ELSE 0 END) as without_club
+                FROM rider_achievements ra
+                JOIN riders r ON ra.rider_id = r.id
+                WHERE ra.achievement_type = 'series_champion'
+            ");
+            $stats = $clubStats[0];
+
+            echo '<h4 class="mt-md mb-sm">🏢 Klubb-koppling för mästare:</h4>';
+
+            // Show summary
+            if ((int)$stats['without_club'] > 0) {
+                echo '<div class="alert alert-warning mb-md">';
+                echo '<strong>⚠️ ' . $stats['without_club'] . ' av ' . $stats['total'] . ' seriemästare saknar klubb-koppling!</strong><br>';
+                echo 'Dessa mästare kommer INTE visas under sina klubbars achievements.<br>';
+                echo '<small>För att fixa: Redigera åkarna och sätt deras klubb.</small>';
+                echo '</div>';
+            } else {
+                echo '<div class="alert alert-success mb-md">';
+                echo '<strong>✓ Alla ' . $stats['total'] . ' seriemästare har klubb-koppling</strong>';
+                echo '</div>';
+            }
+
             $champWithClub = $db->getAll("
                 SELECT ra.rider_id, CONCAT(r.first_name, ' ', r.last_name) as name,
                        ra.achievement_value as series_name, ra.season_year,
@@ -462,13 +488,14 @@ include __DIR__ . '/components/unified-layout.php';
                 LEFT JOIN clubs c ON r.club_id = c.id
                 WHERE ra.achievement_type = 'series_champion'
                 ORDER BY ra.season_year DESC
-                LIMIT 10
+                LIMIT 20
             ");
             echo '<table class="table table--striped" style="font-size: 0.85em;">';
-            echo '<thead><tr><th>Åkare</th><th>Serie</th><th>År</th><th>Klubb</th></tr></thead><tbody>';
+            echo '<thead><tr><th>Åkare</th><th>Serie</th><th>År</th><th>Klubb</th><th>Åtgärd</th></tr></thead><tbody>';
             foreach ($champWithClub as $ch) {
-                $clubCell = $ch['club_id'] ? htmlspecialchars($ch['club_name']) : '<span class="text-error">Ingen klubb!</span>';
-                echo "<tr><td>{$ch['name']}</td><td>{$ch['series_name']}</td><td>{$ch['season_year']}</td><td>{$clubCell}</td></tr>";
+                $clubCell = $ch['club_id'] ? htmlspecialchars($ch['club_name']) : '<span class="text-error">❌ Ingen klubb!</span>';
+                $actionCell = $ch['club_id'] ? '✓' : '<a href="/admin/riders/edit/' . $ch['rider_id'] . '" class="btn btn--sm btn--secondary">Redigera</a>';
+                echo "<tr><td><a href=\"/admin/riders/edit/{$ch['rider_id']}\">{$ch['name']}</a></td><td>{$ch['series_name']}</td><td>{$ch['season_year']}</td><td>{$clubCell}</td><td>{$actionCell}</td></tr>";
             }
             echo '</tbody></table>';
         }
@@ -531,16 +558,21 @@ include __DIR__ . '/components/unified-layout.php';
                 require_once __DIR__ . '/../includes/rebuild-rider-stats.php';
                 $pdo = $db->getPdo();
 
-                // Get all completed series
-                $completedSeries = $db->getAll("SELECT id, name FROM series WHERE status = 'completed'");
+                // Get all qualifying series: completed OR from previous years
+                $qualifyingSeries = $db->getAll("
+                    SELECT id, name, year, status
+                    FROM series
+                    WHERE status = 'completed' OR year < " . $currentYear . "
+                ");
 
-                if (empty($completedSeries)) {
-                    echo '<div class="alert alert-warning mb-md">Inga serier markerade som completed.</div>';
+                if (empty($qualifyingSeries)) {
+                    echo '<div class="alert alert-warning mb-md">Inga kvalificerande serier hittades (varken completed eller från tidigare år).</div>';
                 } else {
                     $totalRiders = 0;
                     $totalChampions = 0;
+                    $processedRiders = []; // Avoid processing same rider twice
 
-                    foreach ($completedSeries as $cs) {
+                    foreach ($qualifyingSeries as $qs) {
                         // Get all riders in this series
                         $ridersStmt = $pdo->prepare("
                             SELECT DISTINCT r.cyclist_id
@@ -549,12 +581,16 @@ include __DIR__ . '/components/unified-layout.php';
                             JOIN series_events se ON se.event_id = e.id
                             WHERE se.series_id = ? AND r.cyclist_id IS NOT NULL
                         ");
-                        $ridersStmt->execute([$cs['id']]);
+                        $ridersStmt->execute([$qs['id']]);
                         $riderIds = $ridersStmt->fetchAll(PDO::FETCH_COLUMN);
 
                         foreach ($riderIds as $riderId) {
-                            rebuildRiderStats($pdo, $riderId);
-                            $totalRiders++;
+                            // Only process each rider once
+                            if (!isset($processedRiders[$riderId])) {
+                                rebuildRiderStats($pdo, $riderId);
+                                $processedRiders[$riderId] = true;
+                                $totalRiders++;
+                            }
                         }
 
                         // Count champions for this series
@@ -562,17 +598,19 @@ include __DIR__ . '/components/unified-layout.php';
                             SELECT COUNT(*) FROM rider_achievements
                             WHERE achievement_type = 'series_champion' AND series_id = ?
                         ");
-                        $champCount->execute([$cs['id']]);
+                        $champCount->execute([$qs['id']]);
                         $totalChampions += (int)$champCount->fetchColumn();
                     }
 
-                    echo '<div class="alert alert-success mb-md">';
-                    echo "<strong>Klar!</strong> Bearbetade {$totalRiders} åkare i " . count($completedSeries) . " serier.<br>";
-                    echo "Totalt {$totalChampions} seriemästare registrerade.";
-                    echo '</div>';
+                    $completedCount = count(array_filter($qualifyingSeries, fn($s) => $s['status'] === 'completed'));
+                    $pastYearCount = count($qualifyingSeries) - $completedCount;
 
-                    // Refresh the page to show updated data
-                    echo '<script>setTimeout(function() { window.location.reload(); }, 2000);</script>';
+                    echo '<div class="alert alert-success mb-md">';
+                    echo "<strong>Klar!</strong> Bearbetade {$totalRiders} unika åkare i " . count($qualifyingSeries) . " serier.<br>";
+                    echo "<small>({$completedCount} completed + {$pastYearCount} från tidigare år)</small><br>";
+                    echo "Totalt {$totalChampions} seriemästare registrerade.<br>";
+                    echo '<a href="/admin/diagnose-series.php" class="btn btn--secondary mt-sm" style="display:inline-block;">Ladda om sidan</a>';
+                    echo '</div>';
                 }
             }
         }
@@ -581,7 +619,7 @@ include __DIR__ . '/components/unified-layout.php';
         <form method="POST" style="display: inline;">
             <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(generate_csrf_token()) ?>">
             <button type="submit" name="rebuild_completed_series" class="btn btn--primary"
-                    onclick="return confirm('Detta kommer beräkna seriemästare för alla completed serier.\n\nFortsätt?');">
+                    onclick="return confirm('Detta kommer beräkna seriemästare för alla kvalificerande serier:\n- Serier markerade som completed\n- Serier från tidigare år (<?= $currentYear - 1 ?> och tidigare)\n\nFortsätt?');">
                 🏆 Beräkna Seriemästare Nu
             </button>
         </form>
