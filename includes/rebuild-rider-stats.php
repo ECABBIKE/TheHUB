@@ -507,16 +507,22 @@ function calculateFinishRates($pdo, $rider_id) {
  * Hittar seriesegrar (seriemästare för avslutade serier)
  *
  * Kvalificerar som avslutad serie:
- * 1. Serier där end_date har passerat (automatisk)
- * 2. Serier markerade som 'completed' (manuell)
- * 3. Serier från tidigare år (bakåtkompatibilitet)
+ * 1. Serier markerade som 'completed' (manuell - administatör markerar när alla resultat är inne)
+ * 2. Serier från tidigare år (bakåtkompatibilitet)
+ *
+ * OBS: end_date används INTE längre automatiskt - serien måste markeras som completed
+ * för att undvika felaktig mästarskap om resultat saknas.
+ *
+ * @param bool $debug Enable debug output (default false)
  */
-function calculateSeriesChampionships($pdo, $rider_id) {
+function calculateSeriesChampionships($pdo, $rider_id, $debug = false) {
     $currentYear = (int)date('Y');
+    $debugLog = [];
 
     // Check if series_events junction table exists
     $stmt = $pdo->query("SHOW TABLES LIKE 'series_events'");
     $useSeriesEvents = $stmt->fetch() !== false;
+    if ($debug) $debugLog[] = "useSeriesEvents: " . ($useSeriesEvents ? 'JA' : 'NEJ');
 
     // Get series info for looking up names later
     $seriesInfo = [];
@@ -524,6 +530,7 @@ function calculateSeriesChampionships($pdo, $rider_id) {
     while ($s = $seriesStmt->fetch(PDO::FETCH_ASSOC)) {
         $seriesInfo[(int)$s['id']] = $s;
     }
+    if ($debug) $debugLog[] = "Antal serier i seriesInfo: " . count($seriesInfo);
 
     // Hämta alla serier där åkaren har resultat och serien är avslutad
     // Use simple query that works, then filter in PHP
@@ -557,20 +564,30 @@ function calculateSeriesChampionships($pdo, $rider_id) {
     }
     $stmt->execute([$rider_id]);
     $allRiderResults = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    if ($debug) $debugLog[] = "allRiderResults: " . count($allRiderResults) . " rader";
 
-    // Filter to only qualifying series (completed, end_date passed, or previous year)
+    // Filter to only qualifying series:
+    // 1. status='completed' (manually marked by admin)
+    // 2. Previous year series (backwards compatibility)
+    // NOTE: end_date is NOT used automatically anymore to avoid false champions
     $riderSeasons = [];
     foreach ($allRiderResults as $row) {
         $sid = (int)$row['series_id'];
         $series = $seriesInfo[$sid] ?? null;
-        if (!$series) continue;
+        if (!$series) {
+            if ($debug) $debugLog[] = "  - Serie {$sid} saknas i seriesInfo!";
+            continue;
+        }
 
         $effectiveYear = (int)($series['year'] ?? $currentYear);
         $isCompleted = ($series['status'] ?? '') === 'completed';
-        $endDatePassed = !empty($series['end_date']) && $series['end_date'] < date('Y-m-d');
         $isPastYear = $effectiveYear < $currentYear;
 
-        if ($isCompleted || $endDatePassed || $isPastYear) {
+        if ($debug) {
+            $debugLog[] = "  - Serie {$sid} ({$series['name']}): year={$effectiveYear}, status={$series['status']}, isCompleted=" . ($isCompleted?'J':'N') . ", isPastYear=" . ($isPastYear?'J':'N');
+        }
+
+        if ($isCompleted || $isPastYear) {
             $riderSeasons[] = [
                 'series_id' => $sid,
                 'series_name' => $series['name'],
@@ -580,6 +597,7 @@ function calculateSeriesChampionships($pdo, $rider_id) {
             ];
         }
     }
+    if ($debug) $debugLog[] = "Kvalificerande riderSeasons: " . count($riderSeasons);
 
     $championships = [];
 
@@ -616,6 +634,10 @@ function calculateSeriesChampionships($pdo, $rider_id) {
         $stmt->execute([$season['series_id'], $season['class_id']]);
         $maxPoints = (int)$stmt->fetchColumn();
 
+        if ($debug) {
+            $debugLog[] = "  Koll serie {$season['series_id']}/klass {$season['class_id']}: rider={$season['total_points']}, max={$maxPoints}, match=" . ($season['total_points'] == $maxPoints ? 'JA' : 'NEJ');
+        }
+
         if ($season['total_points'] == $maxPoints && $maxPoints > 0) {
             $championships[] = [
                 'series_id' => $season['series_id'],
@@ -623,6 +645,11 @@ function calculateSeriesChampionships($pdo, $rider_id) {
                 'year' => $year
             ];
         }
+    }
+
+    if ($debug) {
+        $debugLog[] = "Returnerar " . count($championships) . " mästarskap";
+        return ['championships' => $championships, 'debug' => $debugLog];
     }
 
     return $championships;

@@ -130,6 +130,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         try {
+            // Check if we're marking as completed (and it wasn't before)
+            $wasCompleted = !$isNew && ($series['status'] ?? '') === 'completed';
+            $isNowCompleted = $seriesData['status'] === 'completed';
+            $justCompleted = !$wasCompleted && $isNowCompleted;
+            $calculateChampions = isset($_POST['calculate_champions']) && $_POST['calculate_champions'] === '1';
+
             if ($isNew) {
                 $newId = $db->insert('series', $seriesData);
                 $_SESSION['message'] = 'Serie skapad!';
@@ -138,8 +144,44 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 exit;
             } else {
                 $db->update('series', $seriesData, 'id = ?', [$id]);
-                $_SESSION['message'] = 'Serie uppdaterad!';
-                $_SESSION['messageType'] = 'success';
+
+                // If just marked as completed and user confirmed to calculate champions
+                if ($justCompleted && $calculateChampions) {
+                    require_once __DIR__ . '/../includes/rebuild-rider-stats.php';
+                    $pdo = $db->getPdo();
+
+                    // Rebuild stats for all riders who have results in this series
+                    $ridersStmt = $pdo->prepare("
+                        SELECT DISTINCT r.cyclist_id
+                        FROM results r
+                        JOIN events e ON r.event_id = e.id
+                        JOIN series_events se ON se.event_id = e.id
+                        WHERE se.series_id = ? AND r.cyclist_id IS NOT NULL
+                    ");
+                    $ridersStmt->execute([$id]);
+                    $riderIds = $ridersStmt->fetchAll(PDO::FETCH_COLUMN);
+
+                    $championCount = 0;
+                    foreach ($riderIds as $riderId) {
+                        rebuildRiderStats($pdo, $riderId);
+                        // Check if this rider got a championship for this series
+                        $checkStmt = $pdo->prepare("
+                            SELECT COUNT(*) FROM rider_achievements
+                            WHERE rider_id = ? AND achievement_type = 'series_champion' AND series_id = ?
+                        ");
+                        $checkStmt->execute([$riderId, $id]);
+                        if ($checkStmt->fetchColumn() > 0) {
+                            $championCount++;
+                        }
+                    }
+
+                    $_SESSION['message'] = "Serie avslutad! Beräknade {$championCount} seriemästare.";
+                    $_SESSION['messageType'] = 'success';
+                } else {
+                    $_SESSION['message'] = 'Serie uppdaterad!';
+                    $_SESSION['messageType'] = 'success';
+                }
+
                 header('Location: /admin/series/edit/' . $id . '?saved=1');
                 exit;
             }
@@ -205,6 +247,7 @@ include __DIR__ . '/components/unified-layout.php';
 
 <form method="POST" enctype="multipart/form-data">
     <?= csrf_field() ?>
+    <input type="hidden" name="calculate_champions" id="calculate_champions" value="0">
 
     <!-- Basic Info -->
     <div class="admin-card">
@@ -254,9 +297,12 @@ include __DIR__ . '/components/unified-layout.php';
                     <select id="status" name="status" class="admin-form-select">
                         <option value="planning" <?= ($series['status'] ?? '') === 'planning' ? 'selected' : '' ?>>Planering</option>
                         <option value="active" <?= ($series['status'] ?? '') === 'active' ? 'selected' : '' ?>>Aktiv</option>
-                        <option value="completed" <?= ($series['status'] ?? '') === 'completed' ? 'selected' : '' ?>>Avslutad</option>
+                        <option value="completed" <?= ($series['status'] ?? '') === 'completed' ? 'selected' : '' ?>>Avslutad ✓</option>
                         <option value="cancelled" <?= ($series['status'] ?? '') === 'cancelled' ? 'selected' : '' ?>>Inställd</option>
                     </select>
+                    <small style="color: var(--color-text-secondary); font-size: 0.75rem;">
+                        "Avslutad" beräknar seriemästare automatiskt
+                    </small>
                 </div>
             </div>
 
@@ -380,10 +426,36 @@ include __DIR__ . '/components/unified-layout.php';
     </div>
 </form>
 
-<?php if (!$isNew): ?>
 <script>
 const csrfToken = '<?= htmlspecialchars(generate_csrf_token()) ?>';
+const currentStatus = '<?= htmlspecialchars($series['status'] ?? 'planning') ?>';
 
+// Handle form submission - check if status changed to completed
+document.querySelector('form').addEventListener('submit', function(e) {
+    const statusSelect = document.getElementById('status');
+    const newStatus = statusSelect.value;
+    const calculateChampionsField = document.getElementById('calculate_champions');
+
+    // Only show dialog if status is being changed TO completed (wasn't before)
+    if (newStatus === 'completed' && currentStatus !== 'completed') {
+        e.preventDefault();
+
+        // Show confirmation dialog
+        const confirmCalc = confirm(
+            'Du markerar serien som AVSLUTAD.\n\n' +
+            'Vill du räkna seriemästare nu?\n\n' +
+            'OBS: Se till att ALLA resultat är importerade innan du bekräftar!\n\n' +
+            'Klicka OK för att beräkna mästare, eller Avbryt för att bara spara status.'
+        );
+
+        calculateChampionsField.value = confirmCalc ? '1' : '0';
+
+        // Submit the form
+        this.submit();
+    }
+});
+
+<?php if (!$isNew): ?>
 function deleteSeries(id, name) {
     if (!confirm('Är du säker på att du vill ta bort "' + name + '"?\n\nDetta kan inte ångras.')) {
         return;
@@ -398,8 +470,8 @@ function deleteSeries(id, name) {
     document.body.appendChild(form);
     form.submit();
 }
-</script>
 <?php endif; ?>
+</script>
 
 <style>
 .admin-form-textarea {
