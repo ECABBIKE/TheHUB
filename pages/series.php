@@ -79,7 +79,7 @@ try {
       <h1 class="page-title">Tävlingsserier <?= $selectedYear ?></h1>
       <p class="page-subtitle">Alla GravitySeries och andra tävlingsserier</p>
     </div>
-    <?php if (count($availableYears) > 1): ?>
+    <?php if (!empty($availableYears)): ?>
     <div class="year-selector">
       <label for="year-select" class="sr-only">Välj år</label>
       <select id="year-select" class="year-select" onchange="window.location.href='?year=' + this.value">
