@@ -745,9 +745,11 @@ function updateExperienceLevel($pdo, $rider_id) {
 
 /**
  * Uppdaterar aktiva serieledare (för pågående säsonger)
+ * Kräver minst 2 genomförda tävlingar för att vara serieledare
  */
 function updateCurrentSeriesLeaders($pdo) {
     $currentYear = date('Y');
+    $minEventsForLeader = 2; // Minst 2 tävlingar krävs
 
     // Rensa gamla serieledare-achievements för innevarande år
     $stmt = $pdo->prepare("
@@ -768,6 +770,21 @@ function updateCurrentSeriesLeaders($pdo) {
     $seriesClasses = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     foreach ($seriesClasses as $sc) {
+        // Kolla hur många events som genomförts i denna serie/klass
+        $stmt = $pdo->prepare("
+            SELECT COUNT(DISTINCT e.id) as event_count
+            FROM events e
+            JOIN results r ON r.event_id = e.id
+            WHERE e.series_id = ? AND r.class_id = ? AND YEAR(e.date) = ?
+        ");
+        $stmt->execute([$sc['series_id'], $sc['class_id'], $currentYear]);
+        $eventCount = (int)$stmt->fetchColumn();
+
+        // Skippa om färre än 2 events genomförts
+        if ($eventCount < $minEventsForLeader) {
+            continue;
+        }
+
         // Find leader for this series/class
         $stmt = $pdo->prepare("
             SELECT r.cyclist_id, SUM(r.points) as total_points
