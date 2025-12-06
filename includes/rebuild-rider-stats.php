@@ -504,24 +504,32 @@ function calculateFinishRates($pdo, $rider_id) {
 }
 
 /**
- * Hittar seriesegrar (historiska seriemästare)
+ * Hittar seriesegrar (seriemästare för avslutade serier)
+ *
+ * Kollar både:
+ * 1. Serier markerade som 'completed' (oavsett år)
+ * 2. Serier från tidigare år (för bakåtkompatibilitet)
  */
 function calculateSeriesChampionships($pdo, $rider_id) {
-    // Simplified version - checks if rider had most points in completed seasons
     $currentYear = date('Y');
 
+    // Hämta alla serier där åkaren har resultat och serien är avslutad
+    // (antingen status='completed' ELLER från tidigare år)
     $stmt = $pdo->prepare("
         SELECT
             s.id as series_id,
             s.name as series_name,
-            YEAR(e.date) as year,
+            s.year as series_year,
+            YEAR(e.date) as event_year,
             r.class_id,
             SUM(r.points) as total_points
         FROM results r
         JOIN events e ON r.event_id = e.id
         JOIN series s ON e.series_id = s.id
-        WHERE r.cyclist_id = ? AND YEAR(e.date) < ? AND r.status = 'finished'
-        GROUP BY s.id, YEAR(e.date), r.class_id
+        WHERE r.cyclist_id = ?
+          AND r.status = 'finished'
+          AND (s.status = 'completed' OR YEAR(e.date) < ?)
+        GROUP BY s.id, COALESCE(s.year, YEAR(e.date)), r.class_id
     ");
     $stmt->execute([$rider_id, $currentYear]);
     $riderSeasons = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -529,24 +537,30 @@ function calculateSeriesChampionships($pdo, $rider_id) {
     $championships = [];
 
     foreach ($riderSeasons as $season) {
-        // Check if this rider had the most points
+        $year = $season['series_year'] ?? $season['event_year'];
+
+        // Kolla om denna åkare hade flest poäng i denna serie/klass
         $stmt = $pdo->prepare("
             SELECT MAX(total) as max_points FROM (
                 SELECT SUM(r.points) as total
                 FROM results r
                 JOIN events e ON r.event_id = e.id
-                WHERE e.series_id = ? AND r.class_id = ? AND YEAR(e.date) = ? AND r.status = 'finished'
+                JOIN series s ON e.series_id = s.id
+                WHERE e.series_id = ?
+                  AND r.class_id = ?
+                  AND (s.year = ? OR YEAR(e.date) = ?)
+                  AND r.status = 'finished'
                 GROUP BY r.cyclist_id
             ) as subq
         ");
-        $stmt->execute([$season['series_id'], $season['class_id'], $season['year']]);
+        $stmt->execute([$season['series_id'], $season['class_id'], $year, $year]);
         $maxPoints = $stmt->fetchColumn();
 
         if ($season['total_points'] == $maxPoints && $maxPoints > 0) {
             $championships[] = [
                 'series_id' => $season['series_id'],
                 'series_name' => $season['series_name'],
-                'year' => $season['year']
+                'year' => $year
             ];
         }
     }
