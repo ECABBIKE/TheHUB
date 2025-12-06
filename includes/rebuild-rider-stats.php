@@ -912,6 +912,61 @@ function getSeriesColor($seriesName) {
 }
 
 /**
+ * Bygger om statistik för alla åkare i ett specifikt event
+ * Anropas automatiskt efter resultatimport
+ */
+function rebuildEventRiderStats($pdo, $eventId) {
+    // Hämta alla åkare som har resultat i detta event
+    $stmt = $pdo->prepare("
+        SELECT DISTINCT cyclist_id as rider_id
+        FROM results
+        WHERE event_id = ? AND cyclist_id IS NOT NULL
+    ");
+    $stmt->execute([$eventId]);
+    $riderIds = $stmt->fetchAll(PDO::FETCH_COLUMN);
+
+    if (empty($riderIds)) {
+        return [
+            'event_id' => $eventId,
+            'processed' => 0,
+            'failed' => 0,
+            'message' => 'Inga åkare hittades för detta event'
+        ];
+    }
+
+    $startTime = microtime(true);
+    $processed = 0;
+    $failed = 0;
+
+    foreach ($riderIds as $riderId) {
+        $result = rebuildRiderStats($pdo, $riderId);
+
+        if (!isset($result['success']) || !$result['success']) {
+            $failed++;
+        }
+        $processed++;
+    }
+
+    // Uppdatera serieledare om eventet tillhör en serie
+    $eventInfo = $pdo->prepare("SELECT series_id FROM events WHERE id = ?");
+    $eventInfo->execute([$eventId]);
+    $seriesId = $eventInfo->fetchColumn();
+
+    if ($seriesId) {
+        updateCurrentSeriesLeaders($pdo);
+    }
+
+    $endTime = microtime(true);
+
+    return [
+        'event_id' => $eventId,
+        'processed' => $processed,
+        'failed' => $failed,
+        'duration_seconds' => round($endTime - $startTime, 2)
+    ];
+}
+
+/**
  * Sanitize social media handles
  */
 function sanitizeSocialHandle($value, $platform) {
