@@ -287,9 +287,15 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
                 <a href="/club/<?= $rider['club_id'] ?>" class="profile-club"><?= htmlspecialchars($rider['club_name']) ?></a>
                 <?php endif; ?>
 
+                <?php if ($rider['gravity_id']): ?>
+                <div class="profile-gravity-id">
+                    <span>GS</span> <?= htmlspecialchars($rider['gravity_id']) ?>
+                </div>
+                <?php endif; ?>
+
                 <?php if ($rider['license_number']): ?>
                 <div class="profile-uci">
-                    <span>#</span> UCI <?= htmlspecialchars($rider['license_number']) ?>
+                    <span>UCI</span> <?= htmlspecialchars($rider['license_number']) ?>
                 </div>
                 <?php endif; ?>
 
@@ -495,57 +501,9 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
             </div>
         </section>
         <?php endif; ?>
-
-        <!-- All Results -->
-        <section class="section">
-            <div class="section-header">
-                <h2 class="section-title">Alla resultat</h2>
-            </div>
-            <div class="card">
-                <?php if (empty($results)): ?>
-                <div class="empty-state">
-                    <div class="empty-icon">🏁</div>
-                    <p>Inga resultat registrerade</p>
-                </div>
-                <?php else: ?>
-                <div class="results-list">
-                    <?php foreach (array_slice($results, 0, 10) as $result): ?>
-                    <a href="/event/<?= $result['event_id'] ?>" class="result-item">
-                        <div class="result-position <?= $result['position'] <= 3 && $result['status'] === 'finished' ? 'p' . $result['position'] : '' ?>">
-                            <?php if ($result['status'] !== 'finished'): ?>
-                                <?= strtoupper(substr($result['status'], 0, 3)) ?>
-                            <?php elseif ($result['position'] == 1): ?>
-                                <img src="/assets/icons/medal-1st.svg" alt="1:a" class="medal-icon">
-                            <?php elseif ($result['position'] == 2): ?>
-                                <img src="/assets/icons/medal-2nd.svg" alt="2:a" class="medal-icon">
-                            <?php elseif ($result['position'] == 3): ?>
-                                <img src="/assets/icons/medal-3rd.svg" alt="3:e" class="medal-icon">
-                            <?php else: ?>
-                                <?= $result['position'] ?>
-                            <?php endif; ?>
-                        </div>
-                        <div class="result-info">
-                            <div class="result-event-name"><?= htmlspecialchars($result['event_name']) ?></div>
-                            <div class="result-meta">
-                                <span><?= date('j M Y', strtotime($result['event_date'])) ?></span>
-                                <?php if ($result['series_name']): ?>
-                                <span>•</span>
-                                <span><?= htmlspecialchars($result['series_name']) ?></span>
-                                <?php endif; ?>
-                            </div>
-                        </div>
-                        <div class="result-time">
-                            <div class="result-time-value"><?= htmlspecialchars($result['finish_time'] ?? '-') ?></div>
-                        </div>
-                    </a>
-                    <?php endforeach; ?>
-                </div>
-                <?php endif; ?>
-            </div>
-        </section>
     </div>
 
-    <!-- Sidebar: Achievements -->
+    <!-- Sidebar: Achievements & Results -->
     <aside class="content-sidebar">
         <section class="section">
             <div class="section-header">
@@ -622,6 +580,52 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
                 </div>
             </div>
         </section>
+
+        <!-- All Results -->
+        <section class="section">
+            <div class="section-header">
+                <h2 class="section-title">Alla resultat</h2>
+            </div>
+            <div class="card results-card">
+                <?php if (empty($results)): ?>
+                <div class="empty-state">
+                    <div class="empty-icon">🏁</div>
+                    <p>Inga resultat registrerade</p>
+                </div>
+                <?php else: ?>
+                <div class="results-list compact">
+                    <?php foreach (array_slice($results, 0, 10) as $result): ?>
+                    <a href="/event/<?= $result['event_id'] ?>" class="result-item">
+                        <div class="result-position <?= $result['position'] <= 3 && $result['status'] === 'finished' ? 'p' . $result['position'] : '' ?>">
+                            <?php if ($result['status'] !== 'finished'): ?>
+                                <?= strtoupper(substr($result['status'], 0, 3)) ?>
+                            <?php elseif ($result['position'] == 1): ?>
+                                <img src="/assets/icons/medal-1st.svg" alt="1:a" class="medal-icon">
+                            <?php elseif ($result['position'] == 2): ?>
+                                <img src="/assets/icons/medal-2nd.svg" alt="2:a" class="medal-icon">
+                            <?php elseif ($result['position'] == 3): ?>
+                                <img src="/assets/icons/medal-3rd.svg" alt="3:e" class="medal-icon">
+                            <?php else: ?>
+                                <?= $result['position'] ?>
+                            <?php endif; ?>
+                        </div>
+                        <div class="result-info">
+                            <div class="result-event-name"><?= htmlspecialchars($result['event_name']) ?></div>
+                            <div class="result-meta">
+                                <span><?= date('j M Y', strtotime($result['event_date'])) ?></span>
+                            </div>
+                        </div>
+                    </a>
+                    <?php endforeach; ?>
+                </div>
+                <?php if (count($results) > 10): ?>
+                <div class="results-more">
+                    <span>+ <?= count($results) - 10 ?> fler resultat</span>
+                </div>
+                <?php endif; ?>
+                <?php endif; ?>
+            </div>
+        </section>
     </aside>
 </div>
 
@@ -676,13 +680,17 @@ document.querySelectorAll('.series-tab').forEach(tab => {
     width: 100px;
     height: 100px;
     border-radius: var(--radius-lg);
-    background: linear-gradient(135deg, var(--color-secondary, #323539), var(--color-primary, #171717));
+    background: linear-gradient(135deg, #f3f4f6, #e5e7eb);
     display: flex;
     align-items: center;
     justify-content: center;
     border: 3px solid var(--color-bg-surface);
     box-shadow: var(--shadow-lg);
     overflow: hidden;
+}
+
+.profile-photo.has-image {
+    background: var(--color-primary);
 }
 
 .profile-photo img {
@@ -694,7 +702,7 @@ document.querySelectorAll('.series-tab').forEach(tab => {
 .profile-photo svg {
     width: 45%;
     height: 45%;
-    stroke: var(--color-text-muted);
+    stroke: #9ca3af;
 }
 
 .ranking-badge {
@@ -760,11 +768,39 @@ document.querySelectorAll('.series-tab').forEach(tab => {
 
 .profile-club:hover { text-decoration: underline; }
 
+.profile-gravity-id {
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    color: var(--color-text);
+    margin-bottom: var(--space-xs);
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+}
+
+.profile-gravity-id span {
+    background: var(--color-accent);
+    color: white;
+    font-size: 0.65rem;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: var(--radius-sm);
+}
+
 .profile-uci {
     font-family: var(--font-mono);
     font-size: 0.8rem;
     color: var(--color-text-muted);
     margin-bottom: var(--space-md);
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+}
+
+.profile-uci span {
+    font-size: 0.65rem;
+    font-weight: 600;
+    color: var(--color-text-muted);
 }
 
 .profile-meta {
@@ -778,8 +814,8 @@ document.querySelectorAll('.series-tab').forEach(tab => {
     align-items: center;
     gap: 6px;
     padding: 6px 14px;
-    background: var(--color-accent);
-    color: var(--color-primary, #171717);
+    background: var(--color-gs-blue, #004a98);
+    color: white;
     font-size: 0.8rem;
     font-weight: 700;
     border-radius: var(--radius-full);
@@ -802,8 +838,8 @@ document.querySelectorAll('.series-tab').forEach(tab => {
     align-items: center;
     gap: 4px;
     padding: 6px 12px;
-    background: rgba(97, 206, 112, 0.15);
-    color: #166534;
+    background: var(--color-accent, #61CE70);
+    color: white;
     font-size: 0.75rem;
     font-weight: 600;
     border-radius: var(--radius-full);
@@ -911,11 +947,13 @@ document.querySelectorAll('.series-tab').forEach(tab => {
 }
 
 .stat-card.highlight {
-    background: linear-gradient(135deg, rgba(255,215,0,0.15), rgba(255,215,0,0.05));
-    border-color: rgba(255, 215, 0, 0.3);
+    background: linear-gradient(135deg, #fef3c7, #fde68a);
+    border-color: #fbbf24;
+    box-shadow: 0 2px 8px rgba(251, 191, 36, 0.25);
 }
 
-.stat-card.highlight .stat-value { color: #b45309; }
+.stat-card.highlight .stat-value { color: #92400e; }
+.stat-card.highlight .stat-label { color: #b45309; }
 
 .stat-value {
     font-family: var(--font-mono);
@@ -1278,6 +1316,38 @@ document.querySelectorAll('.series-tab').forEach(tab => {
 .card { background: var(--color-bg-surface); border-radius: var(--radius-lg); box-shadow: var(--shadow-md); padding: var(--space-lg); }
 .empty-state { text-align: center; padding: var(--space-2xl); color: var(--color-text-muted); }
 .empty-icon { font-size: 48px; margin-bottom: var(--space-md); }
+
+/* Compact Results for Sidebar */
+.results-card { padding: var(--space-md); }
+.results-card .results-list.compact { gap: var(--space-xs); }
+.results-card .results-list.compact .result-item {
+    padding: var(--space-sm);
+    grid-template-columns: 32px 1fr;
+    gap: var(--space-sm);
+}
+.results-card .results-list.compact .result-position {
+    width: 32px;
+    height: 32px;
+    font-size: 0.8rem;
+}
+.results-card .results-list.compact .medal-icon {
+    width: 20px;
+    height: 20px;
+}
+.results-card .results-list.compact .result-event-name {
+    font-size: 0.8rem;
+}
+.results-card .results-list.compact .result-meta {
+    font-size: 0.7rem;
+}
+.results-more {
+    text-align: center;
+    padding-top: var(--space-sm);
+    margin-top: var(--space-sm);
+    border-top: 1px solid var(--color-border);
+    font-size: 0.75rem;
+    color: var(--color-text-muted);
+}
 
 /* Responsive - Tablet */
 @media (max-width: 768px) {
