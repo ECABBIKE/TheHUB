@@ -297,7 +297,6 @@ function getRiderSeriesStandings($pdo, $rider_id, $year = null) {
         SELECT
             s.id as series_id,
             s.name as series_name,
-            s.color as series_color,
             r.class_id,
             c.display_name as class_name,
             SUM(r.points) as total_points,
@@ -322,6 +321,8 @@ function getRiderSeriesStandings($pdo, $rider_id, $year = null) {
         $standing['total_riders'] = getTotalRidersInClass($pdo, $standing['series_id'], $standing['class_id'], $year);
         $standing['gap_to_podium'] = calculateGapToPodium($pdo, $standing['series_id'], $rider_id, $standing['class_id'], $year);
         $standing['results'] = getSeriesResults($pdo, $standing['series_id'], $rider_id, $year);
+        // Default series color based on series name
+        $standing['series_color'] = getSeriesColor($standing['series_name']);
     }
 
     return $standings;
@@ -644,6 +645,7 @@ function calculateTrend($pdo, $series_id, $rider_id, $class_id, $year) {
 function getSeriesResults($pdo, $series_id, $rider_id, $year) {
     $stmt = $pdo->prepare("
         SELECT
+            e.id as event_id,
             r.position,
             r.finish_time as time,
             r.points,
@@ -804,6 +806,30 @@ function getExperienceLevelInfo($level) {
         5 => ['name' => 'Veteran', 'icon' => '👑', 'next' => null]
     ];
     return $levels[$level] ?? $levels[1];
+}
+
+/**
+ * Get series color based on name
+ */
+function getSeriesColor($seriesName) {
+    $name = strtolower($seriesName ?? '');
+
+    // GravitySeries colors from CLAUDE.md
+    if (strpos($name, 'gravityseries') !== false || strpos($name, 'gravity series') !== false) {
+        return '#61CE70'; // --color-gs-green
+    }
+    if (strpos($name, 'ges') !== false || strpos($name, 'gravity enduro') !== false) {
+        return '#EF761F'; // --color-ges-orange
+    }
+    if (strpos($name, 'ggs') !== false || strpos($name, 'gravity gravel') !== false) {
+        return '#8A9A5B'; // --color-ggs-green
+    }
+    if (strpos($name, 'blue') !== false) {
+        return '#004a98'; // --color-gs-blue
+    }
+
+    // Default accent color
+    return '#61CE70';
 }
 
 /**
