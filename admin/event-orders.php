@@ -122,29 +122,12 @@ $stats = $db->getRow("
     WHERE event_id = ?
 ", [$eventId]);
 
-// Set page variables
-$active_event_tab = 'orders';
-$pageTitle = 'Ordrar - ' . $event['name'];
-$pageType = 'admin';
+// Set page variables for unified layout
+$page_title = 'Ordrar - ' . $event['name'];
+$page_actions = '<a href="/admin/event-payment.php?id=' . $eventId . '" class="btn btn--secondary"><i data-lucide="settings"></i> Betalningsinställningar</a>';
 
-include __DIR__ . '/../includes/layout-header.php';
+include __DIR__ . '/components/unified-layout.php';
 ?>
-
-<main class="main-content">
-    <div class="container">
-        <!-- Header -->
-        <div class="flex items-center justify-between mb-lg">
-            <div>
-                <h1>
-                    <i data-lucide="receipt"></i>
-                    Ordrar
-                </h1>
-            </div>
-            <a href="/admin/event-payment.php?id=<?= $eventId ?>" class="btn btn--secondary">
-                <i data-lucide="settings"></i>
-                Betalningsinställningar
-            </a>
-        </div>
 
         <!-- Message -->
         <?php if ($message): ?>
@@ -311,8 +294,6 @@ include __DIR__ . '/../includes/layout-header.php';
                 <?php endif; ?>
             </div>
         </div>
-    </div>
-</main>
 
 <style>
 .icon-xl {
@@ -321,4 +302,4 @@ include __DIR__ . '/../includes/layout-header.php';
 }
 </style>
 
-<?php include __DIR__ . '/../includes/layout-footer.php'; ?>
+<?php include __DIR__ . '/components/unified-layout-footer.php'; ?>

@@ -138,27 +138,11 @@ $stats = $db->getRow("
     " . ($isSuperAdmin ? '' : "WHERE o.event_id IN (SELECT event_id FROM promotor_events WHERE user_id = {$currentAdmin['id']})") . "
 ");
 
-$pageTitle = 'Ordrar & Betalningar';
-$pageType = 'admin';
-$active_tab = 'payments';
-include __DIR__ . '/../includes/layout-header.php';
+// Page settings for unified layout
+$page_title = 'Ordrar & Betalningar';
+$page_actions = '<a href="/admin/payment-settings.php" class="btn btn--secondary"><i data-lucide="settings"></i> Betalningsinställningar</a>';
+include __DIR__ . '/components/unified-layout.php';
 ?>
-
-<main class="main-content">
-    <div class="container">
-        <!-- Header -->
-        <div class="flex items-center justify-between mb-lg">
-            <div>
-                <h1 class="">
-                    <i data-lucide="receipt"></i>
-                    Ordrar & Betalningar
-                </h1>
-            </div>
-            <a href="/admin/payment-settings.php" class="btn btn--secondary">
-                <i data-lucide="settings"></i>
-                Betalningsinställningar
-            </a>
-        </div>
 
         <!-- Message -->
         <?php if ($message): ?>
@@ -337,8 +321,6 @@ include __DIR__ . '/../includes/layout-header.php';
                 <?php endif; ?>
             </div>
         </div>
-    </div>
-</main>
 
 <!-- Confirm Payment Modal -->
 <div id="confirm-modal" class="modal hidden">
@@ -476,4 +458,4 @@ document.addEventListener('keydown', function(e) {
 });
 </script>
 
-<?php include __DIR__ . '/../includes/layout-footer.php'; ?>
+<?php include __DIR__ . '/components/unified-layout-footer.php'; ?>
