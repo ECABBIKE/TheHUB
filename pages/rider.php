@@ -364,15 +364,27 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
             <?php endif; ?>
             </div>
 
-            <?php if ($isOwnProfile): ?>
-            <a href="/profile/edit" class="edit-profile-btn">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-                </svg>
-                Redigera
-            </a>
-            <?php endif; ?>
+            <div class="profile-actions">
+                <button type="button" class="share-profile-btn" onclick="shareProfile(<?= $riderId ?>)" title="Dela profil">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="18" cy="5" r="3"/>
+                        <circle cx="6" cy="12" r="3"/>
+                        <circle cx="18" cy="19" r="3"/>
+                        <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/>
+                        <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+                    </svg>
+                    Dela
+                </button>
+                <?php if ($isOwnProfile): ?>
+                <a href="/profile/edit" class="edit-profile-btn">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                    </svg>
+                    Redigera
+                </a>
+                <?php endif; ?>
+            </div>
         </div>
     </div>
 </section>
@@ -606,6 +618,80 @@ document.querySelectorAll('.series-tab').forEach(tab => {
         document.getElementById(targetId).classList.add('active');
     });
 });
+
+// Share Profile Function
+function shareProfile(riderId) {
+    const shareUrl = window.location.origin + '/rider/' + riderId;
+    const imageUrl = window.location.origin + '/api/share-image.php?rider_id=' + riderId;
+
+    // Check if Web Share API is available
+    if (navigator.share) {
+        navigator.share({
+            title: document.title,
+            text: 'Kolla in min GravitySeries-profil!',
+            url: shareUrl
+        }).catch(() => {});
+    } else {
+        // Show modal with share options
+        showShareModal(shareUrl, imageUrl, riderId);
+    }
+}
+
+function showShareModal(shareUrl, imageUrl, riderId) {
+    // Create modal
+    const modal = document.createElement('div');
+    modal.className = 'share-modal-overlay';
+    modal.innerHTML = `
+        <div class="share-modal">
+            <div class="share-modal-header">
+                <h3>Dela profil</h3>
+                <button class="share-modal-close" onclick="this.closest('.share-modal-overlay').remove()">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="share-modal-body">
+                <div class="share-preview">
+                    <img src="${imageUrl}" alt="Dela bild" loading="lazy">
+                </div>
+                <div class="share-options">
+                    <a href="${imageUrl}" download="gravityseries-stats.png" class="share-option">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                            <polyline points="7 10 12 15 17 10"/>
+                            <line x1="12" y1="15" x2="12" y2="3"/>
+                        </svg>
+                        Ladda ner bild
+                    </a>
+                    <button onclick="copyToClipboard('${shareUrl}')" class="share-option">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                        </svg>
+                        Kopiera länk
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+
+    // Close on overlay click
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) modal.remove();
+    });
+}
+
+function copyToClipboard(text) {
+    navigator.clipboard.writeText(text).then(() => {
+        // Show success feedback
+        const btn = event.target.closest('.share-option');
+        const originalHtml = btn.innerHTML;
+        btn.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> Kopierat!';
+        setTimeout(() => { btn.innerHTML = originalHtml; }, 2000);
+    });
+}
 </script>
 
 <style>
@@ -886,12 +972,18 @@ document.querySelectorAll('.series-tab').forEach(tab => {
 .social-link.empty { opacity: 0.4; pointer-events: none; }
 .social-link.empty svg { fill: var(--color-text-muted); }
 
+/* Profile Actions */
+.profile-actions {
+    display: flex;
+    gap: var(--space-sm);
+    margin-top: var(--space-md);
+}
+
 /* Edit Profile Button */
 .edit-profile-btn {
     display: inline-flex;
     align-items: center;
     gap: var(--space-xs);
-    margin-top: var(--space-md);
     padding: var(--space-sm) var(--space-md);
     background: var(--color-accent);
     color: white;
@@ -900,12 +992,140 @@ document.querySelectorAll('.series-tab').forEach(tab => {
     border-radius: var(--radius-md);
     text-decoration: none;
     transition: all 0.2s ease;
+    border: none;
+    cursor: pointer;
 }
 
 .edit-profile-btn:hover {
     background: var(--color-accent);
     opacity: 0.9;
     transform: translateY(-1px);
+}
+
+/* Share Profile Button */
+.share-profile-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-xs);
+    padding: var(--space-sm) var(--space-md);
+    background: var(--color-bg-sunken);
+    color: var(--color-text);
+    font-size: 0.85rem;
+    font-weight: 600;
+    border-radius: var(--radius-md);
+    text-decoration: none;
+    transition: all 0.2s ease;
+    border: 1px solid var(--color-border);
+    cursor: pointer;
+    font-family: inherit;
+}
+
+.share-profile-btn:hover {
+    background: var(--color-bg-surface);
+    border-color: var(--color-accent);
+    color: var(--color-accent);
+    transform: translateY(-1px);
+}
+
+/* Share Modal */
+.share-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    padding: var(--space-md);
+}
+
+.share-modal {
+    background: var(--color-bg-surface);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+    max-width: 480px;
+    width: 100%;
+    overflow: hidden;
+}
+
+.share-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--space-md);
+    border-bottom: 1px solid var(--color-border);
+}
+
+.share-modal-header h3 {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 700;
+}
+
+.share-modal-close {
+    background: none;
+    border: none;
+    padding: var(--space-xs);
+    cursor: pointer;
+    color: var(--color-text-muted);
+    border-radius: var(--radius-sm);
+    transition: all 0.2s ease;
+}
+
+.share-modal-close:hover {
+    background: var(--color-bg-sunken);
+    color: var(--color-text);
+}
+
+.share-modal-body {
+    padding: var(--space-md);
+}
+
+.share-preview {
+    background: var(--color-bg-sunken);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    margin-bottom: var(--space-md);
+}
+
+.share-preview img {
+    width: 100%;
+    height: auto;
+    display: block;
+}
+
+.share-options {
+    display: flex;
+    gap: var(--space-sm);
+}
+
+.share-option {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-sm);
+    padding: var(--space-md);
+    background: var(--color-bg-sunken);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    color: var(--color-text);
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: inherit;
+}
+
+.share-option:hover {
+    background: var(--color-accent);
+    border-color: var(--color-accent);
+    color: white;
+}
+
+.share-option svg {
+    flex-shrink: 0;
 }
 
 /* Add Social Prompt */

@@ -535,21 +535,6 @@ include __DIR__ . '/../includes/layout-header.php';
   <small class="text-secondary">Tilldelas av systemet</small>
   </div>
 
-  <!-- Discipline (read-only) -->
-  <div>
-  <label class="label">
-  <i data-lucide="bike"></i>
-  Huvuddisciplin
-  </label>
-  <input
-  type="text"
-  class="input"
-  value="<?= h($rider['discipline'] ?: '-') ?>"
-  disabled
-  >
-  <small class="text-secondary">Importeras från SCF</small>
-  </div>
-
   <!-- Disciplines Checkboxes (read-only from license) -->
   <div style="grid-column: span 2;">
   <label class="label">
