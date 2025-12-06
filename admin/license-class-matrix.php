@@ -137,15 +137,6 @@ include __DIR__ . '/components/unified-layout.php';
   </div>
  </div>
 
- <!-- Current Tab Info -->
- <div class="alert alert-<?= $eventLicenseClasses[$currentTab]['color'] ?> mb-md">
-  <i data-lucide="<?= $eventLicenseClasses[$currentTab]['icon'] ?>"></i>
-  <div>
-  <strong><?= h($eventLicenseClasses[$currentTab]['name']) ?> Event</strong>
-  <br>
-  <span class="text-sm"><?= h($eventLicenseClasses[$currentTab]['desc']) ?></span>
-  </div>
- </div>
 
  <?php if (empty($classes)): ?>
   <div class="card">
@@ -161,11 +152,8 @@ include __DIR__ . '/components/unified-layout.php';
   <div class="card-header">
   <h2 class="">
    <i data-lucide="grid-3x3"></i>
-   Licensmatris för <?= h($eventLicenseClasses[$currentTab]['name']) ?>
+   <?= h($eventLicenseClasses[$currentTab]['name']) ?>-matris
   </h2>
-  <p class="text-secondary text-sm gs-mb-0">
-   Kryssa i vilka klasser varje licenstyp får anmäla sig till på <?= strtolower($eventLicenseClasses[$currentTab]['name']) ?> event
-  </p>
   </div>
   <div class="card-body">
   <form method="POST" id="matrixForm">
@@ -174,16 +162,15 @@ include __DIR__ . '/components/unified-layout.php';
    <input type="hidden" name="event_license_class" value="<?= h($currentTab) ?>">
 
    <div class="table-responsive" style="max-height: 60vh; overflow: auto;">
-   <table class="table table-compact" style="font-size: 0.9rem;">
+   <table class="table table-compact" style="font-size: 0.85rem;">
     <thead style="position: sticky; top: 0; background: var(--gs-bg); z-index: 10;">
     <tr>
-     <th style="position: sticky; left: 0; background: var(--gs-bg); z-index: 11; min-width: 150px;">
+     <th style="position: sticky; left: 0; background: var(--gs-bg); z-index: 11; min-width: 140px;">
      Klass
      </th>
      <?php foreach ($licenseTypes as $license): ?>
-     <th class="text-center" style="min-width: 120px;">
-      <div><?= h($license['name']) ?></div>
-      <small class="text-secondary gs-font-normal"><?= h($license['description']) ?></small>
+     <th class="text-center" style="min-width: 80px; padding: 8px 4px;">
+      <?= h($license['name']) ?>
      </th>
      <?php endforeach; ?>
     </tr>
@@ -202,16 +189,16 @@ include __DIR__ . '/components/unified-layout.php';
       <?php endif; ?>
      </td>
      <?php foreach ($licenseTypes as $license): ?>
-      <td class="text-center">
+      <td class="text-center" style="padding: 4px;">
       <input type="hidden"
        name="mapping[<?= $class['id'] ?>][<?= h($license['code']) ?>]"
        value="0">
-      <label style="cursor: pointer; display: block; padding: 8px;">
+      <label style="cursor: pointer; display: block; padding: 4px;">
        <input type="checkbox"
         name="mapping[<?= $class['id'] ?>][<?= h($license['code']) ?>]"
         value="1"
         <?= isset($currentMappings[$class['id']][$license['code']]) ? 'checked' : '' ?>
-        style="width: 20px; height: 20px; cursor: pointer;">
+        style="width: 18px; height: 18px; cursor: pointer;">
       </label>
       </td>
      <?php endforeach; ?>
@@ -247,32 +234,6 @@ include __DIR__ . '/components/unified-layout.php';
    </button>
    </div>
   </form>
-  </div>
- </div>
-
- <!-- Quick Stats -->
- <div class="card mt-lg">
-  <div class="card-header">
-  <h3 class="">
-   <i data-lucide="bar-chart-2"></i>
-   Översikt för <?= h($eventLicenseClasses[$currentTab]['name']) ?>
-  </h3>
-  </div>
-  <div class="card-body">
-  <div class="grid grid-cols-3 gap-md">
-   <?php foreach ($licenseTypes as $license):
-   $count = 0;
-   foreach ($classes as $class) {
-    if (isset($currentMappings[$class['id']][$license['code']])) $count++;
-   }
-   ?>
-   <div class="text-center p-md" style="border: 1px solid var(--border); border-radius: var(--gs-radius);">
-    <div class="gs-mb-xs"><?= $count ?></div>
-    <div class="text-sm text-secondary"><?= h($license['name']) ?></div>
-    <div class="text-xs text-secondary">av <?= count($classes) ?> klasser</div>
-   </div>
-   <?php endforeach; ?>
-  </div>
   </div>
  </div>
 

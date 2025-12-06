@@ -104,8 +104,6 @@ include __DIR__ . '/../includes/admin-header.php';
         <h1><?= $pageTitle ?></h1>
     </div>
 
-    <!-- DITT INNEHÅLL HÄR -->
-
 </div>
 
 <?php include __DIR__ . '/../includes/admin-footer.php'; ?>
