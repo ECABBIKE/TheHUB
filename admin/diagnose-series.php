@@ -186,17 +186,18 @@ include __DIR__ . '/components/unified-layout.php';
         try {
             if ($seriesEventsExists) {
                 // Use series_events junction table
+                // Note: Using MAX() for non-grouped columns to satisfy ONLY_FULL_GROUP_BY
                 $allTotals = $db->getAll("
                     SELECT
                         s.id as series_id,
-                        s.name as series_name,
-                        COALESCE(s.year, YEAR(MAX(e.date))) as effective_year,
-                        s.status,
-                        s.end_date,
+                        MAX(s.name) as series_name,
+                        COALESCE(MAX(s.year), YEAR(MAX(e.date))) as effective_year,
+                        MAX(s.status) as status,
+                        MAX(s.end_date) as end_date,
                         r.class_id,
-                        c.display_name as class_name,
+                        MAX(c.display_name) as class_name,
                         r.cyclist_id,
-                        CONCAT(rd.first_name, ' ', rd.last_name) as rider_name,
+                        MAX(CONCAT(rd.first_name, ' ', rd.last_name)) as rider_name,
                         SUM(r.points) as total_points
                     FROM results r
                     JOIN events e ON r.event_id = e.id
@@ -206,21 +207,21 @@ include __DIR__ . '/components/unified-layout.php';
                     JOIN riders rd ON r.cyclist_id = rd.id
                     WHERE r.status = 'finished'
                     GROUP BY s.id, r.class_id, r.cyclist_id
-                    ORDER BY s.name, c.display_name, total_points DESC
+                    ORDER BY series_name, class_name, total_points DESC
                 ");
             } else {
                 // Fallback: use events.series_id
                 $allTotals = $db->getAll("
                     SELECT
                         s.id as series_id,
-                        s.name as series_name,
-                        COALESCE(s.year, YEAR(MAX(e.date))) as effective_year,
-                        s.status,
-                        s.end_date,
+                        MAX(s.name) as series_name,
+                        COALESCE(MAX(s.year), YEAR(MAX(e.date))) as effective_year,
+                        MAX(s.status) as status,
+                        MAX(s.end_date) as end_date,
                         r.class_id,
-                        c.display_name as class_name,
+                        MAX(c.display_name) as class_name,
                         r.cyclist_id,
-                        CONCAT(rd.first_name, ' ', rd.last_name) as rider_name,
+                        MAX(CONCAT(rd.first_name, ' ', rd.last_name)) as rider_name,
                         SUM(r.points) as total_points
                     FROM results r
                     JOIN events e ON r.event_id = e.id
@@ -230,7 +231,7 @@ include __DIR__ . '/components/unified-layout.php';
                     WHERE r.status = 'finished'
                       AND e.series_id IS NOT NULL
                     GROUP BY s.id, r.class_id, r.cyclist_id
-                    ORDER BY s.name, c.display_name, total_points DESC
+                    ORDER BY series_name, class_name, total_points DESC
                 ");
             }
 
