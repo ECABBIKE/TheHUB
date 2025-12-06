@@ -103,21 +103,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// Check if editing a series
-$editSeries = null;
+// Redirect old edit URLs to new edit page
 if (isset($_GET['edit']) && is_numeric($_GET['edit'])) {
-    $editSeries = $db->getRow("SELECT * FROM series WHERE id = ?", [intval($_GET['edit'])]);
+    header('Location: /admin/series/edit/' . intval($_GET['edit']));
+    exit;
 }
 
 // Get filter parameters
 $filterYear = isset($_GET['year']) && is_numeric($_GET['year']) ? intval($_GET['year']) : null;
 
-// Build WHERE clause
+// Check if year column exists on series table
+$yearColumnExists = false;
+try {
+    $columns = $db->getAll("SHOW COLUMNS FROM series LIKE 'year'");
+    $yearColumnExists = !empty($columns);
+} catch (Exception $e) {}
+
+// Build WHERE clause - use series.year column if available, fallback to YEAR(start_date)
 $where = [];
 $params = [];
 
 if ($filterYear) {
-    $where[] = "YEAR(start_date) = ?";
+    if ($yearColumnExists) {
+        // Use COALESCE to prefer series.year, fallback to YEAR(start_date)
+        $where[] = "COALESCE(year, YEAR(start_date)) = ?";
+    } else {
+        $where[] = "YEAR(start_date) = ?";
+    }
     $params[] = $filterYear;
 }
 
@@ -143,11 +155,12 @@ try {
 
 // Get series from database
 $formatSelect = $formatColumnExists ? ', format' : ', "Championship" as format';
+$yearSelect = $yearColumnExists ? ', year' : ', NULL as year';
 $eventsCountSelect = $seriesEventsTableExists
     ? '(SELECT COUNT(*) FROM series_events WHERE series_id = series.id)'
     : '0';
 
-$sql = "SELECT id, name, type{$formatSelect}, status, start_date, end_date, logo, organizer,
+$sql = "SELECT id, name, type{$formatSelect}{$yearSelect}, status, start_date, end_date, logo, organizer,
     {$eventsCountSelect} as events_count
     FROM series
     {$whereClause}
@@ -155,8 +168,12 @@ $sql = "SELECT id, name, type{$formatSelect}, status, start_date, end_date, logo
 
 $series = $db->getAll($sql, $params);
 
-// Get all years from series
-$allYears = $db->getAll("SELECT DISTINCT YEAR(start_date) as year FROM series WHERE start_date IS NOT NULL ORDER BY year DESC");
+// Get all years from series - use series.year column if available
+if ($yearColumnExists) {
+    $allYears = $db->getAll("SELECT DISTINCT COALESCE(year, YEAR(start_date)) as year FROM series WHERE year IS NOT NULL OR start_date IS NOT NULL ORDER BY year DESC");
+} else {
+    $allYears = $db->getAll("SELECT DISTINCT YEAR(start_date) as year FROM series WHERE start_date IS NOT NULL ORDER BY year DESC");
+}
 
 // Count unique participants in active series
 $uniqueParticipants = 0;
@@ -174,10 +191,10 @@ if ($seriesEventsTableExists) {
 // Page config
 $page_title = 'Serier';
 $page_group = 'standings';
-$page_actions = '<button onclick="openSeriesModal()" class="btn-admin btn-admin-primary">
+$page_actions = '<a href="/admin/series/edit?new=1" class="btn-admin btn-admin-primary">
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
     Ny Serie
-</button>';
+</a>';
 
 // Include unified layout (uses same layout as public site)
 include __DIR__ . '/components/unified-layout.php';
@@ -282,7 +299,7 @@ include __DIR__ . '/components/unified-layout.php';
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>
                 <h3>Inga serier hittades</h3>
                 <p>Prova att ändra filtren eller skapa en ny serie.</p>
-                <button onclick="openSeriesModal()" class="btn-admin btn-admin-primary">Skapa serie</button>
+                <a href="/admin/series/edit?new=1" class="btn-admin btn-admin-primary">Skapa serie</a>
             </div>
         <?php else: ?>
             <div class="admin-table-container">
@@ -290,6 +307,7 @@ include __DIR__ . '/components/unified-layout.php';
                     <thead>
                         <tr>
                             <th>Namn</th>
+                            <th>År</th>
                             <th>Typ</th>
                             <th>Format</th>
                             <th>Status</th>
@@ -311,9 +329,16 @@ include __DIR__ . '/components/unified-layout.php';
                             ?>
                             <tr>
                                 <td>
-                                    <a href="?edit=<?= $serie['id'] ?>" style="color: var(--color-accent); text-decoration: none; font-weight: 500;">
+                                    <a href="/admin/series/edit/<?= $serie['id'] ?>" style="color: var(--color-accent); text-decoration: none; font-weight: 500;">
                                         <?= htmlspecialchars($serie['name']) ?>
                                     </a>
+                                </td>
+                                <td>
+                                    <?php if (!empty($serie['year'])): ?>
+                                        <span class="admin-badge admin-badge-info"><?= $serie['year'] ?></span>
+                                    <?php else: ?>
+                                        <span style="color: var(--color-text-secondary);">-</span>
+                                    <?php endif; ?>
                                 </td>
                                 <td><?= htmlspecialchars($serie['type'] ?? '-') ?></td>
                                 <td>
@@ -336,7 +361,7 @@ include __DIR__ . '/components/unified-layout.php';
                                         <a href="/admin/series/pricing?series_id=<?= $serie['id'] ?>" class="btn-admin btn-admin-sm btn-admin-secondary" title="Priser">
                                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg>
                                         </a>
-                                        <a href="?edit=<?= $serie['id'] ?>" class="btn-admin btn-admin-sm btn-admin-secondary" title="Redigera">
+                                        <a href="/admin/series/edit/<?= $serie['id'] ?>" class="btn-admin btn-admin-sm btn-admin-secondary" title="Redigera">
                                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
                                         </a>
                                         <button onclick="deleteSeries(<?= $serie['id'] ?>, '<?= addslashes($serie['name']) ?>')" class="btn-admin btn-admin-sm btn-admin-danger" title="Ta bort">
@@ -469,30 +494,6 @@ function deleteSeries(id, name) {
     form.submit();
 }
 
-// Handle edit mode from URL parameter
-document.addEventListener('DOMContentLoaded', function() {
-    <?php if ($editSeries): ?>
-        document.getElementById('formAction').value = 'update';
-        document.getElementById('seriesId').value = '<?= $editSeries['id'] ?>';
-        document.getElementById('name').value = '<?= addslashes($editSeries['name']) ?>';
-        document.getElementById('type').value = '<?= addslashes($editSeries['type'] ?? '') ?>';
-        document.getElementById('format').value = '<?= $editSeries['format'] ?? 'Championship' ?>';
-        document.getElementById('status').value = '<?= $editSeries['status'] ?? 'planning' ?>';
-        document.getElementById('start_date').value = '<?= $editSeries['start_date'] ?? '' ?>';
-        document.getElementById('end_date').value = '<?= $editSeries['end_date'] ?? '' ?>';
-        document.getElementById('description').value = '<?= addslashes($editSeries['description'] ?? '') ?>';
-        document.getElementById('organizer').value = '<?= addslashes($editSeries['organizer'] ?? '') ?>';
-
-        <?php if (!empty($editSeries['logo'])): ?>
-            document.getElementById('currentLogo').style.display = 'block';
-            document.getElementById('currentLogoImg').src = '<?= $editSeries['logo'] ?>';
-        <?php endif; ?>
-
-        document.getElementById('modalTitle').textContent = 'Redigera Serie';
-        document.getElementById('submitButton').textContent = 'Uppdatera';
-        document.getElementById('seriesModal').style.display = 'flex';
-    <?php endif; ?>
-});
 
 // Close modal with Escape key
 document.addEventListener('keydown', function(e) {
