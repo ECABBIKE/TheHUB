@@ -244,6 +244,7 @@ $isSeriesLeader = false;
 $isSeriesChampion = false;
 $isSwedishChampion = false;
 $swedishChampionCount = 0;
+$seriesChampionCount = 0;
 $finisher100 = false;
 
 foreach ($achievements as $ach) {
@@ -253,10 +254,13 @@ foreach ($achievements as $ach) {
         case 'bronze': $achievementCounts['bronze'] = (int)$ach['achievement_value']; break;
         case 'hot_streak': $achievementCounts['hot_streak'] = (int)$ach['achievement_value']; break;
         case 'series_leader': $isSeriesLeader = true; break;
-        case 'series_champion': $isSeriesChampion = true; break;
+        case 'series_champion':
+            $isSeriesChampion = true;
+            $seriesChampionCount++; // Count each series championship
+            break;
         case 'swedish_champion':
             $isSwedishChampion = true;
-            $swedishChampionCount = (int)$ach['achievement_value'];
+            $swedishChampionCount++; // Count each SM title (value is event name, not count)
             break;
         case 'finisher_100': $finisher100 = true; break;
     }
@@ -544,7 +548,7 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
             'hot_streak' => $achievementCounts['hot_streak'],
             'series_completed' => $finisher100 ? 1 : 0,
             'is_serieledare' => $isSeriesLeader,
-            'series_wins' => $isSeriesChampion ? 1 : 0,
+            'series_wins' => $seriesChampionCount,
             'sm_wins' => $swedishChampionCount,
             'seasons_active' => $experienceLevel,
             'has_series_win' => $isSeriesChampion,
