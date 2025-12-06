@@ -1279,13 +1279,252 @@ document.querySelectorAll('.series-tab').forEach(tab => {
 .empty-state { text-align: center; padding: var(--space-2xl); color: var(--color-text-muted); }
 .empty-icon { font-size: 48px; margin-bottom: var(--space-md); }
 
-/* Responsive */
-@media (max-width: 640px) {
-    .stats-grid { grid-template-columns: repeat(2, 1fr); }
-    .series-stats { grid-template-columns: repeat(2, 1fr); }
-    .hero-main { flex-direction: column; align-items: center; text-align: center; }
-    .profile-info { text-align: center; }
-    .profile-meta { justify-content: center; }
-    .profile-photo { width: 80px; height: 80px; }
+/* Responsive - Tablet */
+@media (max-width: 768px) {
+    .hero-content {
+        padding: var(--space-md);
+    }
+
+    .series-content {
+        padding: var(--space-md);
+    }
+
+    .achievements-card {
+        padding: var(--space-md);
+    }
+
+    .rank-position {
+        font-size: 2rem;
+    }
+}
+
+/* Responsive - Mobile */
+@media (max-width: 599px) {
+    /* Hero Section */
+    .hero-main {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        gap: var(--space-md);
+    }
+
+    .profile-info {
+        text-align: center;
+    }
+
+    .profile-meta {
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+
+    .profile-photo {
+        width: 72px;
+        height: 72px;
+    }
+
+    .profile-name {
+        font-size: 1.25rem;
+    }
+
+    .profile-age {
+        font-size: 0.9rem;
+    }
+
+    .ranking-badge {
+        width: 36px;
+        height: 36px;
+        top: -6px;
+        right: -6px;
+    }
+
+    .ranking-badge .rank-number {
+        font-size: 0.95rem;
+    }
+
+    .ranking-badge .rank-label {
+        font-size: 0.4rem;
+    }
+
+    /* Stats Grid */
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: var(--space-xs);
+    }
+
+    .stat-card {
+        padding: var(--space-sm);
+    }
+
+    .stat-value {
+        font-size: 1.25rem;
+    }
+
+    .stat-label {
+        font-size: 0.65rem;
+    }
+
+    /* Series Tabs */
+    .series-nav {
+        gap: 0;
+    }
+
+    .series-tab {
+        padding: var(--space-sm) var(--space-md);
+        font-size: 0.75rem;
+        flex-direction: column;
+        gap: var(--space-xs);
+    }
+
+    .series-dot {
+        width: 6px;
+        height: 6px;
+    }
+
+    .series-content {
+        padding: var(--space-sm);
+    }
+
+    /* Standings */
+    .standings-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: var(--space-sm);
+    }
+
+    .rank-position {
+        font-size: 1.75rem;
+    }
+
+    .standings-trend {
+        padding: var(--space-xs) var(--space-sm);
+        font-size: 0.75rem;
+    }
+
+    /* Series Stats */
+    .series-stats {
+        grid-template-columns: repeat(2, 1fr);
+        gap: var(--space-sm);
+        padding: var(--space-sm);
+    }
+
+    .series-stat-value {
+        font-size: 1rem;
+    }
+
+    /* Result Items */
+    .result-item {
+        grid-template-columns: auto 1fr;
+        gap: var(--space-sm);
+        padding: var(--space-sm);
+    }
+
+    .result-position {
+        width: 32px;
+        height: 32px;
+        font-size: 0.8rem;
+    }
+
+    .medal-icon {
+        width: 22px;
+        height: 22px;
+    }
+
+    .result-event-name {
+        font-size: 0.8rem;
+    }
+
+    .result-meta {
+        font-size: 0.7rem;
+    }
+
+    .result-time {
+        display: none;
+    }
+
+    /* Achievements */
+    .achievements-card {
+        padding: var(--space-sm);
+    }
+
+    .experience-section {
+        margin-bottom: var(--space-md);
+        padding-bottom: var(--space-md);
+    }
+
+    .experience-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: var(--space-sm);
+    }
+
+    .achievements-grid {
+        grid-template-columns: repeat(3, 1fr);
+        gap: var(--space-sm);
+    }
+
+    .achievement {
+        padding: var(--space-sm);
+    }
+
+    .achievement-icon {
+        width: 40px;
+        height: 40px;
+        font-size: 1.25rem;
+    }
+
+    .achievement-medal {
+        width: 26px;
+        height: 26px;
+    }
+
+    .achievement-name {
+        font-size: 0.6rem;
+    }
+
+    /* Social Links */
+    .hero-social {
+        justify-content: center;
+        padding-top: var(--space-sm);
+    }
+
+    .social-link {
+        width: 36px;
+        height: 36px;
+    }
+
+    .social-link svg {
+        width: 16px;
+        height: 16px;
+    }
+
+    /* Edit Profile */
+    .edit-profile-btn {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .add-social-prompt {
+        justify-content: center;
+    }
+
+    /* Content Layout */
+    .content-layout {
+        gap: var(--space-md);
+    }
+
+    /* Section Headers */
+    .section-title {
+        font-size: 0.9rem;
+    }
+
+    .section-title::before {
+        height: 14px;
+        width: 3px;
+    }
+
+    /* Cards */
+    .card {
+        padding: var(--space-md);
+    }
 }
 </style>
