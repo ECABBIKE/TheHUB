@@ -1,17 +1,16 @@
 <?php
 /**
  * Event Orders - Orders for a specific event
- * Wrapper that shows orders filtered by event with event context menu
+ * Uses Economy Tab System
  */
 
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/../includes/payment.php';
-require_admin();
 
 $db = getDB();
 
-// Get event ID
-$eventId = isset($_GET['id']) ? intval($_GET['id']) : 0;
+// Get event ID (supports both 'id' and 'event_id')
+$eventId = isset($_GET['id']) ? intval($_GET['id']) : (isset($_GET['event_id']) ? intval($_GET['event_id']) : 0);
 
 if ($eventId <= 0) {
     $_SESSION['flash_message'] = 'Ogiltigt event-ID';
@@ -122,11 +121,10 @@ $stats = $db->getRow("
     WHERE event_id = ?
 ", [$eventId]);
 
-// Set page variables for unified layout
-$page_title = 'Ordrar - ' . $event['name'];
-$page_actions = '<a href="/admin/event-payment.php?id=' . $eventId . '" class="btn btn--secondary"><i data-lucide="settings"></i> Betalningsinställningar</a>';
+// Set page variables for economy layout
+$economy_page_title = 'Ordrar';
 
-include __DIR__ . '/components/unified-layout.php';
+include __DIR__ . '/components/economy-layout.php';
 ?>
 
         <!-- Message -->
@@ -302,4 +300,4 @@ include __DIR__ . '/components/unified-layout.php';
 }
 </style>
 
-<?php include __DIR__ . '/components/unified-layout-footer.php'; ?>
+<?php include __DIR__ . '/components/economy-layout-footer.php'; ?>

@@ -1,6 +1,7 @@
 <?php
 /**
  * Order Management - View and confirm payments
+ * Uses Economy Tab System (Global context)
  *
  * Accessible by:
  * - Super Admin: Can manage all orders
@@ -9,7 +10,6 @@
 
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/../includes/payment.php';
-require_admin();
 
 $db = getDB();
 $currentAdmin = getCurrentAdmin();
@@ -138,10 +138,9 @@ $stats = $db->getRow("
     " . ($isSuperAdmin ? '' : "WHERE o.event_id IN (SELECT event_id FROM promotor_events WHERE user_id = {$currentAdmin['id']})") . "
 ");
 
-// Page settings for unified layout
-$page_title = 'Ordrar & Betalningar';
-$page_actions = '<a href="/admin/payment-settings.php" class="btn btn--secondary"><i data-lucide="settings"></i> Betalningsinställningar</a>';
-include __DIR__ . '/components/unified-layout.php';
+// Page settings for economy layout
+$economy_page_title = 'Ordrar';
+include __DIR__ . '/components/economy-layout.php';
 ?>
 
         <!-- Message -->
@@ -458,4 +457,4 @@ document.addEventListener('keydown', function(e) {
 });
 </script>
 
-<?php include __DIR__ . '/components/unified-layout-footer.php'; ?>
+<?php include __DIR__ . '/components/economy-layout-footer.php'; ?>
