@@ -259,9 +259,9 @@ include __DIR__ . '/components/unified-layout.php';
             }
 
             $riderInfo = [];
-            $riderData = $db->getAll("SELECT id, first_name, last_name FROM riders");
+            $riderData = $db->getAll("SELECT id, firstname, lastname FROM riders");
             foreach ($riderData as $r) {
-                $riderInfo[(int)$r['id']] = $r['first_name'] . ' ' . $r['last_name'];
+                $riderInfo[(int)$r['id']] = $r['firstname'] . ' ' . $r['lastname'];
             }
 
             // Add enriched data to results
@@ -374,7 +374,7 @@ include __DIR__ . '/components/unified-layout.php';
         $existingChampions = $db->getAll("
             SELECT
                 ra.rider_id,
-                CONCAT(r.first_name, ' ', r.last_name) as rider_name,
+                CONCAT(r.firstname, ' ', r.lastname) as rider_name,
                 ra.achievement_value as series_name,
                 ra.season_year,
                 ra.earned_at
@@ -547,7 +547,7 @@ include __DIR__ . '/components/unified-layout.php';
             }
 
             $champWithClub = $db->getAll("
-                SELECT ra.rider_id, CONCAT(r.first_name, ' ', r.last_name) as name,
+                SELECT ra.rider_id, CONCAT(r.firstname, ' ', r.lastname) as name,
                        ra.achievement_value as series_name, ra.season_year,
                        r.club_id, c.name as club_name
                 FROM rider_achievements ra

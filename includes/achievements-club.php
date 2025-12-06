@@ -62,7 +62,7 @@ function getClubAchievementStats(PDO $pdo, int $club_id): array {
 
         // Get series wins (from rider_achievements)
         $stmt = $pdo->prepare("
-            SELECT COUNT(*) as wins, r.first_name, r.last_name
+            SELECT COUNT(*) as wins, r.firstname, r.lastname
             FROM rider_achievements ra
             JOIN riders r ON ra.rider_id = r.id
             WHERE r.club_id = ?
@@ -76,7 +76,7 @@ function getClubAchievementStats(PDO $pdo, int $club_id): array {
         $stats['champion_names'] = [];
         foreach ($champions as $champ) {
             $stats['series_wins'] += (int)$champ['wins'];
-            $stats['champion_names'][] = $champ['first_name'] . ' ' . $champ['last_name'];
+            $stats['champion_names'][] = $champ['firstname'] . ' ' . $champ['lastname'];
         }
         $stats['unique_champions'] = count($champions);
 

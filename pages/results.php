@@ -50,7 +50,7 @@ try {
         FROM series s
         INNER JOIN events e ON s.id = e.series_id
         INNER JOIN results r ON e.id = r.event_id
-        WHERE s.status = 'active'
+        WHERE s.status IN ('active', 'completed')
         ORDER BY s.name
     ")->fetchAll(PDO::FETCH_ASSOC);
 
