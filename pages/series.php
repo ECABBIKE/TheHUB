@@ -24,7 +24,7 @@ try {
                 WHERE e2.series_id = s.id) as participant_count
         FROM series s
         LEFT JOIN events e ON s.id = e.series_id
-        WHERE s.status = 'active'
+        WHERE s.status IN ('active', 'completed')
         GROUP BY s.id
         ORDER BY s.year DESC, s.name ASC
     ")->fetchAll(PDO::FETCH_ASSOC);
@@ -38,7 +38,7 @@ try {
         FROM results r
         JOIN events e ON r.event_id = e.id
         JOIN series s ON e.series_id = s.id
-        WHERE s.status = 'active'
+        WHERE s.status IN ('active', 'completed')
     ")->fetch(PDO::FETCH_ASSOC);
     $totalParticipants = $uniqueParticipants['total'] ?? 0;
 
@@ -61,7 +61,7 @@ try {
   <div class="stats-row">
     <div class="stat-block">
       <div class="stat-value"><?= $totalSeries ?></div>
-      <div class="stat-label">Aktiva serier</div>
+      <div class="stat-label">Serier</div>
     </div>
     <div class="stat-block">
       <div class="stat-value"><?= $totalEvents ?></div>
