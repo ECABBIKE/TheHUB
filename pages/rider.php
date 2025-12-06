@@ -257,38 +257,39 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
 <section class="profile-hero">
     <div class="hero-accent-bar"></div>
     <div class="hero-content">
-        <div class="hero-main">
-            <div class="profile-photo-container">
-                <div class="profile-photo">
-                    <?php if ($profileImage): ?>
-                        <img src="<?= htmlspecialchars($profileImage) ?>" alt="<?= $fullName ?>">
-                    <?php else: ?>
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-                            <circle cx="12" cy="7" r="4"/>
-                        </svg>
+        <!-- Top row: Photo + Name + Social -->
+        <div class="hero-top">
+            <div class="hero-left">
+                <div class="profile-photo-container">
+                    <div class="profile-photo">
+                        <?php if ($profileImage): ?>
+                            <img src="<?= htmlspecialchars($profileImage) ?>" alt="<?= $fullName ?>">
+                        <?php else: ?>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                                <circle cx="12" cy="7" r="4"/>
+                            </svg>
+                        <?php endif; ?>
+                    </div>
+                    <?php if ($rankingPosition): ?>
+                    <div class="ranking-badge">
+                        <span class="rank-number">#<?= $rankingPosition ?></span>
+                        <span class="rank-label">Rank</span>
+                    </div>
                     <?php endif; ?>
                 </div>
-                <?php if ($rankingPosition): ?>
-                <div class="ranking-badge">
-                    <span class="rank-number">#<?= $rankingPosition ?></span>
-                    <span class="rank-label">Rank</span>
-                </div>
-                <?php endif; ?>
             </div>
 
-            <div class="profile-info">
-                <div class="profile-name-row">
-                    <h1 class="profile-name"><?= $fullName ?></h1>
-                    <?php if ($age): ?><span class="profile-age"><?= $age ?> år</span><?php endif; ?>
-                </div>
-
+            <div class="hero-center">
+                <h1 class="profile-name"><?= $fullName ?></h1>
+                <?php if ($age): ?><span class="profile-age"><?= $age ?> år</span><?php endif; ?>
                 <?php if ($rider['club_name']): ?>
                 <a href="/club/<?= $rider['club_id'] ?>" class="profile-club"><?= htmlspecialchars($rider['club_name']) ?></a>
                 <?php endif; ?>
+            </div>
 
+            <div class="hero-right">
                 <?php if ($rider['gravity_id']):
-                    // Extract just the number from GID-XXX format
                     $gidNumber = preg_replace('/^.*?-?(\d+)$/', '$1', $rider['gravity_id']);
                     $gidNumber = ltrim($gidNumber, '0') ?: '0';
                 ?>
@@ -297,39 +298,27 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
                     <span class="gid-number"><?= htmlspecialchars($gidNumber) ?></span>
                 </div>
                 <?php endif; ?>
-
-                <?php if ($rider['license_number']): ?>
-                <div class="profile-uci">
-                    <span>UCI</span> <?= htmlspecialchars($rider['license_number']) ?>
-                </div>
-                <?php endif; ?>
-
-                <div class="profile-meta">
-                    <?php if ($hasLicense): ?>
-                    <span class="class-badge"><?= $licenseActive ? '✓' : '✗' ?> <?= htmlspecialchars($rider['license_type']) ?></span>
-                    <?php endif; ?>
-                    <?php if ($experienceLevel > 1): ?>
-                    <span class="experience-badge"><?= $expInfo['icon'] ?> <?= $expInfo['name'] ?></span>
-                    <?php endif; ?>
-                    <?php if ($licenseActive): ?>
-                    <span class="license-badge">Licens <?= date('Y') ?> ✓</span>
-                    <?php endif; ?>
-                </div>
-
-                <?php if ($isOwnProfile): ?>
-                <a href="/profile/edit" class="edit-profile-btn">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-                    </svg>
-                    Redigera profil
-                </a>
-                <?php endif; ?>
             </div>
         </div>
 
-        <!-- Social Links -->
-        <div class="hero-social">
+        <!-- Bottom row: Badges + Social -->
+        <div class="hero-bottom">
+            <div class="profile-badges">
+                <?php if ($hasLicense): ?>
+                <span class="class-badge"><?= $licenseActive ? '✓' : '✗' ?> <?= htmlspecialchars($rider['license_type']) ?></span>
+                <?php endif; ?>
+                <?php if ($licenseActive): ?>
+                <span class="license-badge">Licens <?= date('Y') ?> ✓</span>
+                <?php endif; ?>
+                <?php if ($experienceLevel > 1): ?>
+                <span class="experience-badge"><?= $expInfo['icon'] ?> <?= $expInfo['name'] ?></span>
+                <?php endif; ?>
+                <?php if ($rider['license_number']): ?>
+                <span class="uci-badge">UCI <?= htmlspecialchars($rider['license_number']) ?></span>
+                <?php endif; ?>
+            </div>
+
+            <div class="hero-social">
             <?php
             $hasSocialLinks = !empty($socialProfiles['instagram']) || !empty($socialProfiles['strava']) ||
                               !empty($socialProfiles['facebook']) || !empty($socialProfiles['youtube']) ||
@@ -359,6 +348,17 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
             </a>
             <a href="<?= $socialProfiles['tiktok']['url'] ?? '#' ?>" class="social-link tiktok <?= empty($socialProfiles['tiktok']) ? 'empty' : '' ?>" title="TikTok" <?= !empty($socialProfiles['tiktok']) ? 'target="_blank"' : '' ?>>
                 <svg viewBox="0 0 24 24"><path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z"/></svg>
+            </a>
+            <?php endif; ?>
+            </div>
+
+            <?php if ($isOwnProfile): ?>
+            <a href="/profile/edit" class="edit-profile-btn">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                </svg>
+                Redigera
             </a>
             <?php endif; ?>
         </div>
@@ -669,11 +669,46 @@ document.querySelectorAll('.series-tab').forEach(tab => {
     padding: var(--space-lg);
 }
 
-.hero-main {
-    display: flex;
+/* Hero Top Row - Three columns */
+.hero-top {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
     gap: var(--space-lg);
-    align-items: flex-start;
-    margin-bottom: var(--space-lg);
+    align-items: center;
+    margin-bottom: var(--space-md);
+}
+
+.hero-left {
+    display: flex;
+    align-items: center;
+}
+
+.hero-center {
+    text-align: center;
+}
+
+.hero-right {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+}
+
+/* Hero Bottom Row */
+.hero-bottom {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: var(--space-md);
+    border-top: 1px solid var(--color-border);
+    gap: var(--space-md);
+    flex-wrap: wrap;
+}
+
+.profile-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-sm);
+    align-items: center;
 }
 
 .profile-photo-container {
@@ -682,8 +717,8 @@ document.querySelectorAll('.series-tab').forEach(tab => {
 }
 
 .profile-photo {
-    width: 100px;
-    height: 100px;
+    width: 80px;
+    height: 80px;
     border-radius: var(--radius-lg);
     background: linear-gradient(135deg, #f3f4f6, #e5e7eb);
     display: flex;
@@ -692,10 +727,6 @@ document.querySelectorAll('.series-tab').forEach(tab => {
     border: 3px solid var(--color-bg-surface);
     box-shadow: var(--shadow-lg);
     overflow: hidden;
-}
-
-.profile-photo.has-image {
-    background: var(--color-primary);
 }
 
 .profile-photo img {
@@ -712,41 +743,31 @@ document.querySelectorAll('.series-tab').forEach(tab => {
 
 .ranking-badge {
     position: absolute;
-    top: -8px;
-    right: -8px;
+    top: -6px;
+    right: -6px;
     background: linear-gradient(135deg, #FFD700, #FFA500);
     color: var(--color-primary, #171717);
-    width: 44px;
-    height: 44px;
-    border-radius: var(--radius-md);
+    width: 36px;
+    height: 36px;
+    border-radius: var(--radius-sm);
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     font-weight: 800;
-    box-shadow: var(--shadow-lg);
+    box-shadow: var(--shadow-md);
     border: 2px solid var(--color-bg-surface);
 }
 
 .ranking-badge .rank-number {
-    font-size: 1.125rem;
+    font-size: 0.9rem;
     line-height: 1;
 }
 
 .ranking-badge .rank-label {
-    font-size: 0.5rem;
+    font-size: 0.4rem;
     text-transform: uppercase;
     opacity: 0.8;
-}
-
-.profile-info { flex: 1; min-width: 0; }
-
-.profile-name-row {
-    display: flex;
-    align-items: baseline;
-    gap: var(--space-sm);
-    flex-wrap: wrap;
-    margin-bottom: var(--space-xs);
 }
 
 .profile-name {
@@ -754,21 +775,21 @@ document.querySelectorAll('.series-tab').forEach(tab => {
     font-weight: 800;
     color: var(--color-text);
     letter-spacing: -0.02em;
-    margin: 0;
+    margin: 0 0 var(--space-xs) 0;
 }
 
 .profile-age {
-    font-size: 1rem;
+    font-size: 0.9rem;
     color: var(--color-text-muted);
+    display: block;
+    margin-bottom: var(--space-xs);
 }
 
 .profile-club {
     color: #004a98;
     font-weight: 600;
     text-decoration: none;
-    font-size: 0.95rem;
-    display: inline-block;
-    margin-bottom: var(--space-sm);
+    font-size: 0.9rem;
 }
 
 .profile-club:hover { text-decoration: underline; }
@@ -777,7 +798,6 @@ document.querySelectorAll('.series-tab').forEach(tab => {
     display: inline-flex;
     align-items: center;
     gap: 0;
-    margin-bottom: var(--space-sm);
     background: linear-gradient(135deg, #1a1a2e, #16213e);
     border-radius: var(--radius-md);
     overflow: hidden;
@@ -785,7 +805,7 @@ document.querySelectorAll('.series-tab').forEach(tab => {
 }
 
 .profile-gravity-id .gid-label {
-    font-size: 0.7rem;
+    font-size: 0.65rem;
     font-weight: 600;
     color: rgba(255, 255, 255, 0.7);
     padding: 6px 10px;
@@ -802,26 +822,13 @@ document.querySelectorAll('.series-tab').forEach(tab => {
     text-shadow: 0 0 10px rgba(255, 215, 0, 0.3);
 }
 
-.profile-uci {
+.uci-badge {
     font-family: var(--font-mono);
-    font-size: 0.8rem;
+    font-size: 0.7rem;
     color: var(--color-text-muted);
-    margin-bottom: var(--space-md);
-    display: flex;
-    align-items: center;
-    gap: var(--space-xs);
-}
-
-.profile-uci span {
-    font-size: 0.65rem;
-    font-weight: 600;
-    color: var(--color-text-muted);
-}
-
-.profile-meta {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--space-sm);
+    background: var(--color-bg-sunken);
+    padding: 4px 10px;
+    border-radius: var(--radius-full);
 }
 
 .class-badge {
@@ -1389,48 +1396,66 @@ document.querySelectorAll('.series-tab').forEach(tab => {
 /* Responsive - Mobile */
 @media (max-width: 599px) {
     /* Hero Section */
-    .hero-main {
-        flex-direction: column;
-        align-items: center;
+    .hero-top {
+        grid-template-columns: 1fr;
         text-align: center;
         gap: var(--space-md);
     }
 
-    .profile-info {
+    .hero-left {
+        justify-content: center;
+    }
+
+    .hero-right {
+        justify-content: center;
+    }
+
+    .hero-bottom {
+        flex-direction: column;
+        align-items: center;
         text-align: center;
     }
 
-    .profile-meta {
+    .profile-badges {
         justify-content: center;
-        flex-wrap: wrap;
+    }
+
+    .hero-social {
+        justify-content: center;
     }
 
     .profile-photo {
-        width: 72px;
-        height: 72px;
+        width: 64px;
+        height: 64px;
     }
 
     .profile-name {
         font-size: 1.25rem;
     }
 
-    .profile-age {
-        font-size: 0.9rem;
-    }
-
     .ranking-badge {
-        width: 36px;
-        height: 36px;
-        top: -6px;
-        right: -6px;
+        width: 30px;
+        height: 30px;
+        top: -4px;
+        right: -4px;
     }
 
     .ranking-badge .rank-number {
-        font-size: 0.95rem;
+        font-size: 0.8rem;
     }
 
     .ranking-badge .rank-label {
-        font-size: 0.4rem;
+        display: none;
+    }
+
+    .profile-gravity-id .gid-label {
+        font-size: 0.6rem;
+        padding: 4px 8px;
+    }
+
+    .profile-gravity-id .gid-number {
+        font-size: 0.85rem;
+        padding: 4px 10px;
     }
 
     /* Stats Grid */
