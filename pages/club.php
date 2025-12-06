@@ -12,6 +12,20 @@ if (file_exists($achievementsClubPath)) {
     require_once $achievementsClubPath;
 }
 
+// Include ranking functions
+$rankingFunctionsLoaded = false;
+$rankingPaths = [
+    dirname(__DIR__) . '/includes/ranking_functions.php',
+    __DIR__ . '/../includes/ranking_functions.php',
+];
+foreach ($rankingPaths as $path) {
+    if (file_exists($path)) {
+        require_once $path;
+        $rankingFunctionsLoaded = true;
+        break;
+    }
+}
+
 // Load filter setting from admin configuration
 $publicSettings = require HUB_V3_ROOT . '/config/public_settings.php';
 $filter = $publicSettings['public_riders_display'] ?? 'all';
@@ -121,6 +135,18 @@ try {
     $totalPoints = array_sum(array_column($members, 'total_points'));
     $totalPodiums = array_sum(array_column($members, 'podiums'));
 
+    // Get club ranking position
+    $clubRankingPosition = null;
+    $clubRankingPoints = 0;
+    $parentDb = function_exists('getDB') ? getDB() : null;
+    if ($rankingFunctionsLoaded && $parentDb && function_exists('getSingleClubRanking')) {
+        $clubRanking = getSingleClubRanking($parentDb, $clubId, 'GRAVITY');
+        if ($clubRanking) {
+            $clubRankingPosition = $clubRanking['ranking_position'] ?? null;
+            $clubRankingPoints = $clubRanking['ranking_points'] ?? 0;
+        }
+    }
+
 } catch (Exception $e) {
     $error = $e->getMessage();
     $club = null;
@@ -132,15 +158,18 @@ if (!$club) {
 }
 ?>
 
-<div class="page-header">
-  <h1 class="page-title"><?= htmlspecialchars($club['name']) ?></h1>
-  <div class="page-meta">
-    <?php if ($club['city']): ?>
-      <span class="chip"><?= htmlspecialchars($club['city']) ?></span>
-    <?php endif; ?>
-    <span class="chip chip--primary"><?= $totalMembers ?> medlemmar</span>
-  </div>
-</div>
+<?php
+// Check for club logo
+$clubLogo = null;
+$clubLogoDir = dirname(__DIR__) . '/uploads/clubs/';
+$clubLogoUrl = '/uploads/clubs/';
+foreach (['jpg', 'jpeg', 'png', 'webp', 'svg'] as $ext) {
+    if (file_exists($clubLogoDir . $clubId . '.' . $ext)) {
+        $clubLogo = $clubLogoUrl . $clubId . '.' . $ext . '?v=' . filemtime($clubLogoDir . $clubId . '.' . $ext);
+        break;
+    }
+}
+?>
 
 <?php if (isset($error)): ?>
 <section class="card mb-lg">
@@ -149,49 +178,72 @@ if (!$club) {
 </section>
 <?php endif; ?>
 
-<!-- Club Info -->
-<?php if ($club['website'] || $club['email']): ?>
-<section class="card mb-lg">
-  <div class="club-contact">
-    <?php if ($club['website']): ?>
-    <a href="<?= htmlspecialchars($club['website']) ?>" target="_blank" rel="noopener" class="contact-link">
-      <span class="contact-icon">🌐</span>
-      <span><?= htmlspecialchars(preg_replace('#^https?://#', '', $club['website'])) ?></span>
-    </a>
-    <?php endif; ?>
-    <?php if ($club['email']): ?>
-    <a href="mailto:<?= htmlspecialchars($club['email']) ?>" class="contact-link">
-      <span class="contact-icon">✉️</span>
-      <span><?= htmlspecialchars($club['email']) ?></span>
-    </a>
+<!-- Club Hero -->
+<section class="club-hero">
+  <div class="hero-accent-bar"></div>
+  <div class="hero-content">
+    <div class="hero-top">
+      <div class="club-logo-container">
+        <div class="club-logo">
+          <?php if ($clubLogo): ?>
+            <img src="<?= htmlspecialchars($clubLogo) ?>" alt="<?= htmlspecialchars($club['name']) ?>">
+          <?php else: ?>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+              <circle cx="9" cy="7" r="4"/>
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+              <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+            </svg>
+          <?php endif; ?>
+        </div>
+        <?php if ($clubRankingPosition): ?>
+        <div class="ranking-badge">
+          <span class="rank-label">Ranking</span>
+          <span class="rank-number">#<?= $clubRankingPosition ?></span>
+        </div>
+        <?php endif; ?>
+      </div>
+
+      <div class="hero-info">
+        <h1 class="club-name"><?= htmlspecialchars($club['name']) ?></h1>
+        <?php if ($club['city']): ?>
+        <span class="club-location"><?= htmlspecialchars($club['city']) ?></span>
+        <?php endif; ?>
+        <div class="club-badges">
+          <span class="club-badge"><?= $totalMembers ?> medlemmar</span>
+          <?php if ($totalPoints > 0): ?>
+          <span class="club-badge club-badge--accent"><?= number_format($totalPoints) ?> poäng</span>
+          <?php endif; ?>
+        </div>
+      </div>
+    </div>
+
+    <?php if ($club['website'] || $club['email']): ?>
+    <div class="hero-contact">
+      <?php if ($club['website']): ?>
+      <a href="<?= htmlspecialchars($club['website']) ?>" target="_blank" rel="noopener" class="contact-link">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/>
+          <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+        </svg>
+        <span><?= htmlspecialchars(preg_replace('#^https?://#', '', $club['website'])) ?></span>
+      </a>
+      <?php endif; ?>
+      <?php if ($club['email']): ?>
+      <a href="mailto:<?= htmlspecialchars($club['email']) ?>" class="contact-link">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+          <polyline points="22,6 12,13 2,6"/>
+        </svg>
+        <span><?= htmlspecialchars($club['email']) ?></span>
+      </a>
+      <?php endif; ?>
+    </div>
     <?php endif; ?>
   </div>
 </section>
-<?php endif; ?>
 
-<!-- Stats Grid -->
-<section class="card mb-lg">
-  <div class="stats-grid">
-    <div class="stat-card">
-      <div class="stat-value"><?= $totalMembers ?></div>
-      <div class="stat-label">Medlemmar</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-value"><?= $totalRaces ?></div>
-      <div class="stat-label">Starter</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-value"><?= $totalPodiums ?></div>
-      <div class="stat-label">Pallplatser</div>
-    </div>
-    <div class="stat-card stat-card--accent">
-      <div class="stat-value"><?= number_format($totalPoints) ?></div>
-      <div class="stat-label">Poäng</div>
-    </div>
-  </div>
-</section>
-
-<!-- Club Achievements -->
+<!-- Club Achievements (includes all stats) -->
 <?php if (function_exists('renderClubAchievements')): ?>
 <link rel="stylesheet" href="/assets/css/achievements.css?v=<?= file_exists(dirname(__DIR__) . '/assets/css/achievements.css') ? filemtime(dirname(__DIR__) . '/assets/css/achievements.css') : time() ?>">
 <section class="mb-lg">
@@ -306,64 +358,164 @@ if (!$club) {
 </section>
 
 <style>
-.breadcrumb {
-  display: flex;
-  align-items: center;
-  gap: var(--space-xs);
-  font-size: var(--text-sm);
-  color: var(--color-text-muted);
-}
-.breadcrumb-link {
-  color: var(--color-text-secondary);
-}
-.breadcrumb-link:hover {
-  color: var(--color-accent-text);
-}
-.breadcrumb-current {
-  color: var(--color-text);
-  font-weight: var(--weight-medium);
-}
-
-.page-header {
+/* Club Hero */
+.club-hero {
+  background: var(--color-bg-surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
   margin-bottom: var(--space-lg);
 }
-.page-title {
-  font-size: var(--text-2xl);
-  font-weight: var(--weight-bold);
-  margin: 0 0 var(--space-sm) 0;
-}
-.page-meta {
-  display: flex;
-  gap: var(--space-sm);
-  flex-wrap: wrap;
-}
-.chip--primary {
-  background: var(--color-accent);
-  color: var(--color-text-inverse);
+
+.club-hero .hero-accent-bar {
+  height: 4px;
+  background: linear-gradient(90deg, var(--color-accent), #004a98);
 }
 
-.mb-md { margin-bottom: var(--space-md); }
-.mb-lg { margin-bottom: var(--space-lg); }
-.text-muted { color: var(--color-text-muted); }
+.club-hero .hero-content {
+  padding: var(--space-lg);
+}
 
-.club-contact {
+.club-hero .hero-top {
   display: flex;
-  flex-wrap: wrap;
   gap: var(--space-lg);
+  align-items: center;
 }
+
+.club-logo-container {
+  flex-shrink: 0;
+  position: relative;
+}
+
+.ranking-badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  background: linear-gradient(135deg, #FFD700, #FFA500);
+  color: var(--color-primary, #171717);
+  min-width: 36px;
+  height: auto;
+  padding: 4px 6px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  box-shadow: var(--shadow-md);
+  border: 2px solid var(--color-bg-surface);
+}
+
+.ranking-badge .rank-label {
+  font-size: 0.45rem;
+  text-transform: uppercase;
+  opacity: 0.9;
+  letter-spacing: 0.05em;
+}
+
+.ranking-badge .rank-number {
+  font-size: 0.85rem;
+  line-height: 1;
+}
+
+.club-logo {
+  width: 80px;
+  height: 80px;
+  border-radius: var(--radius-lg);
+  background: linear-gradient(135deg, #f3f4f6, #e5e7eb);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 3px solid var(--color-bg-surface);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+}
+
+.club-logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.club-logo svg {
+  width: 45%;
+  height: 45%;
+  stroke: #9ca3af;
+}
+
+.hero-info {
+  flex: 1;
+}
+
+.club-name {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--color-text);
+  margin: 0 0 var(--space-xs) 0;
+}
+
+.club-location {
+  font-size: 0.9rem;
+  color: var(--color-text-muted);
+  display: block;
+  margin-bottom: var(--space-sm);
+}
+
+.club-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+}
+
+.club-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 12px;
+  background: var(--color-bg-sunken);
+  color: var(--color-text);
+  font-size: 0.8rem;
+  font-weight: 600;
+  border-radius: var(--radius-full);
+}
+
+.club-badge--accent {
+  background: var(--color-accent);
+  color: white;
+}
+
+.hero-contact {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-md);
+  margin-top: var(--space-md);
+  padding-top: var(--space-md);
+  border-top: 1px solid var(--color-border);
+}
+
 .contact-link {
   display: flex;
   align-items: center;
   gap: var(--space-sm);
-  color: var(--color-accent-text);
-}
-.contact-link:hover {
-  text-decoration: underline;
-}
-.contact-icon {
-  font-size: var(--text-lg);
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+  text-decoration: none;
+  transition: color 0.2s ease;
 }
 
+.contact-link:hover {
+  color: var(--color-accent);
+}
+
+.contact-link svg {
+  flex-shrink: 0;
+}
+
+/* Utilities */
+.mb-md { margin-bottom: var(--space-md); }
+.mb-lg { margin-bottom: var(--space-lg); }
+.text-muted { color: var(--color-text-muted); }
+
+/* Legacy support */
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);

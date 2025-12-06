@@ -628,6 +628,27 @@ SVG;
 }
 
 /**
+ * Render Connected badge - linked social media account
+ */
+function renderConnectedBadge(): string {
+    $base = getHexagonBase('#1DA1F2', 'connected');
+    return <<<SVG
+<svg class="badge-svg" width="48" height="48" viewBox="0 0 48 48">
+    {$base}
+    <g transform="translate(24, 24)">
+        <circle cx="0" cy="0" r="8" fill="none" stroke="#1DA1F2" stroke-width="2"/>
+        <circle cx="-10" cy="0" r="3" fill="#1DA1F2"/>
+        <circle cx="10" cy="0" r="3" fill="#1DA1F2"/>
+        <circle cx="0" cy="-10" r="3" fill="#1DA1F2"/>
+        <line x1="-7" y1="0" x2="7" y2="0" stroke="#1DA1F2" stroke-width="1.5"/>
+        <line x1="0" y1="-7" x2="0" y2="0" stroke="#1DA1F2" stroke-width="1.5"/>
+        <circle cx="0" cy="0" r="2" fill="#1DA1F2"/>
+    </g>
+</svg>
+SVG;
+}
+
+/**
  * Render experience star icon SVG
  */
 function renderExperienceIcon(): string {
@@ -848,6 +869,13 @@ function getRiderAchievementDefinitions(): array {
             'badges' => [
                 ['id' => 'season_starter', 'name' => 'Säsongsstartare', 'requirement' => 'Deltog i säsongens första tävling', 'description' => 'Du var med från start!', 'has_counter' => true, 'accent' => '#61CE70', 'svg_function' => 'renderSeasonStarterBadge'],
                 ['id' => 'season_finisher', 'name' => 'Finisher', 'requirement' => 'Deltog i säsongens sista tävling', 'description' => 'Du höll ut till slutet!', 'has_counter' => true, 'accent' => '#61CE70', 'svg_function' => 'renderSeasonFinisherBadge']
+            ]
+        ],
+        'social' => [
+            'title' => 'Community',
+            'icon' => 'share-2',
+            'badges' => [
+                ['id' => 'connected', 'name' => 'Connected', 'requirement' => 'Länkat minst ett socialt media-konto', 'description' => 'Du har kopplat din profil till sociala medier.', 'has_counter' => false, 'accent' => '#1DA1F2', 'svg_function' => 'renderConnectedBadge']
             ]
         ],
         'experience' => [

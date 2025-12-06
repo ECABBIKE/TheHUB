@@ -535,21 +535,6 @@ include __DIR__ . '/../includes/layout-header.php';
   <small class="text-secondary">Tilldelas av systemet</small>
   </div>
 
-  <!-- Discipline (read-only) -->
-  <div>
-  <label class="label">
-  <i data-lucide="bike"></i>
-  Huvuddisciplin
-  </label>
-  <input
-  type="text"
-  class="input"
-  value="<?= h($rider['discipline'] ?: '-') ?>"
-  disabled
-  >
-  <small class="text-secondary">Importeras från SCF</small>
-  </div>
-
   <!-- Disciplines Checkboxes (read-only from license) -->
   <div style="grid-column: span 2;">
   <label class="label">
@@ -557,29 +542,43 @@ include __DIR__ . '/../includes/layout-header.php';
   Licensierade discipliner
   </label>
   <?php
+  // Use the actual discipline values from the database
+  // These come from SCF/UCI imports: MTB, BMX, LVG (Landsväg), Para, Bana, etc.
   $allDisciplines = [
-  'DH' => 'Downhill',
-  'END' => 'Enduro',
-  'XCO' => 'Cross Country Olympic',
-  'XCM' => 'Cross Country Marathon',
+  'MTB' => 'MTB (Mountainbike)',
   'BMX' => 'BMX',
-  'ROAD' => 'Landsväg',
-  'TRACK' => 'Bana',
-  'GRAVEL' => 'Gravel',
-  'CX' => 'Cyclocross'
+  'LVG' => 'Landsväg',
+  'BANA' => 'Bana',
+  'CX' => 'Cyclocross',
+  'PARA' => 'Para-cykling',
+  'TRIAL' => 'Trial',
+  'E-CYCLING' => 'E-cycling',
+  'GRAVEL' => 'Gravel'
   ];
-  $riderDisciplines = $rider['disciplines'] ? json_decode($rider['disciplines'], true) ?: [] : [];
+
+  // Get the rider's discipline from the database (single value or comma-separated)
+  $riderDiscipline = strtoupper(trim($rider['discipline'] ?? ''));
+  $riderDisciplines = array_map('trim', explode(',', $riderDiscipline));
+
+  // Also check the disciplines JSON if available
+  $disciplinesJson = $rider['disciplines'] ? json_decode($rider['disciplines'], true) ?: [] : [];
+  $riderDisciplines = array_merge($riderDisciplines, $disciplinesJson);
+  $riderDisciplines = array_unique(array_filter(array_map('strtoupper', $riderDisciplines)));
   ?>
   <div style="display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 0.5rem;">
   <?php foreach ($allDisciplines as $code => $name): ?>
-  <?php $isChecked = in_array($code, $riderDisciplines); ?>
-  <label style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.75rem; background: <?= $isChecked ? 'rgba(245, 158, 11, 0.15)' : 'var(--color-bg-sunken)' ?>; border: 1px solid <?= $isChecked ? 'var(--color-accent)' : 'var(--color-border)' ?>; border-radius: var(--radius-md); cursor: not-allowed; opacity: <?= $isChecked ? '1' : '0.5' ?>;">
+  <?php $isChecked = in_array(strtoupper($code), $riderDisciplines); ?>
+  <label style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.75rem; background: <?= $isChecked ? 'rgba(97, 206, 112, 0.15)' : 'var(--color-bg-sunken)' ?>; border: 1px solid <?= $isChecked ? 'var(--color-accent)' : 'var(--color-border)' ?>; border-radius: var(--radius-md); cursor: not-allowed; opacity: <?= $isChecked ? '1' : '0.6' ?>;">
   <input type="checkbox" <?= $isChecked ? 'checked' : '' ?> disabled style="accent-color: var(--color-accent);">
   <span style="font-size: var(--text-sm); color: <?= $isChecked ? 'var(--color-accent)' : 'var(--color-text-secondary)' ?>;"><?= h($name) ?></span>
   </label>
   <?php endforeach; ?>
   </div>
-  <small class="text-secondary" style="display: block; margin-top: 0.5rem;">Importeras från SCF. Används för framtida anmälan.</small>
+  <?php if (!empty($riderDiscipline) && $riderDiscipline !== ''): ?>
+  <small class="text-secondary" style="display: block; margin-top: 0.5rem;">Från licens: <strong><?= h($rider['discipline']) ?></strong></small>
+  <?php else: ?>
+  <small class="text-secondary" style="display: block; margin-top: 0.5rem;">Ingen disciplin registrerad i licensdatan.</small>
+  <?php endif; ?>
   </div>
 
   <!-- Contact Information -->

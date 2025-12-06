@@ -345,6 +345,7 @@ function importUCIRiders($filepath, $db, $importId = null) {
  'license_category' => $license_category,
  'discipline' => $discipline,
  'license_valid_until' => $license_valid_until,
+ 'license_year' => !empty($license_year) && is_numeric($license_year) ? (int)$license_year : null,
  'email' => !empty($email) ? $email : null,
  'active' => 1
  ];
