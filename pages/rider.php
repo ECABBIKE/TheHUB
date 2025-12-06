@@ -829,11 +829,12 @@ document.querySelectorAll('.series-tab').forEach(tab => {
     align-items: center;
     gap: 6px;
     padding: 6px 14px;
-    background: var(--color-gs-blue, #004a98);
+    background: linear-gradient(135deg, #0056b3, #004a98);
     color: white;
     font-size: 0.8rem;
     font-weight: 700;
     border-radius: var(--radius-full);
+    box-shadow: 0 2px 6px rgba(0, 74, 152, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 
 .experience-badge {
@@ -841,11 +842,12 @@ document.querySelectorAll('.series-tab').forEach(tab => {
     align-items: center;
     gap: 6px;
     padding: 6px 12px;
-    background: rgba(255, 215, 0, 0.15);
+    background: linear-gradient(135deg, rgba(255, 215, 0, 0.25), rgba(255, 180, 0, 0.15));
     color: #92400e;
     font-size: 0.75rem;
     font-weight: 600;
     border-radius: var(--radius-full);
+    box-shadow: 0 2px 6px rgba(255, 215, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.4);
 }
 
 .license-badge {
@@ -853,11 +855,12 @@ document.querySelectorAll('.series-tab').forEach(tab => {
     align-items: center;
     gap: 4px;
     padding: 6px 12px;
-    background: var(--color-accent, #61CE70);
+    background: linear-gradient(135deg, #6ed67e, #61CE70);
     color: white;
     font-size: 0.75rem;
     font-weight: 600;
     border-radius: var(--radius-full);
+    box-shadow: 0 2px 6px rgba(97, 206, 112, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.25);
 }
 
 /* Social Links */
