@@ -155,7 +155,7 @@ SVG;
 function renderGoldBadge(): string {
     $base = getHexagonBase('#FFD700', 'gold');
     return <<<SVG
-<svg class="badge-svg" viewBox="0 0 48 48">
+<svg class="badge-svg" width="48" height="48" viewBox="0 0 48 48">
     {$base}
     <g transform="translate(24, 22)">
         <polygon points="0,-12 3,-4 12,-4 5,2 7,11 0,6 -7,11 -5,2 -12,-4 -3,-4" fill="#FFD700"/>
@@ -172,7 +172,7 @@ SVG;
 function renderSilverBadge(): string {
     $base = getHexagonBase('#C0C0C0', 'silver');
     return <<<SVG
-<svg class="badge-svg" viewBox="0 0 48 48">
+<svg class="badge-svg" width="48" height="48" viewBox="0 0 48 48">
     {$base}
     <g transform="translate(24, 22)">
         <polygon points="0,-12 3,-4 12,-4 5,2 7,11 0,6 -7,11 -5,2 -12,-4 -3,-4" fill="#C0C0C0"/>
@@ -189,7 +189,7 @@ SVG;
 function renderBronzeBadge(): string {
     $base = getHexagonBase('#CD7F32', 'bronze');
     return <<<SVG
-<svg class="badge-svg" viewBox="0 0 48 48">
+<svg class="badge-svg" width="48" height="48" viewBox="0 0 48 48">
     {$base}
     <g transform="translate(24, 22)">
         <polygon points="0,-12 3,-4 12,-4 5,2 7,11 0,6 -7,11 -5,2 -12,-4 -3,-4" fill="#CD7F32"/>
@@ -206,7 +206,7 @@ SVG;
 function renderHotStreakBadge(): string {
     $base = getHexagonBase('#61CE70', 'hotstreak');
     return <<<SVG
-<svg class="badge-svg" viewBox="0 0 48 48">
+<svg class="badge-svg" width="48" height="48" viewBox="0 0 48 48">
     {$base}
     <g transform="translate(24, 24)">
         <rect x="-14" y="2" width="8" height="12" rx="1" fill="#C0C0C0"/>
@@ -225,7 +225,7 @@ SVG;
 function renderFinisherBadge(): string {
     $base = getHexagonBase('#61CE70', 'finisher');
     return <<<SVG
-<svg class="badge-svg" viewBox="0 0 48 48">
+<svg class="badge-svg" width="48" height="48" viewBox="0 0 48 48">
     {$base}
     <g transform="translate(24, 24)">
         <circle cx="0" cy="0" r="12" fill="none" stroke="var(--badge-hex-bg, #333)" stroke-width="2"/>
@@ -242,7 +242,7 @@ SVG;
 function renderSeriesLeaderBadge(): string {
     $base = getHexagonBase('#EF761F', 'leader');
     return <<<SVG
-<svg class="badge-svg" viewBox="0 0 48 48">
+<svg class="badge-svg" width="48" height="48" viewBox="0 0 48 48">
     {$base}
     <g transform="translate(24, 24)">
         <rect x="-12" y="-6" width="24" height="16" rx="2" fill="none" stroke="#EF761F" stroke-width="1.5"/>
@@ -261,7 +261,7 @@ SVG;
 function renderSeriesChampionBadge(): string {
     $base = getHexagonBase('#FFD700', 'champion');
     return <<<SVG
-<svg class="badge-svg" viewBox="0 0 48 48">
+<svg class="badge-svg" width="48" height="48" viewBox="0 0 48 48">
     {$base}
     <g transform="translate(24, 22)">
         <path d="M-8 -10 L8 -10 L6 2 L4 8 L-4 8 L-6 2 Z" fill="#FFD700"/>
@@ -281,7 +281,7 @@ SVG;
 function renderSwedishChampionBadge(): string {
     $base = getHexagonBase('#004a98', 'sm');
     return <<<SVG
-<svg class="badge-svg" viewBox="0 0 48 48">
+<svg class="badge-svg" width="48" height="48" viewBox="0 0 48 48">
     {$base}
     <g transform="translate(24, 24)">
         <rect x="-10" y="-8" width="20" height="16" rx="2" fill="#004a98"/>
@@ -305,7 +305,7 @@ SVG;
 function renderIronmanBadge(): string {
     $base = getHexagonBase('#607D8B', 'ironman');
     return <<<SVG
-<svg class="badge-svg" viewBox="0 0 48 48">
+<svg class="badge-svg" width="48" height="48" viewBox="0 0 48 48">
     {$base}
     <g transform="translate(24, 24)">
         <circle cx="0" cy="-6" r="5" fill="#607D8B"/>
@@ -324,7 +324,7 @@ SVG;
 function renderClubHeroBadge(): string {
     $base = getHexagonBase('#004a98', 'clubhero');
     return <<<SVG
-<svg class="badge-svg" viewBox="0 0 48 48">
+<svg class="badge-svg" width="48" height="48" viewBox="0 0 48 48">
     {$base}
     <g transform="translate(24, 24)">
         <path d="M0 -14 L10 -4 L10 8 L0 14 L-10 8 L-10 -4 Z" fill="none" stroke="#004a98" stroke-width="2"/>
@@ -342,7 +342,7 @@ SVG;
 function renderLoyalBadge(): string {
     $base = getHexagonBase('#61CE70', 'loyal');
     return <<<SVG
-<svg class="badge-svg" viewBox="0 0 48 48">
+<svg class="badge-svg" width="48" height="48" viewBox="0 0 48 48">
     {$base}
     <g transform="translate(24, 24)">
         <ellipse cx="-6" cy="0" rx="4" ry="6" fill="none" stroke="#61CE70" stroke-width="2"/>
@@ -361,7 +361,7 @@ SVG;
 function renderComebackBadge(): string {
     $base = getHexagonBase('#EF761F', 'comeback');
     return <<<SVG
-<svg class="badge-svg" viewBox="0 0 48 48">
+<svg class="badge-svg" width="48" height="48" viewBox="0 0 48 48">
     {$base}
     <g transform="translate(24, 24)">
         <path d="M0 10 C-8 10 -12 2 -10 -6 C-8 -12 0 -14 0 -14" fill="none" stroke="#EF761F" stroke-width="2"/>
@@ -383,7 +383,7 @@ SVG;
 function renderAllrounderBadge(): string {
     $base = getHexagonBase('#8A9A5B', 'allrounder');
     return <<<SVG
-<svg class="badge-svg" viewBox="0 0 48 48">
+<svg class="badge-svg" width="48" height="48" viewBox="0 0 48 48">
     {$base}
     <g transform="translate(24, 24)">
         <circle cx="0" cy="0" r="10" fill="none" stroke="#8A9A5B" stroke-width="1.5"/>
@@ -404,7 +404,7 @@ SVG;
 function renderAdventurerBadge(): string {
     $base = getHexagonBase('#61CE70', 'adventurer');
     return <<<SVG
-<svg class="badge-svg" viewBox="0 0 48 48">
+<svg class="badge-svg" width="48" height="48" viewBox="0 0 48 48">
     {$base}
     <g transform="translate(24, 24)">
         <path d="M-8 8 L0 -10 L8 8 Z" fill="none" stroke="#61CE70" stroke-width="2" stroke-linejoin="round"/>
@@ -422,7 +422,7 @@ SVG;
 function renderNomadBadge(): string {
     $base = getHexagonBase('#FFE009', 'nomad');
     return <<<SVG
-<svg class="badge-svg" viewBox="0 0 48 48">
+<svg class="badge-svg" width="48" height="48" viewBox="0 0 48 48">
     {$base}
     <g transform="translate(24, 24)">
         <path d="M-10 6 Q0 -8 10 6" fill="none" stroke="#FFE009" stroke-width="2"/>
@@ -445,7 +445,7 @@ SVG;
 function renderRocketStartBadge(): string {
     $base = getHexagonBase('#EF761F', 'rocket');
     return <<<SVG
-<svg class="badge-svg" viewBox="0 0 48 48">
+<svg class="badge-svg" width="48" height="48" viewBox="0 0 48 48">
     {$base}
     <g transform="translate(24, 24)">
         <path d="M0 -12 C4 -12 6 -8 6 -4 L6 6 L2 10 L-2 10 L-6 6 L-6 -4 C-6 -8 -4 -12 0 -12 Z" fill="#EF761F"/>
@@ -463,7 +463,7 @@ SVG;
 function renderConsistentBadge(): string {
     $base = getHexagonBase('#61CE70', 'consistent');
     return <<<SVG
-<svg class="badge-svg" viewBox="0 0 48 48">
+<svg class="badge-svg" width="48" height="48" viewBox="0 0 48 48">
     {$base}
     <g transform="translate(24, 24)">
         <line x1="-10" y1="6" x2="10" y2="6" stroke="#61CE70" stroke-width="2"/>
@@ -483,7 +483,7 @@ SVG;
 function renderImproverBadge(): string {
     $base = getHexagonBase('#61CE70', 'improver');
     return <<<SVG
-<svg class="badge-svg" viewBox="0 0 48 48">
+<svg class="badge-svg" width="48" height="48" viewBox="0 0 48 48">
     {$base}
     <g transform="translate(24, 24)">
         <path d="M-10 8 L-4 4 L0 -2 L4 -6 L10 -10" fill="none" stroke="#61CE70" stroke-width="2.5" stroke-linecap="round"/>
@@ -504,7 +504,7 @@ SVG;
 function renderFirstRaceBadge(): string {
     $base = getHexagonBase('#61CE70', 'firstrace');
     return <<<SVG
-<svg class="badge-svg" viewBox="0 0 48 48">
+<svg class="badge-svg" width="48" height="48" viewBox="0 0 48 48">
     {$base}
     <g transform="translate(24, 24)">
         <circle cx="0" cy="-2" r="8" fill="#61CE70"/>
@@ -521,7 +521,7 @@ SVG;
 function render10RacesBadge(): string {
     $base = getHexagonBase('#61CE70', 'races10');
     return <<<SVG
-<svg class="badge-svg" viewBox="0 0 48 48">
+<svg class="badge-svg" width="48" height="48" viewBox="0 0 48 48">
     {$base}
     <g transform="translate(24, 24)">
         <circle cx="0" cy="0" r="11" fill="none" stroke="#61CE70" stroke-width="2"/>
@@ -537,7 +537,7 @@ SVG;
 function render25RacesBadge(): string {
     $base = getHexagonBase('#C0C0C0', 'races25');
     return <<<SVG
-<svg class="badge-svg" viewBox="0 0 48 48">
+<svg class="badge-svg" width="48" height="48" viewBox="0 0 48 48">
     {$base}
     <g transform="translate(24, 24)">
         <circle cx="0" cy="0" r="11" fill="none" stroke="#C0C0C0" stroke-width="2"/>
@@ -555,7 +555,7 @@ SVG;
 function render50RacesBadge(): string {
     $base = getHexagonBase('#FFD700', 'races50');
     return <<<SVG
-<svg class="badge-svg" viewBox="0 0 48 48">
+<svg class="badge-svg" width="48" height="48" viewBox="0 0 48 48">
     {$base}
     <g transform="translate(24, 24)">
         <circle cx="0" cy="0" r="11" fill="none" stroke="#FFD700" stroke-width="2"/>
@@ -575,7 +575,7 @@ SVG;
 function render100RacesBadge(): string {
     $base = getHexagonBase('#FFD700', 'races100');
     return <<<SVG
-<svg class="badge-svg" viewBox="0 0 48 48">
+<svg class="badge-svg" width="48" height="48" viewBox="0 0 48 48">
     {$base}
     <g transform="translate(24, 24)">
         <circle cx="0" cy="0" r="11" fill="none" stroke="#FFD700" stroke-width="2.5"/>
@@ -595,7 +595,7 @@ SVG;
 function renderSeasonStarterBadge(): string {
     $base = getHexagonBase('#61CE70', 'starter');
     return <<<SVG
-<svg class="badge-svg" viewBox="0 0 48 48">
+<svg class="badge-svg" width="48" height="48" viewBox="0 0 48 48">
     {$base}
     <g transform="translate(24, 24)">
         <rect x="-8" y="-10" width="16" height="20" rx="2" fill="none" stroke="#61CE70" stroke-width="1.5"/>
@@ -613,7 +613,7 @@ SVG;
 function renderSeasonFinisherBadge(): string {
     $base = getHexagonBase('#61CE70', 'seasonfinish');
     return <<<SVG
-<svg class="badge-svg" viewBox="0 0 48 48">
+<svg class="badge-svg" width="48" height="48" viewBox="0 0 48 48">
     {$base}
     <g transform="translate(24, 24)">
         <rect x="-6" y="-10" width="4" height="18" fill="#61CE70"/>
