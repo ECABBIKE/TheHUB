@@ -522,81 +522,27 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
 
     <!-- Sidebar: Achievements & Results -->
     <aside class="content-sidebar">
-        <section class="section">
-            <div class="section-header">
-                <h2 class="section-title">Achievements</h2>
-                <a href="/achievements" class="achievements-info-link" style="font-size: 12px; color: var(--color-accent); text-decoration: none;">ℹ️ Visa alla</a>
-            </div>
+        <link rel="stylesheet" href="/assets/css/achievements.css?v=<?= file_exists(dirname(__DIR__) . '/assets/css/achievements.css') ? filemtime(dirname(__DIR__) . '/assets/css/achievements.css') : time() ?>">
+        <?php
+        // Build stats array for the achievements component
+        $riderStats = [
+            'gold' => $achievementCounts['gold'],
+            'silver' => $achievementCounts['silver'],
+            'bronze' => $achievementCounts['bronze'],
+            'hot_streak' => $achievementCounts['hot_streak'],
+            'series_completed' => $finisher100 ? 1 : 0,
+            'is_serieledare' => $isSeriesLeader,
+            'series_wins' => $isSeriesChampion ? 1 : 0,
+            'sm_wins' => $swedishChampionCount,
+            'seasons_active' => $experienceLevel,
+            'has_series_win' => $isSeriesChampion,
+            'first_season_year' => $rider['first_season'] ?? date('Y')
+        ];
 
-            <div class="achievements-card">
-                <!-- Experience Level - Top -->
-                <div class="experience-section">
-                    <div class="experience-header">
-                        <?= hub_icon('star', 'exp-icon') ?>
-                        <span class="experience-title <?= $expInfo['class'] ?>"><?= $expInfo['name'] ?></span>
-                        <?php if ($rider['first_season']): ?>
-                        <span class="experience-year">Sedan <?= $rider['first_season'] ?></span>
-                        <?php endif; ?>
-                    </div>
-                    <div class="experience-bar">
-                        <?php for ($i = 1; $i <= 6; $i++): ?>
-                        <div class="exp-segment <?= $i <= $experienceLevel ? 'filled' : '' ?> <?= $i == $experienceLevel ? 'current' : '' ?>"></div>
-                        <?php endfor; ?>
-                    </div>
-                </div>
-
-                <!-- Achievement Badges - 4-column Grid -->
-                <div class="achievements-grid">
-                    <div class="achievement-item <?= $achievementCounts['gold'] > 0 ? 'unlocked gold' : 'locked' ?>" title="Vinn ett lopp">
-                        <?= hub_icon('trophy', 'achievement-icon') ?>
-                        <span class="achievement-value"><?= $achievementCounts['gold'] > 0 ? $achievementCounts['gold'] : '−' ?></span>
-                        <span class="achievement-label">Guld</span>
-                    </div>
-                    <div class="achievement-item <?= $achievementCounts['silver'] > 0 ? 'unlocked silver' : 'locked' ?>" title="Kom tvåa i ett lopp">
-                        <?= hub_icon('medal', 'achievement-icon') ?>
-                        <span class="achievement-value"><?= $achievementCounts['silver'] > 0 ? $achievementCounts['silver'] : '−' ?></span>
-                        <span class="achievement-label">Silver</span>
-                    </div>
-                    <div class="achievement-item <?= $achievementCounts['bronze'] > 0 ? 'unlocked bronze' : 'locked' ?>" title="Kom trea i ett lopp">
-                        <?= hub_icon('medal', 'achievement-icon') ?>
-                        <span class="achievement-value"><?= $achievementCounts['bronze'] > 0 ? $achievementCounts['bronze'] : '−' ?></span>
-                        <span class="achievement-label">Brons</span>
-                    </div>
-                    <div class="achievement-item <?= $achievementCounts['hot_streak'] >= 3 ? 'unlocked streak' : 'locked' ?>" title="3+ pallplatser i rad">
-                        <?= hub_icon('trending-up', 'achievement-icon') ?>
-                        <span class="achievement-value"><?= $achievementCounts['hot_streak'] >= 3 ? $achievementCounts['hot_streak'] : '−' ?></span>
-                        <span class="achievement-label">Pallserie</span>
-                    </div>
-                </div>
-
-                <!-- Stats Row - 3 columns -->
-                <div class="achievement-stats">
-                    <div class="achievement-stat <?= $finishRate == 100 ? 'perfect' : '' ?>">
-                        <?= hub_icon('check-circle', 'stat-icon') ?>
-                        <span class="stat-value"><?= $finishRate ?>%</span>
-                        <span class="stat-label">Fullföljt</span>
-                    </div>
-                    <div class="achievement-stat <?= $isSeriesLeader ? 'active' : '' ?>">
-                        <?= hub_icon('flag', 'stat-icon') ?>
-                        <span class="stat-value"><?= $isSeriesLeader ? 'Ja' : '−' ?></span>
-                        <span class="stat-label">Serieledare</span>
-                    </div>
-                    <div class="achievement-stat <?= $isSeriesChampion ? 'champion' : '' ?>">
-                        <?= hub_icon('trophy', 'stat-icon') ?>
-                        <span class="stat-value"><?= $isSeriesChampion ? 'Ja' : '−' ?></span>
-                        <span class="stat-label">Mästare</span>
-                    </div>
-                </div>
-
-                <?php if ($isSwedishChampion): ?>
-                <!-- Swedish Champion Badge -->
-                <div class="sm-badge">
-                    <?= hub_icon('medal', 'sm-icon') ?>
-                    <span class="sm-text">Svensk Mästare ×<?= $swedishChampionCount ?></span>
-                </div>
-                <?php endif; ?>
-            </div>
-        </section>
+        if (function_exists('renderRiderAchievements')) {
+            echo renderRiderAchievements($db, $riderId, $riderStats);
+        }
+        ?>
 
         <!-- All Results -->
         <section class="section">
