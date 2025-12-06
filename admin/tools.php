@@ -441,6 +441,25 @@ include __DIR__ . '/components/unified-layout.php';
             </a>
         </div>
     </div>
+
+    <!-- Diagnose Series Champions -->
+    <div class="tool-card">
+        <div class="tool-card-header">
+            <div class="tool-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/><path d="M11 8v6"/><path d="M8 11h6"/></svg>
+            </div>
+            <div>
+                <h4 class="tool-title">Diagnos: Seriemästare</h4>
+                <p class="tool-description">Se vilka serier som kvalificerar för mästare-beräkning</p>
+            </div>
+        </div>
+        <div class="tool-actions">
+            <a href="/admin/tools/diagnose-series" class="btn-admin btn-admin-secondary" style="flex: 1;">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px;"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                Visa diagnostik
+            </a>
+        </div>
+    </div>
 </div>
 
 <h3 class="section-title">Cache & System</h3>
