@@ -28,10 +28,12 @@ include __DIR__ . '/components/unified-layout.php';
             <strong>Krav för seriemästare:</strong> Serien kvalificerar om minst ett av följande är sant:
         </p>
         <ul class="text-secondary mb-md" style="margin-left: 1.5rem;">
-            <li><code>end_date</code> har passerat (automatiskt! ✨)</li>
-            <li><code>status = 'completed'</code></li>
+            <li><code>status = 'completed'</code> (manuellt markerad som avslutad)</li>
             <li>Events från tidigare år (före <?= $currentYear ?>)</li>
         </ul>
+        <p class="text-secondary mb-md" style="font-size: 0.9em;">
+            <strong>OBS:</strong> <code>end_date</code> används inte längre automatiskt - serien måste markeras som <em>completed</em> manuellt för att undvika felaktiga mästarskap om resultat saknas.
+        </p>
 
         <?php
         // Check if series_events junction table exists
@@ -98,9 +100,8 @@ include __DIR__ . '/components/unified-layout.php';
             <tbody>
                 <?php foreach ($series as $s):
                     $isCompleted = $s['status'] === 'completed';
-                    $endDatePassed = $s['end_date'] && $s['end_date'] < $today;
                     $hasPastEvents = $s['last_event_year'] && $s['last_event_year'] < $currentYear;
-                    $qualifies = $isCompleted || $endDatePassed || $hasPastEvents;
+                    $qualifies = $isCompleted || $hasPastEvents;
                 ?>
                 <tr class="<?= $qualifies ? 'bg-success-light' : '' ?>">
                     <td><strong><?= h($s['name']) ?></strong></td>
@@ -108,11 +109,7 @@ include __DIR__ . '/components/unified-layout.php';
                     <td>
                         <?php if ($s['end_date']): ?>
                             <?= $s['end_date'] ?>
-                            <?php if ($endDatePassed): ?>
-                                <span class="text-success">✓ passerat</span>
-                            <?php else: ?>
-                                <span class="text-warning">⏳ framtid</span>
-                            <?php endif; ?>
+                            <span class="text-secondary">(info)</span>
                         <?php else: ?>
                             <span class="text-secondary">-</span>
                         <?php endif; ?>
@@ -129,10 +126,11 @@ include __DIR__ . '/components/unified-layout.php';
                     <td>
                         <?php if ($qualifies): ?>
                             <span class="text-success"><strong>JA</strong></span>
-                            <?php if ($endDatePassed): ?><br><small>via end_date</small><?php endif; ?>
+                            <?php if ($isCompleted): ?><br><small>via completed</small><?php endif; ?>
+                            <?php if ($hasPastEvents): ?><br><small>via tidigare år</small><?php endif; ?>
                         <?php else: ?>
                             <span class="text-error">NEJ</span>
-                            <br><small class="text-secondary">Sätt end_date eller status='completed'</small>
+                            <br><small class="text-secondary">Markera som completed</small>
                         <?php endif; ?>
                     </td>
                 </tr>
@@ -260,9 +258,8 @@ include __DIR__ . '/components/unified-layout.php';
             <tbody>
                 <?php foreach ($potentialChampions as $pc):
                     $isCompleted = $pc['status'] === 'completed';
-                    $endDatePassed = $pc['end_date'] && $pc['end_date'] < $today;
-                    $isPast = $pc['effective_year'] < $currentYear;
-                    $wouldQualify = $isCompleted || $endDatePassed || $isPast;
+                    $isPast = (int)$pc['effective_year'] < $currentYear;
+                    $wouldQualify = $isCompleted || $isPast;
                 ?>
                 <tr class="<?= $wouldQualify ? 'bg-success-light' : '' ?>">
                     <td><?= h($pc['series_name']) ?></td>
@@ -270,7 +267,6 @@ include __DIR__ . '/components/unified-layout.php';
                     <td>
                         <?php if ($pc['end_date']): ?>
                             <?= $pc['end_date'] ?>
-                            <?= $endDatePassed ? '<span class="text-success">✓</span>' : '' ?>
                         <?php else: ?>
                             <span class="text-secondary">-</span>
                         <?php endif; ?>
@@ -322,17 +318,32 @@ include __DIR__ . '/components/unified-layout.php';
             LIMIT 50
         ");
 
-        // Debug: Detailed test of calculateSeriesChampionships for first potential champion
-        if (!empty($potentialChampions)) {
-            $testRider = (int)$potentialChampions[0]['cyclist_id'];
-            $testRiderName = $potentialChampions[0]['rider_name'];
-            $testSeriesId = (int)$potentialChampions[0]['series_id'];
-            $testClassId = (int)$potentialChampions[0]['class_id'];
-            $testPoints = (int)$potentialChampions[0]['total_points'];
-            $testSeriesName = $potentialChampions[0]['series_name'];
-            $testYear = $potentialChampions[0]['effective_year'];
-            $testEndDate = $potentialChampions[0]['end_date'];
-            $testStatus = $potentialChampions[0]['status'];
+        // Debug: Detailed test of calculateSeriesChampionships for first QUALIFYING potential champion
+        // Find first potential champion from a qualifying series (completed or past year)
+        $testChampion = null;
+        foreach ($potentialChampions as $pc) {
+            $isCompleted = $pc['status'] === 'completed';
+            $isPast = (int)$pc['effective_year'] < $currentYear;
+            if ($isCompleted || $isPast) {
+                $testChampion = $pc;
+                break;
+            }
+        }
+        // Fallback to first if no qualifying found
+        if (!$testChampion && !empty($potentialChampions)) {
+            $testChampion = $potentialChampions[0];
+        }
+
+        if ($testChampion) {
+            $testRider = (int)$testChampion['cyclist_id'];
+            $testRiderName = $testChampion['rider_name'];
+            $testSeriesId = (int)$testChampion['series_id'];
+            $testClassId = (int)$testChampion['class_id'];
+            $testPoints = (int)$testChampion['total_points'];
+            $testSeriesName = $testChampion['series_name'];
+            $testYear = $testChampion['effective_year'];
+            $testEndDate = $testChampion['end_date'];
+            $testStatus = $testChampion['status'];
 
             echo '<div class="alert alert-info mb-md">';
             echo "<strong>Debug:</strong> Detaljerad test för {$testRiderName} (ID: {$testRider})<br>";
@@ -376,19 +387,18 @@ include __DIR__ . '/components/unified-layout.php';
             echo "- status: " . ($seriesInfo['status'] ?? 'NULL') . "<br>";
             echo "- end_date: " . ($seriesInfo['end_date'] ?? 'NULL') . "<br>";
 
-            // Step 3: Check qualifying criteria
+            // Step 3: Check qualifying criteria (completed OR past year - NOT end_date anymore)
             $currentYear = (int)date('Y');
             $effectiveYear = (int)($seriesInfo['year'] ?? $currentYear);
             $isCompleted = ($seriesInfo['status'] ?? '') === 'completed';
-            $endDatePassed = !empty($seriesInfo['end_date']) && $seriesInfo['end_date'] < date('Y-m-d');
             $isPastYear = $effectiveYear < $currentYear;
-            $qualifies = $isCompleted || $endDatePassed || $isPastYear;
+            $qualifies = $isCompleted || $isPastYear;
 
             echo "<br><strong>Steg 3:</strong> Kvalifikationskontroll:<br>";
             echo "- isCompleted: " . ($isCompleted ? 'JA' : 'NEJ') . "<br>";
-            echo "- endDatePassed: " . ($endDatePassed ? 'JA (' . $seriesInfo['end_date'] . ' < ' . date('Y-m-d') . ')' : 'NEJ') . "<br>";
             echo "- isPastYear: " . ($isPastYear ? 'JA (' . $effectiveYear . ' < ' . $currentYear . ')' : 'NEJ') . "<br>";
             echo "- <strong>KVALIFICERAR:</strong> " . ($qualifies ? '<span class="text-success">JA</span>' : '<span class="text-error">NEJ</span>') . "<br>";
+            echo "<small class='text-secondary'>(end_date används inte längre automatiskt)</small><br>";
 
             // Step 4: Check max points for this series/class
             $stmt = $pdo->prepare("
@@ -444,20 +454,18 @@ include __DIR__ . '/components/unified-layout.php';
         ?>
             <div class="alert alert-warning">
                 <strong>Inga seriemästare registrerade!</strong><br>
-                Serier behöver ha <code>end_date</code> som passerat för automatisk mästare-beräkning.
+                Serier måste markeras som <code>completed</code> för att mästare ska räknas.
             </div>
 
             <h4 class="mt-lg mb-md">Åtgärd:</h4>
             <ol>
                 <li>Gå till <a href="/admin/series">/admin/series</a></li>
                 <li>Klicka på en avslutad serie för att redigera</li>
-                <li>Sätt <strong>Slutdatum</strong> till seriens sista dag</li>
-                <li>Spara</li>
-                <li>Gå till <a href="/admin/rebuild-stats">/admin/rebuild-stats</a></li>
-                <li>Kör <strong>Rebuild alla åkare</strong></li>
+                <li>Markera serien som <strong>Avslutad (completed)</strong></li>
+                <li>Bekräfta att du vill räkna seriemästare</li>
             </ol>
             <p class="text-secondary mt-md">
-                <strong>Tips:</strong> Så länge <code>end_date</code> har passerat räknas mästare automatiskt!
+                <strong>OBS:</strong> Markera bara en serie som avslutad när alla resultat är importerade!
             </p>
         <?php else: ?>
         <table class="table table--striped">

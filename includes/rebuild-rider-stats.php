@@ -507,9 +507,11 @@ function calculateFinishRates($pdo, $rider_id) {
  * Hittar seriesegrar (seriemästare för avslutade serier)
  *
  * Kvalificerar som avslutad serie:
- * 1. Serier där end_date har passerat (automatisk)
- * 2. Serier markerade som 'completed' (manuell)
- * 3. Serier från tidigare år (bakåtkompatibilitet)
+ * 1. Serier markerade som 'completed' (manuell - administatör markerar när alla resultat är inne)
+ * 2. Serier från tidigare år (bakåtkompatibilitet)
+ *
+ * OBS: end_date används INTE längre automatiskt - serien måste markeras som completed
+ * för att undvika felaktig mästarskap om resultat saknas.
  *
  * @param bool $debug Enable debug output (default false)
  */
@@ -564,7 +566,10 @@ function calculateSeriesChampionships($pdo, $rider_id, $debug = false) {
     $allRiderResults = $stmt->fetchAll(PDO::FETCH_ASSOC);
     if ($debug) $debugLog[] = "allRiderResults: " . count($allRiderResults) . " rader";
 
-    // Filter to only qualifying series (completed, end_date passed, or previous year)
+    // Filter to only qualifying series:
+    // 1. status='completed' (manually marked by admin)
+    // 2. Previous year series (backwards compatibility)
+    // NOTE: end_date is NOT used automatically anymore to avoid false champions
     $riderSeasons = [];
     foreach ($allRiderResults as $row) {
         $sid = (int)$row['series_id'];
@@ -576,14 +581,13 @@ function calculateSeriesChampionships($pdo, $rider_id, $debug = false) {
 
         $effectiveYear = (int)($series['year'] ?? $currentYear);
         $isCompleted = ($series['status'] ?? '') === 'completed';
-        $endDatePassed = !empty($series['end_date']) && $series['end_date'] < date('Y-m-d');
         $isPastYear = $effectiveYear < $currentYear;
 
         if ($debug) {
-            $debugLog[] = "  - Serie {$sid} ({$series['name']}): year={$effectiveYear}, status={$series['status']}, end_date={$series['end_date']}, isCompleted=" . ($isCompleted?'J':'N') . ", endDatePassed=" . ($endDatePassed?'J':'N') . ", isPastYear=" . ($isPastYear?'J':'N');
+            $debugLog[] = "  - Serie {$sid} ({$series['name']}): year={$effectiveYear}, status={$series['status']}, isCompleted=" . ($isCompleted?'J':'N') . ", isPastYear=" . ($isPastYear?'J':'N');
         }
 
-        if ($isCompleted || $endDatePassed || $isPastYear) {
+        if ($isCompleted || $isPastYear) {
             $riderSeasons[] = [
                 'series_id' => $sid,
                 'series_name' => $series['name'],
