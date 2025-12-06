@@ -797,8 +797,8 @@ function copyToClipboard(text) {
 }
 
 .profile-photo {
-    width: 80px;
-    height: 80px;
+    width: 96px;
+    height: 96px;
     border-radius: var(--radius-lg);
     background: linear-gradient(135deg, #f3f4f6, #e5e7eb);
     display: flex;
@@ -823,12 +823,12 @@ function copyToClipboard(text) {
 
 .ranking-badge {
     position: absolute;
-    top: -6px;
-    right: -6px;
+    top: -8px;
+    right: -8px;
     background: linear-gradient(135deg, #FFD700, #FFA500);
     color: var(--color-primary, #171717);
-    width: 36px;
-    height: 36px;
+    min-width: 44px;
+    padding: 6px 8px;
     border-radius: var(--radius-sm);
     display: flex;
     flex-direction: column;
@@ -839,15 +839,17 @@ function copyToClipboard(text) {
     border: 2px solid var(--color-bg-surface);
 }
 
-.ranking-badge .rank-number {
-    font-size: 0.9rem;
+.ranking-badge .rank-label {
+    font-size: 0.55rem;
+    text-transform: uppercase;
+    opacity: 0.9;
+    letter-spacing: 0.02em;
     line-height: 1;
 }
 
-.ranking-badge .rank-label {
-    font-size: 0.4rem;
-    text-transform: uppercase;
-    opacity: 0.8;
+.ranking-badge .rank-number {
+    font-size: 1rem;
+    line-height: 1.1;
 }
 
 .profile-name {

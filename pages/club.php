@@ -389,13 +389,12 @@ foreach (['jpg', 'jpeg', 'png', 'webp', 'svg'] as $ext) {
 
 .ranking-badge {
   position: absolute;
-  top: -6px;
-  right: -6px;
+  top: -8px;
+  right: -8px;
   background: linear-gradient(135deg, #FFD700, #FFA500);
   color: var(--color-primary, #171717);
-  min-width: 36px;
-  height: auto;
-  padding: 4px 6px;
+  min-width: 44px;
+  padding: 6px 8px;
   border-radius: var(--radius-sm);
   display: flex;
   flex-direction: column;
@@ -407,20 +406,21 @@ foreach (['jpg', 'jpeg', 'png', 'webp', 'svg'] as $ext) {
 }
 
 .ranking-badge .rank-label {
-  font-size: 0.45rem;
+  font-size: 0.55rem;
   text-transform: uppercase;
   opacity: 0.9;
-  letter-spacing: 0.05em;
-}
-
-.ranking-badge .rank-number {
-  font-size: 0.85rem;
+  letter-spacing: 0.02em;
   line-height: 1;
 }
 
+.ranking-badge .rank-number {
+  font-size: 1rem;
+  line-height: 1.1;
+}
+
 .club-logo {
-  width: 80px;
-  height: 80px;
+  width: 96px;
+  height: 96px;
   border-radius: var(--radius-lg);
   background: linear-gradient(135deg, #f3f4f6, #e5e7eb);
   display: flex;
