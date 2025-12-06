@@ -39,26 +39,49 @@ $sidebarNav = defined('HUB_NAV') ? HUB_NAV : [
     ['id' => 'ranking', 'label' => 'Ranking', 'icon' => 'trending-up', 'url' => '/ranking', 'aria' => 'Ranking'],
 ];
 
-// Admin navigation items
+// Load admin tabs config to get navigation from single source of truth
+require_once __DIR__ . '/../includes/config/admin-tabs-config.php';
+
+// Build admin navigation from config - show only main groups
 $adminNav = [
     ['id' => 'admin-dashboard', 'label' => 'Dashboard', 'icon' => 'layout-dashboard', 'url' => '/admin/dashboard', 'aria' => 'Admin Dashboard'],
-    ['id' => 'admin-events', 'label' => 'Events', 'icon' => 'calendar', 'url' => '/admin/events', 'aria' => 'Hantera events'],
-    ['id' => 'admin-series', 'label' => 'Serier', 'icon' => 'trophy', 'url' => '/admin/series', 'aria' => 'Hantera serier'],
-    ['id' => 'admin-riders', 'label' => 'Deltagare', 'icon' => 'users', 'url' => '/admin/riders', 'aria' => 'Hantera deltagare'],
-    ['id' => 'admin-clubs', 'label' => 'Klubbar', 'icon' => 'building', 'url' => '/admin/clubs', 'aria' => 'Hantera klubbar'],
-    ['id' => 'admin-classes', 'label' => 'Klasser', 'icon' => 'layers', 'url' => '/admin/classes', 'aria' => 'Hantera klasser'],
-    ['id' => 'admin-media', 'label' => 'Media', 'icon' => 'image', 'url' => '/admin/media', 'aria' => 'Hantera media'],
-    ['id' => 'admin-sponsors', 'label' => 'Sponsorer', 'icon' => 'award', 'url' => '/admin/sponsors', 'aria' => 'Hantera sponsorer'],
-    ['id' => 'admin-import', 'label' => 'Import', 'icon' => 'upload', 'url' => '/admin/import', 'aria' => 'Importera data'],
-    ['id' => 'admin-ranking', 'label' => 'Ranking', 'icon' => 'bar-chart-2', 'url' => '/admin/ranking', 'aria' => 'Hantera ranking'],
-    ['id' => 'admin-users', 'label' => 'Användare', 'icon' => 'user-cog', 'url' => '/admin/users', 'aria' => 'Hantera användare'],
-    ['id' => 'admin-settings', 'label' => 'Inställningar', 'icon' => 'settings', 'url' => '/admin/settings', 'aria' => 'Systeminställningar'],
 ];
 
-// Check if current admin page is active
-function isAdminPageActive($itemId, $requestUri) {
-    $page = str_replace('admin-', '', $itemId);
-    return strpos($requestUri, '/admin/' . $page) !== false;
+// Add main groups from ADMIN_TABS config
+foreach ($ADMIN_TABS as $groupId => $group) {
+    // Skip super_admin_only groups for non-super admins
+    if (isset($group['super_admin_only']) && $group['super_admin_only']) {
+        if (!function_exists('hasRole') || !hasRole('super_admin')) {
+            continue;
+        }
+    }
+
+    // Get first tab's URL as the group URL
+    $firstTabUrl = $group['tabs'][0]['url'] ?? '/admin/';
+
+    $adminNav[] = [
+        'id' => 'admin-' . $groupId,
+        'label' => $group['title'],
+        'icon' => $group['icon'],
+        'url' => $firstTabUrl,
+        'aria' => $group['title'],
+        'pages' => get_pages_in_group($groupId) // All pages in this group
+    ];
+}
+
+// Check if current admin page is active - using pages array from config
+function isAdminPageActive($item, $requestUri) {
+    // Get current page name from URI
+    $currentPage = basename(parse_url($requestUri, PHP_URL_PATH));
+
+    // If item has pages array, check if current page is in it
+    if (isset($item['pages']) && is_array($item['pages'])) {
+        return in_array($currentPage, $item['pages']);
+    }
+
+    // Fallback: check by URL prefix
+    $groupId = str_replace('admin-', '', $item['id']);
+    return strpos($requestUri, '/admin/' . $groupId) !== false;
 }
 ?>
 <aside class="sidebar" role="navigation" aria-label="Huvudnavigering">
@@ -68,7 +91,7 @@ function isAdminPageActive($itemId, $requestUri) {
       <div class="sidebar-section">
         <div class="sidebar-section-title">Admin</div>
         <?php foreach ($adminNav as $item): ?>
-          <?php $isActive = isAdminPageActive($item['id'], $_SERVER['REQUEST_URI']); ?>
+          <?php $isActive = isAdminPageActive($item, $_SERVER['REQUEST_URI']); ?>
           <a href="<?= htmlspecialchars($item['url']) ?>"
              class="sidebar-link<?= $isActive ? ' is-active' : '' ?>"
              data-nav="<?= htmlspecialchars($item['id']) ?>"
