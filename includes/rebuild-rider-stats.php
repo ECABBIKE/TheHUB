@@ -790,6 +790,7 @@ function getSeriesResults($pdo, $series_id, $rider_id, $year) {
         WHERE r.cyclist_id = ?
           AND e.series_id = ?
           AND YEAR(e.date) = ?
+          AND r.status != 'dns'
         ORDER BY e.date DESC
     ");
     $stmt->execute([$rider_id, $series_id, $year]);

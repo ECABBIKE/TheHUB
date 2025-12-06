@@ -655,21 +655,98 @@ include __DIR__ . '/components/unified-layout.php';
                     $clubName = $club[0]['name'] ?? '(okänd klubb)';
                 }
 
-                // Get series results (sum per series/class)
-                $seriesResults = $db->getAll("
-                    SELECT s.id as series_id, s.name as series_name, s.year, s.status,
-                           c.display_name as class_name,
-                           SUM(res.points) as total_points,
-                           COUNT(*) as race_count
+                // Get series and calculate placement using count_best_results
+                $seriesResults = [];
+
+                // First, find all series/class combos this rider has participated in
+                $riderSeriesClasses = $db->getAll("
+                    SELECT DISTINCT s.id as series_id, s.name as series_name, s.year, s.status,
+                           s.count_best_results, res.class_id, c.display_name as class_name
                     FROM results res
                     JOIN events e ON res.event_id = e.id
                     JOIN series_events se ON se.event_id = e.id
                     JOIN series s ON se.series_id = s.id
                     LEFT JOIN classes c ON res.class_id = c.id
                     WHERE res.cyclist_id = ? AND res.status = 'finished'
-                    GROUP BY s.id, res.class_id
-                    ORDER BY s.year DESC, total_points DESC
+                    ORDER BY s.year DESC, s.name
                 ", [$rid]);
+
+                foreach ($riderSeriesClasses as $sc) {
+                    $seriesId = $sc['series_id'];
+                    $classId = $sc['class_id'];
+                    $countBest = $sc['count_best_results'];
+
+                    // Get ALL riders' points in this series/class (including this rider)
+                    $allRidersResults = $db->getAll("
+                        SELECT res.cyclist_id, res.points, e.id as event_id
+                        FROM results res
+                        JOIN events e ON res.event_id = e.id
+                        JOIN series_events se ON se.event_id = e.id
+                        WHERE se.series_id = ? AND res.class_id = ? AND res.status = 'finished'
+                        ORDER BY res.cyclist_id, res.points DESC
+                    ", [$seriesId, $classId]);
+
+                    // Group by rider and calculate counted points
+                    $riderTotals = [];
+                    $currentRiderId = null;
+                    $currentPoints = [];
+
+                    foreach ($allRidersResults as $row) {
+                        if ($row['cyclist_id'] !== $currentRiderId) {
+                            if ($currentRiderId !== null) {
+                                // Calculate counted points for previous rider
+                                usort($currentPoints, function($a, $b) { return $b - $a; });
+                                $counted = $countBest ? array_slice($currentPoints, 0, $countBest) : $currentPoints;
+                                $riderTotals[$currentRiderId] = [
+                                    'total' => array_sum($currentPoints),
+                                    'counted' => array_sum($counted),
+                                    'race_count' => count($currentPoints),
+                                    'races_counted' => count($counted)
+                                ];
+                            }
+                            $currentRiderId = $row['cyclist_id'];
+                            $currentPoints = [];
+                        }
+                        $currentPoints[] = (int)$row['points'];
+                    }
+                    // Don't forget last rider
+                    if ($currentRiderId !== null) {
+                        usort($currentPoints, function($a, $b) { return $b - $a; });
+                        $counted = $countBest ? array_slice($currentPoints, 0, $countBest) : $currentPoints;
+                        $riderTotals[$currentRiderId] = [
+                            'total' => array_sum($currentPoints),
+                            'counted' => array_sum($counted),
+                            'race_count' => count($currentPoints),
+                            'races_counted' => count($counted)
+                        ];
+                    }
+
+                    // Sort by counted points to determine positions
+                    uasort($riderTotals, function($a, $b) { return $b['counted'] - $a['counted']; });
+
+                    // Find this rider's position
+                    $position = 1;
+                    foreach ($riderTotals as $riderId => $data) {
+                        if ($riderId == $rid) {
+                            $seriesResults[] = [
+                                'series_id' => $seriesId,
+                                'series_name' => $sc['series_name'],
+                                'year' => $sc['year'],
+                                'status' => $sc['status'],
+                                'class_name' => $sc['class_name'],
+                                'position' => $position,
+                                'total_riders' => count($riderTotals),
+                                'counted_points' => $data['counted'],
+                                'total_points' => $data['total'],
+                                'race_count' => $data['race_count'],
+                                'races_counted' => $data['races_counted'],
+                                'count_best' => $countBest
+                            ];
+                            break;
+                        }
+                        $position++;
+                    }
+                }
 
                 // Get achievements
                 $achievements = $db->getAll("
@@ -731,8 +808,8 @@ include __DIR__ . '/components/unified-layout.php';
             }
             echo '</tr>';
 
-            // Series results
-            echo '<tr><td><strong>Serieresultat</strong></td>';
+            // Series results with placement
+            echo '<tr><td><strong>Serieplacering</strong></td>';
             foreach ($riders as $data) {
                 if (isset($data['error'])) {
                     echo '<td>-</td>';
@@ -742,8 +819,17 @@ include __DIR__ . '/components/unified-layout.php';
                     echo '<td>';
                     foreach ($data['series'] as $s) {
                         $statusBadge = $s['status'] === 'completed' ? '✓' : '';
-                        echo htmlspecialchars($s['series_name']) . ' ' . $statusBadge . '<br>';
-                        echo '<small>' . htmlspecialchars($s['class_name'] ?? 'Okänd klass') . ': ' . $s['total_points'] . ' poäng (' . $s['race_count'] . ' starter)</small><br>';
+                        $posClass = $s['position'] == 1 ? 'text-success' : '';
+                        $posIcon = $s['position'] == 1 ? '🏆' : '';
+                        echo '<strong>' . htmlspecialchars($s['series_name']) . '</strong> ' . $statusBadge . '<br>';
+                        echo '<span class="' . $posClass . '">' . $posIcon . ' Plats <strong>#' . $s['position'] . '</strong> av ' . $s['total_riders'] . '</span><br>';
+                        echo '<small>' . htmlspecialchars($s['class_name'] ?? 'Okänd klass') . '</small><br>';
+                        if ($s['count_best']) {
+                            echo '<small>' . $s['counted_points'] . ' poäng (bästa ' . $s['races_counted'] . ' av ' . $s['race_count'] . ' starter)</small><br>';
+                        } else {
+                            echo '<small>' . $s['total_points'] . ' poäng (' . $s['race_count'] . ' starter)</small><br>';
+                        }
+                        echo '<br>';
                     }
                     echo '</td>';
                 }
