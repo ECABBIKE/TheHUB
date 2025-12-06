@@ -55,6 +55,9 @@ $messageType = 'info';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     checkCsrf();
 
+    // Debug: Log is_championship value
+    error_log("EVENT EDIT DEBUG: is_championship POST value = " . (isset($_POST['is_championship']) ? 'SET' : 'NOT SET'));
+
     $name = trim($_POST['name'] ?? '');
     $date = trim($_POST['date'] ?? '');
 
@@ -148,7 +151,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         ];
 
         try {
-            $db->update('events', $eventData, 'id = ?', [$id]);
+            $rowsAffected = $db->update('events', $eventData, 'id = ?', [$id]);
+            error_log("EVENT EDIT DEBUG: Update returned {$rowsAffected} rows, is_championship value was: " . $eventData['is_championship']);
             $_SESSION['message'] = 'Event uppdaterat!';
             $_SESSION['messageType'] = 'success';
             header('Location: /admin/events');
