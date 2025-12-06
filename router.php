@@ -34,7 +34,7 @@ function hub_requires_auth(string $page): bool {
         // Auth pages
         '', 'welcome', 'login', 'logout', 'forgot-password', 'reset-password', 'activate-account', 'index.php',
         // Public content sections (viewable without login)
-        'calendar', 'results', 'series', 'database', 'ranking',
+        'calendar', 'results', 'series', 'database', 'ranking', 'achievements',
         // Legacy public pages
         'rider', 'club', 'event', 'riders', 'clubs'
     ];
@@ -169,7 +169,8 @@ function hub_get_current_page(): array {
         'riders' => ['section' => 'database', 'file' => '/pages/riders.php'],
         'clubs' => ['section' => 'database', 'file' => '/pages/clubs.php'],
         'results' => ['section' => 'results', 'file' => '/pages/results.php'],
-        'ranking' => ['section' => 'ranking', 'file' => '/pages/ranking.php']
+        'ranking' => ['section' => 'ranking', 'file' => '/pages/ranking.php'],
+        'achievements' => ['section' => 'database', 'file' => '/pages/achievements.php']
     ];
 
     if (isset($legacyPages[$section])) {
