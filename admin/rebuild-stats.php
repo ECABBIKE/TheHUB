@@ -344,7 +344,7 @@ include __DIR__ . '/../includes/layout-header.php';
 </main>
 
 <style>
-/* Mobile first */
+/* Mobile first - base styles */
 .stat-box {
     text-align: center;
     padding: var(--space-md);
@@ -353,14 +353,14 @@ include __DIR__ . '/../includes/layout-header.php';
 }
 
 .stat-value {
-    font-size: 1.5rem;
+    font-size: 1.25rem;
     font-weight: 700;
     color: var(--color-primary);
     line-height: 1;
 }
 
 .stat-label {
-    font-size: 0.75rem;
+    font-size: 0.7rem;
     color: var(--color-text);
     text-transform: uppercase;
     letter-spacing: 0.5px;
@@ -394,50 +394,78 @@ include __DIR__ . '/../includes/layout-header.php';
     border-color: var(--color-accent);
 }
 
-/* Stats grid - mobile first (2 columns) */
-.grid-cols-4 {
+/* Grid - mobile first (2 columns) */
+.grid {
     display: grid;
+}
+
+.grid-cols-4 {
     grid-template-columns: repeat(2, 1fr);
+}
+
+.gap-md {
     gap: var(--space-md);
 }
 
-/* Header layout - mobile: stack */
-.flex.items-center.justify-between {
+/* Page header - mobile: stack vertically */
+.main-content .container > .flex:first-child {
+    display: flex;
     flex-direction: column;
     align-items: flex-start;
     gap: var(--space-md);
 }
 
-/* Form layout - mobile: stack */
-.flex.gap-sm {
+/* Form with input + button - mobile: stack */
+form.flex {
+    display: flex;
     flex-direction: column;
     gap: var(--space-sm);
 }
 
-/* Tablet+ */
+form.flex .form-control {
+    width: 100%;
+}
+
+/* Cards full width on mobile */
+.card {
+    overflow-x: auto;
+}
+
+/* Tablet (600px+) */
 @media (min-width: 600px) {
     .stat-value {
-        font-size: 1.75rem;
+        font-size: 1.5rem;
     }
 
-    .flex.gap-sm {
+    .stat-label {
+        font-size: 0.75rem;
+    }
+
+    form.flex {
         flex-direction: row;
+        align-items: center;
     }
 
-    .flex.gap-sm .form-control {
+    form.flex .form-control {
+        width: auto;
         max-width: 200px;
     }
 }
 
-/* Desktop */
+/* Desktop (900px+) */
 @media (min-width: 900px) {
     .grid-cols-4 {
         grid-template-columns: repeat(4, 1fr);
     }
 
-    .flex.items-center.justify-between {
+    .stat-value {
+        font-size: 1.75rem;
+    }
+
+    .main-content .container > .flex:first-child {
         flex-direction: row;
         align-items: center;
+        justify-content: space-between;
     }
 }
 </style>
