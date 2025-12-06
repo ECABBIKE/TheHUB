@@ -11,6 +11,67 @@ $pdo = $db->getPdo();
 
 $currentYear = (int)date('Y');
 
+// Handle rebuild BEFORE rendering page (so queries show updated data)
+$rebuildMessage = null;
+if (isset($_POST['rebuild_completed_series']) && isset($_POST['csrf_token'])) {
+    if (verify_csrf_token($_POST['csrf_token'])) {
+        require_once __DIR__ . '/../includes/rebuild-rider-stats.php';
+
+        // Get all qualifying series: completed OR from previous years
+        $qualifyingSeries = $db->getAll("
+            SELECT id, name, year, status
+            FROM series
+            WHERE status = 'completed' OR year < " . $currentYear . "
+        ");
+
+        if (empty($qualifyingSeries)) {
+            $rebuildMessage = ['type' => 'warning', 'text' => 'Inga kvalificerande serier hittades (varken completed eller från tidigare år).'];
+        } else {
+            $totalRiders = 0;
+            $totalChampions = 0;
+            $processedRiders = []; // Avoid processing same rider twice
+
+            foreach ($qualifyingSeries as $qs) {
+                // Get all riders in this series
+                $ridersStmt = $pdo->prepare("
+                    SELECT DISTINCT r.cyclist_id
+                    FROM results r
+                    JOIN events e ON r.event_id = e.id
+                    JOIN series_events se ON se.event_id = e.id
+                    WHERE se.series_id = ? AND r.cyclist_id IS NOT NULL
+                ");
+                $ridersStmt->execute([$qs['id']]);
+                $riderIds = $ridersStmt->fetchAll(PDO::FETCH_COLUMN);
+
+                foreach ($riderIds as $riderId) {
+                    // Only process each rider once
+                    if (!isset($processedRiders[$riderId])) {
+                        rebuildRiderStats($pdo, $riderId);
+                        $processedRiders[$riderId] = true;
+                        $totalRiders++;
+                    }
+                }
+
+                // Count champions for this series
+                $champCount = $pdo->prepare("
+                    SELECT COUNT(*) FROM rider_achievements
+                    WHERE achievement_type = 'series_champion' AND series_id = ?
+                ");
+                $champCount->execute([$qs['id']]);
+                $totalChampions += (int)$champCount->fetchColumn();
+            }
+
+            $completedCount = count(array_filter($qualifyingSeries, fn($s) => $s['status'] === 'completed'));
+            $pastYearCount = count($qualifyingSeries) - $completedCount;
+
+            $rebuildMessage = [
+                'type' => 'success',
+                'text' => "Klar! Bearbetade {$totalRiders} unika åkare i " . count($qualifyingSeries) . " serier. ({$completedCount} completed + {$pastYearCount} från tidigare år). Totalt {$totalChampions} seriemästare registrerade."
+            ];
+        }
+    }
+}
+
 $page_title = 'Diagnostik: Seriemästare';
 $breadcrumbs = [
     ['label' => 'Verktyg', 'url' => '/admin/tools.php'],
@@ -18,6 +79,12 @@ $breadcrumbs = [
 ];
 include __DIR__ . '/components/unified-layout.php';
 ?>
+
+<?php if ($rebuildMessage): ?>
+<div class="alert alert-<?= $rebuildMessage['type'] ?> mb-lg">
+    <strong><?= $rebuildMessage['type'] === 'success' ? '✓' : '⚠️' ?></strong> <?= htmlspecialchars($rebuildMessage['text']) ?>
+</div>
+<?php endif; ?>
 
 <div class="card mb-lg">
     <div class="card-header">
@@ -551,71 +618,6 @@ include __DIR__ . '/components/unified-layout.php';
         <h2>📋 Snabbåtgärder</h2>
     </div>
     <div class="card-body">
-        <?php
-        // Check if rebuild was requested
-        if (isset($_POST['rebuild_completed_series']) && isset($_POST['csrf_token'])) {
-            if (verify_csrf_token($_POST['csrf_token'])) {
-                require_once __DIR__ . '/../includes/rebuild-rider-stats.php';
-                $pdo = $db->getPdo();
-
-                // Get all qualifying series: completed OR from previous years
-                $qualifyingSeries = $db->getAll("
-                    SELECT id, name, year, status
-                    FROM series
-                    WHERE status = 'completed' OR year < " . $currentYear . "
-                ");
-
-                if (empty($qualifyingSeries)) {
-                    echo '<div class="alert alert-warning mb-md">Inga kvalificerande serier hittades (varken completed eller från tidigare år).</div>';
-                } else {
-                    $totalRiders = 0;
-                    $totalChampions = 0;
-                    $processedRiders = []; // Avoid processing same rider twice
-
-                    foreach ($qualifyingSeries as $qs) {
-                        // Get all riders in this series
-                        $ridersStmt = $pdo->prepare("
-                            SELECT DISTINCT r.cyclist_id
-                            FROM results r
-                            JOIN events e ON r.event_id = e.id
-                            JOIN series_events se ON se.event_id = e.id
-                            WHERE se.series_id = ? AND r.cyclist_id IS NOT NULL
-                        ");
-                        $ridersStmt->execute([$qs['id']]);
-                        $riderIds = $ridersStmt->fetchAll(PDO::FETCH_COLUMN);
-
-                        foreach ($riderIds as $riderId) {
-                            // Only process each rider once
-                            if (!isset($processedRiders[$riderId])) {
-                                rebuildRiderStats($pdo, $riderId);
-                                $processedRiders[$riderId] = true;
-                                $totalRiders++;
-                            }
-                        }
-
-                        // Count champions for this series
-                        $champCount = $pdo->prepare("
-                            SELECT COUNT(*) FROM rider_achievements
-                            WHERE achievement_type = 'series_champion' AND series_id = ?
-                        ");
-                        $champCount->execute([$qs['id']]);
-                        $totalChampions += (int)$champCount->fetchColumn();
-                    }
-
-                    $completedCount = count(array_filter($qualifyingSeries, fn($s) => $s['status'] === 'completed'));
-                    $pastYearCount = count($qualifyingSeries) - $completedCount;
-
-                    echo '<div class="alert alert-success mb-md">';
-                    echo "<strong>Klar!</strong> Bearbetade {$totalRiders} unika åkare i " . count($qualifyingSeries) . " serier.<br>";
-                    echo "<small>({$completedCount} completed + {$pastYearCount} från tidigare år)</small><br>";
-                    echo "Totalt {$totalChampions} seriemästare registrerade.<br>";
-                    echo '<a href="/admin/diagnose-series.php" class="btn btn--secondary mt-sm" style="display:inline-block;">Ladda om sidan</a>';
-                    echo '</div>';
-                }
-            }
-        }
-        ?>
-
         <form method="POST" style="display: inline;">
             <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(generate_csrf_token()) ?>">
             <button type="submit" name="rebuild_completed_series" class="btn btn--primary"
