@@ -256,17 +256,16 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
 <!-- Profile Hero -->
 <section class="profile-hero">
     <div class="hero-accent-bar"></div>
+    <?php if ($rider['gravity_id']):
+        $gidNumber = preg_replace('/^.*?-?(\d+)$/', '$1', $rider['gravity_id']);
+        $gidNumber = ltrim($gidNumber, '0') ?: '0';
+    ?>
+    <div class="gravity-id-badge">
+        <span class="gid-label">Gravity ID</span>
+        <span class="gid-number">#<?= htmlspecialchars($gidNumber) ?></span>
+    </div>
+    <?php endif; ?>
     <div class="hero-content">
-        <?php if ($rider['gravity_id']):
-            $gidNumber = preg_replace('/^.*?-?(\d+)$/', '$1', $rider['gravity_id']);
-            $gidNumber = ltrim($gidNumber, '0') ?: '0';
-        ?>
-        <div class="gravity-id-badge">
-            <span class="gid-label">G-ID</span>
-            <span class="gid-number">#<?= htmlspecialchars($gidNumber) ?></span>
-        </div>
-        <?php endif; ?>
-
         <!-- Top row: Photo + Name -->
         <div class="hero-top">
             <div class="hero-left">
@@ -667,40 +666,41 @@ document.querySelectorAll('.series-tab').forEach(tab => {
 
 .hero-content {
     padding: var(--space-lg);
-    position: relative;
 }
 
-/* Gravity ID Badge - Top Right Corner */
+/* Gravity ID Badge - Top Right Corner (same style as ranking badge) */
 .gravity-id-badge {
     position: absolute;
-    top: var(--space-md);
-    right: var(--space-md);
-    display: flex;
-    align-items: center;
-    gap: 0;
-    background: linear-gradient(135deg, #1a1a2e, #16213e);
+    top: -10px;
+    right: -10px;
+    background: linear-gradient(135deg, #FFD700, #FFA500);
+    color: var(--color-primary, #171717);
+    padding: 8px 12px;
     border-radius: var(--radius-md);
-    overflow: hidden;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    box-shadow: var(--shadow-lg);
+    border: 3px solid var(--color-bg-surface);
     z-index: 10;
 }
 
 .gravity-id-badge .gid-label {
-    font-size: 0.65rem;
-    font-weight: 700;
-    color: rgba(255, 255, 255, 0.8);
-    padding: 8px 10px;
-    background: rgba(0, 0, 0, 0.3);
+    font-size: 0.5rem;
+    text-transform: uppercase;
+    opacity: 0.8;
     letter-spacing: 0.5px;
+    line-height: 1;
+    margin-bottom: 2px;
 }
 
 .gravity-id-badge .gid-number {
     font-family: var(--font-mono);
     font-size: 1.1rem;
     font-weight: 800;
-    color: #FFD700;
-    padding: 8px 12px;
-    text-shadow: 0 0 10px rgba(255, 215, 0, 0.4);
+    line-height: 1;
 }
 
 /* Hero Top Row - Three columns */
@@ -1403,18 +1403,17 @@ document.querySelectorAll('.series-tab').forEach(tab => {
 @media (max-width: 599px) {
     /* Gravity ID Badge */
     .gravity-id-badge {
-        top: var(--space-sm);
-        right: var(--space-sm);
+        top: -8px;
+        right: -8px;
+        padding: 6px 10px;
     }
 
     .gravity-id-badge .gid-label {
-        font-size: 0.55rem;
-        padding: 5px 6px;
+        font-size: 0.4rem;
     }
 
     .gravity-id-badge .gid-number {
-        font-size: 0.85rem;
-        padding: 5px 8px;
+        font-size: 0.9rem;
     }
 
     /* Hero Section */
@@ -1422,7 +1421,6 @@ document.querySelectorAll('.series-tab').forEach(tab => {
         grid-template-columns: 1fr;
         text-align: center;
         gap: var(--space-md);
-        padding-top: var(--space-xl);
     }
 
     .hero-left {
