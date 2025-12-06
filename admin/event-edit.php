@@ -171,8 +171,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             error_log("EVENT EDIT: Saving event ID {$id}");
             error_log("EVENT EDIT: is_championship = " . $eventData['is_championship']);
 
+            // First, try updating is_championship separately to ensure it works
+            $isChampionship = $eventData['is_championship'];
+            $smUpdateResult = $db->query("UPDATE events SET is_championship = ? WHERE id = ?", [$isChampionship, $id]);
+            error_log("EVENT EDIT: SM update result: " . ($smUpdateResult ? 'OK' : 'FAILED'));
+
+            // Then update the rest of the fields (remove is_championship to avoid duplicate)
+            unset($eventData['is_championship']);
             $rowsAffected = $db->update('events', $eventData, 'id = ?', [$id]);
-            error_log("EVENT EDIT: Update returned {$rowsAffected} rows affected");
+            error_log("EVENT EDIT: Main update returned {$rowsAffected} rows affected");
 
             // Verify the save worked by re-reading
             $verifyEvent = $db->getRow("SELECT is_championship FROM events WHERE id = ?", [$id]);
@@ -180,13 +187,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             error_log("EVENT EDIT: Verification - is_championship now = " . $verifyValue);
 
             // Check if the value was actually saved correctly
-            $expectedValue = $eventData['is_championship'];
-            if ($verifyValue != $expectedValue) {
+            if ($verifyValue != $isChampionship) {
                 // Something went wrong - show debug info instead of redirecting
-                $message = "VARNING: Värdet sparades inte korrekt! Försökte spara: {$expectedValue}, men databasen har: {$verifyValue}. Kolumnstatus: {$columnStatus}";
+                $message = "VARNING: Värdet sparades inte korrekt! Försökte spara: {$isChampionship}, men databasen har: {$verifyValue}. SM-query: " . ($smUpdateResult ? 'OK' : 'FAIL');
                 $messageType = 'error';
             } else {
-                $_SESSION['message'] = 'Event uppdaterat!' . ($eventData['is_championship'] ? ' ✓ SM-status sparad' : '');
+                $_SESSION['message'] = 'Event uppdaterat!' . ($isChampionship ? ' ✓ SM-status sparad' : '');
                 $_SESSION['messageType'] = 'success';
                 header('Location: /admin/events/edit/' . $id . '?saved=1');
                 exit;
