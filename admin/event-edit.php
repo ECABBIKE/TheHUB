@@ -7,15 +7,15 @@ require_admin();
 
 $db = getDB();
 
-// Ensure is_championship column exists (safe to run multiple times)
-$columnExists = $db->getValue("
-    SELECT COUNT(*) FROM information_schema.COLUMNS
-    WHERE TABLE_SCHEMA = DATABASE()
-    AND TABLE_NAME = 'events'
-    AND COLUMN_NAME = 'is_championship'
-");
-if (!$columnExists) {
-    $db->query("ALTER TABLE events ADD COLUMN is_championship TINYINT(1) DEFAULT 0");
+// Ensure is_championship column exists using SHOW COLUMNS (more reliable)
+try {
+    $columns = $db->getAll("SHOW COLUMNS FROM events LIKE 'is_championship'");
+    if (empty($columns)) {
+        $db->query("ALTER TABLE events ADD COLUMN is_championship TINYINT(1) NOT NULL DEFAULT 0");
+        error_log("EVENT EDIT: Added is_championship column to events table");
+    }
+} catch (Exception $e) {
+    error_log("EVENT EDIT: Error checking/adding is_championship column: " . $e->getMessage());
 }
 
 // Get event ID from URL (supports both /admin/events/edit/123 and ?id=123)
@@ -151,13 +151,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         ];
 
         try {
+            // Log all data being saved for debugging
+            error_log("EVENT EDIT: Saving event ID {$id}");
+            error_log("EVENT EDIT: is_championship = " . $eventData['is_championship']);
+
             $rowsAffected = $db->update('events', $eventData, 'id = ?', [$id]);
-            error_log("EVENT EDIT DEBUG: Update returned {$rowsAffected} rows, is_championship value was: " . $eventData['is_championship']);
-            $_SESSION['message'] = 'Event uppdaterat!';
+            error_log("EVENT EDIT: Update returned {$rowsAffected} rows affected");
+
+            // Verify the save worked by re-reading
+            $verifyEvent = $db->getRow("SELECT is_championship FROM events WHERE id = ?", [$id]);
+            error_log("EVENT EDIT: Verification - is_championship now = " . ($verifyEvent['is_championship'] ?? 'NULL'));
+
+            $_SESSION['message'] = 'Event uppdaterat!' . ($eventData['is_championship'] ? ' (SM-status sparad)' : '');
             $_SESSION['messageType'] = 'success';
             header('Location: /admin/events');
             exit;
         } catch (Exception $e) {
+            error_log("EVENT EDIT ERROR: " . $e->getMessage());
             $message = 'Ett fel uppstod: ' . $e->getMessage();
             $messageType = 'error';
         }
@@ -489,9 +499,13 @@ include __DIR__ . '/components/unified-layout.php';
                 </label>
 
                 <label style="display: flex; align-items: center; gap: var(--space-sm); cursor: pointer;">
-                    <input type="checkbox" name="is_championship" <?= !empty($event['is_championship']) ? 'checked' : '' ?>>
+                    <input type="checkbox" name="is_championship" value="1" <?= !empty($event['is_championship']) ? 'checked' : '' ?>>
                     <span>🏆 Svenskt Mästerskap</span>
+                    <?php if (!empty($event['is_championship'])): ?>
+                    <span style="background: var(--color-success); color: white; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; margin-left: 8px;">SM</span>
+                    <?php endif; ?>
                 </label>
+                <!-- Debug: is_championship = <?= var_export($event['is_championship'] ?? null, true) ?> -->
 
                 <div style="display: flex; gap: var(--space-sm);">
                     <a href="/admin/events" class="btn-admin btn-admin-secondary">Avbryt</a>
