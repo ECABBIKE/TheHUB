@@ -16,6 +16,12 @@ if (file_exists($rebuildPath)) {
     require_once $rebuildPath;
 }
 
+// Include new achievements system
+$achievementsPath = dirname(__DIR__) . '/includes/achievements.php';
+if (file_exists($achievementsPath)) {
+    require_once $achievementsPath;
+}
+
 // Include ranking functions
 $rankingFunctionsLoaded = false;
 $rankingPaths = [
@@ -519,6 +525,7 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
         <section class="section">
             <div class="section-header">
                 <h2 class="section-title">Achievements</h2>
+                <a href="/achievements" class="achievements-info-link" style="font-size: 12px; color: var(--color-accent); text-decoration: none;">ℹ️ Visa alla</a>
             </div>
 
             <div class="achievements-card">
