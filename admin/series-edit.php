@@ -1,0 +1,440 @@
+<?php
+/**
+ * Admin Series Edit - V3 Unified Design System
+ * Dedicated page for editing series (like event-edit.php)
+ */
+require_once __DIR__ . '/../config.php';
+require_admin();
+
+$db = getDB();
+
+// Get series ID from URL (supports both /admin/series/edit/123 and ?id=123)
+$id = 0;
+if (isset($_GET['id'])) {
+    $id = intval($_GET['id']);
+} else {
+    // Check for pretty URL format
+    $uri = $_SERVER['REQUEST_URI'];
+    if (preg_match('#/admin/series/edit/(\d+)#', $uri, $matches)) {
+        $id = intval($matches[1]);
+    }
+}
+
+// Check if creating new series
+$isNew = ($id === 0 && isset($_GET['new']));
+
+if ($id <= 0 && !$isNew) {
+    $_SESSION['message'] = 'Ogiltigt serie-ID';
+    $_SESSION['messageType'] = 'error';
+    header('Location: /admin/series');
+    exit;
+}
+
+// Fetch series data if editing
+$series = null;
+if (!$isNew) {
+    $series = $db->getRow("SELECT * FROM series WHERE id = ?", [$id]);
+
+    if (!$series) {
+        $_SESSION['message'] = 'Serie hittades inte';
+        $_SESSION['messageType'] = 'error';
+        header('Location: /admin/series');
+        exit;
+    }
+}
+
+// Check if year column exists
+$yearColumnExists = false;
+try {
+    $columns = $db->getAll("SHOW COLUMNS FROM series LIKE 'year'");
+    if (empty($columns)) {
+        // Add year column if it doesn't exist
+        $db->query("ALTER TABLE series ADD COLUMN year INT DEFAULT NULL AFTER name");
+        $yearColumnExists = true;
+    } else {
+        $yearColumnExists = true;
+    }
+} catch (Exception $e) {
+    error_log("SERIES EDIT: Error checking/adding year column: " . $e->getMessage());
+}
+
+// Check if format column exists
+$formatColumnExists = false;
+try {
+    $columns = $db->getAll("SHOW COLUMNS FROM series LIKE 'format'");
+    $formatColumnExists = !empty($columns);
+} catch (Exception $e) {}
+
+// Initialize message variables
+$message = '';
+$messageType = 'info';
+
+// Check if we just saved
+if (isset($_GET['saved']) && $_GET['saved'] == '1' && isset($_SESSION['message'])) {
+    $message = $_SESSION['message'];
+    $messageType = $_SESSION['messageType'] ?? 'success';
+    unset($_SESSION['message'], $_SESSION['messageType']);
+}
+
+// Handle form submission
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    checkCsrf();
+
+    $name = trim($_POST['name'] ?? '');
+
+    if (empty($name)) {
+        $message = 'Namn är obligatoriskt';
+        $messageType = 'error';
+    } else {
+        // Handle logo upload
+        $logoPath = $series['logo'] ?? null;
+        if (isset($_FILES['logo']) && $_FILES['logo']['error'] === UPLOAD_ERR_OK) {
+            $uploadDir = __DIR__ . '/../uploads/series/';
+            if (!is_dir($uploadDir)) {
+                mkdir($uploadDir, 0755, true);
+            }
+
+            $fileExtension = strtolower(pathinfo($_FILES['logo']['name'], PATHINFO_EXTENSION));
+            $allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'];
+
+            if (in_array($fileExtension, $allowedExtensions)) {
+                $fileName = uniqid('series_') . '.' . $fileExtension;
+                $targetPath = $uploadDir . $fileName;
+
+                if (move_uploaded_file($_FILES['logo']['tmp_name'], $targetPath)) {
+                    $logoPath = '/uploads/series/' . $fileName;
+                }
+            }
+        }
+
+        // Prepare series data
+        $seriesData = [
+            'name' => $name,
+            'type' => trim($_POST['type'] ?? ''),
+            'status' => $_POST['status'] ?? 'planning',
+            'start_date' => !empty($_POST['start_date']) ? trim($_POST['start_date']) : null,
+            'end_date' => !empty($_POST['end_date']) ? trim($_POST['end_date']) : null,
+            'description' => trim($_POST['description'] ?? ''),
+            'organizer' => trim($_POST['organizer'] ?? ''),
+            'logo' => $logoPath,
+        ];
+
+        // Add year if column exists
+        if ($yearColumnExists) {
+            $seriesData['year'] = !empty($_POST['year']) ? intval($_POST['year']) : null;
+        }
+
+        // Add format if column exists
+        if ($formatColumnExists) {
+            $seriesData['format'] = $_POST['format'] ?? 'Championship';
+        }
+
+        try {
+            if ($isNew) {
+                $newId = $db->insert('series', $seriesData);
+                $_SESSION['message'] = 'Serie skapad!';
+                $_SESSION['messageType'] = 'success';
+                header('Location: /admin/series/edit/' . $newId . '?saved=1');
+                exit;
+            } else {
+                $db->update('series', $seriesData, 'id = ?', [$id]);
+                $_SESSION['message'] = 'Serie uppdaterad!';
+                $_SESSION['messageType'] = 'success';
+                header('Location: /admin/series/edit/' . $id . '?saved=1');
+                exit;
+            }
+        } catch (Exception $e) {
+            error_log("SERIES EDIT ERROR: " . $e->getMessage());
+            $message = 'Ett fel uppstod: ' . $e->getMessage();
+            $messageType = 'error';
+        }
+    }
+}
+
+// Re-fetch series data after potential update (for display)
+if (!$isNew && $id > 0) {
+    $series = $db->getRow("SELECT * FROM series WHERE id = ?", [$id]);
+}
+
+// Set default values for new series
+if ($isNew) {
+    $series = [
+        'id' => 0,
+        'name' => '',
+        'year' => date('Y'),
+        'type' => '',
+        'format' => 'Championship',
+        'status' => 'planning',
+        'start_date' => '',
+        'end_date' => '',
+        'description' => '',
+        'organizer' => '',
+        'logo' => '',
+    ];
+}
+
+// Get events count for this series
+$eventsCount = 0;
+if (!$isNew) {
+    $eventsCount = $db->getValue("SELECT COUNT(*) FROM events WHERE series_id = ?", [$id]) ?: 0;
+}
+
+// Page config
+$page_title = $isNew ? 'Ny Serie' : 'Redigera Serie: ' . htmlspecialchars($series['name']);
+$breadcrumbs = [
+    ['label' => 'Serier', 'url' => '/admin/series'],
+    ['label' => $isNew ? 'Ny' : htmlspecialchars($series['name'])]
+];
+include __DIR__ . '/components/unified-layout.php';
+?>
+
+<?php if ($message): ?>
+<div class="alert alert-<?= $messageType === 'success' ? 'success' : ($messageType === 'error' ? 'error' : 'info') ?>">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <?php if ($messageType === 'success'): ?>
+            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>
+        <?php elseif ($messageType === 'error'): ?>
+            <circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/>
+        <?php else: ?>
+            <circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="16" y2="12"/><line x1="12" x2="12.01" y1="8" y2="8"/>
+        <?php endif; ?>
+    </svg>
+    <?= htmlspecialchars($message) ?>
+</div>
+<?php endif; ?>
+
+<form method="POST" enctype="multipart/form-data">
+    <?= csrf_field() ?>
+
+    <!-- Basic Info -->
+    <div class="admin-card">
+        <div class="admin-card-header">
+            <h2>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 20px; height: 20px;"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>
+                Grundläggande information
+            </h2>
+        </div>
+        <div class="admin-card-body">
+            <div class="admin-form-row">
+                <div class="admin-form-group" style="flex: 2;">
+                    <label for="name" class="admin-form-label">Namn <span style="color: var(--color-error);">*</span></label>
+                    <input type="text" id="name" name="name" class="admin-form-input" required
+                           value="<?= htmlspecialchars($series['name'] ?? '') ?>"
+                           placeholder="T.ex. GravitySeries 2025">
+                </div>
+                <div class="admin-form-group" style="flex: 1;">
+                    <label for="year" class="admin-form-label">År</label>
+                    <input type="number" id="year" name="year" class="admin-form-input"
+                           value="<?= htmlspecialchars($series['year'] ?? '') ?>"
+                           placeholder="<?= date('Y') ?>" min="2000" max="2100">
+                    <small style="color: var(--color-text-secondary); font-size: 0.75rem;">
+                        Viktigt för seriemästare-beräkning
+                    </small>
+                </div>
+            </div>
+
+            <div class="admin-form-row">
+                <div class="admin-form-group">
+                    <label for="type" class="admin-form-label">Typ</label>
+                    <input type="text" id="type" name="type" class="admin-form-input"
+                           value="<?= htmlspecialchars($series['type'] ?? '') ?>"
+                           placeholder="T.ex. Enduro, DH, XC">
+                </div>
+                <?php if ($formatColumnExists): ?>
+                <div class="admin-form-group">
+                    <label for="format" class="admin-form-label">Format</label>
+                    <select id="format" name="format" class="admin-form-select">
+                        <option value="Championship" <?= ($series['format'] ?? '') === 'Championship' ? 'selected' : '' ?>>Championship</option>
+                        <option value="Team" <?= ($series['format'] ?? '') === 'Team' ? 'selected' : '' ?>>Team</option>
+                    </select>
+                </div>
+                <?php endif; ?>
+                <div class="admin-form-group">
+                    <label for="status" class="admin-form-label">Status</label>
+                    <select id="status" name="status" class="admin-form-select">
+                        <option value="planning" <?= ($series['status'] ?? '') === 'planning' ? 'selected' : '' ?>>Planering</option>
+                        <option value="active" <?= ($series['status'] ?? '') === 'active' ? 'selected' : '' ?>>Aktiv</option>
+                        <option value="completed" <?= ($series['status'] ?? '') === 'completed' ? 'selected' : '' ?>>Avslutad</option>
+                        <option value="cancelled" <?= ($series['status'] ?? '') === 'cancelled' ? 'selected' : '' ?>>Inställd</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="admin-form-row">
+                <div class="admin-form-group">
+                    <label for="start_date" class="admin-form-label">Startdatum</label>
+                    <input type="date" id="start_date" name="start_date" class="admin-form-input"
+                           value="<?= htmlspecialchars($series['start_date'] ?? '') ?>">
+                </div>
+                <div class="admin-form-group">
+                    <label for="end_date" class="admin-form-label">Slutdatum</label>
+                    <input type="date" id="end_date" name="end_date" class="admin-form-input"
+                           value="<?= htmlspecialchars($series['end_date'] ?? '') ?>">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Organizer & Description -->
+    <div class="admin-card">
+        <div class="admin-card-header">
+            <h2>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 20px; height: 20px;"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                Arrangör & Beskrivning
+            </h2>
+        </div>
+        <div class="admin-card-body">
+            <div class="admin-form-group">
+                <label for="organizer" class="admin-form-label">Arrangör</label>
+                <input type="text" id="organizer" name="organizer" class="admin-form-input"
+                       value="<?= htmlspecialchars($series['organizer'] ?? '') ?>"
+                       placeholder="T.ex. Svenska Cykelförbundet">
+            </div>
+
+            <div class="admin-form-group">
+                <label for="description" class="admin-form-label">Beskrivning</label>
+                <textarea id="description" name="description" class="admin-form-textarea" rows="4"
+                          placeholder="Beskriv serien..."><?= htmlspecialchars($series['description'] ?? '') ?></textarea>
+            </div>
+        </div>
+    </div>
+
+    <!-- Logo -->
+    <div class="admin-card">
+        <div class="admin-card-header">
+            <h2>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 20px; height: 20px;"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
+                Logotyp
+            </h2>
+        </div>
+        <div class="admin-card-body">
+            <div class="admin-form-group">
+                <label for="logo" class="admin-form-label">Ladda upp logotyp</label>
+                <input type="file" id="logo" name="logo" class="admin-form-input" accept="image/*">
+                <?php if (!empty($series['logo'])): ?>
+                <div style="margin-top: var(--space-md); padding: var(--space-md); background: var(--color-bg-secondary); border-radius: var(--radius-md);">
+                    <strong style="display: block; margin-bottom: var(--space-sm);">Nuvarande logotyp:</strong>
+                    <img src="<?= htmlspecialchars($series['logo']) ?>" alt="Logotyp" style="max-width: 200px; max-height: 100px; border-radius: var(--radius-sm);">
+                </div>
+                <?php endif; ?>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats (only for existing series) -->
+    <?php if (!$isNew): ?>
+    <div class="admin-card">
+        <div class="admin-card-header">
+            <h2>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 20px; height: 20px;"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
+                Statistik
+            </h2>
+        </div>
+        <div class="admin-card-body">
+            <div class="grid grid-stats grid-gap-md">
+                <div class="admin-stat-card">
+                    <div class="admin-stat-content">
+                        <div class="admin-stat-value"><?= $eventsCount ?></div>
+                        <div class="admin-stat-label">Events</div>
+                    </div>
+                </div>
+                <div class="admin-stat-card">
+                    <div class="admin-stat-content">
+                        <div class="admin-stat-value"><?= htmlspecialchars($series['year'] ?? '-') ?></div>
+                        <div class="admin-stat-label">År</div>
+                    </div>
+                </div>
+            </div>
+
+            <div style="margin-top: var(--space-lg);">
+                <a href="/admin/events?series_id=<?= $id ?>" class="btn-admin btn-admin-secondary">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px;"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg>
+                    Visa events i denna serie
+                </a>
+            </div>
+        </div>
+    </div>
+    <?php endif; ?>
+
+    <!-- Actions -->
+    <div class="admin-card">
+        <div class="admin-card-body">
+            <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--space-md);">
+                <div style="display: flex; gap: var(--space-sm);">
+                    <a href="/admin/series" class="btn-admin btn-admin-secondary">Avbryt</a>
+                    <button type="submit" class="btn-admin btn-admin-primary">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px;"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                        <?= $isNew ? 'Skapa Serie' : 'Spara Ändringar' ?>
+                    </button>
+                </div>
+
+                <?php if (!$isNew): ?>
+                <button type="button" onclick="deleteSeries(<?= $id ?>, '<?= addslashes($series['name']) ?>')"
+                        class="btn-admin btn-admin-danger">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px;"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+                    Ta bort serie
+                </button>
+                <?php endif; ?>
+            </div>
+        </div>
+    </div>
+</form>
+
+<?php if (!$isNew): ?>
+<script>
+const csrfToken = '<?= htmlspecialchars(generate_csrf_token()) ?>';
+
+function deleteSeries(id, name) {
+    if (!confirm('Är du säker på att du vill ta bort "' + name + '"?\n\nDetta kan inte ångras.')) {
+        return;
+    }
+
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = '/admin/series';
+    form.innerHTML = '<input type="hidden" name="action" value="delete">' +
+                     '<input type="hidden" name="id" value="' + id + '">' +
+                     '<input type="hidden" name="csrf_token" value="' + csrfToken + '">';
+    document.body.appendChild(form);
+    form.submit();
+}
+</script>
+<?php endif; ?>
+
+<style>
+.admin-form-textarea {
+    width: 100%;
+    padding: var(--space-sm) var(--space-md);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    background: var(--color-bg);
+    color: var(--color-text);
+    font-family: inherit;
+    font-size: var(--text-sm);
+    resize: vertical;
+}
+
+.admin-form-textarea:focus {
+    outline: none;
+    border-color: var(--color-accent);
+    box-shadow: 0 0 0 3px var(--color-accent-alpha);
+}
+
+/* Mobile adjustments */
+@media (max-width: 600px) {
+    .admin-form-row {
+        flex-direction: column;
+    }
+
+    .admin-card-body > div[style*="display: flex"] {
+        flex-direction: column;
+        align-items: stretch !important;
+    }
+
+    .admin-card-body > div[style*="display: flex"] > div {
+        width: 100%;
+    }
+}
+</style>
+
+<?php include __DIR__ . '/components/unified-layout-footer.php'; ?>

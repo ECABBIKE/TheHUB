@@ -35,10 +35,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Bygg om en enskild åkare
             $riderId = (int)$_POST['rider_id'];
             if ($riderId > 0) {
+                // First, run debug to see what would be found
+                $debugResults = debugRiderAchievements($pdo, $riderId);
+
                 $results = rebuildRiderStats($pdo, $riderId);
                 if (isset($results['success']) && $results['success']) {
                     $message = "Statistik uppdaterad för åkare #$riderId ({$results['achievements_added']} achievements)";
                     $messageType = 'success';
+                    // Add debug info to results
+                    $results['debug'] = $debugResults;
                 } else {
                     $message = "Fel: " . implode(', ', $results['errors'] ?? ['Okänt fel']);
                     $messageType = 'error';
@@ -156,6 +161,130 @@ function runStatsMigration($pdo) {
     }
 
     return $results;
+}
+
+/**
+ * Debug function to show what achievements would be found for a rider
+ */
+function debugRiderAchievements($pdo, $rider_id) {
+    $debug = [
+        'series_championships' => [],
+        'swedish_championships' => [],
+        'series_data' => [],
+        'podiums' => ['gold' => 0, 'silver' => 0, 'bronze' => 0]
+    ];
+
+    $currentYear = (int)date('Y');
+
+    // Check what series data exists for this rider
+    $stmt = $pdo->prepare("
+        SELECT
+            s.id,
+            s.name,
+            s.year as series_year,
+            s.status,
+            YEAR(e.date) as event_year,
+            COUNT(r.id) as result_count,
+            SUM(r.points) as total_points
+        FROM results r
+        JOIN events e ON r.event_id = e.id
+        JOIN series s ON e.series_id = s.id
+        WHERE r.cyclist_id = ?
+          AND r.status = 'finished'
+        GROUP BY s.id, COALESCE(s.year, YEAR(e.date))
+        ORDER BY event_year DESC, s.name
+    ");
+    $stmt->execute([$rider_id]);
+    $debug['series_data'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // Check series championships calculation
+    $stmt = $pdo->prepare("
+        SELECT
+            s.id as series_id,
+            s.name as series_name,
+            s.year as series_year,
+            s.status as series_status,
+            COALESCE(s.year, YEAR(e.date)) as effective_year,
+            r.class_id,
+            SUM(r.points) as total_points
+        FROM results r
+        JOIN events e ON r.event_id = e.id
+        JOIN series s ON e.series_id = s.id
+        WHERE r.cyclist_id = ?
+          AND r.status = 'finished'
+          AND (s.status = 'completed' OR YEAR(e.date) < ?)
+        GROUP BY s.id, COALESCE(s.year, YEAR(e.date)), r.class_id
+    ");
+    $stmt->execute([$rider_id, $currentYear]);
+    $riderSeasons = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    foreach ($riderSeasons as $season) {
+        $year = (int)($season['effective_year']);
+        $seriesId = $season['series_id'];
+        $classId = $season['class_id'];
+
+        // Find max points for this series/class/year
+        $stmt = $pdo->prepare("
+            SELECT MAX(total) as max_points FROM (
+                SELECT r.cyclist_id, SUM(r.points) as total
+                FROM results r
+                JOIN events e ON r.event_id = e.id
+                JOIN series s ON e.series_id = s.id
+                WHERE e.series_id = ?
+                  AND r.class_id = ?
+                  AND COALESCE(s.year, YEAR(e.date)) = ?
+                  AND r.status = 'finished'
+                GROUP BY r.cyclist_id
+            ) as subq
+        ");
+        $stmt->execute([$seriesId, $classId, $year]);
+        $maxPoints = $stmt->fetchColumn();
+
+        $isChampion = ($season['total_points'] == $maxPoints && $maxPoints > 0);
+
+        $debug['series_championships'][] = [
+            'series' => $season['series_name'],
+            'year' => $year,
+            'series_year' => $season['series_year'],
+            'series_status' => $season['series_status'],
+            'class_id' => $classId,
+            'rider_points' => $season['total_points'],
+            'max_points' => $maxPoints,
+            'is_champion' => $isChampion
+        ];
+    }
+
+    // Check Swedish championships
+    $stmt = $pdo->prepare("
+        SELECT
+            e.name as event_name,
+            YEAR(e.date) as year,
+            e.is_championship,
+            r.position
+        FROM results r
+        JOIN events e ON r.event_id = e.id
+        WHERE r.cyclist_id = ?
+          AND r.position = 1
+          AND r.status = 'finished'
+          AND e.is_championship = 1
+    ");
+    $stmt->execute([$rider_id]);
+    $debug['swedish_championships'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // Count podiums
+    $stmt = $pdo->prepare("
+        SELECT
+            SUM(CASE WHEN position = 1 THEN 1 ELSE 0 END) as gold,
+            SUM(CASE WHEN position = 2 THEN 1 ELSE 0 END) as silver,
+            SUM(CASE WHEN position = 3 THEN 1 ELSE 0 END) as bronze
+        FROM results
+        WHERE cyclist_id = ? AND status = 'finished'
+    ");
+    $stmt->execute([$rider_id]);
+    $podiums = $stmt->fetch(PDO::FETCH_ASSOC);
+    $debug['podiums'] = $podiums ?: ['gold' => 0, 'silver' => 0, 'bronze' => 0];
+
+    return $debug;
 }
 
 $page_title = 'Rebuild Rider Stats';
@@ -281,6 +410,100 @@ include __DIR__ . '/components/unified-layout.php';
                         Rebuild åkare
                     </button>
                 </form>
+
+                <?php if (isset($results['debug'])): ?>
+                <div class="debug-output mt-lg">
+                    <h4>🔍 Debug Information</h4>
+
+                    <!-- Podiums -->
+                    <div class="debug-section">
+                        <strong>Pallplatser:</strong>
+                        Guld: <?= $results['debug']['podiums']['gold'] ?? 0 ?>,
+                        Silver: <?= $results['debug']['podiums']['silver'] ?? 0 ?>,
+                        Brons: <?= $results['debug']['podiums']['bronze'] ?? 0 ?>
+                    </div>
+
+                    <!-- Series Data -->
+                    <?php if (!empty($results['debug']['series_data'])): ?>
+                    <div class="debug-section">
+                        <strong>Serie-deltaganden:</strong>
+                        <table class="table table--striped table--sm mt-sm">
+                            <thead>
+                                <tr>
+                                    <th>Serie</th>
+                                    <th>År (serie)</th>
+                                    <th>År (event)</th>
+                                    <th>Status</th>
+                                    <th>Resultat</th>
+                                    <th>Poäng</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($results['debug']['series_data'] as $sd): ?>
+                                <tr>
+                                    <td><?= h($sd['name']) ?></td>
+                                    <td><?= $sd['series_year'] ?? '<span class="text-warning">NULL</span>' ?></td>
+                                    <td><?= $sd['event_year'] ?></td>
+                                    <td><?= $sd['status'] ?? 'N/A' ?></td>
+                                    <td><?= $sd['result_count'] ?></td>
+                                    <td><?= $sd['total_points'] ?></td>
+                                </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                    <?php endif; ?>
+
+                    <!-- Series Championships -->
+                    <div class="debug-section">
+                        <strong>Seriemästare-beräkning:</strong>
+                        <?php if (empty($results['debug']['series_championships'])): ?>
+                            <p class="text-warning">Inga kvalificerande serier hittades (kräver status='completed' eller event från tidigare år)</p>
+                        <?php else: ?>
+                        <table class="table table--striped table--sm mt-sm">
+                            <thead>
+                                <tr>
+                                    <th>Serie</th>
+                                    <th>År</th>
+                                    <th>Serie-år</th>
+                                    <th>Status</th>
+                                    <th>Åkarens poäng</th>
+                                    <th>Max poäng</th>
+                                    <th>Mästare?</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($results['debug']['series_championships'] as $sc): ?>
+                                <tr class="<?= $sc['is_champion'] ? 'bg-success-light' : '' ?>">
+                                    <td><?= h($sc['series']) ?></td>
+                                    <td><?= $sc['year'] ?></td>
+                                    <td><?= $sc['series_year'] ?? '<span class="text-warning">NULL</span>' ?></td>
+                                    <td><?= $sc['series_status'] ?? 'N/A' ?></td>
+                                    <td><?= $sc['rider_points'] ?></td>
+                                    <td><?= $sc['max_points'] ?></td>
+                                    <td><?= $sc['is_champion'] ? '✅ JA' : '❌ Nej' ?></td>
+                                </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                        <?php endif; ?>
+                    </div>
+
+                    <!-- Swedish Championships -->
+                    <div class="debug-section">
+                        <strong>SM-titlar:</strong>
+                        <?php if (empty($results['debug']['swedish_championships'])): ?>
+                            <p class="text-secondary">Inga SM-segrar (kräver is_championship=1 på event och position=1)</p>
+                        <?php else: ?>
+                        <ul>
+                            <?php foreach ($results['debug']['swedish_championships'] as $sm): ?>
+                            <li>🥇 <?= h($sm['event_name']) ?> (<?= $sm['year'] ?>)</li>
+                            <?php endforeach; ?>
+                        </ul>
+                        <?php endif; ?>
+                    </div>
+                </div>
+                <?php endif; ?>
             </div>
         </div>
 
@@ -466,6 +689,61 @@ form.flex .form-control {
         align-items: center;
         justify-content: space-between;
     }
+}
+
+/* Debug output styling */
+.debug-output {
+    background: var(--color-star-fade);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    padding: var(--space-md);
+}
+
+.debug-output h4 {
+    margin: 0 0 var(--space-md) 0;
+    color: var(--color-primary);
+    font-size: 1rem;
+}
+
+.debug-section {
+    margin-bottom: var(--space-md);
+    padding-bottom: var(--space-md);
+    border-bottom: 1px solid var(--color-border);
+}
+
+.debug-section:last-child {
+    margin-bottom: 0;
+    padding-bottom: 0;
+    border-bottom: none;
+}
+
+.debug-section strong {
+    display: block;
+    margin-bottom: var(--space-xs);
+    color: var(--color-primary);
+}
+
+.debug-section ul {
+    margin: var(--space-sm) 0 0 var(--space-lg);
+    padding: 0;
+}
+
+.debug-section li {
+    margin-bottom: var(--space-xs);
+}
+
+.table--sm th,
+.table--sm td {
+    padding: var(--space-xs) var(--space-sm);
+    font-size: 0.8rem;
+}
+
+.bg-success-light {
+    background: rgba(97, 206, 112, 0.15);
+}
+
+.text-warning {
+    color: var(--color-warning);
 }
 </style>
 
