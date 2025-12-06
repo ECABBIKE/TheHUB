@@ -7,14 +7,23 @@ require_admin();
 
 $db = getDB();
 
+// Check column status for debugging
+$columnStatus = 'unknown';
+$columnInfo = [];
+
 // Ensure is_championship column exists using SHOW COLUMNS (more reliable)
 try {
     $columns = $db->getAll("SHOW COLUMNS FROM events LIKE 'is_championship'");
     if (empty($columns)) {
-        $db->query("ALTER TABLE events ADD COLUMN is_championship TINYINT(1) NOT NULL DEFAULT 0");
+        $result = $db->query("ALTER TABLE events ADD COLUMN is_championship TINYINT(1) NOT NULL DEFAULT 0");
+        $columnStatus = $result ? 'created' : 'create_failed';
         error_log("EVENT EDIT: Added is_championship column to events table");
+    } else {
+        $columnStatus = 'exists';
+        $columnInfo = $columns[0];
     }
 } catch (Exception $e) {
+    $columnStatus = 'error: ' . $e->getMessage();
     error_log("EVENT EDIT: Error checking/adding is_championship column: " . $e->getMessage());
 }
 
@@ -50,6 +59,13 @@ if (!$event) {
 // Initialize message variables
 $message = '';
 $messageType = 'info';
+
+// Check if we just saved
+if (isset($_GET['saved']) && $_GET['saved'] == '1' && isset($_SESSION['message'])) {
+    $message = $_SESSION['message'];
+    $messageType = $_SESSION['messageType'] ?? 'success';
+    unset($_SESSION['message'], $_SESSION['messageType']);
+}
 
 // Handle form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -160,12 +176,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             // Verify the save worked by re-reading
             $verifyEvent = $db->getRow("SELECT is_championship FROM events WHERE id = ?", [$id]);
-            error_log("EVENT EDIT: Verification - is_championship now = " . ($verifyEvent['is_championship'] ?? 'NULL'));
+            $verifyValue = $verifyEvent['is_championship'] ?? 'NULL';
+            error_log("EVENT EDIT: Verification - is_championship now = " . $verifyValue);
 
-            $_SESSION['message'] = 'Event uppdaterat!' . ($eventData['is_championship'] ? ' (SM-status sparad)' : '');
-            $_SESSION['messageType'] = 'success';
-            header('Location: /admin/events');
-            exit;
+            // Check if the value was actually saved correctly
+            $expectedValue = $eventData['is_championship'];
+            if ($verifyValue != $expectedValue) {
+                // Something went wrong - show debug info instead of redirecting
+                $message = "VARNING: Värdet sparades inte korrekt! Försökte spara: {$expectedValue}, men databasen har: {$verifyValue}. Kolumnstatus: {$columnStatus}";
+                $messageType = 'error';
+            } else {
+                $_SESSION['message'] = 'Event uppdaterat!' . ($eventData['is_championship'] ? ' ✓ SM-status sparad' : '');
+                $_SESSION['messageType'] = 'success';
+                header('Location: /admin/events/edit/' . $id . '?saved=1');
+                exit;
+            }
         } catch (Exception $e) {
             error_log("EVENT EDIT ERROR: " . $e->getMessage());
             $message = 'Ett fel uppstod: ' . $e->getMessage();
@@ -505,7 +530,14 @@ include __DIR__ . '/components/unified-layout.php';
                     <span style="background: var(--color-success); color: white; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; margin-left: 8px;">SM</span>
                     <?php endif; ?>
                 </label>
-                <!-- Debug: is_championship = <?= var_export($event['is_championship'] ?? null, true) ?> -->
+
+                <!-- VISIBLE DEBUG -->
+                <div style="background: #fef3c7; border: 1px solid #f59e0b; border-radius: 8px; padding: 12px; margin-top: 12px; font-size: 12px; font-family: monospace;">
+                    <strong>🔍 SM Debug:</strong><br>
+                    Kolumn: <?= htmlspecialchars($columnStatus) ?><br>
+                    DB-värde: <?= var_export($event['is_championship'] ?? 'SAKNAS', true) ?><br>
+                    Kolumn-info: <?= !empty($columnInfo) ? htmlspecialchars(json_encode($columnInfo)) : 'N/A' ?>
+                </div>
 
                 <div style="display: flex; gap: var(--space-sm);">
                     <a href="/admin/events" class="btn-admin btn-admin-secondary">Avbryt</a>
