@@ -29,14 +29,9 @@ if (!defined('HUB_V3_ROOT')) {
  * Returns true if user should be redirected to login
  */
 function hub_requires_auth(string $page): bool {
-    // Public pages that don't require authentication
+    // Only auth-related pages are public - everything else requires login
     $publicPages = [
-        // Auth pages
-        '', 'welcome', 'login', 'logout', 'forgot-password', 'reset-password', 'activate-account', 'index.php',
-        // Public content sections (viewable without login)
-        'calendar', 'results', 'series', 'database', 'ranking', 'achievements',
-        // Legacy public pages
-        'rider', 'club', 'event', 'riders', 'clubs'
+        '', 'welcome', 'login', 'logout', 'forgot-password', 'reset-password', 'activate-account', 'index.php'
     ];
     return !in_array($page, $publicPages);
 }
