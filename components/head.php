@@ -15,6 +15,18 @@ if (!function_exists('hub_asset')) {
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
 <meta name="description" content="TheHUB – Sveriges plattform för gravity cycling">
 
+<!-- CRITICAL: FOUC Prevention - must be FIRST -->
+<style>
+    /* Hide content until CSS is ready */
+    .main-content { opacity: 0; }
+    .main-content.css-ready { opacity: 1; transition: opacity 0.1s ease-out; }
+    /* Fallback: show after 300ms if JS fails */
+    @keyframes fouc-fallback { to { opacity: 1; } }
+    .main-content { animation: fouc-fallback 0.1s ease-out 0.3s forwards; }
+    /* Prevent layout shift */
+    html, body { background: #F4F5F7; margin: 0; padding: 0; }
+</style>
+
 <!-- PWA Meta Tags -->
 <meta name="application-name" content="TheHUB">
 <meta name="mobile-web-app-capable" content="yes">
