@@ -322,6 +322,124 @@ include __DIR__ . '/components/unified-layout.php';
             LIMIT 50
         ");
 
+        // Debug: Detailed test of calculateSeriesChampionships for first potential champion
+        if (!empty($potentialChampions)) {
+            $testRider = (int)$potentialChampions[0]['cyclist_id'];
+            $testRiderName = $potentialChampions[0]['rider_name'];
+            $testSeriesId = (int)$potentialChampions[0]['series_id'];
+            $testClassId = (int)$potentialChampions[0]['class_id'];
+            $testPoints = (int)$potentialChampions[0]['total_points'];
+            $testSeriesName = $potentialChampions[0]['series_name'];
+            $testYear = $potentialChampions[0]['effective_year'];
+            $testEndDate = $potentialChampions[0]['end_date'];
+            $testStatus = $potentialChampions[0]['status'];
+
+            echo '<div class="alert alert-info mb-md">';
+            echo "<strong>Debug:</strong> Detaljerad test för {$testRiderName} (ID: {$testRider})<br>";
+            echo "<strong>Serie:</strong> {$testSeriesName} (ID: {$testSeriesId}), Klass: {$testClassId}<br>";
+            echo "<strong>Poäng enligt diagnos:</strong> {$testPoints}<br>";
+            echo "<strong>Serie status:</strong> {$testStatus}, end_date: " . ($testEndDate ?: 'NULL') . ", year: {$testYear}<br><br>";
+
+            // Step 1: Test simple query for rider results
+            $stmt = $pdo->prepare("
+                SELECT s.id as series_id, r.class_id, SUM(r.points) as total_points
+                FROM results r
+                JOIN events e ON r.event_id = e.id
+                JOIN series_events se ON se.event_id = e.id
+                JOIN series s ON se.series_id = s.id
+                WHERE r.cyclist_id = ? AND r.status = 'finished'
+                GROUP BY s.id, r.class_id
+            ");
+            $stmt->execute([$testRider]);
+            $riderResults = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            echo "<strong>Steg 1:</strong> Hittade " . count($riderResults) . " serie/klass-kombinationer för åkare<br>";
+
+            // Find the specific series/class combo
+            $foundCombo = null;
+            foreach ($riderResults as $rr) {
+                if ((int)$rr['series_id'] == $testSeriesId && (int)$rr['class_id'] == $testClassId) {
+                    $foundCombo = $rr;
+                    break;
+                }
+            }
+            if ($foundCombo) {
+                echo "- Hittade serie {$testSeriesId}/klass {$testClassId} med " . $foundCombo['total_points'] . " poäng<br>";
+            } else {
+                echo "<span class='text-error'>- HITTADE INTE serie {$testSeriesId}/klass {$testClassId} i riderResults!</span><br>";
+            }
+
+            // Step 2: Check series info
+            $seriesInfo = $pdo->query("SELECT id, name, year, status, end_date FROM series WHERE id = {$testSeriesId}")->fetch(PDO::FETCH_ASSOC);
+            echo "<br><strong>Steg 2:</strong> Serie-info från DB:<br>";
+            echo "- name: " . ($seriesInfo['name'] ?? 'NULL') . "<br>";
+            echo "- year: " . ($seriesInfo['year'] ?? 'NULL') . "<br>";
+            echo "- status: " . ($seriesInfo['status'] ?? 'NULL') . "<br>";
+            echo "- end_date: " . ($seriesInfo['end_date'] ?? 'NULL') . "<br>";
+
+            // Step 3: Check qualifying criteria
+            $currentYear = (int)date('Y');
+            $effectiveYear = (int)($seriesInfo['year'] ?? $currentYear);
+            $isCompleted = ($seriesInfo['status'] ?? '') === 'completed';
+            $endDatePassed = !empty($seriesInfo['end_date']) && $seriesInfo['end_date'] < date('Y-m-d');
+            $isPastYear = $effectiveYear < $currentYear;
+            $qualifies = $isCompleted || $endDatePassed || $isPastYear;
+
+            echo "<br><strong>Steg 3:</strong> Kvalifikationskontroll:<br>";
+            echo "- isCompleted: " . ($isCompleted ? 'JA' : 'NEJ') . "<br>";
+            echo "- endDatePassed: " . ($endDatePassed ? 'JA (' . $seriesInfo['end_date'] . ' < ' . date('Y-m-d') . ')' : 'NEJ') . "<br>";
+            echo "- isPastYear: " . ($isPastYear ? 'JA (' . $effectiveYear . ' < ' . $currentYear . ')' : 'NEJ') . "<br>";
+            echo "- <strong>KVALIFICERAR:</strong> " . ($qualifies ? '<span class="text-success">JA</span>' : '<span class="text-error">NEJ</span>') . "<br>";
+
+            // Step 4: Check max points for this series/class
+            $stmt = $pdo->prepare("
+                SELECT MAX(total) as max_points FROM (
+                    SELECT SUM(r.points) as total
+                    FROM results r
+                    JOIN events e ON r.event_id = e.id
+                    JOIN series_events se ON se.event_id = e.id
+                    WHERE se.series_id = ? AND r.class_id = ? AND r.status = 'finished'
+                    GROUP BY r.cyclist_id
+                ) as subq
+            ");
+            $stmt->execute([$testSeriesId, $testClassId]);
+            $maxPoints = (int)$stmt->fetchColumn();
+
+            $riderPts = $foundCombo ? (int)$foundCombo['total_points'] : 0;
+            echo "<br><strong>Steg 4:</strong> Poängjämförelse:<br>";
+            echo "- Max poäng i serie/klass: {$maxPoints}<br>";
+            echo "- Åkarens poäng: {$riderPts}<br>";
+            echo "- Är mästare: " . ($riderPts == $maxPoints && $maxPoints > 0 ? '<span class="text-success">JA</span>' : '<span class="text-error">NEJ</span>') . "<br>";
+
+            // Step 5: Now call the actual function with DEBUG enabled
+            echo "<br><strong>Steg 5:</strong> Anropar calculateSeriesChampionships() med debug=true...<br>";
+            require_once __DIR__ . '/../includes/rebuild-rider-stats.php';
+            try {
+                $result = calculateSeriesChampionships($pdo, $testRider, true); // debug=true
+                $championships = $result['championships'];
+                $debugLog = $result['debug'];
+
+                echo "<br><strong>Debug log från funktionen:</strong><br>";
+                echo "<div style='background: #f5f5f5; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 12px; max-height: 300px; overflow-y: auto;'>";
+                foreach ($debugLog as $line) {
+                    echo htmlspecialchars($line) . "<br>";
+                }
+                echo "</div><br>";
+
+                echo "<strong>Slutresultat:</strong> " . count($championships) . " seriemästarskap<br>";
+                if (!empty($championships)) {
+                    foreach ($championships as $c) {
+                        echo "- {$c['series_name']} (år {$c['year']}, serie_id: {$c['series_id']})<br>";
+                    }
+                } else {
+                    echo "<span class='text-warning'>Inga mästarskap returnerades.</span><br>";
+                }
+            } catch (Exception $e) {
+                echo "<strong class='text-error'>FEL:</strong> " . htmlspecialchars($e->getMessage()) . "<br>";
+                echo "<pre style='font-size: 10px;'>" . htmlspecialchars($e->getTraceAsString()) . "</pre>";
+            }
+            echo '</div>';
+        }
+
         if (empty($existingChampions)):
         ?>
             <div class="alert alert-warning">
