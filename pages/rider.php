@@ -172,12 +172,12 @@ try {
     // Experience level info
     $experienceLevel = $rider['experience_level'] ?? 1;
     $experienceInfo = [
-        1 => ['name' => '1st Year', 'icon' => '⭐'],
-        2 => ['name' => '2nd Year', 'icon' => '⭐'],
-        3 => ['name' => 'Experienced', 'icon' => '⭐'],
-        4 => ['name' => 'Expert', 'icon' => '🌟'],
-        5 => ['name' => 'Veteran', 'icon' => '👑'],
-        6 => ['name' => 'Legend', 'icon' => '🏆']
+        1 => ['name' => '1:a året', 'class' => 'level-1'],
+        2 => ['name' => '2:a året', 'class' => 'level-2'],
+        3 => ['name' => 'Erfaren', 'class' => 'level-3'],
+        4 => ['name' => 'Expert', 'class' => 'level-4'],
+        5 => ['name' => 'Veteran', 'class' => 'level-5'],
+        6 => ['name' => 'Legend', 'class' => 'level-6']
     ];
     $expInfo = $experienceInfo[$experienceLevel] ?? $experienceInfo[1];
 
@@ -317,7 +317,7 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
                 <span class="license-badge">Licens <?= date('Y') ?> ✓</span>
                 <?php endif; ?>
                 <?php if ($experienceLevel > 1): ?>
-                <span class="experience-badge"><?= $expInfo['icon'] ?> <?= $expInfo['name'] ?></span>
+                <span class="experience-badge <?= $expInfo['class'] ?>"><?= $expInfo['name'] ?></span>
                 <?php endif; ?>
                 <?php if ($rider['license_number']): ?>
                 <span class="uci-badge">UCI <?= htmlspecialchars($rider['license_number']) ?></span>
@@ -522,60 +522,79 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
             </div>
 
             <div class="achievements-card">
-                <!-- Achievement Badges - Compact Grid -->
-                <div class="achievements-grid">
-                    <!-- Medals Row -->
-                    <div class="achievement-item <?= $achievementCounts['gold'] > 0 ? 'unlocked gold' : 'locked' ?>" title="Vinn ett lopp">
-                        <img src="/assets/icons/medal-1st.svg" alt="Guld" class="achievement-icon">
-                        <span class="achievement-value"><?= $achievementCounts['gold'] > 0 ? $achievementCounts['gold'] : '−' ?></span>
+                <!-- Medals Grid -->
+                <div class="medals-row">
+                    <div class="medal-item gold <?= $achievementCounts['gold'] > 0 ? 'active' : '' ?>">
+                        <div class="medal-circle">
+                            <span class="medal-pos">1</span>
+                        </div>
+                        <span class="medal-count"><?= $achievementCounts['gold'] ?></span>
+                        <span class="medal-label">1:a plats</span>
                     </div>
-                    <div class="achievement-item <?= $achievementCounts['silver'] > 0 ? 'unlocked silver' : 'locked' ?>" title="Kom tvåa i ett lopp">
-                        <img src="/assets/icons/medal-2nd.svg" alt="Silver" class="achievement-icon">
-                        <span class="achievement-value"><?= $achievementCounts['silver'] > 0 ? $achievementCounts['silver'] : '−' ?></span>
+                    <div class="medal-item silver <?= $achievementCounts['silver'] > 0 ? 'active' : '' ?>">
+                        <div class="medal-circle">
+                            <span class="medal-pos">2</span>
+                        </div>
+                        <span class="medal-count"><?= $achievementCounts['silver'] ?></span>
+                        <span class="medal-label">2:a plats</span>
                     </div>
-                    <div class="achievement-item <?= $achievementCounts['bronze'] > 0 ? 'unlocked bronze' : 'locked' ?>" title="Kom trea i ett lopp">
-                        <img src="/assets/icons/medal-3rd.svg" alt="Brons" class="achievement-icon">
-                        <span class="achievement-value"><?= $achievementCounts['bronze'] > 0 ? $achievementCounts['bronze'] : '−' ?></span>
-                    </div>
-                    <div class="achievement-item <?= $achievementCounts['hot_streak'] >= 3 ? 'unlocked streak' : 'locked' ?>" title="3+ pallplatser i rad">
-                        <svg class="achievement-icon-svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
-                        <span class="achievement-value"><?= $achievementCounts['hot_streak'] >= 3 ? $achievementCounts['hot_streak'] : '−' ?></span>
+                    <div class="medal-item bronze <?= $achievementCounts['bronze'] > 0 ? 'active' : '' ?>">
+                        <div class="medal-circle">
+                            <span class="medal-pos">3</span>
+                        </div>
+                        <span class="medal-count"><?= $achievementCounts['bronze'] ?></span>
+                        <span class="medal-label">3:e plats</span>
                     </div>
                 </div>
 
-                <!-- Stats Row -->
-                <div class="achievement-stats <?= $isSwedishChampion ? 'has-sm' : '' ?>">
-                    <div class="achievement-stat <?= $finishRate == 100 ? 'perfect' : '' ?>">
-                        <span class="stat-label">Fullföljt</span>
-                        <span class="stat-value"><?= $finishRate ?>%</span>
-                    </div>
-                    <div class="achievement-stat <?= $isSeriesLeader ? 'active' : '' ?>">
-                        <span class="stat-label">Serieledare</span>
-                        <span class="stat-value"><?= $isSeriesLeader ? '✓' : '−' ?></span>
-                    </div>
-                    <div class="achievement-stat <?= $isSeriesChampion ? 'champion' : '' ?>">
-                        <span class="stat-label">Seriemästare</span>
-                        <span class="stat-value"><?= $isSeriesChampion ? '👑' : '−' ?></span>
-                    </div>
-                    <?php if ($isSwedishChampion): ?>
-                    <div class="achievement-stat swedish-champion">
-                        <span class="stat-label">🇸🇪 SM-Guld</span>
-                        <span class="stat-value"><?= $swedishChampionCount ?></span>
+                <!-- Titles Row -->
+                <div class="titles-row">
+                    <?php if ($isSeriesChampion): ?>
+                    <div class="title-badge champion">
+                        <?= hub_icon('trophy', 'title-icon') ?>
+                        <span>Seriemästare</span>
                     </div>
                     <?php endif; ?>
+                    <?php if ($isSwedishChampion): ?>
+                    <div class="title-badge sm-champion">
+                        <?= hub_icon('medal', 'title-icon') ?>
+                        <span>SM-Guld ×<?= $swedishChampionCount ?></span>
+                    </div>
+                    <?php endif; ?>
+                    <?php if ($isSeriesLeader): ?>
+                    <div class="title-badge leader">
+                        <?= hub_icon('trending-up', 'title-icon') ?>
+                        <span>Serieledare</span>
+                    </div>
+                    <?php endif; ?>
+                    <?php if (!$isSeriesChampion && !$isSwedishChampion && !$isSeriesLeader): ?>
+                    <div class="title-empty">Inga titlar än</div>
+                    <?php endif; ?>
+                </div>
+
+                <!-- Stats Row -->
+                <div class="mini-stats">
+                    <div class="mini-stat">
+                        <span class="mini-value"><?= $finishRate ?>%</span>
+                        <span class="mini-label">Fullföljt</span>
+                    </div>
+                    <div class="mini-stat">
+                        <span class="mini-value"><?= $achievementCounts['hot_streak'] ?></span>
+                        <span class="mini-label">Pallserie</span>
+                    </div>
                 </div>
 
                 <!-- Experience Level -->
                 <div class="experience-section">
                     <div class="experience-header">
-                        <span class="experience-title"><?= $expInfo['icon'] ?> <?= $expInfo['name'] ?></span>
+                        <span class="experience-title <?= $expInfo['class'] ?>"><?= $expInfo['name'] ?></span>
                         <?php if ($rider['first_season']): ?>
                         <span class="experience-year">Sedan <?= $rider['first_season'] ?></span>
                         <?php endif; ?>
                     </div>
                     <div class="experience-bar">
                         <?php for ($i = 1; $i <= 6; $i++): ?>
-                        <div class="exp-segment <?= $i < $experienceLevel ? 'filled' : ($i == $experienceLevel ? 'current' : '') ?> <?= $i == 6 ? 'legend' : '' ?>"></div>
+                        <div class="exp-segment <?= $i <= $experienceLevel ? 'filled' : '' ?> <?= $i == $experienceLevel ? 'current' : '' ?>"></div>
                         <?php endfor; ?>
                     </div>
                 </div>
@@ -853,12 +872,26 @@ document.querySelectorAll('.series-tab').forEach(tab => {
     align-items: center;
     gap: 6px;
     padding: 6px 12px;
-    background: linear-gradient(135deg, rgba(255, 215, 0, 0.25), rgba(255, 180, 0, 0.15));
-    color: #92400e;
+    background: var(--color-bg-sunken);
+    color: var(--color-text);
     font-size: 0.75rem;
     font-weight: 600;
     border-radius: var(--radius-full);
-    box-shadow: 0 2px 6px rgba(255, 215, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+
+.experience-badge.level-4 {
+    background: linear-gradient(135deg, rgba(97, 206, 112, 0.2), rgba(97, 206, 112, 0.1));
+    color: #16a34a;
+}
+
+.experience-badge.level-5 {
+    background: linear-gradient(135deg, rgba(0, 74, 152, 0.2), rgba(0, 74, 152, 0.1));
+    color: #004a98;
+}
+
+.experience-badge.level-6 {
+    background: linear-gradient(135deg, #fef3c7, #fde68a);
+    color: #92400e;
 }
 
 .license-badge {
@@ -1228,7 +1261,7 @@ document.querySelectorAll('.series-tab').forEach(tab => {
 .result-time { text-align: right; }
 .result-time-value { font-family: var(--font-mono); font-size: 0.95rem; font-weight: 600; color: var(--color-text); }
 
-/* Achievements - Compact Design */
+/* Achievements Card */
 .achievements-card {
     background: var(--color-bg-surface);
     border-radius: var(--radius-lg);
@@ -1236,118 +1269,153 @@ document.querySelectorAll('.series-tab').forEach(tab => {
     padding: var(--space-md);
 }
 
-.achievements-grid {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: var(--space-sm);
-    margin-bottom: var(--space-md);
-}
-
-.achievement-item {
+/* Medals Row */
+.medals-row {
     display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: var(--space-sm);
-    background: var(--color-bg-sunken);
-    border-radius: var(--radius-md);
-    transition: all 0.2s ease;
-}
-
-.achievement-item.locked {
-    opacity: 0.35;
-    filter: grayscale(1);
-}
-
-.achievement-item.unlocked {
-    background: linear-gradient(135deg, rgba(255,215,0,0.15), rgba(255,165,0,0.08));
-    box-shadow: inset 0 1px 0 rgba(255,255,255,0.2);
-}
-
-.achievement-icon {
-    width: 28px;
-    height: 28px;
-    margin-bottom: 4px;
-}
-
-.achievement-icon-svg {
-    width: 24px;
-    height: 24px;
-    color: var(--color-accent);
-    margin-bottom: 4px;
-}
-
-.achievement-item.locked .achievement-icon-svg {
-    color: var(--color-text-muted);
-}
-
-.achievement-value {
-    font-family: var(--font-mono);
-    font-size: 0.85rem;
-    font-weight: 700;
-    color: var(--color-text);
-}
-
-.achievement-item.locked .achievement-value {
-    color: var(--color-text-muted);
-}
-
-/* Achievement Stats Row */
-.achievement-stats {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: var(--space-sm);
+    justify-content: center;
+    gap: var(--space-lg);
+    padding: var(--space-md) 0;
     margin-bottom: var(--space-md);
-    padding-bottom: var(--space-md);
     border-bottom: 1px solid var(--color-border);
 }
 
-.achievement-stat {
-    text-align: center;
-    padding: var(--space-sm);
-    background: var(--color-bg-sunken);
-    border-radius: var(--radius-md);
+.medal-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-xs);
+    opacity: 0.3;
 }
 
-.achievement-stat .stat-label {
-    display: block;
-    font-size: 0.65rem;
-    color: var(--color-text-muted);
-    margin-bottom: 2px;
+.medal-item.active {
+    opacity: 1;
 }
 
-.achievement-stat .stat-value {
+.medal-circle {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-mono);
+    font-weight: 800;
+    font-size: 1.1rem;
+    border: 3px solid;
+}
+
+.medal-item.gold .medal-circle {
+    background: linear-gradient(135deg, #fef3c7, #fde68a);
+    border-color: #d4a500;
+    color: #92400e;
+}
+
+.medal-item.silver .medal-circle {
+    background: linear-gradient(135deg, #f8f9fa, #e5e7eb);
+    border-color: #a8a8a8;
+    color: #4b5563;
+}
+
+.medal-item.bronze .medal-circle {
+    background: linear-gradient(135deg, #fed7aa, #fdba74);
+    border-color: #b87333;
+    color: #9a3412;
+}
+
+.medal-count {
     font-family: var(--font-mono);
     font-size: 0.9rem;
     font-weight: 700;
     color: var(--color-text);
 }
 
-.achievement-stat.perfect {
-    background: linear-gradient(135deg, rgba(97,206,112,0.15), rgba(97,206,112,0.08));
-}
-.achievement-stat.perfect .stat-value { color: var(--color-accent); }
-
-.achievement-stat.active {
-    background: linear-gradient(135deg, rgba(0,74,152,0.15), rgba(0,74,152,0.08));
-}
-.achievement-stat.active .stat-value { color: #004a98; }
-
-.achievement-stat.champion {
-    background: linear-gradient(135deg, rgba(255,215,0,0.15), rgba(255,165,0,0.08));
+.medal-item:not(.active) .medal-count {
+    color: var(--color-text-muted);
 }
 
-.achievement-stat.swedish-champion {
-    background: linear-gradient(135deg, rgba(0,106,167,0.2), rgba(254,205,0,0.15));
-    box-shadow: inset 0 1px 0 rgba(255,255,255,0.3);
-}
-.achievement-stat.swedish-champion .stat-value {
-    color: #006aa7;
-    font-weight: 800;
+.medal-label {
+    font-size: 0.65rem;
+    color: var(--color-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
 }
 
-/* Grid adjustment when Swedish Champion is shown */
-.achievement-stats.has-sm {
-    grid-template-columns: repeat(4, 1fr);
+/* Titles Row */
+.titles-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-sm);
+    margin-bottom: var(--space-md);
+    padding-bottom: var(--space-md);
+    border-bottom: 1px solid var(--color-border);
+}
+
+.title-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-xs);
+    padding: var(--space-xs) var(--space-sm);
+    border-radius: var(--radius-full);
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.title-badge .title-icon {
+    width: 14px;
+    height: 14px;
+}
+
+.title-badge.champion {
+    background: linear-gradient(135deg, #fef3c7, #fde68a);
+    color: #92400e;
+}
+
+.title-badge.sm-champion {
+    background: linear-gradient(135deg, #006aa7, #004a98);
+    color: white;
+}
+
+.title-badge.leader {
+    background: linear-gradient(135deg, rgba(97, 206, 112, 0.2), rgba(97, 206, 112, 0.1));
+    color: #16a34a;
+}
+
+.title-empty {
+    font-size: 0.8rem;
+    color: var(--color-text-muted);
+    font-style: italic;
+}
+
+/* Mini Stats */
+.mini-stats {
+    display: flex;
+    gap: var(--space-md);
+    margin-bottom: var(--space-md);
+    padding-bottom: var(--space-md);
+    border-bottom: 1px solid var(--color-border);
+}
+
+.mini-stat {
+    flex: 1;
+    text-align: center;
+    padding: var(--space-sm);
+    background: var(--color-bg-sunken);
+    border-radius: var(--radius-md);
+}
+
+.mini-value {
+    display: block;
+    font-family: var(--font-mono);
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--color-text);
+}
+
+.mini-label {
+    font-size: 0.65rem;
+    color: var(--color-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
 }
 
 /* Experience Section */
@@ -1366,15 +1434,30 @@ document.querySelectorAll('.series-tab').forEach(tab => {
     font-size: 0.85rem;
     font-weight: 700;
     color: var(--color-text);
+    padding: 4px 10px;
+    border-radius: var(--radius-full);
+    background: var(--color-bg-sunken);
+}
+
+.experience-title.level-4 {
+    background: linear-gradient(135deg, rgba(97, 206, 112, 0.2), rgba(97, 206, 112, 0.1));
+    color: #16a34a;
+}
+
+.experience-title.level-5 {
+    background: linear-gradient(135deg, rgba(0, 74, 152, 0.2), rgba(0, 74, 152, 0.1));
+    color: #004a98;
+}
+
+.experience-title.level-6 {
+    background: linear-gradient(135deg, #fef3c7, #fde68a);
+    color: #92400e;
 }
 
 .experience-year {
     font-family: var(--font-mono);
     font-size: 0.7rem;
     color: var(--color-text-muted);
-    background: var(--color-bg-sunken);
-    padding: 3px 8px;
-    border-radius: var(--radius-full);
 }
 
 .experience-bar {
@@ -1395,7 +1478,7 @@ document.querySelectorAll('.series-tab').forEach(tab => {
     content: '';
     position: absolute;
     inset: 0;
-    background: linear-gradient(90deg, var(--color-accent), #8FE89D);
+    background: var(--color-accent);
     border-radius: var(--radius-full);
 }
 
@@ -1403,21 +1486,14 @@ document.querySelectorAll('.series-tab').forEach(tab => {
     content: '';
     position: absolute;
     inset: 0;
-    background: linear-gradient(90deg, #FFD700, #FFA500);
-    animation: pulse 2s ease-in-out infinite;
+    background: var(--color-accent);
+    border-radius: var(--radius-full);
 }
 
-.exp-segment.legend {
-    background: linear-gradient(90deg, rgba(255, 215, 0, 0.3), rgba(255, 165, 0, 0.2));
+/* Sixth segment (Legend) gets gold when filled */
+.exp-segment:last-child.filled::after {
+    background: linear-gradient(90deg, #d4a500, #ffc107);
 }
-
-.exp-segment.legend.filled::after,
-.exp-segment.legend.current::after {
-    background: linear-gradient(90deg, #FFD700, #FF8C00, #FF6B00);
-    box-shadow: 0 0 8px rgba(255, 165, 0, 0.5);
-}
-
-@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
 
 /* Card & Empty State */
 .card { background: var(--color-bg-surface); border-radius: var(--radius-lg); box-shadow: var(--shadow-md); padding: var(--space-lg); }
@@ -1646,39 +1722,45 @@ document.querySelectorAll('.series-tab').forEach(tab => {
         padding: var(--space-sm);
     }
 
-    .experience-section {
-        margin-bottom: var(--space-md);
-        padding-bottom: var(--space-md);
+    .medals-row {
+        gap: var(--space-md);
+        padding: var(--space-sm) 0;
+    }
+
+    .medal-circle {
+        width: 38px;
+        height: 38px;
+        font-size: 1rem;
+    }
+
+    .medal-count {
+        font-size: 0.8rem;
+    }
+
+    .medal-label {
+        font-size: 0.55rem;
+    }
+
+    .titles-row {
+        justify-content: center;
+    }
+
+    .title-badge {
+        font-size: 0.7rem;
+    }
+
+    .mini-stats {
+        gap: var(--space-sm);
+    }
+
+    .mini-value {
+        font-size: 1rem;
     }
 
     .experience-header {
         flex-direction: column;
         align-items: flex-start;
-        gap: var(--space-sm);
-    }
-
-    .achievements-grid {
-        grid-template-columns: repeat(3, 1fr);
-        gap: var(--space-sm);
-    }
-
-    .achievement {
-        padding: var(--space-sm);
-    }
-
-    .achievement-icon {
-        width: 40px;
-        height: 40px;
-        font-size: 1.25rem;
-    }
-
-    .achievement-medal {
-        width: 26px;
-        height: 26px;
-    }
-
-    .achievement-name {
-        font-size: 0.6rem;
+        gap: var(--space-xs);
     }
 
     /* Social Links */
