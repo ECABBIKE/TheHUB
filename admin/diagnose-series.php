@@ -34,24 +34,52 @@ include __DIR__ . '/components/unified-layout.php';
         </ul>
 
         <?php
+        // Check if series_events junction table exists
+        $seriesEventsExists = false;
+        try {
+            $check = $db->getAll("SHOW TABLES LIKE 'series_events'");
+            $seriesEventsExists = !empty($check);
+        } catch (Exception $e) {}
+
         // Get all series with their status and year info
-        $series = $db->getAll("
-            SELECT
-                s.id,
-                s.name,
-                s.year as series_year,
-                s.status,
-                s.end_date,
-                MIN(YEAR(e.date)) as first_event_year,
-                MAX(YEAR(e.date)) as last_event_year,
-                COUNT(DISTINCT e.id) as event_count,
-                COUNT(DISTINCT r.cyclist_id) as rider_count
-            FROM series s
-            LEFT JOIN events e ON e.series_id = s.id
-            LEFT JOIN results r ON r.event_id = e.id AND r.status = 'finished'
-            GROUP BY s.id
-            ORDER BY s.year DESC, s.name
-        ");
+        if ($seriesEventsExists) {
+            $series = $db->getAll("
+                SELECT
+                    s.id,
+                    s.name,
+                    s.year as series_year,
+                    s.status,
+                    s.end_date,
+                    MIN(YEAR(e.date)) as first_event_year,
+                    MAX(YEAR(e.date)) as last_event_year,
+                    COUNT(DISTINCT e.id) as event_count,
+                    COUNT(DISTINCT r.cyclist_id) as rider_count
+                FROM series s
+                LEFT JOIN series_events se ON se.series_id = s.id
+                LEFT JOIN events e ON e.id = se.event_id
+                LEFT JOIN results r ON r.event_id = e.id AND r.status = 'finished'
+                GROUP BY s.id
+                ORDER BY s.year DESC, s.name
+            ");
+        } else {
+            $series = $db->getAll("
+                SELECT
+                    s.id,
+                    s.name,
+                    s.year as series_year,
+                    s.status,
+                    s.end_date,
+                    MIN(YEAR(e.date)) as first_event_year,
+                    MAX(YEAR(e.date)) as last_event_year,
+                    COUNT(DISTINCT e.id) as event_count,
+                    COUNT(DISTINCT r.cyclist_id) as rider_count
+                FROM series s
+                LEFT JOIN events e ON e.series_id = s.id
+                LEFT JOIN results r ON r.event_id = e.id AND r.status = 'finished'
+                GROUP BY s.id
+                ORDER BY s.year DESC, s.name
+            ");
+        }
         $today = date('Y-m-d');
         ?>
 
@@ -124,40 +152,84 @@ include __DIR__ . '/components/unified-layout.php';
         </p>
 
         <?php
-        // Find potential series champions (current leaders in each series/class)
-        $potentialChampions = $db->getAll("
-            SELECT
-                s.id as series_id,
-                s.name as series_name,
-                COALESCE(s.year, YEAR(MAX(e.date))) as effective_year,
-                s.status,
-                s.end_date,
-                r.class_id,
-                c.display_name as class_name,
-                r.cyclist_id,
-                CONCAT(rd.first_name, ' ', rd.last_name) as rider_name,
-                SUM(r.points) as total_points
-            FROM results r
-            JOIN events e ON r.event_id = e.id
-            JOIN series s ON e.series_id = s.id
-            JOIN classes c ON r.class_id = c.id
-            JOIN riders rd ON r.cyclist_id = rd.id
-            WHERE r.status = 'finished'
-            GROUP BY s.id, r.class_id, r.cyclist_id
-            HAVING total_points = (
-                SELECT MAX(sub_total) FROM (
-                    SELECT SUM(r2.points) as sub_total
-                    FROM results r2
-                    JOIN events e2 ON r2.event_id = e2.id
-                    WHERE e2.series_id = s.id
-                      AND r2.class_id = r.class_id
-                      AND r2.status = 'finished'
-                    GROUP BY r2.cyclist_id
-                ) as subq
-            )
-            ORDER BY s.name, c.display_name
-            LIMIT 50
-        ");
+        // Check if series_events junction table exists
+        $seriesEventsExists = false;
+        try {
+            $check = $db->getAll("SHOW TABLES LIKE 'series_events'");
+            $seriesEventsExists = !empty($check);
+        } catch (Exception $e) {}
+
+        // Find potential series champions using a simpler two-step approach
+        // Step 1: Get all rider totals per series/class (using both connection methods)
+        if ($seriesEventsExists) {
+            // Use series_events junction table
+            $allTotals = $db->getAll("
+                SELECT
+                    s.id as series_id,
+                    s.name as series_name,
+                    COALESCE(s.year, YEAR(MAX(e.date))) as effective_year,
+                    s.status,
+                    s.end_date,
+                    r.class_id,
+                    c.display_name as class_name,
+                    r.cyclist_id,
+                    CONCAT(rd.first_name, ' ', rd.last_name) as rider_name,
+                    SUM(r.points) as total_points
+                FROM results r
+                JOIN events e ON r.event_id = e.id
+                JOIN series_events se ON se.event_id = e.id
+                JOIN series s ON se.series_id = s.id
+                LEFT JOIN classes c ON r.class_id = c.id
+                JOIN riders rd ON r.cyclist_id = rd.id
+                WHERE r.status = 'finished'
+                GROUP BY s.id, r.class_id, r.cyclist_id
+                ORDER BY s.name, c.display_name, total_points DESC
+            ");
+        } else {
+            // Fallback: use events.series_id
+            $allTotals = $db->getAll("
+                SELECT
+                    s.id as series_id,
+                    s.name as series_name,
+                    COALESCE(s.year, YEAR(MAX(e.date))) as effective_year,
+                    s.status,
+                    s.end_date,
+                    r.class_id,
+                    c.display_name as class_name,
+                    r.cyclist_id,
+                    CONCAT(rd.first_name, ' ', rd.last_name) as rider_name,
+                    SUM(r.points) as total_points
+                FROM results r
+                JOIN events e ON r.event_id = e.id
+                JOIN series s ON e.series_id = s.id
+                LEFT JOIN classes c ON r.class_id = c.id
+                JOIN riders rd ON r.cyclist_id = rd.id
+                WHERE r.status = 'finished'
+                  AND e.series_id IS NOT NULL
+                GROUP BY s.id, r.class_id, r.cyclist_id
+                ORDER BY s.name, c.display_name, total_points DESC
+            ");
+        }
+
+        // Step 2: Filter to keep only the max scorers per series/class
+        $maxPoints = [];
+        foreach ($allTotals as $row) {
+            $key = $row['series_id'] . '_' . $row['class_id'];
+            if (!isset($maxPoints[$key]) || $row['total_points'] > $maxPoints[$key]) {
+                $maxPoints[$key] = $row['total_points'];
+            }
+        }
+
+        $potentialChampions = [];
+        foreach ($allTotals as $row) {
+            $key = $row['series_id'] . '_' . $row['class_id'];
+            if ($row['total_points'] == $maxPoints[$key] && $row['total_points'] > 0) {
+                $potentialChampions[] = $row;
+            }
+        }
+
+        // Limit to 50
+        $potentialChampions = array_slice($potentialChampions, 0, 50);
 
         if (empty($potentialChampions)):
         ?>

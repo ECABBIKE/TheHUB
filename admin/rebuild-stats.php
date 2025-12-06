@@ -176,52 +176,104 @@ function debugRiderAchievements($pdo, $rider_id) {
 
     $currentYear = (int)date('Y');
 
+    // Check if series_events junction table exists
+    $stmt = $pdo->query("SHOW TABLES LIKE 'series_events'");
+    $useSeriesEvents = $stmt->fetch() !== false;
+
     // Check what series data exists for this rider
-    $stmt = $pdo->prepare("
-        SELECT
-            s.id,
-            s.name,
-            s.year as series_year,
-            s.status,
-            s.end_date,
-            YEAR(e.date) as event_year,
-            COUNT(r.id) as result_count,
-            SUM(r.points) as total_points
-        FROM results r
-        JOIN events e ON r.event_id = e.id
-        JOIN series s ON e.series_id = s.id
-        WHERE r.cyclist_id = ?
-          AND r.status = 'finished'
-        GROUP BY s.id, COALESCE(s.year, YEAR(e.date))
-        ORDER BY event_year DESC, s.name
-    ");
+    if ($useSeriesEvents) {
+        $stmt = $pdo->prepare("
+            SELECT
+                s.id,
+                s.name,
+                s.year as series_year,
+                s.status,
+                s.end_date,
+                YEAR(e.date) as event_year,
+                COUNT(r.id) as result_count,
+                SUM(r.points) as total_points
+            FROM results r
+            JOIN events e ON r.event_id = e.id
+            JOIN series_events se ON se.event_id = e.id
+            JOIN series s ON se.series_id = s.id
+            WHERE r.cyclist_id = ?
+              AND r.status = 'finished'
+            GROUP BY s.id, COALESCE(s.year, YEAR(e.date))
+            ORDER BY event_year DESC, s.name
+        ");
+    } else {
+        $stmt = $pdo->prepare("
+            SELECT
+                s.id,
+                s.name,
+                s.year as series_year,
+                s.status,
+                s.end_date,
+                YEAR(e.date) as event_year,
+                COUNT(r.id) as result_count,
+                SUM(r.points) as total_points
+            FROM results r
+            JOIN events e ON r.event_id = e.id
+            JOIN series s ON e.series_id = s.id
+            WHERE r.cyclist_id = ?
+              AND r.status = 'finished'
+            GROUP BY s.id, COALESCE(s.year, YEAR(e.date))
+            ORDER BY event_year DESC, s.name
+        ");
+    }
     $stmt->execute([$rider_id]);
     $debug['series_data'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     // Check series championships calculation
     // Series qualifies if: status='completed' OR end_date < today OR events from previous year
-    $stmt = $pdo->prepare("
-        SELECT
-            s.id as series_id,
-            s.name as series_name,
-            s.year as series_year,
-            s.status as series_status,
-            s.end_date,
-            COALESCE(s.year, YEAR(e.date)) as effective_year,
-            r.class_id,
-            SUM(r.points) as total_points
-        FROM results r
-        JOIN events e ON r.event_id = e.id
-        JOIN series s ON e.series_id = s.id
-        WHERE r.cyclist_id = ?
-          AND r.status = 'finished'
-          AND (
-              s.status = 'completed'
-              OR (s.end_date IS NOT NULL AND s.end_date < CURDATE())
-              OR YEAR(e.date) < ?
-          )
-        GROUP BY s.id, COALESCE(s.year, YEAR(e.date)), r.class_id
-    ");
+    if ($useSeriesEvents) {
+        $stmt = $pdo->prepare("
+            SELECT
+                s.id as series_id,
+                s.name as series_name,
+                s.year as series_year,
+                s.status as series_status,
+                s.end_date,
+                COALESCE(s.year, YEAR(e.date)) as effective_year,
+                r.class_id,
+                SUM(r.points) as total_points
+            FROM results r
+            JOIN events e ON r.event_id = e.id
+            JOIN series_events se ON se.event_id = e.id
+            JOIN series s ON se.series_id = s.id
+            WHERE r.cyclist_id = ?
+              AND r.status = 'finished'
+              AND (
+                  s.status = 'completed'
+                  OR (s.end_date IS NOT NULL AND s.end_date < CURDATE())
+                  OR YEAR(e.date) < ?
+              )
+            GROUP BY s.id, COALESCE(s.year, YEAR(e.date)), r.class_id
+        ");
+    } else {
+        $stmt = $pdo->prepare("
+            SELECT
+                s.id as series_id,
+                s.name as series_name,
+                s.year as series_year,
+                s.status as series_status,
+                s.end_date,
+                COALESCE(s.year, YEAR(e.date)) as effective_year,
+                r.class_id,
+                SUM(r.points) as total_points
+            FROM results r
+            JOIN events e ON r.event_id = e.id
+            JOIN series s ON e.series_id = s.id
+            WHERE r.cyclist_id = ?
+              AND r.status = 'finished'
+              AND (
+                  s.status = 'completed'
+                  OR (s.end_date IS NOT NULL AND s.end_date < CURDATE())
+                  OR YEAR(e.date) < ?
+              )
+            GROUP BY s.id, COALESCE(s.year, YEAR(e.date)), r.class_id
+        ");
+    }
     $stmt->execute([$rider_id, $currentYear]);
     $riderSeasons = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
@@ -231,19 +283,36 @@ function debugRiderAchievements($pdo, $rider_id) {
         $classId = $season['class_id'];
 
         // Find max points for this series/class/year
-        $stmt = $pdo->prepare("
-            SELECT MAX(total) as max_points FROM (
-                SELECT r.cyclist_id, SUM(r.points) as total
-                FROM results r
-                JOIN events e ON r.event_id = e.id
-                JOIN series s ON e.series_id = s.id
-                WHERE e.series_id = ?
-                  AND r.class_id = ?
-                  AND COALESCE(s.year, YEAR(e.date)) = ?
-                  AND r.status = 'finished'
-                GROUP BY r.cyclist_id
-            ) as subq
-        ");
+        if ($useSeriesEvents) {
+            $stmt = $pdo->prepare("
+                SELECT MAX(total) as max_points FROM (
+                    SELECT r.cyclist_id, SUM(r.points) as total
+                    FROM results r
+                    JOIN events e ON r.event_id = e.id
+                    JOIN series_events se ON se.event_id = e.id
+                    JOIN series s ON se.series_id = s.id
+                    WHERE se.series_id = ?
+                      AND r.class_id = ?
+                      AND COALESCE(s.year, YEAR(e.date)) = ?
+                      AND r.status = 'finished'
+                    GROUP BY r.cyclist_id
+                ) as subq
+            ");
+        } else {
+            $stmt = $pdo->prepare("
+                SELECT MAX(total) as max_points FROM (
+                    SELECT r.cyclist_id, SUM(r.points) as total
+                    FROM results r
+                    JOIN events e ON r.event_id = e.id
+                    JOIN series s ON e.series_id = s.id
+                    WHERE e.series_id = ?
+                      AND r.class_id = ?
+                      AND COALESCE(s.year, YEAR(e.date)) = ?
+                      AND r.status = 'finished'
+                    GROUP BY r.cyclist_id
+                ) as subq
+            ");
+        }
         $stmt->execute([$seriesId, $classId, $year]);
         $maxPoints = $stmt->fetchColumn();
 
