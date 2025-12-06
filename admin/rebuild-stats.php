@@ -344,6 +344,7 @@ include __DIR__ . '/../includes/layout-header.php';
 </main>
 
 <style>
+/* Mobile first - base styles for mobile */
 .stat-box {
     text-align: center;
     padding: var(--space-md);
@@ -352,7 +353,7 @@ include __DIR__ . '/../includes/layout-header.php';
 }
 
 .stat-value {
-    font-size: 1.75rem;
+    font-size: 1.5rem;
     font-weight: 700;
     color: var(--color-text);
     line-height: 1;
@@ -386,6 +387,7 @@ include __DIR__ . '/../includes/layout-header.php';
     font-size: 0.9rem;
     background: var(--color-bg-surface);
     color: var(--color-text);
+    width: 100%;
 }
 
 .form-control:focus {
@@ -393,9 +395,54 @@ include __DIR__ . '/../includes/layout-header.php';
     border-color: var(--color-accent);
 }
 
-@media (max-width: 768px) {
+/* Stats grid - mobile first (2 columns) */
+.grid-cols-4 {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-md);
+}
+
+/* Header layout - mobile: stack */
+.flex.items-center.justify-between {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-md);
+}
+
+/* Form layout - mobile: stack */
+.flex.gap-sm {
+    flex-direction: column;
+    gap: var(--space-sm);
+}
+
+.flex.gap-sm .form-control {
+    max-width: 100% !important;
+}
+
+/* Tablet+ */
+@media (min-width: 600px) {
+    .stat-value {
+        font-size: 1.75rem;
+    }
+
+    .flex.gap-sm {
+        flex-direction: row;
+    }
+
+    .flex.gap-sm .form-control {
+        max-width: 200px !important;
+    }
+}
+
+/* Desktop */
+@media (min-width: 900px) {
     .grid-cols-4 {
-        grid-template-columns: repeat(2, 1fr);
+        grid-template-columns: repeat(4, 1fr);
+    }
+
+    .flex.items-center.justify-between {
+        flex-direction: row;
+        align-items: center;
     }
 }
 </style>
