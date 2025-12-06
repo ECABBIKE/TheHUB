@@ -344,48 +344,49 @@ include __DIR__ . '/../includes/layout-header.php';
 </main>
 
 <style>
+/* Mobile first */
 .stat-box {
     text-align: center;
     padding: var(--space-md);
-    background: var(--color-bg-sunken);
+    background: var(--color-star-fade);
     border-radius: var(--radius-md);
 }
 
 .stat-value {
-    font-size: 1.75rem;
+    font-size: 1.5rem;
     font-weight: 700;
-    color: var(--color-text);
+    color: var(--color-primary);
     line-height: 1;
 }
 
 .stat-label {
     font-size: 0.75rem;
-    color: var(--color-text-secondary);
+    color: var(--color-text);
     text-transform: uppercase;
     letter-spacing: 0.5px;
     margin-top: var(--space-xs);
 }
 
 .usage-list {
-    margin-left: 1.5rem;
-    color: var(--color-text-secondary);
+    margin-left: var(--space-lg);
+    color: var(--color-text);
 }
 
 .usage-list li {
-    margin-bottom: 0.5rem;
+    margin-bottom: var(--space-sm);
 }
 
 .usage-list strong {
-    color: var(--color-text);
+    color: var(--color-primary);
 }
 
 .form-control {
     padding: var(--space-sm) var(--space-md);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-md);
-    font-size: 0.9rem;
-    background: var(--color-bg-surface);
-    color: var(--color-text);
+    background: var(--color-star);
+    color: var(--color-primary);
+    width: 100%;
 }
 
 .form-control:focus {
@@ -393,9 +394,50 @@ include __DIR__ . '/../includes/layout-header.php';
     border-color: var(--color-accent);
 }
 
-@media (max-width: 768px) {
+/* Stats grid - mobile first (2 columns) */
+.grid-cols-4 {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-md);
+}
+
+/* Header layout - mobile: stack */
+.flex.items-center.justify-between {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-md);
+}
+
+/* Form layout - mobile: stack */
+.flex.gap-sm {
+    flex-direction: column;
+    gap: var(--space-sm);
+}
+
+/* Tablet+ */
+@media (min-width: 600px) {
+    .stat-value {
+        font-size: 1.75rem;
+    }
+
+    .flex.gap-sm {
+        flex-direction: row;
+    }
+
+    .flex.gap-sm .form-control {
+        max-width: 200px;
+    }
+}
+
+/* Desktop */
+@media (min-width: 900px) {
     .grid-cols-4 {
-        grid-template-columns: repeat(2, 1fr);
+        grid-template-columns: repeat(4, 1fr);
+    }
+
+    .flex.items-center.justify-between {
+        flex-direction: row;
+        align-items: center;
     }
 }
 </style>
