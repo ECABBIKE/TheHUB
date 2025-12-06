@@ -1,7 +1,7 @@
 <?php
 /**
  * TheHUB V3.5 - Welcome Page
- * Shown to unauthenticated visitors at root (/)
+ * Landing page with login requirement for data access
  */
 
 // Prevent direct access
@@ -12,72 +12,79 @@ if (!defined('HUB_V3_ROOT')) {
 
 require_once HUB_V3_ROOT . '/components/icons.php';
 
-$pdo = hub_db();
+$isLoggedIn = hub_is_logged_in();
 
-// Load filter setting from admin configuration
-$publicSettings = @include(HUB_V3_ROOT . '/config/public_settings.php');
-$filter = $publicSettings['public_riders_display'] ?? 'all';
+// Only fetch data if user is logged in
+$riderCount = 0;
+$clubCount = 0;
+$eventCount = 0;
+$seriesCount = 0;
+$upcomingEvents = [];
+$recentResults = [];
 
-// Get current statistics
-try {
-    // Total riders - respects admin filter setting
-    if ($filter === 'with_results') {
-        $riderCount = $pdo->query("
-            SELECT COUNT(DISTINCT r.id)
-            FROM riders r
-            INNER JOIN results res ON r.id = res.cyclist_id
+if ($isLoggedIn) {
+    $pdo = hub_db();
+
+    // Load filter setting from admin configuration
+    $publicSettings = @include(HUB_V3_ROOT . '/config/public_settings.php');
+    $filter = $publicSettings['public_riders_display'] ?? 'all';
+
+    // Get current statistics
+    try {
+        // Total riders - respects admin filter setting
+        if ($filter === 'with_results') {
+            $riderCount = $pdo->query("
+                SELECT COUNT(DISTINCT r.id)
+                FROM riders r
+                INNER JOIN results res ON r.id = res.cyclist_id
+            ")->fetchColumn();
+
+            $clubCount = $pdo->query("
+                SELECT COUNT(DISTINCT c.id)
+                FROM clubs c
+                INNER JOIN riders r ON c.id = r.club_id
+                INNER JOIN results res ON r.id = res.cyclist_id
+            ")->fetchColumn();
+        } else {
+            $riderCount = $pdo->query("SELECT COUNT(*) FROM riders WHERE active = 1")->fetchColumn();
+            $clubCount = $pdo->query("SELECT COUNT(*) FROM clubs")->fetchColumn();
+        }
+
+        // Total events with results
+        $eventCount = $pdo->query("
+            SELECT COUNT(DISTINCT e.id)
+            FROM events e
+            INNER JOIN results r ON e.id = r.event_id
         ")->fetchColumn();
 
-        $clubCount = $pdo->query("
-            SELECT COUNT(DISTINCT c.id)
-            FROM clubs c
-            INNER JOIN riders r ON c.id = r.club_id
-            INNER JOIN results res ON r.id = res.cyclist_id
-        ")->fetchColumn();
-    } else {
-        $riderCount = $pdo->query("SELECT COUNT(*) FROM riders WHERE active = 1")->fetchColumn();
-        $clubCount = $pdo->query("SELECT COUNT(*) FROM clubs")->fetchColumn();
+        // Active series
+        $seriesCount = $pdo->query("SELECT COUNT(*) FROM series WHERE status = 'active'")->fetchColumn();
+
+        // Upcoming events
+        $upcomingEvents = $pdo->query("
+            SELECT e.id, e.name, e.date, e.location, s.name as series_name
+            FROM events e
+            LEFT JOIN series s ON e.series_id = s.id
+            WHERE e.date >= CURDATE() AND e.active = 1
+            ORDER BY e.date ASC
+            LIMIT 3
+        ")->fetchAll(PDO::FETCH_ASSOC);
+
+        // Recent results (events with results from last 30 days)
+        $recentResults = $pdo->query("
+            SELECT e.id, e.name, e.date, e.location,
+                   COUNT(DISTINCT r.cyclist_id) as participant_count
+            FROM events e
+            INNER JOIN results r ON e.id = r.event_id
+            WHERE e.date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+            GROUP BY e.id
+            ORDER BY e.date DESC
+            LIMIT 3
+        ")->fetchAll(PDO::FETCH_ASSOC);
+
+    } catch (Exception $e) {
+        // Keep defaults on error
     }
-
-    // Total events with results
-    $eventCount = $pdo->query("
-        SELECT COUNT(DISTINCT e.id)
-        FROM events e
-        INNER JOIN results r ON e.id = r.event_id
-    ")->fetchColumn();
-
-    // Active series
-    $seriesCount = $pdo->query("SELECT COUNT(*) FROM series WHERE status = 'active'")->fetchColumn();
-
-    // Upcoming events
-    $upcomingEvents = $pdo->query("
-        SELECT e.id, e.name, e.date, e.location, s.name as series_name
-        FROM events e
-        LEFT JOIN series s ON e.series_id = s.id
-        WHERE e.date >= CURDATE() AND e.active = 1
-        ORDER BY e.date ASC
-        LIMIT 3
-    ")->fetchAll(PDO::FETCH_ASSOC);
-
-    // Recent results (events with results from last 30 days)
-    $recentResults = $pdo->query("
-        SELECT e.id, e.name, e.date, e.location,
-               COUNT(DISTINCT r.cyclist_id) as participant_count
-        FROM events e
-        INNER JOIN results r ON e.id = r.event_id
-        WHERE e.date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
-        GROUP BY e.id
-        ORDER BY e.date DESC
-        LIMIT 3
-    ")->fetchAll(PDO::FETCH_ASSOC);
-
-} catch (Exception $e) {
-    $riderCount = 0;
-    $clubCount = 0;
-    $eventCount = 0;
-    $seriesCount = 0;
-    $upcomingEvents = [];
-    $recentResults = [];
 }
 ?>
 
@@ -100,7 +107,17 @@ try {
         <p class="welcome-version">v<?= APP_VERSION ?><?php if ($versionInfo && $versionInfo['deployment']): ?> [<?= APP_BUILD ?>.<?= str_pad($versionInfo['deployment'], 3, '0', STR_PAD_LEFT) ?>]<?php endif; ?></p>
     </div>
 
-    <!-- Stats Row -->
+    <!-- About Section -->
+    <div class="welcome-about">
+        <h2>Välkommen till TheHUB</h2>
+        <p>TheHUB är den centrala plattformen för GravitySeries och relaterade tävlingsserier. Här hittar du kalender, resultat, serieställningar, ranking och databas över åkare och klubbar.</p>
+        <?php if (!$isLoggedIn): ?>
+        <p class="welcome-about-note">Logga in för att se statistik, kommande tävlingar och senaste resultat.</p>
+        <?php endif; ?>
+    </div>
+
+    <?php if ($isLoggedIn): ?>
+    <!-- Stats Row - Only for logged in users -->
     <div class="welcome-stats">
         <div class="welcome-stat">
             <span class="stat-value"><?= number_format($riderCount) ?></span>
@@ -119,6 +136,19 @@ try {
             <span class="stat-label">Serier</span>
         </div>
     </div>
+    <?php else: ?>
+    <!-- Login CTA for visitors -->
+    <div class="welcome-login-cta">
+        <div class="welcome-login-cta-content">
+            <?= hub_icon('lock', 'welcome-login-icon') ?>
+            <div>
+                <h3>Logga in för fullständig åtkomst</h3>
+                <p>Se statistik, kommande tävlingar, senaste resultat och hantera din profil.</p>
+            </div>
+        </div>
+        <a href="/login" class="btn btn-primary">Logga in</a>
+    </div>
+    <?php endif; ?>
 
     <!-- Navigation Grid -->
     <div class="welcome-nav-grid">
@@ -147,14 +177,14 @@ try {
             <h3>Databas</h3>
             <p>Sök åkare och klubbar</p>
         </a>
-        <?php if (hub_is_logged_in()): ?>
-        <a href="/profile" class="welcome-nav-card welcome-nav-card--login">
+        <?php if ($isLoggedIn): ?>
+        <a href="/profile" class="welcome-nav-card welcome-nav-card--accent">
             <?= hub_icon('user', 'welcome-nav-icon') ?>
             <h3>Min Profil</h3>
             <p>Dina uppgifter & resultat</p>
         </a>
         <?php else: ?>
-        <a href="/login" class="welcome-nav-card welcome-nav-card--login">
+        <a href="/login" class="welcome-nav-card welcome-nav-card--accent">
             <?= hub_icon('log-in', 'welcome-nav-icon') ?>
             <h3>Logga in</h3>
             <p>Åtkomst till din profil</p>
@@ -272,6 +302,78 @@ try {
     font-weight: var(--weight-medium);
 }
 
+/* About Section */
+.welcome-about {
+    background: var(--color-bg-card);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    padding: var(--space-lg);
+    margin-bottom: var(--space-xl);
+    text-align: center;
+}
+
+.welcome-about h2 {
+    font-size: var(--text-xl);
+    font-weight: var(--weight-semibold);
+    color: var(--color-text-primary);
+    margin: 0 0 var(--space-sm);
+}
+
+.welcome-about p {
+    font-size: var(--text-md);
+    color: var(--color-text-secondary);
+    margin: 0;
+    line-height: 1.6;
+}
+
+.welcome-about-note {
+    margin-top: var(--space-md) !important;
+    padding-top: var(--space-md);
+    border-top: 1px solid var(--color-border);
+    font-size: var(--text-sm) !important;
+    color: var(--color-accent) !important;
+    font-weight: var(--weight-medium);
+}
+
+/* Login CTA */
+.welcome-login-cta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-lg);
+    background: linear-gradient(135deg, var(--color-accent-light) 0%, var(--color-bg-card) 100%);
+    border: 1px solid var(--color-accent);
+    border-radius: var(--radius-lg);
+    padding: var(--space-lg);
+    margin-bottom: var(--space-xl);
+}
+
+.welcome-login-cta-content {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+}
+
+.welcome-login-icon {
+    width: 40px;
+    height: 40px;
+    color: var(--color-accent);
+    flex-shrink: 0;
+}
+
+.welcome-login-cta h3 {
+    font-size: var(--text-md);
+    font-weight: var(--weight-semibold);
+    color: var(--color-text-primary);
+    margin: 0 0 var(--space-xs);
+}
+
+.welcome-login-cta p {
+    font-size: var(--text-sm);
+    color: var(--color-text-secondary);
+    margin: 0;
+}
+
 /* Stats */
 .welcome-stats {
     display: grid;
@@ -331,21 +433,21 @@ try {
     box-shadow: var(--shadow-md);
 }
 
-.welcome-nav-card--login {
+.welcome-nav-card--accent {
     background: var(--color-accent-light);
     border-color: var(--color-accent);
 }
 
-.welcome-nav-card--login:hover {
+.welcome-nav-card--accent:hover {
     background: var(--color-accent);
 }
 
-.welcome-nav-card--login:hover h3,
-.welcome-nav-card--login:hover p {
+.welcome-nav-card--accent:hover h3,
+.welcome-nav-card--accent:hover p {
     color: white;
 }
 
-.welcome-nav-card--login:hover .welcome-nav-icon {
+.welcome-nav-card--accent:hover .welcome-nav-icon {
     color: white;
 }
 
@@ -520,6 +622,15 @@ try {
 
     .welcome-nav-grid {
         grid-template-columns: repeat(2, 1fr);
+    }
+
+    .welcome-login-cta {
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .welcome-login-cta-content {
+        flex-direction: column;
     }
 }
 
