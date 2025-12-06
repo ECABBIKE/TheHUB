@@ -32,7 +32,7 @@ if ($useSeriesEvents) {
                 WHERE se2.series_id = s.id) as participant_count
         FROM series s
         LEFT JOIN series_events se ON s.id = se.series_id
-        WHERE s.status = 'active'
+        WHERE s.status IN ('active', 'completed')
         GROUP BY s.id
         ORDER BY s.year DESC, s.name ASC
     ");
@@ -46,7 +46,7 @@ if ($useSeriesEvents) {
                 WHERE e2.series_id = s.id) as participant_count
         FROM series s
         LEFT JOIN events e ON s.id = e.series_id
-        WHERE s.status = 'active'
+        WHERE s.status IN ('active', 'completed')
         GROUP BY s.id
         ORDER BY s.year DESC, s.name ASC
     ");
