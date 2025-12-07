@@ -295,10 +295,25 @@ function parseAndAnalyzeCSV($filepath, $db) {
  throw new Exception('Kunde inte öppna filen');
  }
 
- // Auto-detect delimiter
+ // Auto-detect delimiter (comma, semicolon, or tab)
  $firstLine = fgets($handle);
  rewind($handle);
- $delimiter = (substr_count($firstLine, ';') > substr_count($firstLine, ',')) ? ';' : ',';
+
+ // Remove BOM if present (UTF-8 files from Excel often have this)
+ $firstLine = preg_replace('/^\xEF\xBB\xBF/', '', $firstLine);
+
+ $commaCount = substr_count($firstLine, ',');
+ $semicolonCount = substr_count($firstLine, ';');
+ $tabCount = substr_count($firstLine, "\t");
+
+ // Choose delimiter with highest count
+ if ($tabCount > $commaCount && $tabCount > $semicolonCount) {
+     $delimiter = "\t";
+ } elseif ($semicolonCount > $commaCount) {
+     $delimiter = ';';
+ } else {
+     $delimiter = ',';
+ }
 
  // Read header (0 = unlimited line length)
  $header = fgetcsv($handle, 0, $delimiter);
@@ -309,6 +324,8 @@ function parseAndAnalyzeCSV($filepath, $db) {
 
  // Normalize header
  $header = array_map(function($col) {
+ // Remove BOM from first column if present
+ $col = preg_replace('/^\xEF\xBB\xBF/', '', $col);
  $col = strtolower(trim(str_replace([' ', '-', '_'], '', $col)));
 
  if (empty($col)) {

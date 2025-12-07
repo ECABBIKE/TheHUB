@@ -176,6 +176,29 @@ include __DIR__ . '/components/unified-layout.php';
 }
 </style>
 
+<h3 class="section-title">Namnhantering</h3>
+
+<div class="tools-grid">
+    <!-- Normalize Names -->
+    <div class="tool-card">
+        <div class="tool-card-header">
+            <div class="tool-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7V4h16v3"/><path d="M9 20h6"/><path d="M12 4v16"/></svg>
+            </div>
+            <div>
+                <h4 class="tool-title">Normalisera namn</h4>
+                <p class="tool-description">Konvertera namn från VERSALER eller gemener till korrekt versalgemen form</p>
+            </div>
+        </div>
+        <div class="tool-actions">
+            <a href="/admin/normalize-names" class="btn-admin btn-admin-primary" style="flex: 1;">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px;"><path d="M4 7V4h16v3"/><path d="M9 20h6"/><path d="M12 4v16"/></svg>
+                Normalisera namn
+            </a>
+        </div>
+    </div>
+</div>
+
 <h3 class="section-title">Dubbletthantering</h3>
 
 <div class="tools-grid">

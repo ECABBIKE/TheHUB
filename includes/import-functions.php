@@ -64,10 +64,22 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
         throw new Exception('Kunde inte öppna filen');
     }
 
-    // Auto-detect delimiter (comma or semicolon)
+    // Auto-detect delimiter (comma, semicolon, or tab)
     $firstLine = fgets($handle);
     rewind($handle);
-    $delimiter = (substr_count($firstLine, ';') > substr_count($firstLine, ',')) ? ';' : ',';
+
+    $commaCount = substr_count($firstLine, ',');
+    $semicolonCount = substr_count($firstLine, ';');
+    $tabCount = substr_count($firstLine, "\t");
+
+    // Choose delimiter with highest count
+    if ($tabCount > $commaCount && $tabCount > $semicolonCount) {
+        $delimiter = "\t";
+    } elseif ($semicolonCount > $commaCount) {
+        $delimiter = ';';
+    } else {
+        $delimiter = ',';
+    }
 
     // Read header row (0 = unlimited line length)
     $header = fgetcsv($handle, 0, $delimiter);
@@ -104,6 +116,8 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
         static $colIndex = 0;
         $currentIndex = $colIndex++;
 
+        // Remove BOM from first column if present
+        $col = preg_replace('/^\xEF\xBB\xBF/', '', $col);
         $col = mb_strtolower(trim($col), 'UTF-8');
 
         // Skip empty columns (give them unique names to avoid conflicts)
