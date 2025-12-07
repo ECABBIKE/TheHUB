@@ -198,6 +198,7 @@ function recalculateAllSeriesPoints($db, $seriesId) {
 
 /**
  * Get series standings using series_results table
+ * NOTE: Wrapped in function_exists to prevent conflict with point-calculations.php
  *
  * @param object $db Database instance
  * @param int $seriesId Series ID
@@ -205,6 +206,7 @@ function recalculateAllSeriesPoints($db, $seriesId) {
  * @param int|null $countBest Optional: only count X best results
  * @return array Standings array sorted by total points
  */
+if (!function_exists('getSeriesStandings')):
 function getSeriesStandings($db, $seriesId, $classId = null, $countBest = null) {
     // Build WHERE clause
     $where = "sr.series_id = ?";
@@ -308,6 +310,7 @@ function getSeriesStandings($db, $seriesId, $classId = null, $countBest = null) 
 
     return $standings;
 }
+endif; // function_exists('getSeriesStandings')
 
 /**
  * Sync results to series_results when new results are imported
