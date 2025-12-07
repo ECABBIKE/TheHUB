@@ -116,6 +116,8 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
         static $colIndex = 0;
         $currentIndex = $colIndex++;
 
+        // Remove BOM from first column if present
+        $col = preg_replace('/^\xEF\xBB\xBF/', '', $col);
         $col = mb_strtolower(trim($col), 'UTF-8');
 
         // Skip empty columns (give them unique names to avoid conflicts)

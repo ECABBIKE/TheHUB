@@ -299,6 +299,9 @@ function parseAndAnalyzeCSV($filepath, $db) {
  $firstLine = fgets($handle);
  rewind($handle);
 
+ // Remove BOM if present (UTF-8 files from Excel often have this)
+ $firstLine = preg_replace('/^\xEF\xBB\xBF/', '', $firstLine);
+
  $commaCount = substr_count($firstLine, ',');
  $semicolonCount = substr_count($firstLine, ';');
  $tabCount = substr_count($firstLine, "\t");
@@ -321,6 +324,8 @@ function parseAndAnalyzeCSV($filepath, $db) {
 
  // Normalize header
  $header = array_map(function($col) {
+ // Remove BOM from first column if present
+ $col = preg_replace('/^\xEF\xBB\xBF/', '', $col);
  $col = strtolower(trim(str_replace([' ', '-', '_'], '', $col)));
 
  if (empty($col)) {
