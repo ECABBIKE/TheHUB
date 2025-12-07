@@ -272,8 +272,8 @@ foreach ($duplicateGroups as $group) {
  if (!$r2['email'] && $r1['email']) $r2Missing[] = 'e-post';
 
  $sameUci = $uci1 && $uci2 && $uci1 === $uci2;
- if (!$sameUci && empty($r1Missing) && empty($r2Missing)) continue;
 
+ // Always show duplicates with same name (removed the skip condition)
  $potentialDuplicates[] = [
   'reason' => $sameUci ? 'Samma UCI ID' : 'Exakt samma namn',
   'rider1' => ['id' => $r1['id'], 'name' => $r1['firstname'].' '.$r1['lastname'],

@@ -167,34 +167,72 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         ];
 
         try {
-            // Log all data being saved for debugging
             error_log("EVENT EDIT: Saving event ID {$id}, name: {$name}");
 
             // Store is_championship separately
             $isChampionship = $eventData['is_championship'];
             unset($eventData['is_championship']);
 
-            // Update event data
-            $rowsAffected = $db->update('events', $eventData, 'id = ?', [$id]);
-            error_log("EVENT EDIT: Main update returned {$rowsAffected} rows affected");
+            // First, try to update just the basic fields that we KNOW exist
+            $basicFields = [
+                'name' => $eventData['name'],
+                'date' => $eventData['date'],
+                'location' => $eventData['location'],
+                'venue_id' => $eventData['venue_id'],
+                'discipline' => $eventData['discipline'],
+                'event_level' => $eventData['event_level'],
+                'event_format' => $eventData['event_format'],
+                'series_id' => $eventData['series_id'],
+                'active' => $eventData['active'],
+                'website' => $eventData['website'],
+            ];
 
-            // Update is_championship separately (in case column doesn't exist in some installs)
+            // Try basic update first
+            $basicResult = $db->query(
+                "UPDATE events SET name = ?, date = ?, location = ?, venue_id = ?,
+                 discipline = ?, event_level = ?, event_format = ?, series_id = ?,
+                 active = ?, website = ? WHERE id = ?",
+                [
+                    $basicFields['name'], $basicFields['date'], $basicFields['location'],
+                    $basicFields['venue_id'], $basicFields['discipline'], $basicFields['event_level'],
+                    $basicFields['event_format'], $basicFields['series_id'], $basicFields['active'],
+                    $basicFields['website'], $id
+                ]
+            );
+
+            if (!$basicResult) {
+                throw new Exception("Kunde inte uppdatera grunddata - kontrollera databasen");
+            }
+
+            // Now try to update extended fields (these might not exist in all installs)
+            try {
+                unset($eventData['name'], $eventData['date'], $eventData['location'],
+                      $eventData['venue_id'], $eventData['discipline'], $eventData['event_level'],
+                      $eventData['event_format'], $eventData['series_id'], $eventData['active'],
+                      $eventData['website']);
+
+                if (!empty($eventData)) {
+                    $db->update('events', $eventData, 'id = ?', [$id]);
+                }
+            } catch (Exception $extEx) {
+                error_log("EVENT EDIT: Extended fields update failed (non-critical): " . $extEx->getMessage());
+            }
+
+            // Update is_championship separately
             try {
                 $db->query("UPDATE events SET is_championship = ? WHERE id = ?", [$isChampionship, $id]);
             } catch (Exception $smEx) {
                 error_log("EVENT EDIT: SM column update failed: " . $smEx->getMessage());
             }
 
-            // Verify the save worked by re-reading
-            $verifyEvent = $db->getRow("SELECT name, is_championship FROM events WHERE id = ?", [$id]);
+            // Verify basic fields were saved
+            $verifyEvent = $db->getRow("SELECT name FROM events WHERE id = ?", [$id]);
             $savedName = $verifyEvent['name'] ?? '';
-            $verifyValue = $verifyEvent['is_championship'] ?? 0;
 
-            // Check if name was saved correctly
             if ($savedName !== $name) {
-                $message = "VARNING: Namnet sparades inte korrekt! Försökte spara: '{$name}', men databasen har: '{$savedName}'";
+                $message = "VARNING: Namnet sparades inte! Försökte: '{$name}', DB har: '{$savedName}'";
                 $messageType = 'error';
-                error_log("EVENT EDIT ERROR: Name mismatch - tried: {$name}, got: {$savedName}");
+                error_log("EVENT EDIT ERROR: Name mismatch");
             } else {
                 $_SESSION['message'] = 'Event uppdaterat!';
                 $_SESSION['messageType'] = 'success';
