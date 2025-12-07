@@ -128,6 +128,7 @@ RewriteRule ^admin/clear-event-results/?$ admin/clear-event-results.php [QSA,L]
 RewriteRule ^admin/clear-cache/?$ admin/clear-cache.php [QSA,L]
 RewriteRule ^admin/point-scales/?$ admin/point-scales.php [QSA,L]
 RewriteRule ^admin/tools/?$ admin/tools.php [QSA,L]
+RewriteRule ^admin/normalize-names/?$ admin/normalize-names.php [QSA,L]
 RewriteRule ^admin/tools/diagnose-series/?$ admin/diagnose-series.php [QSA,L]
 RewriteRule ^admin/migrations/?$ admin/migrations/migration-browser.php [QSA,L]
 
