@@ -86,6 +86,9 @@ try {
         $seriesEvents = $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
+    // Debug: Log event count
+    error_log("SERIES {$seriesId}: Found " . count($seriesEvents) . " events, series year: " . ($series['year'] ?? 'NULL'));
+
     // Filter events that have templates (these will show in standings columns)
     $eventsWithPoints = array_filter($seriesEvents, function($e) {
         return !empty($e['template_id']);
