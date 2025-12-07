@@ -82,15 +82,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
         foreach ($_POST['rider_ids'] as $riderId) {
             $riderId = (int)$riderId;
-            $rider = $db->getRow("SELECT id, first_name, last_name FROM riders WHERE id = ?", [$riderId]);
+            $rider = $db->getRow("SELECT id, firstname, lastname FROM riders WHERE id = ?", [$riderId]);
 
             if ($rider) {
-                $newFirstName = properNameCase($rider['first_name']);
-                $newLastName = properNameCase($rider['last_name']);
+                $newFirstName = properNameCase($rider['firstname']);
+                $newLastName = properNameCase($rider['lastname']);
 
                 try {
                     $db->query(
-                        "UPDATE riders SET first_name = ?, last_name = ?, updated_at = NOW() WHERE id = ?",
+                        "UPDATE riders SET firstname = ?, lastname = ?, updated_at = NOW() WHERE id = ?",
                         [$newFirstName, $newLastName, $riderId]
                     );
                     $normalized++;
@@ -115,18 +115,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $errors = 0;
 
         // Get all riders that need normalization
-        $riders = $db->getAll("SELECT id, first_name, last_name FROM riders");
+        $riders = $db->getAll("SELECT id, firstname, lastname FROM riders");
 
         foreach ($riders as $rider) {
-            if (needsNormalization($rider['first_name']) || needsNormalization($rider['last_name'])) {
-                $newFirstName = properNameCase($rider['first_name']);
-                $newLastName = properNameCase($rider['last_name']);
+            if (needsNormalization($rider['firstname']) || needsNormalization($rider['lastname'])) {
+                $newFirstName = properNameCase($rider['firstname']);
+                $newLastName = properNameCase($rider['lastname']);
 
                 // Only update if something changed
-                if ($newFirstName !== $rider['first_name'] || $newLastName !== $rider['last_name']) {
+                if ($newFirstName !== $rider['firstname'] || $newLastName !== $rider['lastname']) {
                     try {
                         $db->query(
-                            "UPDATE riders SET first_name = ?, last_name = ?, updated_at = NOW() WHERE id = ?",
+                            "UPDATE riders SET firstname = ?, lastname = ?, updated_at = NOW() WHERE id = ?",
                             [$newFirstName, $newLastName, $rider['id']]
                         );
                         $normalized++;
@@ -149,16 +149,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 }
 
 // Get riders with problematic names
-$allRiders = $db->getAll("SELECT id, first_name, last_name, club_id FROM riders ORDER BY last_name, first_name");
+$allRiders = $db->getAll("SELECT id, firstname, lastname, club_id FROM riders ORDER BY lastname, firstname");
 $problematicRiders = [];
 
 foreach ($allRiders as $rider) {
-    $firstNeedsNorm = needsNormalization($rider['first_name']);
-    $lastNeedsNorm = needsNormalization($rider['last_name']);
+    $firstNeedsNorm = needsNormalization($rider['firstname']);
+    $lastNeedsNorm = needsNormalization($rider['lastname']);
 
     if ($firstNeedsNorm || $lastNeedsNorm) {
-        $rider['new_first_name'] = properNameCase($rider['first_name']);
-        $rider['new_last_name'] = properNameCase($rider['last_name']);
+        $rider['new_firstname'] = properNameCase($rider['firstname']);
+        $rider['new_lastname'] = properNameCase($rider['lastname']);
         $rider['first_needs_norm'] = $firstNeedsNorm;
         $rider['last_needs_norm'] = $lastNeedsNorm;
         $problematicRiders[] = $rider;
@@ -410,12 +410,12 @@ include __DIR__ . '/components/unified-layout.php';
                             </td>
                             <td>
                                 <span class="name-old">
-                                    <?= htmlspecialchars($rider['first_name'] . ' ' . $rider['last_name']) ?>
+                                    <?= htmlspecialchars($rider['firstname'] . ' ' . $rider['lastname']) ?>
                                 </span>
                             </td>
                             <td>
                                 <span class="name-new">
-                                    <?= htmlspecialchars($rider['new_first_name'] . ' ' . $rider['new_last_name']) ?>
+                                    <?= htmlspecialchars($rider['new_firstname'] . ' ' . $rider['new_lastname']) ?>
                                 </span>
                             </td>
                             <td>
