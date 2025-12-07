@@ -266,6 +266,48 @@ Om du behöver:
 
 ---
 
+## 🗄️ DATABAS - TABELLSCHEMA
+
+**VIKTIGT:** Kolumnnamn är UTAN understreck!
+
+### riders (deltagare)
+```sql
+id, firstname, lastname, birth_year, gender,
+license_number, license_type, license_year, license_valid_until,
+gravity_id, uci_id, club_id, nationality, active,
+first_season, experience_level,
+stats_total_starts, stats_total_finished, stats_total_wins, stats_total_podiums, stats_total_points,
+created_at, updated_at
+```
+
+### results (resultat)
+```sql
+id, event_id, cyclist_id, class_id, position,
+finish_time, status, bib_number, points,
+ss1, ss2, ss3, ..., ss15,  -- Split times
+created_at
+```
+
+### events (tävlingar)
+```sql
+id, name, date, location, venue_id, series_id,
+discipline, event_level, event_format, active,
+is_championship, organizer_club_id,
+stage_names, pricing_template_id
+```
+
+### clubs (klubbar)
+```sql
+id, name, city, country, active
+```
+
+### series (serier)
+```sql
+id, name, year, status, logo
+```
+
+---
+
 ## 📂 PROJEKTSTRUKTUR
 
 ```

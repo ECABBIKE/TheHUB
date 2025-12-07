@@ -168,31 +168,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         try {
             // Log all data being saved for debugging
-            error_log("EVENT EDIT: Saving event ID {$id}");
-            error_log("EVENT EDIT: is_championship = " . $eventData['is_championship']);
+            error_log("EVENT EDIT: Saving event ID {$id}, name: {$name}");
 
-            // First, try updating is_championship separately to ensure it works
+            // Store is_championship separately
             $isChampionship = $eventData['is_championship'];
-            $smUpdateResult = $db->query("UPDATE events SET is_championship = ? WHERE id = ?", [$isChampionship, $id]);
-            error_log("EVENT EDIT: SM update result: " . ($smUpdateResult ? 'OK' : 'FAILED'));
-
-            // Then update the rest of the fields (remove is_championship to avoid duplicate)
             unset($eventData['is_championship']);
+
+            // Update event data
             $rowsAffected = $db->update('events', $eventData, 'id = ?', [$id]);
             error_log("EVENT EDIT: Main update returned {$rowsAffected} rows affected");
 
-            // Verify the save worked by re-reading
-            $verifyEvent = $db->getRow("SELECT is_championship FROM events WHERE id = ?", [$id]);
-            $verifyValue = $verifyEvent['is_championship'] ?? 'NULL';
-            error_log("EVENT EDIT: Verification - is_championship now = " . $verifyValue);
+            // Update is_championship separately (in case column doesn't exist in some installs)
+            try {
+                $db->query("UPDATE events SET is_championship = ? WHERE id = ?", [$isChampionship, $id]);
+            } catch (Exception $smEx) {
+                error_log("EVENT EDIT: SM column update failed: " . $smEx->getMessage());
+            }
 
-            // Check if the value was actually saved correctly
-            if ($verifyValue != $isChampionship) {
-                // Something went wrong - show debug info instead of redirecting
-                $message = "VARNING: Värdet sparades inte korrekt! Försökte spara: {$isChampionship}, men databasen har: {$verifyValue}. SM-query: " . ($smUpdateResult ? 'OK' : 'FAIL');
+            // Verify the save worked by re-reading
+            $verifyEvent = $db->getRow("SELECT name, is_championship FROM events WHERE id = ?", [$id]);
+            $savedName = $verifyEvent['name'] ?? '';
+            $verifyValue = $verifyEvent['is_championship'] ?? 0;
+
+            // Check if name was saved correctly
+            if ($savedName !== $name) {
+                $message = "VARNING: Namnet sparades inte korrekt! Försökte spara: '{$name}', men databasen har: '{$savedName}'";
                 $messageType = 'error';
+                error_log("EVENT EDIT ERROR: Name mismatch - tried: {$name}, got: {$savedName}");
             } else {
-                $_SESSION['message'] = 'Event uppdaterat!' . ($isChampionship ? ' ✓ SM-status sparad' : '');
+                $_SESSION['message'] = 'Event uppdaterat!';
                 $_SESSION['messageType'] = 'success';
                 header('Location: /admin/events/edit/' . $id . '?saved=1');
                 exit;
@@ -536,14 +540,6 @@ include __DIR__ . '/components/unified-layout.php';
                     <span style="background: var(--color-success); color: white; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; margin-left: 8px;">SM</span>
                     <?php endif; ?>
                 </label>
-
-                <!-- VISIBLE DEBUG -->
-                <div style="background: #fef3c7; border: 1px solid #f59e0b; border-radius: 8px; padding: 12px; margin-top: 12px; font-size: 12px; font-family: monospace;">
-                    <strong>🔍 SM Debug:</strong><br>
-                    Kolumn: <?= htmlspecialchars($columnStatus) ?><br>
-                    DB-värde: <?= var_export($event['is_championship'] ?? 'SAKNAS', true) ?><br>
-                    Kolumn-info: <?= !empty($columnInfo) ? htmlspecialchars(json_encode($columnInfo)) : 'N/A' ?>
-                </div>
 
                 <div style="display: flex; gap: var(--space-sm);">
                     <a href="/admin/events" class="btn-admin btn-admin-secondary">Avbryt</a>
