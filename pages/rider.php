@@ -141,6 +141,167 @@ try {
     $wins = $rider['stats_total_wins'] ?: count(array_filter($results, fn($r) => $r['position'] == 1 && $r['status'] === 'finished'));
     $podiums = $rider['stats_total_podiums'] ?: count(array_filter($results, fn($r) => $r['position'] <= 3 && $r['status'] === 'finished'));
 
+    // === TREND SECTION DATA ===
+
+    // 1. Form curve - Last 5 races with positions
+    $finishedResults = array_filter($results, fn($r) => $r['status'] === 'finished' && $r['position'] > 0);
+    $formResults = array_slice($finishedResults, 0, 5);
+    $formResults = array_reverse($formResults); // Chronological order (oldest first)
+
+    // Calculate form trend (compare avg of first half vs second half)
+    $formTrend = 'stable';
+    if (count($formResults) >= 3) {
+        $midPoint = (int)(count($formResults) / 2);
+        $firstHalf = array_slice($formResults, 0, $midPoint);
+        $secondHalf = array_slice($formResults, -$midPoint);
+
+        $firstAvg = count($firstHalf) > 0 ? array_sum(array_column($firstHalf, 'position')) / count($firstHalf) : 0;
+        $secondAvg = count($secondHalf) > 0 ? array_sum(array_column($secondHalf, 'position')) / count($secondHalf) : 0;
+
+        // Lower position is better (1st > 2nd > 3rd)
+        if ($secondAvg < $firstAvg - 1) {
+            $formTrend = 'up'; // Improving (lower positions)
+        } elseif ($secondAvg > $firstAvg + 1) {
+            $formTrend = 'down'; // Declining (higher positions)
+        }
+    }
+
+    // 2. Season Highlights calculation
+    $highlights = [];
+
+    // Win rate
+    $winRate = $totalStarts > 0 ? round(($wins / $totalStarts) * 100) : 0;
+    if ($winRate >= 10) {
+        $highlights[] = [
+            'icon' => '🏆',
+            'text' => $winRate . '% win rate',
+            'type' => 'winrate'
+        ];
+    }
+
+    // Podium streak (consecutive top-3 finishes)
+    $currentStreak = 0;
+    foreach ($results as $r) {
+        if ($r['status'] === 'finished' && $r['position'] <= 3) {
+            $currentStreak++;
+        } else {
+            break;
+        }
+    }
+    if ($currentStreak >= 2) {
+        $highlights[] = [
+            'icon' => '🔥',
+            'text' => $currentStreak . ' pallplatser i rad',
+            'type' => 'streak',
+            'active' => true
+        ];
+    }
+
+    // Best result
+    $bestResult = null;
+    foreach ($finishedResults as $r) {
+        if ($r['position'] == 1) {
+            $bestResult = $r;
+            break;
+        }
+    }
+    if (!$bestResult && !empty($finishedResults)) {
+        // Find lowest position
+        $bestPos = PHP_INT_MAX;
+        foreach ($finishedResults as $r) {
+            if ($r['position'] < $bestPos) {
+                $bestPos = $r['position'];
+                $bestResult = $r;
+            }
+        }
+    }
+    if ($bestResult) {
+        $posText = $bestResult['position'] == 1 ? '1:a' : ($bestResult['position'] == 2 ? '2:a' : ($bestResult['position'] == 3 ? '3:e' : $bestResult['position'] . ':e'));
+        $highlights[] = [
+            'icon' => '⭐',
+            'text' => 'Bästa: ' . $posText . ' ' . htmlspecialchars($bestResult['event_name']),
+            'type' => 'best'
+        ];
+    }
+
+    // Head-to-head statistics (riders beaten percentage)
+    // Calculate from results: for each event, count riders with worse position
+    $totalRidersBeaten = 0;
+    $totalCompetitors = 0;
+    foreach ($finishedResults as $r) {
+        if (isset($r['event_id'])) {
+            // Count riders in same event with worse position
+            $eventStmt = $db->prepare("
+                SELECT COUNT(*) as total,
+                       SUM(CASE WHEN position > ? THEN 1 ELSE 0 END) as beaten
+                FROM results
+                WHERE event_id = ? AND status = 'finished' AND cyclist_id != ?
+            ");
+            $eventStmt->execute([$r['position'], $r['event_id'], $riderId]);
+            $eventStats = $eventStmt->fetch(PDO::FETCH_ASSOC);
+            if ($eventStats) {
+                $totalCompetitors += $eventStats['total'];
+                $totalRidersBeaten += $eventStats['beaten'];
+            }
+        }
+    }
+    $h2hPercent = $totalCompetitors > 0 ? round(($totalRidersBeaten / $totalCompetitors) * 100) : 0;
+    if ($h2hPercent >= 40 && $totalCompetitors >= 5) {
+        $highlights[] = [
+            'icon' => '⚔️',
+            'text' => 'Slagit ' . $h2hPercent . '% av motståndare',
+            'type' => 'h2h'
+        ];
+    }
+
+    // Ensure we have at least some highlights
+    if (empty($highlights) && $totalStarts > 0) {
+        $highlights[] = [
+            'icon' => '🚴',
+            'text' => $totalStarts . ' starter denna säsong',
+            'type' => 'starts'
+        ];
+    }
+
+    // 3. Ranking history - Get historical positions from snapshots
+    $rankingHistory = [];
+    if ($rankingFunctionsLoaded) {
+        try {
+            // Get ranking snapshots for last 6 months
+            $historyStmt = $db->prepare("
+                SELECT
+                    DATE_FORMAT(snapshot_date, '%Y-%m') as month,
+                    DATE_FORMAT(snapshot_date, '%b') as month_short,
+                    ranking_position,
+                    total_ranking_points
+                FROM ranking_snapshots
+                WHERE rider_id = ? AND discipline = 'GRAVITY'
+                ORDER BY snapshot_date ASC
+            ");
+            $historyStmt->execute([$riderId]);
+            $snapshots = $historyStmt->fetchAll(PDO::FETCH_ASSOC);
+
+            // Group by month (take latest per month)
+            $byMonth = [];
+            foreach ($snapshots as $snap) {
+                $byMonth[$snap['month']] = $snap;
+            }
+            $rankingHistory = array_values($byMonth);
+
+            // Limit to last 6 entries
+            $rankingHistory = array_slice($rankingHistory, -6);
+        } catch (Exception $e) {
+            // Ignore errors
+        }
+    }
+
+    // Calculate ranking change from start
+    $rankingChange = 0;
+    if (!empty($rankingHistory) && $rankingPosition) {
+        $startPosition = $rankingHistory[0]['ranking_position'] ?? $rankingPosition;
+        $rankingChange = $startPosition - $rankingPosition; // Positive = improved
+    }
+
     // Calculate age
     $currentYear = date('Y');
     $age = ($rider['birth_year'] && $rider['birth_year'] > 0) ? ($currentYear - $rider['birth_year']) : null;
@@ -393,23 +554,242 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
     </div>
 </section>
 
-<!-- Stats Grid -->
-<div class="stats-grid">
-    <div class="stat-card">
-        <div class="stat-value"><?= $totalStarts ?></div>
-        <div class="stat-label">Starter</div>
+<!-- Rider Stats Trend Section -->
+<div class="rider-stats-trend">
+    <div class="stats-row">
+        <!-- Form Section -->
+        <div class="form-section">
+            <h4 class="trend-section-title">Form</h4>
+            <?php if (!empty($formResults)): ?>
+            <div class="form-results">
+                <?php foreach ($formResults as $idx => $fr):
+                    $pos = $fr['position'];
+                    $posClass = $pos == 1 ? 'gold' : ($pos == 2 ? 'silver' : ($pos == 3 ? 'bronze' : ''));
+                    $posEmoji = $pos == 1 ? '🥇' : ($pos == 2 ? '🥈' : ($pos == 3 ? '🥉' : $pos));
+                ?>
+                <div class="form-race">
+                    <span class="form-position <?= $posClass ?>"><?= $posEmoji ?></span>
+                    <span class="form-event"><?= htmlspecialchars(mb_substr($fr['event_name'], 0, 10)) ?></span>
+                </div>
+                <?php endforeach; ?>
+            </div>
+
+            <!-- Visual Form Chart -->
+            <div class="form-chart">
+                <?php
+                // Generate SVG points for form curve
+                $chartWidth = 200;
+                $chartHeight = 50;
+                $padding = 15;
+                $numResults = count($formResults);
+
+                if ($numResults > 0) {
+                    $xStep = $numResults > 1 ? ($chartWidth - $padding * 2) / ($numResults - 1) : 0;
+                    $points = [];
+                    $circles = [];
+                    $maxPos = max(array_column($formResults, 'position'));
+                    $minPos = min(array_column($formResults, 'position'));
+                    $range = max(1, $maxPos - $minPos);
+
+                    foreach ($formResults as $idx => $fr) {
+                        $x = $padding + ($idx * $xStep);
+                        // Invert Y so lower positions are higher on chart
+                        $y = $padding + (($fr['position'] - $minPos) / $range) * ($chartHeight - $padding * 2);
+                        $points[] = "$x,$y";
+
+                        // Circle color based on position
+                        $fillColor = $fr['position'] == 1 ? '#FFD700' :
+                                    ($fr['position'] == 2 ? '#C0C0C0' :
+                                    ($fr['position'] == 3 ? '#CD7F32' : '#7A7A7A'));
+                        $circles[] = ['x' => $x, 'y' => $y, 'fill' => $fillColor];
+                    }
+                    $polyPoints = implode(' ', $points);
+                ?>
+                <svg viewBox="0 0 <?= $chartWidth ?> <?= $chartHeight ?>">
+                    <!-- Trend line -->
+                    <polyline
+                        points="<?= $polyPoints ?>"
+                        fill="none"
+                        stroke="var(--color-accent)"
+                        stroke-width="3"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"/>
+                    <!-- Data points -->
+                    <?php foreach ($circles as $c): ?>
+                    <circle cx="<?= $c['x'] ?>" cy="<?= $c['y'] ?>" r="6" fill="<?= $c['fill'] ?>" stroke="white" stroke-width="2"/>
+                    <?php endforeach; ?>
+                </svg>
+                <?php } ?>
+            </div>
+
+            <div class="form-trend <?= $formTrend ?>">
+                <?php if ($formTrend === 'up'): ?>
+                <span class="trend-arrow">↗</span>
+                <span class="trend-text">Stigande form</span>
+                <?php elseif ($formTrend === 'down'): ?>
+                <span class="trend-arrow">↘</span>
+                <span class="trend-text">Fallande form</span>
+                <?php else: ?>
+                <span class="trend-arrow">→</span>
+                <span class="trend-text">Stabil form</span>
+                <?php endif; ?>
+            </div>
+            <?php else: ?>
+            <div class="form-empty">
+                <span class="empty-icon">🏁</span>
+                <span>Inga resultat ännu</span>
+            </div>
+            <?php endif; ?>
+        </div>
+
+        <!-- Highlights Section -->
+        <div class="highlights-section">
+            <h4 class="trend-section-title">Säsongens Highlights</h4>
+            <?php if (!empty($highlights)): ?>
+            <div class="highlights-list">
+                <?php foreach ($highlights as $hl): ?>
+                <div class="highlight-item <?= $hl['type'] ?> <?= !empty($hl['active']) ? 'active' : '' ?>">
+                    <span class="highlight-icon"><?= $hl['icon'] ?></span>
+                    <span class="highlight-text"><?= $hl['text'] ?></span>
+                </div>
+                <?php endforeach; ?>
+            </div>
+            <?php else: ?>
+            <div class="highlights-empty">
+                <span class="empty-icon">⏳</span>
+                <span>Bygg din statistik genom att tävla!</span>
+            </div>
+            <?php endif; ?>
+        </div>
     </div>
-    <div class="stat-card">
-        <div class="stat-value"><?= $finishedRaces ?></div>
-        <div class="stat-label">Fullföljt</div>
-    </div>
-    <div class="stat-card <?= $wins > 0 ? 'highlight' : '' ?>">
-        <div class="stat-value"><?= $wins ?></div>
-        <div class="stat-label">Segrar</div>
-    </div>
-    <div class="stat-card">
-        <div class="stat-value"><?= $podiums ?></div>
-        <div class="stat-label">Pallplatser</div>
+
+    <!-- Ranking Section -->
+    <div class="ranking-section">
+        <div class="ranking-header">
+            <h4 class="trend-section-title">Ranking</h4>
+            <?php if ($rankingPosition): ?>
+            <div class="ranking-current">
+                <span class="rank-number-large">#<?= $rankingPosition ?></span>
+                <?php if ($rankingChange != 0): ?>
+                <span class="rank-change <?= $rankingChange > 0 ? 'up' : 'down' ?>">
+                    <?= $rankingChange > 0 ? '↑' : '↓' ?><?= abs($rankingChange) ?> från start
+                </span>
+                <?php endif; ?>
+            </div>
+            <?php endif; ?>
+        </div>
+
+        <?php if (!empty($rankingHistory) && count($rankingHistory) > 1): ?>
+        <!-- Ranking Chart -->
+        <div class="ranking-chart">
+            <?php
+            // Calculate chart dimensions
+            $chartWidth = 300;
+            $chartHeight = 80;
+            $padding = 30;
+            $numPoints = count($rankingHistory);
+
+            // Find min/max positions for scaling
+            $positions = array_column($rankingHistory, 'ranking_position');
+            $minRank = min($positions);
+            $maxRank = max($positions);
+            $rankRange = max(1, $maxRank - $minRank);
+
+            // Add some padding to range
+            $minRank = max(1, $minRank - 1);
+            $maxRank = $maxRank + 1;
+            $rankRange = $maxRank - $minRank;
+
+            $xStep = $numPoints > 1 ? ($chartWidth - $padding * 2) / ($numPoints - 1) : 0;
+            $points = [];
+            $areaPoints = [];
+
+            foreach ($rankingHistory as $idx => $h) {
+                $x = $padding + ($idx * $xStep);
+                // Invert Y so rank #1 is at top
+                $y = $padding + (($h['ranking_position'] - $minRank) / $rankRange) * ($chartHeight - $padding * 2);
+                $points[] = "$x,$y";
+                $areaPoints[] = ['x' => $x, 'y' => $y, 'pos' => $h['ranking_position']];
+            }
+
+            // Create area fill polygon
+            $polyPoints = implode(' ', $points);
+            $firstX = $areaPoints[0]['x'];
+            $lastX = $areaPoints[count($areaPoints) - 1]['x'];
+            $bottomY = $chartHeight - $padding;
+            $areaPolygon = $polyPoints . " $lastX,$bottomY $firstX,$bottomY";
+            ?>
+            <svg viewBox="0 0 <?= $chartWidth ?> <?= $chartHeight ?>">
+                <defs>
+                    <linearGradient id="rankingGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stop-color="var(--color-accent)"/>
+                        <stop offset="100%" stop-color="var(--color-accent)" stop-opacity="0"/>
+                    </linearGradient>
+                </defs>
+
+                <!-- Grid lines -->
+                <line x1="<?= $padding ?>" y1="<?= $padding ?>" x2="<?= $chartWidth - $padding ?>" y2="<?= $padding ?>" stroke="var(--color-border)" stroke-width="1" opacity="0.5"/>
+                <line x1="<?= $padding ?>" y1="<?= $chartHeight / 2 ?>" x2="<?= $chartWidth - $padding ?>" y2="<?= $chartHeight / 2 ?>" stroke="var(--color-border)" stroke-width="1" stroke-dasharray="4" opacity="0.3"/>
+                <line x1="<?= $padding ?>" y1="<?= $chartHeight - $padding ?>" x2="<?= $chartWidth - $padding ?>" y2="<?= $chartHeight - $padding ?>" stroke="var(--color-border)" stroke-width="1" opacity="0.5"/>
+
+                <!-- Y-axis labels -->
+                <text x="5" y="<?= $padding + 4 ?>" font-size="10" fill="var(--color-text-muted)">#<?= $minRank ?></text>
+                <text x="5" y="<?= $chartHeight - $padding + 4 ?>" font-size="10" fill="var(--color-text-muted)">#<?= $maxRank ?></text>
+
+                <!-- Area fill -->
+                <polygon points="<?= $areaPolygon ?>" fill="url(#rankingGradient)" opacity="0.3"/>
+
+                <!-- Ranking line -->
+                <polyline
+                    points="<?= $polyPoints ?>"
+                    fill="none"
+                    stroke="var(--color-accent)"
+                    stroke-width="3"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"/>
+
+                <!-- Current position marker -->
+                <?php $lastPoint = end($areaPoints); ?>
+                <circle cx="<?= $lastPoint['x'] ?>" cy="<?= $lastPoint['y'] ?>" r="8" fill="var(--color-accent)" stroke="white" stroke-width="2"/>
+            </svg>
+        </div>
+
+        <!-- Month labels -->
+        <div class="ranking-months">
+            <?php foreach ($rankingHistory as $h): ?>
+            <span><?= $h['month_short'] ?></span>
+            <?php endforeach; ?>
+        </div>
+        <?php elseif ($rankingPosition): ?>
+        <!-- Simple progress bar if no history -->
+        <div class="ranking-bar-container">
+            <?php
+            // Get total riders for percentage
+            $totalRankedRiders = 100; // Default estimate
+            try {
+                $countStmt = $db->prepare("SELECT COUNT(DISTINCT rider_id) as cnt FROM ranking_snapshots WHERE discipline = 'GRAVITY'");
+                $countStmt->execute();
+                $countResult = $countStmt->fetch(PDO::FETCH_ASSOC);
+                if ($countResult && $countResult['cnt'] > 0) {
+                    $totalRankedRiders = $countResult['cnt'];
+                }
+            } catch (Exception $e) {}
+            $rankPercent = max(5, min(100, 100 - (($rankingPosition - 1) / max(1, $totalRankedRiders - 1)) * 100));
+            ?>
+            <div class="ranking-bar">
+                <div class="ranking-fill" style="width: <?= $rankPercent ?>%"></div>
+            </div>
+            <div class="ranking-labels">
+                <span>#<?= $totalRankedRiders ?></span>
+                <span>#1</span>
+            </div>
+        </div>
+        <?php else: ?>
+        <div class="ranking-empty">
+            <span class="empty-icon">📊</span>
+            <span>Ingen ranking tillgänglig</span>
+        </div>
+        <?php endif; ?>
     </div>
 </div>
 
@@ -1940,6 +2320,319 @@ function copyToClipboard(text) {
 
     .gravity-id-badge .gid-number {
         font-size: 1.1rem;
+    }
+}
+
+/* ============================================
+   RIDER STATS TREND SECTION
+   ============================================ */
+
+.rider-stats-trend {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+    margin-bottom: var(--space-lg);
+}
+
+.stats-row {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--space-md);
+}
+
+@media (min-width: 600px) {
+    .stats-row {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+/* Trend Section Cards */
+.form-section,
+.highlights-section,
+.ranking-section {
+    background: var(--color-bg-surface);
+    border-radius: var(--radius-lg);
+    padding: var(--space-md);
+    border: 1px solid var(--color-border);
+    box-shadow: var(--shadow-sm);
+}
+
+.trend-section-title {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--color-text-muted);
+    margin: 0 0 var(--space-md) 0;
+}
+
+/* Form Section */
+.form-results {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--space-xs);
+    margin-bottom: var(--space-sm);
+}
+
+.form-race {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-xs);
+    flex: 1;
+    min-width: 0;
+}
+
+.form-position {
+    font-size: 1.25rem;
+    line-height: 1;
+}
+
+.form-position.gold { filter: drop-shadow(0 2px 4px rgba(255, 215, 0, 0.4)); }
+.form-position.silver { filter: drop-shadow(0 2px 4px rgba(192, 192, 192, 0.4)); }
+.form-position.bronze { filter: drop-shadow(0 2px 4px rgba(205, 127, 50, 0.4)); }
+
+.form-event {
+    font-size: 0.6rem;
+    color: var(--color-text-muted);
+    max-width: 50px;
+    text-align: center;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.form-chart {
+    height: 50px;
+    margin: var(--space-md) 0;
+}
+
+.form-chart svg {
+    width: 100%;
+    height: 100%;
+}
+
+.form-trend {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-xs);
+    font-size: 0.8rem;
+    font-weight: 600;
+    padding: var(--space-xs) var(--space-sm);
+    border-radius: var(--radius-sm);
+    background: var(--color-bg-sunken);
+}
+
+.form-trend.up {
+    color: #10B981;
+    background: rgba(16, 185, 129, 0.1);
+}
+
+.form-trend.down {
+    color: #EF4444;
+    background: rgba(239, 68, 68, 0.1);
+}
+
+.form-trend.stable {
+    color: #F59E0B;
+    background: rgba(245, 158, 11, 0.1);
+}
+
+.trend-arrow {
+    font-size: 1rem;
+}
+
+.form-empty,
+.highlights-empty,
+.ranking-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-sm);
+    padding: var(--space-lg);
+    color: var(--color-text-muted);
+    font-size: 0.85rem;
+    text-align: center;
+}
+
+.form-empty .empty-icon,
+.highlights-empty .empty-icon,
+.ranking-empty .empty-icon {
+    font-size: 1.5rem;
+    opacity: 0.6;
+}
+
+/* Highlights Section */
+.highlights-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+}
+
+.highlight-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    font-size: 0.85rem;
+    padding: var(--space-sm) var(--space-md);
+    background: var(--color-bg-sunken);
+    border-radius: var(--radius-md);
+    transition: transform 0.2s ease;
+}
+
+.highlight-item:hover {
+    transform: translateX(4px);
+}
+
+.highlight-icon {
+    font-size: 1.1rem;
+    flex-shrink: 0;
+}
+
+.highlight-text {
+    font-weight: 500;
+    color: var(--color-text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Active streak special styling */
+.highlight-item.streak.active {
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(245, 158, 11, 0.08));
+    border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+[data-theme="dark"] .highlight-item.streak.active {
+    background: linear-gradient(135deg, rgba(120, 53, 15, 0.4), rgba(146, 64, 14, 0.3));
+}
+
+/* Ranking Section */
+.ranking-section {
+    grid-column: 1 / -1;
+}
+
+.ranking-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--space-md);
+    flex-wrap: wrap;
+    gap: var(--space-sm);
+}
+
+.ranking-current {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-sm);
+}
+
+.rank-number-large {
+    font-family: var(--font-mono);
+    font-size: 1.75rem;
+    font-weight: 800;
+    color: var(--color-text);
+    line-height: 1;
+}
+
+.rank-change {
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.rank-change.up { color: #10B981; }
+.rank-change.down { color: #EF4444; }
+
+.ranking-chart {
+    height: 80px;
+    margin: var(--space-md) 0 var(--space-sm);
+}
+
+.ranking-chart svg {
+    width: 100%;
+    height: 100%;
+}
+
+.ranking-months {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.65rem;
+    color: var(--color-text-muted);
+    padding: 0 30px;
+}
+
+/* Ranking Progress Bar (fallback) */
+.ranking-bar-container {
+    margin-top: var(--space-md);
+}
+
+.ranking-bar {
+    position: relative;
+    height: 10px;
+    background: var(--color-bg-sunken);
+    border-radius: var(--radius-full);
+    overflow: hidden;
+}
+
+.ranking-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--color-accent), #4CAF50);
+    border-radius: var(--radius-full);
+    transition: width 0.6s ease;
+}
+
+.ranking-labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.7rem;
+    color: var(--color-text-muted);
+    margin-top: var(--space-xs);
+}
+
+/* Tablet+ improvements */
+@media (min-width: 600px) {
+    .form-section,
+    .highlights-section,
+    .ranking-section {
+        padding: var(--space-lg);
+    }
+
+    .trend-section-title {
+        font-size: 0.75rem;
+    }
+
+    .form-position {
+        font-size: 1.5rem;
+    }
+
+    .form-event {
+        font-size: 0.65rem;
+        max-width: 60px;
+    }
+
+    .highlight-item {
+        padding: var(--space-sm) var(--space-md);
+    }
+
+    .rank-number-large {
+        font-size: 2rem;
+    }
+
+    .ranking-months {
+        font-size: 0.7rem;
+    }
+}
+
+/* Desktop improvements */
+@media (min-width: 900px) {
+    .rank-number-large {
+        font-size: 2.25rem;
+    }
+
+    .ranking-chart {
+        height: 100px;
     }
 }
 </style>
