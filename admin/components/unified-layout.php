@@ -47,6 +47,17 @@ $pageInfo = [
 
     <!-- Admin-specific CSS -->
     <link rel="stylesheet" href="/admin/assets/css/admin.css?v=<?= filemtime(__DIR__ . '/../assets/css/admin.css') ?>">
+
+    <!-- Prevent icon flash: hide data-lucide elements until JS replaces them -->
+    <style>
+        [data-lucide] {
+            display: none !important;
+        }
+        /* Once lucide replaces them with SVG, they become visible */
+        svg.lucide {
+            display: inline-block !important;
+        }
+    </style>
 </head>
 <body>
     <a href="#main-content" class="skip-link">Hoppa till huvudinnehåll</a>
