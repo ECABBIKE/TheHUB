@@ -470,26 +470,24 @@ unset($club);
     <!-- Individual Standings Section -->
     <div id="individual-standings">
         <!-- Filters -->
-        <div class="card filters-card">
-            <form method="get" class="series-filters">
-                <div class="filter-group">
-                    <label for="class-filter">Klass</label>
-                    <select name="class" id="class-filter" onchange="this.form.submit()">
-                        <option value="all" <?= $selectedClass === 'all' ? 'selected' : '' ?>>Alla klasser</option>
-                        <?php foreach ($classes as $cls): ?>
-                            <option value="<?= $cls['id'] ?>" <?= $selectedClass == $cls['id'] ? 'selected' : '' ?>>
-                                <?= htmlspecialchars($cls['display_name'] ?? $cls['name']) ?> (<?= $cls['rider_count'] ?>)
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-                <div class="filter-group">
-                    <label for="name-search">Sok namn</label>
-                    <input type="search" name="search" id="name-search" value="<?= htmlspecialchars($searchName) ?>" placeholder="Skriv namn...">
-                </div>
-                <button type="submit" class="btn btn-primary">Sok</button>
-            </form>
-        </div>
+        <form method="get" class="filter-bar">
+            <label class="filter-select-wrapper">
+                <span class="filter-label">Klass:</span>
+                <select name="class" id="class-filter" class="filter-select" onchange="this.form.submit()">
+                    <option value="all" <?= $selectedClass === 'all' ? 'selected' : '' ?>>Alla klasser</option>
+                    <?php foreach ($classes as $cls): ?>
+                        <option value="<?= $cls['id'] ?>" <?= $selectedClass == $cls['id'] ? 'selected' : '' ?>>
+                            <?= htmlspecialchars($cls['display_name'] ?? $cls['name']) ?> (<?= $cls['rider_count'] ?>)
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+            </label>
+            <label class="filter-select-wrapper filter-search-wrapper">
+                <span class="filter-label">Sök namn:</span>
+                <input type="search" name="search" id="name-search" class="filter-input" value="<?= htmlspecialchars($searchName) ?>" placeholder="Skriv namn...">
+            </label>
+            <button type="submit" class="btn btn-primary filter-btn">Sök</button>
+        </form>
 
         <!-- Individual Standings -->
         <div class="card">
@@ -702,23 +700,33 @@ function toggleClubRiders(btn, e) {
     color: var(--color-text-muted);
 }
 
-/* Collapsible Events */
+/* Collapsible Events Dropdown (standardized) */
 .events-dropdown {
     background: var(--color-bg-card);
     border-radius: var(--radius-lg);
     margin-bottom: var(--space-lg);
     overflow: hidden;
+    box-shadow: var(--shadow-sm);
 }
 .events-dropdown-header {
     display: flex;
     align-items: center;
     gap: var(--space-sm);
-    padding: var(--space-md) var(--space-lg);
+    padding: var(--space-md);
     cursor: pointer;
     font-weight: var(--weight-medium);
     list-style: none;
+    background: var(--color-bg-surface);
+    border-bottom: 1px solid transparent;
+    transition: background 0.15s;
+}
+.events-dropdown-header:hover {
+    background: var(--color-bg-hover);
 }
 .events-dropdown-header::-webkit-details-marker { display: none; }
+.events-dropdown[open] .events-dropdown-header {
+    border-bottom-color: var(--color-border);
+}
 .events-count {
     color: var(--color-text-muted);
     font-size: var(--text-sm);
@@ -726,23 +734,24 @@ function toggleClubRiders(btn, e) {
 }
 .dropdown-arrow {
     transition: transform 0.2s;
+    color: var(--color-text-muted);
 }
 .events-dropdown[open] .dropdown-arrow {
     transform: rotate(180deg);
 }
 .events-dropdown-content {
-    border-top: 1px solid var(--color-border);
     max-height: 300px;
     overflow-y: auto;
 }
 .event-dropdown-item {
     display: flex;
     gap: var(--space-sm);
-    padding: var(--space-sm) var(--space-lg);
+    padding: var(--space-sm) var(--space-md);
     text-decoration: none;
     color: inherit;
     border-bottom: 1px solid var(--color-border-light);
     transition: background 0.15s;
+    align-items: center;
 }
 .event-dropdown-item:hover {
     background: var(--color-bg-hover);
@@ -754,17 +763,24 @@ function toggleClubRiders(btn, e) {
     color: var(--color-accent);
     font-weight: var(--weight-medium);
     min-width: 30px;
+    font-size: var(--text-sm);
 }
 .event-date {
     color: var(--color-text-muted);
     min-width: 50px;
+    font-size: var(--text-sm);
 }
 .event-name {
     flex: 1;
+    font-size: var(--text-sm);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 .event-results {
     color: var(--color-text-muted);
-    font-size: var(--text-sm);
+    font-size: var(--text-xs);
+    white-space: nowrap;
 }
 
 /* Toggle Tabs */
@@ -803,9 +819,6 @@ function toggleClubRiders(btn, e) {
     padding: var(--space-lg);
     margin-bottom: var(--space-lg);
 }
-.filters-card {
-    padding: var(--space-md) var(--space-lg);
-}
 .card-title {
     font-size: var(--text-lg);
     margin: 0 0 var(--space-md);
@@ -815,30 +828,63 @@ function toggleClubRiders(btn, e) {
     margin-bottom: 1rem;
 }
 
-/* Filters */
-.series-filters {
+/* Filter Bar (standardized) */
+.filter-bar {
     display: flex;
+    flex-wrap: wrap;
     gap: var(--space-md);
     align-items: flex-end;
-    flex-wrap: wrap;
+    margin-bottom: var(--space-lg);
+    padding: var(--space-md);
+    background: var(--color-bg-card);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--color-border);
 }
-.filter-group {
+.filter-select-wrapper {
     display: flex;
     flex-direction: column;
-    gap: var(--space-xs);
+    gap: var(--space-2xs);
+    flex: 1;
+    min-width: 140px;
+    max-width: 220px;
 }
-.filter-group label {
-    font-size: var(--text-sm);
+.filter-search-wrapper {
+    flex: 2;
+    max-width: 280px;
+}
+.filter-label {
+    font-size: var(--text-xs);
+    color: var(--color-text-secondary);
+    text-transform: uppercase;
     font-weight: var(--weight-medium);
 }
-.filter-group select,
-.filter-group input {
+.filter-select,
+.filter-input {
     padding: var(--space-sm) var(--space-md);
+    font-size: var(--text-sm);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-md);
     background: var(--color-bg-surface);
-    color: inherit;
-    min-width: 180px;
+    color: var(--color-text-primary);
+    transition: border-color var(--transition-fast);
+}
+.filter-select {
+    padding-right: var(--space-xl);
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236b7280' d='M3 4.5L6 7.5L9 4.5'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+}
+.filter-select:focus,
+.filter-input:focus {
+    outline: none;
+    border-color: var(--color-accent);
+    box-shadow: 0 0 0 3px rgba(59, 158, 255, 0.1);
+}
+.filter-btn {
+    align-self: flex-end;
+    white-space: nowrap;
 }
 
 /* Standings Tables */
@@ -1006,16 +1052,50 @@ function toggleClubRiders(btn, e) {
     .series-hero-logo {
         margin: 0 auto;
     }
+    /* Filter bar mobile */
+    .filter-bar {
+        flex-direction: column;
+        padding: var(--space-sm);
+        gap: var(--space-sm);
+    }
+    .filter-select-wrapper,
+    .filter-search-wrapper {
+        width: 100%;
+        max-width: none;
+        min-width: 0;
+    }
+    .filter-select,
+    .filter-input {
+        width: 100%;
+    }
+    .filter-btn {
+        width: 100%;
+    }
+    /* Events dropdown mobile */
+    .events-dropdown-header {
+        padding: var(--space-sm) var(--space-md);
+        font-size: var(--text-sm);
+    }
+    .event-dropdown-item {
+        padding: var(--space-xs) var(--space-sm);
+        gap: var(--space-xs);
+    }
+    .event-num {
+        min-width: 24px;
+        font-size: var(--text-xs);
+    }
+    .event-date {
+        min-width: 40px;
+        font-size: var(--text-xs);
+    }
+    .event-name {
+        font-size: var(--text-xs);
+    }
+    .event-results {
+        display: none;
+    }
     .series-meta {
         justify-content: center;
-    }
-    .series-filters {
-        flex-direction: column;
-        align-items: stretch;
-    }
-    .filter-group select,
-    .filter-group input {
-        width: 100%;
     }
     .standings-table .col-club,
     .standings-table th.col-club,
@@ -1041,14 +1121,6 @@ function toggleClubRiders(btn, e) {
     .series-hero-logo {
         width: 80px;
         height: 80px;
-    }
-    .series-filters {
-        flex-direction: row;
-        flex-wrap: wrap;
-    }
-    .filter-group {
-        flex: 1;
-        min-width: 150px;
     }
     /* Make table horizontally scrollable */
     .table-responsive {
