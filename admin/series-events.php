@@ -254,9 +254,131 @@ include __DIR__ . '/components/unified-layout.php';
 ?>
 
 <!-- Content starts here (unified-layout already opened <main>) -->
+<style>
+/* Mobile responsiveness for series-events page */
+@media (max-width: 767px) {
+    /* Header adjustments */
+    .page-header-flex {
+        flex-direction: column;
+        align-items: flex-start !important;
+        gap: var(--space-md);
+    }
+
+    .page-header-flex .flex.gap-sm {
+        width: 100%;
+        flex-direction: column;
+    }
+
+    .page-header-flex .btn {
+        width: 100%;
+        justify-content: center;
+    }
+
+    /* Grid adjustments */
+    .grid.gs-lg-grid-cols-3 {
+        grid-template-columns: 1fr !important;
+    }
+
+    .gs-lg-col-span-2 {
+        grid-column: span 1 !important;
+    }
+
+    /* Table mobile layout */
+    .table-responsive {
+        margin: 0 calc(var(--space-md) * -1);
+        padding: 0 var(--space-sm);
+        overflow-x: auto;
+    }
+
+    .table {
+        font-size: var(--text-xs);
+        min-width: 700px;
+    }
+
+    .table th,
+    .table td {
+        padding: var(--space-xs) var(--space-sm);
+        white-space: nowrap;
+    }
+
+    /* Hide less important columns on mobile */
+    .table th:nth-child(5),
+    .table td:nth-child(5) {
+        display: none;
+    }
+
+    /* Compact buttons */
+    .btn-xs {
+        padding: 4px 6px;
+    }
+
+    .btn--sm {
+        padding: var(--space-xs) var(--space-sm);
+        font-size: var(--text-xs);
+    }
+
+    /* Bulk edit form mobile */
+    .alert.alert--info .flex {
+        flex-direction: column;
+        gap: var(--space-sm);
+        align-items: stretch !important;
+    }
+
+    .alert.alert--info .input {
+        width: 100% !important;
+        min-width: unset !important;
+    }
+
+    .alert.alert--info .btn {
+        width: 100%;
+        justify-content: center;
+    }
+
+    /* Card body form elements */
+    .card-body .input,
+    .card-body select {
+        width: 100%;
+    }
+
+    /* Template select in table */
+    .template-form {
+        display: block !important;
+        width: 100%;
+    }
+
+    .template-form > div {
+        flex-direction: column;
+        gap: var(--space-xs) !important;
+    }
+
+    .template-form .input {
+        min-width: unset !important;
+        width: 100%;
+    }
+}
+
+@media (max-width: 480px) {
+    /* Even smaller screens */
+    .table {
+        font-size: 10px;
+    }
+
+    .badge {
+        font-size: 9px;
+        padding: 2px 4px;
+    }
+
+    /* Stack order column buttons */
+    .table td:nth-child(2) .flex {
+        flex-direction: column;
+        gap: 2px;
+    }
+}
+</style>
+
 <div class="container">
  <!-- Header -->
- <div class="flex items-center justify-between mb-lg">
+ <div class="flex items-center justify-between mb-lg page-header-flex">
  <div>
  <h1 class="">
   <i data-lucide="calendar"></i>
