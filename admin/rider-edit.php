@@ -182,12 +182,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
  ];
 
  try {
- $db->update('riders', $riderData, 'id = ?', [$id]);
- $message = 'Deltagare uppdaterad!';
- $messageType = 'success';
+ $updateResult = $db->update('riders', $riderData, 'id = ?', [$id]);
 
- // Refresh rider data
+ // Refresh rider data to verify the save worked
  $rider = $db->getRow("SELECT * FROM riders WHERE id = ?", [$id]);
+
+ // Verify club_id was actually saved
+ $savedClubId = $rider['club_id'];
+ $expectedClubId = !empty($_POST['club_id']) ? intval($_POST['club_id']) : null;
+
+ if ($savedClubId != $expectedClubId) {
+  $message = 'Varning: Klubben kunde inte sparas korrekt. Försökte sätta klubb-ID till ' . ($expectedClubId ?? 'null') . ' men värdet är ' . ($savedClubId ?? 'null');
+  $messageType = 'warning';
+  error_log("RIDER EDIT: Club save mismatch - expected: " . var_export($expectedClubId, true) . ", got: " . var_export($savedClubId, true));
+ } else {
+  $message = 'Deltagare uppdaterad!';
+  $messageType = 'success';
+ }
  } catch (Exception $e) {
  $message = 'Ett fel uppstod: ' . $e->getMessage();
  $messageType = 'error';
@@ -306,8 +317,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
  }
 }
 
-// Get clubs for dropdown
-$clubs = $db->getAll("SELECT id, name FROM clubs WHERE active = 1 ORDER BY name");
+// Get clubs for dropdown - include inactive clubs to show current assignment even if club is inactive
+$clubs = $db->getAll("SELECT id, name, active FROM clubs ORDER BY active DESC, name");
+
+// Get current club info (in case it's inactive and not in the main list)
+$currentClub = null;
+if (!empty($rider['club_id'])) {
+    $currentClub = $db->getRow("SELECT id, name, active FROM clubs WHERE id = ?", [$rider['club_id']]);
+}
 
 // Page config for admin layout
 $page_title = 'Redigera Deltagare';
@@ -461,11 +478,17 @@ include __DIR__ . '/components/unified-layout.php';
   <select id="club_id" name="club_id" class="input">
   <option value="">Ingen klubb</option>
   <?php foreach ($clubs as $club): ?>
-  <option value="<?= $club['id'] ?>" <?= $rider['club_id'] == $club['id'] ? 'selected' : '' ?>>
-   <?= h($club['name']) ?>
+  <option value="<?= $club['id'] ?>" <?= $rider['club_id'] == $club['id'] ? 'selected' : '' ?><?= !$club['active'] ? ' style="color: #999;"' : '' ?>>
+   <?= h($club['name']) ?><?= !$club['active'] ? ' (inaktiv)' : '' ?>
   </option>
   <?php endforeach; ?>
   </select>
+  <?php if ($currentClub && !$currentClub['active']): ?>
+  <small class="text-warning" style="display: block; margin-top: 0.25rem;">
+   <i data-lucide="alert-triangle" style="width: 12px; height: 12px;"></i>
+   Nuvarande klubb "<?= h($currentClub['name']) ?>" är inaktiv
+  </small>
+  <?php endif; ?>
   </div>
 
   <!-- License Number (system-locked) -->
