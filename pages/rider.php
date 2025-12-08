@@ -993,7 +993,18 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
                     <span class="dropdown-arrow">▾</span>
                 </summary>
                 <div class="events-dropdown-content">
-                    <?php foreach ($results as $result): ?>
+                    <?php
+                    $currentYear = null;
+                    foreach ($results as $result):
+                        $resultYear = date('Y', strtotime($result['event_date']));
+                        if ($resultYear !== $currentYear):
+                            $currentYear = $resultYear;
+                    ?>
+                    <div class="year-divider">
+                        <span class="year-label"><?= $currentYear ?></span>
+                        <span class="year-line"></span>
+                    </div>
+                    <?php endif; ?>
                     <a href="/event/<?= $result['event_id'] ?>" class="event-dropdown-item">
                         <?php if ($result['is_motion']): ?>
                         <span class="event-position motion">
@@ -1893,6 +1904,26 @@ function copyToClipboard(text) {
     color: var(--color-text-muted);
     font-size: var(--text-xs);
     white-space: nowrap;
+}
+
+/* Year divider for historical results */
+.year-divider {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    padding: var(--space-sm) var(--space-md);
+    background: var(--color-bg-sunken);
+}
+.year-label {
+    font-size: var(--text-xs);
+    font-weight: var(--weight-bold);
+    color: var(--color-text-secondary);
+    white-space: nowrap;
+}
+.year-line {
+    flex: 1;
+    height: 1px;
+    background: var(--color-border);
 }
 
 /* Series results dropdown specific */
