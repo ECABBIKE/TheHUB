@@ -996,14 +996,18 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
                 <div class="results-list compact">
                     <?php foreach (array_slice($results, 0, 10) as $result): ?>
                     <a href="/event/<?= $result['event_id'] ?>" class="result-item">
-                        <div class="result-position <?= $result['position'] <= 3 && $result['status'] === 'finished' ? 'p' . $result['position'] : '' ?>">
+                        <?php
+                        // Don't show medals for motion classes
+                        $showMedal = !$result['is_motion'] && $result['status'] === 'finished' && $result['position'] <= 3;
+                        ?>
+                        <div class="result-position <?= $showMedal ? 'p' . $result['position'] : '' ?>">
                             <?php if ($result['status'] !== 'finished'): ?>
                                 <?= strtoupper(substr($result['status'], 0, 3)) ?>
-                            <?php elseif ($result['position'] == 1): ?>
+                            <?php elseif ($showMedal && $result['position'] == 1): ?>
                                 <img src="/assets/icons/medal-1st.svg" alt="1:a" class="medal-icon">
-                            <?php elseif ($result['position'] == 2): ?>
+                            <?php elseif ($showMedal && $result['position'] == 2): ?>
                                 <img src="/assets/icons/medal-2nd.svg" alt="2:a" class="medal-icon">
-                            <?php elseif ($result['position'] == 3): ?>
+                            <?php elseif ($showMedal && $result['position'] == 3): ?>
                                 <img src="/assets/icons/medal-3rd.svg" alt="3:e" class="medal-icon">
                             <?php else: ?>
                                 <?= $result['position'] ?>
@@ -1013,6 +1017,9 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
                             <div class="result-event-name"><?= htmlspecialchars($result['event_name']) ?></div>
                             <div class="result-meta">
                                 <span><?= date('j M Y', strtotime($result['event_date'])) ?></span>
+                                <?php if ($result['is_motion']): ?>
+                                <span>• Motion</span>
+                                <?php endif; ?>
                             </div>
                         </div>
                     </a>
