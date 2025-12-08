@@ -2679,6 +2679,123 @@ function copyToClipboard(text) {
     margin-top: var(--space-xs);
 }
 
+/* Mobile improvements */
+@media (max-width: 599px) {
+    .rider-stats-trend {
+        gap: var(--space-sm);
+        margin-bottom: var(--space-md);
+    }
+
+    .stats-row {
+        gap: var(--space-sm);
+    }
+
+    .form-section,
+    .highlights-section,
+    .ranking-section {
+        padding: var(--space-sm);
+        border-radius: var(--radius-md);
+    }
+
+    .trend-section-title {
+        font-size: 0.65rem;
+        margin-bottom: var(--space-sm);
+    }
+
+    /* Form section mobile */
+    .form-results {
+        gap: 2px;
+        margin-bottom: var(--space-xs);
+    }
+
+    .form-race {
+        gap: 2px;
+    }
+
+    .form-position {
+        font-size: 1rem;
+    }
+
+    .form-event {
+        font-size: 0.5rem;
+        max-width: 40px;
+    }
+
+    .form-chart {
+        height: 40px;
+        margin: var(--space-sm) 0;
+    }
+
+    .form-trend {
+        font-size: 0.7rem;
+        padding: var(--space-xs);
+    }
+
+    .trend-arrow {
+        font-size: 0.85rem;
+    }
+
+    /* Highlights section mobile */
+    .highlights-list {
+        gap: var(--space-xs);
+    }
+
+    .highlight-item {
+        font-size: 0.75rem;
+        padding: var(--space-xs) var(--space-sm);
+        gap: var(--space-xs);
+    }
+
+    .highlight-icon {
+        font-size: 0.9rem;
+    }
+
+    /* Empty states mobile */
+    .form-empty,
+    .highlights-empty,
+    .ranking-empty {
+        padding: var(--space-md);
+        font-size: 0.75rem;
+    }
+
+    .form-empty .empty-icon,
+    .highlights-empty .empty-icon,
+    .ranking-empty .empty-icon {
+        font-size: 1.25rem;
+    }
+
+    /* Ranking section mobile */
+    .ranking-header {
+        flex-direction: column;
+        gap: var(--space-xs);
+        align-items: flex-start;
+    }
+
+    .rank-number-large {
+        font-size: 1.5rem;
+    }
+
+    .rank-change {
+        font-size: 0.65rem;
+    }
+
+    .ranking-chart {
+        height: 60px;
+    }
+
+    .ranking-months {
+        font-size: 0.55rem;
+    }
+
+    .ranking-bar-container {
+        margin-top: var(--space-sm);
+    }
+
+    .ranking-bar {
+        height: 6px;
+    }
+}
+
 /* Tablet+ improvements */
 @media (min-width: 600px) {
     .form-section,
