@@ -156,8 +156,8 @@ try {
   <?php if (!empty($allBrands)): ?>
   <label class="filter-select-wrapper">
     <span class="filter-label">Tävlingsserie:</span>
-    <select class="filter-select" onchange="if(this.value) window.location=this.value">
-      <option value="/results" <?= !$filterBrand ? 'selected' : '' ?>>Alla serier</option>
+    <select class="filter-select" onchange="window.location=this.value">
+      <option value="/results">Alla serier</option>
       <?php foreach ($allBrands as $b): ?>
       <option value="/results?brand=<?= $b['id'] ?>" <?= $filterBrand == $b['id'] ? 'selected' : '' ?>>
         <?= htmlspecialchars($b['name']) ?>
@@ -165,13 +165,12 @@ try {
       <?php endforeach; ?>
     </select>
   </label>
-  <?php endif; ?>
 
   <?php if (!empty($allYears)): ?>
   <label class="filter-select-wrapper">
     <span class="filter-label">År:</span>
-    <select class="filter-select" onchange="if(this.value) window.location=this.value">
-      <option value="/results<?= $filterBrand ? '?brand=' . $filterBrand : '' ?>" <?= !$filterYear ? 'selected' : '' ?>>Alla år</option>
+    <select class="filter-select" onchange="window.location=this.value">
+      <option value="/results<?= $filterBrand ? '?brand=' . $filterBrand : '' ?>">Alla år</option>
       <?php foreach ($allYears as $y): ?>
       <option value="/results?<?= $filterBrand ? 'brand=' . $filterBrand . '&' : '' ?>year=<?= $y['year'] ?>" <?= $filterYear == $y['year'] ? 'selected' : '' ?>>
         <?= $y['year'] ?>
@@ -181,21 +180,33 @@ try {
   </label>
   <?php endif; ?>
 
-  <?php
-  // Show series dropdown only if brands aren't being used, or as a secondary filter
-  if (empty($allBrands)):
-  ?>
+  <?php else: ?>
+  <!-- Fallback: Show old series dropdown when no brands exist -->
   <label class="filter-select-wrapper">
     <span class="filter-label">Serie:</span>
-    <select class="filter-select" onchange="if(this.value) window.location=this.value">
-      <option value="/results<?= $filterYear ? '?year=' . $filterYear : '' ?>" <?= !$filterSeries ? 'selected' : '' ?>>Alla serier</option>
+    <select class="filter-select" onchange="window.location=this.value">
+      <option value="/results<?= $filterYear ? '?year=' . $filterYear : '' ?>">Alla serier</option>
       <?php foreach ($allSeries as $s): ?>
       <option value="/results?series=<?= $s['id'] ?><?= $filterYear ? '&year=' . $filterYear : '' ?>" <?= $filterSeries == $s['id'] ? 'selected' : '' ?>>
-        <?= htmlspecialchars($s['name']) ?><?= isset($s['year']) ? ' (' . $s['year'] . ')' : '' ?>
+        <?= htmlspecialchars($s['name']) ?><?= !empty($s['year']) ? ' (' . $s['year'] . ')' : '' ?>
       </option>
       <?php endforeach; ?>
     </select>
   </label>
+
+  <?php if (!empty($allYears)): ?>
+  <label class="filter-select-wrapper">
+    <span class="filter-label">År:</span>
+    <select class="filter-select" onchange="window.location=this.value">
+      <option value="/results<?= $filterSeries ? '?series=' . $filterSeries : '' ?>">Alla år</option>
+      <?php foreach ($allYears as $y): ?>
+      <option value="/results?<?= $filterSeries ? 'series=' . $filterSeries . '&' : '' ?>year=<?= $y['year'] ?>" <?= $filterYear == $y['year'] ? 'selected' : '' ?>>
+        <?= $y['year'] ?>
+      </option>
+      <?php endforeach; ?>
+    </select>
+  </label>
+  <?php endif; ?>
   <?php endif; ?>
 </div>
 
