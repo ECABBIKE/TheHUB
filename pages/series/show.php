@@ -997,8 +997,8 @@ function toggleClubRiders(btn, e) {
     color: white;
 }
 
-/* Mobile */
-@media (max-width: 767px) {
+/* Mobile Portrait - hide event columns, compact layout */
+@media (max-width: 599px) and (orientation: portrait) {
     .series-hero {
         flex-direction: column;
         text-align: center;
@@ -1028,6 +1028,62 @@ function toggleClubRiders(btn, e) {
     .col-name, .col-club-name {
         white-space: normal;
         word-break: break-word;
+    }
+}
+
+/* Mobile Landscape & Tablet - scrollable table with all columns */
+@media (max-width: 1024px) and (orientation: landscape),
+       (min-width: 600px) and (max-width: 1024px) {
+    .series-hero {
+        flex-direction: row;
+        text-align: left;
+    }
+    .series-hero-logo {
+        width: 80px;
+        height: 80px;
+    }
+    .series-filters {
+        flex-direction: row;
+        flex-wrap: wrap;
+    }
+    .filter-group {
+        flex: 1;
+        min-width: 150px;
+    }
+    /* Make table horizontally scrollable */
+    .table-responsive {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        margin: 0 calc(-1 * var(--space-md));
+        padding: 0 var(--space-md);
+    }
+    .standings-table {
+        min-width: 700px;
+    }
+    /* Compact columns for landscape */
+    .standings-table .col-event {
+        width: 36px;
+        font-size: var(--text-xs);
+        padding: var(--space-xs);
+    }
+    .standings-table th.col-event {
+        font-size: 0.65rem;
+        padding: var(--space-xs);
+    }
+    .col-name, .col-club-name {
+        white-space: nowrap;
+        max-width: 120px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .col-club {
+        max-width: 80px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .col-total {
+        width: 50px;
+        font-size: var(--text-sm);
     }
 }
 </style>
