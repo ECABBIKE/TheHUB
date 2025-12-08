@@ -262,19 +262,19 @@ if (empty($clubRankings)) {
 <!-- Search Section -->
 <div class="search-card">
     <div class="search-tabs">
-        <button class="search-tab active" data-tab="riders">👥 Sök Åkare</button>
-        <button class="search-tab" data-tab="clubs">🛡️ Sök Klubbar</button>
+        <button class="search-tab active" data-tab="riders"><i data-lucide="users"></i> Sök Åkare</button>
+        <button class="search-tab" data-tab="clubs"><i data-lucide="shield"></i> Sök Klubbar</button>
     </div>
 
     <div class="search-box">
-        <span class="search-icon">🔍</span>
+        <span class="search-icon"><i data-lucide="search"></i></span>
         <input type="text"
                id="database-search"
                class="search-input"
                placeholder="Skriv namn för att söka..."
                autocomplete="off"
                data-type="riders">
-        <button type="button" class="search-clear" style="display:none;">✕</button>
+        <button type="button" class="search-clear" style="display:none;"><i data-lucide="x"></i></button>
     </div>
 
     <div class="search-results" id="search-results"></div>
@@ -288,7 +288,7 @@ if (empty($clubRankings)) {
 <div class="database-grid">
     <!-- Top Riders -->
     <div class="card">
-        <h2 class="card-title">🏆 Topprankade</h2>
+        <h2 class="card-title"><i data-lucide="trophy"></i> Topprankade</h2>
         <div class="ranking-list">
             <?php foreach ($topRiders as $i => $rider): ?>
             <a href="/rider/<?= $rider['id'] ?>" class="ranking-item">
@@ -321,7 +321,7 @@ if (empty($clubRankings)) {
 
     <!-- Top Clubs -->
     <div class="card">
-        <h2 class="card-title">🛡️ Toppklubbar</h2>
+        <h2 class="card-title"><i data-lucide="shield"></i> Toppklubbar</h2>
         <div class="ranking-list">
             <?php foreach ($clubRankings as $i => $club): ?>
             <a href="/club/<?= $club['id'] ?>" class="ranking-item">
@@ -341,7 +341,7 @@ if (empty($clubRankings)) {
                     <span class="ranking-meta"><?= $club['riders_with_points'] ?> åkare med poäng</span>
                 </div>
                 <div class="ranking-stats">
-                    <span class="stat"><?= $club['podiums'] ?> 🏆</span>
+                    <span class="stat"><?= $club['podiums'] ?> pall</span>
                     <span class="stat"><?= number_format($club['total_points']) ?> poäng</span>
                 </div>
             </a>
@@ -652,6 +652,32 @@ if (empty($clubRankings)) {
     color: #92400e;
 }
 
+/* Lucide icons in tabs and titles */
+.search-tab i, .search-tab svg {
+    width: 16px;
+    height: 16px;
+    vertical-align: -3px;
+}
+.card-title i, .card-title svg {
+    width: 20px;
+    height: 20px;
+    vertical-align: -4px;
+    color: var(--color-accent);
+}
+.search-icon i, .search-icon svg {
+    width: 18px;
+    height: 18px;
+}
+.search-clear i, .search-clear svg {
+    width: 16px;
+    height: 16px;
+}
+.search-result-avatar i, .search-result-avatar svg {
+    width: 20px;
+    height: 20px;
+    color: white;
+}
+
 @media (max-width: 768px) {
     .stats-grid {
         grid-template-columns: repeat(2, 1fr);
@@ -669,6 +695,129 @@ if (empty($clubRankings)) {
     .ranking-stats {
         flex-direction: column;
         gap: 2px;
+    }
+}
+
+/* Mobile Portrait - Extra compact */
+@media (max-width: 480px) {
+    .page-header {
+        margin-bottom: var(--space-md);
+    }
+    .page-title {
+        font-size: var(--text-xl);
+        gap: var(--space-xs);
+    }
+    .page-icon {
+        width: 24px;
+        height: 24px;
+    }
+    .page-subtitle {
+        font-size: var(--text-sm);
+    }
+
+    /* Stats grid - tighter */
+    .stats-grid {
+        grid-template-columns: repeat(4, 1fr);
+        gap: var(--space-xs);
+        margin-bottom: var(--space-md);
+    }
+    .stat-card {
+        padding: var(--space-sm) var(--space-xs);
+        border-radius: var(--radius-md);
+    }
+    .stat-value {
+        font-size: var(--text-lg);
+        line-height: 1;
+    }
+    .stat-label {
+        font-size: 9px;
+        letter-spacing: 0;
+        line-height: 1.2;
+        margin-top: 2px;
+    }
+
+    /* Search card - compact */
+    .search-card {
+        padding: var(--space-md);
+        margin-bottom: var(--space-md);
+    }
+    .search-tabs {
+        gap: var(--space-xs);
+        margin-bottom: var(--space-sm);
+    }
+    .search-tab {
+        padding: var(--space-xs) var(--space-sm);
+        font-size: var(--text-sm);
+        border-width: 1px;
+    }
+    .search-input {
+        padding: var(--space-sm) var(--space-sm) var(--space-sm) calc(var(--space-sm) + 1.5em);
+        font-size: var(--text-md);
+        border-radius: var(--radius-md);
+    }
+    .search-icon {
+        left: var(--space-sm);
+        font-size: 1em;
+    }
+    .search-hint {
+        padding: var(--space-sm);
+        font-size: var(--text-sm);
+    }
+
+    /* Cards - compact */
+    .card {
+        padding: var(--space-md);
+        margin-bottom: var(--space-md);
+        border-radius: var(--radius-md);
+    }
+    .card-title {
+        font-size: var(--text-md);
+        margin-bottom: var(--space-sm);
+    }
+    .card-link {
+        padding: var(--space-xs);
+        margin-top: var(--space-sm);
+        font-size: var(--text-sm);
+    }
+
+    /* Ranking items - optimized */
+    .ranking-item {
+        gap: var(--space-sm);
+        padding: var(--space-xs) 0;
+    }
+    .ranking-pos {
+        width: 28px;
+        height: 28px;
+        font-size: var(--text-xs);
+    }
+    .medal-icon {
+        width: 20px;
+        height: 20px;
+    }
+    .ranking-info {
+        flex: 1;
+        min-width: 0;
+        overflow: hidden;
+    }
+    .ranking-name {
+        font-size: var(--text-sm);
+    }
+    .ranking-meta {
+        font-size: var(--text-xs);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .ranking-stats {
+        flex-direction: row;
+        flex-wrap: wrap;
+        gap: 3px;
+        max-width: 90px;
+    }
+    .ranking-stats .stat {
+        font-size: 10px;
+        padding: 1px 4px;
+        white-space: nowrap;
     }
 }
 </style>
@@ -736,13 +885,15 @@ document.addEventListener('DOMContentLoaded', function() {
                                     '</div></a>';
                             } else {
                                 return '<a href="/club/' + item.id + '" class="search-result">' +
-                                    '<span class="search-result-avatar">🛡️</span>' +
+                                    '<span class="search-result-avatar"><i data-lucide="shield"></i></span>' +
                                     '<div class="search-result-info">' +
                                     '<span class="search-result-name">' + item.name + '</span>' +
                                     '<span class="search-result-meta">' + (item.member_count || 0) + ' medlemmar</span>' +
                                     '</div></a>';
                             }
                         }).join('');
+                        // Re-init Lucide icons for dynamic content
+                        if (typeof lucide !== 'undefined') lucide.createIcons();
                     } else {
                         searchResults.innerHTML = '<div class="search-hint">Inga resultat hittades</div>';
                     }
