@@ -2684,10 +2684,13 @@ function copyToClipboard(text) {
     .rider-stats-trend {
         gap: var(--space-sm);
         margin-bottom: var(--space-md);
+        max-width: 100%;
+        overflow: hidden;
     }
 
     .stats-row {
         gap: var(--space-sm);
+        max-width: 100%;
     }
 
     .form-section,
@@ -2695,6 +2698,9 @@ function copyToClipboard(text) {
     .ranking-section {
         padding: var(--space-sm);
         border-radius: var(--radius-md);
+        max-width: 100%;
+        overflow: hidden;
+        box-sizing: border-box;
     }
 
     .trend-section-title {
@@ -2706,10 +2712,13 @@ function copyToClipboard(text) {
     .form-results {
         gap: 2px;
         margin-bottom: var(--space-xs);
+        max-width: 100%;
+        overflow: hidden;
     }
 
     .form-race {
         gap: 2px;
+        min-width: 0; /* Allow flex items to shrink */
     }
 
     .form-position {
@@ -2718,12 +2727,20 @@ function copyToClipboard(text) {
 
     .form-event {
         font-size: 0.5rem;
-        max-width: 40px;
+        max-width: 36px;
+        word-break: break-all;
     }
 
     .form-chart {
         height: 40px;
         margin: var(--space-sm) 0;
+        max-width: 100%;
+        overflow: hidden;
+    }
+
+    .form-chart svg {
+        max-width: 100%;
+        height: auto;
     }
 
     .form-trend {
@@ -2738,16 +2755,27 @@ function copyToClipboard(text) {
     /* Highlights section mobile */
     .highlights-list {
         gap: var(--space-xs);
+        max-width: 100%;
     }
 
     .highlight-item {
         font-size: 0.75rem;
         padding: var(--space-xs) var(--space-sm);
         gap: var(--space-xs);
+        max-width: 100%;
+        overflow: hidden;
+    }
+
+    .highlight-text {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        min-width: 0;
     }
 
     .highlight-icon {
         font-size: 0.9rem;
+        flex-shrink: 0;
     }
 
     /* Empty states mobile */
@@ -2769,6 +2797,7 @@ function copyToClipboard(text) {
         flex-direction: column;
         gap: var(--space-xs);
         align-items: flex-start;
+        max-width: 100%;
     }
 
     .rank-number-large {
@@ -2781,10 +2810,19 @@ function copyToClipboard(text) {
 
     .ranking-chart {
         height: 60px;
+        max-width: 100%;
+        overflow: hidden;
+    }
+
+    .ranking-chart svg {
+        max-width: 100%;
+        height: auto;
     }
 
     .ranking-months {
         font-size: 0.55rem;
+        max-width: 100%;
+        overflow: hidden;
     }
 
     .ranking-bar-container {
