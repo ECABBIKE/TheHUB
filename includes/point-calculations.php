@@ -133,18 +133,49 @@ function calculatePoints($db, $event_id, $position, $status = 'finished', $class
         }
     }
 
-    // Get event's point scale
+    // Get event's point scale - with robust fallback chain
+    $scale_id = null;
+
+    // 1. Try event's own point_scale_id
     $event = $db->getRow(
         "SELECT point_scale_id FROM events WHERE id = ?",
         [$event_id]
     );
 
-    if (!$event || !$event['point_scale_id']) {
-        // No scale assigned - no points (user explicitly chose "ingen mall")
-        return 0;
+    if ($event && !empty($event['point_scale_id'])) {
+        $scale_id = $event['point_scale_id'];
     }
 
-    $scale_id = $event['point_scale_id'];
+    // 2. If no scale, try to get from series_events (for series events)
+    if (!$scale_id) {
+        $seriesTemplate = $db->getRow(
+            "SELECT template_id FROM series_events WHERE event_id = ? AND template_id IS NOT NULL LIMIT 1",
+            [$event_id]
+        );
+
+        if ($seriesTemplate && !empty($seriesTemplate['template_id'])) {
+            $scale_id = $seriesTemplate['template_id'];
+            error_log("ℹ️  Using series template {$scale_id} for event {$event_id}");
+        }
+    }
+
+    // 3. Final fallback: use default scale
+    if (!$scale_id) {
+        $defaultScale = $db->getRow(
+            "SELECT id FROM point_scales WHERE is_default = 1 LIMIT 1"
+        );
+
+        if ($defaultScale && !empty($defaultScale['id'])) {
+            $scale_id = $defaultScale['id'];
+            error_log("ℹ️  Using default point scale {$scale_id} for event {$event_id}");
+        }
+    }
+
+    // If still no scale, give up
+    if (!$scale_id) {
+        error_log("⚠️  No point scale found for event {$event_id} - no event scale, no series template, no default");
+        return 0;
+    }
 
     // Get points for this position
     $value = $db->getRow(

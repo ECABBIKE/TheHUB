@@ -5,6 +5,7 @@
  */
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/../includes/ranking_functions.php';
+require_once __DIR__ . '/../includes/point-calculations.php';
 require_admin();
 
 $db = getDB();
@@ -90,6 +91,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } catch (Exception $e) {
             $message = 'Fel vid återställning: ' . $e->getMessage();
             $messageType = 'error';
+        }
+
+    } elseif (isset($_POST['recalc_event_points'])) {
+        // Recalculate ranking points for a specific event
+        $eventId = intval($_POST['event_id'] ?? 0);
+        if ($eventId > 0) {
+            try {
+                // Get event info
+                $event = $db->getRow("SELECT name, event_format FROM events WHERE id = ?", [$eventId]);
+                $eventName = $event['name'] ?? "Event $eventId";
+                $eventFormat = $event['event_format'] ?? 'ENDURO';
+
+                // Use appropriate recalculation function based on event format
+                if (strpos($eventFormat, 'DH') !== false) {
+                    $useSwecupDh = ($eventFormat === 'DH_SWECUP');
+                    $stats = recalculateDHEventResults($db, $eventId, null, $useSwecupDh);
+                } else {
+                    $stats = recalculateEventResults($db, $eventId);
+                }
+
+                $message = "Poäng beräknade för \"{$eventName}\": {$stats['points_updated']} resultat uppdaterade.";
+                $messageType = 'success';
+
+                if (!empty($stats['errors'])) {
+                    $message .= " Fel: " . implode(', ', array_slice($stats['errors'], 0, 3));
+                    $messageType = 'warning';
+                }
+            } catch (Exception $e) {
+                $message = 'Fel vid poängberäkning: ' . $e->getMessage();
+                $messageType = 'error';
+            }
         }
     }
 }
@@ -245,7 +277,7 @@ include __DIR__ . '/components/unified-layout.php';
                     <?php foreach ($activeEvents as $event): ?>
                     <tr class="<?= $event['time_weight'] === '50%' ? 'row-faded' : '' ?>">
                         <td>
-                            <a href="/admin/event-results?event_id=<?= $event['id'] ?>" class="admin-link">
+                            <a href="/admin/edit-results?event_id=<?= $event['id'] ?>" class="admin-link">
                                 <?= h($event['name']) ?>
                             </a>
                             <?php if ($event['location']): ?>
@@ -342,11 +374,15 @@ include __DIR__ . '/components/unified-layout.php';
                                 Sätt disciplin
                             </a>
                             <?php elseif ($event['issue'] === 'Inga poäng tilldelade'): ?>
-                            <a href="/admin/event-results?event_id=<?= $event['id'] ?>" class="btn-admin btn-admin-secondary" style="font-size: 0.75rem; padding: 0.25rem 0.5rem;">
-                                Beräkna poäng
-                            </a>
+                            <form method="POST" style="display: inline;">
+                                <?= csrf_field() ?>
+                                <input type="hidden" name="event_id" value="<?= $event['id'] ?>">
+                                <button type="submit" name="recalc_event_points" class="btn-admin btn-admin-primary" style="font-size: 0.75rem; padding: 0.25rem 0.5rem;">
+                                    Beräkna poäng
+                                </button>
+                            </form>
                             <?php elseif ($event['issue'] === 'Inga finished-resultat'): ?>
-                            <a href="/admin/event-results?event_id=<?= $event['id'] ?>" class="btn-admin btn-admin-secondary" style="font-size: 0.75rem; padding: 0.25rem 0.5rem;">
+                            <a href="/admin/edit-results?event_id=<?= $event['id'] ?>" class="btn-admin btn-admin-secondary" style="font-size: 0.75rem; padding: 0.25rem 0.5rem;">
                                 Uppdatera status
                             </a>
                             <?php else: ?>
