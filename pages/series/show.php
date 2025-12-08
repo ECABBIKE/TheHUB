@@ -659,6 +659,96 @@ function toggleClubRiders(btn, e) {
 </script>
 
 <style>
+/* Events Dropdown - Inline CSS for guaranteed styling */
+.events-dropdown {
+    background: var(--color-bg-card, #ffffff);
+    border-radius: var(--radius-lg, 16px);
+    border: 1px solid var(--color-border, #e5e7eb);
+    margin-bottom: var(--space-lg, 24px);
+    overflow: hidden;
+}
+.events-dropdown[open] {
+    box-shadow: var(--shadow-md, 0 4px 12px rgba(0,0,0,0.08));
+}
+.events-dropdown-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--space-md, 16px) var(--space-lg, 24px);
+    cursor: pointer;
+    font-weight: 600;
+    font-size: var(--text-md, 1rem);
+    background: var(--color-bg-surface, #f8f9fa);
+    user-select: none;
+    list-style: none;
+}
+.events-dropdown-header::-webkit-details-marker {
+    display: none;
+}
+.events-dropdown-header::marker {
+    display: none;
+    content: "";
+}
+.events-dropdown-header:hover {
+    background: var(--color-bg-hover, #f1f3f4);
+}
+.events-count {
+    background: var(--color-accent, #61CE70);
+    color: white;
+    font-size: var(--text-xs, 0.75rem);
+    padding: 2px 8px;
+    border-radius: var(--radius-full, 9999px);
+    font-weight: 500;
+}
+.dropdown-arrow {
+    color: var(--color-text-muted, #9ca3af);
+    font-size: var(--text-sm, 0.875rem);
+    transition: transform 0.2s ease;
+}
+.events-dropdown[open] .dropdown-arrow {
+    transform: rotate(180deg);
+}
+.events-dropdown-content {
+    border-top: 1px solid var(--color-border, #e5e7eb);
+    max-height: 400px;
+    overflow-y: auto;
+}
+.event-dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm, 8px);
+    padding: var(--space-sm, 8px) var(--space-lg, 24px);
+    text-decoration: none;
+    color: inherit;
+    border-bottom: 1px solid var(--color-border-light, #f3f4f6);
+    transition: background 0.15s ease;
+}
+.event-dropdown-item:last-child {
+    border-bottom: none;
+}
+.event-dropdown-item:hover {
+    background: var(--color-bg-hover, #f8f9fa);
+}
+.event-num {
+    font-size: var(--text-xs, 0.75rem);
+    color: var(--color-text-muted, #9ca3af);
+    min-width: 28px;
+}
+.event-date {
+    font-size: var(--text-sm, 0.875rem);
+    color: var(--color-text-secondary, #6b7280);
+    min-width: 60px;
+}
+.event-name {
+    flex: 1;
+    font-weight: 500;
+    color: var(--color-text-primary, #1f2937);
+}
+.event-results {
+    font-size: var(--text-sm, 0.875rem);
+    color: var(--color-text-muted, #9ca3af);
+}
+
 /* Filters Bar */
 .filters-bar {
     display: flex;
