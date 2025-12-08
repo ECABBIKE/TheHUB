@@ -285,49 +285,7 @@ try {
   margin: 0;
 }
 
-.filter-bar {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-md);
-  margin-bottom: var(--space-lg);
-  padding: var(--space-md);
-  background: var(--color-bg-card);
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--color-border);
-}
-.filter-select-wrapper {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2xs);
-  flex: 1;
-  min-width: 140px;
-}
-.filter-label {
-  font-size: var(--text-xs);
-  color: var(--color-text-secondary);
-  text-transform: uppercase;
-  font-weight: var(--weight-medium);
-}
-.filter-select {
-  padding: var(--space-sm) var(--space-md);
-  padding-right: var(--space-xl);
-  font-size: var(--text-sm);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  background: var(--color-bg-surface);
-  color: var(--color-text-primary);
-  cursor: pointer;
-  appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236b7280' d='M3 4.5L6 7.5L9 4.5'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 8px center;
-  transition: border-color var(--transition-fast);
-}
-.filter-select:focus {
-  outline: none;
-  border-color: var(--color-accent);
-  box-shadow: 0 0 0 3px rgba(59, 158, 255, 0.1);
-}
+/* Filter bar uses global styles from components.css */
 .mb-lg { margin-bottom: var(--space-lg); }
 
 .events-list {
@@ -433,18 +391,7 @@ try {
   .page-title {
     font-size: var(--text-xl);
   }
-  .filter-bar {
-    flex-direction: column;
-    padding: var(--space-sm);
-    gap: var(--space-sm);
-  }
-  .filter-select-wrapper {
-    width: 100%;
-    min-width: 0;
-  }
-  .filter-select {
-    width: 100%;
-  }
+  /* Filter bar mobile styles are in components.css */
   .event-row {
     padding: var(--space-sm);
     gap: var(--space-sm);
