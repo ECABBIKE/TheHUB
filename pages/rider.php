@@ -1190,6 +1190,190 @@ function copyToClipboard(text) {
 </script>
 
 <style>
+/* ============================================================================
+   EVENTS DROPDOWN - Collapsible event lists (duplicated from components.css)
+   ============================================================================ */
+.events-dropdown {
+    background: var(--color-bg-card);
+    border-radius: var(--radius-lg);
+    margin-bottom: var(--space-lg);
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--color-border);
+}
+
+.events-dropdown-header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    padding: var(--space-md);
+    cursor: pointer;
+    font-weight: var(--weight-medium);
+    list-style: none;
+    background: var(--color-bg-surface);
+    border-bottom: 1px solid transparent;
+    transition: background 0.15s;
+}
+
+.events-dropdown-header:hover {
+    background: var(--color-bg-hover);
+}
+
+.events-dropdown-header::-webkit-details-marker {
+    display: none;
+}
+
+.events-dropdown[open] .events-dropdown-header {
+    border-bottom-color: var(--color-border);
+}
+
+.events-count {
+    color: var(--color-text-muted);
+    font-size: var(--text-sm);
+    margin-left: auto;
+}
+
+.dropdown-arrow {
+    transition: transform 0.2s;
+    color: var(--color-text-muted);
+}
+
+.events-dropdown[open] .dropdown-arrow {
+    transform: rotate(180deg);
+}
+
+.events-dropdown-content {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.event-dropdown-item {
+    display: flex;
+    gap: var(--space-sm);
+    padding: var(--space-sm) var(--space-md);
+    text-decoration: none;
+    color: inherit;
+    align-items: center;
+    border-bottom: 1px solid var(--color-border-light);
+    transition: background 0.15s;
+}
+
+.event-dropdown-item:hover {
+    background: var(--color-bg-hover);
+}
+
+.event-dropdown-item:last-child {
+    border-bottom: none;
+}
+
+.event-position {
+    width: 28px;
+    height: 28px;
+    min-width: 28px;
+    border-radius: var(--radius-sm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    font-weight: 700;
+    background: var(--color-bg-sunken);
+    color: var(--color-text-muted);
+    border: 1px solid var(--color-border);
+}
+
+.event-position.p1 {
+    background: linear-gradient(135deg, #fef3c7, #fde68a);
+    border-color: #FFD700;
+    color: #92400e;
+}
+
+.event-position.p2 {
+    background: linear-gradient(135deg, #f3f4f6, #e5e7eb);
+    border-color: #C0C0C0;
+    color: #4b5563;
+}
+
+.event-position.p3 {
+    background: linear-gradient(135deg, #fed7aa, #fdba74);
+    border-color: #CD7F32;
+    color: #9a3412;
+}
+
+.event-position.motion {
+    color: var(--color-accent);
+}
+
+.event-position.motion i,
+.event-position.motion svg {
+    width: 14px;
+    height: 14px;
+}
+
+.event-position .medal-icon {
+    width: 18px;
+    height: 18px;
+    display: block;
+}
+
+.event-date {
+    color: var(--color-text-muted);
+    min-width: 50px;
+    font-size: var(--text-sm);
+}
+
+.event-name {
+    flex: 1;
+    font-size: var(--text-sm);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.event-results {
+    color: var(--color-text-muted);
+    font-size: var(--text-xs);
+    white-space: nowrap;
+}
+
+/* Series results dropdown variant */
+.series-results-dropdown {
+    margin-top: var(--space-md);
+    box-shadow: none;
+    border: 1px solid var(--color-border);
+}
+
+.series-results-dropdown .events-dropdown-header {
+    padding: var(--space-sm) var(--space-md);
+    font-size: var(--text-sm);
+}
+
+.series-results-dropdown .events-dropdown-content {
+    max-height: 300px;
+}
+
+/* Year divider */
+.year-divider {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    padding: var(--space-xs) var(--space-md);
+    background: var(--color-bg-sunken);
+}
+
+.year-label {
+    font-size: var(--text-xs);
+    font-weight: var(--weight-semibold);
+    color: var(--color-text-muted);
+    white-space: nowrap;
+}
+
+.year-line {
+    flex: 1;
+    height: 1px;
+    background: var(--color-border-light);
+}
+
 /* Profile Hero */
 .profile-hero {
     background: var(--color-bg-surface);
@@ -2943,6 +3127,42 @@ function copyToClipboard(text) {
 
 /* Mobile improvements */
 @media (max-width: 599px) {
+    /* Events dropdown mobile */
+    .events-dropdown-header {
+        padding: var(--space-sm) var(--space-md);
+        font-size: var(--text-sm);
+    }
+
+    .event-dropdown-item {
+        padding: var(--space-xs) var(--space-sm);
+        gap: var(--space-xs);
+    }
+
+    .event-position {
+        width: 24px;
+        height: 24px;
+        min-width: 24px;
+        font-size: 0.65rem;
+    }
+
+    .event-position .medal-icon {
+        width: 16px;
+        height: 16px;
+    }
+
+    .event-date {
+        min-width: 40px;
+        font-size: var(--text-xs);
+    }
+
+    .event-name {
+        font-size: var(--text-xs);
+    }
+
+    .event-results {
+        display: none;
+    }
+
     .rider-stats-trend {
         gap: var(--space-sm);
         margin-bottom: var(--space-md);
