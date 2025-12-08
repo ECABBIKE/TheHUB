@@ -810,6 +810,68 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
             <span>Ingen ranking tillgänglig</span>
         </div>
         <?php endif; ?>
+
+        <?php
+        // Get ranking events breakdown
+        $rankingEvents = [];
+        if (isset($riderRankingDetails) && !empty($riderRankingDetails['events'])) {
+            $rankingEvents = $riderRankingDetails['events'];
+        }
+        ?>
+        <?php if (!empty($rankingEvents)): ?>
+        <!-- Ranking Breakdown Dropdown -->
+        <details class="ranking-breakdown-details">
+            <summary class="ranking-breakdown-summary">
+                <span class="breakdown-title">
+                    <i data-lucide="calculator"></i>
+                    Visa uträkning
+                </span>
+                <span class="breakdown-total"><?= number_format($rankingPoints, 1) ?> p</span>
+                <i data-lucide="chevron-down" class="breakdown-chevron"></i>
+            </summary>
+            <div class="ranking-breakdown-content">
+                <div class="breakdown-formula">
+                    <span class="formula-label">Formel:</span>
+                    <span class="formula-text">Baspoäng × Fältstorlek × Eventtyp × Tidsvikt</span>
+                </div>
+                <div class="breakdown-events-list">
+                    <?php foreach ($rankingEvents as $event): ?>
+                    <div class="breakdown-event">
+                        <div class="breakdown-event-header">
+                            <span class="breakdown-event-name"><?= htmlspecialchars($event['event_name'] ?? 'Event') ?></span>
+                            <span class="breakdown-event-points">+<?= number_format($event['weighted_points'] ?? 0, 1) ?></span>
+                        </div>
+                        <div class="breakdown-event-meta">
+                            <span class="breakdown-event-date"><?= date('j M Y', strtotime($event['event_date'])) ?></span>
+                            <span class="breakdown-event-class"><?= htmlspecialchars($event['class_name'] ?? '') ?></span>
+                        </div>
+                        <div class="breakdown-event-calc">
+                            <span class="calc-item">
+                                <span class="calc-label">Bas</span>
+                                <span class="calc-value"><?= number_format($event['original_points'] ?? 0, 1) ?></span>
+                            </span>
+                            <span class="calc-op">×</span>
+                            <span class="calc-item">
+                                <span class="calc-label">Fält</span>
+                                <span class="calc-value"><?= number_format(($event['field_multiplier'] ?? 1) * 100, 0) ?>%</span>
+                            </span>
+                            <span class="calc-op">×</span>
+                            <span class="calc-item">
+                                <span class="calc-label">Event</span>
+                                <span class="calc-value"><?= number_format(($event['event_level_multiplier'] ?? 1) * 100, 0) ?>%</span>
+                            </span>
+                            <span class="calc-op">×</span>
+                            <span class="calc-item <?= ($event['time_multiplier'] ?? 1) < 1 ? 'faded' : '' ?>">
+                                <span class="calc-label">Tid</span>
+                                <span class="calc-value"><?= number_format(($event['time_multiplier'] ?? 1) * 100, 0) ?>%</span>
+                            </span>
+                        </div>
+                    </div>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+        </details>
+        <?php endif; ?>
     </div>
 </div>
 <?php elseif ($motionStarts > 0): ?>
@@ -2696,6 +2758,189 @@ function copyToClipboard(text) {
     margin-top: var(--space-xs);
 }
 
+/* Ranking Breakdown Dropdown */
+.ranking-breakdown-details {
+    margin-top: var(--space-md);
+    border-top: 1px solid var(--color-border);
+    padding-top: var(--space-md);
+}
+
+.ranking-breakdown-summary {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    padding: var(--space-sm) var(--space-md);
+    background: var(--color-bg-sunken);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    list-style: none;
+    transition: background var(--transition-fast);
+}
+
+.ranking-breakdown-summary::-webkit-details-marker {
+    display: none;
+}
+
+.ranking-breakdown-summary:hover {
+    background: var(--color-bg-hover);
+}
+
+.ranking-breakdown-details[open] .ranking-breakdown-summary {
+    border-radius: var(--radius-md) var(--radius-md) 0 0;
+}
+
+.breakdown-title {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    color: var(--color-text-primary);
+}
+
+.breakdown-title i {
+    width: 16px;
+    height: 16px;
+    color: var(--color-accent);
+}
+
+.breakdown-total {
+    margin-left: auto;
+    font-size: var(--text-sm);
+    font-weight: var(--weight-bold);
+    color: var(--color-accent);
+}
+
+.breakdown-chevron {
+    width: 16px;
+    height: 16px;
+    color: var(--color-text-muted);
+    transition: transform var(--transition-fast);
+}
+
+.ranking-breakdown-details[open] .breakdown-chevron {
+    transform: rotate(180deg);
+}
+
+.ranking-breakdown-content {
+    background: var(--color-bg-sunken);
+    border-radius: 0 0 var(--radius-md) var(--radius-md);
+    padding: var(--space-md);
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.breakdown-formula {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-xs);
+    padding: var(--space-sm);
+    background: var(--color-bg-card);
+    border-radius: var(--radius-sm);
+    margin-bottom: var(--space-md);
+    font-size: var(--text-xs);
+}
+
+.formula-label {
+    font-weight: var(--weight-medium);
+    color: var(--color-text-secondary);
+}
+
+.formula-text {
+    color: var(--color-text-muted);
+    font-family: monospace;
+}
+
+.breakdown-events-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+}
+
+.breakdown-event {
+    background: var(--color-bg-card);
+    border-radius: var(--radius-sm);
+    padding: var(--space-sm);
+    border: 1px solid var(--color-border);
+}
+
+.breakdown-event-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: var(--space-sm);
+    margin-bottom: var(--space-2xs);
+}
+
+.breakdown-event-name {
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    color: var(--color-text-primary);
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.breakdown-event-points {
+    font-size: var(--text-sm);
+    font-weight: var(--weight-bold);
+    color: var(--color-accent);
+    white-space: nowrap;
+}
+
+.breakdown-event-meta {
+    display: flex;
+    gap: var(--space-sm);
+    font-size: var(--text-xs);
+    color: var(--color-text-muted);
+    margin-bottom: var(--space-xs);
+}
+
+.breakdown-event-calc {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2xs);
+    padding: var(--space-xs);
+    background: var(--color-bg-sunken);
+    border-radius: var(--radius-xs);
+}
+
+.calc-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: var(--space-2xs) var(--space-xs);
+    background: var(--color-bg-card);
+    border-radius: var(--radius-xs);
+    min-width: 40px;
+}
+
+.calc-item.faded {
+    opacity: 0.5;
+}
+
+.calc-label {
+    font-size: 9px;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+    letter-spacing: 0.3px;
+}
+
+.calc-value {
+    font-size: var(--text-xs);
+    font-weight: var(--weight-bold);
+    color: var(--color-text-primary);
+}
+
+.calc-op {
+    font-size: var(--text-xs);
+    color: var(--color-text-muted);
+    padding: 0 2px;
+}
+
 /* Mobile improvements */
 @media (max-width: 599px) {
     .rider-stats-trend {
@@ -2854,6 +3099,84 @@ function copyToClipboard(text) {
 
     .ranking-bar {
         height: 6px;
+    }
+
+    /* Ranking breakdown mobile */
+    .ranking-breakdown-details {
+        margin-top: var(--space-sm);
+        padding-top: var(--space-sm);
+    }
+
+    .ranking-breakdown-summary {
+        padding: var(--space-xs) var(--space-sm);
+    }
+
+    .breakdown-title {
+        font-size: var(--text-xs);
+    }
+
+    .breakdown-title i {
+        width: 14px;
+        height: 14px;
+    }
+
+    .breakdown-total {
+        font-size: var(--text-xs);
+    }
+
+    .breakdown-chevron {
+        width: 14px;
+        height: 14px;
+    }
+
+    .ranking-breakdown-content {
+        padding: var(--space-sm);
+        max-height: 300px;
+    }
+
+    .breakdown-formula {
+        padding: var(--space-xs);
+        flex-direction: column;
+        font-size: 10px;
+    }
+
+    .breakdown-event {
+        padding: var(--space-xs);
+    }
+
+    .breakdown-event-name {
+        font-size: var(--text-xs);
+    }
+
+    .breakdown-event-points {
+        font-size: var(--text-xs);
+    }
+
+    .breakdown-event-meta {
+        font-size: 10px;
+        flex-wrap: wrap;
+    }
+
+    .breakdown-event-calc {
+        gap: 2px;
+        padding: var(--space-2xs);
+    }
+
+    .calc-item {
+        padding: 2px 4px;
+        min-width: 32px;
+    }
+
+    .calc-label {
+        font-size: 8px;
+    }
+
+    .calc-value {
+        font-size: 10px;
+    }
+
+    .calc-op {
+        font-size: 10px;
     }
 }
 
