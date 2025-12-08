@@ -100,17 +100,18 @@ if (isset($_GET['action']) && $_GET['action'] === 'merge') {
  $resultsDeleted = 0;
 
  foreach ($mergeIds as $oldId) {
- // Get results for this duplicate rider
+ // Get results for this duplicate rider (include class_id for multi-class support)
  $oldResults = $db->getAll(
- "SELECT id, event_id FROM results WHERE cyclist_id = ?",
+ "SELECT id, event_id, class_id FROM results WHERE cyclist_id = ?",
   [$oldId]
  );
 
  foreach ($oldResults as $oldResult) {
-  // Check if kept rider already has result for this event
+  // Check if kept rider already has result for this event AND class
+  // Using <=> for NULL-safe comparison (rider can have one result per class per event)
   $existing = $db->getRow(
- "SELECT id FROM results WHERE cyclist_id = ? AND event_id = ?",
-  [$keepId, $oldResult['event_id']]
+ "SELECT id FROM results WHERE cyclist_id = ? AND event_id = ? AND class_id <=> ?",
+  [$keepId, $oldResult['event_id'], $oldResult['class_id']]
   );
 
   if ($existing) {
@@ -260,13 +261,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['auto_merge_by_lastnam
  if (!$keepRider) continue;
 
  foreach ($ids as $oldId) {
- // Move all results
- $oldResults = $db->getAll("SELECT id, event_id FROM results WHERE cyclist_id = ?", [$oldId]);
+ // Move all results (include class_id for multi-class support)
+ $oldResults = $db->getAll("SELECT id, event_id, class_id FROM results WHERE cyclist_id = ?", [$oldId]);
 
  foreach ($oldResults as $oldResult) {
+  // Check if kept rider already has result for this event AND class
   $existing = $db->getRow(
- "SELECT id FROM results WHERE cyclist_id = ? AND event_id = ?",
-  [$keepId, $oldResult['event_id']]
+ "SELECT id FROM results WHERE cyclist_id = ? AND event_id = ? AND class_id <=> ?",
+  [$keepId, $oldResult['event_id'], $oldResult['class_id']]
   );
 
   if ($existing) {
@@ -336,17 +338,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['auto_merge_all'])) {
  array_shift($ids); // Remove keep ID from list
 
  foreach ($ids as $oldId) {
- // Get results for duplicate rider
+ // Get results for duplicate rider (include class_id for multi-class support)
  $oldResults = $db->getAll(
- "SELECT id, event_id FROM results WHERE cyclist_id = ?",
+ "SELECT id, event_id, class_id FROM results WHERE cyclist_id = ?",
   [$oldId]
  );
 
  foreach ($oldResults as $oldResult) {
-  // Check if kept rider already has result for this event
+  // Check if kept rider already has result for this event AND class
   $existing = $db->getRow(
- "SELECT id FROM results WHERE cyclist_id = ? AND event_id = ?",
-  [$keepId, $oldResult['event_id']]
+ "SELECT id FROM results WHERE cyclist_id = ? AND event_id = ? AND class_id <=> ?",
+  [$keepId, $oldResult['event_id'], $oldResult['class_id']]
   );
 
   if ($existing) {

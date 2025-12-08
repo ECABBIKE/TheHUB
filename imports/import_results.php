@@ -94,10 +94,11 @@ class ResultImporter {
                     // Format time
                     $finishTime = $this->formatTime($data['time']);
 
-                    // Check if result already exists
+                    // Check if result already exists for this rider in this category
+                    // NOTE: We check category_id to allow riders to compete in multiple classes per event
                     $existingResult = $this->db->getRow(
-                        "SELECT id FROM results WHERE event_id = ? AND cyclist_id = ?",
-                        [$eventId, $cyclistId]
+                        "SELECT id FROM results WHERE event_id = ? AND cyclist_id = ? AND category_id <=> ?",
+                        [$eventId, $cyclistId, $categoryId]
                     );
 
                     if ($existingResult) {

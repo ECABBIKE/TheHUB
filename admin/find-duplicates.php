@@ -152,15 +152,16 @@ if (isset($_GET['action']) && $_GET['action'] === 'merge') {
   throw new Exception("En av ryttarna hittades inte");
   }
 
-  // Move results from remove to keep
-  $resultsToMove = $db->getAll("SELECT id, event_id FROM results WHERE cyclist_id = ?", [$removeId]);
+  // Move results from remove to keep (include class_id for multi-class support)
+  $resultsToMove = $db->getAll("SELECT id, event_id, class_id FROM results WHERE cyclist_id = ?", [$removeId]);
   $moved = 0;
   $deleted = 0;
 
   foreach ($resultsToMove as $result) {
+  // Check if kept rider already has result for this event AND class
   $existing = $db->getRow(
-  "SELECT id FROM results WHERE cyclist_id = ? AND event_id = ?",
-   [$keepId, $result['event_id']]
+  "SELECT id FROM results WHERE cyclist_id = ? AND event_id = ? AND class_id <=> ?",
+   [$keepId, $result['event_id'], $result['class_id']]
   );
 
   if ($existing) {
