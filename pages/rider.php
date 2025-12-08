@@ -817,9 +817,9 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
 <div class="highlight-card">
     <div class="highlight-icon"><i data-lucide="bike"></i></div>
     <div class="highlight-content">
-        <h3 class="highlight-title">Motion-deltagare</h3>
-        <p class="highlight-text">Har deltagit i <strong><?= $motionStarts ?></strong> motion-lopp och fullföljt <strong><?= $motionFinished ?></strong>.</p>
-        <p class="highlight-subtext">Motion-klasser är icke-tävlande och ger inga rankingpoäng.</p>
+        <h3 class="highlight-title">Motion</h3>
+        <p class="highlight-text"><strong><?= $motionStarts ?></strong> starter, <strong><?= $motionFinished ?></strong> fullföljda</p>
+        <p class="highlight-subtext">Icke-tävlande klass utan ranking.</p>
     </div>
 </div>
 <?php else: ?>

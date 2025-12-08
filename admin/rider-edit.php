@@ -124,6 +124,43 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
  $message = 'Förnamn och efternamn är obligatoriska';
  $messageType = 'error';
  } else {
+ // Helper function to normalize social media links
+ $normalizeSocial = function($value, $platform) {
+  $value = trim($value);
+  if (empty($value)) return '';
+
+  // If it's already a URL, return as-is
+  if (strpos($value, 'http://') === 0 || strpos($value, 'https://') === 0) {
+   return $value;
+  }
+
+  // Remove @ prefix if present
+  $username = ltrim($value, '@');
+
+  switch ($platform) {
+   case 'instagram':
+    return 'https://instagram.com/' . $username;
+   case 'facebook':
+    return 'https://facebook.com/' . $username;
+   case 'strava':
+    // Could be athlete ID or URL path
+    if (is_numeric($username)) {
+     return 'https://www.strava.com/athletes/' . $username;
+    }
+    return 'https://www.strava.com/athletes/' . $username;
+   case 'youtube':
+    // Handle @username or channel name
+    if (strpos($value, '@') === 0) {
+     return 'https://youtube.com/' . $value;
+    }
+    return 'https://youtube.com/@' . $username;
+   case 'tiktok':
+    return 'https://tiktok.com/@' . $username;
+   default:
+    return $value;
+  }
+ };
+
  // Prepare rider data (read-only fields excluded: license_number, license_type, license_category, license_valid_until, discipline)
  $riderData = [
  'firstname' => $firstname,
@@ -136,12 +173,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
  'team' => trim($_POST['team'] ?? ''),
  'notes' => trim($_POST['notes'] ?? ''),
  'active' => isset($_POST['active']) ? 1 : 0,
- // Social media links
- 'social_instagram' => trim($_POST['social_instagram'] ?? ''),
- 'social_facebook' => trim($_POST['social_facebook'] ?? ''),
- 'social_strava' => trim($_POST['social_strava'] ?? ''),
- 'social_youtube' => trim($_POST['social_youtube'] ?? ''),
- 'social_tiktok' => trim($_POST['social_tiktok'] ?? ''),
+ // Social media links (normalized to full URLs)
+ 'social_instagram' => $normalizeSocial($_POST['social_instagram'] ?? '', 'instagram'),
+ 'social_facebook' => $normalizeSocial($_POST['social_facebook'] ?? '', 'facebook'),
+ 'social_strava' => $normalizeSocial($_POST['social_strava'] ?? '', 'strava'),
+ 'social_youtube' => $normalizeSocial($_POST['social_youtube'] ?? '', 'youtube'),
+ 'social_tiktok' => $normalizeSocial($_POST['social_tiktok'] ?? '', 'tiktok'),
  ];
 
  try {
@@ -272,27 +309,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // Get clubs for dropdown
 $clubs = $db->getAll("SELECT id, name FROM clubs WHERE active = 1 ORDER BY name");
 
-$pageTitle = 'Redigera Deltagare';
-$pageType = 'admin';
-include __DIR__ . '/../includes/layout-header.php';
+// Page config for admin layout
+$page_title = 'Redigera Deltagare';
+$breadcrumbs = [
+    ['label' => 'Deltagare', 'url' => '/admin/riders'],
+    ['label' => h($rider['firstname'] . ' ' . $rider['lastname'])]
+];
+
+include __DIR__ . '/components/unified-layout.php';
 ?>
 
-<main class="main-content">
- <div class="container" style="max-width: 900px;">
- <!-- Header -->
- <div class="flex items-center justify-between mb-lg">
- <h1 class="text-primary">
- <i data-lucide="user-circle"></i>
- Redigera Deltagare
- </h1>
- <a href="/admin/riders.php" class="btn btn--secondary">
- <i data-lucide="arrow-left"></i>
- Tillbaka
- </a>
- </div>
-
- <!-- Message -->
- <?php if ($message): ?>
+<!-- Message -->
+<?php if ($message): ?>
  <div class="alert alert--<?= h($messageType) ?> mb-lg">
  <i data-lucide="<?= $messageType === 'success' ? 'check-circle' : 'alert-circle' ?>"></i>
  <?= h($message) ?>
@@ -645,7 +673,7 @@ include __DIR__ . '/../includes/layout-header.php';
   name="social_instagram"
   class="input"
   value="<?= h($rider['social_instagram'] ?? '') ?>"
-  placeholder="@användarnamn eller URL"
+  placeholder="användarnamn eller URL"
   >
   </div>
 
@@ -661,7 +689,7 @@ include __DIR__ . '/../includes/layout-header.php';
   name="social_facebook"
   class="input"
   value="<?= h($rider['social_facebook'] ?? '') ?>"
-  placeholder="Användarnamn eller URL"
+  placeholder="användarnamn eller URL"
   >
   </div>
 
@@ -709,7 +737,7 @@ include __DIR__ . '/../includes/layout-header.php';
   name="social_tiktok"
   class="input"
   value="<?= h($rider['social_tiktok'] ?? '') ?>"
-  placeholder="@användarnamn eller URL"
+  placeholder="användarnamn eller URL"
   >
   </div>
 
@@ -918,8 +946,6 @@ include __DIR__ . '/../includes/layout-header.php';
  </div>
  </div>
  <?php endif; ?>
- </div>
-</main>
 
 <style>
 @media (max-width: 768px) {
@@ -940,4 +966,4 @@ function confirmDeleteAccount() {
 }
 </script>
 
-<?php include __DIR__ . '/../includes/layout-footer.php'; ?>
+<?php include __DIR__ . '/components/unified-layout-footer.php'; ?>
