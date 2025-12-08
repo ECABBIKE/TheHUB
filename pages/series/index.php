@@ -1,7 +1,7 @@
 <?php
 /**
  * TheHUB V3.5 - Series List
- * Shows all active competition series
+ * Shows all competition series with year selector
  */
 
 // Prevent direct access
@@ -21,9 +21,32 @@ try {
     $useSeriesEvents = false;
 }
 
-// Get all active series with counts
+// Get available years
+$yearStmt = $pdo->query("
+    SELECT DISTINCT year FROM series
+    WHERE status IN ('active', 'completed') AND year IS NOT NULL
+    ORDER BY year DESC
+");
+$availableYears = $yearStmt->fetchAll(PDO::FETCH_COLUMN);
+
+// Default year: use query param, or current year if available, else first in list
+$currentYear = (int)date('Y');
+$selectedYear = isset($_GET['year']) ? (int)$_GET['year'] : null;
+
+if (!$selectedYear) {
+    // Default to current year if it exists, otherwise newest available
+    if (in_array($currentYear, $availableYears)) {
+        $selectedYear = $currentYear;
+    } elseif (!empty($availableYears)) {
+        $selectedYear = $availableYears[0];
+    } else {
+        $selectedYear = $currentYear;
+    }
+}
+
+// Get series for selected year
 if ($useSeriesEvents) {
-    $stmt = $pdo->query("
+    $stmt = $pdo->prepare("
         SELECT s.id, s.name, s.description, s.year, s.status, s.logo, s.start_date, s.end_date,
                COUNT(DISTINCT se.event_id) as event_count,
                (SELECT COUNT(DISTINCT r.cyclist_id)
@@ -32,12 +55,12 @@ if ($useSeriesEvents) {
                 WHERE se2.series_id = s.id) as participant_count
         FROM series s
         LEFT JOIN series_events se ON s.id = se.series_id
-        WHERE s.status IN ('active', 'completed')
+        WHERE s.status IN ('active', 'completed') AND s.year = ?
         GROUP BY s.id
-        ORDER BY s.year DESC, s.name ASC
+        ORDER BY s.name ASC
     ");
 } else {
-    $stmt = $pdo->query("
+    $stmt = $pdo->prepare("
         SELECT s.id, s.name, s.description, s.year, s.status, s.logo, s.start_date, s.end_date,
                COUNT(DISTINCT e.id) as event_count,
                (SELECT COUNT(DISTINCT r.cyclist_id)
@@ -46,11 +69,12 @@ if ($useSeriesEvents) {
                 WHERE e2.series_id = s.id) as participant_count
         FROM series s
         LEFT JOIN events e ON s.id = e.series_id
-        WHERE s.status IN ('active', 'completed')
+        WHERE s.status IN ('active', 'completed') AND s.year = ?
         GROUP BY s.id
-        ORDER BY s.year DESC, s.name ASC
+        ORDER BY s.name ASC
     ");
 }
+$stmt->execute([$selectedYear]);
 $seriesList = $stmt->fetchAll(PDO::FETCH_ASSOC);
 ?>
 
@@ -62,46 +86,42 @@ $seriesList = $stmt->fetchAll(PDO::FETCH_ASSOC);
     <p class="page-subtitle">Alla GravitySeries och andra tävlingsserier</p>
 </div>
 
+<!-- Year Selector -->
+<div class="year-selector">
+    <?php foreach ($availableYears as $year): ?>
+        <a href="?year=<?= $year ?>" class="year-btn <?= $year == $selectedYear ? 'active' : '' ?>">
+            <?= $year ?>
+        </a>
+    <?php endforeach; ?>
+</div>
+
 <?php if (empty($seriesList)): ?>
     <div class="empty-state">
         <div class="empty-state-icon">🏆</div>
-        <h2>Inga serier ännu</h2>
-        <p>Det finns inga aktiva tävlingsserier registrerade.</p>
+        <h2>Inga serier för <?= $selectedYear ?></h2>
+        <p>Det finns inga tävlingsserier registrerade för detta år.</p>
     </div>
 <?php else: ?>
-    <div class="series-grid">
+    <div class="series-logo-grid">
         <?php foreach ($seriesList as $s): ?>
-        <a href="/series/<?= $s['id'] ?>" class="series-card">
-            <div class="series-card-header">
-                <div class="series-card-logo">
-                    <?php if ($s['logo']): ?>
-                        <img src="<?= htmlspecialchars($s['logo']) ?>" alt="<?= htmlspecialchars($s['name']) ?>">
-                    <?php else: ?>
-                        <span class="series-card-logo-placeholder">🏆</span>
+        <a href="/series/<?= $s['id'] ?>" class="series-logo-card">
+            <div class="series-logo-wrapper">
+                <?php if ($s['logo']): ?>
+                    <img src="<?= htmlspecialchars($s['logo']) ?>" alt="<?= htmlspecialchars($s['name']) ?>" class="series-logo-img">
+                <?php else: ?>
+                    <div class="series-logo-placeholder">🏆</div>
+                <?php endif; ?>
+                <span class="series-year-badge"><?= $s['year'] ?></span>
+            </div>
+            <div class="series-logo-info">
+                <h3 class="series-logo-name"><?= htmlspecialchars($s['name']) ?></h3>
+                <div class="series-logo-meta">
+                    <span><?= $s['event_count'] ?> tävlingar</span>
+                    <?php if ($s['participant_count']): ?>
+                        <span class="meta-sep">•</span>
+                        <span><?= $s['participant_count'] ?> deltagare</span>
                     <?php endif; ?>
                 </div>
-                <?php if ($s['year']): ?>
-                    <span class="series-badge"><?= $s['year'] ?></span>
-                <?php endif; ?>
-            </div>
-
-            <h2 class="series-card-title"><?= htmlspecialchars($s['name']) ?></h2>
-
-            <?php if ($s['description']): ?>
-                <p class="series-card-description"><?= htmlspecialchars($s['description']) ?></p>
-            <?php endif; ?>
-
-            <div class="series-card-stats">
-                <div class="stat">
-                    <span class="stat-value"><?= $s['event_count'] ?></span>
-                    <span class="stat-label">tävlingar</span>
-                </div>
-                <?php if ($s['participant_count']): ?>
-                <div class="stat">
-                    <span class="stat-value"><?= $s['participant_count'] ?></span>
-                    <span class="stat-label">deltagare</span>
-                </div>
-                <?php endif; ?>
             </div>
         </a>
         <?php endforeach; ?>
@@ -110,7 +130,7 @@ $seriesList = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 <style>
 .page-header {
-    margin-bottom: var(--space-xl);
+    margin-bottom: var(--space-lg);
 }
 .page-title {
     display: flex;
@@ -131,111 +151,131 @@ $seriesList = $stmt->fetchAll(PDO::FETCH_ASSOC);
     color: var(--color-text-secondary);
     margin: 0;
 }
-.series-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: var(--space-md);
+
+/* Year Selector */
+.year-selector {
+    display: flex;
+    gap: var(--space-xs);
+    margin-bottom: var(--space-xl);
+    flex-wrap: wrap;
 }
 
-.series-card {
-    display: flex;
-    flex-direction: column;
-    padding: var(--space-md);
+.year-btn {
+    padding: var(--space-sm) var(--space-lg);
     background: var(--color-bg-card);
     border: 1px solid var(--color-border);
-    border-radius: var(--radius-lg);
+    border-radius: var(--radius-full);
     text-decoration: none;
-    color: inherit;
+    color: var(--color-text-secondary);
+    font-weight: var(--weight-medium);
+    font-size: var(--text-sm);
     transition: all var(--transition-fast);
 }
 
-.series-card:hover {
+.year-btn:hover {
     border-color: var(--color-accent);
-    box-shadow: var(--shadow-md);
-    transform: translateY(-2px);
+    color: var(--color-accent);
 }
 
-.series-card-header {
+.year-btn.active {
+    background: var(--color-accent);
+    border-color: var(--color-accent);
+    color: white;
+}
+
+/* Series Logo Grid */
+.series-logo-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: var(--space-lg);
+    max-width: 900px;
+}
+
+.series-logo-card {
     display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    margin-bottom: var(--space-sm);
+    flex-direction: column;
+    align-items: center;
+    text-decoration: none;
+    color: inherit;
+    transition: transform var(--transition-fast);
 }
 
-.series-card-logo {
-    width: 48px;
-    height: 48px;
-    flex-shrink: 0;
+.series-logo-card:hover {
+    transform: translateY(-4px);
+}
+
+.series-logo-card:hover .series-logo-wrapper {
+    box-shadow: var(--shadow-lg);
+    border-color: var(--color-accent);
+}
+
+.series-logo-wrapper {
+    position: relative;
+    width: 120px;
+    height: 120px;
+    background: var(--color-bg-card);
+    border: 2px solid var(--color-border);
+    border-radius: var(--radius-lg);
     display: flex;
     align-items: center;
     justify-content: center;
-    background: var(--color-bg-sunken);
-    border-radius: var(--radius-md);
     overflow: hidden;
+    transition: all var(--transition-fast);
 }
 
-.series-card-logo img {
-    max-width: 100%;
-    max-height: 100%;
+.series-logo-img {
+    max-width: 90%;
+    max-height: 90%;
     object-fit: contain;
 }
 
-.series-card-logo-placeholder {
-    font-size: 1.5rem;
+.series-logo-placeholder {
+    font-size: 3rem;
 }
 
-.series-badge {
-    background: var(--color-accent);
+/* Year badge - like Gravity-ID badge */
+.series-year-badge {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    background: linear-gradient(135deg, var(--color-accent) 0%, #00A3E0 100%);
     color: white;
-    padding: 2px 10px;
-    border-radius: var(--radius-full);
     font-size: var(--text-xs);
-    font-weight: var(--weight-semibold);
-}
-
-.series-card-title {
-    font-size: var(--text-md);
-    font-weight: var(--weight-semibold);
-    margin: 0 0 var(--space-xs);
-    line-height: 1.3;
-}
-
-.series-card-description {
-    font-size: var(--text-sm);
-    color: var(--color-text-secondary);
-    margin: 0 0 var(--space-sm);
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-    flex: 1;
-}
-
-.series-card-stats {
-    display: flex;
-    gap: var(--space-lg);
-    padding-top: var(--space-sm);
-    border-top: 1px solid var(--color-border-light);
-    margin-top: auto;
-}
-
-.stat {
-    display: flex;
-    flex-direction: column;
-}
-
-.stat-value {
-    font-size: var(--text-lg);
     font-weight: var(--weight-bold);
-    color: var(--color-accent);
-    line-height: 1;
+    padding: 4px 10px;
+    border-radius: var(--radius-full);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    border: 2px solid var(--color-bg-card);
 }
 
-.stat-label {
+.series-logo-info {
+    text-align: center;
+    margin-top: var(--space-sm);
+    max-width: 100%;
+}
+
+.series-logo-name {
+    font-size: var(--text-sm);
+    font-weight: var(--weight-semibold);
+    margin: 0 0 var(--space-2xs);
+    line-height: 1.3;
+    color: var(--color-text-primary);
+}
+
+.series-logo-meta {
     font-size: var(--text-xs);
+    color: var(--color-text-muted);
+    display: flex;
+    justify-content: center;
+    gap: var(--space-2xs);
+    flex-wrap: wrap;
+}
+
+.meta-sep {
     color: var(--color-text-muted);
 }
 
+/* Empty State */
 .empty-state {
     text-align: center;
     padding: var(--space-3xl);
@@ -257,85 +297,35 @@ $seriesList = $stmt->fetchAll(PDO::FETCH_ASSOC);
     margin: 0;
 }
 
-/* Tablet: 2 kolumner */
-@media (min-width: 600px) and (max-width: 900px) {
-    .series-grid {
-        grid-template-columns: repeat(2, 1fr);
-    }
-}
-
-/* Desktop: max 3 kolumner, centrerade */
-@media (min-width: 901px) {
-    .series-grid {
-        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-        max-width: 1000px;
-    }
-}
-
-/* Mobil: kompaktare kort */
+/* Mobile */
 @media (max-width: 599px) {
-    .series-grid {
-        grid-template-columns: 1fr;
-        gap: var(--space-sm);
+    .year-selector {
+        justify-content: center;
     }
 
-    .series-card {
-        flex-direction: row;
-        flex-wrap: wrap;
-        align-items: center;
-        padding: var(--space-sm) var(--space-md);
-        gap: var(--space-sm);
+    .year-btn {
+        padding: var(--space-xs) var(--space-md);
     }
 
-    .series-card-header {
-        margin-bottom: 0;
-        flex-shrink: 0;
-    }
-
-    .series-card-logo {
-        width: 40px;
-        height: 40px;
-    }
-
-    .series-badge {
-        position: absolute;
-        top: var(--space-sm);
-        right: var(--space-sm);
-    }
-
-    .series-card {
-        position: relative;
-    }
-
-    .series-card-title {
-        flex: 1;
-        min-width: 0;
-        font-size: var(--text-sm);
-        margin: 0;
-    }
-
-    .series-card-description {
-        display: none;
-    }
-
-    .series-card-stats {
-        width: 100%;
-        padding-top: var(--space-xs);
+    .series-logo-grid {
+        grid-template-columns: repeat(2, 1fr);
         gap: var(--space-md);
     }
 
-    .stat {
-        flex-direction: row;
-        align-items: baseline;
-        gap: 4px;
+    .series-logo-wrapper {
+        width: 100px;
+        height: 100px;
     }
 
-    .stat-value {
-        font-size: var(--text-sm);
-    }
-
-    .stat-label {
+    .series-logo-name {
         font-size: var(--text-xs);
+    }
+}
+
+/* Tablet */
+@media (min-width: 600px) and (max-width: 900px) {
+    .series-logo-grid {
+        grid-template-columns: repeat(3, 1fr);
     }
 }
 </style>

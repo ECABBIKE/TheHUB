@@ -123,7 +123,8 @@ try {
             e.id as event_id, e.name as event_name, e.date as event_date, e.location,
             s.id as series_id, s.name as series_name,
             cls.display_name as class_name,
-            COALESCE(cls.awards_points, 1) as awards_podiums
+            COALESCE(cls.awards_points, 1) as awards_podiums,
+            CASE WHEN LOWER(COALESCE(cls.display_name, cls.name, '')) LIKE '%motion%' THEN 1 ELSE 0 END as is_motion
         FROM results res
         JOIN events e ON res.event_id = e.id
         LEFT JOIN series s ON e.series_id = s.id
@@ -135,11 +136,20 @@ try {
     $stmt->execute([$riderId]);
     $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // Calculate stats from results if not cached
-    $totalStarts = $rider['stats_total_starts'] ?: count($results);
-    $finishedRaces = $rider['stats_total_finished'] ?: count(array_filter($results, fn($r) => $r['status'] === 'finished'));
-    $wins = $rider['stats_total_wins'] ?: count(array_filter($results, fn($r) => $r['position'] == 1 && $r['status'] === 'finished'));
-    $podiums = $rider['stats_total_podiums'] ?: count(array_filter($results, fn($r) => $r['position'] <= 3 && $r['status'] === 'finished'));
+    // Separate competitive and motion results
+    $competitiveResults = array_filter($results, fn($r) => !$r['is_motion']);
+    $motionResults = array_filter($results, fn($r) => $r['is_motion']);
+    $hasCompetitiveResults = count($competitiveResults) > 0;
+
+    // Motion stats (for highlight section)
+    $motionStarts = count($motionResults);
+    $motionFinished = count(array_filter($motionResults, fn($r) => $r['status'] === 'finished'));
+
+    // Calculate stats from competitive results only (not motion)
+    $totalStarts = count($competitiveResults);
+    $finishedRaces = count(array_filter($competitiveResults, fn($r) => $r['status'] === 'finished'));
+    $wins = count(array_filter($competitiveResults, fn($r) => $r['position'] == 1 && $r['status'] === 'finished'));
+    $podiums = count(array_filter($competitiveResults, fn($r) => $r['position'] <= 3 && $r['status'] === 'finished'));
 
     // === TREND SECTION DATA ===
 
@@ -554,6 +564,7 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
     </div>
 </section>
 
+<?php if ($hasCompetitiveResults): ?>
 <!-- Rider Stats Trend Section -->
 <div class="rider-stats-trend">
     <div class="stats-row">
@@ -792,6 +803,27 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
         <?php endif; ?>
     </div>
 </div>
+<?php elseif ($motionStarts > 0): ?>
+<!-- Highlight Card - Motion/Hobby deltagare -->
+<div class="highlight-card">
+    <div class="highlight-icon">🚴</div>
+    <div class="highlight-content">
+        <h3 class="highlight-title">Motion-deltagare</h3>
+        <p class="highlight-text">Har deltagit i <strong><?= $motionStarts ?></strong> motion-lopp och fullföljt <strong><?= $motionFinished ?></strong>.</p>
+        <p class="highlight-subtext">Motion-klasser är icke-tävlande och ger inga rankingpoäng.</p>
+    </div>
+</div>
+<?php else: ?>
+<!-- No results yet -->
+<div class="highlight-card">
+    <div class="highlight-icon">👋</div>
+    <div class="highlight-content">
+        <h3 class="highlight-title">Välkommen!</h3>
+        <p class="highlight-text">Inga resultat registrerade ännu.</p>
+        <p class="highlight-subtext">Anmäl dig till ett event för att komma igång!</p>
+    </div>
+</div>
+<?php endif; ?>
 
 <div class="content-layout">
     <div class="content-main">
@@ -943,7 +975,7 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
         <!-- All Results -->
         <section class="section">
             <div class="section-header">
-                <h2 class="section-title">Alla resultat</h2>
+                <h2 class="section-title">Historiska resultat</h2>
             </div>
             <div class="card results-card">
                 <?php if (empty($results)): ?>
@@ -2320,6 +2352,62 @@ function copyToClipboard(text) {
 
     .gravity-id-badge .gid-number {
         font-size: 1.1rem;
+    }
+}
+
+/* ============================================
+   HIGHLIGHT CARD (Motion/No Results)
+   ============================================ */
+
+.highlight-card {
+    display: flex;
+    align-items: center;
+    gap: var(--space-lg);
+    background: var(--color-bg-surface);
+    border-radius: var(--radius-lg);
+    padding: var(--space-lg);
+    border: 1px solid var(--color-border);
+    box-shadow: var(--shadow-sm);
+    margin-bottom: var(--space-lg);
+}
+
+.highlight-card .highlight-icon {
+    font-size: 3rem;
+    flex-shrink: 0;
+}
+
+.highlight-card .highlight-content {
+    flex: 1;
+}
+
+.highlight-card .highlight-title {
+    font-size: var(--text-lg);
+    font-weight: 700;
+    margin: 0 0 var(--space-xs) 0;
+    color: var(--color-text-primary);
+}
+
+.highlight-card .highlight-text {
+    font-size: var(--text-md);
+    color: var(--color-text-secondary);
+    margin: 0 0 var(--space-xs) 0;
+}
+
+.highlight-card .highlight-subtext {
+    font-size: var(--text-sm);
+    color: var(--color-text-muted);
+    margin: 0;
+}
+
+@media (max-width: 599px) {
+    .highlight-card {
+        flex-direction: column;
+        text-align: center;
+        padding: var(--space-md);
+    }
+
+    .highlight-card .highlight-icon {
+        font-size: 2.5rem;
     }
 }
 
