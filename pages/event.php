@@ -1645,10 +1645,14 @@ function sortTotalBySplit(headerEl, splitNum) {
 
 /* Filter Row */
 .filter-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr auto;
+    display: flex;
+    flex-wrap: wrap;
     gap: var(--space-md);
-    align-items: end;
+    align-items: flex-end;
+}
+.filter-row .filter-field:not(.filter-field--toggle) {
+    flex: 1;
+    min-width: 150px;
 }
 
 .filter-field {
@@ -2205,7 +2209,12 @@ td.col-place {
     }
 
     .filter-row {
-        grid-template-columns: 1fr;
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .filter-row .filter-field:not(.filter-field--toggle) {
+        flex: none;
+        width: 100%;
     }
 
     .filter-field--toggle {

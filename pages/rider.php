@@ -996,23 +996,26 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
                 <div class="results-list compact">
                     <?php foreach (array_slice($results, 0, 10) as $result): ?>
                     <a href="/event/<?= $result['event_id'] ?>" class="result-item">
-                        <?php
-                        // Don't show medals for motion classes
-                        $showMedal = !$result['is_motion'] && $result['status'] === 'finished' && $result['position'] <= 3;
-                        ?>
-                        <div class="result-position <?= $showMedal ? 'p' . $result['position'] : '' ?>">
+                        <?php if ($result['is_motion']): ?>
+                        <!-- Motion class - show checkmark instead of position -->
+                        <div class="result-position motion">
+                            <i data-lucide="check"></i>
+                        </div>
+                        <?php else: ?>
+                        <div class="result-position <?= $result['status'] === 'finished' && $result['position'] <= 3 ? 'p' . $result['position'] : '' ?>">
                             <?php if ($result['status'] !== 'finished'): ?>
                                 <?= strtoupper(substr($result['status'], 0, 3)) ?>
-                            <?php elseif ($showMedal && $result['position'] == 1): ?>
+                            <?php elseif ($result['position'] == 1): ?>
                                 <img src="/assets/icons/medal-1st.svg" alt="1:a" class="medal-icon">
-                            <?php elseif ($showMedal && $result['position'] == 2): ?>
+                            <?php elseif ($result['position'] == 2): ?>
                                 <img src="/assets/icons/medal-2nd.svg" alt="2:a" class="medal-icon">
-                            <?php elseif ($showMedal && $result['position'] == 3): ?>
+                            <?php elseif ($result['position'] == 3): ?>
                                 <img src="/assets/icons/medal-3rd.svg" alt="3:e" class="medal-icon">
                             <?php else: ?>
                                 <?= $result['position'] ?>
                             <?php endif; ?>
                         </div>
+                        <?php endif; ?>
                         <div class="result-info">
                             <div class="result-event-name"><?= htmlspecialchars($result['event_name']) ?></div>
                             <div class="result-meta">
@@ -1843,6 +1846,8 @@ function copyToClipboard(text) {
 .result-position.p1 { background: linear-gradient(135deg, #fef3c7, #fde68a); border-color: #FFD700; color: #92400e; }
 .result-position.p2 { background: linear-gradient(135deg, #f3f4f6, #e5e7eb); border-color: #C0C0C0; color: #4b5563; }
 .result-position.p3 { background: linear-gradient(135deg, #fed7aa, #fdba74); border-color: #CD7F32; color: #9a3412; }
+.result-position.motion { background: var(--color-bg-surface); border-color: var(--color-border); color: var(--color-accent); }
+.result-position.motion i, .result-position.motion svg { width: 16px; height: 16px; }
 
 .medal-icon {
     width: 22px;
