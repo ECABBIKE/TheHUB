@@ -124,6 +124,43 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
  $message = 'Förnamn och efternamn är obligatoriska';
  $messageType = 'error';
  } else {
+ // Helper function to normalize social media links
+ $normalizeSocial = function($value, $platform) {
+  $value = trim($value);
+  if (empty($value)) return '';
+
+  // If it's already a URL, return as-is
+  if (strpos($value, 'http://') === 0 || strpos($value, 'https://') === 0) {
+   return $value;
+  }
+
+  // Remove @ prefix if present
+  $username = ltrim($value, '@');
+
+  switch ($platform) {
+   case 'instagram':
+    return 'https://instagram.com/' . $username;
+   case 'facebook':
+    return 'https://facebook.com/' . $username;
+   case 'strava':
+    // Could be athlete ID or URL path
+    if (is_numeric($username)) {
+     return 'https://www.strava.com/athletes/' . $username;
+    }
+    return 'https://www.strava.com/athletes/' . $username;
+   case 'youtube':
+    // Handle @username or channel name
+    if (strpos($value, '@') === 0) {
+     return 'https://youtube.com/' . $value;
+    }
+    return 'https://youtube.com/@' . $username;
+   case 'tiktok':
+    return 'https://tiktok.com/@' . $username;
+   default:
+    return $value;
+  }
+ };
+
  // Prepare rider data (read-only fields excluded: license_number, license_type, license_category, license_valid_until, discipline)
  $riderData = [
  'firstname' => $firstname,
@@ -136,12 +173,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
  'team' => trim($_POST['team'] ?? ''),
  'notes' => trim($_POST['notes'] ?? ''),
  'active' => isset($_POST['active']) ? 1 : 0,
- // Social media links
- 'social_instagram' => trim($_POST['social_instagram'] ?? ''),
- 'social_facebook' => trim($_POST['social_facebook'] ?? ''),
- 'social_strava' => trim($_POST['social_strava'] ?? ''),
- 'social_youtube' => trim($_POST['social_youtube'] ?? ''),
- 'social_tiktok' => trim($_POST['social_tiktok'] ?? ''),
+ // Social media links (normalized to full URLs)
+ 'social_instagram' => $normalizeSocial($_POST['social_instagram'] ?? '', 'instagram'),
+ 'social_facebook' => $normalizeSocial($_POST['social_facebook'] ?? '', 'facebook'),
+ 'social_strava' => $normalizeSocial($_POST['social_strava'] ?? '', 'strava'),
+ 'social_youtube' => $normalizeSocial($_POST['social_youtube'] ?? '', 'youtube'),
+ 'social_tiktok' => $normalizeSocial($_POST['social_tiktok'] ?? '', 'tiktok'),
  ];
 
  try {
