@@ -301,33 +301,76 @@ function getRiderSocialProfiles($pdo, $rider_id) {
 function getRiderSeriesStandings($pdo, $rider_id, $year = null) {
     $year = $year ?? date('Y');
 
+    // First get the series and their count_best_results setting
     $stmt = $pdo->prepare("
-        SELECT
+        SELECT DISTINCT
             s.id as series_id,
             s.name as series_name,
+            s.count_best_results,
             r.class_id,
-            c.display_name as class_name,
-            SUM(r.points) as total_points,
-            COUNT(r.id) as events_count,
-            SUM(CASE WHEN r.position = 1 THEN 1 ELSE 0 END) as wins,
-            SUM(CASE WHEN r.position <= 3 THEN 1 ELSE 0 END) as podiums
+            c.display_name as class_name
         FROM results r
         JOIN events e ON r.event_id = e.id
         JOIN series s ON e.series_id = s.id
         JOIN classes c ON r.class_id = c.id
         WHERE r.cyclist_id = ? AND YEAR(e.date) = ? AND r.status = 'finished'
-        GROUP BY s.id, r.class_id
-        ORDER BY total_points DESC
     ");
     $stmt->execute([$rider_id, $year]);
-    $standings = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $seriesClasses = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    $standings = [];
+    foreach ($seriesClasses as $sc) {
+        // Get all points for this rider in this series/class
+        $pStmt = $pdo->prepare("
+            SELECT r.points, r.position, e.id as event_id
+            FROM results r
+            JOIN events e ON r.event_id = e.id
+            WHERE r.cyclist_id = ? AND e.series_id = ? AND r.class_id = ?
+                  AND YEAR(e.date) = ? AND r.status = 'finished'
+            ORDER BY r.points DESC
+        ");
+        $pStmt->execute([$rider_id, $sc['series_id'], $sc['class_id'], $year]);
+        $results = $pStmt->fetchAll(PDO::FETCH_ASSOC);
+
+        if (empty($results)) continue;
+
+        // Calculate counted points based on count_best_results
+        $countBest = $sc['count_best_results'];
+        $allPoints = array_column($results, 'points');
+
+        if ($countBest && count($allPoints) > $countBest) {
+            // Sort descending and take best X
+            rsort($allPoints);
+            $countedPoints = array_sum(array_slice($allPoints, 0, $countBest));
+        } else {
+            $countedPoints = array_sum($allPoints);
+        }
+
+        $wins = count(array_filter($results, fn($r) => $r['position'] == 1));
+        $podiums = count(array_filter($results, fn($r) => $r['position'] <= 3));
+
+        $standings[] = [
+            'series_id' => $sc['series_id'],
+            'series_name' => $sc['series_name'],
+            'class_id' => $sc['class_id'],
+            'class_name' => $sc['class_name'],
+            'count_best_results' => $countBest,
+            'total_points' => $countedPoints,
+            'events_count' => count($results),
+            'wins' => $wins,
+            'podiums' => $podiums
+        ];
+    }
+
+    // Sort by total_points
+    usort($standings, fn($a, $b) => $b['total_points'] - $a['total_points']);
 
     // Lägg till ranking och trend för varje serie
     foreach ($standings as &$standing) {
-        $standing['ranking'] = getSeriesRanking($pdo, $standing['series_id'], $rider_id, $standing['class_id'], $year);
+        $standing['ranking'] = getSeriesRanking($pdo, $standing['series_id'], $rider_id, $standing['class_id'], $year, $standing['count_best_results']);
         $standing['trend'] = calculateTrend($pdo, $standing['series_id'], $rider_id, $standing['class_id'], $year);
         $standing['total_riders'] = getTotalRidersInClass($pdo, $standing['series_id'], $standing['class_id'], $year);
-        $standing['gap_to_podium'] = calculateGapToPodium($pdo, $standing['series_id'], $rider_id, $standing['class_id'], $year);
+        $standing['gap_to_podium'] = calculateGapToPodium($pdo, $standing['series_id'], $rider_id, $standing['class_id'], $year, $standing['count_best_results']);
         $standing['results'] = getSeriesResults($pdo, $standing['series_id'], $rider_id, $year);
         // Default series color based on series name
         $standing['series_color'] = getSeriesColor($standing['series_name']);
@@ -337,23 +380,48 @@ function getRiderSeriesStandings($pdo, $rider_id, $year = null) {
 }
 
 /**
- * Hämtar ranking position i serie
+ * Hämtar ranking position i serie (med count_best_results)
  */
-function getSeriesRanking($pdo, $series_id, $rider_id, $class_id, $year) {
+function getSeriesRanking($pdo, $series_id, $rider_id, $class_id, $year, $countBest = null) {
+    // Get all riders in this series/class
     $stmt = $pdo->prepare("
-        SELECT r.cyclist_id, SUM(r.points) as total_points
+        SELECT DISTINCT r.cyclist_id
         FROM results r
         JOIN events e ON r.event_id = e.id
         WHERE e.series_id = ? AND r.class_id = ? AND YEAR(e.date) = ? AND r.status = 'finished'
-        GROUP BY r.cyclist_id
-        ORDER BY total_points DESC
     ");
     $stmt->execute([$series_id, $class_id, $year]);
-    $allRiders = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $riders = $stmt->fetchAll(PDO::FETCH_COLUMN);
 
+    // Calculate counted points for each rider
+    $riderPoints = [];
+    foreach ($riders as $rid) {
+        $pStmt = $pdo->prepare("
+            SELECT r.points
+            FROM results r
+            JOIN events e ON r.event_id = e.id
+            WHERE r.cyclist_id = ? AND e.series_id = ? AND r.class_id = ?
+                  AND YEAR(e.date) = ? AND r.status = 'finished'
+            ORDER BY r.points DESC
+        ");
+        $pStmt->execute([$rid, $series_id, $class_id, $year]);
+        $points = $pStmt->fetchAll(PDO::FETCH_COLUMN);
+
+        if ($countBest && count($points) > $countBest) {
+            $total = array_sum(array_slice($points, 0, $countBest));
+        } else {
+            $total = array_sum($points);
+        }
+        $riderPoints[$rid] = $total;
+    }
+
+    // Sort by points descending
+    arsort($riderPoints);
+
+    // Find rider's position
     $position = 1;
-    foreach ($allRiders as $r) {
-        if ($r['cyclist_id'] == $rider_id) {
+    foreach ($riderPoints as $rid => $pts) {
+        if ($rid == $rider_id) {
             return $position;
         }
         $position++;
@@ -376,49 +444,67 @@ function getTotalRidersInClass($pdo, $series_id, $class_id, $year) {
 }
 
 /**
- * Beräknar poängdifferens till pallplats
+ * Beräknar poängdifferens till pallplats (med count_best_results)
  */
-function calculateGapToPodium($pdo, $series_id, $rider_id, $class_id, $year) {
+function calculateGapToPodium($pdo, $series_id, $rider_id, $class_id, $year, $countBest = null) {
+    // Get all riders in this series/class
     $stmt = $pdo->prepare("
-        SELECT r.cyclist_id, SUM(r.points) as total_points
+        SELECT DISTINCT r.cyclist_id
         FROM results r
         JOIN events e ON r.event_id = e.id
         WHERE e.series_id = ? AND r.class_id = ? AND YEAR(e.date) = ? AND r.status = 'finished'
-        GROUP BY r.cyclist_id
-        ORDER BY total_points DESC
-        LIMIT 3
     ");
     $stmt->execute([$series_id, $class_id, $year]);
-    $topThree = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $riders = $stmt->fetchAll(PDO::FETCH_COLUMN);
 
-    // Get rider's points
-    $stmt = $pdo->prepare("
-        SELECT SUM(r.points) as total_points
-        FROM results r
-        JOIN events e ON r.event_id = e.id
-        WHERE e.series_id = ? AND r.class_id = ? AND YEAR(e.date) = ? AND r.cyclist_id = ? AND r.status = 'finished'
-    ");
-    $stmt->execute([$series_id, $class_id, $year, $rider_id]);
-    $riderPoints = $stmt->fetchColumn() ?: 0;
+    // Calculate counted points for each rider
+    $riderPointsMap = [];
+    foreach ($riders as $rid) {
+        $pStmt = $pdo->prepare("
+            SELECT r.points
+            FROM results r
+            JOIN events e ON r.event_id = e.id
+            WHERE r.cyclist_id = ? AND e.series_id = ? AND r.class_id = ?
+                  AND YEAR(e.date) = ? AND r.status = 'finished'
+            ORDER BY r.points DESC
+        ");
+        $pStmt->execute([$rid, $series_id, $class_id, $year]);
+        $points = $pStmt->fetchAll(PDO::FETCH_COLUMN);
 
-    if (count($topThree) < 3) {
+        if ($countBest && count($points) > $countBest) {
+            $total = array_sum(array_slice($points, 0, $countBest));
+        } else {
+            $total = array_sum($points);
+        }
+        $riderPointsMap[$rid] = $total;
+    }
+
+    // Sort by points descending
+    arsort($riderPointsMap);
+    $sortedRiders = array_keys($riderPointsMap);
+
+    if (count($sortedRiders) < 3) {
         return null; // Not enough riders
     }
 
-    // Check if rider is in top 3
-    foreach ($topThree as $idx => $rider) {
-        if ($rider['cyclist_id'] == $rider_id) {
-            if ($idx == 0) {
-                // Leader - show gap to second place
-                return isset($topThree[1]) ? $riderPoints - $topThree[1]['total_points'] : 0;
-            }
-            // In podium - show gap to previous position
-            return $topThree[$idx - 1]['total_points'] - $riderPoints;
-        }
+    $riderPoints = $riderPointsMap[$rider_id] ?? 0;
+
+    // Find rider's position
+    $position = array_search($rider_id, $sortedRiders);
+    if ($position === false) {
+        return null;
     }
 
-    // Not in podium - show gap to third place
-    return $topThree[2]['total_points'] - $riderPoints;
+    if ($position == 0) {
+        // Leader - show gap to second place
+        return $riderPoints - $riderPointsMap[$sortedRiders[1]];
+    } elseif ($position <= 2) {
+        // In podium - show gap to previous position
+        return $riderPointsMap[$sortedRiders[$position - 1]] - $riderPoints;
+    } else {
+        // Not in podium - show gap to third place
+        return $riderPointsMap[$sortedRiders[2]] - $riderPoints;
+    }
 }
 
 // ============================================

@@ -2679,6 +2679,161 @@ function copyToClipboard(text) {
     margin-top: var(--space-xs);
 }
 
+/* Mobile improvements */
+@media (max-width: 599px) {
+    .rider-stats-trend {
+        gap: var(--space-sm);
+        margin-bottom: var(--space-md);
+        max-width: 100%;
+        overflow: hidden;
+    }
+
+    .stats-row {
+        gap: var(--space-sm);
+        max-width: 100%;
+    }
+
+    .form-section,
+    .highlights-section,
+    .ranking-section {
+        padding: var(--space-sm);
+        border-radius: var(--radius-md);
+        max-width: 100%;
+        overflow: hidden;
+        box-sizing: border-box;
+    }
+
+    .trend-section-title {
+        font-size: 0.65rem;
+        margin-bottom: var(--space-sm);
+    }
+
+    /* Form section mobile */
+    .form-results {
+        gap: 2px;
+        margin-bottom: var(--space-xs);
+        max-width: 100%;
+        overflow: hidden;
+    }
+
+    .form-race {
+        gap: 2px;
+        min-width: 0; /* Allow flex items to shrink */
+    }
+
+    .form-position {
+        font-size: 1rem;
+    }
+
+    .form-event {
+        font-size: 0.5rem;
+        max-width: 36px;
+        word-break: break-all;
+    }
+
+    .form-chart {
+        height: 40px;
+        margin: var(--space-sm) 0;
+        max-width: 100%;
+        overflow: hidden;
+    }
+
+    .form-chart svg {
+        max-width: 100%;
+        height: auto;
+    }
+
+    .form-trend {
+        font-size: 0.7rem;
+        padding: var(--space-xs);
+    }
+
+    .trend-arrow {
+        font-size: 0.85rem;
+    }
+
+    /* Highlights section mobile */
+    .highlights-list {
+        gap: var(--space-xs);
+        max-width: 100%;
+    }
+
+    .highlight-item {
+        font-size: 0.75rem;
+        padding: var(--space-xs) var(--space-sm);
+        gap: var(--space-xs);
+        max-width: 100%;
+        overflow: hidden;
+    }
+
+    .highlight-text {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        min-width: 0;
+    }
+
+    .highlight-icon {
+        font-size: 0.9rem;
+        flex-shrink: 0;
+    }
+
+    /* Empty states mobile */
+    .form-empty,
+    .highlights-empty,
+    .ranking-empty {
+        padding: var(--space-md);
+        font-size: 0.75rem;
+    }
+
+    .form-empty .empty-icon,
+    .highlights-empty .empty-icon,
+    .ranking-empty .empty-icon {
+        font-size: 1.25rem;
+    }
+
+    /* Ranking section mobile */
+    .ranking-header {
+        flex-direction: column;
+        gap: var(--space-xs);
+        align-items: flex-start;
+        max-width: 100%;
+    }
+
+    .rank-number-large {
+        font-size: 1.5rem;
+    }
+
+    .rank-change {
+        font-size: 0.65rem;
+    }
+
+    .ranking-chart {
+        height: 60px;
+        max-width: 100%;
+        overflow: hidden;
+    }
+
+    .ranking-chart svg {
+        max-width: 100%;
+        height: auto;
+    }
+
+    .ranking-months {
+        font-size: 0.55rem;
+        max-width: 100%;
+        overflow: hidden;
+    }
+
+    .ranking-bar-container {
+        margin-top: var(--space-sm);
+    }
+
+    .ranking-bar {
+        height: 6px;
+    }
+}
+
 /* Tablet+ improvements */
 @media (min-width: 600px) {
     .form-section,
