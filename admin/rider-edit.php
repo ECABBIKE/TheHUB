@@ -673,7 +673,7 @@ include __DIR__ . '/components/unified-layout.php';
   name="social_instagram"
   class="input"
   value="<?= h($rider['social_instagram'] ?? '') ?>"
-  placeholder="@användarnamn eller URL"
+  placeholder="användarnamn eller URL"
   >
   </div>
 
@@ -689,7 +689,7 @@ include __DIR__ . '/components/unified-layout.php';
   name="social_facebook"
   class="input"
   value="<?= h($rider['social_facebook'] ?? '') ?>"
-  placeholder="Användarnamn eller URL"
+  placeholder="användarnamn eller URL"
   >
   </div>
 
@@ -737,7 +737,7 @@ include __DIR__ . '/components/unified-layout.php';
   name="social_tiktok"
   class="input"
   value="<?= h($rider['social_tiktok'] ?? '') ?>"
-  placeholder="@användarnamn eller URL"
+  placeholder="användarnamn eller URL"
   >
   </div>
 
