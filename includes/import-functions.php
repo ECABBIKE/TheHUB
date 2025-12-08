@@ -579,10 +579,12 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
                 $status = 'dq';
             }
 
-            // Check if result already exists
+            // Check if result already exists for this rider in this class
+            // NOTE: We check class_id to allow riders to compete in multiple classes per event
+            // Using <=> for NULL-safe comparison (rider can have one result per class per event)
             $existingResult = $db->getRow(
-                "SELECT id FROM results WHERE event_id = ? AND cyclist_id = ?",
-                [$eventId, $riderId]
+                "SELECT id FROM results WHERE event_id = ? AND cyclist_id = ? AND class_id <=> ?",
+                [$eventId, $riderId, $classId]
             );
 
             // Calculate points based on position (only if class awards points)
