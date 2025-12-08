@@ -472,7 +472,7 @@ document.addEventListener('keydown', function(e) {
 <style>
 .admin-modal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 1000; display: flex; align-items: center; justify-content: center; }
 .admin-modal-overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.5); }
-.admin-modal-content { position: relative; background: var(--color-bg); border-radius: var(--radius-lg); box-shadow: var(--shadow-xl); width: 90%; max-width: 600px; max-height: 90vh; overflow: hidden; display: flex; flex-direction: column; }
+.admin-modal-content { position: relative; background: var(--color-bg-surface, #ffffff); border-radius: var(--radius-lg); box-shadow: var(--shadow-xl); width: 90%; max-width: 600px; max-height: 90vh; overflow: hidden; display: flex; flex-direction: column; }
 .admin-modal-header { display: flex; align-items: center; justify-content: space-between; padding: var(--space-lg); border-bottom: 1px solid var(--color-border); }
 .admin-modal-header h2 { margin: 0; font-size: var(--text-xl); }
 .admin-modal-close { background: none; border: none; padding: var(--space-xs); cursor: pointer; color: var(--color-text-secondary); border-radius: var(--radius-sm); }

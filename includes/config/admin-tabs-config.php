@@ -111,14 +111,14 @@ $ADMIN_TABS = [
                 'label' => 'Deltagare',
                 'icon' => 'user',
                 'url' => '/admin/riders.php',
-                'pages' => ['riders.php', 'rider-edit.php', 'rider-delete.php', 'find-duplicates.php', 'cleanup-duplicates.php', 'enrich-riders.php', 'check-license-numbers.php']
+                'pages' => ['riders.php', 'rider-edit.php', 'rider-delete.php', 'enrich-riders.php', 'check-license-numbers.php']
             ],
             [
                 'id' => 'clubs',
                 'label' => 'Klubbar',
                 'icon' => 'building-2',
                 'url' => '/admin/clubs.php',
-                'pages' => ['clubs.php', 'club-edit.php', 'cleanup-clubs.php']
+                'pages' => ['clubs.php', 'club-edit.php']
             ]
         ]
     ],
@@ -261,7 +261,14 @@ $ADMIN_TABS = [
                 'label' => 'Databas',
                 'icon' => 'server',
                 'url' => '/admin/system-settings.php',
-                'pages' => ['system-settings.php', 'settings.php', 'run-migrations.php', 'tools.php', 'recalculate-all-points.php', 'fix-time-format.php', 'debug-series-points.php', 'clear-cache.php']
+                'pages' => ['system-settings.php', 'settings.php', 'run-migrations.php', 'recalculate-all-points.php', 'fix-time-format.php', 'debug-series-points.php', 'clear-cache.php']
+            ],
+            [
+                'id' => 'tools',
+                'label' => 'Verktyg',
+                'icon' => 'wrench',
+                'url' => '/admin/tools.php',
+                'pages' => ['tools.php', 'normalize-names.php', 'find-duplicates.php', 'cleanup-duplicates.php', 'cleanup-clubs.php', 'search-uci-id.php', 'diagnose-series.php', 'rebuild-stats.php']
             ],
             [
                 'id' => 'media',

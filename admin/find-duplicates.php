@@ -243,7 +243,8 @@ $duplicateGroups = $db->getAll("
 foreach ($duplicateGroups as $group) {
  $riders = $db->getAll("
  SELECT r.id, r.firstname, r.lastname, r.birth_year, r.license_number,
-  r.email, r.club_id, c.name as club_name
+  r.email, r.club_id, c.name as club_name,
+  (SELECT COUNT(*) FROM results WHERE cyclist_id = r.id) as result_count
  FROM riders r
  LEFT JOIN clubs c ON r.club_id = c.id
  WHERE LOWER(r.firstname) = LOWER(?) AND LOWER(r.lastname) = LOWER(?)
@@ -272,16 +273,18 @@ foreach ($duplicateGroups as $group) {
  if (!$r2['email'] && $r1['email']) $r2Missing[] = 'e-post';
 
  $sameUci = $uci1 && $uci2 && $uci1 === $uci2;
- if (!$sameUci && empty($r1Missing) && empty($r2Missing)) continue;
 
+ // Always show duplicates with same name (removed the skip condition)
  $potentialDuplicates[] = [
   'reason' => $sameUci ? 'Samma UCI ID' : 'Exakt samma namn',
   'rider1' => ['id' => $r1['id'], 'name' => $r1['firstname'].' '.$r1['lastname'],
    'birth_year' => $r1['birth_year'], 'license' => $r1['license_number'],
-   'email' => $r1['email'], 'club' => $r1['club_name'], 'missing' => $r1Missing],
+   'email' => $r1['email'], 'club' => $r1['club_name'], 'missing' => $r1Missing,
+   'results' => $r1['result_count'] ?? 0],
   'rider2' => ['id' => $r2['id'], 'name' => $r2['firstname'].' '.$r2['lastname'],
    'birth_year' => $r2['birth_year'], 'license' => $r2['license_number'],
-   'email' => $r2['email'], 'club' => $r2['club_name'], 'missing' => $r2Missing]
+   'email' => $r2['email'], 'club' => $r2['club_name'], 'missing' => $r2Missing,
+   'results' => $r2['result_count'] ?? 0]
  ];
  }
 }
