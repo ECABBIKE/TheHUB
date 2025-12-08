@@ -183,7 +183,7 @@ try {
     $winRate = $totalStarts > 0 ? round(($wins / $totalStarts) * 100) : 0;
     if ($winRate >= 10) {
         $highlights[] = [
-            'icon' => '🏆',
+            'icon' => 'trophy',
             'text' => $winRate . '% win rate',
             'type' => 'winrate'
         ];
@@ -200,7 +200,7 @@ try {
     }
     if ($currentStreak >= 2) {
         $highlights[] = [
-            'icon' => '🔥',
+            'icon' => 'trending-up',
             'text' => $currentStreak . ' pallplatser i rad',
             'type' => 'streak',
             'active' => true
@@ -228,7 +228,7 @@ try {
     if ($bestResult) {
         $posText = $bestResult['position'] == 1 ? '1:a' : ($bestResult['position'] == 2 ? '2:a' : ($bestResult['position'] == 3 ? '3:e' : $bestResult['position'] . ':e'));
         $highlights[] = [
-            'icon' => '⭐',
+            'icon' => 'star',
             'text' => 'Bästa: ' . $posText . ' ' . htmlspecialchars($bestResult['event_name']),
             'type' => 'best'
         ];
@@ -258,7 +258,7 @@ try {
     $h2hPercent = $totalCompetitors > 0 ? round(($totalRidersBeaten / $totalCompetitors) * 100) : 0;
     if ($h2hPercent >= 40 && $totalCompetitors >= 5) {
         $highlights[] = [
-            'icon' => '⚔️',
+            'icon' => 'users',
             'text' => 'Slagit ' . $h2hPercent . '% av motståndare',
             'type' => 'h2h'
         ];
@@ -267,7 +267,7 @@ try {
     // Ensure we have at least some highlights
     if (empty($highlights) && $totalStarts > 0) {
         $highlights[] = [
-            'icon' => '🚴',
+            'icon' => 'bike',
             'text' => $totalStarts . ' starter denna säsong',
             'type' => 'starts'
         ];
@@ -576,10 +576,19 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
                 <?php foreach ($formResults as $idx => $fr):
                     $pos = $fr['position'];
                     $posClass = $pos == 1 ? 'gold' : ($pos == 2 ? 'silver' : ($pos == 3 ? 'bronze' : ''));
-                    $posEmoji = $pos == 1 ? '🥇' : ($pos == 2 ? '🥈' : ($pos == 3 ? '🥉' : $pos));
                 ?>
                 <div class="form-race">
-                    <span class="form-position <?= $posClass ?>"><?= $posEmoji ?></span>
+                    <span class="form-position <?= $posClass ?>">
+                        <?php if ($pos == 1): ?>
+                            <img src="/assets/icons/medal-1st.svg" alt="1:a" class="form-medal">
+                        <?php elseif ($pos == 2): ?>
+                            <img src="/assets/icons/medal-2nd.svg" alt="2:a" class="form-medal">
+                        <?php elseif ($pos == 3): ?>
+                            <img src="/assets/icons/medal-3rd.svg" alt="3:e" class="form-medal">
+                        <?php else: ?>
+                            <span class="form-pos-number"><?= $pos ?></span>
+                        <?php endif; ?>
+                    </span>
                     <span class="form-event"><?= htmlspecialchars(mb_substr($fr['event_name'], 0, 10)) ?></span>
                 </div>
                 <?php endforeach; ?>
@@ -616,7 +625,7 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
                     }
                     $polyPoints = implode(' ', $points);
                 ?>
-                <svg viewBox="0 0 <?= $chartWidth ?> <?= $chartHeight ?>">
+                <svg viewBox="0 0 <?= $chartWidth ?> <?= $chartHeight ?>" preserveAspectRatio="xMidYMid meet" class="form-chart-svg">
                     <!-- Trend line -->
                     <polyline
                         points="<?= $polyPoints ?>"
@@ -647,7 +656,7 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
             </div>
             <?php else: ?>
             <div class="form-empty">
-                <span class="empty-icon">🏁</span>
+                <span class="empty-icon"><i data-lucide="flag"></i></span>
                 <span>Inga resultat ännu</span>
             </div>
             <?php endif; ?>
@@ -660,14 +669,14 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
             <div class="highlights-list">
                 <?php foreach ($highlights as $hl): ?>
                 <div class="highlight-item <?= $hl['type'] ?> <?= !empty($hl['active']) ? 'active' : '' ?>">
-                    <span class="highlight-icon"><?= $hl['icon'] ?></span>
+                    <span class="highlight-icon"><i data-lucide="<?= htmlspecialchars($hl['icon']) ?>"></i></span>
                     <span class="highlight-text"><?= $hl['text'] ?></span>
                 </div>
                 <?php endforeach; ?>
             </div>
             <?php else: ?>
             <div class="highlights-empty">
-                <span class="empty-icon">⏳</span>
+                <span class="empty-icon"><i data-lucide="clock"></i></span>
                 <span>Bygg din statistik genom att tävla!</span>
             </div>
             <?php endif; ?>
@@ -797,7 +806,7 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
         </div>
         <?php else: ?>
         <div class="ranking-empty">
-            <span class="empty-icon">📊</span>
+            <span class="empty-icon"><i data-lucide="bar-chart-2"></i></span>
             <span>Ingen ranking tillgänglig</span>
         </div>
         <?php endif; ?>
@@ -806,7 +815,7 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
 <?php elseif ($motionStarts > 0): ?>
 <!-- Highlight Card - Motion/Hobby deltagare -->
 <div class="highlight-card">
-    <div class="highlight-icon">🚴</div>
+    <div class="highlight-icon"><i data-lucide="bike"></i></div>
     <div class="highlight-content">
         <h3 class="highlight-title">Motion-deltagare</h3>
         <p class="highlight-text">Har deltagit i <strong><?= $motionStarts ?></strong> motion-lopp och fullföljt <strong><?= $motionFinished ?></strong>.</p>
@@ -816,7 +825,7 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
 <?php else: ?>
 <!-- No results yet -->
 <div class="highlight-card">
-    <div class="highlight-icon">👋</div>
+    <div class="highlight-icon"><i data-lucide="user"></i></div>
     <div class="highlight-content">
         <h3 class="highlight-title">Välkommen!</h3>
         <p class="highlight-text">Inga resultat registrerade ännu.</p>
@@ -980,7 +989,7 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
             <div class="card results-card">
                 <?php if (empty($results)): ?>
                 <div class="empty-state">
-                    <div class="empty-icon">🏁</div>
+                    <div class="empty-icon"><i data-lucide="flag"></i></div>
                     <p>Inga resultat registrerade</p>
                 </div>
                 <?php else: ?>
@@ -2372,8 +2381,17 @@ function copyToClipboard(text) {
 }
 
 .highlight-card .highlight-icon {
-    font-size: 3rem;
     flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.highlight-card .highlight-icon i,
+.highlight-card .highlight-icon svg {
+    width: 48px;
+    height: 48px;
+    color: var(--color-accent);
 }
 
 .highlight-card .highlight-content {
@@ -2406,8 +2424,10 @@ function copyToClipboard(text) {
         padding: var(--space-md);
     }
 
-    .highlight-card .highlight-icon {
-        font-size: 2.5rem;
+    .highlight-card .highlight-icon i,
+    .highlight-card .highlight-icon svg {
+        width: 36px;
+        height: 36px;
     }
 }
 
@@ -2472,13 +2492,30 @@ function copyToClipboard(text) {
 }
 
 .form-position {
-    font-size: 1.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     line-height: 1;
 }
 
-.form-position.gold { filter: drop-shadow(0 2px 4px rgba(255, 215, 0, 0.4)); }
-.form-position.silver { filter: drop-shadow(0 2px 4px rgba(192, 192, 192, 0.4)); }
-.form-position.bronze { filter: drop-shadow(0 2px 4px rgba(205, 127, 50, 0.4)); }
+.form-medal {
+    width: 24px;
+    height: 24px;
+    object-fit: contain;
+}
+
+.form-pos-number {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    background: var(--color-bg-sunken);
+    border-radius: 50%;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--color-text-secondary);
+}
 
 .form-event {
     font-size: 0.6rem;
@@ -2491,13 +2528,17 @@ function copyToClipboard(text) {
 }
 
 .form-chart {
+    width: 100%;
     height: 50px;
     margin: var(--space-md) 0;
+    position: relative;
 }
 
-.form-chart svg {
+.form-chart svg,
+.form-chart-svg {
     width: 100%;
     height: 100%;
+    display: block;
 }
 
 .form-trend {
@@ -2548,7 +2589,20 @@ function copyToClipboard(text) {
 .form-empty .empty-icon,
 .highlights-empty .empty-icon,
 .ranking-empty .empty-icon {
-    font-size: 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.form-empty .empty-icon i,
+.form-empty .empty-icon svg,
+.highlights-empty .empty-icon i,
+.highlights-empty .empty-icon svg,
+.ranking-empty .empty-icon i,
+.ranking-empty .empty-icon svg {
+    width: 32px;
+    height: 32px;
+    color: var(--color-text-muted);
     opacity: 0.6;
 }
 
@@ -2575,8 +2629,17 @@ function copyToClipboard(text) {
 }
 
 .highlight-icon {
-    font-size: 1.1rem;
     flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.highlight-icon i,
+.highlight-icon svg {
+    width: 18px;
+    height: 18px;
+    color: var(--color-accent);
 }
 
 .highlight-text {
@@ -2698,8 +2761,7 @@ function copyToClipboard(text) {
     .ranking-section {
         padding: var(--space-sm);
         border-radius: var(--radius-md);
-        max-width: 100%;
-        overflow: hidden;
+        width: 100%;
         box-sizing: border-box;
     }
 
@@ -2721,8 +2783,15 @@ function copyToClipboard(text) {
         min-width: 0; /* Allow flex items to shrink */
     }
 
-    .form-position {
-        font-size: 1rem;
+    .form-medal {
+        width: 20px;
+        height: 20px;
+    }
+
+    .form-pos-number {
+        width: 20px;
+        height: 20px;
+        font-size: 0.65rem;
     }
 
     .form-event {
@@ -2732,15 +2801,15 @@ function copyToClipboard(text) {
     }
 
     .form-chart {
-        height: 40px;
+        height: 45px;
         margin: var(--space-sm) 0;
-        max-width: 100%;
-        overflow: hidden;
+        width: 100%;
     }
 
-    .form-chart svg {
-        max-width: 100%;
-        height: auto;
+    .form-chart svg,
+    .form-chart-svg {
+        width: 100%;
+        height: 100%;
     }
 
     .form-trend {
