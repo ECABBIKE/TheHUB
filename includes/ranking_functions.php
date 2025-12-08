@@ -873,6 +873,8 @@ function getRiderRankingDetails($db, $riderId, $discipline = 'GRAVITY') {
         {$disciplineFilter}
         AND r.status = 'finished'
         AND (r.points > 0 OR COALESCE(r.run_1_points, 0) > 0 OR COALESCE(r.run_2_points, 0) > 0)
+        AND COALESCE(cl.series_eligible, 1) = 1
+        AND COALESCE(cl.awards_points, 1) = 1
         ORDER BY e.date DESC
     ", $params);
 
