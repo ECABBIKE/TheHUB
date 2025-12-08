@@ -256,122 +256,143 @@ include __DIR__ . '/components/unified-layout.php';
 <!-- Content starts here (unified-layout already opened <main>) -->
 <style>
 /* Mobile responsiveness for series-events page */
-@media (max-width: 767px) {
-    /* Header adjustments */
+@media (max-width: 900px) {
+    /* Header - stack vertically */
     .page-header-flex {
-        flex-direction: column;
-        align-items: flex-start !important;
-        gap: var(--space-md);
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 16px !important;
     }
 
-    .page-header-flex .flex.gap-sm {
-        width: 100%;
-        flex-direction: column;
+    .page-header-flex > .flex.gap-sm {
+        flex-direction: column !important;
+        width: 100% !important;
     }
 
     .page-header-flex .btn {
-        width: 100%;
-        justify-content: center;
+        width: 100% !important;
+        justify-content: center !important;
+        display: flex !important;
     }
 
-    /* Grid adjustments */
+    /* Grid - single column */
     .grid.gs-lg-grid-cols-3 {
-        grid-template-columns: 1fr !important;
+        display: block !important;
     }
 
-    .gs-lg-col-span-2 {
-        grid-column: span 1 !important;
+    .grid.gs-lg-grid-cols-3 > div {
+        margin-bottom: 16px !important;
     }
 
-    /* Table mobile layout */
-    .table-responsive {
-        margin: 0 calc(var(--space-md) * -1);
-        padding: 0 var(--space-sm);
-        overflow-x: auto;
+    /* Cards full width */
+    .card {
+        width: 100% !important;
     }
 
-    .table {
-        font-size: var(--text-xs);
-        min-width: 700px;
-    }
-
-    .table th,
-    .table td {
-        padding: var(--space-xs) var(--space-sm);
-        white-space: nowrap;
-    }
-
-    /* Hide less important columns on mobile */
-    .table th:nth-child(5),
-    .table td:nth-child(5) {
-        display: none;
-    }
-
-    /* Compact buttons */
-    .btn-xs {
-        padding: 4px 6px;
-    }
-
-    .btn--sm {
-        padding: var(--space-xs) var(--space-sm);
-        font-size: var(--text-xs);
-    }
-
-    /* Bulk edit form mobile */
-    .alert.alert--info .flex {
-        flex-direction: column;
-        gap: var(--space-sm);
+    /* Bulk edit box */
+    .alert.alert--info .flex.items-center {
+        flex-direction: column !important;
         align-items: stretch !important;
+        gap: 12px !important;
     }
 
+    .alert.alert--info select,
     .alert.alert--info .input {
         width: 100% !important;
         min-width: unset !important;
     }
 
     .alert.alert--info .btn {
-        width: 100%;
-        justify-content: center;
+        width: 100% !important;
     }
 
-    /* Card body form elements */
-    .card-body .input,
-    .card-body select {
-        width: 100%;
+    .alert.alert--info label {
+        text-align: center;
     }
 
-    /* Template select in table */
+    /* Table wrapper - horizontal scroll */
+    .table-responsive {
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch;
+        margin-left: -16px !important;
+        margin-right: -16px !important;
+        padding-left: 16px !important;
+        padding-right: 16px !important;
+    }
+
+    .table {
+        min-width: 650px !important;
+        font-size: 12px !important;
+    }
+
+    .table th,
+    .table td {
+        padding: 8px 6px !important;
+        white-space: nowrap !important;
+    }
+
+    /* Hide location column */
+    .table th:nth-child(5),
+    .table td:nth-child(5) {
+        display: none !important;
+    }
+
+    /* Smaller buttons */
+    .table .btn {
+        padding: 4px 8px !important;
+        font-size: 11px !important;
+    }
+
+    .table .btn i,
+    .table .btn svg {
+        width: 12px !important;
+        height: 12px !important;
+    }
+
+    /* Template dropdown in table */
     .template-form {
-        display: block !important;
-        width: 100%;
+        min-width: 120px !important;
     }
 
-    .template-form > div {
-        flex-direction: column;
-        gap: var(--space-xs) !important;
+    .template-form select {
+        min-width: 100px !important;
+        font-size: 11px !important;
+        padding: 4px !important;
     }
 
-    .template-form .input {
-        min-width: unset !important;
-        width: 100%;
+    /* Order column compact */
+    .table td:nth-child(2) .flex {
+        gap: 2px !important;
+    }
+
+    .table td:nth-child(2) .btn {
+        padding: 2px 4px !important;
     }
 }
 
 @media (max-width: 480px) {
-    /* Even smaller screens */
     .table {
-        font-size: 10px;
+        font-size: 10px !important;
+    }
+
+    .table th,
+    .table td {
+        padding: 6px 4px !important;
     }
 
     .badge {
-        font-size: 9px;
-        padding: 2px 4px;
+        font-size: 9px !important;
+        padding: 2px 4px !important;
     }
 
-    /* Stack order column buttons */
-    .table td:nth-child(2) .flex {
-        flex-direction: column;
-        gap: 2px;
+    /* Hide date column too */
+    .table th:nth-child(4),
+    .table td:nth-child(4) {
+        display: none !important;
+    }
+
+    .template-form select {
+        min-width: 80px !important;
     }
 }
 </style>

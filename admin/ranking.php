@@ -104,6 +104,35 @@ $disciplineStats = getRankingStats($db);
 $latestSnapshot = $db->getRow("SELECT MAX(snapshot_date) as snapshot_date FROM ranking_snapshots");
 $lastSnapshotDate = $latestSnapshot ? $latestSnapshot['snapshot_date'] : null;
 
+// Get active events in ranking (24 months window)
+$cutoffDate = date('Y-m-d', strtotime('-24 months'));
+$activeEvents = $db->getAll("
+    SELECT
+        e.id,
+        e.name,
+        e.date,
+        e.location,
+        e.discipline,
+        COALESCE(e.event_level, 'national') as event_level,
+        COUNT(DISTINCT r.cyclist_id) as rider_count,
+        COUNT(DISTINCT r.class_id) as class_count,
+        CASE
+            WHEN e.date >= DATE_SUB(CURDATE(), INTERVAL 12 MONTH) THEN '100%'
+            ELSE '50%'
+        END as time_weight
+    FROM events e
+    JOIN results r ON r.event_id = e.id
+    JOIN classes cl ON r.class_id = cl.id
+    WHERE e.discipline IN ('ENDURO', 'DH')
+    AND e.date >= ?
+    AND r.status = 'finished'
+    AND (r.points > 0 OR COALESCE(r.run_1_points, 0) > 0 OR COALESCE(r.run_2_points, 0) > 0)
+    AND COALESCE(cl.series_eligible, 1) = 1
+    AND COALESCE(cl.awards_points, 1) = 1
+    GROUP BY e.id
+    ORDER BY e.date DESC
+", [$cutoffDate]);
+
 // Page config
 $page_title = 'Ranking';
 $breadcrumbs = [
@@ -156,6 +185,68 @@ include __DIR__ . '/components/unified-layout.php';
         <div class="admin-stat-value"><?= $disciplineStats['GRAVITY']['riders'] ?></div>
         <div class="admin-stat-label">Gravity åkare</div>
         <div class="admin-stat-meta"><?= $disciplineStats['GRAVITY']['clubs'] ?> klubbar • <?= $disciplineStats['GRAVITY']['events'] ?> events</div>
+    </div>
+</div>
+
+<!-- Active Events in Ranking -->
+<div class="admin-card" style="margin-bottom: 1.5rem;">
+    <div class="admin-card-header">
+        <h3>Aktiva events i ranking (<?= count($activeEvents) ?>)</h3>
+    </div>
+    <div class="admin-card-body">
+        <p class="admin-help-text">Events inom 24 månader som bidrar till rankingpoäng. Gul = 50% tidsvikt (13-24 mån).</p>
+
+        <?php if (empty($activeEvents)): ?>
+        <div class="admin-alert admin-alert-warning">Inga aktiva events hittades.</div>
+        <?php else: ?>
+        <div class="table-responsive">
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th>Event</th>
+                        <th>Datum</th>
+                        <th>Disciplin</th>
+                        <th>Nivå</th>
+                        <th>Åkare</th>
+                        <th>Klasser</th>
+                        <th>Tidsvikt</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($activeEvents as $event): ?>
+                    <tr class="<?= $event['time_weight'] === '50%' ? 'row-faded' : '' ?>">
+                        <td>
+                            <a href="/admin/event-results?event_id=<?= $event['id'] ?>" class="admin-link">
+                                <?= h($event['name']) ?>
+                            </a>
+                            <?php if ($event['location']): ?>
+                            <br><small class="text-muted"><?= h($event['location']) ?></small>
+                            <?php endif; ?>
+                        </td>
+                        <td><?= date('Y-m-d', strtotime($event['date'])) ?></td>
+                        <td>
+                            <span class="admin-badge admin-badge-<?= $event['discipline'] === 'ENDURO' ? 'primary' : 'secondary' ?>">
+                                <?= $event['discipline'] ?>
+                            </span>
+                        </td>
+                        <td>
+                            <span class="admin-badge admin-badge-<?= $event['event_level'] === 'national' ? 'success' : 'warning' ?>">
+                                <?= $event['event_level'] === 'national' ? 'Nationell' : 'Sportmotion' ?>
+                            </span>
+                        </td>
+                        <td><?= $event['rider_count'] ?></td>
+                        <td><?= $event['class_count'] ?></td>
+                        <td>
+                            <span class="admin-badge admin-badge-<?= $event['time_weight'] === '100%' ? 'success' : 'warning' ?>">
+                                <?= $event['time_weight'] ?>
+                            </span>
+                        </td>
+                    </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+        <?php endif; ?>
     </div>
 </div>
 
@@ -352,6 +443,111 @@ include __DIR__ . '/components/unified-layout.php';
 </div>
 
 <style>
+/* Active events table */
+.table-responsive {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    margin: 0 -1rem;
+    padding: 0 1rem;
+}
+
+.admin-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.875rem;
+    min-width: 600px;
+}
+
+.admin-table th,
+.admin-table td {
+    padding: 0.75rem 0.5rem;
+    text-align: left;
+    border-bottom: 1px solid var(--admin-border, #e2e8f0);
+    white-space: nowrap;
+}
+
+.admin-table th {
+    font-weight: 600;
+    background: var(--admin-bg-muted, #f7fafc);
+    color: var(--admin-text-muted, #718096);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.admin-table tbody tr:hover {
+    background: var(--admin-bg-hover, #f7fafc);
+}
+
+.admin-table .row-faded {
+    background: #fffbeb;
+}
+
+.admin-table .row-faded:hover {
+    background: #fef3c7;
+}
+
+.admin-link {
+    color: var(--admin-primary, #0066cc);
+    text-decoration: none;
+}
+
+.admin-link:hover {
+    text-decoration: underline;
+}
+
+.text-muted {
+    color: var(--admin-text-muted, #718096);
+}
+
+.admin-badge {
+    display: inline-block;
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.admin-badge-primary {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+.admin-badge-secondary {
+    background: #e2e8f0;
+    color: #475569;
+}
+
+.admin-badge-success {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.admin-badge-warning {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+@media (max-width: 768px) {
+    .admin-table {
+        font-size: 0.75rem;
+    }
+
+    .admin-table th,
+    .admin-table td {
+        padding: 0.5rem 0.4rem;
+    }
+
+    /* Hide less important columns on mobile */
+    .admin-table th:nth-child(4),
+    .admin-table td:nth-child(4),
+    .admin-table th:nth-child(6),
+    .admin-table td:nth-child(6) {
+        display: none;
+    }
+}
+
 .admin-stats-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
