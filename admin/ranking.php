@@ -245,7 +245,7 @@ include __DIR__ . '/components/unified-layout.php';
                     <?php foreach ($activeEvents as $event): ?>
                     <tr class="<?= $event['time_weight'] === '50%' ? 'row-faded' : '' ?>">
                         <td>
-                            <a href="/admin/event-results?event_id=<?= $event['id'] ?>" class="admin-link">
+                            <a href="/admin/edit-results?event_id=<?= $event['id'] ?>" class="admin-link">
                                 <?= h($event['name']) ?>
                             </a>
                             <?php if ($event['location']): ?>
@@ -342,11 +342,11 @@ include __DIR__ . '/components/unified-layout.php';
                                 Sätt disciplin
                             </a>
                             <?php elseif ($event['issue'] === 'Inga poäng tilldelade'): ?>
-                            <a href="/admin/event-results?event_id=<?= $event['id'] ?>" class="btn-admin btn-admin-secondary" style="font-size: 0.75rem; padding: 0.25rem 0.5rem;">
+                            <a href="/admin/edit-results?event_id=<?= $event['id'] ?>" class="btn-admin btn-admin-secondary" style="font-size: 0.75rem; padding: 0.25rem 0.5rem;">
                                 Beräkna poäng
                             </a>
                             <?php elseif ($event['issue'] === 'Inga finished-resultat'): ?>
-                            <a href="/admin/event-results?event_id=<?= $event['id'] ?>" class="btn-admin btn-admin-secondary" style="font-size: 0.75rem; padding: 0.25rem 0.5rem;">
+                            <a href="/admin/edit-results?event_id=<?= $event['id'] ?>" class="btn-admin btn-admin-secondary" style="font-size: 0.75rem; padding: 0.25rem 0.5rem;">
                                 Uppdatera status
                             </a>
                             <?php else: ?>
