@@ -124,19 +124,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
  $message = 'Förnamn och efternamn är obligatoriska';
  $messageType = 'error';
  } else {
- // Prepare rider data (read-only fields excluded: license_type, license_category, license_valid_until, discipline)
+ // Prepare rider data (read-only fields excluded: license_number, license_type, license_category, license_valid_until, discipline)
  $riderData = [
  'firstname' => $firstname,
  'lastname' => $lastname,
  'birth_year' => !empty($_POST['birth_year']) ? intval($_POST['birth_year']) : null,
  'gender' => trim($_POST['gender'] ?? ''),
  'club_id' => !empty($_POST['club_id']) ? intval($_POST['club_id']) : null,
- 'license_number' => trim($_POST['license_number'] ?? ''),
  'email' => trim($_POST['email'] ?? ''),
  'nationality' => trim($_POST['nationality'] ?? 'SWE'),
  'team' => trim($_POST['team'] ?? ''),
  'notes' => trim($_POST['notes'] ?? ''),
  'active' => isset($_POST['active']) ? 1 : 0,
+ // Social media links
+ 'social_instagram' => trim($_POST['social_instagram'] ?? ''),
+ 'social_facebook' => trim($_POST['social_facebook'] ?? ''),
+ 'social_strava' => trim($_POST['social_strava'] ?? ''),
+ 'social_youtube' => trim($_POST['social_youtube'] ?? ''),
+ 'social_tiktok' => trim($_POST['social_tiktok'] ?? ''),
  ];
 
  try {
@@ -435,20 +440,19 @@ include __DIR__ . '/../includes/layout-header.php';
   </select>
   </div>
 
-  <!-- License Number -->
+  <!-- License Number (system-locked) -->
   <div>
-  <label for="license_number" class="label">
+  <label class="label">
   <i data-lucide="credit-card"></i>
   Licensnummer
   </label>
   <input
   type="text"
-  id="license_number"
-  name="license_number"
   class="input"
-  value="<?= h($rider['license_number']) ?>"
-  placeholder="UCI ID eller SWE-ID"
+  value="<?= h($rider['license_number'] ?: '-') ?>"
+  disabled
   >
+  <small class="text-secondary">Importeras från SCF/UCI - kan inte ändras</small>
   </div>
 
   <!-- License Category (read-only) -->
@@ -619,6 +623,94 @@ include __DIR__ . '/../includes/layout-header.php';
   Aktiv deltagare
   </span>
   </label>
+  </div>
+
+  <!-- Social Media Links -->
+  <div style="grid-column: span 2; margin-top: var(--space-lg);">
+  <h2 class="text-primary mb-md">
+  <i data-lucide="share-2"></i>
+  Sociala medier
+  </h2>
+  </div>
+
+  <!-- Instagram -->
+  <div>
+  <label for="social_instagram" class="label">
+  <i data-lucide="instagram"></i>
+  Instagram
+  </label>
+  <input
+  type="text"
+  id="social_instagram"
+  name="social_instagram"
+  class="input"
+  value="<?= h($rider['social_instagram'] ?? '') ?>"
+  placeholder="@användarnamn eller URL"
+  >
+  </div>
+
+  <!-- Facebook -->
+  <div>
+  <label for="social_facebook" class="label">
+  <i data-lucide="facebook"></i>
+  Facebook
+  </label>
+  <input
+  type="text"
+  id="social_facebook"
+  name="social_facebook"
+  class="input"
+  value="<?= h($rider['social_facebook'] ?? '') ?>"
+  placeholder="Användarnamn eller URL"
+  >
+  </div>
+
+  <!-- Strava -->
+  <div>
+  <label for="social_strava" class="label">
+  <svg viewBox="0 0 24 24" style="width: 16px; height: 16px; fill: currentColor;"><path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169"/></svg>
+  Strava
+  </label>
+  <input
+  type="text"
+  id="social_strava"
+  name="social_strava"
+  class="input"
+  value="<?= h($rider['social_strava'] ?? '') ?>"
+  placeholder="Athlete ID eller URL"
+  >
+  </div>
+
+  <!-- YouTube -->
+  <div>
+  <label for="social_youtube" class="label">
+  <i data-lucide="youtube"></i>
+  YouTube
+  </label>
+  <input
+  type="text"
+  id="social_youtube"
+  name="social_youtube"
+  class="input"
+  value="<?= h($rider['social_youtube'] ?? '') ?>"
+  placeholder="Kanalnamn eller URL"
+  >
+  </div>
+
+  <!-- TikTok -->
+  <div>
+  <label for="social_tiktok" class="label">
+  <svg viewBox="0 0 24 24" style="width: 16px; height: 16px; fill: currentColor;"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z"/></svg>
+  TikTok
+  </label>
+  <input
+  type="text"
+  id="social_tiktok"
+  name="social_tiktok"
+  class="input"
+  value="<?= h($rider['social_tiktok'] ?? '') ?>"
+  placeholder="@användarnamn eller URL"
+  >
   </div>
 
   <!-- Notes -->
