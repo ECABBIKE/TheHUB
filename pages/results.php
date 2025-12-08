@@ -1,11 +1,33 @@
 <?php
 /**
  * V3 Results Page - Shows events with results
+ * Updated to support series_brands for better organization
  */
 
 $db = hub_db();
 
+// Check if series_brands table exists
+$brandsTableExists = false;
+try {
+    $check = $db->query("SHOW TABLES LIKE 'series_brands'");
+    $brandsTableExists = $check->rowCount() > 0;
+} catch (Exception $e) {
+    $brandsTableExists = false;
+}
+
+// Check if brand_id column exists in series
+$brandColumnExists = false;
+if ($brandsTableExists) {
+    try {
+        $check = $db->query("SHOW COLUMNS FROM series LIKE 'brand_id'");
+        $brandColumnExists = $check->rowCount() > 0;
+    } catch (Exception $e) {
+        $brandColumnExists = false;
+    }
+}
+
 // Get filter parameters
+$filterBrand = isset($_GET['brand']) && is_numeric($_GET['brand']) ? intval($_GET['brand']) : null;
 $filterSeries = isset($_GET['series']) && is_numeric($_GET['series']) ? intval($_GET['series']) : null;
 $filterYear = isset($_GET['year']) && is_numeric($_GET['year']) ? intval($_GET['year']) : null;
 
@@ -13,6 +35,12 @@ try {
     // Build query for events with results
     $where = ["1=1"];
     $params = [];
+
+    // Filter by brand (via series.brand_id)
+    if ($filterBrand && $brandColumnExists) {
+        $where[] = "s.brand_id = ?";
+        $params[] = $filterBrand;
+    }
 
     if ($filterSeries) {
         $where[] = "e.series_id = ?";
@@ -44,29 +72,70 @@ try {
     $stmt->execute($params);
     $events = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // Get series for filter
-    $allSeries = $db->query("
-        SELECT DISTINCT s.id, s.name
-        FROM series s
-        INNER JOIN events e ON s.id = e.series_id
-        INNER JOIN results r ON e.id = r.event_id
-        WHERE s.status IN ('active', 'completed')
-        ORDER BY s.name
-    ")->fetchAll(PDO::FETCH_ASSOC);
+    // Get brands for filter (if table exists)
+    $allBrands = [];
+    if ($brandsTableExists && $brandColumnExists) {
+        $allBrands = $db->query("
+            SELECT DISTINCT sb.id, sb.name
+            FROM series_brands sb
+            INNER JOIN series s ON sb.id = s.brand_id
+            INNER JOIN events e ON s.id = e.series_id
+            INNER JOIN results r ON e.id = r.event_id
+            WHERE sb.active = 1
+            ORDER BY sb.display_order ASC, sb.name ASC
+        ")->fetchAll(PDO::FETCH_ASSOC);
+    }
 
-    // Get years for filter
-    $allYears = $db->query("
-        SELECT DISTINCT YEAR(e.date) as year
-        FROM events e
-        INNER JOIN results r ON e.id = r.event_id
-        WHERE e.date IS NOT NULL
-        ORDER BY year DESC
-    ")->fetchAll(PDO::FETCH_ASSOC);
+    // Get series for filter (optionally filtered by brand)
+    if ($filterBrand && $brandColumnExists) {
+        $seriesStmt = $db->prepare("
+            SELECT DISTINCT s.id, s.name, s.year
+            FROM series s
+            INNER JOIN events e ON s.id = e.series_id
+            INNER JOIN results r ON e.id = r.event_id
+            WHERE s.status IN ('active', 'completed') AND s.brand_id = ?
+            ORDER BY s.year DESC, s.name
+        ");
+        $seriesStmt->execute([$filterBrand]);
+        $allSeries = $seriesStmt->fetchAll(PDO::FETCH_ASSOC);
+    } else {
+        $allSeries = $db->query("
+            SELECT DISTINCT s.id, s.name, s.year
+            FROM series s
+            INNER JOIN events e ON s.id = e.series_id
+            INNER JOIN results r ON e.id = r.event_id
+            WHERE s.status IN ('active', 'completed')
+            ORDER BY s.name
+        ")->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    // Get years for filter (optionally filtered by brand)
+    if ($filterBrand && $brandColumnExists) {
+        $yearsStmt = $db->prepare("
+            SELECT DISTINCT YEAR(e.date) as year
+            FROM events e
+            INNER JOIN series s ON e.series_id = s.id
+            INNER JOIN results r ON e.id = r.event_id
+            WHERE e.date IS NOT NULL AND s.brand_id = ?
+            ORDER BY year DESC
+        ");
+        $yearsStmt->execute([$filterBrand]);
+        $allYears = $yearsStmt->fetchAll(PDO::FETCH_ASSOC);
+    } else {
+        $allYears = $db->query("
+            SELECT DISTINCT YEAR(e.date) as year
+            FROM events e
+            INNER JOIN results r ON e.id = r.event_id
+            WHERE e.date IS NOT NULL
+            ORDER BY year DESC
+        ")->fetchAll(PDO::FETCH_ASSOC);
+    }
 
     $totalEvents = count($events);
 
 } catch (Exception $e) {
     $events = [];
+    $allBrands = [];
     $allSeries = [];
     $allYears = [];
     $totalEvents = 0;
@@ -84,26 +153,45 @@ try {
 
 <!-- Filters -->
 <div class="filter-bar mb-lg">
+  <?php if (!empty($allBrands)): ?>
+  <label class="filter-select-wrapper">
+    <span class="filter-label">Tävlingsserie:</span>
+    <select class="filter-select" onchange="if(this.value) window.location=this.value">
+      <option value="/results" <?= !$filterBrand ? 'selected' : '' ?>>Alla serier</option>
+      <?php foreach ($allBrands as $b): ?>
+      <option value="/results?brand=<?= $b['id'] ?>" <?= $filterBrand == $b['id'] ? 'selected' : '' ?>>
+        <?= htmlspecialchars($b['name']) ?>
+      </option>
+      <?php endforeach; ?>
+    </select>
+  </label>
+  <?php endif; ?>
+
+  <?php if (!empty($allYears)): ?>
+  <label class="filter-select-wrapper">
+    <span class="filter-label">År:</span>
+    <select class="filter-select" onchange="if(this.value) window.location=this.value">
+      <option value="/results<?= $filterBrand ? '?brand=' . $filterBrand : '' ?>" <?= !$filterYear ? 'selected' : '' ?>>Alla år</option>
+      <?php foreach ($allYears as $y): ?>
+      <option value="/results?<?= $filterBrand ? 'brand=' . $filterBrand . '&' : '' ?>year=<?= $y['year'] ?>" <?= $filterYear == $y['year'] ? 'selected' : '' ?>>
+        <?= $y['year'] ?>
+      </option>
+      <?php endforeach; ?>
+    </select>
+  </label>
+  <?php endif; ?>
+
+  <?php
+  // Show series dropdown only if brands aren't being used, or as a secondary filter
+  if (empty($allBrands)):
+  ?>
   <label class="filter-select-wrapper">
     <span class="filter-label">Serie:</span>
     <select class="filter-select" onchange="if(this.value) window.location=this.value">
       <option value="/results<?= $filterYear ? '?year=' . $filterYear : '' ?>" <?= !$filterSeries ? 'selected' : '' ?>>Alla serier</option>
       <?php foreach ($allSeries as $s): ?>
       <option value="/results?series=<?= $s['id'] ?><?= $filterYear ? '&year=' . $filterYear : '' ?>" <?= $filterSeries == $s['id'] ? 'selected' : '' ?>>
-        <?= htmlspecialchars($s['name']) ?>
-      </option>
-      <?php endforeach; ?>
-    </select>
-  </label>
-
-  <?php if (!empty($allYears)): ?>
-  <label class="filter-select-wrapper">
-    <span class="filter-label">År:</span>
-    <select class="filter-select" onchange="if(this.value) window.location=this.value">
-      <option value="/results<?= $filterSeries ? '?series=' . $filterSeries : '' ?>" <?= !$filterYear ? 'selected' : '' ?>>Alla år</option>
-      <?php foreach ($allYears as $y): ?>
-      <option value="/results?year=<?= $y['year'] ?><?= $filterSeries ? '&series=' . $filterSeries : '' ?>" <?= $filterYear == $y['year'] ? 'selected' : '' ?>>
-        <?= $y['year'] ?>
+        <?= htmlspecialchars($s['name']) ?><?= isset($s['year']) ? ' (' . $s['year'] . ')' : '' ?>
       </option>
       <?php endforeach; ?>
     </select>

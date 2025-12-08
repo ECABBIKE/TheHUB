@@ -65,6 +65,20 @@ try {
     $formatColumnExists = !empty($columns);
 } catch (Exception $e) {}
 
+// Check if brand_id column exists and get brands
+$brandColumnExists = false;
+$brands = [];
+try {
+    $columns = $db->getAll("SHOW COLUMNS FROM series LIKE 'brand_id'");
+    $brandColumnExists = !empty($columns);
+    if ($brandColumnExists) {
+        $tables = $db->getAll("SHOW TABLES LIKE 'series_brands'");
+        if (!empty($tables)) {
+            $brands = $db->getAll("SELECT id, name FROM series_brands WHERE active = 1 ORDER BY display_order ASC, name ASC");
+        }
+    }
+} catch (Exception $e) {}
+
 // Initialize message variables
 $message = '';
 $messageType = 'info';
@@ -127,6 +141,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Add format if column exists
         if ($formatColumnExists) {
             $seriesData['format'] = $_POST['format'] ?? 'Championship';
+        }
+
+        // Add brand_id if column exists
+        if ($brandColumnExists) {
+            $seriesData['brand_id'] = !empty($_POST['brand_id']) ? intval($_POST['brand_id']) : null;
         }
 
         try {
@@ -212,6 +231,7 @@ if ($isNew) {
         'description' => '',
         'organizer' => '',
         'logo' => '',
+        'brand_id' => null,
     ];
 }
 
@@ -275,6 +295,25 @@ include __DIR__ . '/components/unified-layout.php';
                     </small>
                 </div>
             </div>
+
+            <?php if ($brandColumnExists && !empty($brands)): ?>
+            <div class="admin-form-row">
+                <div class="admin-form-group">
+                    <label for="brand_id" class="admin-form-label">Varumärke (huvudserie)</label>
+                    <select id="brand_id" name="brand_id" class="admin-form-select">
+                        <option value="">-- Inget varumärke --</option>
+                        <?php foreach ($brands as $brand): ?>
+                        <option value="<?= $brand['id'] ?>" <?= ($series['brand_id'] ?? '') == $brand['id'] ? 'selected' : '' ?>>
+                            <?= htmlspecialchars($brand['name']) ?>
+                        </option>
+                        <?php endforeach; ?>
+                    </select>
+                    <small style="color: var(--color-text-secondary); font-size: 0.75rem;">
+                        Gruppera serier under ett gemensamt varumärke (t.ex. "Swecup")
+                    </small>
+                </div>
+            </div>
+            <?php endif; ?>
 
             <div class="admin-form-row">
                 <div class="admin-form-group">
