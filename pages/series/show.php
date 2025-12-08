@@ -700,89 +700,6 @@ function toggleClubRiders(btn, e) {
     color: var(--color-text-muted);
 }
 
-/* Collapsible Events Dropdown (standardized) */
-.events-dropdown {
-    background: var(--color-bg-card);
-    border-radius: var(--radius-lg);
-    margin-bottom: var(--space-lg);
-    overflow: hidden;
-    box-shadow: var(--shadow-sm);
-}
-.events-dropdown-header {
-    display: flex;
-    align-items: center;
-    gap: var(--space-sm);
-    padding: var(--space-md);
-    cursor: pointer;
-    font-weight: var(--weight-medium);
-    list-style: none;
-    background: var(--color-bg-surface);
-    border-bottom: 1px solid transparent;
-    transition: background 0.15s;
-}
-.events-dropdown-header:hover {
-    background: var(--color-bg-hover);
-}
-.events-dropdown-header::-webkit-details-marker { display: none; }
-.events-dropdown[open] .events-dropdown-header {
-    border-bottom-color: var(--color-border);
-}
-.events-count {
-    color: var(--color-text-muted);
-    font-size: var(--text-sm);
-    margin-left: auto;
-}
-.dropdown-arrow {
-    transition: transform 0.2s;
-    color: var(--color-text-muted);
-}
-.events-dropdown[open] .dropdown-arrow {
-    transform: rotate(180deg);
-}
-.events-dropdown-content {
-    max-height: 300px;
-    overflow-y: auto;
-}
-.event-dropdown-item {
-    display: flex;
-    gap: var(--space-sm);
-    padding: var(--space-sm) var(--space-md);
-    text-decoration: none;
-    color: inherit;
-    border-bottom: 1px solid var(--color-border-light);
-    transition: background 0.15s;
-    align-items: center;
-}
-.event-dropdown-item:hover {
-    background: var(--color-bg-hover);
-}
-.event-dropdown-item:last-child {
-    border-bottom: none;
-}
-.event-num {
-    color: var(--color-accent);
-    font-weight: var(--weight-medium);
-    min-width: 30px;
-    font-size: var(--text-sm);
-}
-.event-date {
-    color: var(--color-text-muted);
-    min-width: 50px;
-    font-size: var(--text-sm);
-}
-.event-name {
-    flex: 1;
-    font-size: var(--text-sm);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-.event-results {
-    color: var(--color-text-muted);
-    font-size: var(--text-xs);
-    white-space: nowrap;
-}
-
 /* Toggle Tabs */
 .standings-tabs {
     display: flex;
@@ -826,65 +743,6 @@ function toggleClubRiders(btn, e) {
 .standings-note {
     margin-top: -0.5rem;
     margin-bottom: 1rem;
-}
-
-/* Filter Bar (standardized) */
-.filter-bar {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--space-md);
-    align-items: flex-end;
-    margin-bottom: var(--space-lg);
-    padding: var(--space-md);
-    background: var(--color-bg-card);
-    border-radius: var(--radius-lg);
-    border: 1px solid var(--color-border);
-}
-.filter-select-wrapper {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-2xs);
-    flex: 1;
-    min-width: 140px;
-    max-width: 220px;
-}
-.filter-search-wrapper {
-    flex: 2;
-    max-width: 280px;
-}
-.filter-label {
-    font-size: var(--text-xs);
-    color: var(--color-text-secondary);
-    text-transform: uppercase;
-    font-weight: var(--weight-medium);
-}
-.filter-select,
-.filter-input {
-    padding: var(--space-sm) var(--space-md);
-    font-size: var(--text-sm);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-md);
-    background: var(--color-bg-surface);
-    color: var(--color-text-primary);
-    transition: border-color var(--transition-fast);
-}
-.filter-select {
-    padding-right: var(--space-xl);
-    cursor: pointer;
-    appearance: none;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236b7280' d='M3 4.5L6 7.5L9 4.5'/%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-position: right 8px center;
-}
-.filter-select:focus,
-.filter-input:focus {
-    outline: none;
-    border-color: var(--color-accent);
-    box-shadow: 0 0 0 3px rgba(59, 158, 255, 0.1);
-}
-.filter-btn {
-    align-self: flex-end;
-    white-space: nowrap;
 }
 
 /* Standings Tables */
@@ -1051,48 +909,6 @@ function toggleClubRiders(btn, e) {
     }
     .series-hero-logo {
         margin: 0 auto;
-    }
-    /* Filter bar mobile */
-    .filter-bar {
-        flex-direction: column;
-        padding: var(--space-sm);
-        gap: var(--space-sm);
-    }
-    .filter-select-wrapper,
-    .filter-search-wrapper {
-        width: 100%;
-        max-width: none;
-        min-width: 0;
-    }
-    .filter-select,
-    .filter-input {
-        width: 100%;
-    }
-    .filter-btn {
-        width: 100%;
-    }
-    /* Events dropdown mobile */
-    .events-dropdown-header {
-        padding: var(--space-sm) var(--space-md);
-        font-size: var(--text-sm);
-    }
-    .event-dropdown-item {
-        padding: var(--space-xs) var(--space-sm);
-        gap: var(--space-xs);
-    }
-    .event-num {
-        min-width: 24px;
-        font-size: var(--text-xs);
-    }
-    .event-date {
-        min-width: 40px;
-        font-size: var(--text-xs);
-    }
-    .event-name {
-        font-size: var(--text-xs);
-    }
-    .event-results {
-        display: none;
     }
     .series-meta {
         justify-content: center;
