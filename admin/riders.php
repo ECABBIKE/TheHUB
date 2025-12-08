@@ -13,6 +13,7 @@ $search = $_GET['search'] ?? '';
 $club_id = isset($_GET['club_id']) && is_numeric($_GET['club_id']) ? intval($_GET['club_id']) : null;
 $onlyWithResults = isset($_GET['with_results']) && $_GET['with_results'] == '1';
 $onlySweId = isset($_GET['swe_only']) && $_GET['swe_only'] == '1';
+$onlyActivated = isset($_GET['activated']) && $_GET['activated'] == '1';
 
 // Handle sorting
 $sortBy = $_GET['sort'] ?? 'name';
@@ -61,6 +62,10 @@ if ($onlySweId) {
     $where[] = "c.license_number LIKE 'SWE%'";
 }
 
+if ($onlyActivated) {
+    $where[] = "c.password IS NOT NULL AND c.password != ''";
+}
+
 $whereClause = $where ? 'WHERE ' . implode(' AND ', $where) : '';
 
 $sql = "SELECT
@@ -101,13 +106,14 @@ $page_actions = '<a href="/admin/import/riders" class="btn-admin btn-admin-prima
 </a>';
 
 // Build sort URL helper
-function buildSortUrl($field, $currentSort, $currentOrder, $search, $club_id, $onlyWithResults, $onlySweId) {
+function buildSortUrl($field, $currentSort, $currentOrder, $search, $club_id, $onlyWithResults, $onlySweId, $onlyActivated) {
     $newOrder = ($currentSort === $field && $currentOrder === 'asc') ? 'desc' : 'asc';
     $url = "?sort=$field&order=$newOrder";
     if ($search) $url .= '&search=' . urlencode($search);
     if ($club_id) $url .= '&club_id=' . $club_id;
     if ($onlyWithResults) $url .= '&with_results=1';
     if ($onlySweId) $url .= '&swe_only=1';
+    if ($onlyActivated) $url .= '&activated=1';
     return $url;
 }
 
@@ -161,7 +167,14 @@ include __DIR__ . '/components/unified-layout.php';
                 </label>
             </div>
 
-            <?php if ($search || $onlyWithResults || $onlySweId): ?>
+            <div class="admin-form-group" style="margin-bottom: 0;">
+                <label class="admin-checkbox-label">
+                    <input type="checkbox" name="activated" value="1" <?= $onlyActivated ? 'checked' : '' ?> onchange="this.form.submit()">
+                    <span>Aktiverade konton</span>
+                </label>
+            </div>
+
+            <?php if ($search || $onlyWithResults || $onlySweId || $onlyActivated): ?>
                 <a href="/admin/riders<?= $club_id ? '?club_id=' . $club_id : '' ?>" class="btn-admin btn-admin-sm btn-admin-secondary">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
                     Rensa
@@ -189,7 +202,7 @@ include __DIR__ . '/components/unified-layout.php';
                     <thead>
                         <tr>
                             <th>
-                                <a href="<?= buildSortUrl('name', $sortBy, $sortOrder, $search, $club_id, $onlyWithResults, $onlySweId) ?>" class="admin-sortable">
+                                <a href="<?= buildSortUrl('name', $sortBy, $sortOrder, $search, $club_id, $onlyWithResults, $onlySweId, $onlyActivated) ?>" class="admin-sortable">
                                     Namn
                                     <?php if ($sortBy === 'name'): ?>
                                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;">
@@ -203,7 +216,7 @@ include __DIR__ . '/components/unified-layout.php';
                                 </a>
                             </th>
                             <th>
-                                <a href="<?= buildSortUrl('year', $sortBy, $sortOrder, $search, $club_id, $onlyWithResults, $onlySweId) ?>" class="admin-sortable">
+                                <a href="<?= buildSortUrl('year', $sortBy, $sortOrder, $search, $club_id, $onlyWithResults, $onlySweId, $onlyActivated) ?>" class="admin-sortable">
                                     År
                                     <?php if ($sortBy === 'year'): ?>
                                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;">
@@ -217,7 +230,7 @@ include __DIR__ . '/components/unified-layout.php';
                                 </a>
                             </th>
                             <th>
-                                <a href="<?= buildSortUrl('club', $sortBy, $sortOrder, $search, $club_id, $onlyWithResults, $onlySweId) ?>" class="admin-sortable">
+                                <a href="<?= buildSortUrl('club', $sortBy, $sortOrder, $search, $club_id, $onlyWithResults, $onlySweId, $onlyActivated) ?>" class="admin-sortable">
                                     Klubb
                                     <?php if ($sortBy === 'club'): ?>
                                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;">
@@ -231,7 +244,7 @@ include __DIR__ . '/components/unified-layout.php';
                                 </a>
                             </th>
                             <th>
-                                <a href="<?= buildSortUrl('license', $sortBy, $sortOrder, $search, $club_id, $onlyWithResults, $onlySweId) ?>" class="admin-sortable">
+                                <a href="<?= buildSortUrl('license', $sortBy, $sortOrder, $search, $club_id, $onlyWithResults, $onlySweId, $onlyActivated) ?>" class="admin-sortable">
                                     Licensnummer
                                     <?php if ($sortBy === 'license'): ?>
                                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;">
@@ -245,7 +258,7 @@ include __DIR__ . '/components/unified-layout.php';
                                 </a>
                             </th>
                             <th>
-                                <a href="<?= buildSortUrl('results', $sortBy, $sortOrder, $search, $club_id, $onlyWithResults, $onlySweId) ?>" class="admin-sortable">
+                                <a href="<?= buildSortUrl('results', $sortBy, $sortOrder, $search, $club_id, $onlyWithResults, $onlySweId, $onlyActivated) ?>" class="admin-sortable">
                                     Resultat
                                     <?php if ($sortBy === 'results'): ?>
                                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;">
