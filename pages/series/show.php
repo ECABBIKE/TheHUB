@@ -470,9 +470,9 @@ unset($club);
     <!-- Individual Standings Section -->
     <div id="individual-standings">
         <!-- Filters -->
-        <form method="get" class="filter-bar">
-            <label class="filter-select-wrapper">
-                <span class="filter-label">Klass:</span>
+        <form method="get" class="filters-bar">
+            <div class="filter-group">
+                <label class="filter-label">Klass</label>
                 <select name="class" id="class-filter" class="filter-select" onchange="this.form.submit()">
                     <option value="all" <?= $selectedClass === 'all' ? 'selected' : '' ?>>Alla klasser</option>
                     <?php foreach ($classes as $cls): ?>
@@ -481,11 +481,11 @@ unset($club);
                         </option>
                     <?php endforeach; ?>
                 </select>
-            </label>
-            <label class="filter-select-wrapper filter-search-wrapper">
-                <span class="filter-label">Sök namn:</span>
-                <input type="search" name="search" id="name-search" class="filter-input" value="<?= htmlspecialchars($searchName) ?>" placeholder="Skriv namn...">
-            </label>
+            </div>
+            <div class="filter-group filter-search-group">
+                <label class="filter-label">Sök namn</label>
+                <input type="search" name="search" id="name-search" class="filter-select" value="<?= htmlspecialchars($searchName) ?>" placeholder="Skriv namn...">
+            </div>
             <button type="submit" class="btn btn-primary filter-btn">Sök</button>
         </form>
 
@@ -659,6 +659,62 @@ function toggleClubRiders(btn, e) {
 </script>
 
 <style>
+/* Filters Bar */
+.filters-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-md);
+    margin-bottom: var(--space-lg);
+    padding: var(--space-md);
+    background: var(--color-bg-card);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--color-border);
+    align-items: flex-end;
+}
+.filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2xs);
+    flex: 1;
+    min-width: 140px;
+}
+.filter-search-group {
+    flex: 2;
+}
+.filter-label {
+    font-size: var(--text-xs);
+    color: var(--color-text-secondary);
+    text-transform: uppercase;
+    font-weight: var(--weight-medium);
+}
+.filter-select {
+    padding: var(--space-sm) var(--space-md);
+    padding-right: var(--space-xl);
+    background: var(--color-bg-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    color: var(--color-text-primary);
+    font-size: var(--text-sm);
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236b7280' d='M3 4.5L6 7.5L9 4.5'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+    transition: border-color var(--transition-fast);
+}
+input.filter-select {
+    background-image: none;
+    padding-right: var(--space-md);
+}
+.filter-select:focus {
+    outline: none;
+    border-color: var(--color-accent);
+    box-shadow: 0 0 0 3px rgba(59, 158, 255, 0.1);
+}
+.filter-btn {
+    white-space: nowrap;
+}
+
 .series-hero {
     display: flex;
     gap: var(--space-lg);
@@ -902,6 +958,24 @@ function toggleClubRiders(btn, e) {
 }
 
 /* Mobile Portrait - hide event columns, compact layout */
+@media (max-width: 599px) {
+    .filters-bar {
+        flex-direction: column;
+        padding: var(--space-sm);
+        gap: var(--space-sm);
+    }
+    .filter-group {
+        width: 100%;
+        min-width: 0;
+    }
+    .filter-select {
+        width: 100%;
+    }
+    .filter-btn {
+        width: 100%;
+    }
+}
+
 @media (max-width: 599px) and (orientation: portrait) {
     .series-hero {
         flex-direction: column;
