@@ -107,10 +107,37 @@ CREATE TABLE IF NOT EXISTS categories (
 COMMENT='DEPRECATED: Use classes table instead. Kept for historical reference only.';
 
 -- ============================================================================
+-- SERIES BRANDS TABLE (parent series / series families)
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS series_brands (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    slug VARCHAR(100) UNIQUE,
+    description TEXT,
+    logo VARCHAR(255),
+    website VARCHAR(255),
+
+    -- Badge styling (inherited by series if not overridden)
+    gradient_start VARCHAR(7) DEFAULT '#004A98',
+    gradient_end VARCHAR(7) DEFAULT '#002a5c',
+    accent_color VARCHAR(7) DEFAULT '#61CE70',
+
+    active BOOLEAN DEFAULT 1,
+    display_order INT DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+    INDEX idx_slug (slug),
+    INDEX idx_active (active),
+    INDEX idx_display_order (display_order)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================================================
 -- SERIES TABLE
 -- ============================================================================
 CREATE TABLE IF NOT EXISTS series (
     id INT AUTO_INCREMENT PRIMARY KEY,
+    brand_id INT NULL,
     name VARCHAR(255) NOT NULL,
     slug VARCHAR(100),
     type VARCHAR(100),
@@ -135,12 +162,14 @@ CREATE TABLE IF NOT EXISTS series (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     UNIQUE KEY unique_slug (slug),
+    INDEX idx_brand (brand_id),
     INDEX idx_status (status),
     INDEX idx_type (type),
     INDEX idx_discipline (discipline),
     INDEX idx_year (year),
     INDEX idx_active (active),
-    INDEX idx_start_date (start_date)
+    INDEX idx_start_date (start_date),
+    CONSTRAINT fk_series_brand FOREIGN KEY (brand_id) REFERENCES series_brands(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================================================
