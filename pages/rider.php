@@ -914,40 +914,35 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
                         </div>
 
                         <?php if (!empty($standing['results'])): ?>
-                        <div class="results-header">
-                            <span class="results-title">Resultat i serien</span>
-                            <span class="results-count"><?= count($standing['results']) ?> starter</span>
-                        </div>
-                        <div class="results-list">
-                            <?php foreach ($standing['results'] as $result): ?>
-                            <a href="/event/<?= $result['event_id'] ?? '' ?>" class="result-item">
-                                <div class="result-position <?= $result['position'] <= 3 ? 'p' . $result['position'] : '' ?>">
-                                    <?php if ($result['status'] !== 'finished'): ?>
-                                        <?= strtoupper(substr($result['status'], 0, 3)) ?>
-                                    <?php elseif ($result['position'] == 1): ?>
-                                        <img src="/assets/icons/medal-1st.svg" alt="1:a" class="medal-icon">
-                                    <?php elseif ($result['position'] == 2): ?>
-                                        <img src="/assets/icons/medal-2nd.svg" alt="2:a" class="medal-icon">
-                                    <?php elseif ($result['position'] == 3): ?>
-                                        <img src="/assets/icons/medal-3rd.svg" alt="3:e" class="medal-icon">
-                                    <?php else: ?>
-                                        <?= $result['position'] ?>
-                                    <?php endif; ?>
-                                </div>
-                                <div class="result-info">
-                                    <div class="result-event-name"><?= htmlspecialchars($result['event_name']) ?></div>
-                                    <div class="result-meta">
-                                        <span><?= date('j M Y', strtotime($result['event_date'])) ?></span>
-                                        <span>•</span>
-                                        <span><?= htmlspecialchars($result['class_name']) ?></span>
-                                    </div>
-                                </div>
-                                <div class="result-time">
-                                    <div class="result-time-value"><?= htmlspecialchars($result['time'] ?? '-') ?></div>
-                                </div>
-                            </a>
-                            <?php endforeach; ?>
-                        </div>
+                        <details class="events-dropdown series-results-dropdown">
+                            <summary class="events-dropdown-header">
+                                <span>Resultat i serien</span>
+                                <span class="events-count"><?= count($standing['results']) ?> starter</span>
+                                <span class="dropdown-arrow">▾</span>
+                            </summary>
+                            <div class="events-dropdown-content">
+                                <?php foreach ($standing['results'] as $result): ?>
+                                <a href="/event/<?= $result['event_id'] ?? '' ?>" class="event-dropdown-item">
+                                    <span class="event-position <?= $result['status'] === 'finished' && $result['position'] <= 3 ? 'p' . $result['position'] : '' ?>">
+                                        <?php if ($result['status'] !== 'finished'): ?>
+                                            <?= strtoupper(substr($result['status'], 0, 3)) ?>
+                                        <?php elseif ($result['position'] == 1): ?>
+                                            <img src="/assets/icons/medal-1st.svg" alt="1:a" class="medal-icon">
+                                        <?php elseif ($result['position'] == 2): ?>
+                                            <img src="/assets/icons/medal-2nd.svg" alt="2:a" class="medal-icon">
+                                        <?php elseif ($result['position'] == 3): ?>
+                                            <img src="/assets/icons/medal-3rd.svg" alt="3:e" class="medal-icon">
+                                        <?php else: ?>
+                                            <?= $result['position'] ?>
+                                        <?php endif; ?>
+                                    </span>
+                                    <span class="event-date"><?= date('j M', strtotime($result['event_date'])) ?></span>
+                                    <span class="event-name"><?= htmlspecialchars($result['event_name']) ?></span>
+                                    <span class="event-results"><?= htmlspecialchars($result['class_name']) ?></span>
+                                </a>
+                                <?php endforeach; ?>
+                            </div>
+                        </details>
                         <?php endif; ?>
                     </div>
                     <?php endforeach; ?>
@@ -983,26 +978,29 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
 
         <!-- All Results -->
         <section class="section">
-            <div class="section-header">
-                <h2 class="section-title">Historiska resultat</h2>
-            </div>
+            <?php if (empty($results)): ?>
             <div class="card results-card">
-                <?php if (empty($results)): ?>
                 <div class="empty-state">
                     <div class="empty-icon"><i data-lucide="flag"></i></div>
                     <p>Inga resultat registrerade</p>
                 </div>
-                <?php else: ?>
-                <div class="results-list compact">
-                    <?php foreach (array_slice($results, 0, 10) as $result): ?>
-                    <a href="/event/<?= $result['event_id'] ?>" class="result-item">
+            </div>
+            <?php else: ?>
+            <details class="events-dropdown" open>
+                <summary class="events-dropdown-header">
+                    <span>Historiska resultat</span>
+                    <span class="events-count"><?= count($results) ?> st</span>
+                    <span class="dropdown-arrow">▾</span>
+                </summary>
+                <div class="events-dropdown-content">
+                    <?php foreach ($results as $result): ?>
+                    <a href="/event/<?= $result['event_id'] ?>" class="event-dropdown-item">
                         <?php if ($result['is_motion']): ?>
-                        <!-- Motion class - show checkmark instead of position -->
-                        <div class="result-position motion">
+                        <span class="event-position motion">
                             <i data-lucide="check"></i>
-                        </div>
+                        </span>
                         <?php else: ?>
-                        <div class="result-position <?= $result['status'] === 'finished' && $result['position'] <= 3 ? 'p' . $result['position'] : '' ?>">
+                        <span class="event-position <?= $result['status'] === 'finished' && $result['position'] <= 3 ? 'p' . $result['position'] : '' ?>">
                             <?php if ($result['status'] !== 'finished'): ?>
                                 <?= strtoupper(substr($result['status'], 0, 3)) ?>
                             <?php elseif ($result['position'] == 1): ?>
@@ -1014,27 +1012,16 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
                             <?php else: ?>
                                 <?= $result['position'] ?>
                             <?php endif; ?>
-                        </div>
+                        </span>
                         <?php endif; ?>
-                        <div class="result-info">
-                            <div class="result-event-name"><?= htmlspecialchars($result['event_name']) ?></div>
-                            <div class="result-meta">
-                                <span><?= date('j M Y', strtotime($result['event_date'])) ?></span>
-                                <?php if ($result['is_motion']): ?>
-                                <span>• Motion</span>
-                                <?php endif; ?>
-                            </div>
-                        </div>
+                        <span class="event-date"><?= date('j M', strtotime($result['event_date'])) ?></span>
+                        <span class="event-name"><?= htmlspecialchars($result['event_name']) ?></span>
+                        <span class="event-results"><?= $result['is_motion'] ? 'Motion' : '' ?></span>
                     </a>
                     <?php endforeach; ?>
                 </div>
-                <?php if (count($results) > 10): ?>
-                <div class="results-more">
-                    <span>+ <?= count($results) - 10 ?> fler resultat</span>
-                </div>
-                <?php endif; ?>
-                <?php endif; ?>
-            </div>
+            </details>
+            <?php endif; ?>
         </section>
     </aside>
 </div>
@@ -1806,61 +1793,153 @@ function copyToClipboard(text) {
 .series-stat-value { font-family: var(--font-mono); font-size: 1rem; font-weight: 700; color: var(--color-text); }
 .series-stat-label { font-size: 0.6rem; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.3px; }
 
-/* Results */
-.results-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-md); }
-.results-title { font-size: 0.9rem; font-weight: 700; color: var(--color-text); }
-.results-count { font-size: 0.8rem; color: var(--color-text-muted); }
-
-.results-list { display: flex; flex-direction: column; gap: var(--space-sm); }
-
-.result-item {
-    display: grid;
-    grid-template-columns: auto 1fr;
-    gap: var(--space-sm);
+/* Collapsible Events Dropdown (standardized across all pages) */
+.events-dropdown {
+    background: var(--color-bg-card);
+    border-radius: var(--radius-lg);
+    margin-bottom: var(--space-md);
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+}
+.events-dropdown-header {
+    display: flex;
     align-items: center;
-    padding: var(--space-sm);
-    background: var(--color-bg-sunken);
-    border-radius: var(--radius-md);
+    gap: var(--space-sm);
+    padding: var(--space-md);
+    cursor: pointer;
+    font-weight: var(--weight-medium);
+    list-style: none;
+    background: var(--color-bg-surface);
+    border-bottom: 1px solid transparent;
+    transition: background 0.15s;
+}
+.events-dropdown-header:hover {
+    background: var(--color-bg-hover);
+}
+.events-dropdown-header::-webkit-details-marker { display: none; }
+.events-dropdown[open] .events-dropdown-header {
+    border-bottom-color: var(--color-border);
+}
+.events-count {
+    color: var(--color-text-muted);
+    font-size: var(--text-sm);
+    margin-left: auto;
+}
+.dropdown-arrow {
+    transition: transform 0.2s;
+    color: var(--color-text-muted);
+}
+.events-dropdown[open] .dropdown-arrow {
+    transform: rotate(180deg);
+}
+.events-dropdown-content {
+    max-height: 400px;
+    overflow-y: auto;
+}
+.event-dropdown-item {
+    display: flex;
+    gap: var(--space-sm);
+    padding: var(--space-sm) var(--space-md);
     text-decoration: none;
     color: inherit;
-    transition: all 0.2s ease;
+    border-bottom: 1px solid var(--color-border-light);
+    transition: background 0.15s;
+    align-items: center;
 }
-
-.result-item:hover { background: var(--color-bg-surface); box-shadow: var(--shadow-sm); }
-
-.result-position {
-    width: 32px;
-    height: 32px;
+.event-dropdown-item:hover {
+    background: var(--color-bg-hover);
+}
+.event-dropdown-item:last-child {
+    border-bottom: none;
+}
+.event-position {
+    width: 28px;
+    height: 28px;
+    min-width: 28px;
     border-radius: var(--radius-sm);
     display: flex;
     align-items: center;
     justify-content: center;
     font-family: var(--font-mono);
-    font-size: 0.8rem;
+    font-size: 0.75rem;
     font-weight: 700;
-    background: var(--color-bg-surface);
+    background: var(--color-bg-sunken);
     color: var(--color-text-muted);
     border: 1px solid var(--color-border);
 }
-
-.result-position.p1 { background: linear-gradient(135deg, #fef3c7, #fde68a); border-color: #FFD700; color: #92400e; }
-.result-position.p2 { background: linear-gradient(135deg, #f3f4f6, #e5e7eb); border-color: #C0C0C0; color: #4b5563; }
-.result-position.p3 { background: linear-gradient(135deg, #fed7aa, #fdba74); border-color: #CD7F32; color: #9a3412; }
-.result-position.motion { background: var(--color-bg-surface); border-color: var(--color-border); color: var(--color-accent); }
-.result-position.motion i, .result-position.motion svg { width: 16px; height: 16px; }
-
-.medal-icon {
-    width: 22px;
-    height: 22px;
+.event-position.p1 { background: linear-gradient(135deg, #fef3c7, #fde68a); border-color: #FFD700; color: #92400e; }
+.event-position.p2 { background: linear-gradient(135deg, #f3f4f6, #e5e7eb); border-color: #C0C0C0; color: #4b5563; }
+.event-position.p3 { background: linear-gradient(135deg, #fed7aa, #fdba74); border-color: #CD7F32; color: #9a3412; }
+.event-position.motion { color: var(--color-accent); }
+.event-position.motion i, .event-position.motion svg { width: 14px; height: 14px; }
+.event-position .medal-icon {
+    width: 18px;
+    height: 18px;
     display: block;
-    margin: 0 auto;
+}
+.event-date {
+    color: var(--color-text-muted);
+    font-size: var(--text-sm);
+    min-width: 45px;
+}
+.event-name {
+    flex: 1;
+    font-size: var(--text-sm);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.event-results {
+    color: var(--color-text-muted);
+    font-size: var(--text-xs);
+    white-space: nowrap;
 }
 
-.result-info { min-width: 0; }
-.result-event-name { font-weight: 600; color: var(--color-text); font-size: 0.8rem; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.result-meta { display: flex; flex-wrap: wrap; gap: var(--space-sm); font-size: 0.7rem; color: var(--color-text-muted); }
-.result-time { display: none; }
-.result-time-value { font-family: var(--font-mono); font-size: 0.95rem; font-weight: 600; color: var(--color-text); }
+/* Series results dropdown specific */
+.series-results-dropdown {
+    margin-top: var(--space-md);
+    box-shadow: none;
+    border: 1px solid var(--color-border);
+}
+.series-results-dropdown .events-dropdown-header {
+    padding: var(--space-sm) var(--space-md);
+    font-size: var(--text-sm);
+}
+.series-results-dropdown .events-dropdown-content {
+    max-height: 300px;
+}
+
+/* Mobile optimizations for events dropdown */
+@media (max-width: 599px) {
+    .events-dropdown-header {
+        padding: var(--space-sm) var(--space-md);
+        font-size: var(--text-sm);
+    }
+    .event-dropdown-item {
+        padding: var(--space-xs) var(--space-sm);
+        gap: var(--space-xs);
+    }
+    .event-position {
+        width: 24px;
+        height: 24px;
+        min-width: 24px;
+        font-size: 0.65rem;
+    }
+    .event-position .medal-icon {
+        width: 16px;
+        height: 16px;
+    }
+    .event-date {
+        font-size: var(--text-xs);
+        min-width: 40px;
+    }
+    .event-name {
+        font-size: var(--text-xs);
+    }
+    .event-results {
+        display: none;
+    }
+}
 
 /* Achievements Card */
 .achievements-card {
