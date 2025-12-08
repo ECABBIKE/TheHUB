@@ -115,7 +115,7 @@ try {
         return;
     }
 
-    // Fetch rider's results
+    // Fetch rider's results with motion class flag
     $stmt = $db->prepare("
         SELECT
             res.id, res.finish_time, res.status, res.points, res.position,
@@ -123,7 +123,8 @@ try {
             e.id as event_id, e.name as event_name, e.date as event_date, e.location,
             s.id as series_id, s.name as series_name,
             cls.display_name as class_name,
-            COALESCE(cls.awards_points, 1) as awards_podiums
+            COALESCE(cls.awards_points, 1) as awards_podiums,
+            CASE WHEN LOWER(COALESCE(cls.display_name, cls.name, '')) LIKE '%motion%' THEN 1 ELSE 0 END as is_motion
         FROM results res
         JOIN events e ON res.event_id = e.id
         LEFT JOIN series s ON e.series_id = s.id
@@ -135,11 +136,20 @@ try {
     $stmt->execute([$riderId]);
     $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // Calculate stats from results if not cached
-    $totalStarts = $rider['stats_total_starts'] ?: count($results);
-    $finishedRaces = $rider['stats_total_finished'] ?: count(array_filter($results, fn($r) => $r['status'] === 'finished'));
-    $wins = $rider['stats_total_wins'] ?: count(array_filter($results, fn($r) => $r['position'] == 1 && $r['status'] === 'finished'));
-    $podiums = $rider['stats_total_podiums'] ?: count(array_filter($results, fn($r) => $r['position'] <= 3 && $r['status'] === 'finished'));
+    // Separate competitive and motion results
+    $competitiveResults = array_filter($results, fn($r) => !$r['is_motion']);
+    $motionResults = array_filter($results, fn($r) => $r['is_motion']);
+    $hasCompetitiveResults = count($competitiveResults) > 0;
+
+    // Calculate stats - for competitive results only
+    $totalStarts = count($competitiveResults);
+    $finishedRaces = count(array_filter($competitiveResults, fn($r) => $r['status'] === 'finished'));
+    $wins = count(array_filter($competitiveResults, fn($r) => $r['position'] == 1 && $r['status'] === 'finished'));
+    $podiums = count(array_filter($competitiveResults, fn($r) => $r['position'] <= 3 && $r['status'] === 'finished'));
+
+    // Motion stats (for highlight section)
+    $motionStarts = count($motionResults);
+    $motionFinished = count(array_filter($motionResults, fn($r) => $r['status'] === 'finished'));
 
     // Calculate age
     $currentYear = date('Y');
@@ -297,7 +307,7 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
                             </svg>
                         <?php endif; ?>
                     </div>
-                    <?php if ($rankingPosition): ?>
+                    <?php if ($rankingPosition && $hasCompetitiveResults): ?>
                     <div class="ranking-badge">
                         <span class="rank-label">Ranking</span>
                         <span class="rank-number">#<?= $rankingPosition ?></span>
@@ -393,7 +403,8 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
     </div>
 </section>
 
-<!-- Stats Grid -->
+<?php if ($hasCompetitiveResults): ?>
+<!-- Stats Grid - Tävlingsresultat -->
 <div class="stats-grid">
     <div class="stat-card">
         <div class="stat-value"><?= $totalStarts ?></div>
@@ -412,6 +423,27 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
         <div class="stat-label">Pallplatser</div>
     </div>
 </div>
+<?php elseif ($motionStarts > 0): ?>
+<!-- Highlight Card - Motion/Hobby deltagare -->
+<div class="highlight-card">
+    <div class="highlight-icon">🚴</div>
+    <div class="highlight-content">
+        <h3 class="highlight-title">Motion-deltagare</h3>
+        <p class="highlight-text">Har deltagit i <strong><?= $motionStarts ?></strong> motion-lopp och fullföljt <strong><?= $motionFinished ?></strong>.</p>
+        <p class="highlight-subtext">Motion-klasser är icke-tävlande och ger inga rankingpoäng.</p>
+    </div>
+</div>
+<?php else: ?>
+<!-- No results yet -->
+<div class="highlight-card">
+    <div class="highlight-icon">👋</div>
+    <div class="highlight-content">
+        <h3 class="highlight-title">Välkommen!</h3>
+        <p class="highlight-text">Inga resultat registrerade ännu.</p>
+        <p class="highlight-subtext">Anmäl dig till ett event för att komma igång!</p>
+    </div>
+</div>
+<?php endif; ?>
 
 <div class="content-layout">
     <div class="content-main">
@@ -560,10 +592,10 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
         }
         ?>
 
-        <!-- All Results -->
+        <!-- Historical Results -->
         <section class="section">
             <div class="section-header">
-                <h2 class="section-title">Alla resultat</h2>
+                <h2 class="section-title">Historiska resultat</h2>
             </div>
             <div class="card results-card">
                 <?php if (empty($results)): ?>
@@ -1200,6 +1232,60 @@ function copyToClipboard(text) {
     text-transform: uppercase;
     letter-spacing: 0.5px;
     font-weight: 600;
+}
+
+/* Highlight Card - For motion/hobby participants */
+.highlight-card {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    background: linear-gradient(135deg, var(--color-bg-surface) 0%, var(--color-bg-hover) 100%);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    padding: var(--space-lg);
+    margin-bottom: var(--space-lg);
+}
+
+.highlight-icon {
+    font-size: 2.5rem;
+    flex-shrink: 0;
+}
+
+.highlight-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.highlight-title {
+    font-size: var(--text-lg);
+    font-weight: var(--weight-semibold);
+    margin: 0 0 var(--space-xs);
+    color: var(--color-text-primary);
+}
+
+.highlight-text {
+    font-size: var(--text-sm);
+    color: var(--color-text-secondary);
+    margin: 0 0 var(--space-2xs);
+}
+
+.highlight-subtext {
+    font-size: var(--text-xs);
+    color: var(--color-text-muted);
+    margin: 0;
+}
+
+/* Mobile: Stack highlight card */
+@media (max-width: 480px) {
+    .highlight-card {
+        flex-direction: column;
+        text-align: center;
+        padding: var(--space-md);
+    }
+
+    .highlight-icon {
+        font-size: 3rem;
+    }
 }
 
 /* Content Layout */
