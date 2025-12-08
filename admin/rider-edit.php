@@ -272,27 +272,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // Get clubs for dropdown
 $clubs = $db->getAll("SELECT id, name FROM clubs WHERE active = 1 ORDER BY name");
 
-$pageTitle = 'Redigera Deltagare';
-$pageType = 'admin';
-include __DIR__ . '/../includes/layout-header.php';
+// Page config for admin layout
+$page_title = 'Redigera Deltagare';
+$breadcrumbs = [
+    ['label' => 'Deltagare', 'url' => '/admin/riders'],
+    ['label' => h($rider['firstname'] . ' ' . $rider['lastname'])]
+];
+
+include __DIR__ . '/components/unified-layout.php';
 ?>
 
-<main class="main-content">
- <div class="container" style="max-width: 900px;">
- <!-- Header -->
- <div class="flex items-center justify-between mb-lg">
- <h1 class="text-primary">
- <i data-lucide="user-circle"></i>
- Redigera Deltagare
- </h1>
- <a href="/admin/riders.php" class="btn btn--secondary">
- <i data-lucide="arrow-left"></i>
- Tillbaka
- </a>
- </div>
-
- <!-- Message -->
- <?php if ($message): ?>
+<!-- Message -->
+<?php if ($message): ?>
  <div class="alert alert--<?= h($messageType) ?> mb-lg">
  <i data-lucide="<?= $messageType === 'success' ? 'check-circle' : 'alert-circle' ?>"></i>
  <?= h($message) ?>
@@ -918,8 +909,6 @@ include __DIR__ . '/../includes/layout-header.php';
  </div>
  </div>
  <?php endif; ?>
- </div>
-</main>
 
 <style>
 @media (max-width: 768px) {
@@ -940,4 +929,4 @@ function confirmDeleteAccount() {
 }
 </script>
 
-<?php include __DIR__ . '/../includes/layout-footer.php'; ?>
+<?php include __DIR__ . '/components/unified-layout-footer.php'; ?>
