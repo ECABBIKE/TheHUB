@@ -161,7 +161,6 @@ $pageType = 'admin';
 include __DIR__ . '/../includes/layout-header.php';
 ?>
 
-
 <main class="main-content">
  <div class="container">
  <!-- Header -->
