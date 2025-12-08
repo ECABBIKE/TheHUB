@@ -133,6 +133,51 @@ $activeEvents = $db->getAll("
     ORDER BY e.date DESC
 ", [$cutoffDate]);
 
+// Get events that SHOULD be in ranking but are missing (diagnostic)
+$missingEvents = $db->getAll("
+    SELECT
+        e.id,
+        e.name,
+        e.date,
+        e.location,
+        e.discipline,
+        e.event_format,
+        COALESCE(e.event_level, 'national') as event_level,
+        e.active as event_active,
+        (SELECT COUNT(*) FROM results WHERE event_id = e.id) as total_results,
+        (SELECT COUNT(*) FROM results WHERE event_id = e.id AND status = 'finished') as finished_results,
+        (SELECT COUNT(*) FROM results WHERE event_id = e.id AND (points > 0 OR COALESCE(run_1_points, 0) > 0 OR COALESCE(run_2_points, 0) > 0)) as results_with_points,
+        (SELECT GROUP_CONCAT(DISTINCT CONCAT(cl.name, ' (eligible:', COALESCE(cl.series_eligible,1), ',points:', COALESCE(cl.awards_points,1), ')') SEPARATOR ', ')
+         FROM results r2
+         JOIN classes cl ON r2.class_id = cl.id
+         WHERE r2.event_id = e.id) as classes_info,
+        CASE
+            WHEN e.discipline NOT IN ('ENDURO', 'DH') THEN 'Fel disciplin'
+            WHEN e.date < ? THEN 'Äldre än 24 mån'
+            WHEN NOT EXISTS (SELECT 1 FROM results r WHERE r.event_id = e.id AND r.status = 'finished') THEN 'Inga finished-resultat'
+            WHEN NOT EXISTS (SELECT 1 FROM results r WHERE r.event_id = e.id AND (r.points > 0 OR COALESCE(r.run_1_points, 0) > 0 OR COALESCE(r.run_2_points, 0) > 0)) THEN 'Inga poäng tilldelade'
+            WHEN NOT EXISTS (SELECT 1 FROM results r JOIN classes cl ON r.class_id = cl.id WHERE r.event_id = e.id AND COALESCE(cl.series_eligible, 1) = 1 AND COALESCE(cl.awards_points, 1) = 1) THEN 'Klasser saknar series_eligible/awards_points'
+            ELSE 'Okänt'
+        END as issue
+    FROM events e
+    WHERE e.date >= ?
+    AND e.id NOT IN (
+        SELECT DISTINCT e2.id
+        FROM events e2
+        JOIN results r ON r.event_id = e2.id
+        JOIN classes cl ON r.class_id = cl.id
+        WHERE e2.discipline IN ('ENDURO', 'DH')
+        AND e2.date >= ?
+        AND r.status = 'finished'
+        AND (r.points > 0 OR COALESCE(r.run_1_points, 0) > 0 OR COALESCE(r.run_2_points, 0) > 0)
+        AND COALESCE(cl.series_eligible, 1) = 1
+        AND COALESCE(cl.awards_points, 1) = 1
+    )
+    AND (e.discipline IN ('ENDURO', 'DH') OR e.event_format LIKE '%DH%' OR e.name LIKE '%SweCup%' OR e.name LIKE '%Enduro%')
+    ORDER BY e.date DESC
+    LIMIT 20
+", [$cutoffDate, $cutoffDate, $cutoffDate]);
+
 // Page config
 $page_title = 'Ranking';
 $breadcrumbs = [
@@ -233,6 +278,91 @@ include __DIR__ . '/components/unified-layout.php';
         <?php endif; ?>
     </div>
 </div>
+
+<!-- Missing Events (Diagnostic) -->
+<?php if (!empty($missingEvents)): ?>
+<div class="admin-card" style="margin-bottom: 1.5rem;">
+    <div class="admin-card-header" style="background: #fef3c7; border-bottom: 1px solid #f59e0b;">
+        <h3 style="color: #92400e;">⚠️ Events som saknas i ranking (<?= count($missingEvents) ?>)</h3>
+    </div>
+    <div class="admin-card-body">
+        <p class="admin-help-text">Dessa events matchar Enduro/DH eller SweCup men saknas i ranking. Klicka på "Åtgärd" för att fixa.</p>
+
+        <div class="table-responsive">
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th>Event</th>
+                        <th>Datum</th>
+                        <th>Disciplin</th>
+                        <th>Format</th>
+                        <th>Resultat</th>
+                        <th>Problem</th>
+                        <th>Åtgärd</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($missingEvents as $event): ?>
+                    <tr style="background: #fffbeb;">
+                        <td>
+                            <a href="/admin/event-edit?id=<?= $event['id'] ?>" class="admin-link">
+                                <?= h($event['name']) ?>
+                            </a>
+                            <?php if ($event['location']): ?>
+                            <br><small class="text-muted"><?= h($event['location']) ?></small>
+                            <?php endif; ?>
+                        </td>
+                        <td><?= date('Y-m-d', strtotime($event['date'])) ?></td>
+                        <td>
+                            <span class="admin-badge <?= in_array($event['discipline'], ['ENDURO', 'DH']) ? 'admin-badge-success' : 'admin-badge-danger' ?>">
+                                <?= h($event['discipline'] ?: 'EJ SATT') ?>
+                            </span>
+                        </td>
+                        <td>
+                            <span class="admin-badge admin-badge-secondary">
+                                <?= h($event['event_format'] ?: '-') ?>
+                            </span>
+                        </td>
+                        <td>
+                            <small>
+                                Totalt: <?= $event['total_results'] ?><br>
+                                Finished: <?= $event['finished_results'] ?><br>
+                                Med poäng: <?= $event['results_with_points'] ?>
+                            </small>
+                        </td>
+                        <td>
+                            <span class="admin-badge admin-badge-danger"><?= h($event['issue']) ?></span>
+                            <?php if ($event['classes_info']): ?>
+                            <br><small style="font-size: 0.65rem; color: #666;"><?= h($event['classes_info']) ?></small>
+                            <?php endif; ?>
+                        </td>
+                        <td>
+                            <?php if ($event['issue'] === 'Fel disciplin'): ?>
+                            <a href="/admin/event-edit?id=<?= $event['id'] ?>" class="btn-admin btn-admin-secondary" style="font-size: 0.75rem; padding: 0.25rem 0.5rem;">
+                                Sätt disciplin
+                            </a>
+                            <?php elseif ($event['issue'] === 'Inga poäng tilldelade'): ?>
+                            <a href="/admin/event-results?event_id=<?= $event['id'] ?>" class="btn-admin btn-admin-secondary" style="font-size: 0.75rem; padding: 0.25rem 0.5rem;">
+                                Beräkna poäng
+                            </a>
+                            <?php elseif ($event['issue'] === 'Inga finished-resultat'): ?>
+                            <a href="/admin/event-results?event_id=<?= $event['id'] ?>" class="btn-admin btn-admin-secondary" style="font-size: 0.75rem; padding: 0.25rem 0.5rem;">
+                                Uppdatera status
+                            </a>
+                            <?php else: ?>
+                            <a href="/admin/event-edit?id=<?= $event['id'] ?>" class="btn-admin btn-admin-secondary" style="font-size: 0.75rem; padding: 0.25rem 0.5rem;">
+                                Redigera
+                            </a>
+                            <?php endif; ?>
+                        </td>
+                    </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+<?php endif; ?>
 
 <!-- Info and Calculation Cards -->
 <div class="admin-grid-2">
