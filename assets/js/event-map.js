@@ -407,6 +407,59 @@ class EventMap {
             });
         }
 
+        // Fullscreen button
+        const fullscreenBtn = container.querySelector('.event-map-fullscreen');
+        if (fullscreenBtn) {
+            fullscreenBtn.addEventListener('click', () => {
+                this.toggleFullscreen();
+            });
+        }
+
+        // Menu toggle button (in fullscreen)
+        const menuToggleBtn = container.querySelector('.event-map-menu-toggle');
+        if (menuToggleBtn) {
+            menuToggleBtn.addEventListener('click', () => {
+                container.classList.toggle('menu-hidden');
+            });
+        }
+
+        // Fullscreen menu segment items
+        container.querySelectorAll('.event-map-fs-segment-item').forEach(item => {
+            item.addEventListener('click', () => {
+                const segmentId = item.dataset.segmentId;
+                this.zoomToSegment(segmentId);
+                // Highlight active
+                container.querySelectorAll('.event-map-fs-segment-item').forEach(i => i.classList.remove('active'));
+                item.classList.add('active');
+            });
+        });
+
+        // Fullscreen menu POI items
+        container.querySelectorAll('.event-map-fs-poi-item').forEach(item => {
+            item.addEventListener('click', () => {
+                const poiType = item.dataset.poiType;
+                this.zoomToPois(poiType);
+                // Highlight active
+                container.querySelectorAll('.event-map-fs-poi-item').forEach(i => i.classList.remove('active'));
+                item.classList.add('active');
+            });
+        });
+
+        // Fullscreen locate button
+        const fsLocateBtn = container.querySelector('.event-map-fs-locate');
+        if (fsLocateBtn) {
+            fsLocateBtn.addEventListener('click', () => {
+                this.locateUser(fsLocateBtn);
+            });
+        }
+
+        // ESC key to exit fullscreen
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && container.classList.contains('fullscreen')) {
+                this.toggleFullscreen();
+            }
+        });
+
         // Enable scroll zoom on focus/click
         this.map.getContainer().addEventListener('click', () => {
             this.map.scrollWheelZoom.enable();
@@ -507,6 +560,56 @@ class EventMap {
 
         if (found) {
             this.map.fitBounds(bounds, { padding: [50, 50], maxZoom: 16 });
+        }
+    }
+
+    /**
+     * Zoom to a specific segment
+     * @param {number|string} segmentId
+     */
+    zoomToSegment(segmentId) {
+        if (!this.layers.segments) return;
+
+        this.layers.segments.eachLayer(layer => {
+            if (layer.feature && layer.feature.properties.id == segmentId) {
+                this.map.fitBounds(layer.getBounds(), { padding: [50, 50] });
+                // Highlight the segment briefly
+                layer.setStyle({ weight: 6, opacity: 1 });
+                setTimeout(() => {
+                    layer.setStyle({ weight: 4, opacity: 0.85 });
+                }, 2000);
+            }
+        });
+    }
+
+    /**
+     * Toggle fullscreen mode
+     */
+    toggleFullscreen() {
+        const container = document.getElementById(this.containerId + '-container');
+        if (!container) return;
+
+        const isFullscreen = container.classList.contains('fullscreen');
+
+        if (isFullscreen) {
+            // Exit fullscreen
+            container.classList.remove('fullscreen');
+            container.classList.remove('menu-hidden');
+            document.body.style.overflow = '';
+
+            // Restore map size after transition
+            setTimeout(() => {
+                this.map.invalidateSize();
+            }, 350);
+        } else {
+            // Enter fullscreen
+            container.classList.add('fullscreen');
+            document.body.style.overflow = 'hidden';
+
+            // Update map size after transition
+            setTimeout(() => {
+                this.map.invalidateSize();
+            }, 350);
         }
     }
 

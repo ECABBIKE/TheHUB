@@ -560,3 +560,362 @@
     font-size: var(--text-sm);
     color: white;
 }
+
+/* ==========================================================================
+   FULLSCREEN MODE
+   ========================================================================== */
+
+/* Fullscreen button */
+.event-map-fullscreen {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border: none;
+    background: var(--color-bg-hover);
+    border-radius: var(--radius-md);
+    color: var(--color-text-tertiary);
+    cursor: pointer;
+    transition: var(--transition-fast);
+}
+
+.event-map-fullscreen:hover {
+    background: var(--color-bg-active);
+    color: var(--color-text-primary);
+}
+
+.event-map-fullscreen .icon-close {
+    display: none;
+}
+
+/* Fullscreen menu - hidden by default */
+.event-map-fs-menu {
+    display: none;
+}
+
+/* Fullscreen state */
+.event-map-container.fullscreen {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    border-radius: 0;
+    border: none;
+    display: flex;
+    flex-direction: column;
+    background: var(--color-bg-card);
+}
+
+.event-map-container.fullscreen .event-map-header {
+    flex-shrink: 0;
+    border-radius: 0;
+    padding: var(--space-md) var(--space-lg);
+    background: var(--color-bg-card);
+    border-bottom: 1px solid var(--color-border);
+}
+
+.event-map-container.fullscreen .event-map-fullscreen .icon-expand {
+    display: none;
+}
+
+.event-map-container.fullscreen .event-map-fullscreen .icon-close {
+    display: block;
+}
+
+.event-map-container.fullscreen .event-map-fullscreen {
+    background: var(--color-danger);
+    color: white;
+}
+
+.event-map-container.fullscreen .event-map-fullscreen:hover {
+    background: #dc2626;
+}
+
+/* Hide toggle button in fullscreen */
+.event-map-container.fullscreen .event-map-toggle {
+    display: none;
+}
+
+.event-map-container.fullscreen .event-map-content {
+    flex: 1;
+    display: flex;
+    position: relative;
+    overflow: hidden;
+}
+
+.event-map-container.fullscreen .event-map-view {
+    flex: 1;
+    height: 100% !important;
+    min-height: 100%;
+}
+
+/* Hide elevation/segments/legend in fullscreen (moved to menu) */
+.event-map-container.fullscreen .event-map-elevation,
+.event-map-container.fullscreen .event-map-segments,
+.event-map-container.fullscreen .event-map-legend {
+    display: none;
+}
+
+/* Fullscreen Menu */
+.event-map-container.fullscreen .event-map-fs-menu {
+    display: flex;
+    flex-direction: column;
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 280px;
+    background: var(--color-bg-card);
+    border-right: 1px solid var(--color-border);
+    box-shadow: var(--shadow-lg);
+    z-index: 1000;
+    overflow-y: auto;
+    transform: translateX(0);
+    transition: transform 0.3s ease;
+}
+
+.event-map-container.fullscreen.menu-hidden .event-map-fs-menu {
+    transform: translateX(-100%);
+}
+
+.event-map-fs-menu-header {
+    padding: var(--space-lg);
+    border-bottom: 1px solid var(--color-border);
+    background: var(--color-bg-surface);
+}
+
+.event-map-fs-menu-header h3 {
+    margin: 0 0 var(--space-xs) 0;
+    font-size: var(--text-lg);
+    font-weight: var(--weight-semibold);
+    color: var(--color-text-primary);
+}
+
+.event-map-fs-stats {
+    display: flex;
+    gap: var(--space-md);
+    font-size: var(--text-sm);
+    color: var(--color-text-secondary);
+}
+
+.event-map-fs-stats span {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2xs);
+}
+
+/* Menu sections */
+.event-map-fs-section {
+    padding: var(--space-md) var(--space-lg);
+    border-bottom: 1px solid var(--color-border);
+}
+
+.event-map-fs-section h4 {
+    margin: 0 0 var(--space-sm) 0;
+    font-size: var(--text-xs);
+    font-weight: var(--weight-semibold);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--color-text-muted);
+}
+
+/* Segment list in menu */
+.event-map-fs-segments {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+}
+
+.event-map-fs-segment-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    padding: var(--space-sm);
+    background: var(--color-bg-hover);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: var(--transition-fast);
+}
+
+.event-map-fs-segment-item:hover,
+.event-map-fs-segment-item.active {
+    background: var(--color-accent);
+    color: white;
+}
+
+.event-map-fs-segment-color {
+    width: 4px;
+    height: 32px;
+    border-radius: 2px;
+    flex-shrink: 0;
+}
+
+.event-map-fs-segment-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.event-map-fs-segment-name {
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.event-map-fs-segment-meta {
+    font-size: var(--text-xs);
+    color: var(--color-text-tertiary);
+}
+
+.event-map-fs-segment-item:hover .event-map-fs-segment-meta,
+.event-map-fs-segment-item.active .event-map-fs-segment-meta {
+    color: rgba(255, 255, 255, 0.8);
+}
+
+/* POI list in menu */
+.event-map-fs-pois {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+}
+
+.event-map-fs-poi-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    padding: var(--space-sm);
+    background: var(--color-bg-hover);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: var(--transition-fast);
+}
+
+.event-map-fs-poi-item:hover,
+.event-map-fs-poi-item.active {
+    background: var(--color-accent);
+    color: white;
+}
+
+.event-map-fs-poi-marker {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    flex-shrink: 0;
+}
+
+.event-map-fs-poi-label {
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    flex: 1;
+}
+
+.event-map-fs-poi-count {
+    font-size: var(--text-xs);
+    background: var(--color-bg-active);
+    padding: 2px 6px;
+    border-radius: var(--radius-full);
+    color: var(--color-text-secondary);
+}
+
+.event-map-fs-poi-item:hover .event-map-fs-poi-count,
+.event-map-fs-poi-item.active .event-map-fs-poi-count {
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+}
+
+/* Actions at bottom of menu */
+.event-map-fs-actions {
+    padding: var(--space-md) var(--space-lg);
+    margin-top: auto;
+    border-top: 1px solid var(--color-border);
+}
+
+.event-map-fs-locate {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-xs);
+    width: 100%;
+    padding: var(--space-sm) var(--space-md);
+    background: var(--color-bg-hover);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    color: var(--color-text-primary);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    cursor: pointer;
+    transition: var(--transition-fast);
+}
+
+.event-map-fs-locate:hover {
+    background: var(--color-bg-active);
+    border-color: var(--color-accent);
+    color: var(--color-accent);
+}
+
+.event-map-fs-locate.locating {
+    background: var(--color-accent);
+    border-color: var(--color-accent);
+    color: white;
+}
+
+/* Menu toggle button (shown on map in fullscreen) */
+.event-map-menu-toggle {
+    display: none;
+    position: absolute;
+    top: var(--space-md);
+    left: var(--space-md);
+    z-index: 999;
+    width: 40px;
+    height: 40px;
+    background: var(--color-bg-card);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-md);
+    cursor: pointer;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-text-primary);
+    transition: var(--transition-fast);
+}
+
+.event-map-menu-toggle:hover {
+    background: var(--color-bg-hover);
+}
+
+.event-map-container.fullscreen .event-map-menu-toggle {
+    display: flex;
+}
+
+.event-map-container.fullscreen.menu-hidden .event-map-menu-toggle {
+    left: var(--space-md);
+}
+
+/* Mobile fullscreen adjustments */
+@media (max-width: 768px) {
+    .event-map-container.fullscreen .event-map-fs-menu {
+        width: 100%;
+        max-width: 320px;
+    }
+
+    .event-map-container.fullscreen .event-map-header {
+        padding: var(--space-sm) var(--space-md);
+    }
+
+    .event-map-container.fullscreen .event-map-stats {
+        display: none;
+    }
+}
