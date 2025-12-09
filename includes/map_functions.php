@@ -605,3 +605,261 @@ function getGpxUploadPath() {
     }
     return $path;
 }
+
+// =====================================================
+// SEGMENT DEFINITION BY DISTANCE
+// =====================================================
+
+/**
+ * Get all coordinates with cumulative distance for a track
+ *
+ * @param PDO $pdo Database connection
+ * @param int $trackId Track ID
+ * @return array Array of points with lat, lng, ele, cumulative_km
+ */
+function getTrackCoordinatesWithDistance($pdo, $trackId) {
+    // Get all segments ordered by sequence
+    $stmt = $pdo->prepare("
+        SELECT coordinates, elevation_data
+        FROM event_track_segments
+        WHERE track_id = ?
+        ORDER BY sequence_number ASC
+    ");
+    $stmt->execute([$trackId]);
+    $segments = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    $allPoints = [];
+    $cumulativeDistance = 0;
+    $prevPoint = null;
+
+    foreach ($segments as $segment) {
+        $coords = json_decode($segment['coordinates'], true) ?: [];
+        $elevations = json_decode($segment['elevation_data'], true) ?: [];
+
+        foreach ($coords as $i => $coord) {
+            $point = [
+                'lat' => $coord['lat'],
+                'lng' => $coord['lng'],
+                'ele' => $elevations[$i] ?? ($coord['ele'] ?? null)
+            ];
+
+            if ($prevPoint !== null) {
+                $distance = haversineDistance(
+                    $prevPoint['lat'], $prevPoint['lng'],
+                    $point['lat'], $point['lng']
+                );
+                $cumulativeDistance += $distance;
+            }
+
+            $point['cumulative_km'] = $cumulativeDistance;
+            $allPoints[] = $point;
+            $prevPoint = $point;
+        }
+    }
+
+    return $allPoints;
+}
+
+/**
+ * Define track segments based on distance intervals
+ *
+ * @param PDO $pdo Database connection
+ * @param int $trackId Track ID
+ * @param array $segmentDefs Array of segment definitions:
+ *        [['name' => 'SS1', 'type' => 'stage', 'start_km' => 0, 'end_km' => 5.2], ...]
+ * @return bool Success
+ * @throws Exception On error
+ */
+function defineTrackSegmentsFromDistances($pdo, $trackId, $segmentDefs) {
+    // Get all coordinates with distances
+    $allPoints = getTrackCoordinatesWithDistance($pdo, $trackId);
+
+    if (empty($allPoints)) {
+        throw new Exception("Inga koordinater hittades för banan");
+    }
+
+    $totalDistance = end($allPoints)['cumulative_km'];
+
+    // Validate segment definitions
+    foreach ($segmentDefs as $def) {
+        if ($def['end_km'] > $totalDistance + 0.1) {
+            throw new Exception("Segmentet '{$def['name']}' slutar vid {$def['end_km']} km men banan är bara {$totalDistance} km");
+        }
+    }
+
+    $pdo->beginTransaction();
+
+    try {
+        // Delete existing segments
+        $stmt = $pdo->prepare("DELETE FROM event_track_segments WHERE track_id = ?");
+        $stmt->execute([$trackId]);
+
+        // Create new segments
+        $sequenceNumber = 1;
+
+        foreach ($segmentDefs as $def) {
+            $startKm = floatval($def['start_km']);
+            $endKm = floatval($def['end_km']);
+            $segmentType = $def['type'] ?? 'stage';
+            $segmentName = $def['name'] ?? "Segment $sequenceNumber";
+
+            // Find points within this range
+            $segmentCoords = [];
+            $segmentElevations = [];
+            $elevationGain = 0;
+            $elevationLoss = 0;
+            $prevEle = null;
+
+            foreach ($allPoints as $point) {
+                if ($point['cumulative_km'] >= $startKm && $point['cumulative_km'] <= $endKm) {
+                    $segmentCoords[] = ['lat' => $point['lat'], 'lng' => $point['lng']];
+                    if ($point['ele'] !== null) {
+                        $segmentElevations[] = $point['ele'];
+
+                        if ($prevEle !== null) {
+                            $diff = $point['ele'] - $prevEle;
+                            if ($diff > 0) {
+                                $elevationGain += $diff;
+                            } else {
+                                $elevationLoss += abs($diff);
+                            }
+                        }
+                        $prevEle = $point['ele'];
+                    }
+                }
+            }
+
+            if (empty($segmentCoords)) {
+                // Try to find at least the closest point to start
+                $closestPoint = null;
+                $closestDist = PHP_INT_MAX;
+                foreach ($allPoints as $point) {
+                    $dist = abs($point['cumulative_km'] - $startKm);
+                    if ($dist < $closestDist) {
+                        $closestDist = $dist;
+                        $closestPoint = $point;
+                    }
+                }
+                if ($closestPoint) {
+                    $segmentCoords[] = ['lat' => $closestPoint['lat'], 'lng' => $closestPoint['lng']];
+                }
+            }
+
+            if (empty($segmentCoords)) {
+                continue; // Skip empty segments
+            }
+
+            $startCoord = $segmentCoords[0];
+            $endCoord = end($segmentCoords);
+            $segmentDistance = $endKm - $startKm;
+
+            // Insert segment
+            $stmt = $pdo->prepare("
+                INSERT INTO event_track_segments
+                (track_id, segment_type, segment_name, sequence_number,
+                 distance_km, elevation_gain_m, elevation_loss_m,
+                 start_lat, start_lng, end_lat, end_lng,
+                 coordinates, elevation_data, color)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ");
+            $stmt->execute([
+                $trackId,
+                $segmentType,
+                $segmentName,
+                $sequenceNumber,
+                $segmentDistance,
+                round($elevationGain),
+                round($elevationLoss),
+                $startCoord['lat'],
+                $startCoord['lng'],
+                $endCoord['lat'],
+                $endCoord['lng'],
+                json_encode($segmentCoords),
+                json_encode($segmentElevations),
+                getSegmentColor($segmentType)
+            ]);
+
+            $sequenceNumber++;
+        }
+
+        // Update track totals
+        $stmt = $pdo->prepare("
+            SELECT SUM(distance_km) as total_dist, SUM(elevation_gain_m) as total_ele
+            FROM event_track_segments WHERE track_id = ?
+        ");
+        $stmt->execute([$trackId]);
+        $totals = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        $stmt = $pdo->prepare("
+            UPDATE event_tracks
+            SET total_distance_km = ?, total_elevation_m = ?
+            WHERE id = ?
+        ");
+        $stmt->execute([
+            $totals['total_dist'] ?? 0,
+            $totals['total_ele'] ?? 0,
+            $trackId
+        ]);
+
+        $pdo->commit();
+        return true;
+
+    } catch (Exception $e) {
+        $pdo->rollBack();
+        throw $e;
+    }
+}
+
+/**
+ * Add a single segment by distance
+ *
+ * @param PDO $pdo Database connection
+ * @param int $trackId Track ID
+ * @param array $segmentDef Segment definition (name, type, start_km, end_km)
+ * @return int New segment ID
+ */
+function addSegmentByDistance($pdo, $trackId, $segmentDef) {
+    // Get current segments
+    $stmt = $pdo->prepare("
+        SELECT id, segment_type, segment_name, distance_km,
+               (SELECT SUM(distance_km) FROM event_track_segments WHERE track_id = ? AND sequence_number <= s.sequence_number) as end_km
+        FROM event_track_segments s
+        WHERE track_id = ?
+        ORDER BY sequence_number
+    ");
+    $stmt->execute([$trackId, $trackId]);
+    $existingSegments = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // Rebuild segment definitions including the new one
+    $segmentDefs = [];
+    $startKm = 0;
+    foreach ($existingSegments as $seg) {
+        $segmentDefs[] = [
+            'name' => $seg['segment_name'],
+            'type' => $seg['segment_type'],
+            'start_km' => $startKm,
+            'end_km' => $startKm + $seg['distance_km']
+        ];
+        $startKm += $seg['distance_km'];
+    }
+
+    // Add the new segment (will be inserted at the right position)
+    $segmentDefs[] = $segmentDef;
+
+    // Sort by start_km
+    usort($segmentDefs, fn($a, $b) => $a['start_km'] <=> $b['start_km']);
+
+    // Redefine all segments
+    defineTrackSegmentsFromDistances($pdo, $trackId, $segmentDefs);
+
+    // Return the ID of the newly added segment
+    $stmt = $pdo->prepare("
+        SELECT id FROM event_track_segments
+        WHERE track_id = ? AND segment_name = ?
+        ORDER BY id DESC LIMIT 1
+    ");
+    $stmt->execute([$trackId, $segmentDef['name']]);
+    $result = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    return $result ? $result['id'] : 0;
+}

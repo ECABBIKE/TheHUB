@@ -150,6 +150,66 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $messageType = 'success';
                 }
                 break;
+
+            // Define segments from distances
+            case 'define_segments':
+                $trackId = intval($_POST['track_id'] ?? 0);
+                $segmentCount = intval($_POST['segment_count'] ?? 0);
+
+                if ($trackId <= 0) {
+                    throw new Exception('Ogiltigt track-ID');
+                }
+
+                $segmentDefs = [];
+                for ($i = 1; $i <= $segmentCount; $i++) {
+                    $name = trim($_POST["seg_{$i}_name"] ?? '');
+                    $type = $_POST["seg_{$i}_type"] ?? 'stage';
+                    $startKm = floatval($_POST["seg_{$i}_start"] ?? 0);
+                    $endKm = floatval($_POST["seg_{$i}_end"] ?? 0);
+
+                    if ($endKm > $startKm) {
+                        $segmentDefs[] = [
+                            'name' => $name ?: ($type === 'stage' ? "SS$i" : "L$i"),
+                            'type' => $type,
+                            'start_km' => $startKm,
+                            'end_km' => $endKm
+                        ];
+                    }
+                }
+
+                if (empty($segmentDefs)) {
+                    throw new Exception('Inga giltiga segment definierade');
+                }
+
+                defineTrackSegmentsFromDistances($pdo, $trackId, $segmentDefs);
+                $message = count($segmentDefs) . ' segment definierade!';
+                $messageType = 'success';
+                break;
+
+            // Add single segment
+            case 'add_segment':
+                $trackId = intval($_POST['track_id'] ?? 0);
+                $segmentName = trim($_POST['segment_name'] ?? '');
+                $segmentType = $_POST['segment_type'] ?? 'stage';
+                $startKm = floatval($_POST['start_km'] ?? 0);
+                $endKm = floatval($_POST['end_km'] ?? 0);
+
+                if ($trackId <= 0) {
+                    throw new Exception('Ogiltigt track-ID');
+                }
+                if ($endKm <= $startKm) {
+                    throw new Exception('Slut-km måste vara större än start-km');
+                }
+
+                addSegmentByDistance($pdo, $trackId, [
+                    'name' => $segmentName ?: ($segmentType === 'stage' ? 'SS' : 'Liaison'),
+                    'type' => $segmentType,
+                    'start_km' => $startKm,
+                    'end_km' => $endKm
+                ]);
+                $message = 'Segment tillagt!';
+                $messageType = 'success';
+                break;
         }
 
     } catch (Exception $e) {
@@ -250,11 +310,71 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
 
+        <?php if ($track): ?>
+        <!-- Define Segments Card -->
+        <div class="admin-card" style="margin-top: var(--space-lg);">
+            <div class="admin-card-header">
+                <h2>Definiera sträckor</h2>
+            </div>
+            <div class="admin-card-body">
+                <p class="admin-text-muted" style="margin-bottom: var(--space-md);">
+                    Total distans: <strong><?= number_format($track['total_distance_km'], 1) ?> km</strong>
+                </p>
+
+                <form method="POST" id="define-segments-form">
+                    <?= csrf_field() ?>
+                    <input type="hidden" name="action" value="define_segments">
+                    <input type="hidden" name="track_id" value="<?= $track['id'] ?>">
+                    <input type="hidden" name="segment_count" id="segment-count" value="1">
+
+                    <div id="segment-definitions">
+                        <div class="segment-row" data-index="1" style="display: grid; grid-template-columns: auto 1fr 100px 100px 40px; gap: var(--space-sm); align-items: center; margin-bottom: var(--space-sm); padding: var(--space-sm); background: var(--color-bg-hover); border-radius: var(--radius-sm);">
+                            <select name="seg_1_type" class="admin-form-select admin-form-select-sm" style="width: 100px;">
+                                <option value="stage">Tävling</option>
+                                <option value="liaison">Transport</option>
+                            </select>
+                            <input type="text" name="seg_1_name" class="admin-form-input admin-form-input-sm" placeholder="Namn (t.ex. SS1)">
+                            <input type="number" name="seg_1_start" class="admin-form-input admin-form-input-sm" placeholder="Start km" step="0.1" min="0" value="0">
+                            <input type="number" name="seg_1_end" class="admin-form-input admin-form-input-sm" placeholder="Slut km" step="0.1" min="0" value="<?= number_format($track['total_distance_km'], 1) ?>">
+                            <button type="button" class="btn-admin btn-admin-ghost btn-admin-sm remove-segment" style="padding: 4px;" title="Ta bort" disabled>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" x2="6" y1="6" y2="18"/><line x1="6" x2="18" y1="6" y2="18"/></svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; gap: var(--space-sm); margin-top: var(--space-md);">
+                        <button type="button" id="add-segment-row" class="btn-admin btn-admin-secondary btn-admin-sm">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+                            Lägg till sträcka
+                        </button>
+                        <button type="submit" class="btn-admin btn-admin-primary btn-admin-sm">
+                            Spara sträckor
+                        </button>
+                    </div>
+                </form>
+
+                <details style="margin-top: var(--space-md);">
+                    <summary style="cursor: pointer; color: var(--color-text-secondary); font-size: var(--text-sm);">
+                        Tips för segment-definition
+                    </summary>
+                    <div style="margin-top: var(--space-sm); padding: var(--space-sm); background: var(--color-bg-sunken); border-radius: var(--radius-sm); font-size: var(--text-sm);">
+                        <ul style="margin: 0; padding-left: var(--space-md);">
+                            <li><strong>Tävling (Stage)</strong> = tidstagning, visas med grön färg</li>
+                            <li><strong>Transport (Liaison)</strong> = överföring, visas med grå färg</li>
+                            <li>Segmenten behöver inte täcka hela banan</li>
+                            <li>Du kan ha flera segment av samma typ i rad</li>
+                        </ul>
+                    </div>
+                </details>
+            </div>
+        </div>
+        <?php endif; ?>
+
         <?php if ($track && !empty($track['segments'])): ?>
         <!-- Segments Card -->
         <div class="admin-card" style="margin-top: var(--space-lg);">
             <div class="admin-card-header">
-                <h2>Strackor (<?= count($track['segments']) ?>)</h2>
+                <h2>Nuvarande sträckor (<?= count($track['segments']) ?>)</h2>
             </div>
             <div class="admin-card-body" style="padding: 0;">
                 <div class="admin-table-container">
@@ -526,6 +646,70 @@ include __DIR__ . '/components/unified-layout.php';
         document.addEventListener('DOMContentLoaded', initMap);
     } else {
         initMap();
+    }
+})();
+
+// Segment definition handling
+(function() {
+    const container = document.getElementById('segment-definitions');
+    const countInput = document.getElementById('segment-count');
+    const addBtn = document.getElementById('add-segment-row');
+    const totalDistance = <?= $track ? $track['total_distance_km'] : 0 ?>;
+
+    if (!container || !addBtn) return;
+
+    let segmentIndex = 1;
+
+    addBtn.addEventListener('click', function() {
+        segmentIndex++;
+        countInput.value = segmentIndex;
+
+        // Get the last row's end value to use as the new start
+        const lastRow = container.querySelector('.segment-row:last-child');
+        const lastEnd = lastRow ? parseFloat(lastRow.querySelector('[name$="_end"]').value) || 0 : 0;
+
+        const row = document.createElement('div');
+        row.className = 'segment-row';
+        row.dataset.index = segmentIndex;
+        row.style.cssText = 'display: grid; grid-template-columns: auto 1fr 100px 100px 40px; gap: var(--space-sm); align-items: center; margin-bottom: var(--space-sm); padding: var(--space-sm); background: var(--color-bg-hover); border-radius: var(--radius-sm);';
+
+        row.innerHTML = `
+            <select name="seg_${segmentIndex}_type" class="admin-form-select admin-form-select-sm" style="width: 100px;">
+                <option value="stage">Tävling</option>
+                <option value="liaison">Transport</option>
+            </select>
+            <input type="text" name="seg_${segmentIndex}_name" class="admin-form-input admin-form-input-sm" placeholder="Namn (t.ex. SS${segmentIndex})">
+            <input type="number" name="seg_${segmentIndex}_start" class="admin-form-input admin-form-input-sm" placeholder="Start km" step="0.1" min="0" value="${lastEnd.toFixed(1)}">
+            <input type="number" name="seg_${segmentIndex}_end" class="admin-form-input admin-form-input-sm" placeholder="Slut km" step="0.1" min="0" value="${totalDistance.toFixed(1)}">
+            <button type="button" class="btn-admin btn-admin-ghost btn-admin-sm remove-segment" style="padding: 4px;" title="Ta bort">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" x2="6" y1="6" y2="18"/><line x1="6" x2="18" y1="6" y2="18"/></svg>
+            </button>
+        `;
+
+        container.appendChild(row);
+        updateRemoveButtons();
+    });
+
+    container.addEventListener('click', function(e) {
+        if (e.target.closest('.remove-segment')) {
+            const row = e.target.closest('.segment-row');
+            if (row) {
+                row.remove();
+                updateRemoveButtons();
+                // Update count
+                countInput.value = container.querySelectorAll('.segment-row').length;
+            }
+        }
+    });
+
+    function updateRemoveButtons() {
+        const rows = container.querySelectorAll('.segment-row');
+        rows.forEach((row, i) => {
+            const btn = row.querySelector('.remove-segment');
+            if (btn) {
+                btn.disabled = rows.length <= 1;
+            }
+        });
     }
 })();
 </script>
