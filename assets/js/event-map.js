@@ -264,11 +264,8 @@ class EventMap {
         const chartWidth = width - padding.left - padding.right;
         const chartHeight = height - padding.top - padding.bottom;
 
-        // Background - get computed style or use fallback
-        const computedStyle = getComputedStyle(document.documentElement);
-        const bgColor = computedStyle.getPropertyValue('--color-bg-surface').trim() || '#ffffff';
-        ctx.fillStyle = bgColor;
-        ctx.fillRect(0, 0, width, height);
+        // Clear canvas with transparent background (container CSS handles bg color)
+        ctx.clearRect(0, 0, width, height);
 
         // Draw filled area and line
         let currentColor = points[0].segmentColor;
