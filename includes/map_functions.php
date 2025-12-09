@@ -866,6 +866,7 @@ function addSegmentByDistance($pdo, $trackId, $segmentDef) {
 
 /**
  * Add a segment by waypoint indices (for visual map-based definition)
+ * Uses the unified waypoint list from getTrackWaypointsForEditor
  *
  * @param PDO $pdo
  * @param int $trackId
@@ -876,15 +877,8 @@ function addSegmentByWaypointIndex($pdo, $trackId, $segmentDef) {
     $startIdx = intval($segmentDef['start_index']);
     $endIdx = intval($segmentDef['end_index']);
 
-    // Get waypoints between start and end index
-    $stmt = $pdo->prepare("
-        SELECT id, lat, lng, elevation, sequence_number
-        FROM event_track_waypoints
-        WHERE track_id = ?
-        ORDER BY sequence_number
-    ");
-    $stmt->execute([$trackId]);
-    $allWaypoints = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    // Get all waypoints using the editor function
+    $allWaypoints = getTrackWaypointsForEditor($pdo, $trackId);
 
     if (empty($allWaypoints)) {
         throw new Exception('Inga waypoints hittades för denna bana');
@@ -907,8 +901,15 @@ function addSegmentByWaypointIndex($pdo, $trackId, $segmentDef) {
     $elevationGain = 0;
     $elevationLoss = 0;
     $prevWp = null;
+    $coordinates = [];
+    $elevations = [];
 
     foreach ($segmentWaypoints as $wp) {
+        $coordinates[] = ['lat' => $wp['lat'], 'lng' => $wp['lng']];
+        if ($wp['elevation'] !== null) {
+            $elevations[] = $wp['elevation'];
+        }
+
         if ($prevWp !== null) {
             $distance = haversineDistance(
                 $prevWp['lat'], $prevWp['lng'],
@@ -940,15 +941,12 @@ function addSegmentByWaypointIndex($pdo, $trackId, $segmentDef) {
     // Determine color based on type
     $color = $segmentDef['type'] === 'stage' ? '#61CE70' : '#9CA3AF';
 
-    // Create the segment
+    // Create the segment with coordinates as JSON
     $stmt = $pdo->prepare("
         INSERT INTO event_track_segments
-        (track_id, sequence_number, segment_type, segment_name, color, distance_km, elevation_gain_m, elevation_loss_m, waypoint_start_id, waypoint_end_id)
+        (track_id, sequence_number, segment_type, segment_name, color, distance_km, elevation_gain_m, elevation_loss_m, coordinates, elevation_data)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ");
-
-    $startWaypointId = $segmentWaypoints[0]['id'];
-    $endWaypointId = $segmentWaypoints[count($segmentWaypoints) - 1]['id'];
 
     $stmt->execute([
         $trackId,
@@ -959,8 +957,8 @@ function addSegmentByWaypointIndex($pdo, $trackId, $segmentDef) {
         round($totalDistance, 2),
         round($elevationGain),
         round($elevationLoss),
-        $startWaypointId,
-        $endWaypointId
+        json_encode($coordinates),
+        json_encode($elevations)
     ]);
 
     return $pdo->lastInsertId();
@@ -968,43 +966,54 @@ function addSegmentByWaypointIndex($pdo, $trackId, $segmentDef) {
 
 /**
  * Get all waypoints for a track (for visual segment editor)
+ * Extracts coordinates from all segments and returns a unified waypoint list
  *
  * @param PDO $pdo
  * @param int $trackId
  * @return array Array of waypoints with index, lat, lng, cumulative distance
  */
 function getTrackWaypointsForEditor($pdo, $trackId) {
+    // Get all segments with coordinates
     $stmt = $pdo->prepare("
-        SELECT id, lat, lng, elevation, sequence_number
-        FROM event_track_waypoints
+        SELECT id, sequence_number, coordinates, elevation_data
+        FROM event_track_segments
         WHERE track_id = ?
         ORDER BY sequence_number
     ");
     $stmt->execute([$trackId]);
-    $waypoints = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $segments = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     $result = [];
     $cumulativeDistance = 0;
     $prevWp = null;
+    $globalIndex = 0;
 
-    foreach ($waypoints as $index => $wp) {
-        if ($prevWp !== null) {
-            $distance = haversineDistance(
-                $prevWp['lat'], $prevWp['lng'],
-                $wp['lat'], $wp['lng']
-            );
-            $cumulativeDistance += $distance;
+    foreach ($segments as $segment) {
+        $coordinates = json_decode($segment['coordinates'], true) ?: [];
+        $elevations = json_decode($segment['elevation_data'], true) ?: [];
+
+        foreach ($coordinates as $i => $coord) {
+            if ($prevWp !== null) {
+                $distance = haversineDistance(
+                    $prevWp['lat'], $prevWp['lng'],
+                    $coord['lat'], $coord['lng']
+                );
+                $cumulativeDistance += $distance;
+            }
+
+            $result[] = [
+                'index' => $globalIndex,
+                'lat' => floatval($coord['lat']),
+                'lng' => floatval($coord['lng']),
+                'elevation' => isset($elevations[$i]) ? floatval($elevations[$i]) : (isset($coord['ele']) ? floatval($coord['ele']) : null),
+                'distance_km' => round($cumulativeDistance, 3),
+                'segment_id' => intval($segment['id']),
+                'local_index' => $i
+            ];
+
+            $prevWp = $coord;
+            $globalIndex++;
         }
-
-        $result[] = [
-            'index' => $index,
-            'lat' => floatval($wp['lat']),
-            'lng' => floatval($wp['lng']),
-            'elevation' => $wp['elevation'] !== null ? floatval($wp['elevation']) : null,
-            'distance_km' => round($cumulativeDistance, 3)
-        ];
-
-        $prevWp = $wp;
     }
 
     return $result;
