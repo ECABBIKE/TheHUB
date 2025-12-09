@@ -97,6 +97,10 @@ try {
         $globalTextMap[$gt['field_key']] = $gt['content'];
     }
 
+    // Check for interactive map (GPX data)
+    require_once INCLUDES_PATH . '/map_functions.php';
+    $hasInteractiveMap = eventHasMap($db, $eventId);
+
     // Check event format for DH mode
     $eventFormat = $event['event_format'] ?? 'ENDURO';
     $isDH = in_array($eventFormat, ['DH_STANDARD', 'DH_SWECUP']);
@@ -606,7 +610,7 @@ if (!$event) {
         </a>
         <?php endif; ?>
 
-        <?php if (!empty($event['map_content']) || !empty($event['map_image_url']) || !empty($event['map_use_global'])): ?>
+        <?php if ($hasInteractiveMap || !empty($event['map_content']) || !empty($event['map_image_url']) || !empty($event['map_use_global'])): ?>
         <a href="?id=<?= $eventId ?>&tab=karta" class="event-tab <?= $activeTab === 'karta' ? 'active' : '' ?>">
             <i data-lucide="map-pin"></i>
             Karta
@@ -1113,6 +1117,21 @@ if (!$event) {
         <h2 class="card-title"><i data-lucide="map"></i> Karta</h2>
     </div>
     <div class="card-body">
+        <?php if ($hasInteractiveMap): ?>
+        <!-- Interactive GPX Map -->
+        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+        <link rel="stylesheet" href="<?= hub_asset('css/map.css') ?>">
+        <?php
+        require_once ROOT_PATH . '/components/event-map.php';
+        render_event_map($eventId, $db, ['height' => '450px']);
+        ?>
+        <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+        <script src="<?= hub_asset('js/event-map.js') ?>"></script>
+        <?php if (!empty($event['map_image_url']) || !empty($mapContent)): ?>
+        <hr style="margin: var(--space-lg) 0; border-color: var(--color-border);">
+        <?php endif; ?>
+        <?php endif; ?>
+
         <?php if (!empty($event['map_image_url'])): ?>
         <div class="map-image mb-lg">
             <img src="<?= h($event['map_image_url']) ?>" alt="Karta">
@@ -1131,7 +1150,7 @@ if (!$event) {
         </a>
         <?php endif; ?>
 
-        <?php if (empty($event['map_image_url']) && empty($mapContent) && empty($event['venue_coordinates'])): ?>
+        <?php if (!$hasInteractiveMap && empty($event['map_image_url']) && empty($mapContent) && empty($event['venue_coordinates'])): ?>
             <p class="text-muted">Ingen karta tillgänglig.</p>
         <?php endif; ?>
     </div>
