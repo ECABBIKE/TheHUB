@@ -92,7 +92,9 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
     // Normalize header - accept multiple variants
     $originalHeaders = $header;
 
-    // First pass: identify split time columns (SS1, SS2, SS3, SS3-1, etc.) and map them in order
+    // First pass: identify split time columns and map them in order
+    // Matches: SS1, SS2, PS1, PS2, Stage1, Sträcka1, S1, etc.
+    // The original header name is preserved in stageNamesMapping
     $splitTimeColumns = [];
     $splitTimeIndex = 1;
 
@@ -101,8 +103,9 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
         $normalizedCol = mb_strtolower($originalCol, 'UTF-8');
         $normalizedCol = str_replace([' ', '-', '_'], '', $normalizedCol);
 
-        // Check if this looks like a split time column (ss followed by numbers)
-        if (preg_match('/^ss\d+/', $normalizedCol)) {
+        // Check if this looks like a split/stage time column
+        // Matches: ss1, ss2, ps1, ps2, s1, s2, stage1, sträcka1, stracka1, etc.
+        if (preg_match('/^(ss|ps|s|stage|sträcka|stracka|etapp)\d+/', $normalizedCol)) {
             $splitTimeColumns[$index] = [
                 'original' => $originalCol,
                 'mapped' => 'ss' . $splitTimeIndex
