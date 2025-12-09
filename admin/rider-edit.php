@@ -326,6 +326,44 @@ if (!empty($rider['club_id'])) {
     $currentClub = $db->getRow("SELECT id, name, active FROM clubs WHERE id = ?", [$rider['club_id']]);
 }
 
+// Get club history per year
+require_once __DIR__ . '/../includes/club-membership.php';
+$clubHistory = getRiderClubHistory($db, $riderId);
+
+// Get years with results (for showing which years are locked)
+$yearsWithResults = $db->getAll("
+    SELECT DISTINCT YEAR(e.date) as year, COUNT(*) as result_count
+    FROM results r
+    JOIN events e ON r.event_id = e.id
+    WHERE r.cyclist_id = ?
+    GROUP BY YEAR(e.date)
+    ORDER BY year DESC
+", [$riderId]);
+$yearsWithResultsMap = [];
+foreach ($yearsWithResults as $yr) {
+    $yearsWithResultsMap[$yr['year']] = $yr['result_count'];
+}
+
+// Handle club history update
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'update_club_year') {
+    checkCsrf();
+    $updateYear = (int)($_POST['year'] ?? 0);
+    $updateClubId = (int)($_POST['club_id'] ?? 0);
+
+    if ($updateYear > 0 && $updateClubId > 0) {
+        $result = setRiderClubForYear($db, $riderId, $updateClubId, $updateYear);
+        if ($result['success']) {
+            $message = $result['message'];
+            $messageType = 'success';
+            // Refresh club history
+            $clubHistory = getRiderClubHistory($db, $riderId);
+        } else {
+            $message = $result['message'];
+            $messageType = 'error';
+        }
+    }
+}
+
 // Page config for admin layout
 $page_title = 'Redigera Deltagare';
 $breadcrumbs = [
@@ -793,6 +831,155 @@ include __DIR__ . '/components/unified-layout.php';
  </div>
  </div>
  </form>
+
+ <!-- Club History per Year -->
+ <div class="card mt-lg">
+ <div class="card-header">
+ <h2>
+  <i data-lucide="history"></i>
+  Klubbtillhörighet per år
+ </h2>
+ </div>
+ <div class="card-body">
+ <p class="text-secondary mb-md">
+  Klubbtillhörighet låses per år när åkaren har resultat. Poäng och ranking följer klubben för respektive år.
+ </p>
+
+ <?php if (empty($clubHistory) && empty($yearsWithResultsMap)): ?>
+  <div class="alert alert--info">
+  <i data-lucide="info"></i>
+  Ingen klubbhistorik finns ännu. Klubbtillhörighet skapas automatiskt vid import av resultat.
+  </div>
+ <?php else: ?>
+  <div class="table-responsive">
+  <table class="table">
+  <thead>
+  <tr>
+   <th>År</th>
+   <th>Klubb</th>
+   <th>Resultat</th>
+   <th>Status</th>
+   <th>Åtgärd</th>
+  </tr>
+  </thead>
+  <tbody>
+  <?php
+  // Combine club history with years that have results
+  $allYears = [];
+  foreach ($clubHistory as $ch) {
+   $allYears[$ch['season_year']] = $ch;
+  }
+  foreach ($yearsWithResultsMap as $year => $count) {
+   if (!isset($allYears[$year])) {
+   $allYears[$year] = [
+    'season_year' => $year,
+    'club_id' => null,
+    'club_name' => null,
+    'locked' => 0,
+    'results_count' => $count
+   ];
+   }
+  }
+  krsort($allYears);
+
+  foreach ($allYears as $year => $data):
+   $resultsCount = $data['results_count'] ?? ($yearsWithResultsMap[$year] ?? 0);
+   $isLocked = $data['locked'] || $resultsCount > 0;
+  ?>
+  <tr>
+   <td><strong><?= $year ?></strong></td>
+   <td>
+   <?php if ($data['club_name']): ?>
+    <?= h($data['club_name']) ?>
+   <?php else: ?>
+    <span class="text-secondary">Ej satt</span>
+   <?php endif; ?>
+   </td>
+   <td>
+   <?php if ($resultsCount > 0): ?>
+    <span class="badge badge-primary"><?= $resultsCount ?> resultat</span>
+   <?php else: ?>
+    <span class="badge badge-secondary">Inga resultat</span>
+   <?php endif; ?>
+   </td>
+   <td>
+   <?php if ($isLocked): ?>
+    <span class="badge badge-success">
+    <i data-lucide="lock" style="width: 12px; height: 12px;"></i>
+    Låst
+    </span>
+   <?php else: ?>
+    <span class="badge badge-warning">
+    <i data-lucide="unlock" style="width: 12px; height: 12px;"></i>
+    Kan ändras
+    </span>
+   <?php endif; ?>
+   </td>
+   <td>
+   <?php if (!$isLocked): ?>
+    <form method="POST" style="display: flex; gap: 0.5rem; align-items: center;">
+    <?= csrf_field() ?>
+    <input type="hidden" name="action" value="update_club_year">
+    <input type="hidden" name="year" value="<?= $year ?>">
+    <select name="club_id" class="input" style="min-width: 150px;">
+     <option value="">Välj klubb...</option>
+     <?php foreach ($clubs as $club): ?>
+     <option value="<?= $club['id'] ?>" <?= ($data['club_id'] ?? '') == $club['id'] ? 'selected' : '' ?>>
+      <?= h($club['name']) ?>
+     </option>
+     <?php endforeach; ?>
+    </select>
+    <button type="submit" class="btn btn--primary btn--sm">
+     <i data-lucide="save"></i>
+    </button>
+    </form>
+   <?php else: ?>
+    <span class="text-secondary text-sm">Kan ej ändras</span>
+   <?php endif; ?>
+   </td>
+  </tr>
+  <?php endforeach; ?>
+  </tbody>
+  </table>
+  </div>
+ <?php endif; ?>
+
+ <!-- Add new year -->
+ <div class="mt-lg" style="border-top: 1px solid var(--color-border); padding-top: var(--space-md);">
+  <h4 class="mb-sm">Lägg till klubb för nytt år</h4>
+  <?php
+  // Make sure $allYears is initialized
+  if (!isset($allYears)) {
+   $allYears = [];
+   foreach ($clubHistory as $ch) {
+   $allYears[$ch['season_year']] = $ch;
+   }
+  }
+  ?>
+  <form method="POST" style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+  <?= csrf_field() ?>
+  <input type="hidden" name="action" value="update_club_year">
+  <select name="year" class="input" style="width: 100px;">
+   <?php for ($y = (int)date('Y'); $y >= 2020; $y--): ?>
+   <?php if (!isset($allYears[$y])): ?>
+   <option value="<?= $y ?>"><?= $y ?></option>
+   <?php endif; ?>
+   <?php endfor; ?>
+  </select>
+  <select name="club_id" class="input" style="min-width: 200px;">
+   <option value="">Välj klubb...</option>
+   <?php foreach ($clubs as $club): ?>
+   <option value="<?= $club['id'] ?>"><?= h($club['name']) ?></option>
+   <?php endforeach; ?>
+  </select>
+  <button type="submit" class="btn btn--secondary btn--sm">
+   <i data-lucide="plus"></i>
+   Lägg till
+  </button>
+  </form>
+ </div>
+ </div>
+ </div>
 
  <?php if (hasRole('super_admin')): ?>
  <!-- User Account Section -->
