@@ -342,12 +342,14 @@ function calculateClubRankingData($db, $discipline = 'GRAVITY', $debug = false) 
     }
 
     // Get all qualifying results with club info, sorted by points for club position calculation
+    // Uses r.club_id (from results table) with fallback to rd.club_id (from riders table)
+    // This ensures points follow the club the rider was with at the time of the result
     $results = $db->getAll("
         SELECT
             r.cyclist_id as rider_id,
             r.event_id,
             r.class_id,
-            rd.club_id,
+            COALESCE(r.club_id, rd.club_id) as club_id,
             c.name as club_name,
             COALESCE(
                 CASE
@@ -364,15 +366,15 @@ function calculateClubRankingData($db, $discipline = 'GRAVITY', $debug = false) 
         JOIN events e ON r.event_id = e.id
         JOIN classes cl ON r.class_id = cl.id
         JOIN riders rd ON r.cyclist_id = rd.id
-        LEFT JOIN clubs c ON rd.club_id = c.id
+        LEFT JOIN clubs c ON COALESCE(r.club_id, rd.club_id) = c.id
         WHERE r.status = 'finished'
-        AND rd.club_id IS NOT NULL
+        AND COALESCE(r.club_id, rd.club_id) IS NOT NULL
         AND (r.points > 0 OR COALESCE(r.run_1_points, 0) > 0 OR COALESCE(r.run_2_points, 0) > 0)
         AND e.date >= ?
         {$disciplineFilter}
         AND COALESCE(cl.series_eligible, 1) = 1
         AND COALESCE(cl.awards_points, 1) = 1
-        ORDER BY e.id, cl.id, rd.club_id, original_points DESC
+        ORDER BY e.id, cl.id, COALESCE(r.club_id, rd.club_id), original_points DESC
     ", $params);
 
     if (empty($results)) return [];

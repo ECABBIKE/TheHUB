@@ -156,41 +156,29 @@ uksort($resultsByClass, function($a, $b) use ($resultsByClass) {
 // Get all classes for dropdown
 $classes = $db->getAll("SELECT id, name, display_name FROM classes WHERE active = 1 ORDER BY sort_order, name");
 
-$pageTitle = 'Editera Resultat - ' . $event['name'];
-$pageType = 'admin';
-include __DIR__ . '/../includes/layout-header.php';
+// Page config for unified layout
+$page_title = 'Editera Resultat - ' . $event['name'];
+$breadcrumbs = [
+    ['label' => 'Resultat', 'url' => '/admin/results.php'],
+    ['label' => $event['name']]
+];
+$page_actions = '<form method="POST" style="display: inline;">
+    ' . csrf_field() . '
+    <input type="hidden" name="action" value="recalculate">
+    <button type="submit" class="btn-admin btn-admin-secondary" onclick="return confirm(\'Räkna om poäng för alla resultat i detta event?\')">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><rect width="16" height="20" x="4" y="2" rx="2"/><line x1="8" x2="16" y1="6" y2="6"/><line x1="8" x2="16" y1="10" y2="10"/><line x1="8" x2="16" y1="14" y2="14"/><line x1="8" x2="16" y1="18" y2="18"/></svg>
+        Räkna om poäng
+    </button>
+</form>
+<a href="/admin/results.php" class="btn-admin btn-admin-secondary">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>
+    Tillbaka
+</a>';
+
+include __DIR__ . '/components/unified-layout.php';
 ?>
 
-<main class="main-content">
- <div class="container">
- <!-- Header -->
- <div class="flex items-center justify-between mb-lg">
-  <div>
-  <h1 class="text-primary mb-sm">
-   <i data-lucide="edit"></i>
-   Editera Resultat
-  </h1>
-  <h2 class="text-secondary">
-   <?= h($event['name']) ?> - <?= date('Y-m-d', strtotime($event['date'])) ?>
-  </h2>
-  </div>
-  <div class="flex gap-sm">
-  <form method="POST" style="display: inline;">
-   <?= csrf_field() ?>
-   <input type="hidden" name="action" value="recalculate">
-   <button type="submit" class="btn btn--primary" onclick="return confirm('Räkna om poäng för alla resultat i detta event?')">
-   <i data-lucide="calculator"></i>
-   Räkna om poäng
-   </button>
-  </form>
-  <a href="/admin/results.php" class="btn btn--secondary">
-   <i data-lucide="arrow-left"></i>
-   Tillbaka
-  </a>
-  </div>
- </div>
-
- <!-- Message -->
+<!-- Message -->
  <?php if ($message): ?>
   <div class="alert alert-<?= h($messageType) ?> mb-lg">
   <i data-lucide="<?= $messageType === 'success' ? 'check-circle' : 'alert-circle' ?>"></i>
@@ -366,8 +354,6 @@ include __DIR__ . '/../includes/layout-header.php';
   </div>
   <?php endforeach; ?>
  <?php endif; ?>
- </div>
-</main>
 
 <!-- License Assignment Modal -->
 <div id="license-modal" class="gs-modal" style="display: none;">
@@ -502,4 +488,4 @@ include __DIR__ . '/../includes/layout-header.php';
  });
 </script>
 
-<?php include __DIR__ . '/../includes/layout-footer.php'; ?>
+<?php include __DIR__ . '/components/unified-layout-footer.php'; ?>

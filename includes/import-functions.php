@@ -619,9 +619,30 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
                 $points = calculatePoints($db, $eventId, $position, $status, $classId);
             }
 
+            // Get club_id for this result (year-locked club membership)
+            // Include club-membership.php if not already included
+            if (!function_exists('getRiderClubForYear')) {
+                require_once __DIR__ . '/club-membership.php';
+            }
+
+            // Get event date to determine the season year
+            $eventDateInfo = $db->getRow("SELECT date FROM events WHERE id = ?", [$eventId]);
+            $eventYear = $eventDateInfo ? (int)date('Y', strtotime($eventDateInfo['date'])) : (int)date('Y');
+
+            // Get the rider's club for that year (create entry if missing)
+            $resultClubId = getRiderClubForYear($db, $riderId, $eventYear, true);
+
+            // If no club from season lookup, try using the club from CSV import data
+            if (!$resultClubId && $clubId) {
+                $resultClubId = $clubId;
+                // Also set this as the rider's club for that year
+                setRiderClubForYear($db, $riderId, $clubId, $eventYear);
+            }
+
             $resultData = [
                 'event_id' => $eventId,
                 'cyclist_id' => $riderId,
+                'club_id' => $resultClubId,
                 'class_id' => $classId,
                 'bib_number' => $data['bib_number'] ?? null,
                 'position' => $position,
@@ -682,6 +703,10 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
                 // Insert new
                 $resultId = $db->insert('results', $resultData);
                 $stats['success']++;
+
+                // Lock the rider's club for this year (they now have results)
+                lockRiderClubForYear($db, $riderId, $eventYear);
+
                 if ($importId) {
                     trackImportRecord($db, $importId, 'result', $resultId, 'created');
                 }
