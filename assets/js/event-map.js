@@ -26,6 +26,9 @@ class EventMap {
             segments: null,
             pois: null
         };
+        this.userLocationMarker = null;
+        this.userAccuracyCircle = null;
+        this.watchId = null;
 
         this.init();
     }
@@ -261,8 +264,10 @@ class EventMap {
         const chartWidth = width - padding.left - padding.right;
         const chartHeight = height - padding.top - padding.bottom;
 
-        // Background
-        ctx.fillStyle = 'var(--color-surface, #f9fafb)';
+        // Background - get computed style or use fallback
+        const computedStyle = getComputedStyle(document.documentElement);
+        const bgColor = computedStyle.getPropertyValue('--color-bg-surface').trim() || '#ffffff';
+        ctx.fillStyle = bgColor;
         ctx.fillRect(0, 0, width, height);
 
         // Draw filled area and line
@@ -313,7 +318,8 @@ class EventMap {
         ctx.stroke();
 
         // Draw elevation labels
-        ctx.fillStyle = 'var(--color-text-secondary, #6b7280)';
+        const textColor = computedStyle.getPropertyValue('--color-text-secondary').trim() || '#6b7280';
+        ctx.fillStyle = textColor;
         ctx.font = '10px system-ui, sans-serif';
         ctx.textAlign = 'left';
         ctx.fillText(Math.round(maxEle) + 'm', padding.left + 2, padding.top + 10);
@@ -390,6 +396,14 @@ class EventMap {
                         this.map.invalidateSize();
                     }, 350);
                 }
+            });
+        }
+
+        // Locate user button
+        const locateBtn = container.querySelector('.event-map-locate');
+        if (locateBtn) {
+            locateBtn.addEventListener('click', () => {
+                this.locateUser(locateBtn);
             });
         }
 
@@ -494,6 +508,134 @@ class EventMap {
         if (found) {
             this.map.fitBounds(bounds, { padding: [50, 50], maxZoom: 16 });
         }
+    }
+
+    /**
+     * Locate user and center map on their position
+     * @param {HTMLElement} button - The locate button element
+     */
+    locateUser(button) {
+        // Check if geolocation is supported
+        if (!navigator.geolocation) {
+            this.showLocationError(button, 'Geolocation stöds inte av din webbläsare');
+            return;
+        }
+
+        // Set loading state
+        button.classList.add('locating');
+        button.classList.remove('error');
+
+        // Get current position
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                this.handleLocationSuccess(position, button);
+            },
+            (error) => {
+                this.handleLocationError(error, button);
+            },
+            {
+                enableHighAccuracy: true,
+                timeout: 10000,
+                maximumAge: 30000
+            }
+        );
+    }
+
+    /**
+     * Handle successful geolocation
+     * @param {GeolocationPosition} position
+     * @param {HTMLElement} button
+     */
+    handleLocationSuccess(position, button) {
+        const lat = position.coords.latitude;
+        const lng = position.coords.longitude;
+        const accuracy = position.coords.accuracy;
+
+        // Remove loading state
+        button.classList.remove('locating');
+
+        // Create user location icon
+        const userIcon = L.divIcon({
+            className: 'event-map-user-location',
+            html: '<div class="event-map-user-dot"></div>',
+            iconSize: [16, 16],
+            iconAnchor: [8, 8]
+        });
+
+        // Update or create user location marker
+        if (this.userLocationMarker) {
+            this.userLocationMarker.setLatLng([lat, lng]);
+        } else {
+            this.userLocationMarker = L.marker([lat, lng], {
+                icon: userIcon,
+                zIndexOffset: 1000
+            }).addTo(this.map);
+
+            this.userLocationMarker.bindPopup('<strong>Din position</strong>');
+        }
+
+        // Update or create accuracy circle
+        if (this.userAccuracyCircle) {
+            this.userAccuracyCircle.setLatLng([lat, lng]);
+            this.userAccuracyCircle.setRadius(accuracy);
+        } else {
+            this.userAccuracyCircle = L.circle([lat, lng], {
+                radius: accuracy,
+                className: 'event-map-user-accuracy',
+                weight: 1,
+                fillOpacity: 0.15,
+                color: '#4285f4',
+                fillColor: '#4285f4'
+            }).addTo(this.map);
+        }
+
+        // Center map on user location
+        this.map.setView([lat, lng], 15);
+    }
+
+    /**
+     * Handle geolocation error
+     * @param {GeolocationPositionError} error
+     * @param {HTMLElement} button
+     */
+    handleLocationError(error, button) {
+        button.classList.remove('locating');
+        button.classList.add('error');
+
+        let message = 'Kunde inte hitta din position';
+
+        switch (error.code) {
+            case error.PERMISSION_DENIED:
+                message = 'Du nekade åtkomst till din position';
+                break;
+            case error.POSITION_UNAVAILABLE:
+                message = 'Positionsinformation är inte tillgänglig';
+                break;
+            case error.TIMEOUT:
+                message = 'Timeout vid hämtning av position';
+                break;
+        }
+
+        console.warn('Geolocation error:', message);
+
+        // Reset button state after 3 seconds
+        setTimeout(() => {
+            button.classList.remove('error');
+        }, 3000);
+    }
+
+    /**
+     * Show location error state
+     * @param {HTMLElement} button
+     * @param {string} message
+     */
+    showLocationError(button, message) {
+        button.classList.add('error');
+        console.warn('Location error:', message);
+
+        setTimeout(() => {
+            button.classList.remove('error');
+        }, 3000);
     }
 }
 

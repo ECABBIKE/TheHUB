@@ -105,6 +105,75 @@
     transition: transform var(--transition-base);
 }
 
+/* Header actions (locate, toggle) */
+.event-map-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+}
+
+.event-map-locate {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border: none;
+    background: var(--color-bg-hover);
+    border-radius: var(--radius-md);
+    color: var(--color-text-tertiary);
+    cursor: pointer;
+    transition: var(--transition-fast);
+}
+
+.event-map-locate:hover {
+    background: var(--color-bg-active);
+    color: var(--color-text-primary);
+}
+
+.event-map-locate.locating {
+    background: var(--color-accent);
+    color: white;
+    animation: pulse-locate 1s ease-in-out infinite;
+}
+
+.event-map-locate.error {
+    background: var(--color-danger);
+    color: white;
+}
+
+@keyframes pulse-locate {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.6;
+    }
+}
+
+/* User location marker */
+.event-map-user-location {
+    background: none;
+    border: none;
+}
+
+.event-map-user-dot {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #4285f4;
+    border: 3px solid white;
+    box-shadow: 0 0 0 2px rgba(66, 133, 244, 0.3), var(--shadow-md);
+}
+
+.event-map-user-accuracy {
+    position: absolute;
+    border-radius: 50%;
+    background: rgba(66, 133, 244, 0.15);
+    border: 1px solid rgba(66, 133, 244, 0.3);
+    pointer-events: none;
+}
+
 /* ==========================================================================
    MAP VIEW
    ========================================================================== */
