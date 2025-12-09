@@ -119,9 +119,19 @@ if (!function_exists('render_event_map')) {
                         <?= number_format($mapData['track']['total_elevation_m']) ?> m
                     </span>
                 </div>
-                <button class="event-map-toggle" aria-expanded="<?= $collapsed ? 'false' : 'true' ?>" aria-controls="<?= $mapId ?>-content">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="m6 9 6 6 6-6"/>
+                <div class="event-map-actions">
+                    <button class="event-map-locate" title="Visa min position" aria-label="Visa min position">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="3"/>
+                            <path d="M12 2v4"/>
+                            <path d="M12 18v4"/>
+                            <path d="M2 12h4"/>
+                            <path d="M18 12h4"/>
+                        </svg>
+                    </button>
+                    <button class="event-map-toggle" aria-expanded="<?= $collapsed ? 'false' : 'true' ?>" aria-controls="<?= $mapId ?>-content">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="m6 9 6 6 6-6"/>
                     </svg>
                 </button>
             </div>

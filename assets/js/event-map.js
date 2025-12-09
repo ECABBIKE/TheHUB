@@ -26,6 +26,9 @@ class EventMap {
             segments: null,
             pois: null
         };
+        this.userLocationMarker = null;
+        this.userAccuracyCircle = null;
+        this.watchId = null;
 
         this.init();
     }
@@ -396,6 +399,14 @@ class EventMap {
             });
         }
 
+        // Locate user button
+        const locateBtn = container.querySelector('.event-map-locate');
+        if (locateBtn) {
+            locateBtn.addEventListener('click', () => {
+                this.locateUser(locateBtn);
+            });
+        }
+
         // Enable scroll zoom on focus/click
         this.map.getContainer().addEventListener('click', () => {
             this.map.scrollWheelZoom.enable();
@@ -497,6 +508,134 @@ class EventMap {
         if (found) {
             this.map.fitBounds(bounds, { padding: [50, 50], maxZoom: 16 });
         }
+    }
+
+    /**
+     * Locate user and center map on their position
+     * @param {HTMLElement} button - The locate button element
+     */
+    locateUser(button) {
+        // Check if geolocation is supported
+        if (!navigator.geolocation) {
+            this.showLocationError(button, 'Geolocation stöds inte av din webbläsare');
+            return;
+        }
+
+        // Set loading state
+        button.classList.add('locating');
+        button.classList.remove('error');
+
+        // Get current position
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                this.handleLocationSuccess(position, button);
+            },
+            (error) => {
+                this.handleLocationError(error, button);
+            },
+            {
+                enableHighAccuracy: true,
+                timeout: 10000,
+                maximumAge: 30000
+            }
+        );
+    }
+
+    /**
+     * Handle successful geolocation
+     * @param {GeolocationPosition} position
+     * @param {HTMLElement} button
+     */
+    handleLocationSuccess(position, button) {
+        const lat = position.coords.latitude;
+        const lng = position.coords.longitude;
+        const accuracy = position.coords.accuracy;
+
+        // Remove loading state
+        button.classList.remove('locating');
+
+        // Create user location icon
+        const userIcon = L.divIcon({
+            className: 'event-map-user-location',
+            html: '<div class="event-map-user-dot"></div>',
+            iconSize: [16, 16],
+            iconAnchor: [8, 8]
+        });
+
+        // Update or create user location marker
+        if (this.userLocationMarker) {
+            this.userLocationMarker.setLatLng([lat, lng]);
+        } else {
+            this.userLocationMarker = L.marker([lat, lng], {
+                icon: userIcon,
+                zIndexOffset: 1000
+            }).addTo(this.map);
+
+            this.userLocationMarker.bindPopup('<strong>Din position</strong>');
+        }
+
+        // Update or create accuracy circle
+        if (this.userAccuracyCircle) {
+            this.userAccuracyCircle.setLatLng([lat, lng]);
+            this.userAccuracyCircle.setRadius(accuracy);
+        } else {
+            this.userAccuracyCircle = L.circle([lat, lng], {
+                radius: accuracy,
+                className: 'event-map-user-accuracy',
+                weight: 1,
+                fillOpacity: 0.15,
+                color: '#4285f4',
+                fillColor: '#4285f4'
+            }).addTo(this.map);
+        }
+
+        // Center map on user location
+        this.map.setView([lat, lng], 15);
+    }
+
+    /**
+     * Handle geolocation error
+     * @param {GeolocationPositionError} error
+     * @param {HTMLElement} button
+     */
+    handleLocationError(error, button) {
+        button.classList.remove('locating');
+        button.classList.add('error');
+
+        let message = 'Kunde inte hitta din position';
+
+        switch (error.code) {
+            case error.PERMISSION_DENIED:
+                message = 'Du nekade åtkomst till din position';
+                break;
+            case error.POSITION_UNAVAILABLE:
+                message = 'Positionsinformation är inte tillgänglig';
+                break;
+            case error.TIMEOUT:
+                message = 'Timeout vid hämtning av position';
+                break;
+        }
+
+        console.warn('Geolocation error:', message);
+
+        // Reset button state after 3 seconds
+        setTimeout(() => {
+            button.classList.remove('error');
+        }, 3000);
+    }
+
+    /**
+     * Show location error state
+     * @param {HTMLElement} button
+     * @param {string} message
+     */
+    showLocationError(button, message) {
+        button.classList.add('error');
+        console.warn('Location error:', message);
+
+        setTimeout(() => {
+            button.classList.remove('error');
+        }, 3000);
     }
 }
 
