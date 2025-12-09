@@ -129,6 +129,18 @@ if (!function_exists('render_event_map')) {
                             <path d="M18 12h4"/>
                         </svg>
                     </button>
+                    <button class="event-map-fullscreen" title="Helskärm" aria-label="Visa i helskärm">
+                        <svg class="icon-expand" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="15 3 21 3 21 9"/>
+                            <polyline points="9 21 3 21 3 15"/>
+                            <line x1="21" x2="14" y1="3" y2="10"/>
+                            <line x1="3" x2="10" y1="21" y2="14"/>
+                        </svg>
+                        <svg class="icon-close" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="18" x2="6" y1="6" y2="18"/>
+                            <line x1="6" x2="18" y1="6" y2="18"/>
+                        </svg>
+                    </button>
                     <button class="event-map-toggle" aria-expanded="<?= $collapsed ? 'false' : 'true' ?>" aria-controls="<?= $mapId ?>-content">
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="m6 9 6 6 6-6"/>
@@ -136,8 +148,85 @@ if (!function_exists('render_event_map')) {
                 </button>
             </div>
 
+            <!-- Fullscreen Menu (shown only in fullscreen) -->
+            <div class="event-map-fs-menu">
+                <div class="event-map-fs-menu-header">
+                    <h3><?= htmlspecialchars($mapData['track']['name']) ?></h3>
+                    <div class="event-map-fs-stats">
+                        <span><?= number_format($mapData['track']['total_distance_km'], 1) ?> km</span>
+                        <span>+<?= number_format($mapData['track']['total_elevation_m']) ?> m</span>
+                    </div>
+                </div>
+
+                <?php if (!empty($mapData['segments'])): ?>
+                <div class="event-map-fs-section">
+                    <h4>Sträckor</h4>
+                    <ul class="event-map-fs-segments">
+                        <?php foreach ($mapData['segments'] as $segment): ?>
+                        <li class="event-map-fs-segment-item"
+                            data-segment-id="<?= $segment['id'] ?>"
+                            data-segment-type="<?= htmlspecialchars($segment['segment_type']) ?>">
+                            <span class="event-map-fs-segment-color" style="background: <?= htmlspecialchars($segment['color']) ?>"></span>
+                            <div class="event-map-fs-segment-info">
+                                <span class="event-map-fs-segment-name">
+                                    <?= htmlspecialchars($segment['segment_name'] ?: 'Segment ' . $segment['sequence_number']) ?>
+                                </span>
+                                <span class="event-map-fs-segment-meta">
+                                    <?= number_format($segment['distance_km'], 1) ?> km
+                                    <?php if ($segment['segment_type'] === 'stage'): ?>
+                                    · +<?= $segment['elevation_gain_m'] ?>m
+                                    <?php endif; ?>
+                                </span>
+                            </div>
+                        </li>
+                        <?php endforeach; ?>
+                    </ul>
+                </div>
+                <?php endif; ?>
+
+                <?php if (!empty($groupedPois)): ?>
+                <div class="event-map-fs-section">
+                    <h4>Platser</h4>
+                    <ul class="event-map-fs-pois">
+                        <?php foreach ($groupedPois as $group): ?>
+                        <li class="event-map-fs-poi-item" data-poi-type="<?= htmlspecialchars($group['type']) ?>">
+                            <span class="event-map-fs-poi-marker" style="background: <?= htmlspecialchars($group['color']) ?>">
+                                <?= $group['emoji'] ?>
+                            </span>
+                            <span class="event-map-fs-poi-label"><?= htmlspecialchars($group['label']) ?></span>
+                            <?php if ($group['count'] > 1): ?>
+                            <span class="event-map-fs-poi-count"><?= $group['count'] ?></span>
+                            <?php endif; ?>
+                        </li>
+                        <?php endforeach; ?>
+                    </ul>
+                </div>
+                <?php endif; ?>
+
+                <div class="event-map-fs-actions">
+                    <button class="event-map-fs-locate" title="Visa min position">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="3"/>
+                            <path d="M12 2v4"/>
+                            <path d="M12 18v4"/>
+                            <path d="M2 12h4"/>
+                            <path d="M18 12h4"/>
+                        </svg>
+                        Visa min position
+                    </button>
+                </div>
+            </div>
+
             <!-- Map Content -->
             <div class="event-map-content" id="<?= $mapId ?>-content">
+                <!-- Menu toggle button (visible in fullscreen) -->
+                <button class="event-map-menu-toggle" title="Visa/dölj meny" aria-label="Visa eller dölj meny">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="3" x2="21" y1="6" y2="6"/>
+                        <line x1="3" x2="21" y1="12" y2="12"/>
+                        <line x1="3" x2="21" y1="18" y2="18"/>
+                    </svg>
+                </button>
                 <!-- Map View -->
                 <div class="event-map-view" id="<?= $mapId ?>" style="height: <?= htmlspecialchars($height) ?>;"></div>
 
