@@ -173,35 +173,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $isChampionship = $eventData['is_championship'];
             unset($eventData['is_championship']);
 
-            // First, try to update just the basic fields that we KNOW exist (from CLAUDE.md schema)
-            $basicFields = [
-                'name' => $eventData['name'],
-                'date' => $eventData['date'],
-                'location' => $eventData['location'],
-                'venue_id' => $eventData['venue_id'],
-                'discipline' => $eventData['discipline'],
-                'event_level' => $eventData['event_level'],
-                'event_format' => $eventData['event_format'],
-                'series_id' => $eventData['series_id'],
-                'active' => $eventData['active'],
-                'website' => $eventData['website'],
-                'organizer_club_id' => $eventData['organizer_club_id'],
-                'stage_names' => $eventData['stage_names'],
-                'pricing_template_id' => $eventData['pricing_template_id'],
-            ];
-
-            // Try basic update first
+            // First, update the core fields (original 10 that always work)
             $basicResult = $db->query(
                 "UPDATE events SET name = ?, date = ?, location = ?, venue_id = ?,
                  discipline = ?, event_level = ?, event_format = ?, series_id = ?,
-                 active = ?, website = ?, organizer_club_id = ?, stage_names = ?,
-                 pricing_template_id = ? WHERE id = ?",
+                 active = ?, website = ? WHERE id = ?",
                 [
-                    $basicFields['name'], $basicFields['date'], $basicFields['location'],
-                    $basicFields['venue_id'], $basicFields['discipline'], $basicFields['event_level'],
-                    $basicFields['event_format'], $basicFields['series_id'], $basicFields['active'],
-                    $basicFields['website'], $basicFields['organizer_club_id'], $basicFields['stage_names'],
-                    $basicFields['pricing_template_id'], $id
+                    $eventData['name'], $eventData['date'], $eventData['location'],
+                    $eventData['venue_id'], $eventData['discipline'], $eventData['event_level'],
+                    $eventData['event_format'], $eventData['series_id'], $eventData['active'],
+                    $eventData['website'], $id
                 ]
             );
 
@@ -209,13 +190,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 throw new Exception("Kunde inte uppdatera grunddata - kontrollera databasen");
             }
 
+            // Try to update organizer_club_id separately (may not exist in older installs)
+            try {
+                $db->query("UPDATE events SET organizer_club_id = ? WHERE id = ?",
+                    [$eventData['organizer_club_id'], $id]);
+            } catch (Exception $clubEx) {
+                error_log("EVENT EDIT: organizer_club_id update failed: " . $clubEx->getMessage());
+            }
+
             // Now try to update extended fields (these might not exist in all installs)
             try {
                 unset($eventData['name'], $eventData['date'], $eventData['location'],
                       $eventData['venue_id'], $eventData['discipline'], $eventData['event_level'],
                       $eventData['event_format'], $eventData['series_id'], $eventData['active'],
-                      $eventData['website'], $eventData['organizer_club_id'], $eventData['stage_names'],
-                      $eventData['pricing_template_id']);
+                      $eventData['website'], $eventData['organizer_club_id']);
 
                 if (!empty($eventData)) {
                     $db->update('events', $eventData, 'id = ?', [$id]);

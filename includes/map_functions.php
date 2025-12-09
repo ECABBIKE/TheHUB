@@ -863,3 +863,149 @@ function addSegmentByDistance($pdo, $trackId, $segmentDef) {
 
     return $result ? $result['id'] : 0;
 }
+
+/**
+ * Add a segment by waypoint indices (for visual map-based definition)
+ *
+ * @param PDO $pdo
+ * @param int $trackId
+ * @param array $segmentDef ['name', 'type', 'start_index', 'end_index']
+ * @return int New segment ID
+ */
+function addSegmentByWaypointIndex($pdo, $trackId, $segmentDef) {
+    $startIdx = intval($segmentDef['start_index']);
+    $endIdx = intval($segmentDef['end_index']);
+
+    // Get waypoints between start and end index
+    $stmt = $pdo->prepare("
+        SELECT id, lat, lng, elevation, sequence_number
+        FROM event_track_waypoints
+        WHERE track_id = ?
+        ORDER BY sequence_number
+    ");
+    $stmt->execute([$trackId]);
+    $allWaypoints = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    if (empty($allWaypoints)) {
+        throw new Exception('Inga waypoints hittades för denna bana');
+    }
+
+    // Validate indices
+    $maxIndex = count($allWaypoints) - 1;
+    if ($startIdx < 0 || $startIdx > $maxIndex || $endIdx < 0 || $endIdx > $maxIndex) {
+        throw new Exception('Ogiltiga waypoint-index');
+    }
+    if ($endIdx <= $startIdx) {
+        throw new Exception('Slutpunkten måste vara efter startpunkten');
+    }
+
+    // Get waypoints for this segment
+    $segmentWaypoints = array_slice($allWaypoints, $startIdx, $endIdx - $startIdx + 1);
+
+    // Calculate distance and elevation
+    $totalDistance = 0;
+    $elevationGain = 0;
+    $elevationLoss = 0;
+    $prevWp = null;
+
+    foreach ($segmentWaypoints as $wp) {
+        if ($prevWp !== null) {
+            $distance = haversineDistance(
+                $prevWp['lat'], $prevWp['lng'],
+                $wp['lat'], $wp['lng']
+            );
+            $totalDistance += $distance;
+
+            if ($wp['elevation'] !== null && $prevWp['elevation'] !== null) {
+                $eleDiff = $wp['elevation'] - $prevWp['elevation'];
+                if ($eleDiff > 0) {
+                    $elevationGain += $eleDiff;
+                } else {
+                    $elevationLoss += abs($eleDiff);
+                }
+            }
+        }
+        $prevWp = $wp;
+    }
+
+    // Get highest sequence number for segments
+    $stmt = $pdo->prepare("
+        SELECT COALESCE(MAX(sequence_number), 0) as max_seq
+        FROM event_track_segments WHERE track_id = ?
+    ");
+    $stmt->execute([$trackId]);
+    $maxSeq = $stmt->fetch(PDO::FETCH_ASSOC)['max_seq'];
+    $newSeqNum = $maxSeq + 1;
+
+    // Determine color based on type
+    $color = $segmentDef['type'] === 'stage' ? '#61CE70' : '#9CA3AF';
+
+    // Create the segment
+    $stmt = $pdo->prepare("
+        INSERT INTO event_track_segments
+        (track_id, sequence_number, segment_type, segment_name, color, distance_km, elevation_gain_m, elevation_loss_m, waypoint_start_id, waypoint_end_id)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ");
+
+    $startWaypointId = $segmentWaypoints[0]['id'];
+    $endWaypointId = $segmentWaypoints[count($segmentWaypoints) - 1]['id'];
+
+    $stmt->execute([
+        $trackId,
+        $newSeqNum,
+        $segmentDef['type'],
+        $segmentDef['name'],
+        $color,
+        round($totalDistance, 2),
+        round($elevationGain),
+        round($elevationLoss),
+        $startWaypointId,
+        $endWaypointId
+    ]);
+
+    return $pdo->lastInsertId();
+}
+
+/**
+ * Get all waypoints for a track (for visual segment editor)
+ *
+ * @param PDO $pdo
+ * @param int $trackId
+ * @return array Array of waypoints with index, lat, lng, cumulative distance
+ */
+function getTrackWaypointsForEditor($pdo, $trackId) {
+    $stmt = $pdo->prepare("
+        SELECT id, lat, lng, elevation, sequence_number
+        FROM event_track_waypoints
+        WHERE track_id = ?
+        ORDER BY sequence_number
+    ");
+    $stmt->execute([$trackId]);
+    $waypoints = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    $result = [];
+    $cumulativeDistance = 0;
+    $prevWp = null;
+
+    foreach ($waypoints as $index => $wp) {
+        if ($prevWp !== null) {
+            $distance = haversineDistance(
+                $prevWp['lat'], $prevWp['lng'],
+                $wp['lat'], $wp['lng']
+            );
+            $cumulativeDistance += $distance;
+        }
+
+        $result[] = [
+            'index' => $index,
+            'lat' => floatval($wp['lat']),
+            'lng' => floatval($wp['lng']),
+            'elevation' => $wp['elevation'] !== null ? floatval($wp['elevation']) : null,
+            'distance_km' => round($cumulativeDistance, 3)
+        ];
+
+        $prevWp = $wp;
+    }
+
+    return $result;
+}
