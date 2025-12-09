@@ -493,7 +493,7 @@ include __DIR__ . '/components/unified-layout.php';
                 ['key' => 'jury_communication', 'label' => 'Jurykommuniké', 'global_key' => 'jury_use_global'],
                 ['key' => 'competition_schedule', 'label' => 'Tävlingsschema', 'global_key' => 'schedule_use_global'],
                 ['key' => 'start_times', 'label' => 'Starttider', 'global_key' => 'start_times_use_global'],
-                ['key' => 'map_content', 'label' => 'Karta', 'global_key' => 'map_use_global'],
+                ['key' => 'map_content', 'label' => 'Kartbeskrivning', 'global_key' => 'map_use_global'],
                 ['key' => 'driver_meeting', 'label' => 'Förarmöte', 'global_key' => 'driver_meeting_use_global'],
                 ['key' => 'training_info', 'label' => 'Träning', 'global_key' => 'training_use_global'],
                 ['key' => 'timing_info', 'label' => 'Tidtagning', 'global_key' => 'timing_use_global'],
@@ -518,6 +518,24 @@ include __DIR__ . '/components/unified-layout.php';
                         <textarea name="<?= $field['key'] ?>" class="admin-form-input" rows="3"><?= h($event[$field['key']] ?? '') ?></textarea>
                     </div>
                 <?php endforeach; ?>
+            </div>
+
+            <!-- Map Image URL - separate field -->
+            <div class="admin-form-group" style="margin-top: var(--space-lg);">
+                <label class="admin-form-label">Kartbild URL (statisk bild)</label>
+                <div style="display: flex; gap: var(--space-sm);">
+                    <input type="text" name="map_image_url" class="admin-form-input"
+                           value="<?= h($event['map_image_url'] ?? '') ?>"
+                           placeholder="https://... eller /media/events/karta.jpg">
+                    <?php if (!empty($event['map_image_url'])): ?>
+                    <button type="button" class="btn btn-ghost btn-sm" onclick="this.previousElementSibling.value=''" title="Rensa">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="18" x2="6" y1="6" y2="18"/><line x1="6" x2="18" y1="6" y2="18"/>
+                        </svg>
+                    </button>
+                    <?php endif; ?>
+                </div>
+                <small style="color: var(--color-text-secondary);">Lägg till URL till en statisk kartbild. Ladda upp bilder via <a href="/admin/media.php" target="_blank">Mediabiblioteket</a>.</small>
             </div>
         </div>
     </details>
