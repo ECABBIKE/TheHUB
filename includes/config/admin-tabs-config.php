@@ -26,7 +26,7 @@ $ADMIN_TABS = [
                 'label' => 'Events',
                 'icon' => 'calendar',
                 'url' => '/admin/events.php',
-                'pages' => ['events.php', 'event-create.php', 'event-edit.php', 'event-delete.php']
+                'pages' => ['events.php', 'event-create.php', 'event-edit.php', 'event-delete.php', 'event-map.php']
             ],
             [
                 'id' => 'results',
