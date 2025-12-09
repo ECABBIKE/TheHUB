@@ -104,8 +104,8 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
         $normalizedCol = str_replace([' ', '-', '_'], '', $normalizedCol);
 
         // Check if this looks like a split/stage time column
-        // Matches: ss1, ss2, ps1, ps2, s1, s2, stage1, sträcka1, stracka1, etc.
-        if (preg_match('/^(ss|ps|s|stage|sträcka|stracka|etapp)\d+/', $normalizedCol)) {
+        // Matches: ss1, ps1, s1, v1, stage1, sträcka1, varv1, lap1, etc.
+        if (preg_match('/^(ss|ps|s|v|stage|sträcka|stracka|etapp|varv|lap)\d+/', $normalizedCol)) {
             $splitTimeColumns[$index] = [
                 'original' => $originalCol,
                 'mapped' => 'ss' . $splitTimeIndex
