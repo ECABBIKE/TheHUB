@@ -261,8 +261,10 @@ class EventMap {
         const chartWidth = width - padding.left - padding.right;
         const chartHeight = height - padding.top - padding.bottom;
 
-        // Background
-        ctx.fillStyle = 'var(--color-surface, #f9fafb)';
+        // Background - get computed style or use fallback
+        const computedStyle = getComputedStyle(document.documentElement);
+        const bgColor = computedStyle.getPropertyValue('--color-bg-surface').trim() || '#ffffff';
+        ctx.fillStyle = bgColor;
         ctx.fillRect(0, 0, width, height);
 
         // Draw filled area and line
@@ -313,7 +315,8 @@ class EventMap {
         ctx.stroke();
 
         // Draw elevation labels
-        ctx.fillStyle = 'var(--color-text-secondary, #6b7280)';
+        const textColor = computedStyle.getPropertyValue('--color-text-secondary').trim() || '#6b7280';
+        ctx.fillStyle = textColor;
         ctx.font = '10px system-ui, sans-serif';
         ctx.textAlign = 'left';
         ctx.fillText(Math.round(maxEle) + 'm', padding.left + 2, padding.top + 10);

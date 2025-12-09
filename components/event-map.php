@@ -219,8 +219,4 @@ if (!function_exists('render_map_scripts')) {
     }
 }
 
-// If this file is included with $eventId set, render the map
-if (isset($eventId) && isset($pdo)) {
-    $mapOptions = $mapOptions ?? [];
-    render_event_map($eventId, $pdo, $mapOptions);
-}
+// Auto-render disabled - use render_event_map() function explicitly
