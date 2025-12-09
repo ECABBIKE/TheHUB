@@ -185,18 +185,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'series_id' => $eventData['series_id'],
                 'active' => $eventData['active'],
                 'website' => $eventData['website'],
+                'organizer_club_id' => $eventData['organizer_club_id'],
+                'contact_email' => $eventData['contact_email'],
+                'contact_phone' => $eventData['contact_phone'],
+                'registration_deadline' => $eventData['registration_deadline'],
+                'pricing_template_id' => $eventData['pricing_template_id'],
+                'distance' => $eventData['distance'],
+                'elevation_gain' => $eventData['elevation_gain'],
+                'stage_names' => $eventData['stage_names'],
+                'map_image_url' => $eventData['map_image_url'],
             ];
 
             // Try basic update first
             $basicResult = $db->query(
                 "UPDATE events SET name = ?, date = ?, location = ?, venue_id = ?,
                  discipline = ?, event_level = ?, event_format = ?, series_id = ?,
-                 active = ?, website = ? WHERE id = ?",
+                 active = ?, website = ?, organizer_club_id = ?, contact_email = ?,
+                 contact_phone = ?, registration_deadline = ?, pricing_template_id = ?,
+                 distance = ?, elevation_gain = ?, stage_names = ?, map_image_url = ?
+                 WHERE id = ?",
                 [
                     $basicFields['name'], $basicFields['date'], $basicFields['location'],
                     $basicFields['venue_id'], $basicFields['discipline'], $basicFields['event_level'],
                     $basicFields['event_format'], $basicFields['series_id'], $basicFields['active'],
-                    $basicFields['website'], $id
+                    $basicFields['website'], $basicFields['organizer_club_id'], $basicFields['contact_email'],
+                    $basicFields['contact_phone'], $basicFields['registration_deadline'], $basicFields['pricing_template_id'],
+                    $basicFields['distance'], $basicFields['elevation_gain'], $basicFields['stage_names'],
+                    $basicFields['map_image_url'], $id
                 ]
             );
 
@@ -209,7 +224,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 unset($eventData['name'], $eventData['date'], $eventData['location'],
                       $eventData['venue_id'], $eventData['discipline'], $eventData['event_level'],
                       $eventData['event_format'], $eventData['series_id'], $eventData['active'],
-                      $eventData['website']);
+                      $eventData['website'], $eventData['organizer_club_id'], $eventData['contact_email'],
+                      $eventData['contact_phone'], $eventData['registration_deadline'], $eventData['pricing_template_id'],
+                      $eventData['distance'], $eventData['elevation_gain'], $eventData['stage_names'],
+                      $eventData['map_image_url']);
 
                 if (!empty($eventData)) {
                     $db->update('events', $eventData, 'id = ?', [$id]);
