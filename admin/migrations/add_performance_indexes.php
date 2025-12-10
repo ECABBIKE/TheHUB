@@ -12,6 +12,19 @@ require_admin();
 $db = getDB();
 $pdo = $db->getConnection();
 
+// Check database connection
+if (!$pdo) {
+    $page_title = 'Databasfel';
+    $breadcrumbs = [
+        ['label' => 'Verktyg', 'url' => '/admin/tools'],
+        ['label' => 'Prestandaindex']
+    ];
+    include __DIR__ . '/../components/unified-layout.php';
+    echo '<div class="alert alert-danger">Kunde inte ansluta till databasen. Kontrollera databasinställningarna.</div>';
+    include __DIR__ . '/../components/unified-layout-footer.php';
+    exit;
+}
+
 $results = [];
 
 // List of indexes to add
