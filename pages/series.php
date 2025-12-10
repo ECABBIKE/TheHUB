@@ -3,6 +3,7 @@
  * V3 Series Page - All competition series with badge design
  *
  * Uses the TheHUB Badge Design System for a bold, modern display.
+ * Filter by brand (series family) or year.
  */
 
 // Include badge component
@@ -10,13 +11,33 @@ require_once HUB_V3_ROOT . '/components/series-badge.php';
 
 $db = hub_db();
 
+// Check if series_brands table exists
+$brandsTableExists = false;
+try {
+    $check = $db->query("SHOW TABLES LIKE 'series_brands'");
+    $brandsTableExists = $check->rowCount() > 0;
+} catch (Exception $e) {
+    $brandsTableExists = false;
+}
+
+// Check if brand_id column exists in series
+$brandColumnExists = false;
+if ($brandsTableExists) {
+    try {
+        $check = $db->query("SHOW COLUMNS FROM series LIKE 'brand_id'");
+        $brandColumnExists = $check->rowCount() > 0;
+    } catch (Exception $e) {
+        $brandColumnExists = false;
+    }
+}
+
 // Get filter parameters
 $currentYear = (int)date('Y');
-$selectedYear = isset($_GET['year']) ? (int)$_GET['year'] : null;
-$selectedSeriesSlug = isset($_GET['serie']) ? trim($_GET['serie']) : null;
+$filterBrand = isset($_GET['brand']) && is_numeric($_GET['brand']) ? intval($_GET['brand']) : null;
+$filterYear = isset($_GET['year']) && is_numeric($_GET['year']) ? intval($_GET['year']) : null;
 
-// Determine filter mode: 'series' if a series is selected, otherwise 'year'
-$filterMode = $selectedSeriesSlug ? 'series' : 'year';
+// Determine filter mode
+$filterMode = $filterBrand ? 'brand' : 'year';
 
 try {
     // Get all available years that have series
@@ -27,66 +48,59 @@ try {
         ORDER BY year DESC
     ")->fetchAll(PDO::FETCH_COLUMN);
 
-    // Get all unique series names (base name without year) for the series dropdown
-    // We extract the base name by removing trailing year patterns
-    $allSeriesNames = $db->query("
-        SELECT DISTINCT
-            TRIM(REGEXP_REPLACE(name, '[0-9]{4}$', '')) as base_name,
-            MIN(slug) as slug
-        FROM series
-        WHERE status IN ('active', 'completed')
-        GROUP BY base_name
-        ORDER BY base_name ASC
-    ")->fetchAll(PDO::FETCH_ASSOC);
+    // Get brands for filter (if table exists)
+    $allBrands = [];
+    if ($brandsTableExists && $brandColumnExists) {
+        $allBrands = $db->query("
+            SELECT DISTINCT sb.id, sb.name
+            FROM series_brands sb
+            INNER JOIN series s ON sb.id = s.brand_id
+            WHERE sb.active = 1 AND s.status IN ('active', 'completed')
+            ORDER BY sb.display_order ASC, sb.name ASC
+        ")->fetchAll(PDO::FETCH_ASSOC);
+    }
 
-    if ($filterMode === 'series') {
-        // Find the base name for the selected series
-        $selectedSeriesBaseName = null;
-        foreach ($allSeriesNames as $sn) {
-            if ($sn['slug'] === $selectedSeriesSlug) {
-                $selectedSeriesBaseName = $sn['base_name'];
+    if ($filterMode === 'brand') {
+        // Get all series for selected brand (all years)
+        $stmt = $db->prepare("
+            SELECT s.id, s.name, s.slug, s.description, s.year, s.status,
+                   s.type, s.discipline,
+                   s.logo, s.logo_light, s.logo_dark,
+                   s.gradient_start, s.gradient_end, s.accent_color,
+                   COUNT(DISTINCT e.id) as event_count,
+                   (SELECT COUNT(DISTINCT r.cyclist_id)
+                    FROM results r
+                    INNER JOIN events e2 ON r.event_id = e2.id
+                    WHERE e2.series_id = s.id) as participant_count
+            FROM series s
+            LEFT JOIN events e ON s.id = e.series_id
+            WHERE s.status IN ('active', 'completed') AND s.brand_id = ?
+            GROUP BY s.id
+            ORDER BY s.year DESC
+        ");
+        $stmt->execute([$filterBrand]);
+        $series = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Get brand name for title
+        $brandName = 'Serie';
+        foreach ($allBrands as $b) {
+            if ($b['id'] == $filterBrand) {
+                $brandName = $b['name'];
                 break;
             }
         }
 
-        // Get all series matching this base name (all years)
-        if ($selectedSeriesBaseName) {
-            $stmt = $db->prepare("
-                SELECT s.id, s.name, s.slug, s.description, s.year, s.status,
-                       s.type, s.discipline,
-                       s.logo, s.logo_light, s.logo_dark,
-                       s.gradient_start, s.gradient_end, s.accent_color,
-                       COUNT(DISTINCT e.id) as event_count,
-                       (SELECT COUNT(DISTINCT r.cyclist_id)
-                        FROM results r
-                        INNER JOIN events e2 ON r.event_id = e2.id
-                        WHERE e2.series_id = s.id) as participant_count
-                FROM series s
-                LEFT JOIN events e ON s.id = e.series_id
-                WHERE s.status IN ('active', 'completed')
-                  AND TRIM(REGEXP_REPLACE(s.name, '[0-9]{4}$', '')) = ?
-                GROUP BY s.id
-                ORDER BY s.year DESC
-            ");
-            $stmt->execute([$selectedSeriesBaseName]);
-            $series = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-            $pageTitle = trim($selectedSeriesBaseName);
-            $pageSubtitle = 'Historik för alla år';
-        } else {
-            $series = [];
-            $pageTitle = 'Serie hittades inte';
-            $pageSubtitle = '';
-        }
+        $pageTitle = $brandName;
+        $pageSubtitle = 'Historik för alla år';
     } else {
         // Year filter mode (default)
-        if ($selectedYear === null) {
-            $selectedYear = !empty($availableYears) ? $availableYears[0] : $currentYear;
+        if ($filterYear === null) {
+            $filterYear = !empty($availableYears) ? $availableYears[0] : $currentYear;
         }
 
         // If selected year not in available years, default to most recent
-        if (!in_array($selectedYear, $availableYears) && !empty($availableYears)) {
-            $selectedYear = $availableYears[0];
+        if (!in_array($filterYear, $availableYears) && !empty($availableYears)) {
+            $filterYear = $availableYears[0];
         }
 
         // Get series for selected year
@@ -106,10 +120,10 @@ try {
             GROUP BY s.id
             ORDER BY s.name ASC
         ");
-        $stmt->execute([$selectedYear]);
+        $stmt->execute([$filterYear]);
         $series = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        $pageTitle = "Tävlingsserier $selectedYear";
+        $pageTitle = "Tävlingsserier $filterYear";
         $pageSubtitle = 'Alla GravitySeries och andra tävlingsserier';
     }
 
@@ -117,7 +131,7 @@ try {
     $totalEvents = array_sum(array_column($series, 'event_count'));
 
     // Count unique participants
-    if ($filterMode === 'series' && !empty($series)) {
+    if ($filterMode === 'brand' && !empty($series)) {
         $seriesIds = array_column($series, 'id');
         $placeholders = implode(',', array_fill(0, count($seriesIds), '?'));
         $stmt = $db->prepare("
@@ -137,7 +151,7 @@ try {
             JOIN series s ON e.series_id = s.id
             WHERE s.status IN ('active', 'completed') AND s.year = ?
         ");
-        $stmt->execute([$selectedYear]);
+        $stmt->execute([$filterYear]);
         $uniqueParticipants = $stmt->fetch(PDO::FETCH_ASSOC);
         $totalParticipants = $uniqueParticipants['total'] ?? 0;
     }
@@ -145,7 +159,7 @@ try {
 } catch (Exception $e) {
     $series = [];
     $availableYears = [$currentYear];
-    $allSeriesNames = [];
+    $allBrands = [];
     $totalSeries = 0;
     $totalEvents = 0;
     $totalParticipants = 0;
@@ -166,21 +180,21 @@ try {
     <div class="filter-selectors">
       <?php if (!empty($availableYears)): ?>
       <div class="filter-group">
-        <label for="year-select" class="filter-label">År</label>
-        <select id="year-select" class="filter-select" onchange="window.location.href='?year=' + this.value">
+        <label class="filter-label">År</label>
+        <select class="filter-select" onchange="window.location.href='?year=' + this.value">
           <?php foreach ($availableYears as $year): ?>
-            <option value="<?= $year ?>" <?= ($filterMode === 'year' && $year == $selectedYear) ? 'selected' : '' ?>><?= $year ?></option>
+            <option value="<?= $year ?>" <?= ($filterMode === 'year' && $year == $filterYear) ? 'selected' : '' ?>><?= $year ?></option>
           <?php endforeach; ?>
         </select>
       </div>
       <?php endif; ?>
-      <?php if (!empty($allSeriesNames)): ?>
+      <?php if (!empty($allBrands)): ?>
       <div class="filter-group">
-        <label for="series-select" class="filter-label">Serie</label>
-        <select id="series-select" class="filter-select" onchange="if(this.value) window.location.href='?serie=' + this.value; else window.location.href='?year=<?= $selectedYear ?? $currentYear ?>';">
+        <label class="filter-label">Serie</label>
+        <select class="filter-select" onchange="if(this.value) window.location.href='?brand=' + this.value; else window.location.href='?year=<?= $filterYear ?>';">
           <option value="">Alla serier</option>
-          <?php foreach ($allSeriesNames as $sn): ?>
-            <option value="<?= htmlspecialchars($sn['slug']) ?>" <?= ($filterMode === 'series' && $sn['slug'] === $selectedSeriesSlug) ? 'selected' : '' ?>><?= htmlspecialchars($sn['base_name']) ?></option>
+          <?php foreach ($allBrands as $b): ?>
+            <option value="<?= $b['id'] ?>" <?= ($filterMode === 'brand' && $b['id'] == $filterBrand) ? 'selected' : '' ?>><?= htmlspecialchars($b['name']) ?></option>
           <?php endforeach; ?>
         </select>
       </div>
@@ -194,7 +208,7 @@ try {
   <div class="stats-row">
     <div class="stat-block">
       <div class="stat-value"><?= $totalSeries ?></div>
-      <div class="stat-label"><?= $filterMode === 'series' ? 'Säsonger' : 'Serier' ?></div>
+      <div class="stat-label"><?= $filterMode === 'brand' ? 'Säsonger' : 'Serier' ?></div>
     </div>
     <div class="stat-block">
       <div class="stat-value"><?= $totalEvents ?></div>
@@ -293,19 +307,6 @@ try {
   outline: none;
   border-color: var(--color-accent);
   box-shadow: 0 0 0 2px rgba(97, 206, 112, 0.2);
-}
-#series-select {
-  min-width: 160px;
-}
-.sr-only {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  border: 0;
 }
 
 .mb-lg { margin-bottom: var(--space-lg); }
