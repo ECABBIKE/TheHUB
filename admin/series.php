@@ -153,18 +153,31 @@ try {
     // Table doesn't exist, that's ok
 }
 
-// Get series from database
-$formatSelect = $formatColumnExists ? ', format' : ', "Championship" as format';
-$yearSelect = $yearColumnExists ? ', year' : ', NULL as year';
-$eventsCountSelect = $seriesEventsTableExists
-    ? '(SELECT COUNT(*) FROM series_events WHERE series_id = series.id)'
-    : '0';
+// Check if brand_id column exists
+$brandColumnExists = false;
+try {
+    $columns = $db->getAll("SHOW COLUMNS FROM series LIKE 'brand_id'");
+    $brandColumnExists = !empty($columns);
+} catch (Exception $e) {}
 
-$sql = "SELECT id, name, type{$formatSelect}{$yearSelect}, status, start_date, end_date, logo, organizer,
-    {$eventsCountSelect} as events_count
-    FROM series
-    {$whereClause}
-    ORDER BY start_date DESC";
+// Get series from database with brand info
+$formatSelect = $formatColumnExists ? ', s.format' : ', "Championship" as format';
+$yearSelect = $yearColumnExists ? ', s.year' : ', NULL as year';
+$eventsCountSelect = $seriesEventsTableExists
+    ? '(SELECT COUNT(*) FROM series_events WHERE series_id = s.id)'
+    : '0';
+$brandSelect = $brandColumnExists ? ', s.brand_id, sb.name as brand_name' : ', NULL as brand_id, NULL as brand_name';
+$brandJoin = $brandColumnExists ? 'LEFT JOIN series_brands sb ON s.brand_id = sb.id' : '';
+
+// Rebuild where clause for aliased table
+$whereAliased = str_replace(['year', 'start_date'], ['s.year', 's.start_date'], $whereClause);
+
+$sql = "SELECT s.id, s.name, s.type{$formatSelect}{$yearSelect}, s.status, s.start_date, s.end_date, s.logo, s.organizer,
+    {$eventsCountSelect} as events_count{$brandSelect}
+    FROM series s
+    {$brandJoin}
+    {$whereAliased}
+    ORDER BY sb.name ASC, s.year DESC, s.start_date DESC";
 
 $series = $db->getAll($sql, $params);
 
@@ -310,12 +323,10 @@ include __DIR__ . '/components/unified-layout.php';
                 <table class="admin-table">
                     <thead>
                         <tr>
-                            <th>Namn</th>
+                            <th>Huvudserie</th>
+                            <th>Säsong</th>
                             <th>År</th>
-                            <th>Typ</th>
-                            <th>Format</th>
                             <th>Status</th>
-                            <th>Startdatum</th>
                             <th>Events</th>
                             <th style="width: 150px;">Åtgärder</th>
                         </tr>
@@ -333,28 +344,39 @@ include __DIR__ . '/components/unified-layout.php';
                             ?>
                             <tr>
                                 <td>
+                                    <?php if (!empty($serie['brand_name'])): ?>
+                                        <span style="font-weight: 500; color: var(--color-text);">
+                                            <?= htmlspecialchars($serie['brand_name']) ?>
+                                        </span>
+                                    <?php else: ?>
+                                        <span style="color: var(--color-text-secondary); font-style: italic;">
+                                            Ingen huvudserie
+                                        </span>
+                                    <?php endif; ?>
+                                </td>
+                                <td>
                                     <a href="/admin/series/edit/<?= $serie['id'] ?>" style="color: var(--color-accent); text-decoration: none; font-weight: 500;">
                                         <?= htmlspecialchars($serie['name']) ?>
                                     </a>
+                                    <?php if (!empty($serie['type'])): ?>
+                                        <br><span style="font-size: 0.75rem; color: var(--color-text-secondary);"><?= htmlspecialchars($serie['type']) ?></span>
+                                    <?php endif; ?>
                                 </td>
                                 <td>
                                     <?php if (!empty($serie['year'])): ?>
                                         <span class="admin-badge admin-badge-info"><?= $serie['year'] ?></span>
                                     <?php else: ?>
-                                        <span style="color: var(--color-text-secondary);">-</span>
+                                        <span style="color: var(--color-warning);">Saknas!</span>
                                     <?php endif; ?>
-                                </td>
-                                <td><?= htmlspecialchars($serie['type'] ?? '-') ?></td>
-                                <td>
-                                    <span class="admin-badge"><?= htmlspecialchars($serie['format'] ?? 'Championship') ?></span>
                                 </td>
                                 <td>
                                     <span class="admin-badge <?= $statusInfo['class'] ?>">
                                         <?= $statusInfo['text'] ?>
                                     </span>
                                 </td>
-                                <td><?= $serie['start_date'] ? date('Y-m-d', strtotime($serie['start_date'])) : '-' ?></td>
-                                <td><?= $serie['events_count'] ?></td>
+                                <td>
+                                    <span class="admin-badge admin-badge-secondary"><?= $serie['events_count'] ?></span>
+                                </td>
                                 <td>
                                     <div class="table-actions">
                                         <?php if ($seriesEventsTableExists): ?>
