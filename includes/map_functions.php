@@ -164,9 +164,10 @@ function haversineDistance($lat1, $lon1, $lat2, $lon2) {
  * @param string $name Track name
  * @param string $gpxFile GPX filename
  * @param array $parsedData Parsed GPX data from parseGpxFile()
+ * @param array $options Optional: route_type, route_label, color, is_primary
  * @return int Track ID
  */
-function saveEventTrack($pdo, $eventId, $name, $gpxFile, $parsedData) {
+function saveEventTrack($pdo, $eventId, $name, $gpxFile, $parsedData, $options = []) {
     $pdo->beginTransaction();
 
     try {
@@ -181,23 +182,44 @@ function saveEventTrack($pdo, $eventId, $name, $gpxFile, $parsedData) {
             }
         }
 
+        // Get next display order
+        $stmt = $pdo->prepare("SELECT COALESCE(MAX(display_order), 0) + 1 FROM event_tracks WHERE event_id = ?");
+        $stmt->execute([$eventId]);
+        $nextOrder = $stmt->fetchColumn();
+
+        // Check if this should be primary (first track or explicitly set)
+        $stmt = $pdo->prepare("SELECT COUNT(*) FROM event_tracks WHERE event_id = ?");
+        $stmt->execute([$eventId]);
+        $existingCount = $stmt->fetchColumn();
+        $isPrimary = ($existingCount == 0) || ($options['is_primary'] ?? false);
+
+        // If setting as primary, unset other primaries
+        if ($isPrimary) {
+            $pdo->prepare("UPDATE event_tracks SET is_primary = 0 WHERE event_id = ?")->execute([$eventId]);
+        }
+
         // Insert main track record
         $stmt = $pdo->prepare("
             INSERT INTO event_tracks
-            (event_id, name, gpx_file, total_distance_km, total_elevation_m,
-             bounds_north, bounds_south, bounds_east, bounds_west)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            (event_id, name, route_type, route_label, gpx_file, total_distance_km, total_elevation_m,
+             bounds_north, bounds_south, bounds_east, bounds_west, is_primary, display_order, color)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ");
         $stmt->execute([
             $eventId,
             $name,
+            $options['route_type'] ?? null,
+            $options['route_label'] ?? $name,
             $gpxFile,
             $totalDistance,
             $totalElevation,
             $parsedData['bounds']['north'],
             $parsedData['bounds']['south'],
             $parsedData['bounds']['east'],
-            $parsedData['bounds']['west']
+            $parsedData['bounds']['west'],
+            $isPrimary ? 1 : 0,
+            $options['display_order'] ?? $nextOrder,
+            $options['color'] ?? '#3B82F6'
         ]);
 
         $trackId = $pdo->lastInsertId();
@@ -243,7 +265,7 @@ function saveEventTrack($pdo, $eventId, $name, $gpxFile, $parsedData) {
 }
 
 /**
- * Get track with all segments for an event
+ * Get track with all segments for an event (backwards compatible - returns first/primary track)
  *
  * @param PDO $pdo Database connection
  * @param int $eventId Event ID
@@ -251,7 +273,7 @@ function saveEventTrack($pdo, $eventId, $name, $gpxFile, $parsedData) {
  */
 function getEventTrack($pdo, $eventId) {
     $stmt = $pdo->prepare("
-        SELECT * FROM event_tracks WHERE event_id = ? LIMIT 1
+        SELECT * FROM event_tracks WHERE event_id = ? ORDER BY is_primary DESC, display_order ASC LIMIT 1
     ");
     $stmt->execute([$eventId]);
     $track = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -276,6 +298,109 @@ function getEventTrack($pdo, $eventId) {
     }
 
     return $track;
+}
+
+/**
+ * Get ALL tracks for an event (for multi-track support)
+ *
+ * @param PDO $pdo Database connection
+ * @param int $eventId Event ID
+ * @return array Array of tracks with segments
+ */
+function getEventTracks($pdo, $eventId) {
+    $stmt = $pdo->prepare("
+        SELECT * FROM event_tracks
+        WHERE event_id = ?
+        ORDER BY is_primary DESC, display_order ASC
+    ");
+    $stmt->execute([$eventId]);
+    $tracks = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    foreach ($tracks as &$track) {
+        $stmt = $pdo->prepare("
+            SELECT * FROM event_track_segments
+            WHERE track_id = ?
+            ORDER BY sequence_number ASC
+        ");
+        $stmt->execute([$track['id']]);
+        $track['segments'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        foreach ($track['segments'] as &$segment) {
+            $segment['coordinates'] = json_decode($segment['coordinates'], true);
+            $segment['elevation_data'] = json_decode($segment['elevation_data'], true);
+        }
+    }
+
+    return $tracks;
+}
+
+/**
+ * Get a specific track by ID
+ *
+ * @param PDO $pdo Database connection
+ * @param int $trackId Track ID
+ * @return array|null Track data with segments
+ */
+function getTrackById($pdo, $trackId) {
+    $stmt = $pdo->prepare("SELECT * FROM event_tracks WHERE id = ?");
+    $stmt->execute([$trackId]);
+    $track = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$track) {
+        return null;
+    }
+
+    $stmt = $pdo->prepare("
+        SELECT * FROM event_track_segments
+        WHERE track_id = ?
+        ORDER BY sequence_number ASC
+    ");
+    $stmt->execute([$track['id']]);
+    $track['segments'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    foreach ($track['segments'] as &$segment) {
+        $segment['coordinates'] = json_decode($segment['coordinates'], true);
+        $segment['elevation_data'] = json_decode($segment['elevation_data'], true);
+    }
+
+    return $track;
+}
+
+/**
+ * Update track metadata
+ *
+ * @param PDO $pdo Database connection
+ * @param int $trackId Track ID
+ * @param array $data Data to update (name, route_type, route_label, color, is_primary)
+ * @return bool Success
+ */
+function updateTrack($pdo, $trackId, $data) {
+    // If setting as primary, unset others first
+    if (!empty($data['is_primary'])) {
+        $stmt = $pdo->prepare("SELECT event_id FROM event_tracks WHERE id = ?");
+        $stmt->execute([$trackId]);
+        $eventId = $stmt->fetchColumn();
+        if ($eventId) {
+            $pdo->prepare("UPDATE event_tracks SET is_primary = 0 WHERE event_id = ?")->execute([$eventId]);
+        }
+    }
+
+    $fields = [];
+    $values = [];
+    foreach (['name', 'route_type', 'route_label', 'color', 'is_primary', 'display_order'] as $field) {
+        if (array_key_exists($field, $data)) {
+            $fields[] = "$field = ?";
+            $values[] = $data[$field];
+        }
+    }
+
+    if (empty($fields)) {
+        return false;
+    }
+
+    $values[] = $trackId;
+    $stmt = $pdo->prepare("UPDATE event_tracks SET " . implode(', ', $fields) . " WHERE id = ?");
+    return $stmt->execute($values);
 }
 
 /**
@@ -495,7 +620,7 @@ function bulkAddPois($pdo, $eventId, $poisData) {
 // =====================================================
 
 /**
- * Get complete map data for frontend
+ * Get complete map data for frontend (single primary track - backwards compatible)
  *
  * @param PDO $pdo Database connection
  * @param int $eventId Event ID
@@ -533,7 +658,7 @@ function getEventMapData($pdo, $eventId) {
                 'distance_km' => (float)$segment['distance_km'],
                 'elevation_gain' => (int)$segment['elevation_gain_m'],
                 'color' => $segment['color'],
-                'timing_id' => $segment['timing_id']
+                'timing_id' => $segment['timing_id'] ?? null
             ]
         ];
     }
@@ -575,6 +700,121 @@ function getEventMapData($pdo, $eventId) {
             'features' => $features
         ],
         'segments' => $track['segments'],
+        'pois' => $pois,
+        'poi_types' => POI_TYPES
+    ];
+}
+
+/**
+ * Get complete map data for ALL tracks (multi-track version)
+ *
+ * @param PDO $pdo Database connection
+ * @param int $eventId Event ID
+ * @return array Map data with all tracks
+ */
+function getEventMapDataMultiTrack($pdo, $eventId) {
+    $tracks = getEventTracks($pdo, $eventId);
+    $pois = getEventPois($pdo, $eventId);
+
+    if (empty($tracks)) {
+        return null;
+    }
+
+    // Calculate combined bounds
+    $bounds = [
+        'north' => -90, 'south' => 90,
+        'east' => -180, 'west' => 180
+    ];
+
+    $tracksData = [];
+    $allFeatures = [];
+
+    foreach ($tracks as $track) {
+        // Update combined bounds
+        if ($track['bounds_north']) $bounds['north'] = max($bounds['north'], (float)$track['bounds_north']);
+        if ($track['bounds_south']) $bounds['south'] = min($bounds['south'], (float)$track['bounds_south']);
+        if ($track['bounds_east']) $bounds['east'] = max($bounds['east'], (float)$track['bounds_east']);
+        if ($track['bounds_west']) $bounds['west'] = min($bounds['west'], (float)$track['bounds_west']);
+
+        $trackFeatures = [];
+
+        foreach ($track['segments'] as $segment) {
+            $coordinates = array_map(function($coord) {
+                return [$coord['lng'], $coord['lat']];
+            }, $segment['coordinates'] ?? []);
+
+            $feature = [
+                'type' => 'Feature',
+                'geometry' => [
+                    'type' => 'LineString',
+                    'coordinates' => $coordinates
+                ],
+                'properties' => [
+                    'id' => (int)$segment['id'],
+                    'type' => 'segment',
+                    'track_id' => (int)$track['id'],
+                    'segment_type' => $segment['segment_type'],
+                    'name' => $segment['segment_name'],
+                    'sequence' => (int)$segment['sequence_number'],
+                    'distance_km' => (float)$segment['distance_km'],
+                    'elevation_gain' => (int)$segment['elevation_gain_m'],
+                    'color' => $segment['color'],
+                    'timing_id' => $segment['timing_id'] ?? null
+                ]
+            ];
+            $trackFeatures[] = $feature;
+            $allFeatures[] = $feature;
+        }
+
+        $tracksData[] = [
+            'id' => (int)$track['id'],
+            'name' => $track['name'],
+            'route_type' => $track['route_type'] ?? null,
+            'route_label' => $track['route_label'] ?? $track['name'],
+            'color' => $track['color'] ?? '#3B82F6',
+            'is_primary' => (bool)($track['is_primary'] ?? false),
+            'total_distance_km' => (float)$track['total_distance_km'],
+            'total_elevation_m' => (int)$track['total_elevation_m'],
+            'segments' => $track['segments'],
+            'geojson' => [
+                'type' => 'FeatureCollection',
+                'features' => $trackFeatures
+            ]
+        ];
+    }
+
+    // Add POI points
+    foreach ($pois as $poi) {
+        $allFeatures[] = [
+            'type' => 'Feature',
+            'geometry' => [
+                'type' => 'Point',
+                'coordinates' => [(float)$poi['lng'], (float)$poi['lat']]
+            ],
+            'properties' => [
+                'id' => (int)$poi['id'],
+                'type' => 'poi',
+                'poi_type' => $poi['poi_type'],
+                'label' => $poi['label'] ?: $poi['type_label'],
+                'description' => $poi['description'],
+                'icon' => $poi['type_icon'],
+                'emoji' => $poi['type_emoji'],
+                'color' => $poi['type_color']
+            ]
+        ];
+    }
+
+    return [
+        'tracks' => $tracksData,
+        'primary_track_id' => $tracksData[0]['id'] ?? null,
+        'bounds' => [
+            [(float)$bounds['south'], (float)$bounds['west']],
+            [(float)$bounds['north'], (float)$bounds['east']]
+        ],
+        'geojson' => [
+            'type' => 'FeatureCollection',
+            'features' => $allFeatures
+        ],
         'pois' => $pois,
         'poi_types' => POI_TYPES
     ];
