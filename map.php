@@ -481,11 +481,15 @@ $eventName = htmlspecialchars($event['name']);
                 }
                 if (!empty($allSegments)): ?>
                 <div class="dropdown-section-title">Sträckor</div>
-                <?php foreach ($allSegments as $seg): ?>
+                <?php foreach ($allSegments as $seg):
+                    $segType = $seg['segment_type'] ?? 'stage';
+                    $typeIcon = $segType === 'lift' ? '🚡' : ($segType === 'liaison' ? '🔗' : '🏁');
+                    $typeLabel = $segType === 'lift' ? 'Lift' : ($segType === 'liaison' ? 'Transport' : '');
+                ?>
                 <div class="dropdown-item segment-item" data-segment-id="<?= $seg['id'] ?>" data-track-id="<?= $seg['track_id'] ?>" onclick="selectSegment(<?= $seg['id'] ?>, <?= $seg['track_id'] ?>)">
                     <div class="seg-info">
-                        <span class="seg-name"><?= htmlspecialchars($seg['name']) ?></span>
-                        <span class="seg-meta"><?= number_format($seg['distance_km'], 2) ?> km · <?= number_format($seg['elevation_drop_m'] ?? 0) ?> m FHM</span>
+                        <span class="seg-name"><?= $typeIcon ?> <?= htmlspecialchars($seg['name']) ?></span>
+                        <span class="seg-meta"><?= number_format($seg['distance_km'], 2) ?> km<?php if ($segType !== 'lift'): ?> · <?= number_format($seg['elevation_drop_m'] ?? 0) ?> m FHM<?php else: ?> · <em>ej i höjdprofil</em><?php endif; ?></span>
                     </div>
                 </div>
                 <?php endforeach; ?>
@@ -821,38 +825,46 @@ $eventName = htmlspecialchars($event['name']);
         canvas.width = rect.width * 2; canvas.height = rect.height * 2;
         ctx.scale(2, 2);
 
-        let allEle = [], allDist = [];
+        let allEle = [], allDist = [], segmentTypes = [];
 
         if (singleSegment) {
-            // Show single segment elevation
+            // Show single segment elevation (skip lift for stats but show profile)
             const ele = singleSegment.elevation_data || [];
             const coords = singleSegment.coordinates || [];
+            const isLift = singleSegment.segment_type === 'lift';
             let dist = 0;
             coords.forEach((c, i) => {
                 if (i > 0) dist += haversine(coords[i-1].lat, coords[i-1].lng, c.lat, c.lng);
                 allDist.push(dist);
                 allEle.push(ele[i] ?? c.ele ?? 0);
+                segmentTypes.push(isLift ? 'lift' : 'normal');
             });
         } else if (mapData.tracks) {
-            // Show all visible tracks
+            // Show all visible tracks - skip lift segments for elevation stats
             mapData.tracks.forEach(track => {
                 if (!visibleTracks.has(track.id)) return;
                 (track.segments || []).forEach(seg => {
+                    // Skip lift segments entirely from elevation profile
+                    if (seg.segment_type === 'lift') return;
+
                     const ele = seg.elevation_data || [], coords = seg.coordinates || [];
                     let dist = allDist.length ? allDist[allDist.length - 1] : 0;
                     coords.forEach((c, i) => {
                         if (i > 0) dist += haversine(coords[i-1].lat, coords[i-1].lng, c.lat, c.lng);
                         allDist.push(dist);
                         allEle.push(ele[i] ?? c.ele ?? 0);
+                        segmentTypes.push('normal');
                     });
                 });
             });
         }
 
-        // Calculate stats
+        // Calculate stats - exclude lift segments
         const totalDist = allDist.length > 0 ? allDist[allDist.length - 1] : 0;
         let totalClimb = 0, totalDescent = 0;
         for (let i = 1; i < allEle.length; i++) {
+            // Skip elevation changes in lift segments
+            if (segmentTypes[i] === 'lift' || segmentTypes[i-1] === 'lift') continue;
             const diff = allEle[i] - allEle[i-1];
             if (diff > 0) totalClimb += diff;
             else totalDescent += Math.abs(diff);

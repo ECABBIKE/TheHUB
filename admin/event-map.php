@@ -358,6 +358,7 @@ include __DIR__ . '/components/unified-layout.php';
                         <select name="segment_type" class="admin-form-select">
                             <option value="stage">Tävling</option>
                             <option value="liaison">Transport</option>
+                            <option value="lift">Lift</option>
                         </select>
                         <input type="text" name="segment_name" class="admin-form-input" placeholder="Namn">
                     </div>
