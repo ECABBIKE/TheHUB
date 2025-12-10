@@ -36,6 +36,9 @@ if (!$clubId) {
 }
 
 try {
+    // DEBUG: Performance timer (remove after testing)
+    $debugStartTime = microtime(true);
+
     // Fetch club details
     $stmt = $db->prepare("SELECT * FROM clubs WHERE id = ?");
     $stmt->execute([$clubId]);
@@ -201,9 +204,13 @@ try {
         }
     }
 
+    // DEBUG: Stop timer
+    $debugQueryTime = round((microtime(true) - $debugStartTime) * 1000, 2);
+
 } catch (Exception $e) {
     $error = $e->getMessage();
     $club = null;
+    $debugQueryTime = 0;
 }
 
 if (!$club) {
@@ -231,6 +238,13 @@ foreach (['jpg', 'jpeg', 'png', 'webp', 'svg'] as $ext) {
   <p><?= htmlspecialchars($error) ?></p>
 </section>
 <?php endif; ?>
+
+<!-- DEBUG: Performance info (remove after testing) -->
+<div style="background: #1a1a2e; color: #61CE70; padding: 12px 16px; border-radius: 8px; margin-bottom: 16px; font-family: monospace; font-size: 14px;">
+  ⚡ Query time: <strong><?= $debugQueryTime ?>ms</strong> |
+  Members: <?= $totalMembers ?> |
+  Total results processed: <?= array_sum(array_column($members, 'total_races')) ?>
+</div>
 
 <!-- Club Hero -->
 <section class="club-hero">
