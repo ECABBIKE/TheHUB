@@ -150,7 +150,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 // Fetch series and venues for dropdowns
-$series = $db->getAll("SELECT id, name FROM series WHERE status = 'active' ORDER BY name");
+// Include completed series so events can be added back if needed
+$series = $db->getAll("
+    SELECT s.id, s.name, s.year, s.status, sb.name as brand_name
+    FROM series s
+    LEFT JOIN series_brands sb ON s.brand_id = sb.id
+    WHERE s.status IN ('active', 'planning', 'completed')
+    ORDER BY sb.name ASC, s.year DESC, s.name ASC
+");
 $venues = $db->getAll("SELECT id, name, city FROM venues WHERE active = 1 ORDER BY name");
 $pricingTemplates = $db->getAll("SELECT id, name, is_default FROM pricing_templates ORDER BY is_default DESC, name ASC");
 $defaultTemplate = array_filter($pricingTemplates, fn($t) => $t['is_default']);
@@ -346,10 +353,28 @@ include __DIR__ . '/../includes/layout-header.php';
   </label>
   <select id="series_id" name="series_id" class="input">
   <option value="">Ingen serie</option>
-  <?php foreach ($series as $s): ?>
-   <option value="<?= $s['id'] ?>" <?= ($_POST['series_id'] ?? '') == $s['id'] ? 'selected' : '' ?>>
-   <?= htmlspecialchars($s['name']) ?>
-   </option>
+  <?php
+  // Group by brand for display
+  $seriesByBrand = [];
+  foreach ($series as $s) {
+      $brandName = $s['brand_name'] ?? 'Utan varumärke';
+      if (!isset($seriesByBrand[$brandName])) {
+          $seriesByBrand[$brandName] = [];
+      }
+      $seriesByBrand[$brandName][] = $s;
+  }
+  foreach ($seriesByBrand as $brandName => $brandSeries): ?>
+      <optgroup label="<?= htmlspecialchars($brandName) ?>">
+      <?php foreach ($brandSeries as $s):
+          $isCompleted = ($s['status'] ?? '') === 'completed';
+          $yearLabel = $s['year'] ? " ({$s['year']})" : '';
+          $completedLabel = $isCompleted ? ' [Avslutad]' : '';
+      ?>
+          <option value="<?= $s['id'] ?>" <?= ($_POST['series_id'] ?? '') == $s['id'] ? 'selected' : '' ?>>
+              <?= htmlspecialchars($s['name']) ?><?= $yearLabel ?><?= $completedLabel ?>
+          </option>
+      <?php endforeach; ?>
+      </optgroup>
   <?php endforeach; ?>
   </select>
   </div>
