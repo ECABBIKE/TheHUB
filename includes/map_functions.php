@@ -787,7 +787,8 @@ function getEventMapDataMultiTrack($pdo, $eventId) {
         $trackFeatures = [];
 
         // Check if track has raw coordinates (new workflow)
-        $hasRawCoords = !empty($track['raw_coordinates'] ?? null);
+        // Use the flag set in getEventTracks() for consistency
+        $hasRawCoords = $track['has_raw_coords'] ?? false;
 
         if ($hasRawCoords) {
             // NEW WORKFLOW: Build connected segments from raw coordinates
@@ -828,7 +829,36 @@ function getEventMapDataMultiTrack($pdo, $eventId) {
                 }
             }
         } else {
-            // OLD WORKFLOW: Draw segments if present, otherwise use GPX file fallback
+            // OLD WORKFLOW: ALWAYS draw base track first, then segments on top
+            // This ensures the full track is visible even with partial segments
+            $waypoints = getTrackWaypointsForEditor($pdo, $track['id']);
+            if (!empty($waypoints)) {
+                $baseCoordinates = array_map(function($wp) {
+                    return [$wp['lng'], $wp['lat']];
+                }, $waypoints);
+
+                // Draw base track (gray, underneath segments)
+                $baseFeature = [
+                    'type' => 'Feature',
+                    'geometry' => [
+                        'type' => 'LineString',
+                        'coordinates' => $baseCoordinates
+                    ],
+                    'properties' => [
+                        'id' => 0,
+                        'type' => 'base_track',
+                        'track_id' => (int)$track['id'],
+                        'segment_type' => 'liaison',
+                        'name' => 'Hela banan',
+                        'distance_km' => (float)$track['total_distance_km'],
+                        'color' => '#9CA3AF' // Gray base track
+                    ]
+                ];
+                $trackFeatures[] = $baseFeature;
+                $allFeatures[] = $baseFeature;
+            }
+
+            // Draw segments on top of base track
             if (!empty($track['segments'])) {
                 foreach ($track['segments'] as $segment) {
                     $coordinates = array_map(function($coord) {
@@ -852,33 +882,6 @@ function getEventMapDataMultiTrack($pdo, $eventId) {
                             'elevation_gain' => (int)$segment['elevation_gain_m'],
                             'color' => $segment['color'],
                             'timing_id' => $segment['timing_id'] ?? null
-                        ]
-                    ];
-                    $trackFeatures[] = $feature;
-                    $allFeatures[] = $feature;
-                }
-            } else {
-                // FALLBACK: No raw_coords and no segments - try GPX file directly
-                $waypoints = getTrackWaypointsForEditor($pdo, $track['id']);
-                if (!empty($waypoints)) {
-                    $coordinates = array_map(function($wp) {
-                        return [$wp['lng'], $wp['lat']];
-                    }, $waypoints);
-
-                    $feature = [
-                        'type' => 'Feature',
-                        'geometry' => [
-                            'type' => 'LineString',
-                            'coordinates' => $coordinates
-                        ],
-                        'properties' => [
-                            'id' => 0,
-                            'type' => 'base_track',
-                            'track_id' => (int)$track['id'],
-                            'segment_type' => 'liaison',
-                            'name' => 'Hela banan',
-                            'distance_km' => (float)$track['total_distance_km'],
-                            'color' => $track['color'] ?? '#61CE70'
                         ]
                     ];
                     $trackFeatures[] = $feature;
