@@ -105,9 +105,9 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
 
         // Check if this looks like a split/stage time column
         // Matches: ss1, ps1, s1, v1, stage1, sträcka1, varv1, lap1, etc.
-        // Also matches standalone names: prostage, prolog, prologue (without number = treated as stage)
+        // Also matches standalone names: prostage, powerstage, prolog, prologue (with or without number)
         $isSplitTimeCol = preg_match('/^(ss|ps|s|v|stage|sträcka|stracka|etapp|varv|lap)\d+/', $normalizedCol)
-                       || preg_match('/^(prostage|prolog|prologue|prologstage)\d*$/', $normalizedCol);
+                       || preg_match('/^(prostage|powerstage|prolog|prologue|prologstage)\d*$/', $normalizedCol);
 
         if ($isSplitTimeCol) {
             $splitTimeColumns[$index] = [
