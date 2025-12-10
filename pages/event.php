@@ -2263,6 +2263,60 @@ td.col-place {
     .event-title {
         font-size: var(--text-lg);
     }
+
+    /* Compact event header on mobile */
+    .event-header-content {
+        padding: var(--space-md);
+        gap: var(--space-sm);
+    }
+
+    .event-logo {
+        display: none; /* Hide logo on mobile portrait - series name shown as badge */
+    }
+
+    .event-meta {
+        gap: var(--space-xs);
+        margin-bottom: var(--space-xs);
+    }
+
+    .event-meta-item {
+        font-size: var(--text-xs);
+    }
+
+    .event-organizer {
+        display: none; /* Hide organizer section on mobile - available in info tab */
+    }
+
+    .event-stats {
+        padding-top: var(--space-sm);
+        gap: var(--space-xs);
+    }
+
+    .event-stat {
+        padding: var(--space-xs) var(--space-sm);
+    }
+
+    .event-stat-value {
+        font-size: var(--text-md);
+    }
+
+    .event-stat-label {
+        font-size: 0.65rem;
+    }
+
+    /* Compact tabs */
+    .event-tabs-wrapper {
+        margin-bottom: var(--space-sm);
+    }
+
+    .event-tab {
+        padding: var(--space-xs) var(--space-sm);
+        font-size: var(--text-xs);
+    }
+
+    .event-tab i {
+        display: none; /* Hide icons in tabs on mobile */
+    }
 }
 
 /* Mobile landscape: show table with splits */

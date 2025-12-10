@@ -1067,16 +1067,89 @@ input.filter-select {
 }
 
 @media (max-width: 599px) and (orientation: portrait) {
+    /* Compact series hero */
     .series-hero {
-        flex-direction: column;
-        text-align: center;
+        flex-direction: row;
+        padding: var(--space-md);
+        gap: var(--space-md);
+        align-items: center;
     }
     .series-hero-logo {
-        margin: 0 auto;
+        width: 50px;
+        height: 50px;
+        margin: 0;
+    }
+    .series-hero-logo img {
+        width: 100%;
+        height: 100%;
+    }
+    .series-logo-placeholder {
+        font-size: 1.5rem;
+    }
+    .series-hero-info {
+        text-align: left;
+    }
+    .series-title {
+        font-size: var(--text-lg);
+        margin-bottom: var(--space-2xs);
+    }
+    .series-description {
+        display: none; /* Hide description on mobile */
     }
     .series-meta {
-        justify-content: center;
+        justify-content: flex-start;
+        gap: var(--space-sm);
+        font-size: var(--text-xs);
     }
+
+    /* Compact events dropdown */
+    .events-dropdown {
+        margin-bottom: var(--space-md);
+    }
+    .events-dropdown-header {
+        padding: var(--space-sm) var(--space-md);
+        font-size: var(--text-sm);
+    }
+    .events-count {
+        font-size: 0.65rem;
+        padding: 1px 6px;
+    }
+
+    /* Ultra compact event items - single line like history */
+    .event-dropdown-item {
+        padding: var(--space-xs) var(--space-md);
+        font-size: var(--text-sm);
+    }
+    .event-num {
+        font-size: 0.65rem;
+        min-width: 20px;
+    }
+    .event-date {
+        font-size: var(--text-xs);
+        min-width: 45px;
+    }
+    .event-name {
+        font-size: var(--text-sm);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    .event-results {
+        font-size: 0.65rem;
+        white-space: nowrap;
+    }
+
+    /* Compact tabs */
+    .standings-tabs {
+        margin-bottom: var(--space-md);
+        padding: 2px;
+    }
+    .standings-tab {
+        padding: var(--space-xs) var(--space-sm);
+        font-size: var(--text-xs);
+    }
+
+    /* Hide columns in table */
     .standings-table .col-club,
     .standings-table th.col-club,
     .standings-table .col-riders,
@@ -1088,6 +1161,16 @@ input.filter-select {
     .col-name, .col-club-name {
         white-space: normal;
         word-break: break-word;
+    }
+
+    /* Compact cards */
+    .card {
+        padding: var(--space-md);
+        margin-bottom: var(--space-md);
+    }
+    .card-title {
+        font-size: var(--text-md);
+        margin-bottom: var(--space-sm);
     }
 }
 
