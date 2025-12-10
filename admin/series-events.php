@@ -57,6 +57,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
  'sort_order' => $sortOrder
  ]);
 
+ // Also update events.series_id for backward compatibility and sync
+ $db->update('events', ['series_id' => $seriesId], 'id = ?', [$eventId]);
+
  // If a template was specified, calculate series points
  // NOTE: This only affects series_results, NOT results.points (ranking)
  if ($templateId) {
@@ -140,7 +143,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
  } elseif ($action === 'remove_event') {
  $seriesEventId = intval($_POST['series_event_id']);
 
+ // Get event_id before deleting
+ $seriesEvent = $db->getRow(
+     "SELECT event_id FROM series_events WHERE id = ? AND series_id = ?",
+     [$seriesEventId, $seriesId]
+ );
+
  $db->delete('series_events', 'id = ? AND series_id = ?', [$seriesEventId, $seriesId]);
+
+ // Also clear events.series_id if it points to this series
+ if ($seriesEvent) {
+     $db->query(
+         "UPDATE events SET series_id = NULL WHERE id = ? AND series_id = ?",
+         [$seriesEvent['event_id'], $seriesId]
+     );
+ }
 
  $message = 'Event borttaget från serien!';
  $messageType = 'success';

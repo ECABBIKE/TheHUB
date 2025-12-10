@@ -116,6 +116,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
  try {
  $db->insert('events', $eventData);
+
+ // Sync series_events if series_id was specified
+ $seriesId = $eventData['series_id'];
+ if ($seriesId) {
+  // Get the newly created event ID
+  $newEventId = $db->lastInsertId();
+
+  // Get max sort order for this series
+  $maxOrder = $db->getRow(
+   "SELECT MAX(sort_order) as max_order FROM series_events WHERE series_id = ?",
+   [$seriesId]
+  );
+  $sortOrder = ($maxOrder['max_order'] ?? 0) + 1;
+
+  // Insert into series_events
+  $db->insert('series_events', [
+   'series_id' => $seriesId,
+   'event_id' => $newEventId,
+   'sort_order' => $sortOrder
+  ]);
+ }
+
  $_SESSION['message'] = 'Event skapat!';
  $_SESSION['messageType'] = 'success';
  header('Location: /admin/events.php');
