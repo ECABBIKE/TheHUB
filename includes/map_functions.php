@@ -752,6 +752,9 @@ function getEventMapData($pdo, $eventId) {
         ];
     }
 
+    // Get elevation profile data (full track with segment positions)
+    $elevationProfile = getElevationProfileData($pdo, $track['id']);
+
     return [
         'track' => [
             'id' => (int)$track['id'],
@@ -768,6 +771,7 @@ function getEventMapData($pdo, $eventId) {
             'features' => $features
         ],
         'segments' => $track['segments'],
+        'elevation_profile' => $elevationProfile,
         'pois' => $pois,
         'poi_types' => POI_TYPES
     ];
@@ -1590,4 +1594,121 @@ function getSegmentIndexRanges($pdo, $trackId, $totalWaypoints) {
     }
 
     return $ranges;
+}
+
+/**
+ * Get complete elevation profile data for a track
+ * Returns full track waypoints with elevation + segment ranges for coloring
+ *
+ * @param PDO $pdo
+ * @param int $trackId
+ * @return array ['waypoints' => [...], 'segments' => [...], 'stats' => [...]]
+ */
+function getElevationProfileData($pdo, $trackId) {
+    $waypoints = getTrackWaypointsForEditor($pdo, $trackId);
+
+    if (empty($waypoints)) {
+        return null;
+    }
+
+    $totalWaypoints = count($waypoints);
+    $segmentRanges = getSegmentIndexRanges($pdo, $trackId, $totalWaypoints);
+
+    // Calculate stats
+    $elevations = array_filter(array_column($waypoints, 'elevation'), fn($e) => $e !== null);
+    $minEle = !empty($elevations) ? min($elevations) : 0;
+    $maxEle = !empty($elevations) ? max($elevations) : 0;
+    $totalDistance = end($waypoints)['distance_km'] ?? 0;
+
+    // Calculate total climb (excluding lifts)
+    $totalClimb = 0;
+    $totalDescent = 0;
+    $prevEle = null;
+
+    foreach ($waypoints as $i => $wp) {
+        $ele = $wp['elevation'];
+        if ($ele === null || $prevEle === null) {
+            $prevEle = $ele;
+            continue;
+        }
+
+        // Check if this point is within a lift segment
+        $isLift = false;
+        foreach ($segmentRanges as $seg) {
+            if ($seg['type'] === 'lift' && $i >= $seg['start'] && $i <= $seg['end']) {
+                $isLift = true;
+                break;
+            }
+        }
+
+        if (!$isLift) {
+            $diff = $ele - $prevEle;
+            if ($diff > 0) {
+                $totalClimb += $diff;
+            } else {
+                $totalDescent += abs($diff);
+            }
+        }
+
+        $prevEle = $ele;
+    }
+
+    // Simplify waypoints for transmission (every Nth point for large tracks)
+    $simplifiedWaypoints = $waypoints;
+    if ($totalWaypoints > 500) {
+        $step = ceil($totalWaypoints / 500);
+        $simplifiedWaypoints = [];
+        for ($i = 0; $i < $totalWaypoints; $i += $step) {
+            $simplifiedWaypoints[] = $waypoints[$i];
+        }
+        // Always include last point
+        if (end($simplifiedWaypoints)['index'] !== $waypoints[$totalWaypoints - 1]['index']) {
+            $simplifiedWaypoints[] = $waypoints[$totalWaypoints - 1];
+        }
+
+        // Recalculate segment ranges for simplified indices
+        $indexMap = [];
+        foreach ($simplifiedWaypoints as $newIdx => $wp) {
+            $indexMap[$wp['index']] = $newIdx;
+        }
+
+        // Map segment ranges to simplified indices
+        foreach ($segmentRanges as &$seg) {
+            // Find closest simplified index for start
+            $closestStart = 0;
+            foreach ($simplifiedWaypoints as $newIdx => $wp) {
+                if ($wp['index'] <= $seg['start']) {
+                    $closestStart = $newIdx;
+                }
+            }
+            // Find closest simplified index for end
+            $closestEnd = count($simplifiedWaypoints) - 1;
+            foreach ($simplifiedWaypoints as $newIdx => $wp) {
+                if ($wp['index'] >= $seg['end']) {
+                    $closestEnd = $newIdx;
+                    break;
+                }
+            }
+            $seg['start'] = $closestStart;
+            $seg['end'] = $closestEnd;
+        }
+    }
+
+    return [
+        'waypoints' => array_map(function($wp) {
+            return [
+                'idx' => $wp['index'],
+                'dist' => $wp['distance_km'],
+                'ele' => $wp['elevation']
+            ];
+        }, $simplifiedWaypoints),
+        'segments' => $segmentRanges,
+        'stats' => [
+            'total_distance_km' => round($totalDistance, 2),
+            'min_elevation_m' => round($minEle),
+            'max_elevation_m' => round($maxEle),
+            'total_climb_m' => round($totalClimb),
+            'total_descent_m' => round($totalDescent)
+        ]
+    ];
 }

@@ -242,6 +242,49 @@ if (!function_exists('render_event_map')) {
     font-size: 0.9rem;
 }
 .emap-checkbox input { width: 16px; height: 16px; }
+/* Segments list */
+.emap-segments-list {
+    max-height: 200px;
+    overflow-y: auto;
+}
+.emap-segment-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    padding: var(--space-xs) var(--space-sm);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: background 0.2s;
+}
+.emap-segment-item:hover { background: var(--color-border); }
+.emap-segment-item.active { background: rgba(97, 206, 112, 0.2); }
+.emap-segment-icon { font-size: 0.9rem; }
+.emap-segment-info { flex: 1; min-width: 0; }
+.emap-segment-name { font-size: 0.85rem; font-weight: 500; }
+.emap-segment-meta { font-size: 0.75rem; color: var(--color-text); }
+.emap-segment-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+    flex-shrink: 0;
+}
+/* POI items */
+.emap-poi-group { margin-bottom: var(--space-xs); }
+.emap-poi-items {
+    margin-left: var(--space-lg);
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+}
+.emap-poi-group:hover .emap-poi-items,
+.emap-poi-items.expanded { max-height: 150px; overflow-y: auto; }
+.emap-poi-item {
+    font-size: 0.8rem;
+    padding: var(--space-2xs) var(--space-xs);
+    cursor: pointer;
+    border-radius: var(--radius-sm);
+}
+.emap-poi-item:hover { background: var(--color-border); }
 .emap-location-btn {
     position: absolute;
     bottom: var(--space-lg);
@@ -358,6 +401,11 @@ if (!function_exists('render_event_map')) {
     <div class="emap-sidebar">
         <div class="emap-sidebar-header">
             <strong><?= htmlspecialchars($eventName) ?></strong>
+            <?php if (!empty($tracks)): ?>
+            <div style="font-size: 0.85rem; color: var(--color-text); margin-top: var(--space-2xs);">
+                <?= number_format($tracks[0]['total_distance_km'], 1) ?> km · ↑<?= number_format($tracks[0]['total_elevation_m']) ?>m
+            </div>
+            <?php endif; ?>
         </div>
         <div class="emap-sidebar-body">
             <?php if (count($tracks) > 1): ?>
@@ -375,28 +423,60 @@ if (!function_exists('render_event_map')) {
                 </div>
                 <?php endforeach; ?>
             </div>
-            <?php elseif (count($tracks) == 1): ?>
+            <?php endif; ?>
+
+            <?php
+            // Get segments for display
+            $allSegments = [];
+            foreach ($tracks as $track) {
+                if (!empty($track['segments'])) {
+                    foreach ($track['segments'] as $seg) {
+                        $allSegments[] = $seg;
+                    }
+                }
+            }
+            ?>
+            <?php if (!empty($allSegments)): ?>
             <div class="emap-section">
-                <div style="display: flex; align-items: center; gap: var(--space-sm);">
-                    <span class="emap-track-dot" style="background: <?= htmlspecialchars($tracks[0]['color'] ?? '#3B82F6') ?>;"></span>
-                    <div>
-                        <div style="font-weight: 500;"><?= htmlspecialchars($tracks[0]['route_label'] ?? $tracks[0]['name']) ?></div>
-                        <div style="font-size: 0.85rem; color: var(--color-text);">
-                            <?= number_format($tracks[0]['total_distance_km'], 1) ?> km · +<?= number_format($tracks[0]['total_elevation_m']) ?> m
+                <div class="emap-section-title">Sektioner (<?= count($allSegments) ?>)</div>
+                <div class="emap-segments-list">
+                    <?php foreach ($allSegments as $seg):
+                        $segType = $seg['segment_type'] ?? 'liaison';
+                        $segColor = $seg['color'] ?? ($segType === 'stage' ? '#EF4444' : ($segType === 'lift' ? '#F59E0B' : '#61CE70'));
+                        $segName = $seg['segment_name'] ?? 'Sektion';
+                        $segDist = number_format($seg['distance_km'] ?? 0, 1);
+                        $segIcon = $segType === 'stage' ? '🏁' : ($segType === 'lift' ? '🚡' : '🚴');
+                    ?>
+                    <div class="emap-segment-item" onclick="<?= $mapId ?>_zoomToSegment(<?= $seg['id'] ?? 0 ?>)" data-segment-id="<?= $seg['id'] ?? 0 ?>">
+                        <span class="emap-segment-icon"><?= $segIcon ?></span>
+                        <div class="emap-segment-info">
+                            <div class="emap-segment-name"><?= htmlspecialchars($segName) ?></div>
+                            <div class="emap-segment-meta"><?= $segDist ?> km</div>
                         </div>
+                        <span class="emap-segment-dot" style="background: <?= $segColor ?>;"></span>
                     </div>
+                    <?php endforeach; ?>
                 </div>
             </div>
             <?php endif; ?>
 
             <?php if (!empty($poiGroups)): ?>
             <div class="emap-section">
-                <div class="emap-section-title">Visa på kartan</div>
+                <div class="emap-section-title">POIs</div>
                 <?php foreach ($poiGroups as $type => $group): ?>
-                <label class="emap-checkbox">
-                    <input type="checkbox" checked data-poi-type="<?= htmlspecialchars($type) ?>" onchange="<?= $mapId ?>_togglePoiType('<?= htmlspecialchars($type) ?>')">
-                    <span><?= $group['emoji'] ?> <?= htmlspecialchars($group['label']) ?> (<?= count($group['items']) ?>)</span>
-                </label>
+                <div class="emap-poi-group">
+                    <label class="emap-checkbox">
+                        <input type="checkbox" checked data-poi-type="<?= htmlspecialchars($type) ?>" onchange="<?= $mapId ?>_togglePoiType('<?= htmlspecialchars($type) ?>')">
+                        <span><?= $group['emoji'] ?> <?= htmlspecialchars($group['label']) ?></span>
+                    </label>
+                    <div class="emap-poi-items" data-poi-type="<?= htmlspecialchars($type) ?>">
+                        <?php foreach ($group['items'] as $poi): ?>
+                        <div class="emap-poi-item" onclick="<?= $mapId ?>_zoomToPoi(<?= $poi['lat'] ?>, <?= $poi['lng'] ?>)">
+                            <?= htmlspecialchars($poi['label'] ?: $group['label']) ?>
+                        </div>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
                 <?php endforeach; ?>
             </div>
             <?php endif; ?>
@@ -596,6 +676,29 @@ if (!function_exists('render_event_map')) {
         const wasOpen = dropdown.classList.contains('open');
         document.querySelectorAll('.emap-dropdown.open').forEach(d => d.classList.remove('open'));
         if (!wasOpen) dropdown.classList.add('open');
+    };
+
+    // Zoom to segment by ID
+    window[mapId + '_zoomToSegment'] = function(segmentId) {
+        if (!mapData.tracks) return;
+        for (const track of mapData.tracks) {
+            if (!track.segments) continue;
+            for (const seg of track.segments) {
+                if (seg.id == segmentId && seg.coordinates && seg.coordinates.length) {
+                    const bounds = L.latLngBounds(seg.coordinates.map(c => [c.lat, c.lng]));
+                    map.fitBounds(bounds, { padding: [50, 50], maxZoom: 16 });
+                    // Highlight segment
+                    document.querySelectorAll('.emap-segment-item').forEach(el => el.classList.remove('active'));
+                    document.querySelector('[data-segment-id="' + segmentId + '"]')?.classList.add('active');
+                    return;
+                }
+            }
+        }
+    };
+
+    // Zoom to POI by coordinates
+    window[mapId + '_zoomToPoi'] = function(lat, lng) {
+        map.setView([lat, lng], 16);
     };
 
     window[mapId + '_toggleLocation'] = function() {

@@ -202,12 +202,21 @@ class EventMap {
 
     /**
      * Create elevation profile canvas
+     * Uses full track data with segment positions for correct coloring
      */
     createElevationProfile() {
         const canvas = document.getElementById(this.containerId + '-elevation');
-        if (!canvas || !this.data.segments) return;
+        if (!canvas) return;
 
-        // Collect all elevation data
+        // Prefer new elevation_profile data if available
+        if (this.data.elevation_profile && this.data.elevation_profile.waypoints) {
+            this.drawElevationFromProfile(canvas, this.data.elevation_profile);
+            return;
+        }
+
+        // Fallback to old method for backwards compatibility
+        if (!this.data.segments) return;
+
         const elevationPoints = [];
         let cumulativeDistance = 0;
 
@@ -237,6 +246,134 @@ class EventMap {
         if (elevationPoints.length < 2) return;
 
         this.drawElevationCanvas(canvas, elevationPoints);
+    }
+
+    /**
+     * Draw elevation profile using new profile data format
+     * @param {HTMLCanvasElement} canvas
+     * @param {Object} profile - { waypoints, segments, stats }
+     */
+    drawElevationFromProfile(canvas, profile) {
+        const ctx = canvas.getContext('2d');
+        const container = canvas.parentElement;
+        const width = container.offsetWidth || 600;
+        const height = 100;
+
+        canvas.width = width;
+        canvas.height = height;
+
+        const waypoints = profile.waypoints;
+        const segments = profile.segments;
+        const stats = profile.stats;
+
+        if (!waypoints || waypoints.length < 2) return;
+
+        const maxDist = stats.total_distance_km || waypoints[waypoints.length - 1].dist;
+        const minEle = stats.min_elevation_m;
+        const maxEle = stats.max_elevation_m;
+        const eleRange = (maxEle - minEle) || 1;
+
+        const padding = { top: 10, bottom: 20, left: 40, right: 10 };
+        const chartWidth = width - padding.left - padding.right;
+        const chartHeight = height - padding.top - padding.bottom;
+
+        ctx.clearRect(0, 0, width, height);
+
+        // Get color for a waypoint index
+        const getColorForIndex = (wpIndex) => {
+            for (const seg of segments) {
+                if (wpIndex >= seg.start && wpIndex <= seg.end) {
+                    return seg.color || '#61CE70';
+                }
+            }
+            return '#61CE70';
+        };
+
+        // Draw filled segments
+        segments.forEach((seg) => {
+            const startWp = waypoints[seg.start];
+            const endWp = waypoints[seg.end];
+            if (!startWp || !endWp) return;
+
+            ctx.beginPath();
+            ctx.moveTo(
+                padding.left + (startWp.dist / maxDist) * chartWidth,
+                height - padding.bottom
+            );
+
+            // Draw elevation line for this segment
+            for (let i = seg.start; i <= seg.end && i < waypoints.length; i++) {
+                const wp = waypoints[i];
+                const x = padding.left + (wp.dist / maxDist) * chartWidth;
+                const y = padding.top + (1 - (wp.ele - minEle) / eleRange) * chartHeight;
+                ctx.lineTo(x, y);
+            }
+
+            ctx.lineTo(
+                padding.left + (endWp.dist / maxDist) * chartWidth,
+                height - padding.bottom
+            );
+            ctx.closePath();
+
+            // Fill with segment color (semi-transparent)
+            const color = seg.color || '#61CE70';
+            ctx.fillStyle = this.hexToRgba(color, 0.3);
+            ctx.fill();
+        });
+
+        // Draw elevation line with segment colors
+        segments.forEach((seg) => {
+            ctx.beginPath();
+            ctx.strokeStyle = seg.color || '#61CE70';
+            ctx.lineWidth = 2;
+
+            for (let i = seg.start; i <= seg.end && i < waypoints.length; i++) {
+                const wp = waypoints[i];
+                const x = padding.left + (wp.dist / maxDist) * chartWidth;
+                const y = padding.top + (1 - (wp.ele - minEle) / eleRange) * chartHeight;
+
+                if (i === seg.start) {
+                    ctx.moveTo(x, y);
+                } else {
+                    ctx.lineTo(x, y);
+                }
+            }
+            ctx.stroke();
+        });
+
+        // Draw axis labels
+        const textColor = getComputedStyle(document.documentElement)
+            .getPropertyValue('--color-text-secondary').trim() || '#6b7280';
+        ctx.fillStyle = textColor;
+        ctx.font = '10px system-ui, sans-serif';
+
+        // Y-axis labels (elevation)
+        ctx.textAlign = 'right';
+        ctx.fillText(Math.round(maxEle) + 'm', padding.left - 4, padding.top + 10);
+        ctx.fillText(Math.round(minEle) + 'm', padding.left - 4, height - padding.bottom);
+
+        // X-axis labels (distance)
+        ctx.textAlign = 'left';
+        ctx.fillText('0', padding.left, height - 4);
+        ctx.textAlign = 'right';
+        ctx.fillText(maxDist.toFixed(1) + ' km', width - padding.right, height - 4);
+
+        // Draw stats summary
+        ctx.textAlign = 'center';
+        ctx.fillStyle = textColor;
+        ctx.font = '11px system-ui, sans-serif';
+        const statsText = `${maxDist.toFixed(1)} km  •  ↑${stats.total_climb_m}m  •  ↓${stats.total_descent_m}m`;
+        ctx.fillText(statsText, width / 2, height - 4);
+    }
+
+    /**
+     * Convert hex color to rgba
+     */
+    hexToRgba(hex, alpha) {
+        const r = parseInt(hex.slice(1, 3), 16);
+        const g = parseInt(hex.slice(3, 5), 16);
+        const b = parseInt(hex.slice(5, 7), 16);
+        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
     }
 
     /**
