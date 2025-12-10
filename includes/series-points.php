@@ -111,6 +111,21 @@ function recalculateSeriesEventPoints($db, $seriesId, $eventId) {
           AND COALESCE(cl.series_eligible, 1) = 1
     ", [$eventId]);
 
+    // PERFORMANCE FIX: Pre-fetch ALL existing series_results for this event/series
+    // This eliminates N+1 query problem (was doing 1 query per result)
+    $existingResults = $db->getAll("
+        SELECT id, cyclist_id, class_id, points
+        FROM series_results
+        WHERE series_id = ? AND event_id = ?
+    ", [$seriesId, $eventId]);
+
+    // Build lookup map: "cyclist_id|class_id" => ['id' => ..., 'points' => ...]
+    $existingMap = [];
+    foreach ($existingResults as $er) {
+        $key = $er['cyclist_id'] . '|' . ($er['class_id'] ?? 'null');
+        $existingMap[$key] = ['id' => $er['id'], 'points' => $er['points']];
+    }
+
     foreach ($results as $result) {
         // Calculate points using series template with event_level multiplier
         $points = calculateSeriesPointsForPosition(
@@ -121,11 +136,9 @@ function recalculateSeriesEventPoints($db, $seriesId, $eventId) {
             $eventLevel
         );
 
-        // Check if series_result already exists
-        $existing = $db->getRow("
-            SELECT id, points FROM series_results
-            WHERE series_id = ? AND event_id = ? AND cyclist_id = ? AND class_id <=> ?
-        ", [$seriesId, $eventId, $result['cyclist_id'], $result['class_id']]);
+        // Check if series_result already exists using lookup map (no DB query!)
+        $lookupKey = $result['cyclist_id'] . '|' . ($result['class_id'] ?? 'null');
+        $existing = $existingMap[$lookupKey] ?? null;
 
         if ($existing) {
             // Update if points changed

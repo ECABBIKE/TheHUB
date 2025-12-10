@@ -97,6 +97,9 @@ function determineRiderClass($db, $birthYear, $gender, $eventDate, $discipline =
  * Assign classes to all results for an event
  * Updates results table with class_id based on rider's age and gender
  *
+ * PERFORMANCE OPTIMIZED: Pre-fetches all classes and determines in PHP
+ * instead of making a database query per result (N+1 fix)
+ *
  * @param object $db Database instance
  * @param int $event_id Event ID
  * @return array Stats (assigned, skipped, errors)
@@ -123,6 +126,16 @@ function assignClassesToEvent($db, $event_id) {
 
     $discipline = $event['discipline'] ?? 'ROAD';
     $eventDate = $event['date'];
+    $eventYear = (int)date('Y', strtotime($eventDate));
+
+    // PERFORMANCE FIX: Pre-fetch ALL active classes once
+    // This eliminates N+1 query problem (was doing 1 query per rider)
+    $allClasses = $db->getAll("
+        SELECT id, gender, min_age, max_age, discipline, sort_order
+        FROM classes
+        WHERE active = 1
+        ORDER BY sort_order ASC
+    ");
 
     // Get all results with rider info
     $results = $db->getAll("
@@ -132,29 +145,84 @@ function assignClassesToEvent($db, $event_id) {
         WHERE r.event_id = ?
     ", [$event_id]);
 
+    // Group updates by class_id for batch processing
+    $updatesByClass = [];
+
     foreach ($results as $result) {
         if (!$result['birth_year'] || !$result['gender']) {
             $stats['skipped']++;
             continue;
         }
 
-        $classId = determineRiderClass(
-            $db,
-            $result['birth_year'],
-            $result['gender'],
-            $eventDate,
-            $discipline
-        );
+        // Calculate age
+        $age = $eventYear - $result['birth_year'];
+
+        // Normalize gender
+        $gender = strtoupper(trim($result['gender']));
+        $genderLower = strtolower($result['gender']);
+        if (in_array($genderLower, ['woman', 'women', 'female', 'kvinna', 'dam', 'f', 'k'])) {
+            $gender = 'F';
+        } elseif (in_array($genderLower, ['man', 'men', 'male', 'herr', 'm'])) {
+            $gender = 'M';
+        }
+
+        // Find matching class from pre-fetched list (no DB query!)
+        $classId = null;
+        foreach ($allClasses as $class) {
+            // Check gender match
+            $classGender = $class['gender'];
+            $genderMatch = empty($classGender) || $classGender === 'ALL' ||
+                           $classGender === $gender ||
+                           (in_array($gender, ['F', 'K']) && in_array($classGender, ['F', 'K']));
+
+            if (!$genderMatch) continue;
+
+            // Check discipline match
+            $classDiscipline = $class['discipline'];
+            $disciplineMatch = empty($classDiscipline) ||
+                               $classDiscipline === $discipline ||
+                               strpos($classDiscipline, $discipline) !== false;
+
+            if (!$disciplineMatch) continue;
+
+            // Check age range
+            $minAge = $class['min_age'];
+            $maxAge = $class['max_age'];
+            $ageMatch = (is_null($minAge) || $minAge <= $age) &&
+                        (is_null($maxAge) || $maxAge >= $age);
+
+            if (!$ageMatch) continue;
+
+            // Found a match
+            $classId = (int)$class['id'];
+            break;
+        }
 
         if ($classId) {
-            try {
-                $db->update('results', ['class_id' => $classId], 'id = ?', [$result['result_id']]);
-                $stats['assigned']++;
-            } catch (Exception $e) {
-                $stats['errors'][] = "Result {$result['result_id']}: " . $e->getMessage();
+            // Group by class_id for potential batch update
+            if (!isset($updatesByClass[$classId])) {
+                $updatesByClass[$classId] = [];
             }
+            $updatesByClass[$classId][] = $result['result_id'];
+            $stats['assigned']++;
         } else {
             $stats['skipped']++;
+        }
+    }
+
+    // Perform batch updates per class (much faster than individual updates)
+    foreach ($updatesByClass as $classId => $resultIds) {
+        if (empty($resultIds)) continue;
+
+        try {
+            // Batch update all results with same class_id
+            $placeholders = implode(',', array_fill(0, count($resultIds), '?'));
+            $db->query(
+                "UPDATE results SET class_id = ? WHERE id IN ($placeholders)",
+                array_merge([$classId], $resultIds)
+            );
+        } catch (Exception $e) {
+            $stats['errors'][] = "Batch update for class {$classId}: " . $e->getMessage();
         }
     }
 
@@ -282,6 +350,8 @@ function calculateClassPoints($db, $event_id, $class_id, $class_position, $statu
 /**
  * Recalculate all class points for an event
  *
+ * PERFORMANCE OPTIMIZED: Pre-fetches point scales and calculates in batches
+ *
  * @param object $db Database instance
  * @param int $event_id Event ID
  * @return array Stats (updated, errors)
@@ -289,26 +359,103 @@ function calculateClassPoints($db, $event_id, $class_id, $class_position, $statu
 function recalculateClassPoints($db, $event_id) {
     $stats = ['updated' => 0, 'errors' => []];
 
+    // PERFORMANCE FIX: Pre-fetch all relevant data
+    // 1. Get event's point scale
+    $event = $db->getRow("SELECT point_scale_id FROM events WHERE id = ?", [$event_id]);
+    $eventScaleId = $event['point_scale_id'] ?? null;
+
+    // 2. Get default scale as fallback
+    if (!$eventScaleId) {
+        $defaultScale = $db->getRow("SELECT id FROM point_scales WHERE is_default = 1 LIMIT 1");
+        $eventScaleId = $defaultScale['id'] ?? null;
+    }
+
+    // 3. Pre-fetch all class point scales
+    $classScales = $db->getAll("SELECT id, point_scale_id FROM classes WHERE point_scale_id IS NOT NULL");
+    $classScaleMap = [];
+    foreach ($classScales as $cs) {
+        $classScaleMap[$cs['id']] = $cs['point_scale_id'];
+    }
+
+    // 4. Pre-fetch ALL point scale values we might need
+    $scaleIds = array_unique(array_merge(
+        array_values($classScaleMap),
+        $eventScaleId ? [$eventScaleId] : []
+    ));
+
+    $pointValues = [];
+    if (!empty($scaleIds)) {
+        $placeholders = implode(',', array_fill(0, count($scaleIds), '?'));
+        $allValues = $db->getAll(
+            "SELECT scale_id, position, points FROM point_scale_values WHERE scale_id IN ($placeholders)",
+            $scaleIds
+        );
+        // Build lookup: scale_id => [position => points]
+        foreach ($allValues as $v) {
+            if (!isset($pointValues[$v['scale_id']])) {
+                $pointValues[$v['scale_id']] = [];
+            }
+            $pointValues[$v['scale_id']][$v['position']] = (float)$v['points'];
+        }
+    }
+
+    // Get all results
     $results = $db->getAll("
         SELECT id, class_id, class_position, status
         FROM results
         WHERE event_id = ? AND class_id IS NOT NULL
     ", [$event_id]);
 
-    foreach ($results as $result) {
-        $classPoints = calculateClassPoints(
-            $db,
-            $event_id,
-            $result['class_id'],
-            $result['class_position'],
-            $result['status']
-        );
+    // Calculate points and group updates
+    $updates = []; // [result_id => points]
 
+    foreach ($results as $result) {
+        // No points for DNF, DNS, or DQ
+        if (in_array($result['status'], ['dnf', 'dns', 'dq']) ||
+            !$result['class_position'] || $result['class_position'] < 1) {
+            $updates[$result['id']] = 0;
+            continue;
+        }
+
+        // Determine which scale to use (class-specific or event)
+        $scaleId = $classScaleMap[$result['class_id']] ?? $eventScaleId;
+
+        if (!$scaleId || !isset($pointValues[$scaleId])) {
+            $updates[$result['id']] = 0;
+            continue;
+        }
+
+        // Look up points from pre-fetched data (no DB query!)
+        $position = $result['class_position'];
+        $points = $pointValues[$scaleId][$position] ?? 0;
+
+        // If position not in scale, use last position's points
+        if ($points === 0 && !empty($pointValues[$scaleId])) {
+            $maxPos = max(array_keys($pointValues[$scaleId]));
+            $points = $pointValues[$scaleId][$maxPos] ?? 0;
+        }
+
+        $updates[$result['id']] = $points;
+    }
+
+    // Batch update using CASE statement (single query for all updates!)
+    if (!empty($updates)) {
         try {
-            $db->update('results', ['class_points' => $classPoints], 'id = ?', [$result['id']]);
-            $stats['updated']++;
+            $cases = [];
+            $ids = [];
+            foreach ($updates as $id => $points) {
+                $cases[] = "WHEN id = " . (int)$id . " THEN " . (float)$points;
+                $ids[] = (int)$id;
+            }
+
+            $sql = "UPDATE results SET class_points = CASE " .
+                   implode(' ', $cases) .
+                   " END WHERE id IN (" . implode(',', $ids) . ")";
+
+            $db->query($sql);
+            $stats['updated'] = count($updates);
         } catch (Exception $e) {
-            $stats['errors'][] = "Result {$result['id']}: " . $e->getMessage();
+            $stats['errors'][] = "Batch update failed: " . $e->getMessage();
         }
     }
 

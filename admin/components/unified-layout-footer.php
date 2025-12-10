@@ -8,8 +8,10 @@
     <!-- Toast Container -->
     <div id="toast-container" class="toast-container"></div>
 
-    <!-- Lucide Icons -->
-    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+    <!-- Lucide Icons (pinned version with SRI for security) -->
+    <script src="https://unpkg.com/lucide@0.263.1/dist/umd/lucide.min.js"
+            integrity="sha384-5wnXeGaKKM8t+1xSmT9SzNz2R3YVHHdHKpzr6ZYRQyDdNsXLqwVG+S0c5qK6V3JL"
+            crossorigin="anonymous"></script>
     <script>
         // Initialize icons - handle async loading
         function initLucideIcons() {

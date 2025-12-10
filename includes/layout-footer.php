@@ -54,8 +54,10 @@
         })();
     </script>
 
-    <!-- Lucide Icons -->
-    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Lucide Icons (pinned version with SRI for security) -->
+    <script src="https://unpkg.com/lucide@0.263.1/dist/umd/lucide.min.js"
+            integrity="sha384-5wnXeGaKKM8t+1xSmT9SzNz2R3YVHHdHKpzr6ZYRQyDdNsXLqwVG+S0c5qK6V3JL"
+            crossorigin="anonymous"></script>
     <script>
         // Initialize Lucide icons
         lucide.createIcons();
