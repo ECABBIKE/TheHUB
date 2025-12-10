@@ -150,6 +150,46 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $message = 'Sträcka tillagd!';
                 $messageType = 'success';
                 break;
+
+            case 'save_all_segments':
+                $trackId = intval($_POST['track_id'] ?? 0);
+                $segmentsJson = $_POST['segments_data'] ?? '[]';
+                $segments = json_decode($segmentsJson, true);
+
+                if ($trackId <= 0 || empty($segments)) {
+                    throw new Exception('Ingen segmentdata');
+                }
+
+                // Delete existing segments for this track
+                $pdo->prepare("DELETE FROM event_track_segments WHERE track_id = ?")->execute([$trackId]);
+
+                // Add all new segments
+                $ssCount = 0;
+                $liftCount = 0;
+                foreach ($segments as $seg) {
+                    $type = $seg['type'] ?? 'liaison';
+                    $name = '';
+                    if ($type === 'stage') {
+                        $ssCount++;
+                        $name = 'SS' . $ssCount;
+                    } elseif ($type === 'lift') {
+                        $liftCount++;
+                        $name = 'Lift ' . $liftCount;
+                    } else {
+                        $name = 'Transport';
+                    }
+
+                    addSegmentByWaypointIndex($pdo, $trackId, [
+                        'name' => $name,
+                        'type' => $type,
+                        'start_index' => intval($seg['start']),
+                        'end_index' => intval($seg['end'])
+                    ]);
+                }
+
+                $message = count($segments) . ' sektioner sparade!';
+                $messageType = 'success';
+                break;
         }
     } catch (Exception $e) {
         $message = $e->getMessage();
@@ -313,30 +353,37 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
 
-        <!-- Sektioner -->
+        <!-- Sektioner - Multi-point editor -->
         <div class="admin-card admin-card-compact">
             <div class="admin-card-header">
-                <h2>Sektioner (<?= count($currentTrack['segments']) ?>)</h2>
+                <h2>Sektioner</h2>
             </div>
             <div class="admin-card-body">
-                <div id="segment-status" class="admin-status-box">Klicka på banan för att markera</div>
-
-                <div class="segment-type-buttons">
-                    <button type="button" class="section-type-btn active" data-type="liaison">🚴 Transport</button>
-                    <button type="button" class="section-type-btn" data-type="stage">🏁 SS</button>
-                    <button type="button" class="section-type-btn" data-type="lift">🚡 Lift</button>
+                <div id="segment-status" class="admin-status-box">
+                    <strong>Steg 1:</strong> Klicka på banan för att sätta ut delningspunkter
                 </div>
 
-                <div id="pending-actions" class="admin-pending-box" style="display: none;">
-                    <span id="pending-info">Dra markören för att justera</span>
-                    <div class="admin-btn-group">
-                        <button type="button" onclick="savePendingSegment()" class="btn-admin btn-admin-primary btn-admin-sm">✓ Spara</button>
-                        <button type="button" onclick="cancelPendingSegment()" class="btn-admin btn-admin-secondary btn-admin-sm">✕ Avbryt</button>
-                    </div>
+                <div id="markers-info" class="admin-info-box" style="display: none;">
+                    <span id="markers-count">0 punkter</span>
+                    <button type="button" onclick="clearAllMarkers()" class="btn-admin btn-admin-ghost btn-admin-xs">Rensa alla</button>
                 </div>
 
-                <div class="admin-segment-list">
-                    <?php if (!empty($currentTrack['segments'])): ?>
+                <!-- Segment list - dynamically updated -->
+                <div id="segments-list" class="admin-segment-list">
+                    <p class="admin-text-muted admin-text-sm">Sätt ut minst 1 punkt för att skapa sektioner</p>
+                </div>
+
+                <!-- Save button -->
+                <div id="save-actions" style="display: none; margin-top: var(--space-sm);">
+                    <button type="button" onclick="saveAllSegments()" class="btn-admin btn-admin-primary btn-admin-block">
+                        💾 Spara alla sektioner
+                    </button>
+                </div>
+
+                <!-- Existing segments (saved) -->
+                <?php if (!empty($currentTrack['segments'])): ?>
+                <div class="admin-existing-segments" style="margin-top: var(--space-md); padding-top: var(--space-md); border-top: 1px solid var(--color-border);">
+                    <div class="admin-text-muted admin-text-sm" style="margin-bottom: var(--space-xs);">Sparade sektioner:</div>
                     <?php foreach ($currentTrack['segments'] as $seg):
                         $icon = $seg['segment_type'] === 'stage' ? '🏁' : ($seg['segment_type'] === 'lift' ? '🚡' : '🚴');
                     ?>
@@ -357,19 +404,18 @@ include __DIR__ . '/components/unified-layout.php';
                         </form>
                     </div>
                     <?php endforeach; ?>
-                    <?php else: ?>
-                    <p class="admin-text-muted admin-text-sm">Inga sektioner markerade</p>
-                    <?php endif; ?>
+                    <button type="button" onclick="editExistingSegments()" class="btn-admin btn-admin-secondary btn-admin-sm btn-admin-block" style="margin-top: var(--space-sm);">
+                        ✏️ Redigera sektioner
+                    </button>
                 </div>
+                <?php endif; ?>
 
-                <form method="POST" id="segment-form" style="display: none;">
+                <!-- Hidden form for saving -->
+                <form method="POST" id="save-segments-form" style="display: none;">
                     <?= csrf_field() ?>
-                    <input type="hidden" name="action" value="add_segment_visual">
+                    <input type="hidden" name="action" value="save_all_segments">
                     <input type="hidden" name="track_id" value="<?= $currentTrack['id'] ?>">
-                    <input type="hidden" name="start_index" id="start-index" value="">
-                    <input type="hidden" name="end_index" id="end-index" value="">
-                    <input type="hidden" name="segment_type" id="segment-type" value="liaison">
-                    <input type="hidden" name="segment_name" id="segment-name-hidden" value="">
+                    <input type="hidden" name="segments_data" id="segments-data" value="[]">
                 </form>
                 <form method="POST" id="update-type-form" style="display: none;">
                     <?= csrf_field() ?>
@@ -549,27 +595,23 @@ include __DIR__ . '/components/unified-layout.php';
     font-size: var(--text-sm);
     margin-bottom: var(--space-sm);
 }
-.segment-type-buttons {
+.admin-info-box {
     display: flex;
-    gap: var(--space-xs);
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--space-xs) var(--space-sm);
+    background: rgba(59, 130, 246, 0.1);
+    border-radius: var(--radius-sm);
+    font-size: var(--text-sm);
     margin-bottom: var(--space-sm);
 }
-.section-type-btn {
-    flex: 1;
-    padding: var(--space-xs) var(--space-sm);
+.segment-type-select {
+    padding: 2px 4px;
     font-size: var(--text-xs);
-    border: none;
+    border: 1px solid var(--color-border);
     border-radius: var(--radius-sm);
-    cursor: pointer;
-    opacity: 0.6;
-    transition: opacity 0.2s;
+    background: white;
 }
-.section-type-btn.active {
-    opacity: 1;
-}
-.section-type-btn[data-type="liaison"] { background: var(--color-success); color: white; }
-.section-type-btn[data-type="stage"] { background: var(--color-danger); color: white; }
-.section-type-btn[data-type="lift"] { background: var(--color-warning); color: white; }
 .admin-pending-box {
     padding: var(--space-sm);
     background: rgba(59, 130, 246, 0.1);
@@ -633,9 +675,7 @@ include __DIR__ . '/components/unified-layout.php';
 const mapData = <?= json_encode($mapData) ?>;
 const waypoints = <?= json_encode($trackWaypoints) ?>;
 const currentTrackId = <?= $selectedTrackId ?: 'null' ?>;
-let map, startMarker, endMarker, previewLine, tempMarker, baseTrackLine;
-let mode = 'start';
-let startIdx = -1, endIdx = -1;
+let map, baseTrackLine, tempMarker;
 
 // Segment colors
 const SEGMENT_COLORS = {
@@ -644,20 +684,22 @@ const SEGMENT_COLORS = {
     lift: '#F59E0B'      // Orange/Yellow
 };
 
+// Multi-point editor state
+let splitMarkers = [];      // Array of {marker, index, id}
+let segmentLines = [];      // Array of polylines between markers
+let segmentTypes = [];      // Array of segment types (liaison/stage/lift)
+
 function init() {
     map = L.map('map').setView([62, 15], 5);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
     if (mapData && mapData.tracks) {
-        // Draw all tracks
         mapData.tracks.forEach(track => {
             if (track.geojson && track.geojson.features) {
-                // First draw base track (gray), then segments on top
                 track.geojson.features.forEach(feature => {
                     const props = feature.properties;
                     const isBase = props.type === 'base_track';
                     const isCurrent = track.id === currentTrackId;
-
                     L.geoJSON(feature, {
                         style: () => ({
                             color: props.color || track.color,
@@ -669,7 +711,6 @@ function init() {
             }
         });
 
-        // Draw POIs
         if (mapData.pois) {
             mapData.pois.forEach(p => {
                 L.marker([p.lat, p.lng])
@@ -694,212 +735,297 @@ function init() {
     }
 
     map.on('click', onMapClick);
-
-    // Setup section type buttons
-    document.querySelectorAll('.section-type-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            document.querySelectorAll('.section-type-btn').forEach(b => {
-                b.classList.remove('active');
-                b.style.opacity = '0.6';
-            });
-            btn.classList.add('active');
-            btn.style.opacity = '1';
-            currentSegmentType = btn.dataset.type;
-            document.getElementById('segment-type').value = currentSegmentType;
-        });
-    });
 }
 
-// Section-based state
-let sectionMarkers = [];
-let sectionLines = [];
-let currentSegmentType = 'liaison';
-
-// Pending segment state (before saving)
-let pendingMarker = null;
-let pendingLine = null;
-let pendingStartIdx = -1;
-let pendingEndIdx = -1;
-let pendingType = 'liaison';
-
-// Find where the last existing segment ends (to continue from there)
-let lastSectionIndex = 0;
-// Count existing segments by type for auto-naming
-let existingSegmentCounts = { stage: 0, liaison: 0, lift: 0 };
-<?php
-if ($currentTrack && !empty($currentTrack['segments'])) {
-    $lastSegment = end($currentTrack['segments']);
-    $lastEndIndex = $lastSegment['end_index'] ?? 0;
-    echo "lastSectionIndex = " . intval($lastEndIndex) . ";\n";
-
-    // Count existing segments by type
-    $typeCounts = ['stage' => 0, 'liaison' => 0, 'lift' => 0];
-    foreach ($currentTrack['segments'] as $seg) {
-        $type = $seg['segment_type'] ?? 'liaison';
-        if (isset($typeCounts[$type])) {
-            $typeCounts[$type]++;
-        }
-    }
-    echo "existingSegmentCounts = " . json_encode($typeCounts) . ";\n";
-}
-?>
-
+// Handle click on track - add a split point
 function onTrackClick(e) {
     L.DomEvent.stopPropagation(e);
     const nearest = findNearest(e.latlng);
     if (!nearest) return;
 
-    // Don't allow clicking before the last section point
-    if (nearest.index <= lastSectionIndex && lastSectionIndex > 0) {
-        document.getElementById('segment-status').innerHTML =
-            '<span style="color: var(--color-danger);">Måste klicka längre fram på banan!</span>';
+    // Check if there's already a marker very close to this index
+    const existingIdx = splitMarkers.findIndex(m => Math.abs(m.index - nearest.index) < 20);
+    if (existingIdx >= 0) {
+        // Remove that marker instead of adding new
+        removeMarker(existingIdx);
         return;
     }
 
-    // If there's already a pending segment, save it first or cancel
-    if (pendingMarker) {
-        // Update the pending marker position instead
-        updatePendingMarker(nearest);
-        return;
-    }
+    // Add new split marker
+    addMarker(nearest.index, nearest.wp);
+}
 
-    // Create pending segment from lastSectionIndex to this point
-    pendingStartIdx = lastSectionIndex;
-    pendingEndIdx = nearest.index;
-    pendingType = currentSegmentType;
+function addMarker(index, wp) {
+    const markerId = Date.now();
 
-    // Add draggable marker
-    pendingMarker = L.marker([nearest.wp.lat, nearest.wp.lng], {
+    const marker = L.marker([wp.lat, wp.lng], {
         draggable: true,
         icon: L.divIcon({
-            className: 'segment-marker',
-            html: `<div style="width: 20px; height: 20px; background: ${SEGMENT_COLORS[pendingType]}; border: 3px solid white; border-radius: 50%; box-shadow: 0 2px 6px rgba(0,0,0,0.4); cursor: grab;"></div>`,
-            iconSize: [20, 20],
-            iconAnchor: [10, 10]
+            className: 'split-marker',
+            html: `<div style="width: 24px; height: 24px; background: #3B82F6; border: 3px solid white; border-radius: 50%; box-shadow: 0 2px 8px rgba(0,0,0,0.4); cursor: grab; display: flex; align-items: center; justify-content: center; color: white; font-size: 12px; font-weight: bold;">${splitMarkers.length + 1}</div>`,
+            iconSize: [24, 24],
+            iconAnchor: [12, 12]
         })
     }).addTo(map);
 
-    // Handle marker drag
-    pendingMarker.on('drag', onMarkerDrag);
-    pendingMarker.on('dragend', onMarkerDragEnd);
+    marker.on('drag', (e) => onMarkerDrag(markerId, e));
+    marker.on('dragend', (e) => onMarkerDragEnd(markerId, e));
 
-    // Draw pending segment line
-    drawPendingLine();
+    // Insert marker in sorted position
+    const newMarker = { marker, index, id: markerId };
+    splitMarkers.push(newMarker);
+    splitMarkers.sort((a, b) => a.index - b.index);
 
-    // Show pending actions UI
-    updatePendingUI();
+    // Default type for new segment is liaison
+    updateSegmentTypes();
+    updateUI();
+    drawSegmentLines();
 }
 
-function updatePendingMarker(nearest) {
-    pendingEndIdx = nearest.index;
-    pendingMarker.setLatLng([nearest.wp.lat, nearest.wp.lng]);
-    drawPendingLine();
-    updatePendingUI();
+function removeMarker(idx) {
+    const m = splitMarkers[idx];
+    if (m) {
+        map.removeLayer(m.marker);
+        splitMarkers.splice(idx, 1);
+    }
+    updateSegmentTypes();
+    updateUI();
+    drawSegmentLines();
+    updateMarkerNumbers();
 }
 
-function onMarkerDrag(e) {
-    // Find nearest waypoint while dragging
+function updateMarkerNumbers() {
+    splitMarkers.forEach((m, i) => {
+        const el = m.marker.getElement();
+        if (el) {
+            const div = el.querySelector('div');
+            if (div) div.textContent = i + 1;
+        }
+    });
+}
+
+function onMarkerDrag(markerId, e) {
     const nearest = findNearest(e.latlng);
-    if (nearest && nearest.index > pendingStartIdx) {
-        pendingEndIdx = nearest.index;
-        drawPendingLine();
-        updatePendingUI();
+    if (nearest) {
+        const idx = splitMarkers.findIndex(m => m.id === markerId);
+        if (idx >= 0) {
+            // Check bounds - can't go past neighbors
+            const prevIdx = idx > 0 ? splitMarkers[idx - 1].index : -1;
+            const nextIdx = idx < splitMarkers.length - 1 ? splitMarkers[idx + 1].index : waypoints.length;
+
+            if (nearest.index > prevIdx && nearest.index < nextIdx) {
+                splitMarkers[idx].index = nearest.index;
+                drawSegmentLines();
+                updateSegmentListDistances();
+            }
+        }
     }
 }
 
-function onMarkerDragEnd(e) {
-    // Snap to nearest waypoint
+function onMarkerDragEnd(markerId, e) {
     const nearest = findNearest(e.target.getLatLng());
-    if (nearest && nearest.index > pendingStartIdx) {
-        pendingEndIdx = nearest.index;
-        pendingMarker.setLatLng([nearest.wp.lat, nearest.wp.lng]);
-        drawPendingLine();
-        updatePendingUI();
-    } else {
-        // Reset to previous valid position
-        const wp = waypoints[pendingEndIdx];
-        pendingMarker.setLatLng([wp.lat, wp.lng]);
+    const idx = splitMarkers.findIndex(m => m.id === markerId);
+
+    if (nearest && idx >= 0) {
+        const prevIdx = idx > 0 ? splitMarkers[idx - 1].index : -1;
+        const nextIdx = idx < splitMarkers.length - 1 ? splitMarkers[idx + 1].index : waypoints.length;
+
+        if (nearest.index > prevIdx && nearest.index < nextIdx) {
+            splitMarkers[idx].index = nearest.index;
+            splitMarkers[idx].marker.setLatLng([nearest.wp.lat, nearest.wp.lng]);
+        } else {
+            // Snap back to previous valid position
+            const wp = waypoints[splitMarkers[idx].index];
+            splitMarkers[idx].marker.setLatLng([wp.lat, wp.lng]);
+        }
+    }
+    drawSegmentLines();
+    updateUI();
+}
+
+function updateSegmentTypes() {
+    // Ensure we have the right number of segment types
+    const numSegments = splitMarkers.length + 1; // segments = markers + 1
+    while (segmentTypes.length < numSegments) {
+        segmentTypes.push('liaison'); // Default to transport
+    }
+    while (segmentTypes.length > numSegments) {
+        segmentTypes.pop();
     }
 }
 
-function drawPendingLine() {
-    // Remove old pending line
-    if (pendingLine) {
-        map.removeLayer(pendingLine);
-    }
+function drawSegmentLines() {
+    // Remove old lines
+    segmentLines.forEach(line => map.removeLayer(line));
+    segmentLines = [];
 
-    // Draw new pending line
-    const coords = waypoints.slice(pendingStartIdx, pendingEndIdx + 1).map(w => [w.lat, w.lng]);
-    pendingLine = L.polyline(coords, {
-        color: SEGMENT_COLORS[pendingType],
-        weight: 6,
-        opacity: 0.7,
-        dashArray: '10, 10' // Dashed to show it's pending
-    }).addTo(map);
+    if (splitMarkers.length === 0) return;
+
+    // Build segment ranges
+    const ranges = [];
+    let start = 0;
+
+    for (let i = 0; i <= splitMarkers.length; i++) {
+        const end = i < splitMarkers.length ? splitMarkers[i].index : waypoints.length - 1;
+        const type = segmentTypes[i] || 'liaison';
+
+        if (end > start) {
+            const coords = waypoints.slice(start, end + 1).map(w => [w.lat, w.lng]);
+            const line = L.polyline(coords, {
+                color: SEGMENT_COLORS[type],
+                weight: 6,
+                opacity: 0.9
+            }).addTo(map);
+            segmentLines.push(line);
+            ranges.push({ start, end, type });
+        }
+
+        start = end;
+    }
 }
 
-function updatePendingUI() {
-    const dist = (waypoints[pendingEndIdx].distance_km - waypoints[pendingStartIdx].distance_km).toFixed(2);
-    const typeLabel = pendingType === 'stage' ? 'SS' : (pendingType === 'lift' ? 'Lift' : 'Transport');
+function updateUI() {
+    const markersInfo = document.getElementById('markers-info');
+    const segmentsList = document.getElementById('segments-list');
+    const saveActions = document.getElementById('save-actions');
+    const statusBox = document.getElementById('segment-status');
 
-    document.getElementById('pending-actions').style.display = 'block';
-    document.getElementById('pending-info').innerHTML =
-        `<strong>${typeLabel}</strong>: ${dist} km — Dra markören för att justera`;
-    document.getElementById('segment-status').innerHTML =
-        `<span style="color: ${SEGMENT_COLORS[pendingType]};">Förhandsvisning</span>`;
+    if (splitMarkers.length === 0) {
+        markersInfo.style.display = 'none';
+        saveActions.style.display = 'none';
+        segmentsList.innerHTML = '<p class="admin-text-muted admin-text-sm">Sätt ut minst 1 punkt för att skapa sektioner</p>';
+        statusBox.innerHTML = '<strong>Steg 1:</strong> Klicka på banan för att sätta ut delningspunkter';
+        return;
+    }
+
+    markersInfo.style.display = 'flex';
+    document.getElementById('markers-count').textContent = splitMarkers.length + ' punkt' + (splitMarkers.length > 1 ? 'er' : '');
+
+    // Build segment list
+    let html = '';
+    let start = 0;
+
+    for (let i = 0; i <= splitMarkers.length; i++) {
+        const end = i < splitMarkers.length ? splitMarkers[i].index : waypoints.length - 1;
+        const type = segmentTypes[i] || 'liaison';
+        const dist = (waypoints[end].distance_km - waypoints[start].distance_km).toFixed(1);
+        const icon = type === 'stage' ? '🏁' : (type === 'lift' ? '🚡' : '🚴');
+
+        html += `
+        <div class="admin-segment-item" data-segment-idx="${i}">
+            <span class="color-dot" style="background: ${SEGMENT_COLORS[type]};"></span>
+            <span class="admin-segment-name">${icon} Sektion ${i + 1}</span>
+            <span class="admin-text-muted">${dist}km</span>
+            <select onchange="changeType(${i}, this.value)" class="segment-type-select">
+                <option value="liaison" ${type === 'liaison' ? 'selected' : ''}>🚴 T</option>
+                <option value="stage" ${type === 'stage' ? 'selected' : ''}>🏁 SS</option>
+                <option value="lift" ${type === 'lift' ? 'selected' : ''}>🚡 L</option>
+            </select>
+        </div>`;
+
+        start = end;
+    }
+
+    segmentsList.innerHTML = html;
+    saveActions.style.display = 'block';
+    statusBox.innerHTML = '<strong>Steg 2:</strong> Välj typ för varje sektion, sen spara';
 }
 
-function savePendingSegment() {
-    if (!pendingMarker) return;
+function updateSegmentListDistances() {
+    // Quick update of distances during drag
+    let start = 0;
+    const items = document.querySelectorAll('[data-segment-idx]');
 
-    // Auto-generate name (count existing from DB + any added this session)
-    let autoName = '';
-    const dbCount = existingSegmentCounts[pendingType] || 0;
-    const sessionCount = sectionMarkers.filter(m => m.type === pendingType).length;
-    const totalOfType = dbCount + sessionCount;
-
-    if (pendingType === 'stage') {
-        autoName = 'SS' + (totalOfType + 1);
-    } else if (pendingType === 'lift') {
-        autoName = 'Lift ' + (totalOfType + 1);
-    } else {
-        autoName = 'Transport';
-    }
-
-    // Save segment to server via form
-    document.getElementById('start-index').value = pendingStartIdx;
-    document.getElementById('end-index').value = pendingEndIdx;
-    document.getElementById('segment-type').value = pendingType;
-    document.getElementById('segment-name-hidden').value = autoName;
-    document.getElementById('segment-form').submit();
+    items.forEach((item, i) => {
+        const end = i < splitMarkers.length ? splitMarkers[i].index : waypoints.length - 1;
+        const dist = (waypoints[end].distance_km - waypoints[start].distance_km).toFixed(1);
+        const distSpan = item.querySelector('.admin-text-muted');
+        if (distSpan) distSpan.textContent = dist + 'km';
+        start = end;
+    });
 }
 
-function cancelPendingSegment() {
-    // Remove pending marker and line
-    if (pendingMarker) {
-        map.removeLayer(pendingMarker);
-        pendingMarker = null;
-    }
-    if (pendingLine) {
-        map.removeLayer(pendingLine);
-        pendingLine = null;
+function changeType(segIdx, newType) {
+    segmentTypes[segIdx] = newType;
+    drawSegmentLines();
+    updateUI();
+}
+
+function clearAllMarkers() {
+    if (!confirm('Ta bort alla punkter?')) return;
+    splitMarkers.forEach(m => map.removeLayer(m.marker));
+    splitMarkers = [];
+    segmentTypes = [];
+    drawSegmentLines();
+    updateUI();
+}
+
+function saveAllSegments() {
+    if (splitMarkers.length === 0) {
+        alert('Sätt ut minst en punkt först');
+        return;
     }
 
-    // Reset state
-    pendingStartIdx = -1;
-    pendingEndIdx = -1;
+    // Build segments data
+    const segments = [];
+    let start = 0;
 
-    // Hide pending actions UI
-    document.getElementById('pending-actions').style.display = 'none';
-    document.getElementById('segment-status').innerHTML = 'Klicka på banan';
+    for (let i = 0; i <= splitMarkers.length; i++) {
+        const end = i < splitMarkers.length ? splitMarkers[i].index : waypoints.length - 1;
+        const type = segmentTypes[i] || 'liaison';
+
+        if (end > start) {
+            segments.push({ start, end, type });
+        }
+        start = end;
+    }
+
+    document.getElementById('segments-data').value = JSON.stringify(segments);
+    document.getElementById('save-segments-form').submit();
+}
+
+function editExistingSegments() {
+    // Load existing segments into the editor
+    <?php if ($currentTrack && !empty($currentTrack['segments'])): ?>
+    const existingSegments = <?= json_encode(array_map(function($s) {
+        return [
+            'start' => $s['start_index'] ?? 0,
+            'end' => $s['end_index'] ?? 0,
+            'type' => $s['segment_type'] ?? 'liaison'
+        ];
+    }, $currentTrack['segments'])) ?>;
+
+    // Clear current markers
+    splitMarkers.forEach(m => map.removeLayer(m.marker));
+    splitMarkers = [];
+    segmentTypes = [];
+
+    // Add markers at each split point (end of each segment except last)
+    existingSegments.forEach((seg, i) => {
+        if (i < existingSegments.length - 1 && seg.end > 0 && seg.end < waypoints.length) {
+            const wp = waypoints[seg.end];
+            if (wp) addMarker(seg.end, wp);
+        }
+        segmentTypes.push(seg.type);
+    });
+
+    updateUI();
+    drawSegmentLines();
+    <?php endif; ?>
 }
 
 function onMapClick(e) {
-    document.getElementById('poi-lat').value = e.latlng.lat;
-    document.getElementById('poi-lng').value = e.latlng.lng;
-    document.getElementById('poi-btn').disabled = false;
-    if (tempMarker) map.removeLayer(tempMarker);
-    tempMarker = L.circleMarker(e.latlng, {radius: 6, color: '#3B82F6', fillOpacity: 1}).addTo(map);
+    const poiLat = document.getElementById('poi-lat');
+    const poiLng = document.getElementById('poi-lng');
+    const poiBtn = document.getElementById('poi-btn');
+
+    if (poiLat && poiLng && poiBtn) {
+        poiLat.value = e.latlng.lat;
+        poiLng.value = e.latlng.lng;
+        poiBtn.disabled = false;
+        if (tempMarker) map.removeLayer(tempMarker);
+        tempMarker = L.circleMarker(e.latlng, {radius: 6, color: '#3B82F6', fillOpacity: 1}).addTo(map);
+    }
 }
 
 function findNearest(latlng) {
@@ -909,26 +1035,7 @@ function findNearest(latlng) {
         const d = latlng.distanceTo(L.latLng(wp.lat, wp.lng));
         if (d < best.dist) best = {index: i, wp: wp, dist: d};
     });
-    return best.dist < 200 ? best : null;
-}
-
-function undoLastSection() {
-    // This would need server-side support to delete the last segment
-    // For now, just reload the page
-    if (confirm('Vill du ta bort senaste sektionen? (Sidan laddas om)')) {
-        const lastSegment = document.querySelector('[data-segment-id]:last-child form');
-        if (lastSegment) {
-            lastSegment.submit();
-        } else {
-            location.reload();
-        }
-    }
-}
-
-function resetAllSections() {
-    if (confirm('Vill du ta bort ALLA sektioner och börja om?')) {
-        location.reload();
-    }
+    return best.dist < 300 ? best : null;
 }
 
 function changeSegmentType(segId, newType) {
