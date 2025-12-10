@@ -244,10 +244,36 @@ if ($isNew) {
     ];
 }
 
-// Get events count for this series
+// Get events count and results status for this series
 $eventsCount = 0;
+$eventsWithResults = 0;
+$readyToComplete = false;
 if (!$isNew) {
-    $eventsCount = $db->getValue("SELECT COUNT(*) FROM events WHERE series_id = ?", [$id]) ?: 0;
+    // Check if series_events table exists
+    $seriesEventsExists = false;
+    try {
+        $tables = $db->getAll("SHOW TABLES LIKE 'series_events'");
+        $seriesEventsExists = !empty($tables);
+    } catch (Exception $e) {}
+
+    if ($seriesEventsExists) {
+        // Count events via junction table
+        $eventsCount = $db->getValue("SELECT COUNT(*) FROM series_events WHERE series_id = ?", [$id]) ?: 0;
+        // Count events with at least one finished result
+        $eventsWithResults = $db->getValue("
+            SELECT COUNT(DISTINCT se.event_id)
+            FROM series_events se
+            INNER JOIN results r ON r.event_id = se.event_id
+            WHERE se.series_id = ? AND r.status = 'finished'
+        ", [$id]) ?: 0;
+    } else {
+        $eventsCount = $db->getValue("SELECT COUNT(*) FROM events WHERE series_id = ?", [$id]) ?: 0;
+    }
+
+    // Check if ready to complete (all events have results but not marked completed)
+    $readyToComplete = $eventsCount > 0
+        && $eventsWithResults >= $eventsCount
+        && ($series['status'] ?? '') !== 'completed';
 }
 
 // Page config
@@ -271,6 +297,26 @@ include __DIR__ . '/components/unified-layout.php';
         <?php endif; ?>
     </svg>
     <?= htmlspecialchars($message) ?>
+</div>
+<?php endif; ?>
+
+<?php if ($readyToComplete): ?>
+<div class="alert alert-warning" style="display: flex; align-items: center; justify-content: space-between; gap: var(--space-md);">
+    <div style="display: flex; align-items: center; gap: var(--space-sm);">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 20px; height: 20px; flex-shrink: 0;">
+            <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/>
+        </svg>
+        <div>
+            <strong>Alla <?= $eventsCount ?> events har resultat!</strong>
+            <span style="color: var(--color-text-secondary);">
+                Ändra status till "Avslutad" för att beräkna seriemästare.
+            </span>
+        </div>
+    </div>
+    <button type="button" onclick="document.getElementById('status').value='completed'; document.getElementById('status').dispatchEvent(new Event('change'));"
+            class="btn-admin btn-admin-warning" style="white-space: nowrap;">
+        Markera avslutad
+    </button>
 </div>
 <?php endif; ?>
 

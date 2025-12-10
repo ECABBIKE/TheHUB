@@ -166,6 +166,12 @@ $yearSelect = $yearColumnExists ? ', s.year' : ', NULL as year';
 $eventsCountSelect = $seriesEventsTableExists
     ? '(SELECT COUNT(*) FROM series_events WHERE series_id = s.id)'
     : '0';
+// Count events that have at least one result
+$eventsWithResultsSelect = $seriesEventsTableExists
+    ? '(SELECT COUNT(DISTINCT se2.event_id) FROM series_events se2
+        INNER JOIN results r ON r.event_id = se2.event_id
+        WHERE se2.series_id = s.id AND r.status = "finished")'
+    : '0';
 $brandSelect = $brandColumnExists ? ', s.brand_id, sb.name as brand_name' : ', NULL as brand_id, NULL as brand_name';
 $brandJoin = $brandColumnExists ? 'LEFT JOIN series_brands sb ON s.brand_id = sb.id' : '';
 
@@ -173,7 +179,8 @@ $brandJoin = $brandColumnExists ? 'LEFT JOIN series_brands sb ON s.brand_id = sb
 $whereAliased = str_replace(['year', 'start_date'], ['s.year', 's.start_date'], $whereClause);
 
 $sql = "SELECT s.id, s.name, s.type{$formatSelect}{$yearSelect}, s.status, s.start_date, s.end_date, s.logo, s.organizer,
-    {$eventsCountSelect} as events_count{$brandSelect}
+    {$eventsCountSelect} as events_count,
+    {$eventsWithResultsSelect} as events_with_results{$brandSelect}
     FROM series s
     {$brandJoin}
     {$whereAliased}
@@ -327,7 +334,7 @@ include __DIR__ . '/components/unified-layout.php';
                             <th>Säsong</th>
                             <th>År</th>
                             <th>Status</th>
-                            <th>Events</th>
+                            <th>Resultat</th>
                             <th style="width: 150px;">Åtgärder</th>
                         </tr>
                     </thead>
@@ -370,12 +377,32 @@ include __DIR__ . '/components/unified-layout.php';
                                     <?php endif; ?>
                                 </td>
                                 <td>
-                                    <span class="admin-badge <?= $statusInfo['class'] ?>">
-                                        <?= $statusInfo['text'] ?>
-                                    </span>
+                                    <?php
+                                    $eventsCount = (int)$serie['events_count'];
+                                    $eventsWithResults = (int)$serie['events_with_results'];
+                                    $allHaveResults = $eventsCount > 0 && $eventsWithResults >= $eventsCount;
+                                    $isNotCompleted = $serie['status'] !== 'completed';
+                                    $readyToComplete = $allHaveResults && $isNotCompleted;
+                                    ?>
+                                    <?php if ($readyToComplete): ?>
+                                        <span class="admin-badge admin-badge-warning" title="Alla events har resultat - redo att avsluta!">
+                                            Redo att avsluta
+                                        </span>
+                                    <?php else: ?>
+                                        <span class="admin-badge <?= $statusInfo['class'] ?>">
+                                            <?= $statusInfo['text'] ?>
+                                        </span>
+                                    <?php endif; ?>
                                 </td>
                                 <td>
-                                    <span class="admin-badge admin-badge-secondary"><?= $serie['events_count'] ?></span>
+                                    <?php if ($eventsCount > 0): ?>
+                                        <span class="admin-badge <?= $allHaveResults ? 'admin-badge-success' : 'admin-badge-secondary' ?>"
+                                              title="<?= $eventsWithResults ?> av <?= $eventsCount ?> har resultat">
+                                            <?= $eventsWithResults ?>/<?= $eventsCount ?>
+                                        </span>
+                                    <?php else: ?>
+                                        <span class="admin-badge admin-badge-secondary">0</span>
+                                    <?php endif; ?>
                                 </td>
                                 <td>
                                     <div class="table-actions">
