@@ -68,57 +68,111 @@ try {
     $stmt->execute([$clubId]);
     $members = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // Calculate stats for each member with dynamic class_position
-    foreach ($members as &$member) {
-        $stmt = $db->prepare("
-            SELECT
-                res.id,
-                res.status,
-                res.points,
-                (
-                    SELECT COUNT(*) + 1
-                    FROM results r2
-                    WHERE r2.event_id = res.event_id
-                    AND r2.class_id = res.class_id
-                    AND r2.status = 'finished'
-                    AND r2.id != res.id
-                    AND (
-                        CASE
-                            WHEN r2.finish_time LIKE '%:%:%' THEN
-                                CAST(SUBSTRING_INDEX(r2.finish_time, ':', 1) AS DECIMAL(10,2)) * 3600 +
-                                CAST(SUBSTRING_INDEX(SUBSTRING_INDEX(r2.finish_time, ':', 2), ':', -1) AS DECIMAL(10,2)) * 60 +
-                                CAST(SUBSTRING_INDEX(r2.finish_time, ':', -1) AS DECIMAL(10,2))
-                            ELSE
-                                CAST(SUBSTRING_INDEX(r2.finish_time, ':', 1) AS DECIMAL(10,2)) * 60 +
-                                CAST(SUBSTRING_INDEX(r2.finish_time, ':', -1) AS DECIMAL(10,2))
-                        END
-                        <
-                        CASE
-                            WHEN res.finish_time LIKE '%:%:%' THEN
-                                CAST(SUBSTRING_INDEX(res.finish_time, ':', 1) AS DECIMAL(10,2)) * 3600 +
-                                CAST(SUBSTRING_INDEX(SUBSTRING_INDEX(res.finish_time, ':', 2), ':', -1) AS DECIMAL(10,2)) * 60 +
-                                CAST(SUBSTRING_INDEX(res.finish_time, ':', -1) AS DECIMAL(10,2))
-                            ELSE
-                                CAST(SUBSTRING_INDEX(res.finish_time, ':', 1) AS DECIMAL(10,2)) * 60 +
-                                CAST(SUBSTRING_INDEX(res.finish_time, ':', -1) AS DECIMAL(10,2))
-                        END
-                    )
-                ) as class_position
-            FROM results res
-            WHERE res.cyclist_id = ? AND res.status = 'finished'
-        ");
-        $stmt->execute([$member['id']]);
-        $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    // PERFORMANCE FIX: Fetch ALL results for all members in ONE query instead of N+1
+    // This reduces database calls from N (one per member) to just 2 queries total
 
-        $member['total_races'] = count($results);
-        $member['total_points'] = array_sum(array_column($results, 'points'));
-        $member['podiums'] = count(array_filter($results, fn($r) => $r['class_position'] && $r['class_position'] <= 3));
-        $member['best_position'] = null;
-        foreach ($results as $r) {
-            if ($r['class_position'] && (!$member['best_position'] || $r['class_position'] < $member['best_position'])) {
-                $member['best_position'] = (int)$r['class_position'];
+    $memberIds = array_column($members, 'id');
+    $memberStats = [];
+
+    if (!empty($memberIds)) {
+        // Initialize stats for all members
+        foreach ($memberIds as $mid) {
+            $memberStats[$mid] = [
+                'total_races' => 0,
+                'total_points' => 0,
+                'podiums' => 0,
+                'best_position' => null,
+                'results' => []
+            ];
+        }
+
+        // Query 1: Get all finished results for club members
+        $placeholders = implode(',', array_fill(0, count($memberIds), '?'));
+        $stmt = $db->prepare("
+            SELECT res.id, res.cyclist_id, res.event_id, res.class_id, res.points, res.finish_time
+            FROM results res
+            WHERE res.cyclist_id IN ($placeholders) AND res.status = 'finished'
+        ");
+        $stmt->execute($memberIds);
+        $allMemberResults = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Collect unique event/class combinations we need to calculate positions for
+        $eventClassCombos = [];
+        foreach ($allMemberResults as $res) {
+            $key = $res['event_id'] . '|' . $res['class_id'];
+            if (!isset($eventClassCombos[$key])) {
+                $eventClassCombos[$key] = ['event_id' => $res['event_id'], 'class_id' => $res['class_id']];
+            }
+            // Store result for later processing
+            $memberStats[$res['cyclist_id']]['results'][] = $res;
+        }
+
+        // Query 2: Get ALL results for these event/class combos to calculate positions
+        // This is needed to know where club members placed relative to everyone
+        $allPositionData = [];
+        if (!empty($eventClassCombos)) {
+            $orConditions = [];
+            $params = [];
+            foreach ($eventClassCombos as $combo) {
+                $orConditions[] = "(event_id = ? AND class_id = ?)";
+                $params[] = $combo['event_id'];
+                $params[] = $combo['class_id'];
+            }
+
+            $stmt = $db->prepare("
+                SELECT id, event_id, class_id, cyclist_id, finish_time
+                FROM results
+                WHERE status = 'finished' AND (" . implode(' OR ', $orConditions) . ")
+                ORDER BY event_id, class_id, finish_time
+            ");
+            $stmt->execute($params);
+            $positionResults = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            // Build position lookup: event_id|class_id|cyclist_id => position
+            $currentEventClass = '';
+            $position = 0;
+            foreach ($positionResults as $pr) {
+                $eventClassKey = $pr['event_id'] . '|' . $pr['class_id'];
+                if ($eventClassKey !== $currentEventClass) {
+                    $currentEventClass = $eventClassKey;
+                    $position = 0;
+                }
+                $position++;
+                $lookupKey = $pr['event_id'] . '|' . $pr['class_id'] . '|' . $pr['cyclist_id'];
+                $allPositionData[$lookupKey] = $position;
             }
         }
+
+        // Calculate stats for each member using pre-fetched data
+        foreach ($memberStats as $cyclistId => &$stats) {
+            $stats['total_races'] = count($stats['results']);
+            $stats['total_points'] = array_sum(array_column($stats['results'], 'points'));
+
+            foreach ($stats['results'] as $res) {
+                $posKey = $res['event_id'] . '|' . $res['class_id'] . '|' . $cyclistId;
+                $classPosition = $allPositionData[$posKey] ?? null;
+
+                if ($classPosition !== null) {
+                    if ($classPosition <= 3) {
+                        $stats['podiums']++;
+                    }
+                    if ($stats['best_position'] === null || $classPosition < $stats['best_position']) {
+                        $stats['best_position'] = (int)$classPosition;
+                    }
+                }
+            }
+            unset($stats['results']); // Free memory
+        }
+        unset($stats);
+    }
+
+    // Assign calculated stats to members
+    foreach ($members as &$member) {
+        $mid = $member['id'];
+        $member['total_races'] = $memberStats[$mid]['total_races'] ?? 0;
+        $member['total_points'] = $memberStats[$mid]['total_points'] ?? 0;
+        $member['podiums'] = $memberStats[$mid]['podiums'] ?? 0;
+        $member['best_position'] = $memberStats[$mid]['best_position'] ?? null;
     }
     unset($member);
 
