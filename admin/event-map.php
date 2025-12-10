@@ -1,4 +1,6 @@
 <?php
+die('TEST - PHP WORKS'); // TEMP DEBUG
+
 /**
  * Admin Event Map Management - Full-width Map Editor
  *
