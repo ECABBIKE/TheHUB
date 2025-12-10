@@ -120,6 +120,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $messageType = 'success';
                 break;
 
+            case 'update_segment_type':
+                $segmentId = intval($_POST['segment_id'] ?? 0);
+                $newType = $_POST['new_type'] ?? '';
+                if ($segmentId > 0 && in_array($newType, ['stage', 'liaison', 'lift'])) {
+                    $colors = ['stage' => '#EF4444', 'liaison' => '#61CE70', 'lift' => '#F59E0B'];
+                    $pdo->prepare("UPDATE event_track_segments SET segment_type = ?, color = ? WHERE id = ?")
+                        ->execute([$newType, $colors[$newType], $segmentId]);
+                }
+                $message = 'Sektionstyp uppdaterad';
+                $messageType = 'success';
+                break;
+
             case 'add_segment_visual':
                 $trackId = intval($_POST['track_id'] ?? 0);
                 $segmentName = trim($_POST['segment_name'] ?? '');
@@ -345,70 +357,51 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
 
-        <!-- Segments for current track -->
-        <div class="admin-card" style="margin-top: var(--space-lg);">
-            <div class="admin-card-header"><h2>Markerade sträckor (<?= count($currentTrack['segments']) ?>)</h2></div>
-            <div class="admin-card-body">
-                <?php if (!empty($currentTrack['segments'])): ?>
-                <?php foreach ($currentTrack['segments'] as $seg): ?>
-                <div style="display: flex; align-items: center; gap: var(--space-sm); padding: var(--space-xs) 0; border-bottom: 1px solid var(--color-border);">
-                    <span style="width: 12px; height: 12px; background: <?= htmlspecialchars($seg['color']) ?>; border-radius: 2px;"></span>
-                    <span style="flex: 1;">
-                        <strong><?= htmlspecialchars($seg['segment_name'] ?: 'Segment ' . $seg['sequence_number']) ?></strong>
-                        <span class="admin-text-muted" style="font-size: 0.85em;">
-                            (<?= $seg['segment_type'] === 'stage' ? 'SS' : ($seg['segment_type'] === 'lift' ? 'Lift' : 'Transport') ?>)
-                        </span>
-                    </span>
-                    <span class="admin-text-muted"><?= number_format($seg['distance_km'], 1) ?> km</span>
-                    <form method="POST" style="margin: 0;">
-                        <?= csrf_field() ?>
-                        <input type="hidden" name="action" value="delete_segment">
-                        <input type="hidden" name="segment_id" value="<?= $seg['id'] ?>">
-                        <button type="submit" class="btn-admin btn-admin-ghost btn-admin-sm" style="color: var(--color-danger);" onclick="return confirm('Ta bort markeringen?')">Ta bort</button>
-                    </form>
+        <!-- Sektioner - kompakt lista med redigering -->
+        <div class="admin-card" style="margin-top: var(--space-md);">
+            <div class="admin-card-header" style="padding: var(--space-sm) var(--space-md);">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <h2 style="font-size: 0.95rem; margin: 0;">Sektioner (<?= count($currentTrack['segments']) ?>)</h2>
+                    <span id="segment-status" style="font-size: 0.8rem; color: var(--color-primary);">Klicka på banan</span>
                 </div>
-                <?php endforeach; ?>
-                <?php else: ?>
-                <p class="admin-text-muted">Inga sträckor markerade än. Klicka på banan för att markera SS eller Lift.</p>
-                <?php endif; ?>
             </div>
-        </div>
-
-        <!-- Section-based Segment Editor -->
-        <div class="admin-card" style="margin-top: var(--space-lg);">
-            <div class="admin-card-header"><h2>Markera sektioner</h2></div>
-            <div class="admin-card-body">
-                <div class="alert alert-info" style="margin-bottom: var(--space-md); background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); padding: var(--space-sm); border-radius: var(--radius-sm);">
-                    <strong>Sektionsbaserad markering:</strong><br>
-                    1. Välj typ för nästa sektion<br>
-                    2. Klicka på banan där sektionen <strong>slutar</strong><br>
-                    3. Upprepa för varje sektion längs banan
+            <div class="admin-card-body" style="padding: var(--space-sm);">
+                <!-- Typ-väljare (kompakt) -->
+                <div style="display: flex; gap: 4px; margin-bottom: var(--space-sm);">
+                    <button type="button" class="section-type-btn active" data-type="liaison" style="flex:1; padding: 6px; font-size: 0.75rem; background: #61CE70; color: white; border: none; border-radius: 4px; cursor: pointer;">🚴 Transport</button>
+                    <button type="button" class="section-type-btn" data-type="stage" style="flex:1; padding: 6px; font-size: 0.75rem; background: #EF4444; color: white; border: none; border-radius: 4px; cursor: pointer; opacity: 0.5;">🏁 SS</button>
+                    <button type="button" class="section-type-btn" data-type="lift" style="flex:1; padding: 6px; font-size: 0.75rem; background: #F59E0B; color: white; border: none; border-radius: 4px; cursor: pointer; opacity: 0.5;">🚡 Lift</button>
                 </div>
 
-                <div style="margin-bottom: var(--space-md);">
-                    <label style="display: block; margin-bottom: var(--space-xs); font-weight: 500;">Nästa sektion blir:</label>
-                    <div style="display: flex; gap: var(--space-xs); flex-wrap: wrap;">
-                        <button type="button" class="btn-admin section-type-btn active" data-type="liaison" style="background: #61CE70; color: white;">
-                            🚴 Transport
-                        </button>
-                        <button type="button" class="btn-admin section-type-btn" data-type="stage" style="background: #EF4444; color: white; opacity: 0.6;">
-                            🏁 SS (Tävling)
-                        </button>
-                        <button type="button" class="btn-admin section-type-btn" data-type="lift" style="background: #F59E0B; color: white; opacity: 0.6;">
-                            🚡 Lift
-                        </button>
+                <!-- Segment-lista med inline redigering -->
+                <div style="max-height: 180px; overflow-y: auto; border: 1px solid var(--color-border); border-radius: 4px;">
+                    <?php if (!empty($currentTrack['segments'])): ?>
+                    <?php foreach ($currentTrack['segments'] as $seg):
+                        $icon = $seg['segment_type'] === 'stage' ? '🏁' : ($seg['segment_type'] === 'lift' ? '🚡' : '🚴');
+                    ?>
+                    <div class="seg-row" style="display: flex; align-items: center; gap: 6px; padding: 6px 8px; border-bottom: 1px solid var(--color-border); font-size: 0.85rem;">
+                        <span style="width: 8px; height: 8px; background: <?= htmlspecialchars($seg['color']) ?>; border-radius: 2px; flex-shrink: 0;"></span>
+                        <span style="flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                            <?= $icon ?> <?= htmlspecialchars($seg['segment_name'] ?: 'Sektion ' . $seg['sequence_number']) ?>
+                        </span>
+                        <span style="color: var(--color-text); font-size: 0.75rem;"><?= number_format($seg['distance_km'], 1) ?>km</span>
+                        <!-- Ändra typ dropdown -->
+                        <select onchange="changeSegmentType(<?= $seg['id'] ?>, this.value)" style="padding: 2px 4px; font-size: 0.7rem; border: 1px solid var(--color-border); border-radius: 3px; background: white;">
+                            <option value="liaison" <?= $seg['segment_type'] === 'liaison' ? 'selected' : '' ?>>Transport</option>
+                            <option value="stage" <?= $seg['segment_type'] === 'stage' ? 'selected' : '' ?>>SS</option>
+                            <option value="lift" <?= $seg['segment_type'] === 'lift' ? 'selected' : '' ?>>Lift</option>
+                        </select>
+                        <form method="POST" style="margin: 0;">
+                            <?= csrf_field() ?>
+                            <input type="hidden" name="action" value="delete_segment">
+                            <input type="hidden" name="segment_id" value="<?= $seg['id'] ?>">
+                            <button type="submit" style="background: none; border: none; color: var(--color-danger); cursor: pointer; padding: 2px 4px; font-size: 0.8rem;" onclick="return confirm('Ta bort?')">×</button>
+                        </form>
                     </div>
-                </div>
-
-                <p id="segment-status" style="font-weight: 500; color: var(--color-primary); margin-bottom: var(--space-sm);">
-                    Klicka på banan för att markera första sektionens slut
-                </p>
-
-                <div id="section-preview" style="display: none; background: var(--color-surface-alt); padding: var(--space-sm); border-radius: var(--radius-sm); margin-bottom: var(--space-sm);">
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <span id="preview-text"></span>
-                        <input type="text" id="segment-name" class="admin-form-input" placeholder="Namn (valfritt)" style="width: 120px; margin-left: var(--space-sm);">
-                    </div>
+                    <?php endforeach; ?>
+                    <?php else: ?>
+                    <p style="padding: var(--space-sm); margin: 0; color: var(--color-text); font-size: 0.85rem;">Inga sektioner. Klicka på banan!</p>
+                    <?php endif; ?>
                 </div>
 
                 <form method="POST" id="segment-form" style="display: none;">
@@ -420,11 +413,12 @@ include __DIR__ . '/components/unified-layout.php';
                     <input type="hidden" name="segment_type" id="segment-type" value="liaison">
                     <input type="hidden" name="segment_name" id="segment-name-hidden" value="">
                 </form>
-
-                <div style="display: flex; gap: var(--space-sm);">
-                    <button type="button" onclick="undoLastSection()" id="undo-btn" disabled class="btn-admin btn-admin-ghost">↩ Ångra</button>
-                    <button type="button" onclick="resetAllSections()" class="btn-admin btn-admin-ghost">🗑 Börja om</button>
-                </div>
+                <form method="POST" id="update-type-form" style="display: none;">
+                    <?= csrf_field() ?>
+                    <input type="hidden" name="action" value="update_segment_type">
+                    <input type="hidden" name="segment_id" id="update-seg-id" value="">
+                    <input type="hidden" name="new_type" id="update-new-type" value="">
+                </form>
             </div>
         </div>
         <?php endif; ?>
@@ -631,7 +625,7 @@ function onTrackClick(e) {
     // Save segment to server via form
     document.getElementById('start-index').value = startIdx;
     document.getElementById('end-index').value = endIdx;
-    document.getElementById('segment-name-hidden').value = document.getElementById('segment-name').value || autoName;
+    document.getElementById('segment-name-hidden').value = autoName;
     document.getElementById('segment-form').submit();
 
     // Update state for next section
@@ -641,9 +635,6 @@ function onTrackClick(e) {
     const typeLabel = currentSegmentType === 'stage' ? 'SS' : (currentSegmentType === 'lift' ? 'Lift' : 'Transport');
     document.getElementById('segment-status').innerHTML =
         `<span style="color: ${SEGMENT_COLORS[currentSegmentType]};">${typeLabel} sparad (${dist} km)</span> - Klicka för nästa sektion`;
-
-    // Enable undo
-    document.getElementById('undo-btn').disabled = false;
 }
 
 function onMapClick(e) {
@@ -679,10 +670,14 @@ function undoLastSection() {
 
 function resetAllSections() {
     if (confirm('Vill du ta bort ALLA sektioner och börja om?')) {
-        // Delete all segments - would need batch delete endpoint
-        // For now, just reload
         location.reload();
     }
+}
+
+function changeSegmentType(segId, newType) {
+    document.getElementById('update-seg-id').value = segId;
+    document.getElementById('update-new-type').value = newType;
+    document.getElementById('update-type-form').submit();
 }
 
 document.addEventListener('DOMContentLoaded', init);
