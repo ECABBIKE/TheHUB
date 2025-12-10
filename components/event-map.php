@@ -92,6 +92,15 @@ if (!function_exists('render_event_map')) {
     height: 600px;
     <?php endif; ?>
     background: #1a1a1a;
+    overflow: hidden;
+}
+@media (max-width: 768px) {
+    .emap-container {
+        position: fixed;
+        inset: 0;
+        height: 100%;
+        height: 100dvh;
+    }
 }
 .emap-map {
     position: absolute;
@@ -312,15 +321,33 @@ if (!function_exists('render_event_map')) {
 }
 @media (max-width: 768px) {
     .emap-close {
+        position: fixed;
         top: auto;
         bottom: var(--space-lg);
         right: 60px;
+    }
+    .emap-location-btn {
+        position: fixed;
+        bottom: var(--space-lg);
+        right: var(--space-md);
+    }
+    .emap-elevation {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
     }
     .emap-elevation.collapsed {
         transform: translateY(calc(100% - 36px));
     }
     .emap-elevation-toggle { height: 36px; }
     .emap-elevation-content { height: 100px; }
+    .emap-mobile-controls {
+        position: fixed;
+        top: var(--space-sm);
+        left: var(--space-sm);
+        right: var(--space-sm);
+    }
 }
 </style>
 
