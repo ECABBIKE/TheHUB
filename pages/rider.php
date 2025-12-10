@@ -825,6 +825,7 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
                 <span class="breakdown-title">
                     <i data-lucide="calculator"></i>
                     Visa uträkning
+                    <span class="breakdown-formula-hint">(poäng × fält × typ × tid)</span>
                 </span>
                 <span class="breakdown-total"><?= number_format($rankingPoints, 1) ?> p</span>
                 <i data-lucide="chevron-down" class="breakdown-chevron"></i>
@@ -2954,6 +2955,12 @@ function copyToClipboard(text) {
     color: var(--color-text-secondary);
 }
 .breakdown-title i { width: 12px; height: 12px; }
+.breakdown-formula-hint {
+    font-weight: var(--weight-normal);
+    color: var(--color-text-muted);
+    font-size: 10px;
+    opacity: 0.7;
+}
 
 .breakdown-total {
     margin-left: auto;
