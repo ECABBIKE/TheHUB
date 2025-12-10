@@ -74,6 +74,52 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Refresh event data
         $event = $db->getRow("SELECT e.*, s.name as series_name FROM events e LEFT JOIN series s ON e.series_id = s.id WHERE e.id = ?", [$eventId]);
 
+    } elseif ($action === 'save_payment_recipient') {
+        // Save payment recipient choice (series, organizer, or custom)
+        $recipient = $_POST['payment_recipient'] ?? 'series';
+        $organizerClubId = !empty($_POST['organizer_club_id']) ? intval($_POST['organizer_club_id']) : null;
+
+        // Validate recipient value
+        if (!in_array($recipient, ['series', 'organizer', 'custom'])) {
+            $recipient = 'series';
+        }
+
+        $db->update('events', [
+            'payment_recipient' => $recipient,
+            'organizer_club_id' => $organizerClubId
+        ], 'id = ?', [$eventId]);
+
+        // If custom, also save the custom Swish settings
+        if ($recipient === 'custom') {
+            $swishNumber = trim($_POST['custom_swish_number'] ?? '');
+            $swishName = trim($_POST['custom_swish_name'] ?? '');
+
+            if ($swishNumber) {
+                if ($eventPaymentConfig) {
+                    $db->update('payment_configs', [
+                        'swish_enabled' => 1,
+                        'swish_number' => $swishNumber,
+                        'swish_name' => $swishName
+                    ], 'id = ?', [$eventPaymentConfig['id']]);
+                } else {
+                    $db->insert('payment_configs', [
+                        'event_id' => $eventId,
+                        'swish_enabled' => 1,
+                        'swish_number' => $swishNumber,
+                        'swish_name' => $swishName
+                    ]);
+                }
+            }
+        }
+
+        $message = 'Betalningsval sparat!';
+        $messageType = 'success';
+
+        // Refresh data
+        $event = $db->getRow("SELECT e.*, s.name as series_name, s.id as series_id FROM events e LEFT JOIN series s ON e.series_id = s.id WHERE e.id = ?", [$eventId]);
+        $eventPaymentConfig = $db->getRow("SELECT * FROM payment_configs WHERE event_id = ?", [$eventId]);
+        $paymentConfig = getPaymentConfig($eventId);
+
     } elseif ($action === 'save_payment_config') {
         // Save event-specific payment configuration
         $useEventConfig = isset($_POST['use_event_config']) ? 1 : 0;
@@ -186,6 +232,40 @@ $eventDate = new DateTime($event['date']);
 $defaultEarlyBirdEnd = clone $eventDate;
 $defaultEarlyBirdEnd->modify('-14 days');
 
+// Get clubs with payment enabled (for organizer dropdown)
+$clubsWithPayment = $db->getAll("
+    SELECT id, name, swish_number, swish_name
+    FROM clubs
+    WHERE active = 1 AND (swish_number IS NOT NULL AND swish_number != '')
+    ORDER BY name
+");
+
+// Get all active clubs (in case organizer club doesn't have payment yet)
+$allClubs = $db->getAll("SELECT id, name FROM clubs WHERE active = 1 ORDER BY name");
+
+// Get series payment info
+$seriesPaymentInfo = null;
+if ($event['series_id']) {
+    $seriesPaymentInfo = $db->getRow("
+        SELECT s.id, s.name, s.swish_number, s.swish_name
+        FROM series s
+        WHERE s.id = ?
+    ", [$event['series_id']]);
+}
+
+// Get current organizer club info
+$organizerClubInfo = null;
+if (!empty($event['organizer_club_id'])) {
+    $organizerClubInfo = $db->getRow("
+        SELECT id, name, swish_number, swish_name
+        FROM clubs
+        WHERE id = ?
+    ", [$event['organizer_club_id']]);
+}
+
+// Determine current payment recipient (default to 'series')
+$currentRecipient = $event['payment_recipient'] ?? 'series';
+
 // Set page variables for economy layout
 $economy_page_title = 'Betalning';
 
@@ -268,6 +348,175 @@ include __DIR__ . '/components/economy-layout.php';
                 </form>
             </div>
         </div>
+
+        <!-- Payment Recipient Selection -->
+        <div class="card mb-lg">
+            <div class="card-header">
+                <h2>
+                    <i data-lucide="wallet"></i>
+                    Betalning till
+                </h2>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <?= csrf_field() ?>
+                    <input type="hidden" name="action" value="save_payment_recipient">
+
+                    <div class="grid gap-md mb-lg">
+                        <!-- Option: Series -->
+                        <label class="p-md rounded-md border cursor-pointer <?= $currentRecipient === 'series' ? 'border-primary bg-primary-light' : 'border-default' ?>" style="display: block;">
+                            <div class="flex items-center gap-md">
+                                <input type="radio" name="payment_recipient" value="series"
+                                    <?= $currentRecipient === 'series' ? 'checked' : '' ?>
+                                    onchange="updateRecipientUI()">
+                                <div class="flex-1">
+                                    <strong>Serie</strong>
+                                    <?php if ($seriesPaymentInfo): ?>
+                                        <span class="text-secondary"> - <?= h($seriesPaymentInfo['name']) ?></span>
+                                    <?php endif; ?>
+                                    <div class="text-sm text-secondary mt-xs">
+                                        <?php if ($seriesPaymentInfo && $seriesPaymentInfo['swish_number']): ?>
+                                            <i data-lucide="smartphone" style="width: 14px; height: 14px;"></i>
+                                            Swish: <?= h($seriesPaymentInfo['swish_number']) ?>
+                                            <?php if ($seriesPaymentInfo['swish_name']): ?>
+                                                (<?= h($seriesPaymentInfo['swish_name']) ?>)
+                                            <?php endif; ?>
+                                        <?php elseif ($seriesPaymentInfo): ?>
+                                            <span class="text-warning">⚠️ Serien har inga betalningsuppgifter konfigurerade</span>
+                                        <?php else: ?>
+                                            <span class="text-secondary">Eventet tillhör ingen serie</span>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+                            </div>
+                        </label>
+
+                        <!-- Option: Organizer -->
+                        <label class="p-md rounded-md border cursor-pointer <?= $currentRecipient === 'organizer' ? 'border-primary bg-primary-light' : 'border-default' ?>" style="display: block;">
+                            <div class="flex items-center gap-md">
+                                <input type="radio" name="payment_recipient" value="organizer"
+                                    <?= $currentRecipient === 'organizer' ? 'checked' : '' ?>
+                                    onchange="updateRecipientUI()">
+                                <div class="flex-1">
+                                    <strong>Arrangör (klubb)</strong>
+                                    <div class="text-sm text-secondary mt-xs">
+                                        Betalning går direkt till arrangörens Swish
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- Organizer club selector (shown when organizer is selected) -->
+                            <div id="organizer-club-selector" class="mt-md pl-lg <?= $currentRecipient === 'organizer' ? '' : 'hidden' ?>">
+                                <label class="label">Välj arrangörsklubb</label>
+                                <select name="organizer_club_id" class="input">
+                                    <option value="">-- Välj klubb --</option>
+                                    <?php foreach ($allClubs as $club): ?>
+                                        <?php
+                                        $hasPayment = false;
+                                        foreach ($clubsWithPayment as $cp) {
+                                            if ($cp['id'] == $club['id']) {
+                                                $hasPayment = true;
+                                                break;
+                                            }
+                                        }
+                                        ?>
+                                        <option value="<?= $club['id'] ?>"
+                                            <?= ($event['organizer_club_id'] ?? '') == $club['id'] ? 'selected' : '' ?>
+                                            <?= !$hasPayment ? 'style="color: #999;"' : '' ?>>
+                                            <?= h($club['name']) ?><?= !$hasPayment ? ' (saknar Swish)' : '' ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                                <?php if ($organizerClubInfo && $organizerClubInfo['swish_number']): ?>
+                                    <div class="mt-sm text-sm">
+                                        <i data-lucide="smartphone" style="width: 14px; height: 14px;"></i>
+                                        Swish: <?= h($organizerClubInfo['swish_number']) ?>
+                                        <?php if ($organizerClubInfo['swish_name']): ?>
+                                            (<?= h($organizerClubInfo['swish_name']) ?>)
+                                        <?php endif; ?>
+                                    </div>
+                                <?php elseif ($organizerClubInfo): ?>
+                                    <div class="mt-sm text-sm text-warning">
+                                        ⚠️ Vald klubb saknar Swish-uppgifter.
+                                        <a href="/admin/club-edit.php?id=<?= $organizerClubInfo['id'] ?>">Lägg till här</a>
+                                    </div>
+                                <?php endif; ?>
+                            </div>
+                        </label>
+
+                        <!-- Option: Custom -->
+                        <label class="p-md rounded-md border cursor-pointer <?= $currentRecipient === 'custom' ? 'border-primary bg-primary-light' : 'border-default' ?>" style="display: block;">
+                            <div class="flex items-center gap-md">
+                                <input type="radio" name="payment_recipient" value="custom"
+                                    <?= $currentRecipient === 'custom' ? 'checked' : '' ?>
+                                    onchange="updateRecipientUI()">
+                                <div class="flex-1">
+                                    <strong>Anpassad</strong>
+                                    <div class="text-sm text-secondary mt-xs">
+                                        Ange egna Swish-uppgifter för detta event
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- Custom Swish fields (shown when custom is selected) -->
+                            <div id="custom-swish-fields" class="mt-md pl-lg <?= $currentRecipient === 'custom' ? '' : 'hidden' ?>">
+                                <div class="grid grid-2 gap-md">
+                                    <div class="form-group">
+                                        <label class="label">Swish-nummer</label>
+                                        <input type="text" name="custom_swish_number" class="input"
+                                            value="<?= h($eventPaymentConfig['swish_number'] ?? '') ?>"
+                                            placeholder="070-123 45 67">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="label">Mottagarnamn</label>
+                                        <input type="text" name="custom_swish_name" class="input"
+                                            value="<?= h($eventPaymentConfig['swish_name'] ?? '') ?>"
+                                            placeholder="Namn på mottagare">
+                                    </div>
+                                </div>
+                            </div>
+                        </label>
+                    </div>
+
+                    <button type="submit" class="btn btn--primary">
+                        <i data-lucide="save"></i>
+                        Spara betalningsval
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <script>
+        function updateRecipientUI() {
+            const selected = document.querySelector('input[name="payment_recipient"]:checked').value;
+
+            // Update card styling
+            document.querySelectorAll('input[name="payment_recipient"]').forEach(radio => {
+                const card = radio.closest('label');
+                if (radio.checked) {
+                    card.classList.add('border-primary', 'bg-primary-light');
+                    card.classList.remove('border-default');
+                } else {
+                    card.classList.remove('border-primary', 'bg-primary-light');
+                    card.classList.add('border-default');
+                }
+            });
+
+            // Show/hide organizer club selector
+            const organizerSelector = document.getElementById('organizer-club-selector');
+            if (selected === 'organizer') {
+                organizerSelector.classList.remove('hidden');
+            } else {
+                organizerSelector.classList.add('hidden');
+            }
+
+            // Show/hide custom swish fields
+            const customFields = document.getElementById('custom-swish-fields');
+            if (selected === 'custom') {
+                customFields.classList.remove('hidden');
+            } else {
+                customFields.classList.add('hidden');
+            }
+        }
+        </script>
 
         <!-- Payment Configuration -->
         <div class="card mb-lg">

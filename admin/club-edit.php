@@ -58,6 +58,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   'instagram' => trim($_POST['instagram'] ?? ''),
   'org_number' => trim($_POST['org_number'] ?? ''),
   'scf_id' => trim($_POST['scf_id'] ?? ''),
+  'swish_number' => trim($_POST['swish_number'] ?? '') ?: null,
+  'swish_name' => trim($_POST['swish_name'] ?? '') ?: null,
+  'payment_enabled' => isset($_POST['payment_enabled']) ? 1 : 0,
   'active' => isset($_POST['active']) ? 1 : 0,
  ];
 
@@ -180,6 +183,74 @@ include __DIR__ . '/../includes/layout-header.php';
      placeholder="T.ex. 802000-0000"
      >
     </div>
+    </div>
+   </div>
+   </div>
+
+   <!-- Payment/Swish Settings -->
+   <div class="card mb-lg">
+   <div class="card-header">
+    <h2 class="text-primary">
+    <i data-lucide="smartphone"></i>
+    Betalning (Swish)
+    </h2>
+   </div>
+   <div class="card-body">
+    <p class="text-secondary mb-md">
+    Om klubben arrangerar tävlingar kan betalning gå direkt till klubbens Swish.
+    </p>
+    <div class="grid gap-lg" style="grid-template-columns: repeat(2, 1fr);">
+    <!-- Swish Number -->
+    <div>
+     <label for="swish_number" class="label">Swish-nummer</label>
+     <input
+     type="text"
+     id="swish_number"
+     name="swish_number"
+     class="input"
+     value="<?= h($club['swish_number'] ?? '') ?>"
+     placeholder="070-123 45 67 eller 123-456 78 90"
+     >
+     <small class="text-secondary">Mobilnummer eller Swish-företagsnummer</small>
+    </div>
+
+    <!-- Swish Name -->
+    <div>
+     <label for="swish_name" class="label">Mottagarnamn</label>
+     <input
+     type="text"
+     id="swish_name"
+     name="swish_name"
+     class="input"
+     value="<?= h($club['swish_name'] ?? '') ?>"
+     placeholder="Klubbens namn"
+     >
+     <small class="text-secondary">Visas för deltagare vid betalning</small>
+    </div>
+
+    <!-- Payment Enabled -->
+    <div style="grid-column: span 2;">
+     <label class="checkbox-label">
+     <input type="checkbox" name="payment_enabled" value="1"
+      <?= ($club['payment_enabled'] ?? 0) ? 'checked' : '' ?>>
+     <span>Aktivera som betalningsmottagare</span>
+     </label>
+     <small class="text-secondary">Klubben kan väljas som mottagare för eventbetalningar</small>
+    </div>
+    </div>
+   </div>
+   </div>
+
+   <!-- Description & Logo -->
+   <div class="card mb-lg">
+   <div class="card-header">
+    <h2 class="text-primary">
+    <i data-lucide="file-text"></i>
+    Övrigt
+    </h2>
+   </div>
+   <div class="card-body">
+    <div class="grid gap-lg" style="grid-template-columns: repeat(2, 1fr);">
 
     <!-- Description -->
     <div>

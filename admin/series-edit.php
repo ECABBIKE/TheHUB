@@ -148,6 +148,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $seriesData['brand_id'] = !empty($_POST['brand_id']) ? intval($_POST['brand_id']) : null;
         }
 
+        // Add Swish payment fields
+        $seriesData['swish_number'] = trim($_POST['swish_number'] ?? '') ?: null;
+        $seriesData['swish_name'] = trim($_POST['swish_name'] ?? '') ?: null;
+
         try {
             // Check if we're marking as completed (and it wasn't before)
             $wasCompleted = !$isNew && ($series['status'] ?? '') === 'completed';
@@ -380,6 +384,37 @@ include __DIR__ . '/components/unified-layout.php';
                 <label for="description" class="admin-form-label">Beskrivning</label>
                 <textarea id="description" name="description" class="admin-form-textarea" rows="4"
                           placeholder="Beskriv serien..."><?= htmlspecialchars($series['description'] ?? '') ?></textarea>
+            </div>
+        </div>
+    </div>
+
+    <!-- Swish Payment -->
+    <div class="admin-card">
+        <div class="admin-card-header">
+            <h2>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 20px; height: 20px;"><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/></svg>
+                Betalning (Swish)
+            </h2>
+        </div>
+        <div class="admin-card-body">
+            <p style="color: var(--color-text-secondary); margin-bottom: var(--space-md);">
+                Swish-uppgifter för serieanmälningar. Event kan välja att betalning går till serien.
+            </p>
+            <div class="admin-form-row">
+                <div class="admin-form-group">
+                    <label for="swish_number" class="admin-form-label">Swish-nummer</label>
+                    <input type="text" id="swish_number" name="swish_number" class="admin-form-input"
+                           value="<?= htmlspecialchars($series['swish_number'] ?? '') ?>"
+                           placeholder="070-123 45 67 eller 123-456 78 90">
+                    <small style="color: var(--color-text-secondary);">Mobilnummer eller Swish-företagsnummer</small>
+                </div>
+                <div class="admin-form-group">
+                    <label for="swish_name" class="admin-form-label">Mottagarnamn</label>
+                    <input type="text" id="swish_name" name="swish_name" class="admin-form-input"
+                           value="<?= htmlspecialchars($series['swish_name'] ?? '') ?>"
+                           placeholder="Seriens namn">
+                    <small style="color: var(--color-text-secondary);">Visas för deltagare vid betalning</small>
+                </div>
             </div>
         </div>
     </div>
