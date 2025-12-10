@@ -376,7 +376,7 @@ include __DIR__ . '/components/unified-layout.php';
                 <!-- Save button -->
                 <div id="save-actions" style="display: none; margin-top: var(--space-sm);">
                     <button type="button" onclick="saveAllSegments()" class="btn-admin btn-admin-primary btn-admin-block">
-                        💾 Spara alla sektioner
+                        <i data-lucide="save" style="width: 14px; height: 14px;"></i> Spara alla sektioner
                     </button>
                 </div>
 
@@ -385,11 +385,11 @@ include __DIR__ . '/components/unified-layout.php';
                 <div class="admin-existing-segments" style="margin-top: var(--space-md); padding-top: var(--space-md); border-top: 1px solid var(--color-border);">
                     <div class="admin-text-muted admin-text-sm" style="margin-bottom: var(--space-xs);">Sparade sektioner:</div>
                     <?php foreach ($currentTrack['segments'] as $seg):
-                        $icon = $seg['segment_type'] === 'stage' ? '🏁' : ($seg['segment_type'] === 'lift' ? '🚡' : '🚴');
+                        $iconName = $seg['segment_type'] === 'stage' ? 'flag' : ($seg['segment_type'] === 'lift' ? 'cable-car' : 'route');
                     ?>
                     <div class="admin-segment-item">
                         <span class="color-dot" style="background: <?= htmlspecialchars($seg['color']) ?>;"></span>
-                        <span class="admin-segment-name"><?= $icon ?> <?= htmlspecialchars($seg['segment_name'] ?: 'Sektion ' . $seg['sequence_number']) ?></span>
+                        <span class="admin-segment-name"><i data-lucide="<?= $iconName ?>" style="width: 14px; height: 14px;"></i> <?= htmlspecialchars($seg['segment_name'] ?: 'Sektion ' . $seg['sequence_number']) ?></span>
                         <span class="admin-text-muted"><?= number_format($seg['distance_km'], 1) ?>km</span>
                         <select onchange="changeSegmentType(<?= $seg['id'] ?>, this.value)" class="admin-form-select admin-form-select-xs">
                             <option value="liaison" <?= $seg['segment_type'] === 'liaison' ? 'selected' : '' ?>>T</option>
@@ -405,7 +405,7 @@ include __DIR__ . '/components/unified-layout.php';
                     </div>
                     <?php endforeach; ?>
                     <button type="button" onclick="editExistingSegments()" class="btn-admin btn-admin-secondary btn-admin-sm btn-admin-block" style="margin-top: var(--space-sm);">
-                        ✏️ Redigera sektioner
+                        <i data-lucide="pencil" style="width: 14px; height: 14px;"></i> Redigera sektioner
                     </button>
                 </div>
                 <?php endif; ?>
@@ -437,7 +437,7 @@ include __DIR__ . '/components/unified-layout.php';
                 <div class="admin-list admin-list-compact">
                     <?php foreach ($pois as $poi): ?>
                     <div class="admin-list-item">
-                        <span><?= $poi['type_emoji'] ?? '📍' ?></span>
+                        <i data-lucide="<?= htmlspecialchars($poi['type_icon'] ?? 'map-pin') ?>" style="width: 14px; height: 14px;"></i>
                         <span class="admin-list-item-text"><?= htmlspecialchars($poi['label'] ?: $poi['type_label'] ?? $poi['poi_type']) ?></span>
                         <form method="POST" class="inline-form">
                             <?= csrf_field() ?>
@@ -478,7 +478,7 @@ include __DIR__ . '/components/unified-layout.php';
     <div class="admin-main-content">
         <div class="admin-card">
             <div class="admin-card-body" style="padding: 0;">
-                <div id="map" style="height: 600px;"></div>
+                <div id="map" style="height: 400px;"></div>
             </div>
         </div>
     </div>
@@ -678,8 +678,8 @@ include __DIR__ . '/components/unified-layout.php';
             Visa hela
         </button>
     </div>
-    <div class="admin-card-body" style="padding: 0;">
-        <canvas id="elevation-canvas" style="width: 100%; height: 150px;"></canvas>
+    <div class="admin-card-body" style="padding: var(--space-sm);">
+        <canvas id="elevation-canvas" style="width: 100%; height: 150px; display: block;"></canvas>
     </div>
 </div>
 <?php endif; ?>
@@ -1240,9 +1240,11 @@ function calculateClimb(elevations) {
 
 document.addEventListener('DOMContentLoaded', () => {
     init();
-    drawElevationProfile();
+    // Delay elevation profile to ensure canvas has proper dimensions
+    setTimeout(() => drawElevationProfile(), 100);
 });
-window.addEventListener('resize', drawElevationProfile);
+window.addEventListener('resize', () => drawElevationProfile());
+window.addEventListener('load', () => drawElevationProfile());
 </script>
 
 <?php include __DIR__ . '/components/unified-layout-footer.php'; ?>
