@@ -3,7 +3,8 @@
  * V3 Series Page - All competition series with badge design
  *
  * Uses the TheHUB Badge Design System for a bold, modern display.
- * Filter by brand (series family) or year.
+ * Filter by brand/series family or year.
+ * Falls back to PHP-based name extraction if series_brands table is empty.
  */
 
 // Include badge component
@@ -11,29 +12,9 @@ require_once HUB_V3_ROOT . '/components/series-badge.php';
 
 $db = hub_db();
 
-// Check if series_brands table exists
-$brandsTableExists = false;
-try {
-    $check = $db->query("SHOW TABLES LIKE 'series_brands'");
-    $brandsTableExists = $check->rowCount() > 0;
-} catch (Exception $e) {
-    $brandsTableExists = false;
-}
-
-// Check if brand_id column exists in series
-$brandColumnExists = false;
-if ($brandsTableExists) {
-    try {
-        $check = $db->query("SHOW COLUMNS FROM series LIKE 'brand_id'");
-        $brandColumnExists = $check->rowCount() > 0;
-    } catch (Exception $e) {
-        $brandColumnExists = false;
-    }
-}
-
 // Get filter parameters
 $currentYear = (int)date('Y');
-$filterBrand = isset($_GET['brand']) && is_numeric($_GET['brand']) ? intval($_GET['brand']) : null;
+$filterBrand = isset($_GET['brand']) ? trim($_GET['brand']) : null;
 $filterYear = isset($_GET['year']) && is_numeric($_GET['year']) ? intval($_GET['year']) : null;
 
 // Determine filter mode
@@ -48,45 +29,120 @@ try {
         ORDER BY year DESC
     ")->fetchAll(PDO::FETCH_COLUMN);
 
-    // Get brands for filter (if table exists)
+    // Try to get brands from series_brands table first
     $allBrands = [];
-    if ($brandsTableExists && $brandColumnExists) {
-        $allBrands = $db->query("
-            SELECT DISTINCT sb.id, sb.name
-            FROM series_brands sb
-            INNER JOIN series s ON sb.id = s.brand_id
-            WHERE sb.active = 1 AND s.status IN ('active', 'completed')
-            ORDER BY sb.display_order ASC, sb.name ASC
-        ")->fetchAll(PDO::FETCH_ASSOC);
+    $useBrandsTable = false;
+
+    try {
+        $check = $db->query("SHOW TABLES LIKE 'series_brands'");
+        if ($check->rowCount() > 0) {
+            $check2 = $db->query("SHOW COLUMNS FROM series LIKE 'brand_id'");
+            if ($check2->rowCount() > 0) {
+                $allBrands = $db->query("
+                    SELECT DISTINCT sb.id, sb.name
+                    FROM series_brands sb
+                    INNER JOIN series s ON sb.id = s.brand_id
+                    WHERE sb.active = 1 AND s.status IN ('active', 'completed')
+                    ORDER BY sb.display_order ASC, sb.name ASC
+                ")->fetchAll(PDO::FETCH_ASSOC);
+                $useBrandsTable = !empty($allBrands);
+            }
+        }
+    } catch (Exception $e) {
+        // Table doesn't exist, use fallback
     }
 
-    if ($filterMode === 'brand') {
-        // Get all series for selected brand (all years)
-        $stmt = $db->prepare("
-            SELECT s.id, s.name, s.slug, s.description, s.year, s.status,
-                   s.type, s.discipline,
-                   s.logo, s.logo_light, s.logo_dark,
-                   s.gradient_start, s.gradient_end, s.accent_color,
-                   COUNT(DISTINCT e.id) as event_count,
-                   (SELECT COUNT(DISTINCT r.cyclist_id)
-                    FROM results r
-                    INNER JOIN events e2 ON r.event_id = e2.id
-                    WHERE e2.series_id = s.id) as participant_count
-            FROM series s
-            LEFT JOIN events e ON s.id = e.series_id
-            WHERE s.status IN ('active', 'completed') AND s.brand_id = ?
-            GROUP BY s.id
-            ORDER BY s.year DESC
-        ");
-        $stmt->execute([$filterBrand]);
-        $series = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    // Fallback: Extract brands from series names using PHP
+    if (!$useBrandsTable) {
+        $allSeriesRaw = $db->query("
+            SELECT id, name, slug, year
+            FROM series
+            WHERE status IN ('active', 'completed')
+            ORDER BY year DESC
+        ")->fetchAll(PDO::FETCH_ASSOC);
 
-        // Get brand name for title
-        $brandName = 'Serie';
-        foreach ($allBrands as $b) {
-            if ($b['id'] == $filterBrand) {
-                $brandName = $b['name'];
-                break;
+        $seriesByBaseName = [];
+        foreach ($allSeriesRaw as $s) {
+            $baseName = trim(preg_replace('/\s*\d{4}$/', '', $s['name']));
+            if (empty($baseName)) continue;
+
+            if (!isset($seriesByBaseName[$baseName])) {
+                $seriesByBaseName[$baseName] = [
+                    'id' => $baseName, // Use name as ID for fallback mode
+                    'name' => $baseName,
+                    'series_ids' => []
+                ];
+            }
+            $seriesByBaseName[$baseName]['series_ids'][] = $s['id'];
+        }
+        $allBrands = array_values($seriesByBaseName);
+        usort($allBrands, fn($a, $b) => strcmp($a['name'], $b['name']));
+    }
+
+    if ($filterMode === 'brand' && $filterBrand) {
+        if ($useBrandsTable && is_numeric($filterBrand)) {
+            // Use brand_id from series_brands table
+            $stmt = $db->prepare("
+                SELECT s.id, s.name, s.slug, s.description, s.year, s.status,
+                       s.type, s.discipline,
+                       s.logo, s.logo_light, s.logo_dark,
+                       s.gradient_start, s.gradient_end, s.accent_color,
+                       COUNT(DISTINCT e.id) as event_count,
+                       (SELECT COUNT(DISTINCT r.cyclist_id)
+                        FROM results r
+                        INNER JOIN events e2 ON r.event_id = e2.id
+                        WHERE e2.series_id = s.id) as participant_count
+                FROM series s
+                LEFT JOIN events e ON s.id = e.series_id
+                WHERE s.status IN ('active', 'completed') AND s.brand_id = ?
+                GROUP BY s.id
+                ORDER BY s.year DESC
+            ");
+            $stmt->execute([$filterBrand]);
+            $series = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            // Get brand name for title
+            $brandName = 'Serie';
+            foreach ($allBrands as $b) {
+                if ($b['id'] == $filterBrand) {
+                    $brandName = $b['name'];
+                    break;
+                }
+            }
+        } else {
+            // Fallback: filter by base name
+            $brandName = urldecode($filterBrand);
+            $matchingIds = [];
+
+            foreach ($allBrands as $b) {
+                if ($b['name'] === $brandName && isset($b['series_ids'])) {
+                    $matchingIds = $b['series_ids'];
+                    break;
+                }
+            }
+
+            if (!empty($matchingIds)) {
+                $placeholders = implode(',', array_fill(0, count($matchingIds), '?'));
+                $stmt = $db->prepare("
+                    SELECT s.id, s.name, s.slug, s.description, s.year, s.status,
+                           s.type, s.discipline,
+                           s.logo, s.logo_light, s.logo_dark,
+                           s.gradient_start, s.gradient_end, s.accent_color,
+                           COUNT(DISTINCT e.id) as event_count,
+                           (SELECT COUNT(DISTINCT r.cyclist_id)
+                            FROM results r
+                            INNER JOIN events e2 ON r.event_id = e2.id
+                            WHERE e2.series_id = s.id) as participant_count
+                    FROM series s
+                    LEFT JOIN events e ON s.id = e.series_id
+                    WHERE s.id IN ($placeholders)
+                    GROUP BY s.id
+                    ORDER BY s.year DESC
+                ");
+                $stmt->execute($matchingIds);
+                $series = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            } else {
+                $series = [];
             }
         }
 
@@ -191,10 +247,11 @@ try {
       <?php if (!empty($allBrands)): ?>
       <div class="filter-group">
         <label class="filter-label">Serie</label>
-        <select class="filter-select" onchange="if(this.value) window.location.href='?brand=' + this.value; else window.location.href='?year=<?= $filterYear ?>';">
+        <select class="filter-select" onchange="if(this.value) window.location.href='?brand=' + encodeURIComponent(this.value); else window.location.href='?year=<?= $filterYear ?>';">
           <option value="">Alla serier</option>
           <?php foreach ($allBrands as $b): ?>
-            <option value="<?= $b['id'] ?>" <?= ($filterMode === 'brand' && $b['id'] == $filterBrand) ? 'selected' : '' ?>><?= htmlspecialchars($b['name']) ?></option>
+            <?php $brandValue = $useBrandsTable ? $b['id'] : $b['name']; ?>
+            <option value="<?= htmlspecialchars($brandValue) ?>" <?= ($filterMode === 'brand' && (($useBrandsTable && $b['id'] == $filterBrand) || (!$useBrandsTable && $b['name'] === urldecode($filterBrand)))) ? 'selected' : '' ?>><?= htmlspecialchars($b['name']) ?></option>
           <?php endforeach; ?>
         </select>
       </div>
