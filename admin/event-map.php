@@ -513,13 +513,13 @@ function init() {
         if (mapData.bounds) map.fitBounds(mapData.bounds, {padding: [30, 30]});
     }
 
-    // Draw clickable base track for current track (for segment selection)
+    // Draw invisible clickable track for segment selection (wide hit area)
     if (waypoints && waypoints.length) {
         const coords = waypoints.map(w => [w.lat, w.lng]);
         baseTrackLine = L.polyline(coords, {
-            color: '#3B82F6',
-            weight: 8,
-            opacity: 0.3,
+            color: 'transparent',
+            weight: 20,  // Wide for easy clicking
+            opacity: 0,
             className: 'clickable-track'
         }).addTo(map);
         baseTrackLine.on('click', onTrackClick);

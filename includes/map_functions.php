@@ -807,7 +807,8 @@ function getEventMapDataMultiTrack($pdo, $eventId) {
         $trackFeatures = [];
 
         // Check if track has raw coordinates (new workflow)
-        $hasRawCoords = !empty($track['raw_coordinates'] ?? null);
+        // Use the flag set in getEventTracks() for consistency
+        $hasRawCoords = $track['has_raw_coords'] ?? false;
 
         if ($hasRawCoords) {
             // NEW WORKFLOW: Build connected segments from raw coordinates
