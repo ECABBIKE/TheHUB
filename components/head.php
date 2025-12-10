@@ -55,10 +55,8 @@ if (!function_exists('hub_asset')) {
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cabin+Condensed:wght@400;500;600;700&family=Manrope:wght@300;400;500;600;700&family=Oswald:wght@400;500;600;700&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
 
-<!-- Lucide Icons (pinned version with SRI for security) -->
-<script src="https://unpkg.com/lucide@0.263.1/dist/umd/lucide.min.js"
-        integrity="sha384-5wnXeGaKKM8t+1xSmT9SzNz2R3YVHHdHKpzr6ZYRQyDdNsXLqwVG+S0c5qK6V3JL"
-        crossorigin="anonymous"></script>
+<!-- Lucide Icons - pinned to specific version for stability -->
+<script src="https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js"></script>
 
 <title><?= htmlspecialchars($pageTitle) ?></title>
 
