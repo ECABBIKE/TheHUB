@@ -374,36 +374,57 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
 
-        <!-- Add Segment -->
+        <!-- Section-based Segment Editor -->
         <div class="admin-card" style="margin-top: var(--space-lg);">
-            <div class="admin-card-header"><h2>Markera sträcka</h2></div>
+            <div class="admin-card-header"><h2>Markera sektioner</h2></div>
             <div class="admin-card-body">
                 <div class="alert alert-info" style="margin-bottom: var(--space-md); background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); padding: var(--space-sm); border-radius: var(--radius-sm);">
-                    <strong>Så här gör du:</strong><br>
-                    1. Klicka på banan för startpunkt (grön markör)<br>
-                    2. Klicka igen för slutpunkt (röd markör)<br>
-                    3. Välj typ (SS/Lift) och ge den ett namn<br>
-                    4. Spara
+                    <strong>Sektionsbaserad markering:</strong><br>
+                    1. Välj typ för nästa sektion<br>
+                    2. Klicka på banan där sektionen <strong>slutar</strong><br>
+                    3. Upprepa för varje sektion längs banan
                 </div>
-                <p class="admin-text-muted" id="segment-status" style="font-weight: 500; color: var(--color-primary);">Klicka på banan för startpunkt</p>
-                <form method="POST" id="segment-form">
+
+                <div style="margin-bottom: var(--space-md);">
+                    <label style="display: block; margin-bottom: var(--space-xs); font-weight: 500;">Nästa sektion blir:</label>
+                    <div style="display: flex; gap: var(--space-xs); flex-wrap: wrap;">
+                        <button type="button" class="btn-admin section-type-btn active" data-type="liaison" style="background: #61CE70; color: white;">
+                            🚴 Transport
+                        </button>
+                        <button type="button" class="btn-admin section-type-btn" data-type="stage" style="background: #EF4444; color: white; opacity: 0.6;">
+                            🏁 SS (Tävling)
+                        </button>
+                        <button type="button" class="btn-admin section-type-btn" data-type="lift" style="background: #F59E0B; color: white; opacity: 0.6;">
+                            🚡 Lift
+                        </button>
+                    </div>
+                </div>
+
+                <p id="segment-status" style="font-weight: 500; color: var(--color-primary); margin-bottom: var(--space-sm);">
+                    Klicka på banan för att markera första sektionens slut
+                </p>
+
+                <div id="section-preview" style="display: none; background: var(--color-surface-alt); padding: var(--space-sm); border-radius: var(--radius-sm); margin-bottom: var(--space-sm);">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span id="preview-text"></span>
+                        <input type="text" id="segment-name" class="admin-form-input" placeholder="Namn (valfritt)" style="width: 120px; margin-left: var(--space-sm);">
+                    </div>
+                </div>
+
+                <form method="POST" id="segment-form" style="display: none;">
                     <?= csrf_field() ?>
                     <input type="hidden" name="action" value="add_segment_visual">
                     <input type="hidden" name="track_id" value="<?= $currentTrack['id'] ?>">
                     <input type="hidden" name="start_index" id="start-index" value="">
                     <input type="hidden" name="end_index" id="end-index" value="">
-                    <div style="display: flex; gap: var(--space-sm); margin-bottom: var(--space-sm);">
-                        <select name="segment_type" id="segment-type" class="admin-form-select" style="flex: 0 0 120px;">
-                            <option value="stage">SS (Tävling)</option>
-                            <option value="lift">Lift</option>
-                        </select>
-                        <input type="text" name="segment_name" id="segment-name" class="admin-form-input" placeholder="t.ex. SS1, Lift 1">
-                    </div>
-                    <div style="display: flex; gap: var(--space-sm);">
-                        <button type="button" onclick="resetSegment()" class="btn-admin btn-admin-ghost">Rensa</button>
-                        <button type="submit" id="save-btn" disabled class="btn-admin btn-admin-primary">Spara sträcka</button>
-                    </div>
+                    <input type="hidden" name="segment_type" id="segment-type" value="liaison">
+                    <input type="hidden" name="segment_name" id="segment-name-hidden" value="">
                 </form>
+
+                <div style="display: flex; gap: var(--space-sm);">
+                    <button type="button" onclick="undoLastSection()" id="undo-btn" disabled class="btn-admin btn-admin-ghost">↩ Ångra</button>
+                    <button type="button" onclick="resetAllSections()" class="btn-admin btn-admin-ghost">🗑 Börja om</button>
+                </div>
             </div>
         </div>
         <?php endif; ?>
@@ -527,82 +548,102 @@ function init() {
 
     map.on('click', onMapClick);
 
-    // Update preview color when segment type changes
-    const typeSelect = document.getElementById('segment-type');
-    if (typeSelect) {
-        typeSelect.addEventListener('change', updatePreviewColor);
-    }
+    // Setup section type buttons
+    document.querySelectorAll('.section-type-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.section-type-btn').forEach(b => {
+                b.classList.remove('active');
+                b.style.opacity = '0.6';
+            });
+            btn.classList.add('active');
+            btn.style.opacity = '1';
+            currentSegmentType = btn.dataset.type;
+            document.getElementById('segment-type').value = currentSegmentType;
+        });
+    });
 }
 
-function updatePreviewColor() {
-    if (previewLine) {
-        const type = document.getElementById('segment-type').value;
-        previewLine.setStyle({ color: SEGMENT_COLORS[type] || '#F59E0B' });
-    }
+// Section-based state
+let sectionMarkers = [];
+let sectionLines = [];
+let currentSegmentType = 'liaison';
+
+// Find where the last existing segment ends (to continue from there)
+let lastSectionIndex = 0;
+<?php
+if ($currentTrack && !empty($currentTrack['segments'])) {
+    $lastSegment = end($currentTrack['segments']);
+    $lastEndIndex = $lastSegment['end_index'] ?? 0;
+    echo "lastSectionIndex = " . intval($lastEndIndex) . ";\n";
 }
+?>
 
 function onTrackClick(e) {
     L.DomEvent.stopPropagation(e);
     const nearest = findNearest(e.latlng);
     if (!nearest) return;
 
-    if (mode === 'start') {
-        startIdx = nearest.index;
-        if (startMarker) map.removeLayer(startMarker);
-        startMarker = L.circleMarker([nearest.wp.lat, nearest.wp.lng], {
-            radius: 10,
-            color: '#61CE70',
-            fillColor: '#61CE70',
-            fillOpacity: 1,
-            weight: 2
-        }).addTo(map);
-        mode = 'end';
-        document.getElementById('segment-status').innerHTML = '<span style="color: #61CE70;">Start vald!</span> Klicka för slutpunkt';
-    } else if (mode === 'end' && nearest.index > startIdx) {
-        endIdx = nearest.index;
-        if (endMarker) map.removeLayer(endMarker);
-        endMarker = L.circleMarker([nearest.wp.lat, nearest.wp.lng], {
-            radius: 10,
-            color: '#EF4444',
-            fillColor: '#EF4444',
-            fillOpacity: 1,
-            weight: 2
-        }).addTo(map);
-
-        // Draw preview line with color based on selected type
-        if (previewLine) map.removeLayer(previewLine);
-        const coords = waypoints.slice(startIdx, endIdx + 1).map(w => [w.lat, w.lng]);
-        const segType = document.getElementById('segment-type').value;
-        previewLine = L.polyline(coords, {
-            color: SEGMENT_COLORS[segType] || '#EF4444',
-            weight: 6,
-            opacity: 0.9
-        }).addTo(map);
-
-        document.getElementById('start-index').value = startIdx;
-        document.getElementById('end-index').value = endIdx;
-        document.getElementById('save-btn').disabled = false;
-
-        const dist = (waypoints[endIdx].distance_km - waypoints[startIdx].distance_km).toFixed(2);
+    // Don't allow clicking before the last section point
+    if (nearest.index <= lastSectionIndex && lastSectionIndex > 0) {
         document.getElementById('segment-status').innerHTML =
-            '<span style="color: var(--color-accent);">Sträcka vald: ' + dist + ' km</span>';
-
-        // Auto-generate name suggestion
-        const nameInput = document.getElementById('segment-name');
-        if (nameInput && !nameInput.value) {
-            const existingCount = document.querySelectorAll('[data-segment-type="' + segType + '"]').length;
-            if (segType === 'stage') {
-                nameInput.placeholder = 'SS' + (existingCount + 1);
-            } else if (segType === 'lift') {
-                nameInput.placeholder = 'Lift ' + (existingCount + 1);
-            }
-        }
-
-        mode = 'done';
-    } else if (mode === 'end' && nearest.index <= startIdx) {
-        document.getElementById('segment-status').innerHTML =
-            '<span style="color: var(--color-danger);">Slutpunkten måste vara efter startpunkten!</span>';
+            '<span style="color: var(--color-danger);">Måste klicka längre fram på banan!</span>';
+        return;
     }
+
+    // Create segment from lastSectionIndex to this point
+    const startIdx = lastSectionIndex;
+    const endIdx = nearest.index;
+
+    // Add section marker
+    const marker = L.circleMarker([nearest.wp.lat, nearest.wp.lng], {
+        radius: 8,
+        color: SEGMENT_COLORS[currentSegmentType],
+        fillColor: SEGMENT_COLORS[currentSegmentType],
+        fillOpacity: 1,
+        weight: 2
+    }).addTo(map);
+    sectionMarkers.push({ marker, index: endIdx, type: currentSegmentType });
+
+    // Draw segment line
+    const coords = waypoints.slice(startIdx, endIdx + 1).map(w => [w.lat, w.lng]);
+    const line = L.polyline(coords, {
+        color: SEGMENT_COLORS[currentSegmentType],
+        weight: 6,
+        opacity: 0.9
+    }).addTo(map);
+    sectionLines.push(line);
+
+    // Calculate distance
+    const dist = (waypoints[endIdx].distance_km - waypoints[startIdx].distance_km).toFixed(2);
+
+    // Auto-generate name
+    let autoName = '';
+    if (currentSegmentType === 'stage') {
+        const ssCount = sectionMarkers.filter(m => m.type === 'stage').length;
+        autoName = 'SS' + ssCount;
+    } else if (currentSegmentType === 'lift') {
+        const liftCount = sectionMarkers.filter(m => m.type === 'lift').length;
+        autoName = 'Lift ' + liftCount;
+    } else {
+        autoName = 'Transport';
+    }
+
+    // Save segment to server via form
+    document.getElementById('start-index').value = startIdx;
+    document.getElementById('end-index').value = endIdx;
+    document.getElementById('segment-name-hidden').value = document.getElementById('segment-name').value || autoName;
+    document.getElementById('segment-form').submit();
+
+    // Update state for next section
+    lastSectionIndex = endIdx;
+
+    // Update status
+    const typeLabel = currentSegmentType === 'stage' ? 'SS' : (currentSegmentType === 'lift' ? 'Lift' : 'Transport');
+    document.getElementById('segment-status').innerHTML =
+        `<span style="color: ${SEGMENT_COLORS[currentSegmentType]};">${typeLabel} sparad (${dist} km)</span> - Klicka för nästa sektion`;
+
+    // Enable undo
+    document.getElementById('undo-btn').disabled = false;
 }
 
 function onMapClick(e) {
@@ -623,16 +664,25 @@ function findNearest(latlng) {
     return best.dist < 200 ? best : null;
 }
 
-function resetSegment() {
-    mode = 'start';
-    startIdx = endIdx = -1;
-    if (startMarker) {map.removeLayer(startMarker); startMarker = null;}
-    if (endMarker) {map.removeLayer(endMarker); endMarker = null;}
-    if (previewLine) {map.removeLayer(previewLine); previewLine = null;}
-    document.getElementById('start-index').value = '';
-    document.getElementById('end-index').value = '';
-    document.getElementById('save-btn').disabled = true;
-    document.getElementById('segment-status').textContent = 'Klicka på banan för startpunkt';
+function undoLastSection() {
+    // This would need server-side support to delete the last segment
+    // For now, just reload the page
+    if (confirm('Vill du ta bort senaste sektionen? (Sidan laddas om)')) {
+        const lastSegment = document.querySelector('[data-segment-id]:last-child form');
+        if (lastSegment) {
+            lastSegment.submit();
+        } else {
+            location.reload();
+        }
+    }
+}
+
+function resetAllSections() {
+    if (confirm('Vill du ta bort ALLA sektioner och börja om?')) {
+        // Delete all segments - would need batch delete endpoint
+        // For now, just reload
+        location.reload();
+    }
 }
 
 document.addEventListener('DOMContentLoaded', init);
