@@ -438,7 +438,7 @@ $eventName = htmlspecialchars($event['name']);
             <?php if (!empty($poiGroups)): ?>
             <?php foreach ($poiGroups as $type => $group): ?>
             <div class="section">
-                <div class="section-title"><?= $group['emoji'] ?> <?= htmlspecialchars($group['label']) ?></div>
+                <div class="section-title"><i data-lucide="map-pin" style="width: 12px; height: 12px; color: var(--color-icon);"></i> <?= htmlspecialchars($group['label']) ?></div>
                 <?php foreach ($group['items'] as $poi): ?>
                 <div class="track-item" onclick="zoomToPoi(<?= $poi['lat'] ?>, <?= $poi['lng'] ?>, '<?= htmlspecialchars(addslashes($poi['label'] ?? $group['label'])) ?>')">
                     <div>
@@ -483,12 +483,11 @@ $eventName = htmlspecialchars($event['name']);
                 <div class="dropdown-section-title">Sträckor</div>
                 <?php foreach ($allSegments as $seg):
                     $segType = $seg['segment_type'] ?? 'stage';
-                    $typeIcon = $segType === 'lift' ? '🚡' : ($segType === 'liaison' ? '🔗' : '🏁');
-                    $typeLabel = $segType === 'lift' ? 'Lift' : ($segType === 'liaison' ? 'Transport' : '');
+                    $typeIconName = $segType === 'lift' ? 'cable-car' : ($segType === 'liaison' ? 'route' : 'flag');
                 ?>
                 <div class="dropdown-item segment-item" data-segment-id="<?= $seg['id'] ?>" data-track-id="<?= $seg['track_id'] ?>" onclick="selectSegment(<?= $seg['id'] ?>, <?= $seg['track_id'] ?>)">
                     <div class="seg-info">
-                        <span class="seg-name"><?= $typeIcon ?> <?= htmlspecialchars($seg['name']) ?></span>
+                        <span class="seg-name"><i data-lucide="<?= $typeIconName ?>" style="width: 14px; height: 14px; color: var(--color-icon); vertical-align: middle;"></i> <?= htmlspecialchars($seg['name']) ?></span>
                         <span class="seg-meta"><?= number_format($seg['distance_km'], 2) ?> km<?php if ($segType !== 'lift'): ?> · <?= number_format($seg['elevation_drop_m'] ?? 0) ?> m FHM<?php else: ?> · <em>ej i höjdprofil</em><?php endif; ?></span>
                     </div>
                 </div>
@@ -503,7 +502,7 @@ $eventName = htmlspecialchars($event['name']);
         <div class="dropdown" id="poi-dropdown" style="position: fixed; bottom: calc(56px + env(safe-area-inset-bottom) + var(--space-sm)); left: 50%; transform: translateX(-50%); display: none; max-width: calc(100vw - var(--space-md));">
             <div class="dropdown-menu" style="position: static; display: block; max-height: 50vh;">
                 <?php foreach ($poiGroups as $type => $group): ?>
-                <div class="dropdown-section-title"><?= $group['emoji'] ?> <?= htmlspecialchars($group['label']) ?></div>
+                <div class="dropdown-section-title"><i data-lucide="map-pin" style="width: 12px; height: 12px; color: var(--color-icon); vertical-align: middle;"></i> <?= htmlspecialchars($group['label']) ?></div>
                 <?php foreach ($group['items'] as $poi): ?>
                 <div class="dropdown-item" onclick="zoomToPoi(<?= $poi['lat'] ?>, <?= $poi['lng'] ?>, '<?= htmlspecialchars(addslashes($poi['label'] ?? $group['label'])) ?>')">
                     <?= htmlspecialchars($poi['label'] ?? $group['label']) ?>
@@ -545,8 +544,8 @@ $eventName = htmlspecialchars($event['name']);
 
     <!-- Desktop bottom controls -->
     <div class="controls-bottom">
-        <a href="/event/<?= $eventId ?>" class="btn-circle" title="Tillbaka till event" style="text-decoration: none;">✕</a>
-        <button class="btn-circle" id="location-btn" onclick="toggleLocation()" title="Min plats">📍</button>
+        <a href="/event/<?= $eventId ?>" class="btn-circle" title="Tillbaka till event" style="text-decoration: none;"><i data-lucide="x" style="width: 20px; height: 20px;"></i></a>
+        <button class="btn-circle" id="location-btn" onclick="toggleLocation()" title="Min plats"><i data-lucide="locate" style="width: 20px; height: 20px;"></i></button>
     </div>
 
     <!-- Elevation -->
@@ -606,18 +605,26 @@ $eventName = htmlspecialchars($event['name']);
             });
         }
 
-        // Draw POIs
+        // Draw POIs with styled markers
         if (mapData.pois) {
             mapData.pois.forEach(poi => {
                 const type = poi.poi_type;
                 if (!poiLayers[type]) { poiLayers[type] = L.layerGroup().addTo(map); visiblePoiTypes.add(type); }
+                const markerHtml = `<div style="
+                    width: 24px; height: 24px;
+                    background: #F59E0B;
+                    border: 2px solid white;
+                    border-radius: 50% 50% 50% 0;
+                    transform: rotate(-45deg);
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+                "></div>`;
                 L.marker([poi.lat, poi.lng], {
                     icon: L.divIcon({
                         className: '',
-                        html: '<div style="font-size:1.5rem;filter:drop-shadow(0 1px 2px rgba(0,0,0,0.3));">' + (poi.type_emoji || '📍') + '</div>',
-                        iconSize: [30, 30], iconAnchor: [15, 15]
+                        html: markerHtml,
+                        iconSize: [24, 24], iconAnchor: [12, 24]
                     })
-                }).bindPopup('<strong>' + (poi.type_emoji || '📍') + ' ' + (poi.label || poi.type_label || type) + '</strong>').addTo(poiLayers[type]);
+                }).bindPopup('<strong>' + (poi.label || poi.type_label || type) + '</strong>').addTo(poiLayers[type]);
             });
         }
 
@@ -825,35 +832,35 @@ $eventName = htmlspecialchars($event['name']);
         canvas.width = rect.width * 2; canvas.height = rect.height * 2;
         ctx.scale(2, 2);
 
+        // Segment colors: stage=red, liaison=green, lift=yellow
+        const segColors = { stage: '#EF4444', liaison: '#61CE70', lift: '#F59E0B' };
         let allEle = [], allDist = [], segmentTypes = [];
 
         if (singleSegment) {
-            // Show single segment elevation (skip lift for stats but show profile)
+            // Show single segment elevation
             const ele = singleSegment.elevation_data || [];
             const coords = singleSegment.coordinates || [];
-            const isLift = singleSegment.segment_type === 'lift';
+            const segType = singleSegment.segment_type || 'stage';
             let dist = 0;
             coords.forEach((c, i) => {
                 if (i > 0) dist += haversine(coords[i-1].lat, coords[i-1].lng, c.lat, c.lng);
                 allDist.push(dist);
                 allEle.push(ele[i] ?? c.ele ?? 0);
-                segmentTypes.push(isLift ? 'lift' : 'normal');
+                segmentTypes.push(segType);
             });
         } else if (mapData.tracks) {
-            // Show all visible tracks - skip lift segments for elevation stats
+            // Show all visible tracks including lift
             mapData.tracks.forEach(track => {
                 if (!visibleTracks.has(track.id)) return;
                 (track.segments || []).forEach(seg => {
-                    // Skip lift segments entirely from elevation profile
-                    if (seg.segment_type === 'lift') return;
-
                     const ele = seg.elevation_data || [], coords = seg.coordinates || [];
+                    const segType = seg.segment_type || 'stage';
                     let dist = allDist.length ? allDist[allDist.length - 1] : 0;
                     coords.forEach((c, i) => {
                         if (i > 0) dist += haversine(coords[i-1].lat, coords[i-1].lng, c.lat, c.lng);
                         allDist.push(dist);
                         allEle.push(ele[i] ?? c.ele ?? 0);
-                        segmentTypes.push('normal');
+                        segmentTypes.push(segType);
                     });
                 });
             });
@@ -885,15 +892,46 @@ $eventName = htmlspecialchars($event['name']);
         const minE = Math.min(...allEle), maxE = Math.max(...allEle), maxD = Math.max(...allDist), range = maxE - minE || 1;
         const pad = { t: 10, r: 10, b: 20, l: 40 }, w = rect.width - pad.l - pad.r, h = rect.height - pad.t - pad.b;
 
-        ctx.fillStyle = 'rgba(97,206,112,0.3)'; ctx.strokeStyle = '#61CE70'; ctx.lineWidth = 2;
-        ctx.beginPath(); ctx.moveTo(pad.l, pad.t + h);
-        allDist.forEach((d, i) => ctx.lineTo(pad.l + (d / maxD) * w, pad.t + h - ((allEle[i] - minE) / range) * h));
-        ctx.lineTo(pad.l + w, pad.t + h); ctx.closePath(); ctx.fill();
+        // Draw segments with different colors
+        let currentType = segmentTypes[0];
+        let segStart = 0;
 
-        ctx.beginPath();
-        allDist.forEach((d, i) => { const x = pad.l + (d / maxD) * w, y = pad.t + h - ((allEle[i] - minE) / range) * h; i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y); });
-        ctx.stroke();
+        for (let i = 1; i <= allDist.length; i++) {
+            if (i === allDist.length || segmentTypes[i] !== currentType) {
+                // Draw this segment
+                const color = segColors[currentType] || '#61CE70';
+                const fillColor = color + '40'; // Add alpha
 
+                // Fill
+                ctx.fillStyle = fillColor;
+                ctx.beginPath();
+                ctx.moveTo(pad.l + (allDist[segStart] / maxD) * w, pad.t + h);
+                for (let j = segStart; j < i; j++) {
+                    ctx.lineTo(pad.l + (allDist[j] / maxD) * w, pad.t + h - ((allEle[j] - minE) / range) * h);
+                }
+                ctx.lineTo(pad.l + (allDist[i-1] / maxD) * w, pad.t + h);
+                ctx.closePath();
+                ctx.fill();
+
+                // Stroke
+                ctx.strokeStyle = color;
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                for (let j = segStart; j < i; j++) {
+                    const x = pad.l + (allDist[j] / maxD) * w;
+                    const y = pad.t + h - ((allEle[j] - minE) / range) * h;
+                    j === segStart ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+                }
+                ctx.stroke();
+
+                if (i < allDist.length) {
+                    currentType = segmentTypes[i];
+                    segStart = i;
+                }
+            }
+        }
+
+        // Draw axis labels
         ctx.fillStyle = '#666'; ctx.font = '10px sans-serif';
         ctx.textAlign = 'right'; ctx.fillText(Math.round(maxE) + ' m', pad.l - 4, pad.t + 10); ctx.fillText(Math.round(minE) + ' m', pad.l - 4, pad.t + h);
         ctx.textAlign = 'center'; ctx.fillText('0', pad.l, pad.t + h + 14); ctx.fillText(maxD.toFixed(1) + ' km', pad.l + w, pad.t + h + 14);
