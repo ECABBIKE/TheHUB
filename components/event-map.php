@@ -69,7 +69,7 @@ if (!function_exists('render_event_map')) {
             if (!isset($poiGroups[$type])) {
                 $poiGroups[$type] = [
                     'label' => $poi['type_label'] ?? $type,
-                    'emoji' => $poi['type_emoji'] ?? '📍',
+                    'icon' => $poi['type_icon'] ?? 'map-pin',
                     'items' => []
                 ];
             }
@@ -445,10 +445,10 @@ if (!function_exists('render_event_map')) {
                         $segColor = $seg['color'] ?? ($segType === 'stage' ? '#EF4444' : ($segType === 'lift' ? '#F59E0B' : '#61CE70'));
                         $segName = $seg['segment_name'] ?? 'Sektion';
                         $segDist = number_format($seg['distance_km'] ?? 0, 1);
-                        $segIcon = $segType === 'stage' ? '🏁' : ($segType === 'lift' ? '🚡' : '🚴');
+                        $segIconName = $segType === 'stage' ? 'flag' : ($segType === 'lift' ? 'cable-car' : 'route');
                     ?>
                     <div class="emap-segment-item" onclick="<?= $mapId ?>_zoomToSegment(<?= $seg['id'] ?? 0 ?>)" data-segment-id="<?= $seg['id'] ?? 0 ?>">
-                        <span class="emap-segment-icon"><?= $segIcon ?></span>
+                        <i data-lucide="<?= $segIconName ?>" style="width: 16px; height: 16px;"></i>
                         <div class="emap-segment-info">
                             <div class="emap-segment-name"><?= htmlspecialchars($segName) ?></div>
                             <div class="emap-segment-meta"><?= $segDist ?> km</div>
@@ -467,7 +467,7 @@ if (!function_exists('render_event_map')) {
                 <div class="emap-poi-group">
                     <label class="emap-checkbox">
                         <input type="checkbox" checked data-poi-type="<?= htmlspecialchars($type) ?>" onchange="<?= $mapId ?>_togglePoiType('<?= htmlspecialchars($type) ?>')">
-                        <span><?= $group['emoji'] ?> <?= htmlspecialchars($group['label']) ?></span>
+                        <span><i data-lucide="<?= htmlspecialchars($group['icon']) ?>" style="width: 14px; height: 14px; vertical-align: middle;"></i> <?= htmlspecialchars($group['label']) ?></span>
                     </label>
                     <div class="emap-poi-items" data-poi-type="<?= htmlspecialchars($type) ?>">
                         <?php foreach ($group['items'] as $poi): ?>
@@ -490,7 +490,7 @@ if (!function_exists('render_event_map')) {
             <button class="emap-dropdown-btn" onclick="<?= $mapId ?>_toggleDropdown('<?= $mapId ?>-track-dropdown')">
                 <span class="dot" id="<?= $mapId ?>-current-dot" style="background: <?= htmlspecialchars($tracks[0]['color'] ?? '#3B82F6') ?>;"></span>
                 <span id="<?= $mapId ?>-current-name"><?= htmlspecialchars($tracks[0]['route_label'] ?? $tracks[0]['name']) ?></span>
-                <span>▼</span>
+                <i data-lucide="chevron-down" style="width: 14px; height: 14px;"></i>
             </button>
             <div class="emap-dropdown-menu">
                 <?php foreach ($tracks as $track): ?>
@@ -508,13 +508,13 @@ if (!function_exists('render_event_map')) {
         <?php if (!empty($poiGroups)): ?>
         <div class="emap-dropdown" id="<?= $mapId ?>-poi-dropdown">
             <button class="emap-dropdown-btn" onclick="<?= $mapId ?>_toggleDropdown('<?= $mapId ?>-poi-dropdown')">
-                📍 POIs <span>▼</span>
+                <i data-lucide="map-pin" style="width: 14px; height: 14px;"></i> POIs <i data-lucide="chevron-down" style="width: 14px; height: 14px;"></i>
             </button>
             <div class="emap-dropdown-menu">
                 <?php foreach ($poiGroups as $type => $group): ?>
                 <div class="emap-dropdown-item active" data-poi-type="<?= htmlspecialchars($type) ?>" onclick="<?= $mapId ?>_togglePoiTypeMobile('<?= htmlspecialchars($type) ?>', this)">
                     <input type="checkbox" checked style="pointer-events: none;">
-                    <?= $group['emoji'] ?> <?= htmlspecialchars($group['label']) ?>
+                    <i data-lucide="<?= htmlspecialchars($group['icon']) ?>" style="width: 14px; height: 14px;"></i> <?= htmlspecialchars($group['label']) ?>
                 </div>
                 <?php endforeach; ?>
             </div>
@@ -524,18 +524,18 @@ if (!function_exists('render_event_map')) {
 
     <!-- Location Button -->
     <button class="emap-location-btn" id="<?= $mapId ?>-location-btn" onclick="<?= $mapId ?>_toggleLocation()" title="Min plats">
-        📍
+        <i data-lucide="locate" style="width: 20px; height: 20px;"></i>
     </button>
 
     <?php if ($showClose): ?>
-    <button class="emap-close" onclick="history.back()" title="Tillbaka">✕</button>
+    <button class="emap-close" onclick="history.back()" title="Tillbaka"><i data-lucide="x" style="width: 20px; height: 20px;"></i></button>
     <?php endif; ?>
 
     <!-- Elevation Profile -->
     <?php if (!empty($tracks)): ?>
     <div class="emap-elevation collapsed" id="<?= $mapId ?>-elevation">
         <div class="emap-elevation-toggle" onclick="<?= $mapId ?>_toggleElevation()">
-            <span class="chevron">▲</span>
+            <i data-lucide="chevron-up" class="chevron" style="width: 16px; height: 16px;"></i>
             <span>Höjdprofil</span>
         </div>
         <div class="emap-elevation-content">
@@ -593,16 +593,20 @@ if (!function_exists('render_event_map')) {
                     poiLayers[type] = L.layerGroup().addTo(map);
                     visiblePoiTypes.add(type);
                 }
+                const iconName = poi.type_icon || 'map-pin';
+                const iconColor = poi.type_color || '#3B82F6';
                 const marker = L.marker([poi.lat, poi.lng], {
                     icon: L.divIcon({
                         className: 'emap-poi-marker',
-                        html: '<div style="font-size: 1.5rem; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.3));">' + (poi.type_emoji || '📍') + '</div>',
-                        iconSize: [30, 30],
-                        iconAnchor: [15, 15]
+                        html: '<div style="width: 28px; height: 28px; background: ' + iconColor + '; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 4px rgba(0,0,0,0.3);"><i data-lucide="' + iconName + '" style="width: 16px; height: 16px; color: white;"></i></div>',
+                        iconSize: [28, 28],
+                        iconAnchor: [14, 14]
                     })
-                }).bindPopup('<strong>' + (poi.type_emoji || '📍') + ' ' + (poi.label || poi.type_label || poi.poi_type) + '</strong>' + (poi.description ? '<br>' + poi.description : ''));
+                }).bindPopup('<strong>' + (poi.label || poi.type_label || poi.poi_type) + '</strong>' + (poi.description ? '<br>' + poi.description : ''));
                 marker.addTo(poiLayers[type]);
             });
+            // Initialize Lucide icons for dynamically added POI markers
+            if (typeof lucide !== 'undefined') setTimeout(() => lucide.createIcons(), 100);
         }
 
         if (mapData.bounds) map.fitBounds(mapData.bounds, { padding: [50, 50] });

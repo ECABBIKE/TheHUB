@@ -1,8 +1,34 @@
 # TheHUB - Development Rules
 
-> ⚠️ LÄS DENNA FIL INNAN DU SKRIVER NÅGON KOD
+> LÄS DENNA FIL INNAN DU SKRIVER NÅGON KOD
 
-## 🔒 LÅSTA FILER - ÄNDRA ALDRIG
+## INGA EMOJIS - ALDRIG
+
+**ANVÄND ALDRIG EMOJIS I KOD.** Använd alltid Lucide-ikoner istället.
+
+```php
+// FEL - ALDRIG SÅ HÄR
+$icon = '🏁';
+echo '📍 Plats';
+
+// RÄTT - ALLTID SÅ HÄR
+<i data-lucide="flag"></i>
+<i data-lucide="map-pin"></i>
+```
+
+Vanliga Lucide-ikoner:
+- `flag` - Mål/Start
+- `map-pin` - Plats/POI
+- `route` - Transport
+- `cable-car` - Lift
+- `save` - Spara
+- `pencil` - Redigera
+- `x` - Stäng
+- `locate` - Min plats
+
+---
+
+## LÅSTA FILER - ÄNDRA ALDRIG
 
 Följande filer får INTE modifieras utan explicit godkännande:
 
