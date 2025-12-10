@@ -161,13 +161,53 @@ $eventName = htmlspecialchars($event['name']);
         .dropdown-item:active { background: var(--color-border); }
         .dropdown-item.active { background: rgba(97,206,112,0.1); }
 
-        /* Bottom controls */
-        .controls-bottom {
+        /* Mobile bottom bar */
+        .mobile-bottom-bar {
             position: fixed;
-            bottom: calc(var(--space-lg) + env(safe-area-inset-bottom));
-            right: var(--space-md);
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(255,255,255,0.97);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
             z-index: 1000;
             display: flex;
+            align-items: stretch;
+            justify-content: space-around;
+            padding-bottom: env(safe-area-inset-bottom);
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+        }
+        .nav-item {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 2px;
+            padding: var(--space-sm) var(--space-xs);
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 0.7rem;
+            color: var(--color-text);
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+        .nav-item:active { background: rgba(0,0,0,0.05); }
+        .nav-item.active { color: var(--color-accent); }
+        .nav-item .nav-icon { font-size: 1.3rem; }
+        .nav-item.loading .nav-icon { animation: pulse 1s infinite; }
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+        /* Desktop bottom controls (hidden on mobile) */
+        .controls-bottom {
+            position: fixed;
+            bottom: var(--space-lg);
+            right: var(--space-md);
+            z-index: 1000;
+            display: none;
             gap: var(--space-sm);
         }
         .btn-circle {
@@ -188,45 +228,41 @@ $eventName = htmlspecialchars($event['name']);
         }
         .btn-circle:active { transform: scale(0.95); }
         .btn-circle.active { background: var(--color-accent); color: white; }
-        .btn-circle.loading { animation: pulse 1s infinite; }
-        @keyframes pulse {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.1); }
-        }
 
         /* Elevation panel */
         .elevation {
             position: fixed;
-            bottom: 0;
+            bottom: calc(56px + env(safe-area-inset-bottom)); /* Above mobile bottom bar */
             left: 0;
             right: 0;
             background: rgba(255,255,255,0.97);
             backdrop-filter: blur(10px);
             -webkit-backdrop-filter: blur(10px);
             z-index: 900;
-            transition: transform 0.3s ease;
-            padding-bottom: env(safe-area-inset-bottom);
+            transition: transform 0.3s ease, opacity 0.3s ease;
+            transform: translateY(0);
+            opacity: 1;
         }
-        .elevation.collapsed {
-            transform: translateY(calc(100% - 44px - env(safe-area-inset-bottom)));
+        .elevation.hidden {
+            transform: translateY(100%);
+            opacity: 0;
+            pointer-events: none;
         }
-        .elevation-toggle {
+        .elevation-header {
             display: flex;
             align-items: center;
-            justify-content: center;
-            height: 44px;
-            cursor: pointer;
+            justify-content: space-between;
+            padding: var(--space-sm) var(--space-md);
             border-bottom: 1px solid var(--color-border);
-            font-size: 0.9rem;
-            font-weight: 500;
-            gap: var(--space-sm);
         }
-        .elevation-toggle .chevron {
-            transition: transform 0.3s;
-            font-size: 0.8rem;
-        }
-        .elevation.collapsed .elevation-toggle .chevron {
-            transform: rotate(180deg);
+        .elevation-header span { font-size: 0.9rem; font-weight: 500; }
+        .elevation-close {
+            background: none;
+            border: none;
+            font-size: 1.2rem;
+            cursor: pointer;
+            padding: var(--space-xs);
+            color: var(--color-text);
         }
         .elevation-content {
             height: 120px;
@@ -237,6 +273,12 @@ $eventName = htmlspecialchars($event['name']);
         /* Desktop sidebar */
         @media (min-width: 769px) {
             .controls-top { display: none; }
+            .mobile-bottom-bar { display: none; }
+            .controls-bottom { display: flex; }
+            .elevation {
+                bottom: 0;
+                padding-bottom: 0;
+            }
             .sidebar {
                 position: fixed;
                 top: var(--space-md);
@@ -297,12 +339,10 @@ $eventName = htmlspecialchars($event['name']);
                 font-size: 0.9rem;
             }
             .checkbox-item input { width: 16px; height: 16px; }
-            .controls-bottom {
-                bottom: var(--space-lg);
-            }
         }
         @media (max-width: 768px) {
             .sidebar { display: none; }
+            .controls-bottom { display: none; }
         }
 
         /* Leaflet overrides */
@@ -354,34 +394,32 @@ $eventName = htmlspecialchars($event['name']);
         </div>
     </div>
 
-    <!-- Mobile controls top -->
-    <div class="controls-top">
-        <?php if (count($tracks) > 1): ?>
-        <div class="dropdown" id="track-dropdown">
-            <button class="dropdown-btn" onclick="toggleDropdown('track-dropdown')">
-                <span class="dot" id="current-dot" style="background: <?= htmlspecialchars($tracks[0]['color'] ?? '#3B82F6') ?>;"></span>
-                <span id="current-name"><?= htmlspecialchars($tracks[0]['route_label'] ?? $tracks[0]['name']) ?></span>
-                <span>▼</span>
-            </button>
-            <div class="dropdown-menu">
+    <!-- Mobile dropdowns (positioned from bottom bar) -->
+    <div class="controls-top" id="mobile-dropdowns">
+        <!-- Track dropdown menu (opens from bottom bar) -->
+        <?php if (count($tracks) > 0): ?>
+        <div class="dropdown" id="track-dropdown" style="position: fixed; bottom: calc(56px + env(safe-area-inset-bottom) + var(--space-sm)); left: var(--space-sm); display: none;">
+            <div class="dropdown-menu" style="position: static; display: block;">
                 <?php foreach ($tracks as $track): ?>
                 <div class="dropdown-item <?= $track['is_primary'] ? 'active' : '' ?>" data-track-id="<?= $track['id'] ?>" onclick="selectTrack(<?= $track['id'] ?>, '<?= htmlspecialchars(addslashes($track['route_label'] ?? $track['name'])) ?>', '<?= $track['color'] ?? '#3B82F6' ?>')">
                     <span class="dot" style="background: <?= htmlspecialchars($track['color'] ?? '#3B82F6') ?>; width: 12px; height: 12px; border-radius: 3px;"></span>
                     <?= htmlspecialchars($track['route_label'] ?? $track['name']) ?>
+                    <span style="margin-left: auto; font-size: 0.8em; opacity: 0.7;"><?= number_format($track['total_distance_km'], 1) ?> km</span>
                 </div>
                 <?php endforeach; ?>
             </div>
         </div>
         <?php endif; ?>
 
+        <!-- POI dropdown menu (opens from bottom bar) -->
         <?php if (!empty($poiGroups)): ?>
-        <div class="dropdown" id="poi-dropdown">
-            <button class="dropdown-btn" onclick="toggleDropdown('poi-dropdown')">📍 POIs ▼</button>
-            <div class="dropdown-menu">
+        <div class="dropdown" id="poi-dropdown" style="position: fixed; bottom: calc(56px + env(safe-area-inset-bottom) + var(--space-sm)); left: 50%; transform: translateX(-50%); display: none;">
+            <div class="dropdown-menu" style="position: static; display: block;">
                 <?php foreach ($poiGroups as $type => $group): ?>
                 <div class="dropdown-item active" data-poi-type="<?= htmlspecialchars($type) ?>" onclick="togglePoiMobile('<?= htmlspecialchars($type) ?>', this)">
                     <input type="checkbox" checked style="pointer-events: none;">
                     <?= $group['emoji'] ?> <?= htmlspecialchars($group['label']) ?>
+                    <span style="margin-left: auto; opacity: 0.7;"><?= count($group['items']) ?></span>
                 </div>
                 <?php endforeach; ?>
             </div>
@@ -389,17 +427,45 @@ $eventName = htmlspecialchars($event['name']);
         <?php endif; ?>
     </div>
 
-    <!-- Bottom controls -->
+    <!-- Mobile bottom bar -->
+    <div class="mobile-bottom-bar">
+        <a href="/event/<?= $eventId ?>" class="nav-item" title="Tillbaka">
+            <span class="nav-icon">←</span>
+            <span>Tillbaka</span>
+        </a>
+        <?php if (count($tracks) > 0): ?>
+        <button class="nav-item" onclick="toggleMobileMenu('track-dropdown')" id="nav-tracks">
+            <span class="nav-icon">🗺️</span>
+            <span>Banor</span>
+        </button>
+        <?php endif; ?>
+        <?php if (!empty($poiGroups)): ?>
+        <button class="nav-item" onclick="toggleMobileMenu('poi-dropdown')" id="nav-pois">
+            <span class="nav-icon">📍</span>
+            <span>POIs</span>
+        </button>
+        <?php endif; ?>
+        <button class="nav-item" onclick="toggleElevation()" id="nav-elevation">
+            <span class="nav-icon">📈</span>
+            <span>Höjd</span>
+        </button>
+        <button class="nav-item" id="nav-location" onclick="toggleLocation()">
+            <span class="nav-icon">📍</span>
+            <span>Plats</span>
+        </button>
+    </div>
+
+    <!-- Desktop bottom controls -->
     <div class="controls-bottom">
-        <button class="btn-circle" onclick="history.back()" title="Tillbaka">✕</button>
+        <a href="/event/<?= $eventId ?>" class="btn-circle" title="Tillbaka till event" style="text-decoration: none;">✕</a>
         <button class="btn-circle" id="location-btn" onclick="toggleLocation()" title="Min plats">📍</button>
     </div>
 
     <!-- Elevation -->
-    <div class="elevation collapsed" id="elevation">
-        <div class="elevation-toggle" onclick="toggleElevation()">
-            <span class="chevron">▲</span>
-            <span>Höjdprofil</span>
+    <div class="elevation hidden" id="elevation">
+        <div class="elevation-header">
+            <span>📈 Höjdprofil</span>
+            <button class="elevation-close" onclick="toggleElevation()">✕</button>
         </div>
         <div class="elevation-content">
             <canvas id="elevation-canvas"></canvas>
@@ -453,9 +519,13 @@ $eventName = htmlspecialchars($event['name']);
         if (mapData.bounds) map.fitBounds(mapData.bounds, { padding: [50, 50] });
         updateElevation();
 
-        // Close dropdowns
+        // Close dropdowns and mobile menus when clicking on map
         document.addEventListener('click', e => {
             if (!e.target.closest('.dropdown')) document.querySelectorAll('.dropdown.open').forEach(d => d.classList.remove('open'));
+            // Close mobile menus when clicking outside
+            if (!e.target.closest('.dropdown') && !e.target.closest('.mobile-bottom-bar') && !e.target.closest('.nav-item')) {
+                document.querySelectorAll('#mobile-dropdowns .dropdown').forEach(d => d.style.display = 'none');
+            }
         });
     });
 
@@ -479,10 +549,15 @@ $eventName = htmlspecialchars($event['name']);
             if (intId === id) { if (!map.hasLayer(layer)) layer.addTo(map); visibleTracks.add(intId); }
             else { if (map.hasLayer(layer)) map.removeLayer(layer); visibleTracks.delete(intId); }
         });
-        document.getElementById('current-name').textContent = name;
-        document.getElementById('current-dot').style.background = color;
+        // Update desktop dropdown UI
+        const currentName = document.getElementById('current-name');
+        const currentDot = document.getElementById('current-dot');
+        if (currentName) currentName.textContent = name;
+        if (currentDot) currentDot.style.background = color;
         document.querySelectorAll('#track-dropdown .dropdown-item').forEach(i => i.classList.toggle('active', parseInt(i.dataset.trackId) === id));
         document.getElementById('track-dropdown').classList.remove('open');
+        // Close mobile menu
+        document.querySelectorAll('#mobile-dropdowns .dropdown').forEach(d => d.style.display = 'none');
         updateElevation();
     }
 
@@ -505,22 +580,44 @@ $eventName = htmlspecialchars($event['name']);
         if (!wasOpen) d.classList.add('open');
     }
 
+    function toggleMobileMenu(id) {
+        const menu = document.getElementById(id);
+        if (!menu) return;
+        const isVisible = menu.style.display !== 'none';
+        // Hide all menus first
+        document.querySelectorAll('#mobile-dropdowns .dropdown').forEach(d => d.style.display = 'none');
+        // Hide elevation if showing menu
+        document.getElementById('elevation').classList.add('hidden');
+        document.getElementById('nav-elevation')?.classList.remove('active');
+        // Toggle the clicked menu
+        if (!isVisible) {
+            menu.style.display = 'block';
+        }
+    }
+
     function toggleLocation() {
         const btn = document.getElementById('location-btn');
+        const navBtn = document.getElementById('nav-location');
+        // Hide menus when toggling location
+        document.querySelectorAll('#mobile-dropdowns .dropdown').forEach(d => d.style.display = 'none');
+
         if (watchId) {
             navigator.geolocation.clearWatch(watchId); watchId = null;
             if (locationMarker) map.removeLayer(locationMarker);
             if (locationCircle) map.removeLayer(locationCircle);
             locationMarker = locationCircle = null;
-            btn.classList.remove('active', 'loading');
+            btn?.classList.remove('active', 'loading');
+            navBtn?.classList.remove('active', 'loading');
             return;
         }
         if (!navigator.geolocation) { alert('Geolocation stöds inte'); return; }
-        btn.classList.add('loading');
+        btn?.classList.add('loading');
+        navBtn?.classList.add('loading');
         watchId = navigator.geolocation.watchPosition(
             pos => {
                 const { latitude, longitude, accuracy } = pos.coords;
-                btn.classList.remove('loading'); btn.classList.add('active');
+                btn?.classList.remove('loading'); btn?.classList.add('active');
+                navBtn?.classList.remove('loading'); navBtn?.classList.add('active');
                 if (!locationMarker) {
                     locationMarker = L.circleMarker([latitude, longitude], { radius: 8, fillColor: '#3B82F6', fillOpacity: 1, color: 'white', weight: 3 }).addTo(map);
                     locationCircle = L.circle([latitude, longitude], { radius: accuracy, fillColor: '#3B82F6', fillOpacity: 0.1, color: '#3B82F6', weight: 1 }).addTo(map);
@@ -530,13 +627,19 @@ $eventName = htmlspecialchars($event['name']);
                     locationCircle.setLatLng([latitude, longitude]).setRadius(accuracy);
                 }
             },
-            () => { btn.classList.remove('loading'); alert('Kunde inte hämta position'); },
+            () => { btn?.classList.remove('loading'); navBtn?.classList.remove('loading'); alert('Kunde inte hämta position'); },
             { enableHighAccuracy: true, maximumAge: 10000 }
         );
     }
 
     function toggleElevation() {
-        document.getElementById('elevation').classList.toggle('collapsed');
+        const el = document.getElementById('elevation');
+        const navBtn = document.getElementById('nav-elevation');
+        // Hide menus when showing elevation
+        document.querySelectorAll('#mobile-dropdowns .dropdown').forEach(d => d.style.display = 'none');
+
+        el.classList.toggle('hidden');
+        navBtn?.classList.toggle('active', !el.classList.contains('hidden'));
         setTimeout(updateElevation, 350);
     }
 
