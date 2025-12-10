@@ -16,8 +16,6 @@ require_once INCLUDES_PATH . '/map_functions.php';
 $db = getDB();
 global $pdo;
 
-die('TEST 2 - After includes'); // TEMP DEBUG
-
 // Get event ID from URL
 $eventId = 0;
 if (isset($_GET['id'])) {
@@ -181,6 +179,8 @@ if ($track) {
 }
 $waypointsJson = json_encode($trackWaypoints);
 $poisJson = json_encode($pois);
+
+die('TEST 3 - After data fetch, before HTML'); // TEMP DEBUG
 ?>
 <!DOCTYPE html>
 <html lang="sv">
