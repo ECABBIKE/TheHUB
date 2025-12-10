@@ -6,6 +6,9 @@
  *
  * @since 2025-12-09
  */
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+
 require_once __DIR__ . '/../config.php';
 require_admin();
 require_once INCLUDES_PATH . '/map_functions.php';
