@@ -373,6 +373,17 @@ include __DIR__ . '/components/unified-layout.php';
                     <button type="button" class="section-type-btn" data-type="lift" style="flex:1; padding: 6px; font-size: 0.75rem; background: #F59E0B; color: white; border: none; border-radius: 4px; cursor: pointer; opacity: 0.5;">🚡 Lift</button>
                 </div>
 
+                <!-- Pending segment actions -->
+                <div id="pending-actions" style="display: none; margin-bottom: var(--space-sm); padding: 8px; background: rgba(59, 130, 246, 0.1); border-radius: 4px;">
+                    <div style="font-size: 0.8rem; margin-bottom: 6px;">
+                        <span id="pending-info">Dra markören för att justera</span>
+                    </div>
+                    <div style="display: flex; gap: 4px;">
+                        <button type="button" onclick="savePendingSegment()" class="btn-admin btn-admin-primary btn-admin-sm" style="flex: 1; font-size: 0.75rem;">✓ Spara</button>
+                        <button type="button" onclick="cancelPendingSegment()" class="btn-admin btn-admin-secondary btn-admin-sm" style="flex: 1; font-size: 0.75rem;">✕ Avbryt</button>
+                    </div>
+                </div>
+
                 <!-- Segment-lista med inline redigering -->
                 <div style="max-height: 180px; overflow-y: auto; border: 1px solid var(--color-border); border-radius: 4px;">
                     <?php if (!empty($currentTrack['segments'])): ?>
@@ -562,13 +573,32 @@ let sectionMarkers = [];
 let sectionLines = [];
 let currentSegmentType = 'liaison';
 
+// Pending segment state (before saving)
+let pendingMarker = null;
+let pendingLine = null;
+let pendingStartIdx = -1;
+let pendingEndIdx = -1;
+let pendingType = 'liaison';
+
 // Find where the last existing segment ends (to continue from there)
 let lastSectionIndex = 0;
+// Count existing segments by type for auto-naming
+let existingSegmentCounts = { stage: 0, liaison: 0, lift: 0 };
 <?php
 if ($currentTrack && !empty($currentTrack['segments'])) {
     $lastSegment = end($currentTrack['segments']);
     $lastEndIndex = $lastSegment['end_index'] ?? 0;
     echo "lastSectionIndex = " . intval($lastEndIndex) . ";\n";
+
+    // Count existing segments by type
+    $typeCounts = ['stage' => 0, 'liaison' => 0, 'lift' => 0];
+    foreach ($currentTrack['segments'] as $seg) {
+        $type = $seg['segment_type'] ?? 'liaison';
+        if (isset($typeCounts[$type])) {
+            $typeCounts[$type]++;
+        }
+    }
+    echo "existingSegmentCounts = " . json_encode($typeCounts) . ";\n";
 }
 ?>
 
@@ -584,57 +614,142 @@ function onTrackClick(e) {
         return;
     }
 
-    // Create segment from lastSectionIndex to this point
-    const startIdx = lastSectionIndex;
-    const endIdx = nearest.index;
+    // If there's already a pending segment, save it first or cancel
+    if (pendingMarker) {
+        // Update the pending marker position instead
+        updatePendingMarker(nearest);
+        return;
+    }
 
-    // Add section marker
-    const marker = L.circleMarker([nearest.wp.lat, nearest.wp.lng], {
-        radius: 8,
-        color: SEGMENT_COLORS[currentSegmentType],
-        fillColor: SEGMENT_COLORS[currentSegmentType],
-        fillOpacity: 1,
-        weight: 2
+    // Create pending segment from lastSectionIndex to this point
+    pendingStartIdx = lastSectionIndex;
+    pendingEndIdx = nearest.index;
+    pendingType = currentSegmentType;
+
+    // Add draggable marker
+    pendingMarker = L.marker([nearest.wp.lat, nearest.wp.lng], {
+        draggable: true,
+        icon: L.divIcon({
+            className: 'segment-marker',
+            html: `<div style="width: 20px; height: 20px; background: ${SEGMENT_COLORS[pendingType]}; border: 3px solid white; border-radius: 50%; box-shadow: 0 2px 6px rgba(0,0,0,0.4); cursor: grab;"></div>`,
+            iconSize: [20, 20],
+            iconAnchor: [10, 10]
+        })
     }).addTo(map);
-    sectionMarkers.push({ marker, index: endIdx, type: currentSegmentType });
 
-    // Draw segment line
-    const coords = waypoints.slice(startIdx, endIdx + 1).map(w => [w.lat, w.lng]);
-    const line = L.polyline(coords, {
-        color: SEGMENT_COLORS[currentSegmentType],
+    // Handle marker drag
+    pendingMarker.on('drag', onMarkerDrag);
+    pendingMarker.on('dragend', onMarkerDragEnd);
+
+    // Draw pending segment line
+    drawPendingLine();
+
+    // Show pending actions UI
+    updatePendingUI();
+}
+
+function updatePendingMarker(nearest) {
+    pendingEndIdx = nearest.index;
+    pendingMarker.setLatLng([nearest.wp.lat, nearest.wp.lng]);
+    drawPendingLine();
+    updatePendingUI();
+}
+
+function onMarkerDrag(e) {
+    // Find nearest waypoint while dragging
+    const nearest = findNearest(e.latlng);
+    if (nearest && nearest.index > pendingStartIdx) {
+        pendingEndIdx = nearest.index;
+        drawPendingLine();
+        updatePendingUI();
+    }
+}
+
+function onMarkerDragEnd(e) {
+    // Snap to nearest waypoint
+    const nearest = findNearest(e.target.getLatLng());
+    if (nearest && nearest.index > pendingStartIdx) {
+        pendingEndIdx = nearest.index;
+        pendingMarker.setLatLng([nearest.wp.lat, nearest.wp.lng]);
+        drawPendingLine();
+        updatePendingUI();
+    } else {
+        // Reset to previous valid position
+        const wp = waypoints[pendingEndIdx];
+        pendingMarker.setLatLng([wp.lat, wp.lng]);
+    }
+}
+
+function drawPendingLine() {
+    // Remove old pending line
+    if (pendingLine) {
+        map.removeLayer(pendingLine);
+    }
+
+    // Draw new pending line
+    const coords = waypoints.slice(pendingStartIdx, pendingEndIdx + 1).map(w => [w.lat, w.lng]);
+    pendingLine = L.polyline(coords, {
+        color: SEGMENT_COLORS[pendingType],
         weight: 6,
-        opacity: 0.9
+        opacity: 0.7,
+        dashArray: '10, 10' // Dashed to show it's pending
     }).addTo(map);
-    sectionLines.push(line);
+}
 
-    // Calculate distance
-    const dist = (waypoints[endIdx].distance_km - waypoints[startIdx].distance_km).toFixed(2);
+function updatePendingUI() {
+    const dist = (waypoints[pendingEndIdx].distance_km - waypoints[pendingStartIdx].distance_km).toFixed(2);
+    const typeLabel = pendingType === 'stage' ? 'SS' : (pendingType === 'lift' ? 'Lift' : 'Transport');
 
-    // Auto-generate name
+    document.getElementById('pending-actions').style.display = 'block';
+    document.getElementById('pending-info').innerHTML =
+        `<strong>${typeLabel}</strong>: ${dist} km — Dra markören för att justera`;
+    document.getElementById('segment-status').innerHTML =
+        `<span style="color: ${SEGMENT_COLORS[pendingType]};">Förhandsvisning</span>`;
+}
+
+function savePendingSegment() {
+    if (!pendingMarker) return;
+
+    // Auto-generate name (count existing from DB + any added this session)
     let autoName = '';
-    if (currentSegmentType === 'stage') {
-        const ssCount = sectionMarkers.filter(m => m.type === 'stage').length;
-        autoName = 'SS' + ssCount;
-    } else if (currentSegmentType === 'lift') {
-        const liftCount = sectionMarkers.filter(m => m.type === 'lift').length;
-        autoName = 'Lift ' + liftCount;
+    const dbCount = existingSegmentCounts[pendingType] || 0;
+    const sessionCount = sectionMarkers.filter(m => m.type === pendingType).length;
+    const totalOfType = dbCount + sessionCount;
+
+    if (pendingType === 'stage') {
+        autoName = 'SS' + (totalOfType + 1);
+    } else if (pendingType === 'lift') {
+        autoName = 'Lift ' + (totalOfType + 1);
     } else {
         autoName = 'Transport';
     }
 
     // Save segment to server via form
-    document.getElementById('start-index').value = startIdx;
-    document.getElementById('end-index').value = endIdx;
+    document.getElementById('start-index').value = pendingStartIdx;
+    document.getElementById('end-index').value = pendingEndIdx;
+    document.getElementById('segment-type').value = pendingType;
     document.getElementById('segment-name-hidden').value = autoName;
     document.getElementById('segment-form').submit();
+}
 
-    // Update state for next section
-    lastSectionIndex = endIdx;
+function cancelPendingSegment() {
+    // Remove pending marker and line
+    if (pendingMarker) {
+        map.removeLayer(pendingMarker);
+        pendingMarker = null;
+    }
+    if (pendingLine) {
+        map.removeLayer(pendingLine);
+        pendingLine = null;
+    }
 
-    // Update status
-    const typeLabel = currentSegmentType === 'stage' ? 'SS' : (currentSegmentType === 'lift' ? 'Lift' : 'Transport');
-    document.getElementById('segment-status').innerHTML =
-        `<span style="color: ${SEGMENT_COLORS[currentSegmentType]};">${typeLabel} sparad (${dist} km)</span> - Klicka för nästa sektion`;
+    // Reset state
+    pendingStartIdx = -1;
+    pendingEndIdx = -1;
+
+    // Hide pending actions UI
+    document.getElementById('pending-actions').style.display = 'none';
+    document.getElementById('segment-status').innerHTML = 'Klicka på banan';
 }
 
 function onMapClick(e) {
