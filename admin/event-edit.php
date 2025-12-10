@@ -279,11 +279,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 // Fetch data for dropdowns
 // Get series with brand and year info for better grouping
+// Include completed series so events can be added back if needed
 $series = $db->getAll("
-    SELECT s.id, s.name, s.year, s.brand_id, sb.name as brand_name
+    SELECT s.id, s.name, s.year, s.brand_id, s.status, sb.name as brand_name
     FROM series s
     LEFT JOIN series_brands sb ON s.brand_id = sb.id
-    WHERE s.status IN ('active', 'planning')
+    WHERE s.status IN ('active', 'planning', 'completed')
     ORDER BY sb.name ASC, s.year DESC, s.name ASC
 ");
 
@@ -411,14 +412,15 @@ include __DIR__ . '/components/unified-layout.php';
                             <optgroup label="<?= h($brandName) ?>">
                                 <?php foreach ($brandSeries as $s):
                                     $yearMatch = ($s['year'] == $eventYear);
-                                    $yearLabel = $s['year'] ? " ({$s['year']})" : '';
+                                    $isCompleted = ($s['status'] ?? '') === 'completed';
                                     $matchIndicator = $yearMatch ? ' ✓' : '';
+                                    $completedIndicator = $isCompleted ? ' [Avslutad]' : '';
                                 ?>
                                     <option value="<?= $s['id'] ?>"
                                             data-year="<?= $s['year'] ?>"
                                             <?= ($event['series_id'] == $s['id']) ? 'selected' : '' ?>
                                             <?= $yearMatch ? 'style="font-weight: bold;"' : '' ?>>
-                                        <?= h($s['name']) ?><?= $matchIndicator ?>
+                                        <?= h($s['name']) ?><?= $matchIndicator ?><?= $completedIndicator ?>
                                     </option>
                                 <?php endforeach; ?>
                             </optgroup>
@@ -426,7 +428,7 @@ include __DIR__ . '/components/unified-layout.php';
                     </select>
                     <small style="color: var(--color-text-secondary);">
                         Välj serie som matchar eventets år (<?= $eventYear ?>).
-                        Serier markerade med ✓ matchar eventdatumet.
+                        ✓ = matchar år. [Avslutad] = serien är markerad som avslutad.
                     </small>
                 </div>
 
