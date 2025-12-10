@@ -1397,32 +1397,8 @@ function getTrackWaypointsForEditor($pdo, $trackId) {
         }
     }
 
-    // Fall back to segments if no raw coords
-    if (empty($coordinates)) {
-        // OLD workflow: Extract from segments
-        $stmt = $pdo->prepare("
-            SELECT id, sequence_number, coordinates, elevation_data
-            FROM event_track_segments
-            WHERE track_id = ?
-            ORDER BY sequence_number
-        ");
-        $stmt->execute([$trackId]);
-        $segments = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-        foreach ($segments as $segment) {
-            $segCoords = json_decode($segment['coordinates'], true) ?: [];
-            $segEles = json_decode($segment['elevation_data'], true) ?: [];
-
-            foreach ($segCoords as $i => $coord) {
-                $coordinates[] = $coord;
-                if (isset($segEles[$i])) {
-                    $elevations[] = $segEles[$i];
-                }
-            }
-        }
-    }
-
-    // Fall back to parsing GPX file directly if still no coordinates
+    // Fall back to GPX file FIRST (has complete track data)
+    // This is preferred over segments because segments might only cover part of the track
     if (empty($coordinates)) {
         $stmt = $pdo->prepare("SELECT gpx_file FROM event_tracks WHERE id = ?");
         $stmt->execute([$trackId]);
@@ -1451,6 +1427,30 @@ function getTrackWaypointsForEditor($pdo, $trackId) {
                     }
                 } catch (Exception $e) {
                     // GPX parsing failed, continue with empty array
+                }
+            }
+        }
+    }
+
+    // Last resort: Extract from segments (might be incomplete if not all track is segmented)
+    if (empty($coordinates)) {
+        $stmt = $pdo->prepare("
+            SELECT id, sequence_number, coordinates, elevation_data
+            FROM event_track_segments
+            WHERE track_id = ?
+            ORDER BY sequence_number
+        ");
+        $stmt->execute([$trackId]);
+        $segments = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        foreach ($segments as $segment) {
+            $segCoords = json_decode($segment['coordinates'], true) ?: [];
+            $segEles = json_decode($segment['elevation_data'], true) ?: [];
+
+            foreach ($segCoords as $i => $coord) {
+                $coordinates[] = $coord;
+                if (isset($segEles[$i])) {
+                    $elevations[] = $segEles[$i];
                 }
             }
         }
