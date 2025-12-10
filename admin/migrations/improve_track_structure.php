@@ -14,7 +14,8 @@
 require_once __DIR__ . '/../../config.php';
 require_admin();
 
-$pdo = getDB();
+// Use global $pdo directly (not getDB() wrapper) for ALTER TABLE
+global $pdo;
 
 echo "<h1>Migration: Improve Track Structure</h1>";
 echo "<pre>";
