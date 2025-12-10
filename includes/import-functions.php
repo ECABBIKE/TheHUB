@@ -93,7 +93,7 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
     $originalHeaders = $header;
 
     // First pass: identify split time columns and map them in order
-    // Matches: SS1, SS2, PS1, PS2, Stage1, Sträcka1, S1, etc.
+    // Matches: SS1, SS2, PS1, PS2, Stage1, Sträcka1, S1, Prostage, etc.
     // The original header name is preserved in stageNamesMapping
     $splitTimeColumns = [];
     $splitTimeIndex = 1;
@@ -105,7 +105,11 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
 
         // Check if this looks like a split/stage time column
         // Matches: ss1, ps1, s1, v1, stage1, sträcka1, varv1, lap1, etc.
-        if (preg_match('/^(ss|ps|s|v|stage|sträcka|stracka|etapp|varv|lap)\d+/', $normalizedCol)) {
+        // Also matches standalone names: prostage, prolog, prologue (without number = treated as stage)
+        $isSplitTimeCol = preg_match('/^(ss|ps|s|v|stage|sträcka|stracka|etapp|varv|lap)\d+/', $normalizedCol)
+                       || preg_match('/^(prostage|prolog|prologue|prologstage)\d*$/', $normalizedCol);
+
+        if ($isSplitTimeCol) {
             $splitTimeColumns[$index] = [
                 'original' => $originalCol,
                 'mapped' => 'ss' . $splitTimeIndex
