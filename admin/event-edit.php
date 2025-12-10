@@ -242,7 +242,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 // Fetch data for dropdowns
-$series = $db->getAll("SELECT id, name FROM series WHERE status = 'active' ORDER BY name");
+// Get series with brand and year info for better grouping
+$series = $db->getAll("
+    SELECT s.id, s.name, s.year, s.brand_id, sb.name as brand_name
+    FROM series s
+    LEFT JOIN series_brands sb ON s.brand_id = sb.id
+    WHERE s.status IN ('active', 'planning')
+    ORDER BY sb.name ASC, s.year DESC, s.name ASC
+");
+
+// Group series by brand for display
+$seriesByBrand = [];
+foreach ($series as $s) {
+    $brandName = $s['brand_name'] ?? 'Utan varumärke';
+    if (!isset($seriesByBrand[$brandName])) {
+        $seriesByBrand[$brandName] = [];
+    }
+    $seriesByBrand[$brandName][] = $s;
+}
+
+// Get event year from date for auto-suggestion
+$eventYear = !empty($event['date']) ? date('Y', strtotime($event['date'])) : date('Y');
 $venues = $db->getAll("SELECT id, name, city FROM venues WHERE active = 1 ORDER BY name");
 $clubs = $db->getAll("SELECT id, name, city FROM clubs WHERE active = 1 ORDER BY name");
 $pricingTemplates = $db->getAll("SELECT id, name, is_default FROM pricing_templates ORDER BY is_default DESC, name ASC");
@@ -342,15 +362,36 @@ include __DIR__ . '/components/unified-layout.php';
                 </div>
 
                 <div class="admin-form-group">
-                    <label class="admin-form-label">Serie</label>
-                    <select name="series_id" class="admin-form-select">
+                    <label class="admin-form-label">
+                        Serie (direktkoppling)
+                        <span style="font-size: 0.75rem; color: var(--color-text-secondary); font-weight: normal;">
+                            - eventet läggs också till via
+                            <a href="/admin/series" style="color: var(--color-accent);">seriehantering</a>
+                        </span>
+                    </label>
+                    <select name="series_id" id="series_id" class="admin-form-select">
                         <option value="">Ingen serie</option>
-                        <?php foreach ($series as $s): ?>
-                            <option value="<?= $s['id'] ?>" <?= ($event['series_id'] == $s['id']) ? 'selected' : '' ?>>
-                                <?= h($s['name']) ?>
-                            </option>
+                        <?php foreach ($seriesByBrand as $brandName => $brandSeries): ?>
+                            <optgroup label="<?= h($brandName) ?>">
+                                <?php foreach ($brandSeries as $s):
+                                    $yearMatch = ($s['year'] == $eventYear);
+                                    $yearLabel = $s['year'] ? " ({$s['year']})" : '';
+                                    $matchIndicator = $yearMatch ? ' ✓' : '';
+                                ?>
+                                    <option value="<?= $s['id'] ?>"
+                                            data-year="<?= $s['year'] ?>"
+                                            <?= ($event['series_id'] == $s['id']) ? 'selected' : '' ?>
+                                            <?= $yearMatch ? 'style="font-weight: bold;"' : '' ?>>
+                                        <?= h($s['name']) ?><?= $matchIndicator ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </optgroup>
                         <?php endforeach; ?>
                     </select>
+                    <small style="color: var(--color-text-secondary);">
+                        Välj serie som matchar eventets år (<?= $eventYear ?>).
+                        Serier markerade med ✓ matchar eventdatumet.
+                    </small>
                 </div>
 
                 <div class="admin-form-group">

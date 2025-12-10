@@ -96,8 +96,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $name = trim($_POST['name'] ?? '');
 
+    $year = !empty($_POST['year']) ? intval($_POST['year']) : null;
+
     if (empty($name)) {
         $message = 'Namn är obligatoriskt';
+        $messageType = 'error';
+    } elseif (empty($year)) {
+        $message = 'År är obligatoriskt - ange vilket år serien gäller';
         $messageType = 'error';
     } else {
         // Handle logo upload
@@ -133,9 +138,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'logo' => $logoPath,
         ];
 
-        // Add year if column exists
+        // Year is always required now
         if ($yearColumnExists) {
-            $seriesData['year'] = !empty($_POST['year']) ? intval($_POST['year']) : null;
+            $seriesData['year'] = $year;
         }
 
         // Add format if column exists
@@ -239,10 +244,36 @@ if ($isNew) {
     ];
 }
 
-// Get events count for this series
+// Get events count and results status for this series
 $eventsCount = 0;
+$eventsWithResults = 0;
+$readyToComplete = false;
 if (!$isNew) {
-    $eventsCount = $db->getValue("SELECT COUNT(*) FROM events WHERE series_id = ?", [$id]) ?: 0;
+    // Check if series_events table exists
+    $seriesEventsExists = false;
+    try {
+        $tables = $db->getAll("SHOW TABLES LIKE 'series_events'");
+        $seriesEventsExists = !empty($tables);
+    } catch (Exception $e) {}
+
+    if ($seriesEventsExists) {
+        // Count events via junction table
+        $eventsCount = $db->getValue("SELECT COUNT(*) FROM series_events WHERE series_id = ?", [$id]) ?: 0;
+        // Count events with at least one finished result
+        $eventsWithResults = $db->getValue("
+            SELECT COUNT(DISTINCT se.event_id)
+            FROM series_events se
+            INNER JOIN results r ON r.event_id = se.event_id
+            WHERE se.series_id = ? AND r.status = 'finished'
+        ", [$id]) ?: 0;
+    } else {
+        $eventsCount = $db->getValue("SELECT COUNT(*) FROM events WHERE series_id = ?", [$id]) ?: 0;
+    }
+
+    // Check if ready to complete (all events have results but not marked completed)
+    $readyToComplete = $eventsCount > 0
+        && $eventsWithResults >= $eventsCount
+        && ($series['status'] ?? '') !== 'completed';
 }
 
 // Page config
@@ -269,6 +300,26 @@ include __DIR__ . '/components/unified-layout.php';
 </div>
 <?php endif; ?>
 
+<?php if ($readyToComplete): ?>
+<div class="alert alert-warning" style="display: flex; align-items: center; justify-content: space-between; gap: var(--space-md);">
+    <div style="display: flex; align-items: center; gap: var(--space-sm);">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 20px; height: 20px; flex-shrink: 0;">
+            <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/>
+        </svg>
+        <div>
+            <strong>Alla <?= $eventsCount ?> events har resultat!</strong>
+            <span style="color: var(--color-text-secondary);">
+                Ändra status till "Avslutad" för att beräkna seriemästare.
+            </span>
+        </div>
+    </div>
+    <button type="button" onclick="document.getElementById('status').value='completed'; document.getElementById('status').dispatchEvent(new Event('change'));"
+            class="btn-admin btn-admin-warning" style="white-space: nowrap;">
+        Markera avslutad
+    </button>
+</div>
+<?php endif; ?>
+
 <form method="POST" enctype="multipart/form-data">
     <?= csrf_field() ?>
     <input type="hidden" name="calculate_champions" id="calculate_champions" value="0">
@@ -282,42 +333,49 @@ include __DIR__ . '/components/unified-layout.php';
             </h2>
         </div>
         <div class="admin-card-body">
-            <div class="admin-form-row">
-                <div class="admin-form-group" style="flex: 2;">
-                    <label for="name" class="admin-form-label">Namn <span style="color: var(--color-error);">*</span></label>
-                    <input type="text" id="name" name="name" class="admin-form-input" required
-                           value="<?= htmlspecialchars($series['name'] ?? '') ?>"
-                           placeholder="T.ex. GravitySeries 2025">
-                </div>
-                <div class="admin-form-group" style="flex: 1;">
-                    <label for="year" class="admin-form-label">År</label>
-                    <input type="number" id="year" name="year" class="admin-form-input"
-                           value="<?= htmlspecialchars($series['year'] ?? '') ?>"
-                           placeholder="<?= date('Y') ?>" min="2000" max="2100">
-                    <small style="color: var(--color-text-secondary); font-size: 0.75rem;">
-                        Viktigt för seriemästare-beräkning
-                    </small>
-                </div>
-            </div>
-
             <?php if ($brandColumnExists && !empty($brands)): ?>
-            <div class="admin-form-row">
-                <div class="admin-form-group">
-                    <label for="brand_id" class="admin-form-label">Varumärke (huvudserie)</label>
-                    <select id="brand_id" name="brand_id" class="admin-form-select">
-                        <option value="">-- Inget varumärke --</option>
-                        <?php foreach ($brands as $brand): ?>
-                        <option value="<?= $brand['id'] ?>" <?= ($series['brand_id'] ?? '') == $brand['id'] ? 'selected' : '' ?>>
-                            <?= htmlspecialchars($brand['name']) ?>
-                        </option>
-                        <?php endforeach; ?>
-                    </select>
-                    <small style="color: var(--color-text-secondary); font-size: 0.75rem;">
-                        Gruppera serier under ett gemensamt varumärke (t.ex. "Swecup")
-                    </small>
-                </div>
+            <div class="admin-form-group" style="background: var(--color-bg-secondary); padding: var(--space-md); border-radius: var(--radius-md); margin-bottom: var(--space-md);">
+                <label for="brand_id" class="admin-form-label" style="font-weight: 600;">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px; display: inline; vertical-align: middle; margin-right: 4px;"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>
+                    Huvudserie (Varumärke) <span style="color: var(--color-error);">*</span>
+                </label>
+                <select id="brand_id" name="brand_id" class="admin-form-select" required onchange="updateSeriesName()">
+                    <option value="">-- Välj huvudserie --</option>
+                    <?php foreach ($brands as $brand): ?>
+                    <option value="<?= $brand['id'] ?>" data-name="<?= htmlspecialchars($brand['name']) ?>" <?= ($series['brand_id'] ?? '') == $brand['id'] ? 'selected' : '' ?>>
+                        <?= htmlspecialchars($brand['name']) ?>
+                    </option>
+                    <?php endforeach; ?>
+                </select>
+                <small style="color: var(--color-text-secondary); font-size: 0.75rem;">
+                    Detta är den övergripande serien (t.ex. "Swecup", "GravitySeries Enduro").
+                    <a href="/admin/series/brands" style="color: var(--color-accent);">Hantera huvudserier</a>
+                </small>
             </div>
             <?php endif; ?>
+
+            <div class="admin-form-row">
+                <div class="admin-form-group" style="flex: 1;">
+                    <label for="year" class="admin-form-label">
+                        Säsong/År <span style="color: var(--color-error);">*</span>
+                    </label>
+                    <input type="number" id="year" name="year" class="admin-form-input" required
+                           value="<?= htmlspecialchars($series['year'] ?? date('Y')) ?>"
+                           min="2000" max="2100">
+                    <small style="color: var(--color-text-secondary); font-size: 0.75rem;">
+                        Vilket år gäller denna säsong? Avgör vilka event som tillhör serien.
+                    </small>
+                </div>
+                <div class="admin-form-group" style="flex: 2;">
+                    <label for="name" class="admin-form-label">Serienamn <span style="color: var(--color-error);">*</span></label>
+                    <input type="text" id="name" name="name" class="admin-form-input" required
+                           value="<?= htmlspecialchars($series['name'] ?? '') ?>"
+                           placeholder="T.ex. Swecup">
+                    <small style="color: var(--color-text-secondary); font-size: 0.75rem;">
+                        År visas separat som badge - skriv ej år i namnet
+                    </small>
+                </div>
+            </div>
 
             <div class="admin-form-row">
                 <div class="admin-form-group">
@@ -349,18 +407,29 @@ include __DIR__ . '/components/unified-layout.php';
                 </div>
             </div>
 
-            <div class="admin-form-row">
-                <div class="admin-form-group">
-                    <label for="start_date" class="admin-form-label">Startdatum</label>
-                    <input type="date" id="start_date" name="start_date" class="admin-form-input"
-                           value="<?= htmlspecialchars($series['start_date'] ?? '') ?>">
+            <details style="margin-top: var(--space-sm);">
+                <summary style="cursor: pointer; color: var(--color-text-secondary); font-size: 0.85rem;">
+                    Valfritt: Specifika datum (normalt beräknas detta från events)
+                </summary>
+                <div class="admin-form-row" style="margin-top: var(--space-sm);">
+                    <div class="admin-form-group">
+                        <label for="start_date" class="admin-form-label">Startdatum</label>
+                        <input type="date" id="start_date" name="start_date" class="admin-form-input"
+                               value="<?= htmlspecialchars($series['start_date'] ?? '') ?>">
+                        <small style="color: var(--color-text-secondary); font-size: 0.75rem;">
+                            Lämna tomt för att använda första eventets datum
+                        </small>
+                    </div>
+                    <div class="admin-form-group">
+                        <label for="end_date" class="admin-form-label">Slutdatum</label>
+                        <input type="date" id="end_date" name="end_date" class="admin-form-input"
+                               value="<?= htmlspecialchars($series['end_date'] ?? '') ?>">
+                        <small style="color: var(--color-text-secondary); font-size: 0.75rem;">
+                            Lämna tomt för att använda sista eventets datum
+                        </small>
+                    </div>
                 </div>
-                <div class="admin-form-group">
-                    <label for="end_date" class="admin-form-label">Slutdatum</label>
-                    <input type="date" id="end_date" name="end_date" class="admin-form-input"
-                           value="<?= htmlspecialchars($series['end_date'] ?? '') ?>">
-                </div>
-            </div>
+            </details>
         </div>
     </div>
 
@@ -503,6 +572,24 @@ include __DIR__ . '/components/unified-layout.php';
 <script>
 const csrfToken = '<?= htmlspecialchars(generate_csrf_token()) ?>';
 const currentStatus = '<?= htmlspecialchars($series['status'] ?? 'planning') ?>';
+const isNewSeries = <?= $isNew ? 'true' : 'false' ?>;
+
+// Auto-generate series name from brand (without year - year shown as badge)
+function updateSeriesName() {
+    if (!isNewSeries) return; // Only auto-update for new series
+
+    const brandSelect = document.getElementById('brand_id');
+    const nameInput = document.getElementById('name');
+
+    if (!brandSelect || !nameInput) return;
+
+    const selectedOption = brandSelect.options[brandSelect.selectedIndex];
+    const brandName = selectedOption?.dataset?.name || '';
+
+    if (brandName) {
+        nameInput.value = brandName;
+    }
+}
 
 // Handle form submission - check if status changed to completed
 document.querySelector('form').addEventListener('submit', function(e) {

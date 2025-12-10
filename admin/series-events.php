@@ -234,9 +234,12 @@ $seriesEvents = $db->getAll("
  ORDER BY se.sort_order ASC
 ", [$seriesId]);
 
-// Get all events not in this series
+// Get series year for matching
+$seriesYear = $series['year'] ?? null;
+
+// Get all events not in this series, with year matching indicator
 $eventsNotInSeries = $db->getAll("
- SELECT e.id, e.name, e.date, e.location, e.discipline
+ SELECT e.id, e.name, e.date, e.location, e.discipline, YEAR(e.date) as event_year
  FROM events e
  WHERE e.id NOT IN (
  SELECT event_id FROM series_events WHERE series_id = ?
@@ -244,6 +247,17 @@ $eventsNotInSeries = $db->getAll("
  AND e.active = 1
  ORDER BY e.date DESC
 ", [$seriesId]);
+
+// Separate events by year match for better UX
+$matchingYearEvents = [];
+$otherYearEvents = [];
+foreach ($eventsNotInSeries as $ev) {
+    if ($seriesYear && $ev['event_year'] == $seriesYear) {
+        $matchingYearEvents[] = $ev;
+    } else {
+        $otherYearEvents[] = $ev;
+    }
+}
 
 // Get all point scales (same templates used for both series and ranking)
 $templates = $db->getAll("SELECT id, name FROM point_scales WHERE active = 1 ORDER BY name");
@@ -477,6 +491,15 @@ include __DIR__ . '/components/unified-layout.php';
   <?php if (empty($eventsNotInSeries)): ?>
   <p class="text-sm text-secondary">Alla events är redan tillagda i serien.</p>
   <?php else: ?>
+  <?php if ($seriesYear): ?>
+  <div class="alert alert--success mb-md" style="padding: 8px 12px; font-size: 0.85rem;">
+   <i data-lucide="calendar-check" style="width: 14px; height: 14px;"></i>
+   Serie-år: <strong><?= $seriesYear ?></strong>
+   <?php if (!empty($matchingYearEvents)): ?>
+   - <?= count($matchingYearEvents) ?> event matchar
+   <?php endif; ?>
+  </div>
+  <?php endif; ?>
   <form method="POST">
   <?= csrf_field() ?>
   <input type="hidden" name="action" value="add_event">
@@ -485,7 +508,21 @@ include __DIR__ . '/components/unified-layout.php';
   <label for="event_id" class="label">Välj event</label>
   <select name="event_id" id="event_id" class="input" required>
    <option value="">-- Välj event --</option>
-   <?php foreach ($eventsNotInSeries as $event): ?>
+   <?php if (!empty($matchingYearEvents)): ?>
+   <optgroup label="✓ Matchar serieåret (<?= $seriesYear ?>)">
+   <?php foreach ($matchingYearEvents as $event): ?>
+   <option value="<?= $event['id'] ?>" style="font-weight: bold;">
+   <?= h($event['name']) ?>
+   <?php if ($event['date']): ?>
+   (<?= date('Y-m-d', strtotime($event['date'])) ?>)
+   <?php endif; ?>
+   </option>
+   <?php endforeach; ?>
+   </optgroup>
+   <?php endif; ?>
+   <?php if (!empty($otherYearEvents)): ?>
+   <optgroup label="Andra år">
+   <?php foreach ($otherYearEvents as $event): ?>
    <option value="<?= $event['id'] ?>">
    <?= h($event['name']) ?>
    <?php if ($event['date']): ?>
@@ -493,7 +530,12 @@ include __DIR__ . '/components/unified-layout.php';
    <?php endif; ?>
    </option>
    <?php endforeach; ?>
+   </optgroup>
+   <?php endif; ?>
   </select>
+  <small class="text-xs text-secondary">
+   Events som matchar serieåret (<?= $seriesYear ?>) visas först
+  </small>
   </div>
 
   <div class="form-group">
