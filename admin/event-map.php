@@ -736,7 +736,7 @@ function init() {
         if (mapData.pois) {
             mapData.pois.forEach(p => {
                 L.marker([p.lat, p.lng])
-                    .bindPopup((p.type_emoji || '') + ' ' + (p.label || p.type_label || p.poi_type))
+                    .bindPopup(p.label || p.type_label || p.poi_type)
                     .addTo(map);
             });
         }
