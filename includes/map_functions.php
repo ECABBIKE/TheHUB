@@ -806,12 +806,18 @@ function getEventMapDataMultiTrack($pdo, $eventId) {
 
         $trackFeatures = [];
 
-        // Add base track polyline (full track as transport/liaison)
-        $basePolyline = getTrackBasePolyline($pdo, $track['id']);
-        if ($basePolyline) {
-            $basePolyline['properties']['track_id'] = (int)$track['id'];
-            $trackFeatures[] = $basePolyline;
-            $allFeatures[] = $basePolyline;
+        // Check if track has raw coordinates (new workflow)
+        $hasRawCoords = !empty($track['raw_coordinates'] ?? null);
+
+        // Only draw base track if we have raw_coordinates (new workflow)
+        // For old tracks, segments already contain the full track
+        if ($hasRawCoords) {
+            $basePolyline = getTrackBasePolyline($pdo, $track['id']);
+            if ($basePolyline) {
+                $basePolyline['properties']['track_id'] = (int)$track['id'];
+                $trackFeatures[] = $basePolyline;
+                $allFeatures[] = $basePolyline;
+            }
         }
 
         // Add segment overlays (SS, Lift, etc.)
@@ -842,9 +848,6 @@ function getEventMapDataMultiTrack($pdo, $eventId) {
             $trackFeatures[] = $feature;
             $allFeatures[] = $feature;
         }
-
-        // Check if track has raw coordinates (new workflow)
-        $hasRawCoords = !empty($track['raw_coordinates'] ?? null);
 
         $tracksData[] = [
             'id' => (int)$track['id'],
@@ -1299,19 +1302,33 @@ function addSegmentByWaypointIndex($pdo, $trackId, $segmentDef) {
  * @return array Array of waypoints with index, lat, lng, cumulative distance
  */
 function getTrackWaypointsForEditor($pdo, $trackId) {
-    // First try to get raw_coordinates from track (new workflow)
-    $stmt = $pdo->prepare("SELECT raw_coordinates, raw_elevation_data FROM event_tracks WHERE id = ?");
-    $stmt->execute([$trackId]);
-    $track = $stmt->fetch(PDO::FETCH_ASSOC);
-
     $coordinates = [];
     $elevations = [];
 
-    if ($track && !empty($track['raw_coordinates'])) {
-        // NEW workflow: Use raw coordinates from track
-        $coordinates = json_decode($track['raw_coordinates'], true) ?: [];
-        $elevations = json_decode($track['raw_elevation_data'], true) ?: [];
-    } else {
+    // Check if raw_coordinates column exists and try to use it
+    $hasRawCoords = false;
+    try {
+        $check = $pdo->query("SHOW COLUMNS FROM event_tracks LIKE 'raw_coordinates'");
+        $hasRawCoords = $check->fetch() !== false;
+    } catch (Exception $e) {
+        $hasRawCoords = false;
+    }
+
+    if ($hasRawCoords) {
+        // Try to get raw_coordinates from track (new workflow)
+        $stmt = $pdo->prepare("SELECT raw_coordinates, raw_elevation_data FROM event_tracks WHERE id = ?");
+        $stmt->execute([$trackId]);
+        $track = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if ($track && !empty($track['raw_coordinates'])) {
+            // NEW workflow: Use raw coordinates from track
+            $coordinates = json_decode($track['raw_coordinates'], true) ?: [];
+            $elevations = json_decode($track['raw_elevation_data'], true) ?: [];
+        }
+    }
+
+    // Fall back to segments if no raw coords
+    if (empty($coordinates)) {
         // OLD workflow: Extract from segments
         $stmt = $pdo->prepare("
             SELECT id, sequence_number, coordinates, elevation_data
