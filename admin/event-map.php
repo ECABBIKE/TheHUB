@@ -874,7 +874,8 @@ function drawSegmentLines() {
             const line = L.polyline(coords, {
                 color: SEGMENT_COLORS[type],
                 weight: 6,
-                opacity: 0.9
+                opacity: 0.9,
+                interactive: false  // Let clicks pass through to base track
             }).addTo(map);
             segmentLines.push(line);
             ranges.push({ start, end, type });
