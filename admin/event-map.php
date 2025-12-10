@@ -219,199 +219,142 @@ include __DIR__ . '/components/unified-layout.php';
 </div>
 <?php endif; ?>
 
-<div class="admin-grid admin-grid-2">
-    <!-- Left: Controls -->
-    <div>
-        <!-- All Tracks -->
-        <div class="admin-card">
-            <div class="admin-card-header"><h2>Banor (<?= count($allTracks) ?>)</h2></div>
-            <div class="admin-card-body">
+<div style="display: grid; grid-template-columns: 280px 1fr; gap: var(--space-md);">
+    <!-- Left: Compact Controls (collapsible panels) -->
+    <div style="display: flex; flex-direction: column; gap: 6px;">
+
+        <!-- 1. GPX/Banor -->
+        <details class="admin-collapse" <?= empty($allTracks) ? 'open' : '' ?>>
+            <summary class="admin-collapse-header">
+                <span>📍 Banor (<?= count($allTracks) ?>)</span>
+            </summary>
+            <div class="admin-collapse-body">
                 <?php if (!empty($allTracks)): ?>
-                <div style="display: flex; flex-direction: column; gap: var(--space-sm); margin-bottom: var(--space-md);">
+                <div style="display: flex; flex-direction: column; gap: 3px; margin-bottom: 8px;">
                     <?php foreach ($allTracks as $t): ?>
-                    <div style="display: flex; align-items: center; gap: var(--space-sm); padding: var(--space-sm); border: 2px solid <?= $t['id'] == $selectedTrackId ? 'var(--color-accent)' : 'var(--color-border)' ?>; border-radius: var(--radius-sm); background: <?= $t['id'] == $selectedTrackId ? 'var(--color-accent-light, rgba(97,206,112,0.1))' : 'transparent' ?>;">
-                        <span style="width: 16px; height: 16px; background: <?= htmlspecialchars($t['color'] ?? '#3B82F6') ?>; border-radius: 3px; flex-shrink: 0;"></span>
-                        <div style="flex: 1; min-width: 0;">
-                            <div style="font-weight: 500;"><?= htmlspecialchars($t['route_label'] ?? $t['name']) ?></div>
-                            <div class="admin-text-muted" style="font-size: 0.85em;">
-                                <?= number_format($t['total_distance_km'], 1) ?> km
-                                <?php if ($t['is_primary']): ?><span style="color: var(--color-accent);">• Primär</span><?php endif; ?>
-                            </div>
-                        </div>
+                    <div style="display: flex; align-items: center; gap: 4px; padding: 4px 6px; border: 1px solid <?= $t['id'] == $selectedTrackId ? 'var(--color-accent)' : 'var(--color-border)' ?>; border-radius: 3px; background: <?= $t['id'] == $selectedTrackId ? 'rgba(97,206,112,0.1)' : 'transparent' ?>; font-size: 0.8rem;">
+                        <span style="width: 8px; height: 8px; background: <?= htmlspecialchars($t['color'] ?? '#3B82F6') ?>; border-radius: 2px;"></span>
+                        <span style="flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"><?= htmlspecialchars($t['route_label'] ?? $t['name']) ?></span>
+                        <span style="color: var(--color-text); font-size: 0.7rem;"><?= number_format($t['total_distance_km'], 1) ?>km</span>
                         <?php if ($t['id'] != $selectedTrackId): ?>
-                        <a href="?id=<?= $eventId ?>&track=<?= $t['id'] ?>" class="btn-admin btn-admin-ghost btn-admin-sm">Välj</a>
+                        <a href="?id=<?= $eventId ?>&track=<?= $t['id'] ?>" style="font-size: 0.65rem; color: var(--color-accent);">Välj</a>
                         <?php endif; ?>
                         <form method="POST" style="margin: 0;">
                             <?= csrf_field() ?>
                             <input type="hidden" name="action" value="delete_track">
                             <input type="hidden" name="track_id" value="<?= $t['id'] ?>">
-                            <button type="submit" class="btn-admin btn-admin-ghost btn-admin-sm" style="color: var(--color-danger);" onclick="return confirm('Ta bort banan?')">×</button>
+                            <button type="submit" style="background: none; border: none; color: var(--color-danger); cursor: pointer; padding: 0 2px; font-size: 0.7rem;" onclick="return confirm('Ta bort?')">×</button>
                         </form>
                     </div>
                     <?php endforeach; ?>
                 </div>
-                <?php else: ?>
-                <p class="admin-text-muted">Inga banor uppladdade än.</p>
                 <?php endif; ?>
-
-                <!-- Upload new track -->
-                <details style="margin-top: var(--space-md);">
-                    <summary style="cursor: pointer; font-weight: 500; color: var(--color-accent);">+ Lägg till ny bana</summary>
-                    <form method="POST" enctype="multipart/form-data" style="margin-top: var(--space-md);">
-                        <?= csrf_field() ?>
-                        <input type="hidden" name="action" value="upload_gpx">
-                        <div class="admin-form-group">
-                            <label class="admin-form-label">Bannamn</label>
-                            <input type="text" name="track_name" class="admin-form-input" placeholder="t.ex. Elite 45km">
-                        </div>
-                        <div class="admin-form-group">
-                            <label class="admin-form-label">Etikett (visas i dropdown)</label>
-                            <input type="text" name="route_label" class="admin-form-input" placeholder="t.ex. Elite">
-                        </div>
-                        <div class="admin-form-group">
-                            <label class="admin-form-label">Färg</label>
-                            <select name="track_color" class="admin-form-select">
-                                <?php foreach ($trackColors as $hex => $name): ?>
-                                <option value="<?= $hex ?>" style="background: <?= $hex ?>; color: white;"><?= $name ?></option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-                        <div class="admin-form-group">
-                            <label style="display: flex; align-items: center; gap: var(--space-sm);">
-                                <input type="checkbox" name="is_primary" value="1">
-                                <span>Primär bana (visas först)</span>
-                            </label>
-                        </div>
-                        <div class="admin-form-group">
-                            <label class="admin-form-label">GPX-fil</label>
-                            <input type="file" name="gpx_file" accept=".gpx" required class="admin-form-input">
-                        </div>
-                        <button type="submit" class="btn-admin btn-admin-primary">Ladda upp</button>
-                    </form>
-                </details>
+                <form method="POST" enctype="multipart/form-data">
+                    <?= csrf_field() ?>
+                    <input type="hidden" name="action" value="upload_gpx">
+                    <input type="text" name="track_name" class="admin-form-input" placeholder="Namn" style="padding: 4px 6px; font-size: 0.75rem; margin-bottom: 4px;">
+                    <div style="display: flex; gap: 4px; margin-bottom: 4px;">
+                        <select name="track_color" class="admin-form-select" style="padding: 4px; font-size: 0.75rem; flex: 1;">
+                            <?php foreach ($trackColors as $hex => $name): ?>
+                            <option value="<?= $hex ?>"><?= $name ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                        <label style="font-size: 0.7rem; display: flex; align-items: center; gap: 2px;">
+                            <input type="checkbox" name="is_primary" value="1" <?= empty($allTracks) ? 'checked' : '' ?>>
+                            Primär
+                        </label>
+                    </div>
+                    <input type="file" name="gpx_file" accept=".gpx" required style="font-size: 0.7rem; width: 100%; margin-bottom: 4px;">
+                    <button type="submit" class="btn-admin btn-admin-primary btn-admin-sm" style="width: 100%; font-size: 0.75rem; padding: 4px;">Ladda upp GPX</button>
+                </form>
             </div>
-        </div>
+        </details>
 
         <?php if ($currentTrack): ?>
-        <!-- Edit Current Track -->
-        <div class="admin-card" style="margin-top: var(--space-lg);">
-            <div class="admin-card-header">
-                <h2 style="display: flex; align-items: center; gap: var(--space-sm);">
-                    <span style="width: 16px; height: 16px; background: <?= htmlspecialchars($currentTrack['color'] ?? '#3B82F6') ?>; border-radius: 3px;"></span>
-                    <?= htmlspecialchars($currentTrack['route_label'] ?? $currentTrack['name']) ?>
-                </h2>
-            </div>
-            <div class="admin-card-body">
+        <!-- 2. Redigera bana -->
+        <details class="admin-collapse">
+            <summary class="admin-collapse-header">
+                <span style="display: flex; align-items: center; gap: 4px;">
+                    <span style="width: 8px; height: 8px; background: <?= htmlspecialchars($currentTrack['color'] ?? '#3B82F6') ?>; border-radius: 2px;"></span>
+                    ⚙️ <?= htmlspecialchars($currentTrack['route_label'] ?? $currentTrack['name']) ?>
+                </span>
+            </summary>
+            <div class="admin-collapse-body">
                 <form method="POST">
                     <?= csrf_field() ?>
                     <input type="hidden" name="action" value="update_track">
                     <input type="hidden" name="track_id" value="<?= $currentTrack['id'] ?>">
-                    <div class="admin-form-group">
-                        <label class="admin-form-label">Namn</label>
-                        <input type="text" name="track_name" class="admin-form-input" value="<?= htmlspecialchars($currentTrack['name']) ?>">
-                    </div>
-                    <div class="admin-form-group">
-                        <label class="admin-form-label">Etikett</label>
-                        <input type="text" name="route_label" class="admin-form-input" value="<?= htmlspecialchars($currentTrack['route_label'] ?? '') ?>">
-                    </div>
-                    <div class="admin-form-group">
-                        <label class="admin-form-label">Färg</label>
-                        <select name="track_color" class="admin-form-select">
+                    <input type="text" name="track_name" class="admin-form-input" value="<?= htmlspecialchars($currentTrack['name']) ?>" placeholder="Namn" style="padding: 4px 6px; font-size: 0.75rem; margin-bottom: 4px;">
+                    <div style="display: flex; gap: 4px; margin-bottom: 4px;">
+                        <select name="track_color" class="admin-form-select" style="padding: 4px; font-size: 0.75rem; flex: 1;">
                             <?php foreach ($trackColors as $hex => $name): ?>
                             <option value="<?= $hex ?>" <?= ($currentTrack['color'] ?? '#3B82F6') === $hex ? 'selected' : '' ?>><?= $name ?></option>
                             <?php endforeach; ?>
                         </select>
-                    </div>
-                    <div class="admin-form-group">
-                        <label style="display: flex; align-items: center; gap: var(--space-sm);">
+                        <label style="font-size: 0.7rem; display: flex; align-items: center; gap: 2px;">
                             <input type="checkbox" name="is_primary" value="1" <?= $currentTrack['is_primary'] ? 'checked' : '' ?>>
-                            <span>Primär bana</span>
+                            Primär
                         </label>
                     </div>
-                    <button type="submit" class="btn-admin btn-admin-secondary btn-admin-sm">Uppdatera</button>
+                    <button type="submit" class="btn-admin btn-admin-secondary btn-admin-sm" style="width: 100%; font-size: 0.75rem; padding: 4px;">Spara ändringar</button>
                 </form>
             </div>
-        </div>
+        </details>
 
-        <!-- Segment Legend -->
-        <div class="admin-card" style="margin-top: var(--space-lg);">
-            <div class="admin-card-header"><h2>Sträcktyper</h2></div>
-            <div class="admin-card-body">
-                <div style="display: flex; flex-wrap: wrap; gap: var(--space-md);">
-                    <div style="display: flex; align-items: center; gap: var(--space-xs);">
-                        <span style="width: 20px; height: 4px; background: #61CE70; border-radius: 2px;"></span>
-                        <span class="admin-text-muted">Transport (standard)</span>
-                    </div>
-                    <div style="display: flex; align-items: center; gap: var(--space-xs);">
-                        <span style="width: 20px; height: 4px; background: #EF4444; border-radius: 2px;"></span>
-                        <span>SS (Tävling)</span>
-                    </div>
-                    <div style="display: flex; align-items: center; gap: var(--space-xs);">
-                        <span style="width: 20px; height: 4px; background: #F59E0B; border-radius: 2px;"></span>
-                        <span>Lift</span>
-                    </div>
+        <!-- 3. Sektioner -->
+        <details class="admin-collapse" open>
+            <summary class="admin-collapse-header">
+                <span>🛤️ Sektioner (<?= count($currentTrack['segments']) ?>)</span>
+            </summary>
+            <div class="admin-collapse-body">
+                <!-- Status -->
+                <div id="segment-status" style="font-size: 0.7rem; color: var(--color-text); margin-bottom: 4px; padding: 3px 6px; background: var(--color-bg-tertiary); border-radius: 3px;">
+                    Klicka på banan
                 </div>
-                <p class="admin-text-muted" style="margin-top: var(--space-sm); font-size: 0.85em;">
-                    Hela banan visas som transport (grön). Markera sektioner som SS eller Lift.
-                </p>
-            </div>
-        </div>
 
-        <!-- Sektioner - kompakt lista med redigering -->
-        <div class="admin-card" style="margin-top: var(--space-md);">
-            <div class="admin-card-header" style="padding: var(--space-sm) var(--space-md);">
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <h2 style="font-size: 0.95rem; margin: 0;">Sektioner (<?= count($currentTrack['segments']) ?>)</h2>
-                    <span id="segment-status" style="font-size: 0.8rem; color: var(--color-primary);">Klicka på banan</span>
-                </div>
-            </div>
-            <div class="admin-card-body" style="padding: var(--space-sm);">
-                <!-- Typ-väljare (kompakt) -->
-                <div style="display: flex; gap: 4px; margin-bottom: var(--space-sm);">
-                    <button type="button" class="section-type-btn active" data-type="liaison" style="flex:1; padding: 6px; font-size: 0.75rem; background: #61CE70; color: white; border: none; border-radius: 4px; cursor: pointer;">🚴 Transport</button>
-                    <button type="button" class="section-type-btn" data-type="stage" style="flex:1; padding: 6px; font-size: 0.75rem; background: #EF4444; color: white; border: none; border-radius: 4px; cursor: pointer; opacity: 0.5;">🏁 SS</button>
-                    <button type="button" class="section-type-btn" data-type="lift" style="flex:1; padding: 6px; font-size: 0.75rem; background: #F59E0B; color: white; border: none; border-radius: 4px; cursor: pointer; opacity: 0.5;">🚡 Lift</button>
+                <!-- Typ-väljare -->
+                <div style="display: flex; gap: 2px; margin-bottom: 4px;">
+                    <button type="button" class="section-type-btn active" data-type="liaison" style="flex:1; padding: 3px; font-size: 0.65rem; background: #61CE70; color: white; border: none; border-radius: 2px; cursor: pointer;">🚴 Transp</button>
+                    <button type="button" class="section-type-btn" data-type="stage" style="flex:1; padding: 3px; font-size: 0.65rem; background: #EF4444; color: white; border: none; border-radius: 2px; cursor: pointer; opacity: 0.5;">🏁 SS</button>
+                    <button type="button" class="section-type-btn" data-type="lift" style="flex:1; padding: 3px; font-size: 0.65rem; background: #F59E0B; color: white; border: none; border-radius: 2px; cursor: pointer; opacity: 0.5;">🚡 Lift</button>
                 </div>
 
                 <!-- Pending segment actions -->
-                <div id="pending-actions" style="display: none; margin-bottom: var(--space-sm); padding: 8px; background: rgba(59, 130, 246, 0.1); border-radius: 4px;">
-                    <div style="font-size: 0.8rem; margin-bottom: 6px;">
-                        <span id="pending-info">Dra markören för att justera</span>
-                    </div>
-                    <div style="display: flex; gap: 4px;">
-                        <button type="button" onclick="savePendingSegment()" class="btn-admin btn-admin-primary btn-admin-sm" style="flex: 1; font-size: 0.75rem;">✓ Spara</button>
-                        <button type="button" onclick="cancelPendingSegment()" class="btn-admin btn-admin-secondary btn-admin-sm" style="flex: 1; font-size: 0.75rem;">✕ Avbryt</button>
+                <div id="pending-actions" style="display: none; margin-bottom: 4px; padding: 4px 6px; background: rgba(59, 130, 246, 0.1); border-radius: 3px;">
+                    <div style="font-size: 0.7rem; margin-bottom: 4px;"><span id="pending-info">Dra markören</span></div>
+                    <div style="display: flex; gap: 3px;">
+                        <button type="button" onclick="savePendingSegment()" class="btn-admin btn-admin-primary btn-admin-sm" style="flex: 1; font-size: 0.65rem; padding: 3px;">✓ Spara</button>
+                        <button type="button" onclick="cancelPendingSegment()" class="btn-admin btn-admin-secondary btn-admin-sm" style="flex: 1; font-size: 0.65rem; padding: 3px;">✕ Avbryt</button>
                     </div>
                 </div>
 
-                <!-- Segment-lista med inline redigering -->
-                <div style="max-height: 180px; overflow-y: auto; border: 1px solid var(--color-border); border-radius: 4px;">
+                <!-- Segment-lista -->
+                <div style="max-height: 150px; overflow-y: auto; border: 1px solid var(--color-border); border-radius: 3px;">
                     <?php if (!empty($currentTrack['segments'])): ?>
                     <?php foreach ($currentTrack['segments'] as $seg):
                         $icon = $seg['segment_type'] === 'stage' ? '🏁' : ($seg['segment_type'] === 'lift' ? '🚡' : '🚴');
                     ?>
-                    <div class="seg-row" style="display: flex; align-items: center; gap: 6px; padding: 6px 8px; border-bottom: 1px solid var(--color-border); font-size: 0.85rem;">
-                        <span style="width: 8px; height: 8px; background: <?= htmlspecialchars($seg['color']) ?>; border-radius: 2px; flex-shrink: 0;"></span>
+                    <div class="seg-row" style="display: flex; align-items: center; gap: 3px; padding: 3px 5px; border-bottom: 1px solid var(--color-border); font-size: 0.75rem;">
+                        <span style="width: 6px; height: 6px; background: <?= htmlspecialchars($seg['color']) ?>; border-radius: 1px;"></span>
                         <span style="flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-                            <?= $icon ?> <?= htmlspecialchars($seg['segment_name'] ?: 'Sektion ' . $seg['sequence_number']) ?>
+                            <?= $icon ?> <?= htmlspecialchars($seg['segment_name'] ?: '#' . $seg['sequence_number']) ?>
                         </span>
-                        <span style="color: var(--color-text); font-size: 0.75rem;"><?= number_format($seg['distance_km'], 1) ?>km</span>
-                        <!-- Ändra typ dropdown -->
-                        <select onchange="changeSegmentType(<?= $seg['id'] ?>, this.value)" style="padding: 2px 4px; font-size: 0.7rem; border: 1px solid var(--color-border); border-radius: 3px; background: white;">
-                            <option value="liaison" <?= $seg['segment_type'] === 'liaison' ? 'selected' : '' ?>>Transport</option>
+                        <span style="color: var(--color-text); font-size: 0.65rem;"><?= number_format($seg['distance_km'], 1) ?>km</span>
+                        <select onchange="changeSegmentType(<?= $seg['id'] ?>, this.value)" style="padding: 1px 2px; font-size: 0.6rem; border: 1px solid var(--color-border); border-radius: 2px;">
+                            <option value="liaison" <?= $seg['segment_type'] === 'liaison' ? 'selected' : '' ?>>T</option>
                             <option value="stage" <?= $seg['segment_type'] === 'stage' ? 'selected' : '' ?>>SS</option>
-                            <option value="lift" <?= $seg['segment_type'] === 'lift' ? 'selected' : '' ?>>Lift</option>
+                            <option value="lift" <?= $seg['segment_type'] === 'lift' ? 'selected' : '' ?>>L</option>
                         </select>
                         <form method="POST" style="margin: 0;">
                             <?= csrf_field() ?>
                             <input type="hidden" name="action" value="delete_segment">
                             <input type="hidden" name="segment_id" value="<?= $seg['id'] ?>">
-                            <button type="submit" style="background: none; border: none; color: var(--color-danger); cursor: pointer; padding: 2px 4px; font-size: 0.8rem;" onclick="return confirm('Ta bort?')">×</button>
+                            <button type="submit" style="background: none; border: none; color: var(--color-danger); cursor: pointer; padding: 0 2px; font-size: 0.65rem;" onclick="return confirm('Ta bort?')">×</button>
                         </form>
                     </div>
                     <?php endforeach; ?>
                     <?php else: ?>
-                    <p style="padding: var(--space-sm); margin: 0; color: var(--color-text); font-size: 0.85rem;">Inga sektioner. Klicka på banan!</p>
+                    <p style="padding: 6px; margin: 0; color: var(--color-text); font-size: 0.7rem;">Klicka på banan för att markera</p>
                     <?php endif; ?>
                 </div>
 
@@ -431,60 +374,92 @@ include __DIR__ . '/components/unified-layout.php';
                     <input type="hidden" name="new_type" id="update-new-type" value="">
                 </form>
             </div>
-        </div>
+        </details>
         <?php endif; ?>
 
-        <!-- POIs -->
-        <div class="admin-card" style="margin-top: var(--space-lg);">
-            <div class="admin-card-header"><h2>POIs (<?= count($pois) ?>)</h2></div>
-            <div class="admin-card-body">
+        <!-- 4. POIs -->
+        <details class="admin-collapse">
+            <summary class="admin-collapse-header">
+                <span>📍 POIs (<?= count($pois) ?>)</span>
+            </summary>
+            <div class="admin-collapse-body">
                 <?php if (!empty($pois)): ?>
-                <?php foreach ($pois as $poi): ?>
-                <div style="display: flex; align-items: center; gap: var(--space-sm); padding: var(--space-xs) 0;">
-                    <span><?= $poi['type_emoji'] ?? '📍' ?></span>
-                    <span style="flex: 1;"><?= htmlspecialchars($poi['label'] ?: $poi['type_label'] ?? $poi['poi_type']) ?></span>
-                    <form method="POST" style="margin: 0;">
-                        <?= csrf_field() ?>
-                        <input type="hidden" name="action" value="delete_poi">
-                        <input type="hidden" name="poi_id" value="<?= $poi['id'] ?>">
-                        <button type="submit" class="btn-admin btn-admin-ghost btn-admin-sm" onclick="return confirm('Ta bort?')">×</button>
-                    </form>
+                <div style="display: flex; flex-direction: column; gap: 2px; margin-bottom: 6px;">
+                    <?php foreach ($pois as $poi): ?>
+                    <div style="display: flex; align-items: center; gap: 3px; padding: 3px 5px; background: var(--color-bg-secondary); border-radius: 2px; font-size: 0.7rem;">
+                        <span><?= $poi['type_emoji'] ?? '📍' ?></span>
+                        <span style="flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"><?= htmlspecialchars($poi['label'] ?: $poi['type_label'] ?? $poi['poi_type']) ?></span>
+                        <form method="POST" style="margin: 0;">
+                            <?= csrf_field() ?>
+                            <input type="hidden" name="action" value="delete_poi">
+                            <input type="hidden" name="poi_id" value="<?= $poi['id'] ?>">
+                            <button type="submit" style="background: none; border: none; color: var(--color-danger); cursor: pointer; padding: 0 2px; font-size: 0.65rem;" onclick="return confirm('Ta bort?')">×</button>
+                        </form>
+                    </div>
+                    <?php endforeach; ?>
                 </div>
-                <?php endforeach; ?>
-                <hr style="margin: var(--space-md) 0;">
                 <?php endif; ?>
-                <p class="admin-text-muted">Klicka på kartan för att lägga till POI</p>
                 <form method="POST" id="poi-form">
                     <?= csrf_field() ?>
                     <input type="hidden" name="action" value="add_poi">
                     <input type="hidden" name="poi_lat" id="poi-lat">
                     <input type="hidden" name="poi_lng" id="poi-lng">
-                    <div class="admin-form-group">
-                        <select name="poi_type" class="admin-form-select" required>
-                            <option value="">Välj typ...</option>
+                    <div style="display: flex; gap: 4px; margin-bottom: 4px;">
+                        <select name="poi_type" class="admin-form-select" required style="padding: 4px; font-size: 0.7rem; flex: 1;">
+                            <option value="">Typ...</option>
                             <?php foreach ($poiTypes as $key => $label): ?>
                             <option value="<?= htmlspecialchars($key) ?>"><?= htmlspecialchars($label) ?></option>
                             <?php endforeach; ?>
                         </select>
+                        <input type="text" name="poi_label" class="admin-form-input" placeholder="Etikett" style="padding: 4px 6px; font-size: 0.7rem; width: 80px;">
                     </div>
-                    <div class="admin-form-group">
-                        <input type="text" name="poi_label" class="admin-form-input" placeholder="Etikett (valfritt)">
-                    </div>
-                    <button type="submit" id="poi-btn" disabled class="btn-admin btn-admin-primary">Lägg till POI</button>
+                    <p style="font-size: 0.65rem; color: var(--color-text); margin-bottom: 4px;">Klicka på kartan</p>
+                    <button type="submit" id="poi-btn" disabled class="btn-admin btn-admin-primary btn-admin-sm" style="width: 100%; font-size: 0.7rem; padding: 3px;">Lägg till</button>
                 </form>
             </div>
-        </div>
+        </details>
+
     </div>
 
     <!-- Right: Map -->
     <div>
-        <div class="admin-card">
-            <div class="admin-card-body" style="padding: 0;">
-                <div id="map" style="height: 600px; border-radius: var(--radius-md);"></div>
-            </div>
+        <div style="background: var(--color-bg); border: 1px solid var(--color-border); border-radius: var(--radius-md); overflow: hidden;">
+            <div id="map" style="height: calc(100vh - 180px); min-height: 400px;"></div>
         </div>
     </div>
 </div>
+
+<!-- Collapse styles -->
+<style>
+.admin-collapse {
+    background: var(--color-bg);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+}
+.admin-collapse-header {
+    padding: 8px 10px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    cursor: pointer;
+    background: var(--color-bg-secondary);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.admin-collapse-header::after {
+    content: '▸';
+    font-size: 0.7rem;
+    transition: transform 0.2s;
+}
+.admin-collapse[open] .admin-collapse-header::after {
+    transform: rotate(90deg);
+}
+.admin-collapse-body {
+    padding: 8px 10px;
+    border-top: 1px solid var(--color-border);
+}
+</style>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 <script>

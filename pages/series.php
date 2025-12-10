@@ -38,10 +38,12 @@ try {
         if ($check->rowCount() > 0) {
             $check2 = $db->query("SHOW COLUMNS FROM series LIKE 'brand_id'");
             if ($check2->rowCount() > 0) {
+                // Only show brands that have series with events
                 $allBrands = $db->query("
                     SELECT DISTINCT sb.id, sb.name
                     FROM series_brands sb
                     INNER JOIN series s ON sb.id = s.brand_id
+                    INNER JOIN events e ON s.id = e.series_id
                     WHERE sb.active = 1 AND s.status IN ('active', 'completed')
                     ORDER BY sb.display_order ASC, sb.name ASC
                 ")->fetchAll(PDO::FETCH_ASSOC);
@@ -54,11 +56,13 @@ try {
 
     // Fallback: Extract brands from series names using PHP
     if (!$useBrandsTable) {
+        // Only get series that have at least one event
         $allSeriesRaw = $db->query("
-            SELECT id, name, slug, year
-            FROM series
-            WHERE status IN ('active', 'completed')
-            ORDER BY year DESC
+            SELECT DISTINCT s.id, s.name, s.slug, s.year
+            FROM series s
+            INNER JOIN events e ON s.id = e.series_id
+            WHERE s.status IN ('active', 'completed')
+            ORDER BY s.year DESC
         ")->fetchAll(PDO::FETCH_ASSOC);
 
         $seriesByBaseName = [];
