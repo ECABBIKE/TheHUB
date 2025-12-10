@@ -30,17 +30,35 @@ if ($id <= 0 && !$isNew) {
     exit;
 }
 
-// Fetch series data if editing
-$series = null;
-if (!$isNew) {
-    $series = $db->getRow("SELECT * FROM series WHERE id = ?", [$id]);
+// Set default values for new series (must be before POST handler)
+$series = [
+    'id' => 0,
+    'name' => '',
+    'year' => date('Y'),
+    'type' => '',
+    'format' => 'Championship',
+    'status' => 'planning',
+    'start_date' => '',
+    'end_date' => '',
+    'description' => '',
+    'organizer' => '',
+    'logo' => '',
+    'brand_id' => null,
+    'swish_number' => '',
+    'swish_name' => '',
+];
 
-    if (!$series) {
+// Fetch series data if editing
+if (!$isNew) {
+    $fetchedSeries = $db->getRow("SELECT * FROM series WHERE id = ?", [$id]);
+
+    if (!$fetchedSeries) {
         $_SESSION['message'] = 'Serie hittades inte';
         $_SESSION['messageType'] = 'error';
         header('Location: /admin/series');
         exit;
     }
+    $series = array_merge($series, $fetchedSeries);
 }
 
 // Check if year column exists
@@ -223,25 +241,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 // Re-fetch series data after potential update (for display)
 if (!$isNew && $id > 0) {
-    $series = $db->getRow("SELECT * FROM series WHERE id = ?", [$id]);
-}
-
-// Set default values for new series
-if ($isNew) {
-    $series = [
-        'id' => 0,
-        'name' => '',
-        'year' => date('Y'),
-        'type' => '',
-        'format' => 'Championship',
-        'status' => 'planning',
-        'start_date' => '',
-        'end_date' => '',
-        'description' => '',
-        'organizer' => '',
-        'logo' => '',
-        'brand_id' => null,
-    ];
+    $fetchedSeries = $db->getRow("SELECT * FROM series WHERE id = ?", [$id]);
+    if ($fetchedSeries) {
+        $series = array_merge($series, $fetchedSeries);
+    }
 }
 
 // Get events count and results status for this series
