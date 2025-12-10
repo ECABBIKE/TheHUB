@@ -745,7 +745,7 @@ include __DIR__ . '/includes/layout-header.php';
   <?php endif; ?>
 
   <?php if (!empty($event['map_content']) || !empty($event['map_image_url']) || !empty($event['map_use_global'])): ?>
-  <a href="?id=<?= $eventId ?>&tab=karta"
+  <a href="/map.php?id=<?= $eventId ?>"
    class="event-tab <?= $activeTab === 'karta' ? 'active' : '' ?>">
    <i data-lucide="map"></i>
    Karta
