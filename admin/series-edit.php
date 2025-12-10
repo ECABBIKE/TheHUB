@@ -315,7 +315,7 @@ include __DIR__ . '/components/unified-layout.php';
                     </label>
                     <input type="number" id="year" name="year" class="admin-form-input" required
                            value="<?= htmlspecialchars($series['year'] ?? date('Y')) ?>"
-                           min="2000" max="2100" onchange="updateSeriesName()">
+                           min="2000" max="2100">
                     <small style="color: var(--color-text-secondary); font-size: 0.75rem;">
                         Vilket år gäller denna säsong? Avgör vilka event som tillhör serien.
                     </small>
@@ -324,9 +324,9 @@ include __DIR__ . '/components/unified-layout.php';
                     <label for="name" class="admin-form-label">Serienamn <span style="color: var(--color-error);">*</span></label>
                     <input type="text" id="name" name="name" class="admin-form-input" required
                            value="<?= htmlspecialchars($series['name'] ?? '') ?>"
-                           placeholder="T.ex. Swecup 2025">
+                           placeholder="T.ex. Swecup">
                     <small style="color: var(--color-text-secondary); font-size: 0.75rem;">
-                        Genereras automatiskt från huvudserie + år, men kan ändras
+                        År visas separat som badge - skriv ej år i namnet
                     </small>
                 </div>
             </div>
@@ -528,22 +528,20 @@ const csrfToken = '<?= htmlspecialchars(generate_csrf_token()) ?>';
 const currentStatus = '<?= htmlspecialchars($series['status'] ?? 'planning') ?>';
 const isNewSeries = <?= $isNew ? 'true' : 'false' ?>;
 
-// Auto-generate series name from brand + year
+// Auto-generate series name from brand (without year - year shown as badge)
 function updateSeriesName() {
     if (!isNewSeries) return; // Only auto-update for new series
 
     const brandSelect = document.getElementById('brand_id');
-    const yearInput = document.getElementById('year');
     const nameInput = document.getElementById('name');
 
-    if (!brandSelect || !yearInput || !nameInput) return;
+    if (!brandSelect || !nameInput) return;
 
     const selectedOption = brandSelect.options[brandSelect.selectedIndex];
     const brandName = selectedOption?.dataset?.name || '';
-    const year = yearInput.value;
 
-    if (brandName && year) {
-        nameInput.value = brandName + ' ' + year;
+    if (brandName) {
+        nameInput.value = brandName;
     }
 }
 
