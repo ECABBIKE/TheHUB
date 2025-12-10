@@ -55,8 +55,8 @@ if (!function_exists('hub_asset')) {
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cabin+Condensed:wght@400;500;600;700&family=Manrope:wght@300;400;500;600;700&family=Oswald:wght@400;500;600;700&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
 
-<!-- Lucide Icons -->
-<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<!-- Lucide Icons - pinned to specific version for stability -->
+<script src="https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js"></script>
 
 <title><?= htmlspecialchars($pageTitle) ?></title>
 
