@@ -275,32 +275,8 @@ function saveEventTrack($pdo, $eventId, $name, $gpxFile, $parsedData, $options =
 
             $trackId = $pdo->lastInsertId();
 
-            // OLD workflow: Create one segment with all coordinates (for backwards compatibility)
-            if (!empty($rawCoordinates)) {
-                $firstCoord = $rawCoordinates[0];
-                $lastCoord = end($rawCoordinates);
-
-                $stmt = $pdo->prepare("
-                    INSERT INTO event_track_segments
-                    (track_id, segment_type, segment_name, sequence_number,
-                     distance_km, elevation_gain_m, elevation_loss_m,
-                     start_lat, start_lng, end_lat, end_lng,
-                     coordinates, elevation_data, color)
-                    VALUES (?, 'liaison', 'Hela banan', 1, ?, ?, 0, ?, ?, ?, ?, ?, ?, ?)
-                ");
-                $stmt->execute([
-                    $trackId,
-                    $totalDistance,
-                    $totalElevation,
-                    $firstCoord['lat'],
-                    $firstCoord['lng'],
-                    $lastCoord['lat'],
-                    $lastCoord['lng'],
-                    json_encode($rawCoordinates),
-                    json_encode($rawElevations),
-                    '#61CE70'
-                ]);
-            }
+            // OLD workflow: No automatic segments created
+            // User will manually mark sections via the segment editor
 
             $pdo->commit();
             return $trackId;
