@@ -327,7 +327,7 @@ include __DIR__ . '/components/unified-layout.php';
             <div class="admin-card-body">
                 <div style="display: flex; flex-wrap: wrap; gap: var(--space-md);">
                     <div style="display: flex; align-items: center; gap: var(--space-xs);">
-                        <span style="width: 20px; height: 4px; background: #9CA3AF; border-radius: 2px;"></span>
+                        <span style="width: 20px; height: 4px; background: #61CE70; border-radius: 2px;"></span>
                         <span class="admin-text-muted">Transport (standard)</span>
                     </div>
                     <div style="display: flex; align-items: center; gap: var(--space-xs);">
@@ -340,7 +340,7 @@ include __DIR__ . '/components/unified-layout.php';
                     </div>
                 </div>
                 <p class="admin-text-muted" style="margin-top: var(--space-sm); font-size: 0.85em;">
-                    Hela banan visas som transport (grå). Markera sektioner som SS eller Lift.
+                    Hela banan visas som transport (grön). Markera sektioner som SS eller Lift.
                 </p>
             </div>
         </div>
@@ -472,7 +472,7 @@ let startIdx = -1, endIdx = -1;
 // Segment colors
 const SEGMENT_COLORS = {
     stage: '#EF4444',    // Red
-    liaison: '#9CA3AF',  // Gray
+    liaison: '#61CE70',  // Green
     lift: '#F59E0B'      // Orange/Yellow
 };
 
