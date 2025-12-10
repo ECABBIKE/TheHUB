@@ -829,33 +829,62 @@ function getEventMapDataMultiTrack($pdo, $eventId) {
                 }
             }
         } else {
-            // OLD WORKFLOW: Just draw segments as before
-            foreach ($track['segments'] as $segment) {
-                $coordinates = array_map(function($coord) {
-                    return [$coord['lng'], $coord['lat']];
-                }, $segment['coordinates'] ?? []);
+            // OLD WORKFLOW: Draw segments if present, otherwise use GPX file fallback
+            if (!empty($track['segments'])) {
+                foreach ($track['segments'] as $segment) {
+                    $coordinates = array_map(function($coord) {
+                        return [$coord['lng'], $coord['lat']];
+                    }, $segment['coordinates'] ?? []);
 
-                $feature = [
-                    'type' => 'Feature',
-                    'geometry' => [
-                        'type' => 'LineString',
-                        'coordinates' => $coordinates
-                    ],
-                    'properties' => [
-                        'id' => (int)$segment['id'],
-                        'type' => 'segment',
-                        'track_id' => (int)$track['id'],
-                        'segment_type' => $segment['segment_type'],
-                        'name' => $segment['segment_name'],
-                        'sequence' => (int)$segment['sequence_number'],
-                        'distance_km' => (float)$segment['distance_km'],
-                        'elevation_gain' => (int)$segment['elevation_gain_m'],
-                        'color' => $segment['color'],
-                        'timing_id' => $segment['timing_id'] ?? null
-                    ]
-                ];
-                $trackFeatures[] = $feature;
-                $allFeatures[] = $feature;
+                    $feature = [
+                        'type' => 'Feature',
+                        'geometry' => [
+                            'type' => 'LineString',
+                            'coordinates' => $coordinates
+                        ],
+                        'properties' => [
+                            'id' => (int)$segment['id'],
+                            'type' => 'segment',
+                            'track_id' => (int)$track['id'],
+                            'segment_type' => $segment['segment_type'],
+                            'name' => $segment['segment_name'],
+                            'sequence' => (int)$segment['sequence_number'],
+                            'distance_km' => (float)$segment['distance_km'],
+                            'elevation_gain' => (int)$segment['elevation_gain_m'],
+                            'color' => $segment['color'],
+                            'timing_id' => $segment['timing_id'] ?? null
+                        ]
+                    ];
+                    $trackFeatures[] = $feature;
+                    $allFeatures[] = $feature;
+                }
+            } else {
+                // FALLBACK: No raw_coords and no segments - try GPX file directly
+                $waypoints = getTrackWaypointsForEditor($pdo, $track['id']);
+                if (!empty($waypoints)) {
+                    $coordinates = array_map(function($wp) {
+                        return [$wp['lng'], $wp['lat']];
+                    }, $waypoints);
+
+                    $feature = [
+                        'type' => 'Feature',
+                        'geometry' => [
+                            'type' => 'LineString',
+                            'coordinates' => $coordinates
+                        ],
+                        'properties' => [
+                            'id' => 0,
+                            'type' => 'base_track',
+                            'track_id' => (int)$track['id'],
+                            'segment_type' => 'liaison',
+                            'name' => 'Hela banan',
+                            'distance_km' => (float)$track['total_distance_km'],
+                            'color' => $track['color'] ?? '#61CE70'
+                        ]
+                    ];
+                    $trackFeatures[] = $feature;
+                    $allFeatures[] = $feature;
+                }
             }
         }
 
@@ -1404,14 +1433,19 @@ function getTrackWaypointsForEditor($pdo, $trackId) {
             if (file_exists($gpxPath)) {
                 try {
                     $parsedData = parseGpxFile($gpxPath);
-                    if (!empty($parsedData['coordinates'])) {
-                        foreach ($parsedData['coordinates'] as $coord) {
-                            $coordinates[] = [
-                                'lat' => $coord['lat'],
-                                'lng' => $coord['lng']
-                            ];
-                            if (isset($coord['ele'])) {
-                                $elevations[] = $coord['ele'];
+                    // Extract coordinates from tracks -> segments -> coordinates structure
+                    if (!empty($parsedData['tracks'])) {
+                        foreach ($parsedData['tracks'] as $gpxTrack) {
+                            foreach ($gpxTrack['segments'] as $segment) {
+                                foreach ($segment['coordinates'] as $coord) {
+                                    $coordinates[] = [
+                                        'lat' => $coord['lat'],
+                                        'lng' => $coord['lng']
+                                    ];
+                                    if (isset($coord['ele'])) {
+                                        $elevations[] = $coord['ele'];
+                                    }
+                                }
                             }
                         }
                     }
