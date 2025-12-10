@@ -809,44 +809,73 @@ function getEventMapDataMultiTrack($pdo, $eventId) {
         // Check if track has raw coordinates (new workflow)
         $hasRawCoords = !empty($track['raw_coordinates'] ?? null);
 
-        // Only draw base track if we have raw_coordinates (new workflow)
-        // For old tracks, segments already contain the full track
         if ($hasRawCoords) {
-            $basePolyline = getTrackBasePolyline($pdo, $track['id']);
-            if ($basePolyline) {
-                $basePolyline['properties']['track_id'] = (int)$track['id'];
-                $trackFeatures[] = $basePolyline;
-                $allFeatures[] = $basePolyline;
+            // NEW WORKFLOW: Build connected segments from raw coordinates
+            // Get all waypoints
+            $waypoints = getTrackWaypointsForEditor($pdo, $track['id']);
+
+            if (!empty($waypoints)) {
+                // Get segment index ranges
+                $segmentRanges = getSegmentIndexRanges($pdo, $track['id'], count($waypoints));
+
+                // Build features for each range (transport + marked segments)
+                foreach ($segmentRanges as $range) {
+                    $rangeCoords = array_slice($waypoints, $range['start'], $range['end'] - $range['start'] + 1);
+                    $coordinates = array_map(function($wp) {
+                        return [$wp['lng'], $wp['lat']];
+                    }, $rangeCoords);
+
+                    if (count($coordinates) < 2) continue;
+
+                    $feature = [
+                        'type' => 'Feature',
+                        'geometry' => [
+                            'type' => 'LineString',
+                            'coordinates' => $coordinates
+                        ],
+                        'properties' => [
+                            'id' => $range['segment_id'] ?? 0,
+                            'type' => 'segment',
+                            'track_id' => (int)$track['id'],
+                            'segment_type' => $range['type'],
+                            'name' => $range['name'],
+                            'distance_km' => $range['distance_km'],
+                            'color' => $range['color']
+                        ]
+                    ];
+                    $trackFeatures[] = $feature;
+                    $allFeatures[] = $feature;
+                }
             }
-        }
+        } else {
+            // OLD WORKFLOW: Just draw segments as before
+            foreach ($track['segments'] as $segment) {
+                $coordinates = array_map(function($coord) {
+                    return [$coord['lng'], $coord['lat']];
+                }, $segment['coordinates'] ?? []);
 
-        // Add segment overlays (SS, Lift, etc.)
-        foreach ($track['segments'] as $segment) {
-            $coordinates = array_map(function($coord) {
-                return [$coord['lng'], $coord['lat']];
-            }, $segment['coordinates'] ?? []);
-
-            $feature = [
-                'type' => 'Feature',
-                'geometry' => [
-                    'type' => 'LineString',
-                    'coordinates' => $coordinates
-                ],
-                'properties' => [
-                    'id' => (int)$segment['id'],
-                    'type' => 'segment',
-                    'track_id' => (int)$track['id'],
-                    'segment_type' => $segment['segment_type'],
-                    'name' => $segment['segment_name'],
-                    'sequence' => (int)$segment['sequence_number'],
-                    'distance_km' => (float)$segment['distance_km'],
-                    'elevation_gain' => (int)$segment['elevation_gain_m'],
-                    'color' => $segment['color'],
-                    'timing_id' => $segment['timing_id'] ?? null
-                ]
-            ];
-            $trackFeatures[] = $feature;
-            $allFeatures[] = $feature;
+                $feature = [
+                    'type' => 'Feature',
+                    'geometry' => [
+                        'type' => 'LineString',
+                        'coordinates' => $coordinates
+                    ],
+                    'properties' => [
+                        'id' => (int)$segment['id'],
+                        'type' => 'segment',
+                        'track_id' => (int)$track['id'],
+                        'segment_type' => $segment['segment_type'],
+                        'name' => $segment['segment_name'],
+                        'sequence' => (int)$segment['sequence_number'],
+                        'distance_km' => (float)$segment['distance_km'],
+                        'elevation_gain' => (int)$segment['elevation_gain_m'],
+                        'color' => $segment['color'],
+                        'timing_id' => $segment['timing_id'] ?? null
+                    ]
+                ];
+                $trackFeatures[] = $feature;
+                $allFeatures[] = $feature;
+            }
         }
 
         $tracksData[] = [
@@ -1270,25 +1299,56 @@ function addSegmentByWaypointIndex($pdo, $trackId, $segmentDef) {
     ];
     $color = $segmentColors[$segmentDef['type']] ?? '#61CE70';
 
-    // Create the segment with coordinates as JSON
-    $stmt = $pdo->prepare("
-        INSERT INTO event_track_segments
-        (track_id, sequence_number, segment_type, segment_name, color, distance_km, elevation_gain_m, elevation_loss_m, coordinates, elevation_data)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    ");
+    // Check if start_index column exists
+    $hasIndexCols = false;
+    try {
+        $check = $pdo->query("SHOW COLUMNS FROM event_track_segments LIKE 'start_index'");
+        $hasIndexCols = $check->fetch() !== false;
+    } catch (Exception $e) {
+        $hasIndexCols = false;
+    }
 
-    $stmt->execute([
-        $trackId,
-        $newSeqNum,
-        $segmentDef['type'],
-        $segmentDef['name'],
-        $color,
-        round($totalDistance, 2),
-        round($elevationGain),
-        round($elevationLoss),
-        json_encode($coordinates),
-        json_encode($elevations)
-    ]);
+    if ($hasIndexCols) {
+        // NEW: Store with index references
+        $stmt = $pdo->prepare("
+            INSERT INTO event_track_segments
+            (track_id, sequence_number, segment_type, segment_name, color, distance_km, elevation_gain_m, elevation_loss_m, start_index, end_index, coordinates, elevation_data)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ");
+        $stmt->execute([
+            $trackId,
+            $newSeqNum,
+            $segmentDef['type'],
+            $segmentDef['name'],
+            $color,
+            round($totalDistance, 2),
+            round($elevationGain),
+            round($elevationLoss),
+            $startIdx,
+            $endIdx,
+            json_encode($coordinates),
+            json_encode($elevations)
+        ]);
+    } else {
+        // OLD: Without index columns
+        $stmt = $pdo->prepare("
+            INSERT INTO event_track_segments
+            (track_id, sequence_number, segment_type, segment_name, color, distance_km, elevation_gain_m, elevation_loss_m, coordinates, elevation_data)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ");
+        $stmt->execute([
+            $trackId,
+            $newSeqNum,
+            $segmentDef['type'],
+            $segmentDef['name'],
+            $color,
+            round($totalDistance, 2),
+            round($elevationGain),
+            round($elevationLoss),
+            json_encode($coordinates),
+            json_encode($elevations)
+        ]);
+    }
 
     return $pdo->lastInsertId();
 }
@@ -1411,4 +1471,122 @@ function getTrackBasePolyline($pdo, $trackId) {
             'opacity' => 0.8
         ]
     ];
+}
+
+/**
+ * Get segment index ranges for a track
+ *
+ * Returns a list of ranges covering the entire track, where marked
+ * segments have their type (stage/lift) and unmarked portions are transport.
+ *
+ * @param PDO $pdo
+ * @param int $trackId
+ * @param int $totalWaypoints Total number of waypoints in track
+ * @return array Array of ranges with start, end, type, name, color, distance_km
+ */
+function getSegmentIndexRanges($pdo, $trackId, $totalWaypoints) {
+    $segmentColors = [
+        'stage' => '#EF4444',   // Red
+        'liaison' => '#61CE70', // Green
+        'lift' => '#F59E0B'     // Orange
+    ];
+
+    // Check if start_index column exists
+    $hasIndexCols = false;
+    try {
+        $check = $pdo->query("SHOW COLUMNS FROM event_track_segments LIKE 'start_index'");
+        $hasIndexCols = $check->fetch() !== false;
+    } catch (Exception $e) {
+        $hasIndexCols = false;
+    }
+
+    // Get all segments with their index ranges
+    $markedSegments = [];
+
+    if ($hasIndexCols) {
+        $stmt = $pdo->prepare("
+            SELECT id, segment_type, segment_name, start_index, end_index, distance_km, color
+            FROM event_track_segments
+            WHERE track_id = ? AND start_index IS NOT NULL AND end_index IS NOT NULL
+            ORDER BY start_index ASC
+        ");
+        $stmt->execute([$trackId]);
+        $markedSegments = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    // If no segments with indices, return whole track as transport
+    if (empty($markedSegments)) {
+        // Get waypoints to calculate distance
+        $waypoints = getTrackWaypointsForEditor($pdo, $trackId);
+        $totalDist = !empty($waypoints) ? end($waypoints)['distance_km'] : 0;
+
+        return [[
+            'start' => 0,
+            'end' => $totalWaypoints - 1,
+            'type' => 'liaison',
+            'name' => 'Transport',
+            'color' => $segmentColors['liaison'],
+            'distance_km' => round($totalDist, 2),
+            'segment_id' => null
+        ]];
+    }
+
+    // Build ranges including gaps (transport sections)
+    $ranges = [];
+    $currentPos = 0;
+    $waypoints = getTrackWaypointsForEditor($pdo, $trackId);
+
+    foreach ($markedSegments as $seg) {
+        $segStart = (int)$seg['start_index'];
+        $segEnd = (int)$seg['end_index'];
+
+        // Add transport section before this segment if there's a gap
+        if ($segStart > $currentPos) {
+            $transportDist = 0;
+            if (isset($waypoints[$segStart]) && isset($waypoints[$currentPos])) {
+                $transportDist = $waypoints[$segStart]['distance_km'] - $waypoints[$currentPos]['distance_km'];
+            }
+            $ranges[] = [
+                'start' => $currentPos,
+                'end' => $segStart,
+                'type' => 'liaison',
+                'name' => 'Transport',
+                'color' => $segmentColors['liaison'],
+                'distance_km' => round($transportDist, 2),
+                'segment_id' => null
+            ];
+        }
+
+        // Add the marked segment
+        $ranges[] = [
+            'start' => $segStart,
+            'end' => $segEnd,
+            'type' => $seg['segment_type'],
+            'name' => $seg['segment_name'],
+            'color' => $seg['color'] ?? $segmentColors[$seg['segment_type']] ?? $segmentColors['liaison'],
+            'distance_km' => (float)$seg['distance_km'],
+            'segment_id' => (int)$seg['id']
+        ];
+
+        $currentPos = $segEnd;
+    }
+
+    // Add transport section after last segment if needed
+    if ($currentPos < $totalWaypoints - 1) {
+        $transportDist = 0;
+        if (isset($waypoints[$totalWaypoints - 1]) && isset($waypoints[$currentPos])) {
+            $transportDist = $waypoints[$totalWaypoints - 1]['distance_km'] - $waypoints[$currentPos]['distance_km'];
+        }
+        $ranges[] = [
+            'start' => $currentPos,
+            'end' => $totalWaypoints - 1,
+            'type' => 'liaison',
+            'name' => 'Transport',
+            'color' => $segmentColors['liaison'],
+            'distance_km' => round($transportDist, 2),
+            'segment_id' => null
+        ];
+    }
+
+    return $ranges;
 }
