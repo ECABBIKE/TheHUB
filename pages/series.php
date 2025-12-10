@@ -27,17 +27,29 @@ try {
         ORDER BY year DESC
     ")->fetchAll(PDO::FETCH_COLUMN);
 
-    // Get all unique series names (base name without year) for the series dropdown
-    // We extract the base name by removing trailing year patterns
-    $allSeriesNames = $db->query("
-        SELECT DISTINCT
-            TRIM(REGEXP_REPLACE(name, '[0-9]{4}$', '')) as base_name,
-            MIN(slug) as slug
+    // Get all unique series names for the series dropdown
+    // Group by slug prefix (without year suffix) to find unique series
+    $allSeriesRaw = $db->query("
+        SELECT id, name, slug, year
         FROM series
         WHERE status IN ('active', 'completed')
-        GROUP BY base_name
-        ORDER BY base_name ASC
+        ORDER BY year DESC
     ")->fetchAll(PDO::FETCH_ASSOC);
+
+    // Extract base names by removing trailing year from name
+    $seriesBaseNames = [];
+    foreach ($allSeriesRaw as $s) {
+        // Remove trailing 4-digit year from name
+        $baseName = trim(preg_replace('/\s*\d{4}$/', '', $s['name']));
+        if (!isset($seriesBaseNames[$baseName])) {
+            $seriesBaseNames[$baseName] = [
+                'base_name' => $baseName,
+                'slug' => $s['slug']  // Use first (most recent) slug
+            ];
+        }
+    }
+    $allSeriesNames = array_values($seriesBaseNames);
+    usort($allSeriesNames, fn($a, $b) => strcmp($a['base_name'], $b['base_name']));
 
     if ($filterMode === 'series') {
         // Find the base name for the selected series
@@ -51,25 +63,38 @@ try {
 
         // Get all series matching this base name (all years)
         if ($selectedSeriesBaseName) {
-            $stmt = $db->prepare("
-                SELECT s.id, s.name, s.slug, s.description, s.year, s.status,
-                       s.type, s.discipline,
-                       s.logo, s.logo_light, s.logo_dark,
-                       s.gradient_start, s.gradient_end, s.accent_color,
-                       COUNT(DISTINCT e.id) as event_count,
-                       (SELECT COUNT(DISTINCT r.cyclist_id)
-                        FROM results r
-                        INNER JOIN events e2 ON r.event_id = e2.id
-                        WHERE e2.series_id = s.id) as participant_count
-                FROM series s
-                LEFT JOIN events e ON s.id = e.series_id
-                WHERE s.status IN ('active', 'completed')
-                  AND TRIM(REGEXP_REPLACE(s.name, '[0-9]{4}$', '')) = ?
-                GROUP BY s.id
-                ORDER BY s.year DESC
-            ");
-            $stmt->execute([$selectedSeriesBaseName]);
-            $series = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            // Find all series IDs that match this base name
+            $matchingSeriesIds = [];
+            foreach ($allSeriesRaw as $s) {
+                $baseName = trim(preg_replace('/\s*\d{4}$/', '', $s['name']));
+                if ($baseName === $selectedSeriesBaseName) {
+                    $matchingSeriesIds[] = $s['id'];
+                }
+            }
+
+            if (!empty($matchingSeriesIds)) {
+                $placeholders = implode(',', array_fill(0, count($matchingSeriesIds), '?'));
+                $stmt = $db->prepare("
+                    SELECT s.id, s.name, s.slug, s.description, s.year, s.status,
+                           s.type, s.discipline,
+                           s.logo, s.logo_light, s.logo_dark,
+                           s.gradient_start, s.gradient_end, s.accent_color,
+                           COUNT(DISTINCT e.id) as event_count,
+                           (SELECT COUNT(DISTINCT r.cyclist_id)
+                            FROM results r
+                            INNER JOIN events e2 ON r.event_id = e2.id
+                            WHERE e2.series_id = s.id) as participant_count
+                    FROM series s
+                    LEFT JOIN events e ON s.id = e.series_id
+                    WHERE s.id IN ($placeholders)
+                    GROUP BY s.id
+                    ORDER BY s.year DESC
+                ");
+                $stmt->execute($matchingSeriesIds);
+                $series = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            } else {
+                $series = [];
+            }
 
             $pageTitle = trim($selectedSeriesBaseName);
             $pageSubtitle = 'Historik för alla år';
