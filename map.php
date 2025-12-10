@@ -62,9 +62,11 @@ $eventName = htmlspecialchars($event['name']);
     <meta name="theme-color" content="#1a1a1a">
     <title>Karta - <?= $eventName ?></title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+    <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         :root {
             --color-accent: #61CE70;
+            --color-icon: #F59E0B;
             --color-border: #e5e7eb;
             --color-text: #7A7A7A;
             --space-xs: 4px;
@@ -195,7 +197,13 @@ $eventName = htmlspecialchars($event['name']);
         }
         .nav-item:active { background: rgba(0,0,0,0.05); }
         .nav-item.active { color: var(--color-accent); }
-        .nav-item .nav-icon { font-size: 1.3rem; }
+        .nav-item.active .nav-icon { color: var(--color-accent); }
+        .nav-item .nav-icon {
+            width: 22px;
+            height: 22px;
+            color: var(--color-icon);
+            stroke-width: 2;
+        }
         .nav-item.loading .nav-icon { animation: pulse 1s infinite; }
         @keyframes pulse {
             0%, 100% { transform: scale(1); }
@@ -251,11 +259,11 @@ $eventName = htmlspecialchars($event['name']);
         .elevation-header {
             display: flex;
             align-items: center;
-            justify-content: space-between;
+            gap: var(--space-sm);
             padding: var(--space-sm) var(--space-md);
             border-bottom: 1px solid var(--color-border);
         }
-        .elevation-header span { font-size: 0.9rem; font-weight: 500; }
+        .elevation-header span { font-size: 0.9rem; font-weight: 500; flex: 1; }
         .elevation-close {
             background: none;
             border: none;
@@ -354,6 +362,53 @@ $eventName = htmlspecialchars($event['name']);
             background: rgba(255,255,255,0.97) !important;
             backdrop-filter: blur(10px) !important;
         }
+        @media (max-width: 768px) {
+            .leaflet-bottom.leaflet-left {
+                bottom: calc(56px + env(safe-area-inset-bottom) + var(--space-sm)) !important;
+            }
+        }
+
+        /* Segment items in dropdown */
+        .dropdown-section-title {
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--color-text);
+            padding: var(--space-sm) var(--space-md);
+            background: #f5f5f5;
+            border-bottom: 1px solid var(--color-border);
+        }
+        .segment-item {
+            padding-left: calc(var(--space-md) + 20px);
+            font-size: 0.85rem;
+        }
+        .segment-item .seg-info {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+        .segment-item .seg-name { font-weight: 500; }
+        .segment-item .seg-meta { font-size: 0.75rem; color: var(--color-text); }
+
+        /* Elevation stats */
+        .elevation-stats {
+            display: flex;
+            gap: var(--space-lg);
+            padding: var(--space-xs) var(--space-md);
+            font-size: 0.8rem;
+            color: var(--color-text);
+            border-bottom: 1px solid var(--color-border);
+        }
+        .elevation-stats .stat {
+            display: flex;
+            align-items: center;
+            gap: var(--space-xs);
+        }
+        .elevation-stats .stat-value {
+            font-weight: 600;
+            color: #333;
+        }
     </style>
 </head>
 <body>
@@ -396,17 +451,42 @@ $eventName = htmlspecialchars($event['name']);
 
     <!-- Mobile dropdowns (positioned from bottom bar) -->
     <div class="controls-top" id="mobile-dropdowns">
-        <!-- Track dropdown menu (opens from bottom bar) -->
+        <!-- Track & Segment dropdown menu (opens from bottom bar) -->
         <?php if (count($tracks) > 0): ?>
-        <div class="dropdown" id="track-dropdown" style="position: fixed; bottom: calc(56px + env(safe-area-inset-bottom) + var(--space-sm)); left: var(--space-sm); display: none;">
-            <div class="dropdown-menu" style="position: static; display: block;">
+        <div class="dropdown" id="track-dropdown" style="position: fixed; bottom: calc(56px + env(safe-area-inset-bottom) + var(--space-sm)); left: var(--space-sm); display: none; max-width: calc(100vw - var(--space-md));">
+            <div class="dropdown-menu" style="position: static; display: block; max-height: 50vh;">
+                <div class="dropdown-section-title">Banor</div>
                 <?php foreach ($tracks as $track): ?>
-                <div class="dropdown-item <?= $track['is_primary'] ? 'active' : '' ?>" data-track-id="<?= $track['id'] ?>" onclick="selectTrack(<?= $track['id'] ?>, '<?= htmlspecialchars(addslashes($track['route_label'] ?? $track['name'])) ?>', '<?= $track['color'] ?? '#3B82F6' ?>')">
+                <div class="dropdown-item <?= $track['is_primary'] ? 'active' : '' ?>" data-track-id="<?= $track['id'] ?>" onclick="selectTrack(<?= $track['id'] ?>)">
                     <span class="dot" style="background: <?= htmlspecialchars($track['color'] ?? '#3B82F6') ?>; width: 12px; height: 12px; border-radius: 3px;"></span>
                     <?= htmlspecialchars($track['route_label'] ?? $track['name']) ?>
                     <span style="margin-left: auto; font-size: 0.8em; opacity: 0.7;"><?= number_format($track['total_distance_km'], 1) ?> km</span>
                 </div>
                 <?php endforeach; ?>
+
+                <?php
+                // Collect all segments from all tracks
+                $allSegments = [];
+                foreach ($tracks as $track) {
+                    if (!empty($track['segments'])) {
+                        foreach ($track['segments'] as $seg) {
+                            $seg['track_id'] = $track['id'];
+                            $seg['track_color'] = $track['color'] ?? '#3B82F6';
+                            $allSegments[] = $seg;
+                        }
+                    }
+                }
+                if (!empty($allSegments)): ?>
+                <div class="dropdown-section-title">Sträckor</div>
+                <?php foreach ($allSegments as $seg): ?>
+                <div class="dropdown-item segment-item" data-segment-id="<?= $seg['id'] ?>" data-track-id="<?= $seg['track_id'] ?>" onclick="selectSegment(<?= $seg['id'] ?>, <?= $seg['track_id'] ?>)">
+                    <div class="seg-info">
+                        <span class="seg-name"><?= htmlspecialchars($seg['name']) ?></span>
+                        <span class="seg-meta"><?= number_format($seg['distance_km'], 2) ?> km · <?= number_format($seg['elevation_drop_m'] ?? 0) ?> m FHM</span>
+                    </div>
+                </div>
+                <?php endforeach; ?>
+                <?php endif; ?>
             </div>
         </div>
         <?php endif; ?>
@@ -430,28 +510,28 @@ $eventName = htmlspecialchars($event['name']);
     <!-- Mobile bottom bar -->
     <div class="mobile-bottom-bar">
         <a href="/event/<?= $eventId ?>" class="nav-item" title="Tillbaka">
-            <span class="nav-icon">←</span>
+            <i data-lucide="arrow-left" class="nav-icon"></i>
             <span>Tillbaka</span>
         </a>
         <?php if (count($tracks) > 0): ?>
         <button class="nav-item" onclick="toggleMobileMenu('track-dropdown')" id="nav-tracks">
-            <span class="nav-icon">🗺️</span>
+            <i data-lucide="map" class="nav-icon"></i>
             <span>Banor</span>
         </button>
         <?php endif; ?>
         <?php if (!empty($poiGroups)): ?>
         <button class="nav-item" onclick="toggleMobileMenu('poi-dropdown')" id="nav-pois">
-            <span class="nav-icon">📍</span>
+            <i data-lucide="map-pin" class="nav-icon"></i>
             <span>POIs</span>
         </button>
         <?php endif; ?>
         <button class="nav-item" onclick="toggleElevation()" id="nav-elevation">
-            <span class="nav-icon">📈</span>
+            <i data-lucide="mountain" class="nav-icon"></i>
             <span>Höjd</span>
         </button>
         <button class="nav-item" id="nav-location" onclick="toggleLocation()">
-            <span class="nav-icon">📍</span>
-            <span>Plats</span>
+            <i data-lucide="locate" class="nav-icon"></i>
+            <span>Din plats</span>
         </button>
     </div>
 
@@ -464,8 +544,23 @@ $eventName = htmlspecialchars($event['name']);
     <!-- Elevation -->
     <div class="elevation hidden" id="elevation">
         <div class="elevation-header">
-            <span>📈 Höjdprofil</span>
+            <i data-lucide="mountain" style="width: 18px; height: 18px; color: var(--color-icon);"></i>
+            <span id="elevation-title">Höjdprofil</span>
             <button class="elevation-close" onclick="toggleElevation()">✕</button>
+        </div>
+        <div class="elevation-stats" id="elevation-stats">
+            <div class="stat">
+                <span>Distans:</span>
+                <span class="stat-value" id="stat-distance">-</span>
+            </div>
+            <div class="stat">
+                <span>FHM:</span>
+                <span class="stat-value" id="stat-fhm">-</span>
+            </div>
+            <div class="stat">
+                <span>Stigning:</span>
+                <span class="stat-value" id="stat-climb">-</span>
+            </div>
         </div>
         <div class="elevation-content">
             <canvas id="elevation-canvas"></canvas>
@@ -475,10 +570,12 @@ $eventName = htmlspecialchars($event['name']);
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
     <script>
     const mapData = <?= json_encode($mapData) ?>;
-    let map, trackLayers = {}, poiLayers = {};
+    let map, trackLayers = {}, poiLayers = {}, segmentLayers = {};
     let locationMarker, locationCircle, watchId;
     let visibleTracks = new Set();
     let visiblePoiTypes = new Set();
+    let selectedSegment = null;
+    let highlightLayer = null;
 
     // Init
     document.addEventListener('DOMContentLoaded', () => {
@@ -519,6 +616,9 @@ $eventName = htmlspecialchars($event['name']);
         if (mapData.bounds) map.fitBounds(mapData.bounds, { padding: [50, 50] });
         updateElevation();
 
+        // Initialize Lucide icons
+        lucide.createIcons();
+
         // Close dropdowns and mobile menus when clicking on map
         document.addEventListener('click', e => {
             if (!e.target.closest('.dropdown')) document.querySelectorAll('.dropdown.open').forEach(d => d.classList.remove('open'));
@@ -543,22 +643,87 @@ $eventName = htmlspecialchars($event['name']);
         updateElevation();
     }
 
-    function selectTrack(id, name, color) {
+    function selectTrack(id) {
+        // Clear selected segment
+        selectedSegment = null;
+        if (highlightLayer) { map.removeLayer(highlightLayer); highlightLayer = null; }
+
+        // Show only this track
         Object.keys(trackLayers).forEach(tid => {
             const layer = trackLayers[tid], intId = parseInt(tid);
-            if (intId === id) { if (!map.hasLayer(layer)) layer.addTo(map); visibleTracks.add(intId); }
-            else { if (map.hasLayer(layer)) map.removeLayer(layer); visibleTracks.delete(intId); }
+            if (intId === id) {
+                if (!map.hasLayer(layer)) layer.addTo(map);
+                visibleTracks.add(intId);
+            } else {
+                if (map.hasLayer(layer)) map.removeLayer(layer);
+                visibleTracks.delete(intId);
+            }
         });
-        // Update desktop dropdown UI
-        const currentName = document.getElementById('current-name');
-        const currentDot = document.getElementById('current-dot');
-        if (currentName) currentName.textContent = name;
-        if (currentDot) currentDot.style.background = color;
-        document.querySelectorAll('#track-dropdown .dropdown-item').forEach(i => i.classList.toggle('active', parseInt(i.dataset.trackId) === id));
-        document.getElementById('track-dropdown').classList.remove('open');
+
+        // Zoom to track bounds
+        const track = mapData.tracks.find(t => t.id === id);
+        if (track && track.bounds) {
+            map.fitBounds(track.bounds, { padding: [50, 50] });
+        }
+
+        // Update UI
+        document.querySelectorAll('#track-dropdown .dropdown-item[data-track-id]').forEach(i => {
+            i.classList.toggle('active', parseInt(i.dataset.trackId) === id && !i.classList.contains('segment-item'));
+        });
+        document.querySelectorAll('.segment-item').forEach(i => i.classList.remove('active'));
+
         // Close mobile menu
         document.querySelectorAll('#mobile-dropdowns .dropdown').forEach(d => d.style.display = 'none');
+
+        // Update elevation title
+        document.getElementById('elevation-title').textContent = track ? (track.route_label || track.name) : 'Höjdprofil';
+
         updateElevation();
+    }
+
+    function selectSegment(segmentId, trackId) {
+        // First make sure the parent track is visible
+        const layer = trackLayers[trackId];
+        if (layer && !map.hasLayer(layer)) {
+            layer.addTo(map);
+            visibleTracks.add(trackId);
+        }
+
+        // Find the segment
+        const track = mapData.tracks.find(t => t.id === trackId);
+        const segment = track?.segments?.find(s => s.id === segmentId);
+        if (!segment) return;
+
+        selectedSegment = { trackId, segmentId, segment };
+
+        // Remove old highlight
+        if (highlightLayer) { map.removeLayer(highlightLayer); highlightLayer = null; }
+
+        // Highlight the segment
+        if (segment.coordinates && segment.coordinates.length > 0) {
+            const coords = segment.coordinates.map(c => [c.lat, c.lng]);
+            highlightLayer = L.polyline(coords, {
+                color: '#F59E0B',
+                weight: 6,
+                opacity: 1
+            }).addTo(map);
+
+            // Zoom to segment
+            map.fitBounds(highlightLayer.getBounds(), { padding: [50, 50] });
+        }
+
+        // Update UI
+        document.querySelectorAll('#track-dropdown .dropdown-item').forEach(i => i.classList.remove('active'));
+        document.querySelector(`.segment-item[data-segment-id="${segmentId}"]`)?.classList.add('active');
+
+        // Close mobile menu
+        document.querySelectorAll('#mobile-dropdowns .dropdown').forEach(d => d.style.display = 'none');
+
+        // Update elevation title
+        document.getElementById('elevation-title').textContent = segment.name;
+
+        // Show elevation for this segment only
+        updateElevation(segment);
     }
 
     function togglePoiType(type) {
@@ -643,7 +808,7 @@ $eventName = htmlspecialchars($event['name']);
         setTimeout(updateElevation, 350);
     }
 
-    function updateElevation() {
+    function updateElevation(singleSegment = null) {
         const canvas = document.getElementById('elevation-canvas');
         if (!canvas) return;
         const ctx = canvas.getContext('2d');
@@ -652,7 +817,19 @@ $eventName = htmlspecialchars($event['name']);
         ctx.scale(2, 2);
 
         let allEle = [], allDist = [];
-        if (mapData.tracks) {
+
+        if (singleSegment) {
+            // Show single segment elevation
+            const ele = singleSegment.elevation_data || [];
+            const coords = singleSegment.coordinates || [];
+            let dist = 0;
+            coords.forEach((c, i) => {
+                if (i > 0) dist += haversine(coords[i-1].lat, coords[i-1].lng, c.lat, c.lng);
+                allDist.push(dist);
+                allEle.push(ele[i] ?? c.ele ?? 0);
+            });
+        } else if (mapData.tracks) {
+            // Show all visible tracks
             mapData.tracks.forEach(track => {
                 if (!visibleTracks.has(track.id)) return;
                 (track.segments || []).forEach(seg => {
@@ -666,6 +843,21 @@ $eventName = htmlspecialchars($event['name']);
                 });
             });
         }
+
+        // Calculate stats
+        const totalDist = allDist.length > 0 ? allDist[allDist.length - 1] : 0;
+        let totalClimb = 0, totalDescent = 0;
+        for (let i = 1; i < allEle.length; i++) {
+            const diff = allEle[i] - allEle[i-1];
+            if (diff > 0) totalClimb += diff;
+            else totalDescent += Math.abs(diff);
+        }
+        const fhm = totalDescent; // Fall Height Meters
+
+        // Update stats display
+        document.getElementById('stat-distance').textContent = totalDist.toFixed(2) + ' km';
+        document.getElementById('stat-fhm').textContent = Math.round(fhm) + ' m';
+        document.getElementById('stat-climb').textContent = '+' + Math.round(totalClimb) + ' m';
 
         if (allEle.length < 2) {
             ctx.fillStyle = '#999'; ctx.font = '12px sans-serif'; ctx.textAlign = 'center';
