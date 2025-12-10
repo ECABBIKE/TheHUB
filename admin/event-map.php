@@ -161,14 +161,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 // Get data
 $track = getEventTrack($pdo, $eventId);
-$pois = getEventPois($pdo, $eventId, false);
-$poiTypes = getPoiTypesForSelect();
+$pois = getEventPois($pdo, $eventId, false) ?: [];
+$poiTypes = getPoiTypesForSelect() ?: [];
 $mapData = getEventMapData($pdo, $eventId);
 $mapDataJson = $mapData ? json_encode($mapData) : 'null';
 
 $trackWaypoints = [];
 if ($track) {
-    $trackWaypoints = getTrackWaypointsForEditor($pdo, $track['id']);
+    try {
+        $trackWaypoints = getTrackWaypointsForEditor($pdo, $track['id']);
+    } catch (Exception $e) {
+        $trackWaypoints = [];
+    }
 }
 $waypointsJson = json_encode($trackWaypoints);
 $poisJson = json_encode($pois);
@@ -584,7 +588,7 @@ $poisJson = json_encode($pois);
             <!-- POIs Section -->
             <div class="sidebar-section">
                 <div class="sidebar-section-header" onclick="toggleSection(this)">
-                    <span>POIs (<?= count($pois) ?>)</span>
+                    <span>POIs (<?= count($pois ?: []) ?>)</span>
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
                 </div>
                 <div class="sidebar-section-content">
