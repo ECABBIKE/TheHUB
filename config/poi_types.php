@@ -109,7 +109,7 @@ define('POI_TYPES', [
  */
 define('SEGMENT_COLORS', [
     'stage' => '#EF4444',    // Red for SS/tävlingssträcka
-    'liaison' => '#9CA3AF',  // Gray for transport
+    'liaison' => '#61CE70',  // Green for transport
     'lift' => '#F59E0B'      // Orange for lift
 ]);
 

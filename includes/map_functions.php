@@ -298,7 +298,7 @@ function saveEventTrack($pdo, $eventId, $name, $gpxFile, $parsedData, $options =
                     $lastCoord['lng'],
                     json_encode($rawCoordinates),
                     json_encode($rawElevations),
-                    '#9CA3AF'
+                    '#61CE70'
                 ]);
             }
 
@@ -1265,10 +1265,10 @@ function addSegmentByWaypointIndex($pdo, $trackId, $segmentDef) {
     // Determine color based on type
     $segmentColors = [
         'stage' => '#EF4444',   // Red for SS/tävling
-        'liaison' => '#9CA3AF', // Gray for transport
+        'liaison' => '#61CE70', // Green for transport
         'lift' => '#F59E0B'     // Orange for lift
     ];
-    $color = $segmentColors[$segmentDef['type']] ?? '#9CA3AF';
+    $color = $segmentColors[$segmentDef['type']] ?? '#61CE70';
 
     // Create the segment with coordinates as JSON
     $stmt = $pdo->prepare("
@@ -1406,7 +1406,7 @@ function getTrackBasePolyline($pdo, $trackId) {
         ],
         'properties' => [
             'type' => 'base_track',
-            'color' => '#9CA3AF', // Gray for transport/liaison
+            'color' => '#61CE70', // Green for transport/liaison
             'weight' => 4,
             'opacity' => 0.8
         ]
