@@ -1,8 +1,8 @@
 <?php
 /**
- * Admin Event Map Management
+ * Admin Event Map Management - Full-width Map Editor
  *
- * Manage GPX tracks, segments, and POIs for events.
+ * Clean map-focused interface with collapsible panels
  *
  * @since 2025-12-09
  */
@@ -48,57 +48,36 @@ $messageType = '';
 // Handle form submissions
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     check_csrf();
-
     $action = $_POST['action'] ?? '';
 
     try {
         switch ($action) {
-
-            // Upload GPX file
             case 'upload_gpx':
                 if (!isset($_FILES['gpx_file']) || $_FILES['gpx_file']['error'] !== UPLOAD_ERR_OK) {
                     throw new Exception('Ingen fil uppladdad eller uppladdningsfel');
                 }
-
                 $file = $_FILES['gpx_file'];
                 $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+                if ($ext !== 'gpx') throw new Exception('Endast GPX-filer tillåtna');
+                if ($file['size'] > 10 * 1024 * 1024) throw new Exception('Max 10MB');
 
-                if ($ext !== 'gpx') {
-                    throw new Exception('Endast GPX-filer ar tillatna');
-                }
-
-                // Check file size (max 10MB)
-                if ($file['size'] > 10 * 1024 * 1024) {
-                    throw new Exception('Filen ar for stor (max 10MB)');
-                }
-
-                // Create upload directory
                 $uploadDir = getGpxUploadPath();
-
-                // Generate unique filename
                 $filename = 'event_' . $eventId . '_' . time() . '.gpx';
                 $filepath = $uploadDir . '/' . $filename;
-
                 if (!move_uploaded_file($file['tmp_name'], $filepath)) {
                     throw new Exception('Kunde inte spara filen');
                 }
 
-                // Delete existing track for this event (if any)
                 $existingTrack = getEventTrack($pdo, $eventId);
-                if ($existingTrack) {
-                    deleteEventTrack($pdo, $existingTrack['id']);
-                }
+                if ($existingTrack) deleteEventTrack($pdo, $existingTrack['id']);
 
-                // Parse and save to database
                 $parsedData = parseGpxFile($filepath);
                 $trackName = trim($_POST['track_name'] ?? '') ?: pathinfo($file['name'], PATHINFO_FILENAME);
                 saveEventTrack($pdo, $eventId, $trackName, $filename, $parsedData);
-
-                $message = 'GPX-fil uppladdad och bearbetad!';
+                $message = 'GPX uppladdad!';
                 $messageType = 'success';
                 break;
 
-            // Delete track
             case 'delete_track':
                 $trackId = intval($_POST['track_id'] ?? 0);
                 if ($trackId > 0) {
@@ -108,7 +87,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
                 break;
 
-            // Add POI
             case 'add_poi':
                 $poiData = [
                     'poi_type' => $_POST['poi_type'] ?? '',
@@ -117,17 +95,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'lat' => floatval($_POST['poi_lat'] ?? 0),
                     'lng' => floatval($_POST['poi_lng'] ?? 0),
                 ];
-
-                if (empty($poiData['poi_type']) || $poiData['lat'] == 0 || $poiData['lng'] == 0) {
-                    throw new Exception('Typ och koordinater kravs');
+                if (empty($poiData['poi_type']) || $poiData['lat'] == 0) {
+                    throw new Exception('Typ och koordinater krävs');
                 }
-
                 addEventPoi($pdo, $eventId, $poiData);
                 $message = 'POI tillagd';
                 $messageType = 'success';
                 break;
 
-            // Delete POI
             case 'delete_poi':
                 $poiId = intval($_POST['poi_id'] ?? 0);
                 if ($poiId > 0) {
@@ -137,81 +112,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
                 break;
 
-            // Update segment
             case 'update_segment':
                 $segmentId = intval($_POST['segment_id'] ?? 0);
                 $segmentType = $_POST['segment_type'] ?? 'stage';
                 $segmentName = trim($_POST['segment_name'] ?? '');
-                $timingId = trim($_POST['timing_id'] ?? '');
-
                 if ($segmentId > 0) {
-                    updateSegmentClassification($pdo, $segmentId, $segmentType, $segmentName, $timingId ?: null);
+                    updateSegmentClassification($pdo, $segmentId, $segmentType, $segmentName, null);
                     $message = 'Segment uppdaterat';
                     $messageType = 'success';
                 }
                 break;
 
-            // Define segments from distances
-            case 'define_segments':
-                $trackId = intval($_POST['track_id'] ?? 0);
-                $segmentCount = intval($_POST['segment_count'] ?? 0);
-
-                if ($trackId <= 0) {
-                    throw new Exception('Ogiltigt track-ID');
+            case 'delete_segment':
+                $segmentId = intval($_POST['segment_id'] ?? 0);
+                if ($segmentId > 0) {
+                    $pdo->prepare("DELETE FROM event_track_segments WHERE id = ?")->execute([$segmentId]);
+                    $message = 'Segment borttaget';
+                    $messageType = 'success';
                 }
-
-                $segmentDefs = [];
-                for ($i = 1; $i <= $segmentCount; $i++) {
-                    $name = trim($_POST["seg_{$i}_name"] ?? '');
-                    $type = $_POST["seg_{$i}_type"] ?? 'stage';
-                    $startKm = floatval($_POST["seg_{$i}_start"] ?? 0);
-                    $endKm = floatval($_POST["seg_{$i}_end"] ?? 0);
-
-                    if ($endKm > $startKm) {
-                        $segmentDefs[] = [
-                            'name' => $name ?: ($type === 'stage' ? "SS$i" : "L$i"),
-                            'type' => $type,
-                            'start_km' => $startKm,
-                            'end_km' => $endKm
-                        ];
-                    }
-                }
-
-                if (empty($segmentDefs)) {
-                    throw new Exception('Inga giltiga segment definierade');
-                }
-
-                defineTrackSegmentsFromDistances($pdo, $trackId, $segmentDefs);
-                $message = count($segmentDefs) . ' segment definierade!';
-                $messageType = 'success';
                 break;
 
-            // Add single segment
-            case 'add_segment':
-                $trackId = intval($_POST['track_id'] ?? 0);
-                $segmentName = trim($_POST['segment_name'] ?? '');
-                $segmentType = $_POST['segment_type'] ?? 'stage';
-                $startKm = floatval($_POST['start_km'] ?? 0);
-                $endKm = floatval($_POST['end_km'] ?? 0);
-
-                if ($trackId <= 0) {
-                    throw new Exception('Ogiltigt track-ID');
-                }
-                if ($endKm <= $startKm) {
-                    throw new Exception('Slut-km måste vara större än start-km');
-                }
-
-                addSegmentByDistance($pdo, $trackId, [
-                    'name' => $segmentName ?: ($segmentType === 'stage' ? 'SS' : 'Liaison'),
-                    'type' => $segmentType,
-                    'start_km' => $startKm,
-                    'end_km' => $endKm
-                ]);
-                $message = 'Segment tillagt!';
-                $messageType = 'success';
-                break;
-
-            // Add segment by clicking on map (visual mode)
             case 'add_segment_visual':
                 $trackId = intval($_POST['track_id'] ?? 0);
                 $segmentName = trim($_POST['segment_name'] ?? '');
@@ -219,15 +139,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $startIdx = intval($_POST['start_index'] ?? -1);
                 $endIdx = intval($_POST['end_index'] ?? -1);
 
-                if ($trackId <= 0) {
-                    throw new Exception('Ogiltigt track-ID');
-                }
-                if ($startIdx < 0 || $endIdx < 0) {
-                    throw new Exception('Välj start- och slutpunkt på kartan');
-                }
-                if ($endIdx <= $startIdx) {
-                    throw new Exception('Slutpunkten måste komma efter startpunkten');
-                }
+                if ($trackId <= 0) throw new Exception('Ogiltigt track-ID');
+                if ($startIdx < 0 || $endIdx < 0) throw new Exception('Välj start och slut på kartan');
+                if ($endIdx <= $startIdx) throw new Exception('Slutpunkt måste vara efter start');
 
                 addSegmentByWaypointIndex($pdo, $trackId, [
                     'name' => $segmentName ?: ($segmentType === 'stage' ? 'SS' : 'Liaison'),
@@ -239,659 +153,868 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $messageType = 'success';
                 break;
         }
-
     } catch (Exception $e) {
         $message = $e->getMessage();
         $messageType = 'error';
     }
 }
 
-// Get current map data
+// Get data
 $track = getEventTrack($pdo, $eventId);
-$pois = getEventPois($pdo, $eventId, false); // Include hidden
+$pois = getEventPois($pdo, $eventId, false);
 $poiTypes = getPoiTypesForSelect();
-
-// Get map data for preview
 $mapData = getEventMapData($pdo, $eventId);
 $mapDataJson = $mapData ? json_encode($mapData) : 'null';
 
-// Get waypoints for visual segment editor
 $trackWaypoints = [];
 if ($track) {
     $trackWaypoints = getTrackWaypointsForEditor($pdo, $track['id']);
 }
 $waypointsJson = json_encode($trackWaypoints);
-
-// Page config
-$page_title = 'Karta - ' . htmlspecialchars($event['name']);
-$breadcrumbs = [
-    ['label' => 'Events', 'url' => '/admin/events'],
-    ['label' => htmlspecialchars($event['name']), 'url' => '/admin/events/edit/' . $eventId],
-    ['label' => 'Karta']
-];
-$page_actions = '<a href="/admin/events/edit/' . $eventId . '" class="btn-admin btn-admin-secondary">
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px"><path d="m15 18-6-6 6-6"/></svg>
-    Tillbaka till event
-</a>';
-
-// Include unified layout
-include __DIR__ . '/components/unified-layout.php';
+$poisJson = json_encode($pois);
 ?>
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Karta - <?= h($event['name']) ?> | TheHUB Admin</title>
+    <link rel="stylesheet" href="<?= hub_asset('css/base.css') ?>">
+    <link rel="stylesheet" href="<?= hub_asset('css/admin.css') ?>">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+    <style>
+    /* Full-screen map layout */
+    .map-editor {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        background: var(--color-bg);
+    }
 
-<!-- Leaflet CSS -->
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
-<!-- Map CSS -->
-<link rel="stylesheet" href="<?= hub_asset('css/map.css') ?>">
+    /* Top bar */
+    .map-topbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: var(--space-sm) var(--space-md);
+        background: var(--color-bg-card);
+        border-bottom: 1px solid var(--color-border);
+        z-index: 1000;
+    }
+    .map-topbar h1 {
+        font-size: var(--text-lg);
+        font-weight: 600;
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: var(--space-sm);
+    }
+    .map-topbar-stats {
+        display: flex;
+        gap: var(--space-lg);
+        font-size: var(--text-sm);
+        color: var(--color-text-secondary);
+    }
+    .map-topbar-stat strong {
+        color: var(--color-text);
+    }
 
-<?php if ($message): ?>
-<div class="alert alert-<?= $messageType === 'error' ? 'error' : 'success' ?>">
-    <?= htmlspecialchars($message) ?>
-</div>
-<?php endif; ?>
+    /* Main content area */
+    .map-content {
+        flex: 1;
+        display: flex;
+        position: relative;
+        overflow: hidden;
+    }
 
-<div class="admin-grid admin-grid-2">
-    <!-- Left Column: GPX Upload & Segments -->
-    <div>
-        <!-- GPX Upload Card -->
-        <div class="admin-card">
-            <div class="admin-card-header">
-                <h2>GPX-fil</h2>
-            </div>
-            <div class="admin-card-body">
-                <?php if ($track): ?>
-                <div class="admin-info-box" style="margin-bottom: var(--space-md);">
-                    <strong>Nuvarande bana:</strong> <?= htmlspecialchars($track['name']) ?><br>
-                    <span class="admin-text-muted">
-                        <?= number_format($track['total_distance_km'], 1) ?> km &bull;
-                        <?= number_format($track['total_elevation_m']) ?>m hojd &bull;
-                        <?= count($track['segments']) ?> segment
-                    </span>
-                </div>
-                <form method="POST" style="margin-bottom: var(--space-md);">
-                    <?= csrf_field() ?>
-                    <input type="hidden" name="action" value="delete_track">
-                    <input type="hidden" name="track_id" value="<?= $track['id'] ?>">
-                    <button type="submit" class="btn-admin btn-admin-danger btn-admin-sm"
-                            onclick="return confirm('Ta bort befintlig bana? Detta raderar alla segment och waypoints.')">
-                        Ta bort bana
-                    </button>
-                </form>
-                <hr style="margin: var(--space-md) 0; border-color: var(--color-border);">
-                <p class="admin-text-muted" style="margin-bottom: var(--space-sm);">Ladda upp ny GPX-fil (ersatter befintlig):</p>
-                <?php endif; ?>
+    /* Sidebar panel */
+    .map-sidebar {
+        width: 320px;
+        background: var(--color-bg-card);
+        border-right: 1px solid var(--color-border);
+        display: flex;
+        flex-direction: column;
+        z-index: 100;
+        transition: margin-left 0.3s ease;
+    }
+    .map-sidebar.collapsed {
+        margin-left: -320px;
+    }
+    .map-sidebar-toggle {
+        position: absolute;
+        left: 320px;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 24px;
+        height: 48px;
+        background: var(--color-bg-card);
+        border: 1px solid var(--color-border);
+        border-left: none;
+        border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 101;
+        transition: left 0.3s ease;
+    }
+    .map-sidebar.collapsed + .map-sidebar-toggle {
+        left: 0;
+    }
+    .map-sidebar-toggle svg {
+        transition: transform 0.3s;
+    }
+    .map-sidebar.collapsed + .map-sidebar-toggle svg {
+        transform: rotate(180deg);
+    }
 
-                <form method="POST" enctype="multipart/form-data">
-                    <?= csrf_field() ?>
-                    <input type="hidden" name="action" value="upload_gpx">
+    /* Sidebar sections */
+    .sidebar-section {
+        border-bottom: 1px solid var(--color-border);
+    }
+    .sidebar-section-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: var(--space-sm) var(--space-md);
+        cursor: pointer;
+        font-weight: 600;
+        font-size: var(--text-sm);
+        background: var(--color-bg-hover);
+    }
+    .sidebar-section-header:hover {
+        background: var(--color-bg-sunken);
+    }
+    .sidebar-section-content {
+        padding: var(--space-sm) var(--space-md);
+        max-height: 300px;
+        overflow-y: auto;
+    }
 
-                    <div class="admin-form-group">
-                        <label class="admin-form-label">Namn pa banan</label>
-                        <input type="text" name="track_name" class="admin-form-input"
-                               placeholder="T.ex. Enduro 2025" value="<?= htmlspecialchars($event['name']) ?>">
-                    </div>
+    /* Segment list */
+    .segment-item {
+        display: flex;
+        align-items: center;
+        gap: var(--space-sm);
+        padding: var(--space-xs) 0;
+        font-size: var(--text-sm);
+        cursor: pointer;
+        border-radius: var(--radius-sm);
+    }
+    .segment-item:hover {
+        background: var(--color-bg-hover);
+    }
+    .segment-color {
+        width: 12px;
+        height: 12px;
+        border-radius: 2px;
+        flex-shrink: 0;
+    }
+    .segment-item-name {
+        flex: 1;
+    }
+    .segment-item-dist {
+        color: var(--color-text-secondary);
+        font-size: var(--text-xs);
+    }
 
-                    <div class="admin-form-group">
-                        <label class="admin-form-label">GPX-fil</label>
-                        <input type="file" name="gpx_file" accept=".gpx" required class="admin-form-input">
-                        <span class="admin-form-hint">Max 10MB</span>
-                    </div>
+    /* POI list */
+    .poi-item {
+        display: flex;
+        align-items: center;
+        gap: var(--space-sm);
+        padding: var(--space-xs) 0;
+        font-size: var(--text-sm);
+    }
+    .poi-item-icon {
+        font-size: 16px;
+    }
 
-                    <button type="submit" class="btn-admin btn-admin-primary">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
-                        Ladda upp GPX
-                    </button>
-                </form>
-            </div>
-        </div>
+    /* Map container */
+    .map-container {
+        flex: 1;
+        position: relative;
+    }
+    #map {
+        width: 100%;
+        height: 100%;
+    }
 
+    /* Elevation profile */
+    .elevation-panel {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: var(--color-bg-card);
+        border-top: 1px solid var(--color-border);
+        z-index: 100;
+        transition: transform 0.3s ease;
+    }
+    .elevation-panel.collapsed {
+        transform: translateY(calc(100% - 32px));
+    }
+    .elevation-toggle {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: var(--space-sm);
+        padding: var(--space-xs) var(--space-md);
+        cursor: pointer;
+        font-size: var(--text-sm);
+        font-weight: 500;
+        background: var(--color-bg-hover);
+    }
+    .elevation-toggle:hover {
+        background: var(--color-bg-sunken);
+    }
+    .elevation-toggle svg {
+        transition: transform 0.3s;
+    }
+    .elevation-panel.collapsed .elevation-toggle svg {
+        transform: rotate(180deg);
+    }
+    #elevation-chart {
+        height: 120px;
+        padding: var(--space-sm);
+    }
+    #elevation-canvas {
+        width: 100%;
+        height: 100%;
+    }
+
+    /* Floating action buttons */
+    .map-fab {
+        position: absolute;
+        right: var(--space-md);
+        top: var(--space-md);
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-sm);
+        z-index: 100;
+    }
+    .fab-btn {
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        background: var(--color-bg-card);
+        border: 1px solid var(--color-border);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        box-shadow: var(--shadow-md);
+        transition: all 0.2s;
+    }
+    .fab-btn:hover {
+        background: var(--color-accent);
+        color: white;
+        border-color: var(--color-accent);
+    }
+    .fab-btn.active {
+        background: var(--color-accent);
+        color: white;
+    }
+
+    /* Mode indicator */
+    .mode-indicator {
+        position: absolute;
+        top: var(--space-md);
+        left: 50%;
+        transform: translateX(-50%);
+        background: var(--color-bg-card);
+        padding: var(--space-sm) var(--space-md);
+        border-radius: var(--radius-md);
+        box-shadow: var(--shadow-lg);
+        font-size: var(--text-sm);
+        z-index: 100;
+        display: none;
+    }
+    .mode-indicator.active {
+        display: flex;
+        align-items: center;
+        gap: var(--space-sm);
+    }
+    .mode-indicator .step-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--color-border);
+    }
+    .mode-indicator .step-dot.active {
+        background: var(--color-accent);
+    }
+    .mode-indicator .step-dot.done {
+        background: var(--color-success);
+    }
+
+    /* Toast messages */
+    .toast {
+        position: fixed;
+        bottom: var(--space-xl);
+        left: 50%;
+        transform: translateX(-50%);
+        background: var(--color-bg-card);
+        padding: var(--space-sm) var(--space-lg);
+        border-radius: var(--radius-md);
+        box-shadow: var(--shadow-lg);
+        z-index: 2000;
+        animation: toast-in 0.3s ease;
+    }
+    .toast.error { border-left: 4px solid var(--color-error); }
+    .toast.success { border-left: 4px solid var(--color-success); }
+    @keyframes toast-in {
+        from { opacity: 0; transform: translateX(-50%) translateY(20px); }
+        to { opacity: 1; transform: translateX(-50%) translateY(0); }
+    }
+
+    /* Upload modal */
+    .modal-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 2000;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.2s;
+    }
+    .modal-overlay.active {
+        opacity: 1;
+        pointer-events: auto;
+    }
+    .modal {
+        background: var(--color-bg-card);
+        border-radius: var(--radius-lg);
+        padding: var(--space-lg);
+        width: 400px;
+        max-width: 90vw;
+        transform: scale(0.9);
+        transition: transform 0.2s;
+    }
+    .modal-overlay.active .modal {
+        transform: scale(1);
+    }
+    .modal h2 {
+        margin: 0 0 var(--space-md) 0;
+        font-size: var(--text-lg);
+    }
+
+    /* Segment markers */
+    .segment-marker {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        font-size: 12px;
+        color: white;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+    }
+    .segment-marker.start { background: #61CE70; }
+    .segment-marker.end { background: #ef4444; }
+    </style>
+</head>
+<body>
+<div class="map-editor">
+    <!-- Top Bar -->
+    <div class="map-topbar">
+        <h1>
+            <a href="/admin/events/edit/<?= $eventId ?>" style="color: var(--color-text-secondary); text-decoration: none;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6"/></svg>
+            </a>
+            <?= h($event['name']) ?>
+        </h1>
         <?php if ($track): ?>
-        <!-- Visual Segment Editor Card -->
-        <div class="admin-card" style="margin-top: var(--space-lg);">
-            <div class="admin-card-header">
-                <h2>Lägg till sträcka</h2>
+        <div class="map-topbar-stats">
+            <span><strong><?= number_format($track['total_distance_km'], 1) ?></strong> km</span>
+            <span><strong><?= number_format($track['total_elevation_m']) ?></strong> m höjd</span>
+            <span><strong><?= count($track['segments']) ?></strong> sträckor</span>
+            <span><strong><?= count($pois) ?></strong> POIs</span>
+        </div>
+        <?php endif; ?>
+        <div style="display: flex; gap: var(--space-sm);">
+            <button type="button" onclick="openModal('gpx-modal')" class="btn-admin btn-admin-secondary btn-admin-sm">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
+                GPX
+            </button>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="map-content">
+        <!-- Sidebar -->
+        <div class="map-sidebar" id="sidebar">
+            <!-- Segments Section -->
+            <div class="sidebar-section">
+                <div class="sidebar-section-header" onclick="toggleSection(this)">
+                    <span>Sträckor (<?= $track ? count($track['segments']) : 0 ?>)</span>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+                </div>
+                <div class="sidebar-section-content">
+                    <?php if ($track && !empty($track['segments'])): ?>
+                        <?php foreach ($track['segments'] as $seg): ?>
+                        <div class="segment-item" onclick="zoomToSegment(<?= $seg['id'] ?>)" data-segment-id="<?= $seg['id'] ?>">
+                            <span class="segment-color" style="background: <?= h($seg['color']) ?>"></span>
+                            <span class="segment-item-name"><?= h($seg['segment_name'] ?: 'Segment ' . $seg['sequence_number']) ?></span>
+                            <span class="segment-item-dist"><?= number_format($seg['distance_km'], 1) ?> km</span>
+                            <form method="POST" style="margin: 0;" onsubmit="return confirm('Ta bort?')">
+                                <?= csrf_field() ?>
+                                <input type="hidden" name="action" value="delete_segment">
+                                <input type="hidden" name="segment_id" value="<?= $seg['id'] ?>">
+                                <button type="submit" style="background: none; border: none; cursor: pointer; padding: 4px; color: var(--color-text-secondary);">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+                                </button>
+                            </form>
+                        </div>
+                        <?php endforeach; ?>
+                    <?php else: ?>
+                        <p style="color: var(--color-text-secondary); font-size: var(--text-sm); margin: 0;">
+                            Ladda upp GPX eller klicka på kartan för att definiera sträckor
+                        </p>
+                    <?php endif; ?>
+                </div>
             </div>
-            <div class="admin-card-body">
-                <p class="admin-text-muted" style="margin-bottom: var(--space-md);">
-                    Total distans: <strong><?= number_format($track['total_distance_km'], 1) ?> km</strong>
-                </p>
 
-                <!-- Visual segment editor instructions -->
-                <div id="segment-editor-panel">
-                    <div class="segment-editor-status" style="padding: var(--space-md); background: var(--color-bg-hover); border-radius: var(--radius-md); margin-bottom: var(--space-md);">
-                        <div id="segment-step-1" class="segment-step active">
-                            <strong>Steg 1:</strong> Klicka på kartan för att markera <span style="color: var(--color-success);">STARTPUNKT</span>
+            <!-- POIs Section -->
+            <div class="sidebar-section">
+                <div class="sidebar-section-header" onclick="toggleSection(this)">
+                    <span>POIs (<?= count($pois) ?>)</span>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+                </div>
+                <div class="sidebar-section-content">
+                    <?php if (!empty($pois)): ?>
+                        <?php foreach ($pois as $poi): ?>
+                        <div class="poi-item">
+                            <span class="poi-item-icon"><?= $poi['type_emoji'] ?></span>
+                            <span style="flex: 1;"><?= h($poi['label'] ?: $poi['type_label']) ?></span>
+                            <form method="POST" style="margin: 0;" onsubmit="return confirm('Ta bort?')">
+                                <?= csrf_field() ?>
+                                <input type="hidden" name="action" value="delete_poi">
+                                <input type="hidden" name="poi_id" value="<?= $poi['id'] ?>">
+                                <button type="submit" style="background: none; border: none; cursor: pointer; padding: 4px; color: var(--color-text-secondary);">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/></svg>
+                                </button>
+                            </form>
                         </div>
-                        <div id="segment-step-2" class="segment-step" style="display: none;">
-                            <strong>Steg 2:</strong> Klicka på kartan för att markera <span style="color: var(--color-error);">SLUTPUNKT</span>
-                            <button type="button" id="reset-segment-btn" class="btn-admin btn-admin-ghost btn-admin-sm" style="margin-left: var(--space-sm);">Börja om</button>
-                        </div>
-                        <div id="segment-step-3" class="segment-step" style="display: none;">
-                            <strong>Steg 3:</strong> Fyll i namn och spara sträckan nedan
+                        <?php endforeach; ?>
+                    <?php else: ?>
+                        <p style="color: var(--color-text-secondary); font-size: var(--text-sm); margin: 0;">
+                            Klicka på kartan för att lägga till POIs
+                        </p>
+                    <?php endif; ?>
+
+                    <!-- Legend -->
+                    <div style="margin-top: var(--space-md); padding-top: var(--space-md); border-top: 1px solid var(--color-border);">
+                        <div style="font-size: var(--text-xs); color: var(--color-text-secondary); margin-bottom: var(--space-xs);">Typer:</div>
+                        <div style="display: flex; flex-wrap: wrap; gap: var(--space-xs); font-size: var(--text-xs);">
+                            <?php foreach (array_slice($poiTypes, 0, 8) as $key => $label): ?>
+                            <span style="padding: 2px 6px; background: var(--color-bg-hover); border-radius: 4px;"><?= h($label) ?></span>
+                            <?php endforeach; ?>
                         </div>
                     </div>
+                </div>
+            </div>
 
-                    <!-- Segment info display -->
-                    <div id="segment-preview-info" style="display: none; padding: var(--space-sm); background: var(--color-bg-sunken); border-radius: var(--radius-sm); margin-bottom: var(--space-md); font-size: var(--text-sm);">
-                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-sm);">
-                            <div><strong>Start:</strong> <span id="preview-start-km">-</span></div>
-                            <div><strong>Slut:</strong> <span id="preview-end-km">-</span></div>
-                            <div><strong>Distans:</strong> <span id="preview-distance">-</span></div>
-                        </div>
+            <!-- Add Segment Section -->
+            <?php if ($track): ?>
+            <div class="sidebar-section" style="flex: 1;">
+                <div class="sidebar-section-header" onclick="toggleSection(this)">
+                    <span>Lägg till sträcka</span>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+                </div>
+                <div class="sidebar-section-content">
+                    <div id="segment-status" style="font-size: var(--text-sm); margin-bottom: var(--space-sm);">
+                        <span style="color: var(--color-success);">1.</span> Klicka startpunkt på banan
                     </div>
-
-                    <!-- Save segment form -->
-                    <form method="POST" id="visual-segment-form">
+                    <form method="POST" id="segment-form">
                         <?= csrf_field() ?>
                         <input type="hidden" name="action" value="add_segment_visual">
                         <input type="hidden" name="track_id" value="<?= $track['id'] ?>">
-                        <input type="hidden" name="start_index" id="segment-start-index" value="">
-                        <input type="hidden" name="end_index" id="segment-end-index" value="">
+                        <input type="hidden" name="start_index" id="start-index" value="">
+                        <input type="hidden" name="end_index" id="end-index" value="">
 
-                        <div style="display: grid; grid-template-columns: 120px 1fr auto; gap: var(--space-sm); align-items: end;">
-                            <div class="admin-form-group" style="margin: 0;">
-                                <label class="admin-form-label">Typ</label>
-                                <select name="segment_type" id="new-segment-type" class="admin-form-select">
-                                    <option value="stage">Tävling</option>
-                                    <option value="liaison">Transport</option>
-                                </select>
-                            </div>
-                            <div class="admin-form-group" style="margin: 0;">
-                                <label class="admin-form-label">Namn</label>
-                                <input type="text" name="segment_name" id="new-segment-name" class="admin-form-input" placeholder="T.ex. SS1 eller Liaison 1">
-                            </div>
-                            <button type="submit" id="save-segment-btn" class="btn-admin btn-admin-primary" disabled>
-                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
-                                Spara sträcka
-                            </button>
+                        <div style="display: flex; gap: var(--space-sm); margin-bottom: var(--space-sm);">
+                            <select name="segment_type" class="admin-form-select admin-form-select-sm" style="flex: 1;">
+                                <option value="stage">Tävling</option>
+                                <option value="liaison">Transport</option>
+                            </select>
+                            <input type="text" name="segment_name" class="admin-form-input admin-form-input-sm" placeholder="Namn" style="flex: 2;">
+                        </div>
+
+                        <div id="segment-preview" style="display: none; font-size: var(--text-xs); color: var(--color-text-secondary); margin-bottom: var(--space-sm);">
+                            <span id="preview-distance">0</span> km vald
+                        </div>
+
+                        <div style="display: flex; gap: var(--space-sm);">
+                            <button type="button" onclick="resetSegmentEditor()" class="btn-admin btn-admin-ghost btn-admin-sm" style="flex: 1;">Rensa</button>
+                            <button type="submit" id="save-segment-btn" disabled class="btn-admin btn-admin-primary btn-admin-sm" style="flex: 1;">Spara</button>
                         </div>
                     </form>
                 </div>
+            </div>
+            <?php endif; ?>
+        </div>
 
-                <div style="margin-top: var(--space-md); padding-top: var(--space-md); border-top: 1px solid var(--color-border);">
-                    <p style="color: var(--color-text-secondary); font-size: var(--text-sm); margin: 0;">
-                        <strong>Tips:</strong> Tävling (stage) visas grön, Transport (liaison) visas grå.
-                        Klicka direkt på banan för att välja start/mål.
-                    </p>
+        <!-- Sidebar Toggle -->
+        <button class="map-sidebar-toggle" onclick="toggleSidebar()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6"/></svg>
+        </button>
+
+        <!-- Map Container -->
+        <div class="map-container">
+            <div id="map"></div>
+
+            <!-- Floating Action Buttons -->
+            <div class="map-fab">
+                <button class="fab-btn" onclick="togglePOIMode()" id="poi-mode-btn" title="Lägg till POI">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                </button>
+                <button class="fab-btn" onclick="centerMap()" title="Centrera">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>
+                </button>
+            </div>
+
+            <!-- Mode Indicator -->
+            <div class="mode-indicator" id="mode-indicator">
+                <span class="step-dot" id="step-1"></span>
+                <span class="step-dot" id="step-2"></span>
+                <span id="mode-text">Klicka startpunkt</span>
+            </div>
+
+            <!-- Elevation Panel -->
+            <?php if ($track): ?>
+            <div class="elevation-panel" id="elevation-panel">
+                <div class="elevation-toggle" onclick="toggleElevation()">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m18 15-6-6-6 6"/></svg>
+                    <span>Höjdprofil</span>
+                </div>
+                <div id="elevation-chart">
+                    <canvas id="elevation-canvas"></canvas>
                 </div>
             </div>
+            <?php endif; ?>
         </div>
-        <?php endif; ?>
-
-        <?php if ($track && !empty($track['segments'])): ?>
-        <!-- Segments Card -->
-        <div class="admin-card" style="margin-top: var(--space-lg);">
-            <div class="admin-card-header">
-                <h2>Nuvarande sträckor (<?= count($track['segments']) ?>)</h2>
-            </div>
-            <div class="admin-card-body" style="padding: 0;">
-                <div class="admin-table-container">
-                    <table class="admin-table">
-                        <thead>
-                            <tr>
-                                <th style="width: 40px;">#</th>
-                                <th>Typ</th>
-                                <th>Namn</th>
-                                <th>Distans</th>
-                                <th>Hojd</th>
-                                <th style="width: 100px;"></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php foreach ($track['segments'] as $segment): ?>
-                            <tr>
-                                <td><?= $segment['sequence_number'] ?></td>
-                                <td>
-                                    <span class="segment-color-preview" style="background: <?= htmlspecialchars($segment['color']) ?>"></span>
-                                </td>
-                                <td>
-                                    <form method="POST" class="admin-inline-form" id="segment-form-<?= $segment['id'] ?>">
-                                        <?= csrf_field() ?>
-                                        <input type="hidden" name="action" value="update_segment">
-                                        <input type="hidden" name="segment_id" value="<?= $segment['id'] ?>">
-                                        <select name="segment_type" class="admin-form-select admin-form-select-sm segment-type-select"
-                                                onchange="document.getElementById('segment-form-<?= $segment['id'] ?>').submit()">
-                                            <option value="stage" <?= $segment['segment_type'] === 'stage' ? 'selected' : '' ?>>Tavling</option>
-                                            <option value="liaison" <?= $segment['segment_type'] === 'liaison' ? 'selected' : '' ?>>Transport</option>
-                                        </select>
-                                        <input type="text" name="segment_name" class="admin-form-input admin-form-input-sm"
-                                               value="<?= htmlspecialchars($segment['segment_name'] ?? '') ?>"
-                                               placeholder="SS<?= $segment['sequence_number'] ?>"
-                                               style="width: 100px; margin-left: var(--space-xs);">
-                                        <input type="hidden" name="timing_id" value="<?= htmlspecialchars($segment['timing_id'] ?? '') ?>">
-                                    </form>
-                                </td>
-                                <td><?= number_format($segment['distance_km'], 1) ?> km</td>
-                                <td>
-                                    <?php if ($segment['segment_type'] === 'stage'): ?>
-                                    +<?= $segment['elevation_gain_m'] ?>m
-                                    <?php else: ?>
-                                    <span class="admin-text-muted">-</span>
-                                    <?php endif; ?>
-                                </td>
-                                <td>
-                                    <button type="submit" form="segment-form-<?= $segment['id'] ?>" class="btn-admin btn-admin-sm btn-admin-ghost">
-                                        Spara
-                                    </button>
-                                </td>
-                            </tr>
-                            <?php endforeach; ?>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-        <?php endif; ?>
     </div>
+</div>
 
-    <!-- Right Column: Map Preview & POIs -->
-    <div>
-        <!-- Map Preview Card -->
-        <div class="admin-card">
-            <div class="admin-card-header">
-                <h2>Kartforhandsvisning</h2>
+<!-- GPX Upload Modal -->
+<div class="modal-overlay" id="gpx-modal">
+    <div class="modal">
+        <h2>Ladda upp GPX</h2>
+        <form method="POST" enctype="multipart/form-data">
+            <?= csrf_field() ?>
+            <input type="hidden" name="action" value="upload_gpx">
+            <div class="admin-form-group">
+                <label class="admin-form-label">Namn</label>
+                <input type="text" name="track_name" class="admin-form-input" value="<?= h($event['name']) ?>">
             </div>
-            <div class="admin-card-body" style="padding: 0;">
-                <div class="admin-map-instructions">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="16" y2="12"/><line x1="12" x2="12.01" y1="8" y2="8"/></svg>
-                    Klicka pa kartan for att placera en ny POI
-                </div>
-                <div id="admin-map" class="admin-map-container"></div>
+            <div class="admin-form-group">
+                <label class="admin-form-label">GPX-fil</label>
+                <input type="file" name="gpx_file" accept=".gpx" required class="admin-form-input">
             </div>
-        </div>
-
-        <!-- Add POI Card -->
-        <div class="admin-card" style="margin-top: var(--space-lg);">
-            <div class="admin-card-header">
-                <h2>Lagg till POI</h2>
+            <div style="display: flex; gap: var(--space-sm); justify-content: flex-end;">
+                <button type="button" onclick="closeModal('gpx-modal')" class="btn-admin btn-admin-ghost">Avbryt</button>
+                <button type="submit" class="btn-admin btn-admin-primary">Ladda upp</button>
             </div>
-            <div class="admin-card-body">
-                <form method="POST" id="poi-form">
-                    <?= csrf_field() ?>
-                    <input type="hidden" name="action" value="add_poi">
-                    <input type="hidden" name="poi_lat" id="poi_lat" value="">
-                    <input type="hidden" name="poi_lng" id="poi_lng" value="">
-
-                    <div class="admin-form-row">
-                        <div class="admin-form-group">
-                            <label class="admin-form-label">Typ *</label>
-                            <select name="poi_type" id="poi_type" class="admin-form-select" required>
-                                <option value="">Valj typ...</option>
-                                <?php foreach ($poiTypes as $key => $label): ?>
-                                <option value="<?= htmlspecialchars($key) ?>"><?= htmlspecialchars($label) ?></option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-                        <div class="admin-form-group">
-                            <label class="admin-form-label">Etikett</label>
-                            <input type="text" name="poi_label" id="poi_label" class="admin-form-input"
-                                   placeholder="T.ex. Parkering Nord">
-                        </div>
-                    </div>
-
-                    <div class="admin-form-group">
-                        <label class="admin-form-label">Beskrivning</label>
-                        <textarea name="poi_description" id="poi_description" class="admin-form-textarea"
-                                  rows="2" placeholder="Valfri beskrivning..."></textarea>
-                    </div>
-
-                    <div class="admin-form-group">
-                        <label class="admin-form-label">Koordinater</label>
-                        <div class="admin-form-row">
-                            <input type="text" id="poi_lat_display" class="admin-form-input" placeholder="Lat" readonly>
-                            <input type="text" id="poi_lng_display" class="admin-form-input" placeholder="Lng" readonly>
-                        </div>
-                        <span class="admin-form-hint">Klicka pa kartan for att valja position</span>
-                    </div>
-
-                    <button type="submit" id="add-poi-btn" class="btn-admin btn-admin-primary" disabled>
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
-                        Lagg till POI
-                    </button>
-                </form>
-            </div>
-        </div>
-
-        <?php if (!empty($pois)): ?>
-        <!-- POI List Card -->
-        <div class="admin-card" style="margin-top: var(--space-lg);">
-            <div class="admin-card-header">
-                <h2>POIs (<?= count($pois) ?>)</h2>
-            </div>
-            <div class="admin-card-body" style="padding: 0;">
-                <div class="admin-table-container">
-                    <table class="admin-table">
-                        <thead>
-                            <tr>
-                                <th>Typ</th>
-                                <th>Etikett</th>
-                                <th>Koordinater</th>
-                                <th style="width: 80px;"></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php foreach ($pois as $poi): ?>
-                            <tr>
-                                <td>
-                                    <span class="poi-type-badge" style="background: <?= htmlspecialchars($poi['type_color']) ?>">
-                                        <?= $poi['type_emoji'] ?> <?= htmlspecialchars($poi['type_label']) ?>
-                                    </span>
-                                </td>
-                                <td><?= htmlspecialchars($poi['label'] ?: '-') ?></td>
-                                <td>
-                                    <span class="admin-text-muted" style="font-size: var(--text-xs);">
-                                        <?= round($poi['lat'], 5) ?>, <?= round($poi['lng'], 5) ?>
-                                    </span>
-                                </td>
-                                <td>
-                                    <form method="POST" style="display: inline;">
-                                        <?= csrf_field() ?>
-                                        <input type="hidden" name="action" value="delete_poi">
-                                        <input type="hidden" name="poi_id" value="<?= $poi['id'] ?>">
-                                        <button type="submit" class="btn-admin btn-admin-sm btn-admin-danger"
-                                                onclick="return confirm('Ta bort denna POI?')">
-                                            Ta bort
-                                        </button>
-                                    </form>
-                                </td>
-                            </tr>
-                            <?php endforeach; ?>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
+        </form>
+        <?php if ($track): ?>
+        <form method="POST" style="margin-top: var(--space-md); padding-top: var(--space-md); border-top: 1px solid var(--color-border);">
+            <?= csrf_field() ?>
+            <input type="hidden" name="action" value="delete_track">
+            <input type="hidden" name="track_id" value="<?= $track['id'] ?>">
+            <button type="submit" onclick="return confirm('Ta bort befintlig bana?')" class="btn-admin btn-admin-danger btn-admin-sm">
+                Ta bort nuvarande bana
+            </button>
+        </form>
         <?php endif; ?>
     </div>
 </div>
 
-<!-- Leaflet JS -->
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<!-- POI Modal -->
+<div class="modal-overlay" id="poi-modal">
+    <div class="modal">
+        <h2>Lägg till POI</h2>
+        <form method="POST" id="poi-form">
+            <?= csrf_field() ?>
+            <input type="hidden" name="action" value="add_poi">
+            <input type="hidden" name="poi_lat" id="poi-lat">
+            <input type="hidden" name="poi_lng" id="poi-lng">
+            <div class="admin-form-group">
+                <label class="admin-form-label">Typ</label>
+                <select name="poi_type" class="admin-form-select" required>
+                    <option value="">Välj...</option>
+                    <?php foreach ($poiTypes as $key => $label): ?>
+                    <option value="<?= h($key) ?>"><?= h($label) ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div class="admin-form-group">
+                <label class="admin-form-label">Etikett</label>
+                <input type="text" name="poi_label" class="admin-form-input" placeholder="Valfritt namn">
+            </div>
+            <div style="display: flex; gap: var(--space-sm); justify-content: flex-end;">
+                <button type="button" onclick="closeModal('poi-modal')" class="btn-admin btn-admin-ghost">Avbryt</button>
+                <button type="submit" class="btn-admin btn-admin-primary">Lägg till</button>
+            </div>
+        </form>
+    </div>
+</div>
 
+<?php if ($message): ?>
+<div class="toast <?= $messageType ?>" id="toast"><?= h($message) ?></div>
+<script>setTimeout(() => document.getElementById('toast')?.remove(), 3000);</script>
+<?php endif; ?>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 <script>
-// Admin map initialization with visual segment editor
-(function() {
-    const mapData = <?= $mapDataJson ?>;
-    const waypoints = <?= $waypointsJson ?>;
-    let map, tempMarker, trackLayer, trackLine;
+const mapData = <?= $mapDataJson ?>;
+const waypoints = <?= $waypointsJson ?>;
+const trackId = <?= $track ? $track['id'] : 'null' ?>;
 
-    // Segment editor state
-    let segmentMode = 'start'; // 'start', 'end', 'complete'
-    let startMarker = null;
-    let endMarker = null;
-    let previewLine = null;
-    let selectedStartIndex = -1;
-    let selectedEndIndex = -1;
+let map, trackLine, startMarker, endMarker, previewLine;
+let segmentMode = 'start';
+let selectedStart = -1, selectedEnd = -1;
+let poiMode = false;
 
-    function initMap() {
-        // Default center (Sweden)
-        let center = [62.0, 15.0];
-        let zoom = 5;
+function initMap() {
+    map = L.map('map', { zoomControl: false }).setView([62, 15], 5);
 
-        // Create map
-        map = L.map('admin-map').setView(center, zoom);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OSM'
+    }).addTo(map);
 
-        // Add tile layer
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '&copy; OpenStreetMap'
+    L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+    if (mapData) {
+        // Add segments
+        const segments = mapData.geojson.features.filter(f => f.properties.type === 'segment');
+        if (segments.length > 0) {
+            L.geoJSON({ type: 'FeatureCollection', features: segments }, {
+                style: f => ({ color: f.properties.color, weight: 5, opacity: 0.8 })
+            }).addTo(map);
+        }
+
+        // Add POIs
+        const pois = mapData.geojson.features.filter(f => f.properties.type === 'poi');
+        pois.forEach(poi => {
+            const coords = poi.geometry.coordinates;
+            const icon = L.divIcon({
+                className: 'poi-marker',
+                html: `<div style="background:${poi.properties.color};width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;box-shadow:0 2px 6px rgba(0,0,0,0.3);">${poi.properties.emoji}</div>`,
+                iconSize: [28, 28],
+                iconAnchor: [14, 14]
+            });
+            L.marker([coords[1], coords[0]], { icon }).addTo(map);
+        });
+
+        if (mapData.bounds) {
+            map.fitBounds(mapData.bounds, { padding: [50, 50] });
+        }
+    }
+
+    // Clickable track
+    if (waypoints && waypoints.length > 0) {
+        const coords = waypoints.map(w => [w.lat, w.lng]);
+        trackLine = L.polyline(coords, { color: '#3B82F6', weight: 6, opacity: 0.6 }).addTo(map);
+        trackLine.on('click', handleTrackClick);
+    }
+
+    map.on('click', handleMapClick);
+    drawElevation();
+}
+
+function handleMapClick(e) {
+    if (poiMode) {
+        document.getElementById('poi-lat').value = e.latlng.lat;
+        document.getElementById('poi-lng').value = e.latlng.lng;
+        openModal('poi-modal');
+        poiMode = false;
+        document.getElementById('poi-mode-btn').classList.remove('active');
+    }
+}
+
+function handleTrackClick(e) {
+    L.DomEvent.stopPropagation(e);
+    const nearest = findNearest(e.latlng);
+    if (!nearest) return;
+
+    const wp = nearest.waypoint;
+
+    if (segmentMode === 'start') {
+        selectedStart = nearest.index;
+        if (startMarker) map.removeLayer(startMarker);
+        startMarker = L.marker([wp.lat, wp.lng], {
+            icon: L.divIcon({ html: '<div class="segment-marker start">S</div>', iconSize: [28,28], iconAnchor: [14,14] })
         }).addTo(map);
 
-        // If we have map data, add it
-        if (mapData) {
-            // Add segments
-            const segments = mapData.geojson.features.filter(f => f.properties.type === 'segment');
-            if (segments.length > 0) {
-                L.geoJSON({ type: 'FeatureCollection', features: segments }, {
-                    style: f => ({ color: f.properties.color, weight: 4 })
-                }).addTo(map);
-            }
+        segmentMode = 'end';
+        updateSegmentUI();
+    } else if (segmentMode === 'end' && nearest.index > selectedStart) {
+        selectedEnd = nearest.index;
+        if (endMarker) map.removeLayer(endMarker);
+        endMarker = L.marker([wp.lat, wp.lng], {
+            icon: L.divIcon({ html: '<div class="segment-marker end">M</div>', iconSize: [28,28], iconAnchor: [14,14] })
+        }).addTo(map);
 
-            // Add existing POIs
-            const pois = mapData.geojson.features.filter(f => f.properties.type === 'poi');
-            if (pois.length > 0) {
-                L.geoJSON({ type: 'FeatureCollection', features: pois }, {
-                    pointToLayer: (f, ll) => {
-                        const icon = L.divIcon({
-                            className: 'event-map-poi-icon',
-                            html: `<div class="event-map-poi-pin" style="background: ${f.properties.color}">${f.properties.emoji}</div>`,
-                            iconSize: [32, 40],
-                            iconAnchor: [16, 40]
-                        });
-                        return L.marker(ll, { icon: icon }).bindPopup(f.properties.emoji + ' ' + f.properties.label);
-                    }
-                }).addTo(map);
-            }
+        // Preview line
+        if (previewLine) map.removeLayer(previewLine);
+        const previewCoords = waypoints.slice(selectedStart, selectedEnd + 1).map(w => [w.lat, w.lng]);
+        previewLine = L.polyline(previewCoords, { color: '#F59E0B', weight: 8 }).addTo(map);
 
-            // Fit bounds
-            if (mapData.bounds) {
-                map.fitBounds(mapData.bounds, { padding: [30, 30] });
-            }
-        }
+        segmentMode = 'complete';
+        document.getElementById('start-index').value = selectedStart;
+        document.getElementById('end-index').value = selectedEnd;
+        document.getElementById('save-segment-btn').disabled = false;
 
-        // Add clickable track line if we have waypoints
-        if (waypoints && waypoints.length > 0) {
-            const trackCoords = waypoints.map(wp => [wp.lat, wp.lng]);
-            trackLine = L.polyline(trackCoords, {
-                color: '#3B82F6',
-                weight: 6,
-                opacity: 0.7
-            }).addTo(map);
-
-            // Make track clickable for segment definition
-            trackLine.on('click', handleTrackClick);
-        }
-
-        // Click handler for POI placement (when not clicking track)
-        map.on('click', function(e) {
-            // Only handle POI clicks if not on track
-            if (e.originalEvent && e.originalEvent.target && e.originalEvent.target.closest('.leaflet-interactive')) {
-                return; // Clicked on track, handled separately
-            }
-
-            handlePoiClick(e);
-        });
-
-        // Reset segment button
-        const resetBtn = document.getElementById('reset-segment-btn');
-        if (resetBtn) {
-            resetBtn.addEventListener('click', resetSegmentSelection);
-        }
+        const dist = (waypoints[selectedEnd].distance_km - waypoints[selectedStart].distance_km).toFixed(2);
+        document.getElementById('preview-distance').textContent = dist;
+        document.getElementById('segment-preview').style.display = 'block';
+        updateSegmentUI();
     }
+}
 
-    // Find nearest waypoint to click position
-    function findNearestWaypoint(latlng) {
-        if (!waypoints || waypoints.length === 0) return null;
+function findNearest(latlng) {
+    if (!waypoints || !waypoints.length) return null;
+    let best = { index: 0, dist: Infinity };
+    waypoints.forEach((wp, i) => {
+        const d = latlng.distanceTo(L.latLng(wp.lat, wp.lng));
+        if (d < best.dist) best = { index: i, dist: d, waypoint: wp };
+    });
+    return best.dist < 200 ? best : null;
+}
 
-        let nearestIndex = 0;
-        let nearestDist = Infinity;
+function updateSegmentUI() {
+    const status = document.getElementById('segment-status');
+    const indicator = document.getElementById('mode-indicator');
+    const step1 = document.getElementById('step-1');
+    const step2 = document.getElementById('step-2');
+    const text = document.getElementById('mode-text');
 
-        waypoints.forEach((wp, index) => {
-            const dist = latlng.distanceTo(L.latLng(wp.lat, wp.lng));
-            if (dist < nearestDist) {
-                nearestDist = dist;
-                nearestIndex = index;
-            }
-        });
-
-        return { index: nearestIndex, waypoint: waypoints[nearestIndex], distance: nearestDist };
-    }
-
-    // Handle click on track for segment definition
-    function handleTrackClick(e) {
-        L.DomEvent.stopPropagation(e);
-
-        const nearest = findNearestWaypoint(e.latlng);
-        if (!nearest || nearest.distance > 100) return; // Too far from track
-
-        const wp = nearest.waypoint;
-
-        if (segmentMode === 'start') {
-            // Set start point
-            selectedStartIndex = nearest.index;
-
-            // Remove old start marker
-            if (startMarker) map.removeLayer(startMarker);
-
-            // Create start marker (green)
-            const startIcon = L.divIcon({
-                className: 'segment-marker-icon',
-                html: '<div class="segment-marker start">S</div>',
-                iconSize: [28, 28],
-                iconAnchor: [14, 14]
-            });
-            startMarker = L.marker([wp.lat, wp.lng], { icon: startIcon }).addTo(map);
-
-            // Update UI
-            segmentMode = 'end';
-            document.getElementById('segment-step-1').style.display = 'none';
-            document.getElementById('segment-step-2').style.display = 'block';
-            document.getElementById('preview-start-km').textContent = wp.distance_km.toFixed(2) + ' km';
-
-        } else if (segmentMode === 'end') {
-            // Set end point (must be after start)
-            if (nearest.index <= selectedStartIndex) {
-                alert('Slutpunkten måste komma efter startpunkten på banan');
-                return;
-            }
-
-            selectedEndIndex = nearest.index;
-
-            // Remove old end marker
-            if (endMarker) map.removeLayer(endMarker);
-
-            // Create end marker (red)
-            const endIcon = L.divIcon({
-                className: 'segment-marker-icon',
-                html: '<div class="segment-marker end">M</div>',
-                iconSize: [28, 28],
-                iconAnchor: [14, 14]
-            });
-            endMarker = L.marker([wp.lat, wp.lng], { icon: endIcon }).addTo(map);
-
-            // Draw preview line
-            if (previewLine) map.removeLayer(previewLine);
-            const previewCoords = waypoints
-                .slice(selectedStartIndex, selectedEndIndex + 1)
-                .map(w => [w.lat, w.lng]);
-            previewLine = L.polyline(previewCoords, {
-                color: '#F59E0B',
-                weight: 8,
-                opacity: 0.9
-            }).addTo(map);
-
-            // Update UI
-            segmentMode = 'complete';
-            document.getElementById('segment-step-2').style.display = 'none';
-            document.getElementById('segment-step-3').style.display = 'block';
-            document.getElementById('segment-preview-info').style.display = 'block';
-
-            const startWp = waypoints[selectedStartIndex];
-            const endWp = waypoints[selectedEndIndex];
-            const distance = (endWp.distance_km - startWp.distance_km).toFixed(2);
-
-            document.getElementById('preview-start-km').textContent = startWp.distance_km.toFixed(2) + ' km';
-            document.getElementById('preview-end-km').textContent = endWp.distance_km.toFixed(2) + ' km';
-            document.getElementById('preview-distance').textContent = distance + ' km';
-
-            // Enable save button and set form values
-            document.getElementById('segment-start-index').value = selectedStartIndex;
-            document.getElementById('segment-end-index').value = selectedEndIndex;
-            document.getElementById('save-segment-btn').disabled = false;
-        }
-    }
-
-    // Reset segment selection
-    function resetSegmentSelection() {
-        segmentMode = 'start';
-        selectedStartIndex = -1;
-        selectedEndIndex = -1;
-
-        if (startMarker) { map.removeLayer(startMarker); startMarker = null; }
-        if (endMarker) { map.removeLayer(endMarker); endMarker = null; }
-        if (previewLine) { map.removeLayer(previewLine); previewLine = null; }
-
-        document.getElementById('segment-step-1').style.display = 'block';
-        document.getElementById('segment-step-2').style.display = 'none';
-        document.getElementById('segment-step-3').style.display = 'none';
-        document.getElementById('segment-preview-info').style.display = 'none';
-
-        document.getElementById('segment-start-index').value = '';
-        document.getElementById('segment-end-index').value = '';
-        document.getElementById('save-segment-btn').disabled = true;
-    }
-
-    // Handle click for POI placement
-    function handlePoiClick(e) {
-        const lat = e.latlng.lat.toFixed(7);
-        const lng = e.latlng.lng.toFixed(7);
-
-        // Update form fields
-        document.getElementById('poi_lat').value = lat;
-        document.getElementById('poi_lng').value = lng;
-        document.getElementById('poi_lat_display').value = lat;
-        document.getElementById('poi_lng_display').value = lng;
-        document.getElementById('add-poi-btn').disabled = false;
-
-        // Remove existing temp marker
-        if (tempMarker) {
-            map.removeLayer(tempMarker);
-        }
-
-        // Add temp marker
-        const tempIcon = L.divIcon({
-            className: 'temp-marker-icon',
-            html: '<div class="temp-marker-dot"></div>',
-            iconSize: [20, 20],
-            iconAnchor: [10, 10]
-        });
-
-        tempMarker = L.marker(e.latlng, { icon: tempIcon }).addTo(map);
-    }
-
-    // Initialize when DOM ready
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', initMap);
+    if (segmentMode === 'start') {
+        status.innerHTML = '<span style="color: var(--color-success);">1.</span> Klicka startpunkt på banan';
+        indicator.classList.remove('active');
+    } else if (segmentMode === 'end') {
+        status.innerHTML = '<span style="color: var(--color-success);">✓</span> Start vald. <span style="color: var(--color-error);">2.</span> Klicka slutpunkt';
+        indicator.classList.add('active');
+        step1.classList.add('done');
+        step2.classList.add('active');
+        text.textContent = 'Klicka slutpunkt';
     } else {
-        initMap();
+        status.innerHTML = '<span style="color: var(--color-success);">✓ ✓</span> Klar! Spara sträckan';
+        step1.classList.add('done');
+        step2.classList.add('done');
+        text.textContent = 'Spara sträckan';
     }
+}
 
-    // Expose reset for form submission
-    window.resetSegmentEditor = resetSegmentSelection;
-})();
+function resetSegmentEditor() {
+    segmentMode = 'start';
+    selectedStart = selectedEnd = -1;
+    if (startMarker) { map.removeLayer(startMarker); startMarker = null; }
+    if (endMarker) { map.removeLayer(endMarker); endMarker = null; }
+    if (previewLine) { map.removeLayer(previewLine); previewLine = null; }
+    document.getElementById('start-index').value = '';
+    document.getElementById('end-index').value = '';
+    document.getElementById('save-segment-btn').disabled = true;
+    document.getElementById('segment-preview').style.display = 'none';
+    document.getElementById('step-1')?.classList.remove('done', 'active');
+    document.getElementById('step-2')?.classList.remove('done', 'active');
+    updateSegmentUI();
+}
+
+function drawElevation() {
+    const canvas = document.getElementById('elevation-canvas');
+    if (!canvas || !waypoints || !waypoints.length) return;
+
+    const ctx = canvas.getContext('2d');
+    const rect = canvas.parentElement.getBoundingClientRect();
+    canvas.width = rect.width;
+    canvas.height = rect.height;
+
+    const elevs = waypoints.map(w => w.elevation).filter(e => e != null);
+    if (!elevs.length) return;
+
+    const min = Math.min(...elevs), max = Math.max(...elevs);
+    const range = max - min || 1;
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Fill
+    ctx.beginPath();
+    ctx.moveTo(0, canvas.height);
+    elevs.forEach((e, i) => {
+        const x = (i / (elevs.length - 1)) * canvas.width;
+        const y = canvas.height - ((e - min) / range) * (canvas.height - 20);
+        if (i === 0) ctx.lineTo(x, y);
+        else ctx.lineTo(x, y);
+    });
+    ctx.lineTo(canvas.width, canvas.height);
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(97, 206, 112, 0.3)';
+    ctx.fill();
+
+    // Line
+    ctx.beginPath();
+    elevs.forEach((e, i) => {
+        const x = (i / (elevs.length - 1)) * canvas.width;
+        const y = canvas.height - ((e - min) / range) * (canvas.height - 20);
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+    });
+    ctx.strokeStyle = '#61CE70';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+}
+
+function toggleSidebar() {
+    document.getElementById('sidebar').classList.toggle('collapsed');
+}
+
+function toggleElevation() {
+    document.getElementById('elevation-panel').classList.toggle('collapsed');
+}
+
+function toggleSection(el) {
+    const content = el.nextElementSibling;
+    content.style.display = content.style.display === 'none' ? 'block' : 'none';
+    el.querySelector('svg').style.transform = content.style.display === 'none' ? 'rotate(-90deg)' : '';
+}
+
+function togglePOIMode() {
+    poiMode = !poiMode;
+    document.getElementById('poi-mode-btn').classList.toggle('active', poiMode);
+}
+
+function centerMap() {
+    if (mapData?.bounds) map.fitBounds(mapData.bounds, { padding: [50, 50] });
+}
+
+function zoomToSegment(id) {
+    // Could implement segment highlighting
+}
+
+function openModal(id) {
+    document.getElementById(id).classList.add('active');
+}
+
+function closeModal(id) {
+    document.getElementById(id).classList.remove('active');
+}
+
+// Close modal on overlay click
+document.querySelectorAll('.modal-overlay').forEach(m => {
+    m.addEventListener('click', e => { if (e.target === m) m.classList.remove('active'); });
+});
+
+// Init
+document.addEventListener('DOMContentLoaded', initMap);
+window.addEventListener('resize', drawElevation);
 </script>
-
-<style>
-/* Segment editor markers */
-.segment-marker {
-    width: 28px;
-    height: 28px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: bold;
-    font-size: 14px;
-    color: white;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-}
-.segment-marker.start {
-    background: var(--color-success, #61CE70);
-}
-.segment-marker.end {
-    background: var(--color-error, #ef4444);
-}
-.temp-marker-dot {
-    width: 16px;
-    height: 16px;
-    background: #3B82F6;
-    border: 3px solid white;
-    border-radius: 50%;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-}
-</style>
-
-<?php
-// Close the unified layout
-include __DIR__ . '/components/unified-layout-footer.php';
-?>
+</body>
+</html>
