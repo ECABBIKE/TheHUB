@@ -436,15 +436,18 @@ $eventName = htmlspecialchars($event['name']);
             <?php endif; ?>
 
             <?php if (!empty($poiGroups)): ?>
+            <?php foreach ($poiGroups as $type => $group): ?>
             <div class="section">
-                <div class="section-title">Visa på kartan</div>
-                <?php foreach ($poiGroups as $type => $group): ?>
-                <label class="checkbox-item">
-                    <input type="checkbox" checked data-poi-type="<?= htmlspecialchars($type) ?>" onchange="togglePoiType('<?= htmlspecialchars($type) ?>')">
-                    <span><?= $group['emoji'] ?> <?= htmlspecialchars($group['label']) ?> (<?= count($group['items']) ?>)</span>
-                </label>
+                <div class="section-title"><?= $group['emoji'] ?> <?= htmlspecialchars($group['label']) ?></div>
+                <?php foreach ($group['items'] as $poi): ?>
+                <div class="track-item" onclick="zoomToPoi(<?= $poi['lat'] ?>, <?= $poi['lng'] ?>, '<?= htmlspecialchars(addslashes($poi['label'] ?? $group['label'])) ?>')">
+                    <div>
+                        <div class="track-name"><?= htmlspecialchars($poi['label'] ?? $group['label']) ?></div>
+                    </div>
+                </div>
                 <?php endforeach; ?>
             </div>
+            <?php endforeach; ?>
             <?php endif; ?>
         </div>
     </div>
@@ -492,15 +495,16 @@ $eventName = htmlspecialchars($event['name']);
         <?php endif; ?>
 
         <!-- POI dropdown menu (opens from bottom bar) -->
-        <?php if (!empty($poiGroups)): ?>
-        <div class="dropdown" id="poi-dropdown" style="position: fixed; bottom: calc(56px + env(safe-area-inset-bottom) + var(--space-sm)); left: 50%; transform: translateX(-50%); display: none;">
-            <div class="dropdown-menu" style="position: static; display: block;">
+        <?php if (!empty($pois)): ?>
+        <div class="dropdown" id="poi-dropdown" style="position: fixed; bottom: calc(56px + env(safe-area-inset-bottom) + var(--space-sm)); left: 50%; transform: translateX(-50%); display: none; max-width: calc(100vw - var(--space-md));">
+            <div class="dropdown-menu" style="position: static; display: block; max-height: 50vh;">
                 <?php foreach ($poiGroups as $type => $group): ?>
-                <div class="dropdown-item active" data-poi-type="<?= htmlspecialchars($type) ?>" onclick="togglePoiMobile('<?= htmlspecialchars($type) ?>', this)">
-                    <input type="checkbox" checked style="pointer-events: none;">
-                    <?= $group['emoji'] ?> <?= htmlspecialchars($group['label']) ?>
-                    <span style="margin-left: auto; opacity: 0.7;"><?= count($group['items']) ?></span>
+                <div class="dropdown-section-title"><?= $group['emoji'] ?> <?= htmlspecialchars($group['label']) ?></div>
+                <?php foreach ($group['items'] as $poi): ?>
+                <div class="dropdown-item" onclick="zoomToPoi(<?= $poi['lat'] ?>, <?= $poi['lng'] ?>, '<?= htmlspecialchars(addslashes($poi['label'] ?? $group['label'])) ?>')">
+                    <?= htmlspecialchars($poi['label'] ?? $group['label']) ?>
                 </div>
+                <?php endforeach; ?>
                 <?php endforeach; ?>
             </div>
         </div>
@@ -726,17 +730,18 @@ $eventName = htmlspecialchars($event['name']);
         updateElevation(segment);
     }
 
-    function togglePoiType(type) {
-        const layer = poiLayers[type];
-        if (!layer) return;
-        if (visiblePoiTypes.has(type)) { map.removeLayer(layer); visiblePoiTypes.delete(type); }
-        else { layer.addTo(map); visiblePoiTypes.add(type); }
-    }
+    function zoomToPoi(lat, lng, label) {
+        // Zoom to POI location
+        map.setView([lat, lng], 17);
 
-    function togglePoiMobile(type, el) {
-        togglePoiType(type);
-        el.classList.toggle('active');
-        el.querySelector('input').checked = visiblePoiTypes.has(type);
+        // Close mobile menu
+        document.querySelectorAll('#mobile-dropdowns .dropdown').forEach(d => d.style.display = 'none');
+
+        // Show a temporary popup at the POI
+        L.popup()
+            .setLatLng([lat, lng])
+            .setContent('<strong>' + label + '</strong>')
+            .openOn(map);
     }
 
     function toggleDropdown(id) {
