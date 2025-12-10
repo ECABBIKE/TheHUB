@@ -1393,6 +1393,35 @@ function getTrackWaypointsForEditor($pdo, $trackId) {
         }
     }
 
+    // Fall back to parsing GPX file directly if still no coordinates
+    if (empty($coordinates)) {
+        $stmt = $pdo->prepare("SELECT gpx_file FROM event_tracks WHERE id = ?");
+        $stmt->execute([$trackId]);
+        $track = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if ($track && !empty($track['gpx_file'])) {
+            $gpxPath = getGpxUploadPath() . '/' . $track['gpx_file'];
+            if (file_exists($gpxPath)) {
+                try {
+                    $parsedData = parseGpxFile($gpxPath);
+                    if (!empty($parsedData['coordinates'])) {
+                        foreach ($parsedData['coordinates'] as $coord) {
+                            $coordinates[] = [
+                                'lat' => $coord['lat'],
+                                'lng' => $coord['lng']
+                            ];
+                            if (isset($coord['ele'])) {
+                                $elevations[] = $coord['ele'];
+                            }
+                        }
+                    }
+                } catch (Exception $e) {
+                    // GPX parsing failed, continue with empty array
+                }
+            }
+        }
+    }
+
     // Build waypoint list with cumulative distance
     $result = [];
     $cumulativeDistance = 0;
