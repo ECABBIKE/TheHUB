@@ -640,6 +640,10 @@ include __DIR__ . '/components/unified-layout.php';
     padding: var(--space-xs) var(--space-sm);
     border-bottom: 1px solid var(--color-border);
     font-size: var(--text-sm);
+    transition: background-color 0.15s ease;
+}
+.admin-segment-item:hover {
+    background-color: var(--color-star-fade);
 }
 .admin-segment-item:last-child {
     border-bottom: none;
@@ -649,6 +653,12 @@ include __DIR__ . '/components/unified-layout.php';
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+}
+.admin-segment-name svg {
+    flex-shrink: 0;
 }
 .admin-text-sm {
     font-size: var(--text-sm);
@@ -660,9 +670,13 @@ include __DIR__ . '/components/unified-layout.php';
 
 <!-- Elevation Profile -->
 <?php if ($currentTrack): ?>
-<div class="admin-card" style="margin-top: var(--space-lg);">
-    <div class="admin-card-header">
-        <h2>Höjdprofil</h2>
+<div class="admin-card" id="elevation-card" style="margin-top: var(--space-lg);">
+    <div class="admin-card-header" style="display: flex; justify-content: space-between; align-items: center;">
+        <h2 id="elevation-title">Höjdprofil</h2>
+        <button type="button" onclick="showFullTrack()" class="btn btn-ghost btn-sm" style="display: flex; align-items: center; gap: var(--space-xs);">
+            <i data-lucide="maximize-2" style="width: 14px; height: 14px;"></i>
+            Visa hela
+        </button>
     </div>
     <div class="admin-card-body" style="padding: 0;">
         <canvas id="elevation-canvas" style="width: 100%; height: 150px;"></canvas>
@@ -688,6 +702,14 @@ const SEGMENT_COLORS = {
 let splitMarkers = [];      // Array of {marker, index, id}
 let segmentLines = [];      // Array of polylines between markers
 let segmentTypes = [];      // Array of segment types (liaison/stage/lift)
+let segmentBounds = [];     // Array of bounds for each segment (for zoom)
+
+// Icon SVGs for segment types (no emojis!)
+const SEGMENT_ICONS = {
+    liaison: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="5" r="3"/><path d="M12 8v4"/><path d="m5 21 7-4 7 4"/><path d="M12 12v5"/></svg>',
+    stage: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" x2="4" y1="22" y2="15"/></svg>',
+    lift: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16"/><path d="M6 4v16"/><path d="M18 4v16"/><rect x="8" y="8" width="8" height="6" rx="1"/></svg>'
+};
 
 function init() {
     map = L.map('map').setView([62, 15], 5);
@@ -858,6 +880,7 @@ function drawSegmentLines() {
     // Remove old lines
     segmentLines.forEach(line => map.removeLayer(line));
     segmentLines = [];
+    segmentBounds = [];
 
     if (splitMarkers.length === 0) return;
 
@@ -878,6 +901,7 @@ function drawSegmentLines() {
                 interactive: false  // Let clicks pass through to base track
             }).addTo(map);
             segmentLines.push(line);
+            segmentBounds.push(L.latLngBounds(coords));
             ranges.push({ start, end, type });
         }
 
@@ -910,17 +934,16 @@ function updateUI() {
         const end = i < splitMarkers.length ? splitMarkers[i].index : waypoints.length - 1;
         const type = segmentTypes[i] || 'liaison';
         const dist = (waypoints[end].distance_km - waypoints[start].distance_km).toFixed(1);
-        const icon = type === 'stage' ? '🏁' : (type === 'lift' ? '🚡' : '🚴');
 
         html += `
-        <div class="admin-segment-item" data-segment-idx="${i}">
+        <div class="admin-segment-item" data-segment-idx="${i}" onclick="zoomToSegment(${i})" style="cursor: pointer;">
             <span class="color-dot" style="background: ${SEGMENT_COLORS[type]};"></span>
-            <span class="admin-segment-name">${icon} Sektion ${i + 1}</span>
+            <span class="admin-segment-name">${SEGMENT_ICONS[type]} Sektion ${i + 1}</span>
             <span class="admin-text-muted">${dist}km</span>
-            <select onchange="changeType(${i}, this.value)" class="segment-type-select">
-                <option value="liaison" ${type === 'liaison' ? 'selected' : ''}>🚴 T</option>
-                <option value="stage" ${type === 'stage' ? 'selected' : ''}>🏁 SS</option>
-                <option value="lift" ${type === 'lift' ? 'selected' : ''}>🚡 L</option>
+            <select onclick="event.stopPropagation()" onchange="changeType(${i}, this.value)" class="segment-type-select">
+                <option value="liaison" ${type === 'liaison' ? 'selected' : ''}>T</option>
+                <option value="stage" ${type === 'stage' ? 'selected' : ''}>SS</option>
+                <option value="lift" ${type === 'lift' ? 'selected' : ''}>L</option>
             </select>
         </div>`;
 
@@ -930,6 +953,40 @@ function updateUI() {
     segmentsList.innerHTML = html;
     saveActions.style.display = 'block';
     statusBox.innerHTML = '<strong>Steg 2:</strong> Välj typ för varje sektion, sen spara';
+}
+
+function zoomToSegment(idx) {
+    if (segmentBounds[idx]) {
+        map.fitBounds(segmentBounds[idx], { padding: [50, 50] });
+
+        // Update elevation profile for this segment
+        let start = 0;
+        for (let i = 0; i < idx; i++) {
+            start = splitMarkers[i].index;
+        }
+        const end = idx < splitMarkers.length ? splitMarkers[idx].index : waypoints.length - 1;
+        const type = segmentTypes[idx] || 'liaison';
+        const typeLabel = type === 'stage' ? 'SS' : (type === 'lift' ? 'Lift' : 'Transport');
+        drawElevationProfile(start, end, `Sektion ${idx + 1} (${typeLabel})`);
+
+        // Highlight selected segment in list
+        document.querySelectorAll('.admin-segment-item').forEach((item, i) => {
+            item.style.background = i === idx ? 'var(--color-star-fade)' : '';
+        });
+    }
+}
+
+function showFullTrack() {
+    // Zoom to full track
+    if (baseTrackLine) {
+        map.fitBounds(baseTrackLine.getBounds(), { padding: [50, 50] });
+    }
+    // Show full elevation profile
+    drawElevationProfile(0, null, 'Hela banan');
+    // Remove highlight
+    document.querySelectorAll('.admin-segment-item').forEach(item => {
+        item.style.background = '';
+    });
 }
 
 function updateSegmentListDistances() {
@@ -1046,9 +1103,17 @@ function changeSegmentType(segId, newType) {
 }
 
 // Elevation profile rendering
-function drawElevationProfile() {
+function drawElevationProfile(startIdx = 0, endIdx = null, title = 'Höjdprofil') {
     const canvas = document.getElementById('elevation-canvas');
     if (!canvas || !waypoints || waypoints.length < 2) return;
+
+    // Update title in header
+    const headerTitle = document.getElementById('elevation-title');
+    if (headerTitle) headerTitle.textContent = title;
+
+    // Slice waypoints if filtering to a section
+    const wps = endIdx !== null ? waypoints.slice(startIdx, endIdx + 1) : waypoints;
+    if (wps.length < 2) return;
 
     const ctx = canvas.getContext('2d');
     const dpr = window.devicePixelRatio || 1;
@@ -1066,8 +1131,9 @@ function drawElevationProfile() {
     const chartHeight = height - padding.top - padding.bottom;
 
     // Extract elevation data
-    const elevations = waypoints.map(w => w.elevation || 0);
-    const distances = waypoints.map(w => w.distance_km || 0);
+    const elevations = wps.map(w => w.elevation || 0);
+    const distances = wps.map(w => w.distance_km || 0);
+    const baseDistance = distances[0];
 
     if (elevations.every(e => e === 0)) {
         // No elevation data available
@@ -1081,7 +1147,9 @@ function drawElevationProfile() {
     const minEle = Math.min(...elevations);
     const maxEle = Math.max(...elevations);
     const eleRange = maxEle - minEle || 100;
-    const maxDist = Math.max(...distances);
+    const minDist = distances[0];
+    const maxDist = distances[distances.length - 1];
+    const distRange = maxDist - minDist || 1;
 
     // Clear canvas
     ctx.fillStyle = '#f8f9fa';
@@ -1102,14 +1170,10 @@ function drawElevationProfile() {
     ctx.beginPath();
     ctx.moveTo(padding.left, padding.top + chartHeight);
 
-    waypoints.forEach((wp, i) => {
-        const x = padding.left + (distances[i] / maxDist) * chartWidth;
+    wps.forEach((wp, i) => {
+        const x = padding.left + ((distances[i] - minDist) / distRange) * chartWidth;
         const y = padding.top + chartHeight - ((elevations[i] - minEle) / eleRange) * chartHeight;
-        if (i === 0) {
-            ctx.lineTo(x, y);
-        } else {
-            ctx.lineTo(x, y);
-        }
+        ctx.lineTo(x, y);
     });
 
     ctx.lineTo(padding.left + chartWidth, padding.top + chartHeight);
@@ -1124,8 +1188,8 @@ function drawElevationProfile() {
 
     // Draw elevation line on top
     ctx.beginPath();
-    waypoints.forEach((wp, i) => {
-        const x = padding.left + (distances[i] / maxDist) * chartWidth;
+    wps.forEach((wp, i) => {
+        const x = padding.left + ((distances[i] - minDist) / distRange) * chartWidth;
         const y = padding.top + chartHeight - ((elevations[i] - minEle) / eleRange) * chartHeight;
         if (i === 0) {
             ctx.moveTo(x, y);
