@@ -6,11 +6,15 @@
  * Run this migration once to add all performance-critical indexes
  */
 
+// Enable error reporting for debugging
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+
 require_once __DIR__ . '/../../config.php';
 require_admin();
 
-$db = getDB();
-$pdo = $db->getConnection();
+// Use global $pdo from config.php
+global $pdo;
 
 // Check database connection
 if (!$pdo) {
