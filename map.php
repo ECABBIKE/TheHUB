@@ -35,15 +35,18 @@ if (!$mapData) {
 
 $tracks = $mapData['tracks'] ?? [];
 $pois = $mapData['pois'] ?? [];
+$poiTypes = $mapData['poi_types'] ?? [];
 
-// Group POIs by type
+// Group POIs by type with icon info
 $poiGroups = [];
 foreach ($pois as $poi) {
     $type = $poi['poi_type'];
     if (!isset($poiGroups[$type])) {
+        $typeConfig = $poiTypes[$type] ?? [];
         $poiGroups[$type] = [
-            'label' => $poi['type_label'] ?? $type,
-            'emoji' => $poi['type_emoji'] ?? '📍',
+            'label' => $typeConfig['label'] ?? $poi['type_label'] ?? $type,
+            'icon' => $typeConfig['icon'] ?? 'map-pin',
+            'color' => $typeConfig['color'] ?? '#F59E0B',
             'items' => []
         ];
     }
@@ -409,6 +412,26 @@ $eventName = htmlspecialchars($event['name']);
             font-weight: 600;
             color: #333;
         }
+
+        /* POI markers */
+        .poi-marker-container {
+            background: transparent !important;
+            border: none !important;
+        }
+        .poi-marker {
+            width: 28px;
+            height: 28px;
+            border-radius: 50% 50% 50% 0;
+            transform: rotate(-45deg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+            border: 2px solid white;
+        }
+        .poi-marker i {
+            transform: rotate(45deg);
+        }
     </style>
 </head>
 <body>
@@ -438,11 +461,19 @@ $eventName = htmlspecialchars($event['name']);
             <?php if (!empty($poiGroups)): ?>
             <?php foreach ($poiGroups as $type => $group): ?>
             <div class="section">
-                <div class="section-title"><i data-lucide="map-pin" style="width: 12px; height: 12px; color: var(--color-icon);"></i> <?= htmlspecialchars($group['label']) ?></div>
-                <?php foreach ($group['items'] as $poi): ?>
-                <div class="track-item" onclick="zoomToPoi(<?= $poi['lat'] ?>, <?= $poi['lng'] ?>, '<?= htmlspecialchars(addslashes($poi['label'] ?? $group['label'])) ?>')">
+                <div class="section-title"><i data-lucide="<?= htmlspecialchars($group['icon']) ?>" style="width: 12px; height: 12px; color: <?= htmlspecialchars($group['color']) ?>;"></i> <?= htmlspecialchars($group['label']) ?> (<?= count($group['items']) ?>)</div>
+                <?php foreach ($group['items'] as $idx => $poi):
+                    $poiName = $poi['label'] ?: $group['label'];
+                    if (count($group['items']) > 1 && !$poi['label']) {
+                        $poiName = $group['label'] . ' ' . ($idx + 1);
+                    }
+                ?>
+                <div class="track-item" onclick="zoomToPoi(<?= $poi['lat'] ?>, <?= $poi['lng'] ?>, '<?= htmlspecialchars(addslashes($poiName)) ?>', '<?= htmlspecialchars($group['icon']) ?>', '<?= htmlspecialchars($group['color']) ?>')">
                     <div>
-                        <div class="track-name"><?= htmlspecialchars($poi['label'] ?? $group['label']) ?></div>
+                        <div class="track-name"><?= htmlspecialchars($poiName) ?></div>
+                        <?php if (!empty($poi['description'])): ?>
+                        <div class="track-meta"><?= htmlspecialchars($poi['description']) ?></div>
+                        <?php endif; ?>
                     </div>
                 </div>
                 <?php endforeach; ?>
@@ -502,10 +533,15 @@ $eventName = htmlspecialchars($event['name']);
         <div class="dropdown" id="poi-dropdown" style="position: fixed; bottom: calc(56px + env(safe-area-inset-bottom) + var(--space-sm)); left: 50%; transform: translateX(-50%); display: none; max-width: calc(100vw - var(--space-md));">
             <div class="dropdown-menu" style="position: static; display: block; max-height: 50vh;">
                 <?php foreach ($poiGroups as $type => $group): ?>
-                <div class="dropdown-section-title"><i data-lucide="map-pin" style="width: 12px; height: 12px; color: var(--color-icon); vertical-align: middle;"></i> <?= htmlspecialchars($group['label']) ?></div>
-                <?php foreach ($group['items'] as $poi): ?>
-                <div class="dropdown-item" onclick="zoomToPoi(<?= $poi['lat'] ?>, <?= $poi['lng'] ?>, '<?= htmlspecialchars(addslashes($poi['label'] ?? $group['label'])) ?>')">
-                    <?= htmlspecialchars($poi['label'] ?? $group['label']) ?>
+                <div class="dropdown-section-title"><i data-lucide="<?= htmlspecialchars($group['icon']) ?>" style="width: 12px; height: 12px; color: <?= htmlspecialchars($group['color']) ?>; vertical-align: middle;"></i> <?= htmlspecialchars($group['label']) ?> (<?= count($group['items']) ?>)</div>
+                <?php foreach ($group['items'] as $idx => $poi):
+                    $poiName = $poi['label'] ?: $group['label'];
+                    if (count($group['items']) > 1 && !$poi['label']) {
+                        $poiName = $group['label'] . ' ' . ($idx + 1);
+                    }
+                ?>
+                <div class="dropdown-item" onclick="zoomToPoi(<?= $poi['lat'] ?>, <?= $poi['lng'] ?>, '<?= htmlspecialchars(addslashes($poiName)) ?>', '<?= htmlspecialchars($group['icon']) ?>', '<?= htmlspecialchars($group['color']) ?>')">
+                    <?= htmlspecialchars($poiName) ?>
                 </div>
                 <?php endforeach; ?>
                 <?php endforeach; ?>
@@ -605,26 +641,30 @@ $eventName = htmlspecialchars($event['name']);
             });
         }
 
-        // Draw POIs with styled markers
+        // Draw POIs with styled markers using POI type icons
+        const poiTypes = mapData.poi_types || {};
         if (mapData.pois) {
             mapData.pois.forEach(poi => {
                 const type = poi.poi_type;
+                const typeConfig = poiTypes[type] || {};
+                const color = typeConfig.color || '#F59E0B';
+                const icon = typeConfig.icon || 'map-pin';
+
                 if (!poiLayers[type]) { poiLayers[type] = L.layerGroup().addTo(map); visiblePoiTypes.add(type); }
-                const markerHtml = `<div style="
-                    width: 24px; height: 24px;
-                    background: #F59E0B;
-                    border: 2px solid white;
-                    border-radius: 50% 50% 50% 0;
-                    transform: rotate(-45deg);
-                    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
-                "></div>`;
+
+                // Create marker with Lucide icon
+                const markerHtml = `<div class="poi-marker" style="background: ${color};">
+                    <i data-lucide="${icon}" style="width: 14px; height: 14px; color: white; stroke-width: 2.5;"></i>
+                </div>`;
+
                 L.marker([poi.lat, poi.lng], {
                     icon: L.divIcon({
-                        className: '',
+                        className: 'poi-marker-container',
                         html: markerHtml,
-                        iconSize: [24, 24], iconAnchor: [12, 24]
+                        iconSize: [28, 28], iconAnchor: [14, 28]
                     })
-                }).bindPopup('<strong>' + (poi.label || poi.type_label || type) + '</strong>').addTo(poiLayers[type]);
+                }).bindPopup('<strong>' + (poi.label || poi.type_label || type) + '</strong>' +
+                    (poi.description ? '<br><small>' + poi.description + '</small>' : '')).addTo(poiLayers[type]);
             });
         }
 
@@ -741,18 +781,28 @@ $eventName = htmlspecialchars($event['name']);
         updateElevation(segment);
     }
 
-    function zoomToPoi(lat, lng, label) {
-        // Zoom to POI location
-        map.setView([lat, lng], 17);
+    function zoomToPoi(lat, lng, label, icon = 'map-pin', color = '#F59E0B') {
+        // Zoom to POI location with smooth animation
+        map.flyTo([lat, lng], 18, { duration: 0.5 });
 
         // Close mobile menu
         document.querySelectorAll('#mobile-dropdowns .dropdown').forEach(d => d.style.display = 'none');
 
-        // Show a temporary popup at the POI
-        L.popup()
+        // Show popup with icon
+        const popupContent = `<div style="display: flex; align-items: center; gap: 8px;">
+            <div style="width: 24px; height: 24px; background: ${color}; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                <i data-lucide="${icon}" style="width: 14px; height: 14px; color: white;"></i>
+            </div>
+            <strong>${label}</strong>
+        </div>`;
+
+        L.popup({ offset: [0, -10] })
             .setLatLng([lat, lng])
-            .setContent('<strong>' + label + '</strong>')
+            .setContent(popupContent)
             .openOn(map);
+
+        // Re-initialize Lucide icons for popup
+        setTimeout(() => lucide.createIcons(), 50);
     }
 
     function toggleDropdown(id) {
