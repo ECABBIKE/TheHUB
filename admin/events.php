@@ -10,13 +10,29 @@ global $pdo;
 $filterSeries = isset($_GET['series_id']) && is_numeric($_GET['series_id']) ? intval($_GET['series_id']) : null;
 $filterYear = isset($_GET['year']) && is_numeric($_GET['year']) ? intval($_GET['year']) : null;
 
+// Check if series_events table exists
+$seriesEventsTableExists = false;
+try {
+    $pdo->query("SELECT 1 FROM series_events LIMIT 1");
+    $seriesEventsTableExists = true;
+} catch (Exception $e) {
+    // Table doesn't exist
+}
+
 // Build WHERE clause
 $where = [];
 $params = [];
 
 if ($filterSeries) {
-    $where[] = "e.series_id = ?";
-    $params[] = $filterSeries;
+    // Check both direct series_id link AND series_events junction table
+    if ($seriesEventsTableExists) {
+        $where[] = "(e.series_id = ? OR e.id IN (SELECT event_id FROM series_events WHERE series_id = ?))";
+        $params[] = $filterSeries;
+        $params[] = $filterSeries;
+    } else {
+        $where[] = "e.series_id = ?";
+        $params[] = $filterSeries;
+    }
 }
 
 if ($filterYear) {
@@ -26,12 +42,20 @@ if ($filterYear) {
 
 $whereClause = !empty($where) ? 'WHERE ' . implode(' AND ', $where) : '';
 
-// Get events
+// Get events - include series name from both direct link and junction table
+$seriesNameSelect = $seriesEventsTableExists
+    ? "COALESCE(s.name, (SELECT s2.name FROM series s2 INNER JOIN series_events se ON s2.id = se.series_id WHERE se.event_id = e.id LIMIT 1))"
+    : "s.name";
+
+$seriesIdSelect = $seriesEventsTableExists
+    ? "COALESCE(e.series_id, (SELECT se.series_id FROM series_events se WHERE se.event_id = e.id LIMIT 1))"
+    : "e.series_id";
+
 $sql = "SELECT
     e.id, e.name, e.date, e.location, e.discipline, e.status,
     v.name as venue_name,
-    s.name as series_name,
-    s.id as series_id
+    {$seriesNameSelect} as series_name,
+    {$seriesIdSelect} as series_id
 FROM events e
 LEFT JOIN venues v ON e.venue_id = v.id
 LEFT JOIN series s ON e.series_id = s.id
@@ -55,20 +79,34 @@ try {
     $allYears = [];
 }
 
-// Get series for filter
+// Get series for filter (check both direct link and junction table)
 try {
     if ($filterYear) {
-        $stmt = $pdo->prepare("
-            SELECT DISTINCT s.id, s.name
-            FROM series s
-            INNER JOIN events e ON s.id = e.series_id
-            WHERE s.active = 1 AND YEAR(e.date) = ?
-            ORDER BY s.name
-        ");
-        $stmt->execute([$filterYear]);
+        if ($seriesEventsTableExists) {
+            // Get series that have events in this year (via either linking method)
+            $stmt = $pdo->prepare("
+                SELECT DISTINCT s.id, s.name, s.year
+                FROM series s
+                WHERE s.active = 1 AND (
+                    s.id IN (SELECT DISTINCT series_id FROM events WHERE series_id IS NOT NULL AND YEAR(date) = ?)
+                    OR s.id IN (SELECT DISTINCT se.series_id FROM series_events se INNER JOIN events e ON se.event_id = e.id WHERE YEAR(e.date) = ?)
+                )
+                ORDER BY s.name
+            ");
+            $stmt->execute([$filterYear, $filterYear]);
+        } else {
+            $stmt = $pdo->prepare("
+                SELECT DISTINCT s.id, s.name, s.year
+                FROM series s
+                INNER JOIN events e ON s.id = e.series_id
+                WHERE s.active = 1 AND YEAR(e.date) = ?
+                ORDER BY s.name
+            ");
+            $stmt->execute([$filterYear]);
+        }
         $allSeries = $stmt->fetchAll(PDO::FETCH_ASSOC);
     } else {
-        $allSeries = $pdo->query("SELECT id, name FROM series WHERE active = 1 ORDER BY name")->fetchAll(PDO::FETCH_ASSOC);
+        $allSeries = $pdo->query("SELECT id, name, year FROM series WHERE active = 1 ORDER BY year DESC, name")->fetchAll(PDO::FETCH_ASSOC);
     }
 } catch (Exception $e) {
     $allSeries = [];
@@ -119,7 +157,7 @@ include __DIR__ . '/components/unified-layout.php';
                     <option value="">Alla serier</option>
                     <?php foreach ($allSeries as $series): ?>
                         <option value="<?= $series['id'] ?>" <?= $filterSeries == $series['id'] ? 'selected' : '' ?>>
-                            <?= htmlspecialchars($series['name']) ?>
+                            <?= htmlspecialchars($series['name']) ?><?= !empty($series['year']) ? ' (' . $series['year'] . ')' : '' ?>
                         </option>
                     <?php endforeach; ?>
                 </select>

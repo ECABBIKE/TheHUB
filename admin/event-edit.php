@@ -219,6 +219,42 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 error_log("EVENT EDIT: SM column update failed: " . $smEx->getMessage());
             }
 
+            // Sync series_events junction table with events.series_id
+            try {
+                $newSeriesId = !empty($_POST['series_id']) ? intval($_POST['series_id']) : null;
+
+                // Remove from any previous series_events entries that don't match
+                $db->query(
+                    "DELETE FROM series_events WHERE event_id = ? AND series_id != ?",
+                    [$id, $newSeriesId ?? 0]
+                );
+
+                // Add to series_events if series_id is set and not already there
+                if ($newSeriesId) {
+                    $existingLink = $db->getRow(
+                        "SELECT id FROM series_events WHERE series_id = ? AND event_id = ?",
+                        [$newSeriesId, $id]
+                    );
+
+                    if (!$existingLink) {
+                        // Get max sort order for this series
+                        $maxOrder = $db->getRow(
+                            "SELECT MAX(sort_order) as max_order FROM series_events WHERE series_id = ?",
+                            [$newSeriesId]
+                        );
+                        $sortOrder = ($maxOrder['max_order'] ?? 0) + 1;
+
+                        $db->insert('series_events', [
+                            'series_id' => $newSeriesId,
+                            'event_id' => $id,
+                            'sort_order' => $sortOrder
+                        ]);
+                    }
+                }
+            } catch (Exception $syncEx) {
+                error_log("EVENT EDIT: series_events sync failed (non-critical): " . $syncEx->getMessage());
+            }
+
             // Verify basic fields were saved
             $verifyEvent = $db->getRow("SELECT name FROM events WHERE id = ?", [$id]);
             $savedName = $verifyEvent['name'] ?? '';
