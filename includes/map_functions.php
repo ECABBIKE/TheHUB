@@ -159,6 +159,12 @@ function haversineDistance($lat1, $lon1, $lat2, $lon2) {
 /**
  * Save track to database
  *
+ * NEW WORKFLOW:
+ * - Raw coordinates are stored in the track itself
+ * - NO automatic segments created
+ * - Full track is shown as "transport/liaison" by default
+ * - User manually marks sections as SS (stage) or Lift
+ *
  * @param PDO $pdo Database connection
  * @param int $eventId Event ID
  * @param string $name Track name
@@ -171,12 +177,20 @@ function saveEventTrack($pdo, $eventId, $name, $gpxFile, $parsedData, $options =
     $pdo->beginTransaction();
 
     try {
-        // Calculate totals
+        // Collect ALL raw coordinates and elevations from all segments
+        $rawCoordinates = [];
+        $rawElevations = [];
         $totalDistance = 0;
         $totalElevation = 0;
 
         foreach ($parsedData['tracks'] as $track) {
             foreach ($track['segments'] as $segment) {
+                foreach ($segment['coordinates'] as $coord) {
+                    $rawCoordinates[] = $coord;
+                }
+                foreach ($segment['elevations'] as $ele) {
+                    $rawElevations[] = $ele;
+                }
                 $totalDistance += $segment['distance_km'];
                 $totalElevation += $segment['elevation_gain_m'];
             }
@@ -198,62 +212,104 @@ function saveEventTrack($pdo, $eventId, $name, $gpxFile, $parsedData, $options =
             $pdo->prepare("UPDATE event_tracks SET is_primary = 0 WHERE event_id = ?")->execute([$eventId]);
         }
 
-        // Insert main track record
-        $stmt = $pdo->prepare("
-            INSERT INTO event_tracks
-            (event_id, name, route_type, route_label, gpx_file, total_distance_km, total_elevation_m,
-             bounds_north, bounds_south, bounds_east, bounds_west, is_primary, display_order, color)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ");
-        $stmt->execute([
-            $eventId,
-            $name,
-            $options['route_type'] ?? null,
-            $options['route_label'] ?? $name,
-            $gpxFile,
-            $totalDistance,
-            $totalElevation,
-            $parsedData['bounds']['north'],
-            $parsedData['bounds']['south'],
-            $parsedData['bounds']['east'],
-            $parsedData['bounds']['west'],
-            $isPrimary ? 1 : 0,
-            $options['display_order'] ?? $nextOrder,
-            $options['color'] ?? '#3B82F6'
-        ]);
+        // Check if raw_coordinates column exists (for backwards compatibility)
+        $hasRawCoords = false;
+        try {
+            $check = $pdo->query("SHOW COLUMNS FROM event_tracks LIKE 'raw_coordinates'");
+            $hasRawCoords = $check->fetch() !== false;
+        } catch (Exception $e) {
+            $hasRawCoords = false;
+        }
 
-        $trackId = $pdo->lastInsertId();
+        if ($hasRawCoords) {
+            // NEW: Insert track with raw coordinates, NO automatic segments
+            $stmt = $pdo->prepare("
+                INSERT INTO event_tracks
+                (event_id, name, route_type, route_label, gpx_file, raw_coordinates, raw_elevation_data,
+                 total_distance_km, total_elevation_m,
+                 bounds_north, bounds_south, bounds_east, bounds_west, is_primary, display_order, color)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ");
+            $stmt->execute([
+                $eventId,
+                $name,
+                $options['route_type'] ?? null,
+                $options['route_label'] ?? $name,
+                $gpxFile,
+                json_encode($rawCoordinates),
+                json_encode($rawElevations),
+                $totalDistance,
+                $totalElevation,
+                $parsedData['bounds']['north'],
+                $parsedData['bounds']['south'],
+                $parsedData['bounds']['east'],
+                $parsedData['bounds']['west'],
+                $isPrimary ? 1 : 0,
+                $options['display_order'] ?? $nextOrder,
+                $options['color'] ?? '#3B82F6'
+            ]);
+        } else {
+            // OLD: Without raw_coordinates (pre-migration)
+            $stmt = $pdo->prepare("
+                INSERT INTO event_tracks
+                (event_id, name, route_type, route_label, gpx_file, total_distance_km, total_elevation_m,
+                 bounds_north, bounds_south, bounds_east, bounds_west, is_primary, display_order, color)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ");
+            $stmt->execute([
+                $eventId,
+                $name,
+                $options['route_type'] ?? null,
+                $options['route_label'] ?? $name,
+                $gpxFile,
+                $totalDistance,
+                $totalElevation,
+                $parsedData['bounds']['north'],
+                $parsedData['bounds']['south'],
+                $parsedData['bounds']['east'],
+                $parsedData['bounds']['west'],
+                $isPrimary ? 1 : 0,
+                $options['display_order'] ?? $nextOrder,
+                $options['color'] ?? '#3B82F6'
+            ]);
 
-        // Insert segments
-        $sequenceNumber = 1;
-        foreach ($parsedData['tracks'] as $track) {
-            foreach ($track['segments'] as $segment) {
+            $trackId = $pdo->lastInsertId();
+
+            // OLD workflow: Create one segment with all coordinates (for backwards compatibility)
+            if (!empty($rawCoordinates)) {
+                $firstCoord = $rawCoordinates[0];
+                $lastCoord = end($rawCoordinates);
+
                 $stmt = $pdo->prepare("
                     INSERT INTO event_track_segments
                     (track_id, segment_type, segment_name, sequence_number,
                      distance_km, elevation_gain_m, elevation_loss_m,
                      start_lat, start_lng, end_lat, end_lng,
                      coordinates, elevation_data, color)
-                    VALUES (?, 'stage', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    VALUES (?, 'liaison', 'Hela banan', 1, ?, ?, 0, ?, ?, ?, ?, ?, ?, ?)
                 ");
                 $stmt->execute([
                     $trackId,
-                    "SS$sequenceNumber",
-                    $sequenceNumber,
-                    $segment['distance_km'],
-                    $segment['elevation_gain_m'],
-                    $segment['elevation_loss_m'],
-                    $segment['start']['lat'],
-                    $segment['start']['lng'],
-                    $segment['end']['lat'],
-                    $segment['end']['lng'],
-                    json_encode($segment['coordinates']),
-                    json_encode($segment['elevations']),
-                    SEGMENT_COLORS['stage']
+                    $totalDistance,
+                    $totalElevation,
+                    $firstCoord['lat'],
+                    $firstCoord['lng'],
+                    $lastCoord['lat'],
+                    $lastCoord['lng'],
+                    json_encode($rawCoordinates),
+                    json_encode($rawElevations),
+                    '#9CA3AF'
                 ]);
-                $sequenceNumber++;
             }
+
+            $pdo->commit();
+            return $trackId;
         }
+
+        $trackId = $pdo->lastInsertId();
+
+        // NEW workflow: NO automatic segments created
+        // User will manually mark sections as SS/Lift
 
         $pdo->commit();
         return $trackId;
@@ -308,6 +364,15 @@ function getEventTrack($pdo, $eventId) {
  * @return array Array of tracks with segments
  */
 function getEventTracks($pdo, $eventId) {
+    // Check if raw_coordinates column exists
+    $hasRawCoords = false;
+    try {
+        $check = $pdo->query("SHOW COLUMNS FROM event_tracks LIKE 'raw_coordinates'");
+        $hasRawCoords = $check->fetch() !== false;
+    } catch (Exception $e) {
+        $hasRawCoords = false;
+    }
+
     $stmt = $pdo->prepare("
         SELECT * FROM event_tracks
         WHERE event_id = ?
@@ -329,6 +394,9 @@ function getEventTracks($pdo, $eventId) {
             $segment['coordinates'] = json_decode($segment['coordinates'], true);
             $segment['elevation_data'] = json_decode($segment['elevation_data'], true);
         }
+
+        // Don't decode raw_coordinates here (too large), just mark if present
+        $track['has_raw_coords'] = $hasRawCoords && !empty($track['raw_coordinates']);
     }
 
     return $tracks;
@@ -738,6 +806,15 @@ function getEventMapDataMultiTrack($pdo, $eventId) {
 
         $trackFeatures = [];
 
+        // Add base track polyline (full track as transport/liaison)
+        $basePolyline = getTrackBasePolyline($pdo, $track['id']);
+        if ($basePolyline) {
+            $basePolyline['properties']['track_id'] = (int)$track['id'];
+            $trackFeatures[] = $basePolyline;
+            $allFeatures[] = $basePolyline;
+        }
+
+        // Add segment overlays (SS, Lift, etc.)
         foreach ($track['segments'] as $segment) {
             $coordinates = array_map(function($coord) {
                 return [$coord['lng'], $coord['lat']];
@@ -766,6 +843,9 @@ function getEventMapDataMultiTrack($pdo, $eventId) {
             $allFeatures[] = $feature;
         }
 
+        // Check if track has raw coordinates (new workflow)
+        $hasRawCoords = !empty($track['raw_coordinates'] ?? null);
+
         $tracksData[] = [
             'id' => (int)$track['id'],
             'name' => $track['name'],
@@ -776,6 +856,7 @@ function getEventMapDataMultiTrack($pdo, $eventId) {
             'total_distance_km' => (float)$track['total_distance_km'],
             'total_elevation_m' => (int)$track['total_elevation_m'],
             'segments' => $track['segments'],
+            'has_raw_coords' => $hasRawCoords,
             'geojson' => [
                 'type' => 'FeatureCollection',
                 'features' => $trackFeatures
@@ -1179,7 +1260,12 @@ function addSegmentByWaypointIndex($pdo, $trackId, $segmentDef) {
     $newSeqNum = $maxSeq + 1;
 
     // Determine color based on type
-    $color = $segmentDef['type'] === 'stage' ? '#61CE70' : '#9CA3AF';
+    $segmentColors = [
+        'stage' => '#EF4444',   // Red for SS/tävling
+        'liaison' => '#9CA3AF', // Gray for transport
+        'lift' => '#F59E0B'     // Orange for lift
+    ];
+    $color = $segmentColors[$segmentDef['type']] ?? '#9CA3AF';
 
     // Create the segment with coordinates as JSON
     $stmt = $pdo->prepare("
@@ -1206,55 +1292,106 @@ function addSegmentByWaypointIndex($pdo, $trackId, $segmentDef) {
 
 /**
  * Get all waypoints for a track (for visual segment editor)
- * Extracts coordinates from all segments and returns a unified waypoint list
+ * Uses raw_coordinates if available, otherwise falls back to segment coordinates
  *
  * @param PDO $pdo
  * @param int $trackId
  * @return array Array of waypoints with index, lat, lng, cumulative distance
  */
 function getTrackWaypointsForEditor($pdo, $trackId) {
-    // Get all segments with coordinates
-    $stmt = $pdo->prepare("
-        SELECT id, sequence_number, coordinates, elevation_data
-        FROM event_track_segments
-        WHERE track_id = ?
-        ORDER BY sequence_number
-    ");
+    // First try to get raw_coordinates from track (new workflow)
+    $stmt = $pdo->prepare("SELECT raw_coordinates, raw_elevation_data FROM event_tracks WHERE id = ?");
     $stmt->execute([$trackId]);
-    $segments = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $track = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    $result = [];
-    $cumulativeDistance = 0;
-    $prevWp = null;
-    $globalIndex = 0;
+    $coordinates = [];
+    $elevations = [];
 
-    foreach ($segments as $segment) {
-        $coordinates = json_decode($segment['coordinates'], true) ?: [];
-        $elevations = json_decode($segment['elevation_data'], true) ?: [];
+    if ($track && !empty($track['raw_coordinates'])) {
+        // NEW workflow: Use raw coordinates from track
+        $coordinates = json_decode($track['raw_coordinates'], true) ?: [];
+        $elevations = json_decode($track['raw_elevation_data'], true) ?: [];
+    } else {
+        // OLD workflow: Extract from segments
+        $stmt = $pdo->prepare("
+            SELECT id, sequence_number, coordinates, elevation_data
+            FROM event_track_segments
+            WHERE track_id = ?
+            ORDER BY sequence_number
+        ");
+        $stmt->execute([$trackId]);
+        $segments = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        foreach ($coordinates as $i => $coord) {
-            if ($prevWp !== null) {
-                $distance = haversineDistance(
-                    $prevWp['lat'], $prevWp['lng'],
-                    $coord['lat'], $coord['lng']
-                );
-                $cumulativeDistance += $distance;
+        foreach ($segments as $segment) {
+            $segCoords = json_decode($segment['coordinates'], true) ?: [];
+            $segEles = json_decode($segment['elevation_data'], true) ?: [];
+
+            foreach ($segCoords as $i => $coord) {
+                $coordinates[] = $coord;
+                if (isset($segEles[$i])) {
+                    $elevations[] = $segEles[$i];
+                }
             }
-
-            $result[] = [
-                'index' => $globalIndex,
-                'lat' => floatval($coord['lat']),
-                'lng' => floatval($coord['lng']),
-                'elevation' => isset($elevations[$i]) ? floatval($elevations[$i]) : (isset($coord['ele']) ? floatval($coord['ele']) : null),
-                'distance_km' => round($cumulativeDistance, 3),
-                'segment_id' => intval($segment['id']),
-                'local_index' => $i
-            ];
-
-            $prevWp = $coord;
-            $globalIndex++;
         }
     }
 
+    // Build waypoint list with cumulative distance
+    $result = [];
+    $cumulativeDistance = 0;
+    $prevWp = null;
+
+    foreach ($coordinates as $i => $coord) {
+        if ($prevWp !== null) {
+            $distance = haversineDistance(
+                $prevWp['lat'], $prevWp['lng'],
+                $coord['lat'], $coord['lng']
+            );
+            $cumulativeDistance += $distance;
+        }
+
+        $result[] = [
+            'index' => $i,
+            'lat' => floatval($coord['lat']),
+            'lng' => floatval($coord['lng']),
+            'elevation' => isset($elevations[$i]) ? floatval($elevations[$i]) : (isset($coord['ele']) ? floatval($coord['ele']) : null),
+            'distance_km' => round($cumulativeDistance, 3)
+        ];
+
+        $prevWp = $coord;
+    }
+
     return $result;
+}
+
+/**
+ * Get raw track polyline for display (the full track as base layer)
+ *
+ * @param PDO $pdo
+ * @param int $trackId
+ * @return array GeoJSON LineString feature
+ */
+function getTrackBasePolyline($pdo, $trackId) {
+    $waypoints = getTrackWaypointsForEditor($pdo, $trackId);
+
+    if (empty($waypoints)) {
+        return null;
+    }
+
+    $coordinates = array_map(function($wp) {
+        return [$wp['lng'], $wp['lat']];
+    }, $waypoints);
+
+    return [
+        'type' => 'Feature',
+        'geometry' => [
+            'type' => 'LineString',
+            'coordinates' => $coordinates
+        ],
+        'properties' => [
+            'type' => 'base_track',
+            'color' => '#9CA3AF', // Gray for transport/liaison
+            'weight' => 4,
+            'opacity' => 0.8
+        ]
+    ];
 }

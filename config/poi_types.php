@@ -108,8 +108,9 @@ define('POI_TYPES', [
  * Segment type colors
  */
 define('SEGMENT_COLORS', [
-    'stage' => '#FF0000',    // Rod for tavlingsstracka
-    'liaison' => '#00AA00'   // Gron for transport
+    'stage' => '#EF4444',    // Red for SS/tävlingssträcka
+    'liaison' => '#9CA3AF',  // Gray for transport
+    'lift' => '#F59E0B'      // Orange for lift
 ]);
 
 /**
