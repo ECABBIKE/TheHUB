@@ -1,6 +1,4 @@
 <?php
-die('TEST - PHP WORKS'); // TEMP DEBUG
-
 /**
  * Admin Event Map Management - Full-width Map Editor
  *
@@ -17,6 +15,8 @@ require_once INCLUDES_PATH . '/map_functions.php';
 
 $db = getDB();
 global $pdo;
+
+die('TEST 2 - After includes'); // TEMP DEBUG
 
 // Get event ID from URL
 $eventId = 0;
