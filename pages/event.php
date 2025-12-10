@@ -611,7 +611,7 @@ if (!$event) {
         <?php endif; ?>
 
         <?php if ($hasInteractiveMap || !empty($event['map_content']) || !empty($event['map_image_url']) || !empty($event['map_use_global'])): ?>
-        <a href="?id=<?= $eventId ?>&tab=karta" class="event-tab <?= $activeTab === 'karta' ? 'active' : '' ?>">
+        <a href="?id=<?= $eventId ?>&tab=karta" class="event-tab <?= $activeTab === 'karta' ? 'active' : '' ?>" onclick="if(window.innerWidth <= 768) { window.location.href='/map.php?id=<?= $eventId ?>'; return false; }">
             <i data-lucide="map-pin"></i>
             Karta
         </a>

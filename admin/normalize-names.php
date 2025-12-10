@@ -148,22 +148,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     }
 }
 
-// Get riders with problematic names
-$allRiders = $db->getAll("SELECT id, firstname, lastname, club_id FROM riders ORDER BY lastname, firstname");
-$problematicRiders = [];
+// PERFORMANCE FIX: Only fetch riders that actually need normalization
+// Using SQL pattern matching instead of loading all riders into PHP memory
+// This query finds names that are ALL CAPS or all lowercase
+$problematicRiders = $db->getAll("
+    SELECT id, firstname, lastname, club_id
+    FROM riders
+    WHERE (
+        -- All uppercase (at least 2 chars, all alpha chars are uppercase)
+        (LENGTH(firstname) >= 2 AND firstname = UPPER(firstname) AND firstname REGEXP '[A-ZÄÖÅ]')
+        OR (LENGTH(lastname) >= 2 AND lastname = UPPER(lastname) AND lastname REGEXP '[A-ZÄÖÅ]')
+        -- All lowercase
+        OR (LENGTH(firstname) >= 2 AND firstname = LOWER(firstname) AND firstname REGEXP '[a-zäöå]')
+        OR (LENGTH(lastname) >= 2 AND lastname = LOWER(lastname) AND lastname REGEXP '[a-zäöå]')
+    )
+    ORDER BY lastname, firstname
+    LIMIT 500
+");
 
-foreach ($allRiders as $rider) {
-    $firstNeedsNorm = needsNormalization($rider['firstname']);
-    $lastNeedsNorm = needsNormalization($rider['lastname']);
-
-    if ($firstNeedsNorm || $lastNeedsNorm) {
-        $rider['new_firstname'] = properNameCase($rider['firstname']);
-        $rider['new_lastname'] = properNameCase($rider['lastname']);
-        $rider['first_needs_norm'] = $firstNeedsNorm;
-        $rider['last_needs_norm'] = $lastNeedsNorm;
-        $problematicRiders[] = $rider;
-    }
+// Add preview data
+foreach ($problematicRiders as &$rider) {
+    $rider['new_firstname'] = properNameCase($rider['firstname']);
+    $rider['new_lastname'] = properNameCase($rider['lastname']);
+    $rider['first_needs_norm'] = needsNormalization($rider['firstname']);
+    $rider['last_needs_norm'] = needsNormalization($rider['lastname']);
 }
+unset($rider);
+
+// Get total count for stats (separate lightweight query)
+$totalRiders = $db->getRow("SELECT COUNT(*) as cnt FROM riders")['cnt'] ?? 0;
 
 // Get club names for display
 $clubIds = array_unique(array_filter(array_column($problematicRiders, 'club_id')));
@@ -349,7 +362,7 @@ include __DIR__ . '/components/unified-layout.php';
                 <div class="stat-label">Behöver normaliseras</div>
             </div>
             <div class="stat-item">
-                <div class="stat-value"><?= count($allRiders) ?></div>
+                <div class="stat-value"><?= number_format($totalRiders) ?></div>
                 <div class="stat-label">Totalt deltagare</div>
             </div>
         </div>

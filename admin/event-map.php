@@ -1,6 +1,6 @@
 <?php
 /**
- * Admin Event Map Management
+ * Admin Event Map Management - Multi-track support
  */
 require_once __DIR__ . '/../config.php';
 require_admin();
@@ -27,6 +27,9 @@ if (!$event) {
 $message = '';
 $messageType = '';
 
+// Selected track for editing
+$selectedTrackId = intval($_GET['track'] ?? 0);
+
 // Handle POST
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     check_csrf();
@@ -48,18 +51,40 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if (!move_uploaded_file($file['tmp_name'], $filepath)) {
                     throw new Exception('Kunde inte spara');
                 }
-                $existingTrack = getEventTrack($pdo, $eventId);
-                if ($existingTrack) deleteEventTrack($pdo, $existingTrack['id']);
                 $parsedData = parseGpxFile($filepath);
                 $trackName = trim($_POST['track_name'] ?? '') ?: $event['name'];
-                saveEventTrack($pdo, $eventId, $trackName, $filename, $parsedData);
+                $options = [
+                    'route_type' => trim($_POST['route_type'] ?? ''),
+                    'route_label' => trim($_POST['route_label'] ?? '') ?: $trackName,
+                    'color' => $_POST['track_color'] ?? '#3B82F6',
+                    'is_primary' => !empty($_POST['is_primary'])
+                ];
+                $newTrackId = saveEventTrack($pdo, $eventId, $trackName, $filename, $parsedData, $options);
+                $selectedTrackId = $newTrackId;
                 $message = 'GPX uppladdad!';
                 $messageType = 'success';
                 break;
 
+            case 'update_track':
+                $trackId = intval($_POST['track_id'] ?? 0);
+                if ($trackId > 0) {
+                    updateTrack($pdo, $trackId, [
+                        'name' => trim($_POST['track_name'] ?? ''),
+                        'route_label' => trim($_POST['route_label'] ?? ''),
+                        'color' => $_POST['track_color'] ?? '#3B82F6',
+                        'is_primary' => !empty($_POST['is_primary'])
+                    ]);
+                    $message = 'Bana uppdaterad';
+                    $messageType = 'success';
+                }
+                break;
+
             case 'delete_track':
                 $trackId = intval($_POST['track_id'] ?? 0);
-                if ($trackId > 0) deleteEventTrack($pdo, $trackId);
+                if ($trackId > 0) {
+                    deleteEventTrack($pdo, $trackId);
+                    if ($selectedTrackId == $trackId) $selectedTrackId = 0;
+                }
                 $message = 'Bana borttagen';
                 $messageType = 'success';
                 break;
@@ -120,20 +145,47 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// Get data
-$track = getEventTrack($pdo, $eventId);
+// Get all tracks for event
+$allTracks = getEventTracks($pdo, $eventId);
 $pois = getEventPois($pdo, $eventId, false) ?: [];
 $poiTypes = getPoiTypesForSelect() ?: [];
-$mapData = getEventMapData($pdo, $eventId);
 
+// Select first track if none selected
+if ($selectedTrackId <= 0 && !empty($allTracks)) {
+    $selectedTrackId = $allTracks[0]['id'];
+}
+
+// Get selected track details
+$currentTrack = null;
 $trackWaypoints = [];
-if ($track) {
+foreach ($allTracks as $t) {
+    if ($t['id'] == $selectedTrackId) {
+        $currentTrack = $t;
+        break;
+    }
+}
+if ($currentTrack) {
     try {
-        $trackWaypoints = getTrackWaypointsForEditor($pdo, $track['id']);
+        $trackWaypoints = getTrackWaypointsForEditor($pdo, $currentTrack['id']);
     } catch (Exception $e) {
         $trackWaypoints = [];
     }
 }
+
+// Get map data for display (all tracks)
+$mapData = getEventMapDataMultiTrack($pdo, $eventId);
+
+// Track colors for selection
+$trackColors = [
+    '#3B82F6' => 'Blå',
+    '#61CE70' => 'Grön',
+    '#EF4444' => 'Röd',
+    '#F59E0B' => 'Orange',
+    '#8B5CF6' => 'Lila',
+    '#EC4899' => 'Rosa',
+    '#14B8A6' => 'Teal',
+    '#6B7280' => 'Grå'
+];
 
 // Page setup
 $page_title = 'Karta - ' . htmlspecialchars($event['name']);
@@ -158,81 +210,198 @@ include __DIR__ . '/components/unified-layout.php';
 <div class="admin-grid admin-grid-2">
     <!-- Left: Controls -->
     <div>
-        <!-- GPX Upload -->
+        <!-- All Tracks -->
         <div class="admin-card">
-            <div class="admin-card-header"><h2>GPX-fil</h2></div>
+            <div class="admin-card-header"><h2>Banor (<?= count($allTracks) ?>)</h2></div>
             <div class="admin-card-body">
-                <?php if ($track): ?>
-                <p><strong><?= htmlspecialchars($track['name']) ?></strong><br>
-                <span class="admin-text-muted"><?= number_format($track['total_distance_km'], 1) ?> km · <?= count($track['segments']) ?> segment</span></p>
-                <form method="POST" style="margin: var(--space-sm) 0;">
-                    <?= csrf_field() ?>
-                    <input type="hidden" name="action" value="delete_track">
-                    <input type="hidden" name="track_id" value="<?= $track['id'] ?>">
-                    <button type="submit" class="btn-admin btn-admin-danger btn-admin-sm" onclick="return confirm('Ta bort?')">Ta bort bana</button>
-                </form>
-                <hr style="margin: var(--space-md) 0;">
+                <?php if (!empty($allTracks)): ?>
+                <div style="display: flex; flex-direction: column; gap: var(--space-sm); margin-bottom: var(--space-md);">
+                    <?php foreach ($allTracks as $t): ?>
+                    <div style="display: flex; align-items: center; gap: var(--space-sm); padding: var(--space-sm); border: 2px solid <?= $t['id'] == $selectedTrackId ? 'var(--color-accent)' : 'var(--color-border)' ?>; border-radius: var(--radius-sm); background: <?= $t['id'] == $selectedTrackId ? 'var(--color-accent-light, rgba(97,206,112,0.1))' : 'transparent' ?>;">
+                        <span style="width: 16px; height: 16px; background: <?= htmlspecialchars($t['color'] ?? '#3B82F6') ?>; border-radius: 3px; flex-shrink: 0;"></span>
+                        <div style="flex: 1; min-width: 0;">
+                            <div style="font-weight: 500;"><?= htmlspecialchars($t['route_label'] ?? $t['name']) ?></div>
+                            <div class="admin-text-muted" style="font-size: 0.85em;">
+                                <?= number_format($t['total_distance_km'], 1) ?> km
+                                <?php if ($t['is_primary']): ?><span style="color: var(--color-accent);">• Primär</span><?php endif; ?>
+                            </div>
+                        </div>
+                        <?php if ($t['id'] != $selectedTrackId): ?>
+                        <a href="?id=<?= $eventId ?>&track=<?= $t['id'] ?>" class="btn-admin btn-admin-ghost btn-admin-sm">Välj</a>
+                        <?php endif; ?>
+                        <form method="POST" style="margin: 0;">
+                            <?= csrf_field() ?>
+                            <input type="hidden" name="action" value="delete_track">
+                            <input type="hidden" name="track_id" value="<?= $t['id'] ?>">
+                            <button type="submit" class="btn-admin btn-admin-ghost btn-admin-sm" style="color: var(--color-danger);" onclick="return confirm('Ta bort banan?')">×</button>
+                        </form>
+                    </div>
+                    <?php endforeach; ?>
+                </div>
+                <?php else: ?>
+                <p class="admin-text-muted">Inga banor uppladdade än.</p>
                 <?php endif; ?>
-                <form method="POST" enctype="multipart/form-data">
+
+                <!-- Upload new track -->
+                <details style="margin-top: var(--space-md);">
+                    <summary style="cursor: pointer; font-weight: 500; color: var(--color-accent);">+ Lägg till ny bana</summary>
+                    <form method="POST" enctype="multipart/form-data" style="margin-top: var(--space-md);">
+                        <?= csrf_field() ?>
+                        <input type="hidden" name="action" value="upload_gpx">
+                        <div class="admin-form-group">
+                            <label class="admin-form-label">Bannamn</label>
+                            <input type="text" name="track_name" class="admin-form-input" placeholder="t.ex. Elite 45km">
+                        </div>
+                        <div class="admin-form-group">
+                            <label class="admin-form-label">Etikett (visas i dropdown)</label>
+                            <input type="text" name="route_label" class="admin-form-input" placeholder="t.ex. Elite">
+                        </div>
+                        <div class="admin-form-group">
+                            <label class="admin-form-label">Färg</label>
+                            <select name="track_color" class="admin-form-select">
+                                <?php foreach ($trackColors as $hex => $name): ?>
+                                <option value="<?= $hex ?>" style="background: <?= $hex ?>; color: white;"><?= $name ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="admin-form-group">
+                            <label style="display: flex; align-items: center; gap: var(--space-sm);">
+                                <input type="checkbox" name="is_primary" value="1">
+                                <span>Primär bana (visas först)</span>
+                            </label>
+                        </div>
+                        <div class="admin-form-group">
+                            <label class="admin-form-label">GPX-fil</label>
+                            <input type="file" name="gpx_file" accept=".gpx" required class="admin-form-input">
+                        </div>
+                        <button type="submit" class="btn-admin btn-admin-primary">Ladda upp</button>
+                    </form>
+                </details>
+            </div>
+        </div>
+
+        <?php if ($currentTrack): ?>
+        <!-- Edit Current Track -->
+        <div class="admin-card" style="margin-top: var(--space-lg);">
+            <div class="admin-card-header">
+                <h2 style="display: flex; align-items: center; gap: var(--space-sm);">
+                    <span style="width: 16px; height: 16px; background: <?= htmlspecialchars($currentTrack['color'] ?? '#3B82F6') ?>; border-radius: 3px;"></span>
+                    <?= htmlspecialchars($currentTrack['route_label'] ?? $currentTrack['name']) ?>
+                </h2>
+            </div>
+            <div class="admin-card-body">
+                <form method="POST">
                     <?= csrf_field() ?>
-                    <input type="hidden" name="action" value="upload_gpx">
+                    <input type="hidden" name="action" value="update_track">
+                    <input type="hidden" name="track_id" value="<?= $currentTrack['id'] ?>">
                     <div class="admin-form-group">
                         <label class="admin-form-label">Namn</label>
-                        <input type="text" name="track_name" class="admin-form-input" value="<?= htmlspecialchars($event['name']) ?>">
+                        <input type="text" name="track_name" class="admin-form-input" value="<?= htmlspecialchars($currentTrack['name']) ?>">
                     </div>
                     <div class="admin-form-group">
-                        <label class="admin-form-label">GPX-fil</label>
-                        <input type="file" name="gpx_file" accept=".gpx" required class="admin-form-input">
+                        <label class="admin-form-label">Etikett</label>
+                        <input type="text" name="route_label" class="admin-form-input" value="<?= htmlspecialchars($currentTrack['route_label'] ?? '') ?>">
                     </div>
-                    <button type="submit" class="btn-admin btn-admin-primary">Ladda upp</button>
+                    <div class="admin-form-group">
+                        <label class="admin-form-label">Färg</label>
+                        <select name="track_color" class="admin-form-select">
+                            <?php foreach ($trackColors as $hex => $name): ?>
+                            <option value="<?= $hex ?>" <?= ($currentTrack['color'] ?? '#3B82F6') === $hex ? 'selected' : '' ?>><?= $name ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="admin-form-group">
+                        <label style="display: flex; align-items: center; gap: var(--space-sm);">
+                            <input type="checkbox" name="is_primary" value="1" <?= $currentTrack['is_primary'] ? 'checked' : '' ?>>
+                            <span>Primär bana</span>
+                        </label>
+                    </div>
+                    <button type="submit" class="btn-admin btn-admin-secondary btn-admin-sm">Uppdatera</button>
                 </form>
             </div>
         </div>
 
-        <?php if ($track && !empty($track['segments'])): ?>
-        <!-- Segments -->
+        <!-- Segment Legend -->
         <div class="admin-card" style="margin-top: var(--space-lg);">
-            <div class="admin-card-header"><h2>Sträckor (<?= count($track['segments']) ?>)</h2></div>
+            <div class="admin-card-header"><h2>Sträcktyper</h2></div>
             <div class="admin-card-body">
-                <?php foreach ($track['segments'] as $seg): ?>
+                <div style="display: flex; flex-wrap: wrap; gap: var(--space-md);">
+                    <div style="display: flex; align-items: center; gap: var(--space-xs);">
+                        <span style="width: 20px; height: 4px; background: #61CE70; border-radius: 2px;"></span>
+                        <span class="admin-text-muted">Transport (standard)</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: var(--space-xs);">
+                        <span style="width: 20px; height: 4px; background: #EF4444; border-radius: 2px;"></span>
+                        <span>SS (Tävling)</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: var(--space-xs);">
+                        <span style="width: 20px; height: 4px; background: #F59E0B; border-radius: 2px;"></span>
+                        <span>Lift</span>
+                    </div>
+                </div>
+                <p class="admin-text-muted" style="margin-top: var(--space-sm); font-size: 0.85em;">
+                    Hela banan visas som transport (grön). Markera sektioner som SS eller Lift.
+                </p>
+            </div>
+        </div>
+
+        <!-- Segments for current track -->
+        <div class="admin-card" style="margin-top: var(--space-lg);">
+            <div class="admin-card-header"><h2>Markerade sträckor (<?= count($currentTrack['segments']) ?>)</h2></div>
+            <div class="admin-card-body">
+                <?php if (!empty($currentTrack['segments'])): ?>
+                <?php foreach ($currentTrack['segments'] as $seg): ?>
                 <div style="display: flex; align-items: center; gap: var(--space-sm); padding: var(--space-xs) 0; border-bottom: 1px solid var(--color-border);">
                     <span style="width: 12px; height: 12px; background: <?= htmlspecialchars($seg['color']) ?>; border-radius: 2px;"></span>
-                    <span style="flex: 1;"><?= htmlspecialchars($seg['segment_name'] ?: 'Segment ' . $seg['sequence_number']) ?></span>
+                    <span style="flex: 1;">
+                        <strong><?= htmlspecialchars($seg['segment_name'] ?: 'Segment ' . $seg['sequence_number']) ?></strong>
+                        <span class="admin-text-muted" style="font-size: 0.85em;">
+                            (<?= $seg['segment_type'] === 'stage' ? 'SS' : ($seg['segment_type'] === 'lift' ? 'Lift' : 'Transport') ?>)
+                        </span>
+                    </span>
                     <span class="admin-text-muted"><?= number_format($seg['distance_km'], 1) ?> km</span>
                     <form method="POST" style="margin: 0;">
                         <?= csrf_field() ?>
                         <input type="hidden" name="action" value="delete_segment">
                         <input type="hidden" name="segment_id" value="<?= $seg['id'] ?>">
-                        <button type="submit" class="btn-admin btn-admin-ghost btn-admin-sm" onclick="return confirm('Ta bort?')">×</button>
+                        <button type="submit" class="btn-admin btn-admin-ghost btn-admin-sm" style="color: var(--color-danger);" onclick="return confirm('Ta bort markeringen?')">Ta bort</button>
                     </form>
                 </div>
                 <?php endforeach; ?>
+                <?php else: ?>
+                <p class="admin-text-muted">Inga sträckor markerade än. Klicka på banan för att markera SS eller Lift.</p>
+                <?php endif; ?>
             </div>
         </div>
-        <?php endif; ?>
 
-        <?php if ($track): ?>
         <!-- Add Segment -->
         <div class="admin-card" style="margin-top: var(--space-lg);">
-            <div class="admin-card-header"><h2>Lägg till sträcka</h2></div>
+            <div class="admin-card-header"><h2>Markera sträcka</h2></div>
             <div class="admin-card-body">
-                <p class="admin-text-muted" id="segment-status">Klicka på banan för startpunkt</p>
+                <div class="alert alert-info" style="margin-bottom: var(--space-md); background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); padding: var(--space-sm); border-radius: var(--radius-sm);">
+                    <strong>Så här gör du:</strong><br>
+                    1. Klicka på banan för startpunkt (grön markör)<br>
+                    2. Klicka igen för slutpunkt (röd markör)<br>
+                    3. Välj typ (SS/Lift) och ge den ett namn<br>
+                    4. Spara
+                </div>
+                <p class="admin-text-muted" id="segment-status" style="font-weight: 500; color: var(--color-primary);">Klicka på banan för startpunkt</p>
                 <form method="POST" id="segment-form">
                     <?= csrf_field() ?>
                     <input type="hidden" name="action" value="add_segment_visual">
-                    <input type="hidden" name="track_id" value="<?= $track['id'] ?>">
+                    <input type="hidden" name="track_id" value="<?= $currentTrack['id'] ?>">
                     <input type="hidden" name="start_index" id="start-index" value="">
                     <input type="hidden" name="end_index" id="end-index" value="">
                     <div style="display: flex; gap: var(--space-sm); margin-bottom: var(--space-sm);">
-                        <select name="segment_type" class="admin-form-select">
-                            <option value="stage">Tävling</option>
-                            <option value="liaison">Transport</option>
+                        <select name="segment_type" id="segment-type" class="admin-form-select" style="flex: 0 0 120px;">
+                            <option value="stage">SS (Tävling)</option>
+                            <option value="lift">Lift</option>
                         </select>
-                        <input type="text" name="segment_name" class="admin-form-input" placeholder="Namn">
+                        <input type="text" name="segment_name" id="segment-name" class="admin-form-input" placeholder="t.ex. SS1, Lift 1">
                     </div>
                     <div style="display: flex; gap: var(--space-sm);">
                         <button type="button" onclick="resetSegment()" class="btn-admin btn-admin-ghost">Rensa</button>
-                        <button type="submit" id="save-btn" disabled class="btn-admin btn-admin-primary">Spara</button>
+                        <button type="submit" id="save-btn" disabled class="btn-admin btn-admin-primary">Spara sträcka</button>
                     </div>
                 </form>
             </div>
@@ -295,36 +464,81 @@ include __DIR__ . '/components/unified-layout.php';
 <script>
 const mapData = <?= json_encode($mapData) ?>;
 const waypoints = <?= json_encode($trackWaypoints) ?>;
-let map, startMarker, endMarker, previewLine, tempMarker;
+const currentTrackId = <?= $selectedTrackId ?: 'null' ?>;
+let map, startMarker, endMarker, previewLine, tempMarker, baseTrackLine;
 let mode = 'start';
 let startIdx = -1, endIdx = -1;
+
+// Segment colors
+const SEGMENT_COLORS = {
+    stage: '#EF4444',    // Red
+    liaison: '#61CE70',  // Green
+    lift: '#F59E0B'      // Orange/Yellow
+};
 
 function init() {
     map = L.map('map').setView([62, 15], 5);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
-    if (mapData && mapData.geojson) {
-        const segments = mapData.geojson.features.filter(f => f.properties.type === 'segment');
-        if (segments.length) {
-            L.geoJSON({type: 'FeatureCollection', features: segments}, {
-                style: f => ({color: f.properties.color, weight: 4})
-            }).addTo(map);
-        }
-        const pois = mapData.geojson.features.filter(f => f.properties.type === 'poi');
-        pois.forEach(p => {
-            const [lng, lat] = p.geometry.coordinates;
-            L.marker([lat, lng]).bindPopup(p.properties.emoji + ' ' + p.properties.label).addTo(map);
+    if (mapData && mapData.tracks) {
+        // Draw all tracks
+        mapData.tracks.forEach(track => {
+            if (track.geojson && track.geojson.features) {
+                // First draw base track (gray), then segments on top
+                track.geojson.features.forEach(feature => {
+                    const props = feature.properties;
+                    const isBase = props.type === 'base_track';
+                    const isCurrent = track.id === currentTrackId;
+
+                    L.geoJSON(feature, {
+                        style: () => ({
+                            color: props.color || track.color,
+                            weight: isBase ? 4 : 6,
+                            opacity: isCurrent ? (isBase ? 0.6 : 1) : 0.4
+                        })
+                    }).addTo(map);
+                });
+            }
         });
+
+        // Draw POIs
+        if (mapData.pois) {
+            mapData.pois.forEach(p => {
+                L.marker([p.lat, p.lng])
+                    .bindPopup((p.type_emoji || '') + ' ' + (p.label || p.type_label || p.poi_type))
+                    .addTo(map);
+            });
+        }
+
         if (mapData.bounds) map.fitBounds(mapData.bounds, {padding: [30, 30]});
     }
 
+    // Draw clickable base track for current track (for segment selection)
     if (waypoints && waypoints.length) {
         const coords = waypoints.map(w => [w.lat, w.lng]);
-        const line = L.polyline(coords, {color: '#3B82F6', weight: 5, opacity: 0.6}).addTo(map);
-        line.on('click', onTrackClick);
+        baseTrackLine = L.polyline(coords, {
+            color: '#3B82F6',
+            weight: 8,
+            opacity: 0.3,
+            className: 'clickable-track'
+        }).addTo(map);
+        baseTrackLine.on('click', onTrackClick);
     }
 
     map.on('click', onMapClick);
+
+    // Update preview color when segment type changes
+    const typeSelect = document.getElementById('segment-type');
+    if (typeSelect) {
+        typeSelect.addEventListener('change', updatePreviewColor);
+    }
+}
+
+function updatePreviewColor() {
+    if (previewLine) {
+        const type = document.getElementById('segment-type').value;
+        previewLine.setStyle({ color: SEGMENT_COLORS[type] || '#F59E0B' });
+    }
 }
 
 function onTrackClick(e) {
@@ -335,22 +549,59 @@ function onTrackClick(e) {
     if (mode === 'start') {
         startIdx = nearest.index;
         if (startMarker) map.removeLayer(startMarker);
-        startMarker = L.circleMarker([nearest.wp.lat, nearest.wp.lng], {radius: 8, color: '#61CE70', fillOpacity: 1}).addTo(map);
+        startMarker = L.circleMarker([nearest.wp.lat, nearest.wp.lng], {
+            radius: 10,
+            color: '#61CE70',
+            fillColor: '#61CE70',
+            fillOpacity: 1,
+            weight: 2
+        }).addTo(map);
         mode = 'end';
-        document.getElementById('segment-status').textContent = 'Klicka för slutpunkt';
+        document.getElementById('segment-status').innerHTML = '<span style="color: #61CE70;">Start vald!</span> Klicka för slutpunkt';
     } else if (mode === 'end' && nearest.index > startIdx) {
         endIdx = nearest.index;
         if (endMarker) map.removeLayer(endMarker);
-        endMarker = L.circleMarker([nearest.wp.lat, nearest.wp.lng], {radius: 8, color: '#ef4444', fillOpacity: 1}).addTo(map);
+        endMarker = L.circleMarker([nearest.wp.lat, nearest.wp.lng], {
+            radius: 10,
+            color: '#EF4444',
+            fillColor: '#EF4444',
+            fillOpacity: 1,
+            weight: 2
+        }).addTo(map);
+
+        // Draw preview line with color based on selected type
         if (previewLine) map.removeLayer(previewLine);
         const coords = waypoints.slice(startIdx, endIdx + 1).map(w => [w.lat, w.lng]);
-        previewLine = L.polyline(coords, {color: '#F59E0B', weight: 6}).addTo(map);
+        const segType = document.getElementById('segment-type').value;
+        previewLine = L.polyline(coords, {
+            color: SEGMENT_COLORS[segType] || '#EF4444',
+            weight: 6,
+            opacity: 0.9
+        }).addTo(map);
+
         document.getElementById('start-index').value = startIdx;
         document.getElementById('end-index').value = endIdx;
         document.getElementById('save-btn').disabled = false;
+
         const dist = (waypoints[endIdx].distance_km - waypoints[startIdx].distance_km).toFixed(2);
-        document.getElementById('segment-status').textContent = 'Vald: ' + dist + ' km';
+        document.getElementById('segment-status').innerHTML =
+            '<span style="color: var(--color-accent);">Sträcka vald: ' + dist + ' km</span>';
+
+        // Auto-generate name suggestion
+        const nameInput = document.getElementById('segment-name');
+        if (nameInput && !nameInput.value) {
+            const existingCount = document.querySelectorAll('[data-segment-type="' + segType + '"]').length;
+            if (segType === 'stage') {
+                nameInput.placeholder = 'SS' + (existingCount + 1);
+            } else if (segType === 'lift') {
+                nameInput.placeholder = 'Lift ' + (existingCount + 1);
+            }
+        }
+
         mode = 'done';
+    } else if (mode === 'end' && nearest.index <= startIdx) {
+        document.getElementById('segment-status').innerHTML =
+            '<span style="color: var(--color-danger);">Slutpunkten måste vara efter startpunkten!</span>';
     }
 }
 
