@@ -36,8 +36,14 @@ $stmt = $pdo->prepare($sql);
 $stmt->execute($params);
 $events = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-// Get series for filter
-$seriesStmt = $pdo->query("SELECT id, name FROM series WHERE active = 1 ORDER BY name");
+// Get series for filter - only series that have upcoming events
+$seriesStmt = $pdo->query("
+    SELECT DISTINCT s.id, s.name
+    FROM series s
+    INNER JOIN events e ON s.id = e.series_id
+    WHERE e.date >= CURDATE() AND e.active = 1 AND s.active = 1
+    ORDER BY s.name
+");
 $seriesList = $seriesStmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Group events by month
