@@ -437,14 +437,22 @@ include __DIR__ . '/components/unified-layout.php';
                 <?php if (!empty($currentTrack['segments'])): ?>
                 <div class="admin-existing-segments" style="margin-top: var(--space-md); padding-top: var(--space-md); border-top: 1px solid var(--color-border);">
                     <div class="admin-text-muted admin-text-sm" style="margin-bottom: var(--space-xs);">Sparade sektioner:</div>
-                    <?php foreach ($currentTrack['segments'] as $seg):
+                    <?php foreach ($currentTrack['segments'] as $segIdx => $seg):
                         $iconName = $seg['segment_type'] === 'stage' ? 'flag' : ($seg['segment_type'] === 'lift' ? 'cable-car' : 'route');
                         $hasSponsor = !empty($seg['sponsor_name']);
+                        $segStart = intval($seg['start_index'] ?? 0);
+                        $segEnd = intval($seg['end_index'] ?? 0);
+                        $typeLabel = $seg['segment_type'] === 'stage' ? 'SS' : ($seg['segment_type'] === 'lift' ? 'Lift' : 'Transport');
+                        $segDisplayName = !empty($seg['segment_name']) ? $seg['segment_name'] : "Sektion " . ($segIdx + 1);
                     ?>
-                    <div class="admin-segment-item <?= $hasSponsor ? 'has-sponsor' : '' ?>">
+                    <div class="admin-segment-item <?= $hasSponsor ? 'has-sponsor' : '' ?>"
+                         onclick="zoomToExistingSegment(<?= $segStart ?>, <?= $segEnd ?>, '<?= addslashes($segDisplayName) ?> (<?= $typeLabel ?>)')"
+                         style="cursor: pointer;"
+                         data-start="<?= $segStart ?>"
+                         data-end="<?= $segEnd ?>">
                         <span class="color-dot" style="background: <?= htmlspecialchars($seg['color']) ?>;"></span>
                         <i data-lucide="<?= $iconName ?>" style="width: 14px; height: 14px; flex-shrink: 0;"></i>
-                        <input type="text" class="admin-segment-name-input" value="<?= htmlspecialchars($seg['segment_name'] ?? '') ?>" placeholder="Namn..." onchange="changeSegmentName(<?= $seg['id'] ?>, this.value)" title="Segmentnamn (t.ex. SS1, Powerstage)">
+                        <input type="text" class="admin-segment-name-input" value="<?= htmlspecialchars($seg['segment_name'] ?? '') ?>" placeholder="Namn..." onclick="event.stopPropagation()" onchange="changeSegmentName(<?= $seg['id'] ?>, this.value)" title="Segmentnamn (t.ex. SS1, Powerstage)">
                         <?php if ($hasSponsor): ?>
                         <span class="segment-sponsor-badge" title="<?= htmlspecialchars($seg['sponsor_name']) ?>">
                             <span class="sponsor-by">By</span>
@@ -456,20 +464,20 @@ include __DIR__ . '/components/unified-layout.php';
                         </span>
                         <?php endif; ?>
                         <span class="admin-text-muted"><?= number_format($seg['distance_km'], 1) ?>km</span>
-                        <select onchange="changeSegmentType(<?= $seg['id'] ?>, this.value)" class="admin-form-select admin-form-select-xs">
+                        <select onclick="event.stopPropagation()" onchange="changeSegmentType(<?= $seg['id'] ?>, this.value)" class="admin-form-select admin-form-select-xs">
                             <option value="liaison" <?= $seg['segment_type'] === 'liaison' ? 'selected' : '' ?>>T</option>
                             <option value="stage" <?= $seg['segment_type'] === 'stage' ? 'selected' : '' ?>>SS</option>
                             <option value="lift" <?= $seg['segment_type'] === 'lift' ? 'selected' : '' ?>>L</option>
                         </select>
                         <?php if ($sponsorColumnExists && !empty($sponsors) && $seg['segment_type'] === 'stage'): ?>
-                        <select onchange="changeSegmentSponsor(<?= $seg['id'] ?>, this.value)" class="admin-form-select admin-form-select-xs" title="Sträcksponsor">
+                        <select onclick="event.stopPropagation()" onchange="changeSegmentSponsor(<?= $seg['id'] ?>, this.value)" class="admin-form-select admin-form-select-xs" title="Sträcksponsor">
                             <option value="">Sponsor</option>
                             <?php foreach ($sponsors as $sp): ?>
                             <option value="<?= $sp['id'] ?>" <?= ($seg['sponsor_id'] ?? '') == $sp['id'] ? 'selected' : '' ?>><?= htmlspecialchars($sp['name']) ?></option>
                             <?php endforeach; ?>
                         </select>
                         <?php endif; ?>
-                        <form method="POST" class="inline-form">
+                        <form method="POST" class="inline-form" onclick="event.stopPropagation()">
                             <?= csrf_field() ?>
                             <input type="hidden" name="action" value="delete_segment">
                             <input type="hidden" name="segment_id" value="<?= $seg['id'] ?>">
@@ -713,16 +721,17 @@ include __DIR__ . '/components/unified-layout.php';
     gap: var(--space-xs);
 }
 .admin-segment-list {
-    max-height: 200px;
+    max-height: 300px;
     overflow-y: auto;
     border: 1px solid var(--color-border);
     border-radius: var(--radius-sm);
 }
 .admin-segment-item {
-    display: flex;
+    display: grid;
+    grid-template-columns: auto auto 1fr auto auto auto auto;
     align-items: center;
     gap: var(--space-sm);
-    padding: var(--space-xs) var(--space-sm);
+    padding: var(--space-sm);
     border-bottom: 1px solid var(--color-border);
     font-size: var(--text-sm);
     transition: background-color 0.15s ease;
@@ -740,20 +749,22 @@ include __DIR__ . '/components/unified-layout.php';
     display: inline-flex;
     align-items: center;
     gap: 4px;
-    padding: 2px 6px;
-    background: var(--color-star-fade);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-sm);
-    font-size: 10px;
+    padding: 2px 8px;
+    background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+    border: 1px solid #86efac;
+    border-radius: var(--radius-full);
+    font-size: 11px;
+    white-space: nowrap;
 }
 .sponsor-by {
-    color: var(--color-text);
+    color: #166534;
     font-style: italic;
+    font-weight: 500;
 }
 .sponsor-logo-mini {
-    height: 16px;
+    height: 14px;
     width: auto;
-    max-width: 50px;
+    max-width: 40px;
     object-fit: contain;
 }
 .sponsor-name-mini {
@@ -1146,6 +1157,44 @@ function showFullTrack() {
     // Remove highlight
     document.querySelectorAll('.admin-segment-item').forEach(item => {
         item.style.background = '';
+    });
+}
+
+// Zoom to an existing/saved segment using start/end waypoint indices
+function zoomToExistingSegment(startIdx, endIdx, title) {
+    if (!waypoints || waypoints.length < 2) return;
+
+    // Validate indices
+    startIdx = Math.max(0, Math.min(startIdx, waypoints.length - 1));
+    endIdx = Math.max(0, Math.min(endIdx, waypoints.length - 1));
+    if (startIdx >= endIdx) return;
+
+    // Calculate bounds from waypoints in this segment
+    const segWaypoints = waypoints.slice(startIdx, endIdx + 1);
+    if (segWaypoints.length < 2) return;
+
+    const lats = segWaypoints.map(w => w.lat);
+    const lngs = segWaypoints.map(w => w.lng);
+    const bounds = L.latLngBounds(
+        [Math.min(...lats), Math.min(...lngs)],
+        [Math.max(...lats), Math.max(...lngs)]
+    );
+
+    // Zoom map to segment
+    map.fitBounds(bounds, { padding: [50, 50] });
+
+    // Draw elevation profile for this segment
+    drawElevationProfile(startIdx, endIdx, title || 'Sektion');
+
+    // Highlight selected segment in list (for existing segments only)
+    document.querySelectorAll('.admin-existing-segments .admin-segment-item').forEach(item => {
+        const itemStart = parseInt(item.dataset.start || '0');
+        const itemEnd = parseInt(item.dataset.end || '0');
+        if (itemStart === startIdx && itemEnd === endIdx) {
+            item.style.background = 'var(--color-star-fade)';
+        } else {
+            item.style.background = '';
+        }
     });
 }
 
