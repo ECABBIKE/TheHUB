@@ -145,6 +145,89 @@ $page_title = 'Kör Migrationer';
 include __DIR__ . '/components/unified-layout.php';
 ?>
 
+<style>
+/* Mobile-friendly migrations page */
+.migration-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+}
+.migration-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    padding: var(--space-md);
+    background: var(--color-bg-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+}
+.migration-item.not-executed {
+    background: rgba(239, 68, 68, 0.05);
+    border-color: rgba(239, 68, 68, 0.2);
+}
+.migration-item.today {
+    border: 2px solid var(--color-warning);
+}
+.migration-radio {
+    flex-shrink: 0;
+}
+.migration-radio input[type="radio"] {
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+}
+.migration-info {
+    flex: 1;
+    min-width: 0;
+}
+.migration-name {
+    font-weight: 600;
+    word-break: break-word;
+    margin-bottom: 4px;
+}
+.migration-meta {
+    font-size: var(--text-xs);
+    color: var(--color-text-muted);
+}
+.migration-actions {
+    display: flex;
+    gap: var(--space-xs);
+    flex-shrink: 0;
+}
+.migration-status {
+    flex-shrink: 0;
+}
+@media (max-width: 600px) {
+    .migration-item {
+        flex-wrap: wrap;
+    }
+    .migration-info {
+        order: 1;
+        width: calc(100% - 80px);
+    }
+    .migration-status {
+        order: 2;
+    }
+    .migration-radio {
+        order: 3;
+    }
+    .migration-actions {
+        order: 4;
+        width: 100%;
+        margin-top: var(--space-sm);
+    }
+    .migration-actions .btn {
+        flex: 1;
+    }
+    .result-table {
+        font-size: var(--text-xs);
+    }
+    .result-table code {
+        word-break: break-all;
+    }
+}
+</style>
+
 <div class="admin-content">
     <div class="content-header">
         <h1>Kör Migrationer</h1>
@@ -166,44 +249,33 @@ include __DIR__ . '/components/unified-layout.php';
         </div>
         <div class="card-body">
             <p class="text-muted mb-md">Dessa migrationer skapades idag och bör köras:</p>
-            <table class="table">
-                <thead>
-                    <tr>
-                        <th>Status</th>
-                        <th>Migration</th>
-                        <th>Åtgärd</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php foreach ($todaysMigrations as $migration): ?>
-                        <tr style="background: <?= $migration['executed'] ? 'rgba(97, 206, 112, 0.1)' : 'rgba(239, 68, 68, 0.1)' ?>;">
-                            <td>
-                                <?php if ($migration['executed']): ?>
-                                    <span class="badge" style="background: var(--color-success); color: white;">Körd</span>
-                                <?php else: ?>
-                                    <span class="badge" style="background: var(--color-error); color: white;">Ej körd</span>
-                                <?php endif; ?>
-                            </td>
-                            <td>
-                                <strong><?= htmlspecialchars($migration['name']) ?></strong>
-                            </td>
-                            <td>
-                                <?php if (!$migration['executed']): ?>
-                                <form method="POST" style="display: inline;">
-                                    <input type="hidden" name="migration_file" value="<?= htmlspecialchars($migration['file']) ?>">
-                                    <button type="submit" name="run_migration" class="btn btn-sm btn-primary" onclick="return confirm('Kör <?= htmlspecialchars($migration['file']) ?>?')">
-                                        Kör nu
-                                    </button>
-                                </form>
-                                <?php else: ?>
-                                <span class="text-muted">Redan utförd</span>
-                                <?php endif; ?>
-                                <a href="?preview=<?= urlencode($migration['file']) ?>" class="btn btn-sm btn-outline">Visa</a>
-                            </td>
-                        </tr>
-                    <?php endforeach; ?>
-                </tbody>
-            </table>
+            <div class="migration-list">
+                <?php foreach ($todaysMigrations as $migration): ?>
+                    <div class="migration-item today <?= !$migration['executed'] ? 'not-executed' : '' ?>">
+                        <div class="migration-status">
+                            <?php if ($migration['executed']): ?>
+                                <span class="badge" style="background: var(--color-success); color: white;">Körd</span>
+                            <?php else: ?>
+                                <span class="badge" style="background: var(--color-error); color: white;">Ej körd</span>
+                            <?php endif; ?>
+                        </div>
+                        <div class="migration-info">
+                            <div class="migration-name"><?= htmlspecialchars($migration['name']) ?></div>
+                        </div>
+                        <div class="migration-actions">
+                            <?php if (!$migration['executed']): ?>
+                            <form method="POST" style="display: contents;">
+                                <input type="hidden" name="migration_file" value="<?= htmlspecialchars($migration['file']) ?>">
+                                <button type="submit" name="run_migration" class="btn btn-sm btn-primary" onclick="return confirm('Kör <?= htmlspecialchars($migration['file']) ?>?')">
+                                    Kör nu
+                                </button>
+                            </form>
+                            <?php endif; ?>
+                            <a href="?preview=<?= urlencode($migration['file']) ?>" class="btn btn-sm btn-outline">Visa</a>
+                        </div>
+                    </div>
+                <?php endforeach; ?>
+            </div>
         </div>
     </div>
     <?php endif; ?>
@@ -214,30 +286,24 @@ include __DIR__ . '/components/unified-layout.php';
                 <h3>Resultat</h3>
             </div>
             <div class="card-body">
-                <table class="table">
-                    <thead>
-                        <tr>
-                            <th style="width: 100px">Status</th>
-                            <th>Detaljer</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ($results as $result): ?>
-                            <tr>
-                                <td>
-                                    <?php if ($result['status'] === 'success'): ?>
-                                        <span class="badge badge-success">✓ OK</span>
-                                    <?php elseif ($result['status'] === 'skipped'): ?>
-                                        <span class="badge badge-warning">→ Skipped</span>
-                                    <?php else: ?>
-                                        <span class="badge badge-error">✗ Fel</span>
-                                    <?php endif; ?>
-                                </td>
-                                <td><code style="font-size: 12px;"><?= htmlspecialchars($result['message']) ?></code></td>
-                            </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
+                <div class="migration-list">
+                    <?php foreach ($results as $result): ?>
+                        <div class="migration-item" style="padding: var(--space-sm);">
+                            <div class="migration-status">
+                                <?php if ($result['status'] === 'success'): ?>
+                                    <span class="badge badge-success">OK</span>
+                                <?php elseif ($result['status'] === 'skipped'): ?>
+                                    <span class="badge badge-warning">Skip</span>
+                                <?php else: ?>
+                                    <span class="badge badge-error">Fel</span>
+                                <?php endif; ?>
+                            </div>
+                            <div class="migration-info" style="flex: 1;">
+                                <code style="font-size: 11px; word-break: break-all;"><?= htmlspecialchars($result['message']) ?></code>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
             </div>
         </div>
     <?php endif; ?>
@@ -251,41 +317,31 @@ include __DIR__ . '/components/unified-layout.php';
                 <p class="text-muted">Inga migrationer hittades.</p>
             <?php else: ?>
                 <form method="POST">
-                    <table class="table">
-                        <thead>
-                            <tr>
-                                <th style="width: 50px"></th>
-                                <th style="width: 100px">Status</th>
-                                <th>Migration</th>
-                                <th style="width: 150px">Åtgärd</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php foreach ($migrations as $migration): ?>
-                                <tr style="<?= !$migration['executed'] ? 'background: rgba(239, 68, 68, 0.05);' : '' ?>">
-                                    <td>
-                                        <?php if (!$migration['executed']): ?>
-                                        <input type="radio" name="migration_file" value="<?= htmlspecialchars($migration['file']) ?>">
-                                        <?php endif; ?>
-                                    </td>
-                                    <td>
-                                        <?php if ($migration['executed']): ?>
-                                            <span class="badge" style="background: var(--color-success); color: white;">Körd</span>
-                                        <?php else: ?>
-                                            <span class="badge" style="background: var(--color-error); color: white;">Ej körd</span>
-                                        <?php endif; ?>
-                                    </td>
-                                    <td>
-                                        <strong><?= htmlspecialchars($migration['name']) ?></strong>
-                                        <br><small class="text-muted"><?= htmlspecialchars($migration['file']) ?> • <?= $migration['date'] ?></small>
-                                    </td>
-                                    <td>
-                                        <a href="?preview=<?= urlencode($migration['file']) ?>" class="btn btn-sm btn-outline">Visa</a>
-                                    </td>
-                                </tr>
-                            <?php endforeach; ?>
-                        </tbody>
-                    </table>
+                    <div class="migration-list">
+                        <?php foreach ($migrations as $migration): ?>
+                            <div class="migration-item <?= !$migration['executed'] ? 'not-executed' : '' ?>">
+                                <?php if (!$migration['executed']): ?>
+                                <div class="migration-radio">
+                                    <input type="radio" name="migration_file" value="<?= htmlspecialchars($migration['file']) ?>" id="mig_<?= md5($migration['name']) ?>">
+                                </div>
+                                <?php endif; ?>
+                                <div class="migration-status">
+                                    <?php if ($migration['executed']): ?>
+                                        <span class="badge" style="background: var(--color-success); color: white;">Körd</span>
+                                    <?php else: ?>
+                                        <span class="badge" style="background: var(--color-error); color: white;">Ej körd</span>
+                                    <?php endif; ?>
+                                </div>
+                                <div class="migration-info">
+                                    <label class="migration-name" for="mig_<?= md5($migration['name']) ?>"><?= htmlspecialchars($migration['name']) ?></label>
+                                    <div class="migration-meta"><?= $migration['date'] ?></div>
+                                </div>
+                                <div class="migration-actions">
+                                    <a href="?preview=<?= urlencode($migration['file']) ?>" class="btn btn-sm btn-outline">Visa</a>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
 
                     <div class="form-actions mt-lg">
                         <button type="submit" name="run_migration" class="btn btn-primary" onclick="return confirm('Är du säker på att du vill köra denna migration?')">
