@@ -860,6 +860,12 @@ include __DIR__ . '/components/unified-layout.php';
 const mapData = <?= json_encode($mapData) ?>;
 const waypoints = <?= json_encode($trackWaypoints) ?>;
 const currentTrackId = <?= $selectedTrackId ?: 'null' ?>;
+console.log('EVENT-MAP DEBUG:', {
+    waypointsCount: waypoints?.length || 0,
+    currentTrackId: currentTrackId,
+    hasMapData: !!mapData,
+    tracksCount: mapData?.tracks?.length || 0
+});
 let map, baseTrackLine, tempMarker;
 
 // Segment colors
