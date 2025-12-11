@@ -1,52 +1,28 @@
 <?php
-// Absolut första raden - om du ser detta fungerar PHP
-echo "TEST 1: PHP startar<br>";
-
-ini_set('display_errors', '1');
-error_reporting(E_ALL);
-
-echo "TEST 2: Error display aktiverad<br>";
-
-require_once __DIR__ . '/../config.php';
-echo "TEST 3: config.php laddad<br>";
-
-require_admin();
-echo "TEST 4: require_admin() klar<br>";
-
-require_once INCLUDES_PATH . '/map_functions.php';
-echo "TEST 5: map_functions.php laddad<br>";
-
 /**
  * Admin Event Map Management - Multi-track support
  */
-echo "TEST 6: Startar databasanrop<br>";
+require_once __DIR__ . '/../config.php';
+require_admin();
+require_once INCLUDES_PATH . '/map_functions.php';
 
 $db = getDB();
-echo "TEST 7: getDB() klar<br>";
-
 global $pdo;
-echo "TEST 8: global pdo<br>";
 
 // Get event ID
 $eventId = intval($_GET['id'] ?? $_GET['event_id'] ?? 0);
-echo "TEST 9: eventId = $eventId<br>";
-
 if ($eventId <= 0) {
     set_flash('error', 'Ogiltigt event-ID');
     header('Location: /admin/events');
     exit;
 }
 
-echo "TEST 10: Hämtar event från DB<br>";
 $event = $db->getRow("SELECT id, name, date FROM events WHERE id = ?", [$eventId]);
-echo "TEST 11: Event hämtat<br>";
-
 if (!$event) {
     set_flash('error', 'Event hittades inte');
     header('Location: /admin/events');
     exit;
 }
-echo "TEST 12: Event finns: " . htmlspecialchars($event['name']) . "<br>";
 
 $message = '';
 $messageType = '';
@@ -244,31 +220,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 // Get all tracks for event
-echo "TEST 13: Hämtar tracks<br>";
-try {
-    $allTracks = getEventTracks($pdo, $eventId);
-    echo "TEST 14: Tracks hämtade: " . count($allTracks) . " st<br>";
-} catch (Exception $e) {
-    echo "TEST 13-FEL: " . $e->getMessage() . "<br>";
-    echo "TEST 13-TRACE: " . $e->getTraceAsString() . "<br>";
-    $allTracks = [];
-} catch (Error $e) {
-    echo "TEST 13-ERROR: " . $e->getMessage() . "<br>";
-    echo "TEST 13-FIL: " . $e->getFile() . " rad " . $e->getLine() . "<br>";
-    $allTracks = [];
-}
-
+$allTracks = getEventTracks($pdo, $eventId);
 $pois = getEventPois($pdo, $eventId, false) ?: [];
-echo "TEST 15: POIs hämtade: " . count($pois) . " st<br>";
-
 $poiTypes = getPoiTypesForSelect() ?: [];
-echo "TEST 16: POI-typer hämtade<br>";
 
 // Select first track if none selected
 if ($selectedTrackId <= 0 && !empty($allTracks)) {
     $selectedTrackId = $allTracks[0]['id'];
 }
-echo "TEST 17: selectedTrackId = $selectedTrackId<br>";
 
 // Get selected track details
 $currentTrack = null;
@@ -279,23 +238,17 @@ foreach ($allTracks as $t) {
         break;
     }
 }
-echo "TEST 18: currentTrack = " . ($currentTrack ? 'ja' : 'nej') . "<br>";
 
 if ($currentTrack) {
     try {
-        echo "TEST 19: Hämtar waypoints för track " . $currentTrack['id'] . "<br>";
         $trackWaypoints = getTrackWaypointsForEditor($pdo, $currentTrack['id']);
-        echo "TEST 20: Waypoints hämtade: " . count($trackWaypoints) . " st<br>";
     } catch (Exception $e) {
-        echo "TEST 19-FEL: " . $e->getMessage() . "<br>";
         $trackWaypoints = [];
     }
 }
 
 // Get map data for display (all tracks)
-echo "TEST 21: Hämtar mapData<br>";
 $mapData = getEventMapDataMultiTrack($pdo, $eventId);
-echo "TEST 22: mapData hämtad<br>";
 
 // Track colors for selection
 $trackColors = [
@@ -310,17 +263,25 @@ $trackColors = [
 ];
 
 // Get sponsors for segment dropdown (check if column AND table exist)
-echo "TEST 23: Kollar sponsors<br>";
 $sponsors = [];
 $sponsorColumnExists = false;
 try {
     $colCheck = $pdo->query("SHOW COLUMNS FROM event_track_segments LIKE 'sponsor_id'");
     $sponsorColumnExists = $colCheck->fetch() !== false;
     if ($sponsorColumnExists) {
-        // Also check if sponsors table exists
+        // Also check if sponsors table exists and get available columns
         $tableCheck = $pdo->query("SHOW TABLES LIKE 'sponsors'");
         if ($tableCheck->fetch() !== false) {
-            $sponsorStmt = $pdo->query("SELECT id, name, logo FROM sponsors WHERE active = 1 ORDER BY name ASC");
+            // Get actual columns to avoid missing column errors
+            $cols = $pdo->query("SHOW COLUMNS FROM sponsors");
+            $sponsorCols = [];
+            while ($col = $cols->fetch(PDO::FETCH_ASSOC)) {
+                $sponsorCols[] = $col['Field'];
+            }
+            // Build dynamic SELECT
+            $selectFields = ['id', 'name'];
+            if (in_array('logo', $sponsorCols)) $selectFields[] = 'logo';
+            $sponsorStmt = $pdo->query("SELECT " . implode(', ', $selectFields) . " FROM sponsors WHERE active = 1 ORDER BY name ASC");
             $sponsors = $sponsorStmt->fetchAll(PDO::FETCH_ASSOC);
         } else {
             $sponsorColumnExists = false; // Table doesn't exist, disable feature
@@ -330,10 +291,8 @@ try {
     // Sponsors not available
     $sponsorColumnExists = false;
 }
-echo "TEST 24: Sponsors klar<br>";
 
 // Page setup
-echo "TEST 25: Page setup<br>";
 $page_title = 'Karta - ' . htmlspecialchars($event['name']);
 $breadcrumbs = [
     ['label' => 'Events', 'url' => '/admin/events'],
@@ -342,10 +301,7 @@ $breadcrumbs = [
 ];
 $page_actions = '<a href="/admin/events/edit/' . $eventId . '" class="btn-admin btn-admin-secondary">Tillbaka</a>';
 
-echo "TEST 26: Innan include unified-layout.php<br>";
-echo "TEST 27: Fil finns: " . (file_exists(__DIR__ . '/components/unified-layout.php') ? 'JA' : 'NEJ') . "<br>";
 include __DIR__ . '/components/unified-layout.php';
-echo "TEST 28: Efter include unified-layout.php<br>";
 ?>
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
