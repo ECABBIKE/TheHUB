@@ -2,6 +2,33 @@
 
 > LÄS DENNA FIL INNAN DU SKRIVER NÅGON KOD
 
+---
+
+## VERSIONSNUMMER - OBLIGATORISKT
+
+**UPPDATERA ALLTID versionsnumret i `config.php` vid varje push.**
+
+```php
+// config.php - Uppdatera APP_BUILD med dagens datum vid varje push
+define('APP_VERSION', '3.5');          // Major.Minor version
+define('APP_VERSION_NAME', 'Beta');     // Version name
+define('APP_BUILD', '2025-12-11');      // UPPDATERA DETTA: YYYY-MM-DD
+define('DEPLOYMENT_OFFSET', 119);       // Ändra INTE
+```
+
+### Vid varje push:
+1. Uppdatera `APP_BUILD` till dagens datum (YYYY-MM-DD)
+2. Meddela användaren vilken version som skapades
+
+### Format:
+Version visas som: `v3.5 [2025-12-11.XXX] - Beta`
+- XXX = antal git commits + DEPLOYMENT_OFFSET (räknas automatiskt)
+
+### Exempel på meddelande:
+```
+Pushat: TheHUB v3.5 [2025-12-11.125]
+```
+
 ## INGA EMOJIS - ALDRIG
 
 **ANVÄND ALDRIG EMOJIS I KOD.** Använd alltid Lucide-ikoner istället.
