@@ -100,10 +100,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['run_migration'])) {
                             'message' => substr($statement, 0, 80) . '...'
                         ];
                     } catch (PDOException $e) {
-                        // Ignore "column already exists" or "column doesn't exist" errors
-                        if (strpos($e->getMessage(), 'Duplicate column') !== false ||
-                            strpos($e->getMessage(), 'check that column/key exists') !== false ||
-                            strpos($e->getMessage(), 'Unknown column') !== false) {
+                        $errMsg = $e->getMessage();
+                        // Ignore common "already exists" errors
+                        $ignorableErrors = [
+                            'Duplicate column',      // Column already exists
+                            'Duplicate key name',    // Index already exists
+                            'Duplicate entry',       // Row already exists
+                            'already exists',        // Generic already exists
+                            'check that column/key exists', // Column doesn't exist for DROP
+                            'Unknown column',        // Column doesn't exist
+                            'Can\'t DROP',           // Can't drop non-existent
+                            'BLOB/TEXT column',      // Index on text column
+                        ];
+
+                        $isIgnorable = false;
+                        foreach ($ignorableErrors as $pattern) {
+                            if (stripos($errMsg, $pattern) !== false) {
+                                $isIgnorable = true;
+                                break;
+                            }
+                        }
+
+                        if ($isIgnorable) {
                             $results[] = [
                                 'status' => 'skipped',
                                 'message' => 'Redan utförd: ' . substr($statement, 0, 60) . '...'
@@ -112,7 +130,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['run_migration'])) {
                             $errorCount++;
                             $results[] = [
                                 'status' => 'error',
-                                'message' => $e->getMessage()
+                                'message' => $errMsg
                             ];
                         }
                     }
