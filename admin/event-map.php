@@ -261,18 +261,25 @@ $trackColors = [
     '#6B7280' => 'Grå'
 ];
 
-// Get sponsors for segment dropdown (check if column exists)
+// Get sponsors for segment dropdown (check if column AND table exist)
 $sponsors = [];
 $sponsorColumnExists = false;
 try {
     $colCheck = $pdo->query("SHOW COLUMNS FROM event_track_segments LIKE 'sponsor_id'");
     $sponsorColumnExists = $colCheck->fetch() !== false;
     if ($sponsorColumnExists) {
-        $sponsorStmt = $pdo->query("SELECT id, name, logo FROM sponsors WHERE active = 1 ORDER BY name ASC");
-        $sponsors = $sponsorStmt->fetchAll(PDO::FETCH_ASSOC);
+        // Also check if sponsors table exists
+        $tableCheck = $pdo->query("SHOW TABLES LIKE 'sponsors'");
+        if ($tableCheck->fetch() !== false) {
+            $sponsorStmt = $pdo->query("SELECT id, name, logo FROM sponsors WHERE active = 1 ORDER BY name ASC");
+            $sponsors = $sponsorStmt->fetchAll(PDO::FETCH_ASSOC);
+        } else {
+            $sponsorColumnExists = false; // Table doesn't exist, disable feature
+        }
     }
 } catch (Exception $e) {
     // Sponsors not available
+    $sponsorColumnExists = false;
 }
 
 // Page setup
