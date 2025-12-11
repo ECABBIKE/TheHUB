@@ -56,19 +56,20 @@ try {
 
     // Fallback: Extract brands from series names using PHP
     if (!$useBrandsTable) {
-        // Only get series that have at least one event
+        // Get all series (with or without events)
         $allSeriesRaw = $db->query("
             SELECT DISTINCT s.id, s.name, s.slug, s.year
             FROM series s
-            INNER JOIN events e ON s.id = e.series_id
             WHERE s.status IN ('active', 'completed')
             ORDER BY s.year DESC
         ")->fetchAll(PDO::FETCH_ASSOC);
 
         $seriesByBaseName = [];
         foreach ($allSeriesRaw as $s) {
+            // Remove year from end of name (e.g. "GravitySeries 2024" -> "GravitySeries")
             $baseName = trim(preg_replace('/\s*\d{4}$/', '', $s['name']));
-            if (empty($baseName)) continue;
+            // If no year suffix, use the full name
+            if (empty($baseName)) $baseName = $s['name'];
 
             if (!isset($seriesByBaseName[$baseName])) {
                 $seriesByBaseName[$baseName] = [
@@ -79,6 +80,9 @@ try {
             }
             $seriesByBaseName[$baseName]['series_ids'][] = $s['id'];
         }
+
+        // Only include brands that have multiple years (actual series families)
+        // or include all if we want to allow single-year filtering too
         $allBrands = array_values($seriesByBaseName);
         usort($allBrands, fn($a, $b) => strcmp($a['name'], $b['name']));
     }

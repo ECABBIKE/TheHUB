@@ -573,7 +573,7 @@ $eventName = htmlspecialchars($event['name']);
         <!-- Track & Segment dropdown menu (opens from bottom bar) -->
         <?php if (count($tracks) > 0): ?>
         <div class="dropdown" id="track-dropdown" style="position: fixed; bottom: calc(56px + env(safe-area-inset-bottom) + var(--space-sm)); left: var(--space-sm); display: none; max-width: calc(100vw - var(--space-md));">
-            <div class="dropdown-menu" style="position: static; display: block; max-height: 50vh;">
+            <div class="dropdown-menu" style="position: static; display: block; max-height: 50vh; overflow-y: auto;">
                 <div class="dropdown-section-title">Banor</div>
                 <?php foreach ($tracks as $track): ?>
                 <div class="dropdown-item <?= $track['is_primary'] ? 'active' : '' ?>" data-track-id="<?= $track['id'] ?>" onclick="selectTrack(<?= $track['id'] ?>)">
@@ -600,11 +600,18 @@ $eventName = htmlspecialchars($event['name']);
                 <?php foreach ($allSegments as $seg):
                     $segType = $seg['segment_type'] ?? 'stage';
                     $typeIconName = $segType === 'lift' ? 'cable-car' : ($segType === 'liaison' ? 'route' : 'flag');
+                    // Get segment name with fallback
+                    $segName = $seg['segment_name'] ?? $seg['name'] ?? ($segType === 'stage' ? 'SS' : ($segType === 'liaison' ? 'Transport' : 'Lift'));
+                    // Transport/liaison shows HM (climb), Stage shows FHM (descent)
+                    $segHeight = $segType === 'stage'
+                        ? ($seg['elevation_loss_m'] ?? $seg['elevation_drop_m'] ?? 0)
+                        : ($seg['elevation_gain_m'] ?? 0);
+                    $segHeightLabel = $segType === 'stage' ? 'FHM' : 'HM';
                 ?>
                 <div class="dropdown-item segment-item" data-segment-id="<?= $seg['id'] ?>" data-track-id="<?= $seg['track_id'] ?>" onclick="selectSegment(<?= $seg['id'] ?>, <?= $seg['track_id'] ?>)">
                     <div class="seg-info">
-                        <span class="seg-name"><i data-lucide="<?= $typeIconName ?>" style="width: 14px; height: 14px; color: var(--color-icon); vertical-align: middle;"></i> <?= htmlspecialchars($seg['name']) ?></span>
-                        <span class="seg-meta"><?= number_format($seg['distance_km'], 2) ?> km<?php if ($segType !== 'lift'): ?> · <?= number_format($seg['elevation_drop_m'] ?? 0) ?> m FHM<?php else: ?> · <em>ej i höjdprofil</em><?php endif; ?></span>
+                        <span class="seg-name"><i data-lucide="<?= $typeIconName ?>" style="width: 14px; height: 14px; color: var(--color-icon); vertical-align: middle;"></i> <?= htmlspecialchars($segName) ?></span>
+                        <span class="seg-meta"><?= number_format($seg['distance_km'], 2) ?> km<?php if ($segType !== 'lift'): ?> · <?= number_format($segHeight) ?> m <?= $segHeightLabel ?><?php else: ?> · <em>ej i höjdprofil</em><?php endif; ?></span>
                     </div>
                 </div>
                 <?php endforeach; ?>
@@ -674,7 +681,8 @@ $eventName = htmlspecialchars($event['name']);
         <div class="elevation-header">
             <i data-lucide="mountain" style="width: 18px; height: 18px; color: var(--color-icon);"></i>
             <span id="elevation-title">Höjdprofil</span>
-            <button class="elevation-close" onclick="toggleElevation()">✕</button>
+            <button class="elevation-close" id="elevation-clear-btn" onclick="clearSegmentSelection()" style="display: none;" title="Visa hela banan"><i data-lucide="rotate-ccw" style="width: 14px; height: 14px;"></i></button>
+            <button class="elevation-close" onclick="toggleElevation()"><i data-lucide="x" style="width: 14px; height: 14px;"></i></button>
         </div>
         <div class="elevation-stats" id="elevation-stats">
             <div class="stat">
@@ -815,8 +823,9 @@ $eventName = htmlspecialchars($event['name']);
         // Close mobile menu
         document.querySelectorAll('#mobile-dropdowns .dropdown').forEach(d => d.style.display = 'none');
 
-        // Update elevation title
+        // Update elevation title and hide clear button
         document.getElementById('elevation-title').textContent = track ? (track.route_label || track.name) : 'Höjdprofil';
+        document.getElementById('elevation-clear-btn').style.display = 'none';
 
         updateElevation();
     }
@@ -859,11 +868,35 @@ $eventName = htmlspecialchars($event['name']);
         // Close mobile menu
         document.querySelectorAll('#mobile-dropdowns .dropdown').forEach(d => d.style.display = 'none');
 
-        // Update elevation title
-        document.getElementById('elevation-title').textContent = segment.name;
+        // Update elevation title and show clear button
+        const segName = segment.segment_name || segment.name || (segment.segment_type === 'stage' ? 'SS' : 'Transport');
+        document.getElementById('elevation-title').textContent = segName;
+        document.getElementById('elevation-clear-btn').style.display = 'flex';
 
         // Show elevation for this segment only
         updateElevation(segment);
+    }
+
+    function clearSegmentSelection() {
+        // Clear selected segment
+        selectedSegment = null;
+        if (highlightLayer) { map.removeLayer(highlightLayer); highlightLayer = null; }
+
+        // Reset UI
+        document.querySelectorAll('#track-dropdown .dropdown-item').forEach(i => i.classList.remove('active'));
+        // Re-activate visible tracks
+        document.querySelectorAll('#track-dropdown .dropdown-item[data-track-id]:not(.segment-item)').forEach(i => {
+            if (visibleTracks.has(parseInt(i.dataset.trackId))) {
+                i.classList.add('active');
+            }
+        });
+
+        // Reset elevation title and hide clear button
+        document.getElementById('elevation-title').textContent = 'Höjdprofil';
+        document.getElementById('elevation-clear-btn').style.display = 'none';
+
+        // Update elevation to show all visible tracks
+        updateElevation();
     }
 
     function zoomToPoi(lat, lng, label, icon = 'map-pin', color = '#F59E0B') {
@@ -970,6 +1003,11 @@ $eventName = htmlspecialchars($event['name']);
         // Segment colors: stage=red, liaison=green, lift=yellow
         const segColors = { stage: '#EF4444', liaison: '#61CE70', lift: '#F59E0B' };
         let allEle = [], allDist = [], segmentTypes = [];
+
+        // If no segment passed but one is selected, use the selected segment
+        if (!singleSegment && selectedSegment && selectedSegment.segment) {
+            singleSegment = selectedSegment.segment;
+        }
 
         if (singleSegment) {
             // Show single segment elevation
