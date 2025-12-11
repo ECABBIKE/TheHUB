@@ -478,7 +478,7 @@ include __DIR__ . '/components/unified-layout.php';
     <div class="admin-main-content">
         <div class="admin-card">
             <div class="admin-card-body" style="padding: 0;">
-                <div id="map" style="height: 400px;"></div>
+                <div id="map" style="height: calc(100vh - 280px); min-height: 500px;"></div>
             </div>
         </div>
     </div>

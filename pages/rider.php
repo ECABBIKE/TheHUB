@@ -883,12 +883,11 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
         <!-- Series Standings -->
         <?php if (!empty($seriesStandings)): ?>
         <section class="section">
-            <div class="achievements-card">
-                <div class="achievements-card-header">
-                    <h3 class="achievements-card-title">Serieställning</h3>
-                </div>
+            <div class="section-header-styled">
+                <h3 class="section-title-styled">Serieställning</h3>
+            </div>
 
-            <div class="series-tabs" style="padding: 0;">
+            <div class="series-tabs">
                 <nav class="series-nav">
                     <?php foreach ($seriesStandings as $idx => $standing): ?>
                     <button class="series-tab <?= $idx === 0 ? 'active' : '' ?>" data-target="series-panel-<?= $idx ?>">
@@ -992,7 +991,6 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
                     </div>
                     <?php endforeach; ?>
                 </div>
-            </div>
             </div>
         </section>
         <?php endif; ?>
@@ -1904,6 +1902,30 @@ function copyToClipboard(text) {
     height: 18px;
     background: var(--color-accent);
     border-radius: 2px;
+}
+
+/* Styled Section Header - consistent with achievements */
+.section-header-styled {
+    margin-bottom: var(--space-md);
+}
+
+.section-title-styled {
+    font-size: 14px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    color: var(--color-text);
+    margin: 0;
+}
+
+.section-title-styled::before {
+    content: '';
+    width: 3px;
+    height: 16px;
+    background: var(--color-accent);
+    border-radius: 2px;
+    flex-shrink: 0;
 }
 
 /* Series Tabs */
