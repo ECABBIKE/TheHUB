@@ -357,18 +357,25 @@ function getEventTracks($pdo, $eventId) {
     $stmt->execute([$eventId]);
     $tracks = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // Check if sponsor_id column exists
+    // Check if sponsor_id column exists AND sponsors table exists
     $hasSponsorColumn = false;
+    $hasSponsorsTable = false;
     try {
         $check = $pdo->query("SHOW COLUMNS FROM event_track_segments LIKE 'sponsor_id'");
         $hasSponsorColumn = $check->fetch() !== false;
+        if ($hasSponsorColumn) {
+            // Also check if sponsors table exists
+            $check = $pdo->query("SHOW TABLES LIKE 'sponsors'");
+            $hasSponsorsTable = $check->fetch() !== false;
+        }
     } catch (Exception $e) {
         $hasSponsorColumn = false;
+        $hasSponsorsTable = false;
     }
 
     foreach ($tracks as &$track) {
-        // Fetch segments with optional sponsor info
-        if ($hasSponsorColumn) {
+        // Fetch segments with optional sponsor info (only if both column and table exist)
+        if ($hasSponsorColumn && $hasSponsorsTable) {
             $stmt = $pdo->prepare("
                 SELECT s.*, sp.name as sponsor_name, sp.logo as sponsor_logo, sp.website as sponsor_website
                 FROM event_track_segments s

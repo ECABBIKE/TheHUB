@@ -25,10 +25,11 @@ try {
 $filterSeriesName = isset($_GET['series']) ? trim($_GET['series']) : null;
 $currentYear = (int)date('Y');
 
-// Default to current year ONLY on initial page load (no query params at all)
-// If user explicitly selects "Alla år" (?year=all or just omits year with other params), show all
-$hasAnyParams = !empty($_SERVER['QUERY_STRING']);
-if (!$hasAnyParams) {
+// Check if user has set any filter params (series or year)
+// Note: Router sets $_GET['page'], so we can't use count($_GET) === 0
+$hasFilterParams = isset($_GET['series']) || isset($_GET['year']);
+
+if (!$hasFilterParams) {
     // Initial page load - default to current year
     $filterYear = $currentYear;
 } elseif (isset($_GET['year']) && $_GET['year'] === 'all') {
@@ -38,7 +39,7 @@ if (!$hasAnyParams) {
     // Specific year selected
     $filterYear = intval($_GET['year']);
 } else {
-    // Has other params but no year - show all years
+    // Has series param but no year - show all years for that series
     $filterYear = null;
 }
 
