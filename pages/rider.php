@@ -883,11 +883,12 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
         <!-- Series Standings -->
         <?php if (!empty($seriesStandings)): ?>
         <section class="section">
-            <div class="section-header">
-                <h2 class="section-title">Serieställning</h2>
-            </div>
+            <div class="achievements-card">
+                <div class="achievements-card-header">
+                    <h3 class="achievements-card-title">Serieställning</h3>
+                </div>
 
-            <div class="series-tabs">
+            <div class="series-tabs" style="padding: 0;">
                 <nav class="series-nav">
                     <?php foreach ($seriesStandings as $idx => $standing): ?>
                     <button class="series-tab <?= $idx === 0 ? 'active' : '' ?>" data-target="series-panel-<?= $idx ?>">
@@ -991,6 +992,7 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
                     </div>
                     <?php endforeach; ?>
                 </div>
+            </div>
             </div>
         </section>
         <?php endif; ?>
