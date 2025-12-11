@@ -93,13 +93,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['run_migration'])) {
                     if (empty(trim($statement))) continue;
 
                     try {
-                        $db->exec($statement);
+                        $pdo->exec($statement);
                         $successCount++;
                         $results[] = [
                             'status' => 'success',
                             'message' => substr($statement, 0, 80) . '...'
                         ];
-                    } catch (PDOException $e) {
+                    } catch (Exception $e) {
                         $errMsg = $e->getMessage();
                         // Ignore common "already exists" errors
                         $ignorableErrors = [
