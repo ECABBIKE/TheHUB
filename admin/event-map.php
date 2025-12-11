@@ -1,4 +1,5 @@
 <?php
+die("DEBUG: event-map.php is running - if you see this, the file is being executed");
 /**
  * Admin Event Map Management - Multi-track support
  */
