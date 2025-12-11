@@ -1071,7 +1071,7 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
                         <?php endif; ?>
                         <span class="event-date"><?= date('j M', strtotime($result['event_date'])) ?></span>
                         <span class="event-name"><?= htmlspecialchars($result['event_name']) ?></span>
-                        <span class="event-results"><?= $result['is_motion'] ? 'Motion' : '' ?></span>
+                        <span class="event-results"><?= $result['is_motion'] ? 'Motion' : htmlspecialchars($result['series_name'] ?? '') ?></span>
                     </a>
                     <?php endforeach; ?>
                 </div>
