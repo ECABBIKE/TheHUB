@@ -19,24 +19,34 @@ echo "TEST 5: map_functions.php laddad<br>";
 /**
  * Admin Event Map Management - Multi-track support
  */
+echo "TEST 6: Startar databasanrop<br>";
 
 $db = getDB();
+echo "TEST 7: getDB() klar<br>";
+
 global $pdo;
+echo "TEST 8: global pdo<br>";
 
 // Get event ID
 $eventId = intval($_GET['id'] ?? $_GET['event_id'] ?? 0);
+echo "TEST 9: eventId = $eventId<br>";
+
 if ($eventId <= 0) {
     set_flash('error', 'Ogiltigt event-ID');
     header('Location: /admin/events');
     exit;
 }
 
+echo "TEST 10: Hämtar event från DB<br>";
 $event = $db->getRow("SELECT id, name, date FROM events WHERE id = ?", [$eventId]);
+echo "TEST 11: Event hämtat<br>";
+
 if (!$event) {
     set_flash('error', 'Event hittades inte');
     header('Location: /admin/events');
     exit;
 }
+echo "TEST 12: Event finns: " . htmlspecialchars($event['name']) . "<br>";
 
 $message = '';
 $messageType = '';
@@ -234,14 +244,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 // Get all tracks for event
+echo "TEST 13: Hämtar tracks<br>";
 $allTracks = getEventTracks($pdo, $eventId);
+echo "TEST 14: Tracks hämtade: " . count($allTracks) . " st<br>";
+
 $pois = getEventPois($pdo, $eventId, false) ?: [];
+echo "TEST 15: POIs hämtade: " . count($pois) . " st<br>";
+
 $poiTypes = getPoiTypesForSelect() ?: [];
+echo "TEST 16: POI-typer hämtade<br>";
 
 // Select first track if none selected
 if ($selectedTrackId <= 0 && !empty($allTracks)) {
     $selectedTrackId = $allTracks[0]['id'];
 }
+echo "TEST 17: selectedTrackId = $selectedTrackId<br>";
 
 // Get selected track details
 $currentTrack = null;
@@ -252,16 +269,23 @@ foreach ($allTracks as $t) {
         break;
     }
 }
+echo "TEST 18: currentTrack = " . ($currentTrack ? 'ja' : 'nej') . "<br>";
+
 if ($currentTrack) {
     try {
+        echo "TEST 19: Hämtar waypoints för track " . $currentTrack['id'] . "<br>";
         $trackWaypoints = getTrackWaypointsForEditor($pdo, $currentTrack['id']);
+        echo "TEST 20: Waypoints hämtade: " . count($trackWaypoints) . " st<br>";
     } catch (Exception $e) {
+        echo "TEST 19-FEL: " . $e->getMessage() . "<br>";
         $trackWaypoints = [];
     }
 }
 
 // Get map data for display (all tracks)
+echo "TEST 21: Hämtar mapData<br>";
 $mapData = getEventMapDataMultiTrack($pdo, $eventId);
+echo "TEST 22: mapData hämtad<br>";
 
 // Track colors for selection
 $trackColors = [
@@ -276,6 +300,7 @@ $trackColors = [
 ];
 
 // Get sponsors for segment dropdown (check if column AND table exist)
+echo "TEST 23: Kollar sponsors<br>";
 $sponsors = [];
 $sponsorColumnExists = false;
 try {
@@ -295,8 +320,10 @@ try {
     // Sponsors not available
     $sponsorColumnExists = false;
 }
+echo "TEST 24: Sponsors klar<br>";
 
 // Page setup
+echo "TEST 25: Page setup<br>";
 $page_title = 'Karta - ' . htmlspecialchars($event['name']);
 $breadcrumbs = [
     ['label' => 'Events', 'url' => '/admin/events'],
@@ -305,7 +332,10 @@ $breadcrumbs = [
 ];
 $page_actions = '<a href="/admin/events/edit/' . $eventId . '" class="btn-admin btn-admin-secondary">Tillbaka</a>';
 
+echo "TEST 26: Innan include unified-layout.php<br>";
+echo "TEST 27: Fil finns: " . (file_exists(__DIR__ . '/components/unified-layout.php') ? 'JA' : 'NEJ') . "<br>";
 include __DIR__ . '/components/unified-layout.php';
+echo "TEST 28: Efter include unified-layout.php<br>";
 ?>
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
