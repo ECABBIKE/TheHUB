@@ -22,16 +22,16 @@ try {
 }
 
 // Get filter parameters
-$filterSeries = isset($_GET['series']) && is_numeric($_GET['series']) ? intval($_GET['series']) : null;
+$filterSeriesName = isset($_GET['series']) ? trim($_GET['series']) : null;
 $filterYear = isset($_GET['year']) && is_numeric($_GET['year']) ? intval($_GET['year']) : null;
 
-// Get all series for dropdown
+// Get unique series names for dropdown
 $allSeriesStmt = $pdo->query("
-    SELECT id, name, year FROM series
+    SELECT DISTINCT name FROM series
     WHERE status IN ('active', 'completed')
-    ORDER BY year DESC, name ASC
+    ORDER BY name ASC
 ");
-$allSeries = $allSeriesStmt->fetchAll(PDO::FETCH_ASSOC);
+$allSeriesNames = $allSeriesStmt->fetchAll(PDO::FETCH_COLUMN);
 
 // Get available years
 $yearStmt = $pdo->query("
@@ -45,9 +45,9 @@ $availableYears = $yearStmt->fetchAll(PDO::FETCH_COLUMN);
 $where = ["s.status IN ('active', 'completed')"];
 $params = [];
 
-if ($filterSeries) {
-    $where[] = "s.id = ?";
-    $params[] = $filterSeries;
+if ($filterSeriesName) {
+    $where[] = "s.name = ?";
+    $params[] = $filterSeriesName;
 }
 
 if ($filterYear) {
@@ -93,7 +93,7 @@ $seriesList = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Page title
 $pageTitle = 'Tävlingsserier';
-if ($filterSeries && !empty($seriesList)) {
+if ($filterSeriesName && !empty($seriesList)) {
     $pageTitle = $seriesList[0]['name'];
 } elseif ($filterYear) {
     $pageTitle = "Serier $filterYear";
@@ -114,9 +114,9 @@ if ($filterSeries && !empty($seriesList)) {
         <label class="filter-label">Serie</label>
         <select class="filter-select" onchange="window.location=this.value">
             <option value="/series<?= $filterYear ? '?year=' . $filterYear : '' ?>">Alla serier</option>
-            <?php foreach ($allSeries as $s): ?>
-            <option value="/series?series=<?= $s['id'] ?><?= $filterYear ? '&year=' . $filterYear : '' ?>" <?= $filterSeries == $s['id'] ? 'selected' : '' ?>>
-                <?= htmlspecialchars($s['name']) ?>
+            <?php foreach ($allSeriesNames as $name): ?>
+            <option value="/series?series=<?= urlencode($name) ?><?= $filterYear ? '&year=' . $filterYear : '' ?>" <?= $filterSeriesName === $name ? 'selected' : '' ?>>
+                <?= htmlspecialchars($name) ?>
             </option>
             <?php endforeach; ?>
         </select>
@@ -124,9 +124,9 @@ if ($filterSeries && !empty($seriesList)) {
     <div class="filter-group">
         <label class="filter-label">År</label>
         <select class="filter-select" onchange="window.location=this.value">
-            <option value="/series<?= $filterSeries ? '?series=' . $filterSeries : '' ?>">Alla år</option>
+            <option value="/series<?= $filterSeriesName ? '?series=' . urlencode($filterSeriesName) : '' ?>">Alla år</option>
             <?php foreach ($availableYears as $year): ?>
-            <option value="/series?<?= $filterSeries ? 'series=' . $filterSeries . '&' : '' ?>year=<?= $year ?>" <?= $filterYear == $year ? 'selected' : '' ?>>
+            <option value="/series?<?= $filterSeriesName ? 'series=' . urlencode($filterSeriesName) . '&' : '' ?>year=<?= $year ?>" <?= $filterYear == $year ? 'selected' : '' ?>>
                 <?= $year ?>
             </option>
             <?php endforeach; ?>
