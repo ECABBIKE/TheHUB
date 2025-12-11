@@ -1,5 +1,4 @@
 <?php
-echo "LAYOUT-1: unified-layout.php startar<br>";
 /**
  * Admin Unified Layout - Uses same layout as public site
  *
@@ -13,19 +12,14 @@ echo "LAYOUT-1: unified-layout.php startar<br>";
  */
 
 // Ensure we have the V3 config
-echo "LAYOUT-2: Laddar v3-config.php<br>";
 require_once __DIR__ . '/../../v3-config.php';
-echo "LAYOUT-3: v3-config.php laddad<br>";
 require_once __DIR__ . '/../../config.php';
-echo "LAYOUT-4: config.php laddad<br>";
 
 // Ensure admin authentication
 require_admin();
-echo "LAYOUT-5: require_admin() klar<br>";
 
 // Get theme
 $theme = hub_get_theme();
-echo "LAYOUT-6: Tema hämtat<br>";
 
 // Create a mock pageInfo for the sidebar
 $pageInfo = [
@@ -68,26 +62,14 @@ $pageInfo = [
 <body>
     <a href="#main-content" class="skip-link">Hoppa till huvudinnehåll</a>
 
-    <?php
-    echo "LAYOUT-7: Innan header.php<br>";
-    include HUB_V3_ROOT . '/components/header.php';
-    echo "LAYOUT-8: Efter header.php<br>";
-    ?>
+    <?php include HUB_V3_ROOT . '/components/header.php'; ?>
 
     <div class="app-layout">
-        <?php
-        echo "LAYOUT-9: Innan sidebar.php<br>";
-        include HUB_V3_ROOT . '/components/sidebar.php';
-        echo "LAYOUT-10: Efter sidebar.php<br>";
-        ?>
+        <?php include HUB_V3_ROOT . '/components/sidebar.php'; ?>
 
         <main id="main-content" class="main-content" role="main">
             <!-- Admin Submenu (automatic based on current page) -->
-            <?php
-            echo "LAYOUT-11: Innan admin-submenu.php<br>";
-            include __DIR__ . '/../../includes/components/admin-submenu.php';
-            echo "LAYOUT-12: Efter admin-submenu.php<br>";
-            ?>
+            <?php include __DIR__ . '/../../includes/components/admin-submenu.php'; ?>
 
             <!-- Page Header -->
             <div class="page-header">
