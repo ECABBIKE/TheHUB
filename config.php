@@ -41,7 +41,7 @@ define('EVENTS_PER_PAGE', 20);
 // Version info
 define('APP_VERSION', '3.5');
 define('APP_VERSION_NAME', 'Beta');
-define('APP_BUILD', '2025-12-11');
+define('APP_BUILD', '2025-12-11b');
 define('DEPLOYMENT_OFFSET', 119); // Deployments before git repo
 
 try {
