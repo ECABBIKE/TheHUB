@@ -132,6 +132,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $messageType = 'success';
                 break;
 
+            case 'update_segment_name':
+                $segmentId = intval($_POST['segment_id'] ?? 0);
+                $newName = trim($_POST['new_name'] ?? '');
+                if ($segmentId > 0) {
+                    $pdo->prepare("UPDATE event_track_segments SET segment_name = ? WHERE id = ?")
+                        ->execute([$newName, $segmentId]);
+                }
+                $message = 'Segmentnamn uppdaterat';
+                $messageType = 'success';
+                break;
+
             case 'add_segment_visual':
                 $trackId = intval($_POST['track_id'] ?? 0);
                 $segmentName = trim($_POST['segment_name'] ?? '');
@@ -389,7 +400,8 @@ include __DIR__ . '/components/unified-layout.php';
                     ?>
                     <div class="admin-segment-item">
                         <span class="color-dot" style="background: <?= htmlspecialchars($seg['color']) ?>;"></span>
-                        <span class="admin-segment-name"><i data-lucide="<?= $iconName ?>" style="width: 14px; height: 14px;"></i> <?= htmlspecialchars($seg['segment_name'] ?: 'Sektion ' . $seg['sequence_number']) ?></span>
+                        <i data-lucide="<?= $iconName ?>" style="width: 14px; height: 14px; flex-shrink: 0;"></i>
+                        <input type="text" class="admin-segment-name-input" value="<?= htmlspecialchars($seg['segment_name'] ?? '') ?>" placeholder="Namn..." onchange="changeSegmentName(<?= $seg['id'] ?>, this.value)" title="Segmentnamn (t.ex. SS1, Powerstage)">
                         <span class="admin-text-muted"><?= number_format($seg['distance_km'], 1) ?>km</span>
                         <select onchange="changeSegmentType(<?= $seg['id'] ?>, this.value)" class="admin-form-select admin-form-select-xs">
                             <option value="liaison" <?= $seg['segment_type'] === 'liaison' ? 'selected' : '' ?>>T</option>
@@ -422,6 +434,12 @@ include __DIR__ . '/components/unified-layout.php';
                     <input type="hidden" name="action" value="update_segment_type">
                     <input type="hidden" name="segment_id" id="update-seg-id" value="">
                     <input type="hidden" name="new_type" id="update-new-type" value="">
+                </form>
+                <form method="POST" id="update-name-form" style="display: none;">
+                    <?= csrf_field() ?>
+                    <input type="hidden" name="action" value="update_segment_name">
+                    <input type="hidden" name="segment_id" id="update-name-seg-id" value="">
+                    <input type="hidden" name="new_name" id="update-new-name" value="">
                 </form>
             </div>
         </div>
@@ -665,6 +683,50 @@ include __DIR__ . '/components/unified-layout.php';
 }
 .admin-text-xs {
     font-size: var(--text-xs);
+}
+.admin-segment-name-input {
+    flex: 1;
+    padding: 2px 6px;
+    font-size: var(--text-xs);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    min-width: 60px;
+    max-width: 100px;
+}
+.admin-segment-name-input:focus {
+    outline: none;
+    border-color: var(--color-accent);
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+    .admin-grid-sidebar {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-md);
+    }
+    .admin-sidebar-narrow {
+        order: 1;
+    }
+    .admin-main-content {
+        order: 2;
+    }
+    #map {
+        height: 50vh !important;
+        min-height: 300px !important;
+    }
+    .admin-segment-item {
+        flex-wrap: wrap;
+        gap: var(--space-xs);
+    }
+    .admin-segment-name {
+        width: 100%;
+        order: 1;
+    }
+    .admin-segment-name-input {
+        max-width: none;
+        flex: 1;
+    }
 }
 </style>
 
@@ -1100,6 +1162,12 @@ function changeSegmentType(segId, newType) {
     document.getElementById('update-seg-id').value = segId;
     document.getElementById('update-new-type').value = newType;
     document.getElementById('update-type-form').submit();
+}
+
+function changeSegmentName(segId, newName) {
+    document.getElementById('update-name-seg-id').value = segId;
+    document.getElementById('update-new-name').value = newName;
+    document.getElementById('update-name-form').submit();
 }
 
 // Elevation profile rendering
