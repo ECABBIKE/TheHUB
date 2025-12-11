@@ -357,12 +357,32 @@ function getEventTracks($pdo, $eventId) {
     $stmt->execute([$eventId]);
     $tracks = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+    // Check if sponsor_id column exists
+    $hasSponsorColumn = false;
+    try {
+        $check = $pdo->query("SHOW COLUMNS FROM event_track_segments LIKE 'sponsor_id'");
+        $hasSponsorColumn = $check->fetch() !== false;
+    } catch (Exception $e) {
+        $hasSponsorColumn = false;
+    }
+
     foreach ($tracks as &$track) {
-        $stmt = $pdo->prepare("
-            SELECT * FROM event_track_segments
-            WHERE track_id = ?
-            ORDER BY sequence_number ASC
-        ");
+        // Fetch segments with optional sponsor info
+        if ($hasSponsorColumn) {
+            $stmt = $pdo->prepare("
+                SELECT s.*, sp.name as sponsor_name, sp.logo as sponsor_logo, sp.website as sponsor_website
+                FROM event_track_segments s
+                LEFT JOIN sponsors sp ON s.sponsor_id = sp.id
+                WHERE s.track_id = ?
+                ORDER BY s.sequence_number ASC
+            ");
+        } else {
+            $stmt = $pdo->prepare("
+                SELECT * FROM event_track_segments
+                WHERE track_id = ?
+                ORDER BY sequence_number ASC
+            ");
+        }
         $stmt->execute([$track['id']]);
         $track['segments'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
@@ -881,7 +901,11 @@ function getEventMapDataMultiTrack($pdo, $eventId) {
                             'distance_km' => (float)$segment['distance_km'],
                             'elevation_gain' => (int)$segment['elevation_gain_m'],
                             'color' => $segment['color'],
-                            'timing_id' => $segment['timing_id'] ?? null
+                            'timing_id' => $segment['timing_id'] ?? null,
+                            'sponsor_id' => $segment['sponsor_id'] ?? null,
+                            'sponsor_name' => $segment['sponsor_name'] ?? null,
+                            'sponsor_logo' => $segment['sponsor_logo'] ?? null,
+                            'sponsor_website' => $segment['sponsor_website'] ?? null
                         ]
                     ];
                     $trackFeatures[] = $feature;
