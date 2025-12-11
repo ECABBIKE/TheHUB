@@ -222,6 +222,12 @@ function create_sponsor($data) {
         $cols = $pdo->query("SHOW COLUMNS FROM sponsors")->fetchAll(PDO::FETCH_COLUMN);
         $availableColumns = array_flip($cols);
 
+        // Generate slug from name if not provided
+        $slug = $data['slug'] ?? null;
+        if (empty($slug) && !empty($data['name'])) {
+            $slug = generate_sponsor_slug($data['name']);
+        }
+
         // Base fields that always exist
         $fields = ['name', 'tier', 'website', 'description', 'active'];
         $values = [
@@ -231,6 +237,12 @@ function create_sponsor($data) {
             $data['description'] ?? null,
             isset($data['active']) ? ($data['active'] ? 1 : 0) : 1
         ];
+
+        // Add slug if column exists
+        if (isset($availableColumns['slug']) && $slug) {
+            $fields[] = 'slug';
+            $values[] = $slug;
+        }
 
         // Optional fields - only include if column exists
         $optionalFields = [
@@ -263,6 +275,36 @@ function create_sponsor($data) {
         error_log("create_sponsor error: " . $e->getMessage());
         return ['success' => false, 'error' => 'Kunde inte skapa sponsor: ' . $e->getMessage()];
     }
+}
+
+/**
+ * Generate unique slug from name
+ */
+function generate_sponsor_slug($name) {
+    global $pdo;
+
+    // Convert to lowercase, replace spaces/special chars with hyphens
+    $slug = strtolower(trim($name));
+    $slug = preg_replace('/[åä]/u', 'a', $slug);
+    $slug = preg_replace('/[ö]/u', 'o', $slug);
+    $slug = preg_replace('/[^a-z0-9]+/', '-', $slug);
+    $slug = trim($slug, '-');
+
+    // Check if slug exists, append number if needed
+    $baseSlug = $slug;
+    $counter = 1;
+
+    while (true) {
+        $stmt = $pdo->prepare("SELECT id FROM sponsors WHERE slug = ?");
+        $stmt->execute([$slug]);
+        if (!$stmt->fetch()) {
+            break; // Slug is unique
+        }
+        $slug = $baseSlug . '-' . $counter;
+        $counter++;
+    }
+
+    return $slug;
 }
 
 /**

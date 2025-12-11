@@ -9,8 +9,7 @@ header('Content-Type: application/json');
 
 require_once __DIR__ . '/../config.php';
 
-// Check if user is logged in (basic auth check)
-session_start();
+// Check if user is logged in (session already started in config.php)
 if (empty($_SESSION['user_id'])) {
     echo json_encode(['success' => false, 'error' => 'Ej inloggad']);
     exit;
