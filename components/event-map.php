@@ -62,6 +62,25 @@ if (!function_exists('render_event_map')) {
 
         $pois = $mapData['pois'] ?? [];
 
+        // POI type to Lucide icon mapping
+        $poiIconMap = [
+            'parking' => 'car',
+            'start' => 'play',
+            'finish' => 'flag',
+            'food' => 'utensils',
+            'water' => 'droplet',
+            'wc' => 'door-open',
+            'toilet' => 'door-open',
+            'medical' => 'cross',
+            'first_aid' => 'cross',
+            'info' => 'info',
+            'camping' => 'tent',
+            'lift' => 'cable-car',
+            'arena' => 'map-pin',
+            'spectator' => 'eye',
+            'photo' => 'camera',
+        ];
+
         // Group POIs by type
         $poiGroups = [];
         foreach ($pois as $poi) {
@@ -69,7 +88,7 @@ if (!function_exists('render_event_map')) {
             if (!isset($poiGroups[$type])) {
                 $poiGroups[$type] = [
                     'label' => $poi['type_label'] ?? $type,
-                    'emoji' => $poi['type_emoji'] ?? '📍',
+                    'icon' => $poiIconMap[$type] ?? ($poi['type_icon'] ?? 'map-pin'),
                     'items' => []
                 ];
             }
@@ -445,10 +464,10 @@ if (!function_exists('render_event_map')) {
                         $segColor = $seg['color'] ?? ($segType === 'stage' ? '#EF4444' : ($segType === 'lift' ? '#F59E0B' : '#61CE70'));
                         $segName = $seg['segment_name'] ?? 'Sektion';
                         $segDist = number_format($seg['distance_km'] ?? 0, 1);
-                        $segIcon = $segType === 'stage' ? '🏁' : ($segType === 'lift' ? '🚡' : '🚴');
+                        $segIconName = $segType === 'stage' ? 'flag' : ($segType === 'lift' ? 'cable-car' : 'route');
                     ?>
                     <div class="emap-segment-item" onclick="<?= $mapId ?>_zoomToSegment(<?= $seg['id'] ?? 0 ?>)" data-segment-id="<?= $seg['id'] ?? 0 ?>">
-                        <span class="emap-segment-icon"><?= $segIcon ?></span>
+                        <i data-lucide="<?= $segIconName ?>" class="emap-segment-icon"></i>
                         <div class="emap-segment-info">
                             <div class="emap-segment-name"><?= htmlspecialchars($segName) ?></div>
                             <div class="emap-segment-meta"><?= $segDist ?> km</div>
@@ -467,7 +486,7 @@ if (!function_exists('render_event_map')) {
                 <div class="emap-poi-group">
                     <label class="emap-checkbox">
                         <input type="checkbox" checked data-poi-type="<?= htmlspecialchars($type) ?>" onchange="<?= $mapId ?>_togglePoiType('<?= htmlspecialchars($type) ?>')">
-                        <span><?= $group['emoji'] ?> <?= htmlspecialchars($group['label']) ?></span>
+                        <span><i data-lucide="<?= htmlspecialchars($group['icon']) ?>" style="width: 14px; height: 14px;"></i> <?= htmlspecialchars($group['label']) ?></span>
                     </label>
                     <div class="emap-poi-items" data-poi-type="<?= htmlspecialchars($type) ?>">
                         <?php foreach ($group['items'] as $poi): ?>
@@ -490,7 +509,7 @@ if (!function_exists('render_event_map')) {
             <button class="emap-dropdown-btn" onclick="<?= $mapId ?>_toggleDropdown('<?= $mapId ?>-track-dropdown')">
                 <span class="dot" id="<?= $mapId ?>-current-dot" style="background: <?= htmlspecialchars($tracks[0]['color'] ?? '#3B82F6') ?>;"></span>
                 <span id="<?= $mapId ?>-current-name"><?= htmlspecialchars($tracks[0]['route_label'] ?? $tracks[0]['name']) ?></span>
-                <span>▼</span>
+                <i data-lucide="chevron-down" style="width: 12px; height: 12px;"></i>
             </button>
             <div class="emap-dropdown-menu">
                 <?php foreach ($tracks as $track): ?>
@@ -508,13 +527,13 @@ if (!function_exists('render_event_map')) {
         <?php if (!empty($poiGroups)): ?>
         <div class="emap-dropdown" id="<?= $mapId ?>-poi-dropdown">
             <button class="emap-dropdown-btn" onclick="<?= $mapId ?>_toggleDropdown('<?= $mapId ?>-poi-dropdown')">
-                📍 POIs <span>▼</span>
+                <i data-lucide="map-pin" style="width: 14px; height: 14px;"></i> POIs <i data-lucide="chevron-down" style="width: 12px; height: 12px;"></i>
             </button>
             <div class="emap-dropdown-menu">
                 <?php foreach ($poiGroups as $type => $group): ?>
                 <div class="emap-dropdown-item active" data-poi-type="<?= htmlspecialchars($type) ?>" onclick="<?= $mapId ?>_togglePoiTypeMobile('<?= htmlspecialchars($type) ?>', this)">
                     <input type="checkbox" checked style="pointer-events: none;">
-                    <?= $group['emoji'] ?> <?= htmlspecialchars($group['label']) ?>
+                    <i data-lucide="<?= htmlspecialchars($group['icon']) ?>" style="width: 14px; height: 14px;"></i> <?= htmlspecialchars($group['label']) ?>
                 </div>
                 <?php endforeach; ?>
             </div>
@@ -524,18 +543,20 @@ if (!function_exists('render_event_map')) {
 
     <!-- Location Button -->
     <button class="emap-location-btn" id="<?= $mapId ?>-location-btn" onclick="<?= $mapId ?>_toggleLocation()" title="Min plats">
-        📍
+        <i data-lucide="navigation" style="width: 20px; height: 20px;"></i>
     </button>
 
     <?php if ($showClose): ?>
-    <button class="emap-close" onclick="history.back()" title="Tillbaka">✕</button>
+    <button class="emap-close" onclick="history.back()" title="Tillbaka">
+        <i data-lucide="x" style="width: 20px; height: 20px;"></i>
+    </button>
     <?php endif; ?>
 
     <!-- Elevation Profile -->
     <?php if (!empty($tracks)): ?>
     <div class="emap-elevation collapsed" id="<?= $mapId ?>-elevation">
         <div class="emap-elevation-toggle" onclick="<?= $mapId ?>_toggleElevation()">
-            <span class="chevron">▲</span>
+            <i data-lucide="chevron-up" class="chevron" style="width: 16px; height: 16px;"></i>
             <span>Höjdprofil</span>
         </div>
         <div class="emap-elevation-content">
@@ -585,6 +606,27 @@ if (!function_exists('render_event_map')) {
             });
         }
 
+        // POI icon SVGs
+        const poiIcons = {
+            parking: '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.5 2.8c-.4.6-.6 1.3-.6 2V16c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/></svg>',
+            start: '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="white" stroke="white" stroke-width="2"><polygon points="6 3 20 12 6 21 6 3"/></svg>',
+            finish: '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" x2="4" y1="22" y2="15"/></svg>',
+            food: '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3"/><path d="M18 22v-7"/></svg>',
+            water: '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5S5 13 5 15a7 7 0 0 0 7 7z"/></svg>',
+            wc: '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M13 4h3a2 2 0 0 1 2 2v14"/><path d="M2 20h3"/><path d="M13 20h9"/><path d="M10 12v.01"/><path d="M13 4.562v16.157a1 1 0 0 1-1.242.97L5 20V5.562a2 2 0 0 1 1.515-1.94l4-1A2 2 0 0 1 13 4.562Z"/></svg>',
+            toilet: '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M13 4h3a2 2 0 0 1 2 2v14"/><path d="M2 20h3"/><path d="M13 20h9"/><path d="M10 12v.01"/><path d="M13 4.562v16.157a1 1 0 0 1-1.242.97L5 20V5.562a2 2 0 0 1 1.515-1.94l4-1A2 2 0 0 1 13 4.562Z"/></svg>',
+            medical: '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M11 2a2 2 0 0 0-2 2v5H4a2 2 0 0 0-2 2v2c0 1.1.9 2 2 2h5v5c0 1.1.9 2 2 2h2a2 2 0 0 0 2-2v-5h5a2 2 0 0 0 2-2v-2a2 2 0 0 0-2-2h-5V4a2 2 0 0 0-2-2h-2z"/></svg>',
+            first_aid: '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M11 2a2 2 0 0 0-2 2v5H4a2 2 0 0 0-2 2v2c0 1.1.9 2 2 2h5v5c0 1.1.9 2 2 2h2a2 2 0 0 0 2-2v-5h5a2 2 0 0 0 2-2v-2a2 2 0 0 0-2-2h-5V4a2 2 0 0 0-2-2h-2z"/></svg>',
+            info: '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>',
+            camping: '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M3.5 21 14 3"/><path d="M20.5 21 10 3"/><path d="M15.5 21 12 15l-3.5 6"/><path d="M2 21h20"/></svg>',
+            lift: '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M4 4h16"/><path d="M6 4v16"/><path d="M18 4v16"/><rect x="8" y="8" width="8" height="6" rx="1"/></svg>',
+            default: '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></svg>'
+        };
+
+        function getPoiIcon(type) {
+            return poiIcons[type] || poiIcons.default;
+        }
+
         // Draw POIs
         if (mapData.pois) {
             mapData.pois.forEach(poi => {
@@ -593,14 +635,15 @@ if (!function_exists('render_event_map')) {
                     poiLayers[type] = L.layerGroup().addTo(map);
                     visiblePoiTypes.add(type);
                 }
+                const iconSvg = getPoiIcon(type);
                 const marker = L.marker([poi.lat, poi.lng], {
                     icon: L.divIcon({
                         className: 'emap-poi-marker',
-                        html: '<div style="font-size: 1.5rem; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.3));">' + (poi.type_emoji || '📍') + '</div>',
-                        iconSize: [30, 30],
-                        iconAnchor: [15, 15]
+                        html: '<div style="width: 32px; height: 32px; background: var(--color-accent, #61CE70); border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 6px rgba(0,0,0,0.3);">' + iconSvg + '</div>',
+                        iconSize: [32, 32],
+                        iconAnchor: [16, 16]
                     })
-                }).bindPopup('<strong>' + (poi.type_emoji || '📍') + ' ' + (poi.label || poi.type_label || poi.poi_type) + '</strong>' + (poi.description ? '<br>' + poi.description : ''));
+                }).bindPopup('<strong>' + (poi.label || poi.type_label || poi.poi_type) + '</strong>' + (poi.description ? '<br>' + poi.description : ''));
                 marker.addTo(poiLayers[type]);
             });
         }
@@ -830,9 +873,13 @@ if (!function_exists('render_event_map')) {
     }
 
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', init);
+        document.addEventListener('DOMContentLoaded', () => {
+            init();
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+        });
     } else {
         init();
+        if (typeof lucide !== 'undefined') lucide.createIcons();
     }
     window.addEventListener('resize', () => setTimeout(updateElevation, 100));
 })();
@@ -859,6 +906,7 @@ if (!function_exists('render_map_scripts')) {
     function render_map_scripts(): void {
         ?>
         <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+        <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
         <?php
     }
 }

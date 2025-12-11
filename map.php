@@ -71,6 +71,7 @@ $eventName = htmlspecialchars($event['name']);
             --color-primary: #171717;
             --color-secondary: #323539;
             --color-accent: #61CE70;
+            --color-icon: #F59E0B;
             --color-text: #7A7A7A;
             --color-text-dark: #171717;
             --color-border: #e5e7eb;
