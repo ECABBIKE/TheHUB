@@ -439,11 +439,22 @@ include __DIR__ . '/components/unified-layout.php';
                     <div class="admin-text-muted admin-text-sm" style="margin-bottom: var(--space-xs);">Sparade sektioner:</div>
                     <?php foreach ($currentTrack['segments'] as $seg):
                         $iconName = $seg['segment_type'] === 'stage' ? 'flag' : ($seg['segment_type'] === 'lift' ? 'cable-car' : 'route');
+                        $hasSponsor = !empty($seg['sponsor_name']);
                     ?>
-                    <div class="admin-segment-item">
+                    <div class="admin-segment-item <?= $hasSponsor ? 'has-sponsor' : '' ?>">
                         <span class="color-dot" style="background: <?= htmlspecialchars($seg['color']) ?>;"></span>
                         <i data-lucide="<?= $iconName ?>" style="width: 14px; height: 14px; flex-shrink: 0;"></i>
                         <input type="text" class="admin-segment-name-input" value="<?= htmlspecialchars($seg['segment_name'] ?? '') ?>" placeholder="Namn..." onchange="changeSegmentName(<?= $seg['id'] ?>, this.value)" title="Segmentnamn (t.ex. SS1, Powerstage)">
+                        <?php if ($hasSponsor): ?>
+                        <span class="segment-sponsor-badge" title="<?= htmlspecialchars($seg['sponsor_name']) ?>">
+                            <span class="sponsor-by">By</span>
+                            <?php if (!empty($seg['sponsor_logo'])): ?>
+                            <img src="/uploads/sponsors/<?= htmlspecialchars($seg['sponsor_logo']) ?>" alt="<?= htmlspecialchars($seg['sponsor_name']) ?>" class="sponsor-logo-mini">
+                            <?php else: ?>
+                            <span class="sponsor-name-mini"><?= htmlspecialchars($seg['sponsor_name']) ?></span>
+                            <?php endif; ?>
+                        </span>
+                        <?php endif; ?>
                         <span class="admin-text-muted"><?= number_format($seg['distance_km'], 1) ?>km</span>
                         <select onchange="changeSegmentType(<?= $seg['id'] ?>, this.value)" class="admin-form-select admin-form-select-xs">
                             <option value="liaison" <?= $seg['segment_type'] === 'liaison' ? 'selected' : '' ?>>T</option>
@@ -721,6 +732,37 @@ include __DIR__ . '/components/unified-layout.php';
 }
 .admin-segment-item:last-child {
     border-bottom: none;
+}
+.admin-segment-item.has-sponsor {
+    background: linear-gradient(90deg, transparent 0%, rgba(97, 206, 112, 0.08) 100%);
+}
+.segment-sponsor-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 6px;
+    background: var(--color-star-fade);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    font-size: 10px;
+}
+.sponsor-by {
+    color: var(--color-text);
+    font-style: italic;
+}
+.sponsor-logo-mini {
+    height: 16px;
+    width: auto;
+    max-width: 50px;
+    object-fit: contain;
+}
+.sponsor-name-mini {
+    font-weight: var(--weight-medium);
+    color: var(--color-primary);
+    max-width: 60px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 .admin-segment-name {
     flex: 1;
