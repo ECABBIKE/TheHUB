@@ -1162,7 +1162,11 @@ function showFullTrack() {
 
 // Zoom to an existing/saved segment using start/end waypoint indices
 function zoomToExistingSegment(startIdx, endIdx, title) {
-    if (!waypoints || waypoints.length < 2) return;
+    console.log('zoomToExistingSegment called:', {startIdx, endIdx, title, waypointsLength: waypoints?.length});
+    if (!waypoints || waypoints.length < 2) {
+        console.log('No waypoints available');
+        return;
+    }
 
     // Validate indices
     startIdx = Math.max(0, Math.min(startIdx, waypoints.length - 1));
