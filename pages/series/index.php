@@ -25,10 +25,9 @@ try {
 $filterSeriesName = isset($_GET['series']) ? trim($_GET['series']) : null;
 $currentYear = (int)date('Y');
 
-// Default to current year ONLY on initial page load (no query params at all)
-// If user explicitly selects "Alla år" (?year=all or just omits year with other params), show all
-$hasAnyParams = !empty($_SERVER['QUERY_STRING']);
-if (!$hasAnyParams) {
+// Default to current year ONLY on initial page load (no GET params at all)
+// Use count($_GET) which is more reliable than QUERY_STRING
+if (count($_GET) === 0) {
     // Initial page load - default to current year
     $filterYear = $currentYear;
 } elseif (isset($_GET['year']) && $_GET['year'] === 'all') {
