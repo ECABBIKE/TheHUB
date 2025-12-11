@@ -27,6 +27,22 @@ try {
     error_log("EVENT EDIT: Error checking/adding is_championship column: " . $e->getMessage());
 }
 
+// Check if payment_recipient_id column exists and get recipients
+$paymentRecipientColumnExists = false;
+$paymentRecipients = [];
+try {
+    $columns = $db->getAll("SHOW COLUMNS FROM events LIKE 'payment_recipient_id'");
+    $paymentRecipientColumnExists = !empty($columns);
+    if ($paymentRecipientColumnExists) {
+        $tables = $db->getAll("SHOW TABLES LIKE 'payment_recipients'");
+        if (!empty($tables)) {
+            $paymentRecipients = $db->getAll("SELECT id, name, swish_number, swish_name FROM payment_recipients WHERE active = 1 ORDER BY name ASC");
+        }
+    }
+} catch (Exception $e) {
+    error_log("EVENT EDIT: Error checking payment_recipient_id column: " . $e->getMessage());
+}
+
 // Get event ID from URL (supports both /admin/events/edit/123 and ?id=123)
 $id = 0;
 if (isset($_GET['id'])) {
@@ -217,6 +233,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $db->query("UPDATE events SET is_championship = ? WHERE id = ?", [$isChampionship, $id]);
             } catch (Exception $smEx) {
                 error_log("EVENT EDIT: SM column update failed: " . $smEx->getMessage());
+            }
+
+            // Update payment_recipient_id separately (if column exists)
+            if ($paymentRecipientColumnExists) {
+                try {
+                    $paymentRecipientId = !empty($_POST['payment_recipient_id']) ? intval($_POST['payment_recipient_id']) : null;
+                    $db->query("UPDATE events SET payment_recipient_id = ? WHERE id = ?", [$paymentRecipientId, $id]);
+                } catch (Exception $prEx) {
+                    error_log("EVENT EDIT: payment_recipient_id update failed: " . $prEx->getMessage());
+                }
             }
 
             // Sync series_events junction table with events.series_id
@@ -523,6 +549,32 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
     </div>
+
+    <!-- PAYMENT SETTINGS -->
+    <?php if ($paymentRecipientColumnExists && !empty($paymentRecipients)): ?>
+    <div class="admin-card" style="margin-bottom: var(--space-lg);">
+        <div class="admin-card-header">
+            <h2>Betalning</h2>
+        </div>
+        <div class="admin-card-body">
+            <div class="admin-form-group">
+                <label class="admin-form-label">Betalningsmottagare (Swish)</label>
+                <select name="payment_recipient_id" class="admin-form-select">
+                    <option value="">Använd seriens mottagare</option>
+                    <?php foreach ($paymentRecipients as $recipient): ?>
+                        <option value="<?= $recipient['id'] ?>" <?= ($event['payment_recipient_id'] ?? '') == $recipient['id'] ? 'selected' : '' ?>>
+                            <?= h($recipient['name']) ?> (<?= h($recipient['swish_number']) ?>)
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+                <small style="color: var(--color-text-secondary);">
+                    Välj en specifik mottagare för detta event, eller lämna tomt för att använda seriens mottagare.
+                    <a href="/admin/payment-recipients" style="color: var(--color-accent);">Hantera mottagare</a>
+                </small>
+            </div>
+        </div>
+    </div>
+    <?php endif; ?>
 
     <!-- LOCATION DETAILS -->
     <div class="admin-card" style="margin-bottom: var(--space-lg);">
