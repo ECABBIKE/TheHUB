@@ -595,23 +595,54 @@ $eventName = htmlspecialchars($event['name']);
                         }
                     }
                 }
+                // Sort by sequence_number to ensure correct order
+                usort($allSegments, fn($a, $b) => ($a['sequence_number'] ?? 0) - ($b['sequence_number'] ?? 0));
+
                 if (!empty($allSegments)): ?>
                 <div class="dropdown-section-title">Sträckor</div>
-                <?php foreach ($allSegments as $seg):
-                    $segType = $seg['segment_type'] ?? 'stage';
+                <?php
+                $stageCounter = 0;
+                $transportCounter = 0;
+                $liftCounter = 0;
+                foreach ($allSegments as $seg):
+                    $segType = $seg['segment_type'] ?? 'liaison';
                     $typeIconName = $segType === 'lift' ? 'cable-car' : ($segType === 'liaison' ? 'route' : 'flag');
-                    // Get segment name with fallback
-                    $segName = $seg['segment_name'] ?? $seg['name'] ?? ($segType === 'stage' ? 'SS' : ($segType === 'liaison' ? 'Transport' : 'Lift'));
+
+                    // Count segments by type for auto-naming
+                    if ($segType === 'stage') $stageCounter++;
+                    elseif ($segType === 'lift') $liftCounter++;
+                    else $transportCounter++;
+
+                    // Get segment name - use DB value if set, otherwise auto-generate
+                    $segName = !empty($seg['segment_name']) ? $seg['segment_name'] : null;
+                    if (!$segName) {
+                        if ($segType === 'stage') {
+                            $segName = 'SS' . $stageCounter;
+                        } elseif ($segType === 'lift') {
+                            $segName = 'Lift ' . $liftCounter;
+                        } else {
+                            $segName = 'Transport ' . $transportCounter;
+                        }
+                    }
+
                     // Transport/liaison shows HM (climb), Stage shows FHM (descent)
                     $segHeight = $segType === 'stage'
                         ? ($seg['elevation_loss_m'] ?? $seg['elevation_drop_m'] ?? 0)
                         : ($seg['elevation_gain_m'] ?? 0);
                     $segHeightLabel = $segType === 'stage' ? 'FHM' : 'HM';
+
+                    // Format distance - show meters if under 1km
+                    $distKm = $seg['distance_km'] ?? 0;
+                    if ($distKm < 1) {
+                        $distStr = number_format($distKm * 1000, 0) . ' m';
+                    } else {
+                        $distStr = number_format($distKm, 2) . ' km';
+                    }
                 ?>
                 <div class="dropdown-item segment-item" data-segment-id="<?= $seg['id'] ?>" data-track-id="<?= $seg['track_id'] ?>" onclick="selectSegment(<?= $seg['id'] ?>, <?= $seg['track_id'] ?>)">
                     <div class="seg-info">
                         <span class="seg-name"><i data-lucide="<?= $typeIconName ?>" style="width: 14px; height: 14px; color: var(--color-icon); vertical-align: middle;"></i> <?= htmlspecialchars($segName) ?></span>
-                        <span class="seg-meta"><?= number_format($seg['distance_km'], 2) ?> km<?php if ($segType !== 'lift'): ?> · <?= number_format($segHeight) ?> m <?= $segHeightLabel ?><?php else: ?> · <em>ej i höjdprofil</em><?php endif; ?></span>
+                        <span class="seg-meta"><?= $distStr ?><?php if ($segType !== 'lift'): ?> · <?= number_format($segHeight) ?> m <?= $segHeightLabel ?><?php else: ?> · <em>ej i höjdprofil</em><?php endif; ?></span>
                     </div>
                 </div>
                 <?php endforeach; ?>
