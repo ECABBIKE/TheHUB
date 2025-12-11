@@ -23,7 +23,24 @@ try {
 
 // Get filter parameters
 $filterSeriesName = isset($_GET['series']) ? trim($_GET['series']) : null;
-$filterYear = isset($_GET['year']) && is_numeric($_GET['year']) ? intval($_GET['year']) : null;
+$currentYear = (int)date('Y');
+
+// Default to current year ONLY on initial page load (no query params at all)
+// If user explicitly selects "Alla år" (?year=all or just omits year with other params), show all
+$hasAnyParams = !empty($_SERVER['QUERY_STRING']);
+if (!$hasAnyParams) {
+    // Initial page load - default to current year
+    $filterYear = $currentYear;
+} elseif (isset($_GET['year']) && $_GET['year'] === 'all') {
+    // Explicitly selected "Alla år"
+    $filterYear = null;
+} elseif (isset($_GET['year']) && is_numeric($_GET['year'])) {
+    // Specific year selected
+    $filterYear = intval($_GET['year']);
+} else {
+    // Has other params but no year - show all years
+    $filterYear = null;
+}
 
 // Get unique series names for dropdown
 $allSeriesStmt = $pdo->query("
@@ -113,9 +130,9 @@ if ($filterSeriesName && !empty($seriesList)) {
     <div class="filter-group">
         <label class="filter-label">Serie</label>
         <select class="filter-select" onchange="window.location=this.value">
-            <option value="/series<?= $filterYear ? '?year=' . $filterYear : '' ?>">Alla serier</option>
+            <option value="/series?<?= $filterYear ? 'year=' . $filterYear : 'year=all' ?>" <?= !$filterSeriesName ? 'selected' : '' ?>>Alla serier</option>
             <?php foreach ($allSeriesNames as $name): ?>
-            <option value="/series?series=<?= urlencode($name) ?><?= $filterYear ? '&year=' . $filterYear : '' ?>" <?= $filterSeriesName === $name ? 'selected' : '' ?>>
+            <option value="/series?series=<?= urlencode($name) ?><?= $filterYear ? '&year=' . $filterYear : '&year=all' ?>" <?= $filterSeriesName === $name ? 'selected' : '' ?>>
                 <?= htmlspecialchars($name) ?>
             </option>
             <?php endforeach; ?>
@@ -124,7 +141,7 @@ if ($filterSeriesName && !empty($seriesList)) {
     <div class="filter-group">
         <label class="filter-label">År</label>
         <select class="filter-select" onchange="window.location=this.value">
-            <option value="/series<?= $filterSeriesName ? '?series=' . urlencode($filterSeriesName) : '' ?>">Alla år</option>
+            <option value="/series?<?= $filterSeriesName ? 'series=' . urlencode($filterSeriesName) . '&' : '' ?>year=all" <?= $filterYear === null ? 'selected' : '' ?>>Alla år</option>
             <?php foreach ($availableYears as $year): ?>
             <option value="/series?<?= $filterSeriesName ? 'series=' . urlencode($filterSeriesName) . '&' : '' ?>year=<?= $year ?>" <?= $filterYear == $year ? 'selected' : '' ?>>
                 <?= $year ?>
