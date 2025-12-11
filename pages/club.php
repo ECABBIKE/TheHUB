@@ -239,13 +239,6 @@ foreach (['jpg', 'jpeg', 'png', 'webp', 'svg'] as $ext) {
 </section>
 <?php endif; ?>
 
-<!-- DEBUG: Performance info (remove after testing) -->
-<div style="background: #1a1a2e; color: #61CE70; padding: 12px 16px; border-radius: 8px; margin-bottom: 16px; font-family: monospace; font-size: 14px;">
-  ⚡ Query time: <strong><?= $debugQueryTime ?>ms</strong> |
-  Members: <?= $totalMembers ?> |
-  Total results processed: <?= array_sum(array_column($members, 'total_races')) ?>
-</div>
-
 <!-- Club Hero -->
 <section class="club-hero">
   <div class="hero-accent-bar"></div>
