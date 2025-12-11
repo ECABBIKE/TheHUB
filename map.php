@@ -630,11 +630,19 @@ $eventName = htmlspecialchars($event['name']);
                         ? ($seg['elevation_loss_m'] ?? $seg['elevation_drop_m'] ?? 0)
                         : ($seg['elevation_gain_m'] ?? 0);
                     $segHeightLabel = $segType === 'stage' ? 'FHM' : 'HM';
+
+                    // Format distance - show meters if under 1km
+                    $distKm = $seg['distance_km'] ?? 0;
+                    if ($distKm < 1) {
+                        $distStr = number_format($distKm * 1000, 0) . ' m';
+                    } else {
+                        $distStr = number_format($distKm, 2) . ' km';
+                    }
                 ?>
                 <div class="dropdown-item segment-item" data-segment-id="<?= $seg['id'] ?>" data-track-id="<?= $seg['track_id'] ?>" onclick="selectSegment(<?= $seg['id'] ?>, <?= $seg['track_id'] ?>)">
                     <div class="seg-info">
                         <span class="seg-name"><i data-lucide="<?= $typeIconName ?>" style="width: 14px; height: 14px; color: var(--color-icon); vertical-align: middle;"></i> <?= htmlspecialchars($segName) ?></span>
-                        <span class="seg-meta"><?= number_format($seg['distance_km'], 2) ?> km<?php if ($segType !== 'lift'): ?> · <?= number_format($segHeight) ?> m <?= $segHeightLabel ?><?php else: ?> · <em>ej i höjdprofil</em><?php endif; ?></span>
+                        <span class="seg-meta"><?= $distStr ?><?php if ($segType !== 'lift'): ?> · <?= number_format($segHeight) ?> m <?= $segHeightLabel ?><?php else: ?> · <em>ej i höjdprofil</em><?php endif; ?></span>
                     </div>
                 </div>
                 <?php endforeach; ?>
