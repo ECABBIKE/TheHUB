@@ -743,23 +743,22 @@ include __DIR__ . '/components/unified-layout.php';
     border-bottom: none;
 }
 .admin-segment-item.has-sponsor {
-    background: linear-gradient(90deg, transparent 0%, rgba(97, 206, 112, 0.08) 100%);
+    background: rgba(97, 206, 112, 0.05);
 }
 .segment-sponsor-badge {
     display: inline-flex;
     align-items: center;
-    gap: 4px;
-    padding: 2px 8px;
-    background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
-    border: 1px solid #86efac;
-    border-radius: var(--radius-full);
-    font-size: 11px;
+    gap: var(--space-xs);
+    padding: var(--space-xs) var(--space-sm);
+    background: var(--color-star-fade);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    font-size: var(--text-xs);
     white-space: nowrap;
 }
 .sponsor-by {
-    color: #166534;
+    color: var(--color-text);
     font-style: italic;
-    font-weight: 500;
 }
 .sponsor-logo-mini {
     height: 14px;
@@ -860,6 +859,12 @@ include __DIR__ . '/components/unified-layout.php';
 const mapData = <?= json_encode($mapData) ?>;
 const waypoints = <?= json_encode($trackWaypoints) ?>;
 const currentTrackId = <?= $selectedTrackId ?: 'null' ?>;
+console.log('EVENT-MAP DEBUG:', {
+    waypointsCount: waypoints?.length || 0,
+    currentTrackId: currentTrackId,
+    hasMapData: !!mapData,
+    tracksCount: mapData?.tracks?.length || 0
+});
 let map, baseTrackLine, tempMarker;
 
 // Segment colors
