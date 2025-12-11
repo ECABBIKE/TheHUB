@@ -53,6 +53,7 @@ RewriteRule ^login/?$ index.php?page=login [QSA,L]
 RewriteRule ^logout/?$ index.php?page=logout [QSA,L]
 RewriteRule ^dashboard/?$ index.php?page=dashboard [QSA,L]
 RewriteRule ^welcome/?$ index.php?page=welcome [QSA,L]
+RewriteRule ^checkout/?$ index.php?page=checkout [QSA,L]
 
 # Main sections
 RewriteRule ^database(/.*)?$ index.php?page=database$1 [QSA,L]
