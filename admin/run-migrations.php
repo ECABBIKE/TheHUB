@@ -7,7 +7,7 @@ require_once __DIR__ . '/../config.php';
 require_admin();
 
 $db = getDB();
-$pdo = getPDO();
+$pdo = $GLOBALS['pdo'];
 $message = '';
 $error = '';
 $results = [];

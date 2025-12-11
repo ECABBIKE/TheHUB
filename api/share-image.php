@@ -10,7 +10,7 @@
  */
 
 // Include config and database
-require_once dirname(__DIR__) . '/config/database.php';
+require_once dirname(__DIR__) . '/config.php';
 
 // Get rider ID
 $riderId = intval($_GET['rider_id'] ?? 0);
@@ -22,7 +22,7 @@ if (!$riderId) {
 }
 
 try {
-    $pdo = getPDO();
+    $pdo = $GLOBALS['pdo'];
 
     // Fetch rider data
     $stmt = $pdo->prepare("
