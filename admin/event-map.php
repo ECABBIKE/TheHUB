@@ -2,6 +2,9 @@
 /**
  * Admin Event Map Management - Multi-track support
  */
+ini_set('display_errors', '1');
+error_reporting(E_ALL);
+
 require_once __DIR__ . '/../config.php';
 require_admin();
 require_once INCLUDES_PATH . '/map_functions.php';
