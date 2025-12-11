@@ -245,8 +245,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 // Get all tracks for event
 echo "TEST 13: Hämtar tracks<br>";
-$allTracks = getEventTracks($pdo, $eventId);
-echo "TEST 14: Tracks hämtade: " . count($allTracks) . " st<br>";
+try {
+    $allTracks = getEventTracks($pdo, $eventId);
+    echo "TEST 14: Tracks hämtade: " . count($allTracks) . " st<br>";
+} catch (Exception $e) {
+    echo "TEST 13-FEL: " . $e->getMessage() . "<br>";
+    echo "TEST 13-TRACE: " . $e->getTraceAsString() . "<br>";
+    $allTracks = [];
+} catch (Error $e) {
+    echo "TEST 13-ERROR: " . $e->getMessage() . "<br>";
+    echo "TEST 13-FIL: " . $e->getFile() . " rad " . $e->getLine() . "<br>";
+    $allTracks = [];
+}
 
 $pois = getEventPois($pdo, $eventId, false) ?: [];
 echo "TEST 15: POIs hämtade: " . count($pois) . " st<br>";
