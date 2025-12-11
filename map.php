@@ -625,6 +625,10 @@ $eventName = htmlspecialchars($event['name']);
                         }
                     }
 
+                    // Sponsor info
+                    $segSponsorName = $seg['sponsor_name'] ?? null;
+                    $segDisplayName = $segSponsorName ? ($segName . ' By ' . $segSponsorName) : $segName;
+
                     // Transport/liaison shows HM (climb), Stage shows FHM (descent)
                     $segHeight = $segType === 'stage'
                         ? ($seg['elevation_loss_m'] ?? $seg['elevation_drop_m'] ?? 0)
@@ -641,7 +645,7 @@ $eventName = htmlspecialchars($event['name']);
                 ?>
                 <div class="dropdown-item segment-item" data-segment-id="<?= $seg['id'] ?>" data-track-id="<?= $seg['track_id'] ?>" onclick="selectSegment(<?= $seg['id'] ?>, <?= $seg['track_id'] ?>)">
                     <div class="seg-info">
-                        <span class="seg-name"><i data-lucide="<?= $typeIconName ?>" style="width: 14px; height: 14px; color: var(--color-icon); vertical-align: middle;"></i> <?= htmlspecialchars($segName) ?></span>
+                        <span class="seg-name"><i data-lucide="<?= $typeIconName ?>" style="width: 14px; height: 14px; color: var(--color-icon); vertical-align: middle;"></i> <?= htmlspecialchars($segDisplayName) ?></span>
                         <span class="seg-meta"><?= $distStr ?><?php if ($segType !== 'lift'): ?> · <?= number_format($segHeight) ?> m <?= $segHeightLabel ?><?php else: ?> · <em>ej i höjdprofil</em><?php endif; ?></span>
                     </div>
                 </div>
