@@ -357,16 +357,24 @@ function getEventTracks($pdo, $eventId) {
     $stmt->execute([$eventId]);
     $tracks = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // Check if sponsor_id column exists AND sponsors table exists
+    // Check if sponsor_id column exists AND sponsors table exists with required columns
     $hasSponsorColumn = false;
     $hasSponsorsTable = false;
+    $sponsorColumns = [];
     try {
         $check = $pdo->query("SHOW COLUMNS FROM event_track_segments LIKE 'sponsor_id'");
         $hasSponsorColumn = $check->fetch() !== false;
         if ($hasSponsorColumn) {
-            // Also check if sponsors table exists
+            // Check if sponsors table exists and get its columns
             $check = $pdo->query("SHOW TABLES LIKE 'sponsors'");
             $hasSponsorsTable = $check->fetch() !== false;
+            if ($hasSponsorsTable) {
+                // Get actual columns in sponsors table
+                $cols = $pdo->query("SHOW COLUMNS FROM sponsors");
+                while ($col = $cols->fetch(PDO::FETCH_ASSOC)) {
+                    $sponsorColumns[] = $col['Field'];
+                }
+            }
         }
     } catch (Exception $e) {
         $hasSponsorColumn = false;
@@ -375,9 +383,17 @@ function getEventTracks($pdo, $eventId) {
 
     foreach ($tracks as &$track) {
         // Fetch segments with optional sponsor info (only if both column and table exist)
-        if ($hasSponsorColumn && $hasSponsorsTable) {
+        if ($hasSponsorColumn && $hasSponsorsTable && in_array('name', $sponsorColumns)) {
+            // Build SELECT dynamically based on available columns
+            $sponsorFields = ['sp.name as sponsor_name'];
+            if (in_array('logo', $sponsorColumns)) {
+                $sponsorFields[] = 'sp.logo as sponsor_logo';
+            }
+            if (in_array('website', $sponsorColumns)) {
+                $sponsorFields[] = 'sp.website as sponsor_website';
+            }
             $stmt = $pdo->prepare("
-                SELECT s.*, sp.name as sponsor_name, sp.logo as sponsor_logo, sp.website as sponsor_website
+                SELECT s.*, " . implode(', ', $sponsorFields) . "
                 FROM event_track_segments s
                 LEFT JOIN sponsors sp ON s.sponsor_id = sp.id
                 WHERE s.track_id = ?
