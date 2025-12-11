@@ -80,10 +80,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['run_migration'])) {
             try {
                 $sql = file_get_contents($fullPath);
 
+                // Remove comment lines (lines starting with --)
+                $sqlLines = explode("\n", $sql);
+                $sqlLines = array_filter($sqlLines, fn($line) => !preg_match('/^\s*--/', $line));
+                $sql = implode("\n", $sqlLines);
+
                 // Split into individual statements
                 $statements = array_filter(
                     array_map('trim', explode(';', $sql)),
-                    fn($s) => !empty($s) && !preg_match('/^--/', $s)
+                    fn($s) => !empty($s)
                 );
 
                 $successCount = 0;
