@@ -1,7 +1,7 @@
 <?php
 /**
  * TheHUB V3.5 - Series List
- * Shows all competition series with year selector
+ * Shows all competition series with Serie + År selectors
  */
 
 // Prevent direct access
@@ -21,6 +21,18 @@ try {
     $useSeriesEvents = false;
 }
 
+// Get filter parameters
+$filterSeries = isset($_GET['series']) && is_numeric($_GET['series']) ? intval($_GET['series']) : null;
+$filterYear = isset($_GET['year']) && is_numeric($_GET['year']) ? intval($_GET['year']) : null;
+
+// Get all series for dropdown
+$allSeriesStmt = $pdo->query("
+    SELECT id, name, year FROM series
+    WHERE status IN ('active', 'completed')
+    ORDER BY year DESC, name ASC
+");
+$allSeries = $allSeriesStmt->fetchAll(PDO::FETCH_ASSOC);
+
 // Get available years
 $yearStmt = $pdo->query("
     SELECT DISTINCT year FROM series
@@ -29,24 +41,25 @@ $yearStmt = $pdo->query("
 ");
 $availableYears = $yearStmt->fetchAll(PDO::FETCH_COLUMN);
 
-// Default year: use query param, or current year if available, else first in list
-$currentYear = (int)date('Y');
-$selectedYear = isset($_GET['year']) ? (int)$_GET['year'] : null;
+// Build WHERE clause
+$where = ["s.status IN ('active', 'completed')"];
+$params = [];
 
-if (!$selectedYear) {
-    // Default to current year if it exists, otherwise newest available
-    if (in_array($currentYear, $availableYears)) {
-        $selectedYear = $currentYear;
-    } elseif (!empty($availableYears)) {
-        $selectedYear = $availableYears[0];
-    } else {
-        $selectedYear = $currentYear;
-    }
+if ($filterSeries) {
+    $where[] = "s.id = ?";
+    $params[] = $filterSeries;
 }
 
-// Get series for selected year
+if ($filterYear) {
+    $where[] = "s.year = ?";
+    $params[] = $filterYear;
+}
+
+$whereClause = 'WHERE ' . implode(' AND ', $where);
+
+// Get series for display
 if ($useSeriesEvents) {
-    $stmt = $pdo->prepare("
+    $sql = "
         SELECT s.id, s.name, s.description, s.year, s.status, s.logo, s.start_date, s.end_date,
                COUNT(DISTINCT se.event_id) as event_count,
                (SELECT COUNT(DISTINCT r.cyclist_id)
@@ -55,12 +68,12 @@ if ($useSeriesEvents) {
                 WHERE se2.series_id = s.id) as participant_count
         FROM series s
         LEFT JOIN series_events se ON s.id = se.series_id
-        WHERE s.status IN ('active', 'completed') AND s.year = ?
+        {$whereClause}
         GROUP BY s.id
-        ORDER BY s.name ASC
-    ");
+        ORDER BY s.year DESC, s.name ASC
+    ";
 } else {
-    $stmt = $pdo->prepare("
+    $sql = "
         SELECT s.id, s.name, s.description, s.year, s.status, s.logo, s.start_date, s.end_date,
                COUNT(DISTINCT e.id) as event_count,
                (SELECT COUNT(DISTINCT r.cyclist_id)
@@ -69,19 +82,28 @@ if ($useSeriesEvents) {
                 WHERE e2.series_id = s.id) as participant_count
         FROM series s
         LEFT JOIN events e ON s.id = e.series_id
-        WHERE s.status IN ('active', 'completed') AND s.year = ?
+        {$whereClause}
         GROUP BY s.id
-        ORDER BY s.name ASC
-    ");
+        ORDER BY s.year DESC, s.name ASC
+    ";
 }
-$stmt->execute([$selectedYear]);
+$stmt = $pdo->prepare($sql);
+$stmt->execute($params);
 $seriesList = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Page title
+$pageTitle = 'Tävlingsserier';
+if ($filterSeries && !empty($seriesList)) {
+    $pageTitle = $seriesList[0]['name'];
+} elseif ($filterYear) {
+    $pageTitle = "Serier $filterYear";
+}
 ?>
 
 <div class="page-header">
     <h1 class="page-title">
         <i data-lucide="award" class="page-icon"></i>
-        Tävlingsserier
+        <?= htmlspecialchars($pageTitle) ?>
     </h1>
     <p class="page-subtitle">Alla GravitySeries och andra tävlingsserier</p>
 </div>
@@ -89,10 +111,22 @@ $seriesList = $stmt->fetchAll(PDO::FETCH_ASSOC);
 <!-- Filters -->
 <div class="filters-bar">
     <div class="filter-group">
+        <label class="filter-label">Serie</label>
+        <select class="filter-select" onchange="window.location=this.value">
+            <option value="/series<?= $filterYear ? '?year=' . $filterYear : '' ?>">Alla serier</option>
+            <?php foreach ($allSeries as $s): ?>
+            <option value="/series?series=<?= $s['id'] ?><?= $filterYear ? '&year=' . $filterYear : '' ?>" <?= $filterSeries == $s['id'] ? 'selected' : '' ?>>
+                <?= htmlspecialchars($s['name']) ?>
+            </option>
+            <?php endforeach; ?>
+        </select>
+    </div>
+    <div class="filter-group">
         <label class="filter-label">År</label>
         <select class="filter-select" onchange="window.location=this.value">
+            <option value="/series<?= $filterSeries ? '?series=' . $filterSeries : '' ?>">Alla år</option>
             <?php foreach ($availableYears as $year): ?>
-            <option value="/series?year=<?= $year ?>" <?= $year == $selectedYear ? 'selected' : '' ?>>
+            <option value="/series?<?= $filterSeries ? 'series=' . $filterSeries . '&' : '' ?>year=<?= $year ?>" <?= $filterYear == $year ? 'selected' : '' ?>>
                 <?= $year ?>
             </option>
             <?php endforeach; ?>
@@ -102,9 +136,9 @@ $seriesList = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 <?php if (empty($seriesList)): ?>
     <div class="empty-state">
-        <div class="empty-state-icon">🏆</div>
-        <h2>Inga serier för <?= $selectedYear ?></h2>
-        <p>Det finns inga tävlingsserier registrerade för detta år.</p>
+        <i data-lucide="trophy" style="width: 48px; height: 48px; color: var(--color-text-muted); margin-bottom: var(--space-md);"></i>
+        <h2>Inga serier hittades</h2>
+        <p>Prova ett annat filter.</p>
     </div>
 <?php else: ?>
     <div class="series-logo-grid">
@@ -114,7 +148,7 @@ $seriesList = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 <?php if ($s['logo']): ?>
                     <img src="<?= htmlspecialchars($s['logo']) ?>" alt="<?= htmlspecialchars($s['name']) ?>" class="series-logo-img">
                 <?php else: ?>
-                    <div class="series-logo-placeholder">🏆</div>
+                    <div class="series-logo-placeholder"><i data-lucide="trophy" style="width: 48px; height: 48px; color: var(--color-text-muted);"></i></div>
                 <?php endif; ?>
                 <span class="series-year-badge"><?= $s['year'] ?></span>
             </div>
