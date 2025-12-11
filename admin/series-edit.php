@@ -97,6 +97,13 @@ try {
     }
 } catch (Exception $e) {}
 
+// Check if swish columns exist
+$swishColumnsExist = false;
+try {
+    $columns = $db->getAll("SHOW COLUMNS FROM series LIKE 'swish_number'");
+    $swishColumnsExist = !empty($columns);
+} catch (Exception $e) {}
+
 // Initialize message variables
 $message = '';
 $messageType = 'info';
@@ -171,9 +178,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $seriesData['brand_id'] = !empty($_POST['brand_id']) ? intval($_POST['brand_id']) : null;
         }
 
-        // Add Swish payment fields
-        $seriesData['swish_number'] = trim($_POST['swish_number'] ?? '') ?: null;
-        $seriesData['swish_name'] = trim($_POST['swish_name'] ?? '') ?: null;
+        // Add Swish payment fields if columns exist
+        if ($swishColumnsExist) {
+            $seriesData['swish_number'] = trim($_POST['swish_number'] ?? '') ?: null;
+            $seriesData['swish_name'] = trim($_POST['swish_name'] ?? '') ?: null;
+        }
 
         try {
             // Check if we're marking as completed (and it wasn't before)
@@ -460,6 +469,7 @@ include __DIR__ . '/components/unified-layout.php';
         </div>
     </div>
 
+    <?php if ($swishColumnsExist): ?>
     <!-- Swish Payment -->
     <div class="admin-card">
         <div class="admin-card-header">
@@ -490,6 +500,7 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
     </div>
+    <?php endif; ?>
 
     <!-- Logo -->
     <div class="admin-card">
