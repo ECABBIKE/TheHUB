@@ -162,7 +162,7 @@ if (!function_exists('render_event_map')) {
         position: absolute;
         top: var(--space-sm);
         left: var(--space-sm);
-        right: var(--space-sm);
+        right: 50px;
         z-index: 100;
         display: flex;
         gap: var(--space-sm);
@@ -223,13 +223,45 @@ if (!function_exists('render_event_map')) {
 .emap-section {
     margin-bottom: var(--space-md);
 }
+/* Collapsible sections */
+.emap-collapsible {
+    margin-bottom: var(--space-md);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+}
+.emap-collapsible > summary {
+    list-style: none;
+    cursor: pointer;
+    padding: var(--space-sm) var(--space-md);
+    background: var(--color-bg-sunken, #f8f9fa);
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    user-select: none;
+}
+.emap-collapsible > summary::-webkit-details-marker { display: none; }
+.emap-collapsible > summary:hover { background: var(--color-border); }
+.emap-collapse-icon {
+    width: 14px;
+    height: 14px;
+    transition: transform 0.2s;
+    flex-shrink: 0;
+}
+.emap-collapsible:not([open]) .emap-collapse-icon { transform: rotate(-90deg); }
+.emap-collapsible .emap-segments-list,
+.emap-collapsible .emap-poi-list {
+    padding: var(--space-sm);
+    max-height: 250px;
+    overflow-y: auto;
+}
 .emap-section-title {
     font-size: 0.75rem;
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.05em;
     color: var(--color-text);
-    margin-bottom: var(--space-sm);
+    margin: 0;
 }
 .emap-track-item {
     display: flex;
@@ -381,6 +413,7 @@ if (!function_exists('render_event_map')) {
     align-items: center;
     justify-content: center;
 }
+<?php if ($fullscreen): ?>
 @media (max-width: 768px) {
     .emap-close {
         position: fixed;
@@ -399,17 +432,20 @@ if (!function_exists('render_event_map')) {
         left: 0;
         right: 0;
     }
-    .emap-elevation.collapsed {
-        transform: translateY(calc(100% - 36px));
-    }
-    .emap-elevation-toggle { height: 36px; }
-    .emap-elevation-content { height: 100px; }
     .emap-mobile-controls {
         position: fixed;
         top: var(--space-sm);
         left: var(--space-sm);
         right: var(--space-sm);
     }
+}
+<?php endif; ?>
+@media (max-width: 768px) {
+    .emap-elevation.collapsed {
+        transform: translateY(calc(100% - 36px));
+    }
+    .emap-elevation-toggle { height: 36px; }
+    .emap-elevation-content { height: 100px; }
 }
 </style>
 
@@ -456,8 +492,11 @@ if (!function_exists('render_event_map')) {
             }
             ?>
             <?php if (!empty($allSegments)): ?>
-            <div class="emap-section">
-                <div class="emap-section-title">Sektioner (<?= count($allSegments) ?>)</div>
+            <details class="emap-collapsible" open>
+                <summary class="emap-section-title">
+                    <i data-lucide="chevron-down" class="emap-collapse-icon"></i>
+                    Sektioner (<?= count($allSegments) ?>)
+                </summary>
                 <div class="emap-segments-list">
                     <?php foreach ($allSegments as $seg):
                         $segType = $seg['segment_type'] ?? 'liaison';
@@ -476,12 +515,16 @@ if (!function_exists('render_event_map')) {
                     </div>
                     <?php endforeach; ?>
                 </div>
-            </div>
+            </details>
             <?php endif; ?>
 
             <?php if (!empty($poiGroups)): ?>
-            <div class="emap-section">
-                <div class="emap-section-title">POIs</div>
+            <details class="emap-collapsible">
+                <summary class="emap-section-title">
+                    <i data-lucide="chevron-down" class="emap-collapse-icon"></i>
+                    Platser (<?= count($pois) ?>)
+                </summary>
+                <div class="emap-poi-list">
                 <?php foreach ($poiGroups as $type => $group): ?>
                 <div class="emap-poi-group">
                     <label class="emap-checkbox">
@@ -497,7 +540,8 @@ if (!function_exists('render_event_map')) {
                     </div>
                 </div>
                 <?php endforeach; ?>
-            </div>
+                </div>
+            </details>
             <?php endif; ?>
         </div>
     </div>
@@ -543,7 +587,7 @@ if (!function_exists('render_event_map')) {
 
     <!-- Location Button -->
     <button class="emap-location-btn" id="<?= $mapId ?>-location-btn" onclick="<?= $mapId ?>_toggleLocation()" title="Min plats">
-        <i data-lucide="navigation" style="width: 20px; height: 20px;"></i>
+        <i data-lucide="crosshair" style="width: 20px; height: 20px;"></i>
     </button>
 
     <?php if ($showClose): ?>
