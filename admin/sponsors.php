@@ -662,7 +662,8 @@ async function saveSponsor(event) {
         try {
             const uploadResponse = await fetch('/api/upload.php', {
                 method: 'POST',
-                body: uploadData
+                body: uploadData,
+                credentials: 'include'
             });
             const uploadResult = await uploadResponse.json();
 
