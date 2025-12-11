@@ -143,6 +143,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $messageType = 'success';
                 break;
 
+            case 'update_segment_sponsor':
+                $segmentId = intval($_POST['segment_id'] ?? 0);
+                $sponsorId = !empty($_POST['sponsor_id']) ? intval($_POST['sponsor_id']) : null;
+                if ($segmentId > 0) {
+                    $pdo->prepare("UPDATE event_track_segments SET sponsor_id = ? WHERE id = ?")
+                        ->execute([$sponsorId, $segmentId]);
+                }
+                $message = 'Sträcksponsor uppdaterad';
+                $messageType = 'success';
+                break;
+
             case 'add_segment_visual':
                 $trackId = intval($_POST['track_id'] ?? 0);
                 $segmentName = trim($_POST['segment_name'] ?? '');
@@ -249,6 +260,20 @@ $trackColors = [
     '#14B8A6' => 'Teal',
     '#6B7280' => 'Grå'
 ];
+
+// Get sponsors for segment dropdown (check if column exists)
+$sponsors = [];
+$sponsorColumnExists = false;
+try {
+    $colCheck = $pdo->query("SHOW COLUMNS FROM event_track_segments LIKE 'sponsor_id'");
+    $sponsorColumnExists = $colCheck->fetch() !== false;
+    if ($sponsorColumnExists) {
+        $sponsorStmt = $pdo->query("SELECT id, name, logo FROM sponsors WHERE active = 1 ORDER BY name ASC");
+        $sponsors = $sponsorStmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+} catch (Exception $e) {
+    // Sponsors not available
+}
 
 // Page setup
 $page_title = 'Karta - ' . htmlspecialchars($event['name']);
@@ -408,6 +433,14 @@ include __DIR__ . '/components/unified-layout.php';
                             <option value="stage" <?= $seg['segment_type'] === 'stage' ? 'selected' : '' ?>>SS</option>
                             <option value="lift" <?= $seg['segment_type'] === 'lift' ? 'selected' : '' ?>>L</option>
                         </select>
+                        <?php if ($sponsorColumnExists && !empty($sponsors) && $seg['segment_type'] === 'stage'): ?>
+                        <select onchange="changeSegmentSponsor(<?= $seg['id'] ?>, this.value)" class="admin-form-select admin-form-select-xs" title="Sträcksponsor">
+                            <option value="">Sponsor</option>
+                            <?php foreach ($sponsors as $sp): ?>
+                            <option value="<?= $sp['id'] ?>" <?= ($seg['sponsor_id'] ?? '') == $sp['id'] ? 'selected' : '' ?>><?= htmlspecialchars($sp['name']) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                        <?php endif; ?>
                         <form method="POST" class="inline-form">
                             <?= csrf_field() ?>
                             <input type="hidden" name="action" value="delete_segment">
@@ -440,6 +473,12 @@ include __DIR__ . '/components/unified-layout.php';
                     <input type="hidden" name="action" value="update_segment_name">
                     <input type="hidden" name="segment_id" id="update-name-seg-id" value="">
                     <input type="hidden" name="new_name" id="update-new-name" value="">
+                </form>
+                <form method="POST" id="update-sponsor-form" style="display: none;">
+                    <?= csrf_field() ?>
+                    <input type="hidden" name="action" value="update_segment_sponsor">
+                    <input type="hidden" name="segment_id" id="update-sponsor-seg-id" value="">
+                    <input type="hidden" name="sponsor_id" id="update-sponsor-id" value="">
                 </form>
             </div>
         </div>
@@ -1168,6 +1207,12 @@ function changeSegmentName(segId, newName) {
     document.getElementById('update-name-seg-id').value = segId;
     document.getElementById('update-new-name').value = newName;
     document.getElementById('update-name-form').submit();
+}
+
+function changeSegmentSponsor(segId, sponsorId) {
+    document.getElementById('update-sponsor-seg-id').value = segId;
+    document.getElementById('update-sponsor-id').value = sponsorId;
+    document.getElementById('update-sponsor-form').submit();
 }
 
 // Elevation profile rendering

@@ -457,10 +457,71 @@ if (!function_exists('render_event_map')) {
     .emap-elevation-toggle { height: 36px; }
     .emap-elevation-content { height: 100px; }
 }
+/* Sponsor Banner */
+.emap-sponsor-banner {
+    position: absolute;
+    top: var(--space-sm);
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1000;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border-radius: var(--radius-md);
+    padding: var(--space-xs) var(--space-md);
+    box-shadow: var(--shadow-md);
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+}
+.emap-sponsor-banner a {
+    display: flex;
+    align-items: center;
+}
+.emap-sponsor-banner img {
+    max-height: 40px;
+    max-width: 150px;
+    object-fit: contain;
+}
+.emap-sponsor-close {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: var(--space-2xs);
+    color: var(--color-text-secondary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-sm);
+}
+.emap-sponsor-close:hover {
+    background: var(--color-bg-secondary);
+    color: var(--color-text);
+}
+@media (max-width: 768px) {
+    .emap-sponsor-banner {
+        top: auto;
+        bottom: 150px;
+        left: var(--space-sm);
+        right: var(--space-sm);
+        transform: none;
+        justify-content: center;
+    }
+}
 </style>
 
 <div class="emap-container" id="<?= $mapId ?>-container">
     <div class="emap-map" id="<?= $mapId ?>"></div>
+
+    <!-- Sponsor Banner -->
+    <div class="emap-sponsor-banner" id="<?= $mapId ?>-sponsor-banner" style="display: none;">
+        <a id="<?= $mapId ?>-sponsor-link" href="#" target="_blank" rel="noopener">
+            <img id="<?= $mapId ?>-sponsor-logo" src="" alt="Sponsor">
+        </a>
+        <button type="button" class="emap-sponsor-close" onclick="<?= $mapId ?>_hideSponsorBanner()">
+            <i data-lucide="x" style="width: 14px; height: 14px;"></i>
+        </button>
+    </div>
 
     <!-- Desktop Sidebar -->
     <div class="emap-sidebar">
@@ -519,11 +580,16 @@ if (!function_exists('render_event_map')) {
                             ? ($seg['elevation_loss_m'] ?? 0)
                             : ($seg['elevation_gain_m'] ?? 0);
                         $segHeightLabel = $segType === 'stage' ? 'fhm' : 'hm';
+                        // Sponsor info
+                        $segSponsorName = $seg['sponsor_name'] ?? null;
+                        $segSponsorLogo = $seg['sponsor_logo'] ?? null;
+                        $segSponsorUrl = $seg['sponsor_website'] ?? null;
+                        $segDisplayName = $segSponsorName ? ($segName . ' By ' . $segSponsorName) : $segName;
                     ?>
-                    <div class="emap-segment-item" onclick="<?= $mapId ?>_zoomToSegment(<?= $seg['id'] ?? 0 ?>)" data-segment-id="<?= $seg['id'] ?? 0 ?>">
+                    <div class="emap-segment-item" onclick="<?= $mapId ?>_zoomToSegment(<?= $seg['id'] ?? 0 ?>, <?= $segSponsorLogo ? "'" . htmlspecialchars(addslashes($segSponsorLogo)) . "'" : 'null' ?>, <?= $segSponsorUrl ? "'" . htmlspecialchars(addslashes($segSponsorUrl)) . "'" : 'null' ?>)" data-segment-id="<?= $seg['id'] ?? 0 ?>" data-sponsor-logo="<?= htmlspecialchars($segSponsorLogo ?? '') ?>" data-sponsor-url="<?= htmlspecialchars($segSponsorUrl ?? '') ?>">
                         <i data-lucide="<?= $segIconName ?>" class="emap-segment-icon"></i>
                         <div class="emap-segment-info">
-                            <div class="emap-segment-name"><?= htmlspecialchars($segName) ?></div>
+                            <div class="emap-segment-name"><?= htmlspecialchars($segDisplayName) ?></div>
                             <div class="emap-segment-meta"><?= $segDist ?> km · <?= $segHeight ?> <?= $segHeightLabel ?></div>
                         </div>
                         <span class="emap-segment-dot" style="background: <?= $segColor ?>;"></span>
@@ -612,10 +678,12 @@ if (!function_exists('render_event_map')) {
                     $segIconName = $segType === 'stage' ? 'flag' : ($segType === 'lift' ? 'cable-car' : 'route');
                     $segHeight = $segType === 'stage' ? ($seg['elevation_loss_m'] ?? 0) : ($seg['elevation_gain_m'] ?? 0);
                     $segHeightLabel = $segType === 'stage' ? 'fhm' : 'hm';
+                    $segSponsorName = $seg['sponsor_name'] ?? null;
+                    $segDisplayName = $segSponsorName ? ($segName . ' By ' . $segSponsorName) : $segName;
                 ?>
                 <div class="emap-dropdown-item" data-segment-id="<?= $seg['id'] ?? 0 ?>" onclick="<?= $mapId ?>_zoomToSegment(<?= $seg['id'] ?? 0 ?>); <?= $mapId ?>_toggleDropdown('<?= $mapId ?>-segment-dropdown')">
                     <span class="dot" style="background: <?= $segColor ?>; width: 10px; height: 10px; border-radius: 2px;"></span>
-                    <span style="flex: 1;"><?= htmlspecialchars($segName) ?></span>
+                    <span style="flex: 1;"><?= htmlspecialchars($segDisplayName) ?></span>
                     <span style="font-size: 0.7rem; color: var(--color-text);"><?= $segHeight ?> <?= $segHeightLabel ?></span>
                 </div>
                 <?php endforeach; ?>
@@ -808,8 +876,36 @@ if (!function_exists('render_event_map')) {
         if (!wasOpen) dropdown.classList.add('open');
     };
 
+    // Hide sponsor banner
+    window[mapId + '_hideSponsorBanner'] = function() {
+        const banner = document.getElementById(mapId + '-sponsor-banner');
+        if (banner) banner.style.display = 'none';
+    };
+
+    // Show sponsor banner
+    function showSponsorBanner(logoUrl, websiteUrl) {
+        const banner = document.getElementById(mapId + '-sponsor-banner');
+        const logo = document.getElementById(mapId + '-sponsor-logo');
+        const link = document.getElementById(mapId + '-sponsor-link');
+        if (!banner || !logo || !logoUrl) {
+            if (banner) banner.style.display = 'none';
+            return;
+        }
+        logo.src = logoUrl.startsWith('/') ? logoUrl : '/' + logoUrl;
+        if (link && websiteUrl) {
+            link.href = websiteUrl;
+            link.style.pointerEvents = 'auto';
+        } else if (link) {
+            link.href = '#';
+            link.style.pointerEvents = 'none';
+        }
+        banner.style.display = 'flex';
+        // Re-init Lucide icons for the close button
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+    }
+
     // Zoom to segment by ID
-    window[mapId + '_zoomToSegment'] = function(segmentId) {
+    window[mapId + '_zoomToSegment'] = function(segmentId, sponsorLogo, sponsorUrl) {
         if (!mapData.tracks) return;
         for (const track of mapData.tracks) {
             if (!track.segments) continue;
@@ -823,11 +919,21 @@ if (!function_exists('render_event_map')) {
                     // Lock elevation profile to this segment
                     selectedSegmentId = segmentId;
                     // Update title and show clear button
+                    const segSponsorName = seg.sponsor_name;
                     const segName = seg.segment_name || (seg.segment_type === 'stage' ? 'SS' : 'Transport');
+                    const displayName = segSponsorName ? (segName + ' By ' + segSponsorName) : segName;
                     const titleEl = document.getElementById(mapId + '-elevation-title');
                     const clearBtn = document.getElementById(mapId + '-elevation-clear');
-                    if (titleEl) titleEl.textContent = segName + ' - Höjdprofil';
+                    if (titleEl) titleEl.textContent = displayName + ' - Höjdprofil';
                     if (clearBtn) clearBtn.style.display = 'block';
+                    // Show sponsor banner if logo exists
+                    const logoToShow = sponsorLogo || seg.sponsor_logo;
+                    const urlToShow = sponsorUrl || seg.sponsor_website;
+                    if (logoToShow) {
+                        showSponsorBanner(logoToShow, urlToShow);
+                    } else {
+                        window[mapId + '_hideSponsorBanner']();
+                    }
                     // Open elevation panel and update
                     const elevPanel = document.getElementById(mapId + '-elevation');
                     if (elevPanel) {
@@ -849,6 +955,8 @@ if (!function_exists('render_event_map')) {
         const clearBtn = document.getElementById(mapId + '-elevation-clear');
         if (titleEl) titleEl.textContent = 'Höjdprofil';
         if (clearBtn) clearBtn.style.display = 'none';
+        // Hide sponsor banner
+        window[mapId + '_hideSponsorBanner']();
         updateElevation();
     };
 
