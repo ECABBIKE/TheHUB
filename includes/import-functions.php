@@ -92,30 +92,79 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
     // Normalize header - accept multiple variants
     $originalHeaders = $header;
 
-    // First pass: identify split time columns and map them in order
-    // Matches: SS1, SS2, PS1, PS2, Stage1, Sträcka1, S1, Prostage, etc.
-    // The original header name is preserved in stageNamesMapping
+    // NEW APPROACH: Find columns BETWEEN "Club" and "NetTime" - these are all stage columns
+    // This handles: varying column names, duplicate headers (SS3, SS3), empty columns, etc.
     $splitTimeColumns = [];
     $splitTimeIndex = 1;
 
+    // First, find the positions of Club and NetTime/finish_time columns
+    $clubIndex = -1;
+    $netTimeIndex = -1;
+
     foreach ($header as $index => $col) {
-        $originalCol = trim($col);
-        $normalizedCol = mb_strtolower($originalCol, 'UTF-8');
+        $normalizedCol = mb_strtolower(trim($col), 'UTF-8');
         $normalizedCol = str_replace([' ', '-', '_'], '', $normalizedCol);
 
-        // Check if this looks like a split/stage time column
-        // Matches: ss1, ps1, s1, v1, stage1, sträcka1, varv1, lap1, etc.
-        // Also matches standalone names: prostage, powerstage, prolog, prologue (with or without number)
-        $isSplitTimeCol = preg_match('/^(ss|ps|s|v|stage|sträcka|stracka|etapp|varv|lap)\d+/', $normalizedCol)
-                       || preg_match('/^(prostage|powerstage|prolog|prologue|prologstage)\d*$/', $normalizedCol);
+        // Find Club column (matches: club, klubb, team, huvudförening)
+        if (in_array($normalizedCol, ['club', 'klubb', 'team', 'huvudförening', 'huvudforening'])) {
+            $clubIndex = $index;
+        }
 
-        if ($isSplitTimeCol) {
-            $splitTimeColumns[$index] = [
+        // Find NetTime/finish_time column (matches: nettime, time, tid, finishtime, totaltid)
+        if (in_array($normalizedCol, ['nettime', 'time', 'tid', 'finishtime', 'totaltid', 'totaltime', 'nettid'])) {
+            $netTimeIndex = $index;
+        }
+    }
+
+    // If we found both Club and NetTime, everything between them is stage columns
+    if ($clubIndex >= 0 && $netTimeIndex > $clubIndex) {
+        for ($i = $clubIndex + 1; $i < $netTimeIndex; $i++) {
+            $originalCol = trim($header[$i]);
+
+            // Skip completely empty columns or columns that are just whitespace
+            if (empty($originalCol)) {
+                continue;
+            }
+
+            // Skip UCI-ID column if it appears between Club and NetTime
+            $normalizedCheck = mb_strtolower($originalCol, 'UTF-8');
+            $normalizedCheck = str_replace([' ', '-', '_'], '', $normalizedCheck);
+            if (in_array($normalizedCheck, ['uciid', 'ucikod', 'licens', 'licensenumber'])) {
+                continue;
+            }
+
+            // This is a stage column - map it sequentially
+            $splitTimeColumns[$i] = [
                 'original' => $originalCol,
                 'mapped' => 'ss' . $splitTimeIndex
             ];
             $stageNamesMapping[$splitTimeIndex] = $originalCol;
             $splitTimeIndex++;
+        }
+    } else {
+        // Fallback: Use pattern matching if we couldn't find Club/NetTime positions
+        // This handles files with different column orders
+        foreach ($header as $index => $col) {
+            $originalCol = trim($col);
+            if (empty($originalCol)) continue;
+
+            $normalizedCol = mb_strtolower($originalCol, 'UTF-8');
+            $normalizedCol = str_replace([' ', '-', '_'], '', $normalizedCol);
+
+            // Check if this looks like a split/stage time column
+            // Matches: ss1, ps1, s1, v1, stage1, sträcka1, varv1, lap1, etc.
+            // Also matches standalone names: prostage, powerstage, prolog, prologue (with or without number)
+            $isSplitTimeCol = preg_match('/^(ss|ps|s|v|stage|sträcka|stracka|etapp|varv|lap)\d*/', $normalizedCol)
+                           || preg_match('/^(prostage|powerstage|prolog|prologue|prologstage)\d*$/', $normalizedCol);
+
+            if ($isSplitTimeCol) {
+                $splitTimeColumns[$index] = [
+                    'original' => $originalCol,
+                    'mapped' => 'ss' . $splitTimeIndex
+                ];
+                $stageNamesMapping[$splitTimeIndex] = $originalCol;
+                $splitTimeIndex++;
+            }
         }
     }
 

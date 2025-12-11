@@ -316,38 +316,94 @@ function parseAndAnalyzeCSV($filepath, $db) {
  }
 
  // Read header (0 = unlimited line length)
- $header = fgetcsv($handle, 0, $delimiter);
- if (!$header) {
+ $rawHeader = fgetcsv($handle, 0, $delimiter);
+ if (!$rawHeader) {
  fclose($handle);
  throw new Exception('Tom fil eller ogiltigt format');
  }
 
- // Normalize header
- $header = array_map(function($col) {
- // Remove BOM from first column if present
- $col = preg_replace('/^\xEF\xBB\xBF/', '', $col);
- $col = strtolower(trim(str_replace([' ', '-', '_'], '', $col)));
+ // Store original header names for stage columns
+ $originalHeaders = $rawHeader;
+ $stageColumnsDetected = [];
 
- if (empty($col)) {
-  return 'empty_' . uniqid();
+ // First pass: Find Club and NetTime positions to detect stage columns between them
+ $clubIndex = -1;
+ $netTimeIndex = -1;
+
+ foreach ($rawHeader as $index => $col) {
+     $normalizedCol = mb_strtolower(trim($col), 'UTF-8');
+     $normalizedCol = str_replace([' ', '-', '_'], '', $normalizedCol);
+
+     // Find Club column
+     if (in_array($normalizedCol, ['club', 'klubb', 'team', 'huvudförening', 'huvudforening'])) {
+         $clubIndex = $index;
+     }
+     // Find NetTime/finish_time column
+     if (in_array($normalizedCol, ['nettime', 'time', 'tid', 'finishtime', 'totaltid', 'totaltime', 'nettid'])) {
+         $netTimeIndex = $index;
+     }
  }
 
- $mappings = [
-  'firstname' => 'firstname', 'förnamn' => 'firstname', 'fornamn' => 'firstname',
-  'lastname' => 'lastname', 'efternamn' => 'lastname',
-  'category' => 'category', 'class' => 'category', 'klass' => 'category',
-  'club' => 'club_name', 'klubb' => 'club_name', 'team' => 'club_name',
-  'position' => 'position', 'placering' => 'position', 'placebycategory' => 'position',
-  'time' => 'finish_time', 'tid' => 'finish_time', 'nettime' => 'finish_time',
-  'status' => 'status',
-  'uciid' => 'license_number', 'licens' => 'license_number',
-  'ss1' => 'ss1', 'ss2' => 'ss2', 'ss3' => 'ss3', 'ss4' => 'ss4',
-  'ss5' => 'ss5', 'ss6' => 'ss6', 'ss7' => 'ss7', 'ss8' => 'ss8',
-  'ss9' => 'ss9', 'ss10' => 'ss10',
- ];
+ // Detect stage columns (between Club and NetTime)
+ $splitTimeColumns = [];
+ $splitTimeIndex = 1;
 
- return $mappings[$col] ?? $col;
- }, $header);
+ if ($clubIndex >= 0 && $netTimeIndex > $clubIndex) {
+     for ($i = $clubIndex + 1; $i < $netTimeIndex; $i++) {
+         $originalCol = trim($rawHeader[$i]);
+         if (empty($originalCol)) continue;
+
+         // Skip UCI-ID if it appears here
+         $normalizedCheck = mb_strtolower($originalCol, 'UTF-8');
+         $normalizedCheck = str_replace([' ', '-', '_'], '', $normalizedCheck);
+         if (in_array($normalizedCheck, ['uciid', 'ucikod', 'licens', 'licensenumber'])) {
+             continue;
+         }
+
+         $splitTimeColumns[$i] = [
+             'original' => $originalCol,
+             'mapped' => 'ss' . $splitTimeIndex
+         ];
+         $stageColumnsDetected[$splitTimeIndex] = $originalCol;
+         $splitTimeIndex++;
+     }
+ }
+
+ // Normalize header with stage column mapping
+ $header = [];
+ foreach ($rawHeader as $index => $col) {
+     // Remove BOM from first column if present
+     $col = preg_replace('/^\xEF\xBB\xBF/', '', $col);
+
+     // Check if this is a stage column we mapped
+     if (isset($splitTimeColumns[$index])) {
+         $header[] = $splitTimeColumns[$index]['mapped'];
+         continue;
+     }
+
+     $col = strtolower(trim(str_replace([' ', '-', '_'], '', $col)));
+
+     if (empty($col)) {
+         $header[] = 'empty_' . uniqid();
+         continue;
+     }
+
+     $mappings = [
+         'firstname' => 'firstname', 'förnamn' => 'firstname', 'fornamn' => 'firstname',
+         'lastname' => 'lastname', 'efternamn' => 'lastname',
+         'category' => 'category', 'class' => 'category', 'klass' => 'category',
+         'club' => 'club_name', 'klubb' => 'club_name', 'team' => 'club_name',
+         'position' => 'position', 'placering' => 'position', 'placebycategory' => 'position',
+         'time' => 'finish_time', 'tid' => 'finish_time', 'nettime' => 'finish_time',
+         'status' => 'status',
+         'uciid' => 'license_number', 'licens' => 'license_number',
+     ];
+
+     $header[] = $mappings[$col] ?? $col;
+ }
+
+ // Add detected stage columns to stats
+ $stats['stage_columns'] = $stageColumnsDetected;
 
  // Read all rows
  while (($row = fgetcsv($handle, 0, $delimiter)) !== false) {
@@ -550,11 +606,37 @@ include __DIR__ . '/components/unified-layout.php';
   <div class="stat-label">Nya deltagare</div>
   </div>
   <div class="stat-card">
-  <i data-lucide="building" class="icon-lg text-accent mb-md"></i>
-  <div class="stat-number"><?= count($matchingStats['clubs_list']) ?></div>
-  <div class="stat-label">Klubbar</div>
+  <i data-lucide="timer" class="icon-lg text-accent mb-md"></i>
+  <div class="stat-number"><?= count($matchingStats['stage_columns'] ?? []) ?></div>
+  <div class="stat-label">Sträckor</div>
   </div>
  </div>
+
+ <!-- Detected Stage Columns -->
+ <?php if (!empty($matchingStats['stage_columns'])): ?>
+  <div class="card mb-lg">
+  <div class="card-header">
+   <h3 class="text-primary">
+   <i data-lucide="timer"></i>
+   Upptäckta sträckkolumner (<?= count($matchingStats['stage_columns']) ?>)
+   </h3>
+  </div>
+  <div class="card-body">
+   <p class="text-sm text-secondary mb-md">
+   Dessa kolumner hittades mellan "Club" och "NetTime" och kommer att importeras som sträcktider.
+   Namnen bevaras och visas i resultatvyn.
+   </p>
+   <div class="flex flex-wrap gap-sm">
+   <?php foreach ($matchingStats['stage_columns'] as $index => $stageName): ?>
+    <span class="badge badge-primary">
+    <strong><?= h($stageName) ?></strong>
+    <small class="text-xs" style="opacity: 0.7;">&rarr; ss<?= $index ?></small>
+    </span>
+   <?php endforeach; ?>
+   </div>
+  </div>
+  </div>
+ <?php endif; ?>
 
  <!-- Potential Duplicates Warning -->
  <?php if (!empty($matchingStats['potential_duplicates'])): ?>
@@ -726,10 +808,19 @@ include __DIR__ . '/components/unified-layout.php';
   </div>
   <div class="card-body gs-padding-0">
   <?php
-  // Get columns to display
+  // Get columns to display (base columns)
   $sampleRow = reset($previewData);
-  $displayColumns = ['category', 'position', 'firstname', 'lastname', 'club_name', 'finish_time', 'status'];
+  $displayColumns = ['category', 'position', 'firstname', 'lastname', 'club_name'];
   $displayColumns = array_filter($displayColumns, function($col) use ($sampleRow) {
+   return isset($sampleRow[$col]);
+  });
+
+  // Add stage columns with original names (from stage_columns mapping)
+  $stageColumns = $matchingStats['stage_columns'] ?? [];
+
+  // Add finish_time and status at the end
+  $endColumns = ['finish_time', 'status'];
+  $endColumns = array_filter($endColumns, function($col) use ($sampleRow) {
    return isset($sampleRow[$col]);
   });
   ?>
@@ -747,9 +838,20 @@ include __DIR__ . '/components/unified-layout.php';
       'firstname' => 'Förnamn',
       'lastname' => 'Efternamn',
       'club_name' => 'Klubb',
-      'finish_time' => 'Tid',
-      'status' => 'Status'
      ];
+     echo $names[$col] ?? $col;
+     ?>
+     </th>
+    <?php endforeach; ?>
+    <?php foreach ($stageColumns as $index => $stageName): ?>
+     <th class="text-center" style="min-width: 70px;">
+      <span title="Sparas som ss<?= $index ?>"><?= h($stageName) ?></span>
+     </th>
+    <?php endforeach; ?>
+    <?php foreach ($endColumns as $col): ?>
+     <th>
+     <?php
+     $names = ['finish_time' => 'Tid', 'status' => 'Status'];
      echo $names[$col] ?? $col;
      ?>
      </th>
@@ -772,9 +874,31 @@ include __DIR__ . '/components/unified-layout.php';
       echo '<span class="badge badge-sm badge-primary">' . h($value) . '</span>';
      } elseif ($col === 'position' && !empty($value) && $value <= 3) {
       echo '<strong class="text-success">' . h($value) . '</strong>';
-     } elseif ($col === 'status' && !empty($value)) {
+     } else {
+      echo h($value ?: '–');
+     }
+     ?>
+     </td>
+    <?php endforeach; ?>
+    <?php foreach ($stageColumns as $index => $stageName): ?>
+     <td class="text-center text-sm" style="font-family: monospace;">
+     <?php
+     // Stage columns are mapped to ss1, ss2, etc. in the data
+     $ssKey = 'ss' . $index;
+     $stageValue = $row[$ssKey] ?? '';
+     echo h($stageValue ?: '–');
+     ?>
+     </td>
+    <?php endforeach; ?>
+    <?php foreach ($endColumns as $col): ?>
+     <td>
+     <?php
+     $value = $row[$col] ?? '';
+     if ($col === 'status' && !empty($value)) {
       $statusClass = in_array(strtoupper($value), ['FIN', 'FINISHED', 'OK']) ? 'badge-success' : 'badge-warning';
       echo '<span class="badge badge-sm ' . $statusClass . '">' . h(strtoupper($value)) . '</span>';
+     } elseif ($col === 'finish_time') {
+      echo '<strong>' . h($value ?: '–') . '</strong>';
      } else {
       echo h($value ?: '–');
      }
