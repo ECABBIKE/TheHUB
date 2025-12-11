@@ -7,22 +7,60 @@ require_once __DIR__ . '/../config.php';
 require_admin();
 
 $db = getDB();
+$pdo = getPDO();
 $message = '';
 $error = '';
 $results = [];
 
+// Ensure migrations_log table exists
+try {
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS migrations_log (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            migration_file VARCHAR(255) NOT NULL UNIQUE,
+            executed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ");
+} catch (Exception $e) {
+    // Ignore if already exists
+}
+
+// Get executed migrations
+$executedMigrations = [];
+try {
+    $stmt = $pdo->query("SELECT migration_file FROM migrations_log");
+    $executedMigrations = $stmt->fetchAll(PDO::FETCH_COLUMN);
+} catch (Exception $e) {
+    // Table might not exist yet
+}
+
 // Get available migrations
 $migrationsDir = __DIR__ . '/../database/migrations/';
 $migrations = [];
+$todaysMigrations = [];
+$today = date('Y-m-d');
 
 if (is_dir($migrationsDir)) {
     $files = glob($migrationsDir . '*.sql');
     foreach ($files as $file) {
-        $migrations[] = [
-            'file' => basename($file),
+        $filename = basename($file);
+        $isExecuted = in_array($filename, $executedMigrations);
+        $fileDate = date('Y-m-d', filemtime($file));
+
+        $migrationData = [
+            'file' => $filename,
             'path' => $file,
-            'name' => pathinfo($file, PATHINFO_FILENAME)
+            'name' => pathinfo($file, PATHINFO_FILENAME),
+            'executed' => $isExecuted,
+            'date' => $fileDate
         ];
+
+        $migrations[] = $migrationData;
+
+        // Collect today's migrations (created today)
+        if ($fileDate === $today) {
+            $todaysMigrations[] = $migrationData;
+        }
     }
     sort($migrations);
 }
@@ -81,7 +119,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['run_migration'])) {
                 }
 
                 if ($errorCount === 0) {
+                    // Log the successful migration
+                    try {
+                        $logStmt = $pdo->prepare("INSERT IGNORE INTO migrations_log (migration_file) VALUES (?)");
+                        $logStmt->execute([$migrationFile]);
+                    } catch (Exception $e) {
+                        // Ignore logging errors
+                    }
                     $message = "Migration '{$migrationFile}' kördes framgångsrikt! ({$successCount} statements)";
+                    // Refresh executed migrations list
+                    $executedMigrations[] = $migrationFile;
                 } else {
                     $error = "Migration kördes med {$errorCount} fel.";
                 }
@@ -108,6 +155,55 @@ include __DIR__ . '/includes/header.php';
 
     <?php if ($error): ?>
         <div class="alert alert-error"><?= htmlspecialchars($error) ?></div>
+    <?php endif; ?>
+
+    <?php if (!empty($todaysMigrations)): ?>
+    <div class="card mb-lg" style="border: 2px solid var(--color-warning);">
+        <div class="card-header" style="background: var(--color-warning); color: white;">
+            <h3 style="margin: 0;">Nya migrationer idag (<?= date('Y-m-d') ?>)</h3>
+        </div>
+        <div class="card-body">
+            <p class="text-muted mb-md">Dessa migrationer skapades idag och bör köras:</p>
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Status</th>
+                        <th>Migration</th>
+                        <th>Åtgärd</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($todaysMigrations as $migration): ?>
+                        <tr style="background: <?= $migration['executed'] ? 'rgba(97, 206, 112, 0.1)' : 'rgba(239, 68, 68, 0.1)' ?>;">
+                            <td>
+                                <?php if ($migration['executed']): ?>
+                                    <span class="badge" style="background: var(--color-success); color: white;">Körd</span>
+                                <?php else: ?>
+                                    <span class="badge" style="background: var(--color-error); color: white;">Ej körd</span>
+                                <?php endif; ?>
+                            </td>
+                            <td>
+                                <strong><?= htmlspecialchars($migration['name']) ?></strong>
+                            </td>
+                            <td>
+                                <?php if (!$migration['executed']): ?>
+                                <form method="POST" style="display: inline;">
+                                    <input type="hidden" name="migration_file" value="<?= htmlspecialchars($migration['file']) ?>">
+                                    <button type="submit" name="run_migration" class="btn btn-sm btn-primary" onclick="return confirm('Kör <?= htmlspecialchars($migration['file']) ?>?')">
+                                        Kör nu
+                                    </button>
+                                </form>
+                                <?php else: ?>
+                                <span class="text-muted">Redan utförd</span>
+                                <?php endif; ?>
+                                <a href="?preview=<?= urlencode($migration['file']) ?>" class="btn btn-sm btn-outline">Visa</a>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+    </div>
     <?php endif; ?>
 
     <?php if (!empty($results)): ?>
@@ -157,22 +253,32 @@ include __DIR__ . '/includes/header.php';
                         <thead>
                             <tr>
                                 <th style="width: 50px"></th>
+                                <th style="width: 100px">Status</th>
                                 <th>Migration</th>
                                 <th style="width: 150px">Åtgärd</th>
                             </tr>
                         </thead>
                         <tbody>
                             <?php foreach ($migrations as $migration): ?>
-                                <tr>
+                                <tr style="<?= !$migration['executed'] ? 'background: rgba(239, 68, 68, 0.05);' : '' ?>">
                                     <td>
+                                        <?php if (!$migration['executed']): ?>
                                         <input type="radio" name="migration_file" value="<?= htmlspecialchars($migration['file']) ?>">
+                                        <?php endif; ?>
+                                    </td>
+                                    <td>
+                                        <?php if ($migration['executed']): ?>
+                                            <span class="badge" style="background: var(--color-success); color: white;">Körd</span>
+                                        <?php else: ?>
+                                            <span class="badge" style="background: var(--color-error); color: white;">Ej körd</span>
+                                        <?php endif; ?>
                                     </td>
                                     <td>
                                         <strong><?= htmlspecialchars($migration['name']) ?></strong>
-                                        <br><small class="text-muted"><?= htmlspecialchars($migration['file']) ?></small>
+                                        <br><small class="text-muted"><?= htmlspecialchars($migration['file']) ?> • <?= $migration['date'] ?></small>
                                     </td>
                                     <td>
-                                        <a href="?preview=<?= urlencode($migration['file']) ?>" class="btn btn-sm btn-outline">Förhandsgranska</a>
+                                        <a href="?preview=<?= urlencode($migration['file']) ?>" class="btn btn-sm btn-outline">Visa</a>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>

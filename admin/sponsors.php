@@ -498,7 +498,7 @@ include __DIR__ . '/components/unified-layout.php';
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" x2="6" y1="6" y2="18"/><line x1="6" x2="18" y1="6" y2="18"/></svg>
             </button>
         </div>
-        <form id="sponsorForm" onsubmit="saveSponsor(event)">
+        <form id="sponsorForm" onsubmit="saveSponsor(event)" enctype="multipart/form-data">
             <input type="hidden" id="sponsorId" name="id">
             <div class="modal-body">
                 <div class="form-group">
@@ -537,11 +537,14 @@ include __DIR__ . '/components/unified-layout.php';
                 <div class="form-group">
                     <label class="form-label">Logo</label>
                     <div class="logo-picker">
-                        <div class="logo-preview" id="logoPreview" onclick="openMediaPicker()">
+                        <div class="logo-preview" id="logoPreview">
                             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
                         </div>
-                        <input type="hidden" id="sponsorLogoId" name="logo_media_id">
-                        <button type="button" class="btn btn-sm btn-secondary" onclick="openMediaPicker()">Välj bild</button>
+                        <div style="flex: 1;">
+                            <input type="file" id="sponsorLogoFile" name="logo_file" accept="image/*" onchange="previewLogo(this)" style="margin-bottom: var(--space-xs);">
+                            <input type="hidden" id="sponsorLogoUrl" name="logo">
+                            <div id="currentLogoInfo" style="font-size: 0.8rem; color: var(--color-text-secondary);"></div>
+                        </div>
                         <button type="button" class="btn btn-sm btn-ghost" onclick="clearLogo()">Ta bort</button>
                     </div>
                 </div>
@@ -620,9 +623,10 @@ async function editSponsor(id) {
         document.getElementById('displayOrder').value = sponsor.display_order || 0;
 
         // Set logo
-        if (sponsor.logo_media_id && sponsor.logo_url) {
-            document.getElementById('sponsorLogoId').value = sponsor.logo_media_id;
-            document.getElementById('logoPreview').innerHTML = `<img src="${sponsor.logo_url}" alt="Logo">`;
+        if (sponsor.logo_url) {
+            setLogoFromUrl(sponsor.logo_url);
+        } else if (sponsor.logo) {
+            setLogoFromUrl(sponsor.logo);
         } else {
             clearLogo();
         }
@@ -644,14 +648,50 @@ async function saveSponsor(event) {
 
     const form = document.getElementById('sponsorForm');
     const formData = new FormData(form);
-    const data = Object.fromEntries(formData.entries());
 
-    // Convert active to boolean
-    data.active = data.active === '1';
-    data.display_order = parseInt(data.display_order) || 0;
+    // Check if there's a file to upload
+    const fileInput = document.getElementById('sponsorLogoFile');
+    let logoUrl = document.getElementById('sponsorLogoUrl').value;
 
-    // Convert logo_media_id to int or null
-    data.logo_media_id = data.logo_media_id ? parseInt(data.logo_media_id) : null;
+    if (fileInput.files && fileInput.files[0]) {
+        // Upload file first
+        const uploadData = new FormData();
+        uploadData.append('file', fileInput.files[0]);
+        uploadData.append('folder', 'sponsors');
+
+        try {
+            const uploadResponse = await fetch('/api/upload.php', {
+                method: 'POST',
+                body: uploadData
+            });
+            const uploadResult = await uploadResponse.json();
+
+            if (uploadResult.success) {
+                logoUrl = uploadResult.path;
+            } else {
+                alert('Kunde inte ladda upp logotyp: ' + (uploadResult.error || 'Okänt fel'));
+                return;
+            }
+        } catch (uploadError) {
+            console.error('Upload error:', uploadError);
+            alert('Kunde inte ladda upp logotyp');
+            return;
+        }
+    }
+
+    // Build data object
+    const data = {
+        name: formData.get('name'),
+        tier: formData.get('tier'),
+        active: formData.get('active') === '1',
+        website: formData.get('website') || null,
+        description: formData.get('description') || null,
+        contact_name: formData.get('contact_name') || null,
+        contact_email: formData.get('contact_email') || null,
+        contact_phone: formData.get('contact_phone') || null,
+        display_order: parseInt(formData.get('display_order')) || 0,
+        logo: logoUrl || null
+    };
 
     try {
         let response;
@@ -677,7 +717,7 @@ async function saveSponsor(event) {
             closeModal();
             location.reload();
         } else {
-            alert(result.error);
+            alert(result.error || 'Kunde inte spara');
         }
     } catch (error) {
         console.error('Error saving sponsor:', error);
@@ -705,33 +745,29 @@ async function deleteSponsor(id, name) {
     }
 }
 
-function openMediaPicker() {
-    // For now, simple prompt for media ID
-    // In production, this would open a media library modal
-    const mediaId = prompt('Ange media ID (från mediabiblioteket):');
-    if (mediaId && !isNaN(mediaId)) {
-        setLogo(parseInt(mediaId));
+function previewLogo(input) {
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            document.getElementById('logoPreview').innerHTML = `<img src="${e.target.result}" alt="Logo">`;
+            document.getElementById('currentLogoInfo').textContent = input.files[0].name;
+        };
+        reader.readAsDataURL(input.files[0]);
     }
 }
 
-async function setLogo(mediaId) {
-    try {
-        const response = await fetch(`/api/media.php?action=get&id=${mediaId}`);
-        const result = await response.json();
-
-        if (result.success) {
-            document.getElementById('sponsorLogoId').value = mediaId;
-            document.getElementById('logoPreview').innerHTML = `<img src="${result.data.thumbnail}" alt="Logo">`;
-        } else {
-            alert('Kunde inte hitta media med det ID:t');
-        }
-    } catch (error) {
-        console.error('Error loading media:', error);
+function setLogoFromUrl(url) {
+    if (url) {
+        document.getElementById('sponsorLogoUrl').value = url;
+        document.getElementById('logoPreview').innerHTML = `<img src="${url}" alt="Logo">`;
+        document.getElementById('currentLogoInfo').textContent = 'Befintlig logo';
     }
 }
 
 function clearLogo() {
-    document.getElementById('sponsorLogoId').value = '';
+    document.getElementById('sponsorLogoFile').value = '';
+    document.getElementById('sponsorLogoUrl').value = '';
+    document.getElementById('currentLogoInfo').textContent = '';
     document.getElementById('logoPreview').innerHTML = `
         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
     `;
