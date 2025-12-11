@@ -127,12 +127,12 @@ function getPoiType($type) {
 /**
  * Get all POI types for admin dropdown
  *
- * @return array Associative array of type => label with emoji
+ * @return array Associative array of type => label (no emoji, icons handled by Lucide)
  */
 function getPoiTypesForSelect() {
     $options = [];
     foreach (POI_TYPES as $key => $config) {
-        $options[$key] = $config['emoji'] . ' ' . $config['label'];
+        $options[$key] = $config['label'];
     }
     return $options;
 }
