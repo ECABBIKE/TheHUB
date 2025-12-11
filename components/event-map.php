@@ -95,32 +95,32 @@ if (!function_exists('render_event_map')) {
             $poiGroups[$type]['items'][] = $poi;
         }
 
-        $fullscreen = $options['fullscreen'] ?? true;
-        $showClose = $options['show_close'] ?? true;
+        $fullscreen = $options['fullscreen'] ?? false;
+        $showClose = $options['show_close'] ?? $fullscreen;
         $eventName = $options['event_name'] ?? 'Event';
+        $height = $options['height'] ?? ($fullscreen ? '100dvh' : '550px');
         ?>
 
 <style>
 .emap-container {
     position: relative;
     width: 100%;
-    <?php if ($fullscreen): ?>
-    height: 100vh;
-    height: 100dvh;
-    <?php else: ?>
-    height: 600px;
-    <?php endif; ?>
-    background: #1a1a1a;
+    height: <?= $height ?>;
+    background: var(--color-bg-sunken, #f8f9fa);
     overflow: hidden;
+    border-radius: var(--radius-md, 10px);
 }
+<?php if ($fullscreen): ?>
 @media (max-width: 768px) {
     .emap-container {
         position: fixed;
         inset: 0;
         height: 100%;
         height: 100dvh;
+        border-radius: 0;
     }
 }
+<?php endif; ?>
 .emap-map {
     position: absolute;
     inset: 0;
@@ -277,7 +277,7 @@ if (!function_exists('render_event_map')) {
 }
 .emap-segment-item:hover { background: var(--color-border); }
 .emap-segment-item.active { background: rgba(97, 206, 112, 0.2); }
-.emap-segment-icon { font-size: 0.9rem; }
+.emap-segment-icon { width: 16px; height: 16px; flex-shrink: 0; color: var(--color-text); }
 .emap-segment-info { flex: 1; min-width: 0; }
 .emap-segment-name { font-size: 0.85rem; font-weight: 500; }
 .emap-segment-meta { font-size: 0.75rem; color: var(--color-text); }
