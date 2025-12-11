@@ -600,7 +600,6 @@ $eventName = htmlspecialchars($event['name']);
 
                 if (!empty($allSegments)): ?>
                 <div class="dropdown-section-title">Sträckor</div>
-                <!-- DEBUG: <?php foreach($allSegments as $ds) { echo 'seq:'.$ds['sequence_number'].' type:'.($ds['segment_type']??'NULL').' name:'.($ds['segment_name']??'NULL').' | '; } ?> -->
                 <?php
                 $stageCounter = 0;
                 $transportCounter = 0;
