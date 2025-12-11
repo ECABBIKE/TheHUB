@@ -14,7 +14,13 @@ require_once __DIR__ . '/../config.php';
 
 /**
  * Get payment configuration for an event
- * Checks in order: event-specific > series > promotor > fallback
+ * Checks in order:
+ * 1. Event's payment_recipient_id (new system)
+ * 2. Series' payment_recipient_id (new system)
+ * 3. Event-specific payment_configs (legacy)
+ * 4. Series payment_configs (legacy)
+ * 5. Promotor config (legacy)
+ * 6. WooCommerce fallback
  *
  * @param int $eventId Event ID
  * @return array|null Payment config or null for WooCommerce fallback
@@ -22,7 +28,47 @@ require_once __DIR__ . '/../config.php';
 function getPaymentConfig(int $eventId): ?array {
     $pdo = hub_db();
 
-    // 1. Check event-specific config
+    // Check if payment_recipients table exists (new system)
+    $newSystemAvailable = false;
+    try {
+        $check = $pdo->query("SHOW TABLES LIKE 'payment_recipients'");
+        $newSystemAvailable = $check->rowCount() > 0;
+    } catch (Exception $e) {}
+
+    if ($newSystemAvailable) {
+        // 1. Check event's own payment_recipient_id
+        try {
+            $stmt = $pdo->prepare("
+                SELECT pr.*, 'event_recipient' as config_source, e.name as source_name, 1 as swish_enabled
+                FROM events e
+                JOIN payment_recipients pr ON e.payment_recipient_id = pr.id
+                WHERE e.id = ? AND pr.active = 1
+            ");
+            $stmt->execute([$eventId]);
+            if ($config = $stmt->fetch(PDO::FETCH_ASSOC)) {
+                return $config;
+            }
+        } catch (Exception $e) {}
+
+        // 2. Check series' payment_recipient_id (if event has no recipient but belongs to series)
+        try {
+            $stmt = $pdo->prepare("
+                SELECT pr.*, 'series_recipient' as config_source, s.name as source_name, 1 as swish_enabled
+                FROM events e
+                JOIN series s ON e.series_id = s.id
+                JOIN payment_recipients pr ON s.payment_recipient_id = pr.id
+                WHERE e.id = ? AND pr.active = 1 AND (e.payment_recipient_id IS NULL)
+            ");
+            $stmt->execute([$eventId]);
+            if ($config = $stmt->fetch(PDO::FETCH_ASSOC)) {
+                return $config;
+            }
+        } catch (Exception $e) {}
+    }
+
+    // Legacy system fallback (payment_configs table)
+
+    // 3. Check event-specific config
     $stmt = $pdo->prepare("
         SELECT pc.*, 'event' as config_source
         FROM payment_configs pc
@@ -33,7 +79,7 @@ function getPaymentConfig(int $eventId): ?array {
         return $config;
     }
 
-    // 2. Check series config (if event belongs to a series)
+    // 4. Check series config (if event belongs to a series)
     $stmt = $pdo->prepare("
         SELECT pc.*, 'series' as config_source, s.name as source_name
         FROM payment_configs pc
@@ -46,7 +92,7 @@ function getPaymentConfig(int $eventId): ?array {
         return $config;
     }
 
-    // 3. Check promotor config (user assigned to this event)
+    // 5. Check promotor config (user assigned to this event)
     $stmt = $pdo->prepare("
         SELECT pc.*, 'promotor' as config_source, au.full_name as source_name
         FROM payment_configs pc
@@ -60,7 +106,7 @@ function getPaymentConfig(int $eventId): ?array {
         return $config;
     }
 
-    // 4. Check if any promotor for this event has swish directly on their profile
+    // 6. Check if any promotor for this event has swish directly on their profile
     $stmt = $pdo->prepare("
         SELECT au.swish_number, au.swish_name, au.full_name as source_name,
                'promotor_direct' as config_source, 1 as swish_enabled
@@ -74,7 +120,7 @@ function getPaymentConfig(int $eventId): ?array {
         return $config;
     }
 
-    // 5. No config found - use WooCommerce fallback
+    // 7. No config found - use WooCommerce fallback
     return null;
 }
 

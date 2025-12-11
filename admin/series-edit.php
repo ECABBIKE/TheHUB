@@ -97,6 +97,27 @@ try {
     }
 } catch (Exception $e) {}
 
+// Check if swish columns exist
+$swishColumnsExist = false;
+try {
+    $columns = $db->getAll("SHOW COLUMNS FROM series LIKE 'swish_number'");
+    $swishColumnsExist = !empty($columns);
+} catch (Exception $e) {}
+
+// Check if payment_recipient_id column exists and get recipients
+$paymentRecipientColumnExists = false;
+$paymentRecipients = [];
+try {
+    $columns = $db->getAll("SHOW COLUMNS FROM series LIKE 'payment_recipient_id'");
+    $paymentRecipientColumnExists = !empty($columns);
+    if ($paymentRecipientColumnExists) {
+        $tables = $db->getAll("SHOW TABLES LIKE 'payment_recipients'");
+        if (!empty($tables)) {
+            $paymentRecipients = $db->getAll("SELECT id, name, swish_number, swish_name FROM payment_recipients WHERE active = 1 ORDER BY name ASC");
+        }
+    }
+} catch (Exception $e) {}
+
 // Initialize message variables
 $message = '';
 $messageType = 'info';
@@ -171,9 +192,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $seriesData['brand_id'] = !empty($_POST['brand_id']) ? intval($_POST['brand_id']) : null;
         }
 
-        // Add Swish payment fields
-        $seriesData['swish_number'] = trim($_POST['swish_number'] ?? '') ?: null;
-        $seriesData['swish_name'] = trim($_POST['swish_name'] ?? '') ?: null;
+        // Add Swish payment fields if columns exist
+        if ($swishColumnsExist) {
+            $seriesData['swish_number'] = trim($_POST['swish_number'] ?? '') ?: null;
+            $seriesData['swish_name'] = trim($_POST['swish_name'] ?? '') ?: null;
+        }
+
+        // Add payment_recipient_id if column exists
+        if ($paymentRecipientColumnExists) {
+            $seriesData['payment_recipient_id'] = !empty($_POST['payment_recipient_id']) ? intval($_POST['payment_recipient_id']) : null;
+        }
 
         try {
             // Check if we're marking as completed (and it wasn't before)
@@ -460,7 +488,64 @@ include __DIR__ . '/components/unified-layout.php';
         </div>
     </div>
 
-    <!-- Swish Payment -->
+    <?php if ($paymentRecipientColumnExists && !empty($paymentRecipients)): ?>
+    <!-- Payment Recipient (dropdown) -->
+    <div class="admin-card">
+        <div class="admin-card-header">
+            <h2>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 20px; height: 20px;"><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/></svg>
+                Betalningsmottagare (Swish)
+            </h2>
+        </div>
+        <div class="admin-card-body">
+            <p style="color: var(--color-text-secondary); margin-bottom: var(--space-md);">
+                Välj vem som tar emot Swish-betalningar för denna serie. Event utan egen mottagare använder seriens.
+            </p>
+            <div class="admin-form-group">
+                <label for="payment_recipient_id" class="admin-form-label">Betalningsmottagare</label>
+                <select id="payment_recipient_id" name="payment_recipient_id" class="admin-form-select">
+                    <option value="">-- Ingen (betalning inaktiverad) --</option>
+                    <?php foreach ($paymentRecipients as $recipient): ?>
+                    <option value="<?= $recipient['id'] ?>" <?= ($series['payment_recipient_id'] ?? '') == $recipient['id'] ? 'selected' : '' ?>>
+                        <?= htmlspecialchars($recipient['name']) ?> (<?= htmlspecialchars($recipient['swish_number']) ?>)
+                    </option>
+                    <?php endforeach; ?>
+                </select>
+                <small style="color: var(--color-text-secondary);">
+                    <a href="/admin/payment-recipients" style="color: var(--color-accent);">Hantera betalningsmottagare</a>
+                </small>
+            </div>
+
+            <?php
+            // Show selected recipient details
+            $selectedRecipient = null;
+            if (!empty($series['payment_recipient_id'])) {
+                foreach ($paymentRecipients as $r) {
+                    if ($r['id'] == $series['payment_recipient_id']) {
+                        $selectedRecipient = $r;
+                        break;
+                    }
+                }
+            }
+            if ($selectedRecipient):
+            ?>
+            <div style="margin-top: var(--space-md); padding: var(--space-md); background: var(--color-bg-secondary); border-radius: var(--radius-md);">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-sm);">
+                    <div>
+                        <span style="color: var(--color-text-secondary); font-size: 0.75rem;">Swish-nummer:</span><br>
+                        <strong><?= htmlspecialchars($selectedRecipient['swish_number']) ?></strong>
+                    </div>
+                    <div>
+                        <span style="color: var(--color-text-secondary); font-size: 0.75rem;">Visas som:</span><br>
+                        <strong><?= htmlspecialchars($selectedRecipient['swish_name']) ?></strong>
+                    </div>
+                </div>
+            </div>
+            <?php endif; ?>
+        </div>
+    </div>
+    <?php elseif ($swishColumnsExist): ?>
+    <!-- Fallback: Manual Swish fields -->
     <div class="admin-card">
         <div class="admin-card-header">
             <h2>
@@ -490,6 +575,7 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
     </div>
+    <?php endif; ?>
 
     <!-- Logo -->
     <div class="admin-card">
