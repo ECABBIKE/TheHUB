@@ -238,25 +238,29 @@ try {
       <?php endif; ?>
     </div>
     <div class="filter-selectors">
-      <?php if (!empty($availableYears)): ?>
-      <div class="filter-group">
-        <label class="filter-label">År</label>
-        <select class="filter-select" onchange="window.location.href='?year=' + this.value">
-          <?php foreach ($availableYears as $year): ?>
-            <option value="<?= $year ?>" <?= ($filterMode === 'year' && $year == $filterYear) ? 'selected' : '' ?>><?= $year ?></option>
-          <?php endforeach; ?>
-        </select>
-      </div>
-      <?php endif; ?>
       <?php if (!empty($allBrands)): ?>
       <div class="filter-group">
         <label class="filter-label">Serie</label>
         <select class="filter-select" onchange="if(this.value) window.location.href='?brand=' + encodeURIComponent(this.value); else window.location.href='?year=<?= $filterYear ?>';">
-          <option value="">Alla serier</option>
+          <option value="">Välj serie...</option>
           <?php foreach ($allBrands as $b): ?>
             <?php $brandValue = $useBrandsTable ? $b['id'] : $b['name']; ?>
             <option value="<?= htmlspecialchars($brandValue) ?>" <?= ($filterMode === 'brand' && (($useBrandsTable && $b['id'] == $filterBrand) || (!$useBrandsTable && $b['name'] === urldecode($filterBrand)))) ? 'selected' : '' ?>><?= htmlspecialchars($b['name']) ?></option>
           <?php endforeach; ?>
+        </select>
+      </div>
+      <?php endif; ?>
+      <?php if (!empty($availableYears)): ?>
+      <div class="filter-group">
+        <label class="filter-label">År</label>
+        <select class="filter-select" onchange="window.location.href='?year=' + this.value" <?= $filterMode === 'brand' ? 'disabled' : '' ?>>
+          <?php if ($filterMode === 'brand'): ?>
+            <option value="">Alla år</option>
+          <?php else: ?>
+            <?php foreach ($availableYears as $year): ?>
+              <option value="<?= $year ?>" <?= ($year == $filterYear) ? 'selected' : '' ?>><?= $year ?></option>
+            <?php endforeach; ?>
+          <?php endif; ?>
         </select>
       </div>
       <?php endif; ?>
