@@ -64,6 +64,13 @@ $ADMIN_TABS = [
                     'refund-requests.php',
                     'pricing-templates.php'
                 ]
+            ],
+            [
+                'id' => 'sponsors',
+                'label' => 'Sponsorer',
+                'icon' => 'heart-handshake',
+                'url' => '/admin/sponsors.php',
+                'pages' => ['sponsors.php', 'sponsor-edit.php']
             ]
         ]
     ],
