@@ -1,36 +1,14 @@
 <?php
 /**
  * V3 Series Page - All competition series
- * Same filter pattern as results.php
+ * Simple filtering: Serie + År
  */
 
-// Include badge component
 require_once HUB_V3_ROOT . '/components/series-badge.php';
 
 $db = hub_db();
 
-// Check if series_brands table exists
-$brandsTableExists = false;
-try {
-    $check = $db->query("SHOW TABLES LIKE 'series_brands'");
-    $brandsTableExists = $check->rowCount() > 0;
-} catch (Exception $e) {
-    $brandsTableExists = false;
-}
-
-// Check if brand_id column exists in series
-$brandColumnExists = false;
-if ($brandsTableExists) {
-    try {
-        $check = $db->query("SHOW COLUMNS FROM series LIKE 'brand_id'");
-        $brandColumnExists = $check->rowCount() > 0;
-    } catch (Exception $e) {
-        $brandColumnExists = false;
-    }
-}
-
 // Get filter parameters
-$filterBrand = isset($_GET['brand']) && is_numeric($_GET['brand']) ? intval($_GET['brand']) : null;
 $filterSeries = isset($_GET['series']) && is_numeric($_GET['series']) ? intval($_GET['series']) : null;
 $filterYear = isset($_GET['year']) && is_numeric($_GET['year']) ? intval($_GET['year']) : null;
 
@@ -38,12 +16,6 @@ try {
     // Build query for series
     $where = ["s.status IN ('active', 'completed')"];
     $params = [];
-
-    // Filter by brand (via series.brand_id)
-    if ($filterBrand && $brandColumnExists) {
-        $where[] = "s.brand_id = ?";
-        $params[] = $filterBrand;
-    }
 
     if ($filterSeries) {
         $where[] = "s.id = ?";
@@ -78,55 +50,21 @@ try {
     $stmt->execute($params);
     $series = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // Get brands for filter (if table exists)
-    $allBrands = [];
-    if ($brandsTableExists && $brandColumnExists) {
-        $allBrands = $db->query("
-            SELECT DISTINCT sb.id, sb.name
-            FROM series_brands sb
-            INNER JOIN series s ON sb.id = s.brand_id
-            WHERE sb.active = 1 AND s.status IN ('active', 'completed')
-            ORDER BY sb.display_order ASC, sb.name ASC
-        ")->fetchAll(PDO::FETCH_ASSOC);
-    }
+    // Get all series for filter dropdown
+    $allSeries = $db->query("
+        SELECT s.id, s.name, s.year
+        FROM series s
+        WHERE s.status IN ('active', 'completed')
+        ORDER BY s.year DESC, s.name ASC
+    ")->fetchAll(PDO::FETCH_ASSOC);
 
-    // Get all series for filter dropdown (optionally filtered by brand)
-    if ($filterBrand && $brandColumnExists) {
-        $seriesStmt = $db->prepare("
-            SELECT DISTINCT s.id, s.name, s.year
-            FROM series s
-            WHERE s.status IN ('active', 'completed') AND s.brand_id = ?
-            ORDER BY s.year DESC, s.name
-        ");
-        $seriesStmt->execute([$filterBrand]);
-        $allSeries = $seriesStmt->fetchAll(PDO::FETCH_ASSOC);
-    } else {
-        $allSeries = $db->query("
-            SELECT DISTINCT s.id, s.name, s.year
-            FROM series s
-            WHERE s.status IN ('active', 'completed')
-            ORDER BY s.year DESC, s.name
-        ")->fetchAll(PDO::FETCH_ASSOC);
-    }
-
-    // Get years for filter (optionally filtered by brand)
-    if ($filterBrand && $brandColumnExists) {
-        $yearsStmt = $db->prepare("
-            SELECT DISTINCT s.year
-            FROM series s
-            WHERE s.status IN ('active', 'completed') AND s.year IS NOT NULL AND s.brand_id = ?
-            ORDER BY s.year DESC
-        ");
-        $yearsStmt->execute([$filterBrand]);
-        $allYears = $yearsStmt->fetchAll(PDO::FETCH_COLUMN);
-    } else {
-        $allYears = $db->query("
-            SELECT DISTINCT year
-            FROM series
-            WHERE status IN ('active', 'completed') AND year IS NOT NULL
-            ORDER BY year DESC
-        ")->fetchAll(PDO::FETCH_COLUMN);
-    }
+    // Get years for filter
+    $allYears = $db->query("
+        SELECT DISTINCT year
+        FROM series
+        WHERE status IN ('active', 'completed') AND year IS NOT NULL
+        ORDER BY year DESC
+    ")->fetchAll(PDO::FETCH_COLUMN);
 
     // Calculate stats
     $totalSeries = count($series);
@@ -135,7 +73,6 @@ try {
 
 } catch (Exception $e) {
     $series = [];
-    $allBrands = [];
     $allSeries = [];
     $allYears = [];
     $totalSeries = 0;
@@ -148,13 +85,6 @@ try {
 $pageTitle = 'Tävlingsserier';
 if ($filterSeries && !empty($series)) {
     $pageTitle = $series[0]['name'];
-} elseif ($filterBrand) {
-    foreach ($allBrands as $b) {
-        if ($b['id'] == $filterBrand) {
-            $pageTitle = $b['name'];
-            break;
-        }
-    }
 } elseif ($filterYear) {
     $pageTitle = "Serier $filterYear";
 }
@@ -170,42 +100,13 @@ if ($filterSeries && !empty($series)) {
 
 <!-- Filters -->
 <div class="filters-bar">
-  <?php if (!empty($allBrands)): ?>
-  <div class="filter-group">
-    <label class="filter-label">Tävlingsserie</label>
-    <select class="filter-select" onchange="window.location=this.value">
-      <option value="/series">Alla serier</option>
-      <?php foreach ($allBrands as $b): ?>
-      <option value="/series?brand=<?= $b['id'] ?>" <?= $filterBrand == $b['id'] ? 'selected' : '' ?>>
-        <?= htmlspecialchars($b['name']) ?>
-      </option>
-      <?php endforeach; ?>
-    </select>
-  </div>
-
-  <?php if (!empty($allYears)): ?>
-  <div class="filter-group">
-    <label class="filter-label">År</label>
-    <select class="filter-select" onchange="window.location=this.value">
-      <option value="/series<?= $filterBrand ? '?brand=' . $filterBrand : '' ?>">Alla år</option>
-      <?php foreach ($allYears as $y): ?>
-      <option value="/series?<?= $filterBrand ? 'brand=' . $filterBrand . '&' : '' ?>year=<?= $y ?>" <?= $filterYear == $y ? 'selected' : '' ?>>
-        <?= $y ?>
-      </option>
-      <?php endforeach; ?>
-    </select>
-  </div>
-  <?php endif; ?>
-
-  <?php else: ?>
-  <!-- Fallback: Show series dropdown when no brands exist -->
   <div class="filter-group">
     <label class="filter-label">Serie</label>
     <select class="filter-select" onchange="window.location=this.value">
       <option value="/series<?= $filterYear ? '?year=' . $filterYear : '' ?>">Alla serier</option>
       <?php foreach ($allSeries as $s): ?>
       <option value="/series?series=<?= $s['id'] ?><?= $filterYear ? '&year=' . $filterYear : '' ?>" <?= $filterSeries == $s['id'] ? 'selected' : '' ?>>
-        <?= htmlspecialchars($s['name']) ?><?= !empty($s['year']) ? ' (' . $s['year'] . ')' : '' ?>
+        <?= htmlspecialchars($s['name']) ?>
       </option>
       <?php endforeach; ?>
     </select>
@@ -223,7 +124,6 @@ if ($filterSeries && !empty($series)) {
       <?php endforeach; ?>
     </select>
   </div>
-  <?php endif; ?>
   <?php endif; ?>
 </div>
 
@@ -243,7 +143,6 @@ if ($filterSeries && !empty($series)) {
 </section>
 <?php else: ?>
 
-<!-- Badge Grid -->
 <?php render_series_badge_grid($series, [
     'badge_options' => [
         'show_discipline' => true,
