@@ -30,11 +30,22 @@ try {
     rsort($availableYears);
 
     // Extract unique series names (base name without year)
+    // Try multiple patterns: "Name 2024", "Name2024", or just use full name
     $seriesNames = [];
     foreach ($allSeries as $s) {
-        // Remove trailing year from name (e.g., "GravitySeries 2024" -> "GravitySeries")
-        $baseName = trim(preg_replace('/\s*\d{4}$/', '', $s['name']));
-        if (empty($baseName)) $baseName = $s['name'];
+        $name = $s['name'] ?? '';
+        if (empty($name)) continue;
+
+        // Try to extract base name by removing year patterns
+        $baseName = $name;
+        // Pattern 1: "Name 2024" or "Name  2024"
+        $baseName = trim(preg_replace('/\s+\d{4}$/', '', $baseName));
+        // Pattern 2: "Name2024" (no space)
+        $baseName = trim(preg_replace('/\d{4}$/', '', $baseName));
+
+        // If we stripped everything or got empty, use full name
+        if (empty($baseName)) $baseName = $name;
+
         if (!in_array($baseName, $seriesNames)) {
             $seriesNames[] = $baseName;
         }
@@ -46,8 +57,12 @@ try {
         // Filter by series name - show all years for this series
         $matchingSeries = [];
         foreach ($allSeries as $s) {
-            $baseName = trim(preg_replace('/\s*\d{4}$/', '', $s['name']));
-            if (empty($baseName)) $baseName = $s['name'];
+            $name = $s['name'] ?? '';
+            $baseName = $name;
+            $baseName = trim(preg_replace('/\s+\d{4}$/', '', $baseName));
+            $baseName = trim(preg_replace('/\d{4}$/', '', $baseName));
+            if (empty($baseName)) $baseName = $name;
+
             if (strcasecmp($baseName, $filterSeries) === 0) {
                 $matchingSeries[] = $s['id'];
             }
@@ -122,8 +137,12 @@ try {
     $totalParticipants = 0;
     $pageTitle = 'Tävlingsserier';
     $pageSubtitle = '';
-    $error = $e->getMessage();
+    $error = 'Kunde inte hämta seriedata: ' . $e->getMessage();
 }
+
+// Debug: ensure arrays are initialized
+if (!isset($seriesNames)) $seriesNames = [];
+if (!isset($availableYears)) $availableYears = [];
 ?>
 
 <div class="page-header">
