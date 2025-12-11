@@ -140,7 +140,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['run_migration'])) {
     }
 }
 
-include __DIR__ . '/includes/header.php';
+$current_admin_page = 'tools';
+$page_title = 'Kör Migrationer';
+include __DIR__ . '/components/unified-layout.php';
 ?>
 
 <div class="admin-content">
@@ -313,4 +315,4 @@ include __DIR__ . '/includes/header.php';
     <?php endif; ?>
 </div>
 
-<?php include __DIR__ . '/includes/footer.php'; ?>
+<?php include __DIR__ . '/components/unified-layout-footer.php'; ?>
