@@ -605,17 +605,17 @@ $eventName = htmlspecialchars($event['name']);
                 $transportCounter = 0;
                 $liftCounter = 0;
                 foreach ($allSegments as $seg):
-                    $segType = $seg['segment_type'] ?? 'liaison';
-                    $typeIconName = $segType === 'lift' ? 'cable-car' : ($segType === 'liaison' ? 'route' : 'flag');
+                    $segType = $seg['segment_type'] ?? 'stage';  // DB default is 'stage'
+                    $typeIconName = $segType === 'stage' ? 'flag' : ($segType === 'lift' ? 'cable-car' : 'route');
 
                     // Count segments by type for auto-naming
                     if ($segType === 'stage') $stageCounter++;
                     elseif ($segType === 'lift') $liftCounter++;
                     else $transportCounter++;
 
-                    // Get segment name - use DB value if set, otherwise auto-generate
-                    $segName = !empty($seg['segment_name']) ? $seg['segment_name'] : null;
-                    if (!$segName) {
+                    // Get segment name - check both 'segment_name' and 'name' keys
+                    $segName = $seg['segment_name'] ?? $seg['name'] ?? null;
+                    if (empty($segName)) {
                         if ($segType === 'stage') {
                             $segName = 'SS' . $stageCounter;
                         } elseif ($segType === 'lift') {
