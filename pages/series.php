@@ -118,9 +118,16 @@ try {
             $brandName = urldecode($filterBrand);
             $matchingIds = [];
 
+            // Try exact match first, then case-insensitive
             foreach ($allBrands as $b) {
-                if ($b['name'] === $brandName && isset($b['series_ids'])) {
+                if (isset($b['series_ids']) && (
+                    $b['name'] === $brandName ||
+                    strcasecmp($b['name'], $brandName) === 0 ||
+                    $b['id'] === $brandName ||
+                    $b['id'] === $filterBrand
+                )) {
                     $matchingIds = $b['series_ids'];
+                    $brandName = $b['name']; // Use actual brand name for title
                     break;
                 }
             }
@@ -243,9 +250,18 @@ try {
         <label class="filter-label">Serie</label>
         <select class="filter-select" onchange="if(this.value) window.location.href='?brand=' + encodeURIComponent(this.value); else window.location.href='?year=<?= $filterYear ?>';">
           <option value="">Välj serie...</option>
-          <?php foreach ($allBrands as $b): ?>
-            <?php $brandValue = $useBrandsTable ? $b['id'] : $b['name']; ?>
-            <option value="<?= htmlspecialchars($brandValue) ?>" <?= ($filterMode === 'brand' && (($useBrandsTable && $b['id'] == $filterBrand) || (!$useBrandsTable && $b['name'] === urldecode($filterBrand)))) ? 'selected' : '' ?>><?= htmlspecialchars($b['name']) ?></option>
+          <?php foreach ($allBrands as $b):
+            $brandValue = $useBrandsTable ? $b['id'] : $b['name'];
+            $isSelected = $filterMode === 'brand' && (
+                ($useBrandsTable && $b['id'] == $filterBrand) ||
+                (!$useBrandsTable && (
+                    $b['name'] === urldecode($filterBrand) ||
+                    strcasecmp($b['name'], urldecode($filterBrand)) === 0 ||
+                    $b['id'] === $filterBrand
+                ))
+            );
+          ?>
+            <option value="<?= htmlspecialchars($brandValue) ?>" <?= $isSelected ? 'selected' : '' ?>><?= htmlspecialchars($b['name']) ?></option>
           <?php endforeach; ?>
         </select>
       </div>

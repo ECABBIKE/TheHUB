@@ -391,6 +391,16 @@ if (!function_exists('render_event_map')) {
 .emap-elevation.collapsed .emap-elevation-toggle .chevron {
     transform: rotate(180deg);
 }
+.emap-elevation-clear {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 4px;
+    margin-left: auto;
+    color: var(--color-text);
+    opacity: 0.7;
+}
+.emap-elevation-clear:hover { opacity: 1; }
 .emap-elevation-content {
     height: 120px;
     padding: var(--space-sm);
@@ -501,15 +511,20 @@ if (!function_exists('render_event_map')) {
                     <?php foreach ($allSegments as $seg):
                         $segType = $seg['segment_type'] ?? 'liaison';
                         $segColor = $seg['color'] ?? ($segType === 'stage' ? '#EF4444' : ($segType === 'lift' ? '#F59E0B' : '#61CE70'));
-                        $segName = $seg['segment_name'] ?? 'Sektion';
+                        $segName = $seg['segment_name'] ?? ($segType === 'stage' ? 'SS' : 'Transport');
                         $segDist = number_format($seg['distance_km'] ?? 0, 1);
                         $segIconName = $segType === 'stage' ? 'flag' : ($segType === 'lift' ? 'cable-car' : 'route');
+                        // Transport shows HM (climb), Stage shows FHM (descent)
+                        $segHeight = $segType === 'stage'
+                            ? ($seg['elevation_loss_m'] ?? 0)
+                            : ($seg['elevation_gain_m'] ?? 0);
+                        $segHeightLabel = $segType === 'stage' ? 'fhm' : 'hm';
                     ?>
                     <div class="emap-segment-item" onclick="<?= $mapId ?>_zoomToSegment(<?= $seg['id'] ?? 0 ?>)" data-segment-id="<?= $seg['id'] ?? 0 ?>">
                         <i data-lucide="<?= $segIconName ?>" class="emap-segment-icon"></i>
                         <div class="emap-segment-info">
                             <div class="emap-segment-name"><?= htmlspecialchars($segName) ?></div>
-                            <div class="emap-segment-meta"><?= $segDist ?> km</div>
+                            <div class="emap-segment-meta"><?= $segDist ?> km · <?= $segHeight ?> <?= $segHeightLabel ?></div>
                         </div>
                         <span class="emap-segment-dot" style="background: <?= $segColor ?>;"></span>
                     </div>
@@ -583,6 +598,30 @@ if (!function_exists('render_event_map')) {
             </div>
         </div>
         <?php endif; ?>
+
+        <?php if (!empty($allSegments)): ?>
+        <div class="emap-dropdown" id="<?= $mapId ?>-segment-dropdown">
+            <button class="emap-dropdown-btn" onclick="<?= $mapId ?>_toggleDropdown('<?= $mapId ?>-segment-dropdown')">
+                <i data-lucide="list" style="width: 14px; height: 14px;"></i> Sektioner <i data-lucide="chevron-down" style="width: 12px; height: 12px;"></i>
+            </button>
+            <div class="emap-dropdown-menu emap-dropdown-scrollable">
+                <?php foreach ($allSegments as $seg):
+                    $segType = $seg['segment_type'] ?? 'liaison';
+                    $segColor = $seg['color'] ?? ($segType === 'stage' ? '#EF4444' : ($segType === 'lift' ? '#F59E0B' : '#61CE70'));
+                    $segName = $seg['segment_name'] ?? ($segType === 'stage' ? 'SS' : 'Transport');
+                    $segIconName = $segType === 'stage' ? 'flag' : ($segType === 'lift' ? 'cable-car' : 'route');
+                    $segHeight = $segType === 'stage' ? ($seg['elevation_loss_m'] ?? 0) : ($seg['elevation_gain_m'] ?? 0);
+                    $segHeightLabel = $segType === 'stage' ? 'fhm' : 'hm';
+                ?>
+                <div class="emap-dropdown-item" data-segment-id="<?= $seg['id'] ?? 0 ?>" onclick="<?= $mapId ?>_zoomToSegment(<?= $seg['id'] ?? 0 ?>); <?= $mapId ?>_toggleDropdown('<?= $mapId ?>-segment-dropdown')">
+                    <span class="dot" style="background: <?= $segColor ?>; width: 10px; height: 10px; border-radius: 2px;"></span>
+                    <span style="flex: 1;"><?= htmlspecialchars($segName) ?></span>
+                    <span style="font-size: 0.7rem; color: var(--color-text);"><?= $segHeight ?> <?= $segHeightLabel ?></span>
+                </div>
+                <?php endforeach; ?>
+            </div>
+        </div>
+        <?php endif; ?>
     </div>
 
     <!-- Location Button -->
@@ -601,7 +640,10 @@ if (!function_exists('render_event_map')) {
     <div class="emap-elevation collapsed" id="<?= $mapId ?>-elevation">
         <div class="emap-elevation-toggle" onclick="<?= $mapId ?>_toggleElevation()">
             <i data-lucide="chevron-up" class="chevron" style="width: 16px; height: 16px;"></i>
-            <span>Höjdprofil</span>
+            <span id="<?= $mapId ?>-elevation-title">Höjdprofil</span>
+            <button class="emap-elevation-clear" id="<?= $mapId ?>-elevation-clear" onclick="event.stopPropagation(); <?= $mapId ?>_clearSegmentSelection()" style="display: none;">
+                <i data-lucide="x" style="width: 14px; height: 14px;"></i>
+            </button>
         </div>
         <div class="emap-elevation-content">
             <canvas id="<?= $mapId ?>-canvas"></canvas>
@@ -615,6 +657,7 @@ if (!function_exists('render_event_map')) {
     const mapId = '<?= $mapId ?>';
     const mapData = <?= json_encode($mapData) ?>;
     let map, trackLayers = {}, poiLayers = {};
+    let selectedSegmentId = null; // Track selected segment for elevation profile
     let locationMarker, locationCircle, watchId;
     let visibleTracks = new Set();
     let visiblePoiTypes = new Set();
@@ -774,13 +817,39 @@ if (!function_exists('render_event_map')) {
                 if (seg.id == segmentId && seg.coordinates && seg.coordinates.length) {
                     const bounds = L.latLngBounds(seg.coordinates.map(c => [c.lat, c.lng]));
                     map.fitBounds(bounds, { padding: [50, 50], maxZoom: 16 });
-                    // Highlight segment
-                    document.querySelectorAll('.emap-segment-item').forEach(el => el.classList.remove('active'));
-                    document.querySelector('[data-segment-id="' + segmentId + '"]')?.classList.add('active');
+                    // Highlight segment in list
+                    document.querySelectorAll('.emap-segment-item, .emap-dropdown-item[data-segment-id]').forEach(el => el.classList.remove('active'));
+                    document.querySelectorAll('[data-segment-id="' + segmentId + '"]').forEach(el => el.classList.add('active'));
+                    // Lock elevation profile to this segment
+                    selectedSegmentId = segmentId;
+                    // Update title and show clear button
+                    const segName = seg.segment_name || (seg.segment_type === 'stage' ? 'SS' : 'Transport');
+                    const titleEl = document.getElementById(mapId + '-elevation-title');
+                    const clearBtn = document.getElementById(mapId + '-elevation-clear');
+                    if (titleEl) titleEl.textContent = segName + ' - Höjdprofil';
+                    if (clearBtn) clearBtn.style.display = 'block';
+                    // Open elevation panel and update
+                    const elevPanel = document.getElementById(mapId + '-elevation');
+                    if (elevPanel) {
+                        elevPanel.classList.remove('collapsed');
+                        setTimeout(updateElevation, 100);
+                    }
                     return;
                 }
             }
         }
+    };
+
+    // Clear segment selection (show full track profile)
+    window[mapId + '_clearSegmentSelection'] = function() {
+        selectedSegmentId = null;
+        document.querySelectorAll('.emap-segment-item, .emap-dropdown-item[data-segment-id]').forEach(el => el.classList.remove('active'));
+        // Reset title and hide clear button
+        const titleEl = document.getElementById(mapId + '-elevation-title');
+        const clearBtn = document.getElementById(mapId + '-elevation-clear');
+        if (titleEl) titleEl.textContent = 'Höjdprofil';
+        if (clearBtn) clearBtn.style.display = 'none';
+        updateElevation();
     };
 
     // Zoom to POI by coordinates
@@ -839,10 +908,19 @@ if (!function_exists('render_event_map')) {
         ctx.scale(2, 2);
 
         let allElevations = [], allDistances = [];
+        let segmentName = null;
+
         if (mapData.tracks) {
             mapData.tracks.forEach(track => {
                 if (!visibleTracks.has(track.id)) return;
                 (track.segments || []).forEach(seg => {
+                    // If a segment is selected, only show that segment
+                    if (selectedSegmentId !== null && seg.id != selectedSegmentId) return;
+
+                    if (selectedSegmentId !== null && seg.id == selectedSegmentId) {
+                        segmentName = seg.segment_name || (seg.segment_type === 'stage' ? 'SS' : 'Transport');
+                    }
+
                     const elevData = seg.elevation_data || [];
                     const coords = seg.coordinates || [];
                     let dist = allDistances.length > 0 ? allDistances[allDistances.length - 1] : 0;
