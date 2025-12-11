@@ -671,6 +671,26 @@
     padding: var(--space-md);
     border: 1px solid var(--achievement-border);
     margin-bottom: var(--space-md);
+    overflow: hidden;
+}
+
+/* Badge grid inside sidebar - more compact */
+.content-sidebar .badge-grid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: var(--space-xs, 4px);
+}
+
+.content-sidebar .badge-item .badge-svg {
+    width: 40px;
+    height: 40px;
+}
+
+.content-sidebar .badge-value {
+    font-size: 11px;
+}
+
+.content-sidebar .badge-label {
+    font-size: 7px;
 }
 
 @media (min-width: 600px) {

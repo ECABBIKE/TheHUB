@@ -1157,6 +1157,37 @@ SVG;
 }
 
 /**
+ * Render 5 Races badge - Early milestone
+ */
+function render5RacesBadge(): string {
+    return <<<SVG
+<svg class="badge-svg" viewBox="0 0 100 116" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+        <linearGradient id="races5Bg" x1="50%" y1="0%" x2="50%" y2="100%">
+            <stop offset="0%" stop-color="#E3F2FD"/>
+            <stop offset="100%" stop-color="#BBDEFB"/>
+        </linearGradient>
+        <linearGradient id="medal5" x1="50%" y1="0%" x2="50%" y2="100%">
+            <stop offset="0%" stop-color="#64B5F6"/>
+            <stop offset="100%" stop-color="#2196F3"/>
+        </linearGradient>
+        <filter id="races5Shadow"><feDropShadow dx="0" dy="2" stdDeviation="2" flood-opacity="0.15"/></filter>
+    </defs>
+    <!-- Hexagon background -->
+    <path d="M50 3L95 29V87L50 113L5 87V29L50 3Z" fill="url(#races5Bg)" stroke="#2196F3" stroke-width="2.5" filter="url(#races5Shadow)"/>
+    <!-- Ribbon -->
+    <path d="M35 20 L35 55 L50 70 L65 55 L65 20" fill="#2196F3"/>
+    <path d="M35 20 L50 35 L65 20" fill="#1976D2"/>
+    <!-- Medal circle -->
+    <circle cx="50" cy="58" r="28" fill="url(#medal5)" stroke="#1976D2" stroke-width="2"/>
+    <circle cx="50" cy="58" r="22" fill="none" stroke="#BBDEFB" stroke-width="2"/>
+    <!-- Number -->
+    <text x="50" y="68" text-anchor="middle" fill="#FFF" font-size="24" font-weight="bold" font-family="system-ui">5</text>
+</svg>
+SVG;
+}
+
+/**
  * Render 10 Races badge - Bronze milestone circle
  */
 function render10RacesBadge(): string {
@@ -1190,6 +1221,68 @@ function render10RacesBadge(): string {
         <path d="M78 58 Q75 45 70 40"/>
         <path d="M80 65 Q75 55 72 50"/>
     </g>
+</svg>
+SVG;
+}
+
+/**
+ * Render 15 Races badge - Teal milestone
+ */
+function render15RacesBadge(): string {
+    return <<<SVG
+<svg class="badge-svg" viewBox="0 0 100 116" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+        <linearGradient id="races15Bg" x1="50%" y1="0%" x2="50%" y2="100%">
+            <stop offset="0%" stop-color="#E0F2F1"/>
+            <stop offset="100%" stop-color="#B2DFDB"/>
+        </linearGradient>
+        <linearGradient id="medal15" x1="50%" y1="0%" x2="50%" y2="100%">
+            <stop offset="0%" stop-color="#4DB6AC"/>
+            <stop offset="100%" stop-color="#009688"/>
+        </linearGradient>
+        <filter id="races15Shadow"><feDropShadow dx="0" dy="2" stdDeviation="2" flood-opacity="0.15"/></filter>
+    </defs>
+    <!-- Hexagon background -->
+    <path d="M50 3L95 29V87L50 113L5 87V29L50 3Z" fill="url(#races15Bg)" stroke="#009688" stroke-width="2.5" filter="url(#races15Shadow)"/>
+    <!-- Ribbon -->
+    <path d="M35 20 L35 55 L50 70 L65 55 L65 20" fill="#009688"/>
+    <path d="M35 20 L50 35 L65 20" fill="#00796B"/>
+    <!-- Medal circle -->
+    <circle cx="50" cy="58" r="28" fill="url(#medal15)" stroke="#00796B" stroke-width="2"/>
+    <circle cx="50" cy="58" r="22" fill="none" stroke="#B2DFDB" stroke-width="2"/>
+    <!-- Number -->
+    <text x="50" y="68" text-anchor="middle" fill="#FFF" font-size="22" font-weight="bold" font-family="system-ui">15</text>
+</svg>
+SVG;
+}
+
+/**
+ * Render 20 Races badge - Orange milestone
+ */
+function render20RacesBadge(): string {
+    return <<<SVG
+<svg class="badge-svg" viewBox="0 0 100 116" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+        <linearGradient id="races20Bg" x1="50%" y1="0%" x2="50%" y2="100%">
+            <stop offset="0%" stop-color="#FFF3E0"/>
+            <stop offset="100%" stop-color="#FFE0B2"/>
+        </linearGradient>
+        <linearGradient id="medal20" x1="50%" y1="0%" x2="50%" y2="100%">
+            <stop offset="0%" stop-color="#FFB74D"/>
+            <stop offset="100%" stop-color="#FF9800"/>
+        </linearGradient>
+        <filter id="races20Shadow"><feDropShadow dx="0" dy="2" stdDeviation="2" flood-opacity="0.15"/></filter>
+    </defs>
+    <!-- Hexagon background -->
+    <path d="M50 3L95 29V87L50 113L5 87V29L50 3Z" fill="url(#races20Bg)" stroke="#FF9800" stroke-width="2.5" filter="url(#races20Shadow)"/>
+    <!-- Ribbon -->
+    <path d="M35 20 L35 55 L50 70 L65 55 L65 20" fill="#FF9800"/>
+    <path d="M35 20 L50 35 L65 20" fill="#F57C00"/>
+    <!-- Medal circle -->
+    <circle cx="50" cy="58" r="28" fill="url(#medal20)" stroke="#F57C00" stroke-width="2"/>
+    <circle cx="50" cy="58" r="22" fill="none" stroke="#FFE0B2" stroke-width="2"/>
+    <!-- Number -->
+    <text x="50" y="68" text-anchor="middle" fill="#FFF" font-size="22" font-weight="bold" font-family="system-ui">20</text>
 </svg>
 SVG;
 }
@@ -1908,7 +2001,7 @@ function renderRiderAchievements(PDO $pdo, int $rider_id, array $stats = null): 
             <!-- Milestone Badges (if applicable) -->
             <?php
             $totalRaces = $stats['total_races'] ?? 0;
-            if ($totalRaces >= 10):
+            if ($totalRaces >= 5):
             ?>
             <div class="badge-grid" style="margin-top: var(--space-md, 16px); padding-top: var(--space-md, 16px); border-top: 1px solid var(--achievement-border, #e0e0e0);">
                 <div class="badge-item" data-tooltip="Första loppet genomfört">
@@ -1917,10 +2010,28 @@ function renderRiderAchievements(PDO $pdo, int $rider_id, array $stats = null): 
                     <span class="badge-label">Debut</span>
                 </div>
 
+                <div class="badge-item<?= $totalRaces < 5 ? ' locked' : '' ?>" data-tooltip="5 lopp genomförda">
+                    <?= render5RacesBadge() ?>
+                    <span class="badge-value"><?= $totalRaces >= 5 ? '✓' : '–' ?></span>
+                    <span class="badge-label">5 lopp</span>
+                </div>
+
                 <div class="badge-item<?= $totalRaces < 10 ? ' locked' : '' ?>" data-tooltip="10 lopp genomförda">
                     <?= render10RacesBadge() ?>
                     <span class="badge-value"><?= $totalRaces >= 10 ? '✓' : '–' ?></span>
                     <span class="badge-label">10 lopp</span>
+                </div>
+
+                <div class="badge-item<?= $totalRaces < 15 ? ' locked' : '' ?>" data-tooltip="15 lopp genomförda">
+                    <?= render15RacesBadge() ?>
+                    <span class="badge-value"><?= $totalRaces >= 15 ? '✓' : '–' ?></span>
+                    <span class="badge-label">15 lopp</span>
+                </div>
+
+                <div class="badge-item<?= $totalRaces < 20 ? ' locked' : '' ?>" data-tooltip="20 lopp genomförda">
+                    <?= render20RacesBadge() ?>
+                    <span class="badge-value"><?= $totalRaces >= 20 ? '✓' : '–' ?></span>
+                    <span class="badge-label">20 lopp</span>
                 </div>
 
                 <div class="badge-item<?= $totalRaces < 25 ? ' locked' : '' ?>" data-tooltip="25 lopp genomförda">
