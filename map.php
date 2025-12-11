@@ -595,13 +595,36 @@ $eventName = htmlspecialchars($event['name']);
                         }
                     }
                 }
+                // Sort by sequence_number to ensure correct order
+                usort($allSegments, fn($a, $b) => ($a['sequence_number'] ?? 0) - ($b['sequence_number'] ?? 0));
+
                 if (!empty($allSegments)): ?>
                 <div class="dropdown-section-title">Sträckor</div>
-                <?php foreach ($allSegments as $seg):
-                    $segType = $seg['segment_type'] ?? 'stage';
+                <?php
+                $stageCounter = 0;
+                $transportCounter = 0;
+                $liftCounter = 0;
+                foreach ($allSegments as $seg):
+                    $segType = $seg['segment_type'] ?? 'liaison';
                     $typeIconName = $segType === 'lift' ? 'cable-car' : ($segType === 'liaison' ? 'route' : 'flag');
-                    // Get segment name with fallback
-                    $segName = $seg['segment_name'] ?? $seg['name'] ?? ($segType === 'stage' ? 'SS' : ($segType === 'liaison' ? 'Transport' : 'Lift'));
+
+                    // Count segments by type for auto-naming
+                    if ($segType === 'stage') $stageCounter++;
+                    elseif ($segType === 'lift') $liftCounter++;
+                    else $transportCounter++;
+
+                    // Get segment name - use DB value if set, otherwise auto-generate
+                    $segName = !empty($seg['segment_name']) ? $seg['segment_name'] : null;
+                    if (!$segName) {
+                        if ($segType === 'stage') {
+                            $segName = 'SS' . $stageCounter;
+                        } elseif ($segType === 'lift') {
+                            $segName = 'Lift ' . $liftCounter;
+                        } else {
+                            $segName = 'Transport ' . $transportCounter;
+                        }
+                    }
+
                     // Transport/liaison shows HM (climb), Stage shows FHM (descent)
                     $segHeight = $segType === 'stage'
                         ? ($seg['elevation_loss_m'] ?? $seg['elevation_drop_m'] ?? 0)
