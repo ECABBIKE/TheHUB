@@ -1,14 +1,24 @@
 <?php
-die("DEBUG: event-map.php is running - if you see this, the file is being executed");
-/**
- * Admin Event Map Management - Multi-track support
- */
+// Absolut första raden - om du ser detta fungerar PHP
+echo "TEST 1: PHP startar<br>";
+
 ini_set('display_errors', '1');
 error_reporting(E_ALL);
 
+echo "TEST 2: Error display aktiverad<br>";
+
 require_once __DIR__ . '/../config.php';
+echo "TEST 3: config.php laddad<br>";
+
 require_admin();
+echo "TEST 4: require_admin() klar<br>";
+
 require_once INCLUDES_PATH . '/map_functions.php';
+echo "TEST 5: map_functions.php laddad<br>";
+
+/**
+ * Admin Event Map Management - Multi-track support
+ */
 
 $db = getDB();
 global $pdo;
