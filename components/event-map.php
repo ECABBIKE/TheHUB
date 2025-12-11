@@ -388,6 +388,22 @@ if (!function_exists('render_event_map')) {
 .emap-elevation-toggle .chevron {
     transition: transform 0.3s;
 }
+.emap-title-sponsor {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-weight: 400;
+    font-style: italic;
+    color: var(--color-text);
+    margin-left: 4px;
+}
+.emap-title-sponsor img {
+    height: 18px;
+    width: auto;
+    max-width: 60px;
+    object-fit: contain;
+    vertical-align: middle;
+}
 .emap-elevation.collapsed .emap-elevation-toggle .chevron {
     transform: rotate(180deg);
 }
@@ -918,16 +934,24 @@ if (!function_exists('render_event_map')) {
                     document.querySelectorAll('[data-segment-id="' + segmentId + '"]').forEach(el => el.classList.add('active'));
                     // Lock elevation profile to this segment
                     selectedSegmentId = segmentId;
-                    // Update title and show clear button
+                    // Update title with sponsor logo if available
                     const segSponsorName = seg.sponsor_name;
+                    const segSponsorLogo = sponsorLogo || seg.sponsor_logo;
                     const segName = seg.segment_name || (seg.segment_type === 'stage' ? 'SS' : 'Transport');
-                    const displayName = segSponsorName ? (segName + ' By ' + segSponsorName) : segName;
                     const titleEl = document.getElementById(mapId + '-elevation-title');
                     const clearBtn = document.getElementById(mapId + '-elevation-clear');
-                    if (titleEl) titleEl.textContent = displayName + ' - Höjdprofil';
+                    if (titleEl) {
+                        if (segSponsorLogo) {
+                            titleEl.innerHTML = segName + ' <span class="emap-title-sponsor">By <img src="/uploads/sponsors/' + segSponsorLogo + '" alt="' + (segSponsorName || 'Sponsor') + '"></span>';
+                        } else if (segSponsorName) {
+                            titleEl.innerHTML = segName + ' <span class="emap-title-sponsor">By ' + segSponsorName + '</span>';
+                        } else {
+                            titleEl.textContent = segName;
+                        }
+                    }
                     if (clearBtn) clearBtn.style.display = 'block';
                     // Show sponsor banner if logo exists
-                    const logoToShow = sponsorLogo || seg.sponsor_logo;
+                    const logoToShow = segSponsorLogo;
                     const urlToShow = sponsorUrl || seg.sponsor_website;
                     if (logoToShow) {
                         showSponsorBanner(logoToShow, urlToShow);
