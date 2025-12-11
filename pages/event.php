@@ -1123,9 +1123,16 @@ if (!$event) {
         <link rel="stylesheet" href="<?= hub_asset('css/map.css') ?>">
         <?php
         require_once ROOT_PATH . '/components/event-map.php';
-        render_event_map($eventId, $db, ['height' => '450px']);
+        render_event_map($eventId, $db, [
+            'height' => '550px',
+            'fullscreen' => false,
+            'show_close' => false,
+            'event_name' => $event['name'] ?? 'Event'
+        ]);
         ?>
         <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+        <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+        <script>if (typeof lucide !== 'undefined') lucide.createIcons();</script>
         <script src="<?= hub_asset('js/event-map.js') ?>"></script>
         <?php if (!empty($event['map_image_url']) || !empty($mapContent)): ?>
         <hr style="margin: var(--space-lg) 0; border-color: var(--color-border);">
