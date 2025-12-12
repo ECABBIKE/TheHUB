@@ -72,6 +72,36 @@ if (!$event) {
     exit;
 }
 
+// Function to save sponsor assignments for events
+function saveEventSponsorAssignments($db, $eventId, $postData) {
+    $pdo = $db->getPdo();
+
+    // First, delete existing sponsor assignments for this event
+    $deleteStmt = $pdo->prepare("DELETE FROM event_sponsors WHERE event_id = ?");
+    $deleteStmt->execute([$eventId]);
+
+    // Insert new assignments
+    $insertStmt = $pdo->prepare("INSERT INTO event_sponsors (event_id, sponsor_id, placement, display_order) VALUES (?, ?, ?, ?)");
+
+    // Header sponsor (single select)
+    if (!empty($postData['sponsor_header'])) {
+        $insertStmt->execute([$eventId, (int)$postData['sponsor_header'], 'header', 0]);
+    }
+
+    // Content sponsors (multiple checkboxes)
+    if (!empty($postData['sponsor_content']) && is_array($postData['sponsor_content'])) {
+        $order = 0;
+        foreach ($postData['sponsor_content'] as $sponsorId) {
+            $insertStmt->execute([$eventId, (int)$sponsorId, 'content', $order++]);
+        }
+    }
+
+    // Sidebar/Results sponsor (single select)
+    if (!empty($postData['sponsor_sidebar'])) {
+        $insertStmt->execute([$eventId, (int)$postData['sponsor_sidebar'], 'sidebar', 0]);
+    }
+}
+
 // Initialize message variables
 $message = '';
 $messageType = 'info';
@@ -290,6 +320,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $messageType = 'error';
                 error_log("EVENT EDIT ERROR: Name mismatch");
             } else {
+                // Save sponsor assignments
+                try {
+                    saveEventSponsorAssignments($db, $id, $_POST);
+                } catch (Exception $sponsorEx) {
+                    error_log("EVENT EDIT: Sponsor assignments save failed: " . $sponsorEx->getMessage());
+                }
+
                 $_SESSION['message'] = 'Event uppdaterat!';
                 $_SESSION['messageType'] = 'success';
                 header('Location: /admin/events/edit/' . $id . '?saved=1');
@@ -335,6 +372,25 @@ $globalTexts = $db->getAll("SELECT field_key, content FROM global_texts WHERE is
 $globalTextMap = [];
 foreach ($globalTexts as $gt) {
     $globalTextMap[$gt['field_key']] = $gt['content'];
+}
+
+// Get all sponsors for selection
+$allSponsors = [];
+$eventSponsors = ['header' => [], 'content' => [], 'sidebar' => []];
+try {
+    $allSponsors = $db->getAll("SELECT id, name, logo, tier FROM sponsors WHERE active = 1 ORDER BY tier ASC, name ASC");
+
+    $sponsorAssignments = $db->getAll("
+        SELECT sponsor_id, placement
+        FROM event_sponsors
+        WHERE event_id = ?
+    ", [$id]);
+    foreach ($sponsorAssignments as $sa) {
+        $placement = $sa['placement'] ?? 'sidebar';
+        $eventSponsors[$placement][] = (int)$sa['sponsor_id'];
+    }
+} catch (Exception $e) {
+    error_log("EVENT EDIT: Could not load sponsors: " . $e->getMessage());
 }
 
 // Page config
@@ -708,6 +764,64 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
     </details>
+
+    <!-- SPONSORS -->
+    <?php if (!empty($allSponsors)): ?>
+    <div class="admin-card" style="margin-bottom: var(--space-lg);">
+        <div class="admin-card-header">
+            <h2>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 20px; height: 20px;"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
+                Sponsorer
+            </h2>
+        </div>
+        <div class="admin-card-body">
+            <p style="margin-bottom: var(--space-md); color: var(--color-text-secondary); font-size: 0.875rem;">
+                Välj sponsorer specifikt för detta event. <strong>OBS:</strong> Seriens sponsorer visas om inga event-sponsorer anges.
+            </p>
+
+            <div style="display: grid; gap: var(--space-lg);">
+                <!-- Header Banner Sponsor -->
+                <div class="admin-form-group">
+                    <label class="admin-form-label">Header-banner (stor banner högst upp)</label>
+                    <select name="sponsor_header" class="admin-form-select">
+                        <option value="">-- Ingen (använd seriens) --</option>
+                        <?php foreach ($allSponsors as $sp): ?>
+                        <option value="<?= $sp['id'] ?>" <?= in_array((int)$sp['id'], $eventSponsors['header']) ? 'selected' : '' ?>>
+                            <?= htmlspecialchars($sp['name']) ?> (<?= ucfirst($sp['tier']) ?>)
+                        </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+
+                <!-- Content Logo Row -->
+                <div class="admin-form-group">
+                    <label class="admin-form-label">Logo-rad (under event-info)</label>
+                    <div style="display: flex; flex-wrap: wrap; gap: var(--space-sm);">
+                        <?php foreach ($allSponsors as $sp): ?>
+                        <label style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; background: var(--color-bg-secondary); border-radius: var(--radius-sm); cursor: pointer; font-size: 0.875rem;">
+                            <input type="checkbox" name="sponsor_content[]" value="<?= $sp['id'] ?>" <?= in_array((int)$sp['id'], $eventSponsors['content']) ? 'checked' : '' ?>>
+                            <?= htmlspecialchars($sp['name']) ?>
+                        </label>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+
+                <!-- Results Sponsor -->
+                <div class="admin-form-group">
+                    <label class="admin-form-label">Resultat-sponsor ("Resultat sponsrat av")</label>
+                    <select name="sponsor_sidebar" class="admin-form-select">
+                        <option value="">-- Ingen (använd seriens) --</option>
+                        <?php foreach ($allSponsors as $sp): ?>
+                        <option value="<?= $sp['id'] ?>" <?= in_array((int)$sp['id'], $eventSponsors['sidebar']) ? 'selected' : '' ?>>
+                            <?= htmlspecialchars($sp['name']) ?> (<?= ucfirst($sp['tier']) ?>)
+                        </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+    <?php endif; ?>
 
     <!-- STATUS & ACTIONS -->
     <div class="admin-card">
