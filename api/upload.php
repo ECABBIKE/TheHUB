@@ -9,10 +9,21 @@ header('Content-Type: application/json');
 
 require_once __DIR__ . '/../config.php';
 
-// Check if user is logged in (session uses $_SESSION['user']['id'])
-$userId = $_SESSION['user']['id'] ?? $_SESSION['user_id'] ?? null;
-if (empty($userId)) {
-    echo json_encode(['success' => false, 'error' => 'Ej inloggad']);
+// Check if admin is logged in (auth.php uses admin_id)
+$isLoggedIn = !empty($_SESSION['admin_logged_in']) && $_SESSION['admin_logged_in'] === true;
+$adminId = $_SESSION['admin_id'] ?? null;
+
+if (!$isLoggedIn || empty($adminId)) {
+    echo json_encode([
+        'success' => false,
+        'error' => 'Ej inloggad - logga in igen',
+        'debug' => [
+            'session_id' => session_id(),
+            'admin_logged_in' => $_SESSION['admin_logged_in'] ?? false,
+            'admin_id' => $adminId,
+            'session_keys' => array_keys($_SESSION ?? [])
+        ]
+    ]);
     exit;
 }
 
