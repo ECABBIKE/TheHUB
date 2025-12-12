@@ -5,6 +5,33 @@
  */
 
 /**
+ * Ensure sponsor logo columns exist
+ */
+function ensure_sponsor_logo_columns() {
+    global $pdo;
+
+    $columns = [
+        'logo_banner_id' => 'INT DEFAULT NULL COMMENT "Media ID for banner logo (1200x150)"',
+        'logo_standard_id' => 'INT DEFAULT NULL COMMENT "Media ID for standard logo (200x60)"',
+        'logo_small_id' => 'INT DEFAULT NULL COMMENT "Media ID for small logo (160x40)"'
+    ];
+
+    try {
+        foreach ($columns as $column => $definition) {
+            $check = $pdo->query("SHOW COLUMNS FROM sponsors LIKE '{$column}'")->fetch();
+            if (!$check) {
+                $pdo->exec("ALTER TABLE sponsors ADD COLUMN {$column} {$definition}");
+            }
+        }
+    } catch (Exception $e) {
+        error_log("ensure_sponsor_logo_columns error: " . $e->getMessage());
+    }
+}
+
+// Run migration on load
+ensure_sponsor_logo_columns();
+
+/**
  * Get all sponsors with optional filters
  */
 function get_sponsors($activeOnly = true, $tier = null) {
@@ -259,6 +286,9 @@ function create_sponsor($data) {
         $optionalFields = [
             'logo' => $data['logo'] ?? null,
             'logo_media_id' => $data['logo_media_id'] ?? null,
+            'logo_banner_id' => $data['logo_banner_id'] ?? null,
+            'logo_standard_id' => $data['logo_standard_id'] ?? null,
+            'logo_small_id' => $data['logo_small_id'] ?? null,
             'contact_name' => $data['contact_name'] ?? null,
             'contact_email' => $data['contact_email'] ?? null,
             'contact_phone' => $data['contact_phone'] ?? null,
@@ -345,6 +375,7 @@ function update_sponsor($id, $data) {
 
         // All possible fields we might want to update
         $allFields = ['name', 'tier', 'website', 'description', 'logo', 'logo_media_id',
+                      'logo_banner_id', 'logo_standard_id', 'logo_small_id',
                       'contact_name', 'contact_email', 'contact_phone', 'display_order', 'active'];
 
         $updates = [];
@@ -516,10 +547,108 @@ function remove_sponsor_from_series($sponsorId, $seriesId) {
     try {
         $stmt = $pdo->prepare("DELETE FROM series_sponsors WHERE sponsor_id = ? AND series_id = ?");
         $stmt->execute([$sponsorId, $seriesId]);
-        
+
         return ['success' => true];
     } catch (PDOException $e) {
         error_log("remove_sponsor_from_series error: " . $e->getMessage());
         return ['success' => false, 'error' => 'Kunde inte ta bort sponsor'];
     }
+}
+
+/**
+ * Get sponsor with all logo URLs for different placements
+ * Returns logo URLs keyed by placement: banner, standard, small
+ */
+function get_sponsor_with_logos($id) {
+    global $pdo;
+
+    try {
+        $stmt = $pdo->prepare("
+            SELECT s.*,
+                   m_old.filepath as legacy_logo_url,
+                   m_banner.filepath as banner_logo_url,
+                   m_standard.filepath as standard_logo_url,
+                   m_small.filepath as small_logo_url
+            FROM sponsors s
+            LEFT JOIN media m_old ON s.logo_media_id = m_old.id
+            LEFT JOIN media m_banner ON s.logo_banner_id = m_banner.id
+            LEFT JOIN media m_standard ON s.logo_standard_id = m_standard.id
+            LEFT JOIN media m_small ON s.logo_small_id = m_small.id
+            WHERE s.id = ?
+        ");
+        $stmt->execute([$id]);
+        $sponsor = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if ($sponsor) {
+            // Build logo URLs with fallbacks
+            // Banner: banner -> legacy -> logo field
+            $sponsor['logo_urls'] = [
+                'banner' => $sponsor['banner_logo_url'] ?? $sponsor['legacy_logo_url'] ?? ($sponsor['logo'] ? '/uploads/sponsors/' . $sponsor['logo'] : null),
+                'standard' => $sponsor['standard_logo_url'] ?? $sponsor['legacy_logo_url'] ?? ($sponsor['logo'] ? '/uploads/sponsors/' . $sponsor['logo'] : null),
+                'small' => $sponsor['small_logo_url'] ?? $sponsor['legacy_logo_url'] ?? ($sponsor['logo'] ? '/uploads/sponsors/' . $sponsor['logo'] : null),
+            ];
+
+            // Normalize paths
+            foreach ($sponsor['logo_urls'] as $key => $url) {
+                if ($url) {
+                    $sponsor['logo_urls'][$key] = '/' . ltrim($url, '/');
+                }
+            }
+        }
+
+        return $sponsor;
+    } catch (PDOException $e) {
+        error_log("get_sponsor_with_logos error: " . $e->getMessage());
+        return null;
+    }
+}
+
+/**
+ * Get the appropriate logo URL for a sponsor based on placement
+ * @param array $sponsor Sponsor data (must include logo fields)
+ * @param string $placement 'header'/'banner', 'content'/'standard', 'sidebar'/'small'
+ * @return string|null Logo URL or null
+ */
+function get_sponsor_logo_for_placement($sponsor, $placement) {
+    // Map placement to logo field
+    $placementMap = [
+        'header' => 'banner',
+        'banner' => 'banner',
+        'content' => 'standard',
+        'standard' => 'standard',
+        'sidebar' => 'small',
+        'small' => 'small',
+        'footer' => 'standard'
+    ];
+
+    $logoType = $placementMap[$placement] ?? 'standard';
+
+    // Try specific logo first, then fallback
+    $fieldMap = [
+        'banner' => ['logo_banner_id', 'banner_logo_url'],
+        'standard' => ['logo_standard_id', 'standard_logo_url'],
+        'small' => ['logo_small_id', 'small_logo_url']
+    ];
+
+    // Check if logo_urls array exists (from get_sponsor_with_logos)
+    if (isset($sponsor['logo_urls'][$logoType])) {
+        return $sponsor['logo_urls'][$logoType];
+    }
+
+    // Check specific URL field
+    $urlField = $fieldMap[$logoType][1] ?? null;
+    if ($urlField && !empty($sponsor[$urlField])) {
+        return '/' . ltrim($sponsor[$urlField], '/');
+    }
+
+    // Fallback to legacy logo_url or logo field
+    if (!empty($sponsor['logo_url'])) {
+        return '/' . ltrim($sponsor['logo_url'], '/');
+    }
+
+    if (!empty($sponsor['logo'])) {
+        return '/uploads/sponsors/' . $sponsor['logo'];
+    }
+
+    return null;
 }
