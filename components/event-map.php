@@ -40,7 +40,7 @@ if (!function_exists('render_event_map')) {
             return;
         }
 
-        $mapId = 'emap-' . $eventId . '-' . uniqid();
+        $mapId = 'emap_' . $eventId . '_' . substr(uniqid(), -6);
 
         // Handle both multi-track and single-track data formats
         $tracks = $mapData['tracks'] ?? [];
@@ -956,17 +956,10 @@ if (!function_exists('render_event_map')) {
 
     // Zoom to segment by ID
     window[mapId + '_zoomToSegment'] = function(segmentId, sponsorLogo, sponsorUrl) {
-        alert('Klickade segment: ' + segmentId); // DEBUG
-        console.log('zoomToSegment called:', { segmentId, sponsorLogo, sponsorUrl });
-        if (!mapData.tracks) {
-            console.log('No tracks in mapData');
-            return;
-        }
+        if (!mapData.tracks) return;
         for (const track of mapData.tracks) {
-            console.log('Checking track:', track.id, 'segments:', track.segments?.length);
             if (!track.segments) continue;
             for (const seg of track.segments) {
-                console.log('Segment:', seg.id, 'has coords:', !!seg.coordinates, seg.coordinates?.length);
                 if (seg.id == segmentId && seg.coordinates && seg.coordinates.length) {
                     const bounds = L.latLngBounds(seg.coordinates.map(c => [c.lat, c.lng]));
                     map.fitBounds(bounds, { padding: [50, 50], maxZoom: 16 });

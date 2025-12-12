@@ -18,8 +18,13 @@ $filterActive = isset($_GET['active']) ? $_GET['active'] === '1' : null;
 $searchQuery = $_GET['search'] ?? '';
 
 // Get all series for filter and form
-$seriesStmt = $pdo->query("SELECT id, name, short_name FROM series WHERE status = 'active' ORDER BY name");
-$allSeries = $seriesStmt->fetchAll(PDO::FETCH_ASSOC);
+$allSeries = [];
+try {
+    $seriesStmt = $pdo->query("SELECT id, name, short_name FROM series ORDER BY name");
+    $allSeries = $seriesStmt->fetchAll(PDO::FETCH_ASSOC);
+} catch (Exception $e) {
+    error_log("Sponsors - could not load series: " . $e->getMessage());
+}
 
 // Get sponsors (with optional series filter)
 if ($searchQuery) {
