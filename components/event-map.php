@@ -239,11 +239,36 @@ if (!function_exists('render_event_map')) {
 }
 .emap-section-header:first-child { margin-top: 0; }
 .emap-section-header i { width: 12px; height: 12px; }
-.emap-poi-row {
-    padding: var(--space-xs) 0;
+.emap-poi-toggles {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-xs);
+    padding: var(--space-sm) 0;
+    border-bottom: 1px solid var(--color-border);
+    margin-bottom: var(--space-sm);
 }
-.emap-poi-row .emap-checkbox {
-    gap: var(--space-sm);
+.emap-poi-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    background: var(--color-bg-sunken, #f5f5f5);
+    border-radius: var(--radius-full);
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+.emap-poi-toggle:hover {
+    background: var(--color-border);
+}
+.emap-poi-toggle input {
+    width: 12px;
+    height: 12px;
+    margin: 0;
+}
+.emap-poi-toggle input:not(:checked) + i,
+.emap-poi-toggle input:not(:checked) + i + span {
+    opacity: 0.4;
 }
 .emap-section-title {
     font-size: 0.75rem;
@@ -557,6 +582,18 @@ if (!function_exists('render_event_map')) {
             </div>
             <?php endif; ?>
 
+            <?php if (!empty($poiGroups)): ?>
+            <div class="emap-poi-toggles">
+                <?php foreach ($poiGroups as $type => $group): ?>
+                <label class="emap-poi-toggle">
+                    <input type="checkbox" checked data-poi-type="<?= htmlspecialchars($type) ?>" onchange="<?= $mapId ?>_togglePoiType('<?= htmlspecialchars($type) ?>')">
+                    <i data-lucide="<?= htmlspecialchars($group['icon']) ?>" style="width: 14px; height: 14px;"></i>
+                    <span><?= htmlspecialchars($group['label']) ?></span>
+                </label>
+                <?php endforeach; ?>
+            </div>
+            <?php endif; ?>
+
             <?php
             // Get segments for display
             $allSegments = [];
@@ -596,21 +633,6 @@ if (!function_exists('render_event_map')) {
                     <div class="emap-segment-meta"><?= $segDist ?> km · <?= $segHeight ?> <?= $segHeightLabel ?></div>
                 </div>
                 <span class="emap-segment-dot" style="background: <?= $segColor ?>;"></span>
-            </div>
-            <?php endforeach; ?>
-            <?php endif; ?>
-
-            <?php if (!empty($poiGroups)): ?>
-            <div class="emap-section-header">
-                <i data-lucide="map-pin"></i> Platser
-            </div>
-            <?php foreach ($poiGroups as $type => $group): ?>
-            <div class="emap-poi-row">
-                <label class="emap-checkbox">
-                    <input type="checkbox" checked data-poi-type="<?= htmlspecialchars($type) ?>" onchange="<?= $mapId ?>_togglePoiType('<?= htmlspecialchars($type) ?>')">
-                    <i data-lucide="<?= htmlspecialchars($group['icon']) ?>" style="width: 14px; height: 14px;"></i>
-                    <span><?= htmlspecialchars($group['label']) ?> (<?= count($group['items']) ?>)</span>
-                </label>
             </div>
             <?php endforeach; ?>
             <?php endif; ?>
@@ -896,6 +918,7 @@ if (!function_exists('render_event_map')) {
 
     // Zoom to segment by ID
     window[mapId + '_zoomToSegment'] = function(segmentId, sponsorLogo, sponsorUrl) {
+        alert('Klickade segment: ' + segmentId); // DEBUG
         console.log('zoomToSegment called:', { segmentId, sponsorLogo, sponsorUrl });
         if (!mapData.tracks) {
             console.log('No tracks in mapData');

@@ -670,7 +670,13 @@ async function saveSponsor(event) {
             if (uploadResult.success) {
                 logoUrl = uploadResult.path;
             } else {
-                alert('Kunde inte ladda upp logotyp: ' + (uploadResult.error || 'Okänt fel'));
+                console.log('Upload failed:', uploadResult);
+                let errorMsg = uploadResult.error || 'Okänt fel';
+                if (uploadResult.debug) {
+                    errorMsg += '\n\nDebug: session_id=' + uploadResult.debug.session_id +
+                                ', has_cookie=' + uploadResult.debug.has_cookie;
+                }
+                alert('Kunde inte ladda upp logotyp: ' + errorMsg);
                 return;
             }
         } catch (uploadError) {
