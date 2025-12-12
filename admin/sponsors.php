@@ -598,6 +598,49 @@ include __DIR__ . '/components/unified-layout.php';
                         </div>
                         <button type="button" class="btn btn-sm btn-ghost" onclick="clearLogo()">Ta bort</button>
                     </div>
+                    <!-- Image size guide -->
+                    <details style="margin-top: var(--space-md); background: var(--color-bg-sunken); padding: var(--space-md); border-radius: var(--radius-md);">
+                        <summary style="cursor: pointer; font-weight: 600; font-size: 0.875rem; color: var(--color-text-primary);">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: inline; vertical-align: middle; margin-right: 4px;"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+                            Rekommenderade bildstorlekar
+                        </summary>
+                        <div style="margin-top: var(--space-md); font-size: 0.8rem; color: var(--color-text-secondary);">
+                            <table style="width: 100%; border-collapse: collapse;">
+                                <thead>
+                                    <tr style="text-align: left; border-bottom: 1px solid var(--color-border);">
+                                        <th style="padding: 6px 8px;">Placering</th>
+                                        <th style="padding: 6px 8px;">Storlek</th>
+                                        <th style="padding: 6px 8px;">Användning</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr style="border-bottom: 1px solid var(--color-border);">
+                                        <td style="padding: 6px 8px; font-weight: 600;">Header-banner</td>
+                                        <td style="padding: 6px 8px;"><code style="background: var(--color-bg); padding: 2px 6px; border-radius: 4px;">1200×150px</code></td>
+                                        <td style="padding: 6px 8px;">Stor reklambanner högst upp</td>
+                                    </tr>
+                                    <tr style="border-bottom: 1px solid var(--color-border);">
+                                        <td style="padding: 6px 8px; font-weight: 600;">Logo-rad</td>
+                                        <td style="padding: 6px 8px;"><code style="background: var(--color-bg); padding: 2px 6px; border-radius: 4px;">200×60px</code></td>
+                                        <td style="padding: 6px 8px;">Rad med logos under event-info</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding: 6px 8px; font-weight: 600;">Resultat-sponsor</td>
+                                        <td style="padding: 6px 8px;"><code style="background: var(--color-bg); padding: 2px 6px; border-radius: 4px;">160×40px</code></td>
+                                        <td style="padding: 6px 8px;">"Resultat sponsrat av" vid klasser</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                            <div style="margin-top: var(--space-sm); padding-top: var(--space-sm); border-top: 1px solid var(--color-border);">
+                                <strong>Tips:</strong>
+                                <ul style="margin: var(--space-xs) 0 0 var(--space-md); padding: 0;">
+                                    <li>Använd <strong>PNG</strong> eller <strong>WebP</strong> med transparent bakgrund</li>
+                                    <li>Horisontella logotyper fungerar bäst</li>
+                                    <li>Max filstorlek: 5MB</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </details>
                 </div>
 
                 <hr style="margin: var(--space-lg) 0; border: none; border-top: 1px solid var(--color-border);">
