@@ -101,27 +101,11 @@ try {
     require_once INCLUDES_PATH . '/map_functions.php';
     $hasInteractiveMap = eventHasMap($db, $eventId);
 
-    // Fetch event sponsors (grouped by placement)
+    // Fetch sponsors - series sponsors take priority over event sponsors
     $eventSponsors = ['header' => [], 'content' => [], 'sidebar' => [], 'footer' => []];
-    try {
-        $sponsorStmt = $db->prepare("
-            SELECT s.*, es.placement, es.display_order
-            FROM sponsors s
-            INNER JOIN event_sponsors es ON s.id = es.sponsor_id
-            WHERE es.event_id = ? AND s.active = 1
-            ORDER BY es.display_order ASC, s.tier ASC
-        ");
-        $sponsorStmt->execute([$eventId]);
-        foreach ($sponsorStmt->fetchAll(PDO::FETCH_ASSOC) as $sponsor) {
-            $placement = $sponsor['placement'] ?? 'sidebar';
-            $eventSponsors[$placement][] = $sponsor;
-        }
-    } catch (Exception $e) {
-        // Table might not exist yet
-    }
 
-    // If no event sponsors, try series sponsors
-    if (empty($eventSponsors['header']) && empty($eventSponsors['content']) && !empty($event['series_id'])) {
+    // First, try series sponsors (these override event sponsors)
+    if (!empty($event['series_id'])) {
         try {
             $seriesSponsorStmt = $db->prepare("
                 SELECT s.*, ss.placement, ss.display_order
@@ -132,6 +116,26 @@ try {
             ");
             $seriesSponsorStmt->execute([$event['series_id']]);
             foreach ($seriesSponsorStmt->fetchAll(PDO::FETCH_ASSOC) as $sponsor) {
+                $placement = $sponsor['placement'] ?? 'sidebar';
+                $eventSponsors[$placement][] = $sponsor;
+            }
+        } catch (Exception $e) {
+            // Table might not exist yet
+        }
+    }
+
+    // If no series sponsors, fall back to event-specific sponsors
+    if (empty($eventSponsors['header']) && empty($eventSponsors['content']) && empty($eventSponsors['sidebar'])) {
+        try {
+            $sponsorStmt = $db->prepare("
+                SELECT s.*, es.placement, es.display_order
+                FROM sponsors s
+                INNER JOIN event_sponsors es ON s.id = es.sponsor_id
+                WHERE es.event_id = ? AND s.active = 1
+                ORDER BY es.display_order ASC, s.tier ASC
+            ");
+            $sponsorStmt->execute([$eventId]);
+            foreach ($sponsorStmt->fetchAll(PDO::FETCH_ASSOC) as $sponsor) {
                 $placement = $sponsor['placement'] ?? 'sidebar';
                 $eventSponsors[$placement][] = $sponsor;
             }

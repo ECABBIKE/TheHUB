@@ -118,6 +118,36 @@ try {
     }
 } catch (Exception $e) {}
 
+// Function to save sponsor assignments
+function saveSponsorAssignments($db, $seriesId, $postData) {
+    $pdo = $db->getPdo();
+
+    // First, delete existing sponsor assignments for this series
+    $deleteStmt = $pdo->prepare("DELETE FROM series_sponsors WHERE series_id = ?");
+    $deleteStmt->execute([$seriesId]);
+
+    // Insert new assignments
+    $insertStmt = $pdo->prepare("INSERT INTO series_sponsors (series_id, sponsor_id, placement, display_order) VALUES (?, ?, ?, ?)");
+
+    // Header sponsor (single select)
+    if (!empty($postData['sponsor_header'])) {
+        $insertStmt->execute([$seriesId, (int)$postData['sponsor_header'], 'header', 0]);
+    }
+
+    // Content sponsors (multiple checkboxes)
+    if (!empty($postData['sponsor_content']) && is_array($postData['sponsor_content'])) {
+        $order = 0;
+        foreach ($postData['sponsor_content'] as $sponsorId) {
+            $insertStmt->execute([$seriesId, (int)$sponsorId, 'content', $order++]);
+        }
+    }
+
+    // Sidebar/Results sponsor (single select)
+    if (!empty($postData['sponsor_sidebar'])) {
+        $insertStmt->execute([$seriesId, (int)$postData['sponsor_sidebar'], 'sidebar', 0]);
+    }
+}
+
 // Initialize message variables
 $message = '';
 $messageType = 'info';
@@ -212,12 +242,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             if ($isNew) {
                 $newId = $db->insert('series', $seriesData);
+
+                // Save sponsor assignments for new series
+                saveSponsorAssignments($db, $newId, $_POST);
+
                 $_SESSION['message'] = 'Serie skapad!';
                 $_SESSION['messageType'] = 'success';
                 header('Location: /admin/series/edit/' . $newId . '?saved=1');
                 exit;
             } else {
                 $db->update('series', $seriesData, 'id = ?', [$id]);
+
+                // Save sponsor assignments for existing series
+                saveSponsorAssignments($db, $id, $_POST);
 
                 // If just marked as completed and user confirmed to calculate champions
                 if ($justCompleted && $calculateChampions) {
@@ -273,6 +310,27 @@ if (!$isNew && $id > 0) {
     if ($fetchedSeries) {
         $series = array_merge($series, $fetchedSeries);
     }
+}
+
+// Get all sponsors for selection
+$allSponsors = [];
+$seriesSponsors = ['header' => [], 'content' => [], 'sidebar' => []];
+try {
+    $allSponsors = $db->getAll("SELECT id, name, logo, tier FROM sponsors WHERE active = 1 ORDER BY tier ASC, name ASC");
+
+    if (!$isNew && $id > 0) {
+        $sponsorAssignments = $db->getAll("
+            SELECT sponsor_id, placement
+            FROM series_sponsors
+            WHERE series_id = ?
+        ", [$id]);
+        foreach ($sponsorAssignments as $sa) {
+            $placement = $sa['placement'] ?? 'sidebar';
+            $seriesSponsors[$placement][] = (int)$sa['sponsor_id'];
+        }
+    }
+} catch (Exception $e) {
+    error_log("Could not load sponsors: " . $e->getMessage());
 }
 
 // Get events count and results status for this series
@@ -598,6 +656,64 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
     </div>
+
+    <!-- Sponsors -->
+    <?php if (!empty($allSponsors)): ?>
+    <div class="admin-card">
+        <div class="admin-card-header">
+            <h2>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 20px; height: 20px;"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
+                Sponsorer
+            </h2>
+        </div>
+        <div class="admin-card-body">
+            <p style="margin-bottom: var(--space-md); color: var(--color-text-secondary); font-size: 0.875rem;">
+                Välj sponsorer för denna serie. De visas på alla events i serien.
+            </p>
+
+            <div style="display: grid; gap: var(--space-lg);">
+                <!-- Header Banner Sponsor -->
+                <div class="admin-form-group">
+                    <label class="admin-form-label">Header-banner (stor banner högst upp)</label>
+                    <select name="sponsor_header" class="admin-form-select">
+                        <option value="">-- Ingen --</option>
+                        <?php foreach ($allSponsors as $sp): ?>
+                        <option value="<?= $sp['id'] ?>" <?= in_array((int)$sp['id'], $seriesSponsors['header']) ? 'selected' : '' ?>>
+                            <?= htmlspecialchars($sp['name']) ?> (<?= ucfirst($sp['tier']) ?>)
+                        </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+
+                <!-- Content Logo Row -->
+                <div class="admin-form-group">
+                    <label class="admin-form-label">Logo-rad (under event-info)</label>
+                    <div style="display: flex; flex-wrap: wrap; gap: var(--space-sm);">
+                        <?php foreach ($allSponsors as $sp): ?>
+                        <label style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; background: var(--color-bg-secondary); border-radius: var(--radius-sm); cursor: pointer; font-size: 0.875rem;">
+                            <input type="checkbox" name="sponsor_content[]" value="<?= $sp['id'] ?>" <?= in_array((int)$sp['id'], $seriesSponsors['content']) ? 'checked' : '' ?>>
+                            <?= htmlspecialchars($sp['name']) ?>
+                        </label>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+
+                <!-- Results Sponsor -->
+                <div class="admin-form-group">
+                    <label class="admin-form-label">Resultat-sponsor ("Resultat sponsrat av")</label>
+                    <select name="sponsor_sidebar" class="admin-form-select">
+                        <option value="">-- Ingen --</option>
+                        <?php foreach ($allSponsors as $sp): ?>
+                        <option value="<?= $sp['id'] ?>" <?= in_array((int)$sp['id'], $seriesSponsors['sidebar']) ? 'selected' : '' ?>>
+                            <?= htmlspecialchars($sp['name']) ?> (<?= ucfirst($sp['tier']) ?>)
+                        </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+    <?php endif; ?>
 
     <!-- Stats (only for existing series) -->
     <?php if (!$isNew): ?>
