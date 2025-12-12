@@ -1534,27 +1534,33 @@ function sortTotalBySplit(headerEl, splitNum) {
 </script>
 
 <style>
-/* Event Sponsor Banner */
+/* Event Sponsor Banner - Full width ad banner
+   Recommended image size: 1200x150px (PNG/WebP with transparent background)
+*/
 .event-sponsor-banner {
     display: flex;
     justify-content: center;
     align-items: center;
     gap: var(--space-md);
-    padding: var(--space-md);
+    padding: var(--space-sm);
     background: var(--color-bg-card);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-md);
+    overflow: hidden;
 }
 .sponsor-banner-link {
     display: flex;
     align-items: center;
+    justify-content: center;
     text-decoration: none;
     transition: opacity 0.2s;
+    width: 100%;
 }
-.sponsor-banner-link:hover { opacity: 0.8; }
+.sponsor-banner-link:hover { opacity: 0.85; }
 .sponsor-banner-logo {
-    max-height: 60px;
-    max-width: 200px;
+    max-height: 150px;
+    max-width: 100%;
+    width: auto;
     object-fit: contain;
 }
 .sponsor-banner-name {
@@ -1563,7 +1569,9 @@ function sortTotalBySplit(headerEl, splitNum) {
     color: var(--color-text-primary);
 }
 
-/* Event Sponsor Logos Row */
+/* Event Sponsor Logos Row
+   Recommended image size: 200x60px (PNG/WebP with transparent background)
+*/
 .event-sponsor-logos {
     display: flex;
     align-items: center;
@@ -1595,8 +1603,8 @@ function sortTotalBySplit(headerEl, splitNum) {
 }
 .sponsor-logo-item:hover { transform: scale(1.05); }
 .sponsor-logo-item img {
-    max-height: 36px;
-    max-width: 120px;
+    max-height: 50px;
+    max-width: 180px;
     object-fit: contain;
 }
 .sponsor-logo-item span {
@@ -1605,7 +1613,9 @@ function sortTotalBySplit(headerEl, splitNum) {
     color: var(--color-text-secondary);
 }
 
-/* Class Results Sponsor */
+/* Class Results Sponsor
+   Recommended image size: 160x40px (PNG/WebP with transparent background)
+*/
 .class-sponsor {
     display: flex;
     align-items: center;
@@ -1624,8 +1634,8 @@ function sortTotalBySplit(headerEl, splitNum) {
     color: var(--color-text-secondary);
 }
 .class-sponsor-logo {
-    max-height: 24px;
-    max-width: 80px;
+    max-height: 32px;
+    max-width: 120px;
     object-fit: contain;
 }
 .class-sponsor-name {
