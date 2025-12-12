@@ -101,6 +101,45 @@ try {
     require_once INCLUDES_PATH . '/map_functions.php';
     $hasInteractiveMap = eventHasMap($db, $eventId);
 
+    // Fetch event sponsors (grouped by placement)
+    $eventSponsors = ['header' => [], 'content' => [], 'sidebar' => [], 'footer' => []];
+    try {
+        $sponsorStmt = $db->prepare("
+            SELECT s.*, es.placement, es.display_order
+            FROM sponsors s
+            INNER JOIN event_sponsors es ON s.id = es.sponsor_id
+            WHERE es.event_id = ? AND s.active = 1
+            ORDER BY es.display_order ASC, s.tier ASC
+        ");
+        $sponsorStmt->execute([$eventId]);
+        foreach ($sponsorStmt->fetchAll(PDO::FETCH_ASSOC) as $sponsor) {
+            $placement = $sponsor['placement'] ?? 'sidebar';
+            $eventSponsors[$placement][] = $sponsor;
+        }
+    } catch (Exception $e) {
+        // Table might not exist yet
+    }
+
+    // If no event sponsors, try series sponsors
+    if (empty($eventSponsors['header']) && empty($eventSponsors['content']) && !empty($event['series_id'])) {
+        try {
+            $seriesSponsorStmt = $db->prepare("
+                SELECT s.*, ss.placement, ss.display_order
+                FROM sponsors s
+                INNER JOIN series_sponsors ss ON s.id = ss.sponsor_id
+                WHERE ss.series_id = ? AND s.active = 1
+                ORDER BY ss.display_order ASC, s.tier ASC
+            ");
+            $seriesSponsorStmt->execute([$event['series_id']]);
+            foreach ($seriesSponsorStmt->fetchAll(PDO::FETCH_ASSOC) as $sponsor) {
+                $placement = $sponsor['placement'] ?? 'sidebar';
+                $eventSponsors[$placement][] = $sponsor;
+            }
+        } catch (Exception $e) {
+            // Table might not exist yet
+        }
+    }
+
     // Check event format for DH mode
     $eventFormat = $event['event_format'] ?? 'ENDURO';
     $isDH = in_array($eventFormat, ['DH_STANDARD', 'DH_SWECUP']);
@@ -559,6 +598,39 @@ if (!$event) {
     </div>
 </section>
 
+<?php if (!empty($eventSponsors['header'])): ?>
+<!-- Sponsor Banner -->
+<section class="event-sponsor-banner mb-lg">
+    <?php foreach ($eventSponsors['header'] as $sponsor): ?>
+    <a href="<?= h($sponsor['website'] ?? '#') ?>" target="_blank" rel="noopener sponsored" class="sponsor-banner-link">
+        <?php if (!empty($sponsor['logo'])): ?>
+        <img src="/uploads/sponsors/<?= h($sponsor['logo']) ?>" alt="<?= h($sponsor['name']) ?>" class="sponsor-banner-logo">
+        <?php else: ?>
+        <span class="sponsor-banner-name"><?= h($sponsor['name']) ?></span>
+        <?php endif; ?>
+    </a>
+    <?php endforeach; ?>
+</section>
+<?php endif; ?>
+
+<?php if (!empty($eventSponsors['content'])): ?>
+<!-- Sponsor Logos Row -->
+<section class="event-sponsor-logos mb-lg">
+    <div class="sponsor-logos-label">Sponsorer</div>
+    <div class="sponsor-logos-row">
+        <?php foreach ($eventSponsors['content'] as $sponsor): ?>
+        <a href="<?= h($sponsor['website'] ?? '#') ?>" target="_blank" rel="noopener sponsored" class="sponsor-logo-item" title="<?= h($sponsor['name']) ?>">
+            <?php if (!empty($sponsor['logo'])): ?>
+            <img src="/uploads/sponsors/<?= h($sponsor['logo']) ?>" alt="<?= h($sponsor['name']) ?>">
+            <?php else: ?>
+            <span><?= h($sponsor['name']) ?></span>
+            <?php endif; ?>
+        </a>
+        <?php endforeach; ?>
+    </div>
+</section>
+<?php endif; ?>
+
 <!-- Tab Navigation -->
 <div class="event-tabs-wrapper mb-lg">
     <div class="event-tabs">
@@ -705,6 +777,17 @@ if (!$event) {
             <h2 class="card-title"><?= h($classData['display_name']) ?></h2>
             <p class="card-subtitle"><?= count($classData['results']) ?> deltagare<?= !$isTimeRanked ? ' (motion)' : '' ?></p>
         </div>
+        <?php if (!empty($eventSponsors['sidebar']) && isset($eventSponsors['sidebar'][0])): ?>
+        <?php $resultSponsor = $eventSponsors['sidebar'][0]; ?>
+        <a href="<?= h($resultSponsor['website'] ?? '#') ?>" target="_blank" rel="noopener sponsored" class="class-sponsor">
+            <span class="class-sponsor-label">Resultat sponsrat av</span>
+            <?php if (!empty($resultSponsor['logo'])): ?>
+            <img src="/uploads/sponsors/<?= h($resultSponsor['logo']) ?>" alt="<?= h($resultSponsor['name']) ?>" class="class-sponsor-logo">
+            <?php else: ?>
+            <span class="class-sponsor-name"><?= h($resultSponsor['name']) ?></span>
+            <?php endif; ?>
+        </a>
+        <?php endif; ?>
     </div>
 
     <!-- Desktop Table -->
@@ -1447,6 +1530,106 @@ function sortTotalBySplit(headerEl, splitNum) {
 </script>
 
 <style>
+/* Event Sponsor Banner */
+.event-sponsor-banner {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: var(--space-md);
+    padding: var(--space-md);
+    background: var(--color-bg-card);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+}
+.sponsor-banner-link {
+    display: flex;
+    align-items: center;
+    text-decoration: none;
+    transition: opacity 0.2s;
+}
+.sponsor-banner-link:hover { opacity: 0.8; }
+.sponsor-banner-logo {
+    max-height: 60px;
+    max-width: 200px;
+    object-fit: contain;
+}
+.sponsor-banner-name {
+    font-size: var(--text-lg);
+    font-weight: var(--weight-semibold);
+    color: var(--color-text-primary);
+}
+
+/* Event Sponsor Logos Row */
+.event-sponsor-logos {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    padding: var(--space-sm) var(--space-md);
+    background: var(--color-bg-card);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    overflow-x: auto;
+}
+.sponsor-logos-label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--color-text-secondary);
+    white-space: nowrap;
+}
+.sponsor-logos-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-lg);
+    flex-wrap: wrap;
+}
+.sponsor-logo-item {
+    display: flex;
+    align-items: center;
+    text-decoration: none;
+    transition: transform 0.2s;
+}
+.sponsor-logo-item:hover { transform: scale(1.05); }
+.sponsor-logo-item img {
+    max-height: 36px;
+    max-width: 120px;
+    object-fit: contain;
+}
+.sponsor-logo-item span {
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    color: var(--color-text-secondary);
+}
+
+/* Class Results Sponsor */
+.class-sponsor {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    text-decoration: none;
+    padding: var(--space-xs) var(--space-sm);
+    background: var(--color-bg-sunken);
+    border-radius: var(--radius-sm);
+    transition: background 0.2s;
+}
+.class-sponsor:hover { background: var(--color-border); }
+.class-sponsor-label {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--color-text-secondary);
+}
+.class-sponsor-logo {
+    max-height: 24px;
+    max-width: 80px;
+    object-fit: contain;
+}
+.class-sponsor-name {
+    font-size: var(--text-sm);
+    font-weight: var(--weight-semibold);
+    color: var(--color-text-primary);
+}
+
 /* Event Header */
 .event-header {
     background: var(--color-bg-card);
