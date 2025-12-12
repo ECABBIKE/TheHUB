@@ -13,12 +13,37 @@ global $pdo;
 
 // Get filter parameters
 $filterTier = $_GET['tier'] ?? null;
+$filterSeries = isset($_GET['series']) ? (int)$_GET['series'] : null;
 $filterActive = isset($_GET['active']) ? $_GET['active'] === '1' : null;
 $searchQuery = $_GET['search'] ?? '';
 
-// Get sponsors
+// Get all series for filter and form
+$seriesStmt = $pdo->query("SELECT id, name, short_name FROM series WHERE status = 'active' ORDER BY name");
+$allSeries = $seriesStmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Get sponsors (with optional series filter)
 if ($searchQuery) {
     $sponsors = search_sponsors($searchQuery, 100);
+} elseif ($filterSeries) {
+    // Filter by series
+    $stmt = $pdo->prepare("
+        SELECT s.*, ss.series_id
+        FROM sponsors s
+        INNER JOIN series_sponsors ss ON s.id = ss.sponsor_id
+        WHERE ss.series_id = ?
+        " . ($filterTier ? " AND s.tier = ?" : "") . "
+        " . ($filterActive !== null ? " AND s.active = ?" : "") . "
+        ORDER BY s.display_order, s.name
+    ");
+    $params = [$filterSeries];
+    if ($filterTier) $params[] = $filterTier;
+    if ($filterActive !== null) $params[] = $filterActive ? 1 : 0;
+    $stmt->execute($params);
+    $sponsors = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    // Add logo_url
+    foreach ($sponsors as &$sp) {
+        $sp['logo_url'] = $sp['logo'] ? '/uploads/sponsors/' . $sp['logo'] : null;
+    }
 } else {
     $sponsors = get_sponsors($filterActive !== false, $filterTier);
 }
@@ -409,10 +434,19 @@ include __DIR__ . '/components/unified-layout.php';
         <button type="submit" class="btn btn-secondary">Sök</button>
     </form>
 
+    <select class="form-select" onchange="filterBySeries(this.value)" style="min-width: 150px;">
+        <option value="">Alla serier</option>
+        <?php foreach ($allSeries as $series): ?>
+        <option value="<?= $series['id'] ?>" <?= $filterSeries === (int)$series['id'] ? 'selected' : '' ?>>
+            <?= htmlspecialchars($series['short_name'] ?: $series['name']) ?>
+        </option>
+        <?php endforeach; ?>
+    </select>
+
     <div class="tier-filter">
-        <a href="/admin/sponsors" class="tier-filter-btn <?= !$filterTier ? 'active' : '' ?>">Alla</a>
+        <a href="/admin/sponsors<?= $filterSeries ? "?series=$filterSeries" : '' ?>" class="tier-filter-btn <?= !$filterTier ? 'active' : '' ?>">Alla</a>
         <?php foreach ($tiers as $tierKey => $tier): ?>
-        <a href="/admin/sponsors?tier=<?= $tierKey ?>" class="tier-filter-btn <?= $filterTier === $tierKey ? 'active' : '' ?>" style="<?= $filterTier === $tierKey ? "background: {$tier['color']}; border-color: {$tier['color']};" : '' ?>">
+        <a href="/admin/sponsors?tier=<?= $tierKey ?><?= $filterSeries ? "&series=$filterSeries" : '' ?>" class="tier-filter-btn <?= $filterTier === $tierKey ? 'active' : '' ?>" style="<?= $filterTier === $tierKey ? "background: {$tier['color']}; border-color: {$tier['color']};" : '' ?>">
             <?= $tier['name'] ?>
         </a>
         <?php endforeach; ?>
@@ -525,6 +559,18 @@ include __DIR__ . '/components/unified-layout.php';
                 </div>
 
                 <div class="form-group">
+                    <label class="form-label">Serier</label>
+                    <div class="series-checkboxes" id="seriesCheckboxes" style="display: flex; flex-wrap: wrap; gap: var(--space-sm);">
+                        <?php foreach ($allSeries as $series): ?>
+                        <label style="display: inline-flex; align-items: center; gap: 4px; padding: 4px 8px; background: var(--color-bg-sunken); border-radius: var(--radius-sm); cursor: pointer; font-size: 0.875rem;">
+                            <input type="checkbox" name="series[]" value="<?= $series['id'] ?>" class="series-checkbox">
+                            <?= htmlspecialchars($series['short_name'] ?: $series['name']) ?>
+                        </label>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+
+                <div class="form-group">
                     <label class="form-label">Webbplats</label>
                     <input type="url" class="form-input" id="sponsorWebsite" name="website" placeholder="https://...">
                 </div>
@@ -586,6 +632,16 @@ include __DIR__ . '/components/unified-layout.php';
 <script>
 let currentSponsorId = null;
 
+function filterBySeries(seriesId) {
+    const url = new URL(window.location.href);
+    if (seriesId) {
+        url.searchParams.set('series', seriesId);
+    } else {
+        url.searchParams.delete('series');
+    }
+    window.location.href = url.toString();
+}
+
 function openCreateModal() {
     currentSponsorId = null;
     document.getElementById('modalTitle').textContent = 'Ny sponsor';
@@ -593,6 +649,8 @@ function openCreateModal() {
     document.getElementById('sponsorId').value = '';
     document.getElementById('sponsorTier').value = 'bronze';
     document.getElementById('sponsorActive').value = '1';
+    // Clear series checkboxes
+    document.querySelectorAll('.series-checkbox').forEach(cb => cb.checked = false);
     clearLogo();
     document.getElementById('sponsorModal').classList.add('active');
 }
@@ -630,6 +688,11 @@ async function editSponsor(id) {
         } else {
             clearLogo();
         }
+
+        // Set series checkboxes
+        document.querySelectorAll('.series-checkbox').forEach(cb => {
+            cb.checked = sponsor.series_ids && sponsor.series_ids.includes(parseInt(cb.value));
+        });
 
         document.getElementById('sponsorModal').classList.add('active');
     } catch (error) {
@@ -686,6 +749,12 @@ async function saveSponsor(event) {
         }
     }
 
+    // Collect selected series
+    const selectedSeries = [];
+    document.querySelectorAll('.series-checkbox:checked').forEach(cb => {
+        selectedSeries.push(parseInt(cb.value));
+    });
+
     // Build data object
     const data = {
         name: formData.get('name'),
@@ -697,7 +766,8 @@ async function saveSponsor(event) {
         contact_email: formData.get('contact_email') || null,
         contact_phone: formData.get('contact_phone') || null,
         display_order: parseInt(formData.get('display_order')) || 0,
-        logo: logoUrl || null
+        logo: logoUrl || null,
+        series_ids: selectedSeries
     };
 
     try {

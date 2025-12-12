@@ -98,7 +98,7 @@ if (!function_exists('render_event_map')) {
         $fullscreen = $options['fullscreen'] ?? false;
         $showClose = $options['show_close'] ?? $fullscreen;
         $eventName = $options['event_name'] ?? 'Event';
-        $height = $options['height'] ?? ($fullscreen ? '100dvh' : '550px');
+        $height = $options['height'] ?? ($fullscreen ? '100dvh' : 'clamp(500px, 70vh, 800px)');
         ?>
 
 <style>
@@ -239,37 +239,57 @@ if (!function_exists('render_event_map')) {
 }
 .emap-section-header:first-child { margin-top: 0; }
 .emap-section-header i { width: 12px; height: 12px; }
-.emap-poi-toggles {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--space-xs);
-    padding: var(--space-sm) 0;
-    border-bottom: 1px solid var(--color-border);
+/* Collapsible sections */
+.emap-collapsible {
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
     margin-bottom: var(--space-sm);
+    overflow: hidden;
 }
-.emap-poi-toggle {
-    display: inline-flex;
+.emap-collapsible-header {
+    display: flex;
     align-items: center;
-    gap: 4px;
-    padding: 4px 8px;
-    background: var(--color-bg-sunken, #f5f5f5);
-    border-radius: var(--radius-full);
-    font-size: 0.75rem;
+    gap: var(--space-sm);
+    padding: var(--space-sm) var(--space-md);
+    background: var(--color-bg-sunken, #f8f9fa);
     cursor: pointer;
-    transition: all 0.15s;
+    font-size: 0.8rem;
+    font-weight: 600;
+    user-select: none;
+    list-style: none;
 }
-.emap-poi-toggle:hover {
-    background: var(--color-border);
+.emap-collapsible-header::-webkit-details-marker { display: none; }
+.emap-collapsible-header:hover { background: var(--color-border); }
+.emap-collapsible-header i { width: 14px; height: 14px; flex-shrink: 0; }
+.emap-collapse-icon { transition: transform 0.2s; }
+.emap-collapsible:not([open]) .emap-collapse-icon { transform: rotate(-90deg); }
+.emap-collapsible-content {
+    max-height: 200px;
+    overflow-y: auto;
+    padding: var(--space-xs);
 }
-.emap-poi-toggle input {
-    width: 12px;
-    height: 12px;
-    margin: 0;
+/* POI items */
+.emap-poi-group { margin-bottom: var(--space-sm); }
+.emap-poi-toggle-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    padding: var(--space-xs) var(--space-sm);
+    font-size: 0.8rem;
+    font-weight: 500;
+    cursor: pointer;
 }
-.emap-poi-toggle input:not(:checked) + i,
-.emap-poi-toggle input:not(:checked) + i + span {
-    opacity: 0.4;
+.emap-poi-toggle-row input { width: 14px; height: 14px; margin: 0; }
+.emap-poi-toggle-row i { width: 14px; height: 14px; }
+.emap-poi-item {
+    padding: var(--space-xs) var(--space-sm);
+    padding-left: calc(var(--space-sm) + 28px);
+    font-size: 0.75rem;
+    color: var(--color-text);
+    cursor: pointer;
+    border-radius: var(--radius-sm);
 }
+.emap-poi-item:hover { background: var(--color-bg-hover, #f0f0f0); }
 .emap-section-title {
     font-size: 0.75rem;
     font-weight: 600;
@@ -582,18 +602,6 @@ if (!function_exists('render_event_map')) {
             </div>
             <?php endif; ?>
 
-            <?php if (!empty($poiGroups)): ?>
-            <div class="emap-poi-toggles">
-                <?php foreach ($poiGroups as $type => $group): ?>
-                <label class="emap-poi-toggle">
-                    <input type="checkbox" checked data-poi-type="<?= htmlspecialchars($type) ?>" onchange="<?= $mapId ?>_togglePoiType('<?= htmlspecialchars($type) ?>')">
-                    <i data-lucide="<?= htmlspecialchars($group['icon']) ?>" style="width: 14px; height: 14px;"></i>
-                    <span><?= htmlspecialchars($group['label']) ?></span>
-                </label>
-                <?php endforeach; ?>
-            </div>
-            <?php endif; ?>
-
             <?php
             // Get segments for display
             $allSegments = [];
@@ -606,35 +614,65 @@ if (!function_exists('render_event_map')) {
             }
             ?>
             <?php if (!empty($allSegments)): ?>
-            <div class="emap-section-header">
-                <i data-lucide="route"></i> Sträckor
-            </div>
-            <?php foreach ($allSegments as $seg):
-                $segType = $seg['segment_type'] ?? 'liaison';
-                $segColor = $seg['color'] ?? ($segType === 'stage' ? '#EF4444' : ($segType === 'lift' ? '#F59E0B' : '#61CE70'));
-                $segName = $seg['segment_name'] ?? ($segType === 'stage' ? 'SS' : 'Transport');
-                $segDist = number_format($seg['distance_km'] ?? 0, 1);
-                $segIconName = $segType === 'stage' ? 'flag' : ($segType === 'lift' ? 'cable-car' : 'route');
-                // Transport shows HM (climb), Stage shows FHM (descent)
-                $segHeight = $segType === 'stage'
-                    ? ($seg['elevation_loss_m'] ?? 0)
-                    : ($seg['elevation_gain_m'] ?? 0);
-                $segHeightLabel = $segType === 'stage' ? 'fhm' : 'hm';
-                // Sponsor info
-                $segSponsorName = $seg['sponsor_name'] ?? null;
-                $segSponsorLogo = $seg['sponsor_logo'] ?? null;
-                $segSponsorUrl = $seg['sponsor_website'] ?? null;
-                $segDisplayName = $segSponsorName ? ($segName . ' By ' . $segSponsorName) : $segName;
-            ?>
-            <div class="emap-segment-item" onclick="<?= $mapId ?>_zoomToSegment(<?= $seg['id'] ?? 0 ?>, <?= $segSponsorLogo ? "'" . htmlspecialchars(addslashes($segSponsorLogo)) . "'" : 'null' ?>, <?= $segSponsorUrl ? "'" . htmlspecialchars(addslashes($segSponsorUrl)) . "'" : 'null' ?>)" data-segment-id="<?= $seg['id'] ?? 0 ?>">
-                <i data-lucide="<?= $segIconName ?>" class="emap-segment-icon"></i>
-                <div class="emap-segment-info">
-                    <div class="emap-segment-name"><?= htmlspecialchars($segDisplayName) ?></div>
-                    <div class="emap-segment-meta"><?= $segDist ?> km · <?= $segHeight ?> <?= $segHeightLabel ?></div>
+            <details class="emap-collapsible" open>
+                <summary class="emap-collapsible-header">
+                    <i data-lucide="chevron-down" class="emap-collapse-icon"></i>
+                    <i data-lucide="route"></i>
+                    <span>Sträckor (<?= count($allSegments) ?>)</span>
+                </summary>
+                <div class="emap-collapsible-content">
+                    <?php foreach ($allSegments as $seg):
+                        $segType = $seg['segment_type'] ?? 'liaison';
+                        $segColor = $seg['color'] ?? ($segType === 'stage' ? '#EF4444' : ($segType === 'lift' ? '#F59E0B' : '#61CE70'));
+                        $segName = $seg['segment_name'] ?? ($segType === 'stage' ? 'SS' : 'Transport');
+                        $segDist = number_format($seg['distance_km'] ?? 0, 1);
+                        $segIconName = $segType === 'stage' ? 'flag' : ($segType === 'lift' ? 'cable-car' : 'route');
+                        $segHeight = $segType === 'stage'
+                            ? ($seg['elevation_loss_m'] ?? 0)
+                            : ($seg['elevation_gain_m'] ?? 0);
+                        $segHeightLabel = $segType === 'stage' ? 'fhm' : 'hm';
+                        $segSponsorName = $seg['sponsor_name'] ?? null;
+                        $segSponsorLogo = $seg['sponsor_logo'] ?? null;
+                        $segSponsorUrl = $seg['sponsor_website'] ?? null;
+                        $segDisplayName = $segSponsorName ? ($segName . ' By ' . $segSponsorName) : $segName;
+                    ?>
+                    <div class="emap-segment-item" onclick="<?= $mapId ?>_zoomToSegment(<?= $seg['id'] ?? 0 ?>, <?= $segSponsorLogo ? "'" . htmlspecialchars(addslashes($segSponsorLogo)) . "'" : 'null' ?>, <?= $segSponsorUrl ? "'" . htmlspecialchars(addslashes($segSponsorUrl)) . "'" : 'null' ?>)" data-segment-id="<?= $seg['id'] ?? 0 ?>">
+                        <i data-lucide="<?= $segIconName ?>" class="emap-segment-icon"></i>
+                        <div class="emap-segment-info">
+                            <div class="emap-segment-name"><?= htmlspecialchars($segDisplayName) ?></div>
+                            <div class="emap-segment-meta"><?= $segDist ?> km · <?= $segHeight ?> <?= $segHeightLabel ?></div>
+                        </div>
+                        <span class="emap-segment-dot" style="background: <?= $segColor ?>;"></span>
+                    </div>
+                    <?php endforeach; ?>
                 </div>
-                <span class="emap-segment-dot" style="background: <?= $segColor ?>;"></span>
-            </div>
-            <?php endforeach; ?>
+            </details>
+            <?php endif; ?>
+
+            <?php if (!empty($poiGroups)): ?>
+            <details class="emap-collapsible">
+                <summary class="emap-collapsible-header">
+                    <i data-lucide="chevron-down" class="emap-collapse-icon"></i>
+                    <i data-lucide="map-pin"></i>
+                    <span>Platser (<?= count($pois) ?>)</span>
+                </summary>
+                <div class="emap-collapsible-content">
+                    <?php foreach ($poiGroups as $type => $group): ?>
+                    <div class="emap-poi-group">
+                        <label class="emap-poi-toggle-row">
+                            <input type="checkbox" checked data-poi-type="<?= htmlspecialchars($type) ?>" onchange="<?= $mapId ?>_togglePoiType('<?= htmlspecialchars($type) ?>')">
+                            <i data-lucide="<?= htmlspecialchars($group['icon']) ?>"></i>
+                            <span><?= htmlspecialchars($group['label']) ?> (<?= count($group['items']) ?>)</span>
+                        </label>
+                        <?php foreach ($group['items'] as $poi): ?>
+                        <div class="emap-poi-item" onclick="<?= $mapId ?>_zoomToPoi(<?= $poi['lat'] ?>, <?= $poi['lng'] ?>)">
+                            <?= htmlspecialchars($poi['label'] ?: $group['label']) ?>
+                        </div>
+                        <?php endforeach; ?>
+                    </div>
+                    <?php endforeach; ?>
+                </div>
+            </details>
             <?php endif; ?>
         </div>
     </div>

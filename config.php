@@ -42,7 +42,7 @@ define('EVENTS_PER_PAGE', 20);
 define('APP_VERSION', '3.5');
 define('APP_VERSION_NAME', 'Beta');
 define('APP_BUILD', '2025-12-12');
-define('DEPLOYMENT_OFFSET', 125); // Deployments before git repo
+define('DEPLOYMENT_OFFSET', 126); // Deployments before git repo
 
 try {
     $pdo = new PDO(

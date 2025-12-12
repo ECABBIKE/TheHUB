@@ -181,6 +181,17 @@ function get_sponsor($id) {
             $sponsor['logo_url'] = '/' . ltrim($sponsor['logo_url'], '/');
         }
 
+        // Get series associations
+        if ($sponsor) {
+            try {
+                $seriesStmt = $pdo->prepare("SELECT series_id FROM series_sponsors WHERE sponsor_id = ?");
+                $seriesStmt->execute([$id]);
+                $sponsor['series_ids'] = $seriesStmt->fetchAll(PDO::FETCH_COLUMN);
+            } catch (Exception $e) {
+                $sponsor['series_ids'] = [];
+            }
+        }
+
         return $sponsor;
     } catch (PDOException $e) {
         error_log("get_sponsor error: " . $e->getMessage());
@@ -267,9 +278,23 @@ function create_sponsor($data) {
         $stmt = $pdo->prepare($sql);
         $stmt->execute($values);
 
+        $sponsorId = $pdo->lastInsertId();
+
+        // Handle series associations
+        if (!empty($data['series_ids']) && is_array($data['series_ids'])) {
+            $seriesStmt = $pdo->prepare("INSERT INTO series_sponsors (series_id, sponsor_id) VALUES (?, ?)");
+            foreach ($data['series_ids'] as $seriesId) {
+                try {
+                    $seriesStmt->execute([$seriesId, $sponsorId]);
+                } catch (Exception $e) {
+                    // Ignore duplicates
+                }
+            }
+        }
+
         return [
             'success' => true,
-            'id' => $pdo->lastInsertId()
+            'id' => $sponsorId
         ];
     } catch (PDOException $e) {
         error_log("create_sponsor error: " . $e->getMessage());
@@ -354,6 +379,24 @@ function update_sponsor($id, $data) {
         $stmt = $pdo->prepare($sql);
         $stmt->execute($params);
 
+        // Handle series associations if provided
+        if (array_key_exists('series_ids', $data)) {
+            // Remove existing associations
+            $pdo->prepare("DELETE FROM series_sponsors WHERE sponsor_id = ?")->execute([$id]);
+
+            // Add new associations
+            if (!empty($data['series_ids']) && is_array($data['series_ids'])) {
+                $seriesStmt = $pdo->prepare("INSERT INTO series_sponsors (series_id, sponsor_id) VALUES (?, ?)");
+                foreach ($data['series_ids'] as $seriesId) {
+                    try {
+                        $seriesStmt->execute([$seriesId, $id]);
+                    } catch (Exception $e) {
+                        // Ignore duplicates
+                    }
+                }
+            }
+        }
+
         return ['success' => true];
     } catch (PDOException $e) {
         error_log("update_sponsor error: " . $e->getMessage());
@@ -414,13 +457,13 @@ function get_sponsors_by_tier($tier) {
  */
 function get_series_sponsors($seriesId) {
     global $pdo;
-    
+
     try {
-        // Check if sponsor_series table exists
+        // Get sponsors for this series
         $stmt = $pdo->prepare("
             SELECT s.*, m.filepath as logo_url, ss.display_order as series_display_order
             FROM sponsors s
-            INNER JOIN sponsor_series ss ON s.id = ss.sponsor_id
+            INNER JOIN series_sponsors ss ON s.id = ss.sponsor_id
             LEFT JOIN media m ON s.logo_media_id = m.id
             WHERE ss.series_id = ? AND s.active = 1
             ORDER BY ss.display_order ASC, s.display_order ASC
@@ -448,10 +491,10 @@ function get_series_sponsors($seriesId) {
  */
 function assign_sponsor_to_series($sponsorId, $seriesId, $displayOrder = 0) {
     global $pdo;
-    
+
     try {
         $stmt = $pdo->prepare("
-            INSERT INTO sponsor_series (sponsor_id, series_id, display_order)
+            INSERT INTO series_sponsors (sponsor_id, series_id, display_order)
             VALUES (?, ?, ?)
             ON DUPLICATE KEY UPDATE display_order = ?
         ");
@@ -469,9 +512,9 @@ function assign_sponsor_to_series($sponsorId, $seriesId, $displayOrder = 0) {
  */
 function remove_sponsor_from_series($sponsorId, $seriesId) {
     global $pdo;
-    
+
     try {
-        $stmt = $pdo->prepare("DELETE FROM sponsor_series WHERE sponsor_id = ? AND series_id = ?");
+        $stmt = $pdo->prepare("DELETE FROM series_sponsors WHERE sponsor_id = ? AND series_id = ?");
         $stmt->execute([$sponsorId, $seriesId]);
         
         return ['success' => true];
