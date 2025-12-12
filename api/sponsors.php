@@ -69,23 +69,29 @@ function handleCreate() {
 }
 
 /**
- * Get single sponsor
+ * Get single sponsor with all logo URLs
  */
 function handleGet() {
     $id = $_GET['id'] ?? null;
-    
+
     if (!$id) {
         echo json_encode(['success' => false, 'error' => 'ID saknas']);
         return;
     }
-    
-    $sponsor = get_sponsor($id);
-    
+
+    // Use get_sponsor_with_logos to get all logo URLs
+    $sponsor = get_sponsor_with_logos($id);
+
+    // If new function fails, fallback to basic get_sponsor
+    if (!$sponsor) {
+        $sponsor = get_sponsor($id);
+    }
+
     if (!$sponsor) {
         echo json_encode(['success' => false, 'error' => 'Sponsor hittades inte']);
         return;
     }
-    
+
     echo json_encode(['success' => true, 'data' => $sponsor]);
 }
 

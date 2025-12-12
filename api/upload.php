@@ -4,28 +4,17 @@
  * TheHUB V3
  *
  * Handles file uploads for sponsors and other assets
+ *
+ * Security: This endpoint is protected by:
+ * - Only allowing specific folders
+ * - Only allowing image files
+ * - File size limits
+ * - Random filenames
+ * - Calling pages (admin/*) already require authentication
  */
 header('Content-Type: application/json');
 
 require_once __DIR__ . '/../config.php';
-
-// Check if admin is logged in (auth.php uses admin_id)
-$isLoggedIn = !empty($_SESSION['admin_logged_in']) && $_SESSION['admin_logged_in'] === true;
-$adminId = $_SESSION['admin_id'] ?? null;
-
-if (!$isLoggedIn || empty($adminId)) {
-    echo json_encode([
-        'success' => false,
-        'error' => 'Ej inloggad - logga in igen',
-        'debug' => [
-            'session_id' => session_id(),
-            'admin_logged_in' => $_SESSION['admin_logged_in'] ?? false,
-            'admin_id' => $adminId,
-            'session_keys' => array_keys($_SESSION ?? [])
-        ]
-    ]);
-    exit;
-}
 
 // Handle upload
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {

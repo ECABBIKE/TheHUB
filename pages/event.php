@@ -102,15 +102,25 @@ try {
     $hasInteractiveMap = eventHasMap($db, $eventId);
 
     // Fetch sponsors - series sponsors take priority over event sponsors
+    // Include all logo fields for placement-specific logos
+    require_once INCLUDES_PATH . '/sponsor-functions.php';
     $eventSponsors = ['header' => [], 'content' => [], 'sidebar' => [], 'footer' => []];
 
     // First, try series sponsors (these override event sponsors)
     if (!empty($event['series_id'])) {
         try {
             $seriesSponsorStmt = $db->prepare("
-                SELECT s.*, ss.placement, ss.display_order
+                SELECT s.*, ss.placement, ss.display_order,
+                       m_banner.filepath as banner_logo_url,
+                       m_standard.filepath as standard_logo_url,
+                       m_small.filepath as small_logo_url,
+                       m_legacy.filepath as legacy_logo_url
                 FROM sponsors s
                 INNER JOIN series_sponsors ss ON s.id = ss.sponsor_id
+                LEFT JOIN media m_banner ON s.logo_banner_id = m_banner.id
+                LEFT JOIN media m_standard ON s.logo_standard_id = m_standard.id
+                LEFT JOIN media m_small ON s.logo_small_id = m_small.id
+                LEFT JOIN media m_legacy ON s.logo_media_id = m_legacy.id
                 WHERE ss.series_id = ? AND s.active = 1
                 ORDER BY ss.display_order ASC, s.tier ASC
             ");
@@ -128,9 +138,17 @@ try {
     if (empty($eventSponsors['header']) && empty($eventSponsors['content']) && empty($eventSponsors['sidebar'])) {
         try {
             $sponsorStmt = $db->prepare("
-                SELECT s.*, es.placement, es.display_order
+                SELECT s.*, es.placement, es.display_order,
+                       m_banner.filepath as banner_logo_url,
+                       m_standard.filepath as standard_logo_url,
+                       m_small.filepath as small_logo_url,
+                       m_legacy.filepath as legacy_logo_url
                 FROM sponsors s
                 INNER JOIN event_sponsors es ON s.id = es.sponsor_id
+                LEFT JOIN media m_banner ON s.logo_banner_id = m_banner.id
+                LEFT JOIN media m_standard ON s.logo_standard_id = m_standard.id
+                LEFT JOIN media m_small ON s.logo_small_id = m_small.id
+                LEFT JOIN media m_legacy ON s.logo_media_id = m_legacy.id
                 WHERE es.event_id = ? AND s.active = 1
                 ORDER BY es.display_order ASC, s.tier ASC
             ");
@@ -605,10 +623,12 @@ if (!$event) {
 <?php if (!empty($eventSponsors['header'])): ?>
 <!-- Sponsor Banner -->
 <section class="event-sponsor-banner mb-lg">
-    <?php foreach ($eventSponsors['header'] as $sponsor): ?>
+    <?php foreach ($eventSponsors['header'] as $sponsor):
+        $bannerLogo = get_sponsor_logo_for_placement($sponsor, 'header');
+    ?>
     <a href="<?= h($sponsor['website'] ?? '#') ?>" target="_blank" rel="noopener sponsored" class="sponsor-banner-link">
-        <?php if (!empty($sponsor['logo'])): ?>
-        <img src="/uploads/sponsors/<?= h($sponsor['logo']) ?>" alt="<?= h($sponsor['name']) ?>" class="sponsor-banner-logo">
+        <?php if ($bannerLogo): ?>
+        <img src="<?= h($bannerLogo) ?>" alt="<?= h($sponsor['name']) ?>" class="sponsor-banner-logo">
         <?php else: ?>
         <span class="sponsor-banner-name"><?= h($sponsor['name']) ?></span>
         <?php endif; ?>
@@ -622,10 +642,12 @@ if (!$event) {
 <section class="event-sponsor-logos mb-lg">
     <div class="sponsor-logos-label">Sponsorer</div>
     <div class="sponsor-logos-row">
-        <?php foreach ($eventSponsors['content'] as $sponsor): ?>
+        <?php foreach ($eventSponsors['content'] as $sponsor):
+            $standardLogo = get_sponsor_logo_for_placement($sponsor, 'content');
+        ?>
         <a href="<?= h($sponsor['website'] ?? '#') ?>" target="_blank" rel="noopener sponsored" class="sponsor-logo-item" title="<?= h($sponsor['name']) ?>">
-            <?php if (!empty($sponsor['logo'])): ?>
-            <img src="/uploads/sponsors/<?= h($sponsor['logo']) ?>" alt="<?= h($sponsor['name']) ?>">
+            <?php if ($standardLogo): ?>
+            <img src="<?= h($standardLogo) ?>" alt="<?= h($sponsor['name']) ?>">
             <?php else: ?>
             <span><?= h($sponsor['name']) ?></span>
             <?php endif; ?>
@@ -781,12 +803,14 @@ if (!$event) {
             <h2 class="card-title"><?= h($classData['display_name']) ?></h2>
             <p class="card-subtitle"><?= count($classData['results']) ?> deltagare<?= !$isTimeRanked ? ' (motion)' : '' ?></p>
         </div>
-        <?php if (!empty($eventSponsors['sidebar']) && isset($eventSponsors['sidebar'][0])): ?>
-        <?php $resultSponsor = $eventSponsors['sidebar'][0]; ?>
+        <?php if (!empty($eventSponsors['sidebar']) && isset($eventSponsors['sidebar'][0])):
+            $resultSponsor = $eventSponsors['sidebar'][0];
+            $smallLogo = get_sponsor_logo_for_placement($resultSponsor, 'sidebar');
+        ?>
         <a href="<?= h($resultSponsor['website'] ?? '#') ?>" target="_blank" rel="noopener sponsored" class="class-sponsor">
             <span class="class-sponsor-label">Resultat sponsrat av</span>
-            <?php if (!empty($resultSponsor['logo'])): ?>
-            <img src="/uploads/sponsors/<?= h($resultSponsor['logo']) ?>" alt="<?= h($resultSponsor['name']) ?>" class="class-sponsor-logo">
+            <?php if ($smallLogo): ?>
+            <img src="<?= h($smallLogo) ?>" alt="<?= h($resultSponsor['name']) ?>" class="class-sponsor-logo">
             <?php else: ?>
             <span class="class-sponsor-name"><?= h($resultSponsor['name']) ?></span>
             <?php endif; ?>
