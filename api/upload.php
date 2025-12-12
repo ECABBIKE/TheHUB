@@ -11,7 +11,19 @@ require_once __DIR__ . '/../config.php';
 
 // Check if user is logged in (session already started in config.php)
 if (empty($_SESSION['user_id'])) {
-    echo json_encode(['success' => false, 'error' => 'Ej inloggad']);
+    // Debug: Log session info
+    error_log('Upload.php - Session ID: ' . session_id());
+    error_log('Upload.php - Session data: ' . print_r($_SESSION, true));
+    error_log('Upload.php - Cookies: ' . print_r($_COOKIE, true));
+    echo json_encode([
+        'success' => false,
+        'error' => 'Ej inloggad',
+        'debug' => [
+            'session_id' => session_id(),
+            'session_status' => session_status(),
+            'has_cookie' => isset($_COOKIE['PHPSESSID'])
+        ]
+    ]);
     exit;
 }
 
