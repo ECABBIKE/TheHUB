@@ -1885,6 +1885,17 @@ function sortTotalBySplit(headerEl, splitNum) {
     background: linear-gradient(90deg, var(--series-gradient-start) 0%, var(--series-gradient-end) 100%);
 }
 
+/* Series color stripe on result cards */
+.class-section {
+    overflow: hidden;
+}
+.class-section::before {
+    content: '';
+    display: block;
+    height: 4px;
+    background: linear-gradient(90deg, var(--series-gradient-start) 0%, var(--series-gradient-end) 100%);
+}
+
 .event-header-content {
     display: flex;
     gap: var(--space-lg);
@@ -2767,17 +2778,6 @@ td.col-place {
         border-radius: 0 !important;
         border-left: none !important;
         border-right: none !important;
-        width: calc(100% + var(--space-md) * 2);
-    }
-
-    /* Series color stripe on result cards (class sections) */
-    .class-section::before {
-        content: '';
-        display: block;
-        height: 4px;
-        background: linear-gradient(90deg, var(--series-gradient-start) 0%, var(--series-gradient-end) 100%);
-        margin: calc(var(--space-md) * -1);
-        margin-bottom: 0;
         width: calc(100% + var(--space-md) * 2);
     }
 
