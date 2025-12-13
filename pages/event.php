@@ -2761,17 +2761,18 @@ td.col-place {
     }
 
     /* Full width edge-to-edge on mobile for all sections */
+    /* Note: main-content uses --space-sm (8px) padding on mobile portrait */
     .event-sponsor-banner,
     .event-sponsor-logos,
     .event-tabs-wrapper,
     .card,
     .filter-row {
-        margin-left: calc(var(--space-md) * -1);
-        margin-right: calc(var(--space-md) * -1);
+        margin-left: calc(var(--space-sm) * -1);
+        margin-right: calc(var(--space-sm) * -1);
         border-radius: 0 !important;
         border-left: none !important;
         border-right: none !important;
-        width: calc(100% + var(--space-md) * 2);
+        width: calc(100% + var(--space-sm) * 2);
     }
 
     .event-sponsor-banner + .event-sponsor-logos {
@@ -2779,7 +2780,7 @@ td.col-place {
     }
 
     .event-sponsor-logos {
-        padding: var(--space-sm) var(--space-md);
+        padding: var(--space-sm);
     }
 
     .sponsor-logos-grid {
@@ -2789,8 +2790,8 @@ td.col-place {
     /* Card internal padding on mobile */
     .card-header,
     .card-body {
-        padding-left: var(--space-md);
-        padding-right: var(--space-md);
+        padding-left: var(--space-sm);
+        padding-right: var(--space-sm);
     }
 
     /* Result items full width */
