@@ -105,10 +105,124 @@ if (!function_exists('render_event_map')) {
 .emap-container {
     position: relative;
     width: 100%;
-    height: <?= $height ?>;
     background: var(--color-bg-sunken, #f8f9fa);
     overflow: hidden;
     border-radius: var(--radius-md, 10px);
+}
+/* Desktop layout - sidebar beside map, not overlapping */
+@media (min-width: 769px) {
+    .emap-container {
+        display: flex;
+        flex-direction: row;
+        height: <?= $height ?>;
+        min-height: 500px;
+    }
+    .emap-sidebar {
+        position: relative;
+        top: auto;
+        left: auto;
+        bottom: auto;
+        width: 280px;
+        min-width: 280px;
+        max-width: 280px;
+        background: var(--color-bg-card, #fff);
+        border-right: 1px solid var(--color-border);
+        z-index: 100;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        border-radius: var(--radius-md, 10px) 0 0 var(--radius-md, 10px);
+    }
+    .emap-sidebar-header {
+        padding: var(--space-md);
+        border-bottom: 1px solid var(--color-border);
+        flex-shrink: 0;
+    }
+    .emap-sidebar-body {
+        flex: 1;
+        overflow-y: auto;
+        padding: var(--space-md);
+    }
+    .emap-main {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+        position: relative;
+    }
+    .emap-map {
+        position: relative;
+        flex: 1;
+        min-height: 0;
+    }
+    .emap-elevation {
+        position: relative;
+        bottom: auto;
+        left: auto;
+        right: auto;
+        background: var(--color-bg-card, #fff);
+        z-index: 90;
+        flex-shrink: 0;
+        border-top: 1px solid var(--color-border);
+    }
+    .emap-elevation.collapsed {
+        transform: none;
+    }
+    .emap-elevation.collapsed .emap-elevation-content {
+        display: none;
+    }
+    .emap-location-btn {
+        position: absolute;
+        bottom: var(--space-md);
+        right: var(--space-md);
+        z-index: 100;
+    }
+    .emap-close {
+        position: absolute;
+        top: var(--space-md);
+        right: var(--space-md);
+        z-index: 100;
+    }
+    .emap-mobile-controls { display: none; }
+}
+/* Mobile layout - original overlay behavior */
+@media (max-width: 768px) {
+    .emap-container {
+        height: <?= $height ?>;
+    }
+    .emap-main {
+        position: absolute;
+        inset: 0;
+    }
+    .emap-map {
+        position: absolute;
+        inset: 0;
+        z-index: 1;
+    }
+    .emap-sidebar { display: none; }
+    .emap-mobile-controls {
+        position: absolute;
+        top: var(--space-sm);
+        left: var(--space-sm);
+        right: 50px;
+        z-index: 100;
+        display: flex;
+        gap: var(--space-sm);
+        flex-wrap: wrap;
+    }
+    .emap-elevation {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: rgba(255,255,255,0.97);
+        backdrop-filter: blur(10px);
+        z-index: 90;
+        transition: transform 0.3s ease;
+    }
+    .emap-elevation.collapsed {
+        transform: translateY(calc(100% - 40px));
+    }
 }
 <?php if ($fullscreen): ?>
 @media (max-width: 768px) {
@@ -121,40 +235,6 @@ if (!function_exists('render_event_map')) {
     }
 }
 <?php endif; ?>
-.emap-map {
-    position: absolute;
-    inset: 0;
-    z-index: 1;
-}
-/* Desktop sidebar */
-@media (min-width: 769px) {
-    .emap-sidebar {
-        position: absolute;
-        top: var(--space-md);
-        left: var(--space-md);
-        bottom: var(--space-md);
-        width: 280px;
-        background: rgba(255,255,255,0.97);
-        backdrop-filter: blur(10px);
-        border-radius: var(--radius-lg);
-        box-shadow: var(--shadow-lg);
-        z-index: 100;
-        display: flex;
-        flex-direction: column;
-        overflow: hidden;
-    }
-    .emap-sidebar-header {
-        padding: var(--space-md);
-        border-bottom: 1px solid var(--color-border);
-        flex-shrink: 0;
-    }
-    .emap-sidebar-body {
-        flex: 1;
-        overflow-y: auto;
-        padding: var(--space-md);
-    }
-    .emap-mobile-controls { display: none; }
-}
 /* Mobile floating controls */
 @media (max-width: 768px) {
     .emap-sidebar { display: none; }
@@ -562,25 +642,13 @@ if (!function_exists('render_event_map')) {
 </style>
 
 <div class="emap-container" id="<?= $mapId ?>-container">
-    <div class="emap-map" id="<?= $mapId ?>"></div>
-
-    <!-- Sponsor Banner -->
-    <div class="emap-sponsor-banner" id="<?= $mapId ?>-sponsor-banner" style="display: none;">
-        <a id="<?= $mapId ?>-sponsor-link" href="#" target="_blank" rel="noopener">
-            <img id="<?= $mapId ?>-sponsor-logo" src="" alt="Sponsor">
-        </a>
-        <button type="button" class="emap-sponsor-close" onclick="<?= $mapId ?>_hideSponsorBanner()">
-            <i data-lucide="x" style="width: 14px; height: 14px;"></i>
-        </button>
-    </div>
-
     <!-- Desktop Sidebar -->
     <div class="emap-sidebar">
         <div class="emap-sidebar-header">
             <strong><?= htmlspecialchars($eventName) ?></strong>
             <?php if (!empty($tracks)): ?>
             <div style="font-size: 0.85rem; color: var(--color-text); margin-top: var(--space-2xs);">
-                <?= number_format($tracks[0]['total_distance_km'], 1) ?> km · ↑<?= number_format($tracks[0]['total_elevation_m']) ?>m
+                <?= number_format($tracks[0]['total_distance_km'], 1) ?> km · <?= number_format($tracks[0]['total_elevation_m']) ?>m
             </div>
             <?php endif; ?>
         </div>
@@ -677,6 +745,20 @@ if (!function_exists('render_event_map')) {
         </div>
     </div>
 
+    <!-- Main content area (map + elevation) -->
+    <div class="emap-main">
+        <div class="emap-map" id="<?= $mapId ?>"></div>
+
+        <!-- Sponsor Banner -->
+        <div class="emap-sponsor-banner" id="<?= $mapId ?>-sponsor-banner" style="display: none;">
+        <a id="<?= $mapId ?>-sponsor-link" href="#" target="_blank" rel="noopener">
+            <img id="<?= $mapId ?>-sponsor-logo" src="" alt="Sponsor">
+        </a>
+        <button type="button" class="emap-sponsor-close" onclick="<?= $mapId ?>_hideSponsorBanner()">
+            <i data-lucide="x" style="width: 14px; height: 14px;"></i>
+        </button>
+    </div>
+
     <!-- Mobile Controls -->
     <div class="emap-mobile-controls">
         <?php if (count($tracks) > 1): ?>
@@ -768,7 +850,8 @@ if (!function_exists('render_event_map')) {
         </div>
     </div>
     <?php endif; ?>
-</div>
+    </div><!-- /.emap-main -->
+</div><!-- /.emap-container -->
 
 <script>
 (function() {
