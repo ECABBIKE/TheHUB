@@ -55,6 +55,8 @@ body{
   .card,
   .filter-row,
   .table-responsive,
+  .table-wrapper,
+  .result-list,
   .alert {
     margin-left:-16px;
     margin-right:-16px;
