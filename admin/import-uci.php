@@ -125,12 +125,46 @@ function detectCsvSeparator($file_path) {
  */
 function ensureUTF8($filepath) {
     $content = file_get_contents($filepath);
-    $encoding = mb_detect_encoding($content, ['UTF-8', 'ISO-8859-1', 'Windows-1252', 'CP1252'], true);
 
-    if ($encoding && $encoding !== 'UTF-8') {
-        $content = mb_convert_encoding($content, 'UTF-8', $encoding);
+    // Remove BOM if present
+    $content = preg_replace('/^\xEF\xBB\xBF/', '', $content);
+
+    // Check if already valid UTF-8
+    if (mb_check_encoding($content, 'UTF-8')) {
+        // Check if it contains typical Windows-1252 sequences that look like corrupted Swedish chars
+        // In Windows-1252: ö=0xF6, ä=0xE4, å=0xE5, Ö=0xD6, Ä=0xC4, Å=0xC5
+        // These bytes are valid UTF-8 continuation bytes, so mb_check_encoding might pass
+        // but the text looks corrupted (š instead of ö, etc.)
+
+        // Look for Windows-1252 byte patterns for Swedish characters
+        if (preg_match('/[\xC0-\xFF]/', $content) && !preg_match('/[\xC0-\xFF][\x80-\xBF]/', $content)) {
+            // Contains high bytes but not proper UTF-8 multi-byte sequences
+            // This is likely Windows-1252/ISO-8859-1
+            $content = mb_convert_encoding($content, 'UTF-8', 'Windows-1252');
+            file_put_contents($filepath, $content);
+            return;
+        }
+
+        // Check for common Swedish words that appear corrupted
+        // If we see "Fšrnamn" instead of "Förnamn", it's Windows-1252 misread as UTF-8
+        if (preg_match('/F.rnamn|f.rnamn|.delseår|.delse.r/u', $content) &&
+            !preg_match('/Förnamn|förnamn|Födelseår|födelseår/u', $content)) {
+            // Looks like Windows-1252 content
+            // Re-read as Windows-1252 and convert to UTF-8
+            $content = file_get_contents($filepath);
+            $content = mb_convert_encoding($content, 'UTF-8', 'Windows-1252');
+            file_put_contents($filepath, $content);
+            return;
+        }
+
+        // Already valid UTF-8
         file_put_contents($filepath, $content);
+        return;
     }
+
+    // Not valid UTF-8, try Windows-1252 (common for Swedish Excel exports)
+    $content = mb_convert_encoding($content, 'UTF-8', 'Windows-1252');
+    file_put_contents($filepath, $content);
 }
 
 /**
