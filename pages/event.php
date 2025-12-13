@@ -137,32 +137,35 @@ try {
         }
     }
 
-    // If no series sponsors, fall back to event-specific sponsors
-    if (empty($eventSponsors['header']) && empty($eventSponsors['content']) && empty($eventSponsors['sidebar'])) {
-        try {
-            $sponsorStmt = $db->prepare("
-                SELECT s.*, es.placement, es.display_order,
-                       m_banner.filepath as banner_logo_url,
-                       m_standard.filepath as standard_logo_url,
-                       m_small.filepath as small_logo_url,
-                       m_legacy.filepath as legacy_logo_url
-                FROM sponsors s
-                INNER JOIN event_sponsors es ON s.id = es.sponsor_id
-                LEFT JOIN media m_banner ON s.logo_banner_id = m_banner.id
-                LEFT JOIN media m_standard ON s.logo_standard_id = m_standard.id
-                LEFT JOIN media m_small ON s.logo_small_id = m_small.id
-                LEFT JOIN media m_legacy ON s.logo_media_id = m_legacy.id
-                WHERE es.event_id = ? AND s.active = 1
-                ORDER BY es.display_order ASC, s.tier ASC
-            ");
-            $sponsorStmt->execute([$eventId]);
-            foreach ($sponsorStmt->fetchAll(PDO::FETCH_ASSOC) as $sponsor) {
-                $placement = $sponsor['placement'] ?? 'sidebar';
-                $eventSponsors[$placement][] = $sponsor;
+    // Event-specific sponsors - these ADD to series sponsors (or replace per placement if specified)
+    try {
+        $sponsorStmt = $db->prepare("
+            SELECT s.*, es.placement, es.display_order,
+                   m_banner.filepath as banner_logo_url,
+                   m_standard.filepath as standard_logo_url,
+                   m_small.filepath as small_logo_url,
+                   m_legacy.filepath as legacy_logo_url
+            FROM sponsors s
+            INNER JOIN event_sponsors es ON s.id = es.sponsor_id
+            LEFT JOIN media m_banner ON s.logo_banner_id = m_banner.id
+            LEFT JOIN media m_standard ON s.logo_standard_id = m_standard.id
+            LEFT JOIN media m_small ON s.logo_small_id = m_small.id
+            LEFT JOIN media m_legacy ON s.logo_media_id = m_legacy.id
+            WHERE es.event_id = ? AND s.active = 1
+            ORDER BY es.display_order ASC, s.tier ASC
+        ");
+        $sponsorStmt->execute([$eventId]);
+        foreach ($sponsorStmt->fetchAll(PDO::FETCH_ASSOC) as $sponsor) {
+            $placement = $sponsor['placement'] ?? 'sidebar';
+            // Event sponsors override series sponsors for each placement
+            if (empty($eventSponsors[$placement])) {
+                $eventSponsors[$placement] = [];
             }
-        } catch (Exception $e) {
-            // Table might not exist yet
+            // Add to beginning (event sponsors take priority)
+            array_unshift($eventSponsors[$placement], $sponsor);
         }
+    } catch (Exception $e) {
+        // Table might not exist yet
     }
 
     // Check event format for DH mode
