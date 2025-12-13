@@ -561,6 +561,14 @@ if (!$event) {
 </div>
 <?php endif; ?>
 
+<?php
+// Event Header Banner (uploaded image, not sponsor) - Full width at top
+if (!empty($event['header_banner_url'])): ?>
+<section class="event-header-banner mb-md">
+    <img src="/<?= h(ltrim($event['header_banner_url'], '/')) ?>" alt="<?= h($event['name']) ?>" class="event-header-banner-img">
+</section>
+<?php endif; ?>
+
 <!-- Event Header -->
 <section class="event-header mb-lg">
     <div class="event-header-content">
@@ -650,14 +658,6 @@ if (!$event) {
         </div>
     </div>
 </section>
-
-<?php
-// Event Header Banner (uploaded image, not sponsor)
-if (!empty($event['header_banner_url'])): ?>
-<section class="event-header-banner mb-lg">
-    <img src="/<?= h(ltrim($event['header_banner_url'], '/')) ?>" alt="<?= h($event['name']) ?>" class="event-header-banner-img">
-</section>
-<?php endif; ?>
 
 <?php
 // Sponsor Banner (from sponsor with banner logo)
@@ -1693,21 +1693,26 @@ function sortTotalBySplit(headerEl, splitNum) {
 </script>
 
 <style>
-/* Event Header Banner (uploaded event image, not sponsor) */
+/* Event Header Banner (uploaded event image, not sponsor) - Full width */
 .event-header-banner {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    background: var(--color-bg-card);
-    border: 1px solid var(--color-border);
+    width: 100%;
+    display: block;
     border-radius: var(--radius-md);
     overflow: hidden;
 }
 .event-header-banner-img {
-    max-width: 100%;
+    width: 100%;
     height: auto;
-    max-height: 200px;
-    object-fit: contain;
+    display: block;
+    object-fit: cover;
+}
+@media (max-width: 768px) {
+    .event-header-banner {
+        border-radius: 0;
+        margin-left: calc(-1 * var(--space-md));
+        margin-right: calc(-1 * var(--space-md));
+        width: calc(100% + var(--space-md) * 2);
+    }
 }
 
 /* Event Sponsor Banner - Full width ad banner
