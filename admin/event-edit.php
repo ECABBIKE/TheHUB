@@ -397,6 +397,20 @@ foreach ($globalTexts as $gt) {
     $globalTextMap[$gt['field_key']] = $gt['content'];
 }
 
+// Get configured classes for this event
+$eventClasses = [];
+try {
+    $eventClasses = $db->getAll("
+        SELECT c.id, c.name, c.display_name, c.gender, epr.base_price
+        FROM event_pricing_rules epr
+        JOIN classes c ON epr.class_id = c.id
+        WHERE epr.event_id = ?
+        ORDER BY c.sort_order ASC, c.name ASC
+    ", [$id]);
+} catch (Exception $e) {
+    error_log("EVENT EDIT: Could not load event classes: " . $e->getMessage());
+}
+
 // Get all sponsors for selection
 $allSponsors = [];
 $eventSponsors = ['header' => [], 'content' => [], 'sidebar' => []];
@@ -422,7 +436,11 @@ $breadcrumbs = [
     ['label' => 'Events', 'url' => '/admin/events'],
     ['label' => htmlspecialchars($event['name'])]
 ];
-$page_actions = '<a href="/admin/event-map.php?id=' . $id . '" class="btn-admin btn-admin-secondary">
+$page_actions = '<a href="/admin/event-pricing.php?id=' . $id . '" class="btn-admin btn-admin-secondary">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+    Klasser &amp; Priser
+</a>
+<a href="/admin/event-map.php?id=' . $id . '" class="btn-admin btn-admin-secondary">
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/><line x1="9" x2="9" y1="3" y2="18"/><line x1="15" x2="15" y1="6" y2="21"/></svg>
     Karta &amp; POI
 </a>';
@@ -584,6 +602,46 @@ include __DIR__ . '/components/unified-layout.php';
                 <input type="text" name="stage_names" class="admin-form-input" value="<?= h($event['stage_names'] ?? '') ?>" placeholder='{"1":"SS1","2":"SS2","3":"SS3"}'>
                 <small style="color: var(--color-text-secondary);">Anpassade namn. Lämna tomt för standard.</small>
             </div>
+        </div>
+    </div>
+
+    <!-- EVENT CLASSES -->
+    <div class="admin-card" style="margin-bottom: var(--space-lg);">
+        <div class="admin-card-header" style="display: flex; justify-content: space-between; align-items: center;">
+            <h2>Klasser</h2>
+            <a href="/admin/event-pricing.php?id=<?= $id ?>" class="btn-admin btn-admin-sm btn-admin-secondary">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+                Hantera klasser
+            </a>
+        </div>
+        <div class="admin-card-body">
+            <?php if (empty($eventClasses)): ?>
+                <div style="text-align: center; padding: var(--space-lg); color: var(--color-text-secondary);">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:48px;height:48px;opacity:0.5;margin-bottom:var(--space-sm);"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                    <p style="margin-bottom: var(--space-sm);">Inga klasser konfigurerade för detta event.</p>
+                    <a href="/admin/event-pricing.php?id=<?= $id ?>" class="btn-admin btn-admin-primary">
+                        Konfigurera klasser & priser
+                    </a>
+                </div>
+            <?php else: ?>
+                <div style="display: flex; flex-wrap: wrap; gap: var(--space-sm);">
+                    <?php foreach ($eventClasses as $class): ?>
+                        <div style="display: inline-flex; align-items: center; gap: var(--space-xs); padding: var(--space-xs) var(--space-sm); background: var(--color-bg-secondary); border-radius: var(--radius-sm); font-size: 0.875rem;">
+                            <span style="font-weight: 500;"><?= htmlspecialchars($class['display_name'] ?? $class['name']) ?></span>
+                            <?php if ($class['gender'] === 'M'): ?>
+                                <span class="admin-badge admin-badge-info" style="font-size: 0.7rem;">H</span>
+                            <?php elseif ($class['gender'] === 'K' || $class['gender'] === 'F'): ?>
+                                <span class="admin-badge admin-badge-info" style="font-size: 0.7rem;">D</span>
+                            <?php endif; ?>
+                            <span style="color: var(--color-text-secondary);"><?= number_format($class['base_price'], 0) ?> kr</span>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+                <p style="margin-top: var(--space-md); font-size: 0.875rem; color: var(--color-text-secondary);">
+                    <?= count($eventClasses) ?> klass<?= count($eventClasses) !== 1 ? 'er' : '' ?> konfigurerade.
+                    <a href="/admin/event-pricing.php?id=<?= $id ?>" style="color: var(--color-accent);">Redigera priser och klasser</a>
+                </p>
+            <?php endif; ?>
         </div>
     </div>
 
