@@ -270,6 +270,21 @@ if ($userTheme === 'auto') {
                 margin-left: 0 !important;
                 width: 100% !important;
             }
+
+            /* CRITICAL: Bottom nav must be fixed on mobile */
+            .nav-bottom {
+                position: fixed !important;
+                bottom: 0 !important;
+                left: 0 !important;
+                right: 0 !important;
+                z-index: 300 !important;
+                display: flex !important;
+                justify-content: space-around !important;
+                background: #FFFFFF !important;
+                border-top: 1px solid #E5E7EB !important;
+                padding: 8px 12px !important;
+                padding-bottom: calc(8px + env(safe-area-inset-bottom, 0)) !important;
+            }
         }
     </style>
 
