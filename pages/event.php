@@ -2762,11 +2762,14 @@ td.col-place {
 
     /* Full width edge-to-edge on mobile for all sections */
     /* Note: main-content uses --space-sm (8px) padding on mobile portrait */
+    .event-header-banner,
+    .event-header,
     .event-sponsor-banner,
     .event-sponsor-logos,
     .event-tabs-wrapper,
     .card,
-    .filter-row {
+    .filter-row,
+    .result-list {
         margin-left: calc(var(--space-sm) * -1);
         margin-right: calc(var(--space-sm) * -1);
         border-radius: 0 !important;
