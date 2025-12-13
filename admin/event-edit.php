@@ -157,9 +157,21 @@ if (isset($_GET['saved']) && $_GET['saved'] == '1' && isset($_SESSION['message']
     unset($_SESSION['message'], $_SESSION['messageType']);
 }
 
+// Get debug POST data if available
+$debugPostSponsors = $_SESSION['debug_post_sponsors'] ?? null;
+unset($_SESSION['debug_post_sponsors']);
+
 // Handle form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     checkCsrf();
+
+    // DEBUG: Store POST sponsor data for display
+    $_SESSION['debug_post_sponsors'] = [
+        'sponsor_header' => $_POST['sponsor_header'] ?? 'NOT SET',
+        'sponsor_content' => $_POST['sponsor_content'] ?? 'NOT SET (no checkboxes selected)',
+        'sponsor_sidebar' => $_POST['sponsor_sidebar'] ?? 'NOT SET'
+    ];
+    error_log("FORM SUBMIT DEBUG: sponsor_content = " . json_encode($_POST['sponsor_content'] ?? 'NOT SET'));
 
     // Debug: Log is_championship value
     error_log("EVENT EDIT DEBUG: is_championship POST value = " . (isset($_POST['is_championship']) ? 'SET' : 'NOT SET'));
@@ -458,13 +470,23 @@ try {
         FROM event_sponsors
         WHERE event_id = ?
     ", [$id]);
+    error_log("SPONSOR LOAD DEBUG: Raw assignments from DB: " . json_encode($sponsorAssignments));
     foreach ($sponsorAssignments as $sa) {
         $placement = $sa['placement'] ?? 'sidebar';
         $eventSponsors[$placement][] = (int)$sa['sponsor_id'];
     }
+    error_log("SPONSOR LOAD DEBUG: Parsed sponsors - content: " . json_encode($eventSponsors['content']) . ", header: " . json_encode($eventSponsors['header']) . ", sidebar: " . json_encode($eventSponsors['sidebar']));
 } catch (Exception $e) {
     error_log("EVENT EDIT: Could not load sponsors: " . $e->getMessage());
 }
+
+// DEBUG: Store what was loaded for display
+$debugSponsorLoad = [
+    'raw' => $sponsorAssignments ?? [],
+    'content' => $eventSponsors['content'],
+    'header' => $eventSponsors['header'],
+    'sidebar' => $eventSponsors['sidebar']
+];
 
 // Page config
 $page_title = 'Redigera Event';
@@ -491,6 +513,15 @@ include __DIR__ . '/components/unified-layout.php';
 <?php if ($message): ?>
     <div class="alert alert-<?= $messageType === 'success' ? 'success' : ($messageType === 'error' ? 'error' : 'info') ?>" style="margin-bottom: var(--space-lg);">
         <?= htmlspecialchars($message) ?>
+    </div>
+<?php endif; ?>
+
+<?php if ($debugPostSponsors): ?>
+    <div style="background: #d4edda; border: 1px solid #28a745; padding: 10px; margin-bottom: var(--space-lg); border-radius: 6px; font-size: 0.8rem;">
+        <strong>DEBUG - POST data som skickades:</strong><br>
+        sponsor_header: <?= htmlspecialchars(json_encode($debugPostSponsors['sponsor_header'])) ?><br>
+        sponsor_content (Logo-rad): <?= htmlspecialchars(json_encode($debugPostSponsors['sponsor_content'])) ?><br>
+        sponsor_sidebar: <?= htmlspecialchars(json_encode($debugPostSponsors['sponsor_sidebar'])) ?>
     </div>
 <?php endif; ?>
 
@@ -951,6 +982,15 @@ include __DIR__ . '/components/unified-layout.php';
             <p style="margin-bottom: var(--space-md); color: var(--color-text-secondary); font-size: 0.875rem;">
                 Välj sponsorer specifikt för detta event. <strong>OBS:</strong> Seriens sponsorer visas om inga event-sponsorer anges.
             </p>
+
+            <!-- DEBUG: Show loaded sponsor data -->
+            <div style="background: #fff3cd; border: 1px solid #ffc107; padding: 10px; margin-bottom: var(--space-md); border-radius: 6px; font-size: 0.8rem;">
+                <strong>DEBUG - Laddade sponsorer från DB:</strong><br>
+                Header: <?= json_encode($eventSponsors['header']) ?><br>
+                Content (Logo-rad): <?= json_encode($eventSponsors['content']) ?><br>
+                Sidebar: <?= json_encode($eventSponsors['sidebar']) ?><br>
+                <small>Raw: <?= json_encode($debugSponsorLoad['raw'] ?? []) ?></small>
+            </div>
 
             <div style="display: grid; gap: var(--space-lg);">
                 <!-- Header Banner from Media Library -->
