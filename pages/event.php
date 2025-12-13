@@ -1892,12 +1892,15 @@ function sortTotalBySplit(headerEl, splitNum) {
 }
 .class-section::before {
     content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
+    display: block;
     height: 4px;
+    margin: calc(var(--space-lg) * -1) calc(var(--space-lg) * -1) var(--space-lg) calc(var(--space-lg) * -1);
     background: linear-gradient(90deg, var(--series-gradient-start) 0%, var(--series-gradient-end) 100%);
+}
+@media (max-width: 599px) and (orientation: portrait) {
+    .class-section::before {
+        margin: calc(var(--space-md) * -1) calc(var(--space-md) * -1) var(--space-md) calc(var(--space-md) * -1);
+    }
 }
 
 .event-header-content {
@@ -2194,8 +2197,8 @@ function sortTotalBySplit(headerEl, splitNum) {
 
 .filter-field--toggle {
     display: flex;
-    align-items: flex-end;
-    padding-bottom: var(--space-sm);
+    align-items: center;
+    padding: var(--space-xs) 0;
 }
 
 .toggle-label {
@@ -2204,6 +2207,9 @@ function sortTotalBySplit(headerEl, splitNum) {
     gap: var(--space-sm);
     cursor: pointer;
     user-select: none;
+    background: var(--color-bg-sunken);
+    padding: var(--space-xs) var(--space-sm);
+    border-radius: var(--radius-full);
 }
 
 .toggle-label input[type="checkbox"] {
@@ -2498,7 +2504,7 @@ td.col-place {
     display: flex;
     align-items: center;
     gap: var(--space-md);
-    padding: var(--space-sm);
+    padding: var(--space-sm) var(--space-md);
     text-decoration: none;
     border-bottom: 1px solid var(--color-border);
 }
@@ -2747,18 +2753,18 @@ td.col-place {
     }
 
     .filter-row {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
+        display: flex;
+        flex-wrap: wrap;
         gap: var(--space-sm);
         padding: var(--space-md);
+        align-items: center;
     }
     .filter-row .filter-field:not(.filter-field--toggle) {
-        grid-column: span 2;
+        flex: 1 1 100%;
     }
 
     .filter-field--toggle {
-        padding-bottom: 0;
-        justify-content: flex-end;
+        flex: 0 0 auto;
     }
 
     .info-grid {
