@@ -91,12 +91,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 // Fetch active series for branding
-$seriesList = $db->getAll("
-    SELECT id, name, slug, gradient_start, gradient_end, accent_color, logo_dark
-    FROM series
-    WHERE active = 1
-    ORDER BY name ASC
-");
+$seriesList = [];
+try {
+    $seriesList = $db->getAll("
+        SELECT id, name, slug,
+               COALESCE(gradient_start, '#004A98') as gradient_start,
+               COALESCE(gradient_end, '#002a5c') as gradient_end,
+               COALESCE(accent_color, '#61CE70') as accent_color,
+               logo_dark
+        FROM series
+        WHERE active = 1
+        ORDER BY name ASC
+    ");
+} catch (Exception $e) {
+    // Try without logo_dark column
+    try {
+        $seriesList = $db->getAll("
+            SELECT id, name, slug,
+                   COALESCE(gradient_start, '#004A98') as gradient_start,
+                   COALESCE(gradient_end, '#002a5c') as gradient_end,
+                   COALESCE(accent_color, '#61CE70') as accent_color,
+                   NULL as logo_dark
+            FROM series
+            WHERE active = 1
+            ORDER BY name ASC
+        ");
+    } catch (Exception $e2) {
+        // Last resort - just get basic series info
+        $seriesList = $db->getAll("SELECT id, name, slug FROM series WHERE active = 1 ORDER BY name ASC");
+    }
+}
 
 // Define color groups for display
 $colorGroups = [
@@ -506,7 +530,6 @@ include __DIR__ . '/components/unified-layout.php';
 </form>
 
 <!-- Series Colors Section (separate forms for each series) -->
-<?php if (!empty($seriesList)): ?>
 <div class="card mb-lg">
     <div class="card-header">
         <h2>
@@ -520,6 +543,12 @@ include __DIR__ . '/components/unified-layout.php';
             Varje serie har egna färger som används för datumboxar, topbar och andra serierelaterade element.
         </p>
 
+        <?php if (empty($seriesList)): ?>
+        <div class="alert alert--warning">
+            <i data-lucide="alert-triangle"></i>
+            Inga aktiva serier hittades. Se till att det finns serier med <code>active = 1</code> i databasen.
+        </div>
+        <?php else: ?>
         <div class="series-color-grid">
             <?php foreach ($seriesList as $series): ?>
             <div class="series-color-card">
@@ -566,9 +595,9 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
             <?php endforeach; ?>
         </div>
+        <?php endif; ?>
     </div>
 </div>
-<?php endif; ?>
 
 <form method="POST" id="brandingFormContinued">
     <?= csrf_field() ?>
