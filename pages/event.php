@@ -2732,17 +2732,18 @@ td.col-place {
     }
 
     .filter-row {
-        flex-direction: column;
-        align-items: stretch;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: var(--space-sm);
+        padding: var(--space-md);
     }
     .filter-row .filter-field:not(.filter-field--toggle) {
-        flex: none;
-        width: 100%;
+        grid-column: span 2;
     }
 
     .filter-field--toggle {
         padding-bottom: 0;
-        padding-top: var(--space-xs);
+        justify-content: flex-end;
     }
 
     .info-grid {
@@ -2840,19 +2841,23 @@ td.col-place {
         padding-right: var(--space-sm);
     }
 
-    /* Result items full width */
+    /* Result items full width - break out of result-list padding */
     .result-item {
         border-radius: 0;
-        margin-left: 0;
-        margin-right: 0;
+        margin-left: calc(var(--space-sm) * -1);
+        margin-right: calc(var(--space-sm) * -1);
+        padding-left: var(--space-sm);
+        padding-right: var(--space-sm);
     }
 
-    /* Table/result-list break out of card padding (16px) to be truly edge-to-edge */
+    /* Table/result-list break out of card padding to be truly edge-to-edge */
     .card .table-wrapper,
     .card .result-list {
         margin-left: calc(var(--space-md) * -1);
         margin-right: calc(var(--space-md) * -1);
         width: calc(100% + var(--space-md) * 2);
+        padding-left: var(--space-sm);
+        padding-right: var(--space-sm);
     }
 
     /* Compact event header on mobile */
