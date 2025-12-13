@@ -561,8 +561,16 @@ if (!$event) {
 </div>
 <?php endif; ?>
 
+<?php
+// Event Header Banner (uploaded image, not sponsor) - Full width at top
+if (!empty($event['header_banner_url'])): ?>
+<section class="event-header-banner">
+    <img src="/<?= h(ltrim($event['header_banner_url'], '/')) ?>" alt="<?= h($event['name']) ?>" class="event-header-banner-img">
+</section>
+<?php endif; ?>
+
 <!-- Event Header -->
-<section class="event-header mb-lg">
+<section class="event-header mb-sm">
     <div class="event-header-content">
         <?php if ($event['series_logo']): ?>
         <div class="event-logo">
@@ -652,20 +660,12 @@ if (!$event) {
 </section>
 
 <?php
-// Event Header Banner (uploaded image, not sponsor)
-if (!empty($event['header_banner_url'])): ?>
-<section class="event-header-banner mb-lg">
-    <img src="/<?= h(ltrim($event['header_banner_url'], '/')) ?>" alt="<?= h($event['name']) ?>" class="event-header-banner-img">
-</section>
-<?php endif; ?>
-
-<?php
 // Sponsor Banner (from sponsor with banner logo)
 $headerSponsorsWithLogos = array_filter($eventSponsors['header'] ?? [], function($s) {
     return get_sponsor_logo_for_placement($s, 'header') !== null;
 });
 if (!empty($headerSponsorsWithLogos)): ?>
-<section class="event-sponsor-banner mb-lg">
+<section class="event-sponsor-banner mb-sm">
     <?php foreach ($headerSponsorsWithLogos as $sponsor):
         $bannerLogo = get_sponsor_logo_for_placement($sponsor, 'header');
     ?>
@@ -679,7 +679,7 @@ if (!empty($headerSponsorsWithLogos)): ?>
 <?php
 // Content sponsors (logo row) - show all, with or without logos
 if (!empty($eventSponsors['content'])): ?>
-<section class="event-sponsor-logos mb-lg">
+<section class="event-sponsor-logos mb-sm">
     <div class="sponsor-logos-label">Sponsorer</div>
     <div class="sponsor-logos-row">
         <?php foreach ($eventSponsors['content'] as $sponsor):
@@ -698,7 +698,7 @@ if (!empty($eventSponsors['content'])): ?>
 <?php endif; ?>
 
 <!-- Tab Navigation -->
-<div class="event-tabs-wrapper mb-lg">
+<div class="event-tabs-wrapper mb-sm">
     <div class="event-tabs">
         <?php
         // When results exist, we show fewer tabs (Resultat, Info, Karta only)
@@ -1693,21 +1693,40 @@ function sortTotalBySplit(headerEl, splitNum) {
 </script>
 
 <style>
-/* Event Header Banner (uploaded event image, not sponsor) */
+/* Event Header Banner (uploaded event image, not sponsor) - Full width */
 .event-header-banner {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    background: var(--color-bg-card);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-md);
+    width: 100%;
+    display: block;
+    border-radius: var(--radius-md) var(--radius-md) 0 0;
     overflow: hidden;
+    margin-bottom: 0;
+}
+.event-header-banner + .event-header {
+    border-radius: 0 0 var(--radius-md) var(--radius-md);
+    border-top: none;
+}
+.event-header-banner + .event-header::before {
+    display: none;
 }
 .event-header-banner-img {
-    max-width: 100%;
+    width: 100%;
     height: auto;
-    max-height: 200px;
-    object-fit: contain;
+    display: block;
+    object-fit: cover;
+}
+@media (max-width: 768px) {
+    .event-header-banner {
+        border-radius: 0;
+        margin-left: calc(-1 * var(--space-md));
+        margin-right: calc(-1 * var(--space-md));
+        width: calc(100% + var(--space-md) * 2);
+    }
+    .event-header-banner + .event-header {
+        border-radius: 0;
+        margin-left: calc(-1 * var(--space-md));
+        margin-right: calc(-1 * var(--space-md));
+        width: calc(100% + var(--space-md) * 2);
+    }
 }
 
 /* Event Sponsor Banner - Full width ad banner
