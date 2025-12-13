@@ -11,6 +11,7 @@ $db = getDB();
 // Handle search and filters
 $search = $_GET['search'] ?? '';
 $club_id = isset($_GET['club_id']) && is_numeric($_GET['club_id']) ? intval($_GET['club_id']) : null;
+$nationality = isset($_GET['nationality']) && strlen($_GET['nationality']) === 3 ? strtoupper($_GET['nationality']) : null;
 $onlyWithResults = isset($_GET['with_results']) && $_GET['with_results'] == '1';
 $onlySweId = isset($_GET['swe_only']) && $_GET['swe_only'] == '1';
 $onlyActivated = isset($_GET['activated']) && $_GET['activated'] == '1';
@@ -20,7 +21,7 @@ $sortBy = $_GET['sort'] ?? 'name';
 $sortOrder = $_GET['order'] ?? 'asc';
 
 // Validate sort parameters
-$allowedSorts = ['name', 'year', 'club', 'license', 'results'];
+$allowedSorts = ['name', 'year', 'club', 'license', 'results', 'nationality'];
 $allowedOrders = ['asc', 'desc'];
 if (!in_array($sortBy, $allowedSorts)) $sortBy = 'name';
 if (!in_array($sortOrder, $allowedOrders)) $sortOrder = 'asc';
@@ -37,6 +38,8 @@ if ($sortBy === 'name') {
     $orderBy = $sortOrder === 'asc' ? 'c.license_number ASC' : 'c.license_number DESC';
 } elseif ($sortBy === 'results') {
     $orderBy = $sortOrder === 'asc' ? 'result_count ASC, c.lastname ASC' : 'result_count DESC, c.lastname ASC';
+} elseif ($sortBy === 'nationality') {
+    $orderBy = $sortOrder === 'asc' ? 'c.nationality ASC, c.lastname ASC' : 'c.nationality DESC, c.lastname ASC';
 }
 
 // Build query filters
@@ -54,6 +57,11 @@ if ($club_id) {
     $params[] = $club_id;
 }
 
+if ($nationality) {
+    $where[] = "c.nationality = ?";
+    $params[] = $nationality;
+}
+
 if ($onlyWithResults) {
     $where[] = "EXISTS (SELECT 1 FROM results r WHERE r.cyclist_id = c.id)";
 }
@@ -69,7 +77,7 @@ if ($onlyActivated) {
 $whereClause = $where ? 'WHERE ' . implode(' AND ', $where) : '';
 
 $sql = "SELECT
-    c.id, c.firstname, c.lastname, c.birth_year, c.gender,
+    c.id, c.firstname, c.lastname, c.birth_year, c.gender, c.nationality,
     c.license_number, c.license_type, c.license_category, c.license_valid_until, c.discipline, c.active,
     cl.name as club_name, cl.id as club_id,
     (SELECT COUNT(*) FROM results r WHERE r.cyclist_id = c.id) as result_count
@@ -86,6 +94,32 @@ $selectedClub = null;
 if ($club_id) {
     $selectedClub = $db->getRow("SELECT * FROM clubs WHERE id = ?", [$club_id]);
 }
+
+// Get distinct nationalities for filter dropdown
+$nationalities = $db->getAll("SELECT DISTINCT nationality, COUNT(*) as count FROM riders WHERE nationality IS NOT NULL AND nationality != '' GROUP BY nationality ORDER BY count DESC, nationality ASC");
+
+// Common nationality names for display
+$nationalityNames = [
+    'SWE' => 'Sverige',
+    'NOR' => 'Norge',
+    'DEN' => 'Danmark',
+    'FIN' => 'Finland',
+    'GBR' => 'Storbritannien',
+    'GER' => 'Tyskland',
+    'FRA' => 'Frankrike',
+    'ITA' => 'Italien',
+    'ESP' => 'Spanien',
+    'USA' => 'USA',
+    'CAN' => 'Kanada',
+    'AUS' => 'Australien',
+    'NZL' => 'Nya Zeeland',
+    'AUT' => 'Österrike',
+    'SUI' => 'Schweiz',
+    'BEL' => 'Belgien',
+    'NED' => 'Nederländerna',
+    'POL' => 'Polen',
+    'CZE' => 'Tjeckien',
+];
 
 // Helper function for age calculation (use existing if available)
 if (!function_exists('calculateAge')) {
@@ -106,11 +140,12 @@ $page_actions = '<a href="/admin/import/riders" class="btn-admin btn-admin-prima
 </a>';
 
 // Build sort URL helper
-function buildSortUrl($field, $currentSort, $currentOrder, $search, $club_id, $onlyWithResults, $onlySweId, $onlyActivated) {
+function buildSortUrl($field, $currentSort, $currentOrder, $search, $club_id, $nationality, $onlyWithResults, $onlySweId, $onlyActivated) {
     $newOrder = ($currentSort === $field && $currentOrder === 'asc') ? 'desc' : 'asc';
     $url = "?sort=$field&order=$newOrder";
     if ($search) $url .= '&search=' . urlencode($search);
     if ($club_id) $url .= '&club_id=' . $club_id;
+    if ($nationality) $url .= '&nationality=' . urlencode($nationality);
     if ($onlyWithResults) $url .= '&with_results=1';
     if ($onlySweId) $url .= '&swe_only=1';
     if ($onlyActivated) $url .= '&activated=1';
@@ -153,6 +188,18 @@ include __DIR__ . '/components/unified-layout.php';
                 >
             </div>
 
+            <div class="admin-form-group" style="margin-bottom: 0; min-width: 140px;">
+                <label class="admin-form-label">Nationalitet</label>
+                <select name="nationality" class="admin-form-select" onchange="this.form.submit()">
+                    <option value="">Alla länder</option>
+                    <?php foreach ($nationalities as $nat): ?>
+                    <option value="<?= h($nat['nationality']) ?>" <?= $nationality === $nat['nationality'] ? 'selected' : '' ?>>
+                        <?= h($nationalityNames[$nat['nationality']] ?? $nat['nationality']) ?> (<?= $nat['count'] ?>)
+                    </option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+
             <div class="admin-form-group" style="margin-bottom: 0;">
                 <label class="admin-checkbox-label">
                     <input type="checkbox" name="with_results" value="1" <?= $onlyWithResults ? 'checked' : '' ?> onchange="this.form.submit()">
@@ -174,7 +221,7 @@ include __DIR__ . '/components/unified-layout.php';
                 </label>
             </div>
 
-            <?php if ($search || $onlyWithResults || $onlySweId || $onlyActivated): ?>
+            <?php if ($search || $nationality || $onlyWithResults || $onlySweId || $onlyActivated): ?>
                 <a href="/admin/riders<?= $club_id ? '?club_id=' . $club_id : '' ?>" class="btn-admin btn-admin-sm btn-admin-secondary">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
                     Rensa
@@ -202,7 +249,7 @@ include __DIR__ . '/components/unified-layout.php';
                     <thead>
                         <tr>
                             <th>
-                                <a href="<?= buildSortUrl('name', $sortBy, $sortOrder, $search, $club_id, $onlyWithResults, $onlySweId, $onlyActivated) ?>" class="admin-sortable">
+                                <a href="<?= buildSortUrl('name', $sortBy, $sortOrder, $search, $club_id, $nationality, $onlyWithResults, $onlySweId, $onlyActivated) ?>" class="admin-sortable">
                                     Namn
                                     <?php if ($sortBy === 'name'): ?>
                                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;">
@@ -216,7 +263,21 @@ include __DIR__ . '/components/unified-layout.php';
                                 </a>
                             </th>
                             <th>
-                                <a href="<?= buildSortUrl('year', $sortBy, $sortOrder, $search, $club_id, $onlyWithResults, $onlySweId, $onlyActivated) ?>" class="admin-sortable">
+                                <a href="<?= buildSortUrl('nationality', $sortBy, $sortOrder, $search, $club_id, $nationality, $onlyWithResults, $onlySweId, $onlyActivated) ?>" class="admin-sortable">
+                                    Land
+                                    <?php if ($sortBy === 'nationality'): ?>
+                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;">
+                                            <?php if ($sortOrder === 'asc'): ?>
+                                                <path d="m18 15-6-6-6 6"/>
+                                            <?php else: ?>
+                                                <path d="m6 9 6 6 6-6"/>
+                                            <?php endif; ?>
+                                        </svg>
+                                    <?php endif; ?>
+                                </a>
+                            </th>
+                            <th>
+                                <a href="<?= buildSortUrl('year', $sortBy, $sortOrder, $search, $club_id, $nationality, $onlyWithResults, $onlySweId, $onlyActivated) ?>" class="admin-sortable">
                                     År
                                     <?php if ($sortBy === 'year'): ?>
                                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;">
@@ -230,7 +291,7 @@ include __DIR__ . '/components/unified-layout.php';
                                 </a>
                             </th>
                             <th>
-                                <a href="<?= buildSortUrl('club', $sortBy, $sortOrder, $search, $club_id, $onlyWithResults, $onlySweId, $onlyActivated) ?>" class="admin-sortable">
+                                <a href="<?= buildSortUrl('club', $sortBy, $sortOrder, $search, $club_id, $nationality, $onlyWithResults, $onlySweId, $onlyActivated) ?>" class="admin-sortable">
                                     Klubb
                                     <?php if ($sortBy === 'club'): ?>
                                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;">
@@ -244,7 +305,7 @@ include __DIR__ . '/components/unified-layout.php';
                                 </a>
                             </th>
                             <th>
-                                <a href="<?= buildSortUrl('license', $sortBy, $sortOrder, $search, $club_id, $onlyWithResults, $onlySweId, $onlyActivated) ?>" class="admin-sortable">
+                                <a href="<?= buildSortUrl('license', $sortBy, $sortOrder, $search, $club_id, $nationality, $onlyWithResults, $onlySweId, $onlyActivated) ?>" class="admin-sortable">
                                     Licensnummer
                                     <?php if ($sortBy === 'license'): ?>
                                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;">
@@ -258,7 +319,7 @@ include __DIR__ . '/components/unified-layout.php';
                                 </a>
                             </th>
                             <th>
-                                <a href="<?= buildSortUrl('results', $sortBy, $sortOrder, $search, $club_id, $onlyWithResults, $onlySweId, $onlyActivated) ?>" class="admin-sortable">
+                                <a href="<?= buildSortUrl('results', $sortBy, $sortOrder, $search, $club_id, $nationality, $onlyWithResults, $onlySweId, $onlyActivated) ?>" class="admin-sortable">
                                     Resultat
                                     <?php if ($sortBy === 'results'): ?>
                                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;">
@@ -311,6 +372,15 @@ include __DIR__ . '/components/unified-layout.php';
                                     <a href="/rider/<?= $rider['id'] ?>" style="color: var(--color-accent); text-decoration: none; font-weight: 500;">
                                         <?= htmlspecialchars($rider['firstname'] . ' ' . $rider['lastname']) ?>
                                     </a>
+                                </td>
+                                <td>
+                                    <?php if ($rider['nationality']): ?>
+                                        <span class="admin-badge" title="<?= h($nationalityNames[$rider['nationality']] ?? $rider['nationality']) ?>">
+                                            <?= h($rider['nationality']) ?>
+                                        </span>
+                                    <?php else: ?>
+                                        -
+                                    <?php endif; ?>
                                 </td>
                                 <td>
                                     <?php if ($rider['birth_year']): ?>

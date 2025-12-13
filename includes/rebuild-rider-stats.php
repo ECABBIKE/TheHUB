@@ -958,29 +958,32 @@ function updateRiderCachedStats($pdo, $rider_id, $results) {
 
 /**
  * Beräknar och uppdaterar experience level
+ * Baserat på antal UNIKA säsonger med resultat (inte kalenderår sedan start)
  * Legend (6) kräver: 5+ säsonger OCH minst 1 serieseger
  */
 function updateExperienceLevel($pdo, $rider_id) {
-    // Hitta första säsongen
+    // Räkna antal unika säsonger med resultat (inte bara kalenderår sedan start)
     $stmt = $pdo->prepare("
-        SELECT MIN(YEAR(e.date)) as first_season
+        SELECT
+            MIN(YEAR(e.date)) as first_season,
+            COUNT(DISTINCT YEAR(e.date)) as seasons_with_results
         FROM results r
         JOIN events e ON r.event_id = e.id
         WHERE r.cyclist_id = ?
     ");
     $stmt->execute([$rider_id]);
-    $firstSeason = $stmt->fetchColumn();
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    if (!$firstSeason) return;
+    $firstSeason = $row['first_season'] ?? null;
+    $seasonsWithResults = (int)($row['seasons_with_results'] ?? 0);
 
-    $currentYear = (int)date('Y');
-    $yearsActive = $currentYear - $firstSeason + 1;
+    if (!$firstSeason || $seasonsWithResults === 0) return;
 
-    // Börja med max 5 (Veteran)
-    $experienceLevel = min($yearsActive, 5);
+    // Experience baserat på FAKTISKA säsonger med resultat
+    $experienceLevel = min($seasonsWithResults, 5);
 
-    // Kolla om Legend-status (kräver 5+ år OCH serieseger)
-    if ($yearsActive >= 5) {
+    // Kolla om Legend-status (kräver 5+ säsonger OCH serieseger)
+    if ($seasonsWithResults >= 5) {
         $stmt = $pdo->prepare("
             SELECT COUNT(*) FROM rider_achievements
             WHERE rider_id = ? AND achievement_type = 'series_champion'
