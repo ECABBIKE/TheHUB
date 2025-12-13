@@ -283,6 +283,13 @@ $ADMIN_TABS = [
                 'icon' => 'image',
                 'url' => '/admin/media.php',
                 'pages' => ['media.php', 'sponsors.php']
+            ],
+            [
+                'id' => 'branding',
+                'label' => 'Branding',
+                'icon' => 'palette',
+                'url' => '/admin/branding.php',
+                'pages' => ['branding.php']
             ]
         ]
     ]
