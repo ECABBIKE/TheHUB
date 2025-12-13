@@ -43,6 +43,30 @@ try {
     error_log("EVENT EDIT: Error checking payment_recipient_id column: " . $e->getMessage());
 }
 
+// Check/create header_banner_media_id column
+$headerBannerColumnExists = false;
+try {
+    $columns = $db->getAll("SHOW COLUMNS FROM events LIKE 'header_banner_media_id'");
+    if (empty($columns)) {
+        $db->query("ALTER TABLE events ADD COLUMN header_banner_media_id INT NULL");
+        error_log("EVENT EDIT: Added header_banner_media_id column to events table");
+    }
+    $headerBannerColumnExists = true;
+} catch (Exception $e) {
+    error_log("EVENT EDIT: Error checking/adding header_banner_media_id column: " . $e->getMessage());
+}
+
+// Get media files from events folder for banner selection
+$eventMediaFiles = [];
+try {
+    global $pdo;
+    $stmt = $pdo->prepare("SELECT id, filename, original_filename, filepath FROM media WHERE folder = 'events' ORDER BY uploaded_at DESC");
+    $stmt->execute();
+    $eventMediaFiles = $stmt->fetchAll(PDO::FETCH_ASSOC);
+} catch (Exception $e) {
+    error_log("EVENT EDIT: Error fetching event media: " . $e->getMessage());
+}
+
 // Get event ID from URL (supports both /admin/events/edit/123 and ?id=123)
 $id = 0;
 if (isset($_GET['id'])) {
@@ -82,11 +106,6 @@ function saveEventSponsorAssignments($db, $eventId, $postData) {
 
     // Insert new assignments
     $insertStmt = $pdo->prepare("INSERT INTO event_sponsors (event_id, sponsor_id, placement, display_order) VALUES (?, ?, ?, ?)");
-
-    // Header sponsor (single select)
-    if (!empty($postData['sponsor_header'])) {
-        $insertStmt->execute([$eventId, (int)$postData['sponsor_header'], 'header', 0]);
-    }
 
     // Content sponsors (multiple checkboxes)
     if (!empty($postData['sponsor_content']) && is_array($postData['sponsor_content'])) {
@@ -259,6 +278,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 error_log("EVENT EDIT: SM column update failed: " . $smEx->getMessage());
             }
 
+            // Update header_banner_media_id separately
+            if ($headerBannerColumnExists) {
+                try {
+                    $headerBannerMediaId = !empty($_POST['header_banner_media_id']) ? intval($_POST['header_banner_media_id']) : null;
+                    $db->query("UPDATE events SET header_banner_media_id = ? WHERE id = ?", [$headerBannerMediaId, $id]);
+                } catch (Exception $hbEx) {
+                    error_log("EVENT EDIT: header_banner_media_id update failed: " . $hbEx->getMessage());
+                }
+            }
+
             // Update payment_recipient_id separately (if column exists)
             if ($paymentRecipientColumnExists) {
                 try {
@@ -368,6 +397,20 @@ foreach ($globalTexts as $gt) {
     $globalTextMap[$gt['field_key']] = $gt['content'];
 }
 
+// Get configured classes for this event
+$eventClasses = [];
+try {
+    $eventClasses = $db->getAll("
+        SELECT c.id, c.name, c.display_name, c.gender, epr.base_price
+        FROM event_pricing_rules epr
+        JOIN classes c ON epr.class_id = c.id
+        WHERE epr.event_id = ?
+        ORDER BY c.sort_order ASC, c.name ASC
+    ", [$id]);
+} catch (Exception $e) {
+    error_log("EVENT EDIT: Could not load event classes: " . $e->getMessage());
+}
+
 // Get all sponsors for selection
 $allSponsors = [];
 $eventSponsors = ['header' => [], 'content' => [], 'sidebar' => []];
@@ -393,7 +436,11 @@ $breadcrumbs = [
     ['label' => 'Events', 'url' => '/admin/events'],
     ['label' => htmlspecialchars($event['name'])]
 ];
-$page_actions = '<a href="/admin/event-map.php?id=' . $id . '" class="btn-admin btn-admin-secondary">
+$page_actions = '<a href="/admin/event-pricing.php?id=' . $id . '" class="btn-admin btn-admin-secondary">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+    Klasser &amp; Priser
+</a>
+<a href="/admin/event-map.php?id=' . $id . '" class="btn-admin btn-admin-secondary">
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/><line x1="9" x2="9" y1="3" y2="18"/><line x1="15" x2="15" y1="6" y2="21"/></svg>
     Karta &amp; POI
 </a>';
@@ -555,6 +602,46 @@ include __DIR__ . '/components/unified-layout.php';
                 <input type="text" name="stage_names" class="admin-form-input" value="<?= h($event['stage_names'] ?? '') ?>" placeholder='{"1":"SS1","2":"SS2","3":"SS3"}'>
                 <small style="color: var(--color-text-secondary);">Anpassade namn. Lämna tomt för standard.</small>
             </div>
+        </div>
+    </div>
+
+    <!-- EVENT CLASSES -->
+    <div class="admin-card" style="margin-bottom: var(--space-lg);">
+        <div class="admin-card-header" style="display: flex; justify-content: space-between; align-items: center;">
+            <h2>Klasser</h2>
+            <a href="/admin/event-pricing.php?id=<?= $id ?>" class="btn-admin btn-admin-sm btn-admin-secondary">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+                Hantera klasser
+            </a>
+        </div>
+        <div class="admin-card-body">
+            <?php if (empty($eventClasses)): ?>
+                <div style="text-align: center; padding: var(--space-lg); color: var(--color-text-secondary);">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:48px;height:48px;opacity:0.5;margin-bottom:var(--space-sm);"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                    <p style="margin-bottom: var(--space-sm);">Inga klasser konfigurerade för detta event.</p>
+                    <a href="/admin/event-pricing.php?id=<?= $id ?>" class="btn-admin btn-admin-primary">
+                        Konfigurera klasser & priser
+                    </a>
+                </div>
+            <?php else: ?>
+                <div style="display: flex; flex-wrap: wrap; gap: var(--space-sm);">
+                    <?php foreach ($eventClasses as $class): ?>
+                        <div style="display: inline-flex; align-items: center; gap: var(--space-xs); padding: var(--space-xs) var(--space-sm); background: var(--color-bg-secondary); border-radius: var(--radius-sm); font-size: 0.875rem;">
+                            <span style="font-weight: 500;"><?= htmlspecialchars($class['display_name'] ?? $class['name']) ?></span>
+                            <?php if ($class['gender'] === 'M'): ?>
+                                <span class="admin-badge admin-badge-info" style="font-size: 0.7rem;">H</span>
+                            <?php elseif ($class['gender'] === 'K' || $class['gender'] === 'F'): ?>
+                                <span class="admin-badge admin-badge-info" style="font-size: 0.7rem;">D</span>
+                            <?php endif; ?>
+                            <span style="color: var(--color-text-secondary);"><?= number_format($class['base_price'], 0) ?> kr</span>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+                <p style="margin-top: var(--space-md); font-size: 0.875rem; color: var(--color-text-secondary);">
+                    <?= count($eventClasses) ?> klass<?= count($eventClasses) !== 1 ? 'er' : '' ?> konfigurerade.
+                    <a href="/admin/event-pricing.php?id=<?= $id ?>" style="color: var(--color-accent);">Redigera priser och klasser</a>
+                </p>
+            <?php endif; ?>
         </div>
     </div>
 
@@ -826,17 +913,20 @@ include __DIR__ . '/components/unified-layout.php';
             </p>
 
             <div style="display: grid; gap: var(--space-lg);">
-                <!-- Header Banner Sponsor -->
+                <!-- Header Banner from Media Library -->
                 <div class="admin-form-group">
                     <label class="admin-form-label">Header-banner (stor banner högst upp)</label>
-                    <select name="sponsor_header" class="admin-form-select">
+                    <select name="header_banner_media_id" class="admin-form-select">
                         <option value="">-- Ingen (använd seriens) --</option>
-                        <?php foreach ($allSponsors as $sp): ?>
-                        <option value="<?= $sp['id'] ?>" <?= in_array((int)$sp['id'], $eventSponsors['header']) ? 'selected' : '' ?>>
-                            <?= htmlspecialchars($sp['name']) ?> (<?= ucfirst($sp['tier']) ?>)
+                        <?php foreach ($eventMediaFiles as $media): ?>
+                        <option value="<?= $media['id'] ?>" <?= ($event['header_banner_media_id'] ?? '') == $media['id'] ? 'selected' : '' ?>>
+                            <?= htmlspecialchars($media['original_filename']) ?>
                         </option>
                         <?php endforeach; ?>
                     </select>
+                    <small style="color: var(--color-text-secondary); margin-top: var(--space-xs); display: block;">
+                        Välj bild från <a href="/admin/media?folder=events" target="_blank">Mediabiblioteket (Event-mappen)</a>
+                    </small>
                 </div>
 
                 <!-- Content Logo Row -->
