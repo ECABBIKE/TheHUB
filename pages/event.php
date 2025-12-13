@@ -608,6 +608,11 @@ if (!$event) {
         </div>
 
         <div class="event-stats">
+            <?php if ($event['series_logo']): ?>
+            <div class="event-stat event-stat--logo">
+                <img src="<?= h($event['series_logo']) ?>" alt="<?= h($event['series_name'] ?? 'Serie') ?>">
+            </div>
+            <?php endif; ?>
             <div class="event-stat">
                 <span class="event-stat-value"><?= $totalParticipants ?></span>
                 <span class="event-stat-label">deltagare</span>
@@ -1804,6 +1809,20 @@ function sortTotalBySplit(headerEl, splitNum) {
     display: flex;
     gap: var(--space-sm);
     flex-shrink: 0;
+    align-items: center;
+}
+
+/* Mobile series logo in stats row - hidden on desktop */
+.event-stat--logo {
+    display: none;
+    padding: var(--space-xs);
+    background: transparent;
+}
+
+.event-stat--logo img {
+    width: 40px;
+    height: 40px;
+    object-fit: contain;
 }
 
 .event-stat {
@@ -2448,6 +2467,18 @@ td.col-place {
         flex-direction: column;
     }
 
+    /* Hide big logo on tablet/mobile - use inline version in stats */
+    .event-logo {
+        display: none;
+    }
+
+    /* Show series logo inline with stats on tablet/mobile */
+    .event-stat--logo {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
     .event-stats {
         width: 100%;
         justify-content: center;
@@ -2499,7 +2530,14 @@ td.col-place {
     }
 
     .event-logo {
-        display: none; /* Hide logo on mobile portrait - series name shown as badge */
+        display: none; /* Hide big logo on mobile - small version shown in stats row */
+    }
+
+    /* Show series logo in stats row on mobile */
+    .event-stat--logo {
+        display: flex;
+        align-items: center;
+        justify-content: center;
     }
 
     .event-meta {

@@ -32,6 +32,9 @@
   --series-enduro:#FFE009;--series-downhill:#FF6B35;--series-xc:#2E7D32;
   --series-ges:#EF761F;--series-ggs:#8A9A5B;--series-gss:#6B4C9A;
   --series-gravel:#795548;--series-dual:#E91E63;
+
+  /* Brand colors for UI elements */
+  --color-enduro:#FFD700;--color-enduro-hover:#E6BD00;
 }
 
 /* Responsive font sizes for mobile */
