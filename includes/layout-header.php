@@ -60,10 +60,39 @@ if (!isset($pageType)) {
     $pageType = 'public';
 }
 
-// Determine title suffix and body class
+// ============================================================================
+// AUTOMATIC PAGE TYPE DETECTION
+// ============================================================================
+// Detect event pages automatically based on URL pattern /event/{ID}
+$requestUri = $_SERVER['REQUEST_URI'] ?? '';
+$isEventPage = preg_match('#^/event/\d+#', $requestUri) === 1;
+$isAdminPage = strpos($requestUri, '/admin') === 0;
+
+// Build body classes array
+$bodyClasses = [];
+
+// Page type class
+if ($pageType === 'admin' || $isAdminPage) {
+    $bodyClasses[] = 'admin-page';
+    $bodyClasses[] = 'is-admin';
+} else {
+    $bodyClasses[] = 'public-page';
+    $bodyClasses[] = 'is-public';
+}
+
+// Event page isolation - automatic detection (NO manual override allowed)
+if ($isEventPage) {
+    $bodyClasses[] = 'event-page';
+}
+
+// Add any custom body classes
+if (isset($bodyClass) && !empty($bodyClass)) {
+    $bodyClasses[] = $bodyClass;
+}
+
+// Determine title suffix and final body class string
 $titleSuffix = ($pageType === 'admin') ? ' - TheHUB Admin' : ' - TheHUB';
-$defaultBodyClass = ($pageType === 'admin') ? 'admin-page' : 'public-page';
-$bodyClass = isset($bodyClass) ? $defaultBodyClass . ' ' . $bodyClass : $defaultBodyClass;
+$bodyClass = implode(' ', array_unique($bodyClasses));
 
 // Get theme from user profile or default to dark
 $userTheme = 'dark';

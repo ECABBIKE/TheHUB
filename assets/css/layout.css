@@ -124,3 +124,36 @@
 @media(min-width:900px){
   .main-content{padding-bottom:var(--space-xl)}
 }
+
+/* ============================================================================
+   EVENT PAGE ISOLATION - Desktop Width 2025
+   Event pages are SACRED - their layout must not be affected by global changes.
+   These rules ensure event result displays remain unchanged.
+   ============================================================================ */
+
+/* Event pages - remove max-width constraints on containers */
+.event-page .main-content,
+.event-page .container,
+.event-page .page-wrap,
+.event-page .content-wrap,
+.event-page .content-prose {
+  max-width: none;
+}
+
+/* Ensure event page tables can expand fully */
+.event-page .table-wrapper {
+  max-width: 100%;
+}
+
+/* Event page cards should respect available space */
+.event-page .card {
+  max-width: 100%;
+}
+
+/* Event page specific padding adjustments for wider content */
+@media(min-width:1200px) {
+  .event-page .main-content {
+    padding-left: var(--space-xl);
+    padding-right: var(--space-xl);
+  }
+}
