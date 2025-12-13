@@ -296,6 +296,89 @@ foreach ($duplicateGroups as $group) {
  }
 }
 
+// Find fuzzy duplicates - similar first names with same last name (e.g. Lucas/Lukas Wibäck)
+$seenPairs = []; // Track pairs we've already added
+foreach ($potentialDuplicates as $dup) {
+    $seenPairs[$dup['rider1']['id'] . '-' . $dup['rider2']['id']] = true;
+    $seenPairs[$dup['rider2']['id'] . '-' . $dup['rider1']['id']] = true;
+}
+
+$fuzzyGroups = $db->getAll("
+    SELECT lastname, SOUNDEX(firstname) as fname_sound, COUNT(*) as cnt,
+           GROUP_CONCAT(DISTINCT firstname SEPARATOR '|') as firstnames
+    FROM riders
+    WHERE firstname IS NOT NULL AND lastname IS NOT NULL
+    GROUP BY LOWER(lastname), SOUNDEX(firstname)
+    HAVING cnt > 1 AND COUNT(DISTINCT LOWER(firstname)) > 1
+    LIMIT 30
+");
+
+foreach ($fuzzyGroups as $group) {
+    $riders = $db->getAll("
+        SELECT r.id, r.firstname, r.lastname, r.birth_year, r.license_number,
+            r.email, r.club_id, c.name as club_name,
+            (SELECT COUNT(*) FROM results WHERE cyclist_id = r.id) as result_count
+        FROM riders r
+        LEFT JOIN clubs c ON r.club_id = c.id
+        WHERE LOWER(r.lastname) = LOWER(?) AND SOUNDEX(r.firstname) = ?
+        ORDER BY r.firstname
+        LIMIT 10
+    ", [$group['lastname'], $group['fname_sound']]);
+
+    // Group riders by firstname and pick one from each unique firstname
+    $byFirstname = [];
+    foreach ($riders as $rider) {
+        $fnLower = strtolower($rider['firstname']);
+        if (!isset($byFirstname[$fnLower])) {
+            $byFirstname[$fnLower] = $rider;
+        }
+    }
+
+    $uniqueRiders = array_values($byFirstname);
+    if (count($uniqueRiders) >= 2) {
+        // Compare pairs of riders with different first names
+        for ($i = 0; $i < count($uniqueRiders) - 1; $i++) {
+            for ($j = $i + 1; $j < count($uniqueRiders); $j++) {
+                $r1 = $uniqueRiders[$i];
+                $r2 = $uniqueRiders[$j];
+
+                // Skip if already in list
+                $pairKey = min($r1['id'], $r2['id']) . '-' . max($r1['id'], $r2['id']);
+                if (isset($seenPairs[$pairKey])) continue;
+                $seenPairs[$pairKey] = true;
+
+                // Skip if different birth year (when both have one)
+                if ($r1['birth_year'] && $r2['birth_year'] && $r1['birth_year'] !== $r2['birth_year']) continue;
+
+                $uci1 = isRealUci($r1['license_number']) ? normalizeUci($r1['license_number']) : null;
+                $uci2 = isRealUci($r2['license_number']) ? normalizeUci($r2['license_number']) : null;
+
+                // Skip if different UCI
+                if ($uci1 && $uci2 && $uci1 !== $uci2) continue;
+
+                $r1Missing = [];
+                $r2Missing = [];
+                if (!$r1['birth_year'] && $r2['birth_year']) $r1Missing[] = 'födelseår';
+                if (!$r2['birth_year'] && $r1['birth_year']) $r2Missing[] = 'födelseår';
+                if (!$uci1 && $uci2) $r1Missing[] = 'UCI ID';
+                if (!$uci2 && $uci1) $r2Missing[] = 'UCI ID';
+
+                $potentialDuplicates[] = [
+                    'reason' => 'Liknande namn (' . $r1['firstname'] . '/' . $r2['firstname'] . ')',
+                    'rider1' => ['id' => $r1['id'], 'name' => $r1['firstname'].' '.$r1['lastname'],
+                        'birth_year' => $r1['birth_year'], 'license' => $r1['license_number'],
+                        'email' => $r1['email'], 'club' => $r1['club_name'], 'missing' => $r1Missing,
+                        'results' => $r1['result_count'] ?? 0],
+                    'rider2' => ['id' => $r2['id'], 'name' => $r2['firstname'].' '.$r2['lastname'],
+                        'birth_year' => $r2['birth_year'], 'license' => $r2['license_number'],
+                        'email' => $r2['email'], 'club' => $r2['club_name'], 'missing' => $r2Missing,
+                        'results' => $r2['result_count'] ?? 0]
+                ];
+            }
+        }
+    }
+}
+
 // Page config for unified layout
 $page_title = 'Hitta Dubbletter';
 $breadcrumbs = [
