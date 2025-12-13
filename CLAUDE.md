@@ -142,30 +142,34 @@ color: var(--color-text);
 
 **Alla innehallssektioner ska ga kant-till-kant pa mobil.**
 
-Detta ar den globala standarden fran 2025. Pa mobil (max-width: 899px) ska alla kort, tabeller och innehallsblock fylla hela skarmbredden for att maximera datautrymme.
+Detta ar den globala standarden fran 2025. Pa mobil (max-width: 767px) ska alla kort, tabeller och innehallsblock fylla hela skarmbredden for att maximera datautrymme.
 
 ### Hur det fungerar
 
-Reglerna finns i `assets/css/layout.css` och tillampas automatiskt pa:
+Reglerna finns i `assets/css/components.css` och tillampas automatiskt pa:
 - `.card` - Alla kort
 - `.filter-row` - Filterrader
+- `.filters-bar` - Filterbarer
 - `.table-responsive` - Tabeller
+- `.table-wrapper` - Tabellwrappers
+- `.result-list` - Resultatlistor
+- `.event-row` - Eventrader
 - `.alert` - Alerts/meddelanden
 
 ### CSS-tekniken
 
 ```css
-@media(max-width:899px){
+@media(max-width:767px){
   .card,
   .filter-row,
   .table-responsive,
   .alert {
-    margin-left: calc(var(--space-md) * -1);
-    margin-right: calc(var(--space-md) * -1);
+    margin-left: -16px;
+    margin-right: -16px;
     border-radius: 0 !important;
     border-left: none !important;
     border-right: none !important;
-    width: calc(100% + var(--space-md) * 2);
+    width: calc(100% + 32px);
   }
 }
 ```
@@ -173,7 +177,7 @@ Reglerna finns i `assets/css/layout.css` och tillampas automatiskt pa:
 ### VIKTIGT - container padding
 
 Pa mobil anvander `.main-content` padding: `var(--space-md)` (16px).
-Negativa marginaler maste matcha detta: `calc(var(--space-md) * -1)`.
+Negativa marginaler maste matcha detta: `-16px`.
 
 Pa extra smala skarmar (599px portrait) anvands `var(--space-sm)` (8px) istallet.
 
@@ -181,18 +185,18 @@ Pa extra smala skarmar (599px portrait) anvands `var(--space-sm)` (8px) istallet
 
 Om du skapar nya innehallsblock som ska ga edge-to-edge pa mobil:
 
-1. Lagg till klassen i layout.css under mobil-regeln (max-width:899px)
+1. Lagg till klassen i components.css under mobil-regeln (max-width:767px)
 2. ELLER anvand samma CSS-monster manuellt:
 
 ```css
-@media(max-width:899px){
+@media(max-width:767px){
   .din-nya-komponent {
-    margin-left: calc(var(--space-md) * -1);
-    margin-right: calc(var(--space-md) * -1);
+    margin-left: -16px;
+    margin-right: -16px;
     border-radius: 0 !important;
     border-left: none !important;
     border-right: none !important;
-    width: calc(100% + var(--space-md) * 2);
+    width: calc(100% + 32px);
   }
 }
 ```

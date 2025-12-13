@@ -52,11 +52,14 @@ body{
 
 /* EDGE-TO-EDGE MOBILE STANDARD 2025 */
 @media(max-width:767px){
+  /* Cards and containers go edge-to-edge */
   .card,
   .filter-row,
+  .filters-bar,
   .table-responsive,
   .table-wrapper,
   .result-list,
+  .event-row,
   .alert {
     margin-left:-16px;
     margin-right:-16px;
@@ -66,20 +69,42 @@ body{
     width:calc(100% + 32px);
   }
   .card-header,.card-body{padding-left:16px;padding-right:16px}
+
+  /* Tables/lists inside cards break out of card padding (24px) */
+  .card .table-wrapper,
+  .card .result-list,
+  .card .table-responsive,
+  .card table {
+    margin-left:-24px;
+    margin-right:-24px;
+    width:calc(100% + 48px);
+  }
 }
 /* Extra narrow phones - container has 8px padding */
 @media(max-width:599px) and (orientation:portrait){
   .card,
   .filter-row,
+  .filters-bar,
   .table-responsive,
   .table-wrapper,
   .result-list,
+  .event-row,
   .alert {
     margin-left:-8px;
     margin-right:-8px;
     width:calc(100% + 16px);
   }
   .card-header,.card-body{padding-left:8px;padding-right:8px}
+
+  /* Tables/lists inside cards (card has 16px padding at this size) */
+  .card .table-wrapper,
+  .card .result-list,
+  .card .table-responsive,
+  .card table {
+    margin-left:-16px;
+    margin-right:-16px;
+    width:calc(100% + 32px);
+  }
 }
 
 .card--elevated{background:var(--color-bg-elevated);box-shadow:var(--shadow-md)}
