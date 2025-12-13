@@ -198,6 +198,14 @@ function importRiderUpdates($filepath, $db, $importId, $seasonYear, $createMissi
             $colMap['uci_id'] = $idx;
         } elseif (strpos($col, 'nationalitet') !== false && strpos($col, '3') !== false) {
             $colMap['nationality'] = $idx;
+        } elseif (strpos($col, 'telefon') !== false || strpos($col, 'mobil') !== false || strpos($col, 'phone') !== false) {
+            $colMap['phone'] = $idx;
+        } elseif (strpos($col, 'postnummer') !== false || strpos($col, 'postnr') !== false) {
+            $colMap['postal_code'] = $idx;
+        } elseif (strpos($col, 'stad') !== false || strpos($col, 'ort') !== false || $col === 'city') {
+            $colMap['city'] = $idx;
+        } elseif (strpos($col, 'adress') !== false || $col === 'address') {
+            $colMap['address'] = $idx;
         }
     }
 
@@ -256,6 +264,10 @@ function importRiderUpdates($filepath, $db, $importId, $seasonYear, $createMissi
             $email = isset($colMap['email']) ? trim($row[$colMap['email']] ?? '') : '';
             $uciId = isset($colMap['uci_id']) ? trim($row[$colMap['uci_id']] ?? '') : '';
             $nationality = isset($colMap['nationality']) ? trim($row[$colMap['nationality']] ?? 'SWE') : 'SWE';
+            $phone = isset($colMap['phone']) ? trim($row[$colMap['phone']] ?? '') : '';
+            $postalCode = isset($colMap['postal_code']) ? trim($row[$colMap['postal_code']] ?? '') : '';
+            $city = isset($colMap['city']) ? trim($row[$colMap['city']] ?? '') : '';
+            $address = isset($colMap['address']) ? trim($row[$colMap['address']] ?? '') : '';
 
             // Find existing rider by name (and optionally birth year)
             $existing = null;
@@ -263,7 +275,7 @@ function importRiderUpdates($filepath, $db, $importId, $seasonYear, $createMissi
             // First try exact name + birth year match
             if ($birthYear) {
                 $existing = $db->getRow(
-                    "SELECT id, license_number, email, birth_year, club_id, nationality FROM riders
+                    "SELECT id, license_number, email, birth_year, club_id, nationality, phone, city FROM riders
                      WHERE LOWER(firstname) = LOWER(?) AND LOWER(lastname) = LOWER(?) AND birth_year = ?",
                     [$firstname, $lastname, $birthYear]
                 );
@@ -274,7 +286,7 @@ function importRiderUpdates($filepath, $db, $importId, $seasonYear, $createMissi
                 $uciIdClean = preg_replace('/[^0-9]/', '', $uciId);
                 if (strlen($uciIdClean) >= 8) {
                     $existing = $db->getRow(
-                        "SELECT id, license_number, email, birth_year, club_id, nationality FROM riders
+                        "SELECT id, license_number, email, birth_year, club_id, nationality, phone, city FROM riders
                          WHERE REPLACE(REPLACE(license_number, ' ', ''), '-', '') = ?",
                         [$uciIdClean]
                     );
@@ -284,7 +296,7 @@ function importRiderUpdates($filepath, $db, $importId, $seasonYear, $createMissi
             // Try by name only (less strict)
             if (!$existing) {
                 $existing = $db->getRow(
-                    "SELECT id, license_number, email, birth_year, club_id, nationality FROM riders
+                    "SELECT id, license_number, email, birth_year, club_id, nationality, phone, city FROM riders
                      WHERE LOWER(firstname) = LOWER(?) AND LOWER(lastname) = LOWER(?)",
                     [$firstname, $lastname]
                 );
@@ -350,6 +362,18 @@ function importRiderUpdates($filepath, $db, $importId, $seasonYear, $createMissi
                     $changes[] = "Nationalitet: {$nationality}";
                 }
 
+                // Update phone if provided and rider doesn't have one
+                if (!empty($phone) && empty($existing['phone'])) {
+                    $updateData['phone'] = $phone;
+                    $changes[] = "Telefon: {$phone}";
+                }
+
+                // Update city if provided and rider doesn't have one
+                if (!empty($city) && empty($existing['city'])) {
+                    $updateData['city'] = $city;
+                    $changes[] = "Stad: {$city}";
+                }
+
                 // Save updates
                 if (!empty($updateData)) {
                     $oldData = $db->getRow("SELECT * FROM riders WHERE id = ?", [$existing['id']]);
@@ -383,6 +407,8 @@ function importRiderUpdates($filepath, $db, $importId, $seasonYear, $createMissi
                     'license_number' => !empty($uciId) ? $uciId : generateSweId($db),
                     'nationality' => $nationality ?: 'SWE',
                     'club_id' => $clubId,
+                    'phone' => !empty($phone) ? $phone : null,
+                    'city' => !empty($city) ? $city : null,
                     'active' => 1
                 ];
 
@@ -543,6 +569,9 @@ include __DIR__ . '/components/unified-layout.php';
                     <tr><td><code>Födelsedag</code></td><td>Datum (DD-MM-YYYY)</td><td>Nej</td></tr>
                     <tr><td><code>Nationalitet (3-letter)</code></td><td>Landskod (SWE, NOR, etc.)</td><td>Nej</td></tr>
                     <tr><td><code>Deltagarens email</code></td><td>E-postadress</td><td>Nej</td></tr>
+                    <tr><td><code>Telefon</code></td><td>Telefonnummer</td><td>Nej</td></tr>
+                    <tr><td><code>Stad</code></td><td>Stad/Ort</td><td>Nej</td></tr>
+                    <tr><td><code>Postnummer</code></td><td>Postnummer</td><td>Nej</td></tr>
                     <tr><td><code>ID Medlemsnummer</code></td><td>UCI-ID (11 siffror)</td><td>Nej</td></tr>
                 </tbody>
             </table>
@@ -562,6 +591,8 @@ include __DIR__ . '/components/unified-layout.php';
                 - <strong>E-post</strong> → uppdateras om rider saknar e-post<br>
                 - <strong>Födelseår</strong> → uppdateras om rider saknar födelseår<br>
                 - <strong>Nationalitet</strong> → uppdateras om den skiljer sig från befintlig<br>
+                - <strong>Telefon</strong> → uppdateras om rider saknar telefon<br>
+                - <strong>Stad</strong> → uppdateras om rider saknar stad<br>
                 - <strong>Klubbtillhörighet</strong> → sätts för valt säsongsår (kan inte ändras om rider har resultat det året)
             </p>
         </div>

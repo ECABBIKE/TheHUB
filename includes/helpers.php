@@ -151,6 +151,27 @@ function generateSweLicenseNumber($db, $year = null) {
   return sprintf('%s%05d', $prefix, $nextNum);
 }
 
+/**
+ * Generate a unique SWE-ID for riders without UCI ID (engångslicens)
+ * Format: SWE-YYYY-NNNNN (e.g., SWE-2025-00001)
+ *
+ * @param object $db Database wrapper instance
+ * @return string Generated SWE-ID
+ */
+function generateSweId($db) {
+  $year = date('Y');
+
+  // Get highest SWE-ID number for this year
+  $lastSweId = $db->getValue("
+    SELECT MAX(CAST(SUBSTRING(license_number, 10) AS UNSIGNED))
+    FROM riders
+    WHERE license_number LIKE ?
+  ", ["SWE-$year-%"]);
+
+  $nextNumber = ($lastSweId ? $lastSweId + 1 : 1);
+  return sprintf("SWE-%d-%05d", $year, $nextNumber);
+}
+
 class DatabaseWrapper {
   private $pdo;
 
