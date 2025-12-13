@@ -193,25 +193,16 @@ function importVenuesFromCSV($filePath, $db) {
  ];
 }
 
-$pageTitle = 'Importera Anläggningar';
-$pageType = 'admin';
-include __DIR__ . '/../includes/layout-header.php';
+// Page config for unified layout
+$page_title = 'Importera Anläggningar';
+$breadcrumbs = [
+    ['label' => 'Import', 'url' => '/admin/import'],
+    ['label' => 'Venues']
+];
+
+// Include unified layout
+include __DIR__ . '/components/unified-layout.php';
 ?>
-
-<main class="main-content">
- <div class="container">
- <h1 class="mb-lg">
- <i data-lucide="map-pin"></i>
- Importera Anläggningar
- </h1>
-
- <div class="gs-breadcrumb mb-lg">
- <a href="/admin/dashboard.php">Dashboard</a>
- <span>/</span>
- <a href="/admin/venues.php">Anläggningar</a>
- <span>/</span>
- <span>Import</span>
- </div>
 
  <?php if ($message): ?>
  <div class="alert alert-<?= h($messageType) ?> mb-lg">
@@ -384,6 +375,5 @@ include __DIR__ . '/../includes/layout-header.php';
  </div>
  </div>
  </div>
-</main>
 
-<?php include __DIR__ . '/../includes/layout-footer.php'; ?>
+<?php include __DIR__ . '/components/unified-layout-footer.php'; ?>

@@ -206,10 +206,9 @@ include __DIR__ . '/components/unified-layout.php';
    type="number"
    id="min_results_to_show"
    name="min_results_to_show"
-   class="input"
+   class="input gs-max-w-200"
    min="1"
    value="<?= $currentSettings['min_results_to_show'] ?>"
-   class="gs-max-w-200"
    >
    <small class="text-muted">
    Deltagare måste ha minst detta antal registrerade resultat för att visas.
@@ -217,7 +216,7 @@ include __DIR__ . '/components/unified-layout.php';
   </div>
 
   <!-- Save Button -->
-  <div class="flex gs-justify-end gap-md gs-pt-md" class="border-top">
+  <div class="flex gs-justify-end gap-md gs-pt-md border-top">
    <a href="/admin/dashboard.php" class="btn btn--secondary">
    <i data-lucide="x"></i>
    Avbryt

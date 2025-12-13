@@ -152,14 +152,20 @@ if (isset($_GET['created'])) {
  $messageType = 'success';
 }
 
-$pageTitle = $isNew ? 'Skapa Användare' : 'Redigera Användare';
-$pageType = 'admin';
-include __DIR__ . '/../includes/layout-header.php';
+// Page config for unified layout
+$page_title = $isNew ? 'Skapa Användare' : 'Redigera Användare';
+$breadcrumbs = [
+    ['label' => 'System', 'url' => '/admin/users.php'],
+    ['label' => $page_title]
+];
+$page_actions = '<a href="/admin/users.php" class="btn btn--secondary"><i data-lucide="arrow-left"></i> Tillbaka</a>';
+
+// Include unified layout
+include __DIR__ . '/components/unified-layout.php';
 ?>
 
-<main class="main-content">
- <div class="container gs-max-w-900">
- <!-- Header -->
+ <div class="gs-max-w-900">
+ <!-- Header Actions -->
  <div class="flex items-center justify-between mb-lg">
   <h1 class="">
   <i data-lucide="<?= $isNew ? 'user-plus' : 'user-cog' ?>"></i>
@@ -408,7 +414,6 @@ include __DIR__ . '/../includes/layout-header.php';
  </form>
  <?php endif; ?>
  </div>
-</main>
 
 <script>
 function confirmDelete() {
@@ -437,4 +442,4 @@ document.getElementById('password')?.addEventListener('input', function() {
 });
 </script>
 
-<?php include __DIR__ . '/../includes/layout-footer.php'; ?>
+<?php include __DIR__ . '/components/unified-layout-footer.php'; ?>
