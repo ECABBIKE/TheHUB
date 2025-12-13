@@ -138,95 +138,101 @@ function checkDuplicatePair($r1, $r2, $nameReason) {
 
 // Handle merge action
 if (isset($_GET['action']) && $_GET['action'] === 'merge') {
- $keepId = (int)($_GET['keep'] ?? 0);
- $removeId = (int)($_GET['remove'] ?? 0);
+    $keepId = (int)($_GET['keep'] ?? 0);
+    $removeId = (int)($_GET['remove'] ?? 0);
 
- if ($keepId && $removeId && $keepId !== $removeId) {
- try {
-  $db->pdo->beginTransaction();
+    if ($keepId && $removeId && $keepId !== $removeId) {
+        $transactionStarted = false;
+        try {
+            $db->beginTransaction();
+            $transactionStarted = true;
 
-  $keepRider = $db->getRow("SELECT * FROM riders WHERE id = ?", [$keepId]);
-  $removeRider = $db->getRow("SELECT * FROM riders WHERE id = ?", [$removeId]);
+            $keepRider = $db->getRow("SELECT * FROM riders WHERE id = ?", [$keepId]);
+            $removeRider = $db->getRow("SELECT * FROM riders WHERE id = ?", [$removeId]);
 
-  if (!$keepRider || !$removeRider) {
-  throw new Exception("En av ryttarna hittades inte");
-  }
+            if (empty($keepRider) || empty($removeRider)) {
+                throw new Exception("En av ryttarna hittades inte");
+            }
 
-  // Move results from remove to keep (include class_id for multi-class support)
-  $resultsToMove = $db->getAll("SELECT id, event_id, class_id FROM results WHERE cyclist_id = ?", [$removeId]);
-  $moved = 0;
-  $deleted = 0;
+            // Move results from remove to keep (include class_id for multi-class support)
+            $resultsToMove = $db->getAll("SELECT id, event_id, class_id FROM results WHERE cyclist_id = ?", [$removeId]);
+            $moved = 0;
+            $deleted = 0;
 
-  foreach ($resultsToMove as $result) {
-  // Check if kept rider already has result for this event AND class
-  $existing = $db->getRow(
-  "SELECT id FROM results WHERE cyclist_id = ? AND event_id = ? AND class_id <=> ?",
-   [$keepId, $result['event_id'], $result['class_id']]
-  );
+            foreach ($resultsToMove as $result) {
+                // Check if kept rider already has result for this event AND class
+                $existing = $db->getRow(
+                    "SELECT id FROM results WHERE cyclist_id = ? AND event_id = ? AND class_id <=> ?",
+                    [$keepId, $result['event_id'], $result['class_id']]
+                );
 
-  if ($existing) {
-   $db->delete('results', 'id = ?', [$result['id']]);
-   $deleted++;
-  } else {
-   $db->update('results', ['cyclist_id' => $keepId], 'id = ?', [$result['id']]);
-   $moved++;
-  }
-  }
+                if (!empty($existing)) {
+                    $db->delete('results', 'id = ?', [$result['id']]);
+                    $deleted++;
+                } else {
+                    $db->update('results', ['cyclist_id' => $keepId], 'id = ?', [$result['id']]);
+                    $moved++;
+                }
+            }
 
-  // Update keep rider with missing data from remove rider
-  $updates = [];
-  if (empty($keepRider['birth_year']) && !empty($removeRider['birth_year'])) {
-  $updates['birth_year'] = $removeRider['birth_year'];
-  }
-  if (empty($keepRider['email']) && !empty($removeRider['email'])) {
-  $updates['email'] = $removeRider['email'];
-  }
-  if (empty($keepRider['phone']) && !empty($removeRider['phone'])) {
-  $updates['phone'] = $removeRider['phone'];
-  }
-  if (empty($keepRider['club_id']) && !empty($removeRider['club_id'])) {
-  $updates['club_id'] = $removeRider['club_id'];
-  }
-  if (empty($keepRider['gender']) && !empty($removeRider['gender'])) {
-  $updates['gender'] = $removeRider['gender'];
-  }
-  // Prefer UCI ID over SWE ID
-  if (!empty($removeRider['license_number'])) {
-  $keepIsSweid = empty($keepRider['license_number']) || strpos($keepRider['license_number'], 'SWE') === 0;
-  $removeIsUci = strpos($removeRider['license_number'], 'SWE') !== 0;
-  if ($keepIsSweid && $removeIsUci) {
-   $updates['license_number'] = $removeRider['license_number'];
-  } elseif (empty($keepRider['license_number'])) {
-   $updates['license_number'] = $removeRider['license_number'];
-  }
-  }
-  if (empty($keepRider['license_type']) && !empty($removeRider['license_type'])) {
-  $updates['license_type'] = $removeRider['license_type'];
-  }
+            // Update keep rider with missing data from remove rider
+            $updates = [];
+            if (empty($keepRider['birth_year']) && !empty($removeRider['birth_year'])) {
+                $updates['birth_year'] = $removeRider['birth_year'];
+            }
+            if (empty($keepRider['email']) && !empty($removeRider['email'])) {
+                $updates['email'] = $removeRider['email'];
+            }
+            if (empty($keepRider['phone']) && !empty($removeRider['phone'])) {
+                $updates['phone'] = $removeRider['phone'];
+            }
+            if (empty($keepRider['club_id']) && !empty($removeRider['club_id'])) {
+                $updates['club_id'] = $removeRider['club_id'];
+            }
+            if (empty($keepRider['gender']) && !empty($removeRider['gender'])) {
+                $updates['gender'] = $removeRider['gender'];
+            }
+            // Prefer UCI ID over SWE ID
+            if (!empty($removeRider['license_number'])) {
+                $keepIsSweid = empty($keepRider['license_number']) || strpos($keepRider['license_number'], 'SWE') === 0;
+                $removeIsUci = strpos($removeRider['license_number'], 'SWE') !== 0;
+                if ($keepIsSweid && $removeIsUci) {
+                    $updates['license_number'] = $removeRider['license_number'];
+                } elseif (empty($keepRider['license_number'])) {
+                    $updates['license_number'] = $removeRider['license_number'];
+                }
+            }
+            if (empty($keepRider['license_type']) && !empty($removeRider['license_type'])) {
+                $updates['license_type'] = $removeRider['license_type'];
+            }
 
-  if (!empty($updates)) {
-  $db->update('riders', $updates, 'id = ?', [$keepId]);
-  }
+            if (!empty($updates)) {
+                $db->update('riders', $updates, 'id = ?', [$keepId]);
+            }
 
-  // Delete the duplicate rider
-  $db->delete('riders', 'id = ?', [$removeId]);
+            // Delete the duplicate rider
+            $db->delete('riders', 'id = ?', [$removeId]);
 
-  $db->pdo->commit();
+            $db->commit();
 
-  $_SESSION['dup_message'] ="Sammanfogade {$removeRider['firstname']} {$removeRider['lastname']} → {$keepRider['firstname']} {$keepRider['lastname']} ({$moved} resultat flyttade" . ($deleted > 0 ?", {$deleted} dubbletter borttagna" :"") .")";
-  $_SESSION['dup_message_type'] = 'success';
+            $_SESSION['dup_message'] = "Sammanfogade {$removeRider['firstname']} {$removeRider['lastname']} → {$keepRider['firstname']} {$keepRider['lastname']} ({$moved} resultat flyttade" . ($deleted > 0 ? ", {$deleted} dubbletter borttagna" : "") . ")";
+            $_SESSION['dup_message_type'] = 'success';
 
- } catch (Exception $e) {
-  if ($db->pdo->inTransaction()) {
-  $db->pdo->rollBack();
-  }
-  $_SESSION['dup_message'] ="Fel:" . $e->getMessage();
-  $_SESSION['dup_message_type'] = 'error';
- }
+        } catch (Exception $e) {
+            if ($transactionStarted) {
+                try {
+                    $db->rollback();
+                } catch (Exception $rollbackError) {
+                    // Ignore rollback errors
+                }
+            }
+            $_SESSION['dup_message'] = "Fel: " . $e->getMessage();
+            $_SESSION['dup_message_type'] = 'error';
+        }
 
- header('Location: /admin/find-duplicates.php');
- exit;
- }
+        header('Location: /admin/find-duplicates.php');
+        exit;
+    }
 }
 
 // Find potential duplicates - simple approach: same firstname+lastname
