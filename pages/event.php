@@ -2260,6 +2260,16 @@ function sortTotalBySplit(headerEl, splitNum) {
     table-layout: fixed;
 }
 
+/* Add padding to first and last columns for edge-to-edge tables */
+.results-table th:first-child,
+.results-table td:first-child {
+    padding-left: var(--space-md);
+}
+.results-table th:last-child,
+.results-table td:last-child {
+    padding-right: var(--space-md);
+}
+
 /* Sticky columns for place and rider name */
 .results-table .col-place {
     position: sticky;
@@ -2270,7 +2280,7 @@ function sortTotalBySplit(headerEl, splitNum) {
 
 .results-table .col-rider {
     position: sticky;
-    left: 50px;
+    left: calc(50px + var(--space-md));
     background: var(--color-bg-card);
     z-index: 2;
 }
