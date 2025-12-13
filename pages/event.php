@@ -12,8 +12,8 @@ if (!$eventId) {
     exit;
 }
 
-// Check if user is admin for edit button
-$isAdmin = function_exists('is_admin') && is_admin();
+// Check if user can edit this event (admins + promotors assigned to this event)
+$canEditEvent = function_exists('canAccessEvent') && canAccessEvent($eventId);
 
 // Helper functions (only define if not already defined)
 if (!function_exists('timeToSeconds')) {
@@ -557,7 +557,7 @@ if (!$event) {
         <div class="event-info">
             <div class="event-title-row">
                 <h1 class="event-title"><?= h($event['name']) ?></h1>
-                <?php if ($isAdmin): ?>
+                <?php if ($canEditEvent): ?>
                 <a href="/admin/event-edit.php?id=<?= $eventId ?>" class="btn-admin-edit" title="Redigera event">
                     <i data-lucide="pencil"></i>
                 </a>
