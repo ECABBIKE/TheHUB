@@ -2804,6 +2804,14 @@ td.col-place {
         margin-right: 0;
     }
 
+    /* Table/result-list break out of card padding (16px) to be truly edge-to-edge */
+    .card .table-wrapper,
+    .card .result-list {
+        margin-left: calc(var(--space-md) * -1);
+        margin-right: calc(var(--space-md) * -1);
+        width: calc(100% + var(--space-md) * 2);
+    }
+
     /* Compact event header on mobile */
     .event-header-content {
         padding: var(--space-md);
