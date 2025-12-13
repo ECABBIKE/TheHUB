@@ -74,8 +74,10 @@
 .result-list{display:none}
 @media(max-width:599px) and (orientation:portrait){
   .table-wrapper{display:none}
-  .result-list{display:flex;flex-direction:column;gap:var(--space-xs)}
-  .result-item{display:flex;align-items:center;gap:var(--space-sm);padding:var(--space-sm);background:var(--color-bg-surface);border:1px solid var(--color-border);border-radius:var(--radius-md);max-width:100%;overflow:hidden}
+  .result-list{display:flex;flex-direction:column;gap:0}
+  /* Edge-to-edge result items - no border-radius, only bottom border */
+  .result-item{display:flex;align-items:center;gap:var(--space-sm);padding:var(--space-sm) var(--space-md);background:var(--color-bg-surface);border:none;border-bottom:1px solid var(--color-border);border-radius:0;overflow:hidden;width:100%}
+  .result-item:last-child{border-bottom:none}
   .result-place{width:28px;height:28px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:var(--color-bg-sunken);border-radius:var(--radius-sm);font-weight:var(--weight-bold);font-size:var(--text-xs)}
   .result-info{flex:1;min-width:0;overflow:hidden}
   .result-name{font-weight:var(--weight-medium);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:var(--text-sm)}
