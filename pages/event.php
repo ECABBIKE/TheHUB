@@ -1730,20 +1730,6 @@ function sortTotalBySplit(headerEl, splitNum) {
     display: block;
     object-fit: cover;
 }
-@media (max-width: 768px) {
-    .event-header-banner {
-        border-radius: 0;
-        margin-left: calc(-1 * var(--space-md));
-        margin-right: calc(-1 * var(--space-md));
-        width: calc(100% + var(--space-md) * 2);
-    }
-    .event-header-banner + .event-header {
-        border-radius: 0;
-        margin-left: calc(-1 * var(--space-md));
-        margin-right: calc(-1 * var(--space-md));
-        width: calc(100% + var(--space-md) * 2);
-    }
-}
 
 /* Event Sponsor Banner - Full width ad banner
    Recommended image size: 1200x150px (PNG/WebP with transparent background)
@@ -2777,30 +2763,6 @@ td.col-place {
     .table-col-hide-mobile {
         display: none;
     }
-
-    /* EDGE-TO-EDGE MOBILE - All cards and content full width */
-    .event-header-banner,
-    .event-header,
-    .event-sponsor-banner,
-    .event-sponsor-logos,
-    .event-tabs-wrapper,
-    .card,
-    .filter-row {
-        margin-left: calc(var(--space-md) * -1);
-        margin-right: calc(var(--space-md) * -1);
-        border-radius: 0 !important;
-        border-left: none !important;
-        border-right: none !important;
-        width: calc(100% + var(--space-md) * 2);
-    }
-
-    /* Tables break out of card padding (card has 24px padding at this size) */
-    .card .table-wrapper,
-    .card .result-list {
-        margin-left: calc(var(--space-lg) * -1);
-        margin-right: calc(var(--space-lg) * -1);
-        width: calc(100% + var(--space-lg) * 2);
-    }
 }
 
 /* Mobile portrait: hide table, show cards, hide splits */
@@ -2817,60 +2779,13 @@ td.col-place {
         font-size: var(--text-lg);
     }
 
-    /* Full width edge-to-edge on mobile for all sections */
-    /* Note: main-content uses --space-sm (8px) padding on mobile portrait */
-    .event-header-banner,
-    .event-header,
-    .event-sponsor-banner,
-    .event-sponsor-logos,
-    .event-tabs-wrapper,
-    .card,
-    .filter-row,
-    .result-list {
-        margin-left: calc(var(--space-sm) * -1);
-        margin-right: calc(var(--space-sm) * -1);
-        border-radius: 0 !important;
-        border-left: none !important;
-        border-right: none !important;
-        width: calc(100% + var(--space-sm) * 2);
-    }
-
-    .event-sponsor-banner + .event-sponsor-logos {
-        border-radius: 0 !important;
-    }
-
+    /* Event-specific sponsor styling */
     .event-sponsor-logos {
         padding: var(--space-sm);
     }
 
     .sponsor-logos-grid {
         gap: var(--space-sm);
-    }
-
-    /* Card internal padding on mobile */
-    .card-header,
-    .card-body {
-        padding-left: var(--space-sm);
-        padding-right: var(--space-sm);
-    }
-
-    /* Result items full width - break out of result-list padding */
-    .result-item {
-        border-radius: 0;
-        margin-left: calc(var(--space-sm) * -1);
-        margin-right: calc(var(--space-sm) * -1);
-        padding-left: var(--space-sm);
-        padding-right: var(--space-sm);
-    }
-
-    /* Table/result-list break out of card padding to be truly edge-to-edge */
-    .card .table-wrapper,
-    .card .result-list {
-        margin-left: calc(var(--space-md) * -1);
-        margin-right: calc(var(--space-md) * -1);
-        width: calc(100% + var(--space-md) * 2);
-        padding-left: var(--space-sm);
-        padding-right: var(--space-sm);
     }
 
     /* Compact event header on mobile */
