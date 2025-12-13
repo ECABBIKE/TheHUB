@@ -30,6 +30,7 @@ $messageType = 'info';
 $stats = null;
 $errors = [];
 $skippedRows = [];
+$columnMappings = [];
 
 // Handle CSV/Excel upload
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['import_file'])) {
@@ -72,6 +73,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['import_file'])) {
    $stats = $result['stats'];
    $errors = $result['errors'];
    $skippedRows = $result['skipped_rows'] ?? [];
+   $columnMappings = $result['column_mappings'] ?? [];
 
    if ($stats['success'] > 0 || $stats['updated'] > 0) {
    $message ="Import klar! {$stats['success']} nya, {$stats['updated']} uppdaterade.";
@@ -149,6 +151,7 @@ function importRidersFromCSV($filepath, $db) {
  $errors = [];
  $skippedRows = []; // Detailed list of skipped rows
  $seenInThisImport = []; // Track riders in this import to detect duplicates
+ $columnMappings = []; // Track original -> mapped column names for debugging
 
  // Ensure UTF-8 encoding
  ensureUTF8ForImport($filepath);
@@ -163,20 +166,24 @@ function importRidersFromCSV($filepath, $db) {
  $delimiter = (substr_count($firstLine, ';') > substr_count($firstLine, ',')) ? ';' : ',';
 
  // Read header row with detected delimiter
- $header = fgetcsv($handle, 1000, $delimiter);
+ $originalHeader = fgetcsv($handle, 1000, $delimiter);
 
- if (!$header) {
+ if (!$originalHeader) {
  fclose($handle);
  throw new Exception('Tom fil eller ogiltigt format');
  }
+
+ // Store original header for debugging
+ $originalHeaderCopy = $originalHeader;
 
  // Expected columns: firstname, lastname, birth_year, gender, club, license_number, email, phone, city
  $expectedColumns = ['firstname', 'lastname', 'birth_year', 'gender', 'club'];
 
  // Normalize header - accept multiple variants of column names
- $header = array_map(function($col) {
+ $header = [];
+ foreach ($originalHeader as $originalCol) {
  // Use mb_strtolower for proper UTF-8 handling (Swedish characters Ö, Å, Ä)
- $col = mb_strtolower(trim($col), 'UTF-8');
+ $col = mb_strtolower(trim($originalCol), 'UTF-8');
  $col = str_replace([' ', '-', '_'], '', $col); // Remove spaces, hyphens, underscores
 
  // Map various column name variants to standard names
@@ -187,13 +194,25 @@ function importRidersFromCSV($filepath, $db) {
   'firstname' => 'firstname',
   'fname' => 'firstname',
   'givenname' => 'firstname',
-  'name' => 'firstname',
+  'first' => 'firstname',
 
   'efternamn' => 'lastname',
   'lastname' => 'lastname',
   'surname' => 'lastname',
   'familyname' => 'lastname',
   'lname' => 'lastname',
+  'last' => 'lastname',
+
+  // Full name (will be split into firstname/lastname later)
+  'namn' => 'fullname',
+  'name' => 'fullname',
+  'fullname' => 'fullname',
+  'fullnamn' => 'fullname',
+  'åkare' => 'fullname',
+  'akare' => 'fullname',
+  'rider' => 'fullname',
+  'deltagare' => 'fullname',
+  'participant' => 'fullname',
 
   // Birth year / age
   'födelseår' => 'birthyear',
@@ -294,8 +313,10 @@ function importRidersFromCSV($filepath, $db) {
   'comment' => 'notes',
  ];
 
- return $mappings[$col] ?? $col;
- }, $header);
+ $mappedCol = $mappings[$col] ?? $col;
+ $header[] = $mappedCol;
+ $columnMappings[] = ['original' => trim($originalCol), 'mapped' => $mappedCol];
+ }
 
  // Cache for club lookups
  $clubCache = [];
@@ -307,7 +328,40 @@ function importRidersFromCSV($filepath, $db) {
  $stats['total']++;
 
  // Map row to associative array
+ // Handle case where row has different number of columns than header
+ if (count($row) !== count($header)) {
+  // Pad row with empty strings if too short, or trim if too long
+  if (count($row) < count($header)) {
+   $row = array_pad($row, count($header), '');
+  } else {
+   $row = array_slice($row, 0, count($header));
+  }
+ }
  $data = array_combine($header, $row);
+
+ // Handle fullname column - split into firstname and lastname
+ if (!empty($data['fullname']) && (empty($data['firstname']) || empty($data['lastname']))) {
+  $fullname = trim($data['fullname']);
+  // Try to split on comma first (Lastname, Firstname format)
+  if (strpos($fullname, ',') !== false) {
+   $parts = array_map('trim', explode(',', $fullname, 2));
+   if (count($parts) >= 2) {
+    $data['lastname'] = $parts[0];
+    $data['firstname'] = $parts[1];
+   }
+  } else {
+   // Split on space (Firstname Lastname format)
+   $parts = preg_split('/\s+/', $fullname);
+   if (count($parts) >= 2) {
+    $data['firstname'] = $parts[0];
+    $data['lastname'] = implode(' ', array_slice($parts, 1));
+   } elseif (count($parts) === 1) {
+    // Only one word - could be either, put in lastname
+    $data['lastname'] = $parts[0];
+    $data['firstname'] = '';
+   }
+  }
+ }
 
  // Validate required fields
  if (empty($data['firstname']) || empty($data['lastname'])) {
@@ -518,7 +572,8 @@ function importRidersFromCSV($filepath, $db) {
  return [
  'stats' => $stats,
  'errors' => $errors,
- 'skipped_rows' => $skippedRows
+ 'skipped_rows' => $skippedRows,
+ 'column_mappings' => $columnMappings
  ];
 }
 
@@ -588,6 +643,59 @@ include __DIR__ . '/components/unified-layout.php';
     <div class="admin-stat-label">Misslyckade</div>
     </div>
    </div>
+
+   <!-- Column Mappings (debug info) -->
+   <?php if (!empty($columnMappings)): ?>
+    <details style="margin-top: var(--space-lg); padding-top: var(--space-lg); border-top: 1px solid var(--color-border);">
+    <summary style="cursor: pointer; font-weight: 500; margin-bottom: var(--space-md); display: flex; align-items: center; gap: var(--space-sm);">
+     <i data-lucide="columns"></i>
+     Kolumnmappning (<?= count($columnMappings) ?> kolumner)
+    </summary>
+    <div class="admin-table-container" style="max-height: 300px; overflow-y: auto;">
+     <table class="admin-table admin-table-sm">
+     <thead>
+      <tr>
+      <th>Original kolumnnamn</th>
+      <th>Mappat till</th>
+      <th>Status</th>
+      </tr>
+     </thead>
+     <tbody>
+      <?php foreach ($columnMappings as $cm):
+       $important = in_array($cm['mapped'], ['firstname', 'lastname', 'fullname', 'birthyear', 'gender', 'club', 'licensenumber']);
+       $nameField = in_array($cm['mapped'], ['firstname', 'lastname', 'fullname']);
+      ?>
+      <tr>
+       <td><code><?= htmlspecialchars($cm['original']) ?></code></td>
+       <td>
+       <?php if ($nameField): ?>
+        <span class="admin-badge admin-badge-success"><?= htmlspecialchars($cm['mapped']) ?></span>
+       <?php elseif ($important): ?>
+        <span class="admin-badge admin-badge-info"><?= htmlspecialchars($cm['mapped']) ?></span>
+       <?php else: ?>
+        <span style="color: var(--color-text-secondary);"><?= htmlspecialchars($cm['mapped']) ?></span>
+       <?php endif; ?>
+       </td>
+       <td>
+       <?php if ($cm['original'] === $cm['mapped']): ?>
+        <span style="color: var(--color-text-secondary);">Okänd kolumn</span>
+       <?php elseif ($nameField): ?>
+        <span style="color: var(--color-success);">Namn-fält</span>
+       <?php else: ?>
+        <span style="color: var(--color-success);">Mappat</span>
+       <?php endif; ?>
+       </td>
+      </tr>
+      <?php endforeach; ?>
+     </tbody>
+     </table>
+    </div>
+    <p style="font-size: 0.75rem; color: var(--color-text-secondary); margin-top: var(--space-sm);">
+     <strong>Tips:</strong> Om kolumner inte mappas korrekt, kontrollera att CSV-filen har rubriker som:
+     Förnamn, Efternamn (eller Namn för fullständigt namn), Födelseår, Kön, Klubb, Licensnummer
+    </p>
+    </details>
+   <?php endif; ?>
 
    <!-- Verification Section -->
    <?php if (isset($stats['total_in_db'])): ?>

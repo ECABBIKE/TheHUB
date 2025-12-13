@@ -6,9 +6,100 @@
  */
 
 require_once __DIR__ . '/../config.php';
-require_once __DIR__ . '/../includes/payment.php';
+
+// Check if payment.php exists before including
+$paymentFunctionsAvailable = false;
+if (file_exists(__DIR__ . '/../includes/payment.php')) {
+    require_once __DIR__ . '/../includes/payment.php';
+    $paymentFunctionsAvailable = true;
+}
 
 $db = getDB();
+
+// Ensure required tables and columns exist
+$setupErrors = [];
+try {
+    // Check/create payment_configs table
+    $tables = $db->getAll("SHOW TABLES LIKE 'payment_configs'");
+    if (empty($tables)) {
+        $db->query("
+            CREATE TABLE IF NOT EXISTS payment_configs (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                event_id INT NULL,
+                series_id INT NULL,
+                promotor_user_id INT NULL,
+                swish_enabled TINYINT(1) DEFAULT 0,
+                swish_number VARCHAR(50) NULL,
+                swish_name VARCHAR(255) NULL,
+                card_enabled TINYINT(1) DEFAULT 0,
+                woo_vendor_id VARCHAR(50) NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                INDEX idx_event (event_id),
+                INDEX idx_series (series_id)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+        ");
+    }
+
+    // Check/create event_pricing_rules table
+    $tables = $db->getAll("SHOW TABLES LIKE 'event_pricing_rules'");
+    if (empty($tables)) {
+        $db->query("
+            CREATE TABLE IF NOT EXISTS event_pricing_rules (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                event_id INT NOT NULL,
+                class_id INT NOT NULL,
+                base_price DECIMAL(10,2) NOT NULL DEFAULT 0,
+                early_bird_discount_percent DECIMAL(5,2) DEFAULT 20,
+                early_bird_end_date DATE NULL,
+                late_registration_fee DECIMAL(10,2) DEFAULT 0,
+                late_registration_start DATE NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                UNIQUE KEY unique_event_class (event_id, class_id),
+                INDEX idx_event (event_id)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+        ");
+    }
+
+    // Check/create orders table
+    $tables = $db->getAll("SHOW TABLES LIKE 'orders'");
+    if (empty($tables)) {
+        $db->query("
+            CREATE TABLE IF NOT EXISTS orders (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                event_id INT NOT NULL,
+                user_id INT NULL,
+                total_amount DECIMAL(10,2) NOT NULL DEFAULT 0,
+                payment_status ENUM('pending','paid','cancelled','refunded') DEFAULT 'pending',
+                payment_method VARCHAR(50) NULL,
+                payment_reference VARCHAR(255) NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                INDEX idx_event (event_id),
+                INDEX idx_status (payment_status)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+        ");
+    }
+
+    // Check/add required columns to events table
+    $eventColumns = $db->getAll("SHOW COLUMNS FROM events");
+    $existingCols = array_column($eventColumns, 'Field');
+
+    if (!in_array('ticketing_enabled', $existingCols)) {
+        $db->query("ALTER TABLE events ADD COLUMN ticketing_enabled TINYINT(1) DEFAULT 0");
+    }
+    if (!in_array('ticket_deadline_days', $existingCols)) {
+        $db->query("ALTER TABLE events ADD COLUMN ticket_deadline_days INT DEFAULT 7");
+    }
+    if (!in_array('payment_recipient', $existingCols)) {
+        $db->query("ALTER TABLE events ADD COLUMN payment_recipient VARCHAR(50) DEFAULT 'series'");
+    }
+
+} catch (Exception $e) {
+    $setupErrors[] = "Databasfel vid setup: " . $e->getMessage();
+    error_log("EVENT PAYMENT SETUP ERROR: " . $e->getMessage());
+}
 
 // Get event ID (supports both 'id' and 'event_id')
 $eventId = isset($_GET['id']) ? intval($_GET['id']) : (isset($_GET['event_id']) ? intval($_GET['event_id']) : 0);
@@ -36,12 +127,26 @@ if (!$event) {
 }
 
 // Get current payment config (may be inherited)
-$paymentConfig = getPaymentConfig($eventId);
-$configSource = $paymentConfig['config_source'] ?? 'woocommerce';
-$sourceName = $paymentConfig['source_name'] ?? 'WooCommerce';
+$paymentConfig = null;
+$configSource = 'woocommerce';
+$sourceName = 'WooCommerce';
+if ($paymentFunctionsAvailable && function_exists('getPaymentConfig')) {
+    try {
+        $paymentConfig = getPaymentConfig($eventId);
+        $configSource = $paymentConfig['config_source'] ?? 'woocommerce';
+        $sourceName = $paymentConfig['source_name'] ?? 'WooCommerce';
+    } catch (Exception $e) {
+        $setupErrors[] = "Kunde inte hämta betalningskonfiguration: " . $e->getMessage();
+    }
+}
 
 // Get event-specific config (if exists)
-$eventPaymentConfig = $db->getRow("SELECT * FROM payment_configs WHERE event_id = ?", [$eventId]);
+$eventPaymentConfig = null;
+try {
+    $eventPaymentConfig = $db->getRow("SELECT * FROM payment_configs WHERE event_id = ?", [$eventId]);
+} catch (Exception $e) {
+    // Table might not exist
+}
 
 // Get series config (if event belongs to series)
 $seriesPaymentConfig = null;
@@ -216,16 +321,24 @@ $classes = $db->getAll("
 ", [$eventId]);
 
 // Get order statistics
-$orderStats = $db->getRow("
-    SELECT
-        COUNT(*) as total_orders,
-        SUM(CASE WHEN payment_status = 'pending' THEN 1 ELSE 0 END) as pending_orders,
-        SUM(CASE WHEN payment_status = 'paid' THEN 1 ELSE 0 END) as paid_orders,
-        SUM(CASE WHEN payment_status = 'cancelled' THEN 1 ELSE 0 END) as cancelled_orders,
-        SUM(CASE WHEN payment_status = 'paid' THEN total_amount ELSE 0 END) as total_revenue
-    FROM orders
-    WHERE event_id = ?
-", [$eventId]);
+$orderStats = ['total_orders' => 0, 'pending_orders' => 0, 'paid_orders' => 0, 'cancelled_orders' => 0, 'total_revenue' => 0];
+try {
+    $result = $db->getRow("
+        SELECT
+            COUNT(*) as total_orders,
+            SUM(CASE WHEN payment_status = 'pending' THEN 1 ELSE 0 END) as pending_orders,
+            SUM(CASE WHEN payment_status = 'paid' THEN 1 ELSE 0 END) as paid_orders,
+            SUM(CASE WHEN payment_status = 'cancelled' THEN 1 ELSE 0 END) as cancelled_orders,
+            SUM(CASE WHEN payment_status = 'paid' THEN total_amount ELSE 0 END) as total_revenue
+        FROM orders
+        WHERE event_id = ?
+    ", [$eventId]);
+    if ($result) {
+        $orderStats = $result;
+    }
+} catch (Exception $e) {
+    // Orders table might not exist
+}
 
 // Calculate default early-bird end date (event date - 14 days)
 $eventDate = new DateTime($event['date']);
@@ -271,6 +384,19 @@ $economy_page_title = 'Betalning';
 
 include __DIR__ . '/components/economy-layout.php';
 ?>
+
+        <!-- Setup Errors -->
+        <?php if (!empty($setupErrors)): ?>
+        <div class="alert alert-error mb-lg">
+            <i data-lucide="alert-triangle"></i>
+            <strong>Databasfel:</strong>
+            <ul style="margin: var(--space-sm) 0 0 var(--space-lg);">
+            <?php foreach ($setupErrors as $err): ?>
+                <li><?= h($err) ?></li>
+            <?php endforeach; ?>
+            </ul>
+        </div>
+        <?php endif; ?>
 
         <!-- Message -->
         <?php if ($message): ?>
