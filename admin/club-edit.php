@@ -144,20 +144,69 @@ if (isset($_GET['msg'])) {
     }
 }
 
+// Nationality code to country name mapping
+$nationalityToCountry = [
+    'SWE' => 'Sverige',
+    'NOR' => 'Norge',
+    'DNK' => 'Danmark',
+    'FIN' => 'Finland',
+    'DEU' => 'Tyskland',
+    'FRA' => 'Frankrike',
+    'CHE' => 'Schweiz',
+    'AUT' => 'Österrike',
+    'ITA' => 'Italien',
+    'ESP' => 'Spanien',
+    'GBR' => 'Storbritannien',
+    'USA' => 'USA',
+];
+
 // Get rider count for this club
 $riderCount = 0;
 $riders = [];
+$majorityNationality = null;
+$majorityCountry = null;
 if (!$isNew) {
     $riderCount = $db->getRow("SELECT COUNT(*) as count FROM riders WHERE club_id = ?", [$id])['count'] ?? 0;
 
     // Get first 10 riders for sidebar
     $riders = $db->getAll("
-        SELECT id, firstname, lastname, gender, birth_year, active
+        SELECT id, firstname, lastname, gender, birth_year, active, nationality
         FROM riders
         WHERE club_id = ?
         ORDER BY lastname, firstname
         LIMIT 10
     ", [$id]);
+
+    // Auto-detect majority nationality for club
+    if ($riderCount > 0) {
+        $nationalityCounts = $db->getAll("
+            SELECT nationality, COUNT(*) as cnt
+            FROM riders
+            WHERE club_id = ? AND nationality IS NOT NULL AND nationality != ''
+            GROUP BY nationality
+            ORDER BY cnt DESC
+            LIMIT 1
+        ", [$id]);
+
+        if (!empty($nationalityCounts)) {
+            $majorityNat = $nationalityCounts[0]['nationality'];
+            $majorityCount = $nationalityCounts[0]['cnt'];
+
+            // Check if majority (>50%) have a non-SWE nationality
+            if ($majorityNat !== 'SWE' && ($majorityCount / $riderCount) > 0.5) {
+                $majorityNationality = $majorityNat;
+                $majorityCountry = $nationalityToCountry[$majorityNat] ?? null;
+
+                // Auto-update club country if different
+                if ($majorityCountry && $club['country'] !== $majorityCountry) {
+                    $db->update('clubs', ['country' => $majorityCountry], 'id = ?', [$id]);
+                    $club['country'] = $majorityCountry;
+                    $message = "Klubbens land har automatiskt uppdaterats till $majorityCountry baserat på medlemmarnas nationalitet.";
+                    $messageType = 'success';
+                }
+            }
+        }
+    }
 }
 
 // Page config for admin layout
@@ -413,13 +462,20 @@ include __DIR__ . '/components/unified-layout.php';
      </div>
      <div>
      <label for="country" class="label">Land</label>
-     <input
-      type="text"
-      id="country"
-      name="country"
-      class="input"
-      value="<?= h($club['country'] ?? 'Sverige') ?>"
-     >
+     <select id="country" name="country" class="input">
+      <option value="Sverige" <?= ($club['country'] ?? 'Sverige') === 'Sverige' ? 'selected' : '' ?>>Sverige</option>
+      <option value="Norge" <?= ($club['country'] ?? '') === 'Norge' ? 'selected' : '' ?>>Norge</option>
+      <option value="Danmark" <?= ($club['country'] ?? '') === 'Danmark' ? 'selected' : '' ?>>Danmark</option>
+      <option value="Finland" <?= ($club['country'] ?? '') === 'Finland' ? 'selected' : '' ?>>Finland</option>
+      <option value="Tyskland" <?= ($club['country'] ?? '') === 'Tyskland' ? 'selected' : '' ?>>Tyskland</option>
+      <option value="Frankrike" <?= ($club['country'] ?? '') === 'Frankrike' ? 'selected' : '' ?>>Frankrike</option>
+      <option value="Schweiz" <?= ($club['country'] ?? '') === 'Schweiz' ? 'selected' : '' ?>>Schweiz</option>
+      <option value="Österrike" <?= ($club['country'] ?? '') === 'Österrike' ? 'selected' : '' ?>>Österrike</option>
+      <option value="Italien" <?= ($club['country'] ?? '') === 'Italien' ? 'selected' : '' ?>>Italien</option>
+      <option value="Spanien" <?= ($club['country'] ?? '') === 'Spanien' ? 'selected' : '' ?>>Spanien</option>
+      <option value="Storbritannien" <?= ($club['country'] ?? '') === 'Storbritannien' ? 'selected' : '' ?>>Storbritannien</option>
+      <option value="USA" <?= ($club['country'] ?? '') === 'USA' ? 'selected' : '' ?>>USA</option>
+     </select>
      </div>
     </div>
     </div>

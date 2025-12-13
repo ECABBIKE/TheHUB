@@ -12,11 +12,77 @@ $db = getDB();
 $message = '';
 $messageType = 'info';
 
+// Nationality code to country name mapping
+$nationalityToCountry = [
+    'SWE' => 'Sverige',
+    'NOR' => 'Norge',
+    'DNK' => 'Danmark',
+    'FIN' => 'Finland',
+    'DEU' => 'Tyskland',
+    'FRA' => 'Frankrike',
+    'CHE' => 'Schweiz',
+    'AUT' => 'Österrike',
+    'ITA' => 'Italien',
+    'ESP' => 'Spanien',
+    'GBR' => 'Storbritannien',
+    'USA' => 'USA',
+];
+
 // Handle form submissions
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     checkCsrf();
 
     $action = $_POST['action'] ?? '';
+
+    // Sync all club nationalities based on rider majority
+    if ($action === 'sync_nationalities') {
+        $updatedCount = 0;
+
+        // Get all clubs with riders
+        $allClubs = $db->getAll("
+            SELECT cl.id, cl.name, cl.country,
+                   COUNT(r.id) as rider_count
+            FROM clubs cl
+            LEFT JOIN riders r ON cl.id = r.club_id
+            GROUP BY cl.id
+            HAVING rider_count > 0
+        ");
+
+        foreach ($allClubs as $clubRow) {
+            $clubId = $clubRow['id'];
+            $riderCount = $clubRow['rider_count'];
+
+            // Get majority nationality for this club
+            $natResult = $db->getRow("
+                SELECT nationality, COUNT(*) as cnt
+                FROM riders
+                WHERE club_id = ? AND nationality IS NOT NULL AND nationality != ''
+                GROUP BY nationality
+                ORDER BY cnt DESC
+                LIMIT 1
+            ", [$clubId]);
+
+            if ($natResult && $natResult['nationality'] !== 'SWE') {
+                $majorityNat = $natResult['nationality'];
+                $majorityCount = $natResult['cnt'];
+
+                // Check if majority (>50%) have this nationality
+                if (($majorityCount / $riderCount) > 0.5) {
+                    $majorityCountry = $nationalityToCountry[$majorityNat] ?? null;
+
+                    if ($majorityCountry && $clubRow['country'] !== $majorityCountry) {
+                        $db->update('clubs', ['country' => $majorityCountry], 'id = ?', [$clubId]);
+                        $updatedCount++;
+                    }
+                }
+            }
+        }
+
+        $message = $updatedCount > 0
+            ? "Uppdaterade land för $updatedCount klubbar baserat på medlemmarnas nationalitet."
+            : "Inga klubbar behövde uppdateras.";
+        $messageType = 'success';
+    }
 
     if ($action === 'create' || $action === 'update') {
         $name = trim($_POST['name'] ?? '');
@@ -64,8 +130,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// Handle search
+// Handle search and filters
 $search = $_GET['search'] ?? '';
+$countryFilter = $_GET['country'] ?? '';
 
 // Handle URL messages
 if (isset($_GET['msg'])) {
@@ -81,11 +148,19 @@ $where = [];
 $params = [];
 
 if ($search) {
-    $where[] = "name LIKE ?";
+    $where[] = "cl.name LIKE ?";
     $params[] = "%$search%";
 }
 
+if ($countryFilter) {
+    $where[] = "cl.country = ?";
+    $params[] = $countryFilter;
+}
+
 $whereClause = $where ? 'WHERE ' . implode(' AND ', $where) : '';
+
+// Get list of countries for filter dropdown
+$countries = $db->getAll("SELECT DISTINCT country FROM clubs WHERE country IS NOT NULL AND country != '' ORDER BY country");
 
 // Get clubs with rider count
 $sql = "SELECT
@@ -118,7 +193,16 @@ $page_title = 'Klubbar';
 $breadcrumbs = [
     ['label' => 'Klubbar']
 ];
-$page_actions = '<a href="/admin/club-edit.php" class="btn btn--primary">
+$page_actions = '
+<form method="POST" style="display: inline-block; margin-right: var(--space-sm);">
+    ' . csrf_field() . '
+    <input type="hidden" name="action" value="sync_nationalities">
+    <button type="submit" class="btn btn--secondary" title="Uppdatera klubbars land baserat på medlemmarnas nationalitet">
+        <i data-lucide="refresh-cw"></i>
+        Synka land
+    </button>
+</form>
+<a href="/admin/club-edit.php" class="btn btn--primary">
     <i data-lucide="plus"></i>
     Ny Klubb
 </a>';
@@ -175,7 +259,7 @@ include __DIR__ . '/components/unified-layout.php';
     </div>
 </div>
 
-<!-- Search -->
+<!-- Search & Filters -->
 <div class="admin-card">
     <div class="admin-card-body">
         <form method="GET" id="searchForm" class="admin-form-row" style="align-items: flex-end;">
@@ -191,7 +275,18 @@ include __DIR__ . '/components/unified-layout.php';
                     autocomplete="off"
                 >
             </div>
-            <?php if ($search): ?>
+            <div class="admin-form-group" style="width: 180px; margin-bottom: 0;">
+                <label for="countryFilter" class="admin-form-label">Land</label>
+                <select name="country" id="countryFilter" class="admin-form-select" onchange="this.form.submit()">
+                    <option value="">Alla länder</option>
+                    <?php foreach ($countries as $c): ?>
+                        <option value="<?= htmlspecialchars($c['country']) ?>" <?= $countryFilter === $c['country'] ? 'selected' : '' ?>>
+                            <?= htmlspecialchars($c['country']) ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <?php if ($search || $countryFilter): ?>
                 <a href="/admin/clubs" class="btn-admin btn-admin-sm btn-admin-secondary">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
                     Rensa
