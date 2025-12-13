@@ -1379,34 +1379,26 @@ $hasPMContent = $pmContent || $driverMeetingPM || $trainingPM || $timingPM || $l
 </section>
 
 <?php elseif ($activeTab === 'karta'): ?>
-<!-- MAP TAB - Interactive map only -->
-<section class="card">
-    <div class="card-header">
-        <h2 class="card-title"><i data-lucide="map"></i> Karta</h2>
-    </div>
-    <div class="card-body">
-        <?php if ($hasInteractiveMap): ?>
-        <!-- Interactive GPX Map -->
-        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
-        <link rel="stylesheet" href="<?= hub_asset('css/map.css') ?>">
-        <?php
-        require_once ROOT_PATH . '/components/event-map.php';
-        render_event_map($eventId, $db, [
-            'height' => '550px',
-            'fullscreen' => false,
-            'show_close' => false,
-            'event_name' => $event['name'] ?? 'Event'
-        ]);
-        ?>
-        <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-        <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
-        <script>if (typeof lucide !== 'undefined') lucide.createIcons();</script>
-        <script src="<?= hub_asset('js/event-map.js') ?>"></script>
-        <?php else: ?>
-        <p class="text-muted">Ingen interaktiv karta tillgänglig.</p>
-        <?php endif; ?>
-    </div>
-</section>
+<!-- MAP TAB - Full width interactive map -->
+<?php if ($hasInteractiveMap): ?>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+<link rel="stylesheet" href="<?= hub_asset('css/map.css') ?>">
+<?php
+require_once ROOT_PATH . '/components/event-map.php';
+render_event_map($eventId, $db, [
+    'height' => 'calc(100vh - 200px)',
+    'fullscreen' => false,
+    'show_close' => false,
+    'event_name' => $event['name'] ?? 'Event'
+]);
+?>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<script>if (typeof lucide !== 'undefined') lucide.createIcons();</script>
+<script src="<?= hub_asset('js/event-map.js') ?>"></script>
+<?php else: ?>
+<p class="text-muted">Ingen interaktiv karta tillgänglig.</p>
+<?php endif; ?>
 
 <?php elseif ($activeTab === 'anmalda'): ?>
 <!-- REGISTERED PARTICIPANTS TAB -->
