@@ -567,6 +567,26 @@ if (!function_exists('render_event_map')) {
         bottom: var(--space-lg);
         right: var(--space-md);
     }
+    /* Gold icons on mobile bottom buttons */
+    .emap-location-btn,
+    .emap-close {
+        background: rgba(0, 0, 0, 0.75);
+        border: 1px solid rgba(255, 215, 0, 0.3);
+    }
+    .emap-location-btn svg,
+    .emap-close svg,
+    .emap-location-btn i,
+    .emap-close i {
+        color: #FFD700 !important;
+    }
+    .emap-location-btn:hover,
+    .emap-close:hover {
+        background: rgba(0, 0, 0, 0.85);
+    }
+    .emap-location-btn.active {
+        background: rgba(255, 215, 0, 0.2);
+        border-color: #FFD700;
+    }
     .emap-elevation {
         position: fixed;
         bottom: 0;
