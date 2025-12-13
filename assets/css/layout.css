@@ -115,6 +115,30 @@
   /* Compact mobile nav for narrow portrait screens */
   .mobile-nav-link{min-width:40px;padding:var(--space-2xs);font-size:9px}
   .mobile-nav-icon svg{width:20px;height:20px}
+
+  /* ============================================================================
+     EDGE-TO-EDGE MOBILE STANDARD - 2025
+     All content sections expand to full viewport width on mobile portrait.
+     This maximizes data space and creates a modern app-like feel.
+     ============================================================================ */
+  .card,
+  .filter-row,
+  .table-responsive,
+  .alert {
+    margin-left: calc(var(--space-sm) * -1);
+    margin-right: calc(var(--space-sm) * -1);
+    border-radius: 0 !important;
+    border-left: none !important;
+    border-right: none !important;
+    width: calc(100% + var(--space-sm) * 2);
+  }
+
+  /* Restore internal padding for card content */
+  .card-header,
+  .card-body {
+    padding-left: var(--space-sm);
+    padding-right: var(--space-sm);
+  }
 }
 
 @media(max-width:899px) and (orientation:landscape){
