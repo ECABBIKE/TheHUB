@@ -818,22 +818,20 @@ if (!empty($eventSponsors['content'])): ?>
         <input type="text" class="filter-input" id="searchFilter" placeholder="Namn eller klubb..." oninput="filterResults()">
     </div>
     <?php if ($hasSplitTimes && !$isDH): ?>
-    <div class="filter-field filter-field--toggle">
+    <div class="filter-toggles">
         <label class="toggle-label">
             <input type="checkbox" id="colorToggle" checked onchange="toggleSplitColors(this.checked)">
             <span class="toggle-text">Färgkodning</span>
             <span class="toggle-switch"></span>
         </label>
-    </div>
-    <?php if (count($globalSplitResults) > 0): ?>
-    <div class="filter-field filter-field--toggle">
+        <?php if (count($globalSplitResults) > 0): ?>
         <label class="toggle-label">
             <input type="checkbox" id="totalViewToggle" onchange="toggleTotalView(this.checked)">
             <span class="toggle-text">Sträcktider Total</span>
             <span class="toggle-switch"></span>
         </label>
+        <?php endif; ?>
     </div>
-    <?php endif; ?>
     <?php endif; ?>
 </div>
 
@@ -1885,21 +1883,17 @@ function sortTotalBySplit(headerEl, splitNum) {
     background: linear-gradient(90deg, var(--series-gradient-start) 0%, var(--series-gradient-end) 100%);
 }
 
-/* Series color stripe on result cards - flush with card top edge */
-.class-section {
-    overflow: hidden;
-    position: relative;
-}
+/* Series color stripe on result cards */
 .class-section::before {
     content: '';
     display: block;
     height: 4px;
-    margin: calc(var(--space-lg) * -1) calc(var(--space-lg) * -1) var(--space-lg) calc(var(--space-lg) * -1);
+    margin: -24px -24px 24px -24px;
     background: linear-gradient(90deg, var(--series-gradient-start) 0%, var(--series-gradient-end) 100%);
 }
 @media (max-width: 599px) and (orientation: portrait) {
     .class-section::before {
-        margin: calc(var(--space-md) * -1) calc(var(--space-md) * -1) var(--space-md) calc(var(--space-md) * -1);
+        margin: -16px -16px 16px -16px;
     }
 }
 
@@ -2162,7 +2156,7 @@ function sortTotalBySplit(headerEl, splitNum) {
     gap: var(--space-md);
     align-items: flex-end;
 }
-.filter-row .filter-field:not(.filter-field--toggle) {
+.filter-row .filter-field {
     flex: 1;
     min-width: 150px;
 }
@@ -2195,21 +2189,19 @@ function sortTotalBySplit(headerEl, splitNum) {
     border-color: var(--color-accent);
 }
 
-.filter-field--toggle {
+.filter-toggles {
     display: flex;
-    align-items: center;
-    padding: var(--space-xs) 0;
+    gap: var(--space-sm);
+    flex-wrap: wrap;
 }
 
 .toggle-label {
-    display: flex;
+    display: inline-flex;
     align-items: center;
-    gap: var(--space-sm);
+    gap: var(--space-xs);
     cursor: pointer;
     user-select: none;
-    background: var(--color-bg-sunken);
-    padding: var(--space-xs) var(--space-sm);
-    border-radius: var(--radius-full);
+    font-size: var(--text-sm);
 }
 
 .toggle-label input[type="checkbox"] {
@@ -2759,12 +2751,13 @@ td.col-place {
         padding: var(--space-md);
         align-items: center;
     }
-    .filter-row .filter-field:not(.filter-field--toggle) {
+    .filter-row .filter-field {
         flex: 1 1 100%;
     }
 
-    .filter-field--toggle {
-        flex: 0 0 auto;
+    .filter-toggles {
+        width: 100%;
+        justify-content: flex-start;
     }
 
     .info-grid {
