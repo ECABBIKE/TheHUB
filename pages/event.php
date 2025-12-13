@@ -1885,13 +1885,17 @@ function sortTotalBySplit(headerEl, splitNum) {
     background: linear-gradient(90deg, var(--series-gradient-start) 0%, var(--series-gradient-end) 100%);
 }
 
-/* Series color stripe on result cards */
+/* Series color stripe on result cards - flush with card top edge */
 .class-section {
     overflow: hidden;
+    position: relative;
 }
 .class-section::before {
     content: '';
-    display: block;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
     height: 4px;
     background: linear-gradient(90deg, var(--series-gradient-start) 0%, var(--series-gradient-end) 100%);
 }
