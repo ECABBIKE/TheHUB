@@ -263,7 +263,7 @@ function importRiderUpdates($filepath, $db, $importId, $seasonYear, $createMissi
             // First try exact name + birth year match
             if ($birthYear) {
                 $existing = $db->getRow(
-                    "SELECT id, license_number, email, birth_year, club_id FROM riders
+                    "SELECT id, license_number, email, birth_year, club_id, nationality FROM riders
                      WHERE LOWER(firstname) = LOWER(?) AND LOWER(lastname) = LOWER(?) AND birth_year = ?",
                     [$firstname, $lastname, $birthYear]
                 );
@@ -274,7 +274,7 @@ function importRiderUpdates($filepath, $db, $importId, $seasonYear, $createMissi
                 $uciIdClean = preg_replace('/[^0-9]/', '', $uciId);
                 if (strlen($uciIdClean) >= 8) {
                     $existing = $db->getRow(
-                        "SELECT id, license_number, email, birth_year, club_id FROM riders
+                        "SELECT id, license_number, email, birth_year, club_id, nationality FROM riders
                          WHERE REPLACE(REPLACE(license_number, ' ', ''), '-', '') = ?",
                         [$uciIdClean]
                     );
@@ -284,7 +284,7 @@ function importRiderUpdates($filepath, $db, $importId, $seasonYear, $createMissi
             // Try by name only (less strict)
             if (!$existing) {
                 $existing = $db->getRow(
-                    "SELECT id, license_number, email, birth_year, club_id FROM riders
+                    "SELECT id, license_number, email, birth_year, club_id, nationality FROM riders
                      WHERE LOWER(firstname) = LOWER(?) AND LOWER(lastname) = LOWER(?)",
                     [$firstname, $lastname]
                 );
@@ -344,9 +344,10 @@ function importRiderUpdates($filepath, $db, $importId, $seasonYear, $createMissi
                 // Update gender
                 $updateData['gender'] = $gender;
 
-                // Update nationality if provided
-                if (!empty($nationality)) {
+                // Update nationality if provided and different
+                if (!empty($nationality) && $nationality !== ($existing['nationality'] ?? '')) {
                     $updateData['nationality'] = $nationality;
+                    $changes[] = "Nationalitet: {$nationality}";
                 }
 
                 // Save updates
@@ -540,6 +541,7 @@ include __DIR__ . '/components/unified-layout.php';
                     <tr><td><code>Klubb/Företag</code></td><td>Klubbnamn (skapas om den inte finns)</td><td>Nej</td></tr>
                     <tr><td><code>Födelseår</code></td><td>År (t.ex. 1992)</td><td>Nej</td></tr>
                     <tr><td><code>Födelsedag</code></td><td>Datum (DD-MM-YYYY)</td><td>Nej</td></tr>
+                    <tr><td><code>Nationalitet (3-letter)</code></td><td>Landskod (SWE, NOR, etc.)</td><td>Nej</td></tr>
                     <tr><td><code>Deltagarens email</code></td><td>E-postadress</td><td>Nej</td></tr>
                     <tr><td><code>ID Medlemsnummer</code></td><td>UCI-ID (11 siffror)</td><td>Nej</td></tr>
                 </tbody>
@@ -559,6 +561,7 @@ include __DIR__ . '/components/unified-layout.php';
                 - <strong>UCI-ID</strong> → uppdateras om rider har SWE-ID eller saknar licensnummer<br>
                 - <strong>E-post</strong> → uppdateras om rider saknar e-post<br>
                 - <strong>Födelseår</strong> → uppdateras om rider saknar födelseår<br>
+                - <strong>Nationalitet</strong> → uppdateras om den skiljer sig från befintlig<br>
                 - <strong>Klubbtillhörighet</strong> → sätts för valt säsongsår (kan inte ändras om rider har resultat det året)
             </p>
         </div>
