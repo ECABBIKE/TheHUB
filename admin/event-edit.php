@@ -663,23 +663,20 @@ include __DIR__ . '/components/unified-layout.php';
         </div>
     </div>
 
-    <!-- EXTENDED CONTENT - Collapsible -->
+    <!-- PM (PROMEMORIA) - Collapsible -->
     <details class="admin-card" style="margin-bottom: var(--space-lg);">
         <summary class="admin-card-header" style="cursor: pointer; user-select: none;">
-            <h2>Event-flikar Information</h2>
+            <h2>PM (Promemoria)</h2>
             <span style="color: var(--color-text-secondary); font-size: var(--text-sm);">Klicka för att expandera</span>
         </summary>
         <div class="admin-card-body">
             <p style="color: var(--color-text-secondary); font-size: var(--text-sm); margin-bottom: var(--space-lg);">
-                Innehåll för event-sidans flikar. Markera "Global" för att använda standardtext.
+                Innehåll för PM-fliken. Markera "Global" för att använda standardtext.
             </p>
 
             <?php
-            $extendedFields = [
-                ['key' => 'pm_content', 'label' => 'PM (Promemoria)', 'global_key' => 'pm_use_global'],
-                ['key' => 'jury_communication', 'label' => 'Jurykommuniké', 'global_key' => 'jury_use_global'],
-                ['key' => 'competition_schedule', 'label' => 'Tävlingsschema', 'global_key' => 'schedule_use_global'],
-                ['key' => 'start_times', 'label' => 'Starttider', 'global_key' => 'start_times_use_global', 'publish_key' => 'starttider_publish_at'],
+            $pmFields = [
+                ['key' => 'pm_content', 'label' => 'PM Huvudtext', 'global_key' => 'pm_use_global'],
                 ['key' => 'driver_meeting', 'label' => 'Förarmöte', 'global_key' => 'driver_meeting_use_global'],
                 ['key' => 'training_info', 'label' => 'Träning', 'global_key' => 'training_use_global'],
                 ['key' => 'timing_info', 'label' => 'Tidtagning', 'global_key' => 'timing_use_global'],
@@ -687,12 +684,49 @@ include __DIR__ . '/components/unified-layout.php';
                 ['key' => 'competition_rules', 'label' => 'Tävlingsregler', 'global_key' => 'rules_use_global'],
                 ['key' => 'insurance_info', 'label' => 'Försäkring', 'global_key' => 'insurance_use_global'],
                 ['key' => 'equipment_info', 'label' => 'Utrustning', 'global_key' => 'equipment_use_global'],
+                ['key' => 'medical_info', 'label' => 'Sjukvård', 'global_key' => 'medical_use_global'],
+                ['key' => 'scf_representatives', 'label' => 'SCF Representanter', 'global_key' => 'scf_use_global'],
             ];
-            // Note: Kartbeskrivning and Tävlingssträckor removed - Karta tab only shows interactive map
             ?>
 
             <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--space-md);">
-                <?php foreach ($extendedFields as $field): ?>
+                <?php foreach ($pmFields as $field): ?>
+                    <div class="admin-form-group">
+                        <label class="admin-form-label">
+                            <?= $field['label'] ?>
+                            <label style="display: inline-flex; align-items: center; gap: 4px; margin-left: var(--space-sm); font-weight: normal; cursor: pointer;">
+                                <input type="checkbox" name="<?= $field['global_key'] ?>" <?= !empty($event[$field['global_key']]) ? 'checked' : '' ?>>
+                                <span style="font-size: var(--text-xs);">Global</span>
+                            </label>
+                        </label>
+                        <textarea name="<?= $field['key'] ?>" class="admin-form-input" rows="3"><?= h($event[$field['key']] ?? '') ?></textarea>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+        </div>
+    </details>
+
+    <!-- ÖVRIGA EVENT-FLIKAR - Collapsible -->
+    <details class="admin-card" style="margin-bottom: var(--space-lg);">
+        <summary class="admin-card-header" style="cursor: pointer; user-select: none;">
+            <h2>Övriga event-flikar</h2>
+            <span style="color: var(--color-text-secondary); font-size: var(--text-sm);">Jury, Schema, Starttider</span>
+        </summary>
+        <div class="admin-card-body">
+            <p style="color: var(--color-text-secondary); font-size: var(--text-sm); margin-bottom: var(--space-lg);">
+                Separata flikar som visas om innehåll finns (eller global text aktiverad).
+            </p>
+
+            <?php
+            $otherTabFields = [
+                ['key' => 'jury_communication', 'label' => 'Jurykommuniké', 'global_key' => 'jury_use_global'],
+                ['key' => 'competition_schedule', 'label' => 'Tävlingsschema', 'global_key' => 'schedule_use_global'],
+                ['key' => 'start_times', 'label' => 'Starttider', 'global_key' => 'start_times_use_global', 'publish_key' => 'starttider_publish_at'],
+            ];
+            ?>
+
+            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--space-md);">
+                <?php foreach ($otherTabFields as $field): ?>
                     <div class="admin-form-group">
                         <label class="admin-form-label">
                             <?= $field['label'] ?>
@@ -742,10 +776,14 @@ include __DIR__ . '/components/unified-layout.php';
     <!-- FACILITIES - Collapsible -->
     <details class="admin-card" style="margin-bottom: var(--space-lg);">
         <summary class="admin-card-header" style="cursor: pointer; user-select: none;">
-            <h2>Faciliteter & Logistik</h2>
+            <h2>Faciliteter & Logistik (Information-fliken)</h2>
             <span style="color: var(--color-text-secondary); font-size: var(--text-sm);">Klicka för att expandera</span>
         </summary>
         <div class="admin-card-body">
+            <p style="color: var(--color-text-secondary); font-size: var(--text-sm); margin-bottom: var(--space-lg);">
+                Innehåll för Information-fliken på event-sidan.
+            </p>
+
             <?php
             $facilityFields = [
                 ['key' => 'hydration_stations', 'label' => 'Vätskekontroller', 'global_key' => 'hydration_use_global'],
@@ -757,12 +795,8 @@ include __DIR__ . '/components/unified-layout.php';
                 ['key' => 'parking_detailed', 'label' => 'Parkering', 'global_key' => 'parking_use_global'],
                 ['key' => 'hotel_accommodation', 'label' => 'Hotell/Boende', 'global_key' => 'hotel_use_global'],
                 ['key' => 'local_info', 'label' => 'Lokal information', 'global_key' => 'local_use_global'],
-                ['key' => 'entry_fees_detailed', 'label' => 'Startavgifter', 'global_key' => 'fees_use_global'],
-                ['key' => 'results_info', 'label' => 'Resultatinfo', 'global_key' => 'results_use_global'],
-                ['key' => 'medical_info', 'label' => 'Sjukvård', 'global_key' => 'medical_use_global'],
                 ['key' => 'media_production', 'label' => 'Media', 'global_key' => 'media_use_global'],
                 ['key' => 'contacts_info', 'label' => 'Kontakter', 'global_key' => 'contacts_use_global'],
-                ['key' => 'scf_representatives', 'label' => 'SCF Representanter', 'global_key' => 'scf_use_global'],
             ];
             ?>
 
