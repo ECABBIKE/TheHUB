@@ -476,6 +476,28 @@ try {
   margin-bottom: var(--space-md);
 }
 
+/* EDGE-TO-EDGE MOBILE */
+@media (max-width: 768px) {
+  .filters-bar,
+  .event-row {
+    margin-left: -16px;
+    margin-right: -16px;
+    border-radius: 0 !important;
+    border-left: none !important;
+    border-right: none !important;
+    width: calc(100% + 32px);
+  }
+  .event-row {
+    padding: var(--space-md);
+  }
+  .year-divider {
+    margin-left: -16px;
+    margin-right: -16px;
+    width: calc(100% + 32px);
+    padding: var(--space-xs) 16px;
+  }
+}
+
 @media (max-width: 599px) {
   .page-title {
     font-size: var(--text-xl);
