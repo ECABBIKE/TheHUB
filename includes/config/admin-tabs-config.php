@@ -64,6 +64,13 @@ $ADMIN_TABS = [
                 'icon' => 'heart-handshake',
                 'url' => '/admin/sponsors.php',
                 'pages' => ['sponsors.php', 'sponsor-edit.php']
+            ],
+            [
+                'id' => 'global-texts',
+                'label' => 'Texter',
+                'icon' => 'file-text',
+                'url' => '/admin/global-texts.php',
+                'pages' => ['global-texts.php']
             ]
         ]
     ],
@@ -95,6 +102,13 @@ $ADMIN_TABS = [
                 'icon' => 'building-2',
                 'url' => '/admin/club-points.php',
                 'pages' => ['club-points.php', 'club-points-detail.php']
+            ],
+            [
+                'id' => 'rules',
+                'label' => 'Anmälningsregler',
+                'icon' => 'shield-check',
+                'url' => '/admin/registration-rules.php',
+                'pages' => ['registration-rules.php']
             ]
         ]
     ],
@@ -159,13 +173,6 @@ $ADMIN_TABS = [
                 'pages' => ['point-scales.php', 'point-scale-edit.php', 'point-templates.php']
             ],
             [
-                'id' => 'rules',
-                'label' => 'Regler',
-                'icon' => 'shield-check',
-                'url' => '/admin/registration-rules.php',
-                'pages' => ['registration-rules.php']
-            ],
-            [
                 'id' => 'public',
                 'label' => 'Publikt',
                 'icon' => 'globe',
@@ -173,11 +180,11 @@ $ADMIN_TABS = [
                 'pages' => ['public-settings.php']
             ],
             [
-                'id' => 'global-texts',
-                'label' => 'Texter',
-                'icon' => 'file-text',
-                'url' => '/admin/global-texts.php',
-                'pages' => ['global-texts.php']
+                'id' => 'media',
+                'label' => 'Media',
+                'icon' => 'image',
+                'url' => '/admin/media.php',
+                'pages' => ['media.php']
             ]
         ]
     ],
@@ -276,13 +283,6 @@ $ADMIN_TABS = [
                 'icon' => 'wrench',
                 'url' => '/admin/tools.php',
                 'pages' => ['tools.php', 'normalize-names.php', 'find-duplicates.php', 'cleanup-duplicates.php', 'cleanup-clubs.php', 'search-uci-id.php', 'diagnose-series.php', 'rebuild-stats.php']
-            ],
-            [
-                'id' => 'media',
-                'label' => 'Media',
-                'icon' => 'image',
-                'url' => '/admin/media.php',
-                'pages' => ['media.php', 'sponsors.php']
             ],
             [
                 'id' => 'branding',
