@@ -373,6 +373,10 @@ function update_sponsor($id, $data) {
         $cols = $pdo->query("SHOW COLUMNS FROM sponsors")->fetchAll(PDO::FETCH_COLUMN);
         $availableColumns = array_flip($cols);
 
+        // DEBUG: Log what we're trying to save
+        error_log("UPDATE_SPONSOR: ID=$id, available_cols=" . implode(',', $cols));
+        error_log("UPDATE_SPONSOR: data=" . json_encode($data));
+
         // All possible fields we might want to update
         $allFields = ['name', 'tier', 'website', 'description', 'logo', 'logo_media_id',
                       'logo_banner_id', 'logo_standard_id', 'logo_small_id',
@@ -394,6 +398,9 @@ function update_sponsor($id, $data) {
                 }
             }
         }
+
+        // DEBUG: Log what will be updated
+        error_log("UPDATE_SPONSOR: updates=" . implode(', ', $updates));
 
         if (empty($updates)) {
             return ['success' => false, 'error' => 'Inget att uppdatera'];
