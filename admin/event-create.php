@@ -68,8 +68,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
  'map_use_global' => isset($_POST['map_use_global']) ? 1 : 0,
  'driver_meeting' => trim($_POST['driver_meeting'] ?? ''),
  'driver_meeting_use_global' => isset($_POST['driver_meeting_use_global']) ? 1 : 0,
- 'competition_tracks' => trim($_POST['competition_tracks'] ?? ''),
- 'tracks_use_global' => isset($_POST['tracks_use_global']) ? 1 : 0,
  'competition_rules' => trim($_POST['competition_rules'] ?? ''),
  'rules_use_global' => isset($_POST['rules_use_global']) ? 1 : 0,
  'insurance_info' => trim($_POST['insurance_info'] ?? ''),
@@ -82,10 +80,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
  'timing_use_global' => isset($_POST['timing_use_global']) ? 1 : 0,
  'lift_info' => trim($_POST['lift_info'] ?? ''),
  'lift_use_global' => isset($_POST['lift_use_global']) ? 1 : 0,
- 'entry_fees_detailed' => trim($_POST['entry_fees_detailed'] ?? ''),
- 'fees_use_global' => isset($_POST['fees_use_global']) ? 1 : 0,
- 'results_info' => trim($_POST['results_info'] ?? ''),
- 'results_use_global' => isset($_POST['results_use_global']) ? 1 : 0,
  'hydration_stations' => trim($_POST['hydration_stations'] ?? ''),
  'hydration_use_global' => isset($_POST['hydration_use_global']) ? 1 : 0,
  'toilets_showers' => trim($_POST['toilets_showers'] ?? ''),
@@ -933,23 +927,6 @@ include __DIR__ . '/../includes/layout-header.php';
 
   <div class="grid grid-cols-1 md-grid-cols-2 gap-md">
   <!-- Competition Tracks -->
-  <div>
-  <label for="competition_tracks" class="label">
-  <i data-lucide="route"></i> Tävlingssträckor
-  <label class="checkbox-label ml-md" style="display: inline-flex; font-weight: normal;">
-   <input type="checkbox" name="tracks_use_global" class="checkbox" <?= !empty($_POST['tracks_use_global']) ? 'checked' : '' ?>>
-   <span class="text-xs">Global</span>
-  </label>
-  </label>
-  <textarea
-  id="competition_tracks"
-  name="competition_tracks"
-  class="input"
-  rows="3"
-  placeholder="Beskrivning av tävlingssträckor..."
-  ><?= htmlspecialchars($_POST['competition_tracks'] ?? '') ?></textarea>
-  </div>
-
   <!-- Competition Rules -->
   <div>
   <label for="competition_rules" class="label">
@@ -1011,42 +988,6 @@ include __DIR__ . '/../includes/layout-header.php';
   </div>
 
   <div class="grid grid-cols-1 md-grid-cols-2 gap-md">
-  <!-- Entry Fees (detailed) -->
-  <div>
-  <label for="entry_fees_detailed" class="label">
-  <i data-lucide="banknote"></i> Startavgifter
-  <label class="checkbox-label ml-md" style="display: inline-flex; font-weight: normal;">
-   <input type="checkbox" name="fees_use_global" class="checkbox" <?= !empty($_POST['fees_use_global']) ? 'checked' : '' ?>>
-   <span class="text-xs">Global</span>
-  </label>
-  </label>
-  <textarea
-  id="entry_fees_detailed"
-  name="entry_fees_detailed"
-  class="input"
-  rows="3"
-  placeholder="Detaljerad avgiftsinformation per klass..."
-  ><?= htmlspecialchars($_POST['entry_fees_detailed'] ?? '') ?></textarea>
-  </div>
-
-  <!-- Results Info -->
-  <div>
-  <label for="results_info" class="label">
-  <i data-lucide="trophy"></i> Resultatinformation
-  <label class="checkbox-label ml-md" style="display: inline-flex; font-weight: normal;">
-   <input type="checkbox" name="results_use_global" class="checkbox" <?= !empty($_POST['results_use_global']) ? 'checked' : '' ?>>
-   <span class="text-xs">Global</span>
-  </label>
-  </label>
-  <textarea
-  id="results_info"
-  name="results_info"
-  class="input"
-  rows="3"
-  placeholder="Hur resultat publiceras..."
-  ><?= htmlspecialchars($_POST['results_info'] ?? '') ?></textarea>
-  </div>
-
   <!-- Medical Info -->
   <div>
   <label for="medical_info" class="label">
