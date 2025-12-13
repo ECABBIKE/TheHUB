@@ -107,7 +107,12 @@ function saveEventSponsorAssignments($db, $eventId, $postData) {
     // Insert new assignments
     $insertStmt = $pdo->prepare("INSERT INTO event_sponsors (event_id, sponsor_id, placement, display_order) VALUES (?, ?, ?, ?)");
 
-    // Content sponsors (multiple checkboxes)
+    // Header sponsors (banner at top - single select)
+    if (!empty($postData['sponsor_header'])) {
+        $insertStmt->execute([$eventId, (int)$postData['sponsor_header'], 'header', 0]);
+    }
+
+    // Content sponsors (logo row - multiple checkboxes)
     if (!empty($postData['sponsor_content']) && is_array($postData['sponsor_content'])) {
         $order = 0;
         foreach ($postData['sponsor_content'] as $sponsorId) {
@@ -926,6 +931,22 @@ include __DIR__ . '/components/unified-layout.php';
                     </select>
                     <small style="color: var(--color-text-secondary); margin-top: var(--space-xs); display: block;">
                         Välj bild från <a href="/admin/media?folder=events" target="_blank">Mediabiblioteket (Event-mappen)</a>
+                    </small>
+                </div>
+
+                <!-- Header Banner Sponsor -->
+                <div class="admin-form-group">
+                    <label class="admin-form-label">Banner-sponsor (bred banner högst upp)</label>
+                    <select name="sponsor_header" class="admin-form-select">
+                        <option value="">-- Ingen (använd seriens) --</option>
+                        <?php foreach ($allSponsors as $sp): ?>
+                        <option value="<?= $sp['id'] ?>" <?= in_array((int)$sp['id'], $eventSponsors['header']) ? 'selected' : '' ?>>
+                            <?= htmlspecialchars($sp['name']) ?> (<?= ucfirst($sp['tier']) ?>)
+                        </option>
+                        <?php endforeach; ?>
+                    </select>
+                    <small style="color: var(--color-text-secondary); margin-top: var(--space-xs); display: block;">
+                        Sponsorns banner-logo visas som bred banner högst upp på event-sidan
                     </small>
                 </div>
 

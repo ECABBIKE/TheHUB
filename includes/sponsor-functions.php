@@ -641,7 +641,21 @@ function get_sponsor_logo_for_placement($sponsor, $placement) {
         return '/' . ltrim($sponsor[$urlField], '/');
     }
 
-    // Fallback to legacy logo_url or logo field
+    // Try other sizes as fallback for this placement
+    foreach (['standard', 'small', 'banner'] as $fallbackType) {
+        if ($fallbackType === $logoType) continue;
+        $fallbackField = $fieldMap[$fallbackType][1] ?? null;
+        if ($fallbackField && !empty($sponsor[$fallbackField])) {
+            return '/' . ltrim($sponsor[$fallbackField], '/');
+        }
+    }
+
+    // Fallback to legacy_logo_url (from logo_media_id join)
+    if (!empty($sponsor['legacy_logo_url'])) {
+        return '/' . ltrim($sponsor['legacy_logo_url'], '/');
+    }
+
+    // Fallback to logo_url or logo field
     if (!empty($sponsor['logo_url'])) {
         return '/' . ltrim($sponsor['logo_url'], '/');
     }
