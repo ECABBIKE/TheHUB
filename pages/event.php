@@ -77,6 +77,8 @@ try {
             s.id as series_id,
             s.name as series_name,
             s.logo as series_logo,
+            s.gradient_start as series_gradient_start,
+            s.gradient_end as series_gradient_end,
             v.name as venue_name,
             v.city as venue_city,
             v.address as venue_address,
@@ -1703,6 +1705,12 @@ function sortTotalBySplit(headerEl, splitNum) {
 </script>
 
 <style>
+/* Series branding colors */
+:root {
+    --series-gradient-start: <?= htmlspecialchars($event['series_gradient_start'] ?? '#004A98') ?>;
+    --series-gradient-end: <?= htmlspecialchars($event['series_gradient_end'] ?? '#002a5c') ?>;
+}
+
 /* Event Header Banner (uploaded event image, not sponsor) - Full width */
 .event-header-banner {
     width: 100%;
@@ -1874,7 +1882,7 @@ function sortTotalBySplit(headerEl, splitNum) {
     content: '';
     display: block;
     height: 4px;
-    background: linear-gradient(90deg, var(--color-accent) 0%, #00A3E0 100%);
+    background: linear-gradient(90deg, var(--series-gradient-start) 0%, var(--series-gradient-end) 100%);
 }
 
 .event-header-content {
@@ -2761,12 +2769,12 @@ td.col-place {
         width: calc(100% + var(--space-md) * 2);
     }
 
-    /* Blue stripe on result cards (class sections) */
+    /* Series color stripe on result cards (class sections) */
     .class-section::before {
         content: '';
         display: block;
         height: 4px;
-        background: linear-gradient(90deg, var(--color-accent) 0%, #00A3E0 100%);
+        background: linear-gradient(90deg, var(--series-gradient-start) 0%, var(--series-gradient-end) 100%);
         margin: calc(var(--space-md) * -1);
         margin-bottom: 0;
         width: calc(100% + var(--space-md) * 2);
