@@ -194,6 +194,11 @@ function importRidersFromCSV($filepath, $db) {
   'clubname' => 'club',
   'team' => 'club',
   'lag' => 'club',
+  'förening' => 'club',
+  'forening' => 'club',
+  'organisation' => 'club',
+  'organization' => 'club',
+  'org' => 'club',
 
   // License
   'licensnummer' => 'licensenumber',
