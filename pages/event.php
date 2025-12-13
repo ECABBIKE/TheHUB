@@ -691,8 +691,7 @@ if (!empty($eventSponsors['content'])) {
 }
 if (!empty($eventSponsors['content'])): ?>
 <section class="event-sponsor-logos mb-sm">
-    <div class="sponsor-logos-label">Sponsorer</div>
-    <div class="sponsor-logos-row">
+    <div class="sponsor-logos-grid">
         <?php foreach ($eventSponsors['content'] as $sponsor):
             $standardLogo = get_sponsor_logo_for_placement($sponsor, 'content');
         ?>
@@ -1747,12 +1746,20 @@ function sortTotalBySplit(headerEl, splitNum) {
     display: flex;
     justify-content: center;
     align-items: center;
-    gap: var(--space-md);
     padding: var(--space-sm);
     background: var(--color-bg-card);
     border: 1px solid var(--color-border);
-    border-radius: var(--radius-md);
+    border-radius: var(--radius-md) var(--radius-md) 0 0;
+    border-bottom: none;
     overflow: hidden;
+}
+/* Connect banner with logo row below - thin divider line */
+.event-sponsor-banner + .event-sponsor-logos {
+    border-radius: 0 0 var(--radius-md) var(--radius-md);
+    margin-top: 0 !important;
+}
+.event-sponsor-banner.mb-sm {
+    margin-bottom: 0 !important;
 }
 .sponsor-banner-link {
     display: flex;
@@ -1775,48 +1782,45 @@ function sortTotalBySplit(headerEl, splitNum) {
     color: var(--color-text-primary);
 }
 
-/* Event Sponsor Logos Row
+/* Event Sponsor Logos Grid (3 columns)
    Recommended image size: 200x60px (PNG/WebP with transparent background)
 */
 .event-sponsor-logos {
-    display: flex;
-    align-items: center;
-    gap: var(--space-md);
-    padding: var(--space-sm) var(--space-md);
     background: var(--color-bg-card);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-md);
-    overflow-x: auto;
+    padding: var(--space-md);
 }
-.sponsor-logos-label {
-    font-size: 0.75rem;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: var(--color-text-secondary);
-    white-space: nowrap;
-}
-.sponsor-logos-row {
+.sponsor-logos-grid {
     display: flex;
-    align-items: center;
-    gap: var(--space-lg);
     flex-wrap: wrap;
+    gap: var(--space-md);
+    align-items: center;
+    justify-content: center;
+}
+.sponsor-logos-grid .sponsor-logo-item {
+    flex: 0 1 calc(33.333% - var(--space-md));
+    min-width: 100px;
 }
 .sponsor-logo-item {
     display: flex;
     align-items: center;
+    justify-content: center;
     text-decoration: none;
     transition: transform 0.2s;
+    width: 100%;
 }
 .sponsor-logo-item:hover { transform: scale(1.05); }
 .sponsor-logo-item img {
     max-height: 50px;
-    max-width: 180px;
+    max-width: 100%;
     object-fit: contain;
 }
 .sponsor-logo-item span {
     font-size: var(--text-sm);
     font-weight: var(--weight-medium);
     color: var(--color-text-secondary);
+    text-align: center;
 }
 
 /* Class Results Sponsor - Compact version
