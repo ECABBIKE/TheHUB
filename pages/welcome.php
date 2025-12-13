@@ -264,7 +264,7 @@ if ($isLoggedIn) {
 <style>
 /* ===== WELCOME PAGE - Clean Design ===== */
 .welcome-page {
-    max-width: 900px;
+    max-width: var(--content-max-width, 1400px);
     margin: 0 auto;
     padding: var(--space-md);
 }
