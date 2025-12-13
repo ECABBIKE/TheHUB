@@ -838,8 +838,8 @@ if (!$event) {
             $resultSponsor = $eventSponsors['sidebar'][0];
             $smallLogo = get_sponsor_logo_for_placement($resultSponsor, 'sidebar');
         ?>
-        <a href="<?= h($resultSponsor['website'] ?? '#') ?>" target="_blank" rel="noopener sponsored" class="class-sponsor">
-            <span class="class-sponsor-label">Resultat sponsrat av</span>
+        <a href="<?= h($resultSponsor['website'] ?? '#') ?>" target="_blank" rel="noopener sponsored" class="class-sponsor" title="Resultat sponsrat av <?= h($resultSponsor['name']) ?>">
+            <span class="class-sponsor-label">Sponsor</span>
             <?php if ($smallLogo): ?>
             <img src="<?= h($smallLogo) ?>" alt="<?= h($resultSponsor['name']) ?>" class="class-sponsor-logo">
             <?php else: ?>
@@ -1768,35 +1768,44 @@ function sortTotalBySplit(headerEl, splitNum) {
     color: var(--color-text-secondary);
 }
 
-/* Class Results Sponsor
+/* Class Results Sponsor - Compact version
    Recommended image size: 160x40px (PNG/WebP with transparent background)
 */
 .class-sponsor {
-    display: flex;
+    display: inline-flex;
     align-items: center;
-    gap: var(--space-sm);
+    gap: var(--space-xs);
     text-decoration: none;
-    padding: var(--space-xs) var(--space-sm);
+    padding: 2px 6px;
     background: var(--color-bg-sunken);
     border-radius: var(--radius-sm);
     transition: background 0.2s;
+    flex-shrink: 0;
 }
 .class-sponsor:hover { background: var(--color-border); }
 .class-sponsor-label {
-    font-size: 0.7rem;
+    font-size: 0.6rem;
     text-transform: uppercase;
-    letter-spacing: 0.03em;
-    color: var(--color-text-secondary);
+    letter-spacing: 0.02em;
+    color: var(--color-text-tertiary);
+    white-space: nowrap;
+}
+@media (max-width: 640px) {
+    .class-sponsor-label { display: none; }
 }
 .class-sponsor-logo {
-    max-height: 32px;
-    max-width: 120px;
+    max-height: 24px;
+    max-width: 80px;
     object-fit: contain;
 }
 .class-sponsor-name {
-    font-size: var(--text-sm);
-    font-weight: var(--weight-semibold);
-    color: var(--color-text-primary);
+    font-size: 0.75rem;
+    font-weight: var(--weight-medium);
+    color: var(--color-text-secondary);
+    max-width: 80px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 /* Event Header */

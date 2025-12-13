@@ -908,9 +908,9 @@ function renderMediaGrid() {
     const grid = document.getElementById('mediaGrid');
     grid.innerHTML = mediaData.map(media => `
         <div class="media-item" onclick="selectMedia(${media.id}, '${media.filepath}')" style="cursor: pointer; border: 2px solid transparent; border-radius: 8px; padding: 8px; transition: border-color 0.2s;">
-            <img src="/${media.filepath}" alt="${media.original_name}" style="width: 100%; height: 80px; object-fit: contain; background: var(--color-bg-sunken); border-radius: 4px;">
+            <img src="/${media.filepath}" alt="${media.original_filename || ''}" style="width: 100%; height: 80px; object-fit: contain; background: var(--color-bg-sunken); border-radius: 4px;">
             <div style="font-size: 0.75rem; color: var(--color-text-secondary); margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-                ${media.original_name}
+                ${media.original_filename || 'Bild'}
             </div>
         </div>
     `).join('');

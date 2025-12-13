@@ -246,14 +246,18 @@ include __DIR__ . '/components/unified-layout.php';
                                     <?php else: ?>-<?php endif; ?>
                                 </td>
                                 <td>
-                                    <?php if (!$class['awards_points']): ?>
-                                        <span class="admin-badge admin-badge-warning">Ingen poäng</span>
-                                    <?php endif; ?>
-                                    <?php if (!$class['series_eligible']): ?>
-                                        <span class="admin-badge admin-badge-secondary">Ej serie</span>
-                                    <?php endif; ?>
                                     <?php if ($class['awards_points'] && $class['series_eligible']): ?>
                                         <span style="color: var(--color-text-secondary);">Standard</span>
+                                    <?php elseif (!$class['awards_points'] && !$class['series_eligible']): ?>
+                                        <!-- Classes intentionally without points/series (Motion, E-bike etc) - no warning needed -->
+                                        <span style="color: var(--color-text-tertiary);">-</span>
+                                    <?php else: ?>
+                                        <?php if (!$class['awards_points']): ?>
+                                            <span class="admin-badge admin-badge-secondary">Ej poäng</span>
+                                        <?php endif; ?>
+                                        <?php if (!$class['series_eligible']): ?>
+                                            <span class="admin-badge admin-badge-secondary">Ej serie</span>
+                                        <?php endif; ?>
                                     <?php endif; ?>
                                 </td>
                                 <td><?= number_format($class['result_count']) ?></td>

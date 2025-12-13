@@ -208,6 +208,11 @@ function get_active_economy_tab($tabs) {
 function get_economy_event_info($event_id) {
     global $pdo;
 
+    // Om $pdo inte är satt, försök hämta via hub_db()
+    if (!$pdo && function_exists('hub_db')) {
+        $pdo = hub_db();
+    }
+
     if (!$pdo || !$event_id) {
         return null;
     }
@@ -229,6 +234,11 @@ function get_economy_event_info($event_id) {
  */
 function get_economy_series_info($series_id) {
     global $pdo;
+
+    // Om $pdo inte är satt, försök hämta via hub_db()
+    if (!$pdo && function_exists('hub_db')) {
+        $pdo = hub_db();
+    }
 
     if (!$pdo || !$series_id) {
         return null;
@@ -255,11 +265,30 @@ function can_access_event_economy($event_id) {
         return true;
     }
 
+    // Admin har alltid tillgång (fallback för när roller inte är konfigurerade)
+    if (function_exists('is_admin') && is_admin()) {
+        return true;
+    }
+
+    // Om användaren är inloggad som admin, ge tillgång
+    if (!empty($_SESSION['admin_user_id']) || !empty($_SESSION['admin_logged_in'])) {
+        return true;
+    }
+
     // Kontrollera promotor-koppling
     global $pdo;
     $user_id = $_SESSION['admin_user_id'] ?? null;
 
+    // Om $pdo inte är satt, försök hämta via hub_db()
+    if (!$pdo && function_exists('hub_db')) {
+        $pdo = hub_db();
+    }
+
     if (!$pdo || !$user_id || !$event_id) {
+        // Om ingen PDO men användare är inloggad, ge tillgång ändå
+        if (!empty($_SESSION['admin_logged_in'])) {
+            return true;
+        }
         return false;
     }
 
@@ -292,11 +321,30 @@ function can_access_series_economy($series_id) {
         return true;
     }
 
+    // Admin har alltid tillgång (fallback för när roller inte är konfigurerade)
+    if (function_exists('is_admin') && is_admin()) {
+        return true;
+    }
+
+    // Om användaren är inloggad som admin, ge tillgång
+    if (!empty($_SESSION['admin_user_id']) || !empty($_SESSION['admin_logged_in'])) {
+        return true;
+    }
+
     // Kontrollera promotor-koppling via events
     global $pdo;
     $user_id = $_SESSION['admin_user_id'] ?? null;
 
+    // Om $pdo inte är satt, försök hämta via hub_db()
+    if (!$pdo && function_exists('hub_db')) {
+        $pdo = hub_db();
+    }
+
     if (!$pdo || !$user_id || !$series_id) {
+        // Om ingen PDO men användare är inloggad, ge tillgång ändå
+        if (!empty($_SESSION['admin_logged_in'])) {
+            return true;
+        }
         return false;
     }
 
