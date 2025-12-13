@@ -842,7 +842,8 @@ if (!$event) {
             $smallLogo = get_sponsor_logo_for_placement($resultSponsor, 'sidebar');
         ?>
         <a href="<?= h($resultSponsor['website'] ?? '#') ?>" target="_blank" rel="noopener sponsored" class="class-sponsor" title="Resultat sponsrat av <?= h($resultSponsor['name']) ?>">
-            <span class="class-sponsor-label">Sponsor</span>
+            <span class="class-sponsor-label-desktop">Resultaten sponsrade av</span>
+            <span class="class-sponsor-label-mobile">Sponsor</span>
             <?php if ($smallLogo): ?>
             <img src="<?= h($smallLogo) ?>" alt="<?= h($resultSponsor['name']) ?>" class="class-sponsor-logo">
             <?php else: ?>
@@ -1386,7 +1387,7 @@ $hasPMContent = $pmContent || $driverMeetingPM || $trainingPM || $timingPM || $l
 <?php
 require_once ROOT_PATH . '/components/event-map.php';
 render_event_map($eventId, $db, [
-    'height' => 'calc(100vh - 200px)',
+    'height' => 'min(calc(100vh - 250px), 600px)',
     'fullscreen' => false,
     'show_close' => false,
     'event_name' => $event['name'] ?? 'Event'
@@ -1778,15 +1779,18 @@ function sortTotalBySplit(headerEl, splitNum) {
     flex-shrink: 0;
 }
 .class-sponsor:hover { background: var(--color-border); }
-.class-sponsor-label {
-    font-size: 0.6rem;
+.class-sponsor-label-desktop,
+.class-sponsor-label-mobile {
+    font-size: 0.65rem;
     text-transform: uppercase;
     letter-spacing: 0.02em;
     color: var(--color-text-tertiary);
     white-space: nowrap;
 }
+.class-sponsor-label-mobile { display: none; }
 @media (max-width: 640px) {
-    .class-sponsor-label { display: none; }
+    .class-sponsor-label-desktop { display: none; }
+    .class-sponsor-label-mobile { display: inline; }
 }
 .class-sponsor-logo {
     max-height: 24px;
