@@ -2760,30 +2760,44 @@ td.col-place {
         font-size: var(--text-lg);
     }
 
-    /* Minimal side padding on mobile for all sections */
+    /* Full width edge-to-edge on mobile for all sections */
     .event-sponsor-banner,
     .event-sponsor-logos,
     .event-tabs-wrapper,
-    .class-card,
-    .info-card,
+    .card,
     .filter-row {
-        margin-left: 0;
-        margin-right: 0;
-        border-radius: 0;
-        border-left: none;
-        border-right: none;
+        margin-left: calc(var(--space-md) * -1);
+        margin-right: calc(var(--space-md) * -1);
+        border-radius: 0 !important;
+        border-left: none !important;
+        border-right: none !important;
+        width: calc(100% + var(--space-md) * 2);
     }
 
     .event-sponsor-banner + .event-sponsor-logos {
-        border-radius: 0;
+        border-radius: 0 !important;
     }
 
     .event-sponsor-logos {
-        padding: var(--space-sm);
+        padding: var(--space-sm) var(--space-md);
     }
 
     .sponsor-logos-grid {
         gap: var(--space-sm);
+    }
+
+    /* Card internal padding on mobile */
+    .card-header,
+    .card-body {
+        padding-left: var(--space-md);
+        padding-right: var(--space-md);
+    }
+
+    /* Result items full width */
+    .result-item {
+        border-radius: 0;
+        margin-left: 0;
+        margin-right: 0;
     }
 
     /* Compact event header on mobile */
