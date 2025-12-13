@@ -2,7 +2,7 @@
 /**
  * Club Duplicate Cleanup Tool
  * Find and merge duplicate clubs created during import
- * Version: v1.0.2 [2025-11-22-003]
+ * Version: v1.1.0 [2025-12-13]
  */
 require_once __DIR__ . '/../config.php';
 require_admin();
@@ -10,6 +10,50 @@ require_admin();
 $db = getDB();
 $message = '';
 $messageType = '';
+
+// File to store ignored duplicate groups
+$ignoredFile = __DIR__ . '/../uploads/ignored_club_duplicates.json';
+
+// Load ignored duplicates
+function loadIgnoredDuplicates($file) {
+    if (file_exists($file)) {
+        $data = json_decode(file_get_contents($file), true);
+        return is_array($data) ? $data : [];
+    }
+    return [];
+}
+
+// Save ignored duplicates
+function saveIgnoredDuplicates($file, $data) {
+    $dir = dirname($file);
+    if (!is_dir($dir)) {
+        mkdir($dir, 0755, true);
+    }
+    file_put_contents($file, json_encode($data, JSON_PRETTY_PRINT));
+}
+
+$ignoredDuplicates = loadIgnoredDuplicates($ignoredFile);
+
+// Handle ignore action
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ignore_group'])) {
+    checkCsrf();
+    $groupKey = $_POST['ignore_group'];
+    if (!in_array($groupKey, $ignoredDuplicates)) {
+        $ignoredDuplicates[] = $groupKey;
+        saveIgnoredDuplicates($ignoredFile, $ignoredDuplicates);
+        $message = 'Gruppen markerad som "inte dubbletter" och kommer inte visas igen';
+        $messageType = 'success';
+    }
+}
+
+// Handle un-ignore (reset) action
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reset_ignored'])) {
+    checkCsrf();
+    $ignoredDuplicates = [];
+    saveIgnoredDuplicates($ignoredFile, $ignoredDuplicates);
+    $message = 'Alla ignorerade grupper återställda';
+    $messageType = 'info';
+}
 
 // Handle merge action
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['merge'])) {
@@ -129,10 +173,13 @@ foreach ($clubs as $club) {
  $clubGroups[$normalized][] = $club;
 }
 
-// Filter to only show groups with potential duplicates (2+ clubs)
-$duplicateGroups = array_filter($clubGroups, function($group) {
- return count($group) >= 2;
-});
+// Filter to only show groups with potential duplicates (2+ clubs) and not ignored
+$duplicateGroups = array_filter($clubGroups, function($group, $key) use ($ignoredDuplicates) {
+ return count($group) >= 2 && !in_array($key, $ignoredDuplicates);
+}, ARRAY_FILTER_USE_BOTH);
+
+// Count ignored groups for display
+$ignoredCount = count($ignoredDuplicates);
 
 // Sort groups by total rider count (most important first)
 uasort($duplicateGroups, function($a, $b) {
@@ -230,6 +277,51 @@ include __DIR__ . '/components/unified-layout.php';
   </div>
  </div>
 
+ <?php if (!empty($emptyClubs)): ?>
+ <!-- Quick action: Delete all empty clubs -->
+ <div class="card mb-lg" style="background: var(--color-error-light, #fee2e2);">
+  <div class="card-body flex items-center justify-between">
+   <div>
+    <strong class="text-error"><i data-lucide="alert-triangle" class="icon-sm"></i> <?= count($emptyClubs) ?> tomma klubbar</strong>
+    <p class="text-sm text-secondary gs-mb-0">Klubbar utan några deltagare kan tas bort</p>
+   </div>
+   <form method="POST">
+    <?= csrf_field() ?>
+    <?php foreach ($emptyClubs as $club): ?>
+    <input type="hidden" name="merge_clubs[]" value="<?= $club['id'] ?>">
+    <?php endforeach; ?>
+    <input type="hidden" name="keep_club" value="0">
+    <button type="submit" name="delete_all_empty" value="1"
+     class="btn btn-danger"
+     onclick="return confirm('Ta bort ALLA <?= count($emptyClubs) ?> tomma klubbar?')">
+    <i data-lucide="trash-2"></i>
+    Ta bort alla tomma klubbar
+    </button>
+   </form>
+  </div>
+ </div>
+ <?php endif; ?>
+
+ <?php if ($ignoredCount > 0): ?>
+  <!-- Ignored groups info -->
+  <div class="card mb-lg" style="background: var(--color-bg-sunken, #f5f5f5);">
+   <div class="card-body flex items-center justify-between">
+    <div>
+     <strong class="text-secondary"><i data-lucide="eye-off" class="icon-sm"></i> <?= $ignoredCount ?> grupper dolda</strong>
+     <p class="text-sm text-secondary gs-mb-0">Grupper markerade som "inte dubbletter"</p>
+    </div>
+    <form method="POST">
+     <?= csrf_field() ?>
+     <button type="submit" name="reset_ignored" value="1" class="btn btn--secondary btn--sm"
+      onclick="return confirm('Återställa alla dolda grupper?')">
+      <i data-lucide="refresh-cw"></i>
+      Visa alla igen
+     </button>
+    </form>
+   </div>
+  </div>
+ <?php endif; ?>
+
  <?php if (!empty($duplicateGroups)): ?>
   <!-- Duplicate Groups -->
   <div class="card mb-lg">
@@ -307,10 +399,16 @@ include __DIR__ . '/components/unified-layout.php';
     </table>
     </div>
 
-    <button type="submit" name="merge" value="1" class="btn btn-warning">
-    <i data-lucide="merge"></i>
-    Slå samman markerade till vald klubb
-    </button>
+    <div class="flex gap-sm">
+     <button type="submit" name="merge" value="1" class="btn btn-warning">
+      <i data-lucide="merge"></i>
+      Slå samman markerade till vald klubb
+     </button>
+     <button type="submit" name="ignore_group" value="<?= h($normalized) ?>" class="btn btn--secondary">
+      <i data-lucide="eye-off"></i>
+      Inte dubbletter
+     </button>
+    </div>
    </form>
    <?php endforeach; ?>
   </div>
@@ -367,30 +465,13 @@ include __DIR__ . '/components/unified-layout.php';
    </table>
    </div>
 
-   <?php if (count($emptyClubs) > 5): ?>
-   <form method="POST" class="mt-lg">
-    <?= csrf_field() ?>
-    <?php foreach ($emptyClubs as $club): ?>
-    <input type="hidden" name="merge_clubs[]" value="<?= $club['id'] ?>">
-    <?php endforeach; ?>
-    <input type="hidden" name="keep_club" value="0">
-    <button type="submit" name="delete_all_empty" value="1"
-     class="btn btn-danger"
-     onclick="return confirm('Ta bort ALLA <?= count($emptyClubs) ?> tomma klubbar?')">
-    <i data-lucide="trash-2"></i>
-    Ta bort alla tomma klubbar
-    </button>
-   </form>
-   <?php endif; ?>
+   <!-- Button moved to top of page -->
   </div>
   </div>
  <?php endif; ?>
 
+ <div class="gs-py-sm">
+  <small class="text-secondary">Cleanup Clubs v1.1.0 [2025-12-13]</small>
  </div>
-
-
-<div class="container gs-py-sm">
- <small class="text-secondary">Cleanup Clubs v1.0.2 [2025-11-22-003]</small>
-</div>
 
 <?php include __DIR__ . '/components/unified-layout-footer.php'; ?>

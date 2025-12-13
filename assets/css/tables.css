@@ -8,16 +8,16 @@
 .table tbody tr:hover{background:var(--color-bg-hover)}
 
 /* Column Types */
-.col-place{width:40px;text-align:center;font-weight:var(--weight-semibold)}
+.col-place{width:48px;min-width:48px;text-align:center;font-weight:var(--weight-semibold)}
 .col-place--1{color:#FFD700}
 .col-place--2{color:#C0C0C0}
 .col-place--3{color:#CD7F32}
-.col-rider{font-weight:var(--weight-medium)}
-.col-club{color:var(--color-text-secondary)}
-.col-time{text-align:right;font-family:var(--font-mono);white-space:nowrap}
-.col-diff{text-align:right;color:var(--color-text-tertiary);font-family:var(--font-mono);white-space:nowrap}
-.col-points{text-align:right;font-weight:var(--weight-semibold);color:var(--color-accent-text);white-space:nowrap}
-.col-split{text-align:right;font-family:var(--font-mono);color:var(--color-text-secondary);white-space:nowrap}
+.col-rider{font-weight:var(--weight-medium);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.col-club{color:var(--color-text-secondary);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.col-time{text-align:right;font-family:var(--font-mono);white-space:nowrap;width:80px;min-width:80px}
+.col-diff,.col-gap{text-align:right;color:var(--color-text-tertiary);font-family:var(--font-mono);white-space:nowrap;width:70px;min-width:70px}
+.col-points{text-align:right;font-weight:var(--weight-semibold);color:var(--color-accent-text);white-space:nowrap;width:60px}
+.col-split{text-align:right;font-family:var(--font-mono);color:var(--color-text-secondary);white-space:nowrap;width:90px;min-width:80px}
 
 /* Portrait: Hide extra columns and compact layout */
 @media(orientation:portrait){
