@@ -145,6 +145,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'organizer' => '', // Keep for backwards compatibility
             'website' => trim($_POST['website'] ?? ''),
             'registration_deadline' => !empty($_POST['registration_deadline']) ? trim($_POST['registration_deadline']) : null,
+            'registration_deadline_time' => !empty($_POST['registration_deadline_time']) ? trim($_POST['registration_deadline_time']) : null,
             'active' => isset($_POST['active']) ? 1 : 0,
             'is_championship' => isset($_POST['is_championship']) ? 1 : 0,
             'contact_email' => trim($_POST['contact_email'] ?? ''),
@@ -161,9 +162,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'schedule_use_global' => isset($_POST['schedule_use_global']) ? 1 : 0,
             'start_times' => trim($_POST['start_times'] ?? ''),
             'start_times_use_global' => isset($_POST['start_times_use_global']) ? 1 : 0,
+            'starttider_publish_at' => !empty($_POST['starttider_publish_at']) ? trim($_POST['starttider_publish_at']) : null,
             'map_content' => trim($_POST['map_content'] ?? ''),
             'map_image_url' => trim($_POST['map_image_url'] ?? ''),
             'map_use_global' => isset($_POST['map_use_global']) ? 1 : 0,
+            'karta_publish_at' => !empty($_POST['karta_publish_at']) ? trim($_POST['karta_publish_at']) : null,
             'driver_meeting' => trim($_POST['driver_meeting'] ?? ''),
             'driver_meeting_use_global' => isset($_POST['driver_meeting_use_global']) ? 1 : 0,
             'competition_tracks' => trim($_POST['competition_tracks'] ?? ''),
@@ -599,8 +602,14 @@ include __DIR__ . '/components/unified-layout.php';
                 </div>
 
                 <div class="admin-form-group">
-                    <label class="admin-form-label">Anmälningsfrist</label>
+                    <label class="admin-form-label">Anmälningsfrist (datum)</label>
                     <input type="date" name="registration_deadline" class="admin-form-input" value="<?= h($event['registration_deadline'] ?? '') ?>">
+                </div>
+
+                <div class="admin-form-group">
+                    <label class="admin-form-label">Anmälningsfrist (klockslag)</label>
+                    <input type="time" name="registration_deadline_time" class="admin-form-input" value="<?= h($event['registration_deadline_time'] ?? '') ?>">
+                    <small style="color: var(--color-text-secondary);">Lämna tomt för 23:59</small>
                 </div>
             </div>
         </div>
@@ -673,8 +682,8 @@ include __DIR__ . '/components/unified-layout.php';
                 ['key' => 'pm_content', 'label' => 'PM (Promemoria)', 'global_key' => 'pm_use_global'],
                 ['key' => 'jury_communication', 'label' => 'Jurykommuniké', 'global_key' => 'jury_use_global'],
                 ['key' => 'competition_schedule', 'label' => 'Tävlingsschema', 'global_key' => 'schedule_use_global'],
-                ['key' => 'start_times', 'label' => 'Starttider', 'global_key' => 'start_times_use_global'],
-                ['key' => 'map_content', 'label' => 'Kartbeskrivning', 'global_key' => 'map_use_global'],
+                ['key' => 'start_times', 'label' => 'Starttider', 'global_key' => 'start_times_use_global', 'publish_key' => 'starttider_publish_at'],
+                ['key' => 'map_content', 'label' => 'Kartbeskrivning', 'global_key' => 'map_use_global', 'publish_key' => 'karta_publish_at'],
                 ['key' => 'driver_meeting', 'label' => 'Förarmöte', 'global_key' => 'driver_meeting_use_global'],
                 ['key' => 'training_info', 'label' => 'Träning', 'global_key' => 'training_use_global'],
                 ['key' => 'timing_info', 'label' => 'Tidtagning', 'global_key' => 'timing_use_global'],
@@ -697,6 +706,19 @@ include __DIR__ . '/components/unified-layout.php';
                             </label>
                         </label>
                         <textarea name="<?= $field['key'] ?>" class="admin-form-input" rows="3"><?= h($event[$field['key']] ?? '') ?></textarea>
+                        <?php if (!empty($field['publish_key'])): ?>
+                        <div style="margin-top: var(--space-xs); display: flex; align-items: center; gap: var(--space-sm);">
+                            <label style="font-size: var(--text-xs); color: var(--color-text-secondary); white-space: nowrap;">
+                                <i data-lucide="calendar-clock" style="width: 12px; height: 12px; display: inline;"></i>
+                                Publiceras:
+                            </label>
+                            <input type="datetime-local" name="<?= $field['publish_key'] ?>"
+                                   class="admin-form-input"
+                                   style="padding: 4px 8px; font-size: var(--text-xs);"
+                                   value="<?= !empty($event[$field['publish_key']]) ? date('Y-m-d\TH:i', strtotime($event[$field['publish_key']])) : '' ?>">
+                            <small style="color: var(--color-text-secondary); font-size: var(--text-xs);">Lämna tomt = synlig direkt</small>
+                        </div>
+                        <?php endif; ?>
                     </div>
                 <?php endforeach; ?>
             </div>

@@ -247,6 +247,21 @@ $duplicateGroups = $db->getAll("
  LIMIT 30
 ");
 
+// Helper function to get rider classes
+function getRiderClasses($db, $riderId) {
+    $classes = $db->getAll("
+        SELECT DISTINCT cl.name, cl.display_name
+        FROM results res
+        JOIN classes cl ON res.class_id = cl.id
+        WHERE res.cyclist_id = ?
+        ORDER BY cl.sort_order
+        LIMIT 5
+    ", [$riderId]);
+    return array_map(function($c) {
+        return $c['display_name'] ?: $c['name'];
+    }, $classes);
+}
+
 foreach ($duplicateGroups as $group) {
  $riders = $db->getAll("
  SELECT r.id, r.firstname, r.lastname, r.birth_year, r.license_number,
@@ -287,11 +302,11 @@ foreach ($duplicateGroups as $group) {
   'rider1' => ['id' => $r1['id'], 'name' => $r1['firstname'].' '.$r1['lastname'],
    'birth_year' => $r1['birth_year'], 'license' => $r1['license_number'],
    'email' => $r1['email'], 'club' => $r1['club_name'], 'missing' => $r1Missing,
-   'results' => $r1['result_count'] ?? 0],
+   'results' => $r1['result_count'] ?? 0, 'classes' => getRiderClasses($db, $r1['id'])],
   'rider2' => ['id' => $r2['id'], 'name' => $r2['firstname'].' '.$r2['lastname'],
    'birth_year' => $r2['birth_year'], 'license' => $r2['license_number'],
    'email' => $r2['email'], 'club' => $r2['club_name'], 'missing' => $r2Missing,
-   'results' => $r2['result_count'] ?? 0]
+   'results' => $r2['result_count'] ?? 0, 'classes' => getRiderClasses($db, $r2['id'])]
  ];
  }
 }
@@ -368,11 +383,11 @@ foreach ($fuzzyGroups as $group) {
                     'rider1' => ['id' => $r1['id'], 'name' => $r1['firstname'].' '.$r1['lastname'],
                         'birth_year' => $r1['birth_year'], 'license' => $r1['license_number'],
                         'email' => $r1['email'], 'club' => $r1['club_name'], 'missing' => $r1Missing,
-                        'results' => $r1['result_count'] ?? 0],
+                        'results' => $r1['result_count'] ?? 0, 'classes' => getRiderClasses($db, $r1['id'])],
                     'rider2' => ['id' => $r2['id'], 'name' => $r2['firstname'].' '.$r2['lastname'],
                         'birth_year' => $r2['birth_year'], 'license' => $r2['license_number'],
                         'email' => $r2['email'], 'club' => $r2['club_name'], 'missing' => $r2Missing,
-                        'results' => $r2['result_count'] ?? 0]
+                        'results' => $r2['result_count'] ?? 0, 'classes' => getRiderClasses($db, $r2['id'])]
                 ];
             }
         }
@@ -457,10 +472,20 @@ include __DIR__ . '/components/unified-layout.php';
      <td style="color: #666;">E-post:</td>
      <td><?= h($rider['email'] ?: '-') ?></td>
      </tr>
+     <tr>
+     <td style="color: #666;">Klasser:</td>
+     <td><?php if (!empty($rider['classes'])): ?>
+      <?php foreach ($rider['classes'] as $cls): ?>
+       <span class="badge badge-secondary" style="font-size: 0.7rem; margin-right: 2px;"><?= h($cls) ?></span>
+      <?php endforeach; ?>
+     <?php else: ?>
+      <span style="color: #999;">-</span>
+     <?php endif; ?></td>
+     </tr>
     </table>
 
     <div style="margin-top: 1rem; display: flex; gap: 0.5rem;">
-     <a href="/rider.php?id=<?= $rider['id'] ?>" target="_blank" class="btn btn--sm btn--secondary">
+     <a href="/rider/<?= $rider['id'] ?>" target="_blank" class="btn btn--sm btn--secondary" title="Visa profil">
      <i data-lucide="external-link"></i>
      </a>
      <?php
