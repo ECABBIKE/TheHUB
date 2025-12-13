@@ -12,6 +12,9 @@ if (!$eventId) {
     exit;
 }
 
+// Check if user is admin for edit button
+$isAdmin = function_exists('is_admin') && is_admin();
+
 // Helper functions (only define if not already defined)
 if (!function_exists('timeToSeconds')) {
     function timeToSeconds($time) {
@@ -552,7 +555,14 @@ if (!$event) {
         <?php endif; ?>
 
         <div class="event-info">
-            <h1 class="event-title"><?= h($event['name']) ?></h1>
+            <div class="event-title-row">
+                <h1 class="event-title"><?= h($event['name']) ?></h1>
+                <?php if ($isAdmin): ?>
+                <a href="/admin/event-edit.php?id=<?= $eventId ?>" class="btn-admin-edit" title="Redigera event">
+                    <i data-lucide="pencil"></i>
+                </a>
+                <?php endif; ?>
+            </div>
 
             <div class="event-meta">
                 <span class="event-meta-item">
@@ -1711,11 +1721,44 @@ function sortTotalBySplit(headerEl, splitNum) {
     min-width: 0;
 }
 
+.event-title-row {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-sm);
+    margin-bottom: var(--space-sm);
+}
+
 .event-title {
     font-size: var(--text-xl);
     font-weight: var(--weight-bold);
-    margin: 0 0 var(--space-sm);
+    margin: 0;
     color: var(--color-text-primary);
+    flex: 1;
+}
+
+.btn-admin-edit {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    background: var(--color-accent);
+    color: white;
+    border-radius: var(--radius-md);
+    text-decoration: none;
+    flex-shrink: 0;
+    transition: all var(--transition-fast);
+    opacity: 0.9;
+}
+
+.btn-admin-edit:hover {
+    opacity: 1;
+    transform: scale(1.05);
+}
+
+.btn-admin-edit i {
+    width: 16px;
+    height: 16px;
 }
 
 .event-meta {
