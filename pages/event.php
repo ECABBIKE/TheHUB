@@ -168,27 +168,6 @@ try {
         // Table might not exist yet
     }
 
-    // DEBUG: Add visible debug info (REMOVE AFTER TESTING)
-    $sponsorDebugInfo = [];
-    foreach ($eventSponsors as $placement => $sponsors) {
-        foreach ($sponsors as $sp) {
-            $sponsorDebugInfo[] = [
-                'placement' => $placement,
-                'id' => $sp['id'] ?? null,
-                'name' => $sp['name'] ?? null,
-                'logo' => $sp['logo'] ?? null,
-                'logo_banner_id' => $sp['logo_banner_id'] ?? null,
-                'logo_standard_id' => $sp['logo_standard_id'] ?? null,
-                'logo_small_id' => $sp['logo_small_id'] ?? null,
-                'logo_media_id' => $sp['logo_media_id'] ?? null,
-                'banner_logo_url' => $sp['banner_logo_url'] ?? null,
-                'standard_logo_url' => $sp['standard_logo_url'] ?? null,
-                'small_logo_url' => $sp['small_logo_url'] ?? null,
-                'legacy_logo_url' => $sp['legacy_logo_url'] ?? null
-            ];
-        }
-    }
-
     // Check event format for DH mode
     $eventFormat = $event['event_format'] ?? 'ENDURO';
     $isDH = in_array($eventFormat, ['DH_STANDARD', 'DH_SWECUP']);
@@ -669,32 +648,6 @@ if (!$event) {
         </div>
     </div>
 </section>
-
-<?php if (!empty($sponsorDebugInfo)): ?>
-<!-- DEBUG: Sponsor Data (REMOVE AFTER TESTING) -->
-<section class="card mb-lg" style="background: #fffbe6; border: 2px solid #f59e0b;">
-    <div class="card-header">
-        <h3 style="color: #b45309;">DEBUG: Sponsor Data</h3>
-    </div>
-    <div class="card-body" style="font-family: monospace; font-size: 12px;">
-        <?php foreach ($sponsorDebugInfo as $debug): ?>
-        <div style="margin-bottom: 12px; padding: 8px; background: white; border-radius: 4px;">
-            <strong><?= h($debug['name']) ?></strong> (<?= h($debug['placement']) ?>)<br>
-            ID: <?= $debug['id'] ?? 'NULL' ?><br>
-            logo: <?= $debug['logo'] ? h($debug['logo']) : 'NULL' ?><br>
-            logo_banner_id: <?= $debug['logo_banner_id'] ?? 'NULL' ?><br>
-            logo_standard_id: <?= $debug['logo_standard_id'] ?? 'NULL' ?><br>
-            logo_small_id: <?= $debug['logo_small_id'] ?? 'NULL' ?><br>
-            logo_media_id: <?= $debug['logo_media_id'] ?? 'NULL' ?><br>
-            banner_logo_url: <?= $debug['banner_logo_url'] ? h($debug['banner_logo_url']) : 'NULL' ?><br>
-            standard_logo_url: <?= $debug['standard_logo_url'] ? h($debug['standard_logo_url']) : 'NULL' ?><br>
-            small_logo_url: <?= $debug['small_logo_url'] ? h($debug['small_logo_url']) : 'NULL' ?><br>
-            legacy_logo_url: <?= $debug['legacy_logo_url'] ? h($debug['legacy_logo_url']) : 'NULL' ?>
-        </div>
-        <?php endforeach; ?>
-    </div>
-</section>
-<?php endif; ?>
 
 <?php if (!empty($eventSponsors['header'])): ?>
 <!-- Sponsor Banner -->
@@ -2230,6 +2183,7 @@ function sortTotalBySplit(headerEl, splitNum) {
     width: 100%;
     border-collapse: separate;
     border-spacing: 0;
+    table-layout: fixed;
 }
 
 /* Sticky columns for place and rider name */
@@ -2301,18 +2255,18 @@ td.col-place {
     margin: 0 auto;
 }
 
-.col-rider { min-width: 150px; }
-.col-club { min-width: 100px; }
+.col-rider { width: 160px; max-width: 160px; overflow: hidden; text-overflow: ellipsis; }
+.col-club { width: 140px; max-width: 140px; overflow: hidden; text-overflow: ellipsis; }
 
 .col-time {
-    min-width: 70px;
+    width: 75px;
     text-align: right;
     font-family: var(--font-mono);
     white-space: nowrap;
 }
 
 .col-gap {
-    min-width: 65px;
+    width: 70px;
     text-align: right;
     font-family: var(--font-mono);
     font-size: var(--text-sm);
@@ -2320,7 +2274,7 @@ td.col-place {
 }
 
 .col-split {
-    min-width: 80px;
+    width: 85px;
     text-align: right;
     font-family: var(--font-mono);
     font-size: var(--text-xs);
