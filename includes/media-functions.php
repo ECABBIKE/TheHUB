@@ -135,31 +135,35 @@ function upload_media($file, $folder = 'general', $uploadedBy = null) {
     // Generate filename
     $ext = pathinfo($file['name'], PATHINFO_EXTENSION);
     $filename = uniqid() . '_' . time() . '.' . strtolower($ext);
-    $filepath = "uploads/media/{$folder}/{$filename}";
-    
+    $relativeFilepath = "uploads/media/{$folder}/{$filename}";
+
+    // Use absolute path for file operations
+    $rootPath = defined('ROOT_PATH') ? ROOT_PATH : dirname(__DIR__);
+    $absoluteFilepath = $rootPath . '/' . $relativeFilepath;
+
     // Create directory if needed
-    $dir = dirname($filepath);
+    $dir = dirname($absoluteFilepath);
     if (!is_dir($dir)) {
         mkdir($dir, 0755, true);
     }
-    
+
     // Move file
-    if (!move_uploaded_file($file['tmp_name'], $filepath)) {
+    if (!move_uploaded_file($file['tmp_name'], $absoluteFilepath)) {
         return ['success' => false, 'error' => 'Kunde inte spara filen'];
     }
-    
+
     // Get image dimensions if applicable
     $width = null;
     $height = null;
     if (strpos($mimeType, 'image/') === 0 && $mimeType !== 'image/svg+xml') {
-        $dimensions = getimagesize($filepath);
+        $dimensions = getimagesize($absoluteFilepath);
         if ($dimensions) {
             $width = $dimensions[0];
             $height = $dimensions[1];
         }
     }
     
-    // Save to database
+    // Save to database (store relative path)
     try {
         $stmt = $pdo->prepare("
             INSERT INTO media (filename, original_filename, filepath, mime_type, size, width, height, folder, uploaded_by, uploaded_at)
@@ -168,7 +172,7 @@ function upload_media($file, $folder = 'general', $uploadedBy = null) {
         $stmt->execute([
             $filename,
             $file['name'],
-            $filepath,
+            $relativeFilepath,
             $mimeType,
             $file['size'],
             $width,
@@ -176,19 +180,19 @@ function upload_media($file, $folder = 'general', $uploadedBy = null) {
             $folder,
             $uploadedBy
         ]);
-        
+
         $mediaId = $pdo->lastInsertId();
-        
+
         return [
             'success' => true,
             'id' => $mediaId,
-            'url' => '/' . $filepath,
+            'url' => '/' . $relativeFilepath,
             'filename' => $filename
         ];
     } catch (PDOException $e) {
         error_log("upload_media error: " . $e->getMessage());
         // Clean up file on database error
-        unlink($filepath);
+        @unlink($absoluteFilepath);
         return ['success' => false, 'error' => 'Databasfel'];
     }
 }
@@ -251,11 +255,13 @@ function delete_media($id) {
         $stmt = $pdo->prepare("DELETE FROM media WHERE id = ?");
         $stmt->execute([$id]);
         
-        // Delete file
-        if (file_exists($media['filepath'])) {
-            unlink($media['filepath']);
+        // Delete file (use absolute path)
+        $rootPath = defined('ROOT_PATH') ? ROOT_PATH : dirname(__DIR__);
+        $absolutePath = $rootPath . '/' . ltrim($media['filepath'], '/');
+        if (file_exists($absolutePath)) {
+            @unlink($absolutePath);
         }
-        
+
         return ['success' => true];
     } catch (PDOException $e) {
         error_log("delete_media error: " . $e->getMessage());

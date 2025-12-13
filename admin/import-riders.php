@@ -101,6 +101,40 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['import_file'])) {
 }
 
 /**
+ * Ensure file is UTF-8 encoded (convert from Windows-1252 if needed)
+ */
+function ensureUTF8ForImport($filepath) {
+ $content = file_get_contents($filepath);
+
+ // Remove BOM if present
+ $content = preg_replace('/^\xEF\xBB\xBF/', '', $content);
+
+ // Check if already valid UTF-8
+ if (mb_check_encoding($content, 'UTF-8')) {
+  // Look for Windows-1252 byte patterns that aren't proper UTF-8
+  if (preg_match('/[\xC0-\xFF]/', $content) && !preg_match('/[\xC0-\xFF][\x80-\xBF]/', $content)) {
+   $content = mb_convert_encoding($content, 'UTF-8', 'Windows-1252');
+   file_put_contents($filepath, $content);
+   return;
+  }
+  // Check for corrupted Swedish words
+  if (preg_match('/F.rnamn|f.rnamn|.delseår|.delse.r/u', $content) &&
+   !preg_match('/Förnamn|förnamn|Födelseår|födelseår/u', $content)) {
+   $content = file_get_contents($filepath);
+   $content = mb_convert_encoding($content, 'UTF-8', 'Windows-1252');
+   file_put_contents($filepath, $content);
+   return;
+  }
+  file_put_contents($filepath, $content);
+  return;
+ }
+
+ // Not valid UTF-8, assume Windows-1252
+ $content = mb_convert_encoding($content, 'UTF-8', 'Windows-1252');
+ file_put_contents($filepath, $content);
+}
+
+/**
  * Import riders from CSV file
  */
 function importRidersFromCSV($filepath, $db) {
@@ -115,6 +149,9 @@ function importRidersFromCSV($filepath, $db) {
  $errors = [];
  $skippedRows = []; // Detailed list of skipped rows
  $seenInThisImport = []; // Track riders in this import to detect duplicates
+
+ // Ensure UTF-8 encoding
+ ensureUTF8ForImport($filepath);
 
  if (($handle = fopen($filepath, 'r')) === false) {
  throw new Exception('Kunde inte öppna filen');
