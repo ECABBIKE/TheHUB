@@ -103,6 +103,16 @@ function saveEventSponsorAssignments($db, $eventId, $postData) {
     error_log("saveEventSponsorAssignments called for event $eventId");
     error_log("POST data: sponsor_header=" . ($postData['sponsor_header'] ?? 'empty') . ", sponsor_content=" . json_encode($postData['sponsor_content'] ?? []) . ", sponsor_sidebar=" . ($postData['sponsor_sidebar'] ?? 'empty'));
 
+    // CRITICAL FIX: Ensure 'content' is a valid ENUM value
+    // The ENUM might be missing 'content' if created with old migration
+    try {
+        $pdo->exec("ALTER TABLE event_sponsors MODIFY COLUMN placement ENUM('header', 'sidebar', 'footer', 'content') DEFAULT 'sidebar'");
+        $pdo->exec("ALTER TABLE series_sponsors MODIFY COLUMN placement ENUM('header', 'sidebar', 'footer', 'content') DEFAULT 'sidebar'");
+        error_log("ENUM FIX: Updated placement columns to include 'content'");
+    } catch (Exception $e) {
+        error_log("ENUM FIX: Could not update ENUM (may already be correct): " . $e->getMessage());
+    }
+
     // First, delete existing sponsor assignments for this event
     $deleteStmt = $pdo->prepare("DELETE FROM event_sponsors WHERE event_id = ?");
     $deleteStmt->execute([$eventId]);
