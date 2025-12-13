@@ -79,44 +79,44 @@ $page_group = 'config';
 include __DIR__ . '/components/unified-layout.php';
 ?>
 
-<div class="gs-max-w-900">
+<!-- Messages -->
+<?php if ($message): ?>
+<div class="alert alert-<?= $messageType === 'success' ? 'success' : ($messageType === 'error' ? 'error' : 'info') ?> mb-lg">
+    <i data-lucide="<?= $messageType === 'success' ? 'check-circle' : ($messageType === 'error' ? 'alert-circle' : 'info') ?>"></i>
+    <?= h($message) ?>
+</div>
+<?php endif; ?>
 
- <!-- Messages -->
- <?php if ($message): ?>
-  <div class="alert alert-<?= $messageType ?> mb-lg">
-  <i data-lucide="<?= $messageType === 'success' ? 'check-circle' : ($messageType === 'error' ? 'alert-circle' : 'info') ?>"></i>
-  <?= h($message) ?>
-  </div>
- <?php endif; ?>
-
- <!-- Statistics -->
- <div class="card mb-lg">
-  <div class="card-header">
-  <h2 class="">
-   <i data-lucide="bar-chart"></i>
-   Statistik
-  </h2>
-  </div>
-  <div class="card-body">
-  <div class="grid grid-cols-1 md-grid-cols-3 gap-md">
-   <div class="stat-card">
-   <i data-lucide="users" class="icon-lg text-primary mb-md"></i>
-   <div class="stat-number"><?= $total_riders ?></div>
-   <div class="stat-label">Totalt aktiva deltagare</div>
-   </div>
-   <div class="stat-card">
-   <i data-lucide="trophy" class="icon-lg text-success mb-md"></i>
-   <div class="stat-number"><?= $riders_with_results ?></div>
-   <div class="stat-label">Med resultat</div>
-   </div>
-   <div class="stat-card">
-   <i data-lucide="user-x" class="icon-lg text-secondary mb-md"></i>
-   <div class="stat-number"><?= $riders_without_results ?></div>
-   <div class="stat-label">Utan resultat</div>
-   </div>
-  </div>
-  </div>
- </div>
+<!-- Statistics -->
+<div class="admin-stats-grid mb-lg">
+    <div class="admin-stat-card">
+        <div class="admin-stat-icon" style="background: var(--color-info-light); color: var(--color-info);">
+            <i data-lucide="users"></i>
+        </div>
+        <div class="admin-stat-content">
+            <div class="admin-stat-value"><?= $total_riders ?></div>
+            <div class="admin-stat-label">Totalt aktiva deltagare</div>
+        </div>
+    </div>
+    <div class="admin-stat-card">
+        <div class="admin-stat-icon" style="background: var(--color-success-light); color: var(--color-success);">
+            <i data-lucide="trophy"></i>
+        </div>
+        <div class="admin-stat-content">
+            <div class="admin-stat-value"><?= $riders_with_results ?></div>
+            <div class="admin-stat-label">Med resultat</div>
+        </div>
+    </div>
+    <div class="admin-stat-card">
+        <div class="admin-stat-icon" style="background: var(--color-bg-tertiary); color: var(--color-text-secondary);">
+            <i data-lucide="user-x"></i>
+        </div>
+        <div class="admin-stat-content">
+            <div class="admin-stat-value"><?= $riders_without_results ?></div>
+            <div class="admin-stat-label">Utan resultat</div>
+        </div>
+    </div>
+</div>
 
  <!-- Settings Form -->
  <div class="card">

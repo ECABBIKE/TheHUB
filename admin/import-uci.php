@@ -411,183 +411,176 @@ $breadcrumbs = [
 include __DIR__ . '/components/unified-layout.php';
 ?>
 
- <!-- Header -->
- <div class="flex items-center justify-between mb-lg">
- <h1 class="text-primary">
-  <i data-lucide="upload"></i>
-  UCI Licensregister Import
- </h1>
- </div>
+<?php if ($message): ?>
+<div class="alert alert-<?= $messageType === 'success' ? 'success' : ($messageType === 'error' ? 'error' : 'info') ?> mb-lg">
+    <p><strong><?= h($message) ?></strong></p>
 
- <!-- Message -->
- <?php if ($message): ?>
- <div class="alert alert-<?= $messageType ?> mb-lg">
-  <p><strong><?= h($message) ?></strong></p>
+    <?php if ($stats): ?>
+    <div style="margin-top: var(--space-md);">
+        <?php if (isset($stats['separator_name'])): ?>
+        <p style="font-size: var(--text-sm); margin-bottom: var(--space-sm);">
+            <i data-lucide="search" style="width: 14px; height: 14px;"></i>
+            <strong>Detekterad separator:</strong> <code><?= h($stats['separator_name']) ?></code>
+        </p>
+        <?php endif; ?>
+        <p><i data-lucide="bar-chart" style="width: 14px; height: 14px;"></i> <strong>Statistik:</strong></p>
+        <ul style="margin-left: var(--space-lg); margin-top: var(--space-sm);">
+            <li>Totalt rader: <?= $stats['total'] ?></li>
+            <li style="color: var(--color-success);">Nya riders: <?= $stats['success'] ?></li>
+            <li style="color: var(--color-accent);">Uppdaterade: <?= $stats['updated'] ?></li>
+            <li style="color: var(--color-text-secondary);">Överhoppade: <?= $stats['skipped'] ?></li>
+            <li style="color: var(--color-error);">Misslyckade: <?= $stats['failed'] ?></li>
+        </ul>
+    </div>
+    <?php endif; ?>
 
-  <?php if ($stats): ?>
-  <div class="mt-md">
-  <?php if (isset($stats['separator_name'])): ?>
-  <p class="text-sm mb-sm gs-code-wrapper">
-   <i data-lucide="search" class="icon-sm"></i> <strong>Detekterad separator:</strong> <code class="gs-code-inline"><?= h($stats['separator_name']) ?></code>
-  </p>
-  <?php endif; ?>
-  <p><i data-lucide="bar-chart" class="icon-sm"></i> <strong>Statistik:</strong></p>
-  <ul class="gs-list-ml-1-5">
-  <li>Totalt rader: <?= $stats['total'] ?></li>
-  <li><i data-lucide="check-circle" class="icon-sm text-success"></i> Nya riders: <?= $stats['success'] ?></li>
-  <li><i data-lucide="refresh-cw" class="icon-sm text-accent"></i> Uppdaterade: <?= $stats['updated'] ?></li>
-  <li><i data-lucide="skip-forward" class="icon-sm text-secondary"></i> Överhoppade: <?= $stats['skipped'] ?></li>
-  <li><i data-lucide="x-circle" class="icon-sm text-error"></i> Misslyckade: <?= $stats['failed'] ?></li>
-  </ul>
-  </div>
-  <?php endif; ?>
+    <?php if (!empty($updated_riders)): ?>
+    <details style="margin-top: var(--space-md);">
+        <summary style="cursor: pointer;"><?= count($updated_riders) ?> uppdaterade riders</summary>
+        <ul style="margin-left: var(--space-lg); margin-top: var(--space-sm);">
+            <?php foreach (array_slice($updated_riders, 0, 20) as $rider): ?>
+            <li><?= h($rider) ?></li>
+            <?php endforeach; ?>
+            <?php if (count($updated_riders) > 20): ?>
+            <li><em>... och <?= count($updated_riders) - 20 ?> till</em></li>
+            <?php endif; ?>
+        </ul>
+    </details>
+    <?php endif; ?>
 
-  <?php if (!empty($updated_riders)): ?>
-  <details class="mt-md">
-  <summary class="gs-cursor-pointer"><?= count($updated_riders) ?> uppdaterade riders</summary>
-  <ul class="gs-list-ml-1-5">
-  <?php foreach (array_slice($updated_riders, 0, 20) as $rider): ?>
-   <li><?= h($rider) ?></li>
-  <?php endforeach; ?>
-  <?php if (count($updated_riders) > 20): ?>
-   <li><em>... och <?= count($updated_riders) - 20 ?> till</em></li>
-  <?php endif; ?>
-  </ul>
-  </details>
-  <?php endif; ?>
+    <?php if (!empty($errors)): ?>
+    <details style="margin-top: var(--space-md);">
+        <summary style="cursor: pointer; color: var(--color-error);"><?= count($errors) ?> fel</summary>
+        <ul style="margin-left: var(--space-lg); margin-top: var(--space-sm);">
+            <?php foreach (array_slice($errors, 0, 20) as $error): ?>
+            <li><?= h($error) ?></li>
+            <?php endforeach; ?>
+            <?php if (count($errors) > 20): ?>
+            <li><em>... och <?= count($errors) - 20 ?> fler fel</em></li>
+            <?php endif; ?>
+        </ul>
+    </details>
+    <?php endif; ?>
+</div>
+<?php endif; ?>
 
-  <?php if (!empty($errors)): ?>
-  <details class="mt-md">
-  <summary class="gs-cursor-pointer-danger">⚠️ <?= count($errors) ?> fel</summary>
-  <ul class="gs-list-ml-1-5">
-  <?php foreach (array_slice($errors, 0, 20) as $error): ?>
-   <li><?= h($error) ?></li>
-  <?php endforeach; ?>
-  <?php if (count($errors) > 20): ?>
-   <li><em>... och <?= count($errors) - 20 ?> fler fel</em></li>
-  <?php endif; ?>
-  </ul>
-  </details>
-  <?php endif; ?>
- </div>
- <?php endif; ?>
+<!-- Format Information -->
+<div class="admin-card mb-lg">
+    <div class="admin-card-header">
+        <h2>
+            <i data-lucide="info"></i>
+            UCI Licensregister Format
+        </h2>
+    </div>
+    <div class="admin-card-body">
+        <p style="margin-bottom: var(--space-md);">Denna import hanterar CSV direkt från UCI Licensregister.</p>
 
- <!-- Format Information -->
- <div class="card mb-lg">
- <div class="card-header">
-  <h3 class="">
-  <i data-lucide="info"></i>
-  UCI Licensregister Format
-  </h3>
- </div>
- <div class="card-body">
-  <p class="mb-md">Denna import hanterar CSV direkt från UCI Licensregister.</p>
+        <h4 style="margin-bottom: var(--space-sm); color: var(--color-text);">Kolumner (ingen header behövs):</h4>
+        <ol style="margin-left: var(--space-lg); line-height: 1.8;">
+            <li><strong>Personnummer</strong> (YYYYMMDD-XXXX) - parsas till birth_year (personnummer sparas EJ)</li>
+            <li><strong>Förnamn</strong> - first_name</li>
+            <li><strong>Efternamn</strong> - last_name</li>
+            <li><strong>Land</strong> - ignoreras</li>
+            <li><strong>Epostadress</strong> - email</li>
+            <li><strong>Huvudförening</strong> - club_name (skapas automatiskt om den inte finns)</li>
+            <li><strong>Gren</strong> - discipline (MTB, Road, Track, BMX, CX, etc)</li>
+            <li><strong>Kategori</strong> - gender (Men = M, Women = F)</li>
+            <li><strong>Licenstyp</strong> - license_category (Master Men, Elite Men, Base License Men, etc)</li>
+            <li><strong>LicensÅr</strong> - license_valid_until (2025 = 2025-12-31)</li>
+            <li><strong>UCIKod</strong> - license_number (sparas exakt som det är, t.ex. "101 637 581 11")</li>
+        </ol>
 
-  <h4 class="mb-sm text-primary">📋 Kolumner (ingen header behövs):</h4>
-  <ol class="gs-list-ml-1-5 gs-list-ml-lg-lh-1-8">
-  <li><strong>Personnummer</strong> (YYYYMMDD-XXXX) → parsas till birth_year (personnummer sparas EJ)</li>
-  <li><strong>Förnamn</strong> → first_name</li>
-  <li><strong>Efternamn</strong> → last_name</li>
-  <li><strong>Land</strong> → ignoreras</li>
-  <li><strong>Epostadress</strong> → email</li>
-  <li><strong>Huvudförening</strong> → club_name (skapas automatiskt om den inte finns)</li>
-  <li><strong>Gren</strong> → discipline (MTB, Road, Track, BMX, CX, etc)</li>
-  <li><strong>Kategori</strong> → gender (Men → M, Women → F)</li>
-  <li><strong>Licenstyp</strong> → license_category (Master Men, Elite Men, Base License Men, etc)</li>
-  <li><strong>LicensÅr</strong> → license_valid_until (2025 → 2025-12-31)</li>
-  <li><strong>UCIKod</strong> → license_number (sparas exakt som det är, t.ex."101 637 581 11")</li>
-  </ol>
+        <div style="margin-top: var(--space-lg); padding: var(--space-md); background: var(--color-bg-tertiary); border-radius: var(--radius-md);">
+            <p style="color: var(--color-text-secondary); font-size: var(--text-sm); margin-bottom: var(--space-sm);"><strong>Exempel på giltig rad:</strong></p>
+            <code style="font-size: var(--text-sm);">
+                19400525-0651,Lars,Nordensson,Sverige,ernst@email.com,Ringmurens Cykelklubb,MTB,Men,Master Men,2025,101 637 581 11
+            </code>
+        </div>
 
-  <div class="mt-lg p-md gs-bg-secondary-br8">
-  <p class="text-secondary text-sm mb-sm"><strong>📄 Exempel på giltig rad:</strong></p>
-  <code class="gs-code-sm">
-  19400525-0651,Lars,Nordensson,Sverige,ernst@email.com,Ringmurens Cykelklubb,MTB,Men,Master Men,2025,101 637 581 11
-  </code>
-  </div>
+        <div class="alert alert-success" style="margin-top: var(--space-md);">
+            <p style="font-size: var(--text-sm);">
+                <strong>Automatiska funktioner:</strong><br>
+                - Födelsedatum parsas automatiskt från personnummer (både YYYYMMDD-XXXX och YYMMDD-XXXX format)<br>
+                - <strong>OBS: Endast födelseår (birth_year) sparas - personnummer lagras EJ</strong><br>
+                - Klubbar skapas automatiskt om de inte finns<br>
+                - UCI-koder sparas exakt med mellanslag (t.ex. "101 637 581 11")<br>
+                - Befintliga riders uppdateras om de hittas (via license_number eller namn+födelseår)<br>
+                - SWE-ID (SWE25XXXXX) genereras automatiskt för riders utan UCI-kod
+            </p>
+        </div>
+    </div>
+</div>
 
-  <div class="mt-md p-md gs-bg-success">
-  <p class="text-sm">
-  <strong>✨ Automatiska funktioner:</strong><br>
-  • Födelsedatum parsas automatiskt från personnummer (både YYYYMMDD-XXXX och YYMMDD-XXXX format)<br>
-  • <strong>OBS: Endast födelseår (birth_year) sparas - personnummer lagras EJ</strong><br>
-  • Klubbar skapas automatiskt om de inte finns<br>
-  • UCI-koder sparas exakt med mellanslag (t.ex."101 637 581 11")<br>
-  • Befintliga riders uppdateras om de hittas (via license_number eller namn+födelseår)<br>
-  • SWE-ID (SWE25XXXXX) genereras automatiskt för riders utan UCI-kod
-  </p>
-  </div>
- </div>
- </div>
+<!-- Upload Form -->
+<div class="admin-card mb-lg">
+    <div class="admin-card-header">
+        <h2>
+            <i data-lucide="upload"></i>
+            Ladda upp UCI-fil
+        </h2>
+    </div>
+    <div class="admin-card-body">
+        <form method="POST" enctype="multipart/form-data">
+            <?= csrf_field() ?>
 
- <!-- Upload Form -->
- <div class="card">
- <div class="card-header">
-  <h3 class="">
-  <i data-lucide="upload"></i>
-  Ladda upp UCI-fil
-  </h3>
- </div>
- <div class="card-body">
-  <form method="POST" enctype="multipart/form-data">
-  <input type="hidden" name="csrf_token" value="<?= generate_csrf_token() ?>">
+            <div class="admin-form-group">
+                <label class="admin-form-label">
+                    <i data-lucide="file-text"></i>
+                    CSV-fil från UCI Licensregister
+                </label>
+                <input type="file" name="uci_file" accept=".csv" class="admin-form-input" required>
+                <small style="color: var(--color-text-secondary);">
+                    Endast CSV-filer. Max <?= MAX_UPLOAD_SIZE / 1024 / 1024 ?>MB.
+                </small>
+            </div>
 
-  <div class="form-group">
-  <label class="label">
-  <i data-lucide="file-text"></i>
-  CSV-fil från UCI Licensregister
-  </label>
-  <input type="file" name="uci_file" accept=".csv" class="input" required>
-  <p class="text-secondary text-sm mt-sm">
-  Endast CSV-filer. Max <?= MAX_UPLOAD_SIZE / 1024 / 1024 ?>MB.
-  </p>
-  </div>
+            <div class="flex gap-md">
+                <button type="submit" class="btn-admin btn-admin-primary">
+                    <i data-lucide="upload"></i>
+                    Importera från UCI
+                </button>
+                <a href="/admin/riders.php" class="btn-admin btn-admin-secondary">
+                    <i data-lucide="arrow-left"></i>
+                    Tillbaka till riders
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
 
-  <div class="flex gap-md">
-  <button type="submit" class="btn btn--primary">
-  <i data-lucide="upload"></i>
-  Importera från UCI
-  </button>
-  <a href="/admin/riders.php" class="btn btn--secondary">
-  <i data-lucide="arrow-left"></i>
-  Tillbaka till riders
-  </a>
-  </div>
-  </form>
- </div>
- </div>
+<!-- Quick Links -->
+<div class="grid" style="grid-template-columns: repeat(2, 1fr); gap: var(--space-lg);">
+    <div class="admin-card">
+        <div class="admin-card-body">
+            <h4 style="margin-bottom: var(--space-sm);">
+                <i data-lucide="users"></i>
+                Andra importalternativ
+            </h4>
+            <p style="color: var(--color-text-secondary); font-size: var(--text-sm); margin-bottom: var(--space-md);">
+                Om du vill använda en anpassad CSV-mall istället för UCI-format.
+            </p>
+            <a href="/admin/import-riders.php" class="btn-admin btn-admin-secondary btn-admin-sm">
+                <i data-lucide="upload"></i>
+                Standard Rider Import
+            </a>
+        </div>
+    </div>
 
- <!-- Quick Links -->
- <div class="grid grid-cols-1 md-grid-cols-2 gap-lg mt-lg">
- <div class="card">
-  <div class="card-body">
-  <h4 class="mb-sm">
-  <i data-lucide="users"></i>
-  Andra importalternativ
-  </h4>
-  <p class="text-secondary text-sm mb-md">
-  Om du vill använda en anpassad CSV-mall istället för UCI-format.
-  </p>
-  <a href="/admin/import-riders.php" class="btn btn--secondary btn--sm">
-  <i data-lucide="upload"></i>
-  Standard Rider Import
-  </a>
-  </div>
- </div>
-
- <div class="card">
-  <div class="card-body">
-  <h4 class="mb-sm">
-  <i data-lucide="download"></i>
-  Ladda ner mallar
-  </h4>
-  <p class="text-secondary text-sm mb-md">
-  Ladda ner CSV-mallar för standard import.
-  </p>
-  <a href="/admin/download-templates.php?template=riders" class="btn btn--secondary btn--sm">
-  <i data-lucide="download"></i>
-  Ladda ner Rider-mall
-  </a>
-  </div>
- </div>
+    <div class="admin-card">
+        <div class="admin-card-body">
+            <h4 style="margin-bottom: var(--space-sm);">
+                <i data-lucide="download"></i>
+                Ladda ner mallar
+            </h4>
+            <p style="color: var(--color-text-secondary); font-size: var(--text-sm); margin-bottom: var(--space-md);">
+                Ladda ner CSV-mallar för standard import.
+            </p>
+            <a href="/admin/download-templates.php?template=riders" class="btn-admin btn-admin-secondary btn-admin-sm">
+                <i data-lucide="download"></i>
+                Ladda ner Rider-mall
+            </a>
+        </div>
+    </div>
+</div>
 
 <?php include __DIR__ . '/components/unified-layout-footer.php'; ?>
