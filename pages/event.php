@@ -649,37 +649,39 @@ if (!$event) {
     </div>
 </section>
 
-<?php if (!empty($eventSponsors['header'])): ?>
+<?php
+// Only show header banner if at least one sponsor has a logo
+$headerSponsorsWithLogos = array_filter($eventSponsors['header'] ?? [], function($s) {
+    return get_sponsor_logo_for_placement($s, 'header') !== null;
+});
+if (!empty($headerSponsorsWithLogos)): ?>
 <!-- Sponsor Banner -->
 <section class="event-sponsor-banner mb-lg">
-    <?php foreach ($eventSponsors['header'] as $sponsor):
+    <?php foreach ($headerSponsorsWithLogos as $sponsor):
         $bannerLogo = get_sponsor_logo_for_placement($sponsor, 'header');
     ?>
     <a href="<?= h($sponsor['website'] ?? '#') ?>" target="_blank" rel="noopener sponsored" class="sponsor-banner-link">
-        <?php if ($bannerLogo): ?>
         <img src="<?= h($bannerLogo) ?>" alt="<?= h($sponsor['name']) ?>" class="sponsor-banner-logo">
-        <?php else: ?>
-        <span class="sponsor-banner-name"><?= h($sponsor['name']) ?></span>
-        <?php endif; ?>
     </a>
     <?php endforeach; ?>
 </section>
 <?php endif; ?>
 
-<?php if (!empty($eventSponsors['content'])): ?>
+<?php
+// Only show content logos if at least one sponsor has a logo
+$contentSponsorsWithLogos = array_filter($eventSponsors['content'] ?? [], function($s) {
+    return get_sponsor_logo_for_placement($s, 'content') !== null;
+});
+if (!empty($contentSponsorsWithLogos)): ?>
 <!-- Sponsor Logos Row -->
 <section class="event-sponsor-logos mb-lg">
     <div class="sponsor-logos-label">Sponsorer</div>
     <div class="sponsor-logos-row">
-        <?php foreach ($eventSponsors['content'] as $sponsor):
+        <?php foreach ($contentSponsorsWithLogos as $sponsor):
             $standardLogo = get_sponsor_logo_for_placement($sponsor, 'content');
         ?>
         <a href="<?= h($sponsor['website'] ?? '#') ?>" target="_blank" rel="noopener sponsored" class="sponsor-logo-item" title="<?= h($sponsor['name']) ?>">
-            <?php if ($standardLogo): ?>
             <img src="<?= h($standardLogo) ?>" alt="<?= h($sponsor['name']) ?>">
-            <?php else: ?>
-            <span><?= h($sponsor['name']) ?></span>
-            <?php endif; ?>
         </a>
         <?php endforeach; ?>
     </div>
@@ -837,18 +839,15 @@ if (!$event) {
             <h2 class="card-title"><?= h($classData['display_name']) ?></h2>
             <p class="card-subtitle"><?= count($classData['results']) ?> deltagare<?= !$isTimeRanked ? ' (motion)' : '' ?></p>
         </div>
-        <?php if (!empty($eventSponsors['sidebar']) && isset($eventSponsors['sidebar'][0])):
-            $resultSponsor = $eventSponsors['sidebar'][0];
-            $smallLogo = get_sponsor_logo_for_placement($resultSponsor, 'sidebar');
-        ?>
+        <?php
+        // Only show sidebar sponsor if it has a logo
+        $resultSponsor = $eventSponsors['sidebar'][0] ?? null;
+        $smallLogo = $resultSponsor ? get_sponsor_logo_for_placement($resultSponsor, 'sidebar') : null;
+        if ($resultSponsor && $smallLogo): ?>
         <a href="<?= h($resultSponsor['website'] ?? '#') ?>" target="_blank" rel="noopener sponsored" class="class-sponsor" title="Resultat sponsrat av <?= h($resultSponsor['name']) ?>">
             <span class="class-sponsor-label-desktop">Resultaten sponsrade av</span>
             <span class="class-sponsor-label-mobile">Sponsor</span>
-            <?php if ($smallLogo): ?>
             <img src="<?= h($smallLogo) ?>" alt="<?= h($resultSponsor['name']) ?>" class="class-sponsor-logo">
-            <?php else: ?>
-            <span class="class-sponsor-name"><?= h($resultSponsor['name']) ?></span>
-            <?php endif; ?>
         </a>
         <?php endif; ?>
     </div>
