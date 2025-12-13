@@ -2497,69 +2497,6 @@ td.col-place {
     color: var(--color-accent);
 }
 
-/* Mobile result cards */
-.result-list {
-    display: none;
-}
-
-.result-item {
-    display: flex;
-    align-items: center;
-    gap: var(--space-md);
-    padding: var(--space-sm) var(--space-md);
-    text-decoration: none;
-    border-bottom: 1px solid var(--color-border);
-}
-
-.result-item:last-child {
-    border-bottom: none;
-}
-
-.result-place {
-    width: 40px;
-    height: 40px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: var(--weight-bold);
-    background: var(--color-bg-sunken);
-    border-radius: var(--radius-md);
-}
-
-.result-place.top-3 {
-    background: var(--color-accent-light);
-}
-
-.result-info {
-    flex: 1;
-    min-width: 0;
-}
-
-.result-name {
-    font-weight: var(--weight-medium);
-    color: var(--color-text-primary);
-}
-
-.result-club {
-    font-size: var(--text-sm);
-    color: var(--color-text-muted);
-}
-
-.result-time-col {
-    text-align: right;
-}
-
-.time-value {
-    font-family: var(--font-mono);
-    font-weight: var(--weight-medium);
-}
-
-.time-behind-small {
-    font-family: var(--font-mono);
-    font-size: var(--text-xs);
-    color: var(--color-text-muted);
-}
-
 /* Info grid */
 .info-grid {
     display: grid;
@@ -2795,8 +2732,7 @@ td.col-place {
     }
 
     /* Tables break out of card padding (card has 24px padding at this size) */
-    .card .table-wrapper,
-    .card .result-list {
+    .card .table-wrapper {
         margin-left: calc(var(--space-lg) * -1);
         margin-right: calc(var(--space-lg) * -1);
         width: calc(100% + var(--space-lg) * 2);
@@ -2805,14 +2741,6 @@ td.col-place {
 
 /* Mobile portrait: hide table, show cards, hide splits */
 @media (max-width: 599px) and (orientation: portrait) {
-    .table-wrapper {
-        display: none;
-    }
-
-    .result-list {
-        display: block;
-    }
-
     .event-title {
         font-size: var(--text-lg);
     }
@@ -2825,8 +2753,7 @@ td.col-place {
     .event-sponsor-logos,
     .event-tabs-wrapper,
     .card,
-    .filter-row,
-    .result-list {
+    .filter-row {
         margin-left: calc(var(--space-sm) * -1);
         margin-right: calc(var(--space-sm) * -1);
         border-radius: 0 !important;
@@ -2854,18 +2781,8 @@ td.col-place {
         padding-right: var(--space-sm);
     }
 
-    /* Result items full width - break out of result-list padding */
-    .result-item {
-        border-radius: 0;
-        margin-left: calc(var(--space-sm) * -1);
-        margin-right: calc(var(--space-sm) * -1);
-        padding-left: var(--space-sm);
-        padding-right: var(--space-sm);
-    }
-
-    /* Table/result-list break out of card padding to be truly edge-to-edge */
-    .card .table-wrapper,
-    .card .result-list {
+    /* Table break out of card padding to be truly edge-to-edge */
+    .card .table-wrapper {
         margin-left: calc(var(--space-md) * -1);
         margin-right: calc(var(--space-md) * -1);
         width: calc(100% + var(--space-md) * 2);
@@ -2937,10 +2854,6 @@ td.col-place {
 
 /* Mobile landscape: show table with splits */
 @media (max-width: 900px) and (orientation: landscape) {
-    .result-list {
-        display: none;
-    }
-
     .table-wrapper {
         display: block;
     }

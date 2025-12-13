@@ -58,7 +58,6 @@ body{
   .filters-bar,
   .table-responsive,
   .table-wrapper,
-  .result-list,
   .event-row,
   .alert {
     margin-left:-16px;
@@ -70,9 +69,8 @@ body{
   }
   .card-header,.card-body{padding-left:16px;padding-right:16px}
 
-  /* Tables/lists inside cards break out of card padding (24px) */
+  /* Tables inside cards break out of card padding (24px) */
   .card .table-wrapper,
-  .card .result-list,
   .card .table-responsive,
   .card table {
     margin-left:-24px;
@@ -87,7 +85,6 @@ body{
   .filters-bar,
   .table-responsive,
   .table-wrapper,
-  .result-list,
   .event-row,
   .alert {
     margin-left:-8px;
@@ -96,9 +93,8 @@ body{
   }
   .card-header,.card-body{padding-left:8px;padding-right:8px}
 
-  /* Tables/lists inside cards (card has 16px padding at this size) */
+  /* Tables inside cards (card has 16px padding at this size) */
   .card .table-wrapper,
-  .card .result-list,
   .card .table-responsive,
   .card table {
     margin-left:-16px;
