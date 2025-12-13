@@ -739,7 +739,7 @@ if (!$event) {
         </a>
         <?php endif; ?>
 
-        <?php if ($kartaPublished && ($hasInteractiveMap || !empty($event['map_content']) || !empty($event['map_image_url']) || !empty($event['map_use_global']))): ?>
+        <?php if ($hasInteractiveMap && $kartaPublished): ?>
         <a href="?id=<?= $eventId ?>&tab=karta" class="event-tab <?= $activeTab === 'karta' ? 'active' : '' ?>" onclick="if(window.innerWidth <= 768) { window.location.href='/map.php?id=<?= $eventId ?>'; return false; }">
             <i data-lucide="map-pin"></i>
             Karta
@@ -1112,7 +1112,14 @@ if (!$event) {
 <?php endif; ?>
 
 <?php elseif ($activeTab === 'info'): ?>
-<!-- INFORMATION TAB -->
+<!-- INFORMATION TAB - Facilities only -->
+<?php
+// Get facility content
+$foodCafe = getEventContent($event, 'food_cafe', 'food_use_global', $globalTextMap);
+$parkingInfo = $event['parking_detailed'] ?? '';
+$hotelInfo = $event['hotel_accommodation'] ?? '';
+$hasFacilities = $foodCafe || $parkingInfo || $hotelInfo;
+?>
 <section class="card">
     <div class="card-header">
         <h2 class="card-title">
@@ -1121,85 +1128,113 @@ if (!$event) {
         </h2>
     </div>
     <div class="card-body">
+        <?php if ($hasFacilities): ?>
         <div class="info-grid">
-            <?php
-            $driverMeeting = getEventContent($event, 'driver_meeting', 'driver_meeting_use_global', $globalTextMap);
-            if (!empty($driverMeeting)): ?>
-            <div class="info-block">
-                <h3><i data-lucide="megaphone"></i> Förarmöte</h3>
-                <p><?= nl2br(h($driverMeeting)) ?></p>
-            </div>
-            <?php endif; ?>
-
-            <?php
-            $trainingInfo = getEventContent($event, 'training_info', 'training_use_global', $globalTextMap);
-            if (!empty($trainingInfo)): ?>
-            <div class="info-block">
-                <h3><i data-lucide="bike"></i> Träning</h3>
-                <p><?= nl2br(h($trainingInfo)) ?></p>
-            </div>
-            <?php endif; ?>
-
-            <?php
-            $timingInfo = getEventContent($event, 'timing_info', 'timing_use_global', $globalTextMap);
-            if (!empty($timingInfo)): ?>
-            <div class="info-block">
-                <h3><i data-lucide="timer"></i> Tidtagning</h3>
-                <p><?= nl2br(h($timingInfo)) ?></p>
-            </div>
-            <?php endif; ?>
-
-            <?php
-            $liftInfo = getEventContent($event, 'lift_info', 'lift_use_global', $globalTextMap);
-            if (!empty($liftInfo)): ?>
-            <div class="info-block">
-                <h3><i data-lucide="cable-car"></i> Lift</h3>
-                <p><?= nl2br(h($liftInfo)) ?></p>
-            </div>
-            <?php endif; ?>
-
-            <?php
-            $foodCafe = getEventContent($event, 'food_cafe', 'food_use_global', $globalTextMap);
-            if (!empty($foodCafe)): ?>
+            <?php if (!empty($foodCafe)): ?>
             <div class="info-block">
                 <h3><i data-lucide="utensils"></i> Mat/Café</h3>
                 <p><?= nl2br(h($foodCafe)) ?></p>
             </div>
             <?php endif; ?>
 
-            <?php if (!empty($event['parking_detailed'])): ?>
+            <?php if (!empty($parkingInfo)): ?>
             <div class="info-block">
                 <h3><i data-lucide="car"></i> Parkering</h3>
-                <p><?= nl2br(h($event['parking_detailed'])) ?></p>
+                <p><?= nl2br(h($parkingInfo)) ?></p>
             </div>
             <?php endif; ?>
 
-            <?php if (!empty($event['hotel_accommodation'])): ?>
+            <?php if (!empty($hotelInfo)): ?>
             <div class="info-block">
                 <h3><i data-lucide="bed"></i> Hotell/Boende</h3>
-                <p><?= nl2br(h($event['hotel_accommodation'])) ?></p>
+                <p><?= nl2br(h($hotelInfo)) ?></p>
             </div>
             <?php endif; ?>
         </div>
-
-        <?php if (empty($driverMeeting) && empty($trainingInfo) && empty($timingInfo) && empty($liftInfo) && empty($foodCafe) && empty($event['parking_detailed']) && empty($event['hotel_accommodation'])): ?>
+        <?php else: ?>
         <p class="text-muted">Ingen information tillgänglig för detta event ännu.</p>
         <?php endif; ?>
     </div>
 </section>
 
 <?php elseif ($activeTab === 'pm'): ?>
-<!-- PM TAB -->
+<!-- PM TAB - With subcategories -->
+<?php
+// Get all PM-related content
+$pmContent = getEventContent($event, 'pm_content', 'pm_use_global', $globalTextMap);
+$driverMeetingPM = getEventContent($event, 'driver_meeting', 'driver_meeting_use_global', $globalTextMap);
+$trainingPM = getEventContent($event, 'training_info', 'training_use_global', $globalTextMap);
+$timingPM = getEventContent($event, 'timing_info', 'timing_use_global', $globalTextMap);
+$liftPM = getEventContent($event, 'lift_info', 'lift_use_global', $globalTextMap);
+$rulesPM = getEventContent($event, 'competition_rules', 'rules_use_global', $globalTextMap);
+$insurancePM = getEventContent($event, 'insurance_info', 'insurance_use_global', $globalTextMap);
+$equipmentPM = getEventContent($event, 'equipment_info', 'equipment_use_global', $globalTextMap);
+$hasPMContent = $pmContent || $driverMeetingPM || $trainingPM || $timingPM || $liftPM || $rulesPM || $insurancePM || $equipmentPM;
+?>
 <section class="card">
     <div class="card-header">
         <h2 class="card-title"><i data-lucide="clipboard-list"></i> PM (Promemoria)</h2>
     </div>
     <div class="card-body">
-        <?php $pmContent = getEventContent($event, 'pm_content', 'pm_use_global', $globalTextMap); ?>
         <?php if ($pmContent): ?>
-            <div class="prose"><?= nl2br(h($pmContent)) ?></div>
-        <?php else: ?>
-            <p class="text-muted">Inget PM tillgängligt för detta event.</p>
+        <div class="prose mb-lg"><?= nl2br(h($pmContent)) ?></div>
+        <?php endif; ?>
+
+        <?php if ($driverMeetingPM || $trainingPM || $timingPM || $liftPM || $rulesPM || $insurancePM || $equipmentPM): ?>
+        <div class="info-grid">
+            <?php if ($driverMeetingPM): ?>
+            <div class="info-block">
+                <h3><i data-lucide="megaphone"></i> Förarmöte</h3>
+                <p><?= nl2br(h($driverMeetingPM)) ?></p>
+            </div>
+            <?php endif; ?>
+
+            <?php if ($trainingPM): ?>
+            <div class="info-block">
+                <h3><i data-lucide="bike"></i> Träning</h3>
+                <p><?= nl2br(h($trainingPM)) ?></p>
+            </div>
+            <?php endif; ?>
+
+            <?php if ($timingPM): ?>
+            <div class="info-block">
+                <h3><i data-lucide="timer"></i> Tidtagning</h3>
+                <p><?= nl2br(h($timingPM)) ?></p>
+            </div>
+            <?php endif; ?>
+
+            <?php if ($liftPM): ?>
+            <div class="info-block">
+                <h3><i data-lucide="cable-car"></i> Lift</h3>
+                <p><?= nl2br(h($liftPM)) ?></p>
+            </div>
+            <?php endif; ?>
+
+            <?php if ($rulesPM): ?>
+            <div class="info-block">
+                <h3><i data-lucide="book-open"></i> Tävlingsregler</h3>
+                <p><?= nl2br(h($rulesPM)) ?></p>
+            </div>
+            <?php endif; ?>
+
+            <?php if ($insurancePM): ?>
+            <div class="info-block">
+                <h3><i data-lucide="shield-check"></i> Försäkring</h3>
+                <p><?= nl2br(h($insurancePM)) ?></p>
+            </div>
+            <?php endif; ?>
+
+            <?php if ($equipmentPM): ?>
+            <div class="info-block">
+                <h3><i data-lucide="hard-hat"></i> Utrustning</h3>
+                <p><?= nl2br(h($equipmentPM)) ?></p>
+            </div>
+            <?php endif; ?>
+        </div>
+        <?php endif; ?>
+
+        <?php if (!$hasPMContent): ?>
+        <p class="text-muted">Inget PM tillgängligt för detta event.</p>
         <?php endif; ?>
     </div>
 </section>
@@ -1253,7 +1288,7 @@ if (!$event) {
 </section>
 
 <?php elseif ($activeTab === 'karta'): ?>
-<!-- MAP TAB -->
+<!-- MAP TAB - Interactive map only -->
 <section class="card">
     <div class="card-header">
         <h2 class="card-title"><i data-lucide="map"></i> Karta</h2>
@@ -1276,31 +1311,8 @@ if (!$event) {
         <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
         <script>if (typeof lucide !== 'undefined') lucide.createIcons();</script>
         <script src="<?= hub_asset('js/event-map.js') ?>"></script>
-        <?php if (!empty($event['map_image_url']) || !empty($mapContent)): ?>
-        <hr style="margin: var(--space-lg) 0; border-color: var(--color-border);">
-        <?php endif; ?>
-        <?php endif; ?>
-
-        <?php if (!empty($event['map_image_url'])): ?>
-        <div class="map-image mb-lg">
-            <img src="<?= h($event['map_image_url']) ?>" alt="Karta">
-        </div>
-        <?php endif; ?>
-
-        <?php $mapContent = getEventContent($event, 'map_content', 'map_use_global', $globalTextMap); ?>
-        <?php if ($mapContent): ?>
-            <div class="prose mb-lg"><?= nl2br(h($mapContent)) ?></div>
-        <?php endif; ?>
-
-        <?php if (!empty($event['venue_coordinates'])): ?>
-        <a href="https://www.google.com/maps?q=<?= urlencode($event['venue_coordinates']) ?>" target="_blank" class="btn btn--secondary">
-            <i data-lucide="navigation"></i>
-            Öppna i Google Maps
-        </a>
-        <?php endif; ?>
-
-        <?php if (!$hasInteractiveMap && empty($event['map_image_url']) && empty($mapContent) && empty($event['venue_coordinates'])): ?>
-            <p class="text-muted">Ingen karta tillgänglig.</p>
+        <?php else: ?>
+        <p class="text-muted">Ingen interaktiv karta tillgänglig.</p>
         <?php endif; ?>
     </div>
 </section>

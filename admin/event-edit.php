@@ -163,10 +163,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'start_times' => trim($_POST['start_times'] ?? ''),
             'start_times_use_global' => isset($_POST['start_times_use_global']) ? 1 : 0,
             'starttider_publish_at' => !empty($_POST['starttider_publish_at']) ? trim($_POST['starttider_publish_at']) : null,
-            'map_content' => trim($_POST['map_content'] ?? ''),
-            'map_image_url' => trim($_POST['map_image_url'] ?? ''),
-            'map_use_global' => isset($_POST['map_use_global']) ? 1 : 0,
-            'karta_publish_at' => !empty($_POST['karta_publish_at']) ? trim($_POST['karta_publish_at']) : null,
+            // Note: karta_publish_at is managed in the map editor (event-map.php)
             'driver_meeting' => trim($_POST['driver_meeting'] ?? ''),
             'driver_meeting_use_global' => isset($_POST['driver_meeting_use_global']) ? 1 : 0,
             'competition_tracks' => trim($_POST['competition_tracks'] ?? ''),
@@ -683,16 +680,15 @@ include __DIR__ . '/components/unified-layout.php';
                 ['key' => 'jury_communication', 'label' => 'Jurykommuniké', 'global_key' => 'jury_use_global'],
                 ['key' => 'competition_schedule', 'label' => 'Tävlingsschema', 'global_key' => 'schedule_use_global'],
                 ['key' => 'start_times', 'label' => 'Starttider', 'global_key' => 'start_times_use_global', 'publish_key' => 'starttider_publish_at'],
-                ['key' => 'map_content', 'label' => 'Kartbeskrivning', 'global_key' => 'map_use_global', 'publish_key' => 'karta_publish_at'],
                 ['key' => 'driver_meeting', 'label' => 'Förarmöte', 'global_key' => 'driver_meeting_use_global'],
                 ['key' => 'training_info', 'label' => 'Träning', 'global_key' => 'training_use_global'],
                 ['key' => 'timing_info', 'label' => 'Tidtagning', 'global_key' => 'timing_use_global'],
                 ['key' => 'lift_info', 'label' => 'Lift', 'global_key' => 'lift_use_global'],
-                ['key' => 'competition_tracks', 'label' => 'Tävlingssträckor', 'global_key' => 'tracks_use_global'],
                 ['key' => 'competition_rules', 'label' => 'Tävlingsregler', 'global_key' => 'rules_use_global'],
                 ['key' => 'insurance_info', 'label' => 'Försäkring', 'global_key' => 'insurance_use_global'],
                 ['key' => 'equipment_info', 'label' => 'Utrustning', 'global_key' => 'equipment_use_global'],
             ];
+            // Note: Kartbeskrivning and Tävlingssträckor removed - Karta tab only shows interactive map
             ?>
 
             <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--space-md);">

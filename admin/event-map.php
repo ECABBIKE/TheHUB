@@ -17,7 +17,7 @@ if ($eventId <= 0) {
     exit;
 }
 
-$event = $db->getRow("SELECT id, name, date FROM events WHERE id = ?", [$eventId]);
+$event = $db->getRow("SELECT id, name, date, karta_publish_at FROM events WHERE id = ?", [$eventId]);
 if (!$event) {
     set_flash('error', 'Event hittades inte');
     header('Location: /admin/events');
@@ -212,6 +212,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $message = count($segments) . ' sektioner sparade!';
                 $messageType = 'success';
                 break;
+
+            case 'update_publish_date':
+                $publishAt = !empty($_POST['karta_publish_at']) ? trim($_POST['karta_publish_at']) : null;
+                $db->query("UPDATE events SET karta_publish_at = ? WHERE id = ?", [$publishAt, $eventId]);
+                // Refresh event data
+                $event['karta_publish_at'] = $publishAt;
+                $message = $publishAt ? 'Publiceringstid sparad: ' . date('Y-m-d H:i', strtotime($publishAt)) : 'Kartan visas direkt';
+                $messageType = 'success';
+                break;
         }
     } catch (Exception $e) {
         $message = $e->getMessage();
@@ -311,6 +320,38 @@ include __DIR__ . '/components/unified-layout.php';
     <?= htmlspecialchars($message) ?>
 </div>
 <?php endif; ?>
+
+<!-- Map Publish Settings -->
+<div class="admin-card" style="margin-bottom: var(--space-md);">
+    <div class="admin-card-body" style="display: flex; align-items: center; gap: var(--space-lg); flex-wrap: wrap;">
+        <div style="flex: 1; min-width: 200px;">
+            <strong><i data-lucide="calendar-clock" style="width: 16px; height: 16px;"></i> Karta publiceras</strong>
+            <p style="font-size: var(--text-sm); color: var(--color-text-secondary); margin: 0;">
+                <?php if (!empty($event['karta_publish_at'])): ?>
+                    <?= date('Y-m-d H:i', strtotime($event['karta_publish_at'])) ?>
+                    <?php if (strtotime($event['karta_publish_at']) > time()): ?>
+                        <span class="badge badge-warning">Schemalagd</span>
+                    <?php else: ?>
+                        <span class="badge badge-success">Publicerad</span>
+                    <?php endif; ?>
+                <?php else: ?>
+                    <span class="badge badge-success">Synlig direkt</span>
+                <?php endif; ?>
+            </p>
+        </div>
+        <form method="POST" style="display: flex; align-items: center; gap: var(--space-sm);">
+            <?= csrf_field() ?>
+            <input type="hidden" name="action" value="update_publish_date">
+            <input type="datetime-local" name="karta_publish_at" class="admin-form-input admin-form-input-sm"
+                   style="width: auto;"
+                   value="<?= !empty($event['karta_publish_at']) ? date('Y-m-d\TH:i', strtotime($event['karta_publish_at'])) : '' ?>">
+            <button type="submit" class="btn-admin btn-admin-primary btn-admin-sm">Spara</button>
+            <?php if (!empty($event['karta_publish_at'])): ?>
+            <button type="submit" class="btn-admin btn-admin-ghost btn-admin-sm" onclick="this.form.querySelector('[name=karta_publish_at]').value=''">Rensa</button>
+            <?php endif; ?>
+        </form>
+    </div>
+</div>
 
 <div class="admin-grid admin-grid-sidebar">
     <!-- Sidebar: Controls -->
