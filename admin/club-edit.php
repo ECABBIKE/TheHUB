@@ -1,27 +1,55 @@
 <?php
+/**
+ * Club Edit Page - V3 Unified Layout
+ * Supports both editing existing clubs and creating new ones
+ * Version: v2.0.0 [2025-12-13]
+ */
 require_once __DIR__ . '/../config.php';
 require_admin();
 
 $db = getDB();
 
-// Get club ID
-$id = isset($_GET['id']) ? intval($_GET['id']) : 0;
+// Get club ID - 0 or null means creating new club
+$id = isset($_GET['id']) && is_numeric($_GET['id']) ? intval($_GET['id']) : 0;
+$isNew = ($id === 0);
 
-if ($id <= 0) {
- $_SESSION['message'] = 'Ogiltigt klubb-ID';
- $_SESSION['messageType'] = 'error';
- header('Location: /admin/clubs.php');
- exit;
-}
+// Default values for new club
+$club = [
+    'name' => '',
+    'short_name' => '',
+    'region' => '',
+    'city' => '',
+    'country' => 'Sverige',
+    'website' => '',
+    'logo' => '',
+    'email' => '',
+    'phone' => '',
+    'contact_person' => '',
+    'address' => '',
+    'postal_code' => '',
+    'description' => '',
+    'facebook' => '',
+    'instagram' => '',
+    'org_number' => '',
+    'scf_id' => '',
+    'swish_number' => '',
+    'swish_name' => '',
+    'payment_enabled' => 0,
+    'active' => 1
+];
 
-// Fetch club data
-$club = $db->getRow("SELECT * FROM clubs WHERE id = ?", [$id]);
+// Fetch existing club data if editing
+if (!$isNew) {
+    $existingClub = $db->getRow("SELECT * FROM clubs WHERE id = ?", [$id]);
 
-if (!$club) {
- $_SESSION['message'] = 'Klubb hittades inte';
- $_SESSION['messageType'] = 'error';
- header('Location: /admin/clubs.php');
- exit;
+    if (!$existingClub) {
+        $_SESSION['message'] = 'Klubb hittades inte';
+        $_SESSION['messageType'] = 'error';
+        header('Location: /admin/clubs.php');
+        exit;
+    }
+
+    $club = array_merge($club, $existingClub);
 }
 
 // Initialize message variables
@@ -30,91 +58,128 @@ $messageType = 'info';
 
 // Handle form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
- checkCsrf();
+    checkCsrf();
 
- // Validate required fields
- $name = trim($_POST['name'] ?? '');
+    $action = $_POST['action'] ?? 'save';
 
- if (empty($name)) {
- $message = 'Klubbnamn är obligatoriskt';
- $messageType = 'error';
- } else {
- // Prepare club data
- $clubData = [
-  'name' => $name,
-  'short_name' => trim($_POST['short_name'] ?? ''),
-  'region' => trim($_POST['region'] ?? ''),
-  'city' => trim($_POST['city'] ?? ''),
-  'country' => trim($_POST['country'] ?? 'Sverige'),
-  'website' => trim($_POST['website'] ?? ''),
-  'logo' => trim($_POST['logo'] ?? ''),
-  'email' => trim($_POST['email'] ?? ''),
-  'phone' => trim($_POST['phone'] ?? ''),
-  'contact_person' => trim($_POST['contact_person'] ?? ''),
-  'address' => trim($_POST['address'] ?? ''),
-  'postal_code' => trim($_POST['postal_code'] ?? ''),
-  'description' => trim($_POST['description'] ?? ''),
-  'facebook' => trim($_POST['facebook'] ?? ''),
-  'instagram' => trim($_POST['instagram'] ?? ''),
-  'org_number' => trim($_POST['org_number'] ?? ''),
-  'scf_id' => trim($_POST['scf_id'] ?? ''),
-  'swish_number' => trim($_POST['swish_number'] ?? '') ?: null,
-  'swish_name' => trim($_POST['swish_name'] ?? '') ?: null,
-  'payment_enabled' => isset($_POST['payment_enabled']) ? 1 : 0,
-  'active' => isset($_POST['active']) ? 1 : 0,
- ];
+    // Handle delete action
+    if ($action === 'delete' && !$isNew) {
+        $riderCount = $db->getRow("SELECT COUNT(*) as cnt FROM riders WHERE club_id = ?", [$id])['cnt'] ?? 0;
 
- try {
-  $db->update('clubs', $clubData, 'id = ?', [$id]);
-  $message = 'Klubb uppdaterad!';
-  $messageType = 'success';
+        if ($riderCount > 0) {
+            $message = "Kan inte ta bort klubb med $riderCount medlemmar. Flytta medlemmarna först.";
+            $messageType = 'error';
+        } else {
+            try {
+                $db->delete('clubs', 'id = ?', [$id]);
+                header('Location: /admin/clubs.php?msg=deleted');
+                exit;
+            } catch (Exception $e) {
+                $message = 'Fel vid borttagning: ' . $e->getMessage();
+                $messageType = 'error';
+            }
+        }
+    } else {
+        // Validate required fields
+        $name = trim($_POST['name'] ?? '');
 
-  // Refresh club data
-  $club = $db->getRow("SELECT * FROM clubs WHERE id = ?", [$id]);
- } catch (Exception $e) {
-  $message = 'Ett fel uppstod: ' . $e->getMessage();
-  $messageType = 'error';
- }
- }
+        if (empty($name)) {
+            $message = 'Klubbnamn är obligatoriskt';
+            $messageType = 'error';
+        } else {
+            // Prepare club data
+            $clubData = [
+                'name' => $name,
+                'short_name' => trim($_POST['short_name'] ?? ''),
+                'region' => trim($_POST['region'] ?? ''),
+                'city' => trim($_POST['city'] ?? ''),
+                'country' => trim($_POST['country'] ?? 'Sverige'),
+                'website' => trim($_POST['website'] ?? ''),
+                'logo' => trim($_POST['logo'] ?? ''),
+                'email' => trim($_POST['email'] ?? ''),
+                'phone' => trim($_POST['phone'] ?? ''),
+                'contact_person' => trim($_POST['contact_person'] ?? ''),
+                'address' => trim($_POST['address'] ?? ''),
+                'postal_code' => trim($_POST['postal_code'] ?? ''),
+                'description' => trim($_POST['description'] ?? ''),
+                'facebook' => trim($_POST['facebook'] ?? ''),
+                'instagram' => trim($_POST['instagram'] ?? ''),
+                'org_number' => trim($_POST['org_number'] ?? ''),
+                'scf_id' => trim($_POST['scf_id'] ?? ''),
+                'swish_number' => trim($_POST['swish_number'] ?? '') ?: null,
+                'swish_name' => trim($_POST['swish_name'] ?? '') ?: null,
+                'payment_enabled' => isset($_POST['payment_enabled']) ? 1 : 0,
+                'active' => isset($_POST['active']) ? 1 : 0,
+            ];
+
+            try {
+                if ($isNew) {
+                    $db->insert('clubs', $clubData);
+                    $id = $db->lastInsertId();
+                    header('Location: /admin/club-edit.php?id=' . $id . '&msg=created');
+                    exit;
+                } else {
+                    $db->update('clubs', $clubData, 'id = ?', [$id]);
+                    $message = 'Klubb uppdaterad!';
+                    $messageType = 'success';
+
+                    // Refresh club data
+                    $club = $db->getRow("SELECT * FROM clubs WHERE id = ?", [$id]);
+                }
+            } catch (Exception $e) {
+                $message = 'Ett fel uppstod: ' . $e->getMessage();
+                $messageType = 'error';
+            }
+        }
+    }
+}
+
+// Handle URL messages
+if (isset($_GET['msg'])) {
+    switch ($_GET['msg']) {
+        case 'created':
+            $message = 'Klubb skapad!';
+            $messageType = 'success';
+            break;
+    }
 }
 
 // Get rider count for this club
-$riderCount = $db->getRow("SELECT COUNT(*) as count FROM riders WHERE club_id = ? AND active = 1", [$id]);
+$riderCount = 0;
+$riders = [];
+if (!$isNew) {
+    $riderCount = $db->getRow("SELECT COUNT(*) as count FROM riders WHERE club_id = ?", [$id])['count'] ?? 0;
 
-$pageTitle = 'Redigera Klubb - ' . $club['name'];
-$pageType = 'admin';
-include __DIR__ . '/../includes/layout-header.php';
+    // Get first 10 riders for sidebar
+    $riders = $db->getAll("
+        SELECT id, firstname, lastname, gender, birth_year, active
+        FROM riders
+        WHERE club_id = ?
+        ORDER BY lastname, firstname
+        LIMIT 10
+    ", [$id]);
+}
+
+// Page config for admin layout
+$page_title = $isNew ? 'Ny Klubb' : 'Redigera Klubb';
+$breadcrumbs = [
+    ['label' => 'Klubbar', 'url' => '/admin/clubs.php'],
+    ['label' => $isNew ? 'Ny Klubb' : h($club['name'])]
+];
+
+include __DIR__ . '/components/unified-layout.php';
 ?>
 
-<main class="main-content">
- <div class="container">
- <!-- Header -->
- <div class="flex items-center justify-between mb-lg">
-  <div>
-  <h1 class="text-primary mb-sm">
-   <i data-lucide="building"></i>
-   <?= h($club['name']) ?>
-  </h1>
-  <p class="text-secondary">
-   <?= $riderCount['count'] ?? 0 ?> aktiva medlemmar
-  </p>
-  </div>
-  <a href="/admin/clubs.php" class="btn btn--secondary">
-  <i data-lucide="arrow-left"></i>
-  Tillbaka
-  </a>
- </div>
+<!-- Messages -->
+<?php if ($message): ?>
+    <div class="alert alert--<?= $messageType ?> mb-lg">
+        <i data-lucide="<?= $messageType === 'success' ? 'check-circle' : ($messageType === 'error' ? 'alert-circle' : 'info') ?>"></i>
+        <?= h($message) ?>
+    </div>
+<?php endif; ?>
 
- <!-- Messages -->
- <?php if ($message): ?>
-  <div class="alert alert-<?= $messageType ?> mb-lg">
-  <i data-lucide="<?= $messageType === 'success' ? 'check-circle' : ($messageType === 'error' ? 'alert-circle' : 'info') ?>"></i>
-  <?= h($message) ?>
-  </div>
- <?php endif; ?>
-
- <!-- Form -->
- <form method="POST">
+<!-- Form -->
+<form method="POST">
   <?= csrf_field() ?>
 
   <div class="grid grid-cols-1 gs-lg-grid-cols-3 gap-lg">
@@ -470,35 +535,137 @@ include __DIR__ . '/../includes/layout-header.php';
     </h2>
    </div>
    <div class="card-body">
-    <label class="checkbox-label">
+    <label class="checkbox-label" style="display: flex; align-items: center; gap: var(--space-sm); cursor: pointer;">
     <input
      type="checkbox"
      name="active"
      class="checkbox"
      <?= $club['active'] ? 'checked' : '' ?>
+     style="width: 18px; height: 18px; accent-color: var(--color-accent);"
     >
     <span>Aktiv klubb</span>
     </label>
+    <?php if (!$isNew): ?>
+    <p class="text-secondary text-sm mt-md">
+     <i data-lucide="users" class="icon-sm"></i>
+     <?= $riderCount ?> aktiva medlemmar
+    </p>
+    <?php endif; ?>
    </div>
    </div>
 
    <!-- Actions -->
-   <div class="card">
+   <div class="card mb-lg">
    <div class="card-body">
     <button type="submit" class="btn btn--primary w-full mb-sm">
     <i data-lucide="save"></i>
-    Spara ändringar
+    <?= $isNew ? 'Skapa klubb' : 'Spara ändringar' ?>
     </button>
-    <a href="/club.php?id=<?= $id ?>" target="_blank" class="btn btn--secondary w-full">
+    <?php if (!$isNew): ?>
+    <a href="/club.php?id=<?= $id ?>" target="_blank" class="btn btn--secondary w-full mb-sm">
     <i data-lucide="eye"></i>
     Visa publik sida
     </a>
+    <?php endif; ?>
+    <a href="/admin/clubs.php" class="btn btn--secondary w-full">
+    <i data-lucide="arrow-left"></i>
+    Tillbaka till listan
+    </a>
    </div>
    </div>
+
+   <?php if (!$isNew): ?>
+   <!-- Danger Zone -->
+   <div class="card" style="border-color: var(--color-error);">
+   <div class="card-header" style="background: rgba(239, 68, 68, 0.1);">
+    <h2 style="color: var(--color-error);">
+    <i data-lucide="alert-triangle"></i>
+    Fara
+    </h2>
+   </div>
+   <div class="card-body">
+    <?php if ($riderCount > 0): ?>
+    <p class="text-secondary text-sm mb-md">
+     Klubben har <?= $riderCount ?> medlemmar och kan inte tas bort.
+    </p>
+    <button type="button" class="btn btn-danger w-full" disabled>
+     <i data-lucide="trash-2"></i>
+     Ta bort klubb
+    </button>
+    <?php else: ?>
+    <p class="text-secondary text-sm mb-md">
+     Denna åtgärd kan inte ångras.
+    </p>
+    <button type="submit" name="action" value="delete" class="btn btn-danger w-full"
+     onclick="return confirm('Är du säker på att du vill ta bort denna klubb?')">
+     <i data-lucide="trash-2"></i>
+     Ta bort klubb
+    </button>
+    <?php endif; ?>
+   </div>
+   </div>
+   <?php endif; ?>
   </div>
   </div>
  </form>
- </div>
-</main>
 
-<?php include __DIR__ . '/../includes/layout-footer.php'; ?>
+<?php if (!$isNew && !empty($riders)): ?>
+<!-- Club Members -->
+<div class="card mt-lg">
+    <div class="card-header flex justify-between items-center">
+        <h2>
+            <i data-lucide="users"></i>
+            Medlemmar (<?= $riderCount ?>)
+        </h2>
+        <a href="/admin/riders.php?club_id=<?= $id ?>" class="btn btn--secondary btn--sm">
+            <i data-lucide="external-link"></i>
+            Visa alla
+        </a>
+    </div>
+    <div class="card-body" style="padding: 0;">
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Namn</th>
+                        <th>Kön</th>
+                        <th>Födelseår</th>
+                        <th>Status</th>
+                        <th>Åtgärd</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($riders as $rider): ?>
+                    <tr>
+                        <td>
+                            <strong><?= h($rider['firstname'] . ' ' . $rider['lastname']) ?></strong>
+                        </td>
+                        <td><?= $rider['gender'] === 'M' ? 'Man' : ($rider['gender'] === 'F' ? 'Kvinna' : '-') ?></td>
+                        <td><?= h($rider['birth_year']) ?: '-' ?></td>
+                        <td>
+                            <span class="badge <?= $rider['active'] ? 'badge-success' : 'badge-secondary' ?>">
+                                <?= $rider['active'] ? 'Aktiv' : 'Inaktiv' ?>
+                            </span>
+                        </td>
+                        <td>
+                            <a href="/admin/rider-edit.php?id=<?= $rider['id'] ?>" class="btn btn--secondary btn--sm">
+                                <i data-lucide="pencil"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+        <?php if ($riderCount > 10): ?>
+        <div class="text-center py-md border-t">
+            <a href="/admin/riders.php?club_id=<?= $id ?>" class="text-accent">
+                Visa alla <?= $riderCount ?> medlemmar
+            </a>
+        </div>
+        <?php endif; ?>
+    </div>
+</div>
+<?php endif; ?>
+
+<?php include __DIR__ . '/components/unified-layout-footer.php'; ?>

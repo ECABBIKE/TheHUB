@@ -52,9 +52,9 @@ function clean_redirect_url(?string $url): string {
 if (hub_is_logged_in()) {
     $redirect = clean_redirect_url($_GET['redirect'] ?? '');
 
-    // If admin and no specific redirect, go to admin panel
-    if (hub_is_admin() && $redirect === '/') {
-        $redirect = '/admin';
+    // If admin, always go to admin dashboard (unless specific redirect given)
+    if (hub_is_admin() && ($redirect === '/dashboard' || $redirect === '/')) {
+        $redirect = '/admin/dashboard.php';
     }
 
     header('Location: ' . $redirect);
@@ -77,9 +77,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($result['success']) {
             $redirect = clean_redirect_url($_POST['redirect'] ?? $_GET['redirect'] ?? '');
 
-            // If admin and no specific redirect, go to admin panel
-            if (hub_is_admin() && $redirect === '/') {
-                $redirect = '/admin';
+            // If admin, always go to admin dashboard (unless specific redirect given)
+            if (hub_is_admin() && ($redirect === '/dashboard' || $redirect === '/')) {
+                $redirect = '/admin/dashboard.php';
             }
 
             header('Location: ' . $redirect);
