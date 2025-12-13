@@ -345,7 +345,7 @@ function format_file_size($bytes) {
  */
 function media_exists($id) {
     global $pdo;
-    
+
     try {
         $stmt = $pdo->prepare("SELECT COUNT(*) FROM media WHERE id = ?");
         $stmt->execute([$id]);
@@ -353,4 +353,16 @@ function media_exists($id) {
     } catch (PDOException $e) {
         return false;
     }
+}
+
+/**
+ * Get media thumbnail URL
+ * For now returns the same URL, but can be extended to generate actual thumbnails
+ */
+function get_media_thumbnail($id, $size = 'medium') {
+    $media = get_media($id);
+    if ($media && isset($media['filepath'])) {
+        return '/' . ltrim($media['filepath'], '/');
+    }
+    return '/assets/images/placeholder.png';
 }

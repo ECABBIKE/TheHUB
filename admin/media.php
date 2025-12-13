@@ -492,7 +492,7 @@ include __DIR__ . '/components/unified-layout.php';
             </svg>
             <p class="upload-zone-text">Dra och släpp filer här eller klicka för att välja</p>
             <p class="upload-zone-hint">Max 10MB. Tillåtna format: JPG, PNG, GIF, WebP, SVG, PDF</p>
-            <input type="file" id="fileInput" multiple accept="image/*,.pdf" style="display: none;">
+            <input type="file" id="fileInput" multiple accept=".jpg,.jpeg,.png,.gif,.webp,.svg,.pdf,image/jpeg,image/png,image/gif,image/webp,image/svg+xml,application/pdf" style="display: none;">
 
             <div class="upload-progress" id="uploadProgress">
                 <div class="progress-bar">
