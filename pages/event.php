@@ -1887,26 +1887,19 @@ function sortTotalBySplit(headerEl, splitNum) {
 
 /* Series color stripe on result cards - flush with card top edge */
 .class-section {
-    overflow: visible;
+    overflow: hidden;
     position: relative;
-    padding-top: calc(var(--space-lg) + 4px); /* Make room for stripe */
 }
 .class-section::before {
     content: '';
-    position: absolute;
-    top: 0;
-    left: -1px;
-    right: -1px;
+    display: block;
     height: 4px;
+    margin: calc(var(--space-lg) * -1) calc(var(--space-lg) * -1) var(--space-lg) calc(var(--space-lg) * -1);
     background: linear-gradient(90deg, var(--series-gradient-start) 0%, var(--series-gradient-end) 100%);
-    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
 }
-/* On mobile edge-to-edge, extend stripe to cover full width */
-@media (max-width: 767px) {
+@media (max-width: 599px) and (orientation: portrait) {
     .class-section::before {
-        left: 0;
-        right: 0;
-        border-radius: 0;
+        margin: calc(var(--space-md) * -1) calc(var(--space-md) * -1) var(--space-md) calc(var(--space-md) * -1);
     }
 }
 
