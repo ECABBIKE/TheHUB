@@ -612,11 +612,11 @@ include __DIR__ . '/components/unified-layout.php';
 
             <div class="admin-form-group" style="margin-top: var(--space-md);">
                 <label style="display: flex; align-items: center; gap: var(--space-sm); cursor: pointer;">
-                    <input type="checkbox" name="create_missing">
+                    <input type="checkbox" name="create_missing" checked>
                     <span>Skapa nya riders om de inte hittas</span>
                 </label>
                 <small style="color: var(--color-text-secondary); margin-left: 24px;">
-                    Om avmarkerat: bara befintliga riders uppdateras.
+                    Riders med UCI-ID och fullständig data skapas automatiskt. Avmarkera för att bara uppdatera befintliga.
                 </small>
             </div>
 
