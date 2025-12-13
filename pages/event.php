@@ -2254,8 +2254,24 @@ td.col-place {
     margin: 0 auto;
 }
 
-.col-rider { width: 160px; max-width: 160px; overflow: hidden; text-overflow: ellipsis; }
-.col-club { width: 140px; max-width: 140px; overflow: hidden; text-overflow: ellipsis; }
+/* Fixed column widths - must apply to both th and td */
+.results-table th.col-place,
+.results-table td.col-place { width: 50px !important; min-width: 50px; max-width: 50px; }
+
+.results-table th.col-rider,
+.results-table td.col-rider { width: 160px !important; min-width: 160px; max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.results-table th.col-club,
+.results-table td.col-club { width: 150px !important; min-width: 150px; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.results-table th.col-time,
+.results-table td.col-time { width: 75px !important; min-width: 75px; max-width: 75px; }
+
+.results-table th.col-gap,
+.results-table td.col-gap { width: 70px !important; min-width: 70px; max-width: 70px; }
+
+.results-table th.col-split,
+.results-table td.col-split { width: 85px !important; min-width: 85px; max-width: 85px; }
 
 .col-time {
     width: 75px;
