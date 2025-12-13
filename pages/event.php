@@ -511,15 +511,26 @@ try {
     $eventDate = strtotime($event['date']);
     $isPastEvent = $eventDate < strtotime('today');
 
-    // Check registration status
-    $registrationOpen = !empty($event['registration_deadline']) && strtotime($event['registration_deadline']) >= time();
+    // Check registration status (with time support)
+    $registrationDeadline = null;
+    if (!empty($event['registration_deadline'])) {
+        $deadlineDate = $event['registration_deadline'];
+        $deadlineTime = !empty($event['registration_deadline_time']) ? $event['registration_deadline_time'] : '23:59:59';
+        $registrationDeadline = strtotime($deadlineDate . ' ' . $deadlineTime);
+    }
+    $registrationOpen = $registrationDeadline && $registrationDeadline >= time();
+
+    // Check publish dates for starttider and karta
+    $starttiderPublished = empty($event['starttider_publish_at']) || strtotime($event['starttider_publish_at']) <= time();
+    $kartaPublished = empty($event['karta_publish_at']) || strtotime($event['karta_publish_at']) <= time();
 
     // Determine active tab based on event state
+    // Priority: 1. Results (if exists) 2. Registration (if open) 3. Information
     $hasResults = !empty($results);
-    if ($registrationOpen) {
-        $defaultTab = 'anmalan';
-    } elseif ($hasResults) {
+    if ($hasResults) {
         $defaultTab = 'resultat';
+    } elseif ($registrationOpen) {
+        $defaultTab = 'anmalan';
     } else {
         $defaultTab = 'info';
     }
@@ -675,12 +686,10 @@ if (!$event) {
 <!-- Tab Navigation -->
 <div class="event-tabs-wrapper mb-lg">
     <div class="event-tabs">
-        <?php if ($registrationOpen): ?>
-        <a href="?id=<?= $eventId ?>&tab=anmalan" class="event-tab <?= $activeTab === 'anmalan' ? 'active' : '' ?>">
-            <i data-lucide="edit-3"></i>
-            Anmälan
-        </a>
-        <?php endif; ?>
+        <?php
+        // When results exist, we show fewer tabs (Resultat, Info, Karta only)
+        $showAllTabs = !$hasResults;
+        ?>
 
         <?php if ($hasResults): ?>
         <a href="?id=<?= $eventId ?>&tab=resultat" class="event-tab <?= $activeTab === 'resultat' ? 'active' : '' ?>">
@@ -695,42 +704,49 @@ if (!$event) {
             Information
         </a>
 
-        <?php if (!empty($event['pm_content']) || !empty($event['pm_use_global'])): ?>
+        <?php if ($showAllTabs && $registrationOpen): ?>
+        <a href="?id=<?= $eventId ?>&tab=anmalan" class="event-tab <?= $activeTab === 'anmalan' ? 'active' : '' ?>">
+            <i data-lucide="edit-3"></i>
+            Anmälan
+        </a>
+        <?php endif; ?>
+
+        <?php if ($showAllTabs && (!empty($event['pm_content']) || !empty($event['pm_use_global']))): ?>
         <a href="?id=<?= $eventId ?>&tab=pm" class="event-tab <?= $activeTab === 'pm' ? 'active' : '' ?>">
             <i data-lucide="file-text"></i>
             PM
         </a>
         <?php endif; ?>
 
-        <?php if (!empty($event['jury_communication']) || !empty($event['jury_use_global'])): ?>
+        <?php if ($showAllTabs && (!empty($event['jury_communication']) || !empty($event['jury_use_global']))): ?>
         <a href="?id=<?= $eventId ?>&tab=jury" class="event-tab <?= $activeTab === 'jury' ? 'active' : '' ?>">
             <i data-lucide="scale"></i>
             Jury
         </a>
         <?php endif; ?>
 
-        <?php if (!empty($event['competition_schedule']) || !empty($event['schedule_use_global'])): ?>
+        <?php if ($showAllTabs && (!empty($event['competition_schedule']) || !empty($event['schedule_use_global']))): ?>
         <a href="?id=<?= $eventId ?>&tab=schema" class="event-tab <?= $activeTab === 'schema' ? 'active' : '' ?>">
             <i data-lucide="calendar-clock"></i>
             Schema
         </a>
         <?php endif; ?>
 
-        <?php if (!empty($event['start_times']) || !empty($event['start_times_use_global'])): ?>
+        <?php if ($showAllTabs && $starttiderPublished && (!empty($event['start_times']) || !empty($event['start_times_use_global']))): ?>
         <a href="?id=<?= $eventId ?>&tab=starttider" class="event-tab <?= $activeTab === 'starttider' ? 'active' : '' ?>">
             <i data-lucide="list-ordered"></i>
             Starttider
         </a>
         <?php endif; ?>
 
-        <?php if ($hasInteractiveMap || !empty($event['map_content']) || !empty($event['map_image_url']) || !empty($event['map_use_global'])): ?>
+        <?php if ($kartaPublished && ($hasInteractiveMap || !empty($event['map_content']) || !empty($event['map_image_url']) || !empty($event['map_use_global']))): ?>
         <a href="?id=<?= $eventId ?>&tab=karta" class="event-tab <?= $activeTab === 'karta' ? 'active' : '' ?>" onclick="if(window.innerWidth <= 768) { window.location.href='/map.php?id=<?= $eventId ?>'; return false; }">
             <i data-lucide="map-pin"></i>
             Karta
         </a>
         <?php endif; ?>
 
-        <?php if (!$isPastEvent): ?>
+        <?php if ($showAllTabs && !$isPastEvent && $totalRegistrations > 0): ?>
         <a href="?id=<?= $eventId ?>&tab=anmalda" class="event-tab <?= $activeTab === 'anmalda' ? 'active' : '' ?>">
             <i data-lucide="users"></i>
             Anmälda
@@ -738,7 +754,7 @@ if (!$event) {
         </a>
         <?php endif; ?>
 
-        <?php if ($ticketingEnabled): ?>
+        <?php if ($showAllTabs && $ticketingEnabled): ?>
         <a href="?id=<?= $eventId ?>&tab=biljetter" class="event-tab <?= $activeTab === 'biljetter' ? 'active' : '' ?>">
             <i data-lucide="ticket"></i>
             Biljetter
