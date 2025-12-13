@@ -49,6 +49,23 @@ body{
 @media(max-width:599px) and (orientation:portrait){
   .card{padding:var(--space-md)}
 }
+
+/* EDGE-TO-EDGE MOBILE STANDARD 2025 */
+@media(max-width:767px){
+  .card,
+  .filter-row,
+  .table-responsive,
+  .alert {
+    margin-left:-16px;
+    margin-right:-16px;
+    border-radius:0!important;
+    border-left:none!important;
+    border-right:none!important;
+    width:calc(100% + 32px);
+  }
+  .card-header,.card-body{padding-left:16px;padding-right:16px}
+}
+
 .card--elevated{background:var(--color-bg-elevated);box-shadow:var(--shadow-md)}
 .card--clickable{cursor:pointer;transition:transform var(--transition-fast),box-shadow var(--transition-fast)}
 .card--clickable:hover{transform:translateY(-2px);box-shadow:var(--shadow-lg)}
