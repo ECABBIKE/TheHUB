@@ -100,16 +100,24 @@ if (!$event) {
 function saveEventSponsorAssignments($db, $eventId, $postData) {
     $pdo = $db->getPdo();
 
+    error_log("saveEventSponsorAssignments called for event $eventId");
+    error_log("POST data: sponsor_header=" . ($postData['sponsor_header'] ?? 'empty') . ", sponsor_content=" . json_encode($postData['sponsor_content'] ?? []) . ", sponsor_sidebar=" . ($postData['sponsor_sidebar'] ?? 'empty'));
+
     // First, delete existing sponsor assignments for this event
     $deleteStmt = $pdo->prepare("DELETE FROM event_sponsors WHERE event_id = ?");
     $deleteStmt->execute([$eventId]);
+    error_log("Deleted existing sponsor assignments for event $eventId");
 
     // Insert new assignments
     $insertStmt = $pdo->prepare("INSERT INTO event_sponsors (event_id, sponsor_id, placement, display_order) VALUES (?, ?, ?, ?)");
 
+    $insertedCount = 0;
+
     // Header sponsors (banner at top - single select)
     if (!empty($postData['sponsor_header'])) {
         $insertStmt->execute([$eventId, (int)$postData['sponsor_header'], 'header', 0]);
+        $insertedCount++;
+        error_log("Inserted header sponsor: " . $postData['sponsor_header']);
     }
 
     // Content sponsors (logo row - multiple checkboxes)
@@ -117,13 +125,19 @@ function saveEventSponsorAssignments($db, $eventId, $postData) {
         $order = 0;
         foreach ($postData['sponsor_content'] as $sponsorId) {
             $insertStmt->execute([$eventId, (int)$sponsorId, 'content', $order++]);
+            $insertedCount++;
+            error_log("Inserted content sponsor: $sponsorId");
         }
     }
 
     // Sidebar/Results sponsor (single select)
     if (!empty($postData['sponsor_sidebar'])) {
         $insertStmt->execute([$eventId, (int)$postData['sponsor_sidebar'], 'sidebar', 0]);
+        $insertedCount++;
+        error_log("Inserted sidebar sponsor: " . $postData['sponsor_sidebar']);
     }
+
+    error_log("Total sponsors inserted: $insertedCount for event $eventId");
 }
 
 // Initialize message variables
@@ -349,14 +363,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 error_log("EVENT EDIT ERROR: Name mismatch");
             } else {
                 // Save sponsor assignments
+                $sponsorError = null;
                 try {
                     saveEventSponsorAssignments($db, $id, $_POST);
+                    error_log("EVENT EDIT: Sponsor assignments saved successfully for event $id");
+                    error_log("EVENT EDIT: sponsor_header=" . ($_POST['sponsor_header'] ?? 'none'));
+                    error_log("EVENT EDIT: sponsor_content=" . json_encode($_POST['sponsor_content'] ?? []));
+                    error_log("EVENT EDIT: sponsor_sidebar=" . ($_POST['sponsor_sidebar'] ?? 'none'));
                 } catch (Exception $sponsorEx) {
                     error_log("EVENT EDIT: Sponsor assignments save failed: " . $sponsorEx->getMessage());
+                    $sponsorError = $sponsorEx->getMessage();
                 }
 
-                $_SESSION['message'] = 'Event uppdaterat!';
-                $_SESSION['messageType'] = 'success';
+                if ($sponsorError) {
+                    $_SESSION['message'] = 'Event sparat, men fel vid sponsorsparning: ' . $sponsorError;
+                    $_SESSION['messageType'] = 'warning';
+                } else {
+                    $_SESSION['message'] = 'Event uppdaterat!';
+                    $_SESSION['messageType'] = 'success';
+                }
                 header('Location: /admin/events/edit/' . $id . '?saved=1');
                 exit;
             }
