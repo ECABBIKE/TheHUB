@@ -1887,17 +1887,27 @@ function sortTotalBySplit(headerEl, splitNum) {
 
 /* Series color stripe on result cards - flush with card top edge */
 .class-section {
-    overflow: hidden;
+    overflow: visible;
     position: relative;
+    padding-top: calc(var(--space-lg) + 4px); /* Make room for stripe */
 }
 .class-section::before {
     content: '';
     position: absolute;
     top: 0;
-    left: 0;
-    right: 0;
+    left: -1px;
+    right: -1px;
     height: 4px;
     background: linear-gradient(90deg, var(--series-gradient-start) 0%, var(--series-gradient-end) 100%);
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+}
+/* On mobile edge-to-edge, extend stripe to cover full width */
+@media (max-width: 767px) {
+    .class-section::before {
+        left: 0;
+        right: 0;
+        border-radius: 0;
+    }
 }
 
 .event-header-content {
@@ -2194,8 +2204,8 @@ function sortTotalBySplit(headerEl, splitNum) {
 
 .filter-field--toggle {
     display: flex;
-    align-items: flex-end;
-    padding-bottom: var(--space-sm);
+    align-items: center;
+    padding: var(--space-xs) 0;
 }
 
 .toggle-label {
@@ -2204,6 +2214,9 @@ function sortTotalBySplit(headerEl, splitNum) {
     gap: var(--space-sm);
     cursor: pointer;
     user-select: none;
+    background: var(--color-bg-sunken);
+    padding: var(--space-xs) var(--space-sm);
+    border-radius: var(--radius-full);
 }
 
 .toggle-label input[type="checkbox"] {
@@ -2498,7 +2511,7 @@ td.col-place {
     display: flex;
     align-items: center;
     gap: var(--space-md);
-    padding: var(--space-sm);
+    padding: var(--space-sm) var(--space-md);
     text-decoration: none;
     border-bottom: 1px solid var(--color-border);
 }
@@ -2747,18 +2760,18 @@ td.col-place {
     }
 
     .filter-row {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
+        display: flex;
+        flex-wrap: wrap;
         gap: var(--space-sm);
         padding: var(--space-md);
+        align-items: center;
     }
     .filter-row .filter-field:not(.filter-field--toggle) {
-        grid-column: span 2;
+        flex: 1 1 100%;
     }
 
     .filter-field--toggle {
-        padding-bottom: 0;
-        justify-content: flex-end;
+        flex: 0 0 auto;
     }
 
     .info-grid {
