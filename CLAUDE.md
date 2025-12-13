@@ -140,9 +140,9 @@ color: var(--color-text);
 
 ## MOBILDESIGN - EDGE-TO-EDGE STANDARD
 
-**Alla innehallssektioner ska ga kant-till-kant pa mobil (portrait).**
+**Alla innehallssektioner ska ga kant-till-kant pa mobil.**
 
-Detta ar den globala standarden fran 2025. Pa mobil portrait (max-width: 599px) ska alla kort, tabeller och innehallsblock fylla hela skarmbredden for att maximera datautrymme.
+Detta ar den globala standarden fran 2025. Pa mobil (max-width: 899px) ska alla kort, tabeller och innehallsblock fylla hela skarmbredden for att maximera datautrymme.
 
 ### Hur det fungerar
 
@@ -155,42 +155,44 @@ Reglerna finns i `assets/css/layout.css` och tillampas automatiskt pa:
 ### CSS-tekniken
 
 ```css
-@media(max-width:599px) and (orientation:portrait){
+@media(max-width:899px){
   .card,
   .filter-row,
   .table-responsive,
   .alert {
-    margin-left: calc(var(--space-sm) * -1);
-    margin-right: calc(var(--space-sm) * -1);
+    margin-left: calc(var(--space-md) * -1);
+    margin-right: calc(var(--space-md) * -1);
     border-radius: 0 !important;
     border-left: none !important;
     border-right: none !important;
-    width: calc(100% + var(--space-sm) * 2);
+    width: calc(100% + var(--space-md) * 2);
   }
 }
 ```
 
 ### VIKTIGT - container padding
 
-Pa mobil portrait anvander `.main-content` padding: `var(--space-sm)` (8px).
-Negativa marginaler maste matcha detta: `calc(var(--space-sm) * -1)`.
+Pa mobil anvander `.main-content` padding: `var(--space-md)` (16px).
+Negativa marginaler maste matcha detta: `calc(var(--space-md) * -1)`.
+
+Pa extra smala skarmar (599px portrait) anvands `var(--space-sm)` (8px) istallet.
 
 ### Nar du skapar nya komponenter
 
 Om du skapar nya innehallsblock som ska ga edge-to-edge pa mobil:
 
-1. Lagg till klassen i layout.css under mobil portrait-regeln
+1. Lagg till klassen i layout.css under mobil-regeln (max-width:899px)
 2. ELLER anvand samma CSS-monster manuellt:
 
 ```css
-@media(max-width:599px) and (orientation:portrait){
+@media(max-width:899px){
   .din-nya-komponent {
-    margin-left: calc(var(--space-sm) * -1);
-    margin-right: calc(var(--space-sm) * -1);
+    margin-left: calc(var(--space-md) * -1);
+    margin-right: calc(var(--space-md) * -1);
     border-radius: 0 !important;
     border-left: none !important;
     border-right: none !important;
-    width: calc(100% + var(--space-sm) * 2);
+    width: calc(100% + var(--space-md) * 2);
   }
 }
 ```

@@ -104,6 +104,30 @@
     padding:var(--space-md);
     padding-bottom:calc(var(--space-md) + var(--mobile-nav-height) + env(safe-area-inset-bottom) + 60px);
   }
+
+  /* ============================================================================
+     EDGE-TO-EDGE MOBILE STANDARD - 2025
+     All content sections expand to full viewport width on mobile.
+     This maximizes data space and creates a modern app-like feel.
+     ============================================================================ */
+  .card,
+  .filter-row,
+  .table-responsive,
+  .alert {
+    margin-left: calc(var(--space-md) * -1);
+    margin-right: calc(var(--space-md) * -1);
+    border-radius: 0 !important;
+    border-left: none !important;
+    border-right: none !important;
+    width: calc(100% + var(--space-md) * 2);
+  }
+
+  /* Restore internal padding for card content */
+  .card-header,
+  .card-body {
+    padding-left: var(--space-md);
+    padding-right: var(--space-md);
+  }
 }
 
 @media(max-width:599px) and (orientation:portrait){
