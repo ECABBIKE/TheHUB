@@ -263,6 +263,7 @@ $eventName = htmlspecialchars($event['name']);
             width: 20px;
             height: 20px;
             stroke-width: 2;
+            color: var(--color-icon);
         }
         .nav-item.loading .nav-icon {
             animation: pulse 1s infinite;

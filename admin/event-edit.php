@@ -138,6 +138,12 @@ function saveEventSponsorAssignments($db, $eventId, $postData) {
     }
 
     error_log("Total sponsors inserted: $insertedCount for event $eventId");
+
+    // VERIFY: Check what was actually saved
+    $verifyStmt = $pdo->prepare("SELECT sponsor_id, placement FROM event_sponsors WHERE event_id = ?");
+    $verifyStmt->execute([$eventId]);
+    $savedSponsors = $verifyStmt->fetchAll(PDO::FETCH_ASSOC);
+    error_log("VERIFY: Actually saved sponsors: " . json_encode($savedSponsors));
 }
 
 // Initialize message variables

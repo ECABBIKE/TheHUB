@@ -8,6 +8,7 @@ $pagesWithOwnNav = [
     'database-rider',
     'database-club',
     'results-event',
+    'event',
     'profile-edit',
     'profile-children',
     'profile-registrations',

@@ -168,7 +168,11 @@ try {
         }
     } catch (Exception $e) {
         // Table might not exist yet
+        error_log("EVENT PAGE: event_sponsors load error: " . $e->getMessage());
     }
+
+    // DEBUG: Log all sponsor placements
+    error_log("EVENT PAGE: Sponsor placements - header:" . count($eventSponsors['header']) . ", content:" . count($eventSponsors['content']) . ", sidebar:" . count($eventSponsors['sidebar']));
 
     // Check event format for DH mode
     $eventFormat = $event['event_format'] ?? 'ENDURO';
@@ -678,6 +682,13 @@ if (!empty($headerSponsorsWithLogos)): ?>
 
 <?php
 // Content sponsors (logo row) - show all, with or without logos
+// DEBUG: Log content sponsors count
+error_log("EVENT PAGE DEBUG: Content sponsors count = " . count($eventSponsors['content'] ?? []));
+if (!empty($eventSponsors['content'])) {
+    foreach ($eventSponsors['content'] as $sp) {
+        error_log("EVENT PAGE DEBUG: Content sponsor: " . ($sp['name'] ?? 'N/A') . " (ID: " . ($sp['id'] ?? 'N/A') . ")");
+    }
+}
 if (!empty($eventSponsors['content'])): ?>
 <section class="event-sponsor-logos mb-sm">
     <div class="sponsor-logos-label">Sponsorer</div>
