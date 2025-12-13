@@ -138,7 +138,66 @@ color: var(--color-text);
 
 ---
 
-## 📐 SIDMALLAR
+## MOBILDESIGN - EDGE-TO-EDGE STANDARD
+
+**Alla innehallssektioner ska ga kant-till-kant pa mobil (portrait).**
+
+Detta ar den globala standarden fran 2025. Pa mobil portrait (max-width: 599px) ska alla kort, tabeller och innehallsblock fylla hela skarmbredden for att maximera datautrymme.
+
+### Hur det fungerar
+
+Reglerna finns i `assets/css/layout.css` och tillampas automatiskt pa:
+- `.card` - Alla kort
+- `.filter-row` - Filterrader
+- `.table-responsive` - Tabeller
+- `.alert` - Alerts/meddelanden
+
+### CSS-tekniken
+
+```css
+@media(max-width:599px) and (orientation:portrait){
+  .card,
+  .filter-row,
+  .table-responsive,
+  .alert {
+    margin-left: calc(var(--space-sm) * -1);
+    margin-right: calc(var(--space-sm) * -1);
+    border-radius: 0 !important;
+    border-left: none !important;
+    border-right: none !important;
+    width: calc(100% + var(--space-sm) * 2);
+  }
+}
+```
+
+### VIKTIGT - container padding
+
+Pa mobil portrait anvander `.main-content` padding: `var(--space-sm)` (8px).
+Negativa marginaler maste matcha detta: `calc(var(--space-sm) * -1)`.
+
+### Nar du skapar nya komponenter
+
+Om du skapar nya innehallsblock som ska ga edge-to-edge pa mobil:
+
+1. Lagg till klassen i layout.css under mobil portrait-regeln
+2. ELLER anvand samma CSS-monster manuellt:
+
+```css
+@media(max-width:599px) and (orientation:portrait){
+  .din-nya-komponent {
+    margin-left: calc(var(--space-sm) * -1);
+    margin-right: calc(var(--space-sm) * -1);
+    border-radius: 0 !important;
+    border-left: none !important;
+    border-right: none !important;
+    width: calc(100% + var(--space-sm) * 2);
+  }
+}
+```
+
+---
+
+## SIDMALLAR
 
 ### Admin-sida (KOPIERA EXAKT)
 
