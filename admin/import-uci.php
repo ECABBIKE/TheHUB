@@ -21,6 +21,7 @@ $errors = [];
 $updated_riders = [];
 $created_riders = [];
 $skipped_riders = [];
+$mapped_columns = [];
 
 // Current year for default selection
 $currentYear = (int)date('Y');
@@ -69,6 +70,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['rider_file'])) {
                     $updated_riders = $result['updated'];
                     $created_riders = $result['created'];
                     $skipped_riders = $result['skipped'];
+                    $mapped_columns = $result['mapped_columns'] ?? [];
 
                     // Update import history
                     $importStatus = ($stats['updated'] > 0 || $stats['created'] > 0) ? 'completed' : 'failed';
@@ -151,6 +153,7 @@ function importRiderUpdates($filepath, $db, $importId, $seasonYear, $createMissi
     $created_riders = [];
     $skipped_riders = [];
     $clubCache = [];
+    $mappedColumns = [];
 
     // Ensure UTF-8
     ensureUTF8($filepath);
@@ -212,7 +215,12 @@ function importRiderUpdates($filepath, $db, $importId, $seasonYear, $createMissi
     // Validate required columns
     if (!isset($colMap['firstname']) || !isset($colMap['lastname'])) {
         fclose($handle);
-        throw new Exception('Saknar obligatoriska kolumner: Förnamn och Efternamn');
+        throw new Exception('Saknar obligatoriska kolumner: Förnamn och Efternamn. Hittade kolumner: ' . implode(', ', $header));
+    }
+
+    // Store which columns were mapped for debugging/display
+    foreach ($colMap as $field => $idx) {
+        $mappedColumns[$field] = $header[$idx];
     }
 
     $lineNumber = 1;
@@ -446,7 +454,8 @@ function importRiderUpdates($filepath, $db, $importId, $seasonYear, $createMissi
         'errors' => $errors,
         'updated' => $updated_riders,
         'created' => $created_riders,
-        'skipped' => $skipped_riders
+        'skipped' => $skipped_riders,
+        'mapped_columns' => $mappedColumns
     ];
 }
 
@@ -476,6 +485,17 @@ include __DIR__ . '/components/unified-layout.php';
             <li style="color: var(--color-gs-blue);">Klubbtillhörigheter satta: <?= $stats['clubs_set'] ?></li>
         </ul>
     </div>
+    <?php endif; ?>
+
+    <?php if (!empty($mapped_columns)): ?>
+    <details style="margin-top: var(--space-md);">
+        <summary style="cursor: pointer;"><i data-lucide="table" style="width: 14px; height: 14px;"></i> Matchade kolumner (<?= count($mapped_columns) ?>)</summary>
+        <div style="margin-left: var(--space-lg); margin-top: var(--space-sm); font-size: var(--text-sm); display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--space-xs);">
+            <?php foreach ($mapped_columns as $field => $colName): ?>
+            <div><strong><?= h($field) ?></strong>: <?= h($colName) ?></div>
+            <?php endforeach; ?>
+        </div>
+    </details>
     <?php endif; ?>
 
     <?php if (!empty($updated_riders)): ?>
