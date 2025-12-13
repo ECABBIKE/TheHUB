@@ -2744,6 +2744,41 @@ td.col-place {
     .table-col-hide-mobile {
         display: none;
     }
+
+    /* EDGE-TO-EDGE MOBILE - All cards and content full width */
+    .event-header-banner,
+    .event-header,
+    .event-sponsor-banner,
+    .event-sponsor-logos,
+    .event-tabs-wrapper,
+    .card,
+    .filter-row {
+        margin-left: calc(var(--space-md) * -1);
+        margin-right: calc(var(--space-md) * -1);
+        border-radius: 0 !important;
+        border-left: none !important;
+        border-right: none !important;
+        width: calc(100% + var(--space-md) * 2);
+    }
+
+    /* Blue stripe on result cards (class sections) */
+    .class-section::before {
+        content: '';
+        display: block;
+        height: 4px;
+        background: linear-gradient(90deg, var(--color-accent) 0%, #00A3E0 100%);
+        margin: calc(var(--space-md) * -1);
+        margin-bottom: 0;
+        width: calc(100% + var(--space-md) * 2);
+    }
+
+    /* Tables break out of card padding */
+    .card .table-wrapper,
+    .card .result-list {
+        margin-left: calc(var(--space-md) * -1);
+        margin-right: calc(var(--space-md) * -1);
+        width: calc(100% + var(--space-md) * 2);
+    }
 }
 
 /* Mobile portrait: hide table, show cards, hide splits */
