@@ -1792,11 +1792,15 @@ function sortTotalBySplit(headerEl, splitNum) {
     padding: var(--space-md);
 }
 .sponsor-logos-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    display: flex;
+    flex-wrap: wrap;
     gap: var(--space-md);
     align-items: center;
-    justify-items: center;
+    justify-content: center;
+}
+.sponsor-logos-grid .sponsor-logo-item {
+    flex: 0 1 calc(33.333% - var(--space-md));
+    min-width: 100px;
 }
 .sponsor-logo-item {
     display: flex;
