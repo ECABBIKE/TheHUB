@@ -161,15 +161,19 @@ if (!function_exists('render_event_map')) {
         left: auto;
         right: auto;
         background: var(--color-bg-card, #fff);
-        z-index: 90;
+        z-index: 200;
         flex-shrink: 0;
         border-top: 1px solid var(--color-border);
+        min-height: 40px;
     }
     .emap-elevation.collapsed {
         transform: none;
     }
     .emap-elevation.collapsed .emap-elevation-content {
         display: none;
+    }
+    .emap-main {
+        overflow: hidden;
     }
     .emap-location-btn {
         position: absolute;
@@ -321,55 +325,56 @@ if (!function_exists('render_event_map')) {
 .emap-section-header i { width: 12px; height: 12px; }
 /* Collapsible sections */
 .emap-collapsible {
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-sm);
     margin-bottom: var(--space-sm);
-    overflow: hidden;
 }
 .emap-collapsible-header {
     display: flex;
     align-items: center;
-    gap: var(--space-sm);
-    padding: var(--space-sm) var(--space-md);
-    background: var(--color-bg-sunken, #f8f9fa);
+    gap: var(--space-xs);
+    padding: var(--space-xs) 0;
     cursor: pointer;
-    font-size: 0.8rem;
+    font-size: 0.7rem;
     font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--color-text-secondary);
     user-select: none;
     list-style: none;
+    border-bottom: 1px solid var(--color-border);
+    margin-bottom: var(--space-xs);
 }
 .emap-collapsible-header::-webkit-details-marker { display: none; }
-.emap-collapsible-header:hover { background: var(--color-border); }
-.emap-collapsible-header i { width: 14px; height: 14px; flex-shrink: 0; }
+.emap-collapsible-header:hover { color: var(--color-text); }
+.emap-collapsible-header i { width: 12px; height: 12px; flex-shrink: 0; }
 .emap-collapse-icon { transition: transform 0.2s; }
 .emap-collapsible:not([open]) .emap-collapse-icon { transform: rotate(-90deg); }
 .emap-collapsible-content {
-    max-height: 200px;
+    max-height: 280px;
     overflow-y: auto;
-    padding: var(--space-xs);
 }
-/* POI items */
-.emap-poi-group { margin-bottom: var(--space-sm); }
+/* POI items - simple clickable list */
+.emap-poi-group { margin-bottom: var(--space-xs); }
 .emap-poi-toggle-row {
     display: flex;
     align-items: center;
     gap: var(--space-sm);
-    padding: var(--space-xs) var(--space-sm);
+    padding: var(--space-xs) 0;
     font-size: 0.8rem;
     font-weight: 500;
-    cursor: pointer;
+    color: var(--color-text-secondary);
 }
-.emap-poi-toggle-row input { width: 14px; height: 14px; margin: 0; }
+.emap-poi-toggle-row input { display: none; }
 .emap-poi-toggle-row i { width: 14px; height: 14px; }
 .emap-poi-item {
-    padding: var(--space-xs) var(--space-sm);
-    padding-left: calc(var(--space-sm) + 28px);
-    font-size: 0.75rem;
-    color: var(--color-text);
+    padding: var(--space-2xs) var(--space-xs);
+    padding-left: var(--space-lg);
+    font-size: 0.8rem;
+    color: var(--color-accent);
     cursor: pointer;
     border-radius: var(--radius-sm);
+    text-decoration: none;
 }
-.emap-poi-item:hover { background: var(--color-bg-hover, #f0f0f0); }
+.emap-poi-item:hover { background: var(--color-bg-hover, #f0f0f0); text-decoration: underline; }
 .emap-section-title {
     font-size: 0.75rem;
     font-weight: 600;
@@ -417,20 +422,22 @@ if (!function_exists('render_event_map')) {
     display: flex;
     align-items: center;
     gap: var(--space-sm);
-    padding: var(--space-xs) var(--space-sm);
-    border-radius: var(--radius-sm);
+    padding: var(--space-xs) 0;
     cursor: pointer;
     transition: background 0.2s;
+    text-decoration: none;
+    color: inherit;
 }
-.emap-segment-item:hover { background: var(--color-border); }
-.emap-segment-item.active { background: rgba(97, 206, 112, 0.2); }
-.emap-segment-icon { width: 16px; height: 16px; flex-shrink: 0; color: var(--color-text); }
+.emap-segment-item:hover .emap-segment-name { color: var(--color-accent); text-decoration: underline; }
+.emap-segment-item.active { background: rgba(97, 206, 112, 0.1); padding-left: var(--space-xs); padding-right: var(--space-xs); border-radius: var(--radius-sm); }
+.emap-segment-icon { width: 14px; height: 14px; flex-shrink: 0; color: var(--color-text-secondary); }
 .emap-segment-info { flex: 1; min-width: 0; }
-.emap-segment-name { font-size: 0.85rem; font-weight: 500; }
-.emap-segment-meta { font-size: 0.75rem; color: var(--color-text); }
+.emap-segment-name { font-size: 0.85rem; font-weight: 500; display: flex; align-items: center; gap: 4px; }
+.emap-segment-sponsor { height: 16px; width: auto; max-width: 50px; object-fit: contain; }
+.emap-segment-meta { font-size: 0.7rem; color: var(--color-text-secondary); }
 .emap-segment-dot {
-    width: 10px;
-    height: 10px;
+    width: 8px;
+    height: 8px;
     border-radius: 2px;
     flex-shrink: 0;
 }
@@ -725,12 +732,22 @@ if (!function_exists('render_event_map')) {
                         $segDisplayName = $segSponsorName ? ($segName . ' By ' . $segSponsorName) : $segName;
                     ?>
                     <div class="emap-segment-item" onclick="<?= $mapId ?>_zoomToSegment(<?= $seg['id'] ?? 0 ?>, <?= $segSponsorLogo ? "'" . htmlspecialchars(addslashes($segSponsorLogo)) . "'" : 'null' ?>, <?= $segSponsorUrl ? "'" . htmlspecialchars(addslashes($segSponsorUrl)) . "'" : 'null' ?>)" data-segment-id="<?= $seg['id'] ?? 0 ?>">
-                        <i data-lucide="<?= $segIconName ?>" class="emap-segment-icon"></i>
+                        <span class="emap-segment-dot" style="background: <?= $segColor ?>;"></span>
                         <div class="emap-segment-info">
-                            <div class="emap-segment-name"><?= htmlspecialchars($segDisplayName) ?></div>
+                            <div class="emap-segment-name">
+                                <?= htmlspecialchars($segName) ?>
+                                <?php if ($segSponsorLogo):
+                                    // Handle both media library paths (uploads/media/...) and legacy paths
+                                    $logoPath = strpos($segSponsorLogo, 'uploads/') === 0 ? '/' . $segSponsorLogo : '/uploads/sponsors/' . $segSponsorLogo;
+                                ?>
+                                <span style="color: var(--color-text-secondary); font-weight: 400;">By</span>
+                                <img src="<?= htmlspecialchars($logoPath) ?>" alt="<?= htmlspecialchars($segSponsorName) ?>" class="emap-segment-sponsor">
+                                <?php elseif ($segSponsorName): ?>
+                                <span style="color: var(--color-text-secondary); font-weight: 400; font-size: 0.75rem;">By <?= htmlspecialchars($segSponsorName) ?></span>
+                                <?php endif; ?>
+                            </div>
                             <div class="emap-segment-meta"><?= $segDist ?> km · <?= $segHeight ?> <?= $segHeightLabel ?></div>
                         </div>
-                        <span class="emap-segment-dot" style="background: <?= $segColor ?>;"></span>
                     </div>
                     <?php endforeach; ?>
                 </div>
@@ -1044,7 +1061,14 @@ if (!function_exists('render_event_map')) {
             if (banner) banner.style.display = 'none';
             return;
         }
-        logo.src = logoUrl.startsWith('/') ? logoUrl : '/' + logoUrl;
+        // Handle both media library paths and legacy paths
+        let fullPath = logoUrl;
+        if (logoUrl.startsWith('uploads/')) {
+            fullPath = '/' + logoUrl;
+        } else if (!logoUrl.startsWith('/')) {
+            fullPath = '/uploads/sponsors/' + logoUrl;
+        }
+        logo.src = fullPath;
         if (link && websiteUrl) {
             link.href = websiteUrl;
             link.style.pointerEvents = 'auto';
@@ -1079,7 +1103,14 @@ if (!function_exists('render_event_map')) {
                     const clearBtn = document.getElementById(mapId + '-elevation-clear');
                     if (titleEl) {
                         if (segSponsorLogo) {
-                            titleEl.innerHTML = segName + ' <span class="emap-title-sponsor">By <img src="/uploads/sponsors/' + segSponsorLogo + '" alt="' + (segSponsorName || 'Sponsor') + '"></span>';
+                            // Handle both media library paths and legacy paths
+                            let logoPath = segSponsorLogo;
+                            if (segSponsorLogo.startsWith('uploads/')) {
+                                logoPath = '/' + segSponsorLogo;
+                            } else if (!segSponsorLogo.startsWith('/')) {
+                                logoPath = '/uploads/sponsors/' + segSponsorLogo;
+                            }
+                            titleEl.innerHTML = segName + ' <span class="emap-title-sponsor">By <img src="' + logoPath + '" alt="' + (segSponsorName || 'Sponsor') + '"></span>';
                         } else if (segSponsorName) {
                             titleEl.innerHTML = segName + ' <span class="emap-title-sponsor">By ' + segSponsorName + '</span>';
                         } else {

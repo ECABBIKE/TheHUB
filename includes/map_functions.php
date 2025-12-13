@@ -385,17 +385,26 @@ function getEventTracks($pdo, $eventId) {
         // Fetch segments with optional sponsor info (only if both column and table exist)
         if ($hasSponsorColumn && $hasSponsorsTable && in_array('name', $sponsorColumns)) {
             // Build SELECT dynamically based on available columns
+            // Prefer media library logos (logo_small_id) over legacy logo field
             $sponsorFields = ['sp.name as sponsor_name'];
-            if (in_array('logo', $sponsorColumns)) {
+            if (in_array('logo_small_id', $sponsorColumns)) {
+                // Use media library logo if available
+                $sponsorFields[] = 'COALESCE(m_small.filepath, sp.logo) as sponsor_logo';
+            } elseif (in_array('logo', $sponsorColumns)) {
                 $sponsorFields[] = 'sp.logo as sponsor_logo';
             }
             if (in_array('website', $sponsorColumns)) {
                 $sponsorFields[] = 'sp.website as sponsor_website';
             }
+
+            $hasMediaJoin = in_array('logo_small_id', $sponsorColumns);
+            $mediaJoin = $hasMediaJoin ? 'LEFT JOIN media m_small ON sp.logo_small_id = m_small.id' : '';
+
             $stmt = $pdo->prepare("
                 SELECT s.*, " . implode(', ', $sponsorFields) . "
                 FROM event_track_segments s
                 LEFT JOIN sponsors sp ON s.sponsor_id = sp.id
+                $mediaJoin
                 WHERE s.track_id = ?
                 ORDER BY s.sequence_number ASC
             ");
