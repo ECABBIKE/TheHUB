@@ -155,20 +155,34 @@ function generateSweLicenseNumber($db, $year = null) {
  * Generate a unique SWE-ID for riders without UCI ID (engångslicens)
  * Format: SWE-YYYY-NNNNN (e.g., SWE-2025-00001)
  *
+ * Uses a static counter to track IDs generated within the same request/session,
+ * preventing duplicates when multiple riders are created in a batch import.
+ *
  * @param object $db Database wrapper instance
  * @return string Generated SWE-ID
  */
 function generateSweId($db) {
+  static $sessionCounter = null;
+  static $baseNumber = null;
+
   $year = date('Y');
 
-  // Get highest SWE-ID number for this year
-  $lastSweId = $db->getValue("
-    SELECT MAX(CAST(SUBSTRING(license_number, 10) AS UNSIGNED))
-    FROM riders
-    WHERE license_number LIKE ?
-  ", ["SWE-$year-%"]);
+  // Initialize on first call - get highest from database
+  if ($baseNumber === null) {
+    $lastSweId = $db->getValue("
+      SELECT MAX(CAST(SUBSTRING(license_number, 10) AS UNSIGNED))
+      FROM riders
+      WHERE license_number LIKE ?
+    ", ["SWE-$year-%"]);
 
-  $nextNumber = ($lastSweId ? $lastSweId + 1 : 1);
+    $baseNumber = $lastSweId ? $lastSweId : 0;
+    $sessionCounter = 0;
+  }
+
+  // Increment session counter for each call
+  $sessionCounter++;
+  $nextNumber = $baseNumber + $sessionCounter;
+
   return sprintf("SWE-%d-%05d", $year, $nextNumber);
 }
 
