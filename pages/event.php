@@ -70,7 +70,7 @@ if (!function_exists('getEventContent')) {
 }
 
 try {
-    // Fetch event details with venue info
+    // Fetch event details with venue info and header banner
     $stmt = $db->prepare("
         SELECT
             e.*,
@@ -79,10 +79,12 @@ try {
             s.logo as series_logo,
             v.name as venue_name,
             v.city as venue_city,
-            v.address as venue_address
+            v.address as venue_address,
+            hb.filepath as header_banner_url
         FROM events e
         LEFT JOIN series s ON e.series_id = s.id
         LEFT JOIN venues v ON e.venue_id = v.id
+        LEFT JOIN media hb ON e.header_banner_media_id = hb.id
         WHERE e.id = ?
     ");
     $stmt->execute([$eventId]);
@@ -649,25 +651,34 @@ if (!$event) {
     </div>
 </section>
 
-<?php if (!empty($eventSponsors['header'])): ?>
-<!-- Sponsor Banner -->
+<?php
+// Event Header Banner (uploaded image, not sponsor)
+if (!empty($event['header_banner_url'])): ?>
+<section class="event-header-banner mb-lg">
+    <img src="/<?= h(ltrim($event['header_banner_url'], '/')) ?>" alt="<?= h($event['name']) ?>" class="event-header-banner-img">
+</section>
+<?php endif; ?>
+
+<?php
+// Sponsor Banner (from sponsor with banner logo)
+$headerSponsorsWithLogos = array_filter($eventSponsors['header'] ?? [], function($s) {
+    return get_sponsor_logo_for_placement($s, 'header') !== null;
+});
+if (!empty($headerSponsorsWithLogos)): ?>
 <section class="event-sponsor-banner mb-lg">
-    <?php foreach ($eventSponsors['header'] as $sponsor):
+    <?php foreach ($headerSponsorsWithLogos as $sponsor):
         $bannerLogo = get_sponsor_logo_for_placement($sponsor, 'header');
     ?>
     <a href="<?= h($sponsor['website'] ?? '#') ?>" target="_blank" rel="noopener sponsored" class="sponsor-banner-link">
-        <?php if ($bannerLogo): ?>
         <img src="<?= h($bannerLogo) ?>" alt="<?= h($sponsor['name']) ?>" class="sponsor-banner-logo">
-        <?php else: ?>
-        <span class="sponsor-banner-name"><?= h($sponsor['name']) ?></span>
-        <?php endif; ?>
     </a>
     <?php endforeach; ?>
 </section>
 <?php endif; ?>
 
-<?php if (!empty($eventSponsors['content'])): ?>
-<!-- Sponsor Logos Row -->
+<?php
+// Content sponsors (logo row) - show all, with or without logos
+if (!empty($eventSponsors['content'])): ?>
 <section class="event-sponsor-logos mb-lg">
     <div class="sponsor-logos-label">Sponsorer</div>
     <div class="sponsor-logos-row">
@@ -837,18 +848,15 @@ if (!$event) {
             <h2 class="card-title"><?= h($classData['display_name']) ?></h2>
             <p class="card-subtitle"><?= count($classData['results']) ?> deltagare<?= !$isTimeRanked ? ' (motion)' : '' ?></p>
         </div>
-        <?php if (!empty($eventSponsors['sidebar']) && isset($eventSponsors['sidebar'][0])):
-            $resultSponsor = $eventSponsors['sidebar'][0];
-            $smallLogo = get_sponsor_logo_for_placement($resultSponsor, 'sidebar');
-        ?>
+        <?php
+        // Only show sidebar sponsor if it has a logo
+        $resultSponsor = $eventSponsors['sidebar'][0] ?? null;
+        $smallLogo = $resultSponsor ? get_sponsor_logo_for_placement($resultSponsor, 'sidebar') : null;
+        if ($resultSponsor && $smallLogo): ?>
         <a href="<?= h($resultSponsor['website'] ?? '#') ?>" target="_blank" rel="noopener sponsored" class="class-sponsor" title="Resultat sponsrat av <?= h($resultSponsor['name']) ?>">
             <span class="class-sponsor-label-desktop">Resultaten sponsrade av</span>
             <span class="class-sponsor-label-mobile">Sponsor</span>
-            <?php if ($smallLogo): ?>
             <img src="<?= h($smallLogo) ?>" alt="<?= h($resultSponsor['name']) ?>" class="class-sponsor-logo">
-            <?php else: ?>
-            <span class="class-sponsor-name"><?= h($resultSponsor['name']) ?></span>
-            <?php endif; ?>
         </a>
         <?php endif; ?>
     </div>
@@ -1685,6 +1693,23 @@ function sortTotalBySplit(headerEl, splitNum) {
 </script>
 
 <style>
+/* Event Header Banner (uploaded event image, not sponsor) */
+.event-header-banner {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: var(--color-bg-card);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+}
+.event-header-banner-img {
+    max-width: 100%;
+    height: auto;
+    max-height: 200px;
+    object-fit: contain;
+}
+
 /* Event Sponsor Banner - Full width ad banner
    Recommended image size: 1200x150px (PNG/WebP with transparent background)
 */
@@ -2255,8 +2280,24 @@ td.col-place {
     margin: 0 auto;
 }
 
-.col-rider { width: 160px; max-width: 160px; overflow: hidden; text-overflow: ellipsis; }
-.col-club { width: 140px; max-width: 140px; overflow: hidden; text-overflow: ellipsis; }
+/* Fixed column widths - must apply to both th and td */
+.results-table th.col-place,
+.results-table td.col-place { width: 50px !important; min-width: 50px; max-width: 50px; }
+
+.results-table th.col-rider,
+.results-table td.col-rider { width: 160px !important; min-width: 160px; max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.results-table th.col-club,
+.results-table td.col-club { width: 150px !important; min-width: 150px; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.results-table th.col-time,
+.results-table td.col-time { width: 75px !important; min-width: 75px; max-width: 75px; }
+
+.results-table th.col-gap,
+.results-table td.col-gap { width: 70px !important; min-width: 70px; max-width: 70px; }
+
+.results-table th.col-split,
+.results-table td.col-split { width: 85px !important; min-width: 85px; max-width: 85px; }
 
 .col-time {
     width: 75px;
