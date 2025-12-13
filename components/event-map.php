@@ -156,28 +156,29 @@ if (!function_exists('render_event_map')) {
         min-height: 0;
     }
     .emap-elevation {
-        position: relative;
-        bottom: auto;
-        left: auto;
-        right: auto;
-        background: var(--color-bg-card, #fff);
-        z-index: 200;
+        position: relative !important;
+        bottom: auto !important;
+        left: auto !important;
+        right: auto !important;
+        background: var(--color-bg-card, #fff) !important;
+        z-index: 200 !important;
         flex-shrink: 0;
         border-top: 1px solid var(--color-border);
         min-height: 40px;
+        transform: none !important;
     }
     .emap-elevation.collapsed {
-        transform: none;
+        transform: none !important;
     }
     .emap-elevation.collapsed .emap-elevation-content {
         display: none;
     }
     .emap-main {
-        overflow: hidden;
+        overflow: visible;
     }
     .emap-location-btn {
         position: absolute;
-        bottom: var(--space-md);
+        bottom: 60px;
         right: var(--space-md);
         z-index: 100;
     }
