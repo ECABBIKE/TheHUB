@@ -400,13 +400,17 @@ function importUCIRiders($filepath, $db, $importId = null) {
  ];
 }
 
-$pageTitle = 'UCI Import';
-$pageType = 'admin';
-include __DIR__ . '/../includes/layout-header.php';
+// Page config for unified layout
+$page_title = 'UCI Import';
+$breadcrumbs = [
+    ['label' => 'Import', 'url' => '/admin/import'],
+    ['label' => 'UCI']
+];
+
+// Include unified layout
+include __DIR__ . '/components/unified-layout.php';
 ?>
 
- <main class="main-content">
- <div class="container">
  <!-- Header -->
  <div class="flex items-center justify-between mb-lg">
  <h1 class="text-primary">
@@ -424,16 +428,16 @@ include __DIR__ . '/../includes/layout-header.php';
   <div class="mt-md">
   <?php if (isset($stats['separator_name'])): ?>
   <p class="text-sm mb-sm gs-code-wrapper">
-   🔍 <strong>Detekterad separator:</strong> <code class="gs-code-inline"><?= h($stats['separator_name']) ?></code>
+   <i data-lucide="search" class="icon-sm"></i> <strong>Detekterad separator:</strong> <code class="gs-code-inline"><?= h($stats['separator_name']) ?></code>
   </p>
   <?php endif; ?>
-  <p>📊 <strong>Statistik:</strong></p>
+  <p><i data-lucide="bar-chart" class="icon-sm"></i> <strong>Statistik:</strong></p>
   <ul class="gs-list-ml-1-5">
   <li>Totalt rader: <?= $stats['total'] ?></li>
-  <li>✅ Nya riders: <?= $stats['success'] ?></li>
-  <li>🔄 Uppdaterade: <?= $stats['updated'] ?></li>
-  <li>⏭️ Överhoppade: <?= $stats['skipped'] ?></li>
-  <li>❌ Misslyckade: <?= $stats['failed'] ?></li>
+  <li><i data-lucide="check-circle" class="icon-sm text-success"></i> Nya riders: <?= $stats['success'] ?></li>
+  <li><i data-lucide="refresh-cw" class="icon-sm text-accent"></i> Uppdaterade: <?= $stats['updated'] ?></li>
+  <li><i data-lucide="skip-forward" class="icon-sm text-secondary"></i> Överhoppade: <?= $stats['skipped'] ?></li>
+  <li><i data-lucide="x-circle" class="icon-sm text-error"></i> Misslyckade: <?= $stats['failed'] ?></li>
   </ul>
   </div>
   <?php endif; ?>
@@ -585,6 +589,5 @@ include __DIR__ . '/../includes/layout-header.php';
   </a>
   </div>
  </div>
- </div>
- </div>
-<?php include __DIR__ . '/../includes/layout-footer.php'; ?>
+
+<?php include __DIR__ . '/components/unified-layout-footer.php'; ?>
