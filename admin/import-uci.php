@@ -21,6 +21,7 @@ $errors = [];
 $updated_riders = [];
 $created_riders = [];
 $skipped_riders = [];
+$mapped_columns = [];
 
 // Current year for default selection
 $currentYear = (int)date('Y');
@@ -69,6 +70,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['rider_file'])) {
                     $updated_riders = $result['updated'];
                     $created_riders = $result['created'];
                     $skipped_riders = $result['skipped'];
+                    $mapped_columns = $result['mapped_columns'] ?? [];
 
                     // Update import history
                     $importStatus = ($stats['updated'] > 0 || $stats['created'] > 0) ? 'completed' : 'failed';
@@ -151,6 +153,7 @@ function importRiderUpdates($filepath, $db, $importId, $seasonYear, $createMissi
     $created_riders = [];
     $skipped_riders = [];
     $clubCache = [];
+    $mappedColumns = [];
 
     // Ensure UTF-8
     ensureUTF8($filepath);
@@ -198,13 +201,26 @@ function importRiderUpdates($filepath, $db, $importId, $seasonYear, $createMissi
             $colMap['uci_id'] = $idx;
         } elseif (strpos($col, 'nationalitet') !== false && strpos($col, '3') !== false) {
             $colMap['nationality'] = $idx;
+        } elseif (strpos($col, 'telefon') !== false || strpos($col, 'mobil') !== false || strpos($col, 'phone') !== false) {
+            $colMap['phone'] = $idx;
+        } elseif (strpos($col, 'postnummer') !== false || strpos($col, 'postnr') !== false) {
+            $colMap['postal_code'] = $idx;
+        } elseif (strpos($col, 'stad') !== false || strpos($col, 'ort') !== false || $col === 'city') {
+            $colMap['city'] = $idx;
+        } elseif (strpos($col, 'adress') !== false || $col === 'address') {
+            $colMap['address'] = $idx;
         }
     }
 
     // Validate required columns
     if (!isset($colMap['firstname']) || !isset($colMap['lastname'])) {
         fclose($handle);
-        throw new Exception('Saknar obligatoriska kolumner: Förnamn och Efternamn');
+        throw new Exception('Saknar obligatoriska kolumner: Förnamn och Efternamn. Hittade kolumner: ' . implode(', ', $header));
+    }
+
+    // Store which columns were mapped for debugging/display
+    foreach ($colMap as $field => $idx) {
+        $mappedColumns[$field] = $header[$idx];
     }
 
     $lineNumber = 1;
@@ -256,6 +272,10 @@ function importRiderUpdates($filepath, $db, $importId, $seasonYear, $createMissi
             $email = isset($colMap['email']) ? trim($row[$colMap['email']] ?? '') : '';
             $uciId = isset($colMap['uci_id']) ? trim($row[$colMap['uci_id']] ?? '') : '';
             $nationality = isset($colMap['nationality']) ? trim($row[$colMap['nationality']] ?? 'SWE') : 'SWE';
+            $phone = isset($colMap['phone']) ? trim($row[$colMap['phone']] ?? '') : '';
+            $postalCode = isset($colMap['postal_code']) ? trim($row[$colMap['postal_code']] ?? '') : '';
+            $city = isset($colMap['city']) ? trim($row[$colMap['city']] ?? '') : '';
+            $address = isset($colMap['address']) ? trim($row[$colMap['address']] ?? '') : '';
 
             // Find existing rider by name (and optionally birth year)
             $existing = null;
@@ -263,7 +283,7 @@ function importRiderUpdates($filepath, $db, $importId, $seasonYear, $createMissi
             // First try exact name + birth year match
             if ($birthYear) {
                 $existing = $db->getRow(
-                    "SELECT id, license_number, email, birth_year, club_id, nationality FROM riders
+                    "SELECT id, license_number, email, birth_year, club_id, nationality, phone, city FROM riders
                      WHERE LOWER(firstname) = LOWER(?) AND LOWER(lastname) = LOWER(?) AND birth_year = ?",
                     [$firstname, $lastname, $birthYear]
                 );
@@ -274,7 +294,7 @@ function importRiderUpdates($filepath, $db, $importId, $seasonYear, $createMissi
                 $uciIdClean = preg_replace('/[^0-9]/', '', $uciId);
                 if (strlen($uciIdClean) >= 8) {
                     $existing = $db->getRow(
-                        "SELECT id, license_number, email, birth_year, club_id, nationality FROM riders
+                        "SELECT id, license_number, email, birth_year, club_id, nationality, phone, city FROM riders
                          WHERE REPLACE(REPLACE(license_number, ' ', ''), '-', '') = ?",
                         [$uciIdClean]
                     );
@@ -284,7 +304,7 @@ function importRiderUpdates($filepath, $db, $importId, $seasonYear, $createMissi
             // Try by name only (less strict)
             if (!$existing) {
                 $existing = $db->getRow(
-                    "SELECT id, license_number, email, birth_year, club_id, nationality FROM riders
+                    "SELECT id, license_number, email, birth_year, club_id, nationality, phone, city FROM riders
                      WHERE LOWER(firstname) = LOWER(?) AND LOWER(lastname) = LOWER(?)",
                     [$firstname, $lastname]
                 );
@@ -350,6 +370,18 @@ function importRiderUpdates($filepath, $db, $importId, $seasonYear, $createMissi
                     $changes[] = "Nationalitet: {$nationality}";
                 }
 
+                // Update phone if provided and rider doesn't have one
+                if (!empty($phone) && empty($existing['phone'])) {
+                    $updateData['phone'] = $phone;
+                    $changes[] = "Telefon: {$phone}";
+                }
+
+                // Update city if provided and rider doesn't have one
+                if (!empty($city) && empty($existing['city'])) {
+                    $updateData['city'] = $city;
+                    $changes[] = "Stad: {$city}";
+                }
+
                 // Save updates
                 if (!empty($updateData)) {
                     $oldData = $db->getRow("SELECT * FROM riders WHERE id = ?", [$existing['id']]);
@@ -383,6 +415,8 @@ function importRiderUpdates($filepath, $db, $importId, $seasonYear, $createMissi
                     'license_number' => !empty($uciId) ? $uciId : generateSweId($db),
                     'nationality' => $nationality ?: 'SWE',
                     'club_id' => $clubId,
+                    'phone' => !empty($phone) ? $phone : null,
+                    'city' => !empty($city) ? $city : null,
                     'active' => 1
                 ];
 
@@ -420,7 +454,8 @@ function importRiderUpdates($filepath, $db, $importId, $seasonYear, $createMissi
         'errors' => $errors,
         'updated' => $updated_riders,
         'created' => $created_riders,
-        'skipped' => $skipped_riders
+        'skipped' => $skipped_riders,
+        'mapped_columns' => $mappedColumns
     ];
 }
 
@@ -450,6 +485,17 @@ include __DIR__ . '/components/unified-layout.php';
             <li style="color: var(--color-gs-blue);">Klubbtillhörigheter satta: <?= $stats['clubs_set'] ?></li>
         </ul>
     </div>
+    <?php endif; ?>
+
+    <?php if (!empty($mapped_columns)): ?>
+    <details style="margin-top: var(--space-md);">
+        <summary style="cursor: pointer;"><i data-lucide="table" style="width: 14px; height: 14px;"></i> Matchade kolumner (<?= count($mapped_columns) ?>)</summary>
+        <div style="margin-left: var(--space-lg); margin-top: var(--space-sm); font-size: var(--text-sm); display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--space-xs);">
+            <?php foreach ($mapped_columns as $field => $colName): ?>
+            <div><strong><?= h($field) ?></strong>: <?= h($colName) ?></div>
+            <?php endforeach; ?>
+        </div>
+    </details>
     <?php endif; ?>
 
     <?php if (!empty($updated_riders)): ?>
@@ -543,6 +589,9 @@ include __DIR__ . '/components/unified-layout.php';
                     <tr><td><code>Födelsedag</code></td><td>Datum (DD-MM-YYYY)</td><td>Nej</td></tr>
                     <tr><td><code>Nationalitet (3-letter)</code></td><td>Landskod (SWE, NOR, etc.)</td><td>Nej</td></tr>
                     <tr><td><code>Deltagarens email</code></td><td>E-postadress</td><td>Nej</td></tr>
+                    <tr><td><code>Telefon</code></td><td>Telefonnummer</td><td>Nej</td></tr>
+                    <tr><td><code>Stad</code></td><td>Stad/Ort</td><td>Nej</td></tr>
+                    <tr><td><code>Postnummer</code></td><td>Postnummer</td><td>Nej</td></tr>
                     <tr><td><code>ID Medlemsnummer</code></td><td>UCI-ID (11 siffror)</td><td>Nej</td></tr>
                 </tbody>
             </table>
@@ -562,6 +611,8 @@ include __DIR__ . '/components/unified-layout.php';
                 - <strong>E-post</strong> → uppdateras om rider saknar e-post<br>
                 - <strong>Födelseår</strong> → uppdateras om rider saknar födelseår<br>
                 - <strong>Nationalitet</strong> → uppdateras om den skiljer sig från befintlig<br>
+                - <strong>Telefon</strong> → uppdateras om rider saknar telefon<br>
+                - <strong>Stad</strong> → uppdateras om rider saknar stad<br>
                 - <strong>Klubbtillhörighet</strong> → sätts för valt säsongsår (kan inte ändras om rider har resultat det året)
             </p>
         </div>
@@ -612,11 +663,11 @@ include __DIR__ . '/components/unified-layout.php';
 
             <div class="admin-form-group" style="margin-top: var(--space-md);">
                 <label style="display: flex; align-items: center; gap: var(--space-sm); cursor: pointer;">
-                    <input type="checkbox" name="create_missing">
+                    <input type="checkbox" name="create_missing" checked>
                     <span>Skapa nya riders om de inte hittas</span>
                 </label>
                 <small style="color: var(--color-text-secondary); margin-left: 24px;">
-                    Om avmarkerat: bara befintliga riders uppdateras.
+                    Riders med UCI-ID och fullständig data skapas automatiskt. Avmarkera för att bara uppdatera befintliga.
                 </small>
             </div>
 

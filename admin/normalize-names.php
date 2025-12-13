@@ -151,16 +151,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 // PERFORMANCE FIX: Only fetch riders that actually need normalization
 // Using SQL pattern matching instead of loading all riders into PHP memory
 // This query finds names that are ALL CAPS or all lowercase
+// NOTE: Must use BINARY for case-sensitive comparison since MySQL default collation is case-insensitive
 $problematicRiders = $db->getAll("
     SELECT id, firstname, lastname, club_id
     FROM riders
     WHERE (
-        -- All uppercase (at least 2 chars, all alpha chars are uppercase)
-        (LENGTH(firstname) >= 2 AND firstname = UPPER(firstname) AND firstname REGEXP '[A-ZÄÖÅ]')
-        OR (LENGTH(lastname) >= 2 AND lastname = UPPER(lastname) AND lastname REGEXP '[A-ZÄÖÅ]')
-        -- All lowercase
-        OR (LENGTH(firstname) >= 2 AND firstname = LOWER(firstname) AND firstname REGEXP '[a-zäöå]')
-        OR (LENGTH(lastname) >= 2 AND lastname = LOWER(lastname) AND lastname REGEXP '[a-zäöå]')
+        -- All uppercase (case-sensitive comparison with BINARY)
+        (LENGTH(firstname) >= 2 AND BINARY firstname = BINARY UPPER(firstname) AND firstname REGEXP BINARY '[A-ZÄÖÅÜ]')
+        OR (LENGTH(lastname) >= 2 AND BINARY lastname = BINARY UPPER(lastname) AND lastname REGEXP BINARY '[A-ZÄÖÅÜ]')
+        -- All lowercase (case-sensitive comparison with BINARY)
+        OR (LENGTH(firstname) >= 2 AND BINARY firstname = BINARY LOWER(firstname) AND firstname REGEXP BINARY '[a-zäöåü]')
+        OR (LENGTH(lastname) >= 2 AND BINARY lastname = BINARY LOWER(lastname) AND lastname REGEXP BINARY '[a-zäöåü]')
     )
     ORDER BY lastname, firstname
     LIMIT 500
