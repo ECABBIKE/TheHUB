@@ -1792,15 +1792,11 @@ function sortTotalBySplit(headerEl, splitNum) {
     padding: var(--space-md);
 }
 .sponsor-logos-grid {
-    display: flex;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
     gap: var(--space-md);
     align-items: center;
-    justify-content: center;
-}
-.sponsor-logos-grid .sponsor-logo-item {
-    flex: 0 1 calc(33.333% - var(--space-md));
-    min-width: 100px;
+    justify-items: center;
 }
 .sponsor-logo-item {
     display: flex;
@@ -2053,9 +2049,7 @@ function sortTotalBySplit(headerEl, splitNum) {
 
 .event-stat {
     text-align: center;
-    padding: var(--space-sm) var(--space-md);
-    background: var(--color-bg-sunken);
-    border-radius: var(--radius-md);
+    padding: var(--space-xs) var(--space-sm);
 }
 
 .event-stat-value {
@@ -2764,6 +2758,32 @@ td.col-place {
 
     .event-title {
         font-size: var(--text-lg);
+    }
+
+    /* Minimal side padding on mobile for all sections */
+    .event-sponsor-banner,
+    .event-sponsor-logos,
+    .event-tabs-wrapper,
+    .class-card,
+    .info-card,
+    .filter-row {
+        margin-left: 0;
+        margin-right: 0;
+        border-radius: 0;
+        border-left: none;
+        border-right: none;
+    }
+
+    .event-sponsor-banner + .event-sponsor-logos {
+        border-radius: 0;
+    }
+
+    .event-sponsor-logos {
+        padding: var(--space-sm);
+    }
+
+    .sponsor-logos-grid {
+        gap: var(--space-sm);
     }
 
     /* Compact event header on mobile */
