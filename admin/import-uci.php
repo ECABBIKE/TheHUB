@@ -172,9 +172,9 @@ function importRiderUpdates($filepath, $db, $importId, $seasonYear, $createMissi
         throw new Exception('Kunde inte läsa filens header');
     }
 
-    // Normalize header names
+    // Normalize header names (use mb_strtolower for proper UTF-8 handling)
     $header = array_map(function($col) {
-        $col = trim(strtolower($col));
+        $col = mb_strtolower(trim($col), 'UTF-8');
         $col = preg_replace('/^\xEF\xBB\xBF/', '', $col); // Remove BOM
         return $col;
     }, $header);
