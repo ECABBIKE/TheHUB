@@ -57,6 +57,7 @@ try {
     $sql = "SELECT
         e.id, e.name, e.date, e.location,
         s.id as series_id, s.name as series_name,
+        s.gradient_start, s.gradient_end,
         COUNT(DISTINCT r.id) as result_count,
         COUNT(DISTINCT r.cyclist_id) as rider_count
     FROM events e
@@ -244,7 +245,12 @@ try {
     </div>
     <?php endif; ?>
     <a href="/event/<?= $event['id'] ?>" class="event-row">
-      <div class="event-date-col">
+      <?php
+        $gradientStart = $event['gradient_start'] ?? '#004A98';
+        $gradientEnd = $event['gradient_end'] ?? '#002a5c';
+        $dateStyle = "background: linear-gradient(135deg, {$gradientStart}, {$gradientEnd});";
+      ?>
+      <div class="event-date-col" style="<?= $dateStyle ?>">
         <?php if ($event['date']): ?>
           <span class="event-day"><?= date('j', strtotime($event['date'])) ?></span>
           <span class="event-month"><?= date('M', strtotime($event['date'])) ?></span>
