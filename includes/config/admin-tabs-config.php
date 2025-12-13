@@ -36,13 +36,6 @@ $ADMIN_TABS = [
                 'pages' => ['results.php', 'edit-results.php', 'clear-event-results.php']
             ],
             [
-                'id' => 'venues',
-                'label' => 'Venues',
-                'icon' => 'mountain',
-                'url' => '/admin/venues.php',
-                'pages' => ['venues.php']
-            ],
-            [
                 // EKONOMI - Samlar allt betalningsrelaterat på ett ställe
                 'id' => 'economy',
                 'label' => 'Ekonomi',
@@ -126,6 +119,13 @@ $ADMIN_TABS = [
                 'icon' => 'building-2',
                 'url' => '/admin/clubs.php',
                 'pages' => ['clubs.php', 'club-edit.php']
+            ],
+            [
+                'id' => 'venues',
+                'label' => 'Anläggningar',
+                'icon' => 'mountain',
+                'url' => '/admin/venues.php',
+                'pages' => ['venues.php', 'venue-edit.php']
             ]
         ]
     ],
