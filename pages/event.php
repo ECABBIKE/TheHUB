@@ -1112,13 +1112,22 @@ if (!$event) {
 <?php endif; ?>
 
 <?php elseif ($activeTab === 'info'): ?>
-<!-- INFORMATION TAB - Facilities only -->
+<!-- INFORMATION TAB - Facilities & Logistics -->
 <?php
-// Get facility content
+// Get all facility content
+$hydrationInfo = getEventContent($event, 'hydration_stations', 'hydration_use_global', $globalTextMap);
+$toiletsInfo = getEventContent($event, 'toilets_showers', 'toilets_use_global', $globalTextMap);
+$bikeWashInfo = getEventContent($event, 'bike_wash', 'bike_wash_use_global', $globalTextMap);
 $foodCafe = getEventContent($event, 'food_cafe', 'food_use_global', $globalTextMap);
+$shopsInfo = getEventContent($event, 'shops_info', 'shops_use_global', $globalTextMap);
+$exhibitorsInfo = getEventContent($event, 'exhibitors', 'exhibitors_use_global', $globalTextMap);
 $parkingInfo = $event['parking_detailed'] ?? '';
 $hotelInfo = $event['hotel_accommodation'] ?? '';
-$hasFacilities = $foodCafe || $parkingInfo || $hotelInfo;
+$localInfo = getEventContent($event, 'local_info', 'local_use_global', $globalTextMap);
+$medicalInfo = getEventContent($event, 'medical_info', 'medical_use_global', $globalTextMap);
+$mediaInfo = getEventContent($event, 'media_production', 'media_use_global', $globalTextMap);
+$contactsInfo = getEventContent($event, 'contacts_info', 'contacts_use_global', $globalTextMap);
+$hasFacilities = $hydrationInfo || $toiletsInfo || $bikeWashInfo || $foodCafe || $shopsInfo || $exhibitorsInfo || $parkingInfo || $hotelInfo || $localInfo || $medicalInfo || $mediaInfo || $contactsInfo;
 ?>
 <section class="card">
     <div class="card-header">
@@ -1130,10 +1139,45 @@ $hasFacilities = $foodCafe || $parkingInfo || $hotelInfo;
     <div class="card-body">
         <?php if ($hasFacilities): ?>
         <div class="info-grid">
+            <?php if (!empty($hydrationInfo)): ?>
+            <div class="info-block">
+                <h3><i data-lucide="droplets"></i> Vätskekontroller</h3>
+                <p><?= nl2br(h($hydrationInfo)) ?></p>
+            </div>
+            <?php endif; ?>
+
+            <?php if (!empty($toiletsInfo)): ?>
+            <div class="info-block">
+                <h3><i data-lucide="bath"></i> Toaletter/Dusch</h3>
+                <p><?= nl2br(h($toiletsInfo)) ?></p>
+            </div>
+            <?php endif; ?>
+
+            <?php if (!empty($bikeWashInfo)): ?>
+            <div class="info-block">
+                <h3><i data-lucide="sparkles"></i> Cykeltvätt</h3>
+                <p><?= nl2br(h($bikeWashInfo)) ?></p>
+            </div>
+            <?php endif; ?>
+
             <?php if (!empty($foodCafe)): ?>
             <div class="info-block">
                 <h3><i data-lucide="utensils"></i> Mat/Café</h3>
                 <p><?= nl2br(h($foodCafe)) ?></p>
+            </div>
+            <?php endif; ?>
+
+            <?php if (!empty($shopsInfo)): ?>
+            <div class="info-block">
+                <h3><i data-lucide="shopping-bag"></i> Affärer</h3>
+                <p><?= nl2br(h($shopsInfo)) ?></p>
+            </div>
+            <?php endif; ?>
+
+            <?php if (!empty($exhibitorsInfo)): ?>
+            <div class="info-block">
+                <h3><i data-lucide="store"></i> Utställare</h3>
+                <p><?= nl2br(h($exhibitorsInfo)) ?></p>
             </div>
             <?php endif; ?>
 
@@ -1148,6 +1192,34 @@ $hasFacilities = $foodCafe || $parkingInfo || $hotelInfo;
             <div class="info-block">
                 <h3><i data-lucide="bed"></i> Hotell/Boende</h3>
                 <p><?= nl2br(h($hotelInfo)) ?></p>
+            </div>
+            <?php endif; ?>
+
+            <?php if (!empty($localInfo)): ?>
+            <div class="info-block">
+                <h3><i data-lucide="map-pin"></i> Lokal information</h3>
+                <p><?= nl2br(h($localInfo)) ?></p>
+            </div>
+            <?php endif; ?>
+
+            <?php if (!empty($medicalInfo)): ?>
+            <div class="info-block">
+                <h3><i data-lucide="heart-pulse"></i> Sjukvård</h3>
+                <p><?= nl2br(h($medicalInfo)) ?></p>
+            </div>
+            <?php endif; ?>
+
+            <?php if (!empty($mediaInfo)): ?>
+            <div class="info-block">
+                <h3><i data-lucide="camera"></i> Media</h3>
+                <p><?= nl2br(h($mediaInfo)) ?></p>
+            </div>
+            <?php endif; ?>
+
+            <?php if (!empty($contactsInfo)): ?>
+            <div class="info-block">
+                <h3><i data-lucide="phone"></i> Kontakter</h3>
+                <p><?= nl2br(h($contactsInfo)) ?></p>
             </div>
             <?php endif; ?>
         </div>
@@ -1169,7 +1241,9 @@ $liftPM = getEventContent($event, 'lift_info', 'lift_use_global', $globalTextMap
 $rulesPM = getEventContent($event, 'competition_rules', 'rules_use_global', $globalTextMap);
 $insurancePM = getEventContent($event, 'insurance_info', 'insurance_use_global', $globalTextMap);
 $equipmentPM = getEventContent($event, 'equipment_info', 'equipment_use_global', $globalTextMap);
-$hasPMContent = $pmContent || $driverMeetingPM || $trainingPM || $timingPM || $liftPM || $rulesPM || $insurancePM || $equipmentPM;
+$scfPM = getEventContent($event, 'scf_representatives', 'scf_use_global', $globalTextMap);
+$medicalPM = getEventContent($event, 'medical_info', 'medical_use_global', $globalTextMap);
+$hasPMContent = $pmContent || $driverMeetingPM || $trainingPM || $timingPM || $liftPM || $rulesPM || $insurancePM || $equipmentPM || $scfPM || $medicalPM;
 ?>
 <section class="card">
     <div class="card-header">
@@ -1180,7 +1254,7 @@ $hasPMContent = $pmContent || $driverMeetingPM || $trainingPM || $timingPM || $l
         <div class="prose mb-lg"><?= nl2br(h($pmContent)) ?></div>
         <?php endif; ?>
 
-        <?php if ($driverMeetingPM || $trainingPM || $timingPM || $liftPM || $rulesPM || $insurancePM || $equipmentPM): ?>
+        <?php if ($driverMeetingPM || $trainingPM || $timingPM || $liftPM || $rulesPM || $insurancePM || $equipmentPM || $scfPM || $medicalPM): ?>
         <div class="info-grid">
             <?php if ($driverMeetingPM): ?>
             <div class="info-block">
@@ -1228,6 +1302,20 @@ $hasPMContent = $pmContent || $driverMeetingPM || $trainingPM || $timingPM || $l
             <div class="info-block">
                 <h3><i data-lucide="hard-hat"></i> Utrustning</h3>
                 <p><?= nl2br(h($equipmentPM)) ?></p>
+            </div>
+            <?php endif; ?>
+
+            <?php if ($medicalPM): ?>
+            <div class="info-block">
+                <h3><i data-lucide="heart-pulse"></i> Sjukvård</h3>
+                <p><?= nl2br(h($medicalPM)) ?></p>
+            </div>
+            <?php endif; ?>
+
+            <?php if ($scfPM): ?>
+            <div class="info-block">
+                <h3><i data-lucide="badge-check"></i> SCF Representanter</h3>
+                <p><?= nl2br(h($scfPM)) ?></p>
             </div>
             <?php endif; ?>
         </div>
