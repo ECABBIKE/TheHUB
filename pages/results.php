@@ -228,7 +228,21 @@ try {
 
 <section class="card">
   <div class="events-list">
-    <?php foreach ($events as $event): ?>
+    <?php
+    $currentYear = null;
+    foreach ($events as $event):
+      $eventYear = $event['date'] ? date('Y', strtotime($event['date'])) : null;
+
+      // Show year divider when year changes
+      if ($eventYear && $eventYear !== $currentYear):
+        $currentYear = $eventYear;
+    ?>
+    <div class="year-divider">
+      <span class="year-divider-line"></span>
+      <span class="year-divider-label"><?= $eventYear ?></span>
+      <span class="year-divider-line"></span>
+    </div>
+    <?php endif; ?>
     <a href="/event/<?= $event['id'] ?>" class="event-row">
       <div class="event-date-col">
         <?php if ($event['date']): ?>
@@ -336,6 +350,32 @@ try {
   flex-direction: column;
   gap: var(--space-xs);
 }
+
+/* Year divider */
+.year-divider {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-md) 0;
+  margin: var(--space-sm) 0;
+}
+.year-divider:first-child {
+  margin-top: 0;
+  padding-top: 0;
+}
+.year-divider-line {
+  flex: 1;
+  height: 1px;
+  background: var(--color-border);
+}
+.year-divider-label {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
 .event-row {
   display: flex;
   align-items: center;
