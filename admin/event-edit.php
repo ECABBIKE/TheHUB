@@ -43,6 +43,30 @@ try {
     error_log("EVENT EDIT: Error checking payment_recipient_id column: " . $e->getMessage());
 }
 
+// Check/create header_banner_media_id column
+$headerBannerColumnExists = false;
+try {
+    $columns = $db->getAll("SHOW COLUMNS FROM events LIKE 'header_banner_media_id'");
+    if (empty($columns)) {
+        $db->query("ALTER TABLE events ADD COLUMN header_banner_media_id INT NULL");
+        error_log("EVENT EDIT: Added header_banner_media_id column to events table");
+    }
+    $headerBannerColumnExists = true;
+} catch (Exception $e) {
+    error_log("EVENT EDIT: Error checking/adding header_banner_media_id column: " . $e->getMessage());
+}
+
+// Get media files from events folder for banner selection
+$eventMediaFiles = [];
+try {
+    global $pdo;
+    $stmt = $pdo->prepare("SELECT id, filename, original_filename, filepath FROM media WHERE folder = 'events' ORDER BY uploaded_at DESC");
+    $stmt->execute();
+    $eventMediaFiles = $stmt->fetchAll(PDO::FETCH_ASSOC);
+} catch (Exception $e) {
+    error_log("EVENT EDIT: Error fetching event media: " . $e->getMessage());
+}
+
 // Get event ID from URL (supports both /admin/events/edit/123 and ?id=123)
 $id = 0;
 if (isset($_GET['id'])) {
@@ -82,11 +106,6 @@ function saveEventSponsorAssignments($db, $eventId, $postData) {
 
     // Insert new assignments
     $insertStmt = $pdo->prepare("INSERT INTO event_sponsors (event_id, sponsor_id, placement, display_order) VALUES (?, ?, ?, ?)");
-
-    // Header sponsor (single select)
-    if (!empty($postData['sponsor_header'])) {
-        $insertStmt->execute([$eventId, (int)$postData['sponsor_header'], 'header', 0]);
-    }
 
     // Content sponsors (multiple checkboxes)
     if (!empty($postData['sponsor_content']) && is_array($postData['sponsor_content'])) {
@@ -257,6 +276,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $db->query("UPDATE events SET is_championship = ? WHERE id = ?", [$isChampionship, $id]);
             } catch (Exception $smEx) {
                 error_log("EVENT EDIT: SM column update failed: " . $smEx->getMessage());
+            }
+
+            // Update header_banner_media_id separately
+            if ($headerBannerColumnExists) {
+                try {
+                    $headerBannerMediaId = !empty($_POST['header_banner_media_id']) ? intval($_POST['header_banner_media_id']) : null;
+                    $db->query("UPDATE events SET header_banner_media_id = ? WHERE id = ?", [$headerBannerMediaId, $id]);
+                } catch (Exception $hbEx) {
+                    error_log("EVENT EDIT: header_banner_media_id update failed: " . $hbEx->getMessage());
+                }
             }
 
             // Update payment_recipient_id separately (if column exists)
@@ -826,17 +855,20 @@ include __DIR__ . '/components/unified-layout.php';
             </p>
 
             <div style="display: grid; gap: var(--space-lg);">
-                <!-- Header Banner Sponsor -->
+                <!-- Header Banner from Media Library -->
                 <div class="admin-form-group">
                     <label class="admin-form-label">Header-banner (stor banner högst upp)</label>
-                    <select name="sponsor_header" class="admin-form-select">
+                    <select name="header_banner_media_id" class="admin-form-select">
                         <option value="">-- Ingen (använd seriens) --</option>
-                        <?php foreach ($allSponsors as $sp): ?>
-                        <option value="<?= $sp['id'] ?>" <?= in_array((int)$sp['id'], $eventSponsors['header']) ? 'selected' : '' ?>>
-                            <?= htmlspecialchars($sp['name']) ?> (<?= ucfirst($sp['tier']) ?>)
+                        <?php foreach ($eventMediaFiles as $media): ?>
+                        <option value="<?= $media['id'] ?>" <?= ($event['header_banner_media_id'] ?? '') == $media['id'] ? 'selected' : '' ?>>
+                            <?= htmlspecialchars($media['original_filename']) ?>
                         </option>
                         <?php endforeach; ?>
                     </select>
+                    <small style="color: var(--color-text-secondary); margin-top: var(--space-xs); display: block;">
+                        Välj bild från <a href="/admin/media?folder=events" target="_blank">Mediabiblioteket (Event-mappen)</a>
+                    </small>
                 </div>
 
                 <!-- Content Logo Row -->
