@@ -138,7 +138,8 @@ function importRidersFromCSV($filepath, $db) {
 
  // Normalize header - accept multiple variants of column names
  $header = array_map(function($col) {
- $col = strtolower(trim($col));
+ // Use mb_strtolower for proper UTF-8 handling (Swedish characters Ö, Å, Ä)
+ $col = mb_strtolower(trim($col), 'UTF-8');
  $col = str_replace([' ', '-', '_'], '', $col); // Remove spaces, hyphens, underscores
 
  // Map various column name variants to standard names
@@ -164,9 +165,16 @@ function importRidersFromCSV($filepath, $db) {
   'född' => 'birthyear',
   'fodd' => 'birthyear',
   'year' => 'birthyear',
+  'år' => 'birthyear',
+  'ar' => 'birthyear',
   'ålder' => 'birthyear',
   'alder' => 'birthyear',
   'age' => 'birthyear',
+  'födelsedatum' => 'birthdate',
+  'fodelsedatum' => 'birthdate',
+  'birthdate' => 'birthdate',
+  'dateofbirth' => 'birthdate',
+  'dob' => 'birthdate',
   // Note: personnummer column is parsed to extract birth_year only
   // The personnummer itself is NOT stored in the database
   'personnummer' => 'personnummer',
@@ -282,6 +290,21 @@ function importRidersFromCSV($filepath, $db) {
   // Fall back to birthyear column if no personnummer or parsing failed
   if (!$birthYear && !empty($data['birthyear'])) {
   $birthYear = (int)$data['birthyear'];
+  }
+  // Fall back to birthdate column - extract year from date (YYYY-MM-DD, DD/MM/YYYY, etc.)
+  if (!$birthYear && !empty($data['birthdate'])) {
+  $dateStr = trim($data['birthdate']);
+  // Try to parse various date formats
+  if (preg_match('/^(\d{4})[-\/]/', $dateStr, $m)) {
+   // YYYY-MM-DD or YYYY/MM/DD
+   $birthYear = (int)$m[1];
+  } elseif (preg_match('/[-\/](\d{4})$/', $dateStr, $m)) {
+   // DD-MM-YYYY or DD/MM/YYYY
+   $birthYear = (int)$m[1];
+  } elseif (preg_match('/^(\d{4})$/', $dateStr, $m)) {
+   // Just year
+   $birthYear = (int)$m[1];
+  }
   }
 
   // Prepare rider data
@@ -478,64 +501,68 @@ include __DIR__ . '/components/unified-layout.php';
 
   <!-- Statistics -->
   <?php if ($stats): ?>
-  <div class="card mb-lg">
-   <div class="card-header">
-   <h2 class="text-primary">
+  <div class="admin-card mb-lg">
+   <div class="admin-card-header">
+   <h2>
     <i data-lucide="bar-chart"></i>
     Import-statistik
    </h2>
    </div>
-   <div class="card-body">
-   <div class="grid grid-cols-1 gs-sm-grid-cols-2 md-grid-cols-3 gs-lg-grid-cols-5 gap-md">
-    <div class="stat-card">
-    <i data-lucide="file-text" class="icon-lg text-primary mb-sm"></i>
-    <div class="stat-number"><?= number_format($stats['total']) ?></div>
-    <div class="stat-label">Totalt rader</div>
+   <div class="admin-card-body">
+   <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: var(--space-md);">
+    <div class="admin-stat-card">
+    <div class="admin-stat-icon" style="background: var(--color-bg-muted);">
+     <i data-lucide="file-text"></i>
     </div>
-    <div class="stat-card">
-    <i data-lucide="check-circle" class="icon-lg text-success mb-sm"></i>
-    <div class="stat-number"><?= number_format($stats['success']) ?></div>
-    <div class="stat-label">Nya</div>
+    <div class="admin-stat-value"><?= number_format($stats['total']) ?></div>
+    <div class="admin-stat-label">Totalt rader</div>
     </div>
-    <div class="stat-card">
-    <i data-lucide="refresh-cw" class="icon-lg text-accent mb-sm"></i>
-    <div class="stat-number"><?= number_format($stats['updated']) ?></div>
-    <div class="stat-label">Uppdaterade</div>
+    <div class="admin-stat-card">
+    <div class="admin-stat-icon" style="background: rgba(97, 206, 112, 0.1); color: var(--color-success);">
+     <i data-lucide="check-circle"></i>
     </div>
-    <div class="stat-card">
-    <i data-lucide="minus-circle" class="icon-lg text-secondary mb-sm"></i>
-    <div class="stat-number"><?= number_format($stats['skipped']) ?></div>
-    <div class="stat-label">Överhoppade</div>
+    <div class="admin-stat-value" style="color: var(--color-success);"><?= number_format($stats['success']) ?></div>
+    <div class="admin-stat-label">Nya</div>
     </div>
-    <div class="stat-card">
-    <i data-lucide="x-circle" class="icon-lg text-error mb-sm"></i>
-    <div class="stat-number"><?= number_format($stats['failed']) ?></div>
-    <div class="stat-label">Misslyckade</div>
+    <div class="admin-stat-card">
+    <div class="admin-stat-icon" style="background: rgba(0, 74, 152, 0.1); color: var(--color-gs-blue);">
+     <i data-lucide="refresh-cw"></i>
+    </div>
+    <div class="admin-stat-value" style="color: var(--color-gs-blue);"><?= number_format($stats['updated']) ?></div>
+    <div class="admin-stat-label">Uppdaterade</div>
+    </div>
+    <div class="admin-stat-card">
+    <div class="admin-stat-icon" style="background: rgba(245, 158, 11, 0.1); color: var(--color-warning);">
+     <i data-lucide="minus-circle"></i>
+    </div>
+    <div class="admin-stat-value" style="color: var(--color-warning);"><?= number_format($stats['skipped']) ?></div>
+    <div class="admin-stat-label">Överhoppade</div>
+    </div>
+    <div class="admin-stat-card">
+    <div class="admin-stat-icon" style="background: rgba(239, 68, 68, 0.1); color: var(--color-danger);">
+     <i data-lucide="x-circle"></i>
+    </div>
+    <div class="admin-stat-value" style="color: var(--color-danger);"><?= number_format($stats['failed']) ?></div>
+    <div class="admin-stat-label">Misslyckade</div>
     </div>
    </div>
 
    <!-- Verification Section -->
    <?php if (isset($stats['total_in_db'])): ?>
-    <div class="mt-lg section-divider">
-    <h3 class="text-primary mb-md">
+    <div style="margin-top: var(--space-lg); padding-top: var(--space-lg); border-top: 1px solid var(--color-border);">
+    <h3 style="margin-bottom: var(--space-md); display: flex; align-items: center; gap: var(--space-sm);">
      <i data-lucide="database"></i>
      Verifiering
     </h3>
-    <div class="alert alert--info">
-     <p class="gs-text-stat">
-     <strong>Totalt i databasen:</strong>
-     <span class="gs-text-stat-lg">
-      <?= number_format($stats['total_in_db']) ?>
-     </span>
-     cyklister
-     </p>
+    <div class="alert alert-info" style="margin-bottom: var(--space-md);">
+     <strong>Totalt i databasen:</strong> <?= number_format($stats['total_in_db']) ?> cyklister
     </div>
-    <div class="flex gap-md mt-md">
-     <a href="/admin/riders.php" class="btn btn--primary">
+    <div style="display: flex; gap: var(--space-md);">
+     <a href="/admin/riders.php" class="btn-admin btn-admin-primary">
      <i data-lucide="users"></i>
      Se alla deltagare
      </a>
-     <a href="/admin/debug-database.php" class="btn btn--secondary">
+     <a href="/admin/debug-database.php" class="btn-admin btn-admin-secondary">
      <i data-lucide="search"></i>
      Debug databas
      </a>
@@ -545,36 +572,36 @@ include __DIR__ . '/components/unified-layout.php';
 
    <!-- Skipped Rows Details -->
    <?php if (!empty($skippedRows)): ?>
-    <div class="mt-lg section-divider">
-    <h3 class="text-warning mb-md">
+    <div style="margin-top: var(--space-lg); padding-top: var(--space-lg); border-top: 1px solid var(--color-border);">
+    <h3 style="margin-bottom: var(--space-md); display: flex; align-items: center; gap: var(--space-sm); color: var(--color-warning);">
      <i data-lucide="alert-circle"></i>
      Överhoppade rader (<?= count($skippedRows) ?>)
     </h3>
-    <div class="gs-scrollable-lg">
-     <table class="table table-sm">
+    <div class="table-responsive">
+     <table class="table">
      <thead>
       <tr>
-      <th>Rad</th>
+      <th style="width: 80px;">Rad</th>
       <th>Namn</th>
       <th>Licens</th>
       <th>Anledning</th>
-      <th>Typ</th>
+      <th style="width: 100px;">Typ</th>
       </tr>
      </thead>
      <tbody>
-      <?php foreach ($skippedRows as $skip): ?>
+      <?php foreach (array_slice($skippedRows, 0, 100) as $skip): ?>
       <tr>
-       <td><code><?= $skip['row'] ?></code></td>
+       <td><code style="background: var(--color-bg-muted); padding: 2px 6px; border-radius: var(--radius-sm);"><?= $skip['row'] ?></code></td>
        <td><?= h($skip['name']) ?></td>
-       <td><?= h($skip['license'] ?? '-') ?></td>
-       <td><?= h($skip['reason']) ?></td>
+       <td><code style="font-size: var(--text-sm);"><?= h($skip['license'] ?? '-') ?></code></td>
+       <td style="color: var(--color-text-secondary);"><?= h($skip['reason']) ?></td>
        <td>
        <?php if ($skip['type'] === 'duplicate'): ?>
-        <span class="badge badge-warning text-xs">Dublett</span>
+        <span class="badge badge-warning">Dublett</span>
        <?php elseif ($skip['type'] === 'missing_fields'): ?>
-        <span class="badge badge-secondary text-xs">Saknar fält</span>
+        <span class="badge badge-secondary">Saknar fält</span>
        <?php elseif ($skip['type'] === 'error'): ?>
-        <span class="badge badge-danger text-xs">Fel</span>
+        <span class="badge badge-danger">Fel</span>
        <?php endif; ?>
        </td>
       </tr>
@@ -582,30 +609,30 @@ include __DIR__ . '/components/unified-layout.php';
      </tbody>
      </table>
      <?php if (count($skippedRows) > 100): ?>
-     <div class="text-sm text-secondary mt-sm gs-text-italic">
+     <p style="margin-top: var(--space-sm); font-size: var(--text-sm); color: var(--color-text-secondary); font-style: italic;">
       Visar första 100 av <?= count($skippedRows) ?> överhoppade rader
-     </div>
+     </p>
      <?php endif; ?>
     </div>
     </div>
    <?php endif; ?>
 
    <?php if (!empty($errors)): ?>
-    <div class="mt-lg section-divider">
-    <h3 class="text-error mb-md">
+    <div style="margin-top: var(--space-lg); padding-top: var(--space-lg); border-top: 1px solid var(--color-border);">
+    <h3 style="margin-bottom: var(--space-md); display: flex; align-items: center; gap: var(--space-sm); color: var(--color-danger);">
      <i data-lucide="alert-triangle"></i>
      Fel och varningar (<?= count($errors) ?>)
     </h3>
-    <div class="gs-scrollable-md">
+    <div style="max-height: 300px; overflow-y: auto; padding: var(--space-md); background: var(--color-bg-muted); border-radius: var(--radius-md);">
      <?php foreach (array_slice($errors, 0, 50) as $error): ?>
-     <div class="text-sm text-secondary gs-mb-4px">
+     <div style="font-size: var(--text-sm); color: var(--color-text-secondary); margin-bottom: 4px;">
       • <?= h($error) ?>
      </div>
      <?php endforeach; ?>
      <?php if (count($errors) > 50): ?>
-     <div class="text-sm text-secondary mt-sm gs-text-italic">
+     <p style="margin-top: var(--space-sm); font-size: var(--text-sm); color: var(--color-text-secondary); font-style: italic;">
       ... och <?= count($errors) - 50 ?> fler
-     </div>
+     </p>
      <?php endif; ?>
     </div>
     </div>
@@ -615,19 +642,19 @@ include __DIR__ . '/components/unified-layout.php';
   <?php endif; ?>
 
   <!-- Upload Form -->
-  <div class="card mb-lg">
-  <div class="card-header">
-   <h2 class="text-primary">
+  <div class="admin-card mb-lg">
+  <div class="admin-card-header">
+   <h2>
    <i data-lucide="upload"></i>
    Ladda upp CSV-fil
    </h2>
   </div>
-  <div class="card-body">
-   <form method="POST" enctype="multipart/form-data" id="uploadForm" class="gs-form-max-width">
+  <div class="admin-card-body">
+   <form method="POST" enctype="multipart/form-data" id="uploadForm" style="max-width: 500px;">
    <?= csrf_field() ?>
 
-   <div class="form-group">
-    <label for="import_file" class="label">
+   <div class="admin-form-group">
+    <label class="admin-form-label">
     <i data-lucide="file"></i>
     Välj CSV-fil
     </label>
@@ -635,44 +662,33 @@ include __DIR__ . '/components/unified-layout.php';
     type="file"
     id="import_file"
     name="import_file"
-    class="input"
+    class="admin-form-input"
     accept=".csv,.xlsx,.xls"
     required
     >
-    <small class="text-secondary text-sm">
+    <small style="color: var(--color-text-secondary); font-size: var(--text-sm);">
     Max storlek: <?= round(MAX_UPLOAD_SIZE / 1024 / 1024) ?>MB
     </small>
    </div>
 
-   <button type="submit" class="btn btn--primary btn-lg">
+   <button type="submit" class="btn-admin btn-admin-primary">
     <i data-lucide="upload"></i>
     Importera
    </button>
    </form>
-
-   <!-- Progress Bar (hidden initially) -->
-   <div id="progressBar" class="gs-progress-container">
-   <div class="flex items-center justify-between mb-sm">
-    <span class="text-sm text-primary gs-font-weight-600">Importerar...</span>
-    <span class="text-sm text-secondary" id="progressPercent">0%</span>
-   </div>
-   <div class="gs-progress-bar-container">
-    <div id="progressFill" class="gs-progress-bar-fill"></div>
-   </div>
-   </div>
   </div>
   </div>
 
   <!-- File Format Guide -->
-  <div class="card">
-  <div class="card-header">
-   <h2 class="text-primary">
+  <div class="admin-card">
+  <div class="admin-card-header">
+   <h2>
    <i data-lucide="info"></i>
    CSV-filformat
    </h2>
   </div>
-  <div class="card-body">
-   <p class="text-secondary mb-md">
+  <div class="admin-card-body">
+   <p style="color: var(--color-text-secondary); margin-bottom: var(--space-md);">
    CSV-filen ska ha följande kolumner i första raden (header):
    </p>
 
