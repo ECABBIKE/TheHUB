@@ -2766,7 +2766,8 @@ td.col-place {
     .event-sponsor-logos,
     .event-tabs-wrapper,
     .card,
-    .filter-row {
+    .filter-row,
+    .result-list {
         margin-left: calc(var(--space-sm) * -1);
         margin-right: calc(var(--space-sm) * -1);
         border-radius: 0 !important;
