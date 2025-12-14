@@ -277,8 +277,8 @@ if ($userTheme === 'auto') {
             }
         }
 
-        /* Mobile LANDSCAPE behavior - compact sidebar with small labels (like bottom nav) */
-        @media (max-width: 899px) and (orientation: landscape) {
+        /* Mobile/Tablet LANDSCAPE behavior - compact sidebar (icon only), NO bottom nav */
+        @media (max-width: 1023px) and (orientation: landscape) {
             .sidebar {
                 position: fixed !important;
                 left: 0 !important;
