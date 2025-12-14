@@ -544,160 +544,6 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
     </div>
-</form>
-
-<!-- Series Colors Section (separate forms for each series) -->
-<div class="card mb-lg">
-    <div class="card-header">
-        <h2>
-            <i data-lucide="trophy"></i>
-            Seriefärger
-        </h2>
-        <span class="badge"><?= count($seriesList) ?> serier</span>
-    </div>
-    <div class="card-body">
-        <p class="text-secondary mb-lg">
-            Varje serie har egna färger som används för datumboxar, topbar och andra serierelaterade element.
-        </p>
-
-        <?php if (empty($seriesList)): ?>
-        <div class="alert alert--warning">
-            <i data-lucide="alert-triangle"></i>
-            Inga aktiva serier hittades. Se till att det finns serier med <code>active = 1</code> i databasen.
-        </div>
-        <?php else: ?>
-        <div class="series-color-grid">
-            <?php foreach ($seriesList as $series): ?>
-            <div class="series-color-card">
-                <div class="series-color-preview" style="background: linear-gradient(135deg, <?= h($series['gradient_start'] ?? '#004A98') ?>, <?= h($series['gradient_end'] ?? '#002a5c') ?>);">
-                    <?php if ($series['logo_dark']): ?>
-                        <img src="/uploads/series/<?= h($series['logo_dark']) ?>" alt="<?= h($series['name']) ?>" class="series-logo">
-                    <?php else: ?>
-                        <span class="series-name-overlay"><?= h($series['name']) ?></span>
-                    <?php endif; ?>
-                </div>
-                <form method="POST" class="series-color-form">
-                    <?= csrf_field() ?>
-                    <input type="hidden" name="action" value="save_series">
-                    <input type="hidden" name="series_id" value="<?= $series['id'] ?>">
-
-                    <h4><?= h($series['name']) ?></h4>
-
-                    <div class="series-color-row">
-                        <label>
-                            <span>Gradient start</span>
-                            <div class="color-swatch-mini" style="background: <?= h($series['gradient_start'] ?? '#004A98') ?>;">
-                                <input type="color" name="gradient_start" value="<?= h($series['gradient_start'] ?? '#004A98') ?>" onchange="updateSeriesPreview(this)">
-                            </div>
-                        </label>
-                        <label>
-                            <span>Gradient slut</span>
-                            <div class="color-swatch-mini" style="background: <?= h($series['gradient_end'] ?? '#002a5c') ?>;">
-                                <input type="color" name="gradient_end" value="<?= h($series['gradient_end'] ?? '#002a5c') ?>" onchange="updateSeriesPreview(this)">
-                            </div>
-                        </label>
-                        <label>
-                            <span>Accent</span>
-                            <div class="color-swatch-mini" style="background: <?= h($series['accent_color'] ?? '#61CE70') ?>;">
-                                <input type="color" name="accent_color" value="<?= h($series['accent_color'] ?? '#61CE70') ?>" onchange="updateSeriesPreview(this)">
-                            </div>
-                        </label>
-                    </div>
-
-                    <button type="submit" class="btn btn--sm btn--primary">
-                        <i data-lucide="save"></i>
-                        Spara
-                    </button>
-                </form>
-            </div>
-            <?php endforeach; ?>
-        </div>
-        <?php endif; ?>
-    </div>
-</div>
-
-<form method="POST" id="brandingFormContinued">
-    <?= csrf_field() ?>
-    <input type="hidden" name="action" value="save">
-
-    <!-- Typography Section -->
-    <div class="card mb-lg">
-        <div class="card-header">
-            <h2>
-                <i data-lucide="type"></i>
-                Typografi
-            </h2>
-        </div>
-        <div class="card-body">
-            <p class="text-secondary mb-lg">
-                Förhandsvisning av de olika typsnitten som används på sidan.
-            </p>
-
-            <?php foreach ($fonts as $fontKey => $fontInfo): ?>
-            <div class="font-preview">
-                <h4><?= h($fontInfo['label']) ?> - <?= h($fontInfo['value']) ?></h4>
-                <code class="text-secondary text-sm">var(--font-<?= $fontKey ?>)</code>
-                <div class="font-sample <?= $fontKey ?>">
-                    <?= h($fontInfo['example']) ?>
-                </div>
-            </div>
-            <?php endforeach; ?>
-        </div>
-    </div>
-
-    <!-- Spacing Section -->
-    <div class="card mb-lg">
-        <div class="card-header">
-            <h2>
-                <i data-lucide="ruler"></i>
-                Spacing
-            </h2>
-        </div>
-        <div class="card-body">
-            <p class="text-secondary mb-lg">
-                Standardiserade avstånd som används för marginaler och padding.
-            </p>
-
-            <div class="spacing-grid">
-                <?php foreach ($spacings as $name => $value): ?>
-                <div class="spacing-item">
-                    <div class="spacing-bar" style="width: <?= $value ?>;"></div>
-                    <div class="spacing-label">
-                        --space-<?= $name ?><br>
-                        <strong><?= $value ?></strong>
-                    </div>
-                </div>
-                <?php endforeach; ?>
-            </div>
-        </div>
-    </div>
-
-    <!-- Radius Section -->
-    <div class="card mb-lg">
-        <div class="card-header">
-            <h2>
-                <i data-lucide="square"></i>
-                Border Radius
-            </h2>
-        </div>
-        <div class="card-body">
-            <p class="text-secondary mb-lg">
-                Standardiserade hörnradier för knappar, kort och andra element.
-            </p>
-
-            <div class="radius-grid">
-                <?php foreach ($radii as $name => $value): ?>
-                <div class="radius-item">
-                    <div class="radius-sample" style="border-radius: <?= $value ?>;"></div>
-                    <div class="radius-label">
-                        --radius-<?= $name ?><br>
-                        <?= $value ?>
-                    </div>
-                </div>
-                <?php endforeach; ?>
-            </div>
-        </div>
-    </div>
 
     <!-- Responsive Layout Section -->
     <div class="card mb-lg">
@@ -829,6 +675,158 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
     </div>
+</form>
+
+<!-- Series Colors Section (separate forms for each series) -->
+<div class="card mb-lg">
+    <div class="card-header">
+        <h2>
+            <i data-lucide="trophy"></i>
+            Seriefärger
+        </h2>
+        <span class="badge"><?= count($seriesList) ?> serier</span>
+    </div>
+    <div class="card-body">
+        <p class="text-secondary mb-lg">
+            Varje serie har egna färger som används för datumboxar, topbar och andra serierelaterade element.
+        </p>
+
+        <?php if (empty($seriesList)): ?>
+        <div class="alert alert--warning">
+            <i data-lucide="alert-triangle"></i>
+            Inga aktiva serier hittades. Se till att det finns serier med <code>active = 1</code> i databasen.
+        </div>
+        <?php else: ?>
+        <div class="series-color-grid">
+            <?php foreach ($seriesList as $series): ?>
+            <div class="series-color-card">
+                <div class="series-color-preview" style="background: linear-gradient(135deg, <?= h($series['gradient_start'] ?? '#004A98') ?>, <?= h($series['gradient_end'] ?? '#002a5c') ?>);">
+                    <?php if ($series['logo_dark']): ?>
+                        <img src="/uploads/series/<?= h($series['logo_dark']) ?>" alt="<?= h($series['name']) ?>" class="series-logo">
+                    <?php else: ?>
+                        <span class="series-name-overlay"><?= h($series['name']) ?></span>
+                    <?php endif; ?>
+                </div>
+                <form method="POST" class="series-color-form">
+                    <?= csrf_field() ?>
+                    <input type="hidden" name="action" value="save_series">
+                    <input type="hidden" name="series_id" value="<?= $series['id'] ?>">
+
+                    <h4><?= h($series['name']) ?></h4>
+
+                    <div class="series-color-row">
+                        <label>
+                            <span>Gradient start</span>
+                            <div class="color-swatch-mini" style="background: <?= h($series['gradient_start'] ?? '#004A98') ?>;">
+                                <input type="color" name="gradient_start" value="<?= h($series['gradient_start'] ?? '#004A98') ?>" onchange="updateSeriesPreview(this)">
+                            </div>
+                        </label>
+                        <label>
+                            <span>Gradient slut</span>
+                            <div class="color-swatch-mini" style="background: <?= h($series['gradient_end'] ?? '#002a5c') ?>;">
+                                <input type="color" name="gradient_end" value="<?= h($series['gradient_end'] ?? '#002a5c') ?>" onchange="updateSeriesPreview(this)">
+                            </div>
+                        </label>
+                        <label>
+                            <span>Accent</span>
+                            <div class="color-swatch-mini" style="background: <?= h($series['accent_color'] ?? '#61CE70') ?>;">
+                                <input type="color" name="accent_color" value="<?= h($series['accent_color'] ?? '#61CE70') ?>" onchange="updateSeriesPreview(this)">
+                            </div>
+                        </label>
+                    </div>
+
+                    <button type="submit" class="btn btn--sm btn--primary">
+                        <i data-lucide="save"></i>
+                        Spara
+                    </button>
+                </form>
+            </div>
+            <?php endforeach; ?>
+        </div>
+        <?php endif; ?>
+    </div>
+</div>
+
+<!-- Display-only Design System Reference Sections -->
+
+<!-- Typography Section -->
+    <div class="card mb-lg">
+        <div class="card-header">
+            <h2>
+                <i data-lucide="type"></i>
+                Typografi
+            </h2>
+        </div>
+        <div class="card-body">
+            <p class="text-secondary mb-lg">
+                Förhandsvisning av de olika typsnitten som används på sidan.
+            </p>
+
+            <?php foreach ($fonts as $fontKey => $fontInfo): ?>
+            <div class="font-preview">
+                <h4><?= h($fontInfo['label']) ?> - <?= h($fontInfo['value']) ?></h4>
+                <code class="text-secondary text-sm">var(--font-<?= $fontKey ?>)</code>
+                <div class="font-sample <?= $fontKey ?>">
+                    <?= h($fontInfo['example']) ?>
+                </div>
+            </div>
+            <?php endforeach; ?>
+        </div>
+    </div>
+
+    <!-- Spacing Section -->
+    <div class="card mb-lg">
+        <div class="card-header">
+            <h2>
+                <i data-lucide="ruler"></i>
+                Spacing
+            </h2>
+        </div>
+        <div class="card-body">
+            <p class="text-secondary mb-lg">
+                Standardiserade avstånd som används för marginaler och padding.
+            </p>
+
+            <div class="spacing-grid">
+                <?php foreach ($spacings as $name => $value): ?>
+                <div class="spacing-item">
+                    <div class="spacing-bar" style="width: <?= $value ?>;"></div>
+                    <div class="spacing-label">
+                        --space-<?= $name ?><br>
+                        <strong><?= $value ?></strong>
+                    </div>
+                </div>
+                <?php endforeach; ?>
+            </div>
+        </div>
+    </div>
+
+    <!-- Radius Section -->
+    <div class="card mb-lg">
+        <div class="card-header">
+            <h2>
+                <i data-lucide="square"></i>
+                Border Radius
+            </h2>
+        </div>
+        <div class="card-body">
+            <p class="text-secondary mb-lg">
+                Standardiserade hörnradier för knappar, kort och andra element.
+            </p>
+
+            <div class="radius-grid">
+                <?php foreach ($radii as $name => $value): ?>
+                <div class="radius-item">
+                    <div class="radius-sample" style="border-radius: <?= $value ?>;"></div>
+                    <div class="radius-label">
+                        --radius-<?= $name ?><br>
+                        <?= $value ?>
+                    </div>
+                </div>
+                <?php endforeach; ?>
+            </div>
+        </div>
+    </div>
 
     <!-- Live Preview -->
     <div class="live-preview">
@@ -866,7 +864,6 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
     </div>
-</form>
 
 <script>
 function updateColorPreview(input, varKey) {
