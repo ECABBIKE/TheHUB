@@ -901,3 +901,76 @@ body.is-landscape .col-event,body.is-landscape .standings-table .col-event{displ
 .alert-error{background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);color:#dc2626}
 .alert-warning{background:rgba(234,179,8,0.1);border:1px solid rgba(234,179,8,0.3);color:#ca8a04}
 .alert-info{background:rgba(59,130,246,0.1);border:1px solid rgba(59,130,246,0.3);color:#2563eb}
+
+/* ============================================================================
+   CHECKOUT/PAYMENT STYLES
+   ============================================================================ */
+
+.container--sm{max-width:500px}
+.payment-option{padding:var(--space-md);border:2px solid var(--color-border);border-radius:var(--radius-lg)}
+.payment-option--swish{border-color:#00A3E0;background:linear-gradient(135deg,rgba(0,163,224,0.05),rgba(0,163,224,0.02))}
+.payment-logo{height:32px;width:auto}
+.btn--swish{background:linear-gradient(135deg,#00A3E0,#0088C7);color:white;border:none}
+.btn--swish:hover{background:linear-gradient(135deg,#0088C7,#006FA0)}
+.swish-qr-container{display:inline-block;padding:var(--space-md);background:white;border-radius:var(--radius-md);box-shadow:0 2px 8px rgba(0,0,0,0.1)}
+.swish-qr{display:block}
+.bg-muted{background:var(--color-bg-card)}
+.bg-warning-subtle{background:rgba(234,179,8,0.1);color:var(--color-text)}
+.icon-xl{width:64px;height:64px}
+.text-success{color:var(--color-success,#22c55e)}
+.text-error{color:var(--color-error,#ef4444)}
+@media(max-width:768px){.swish-desktop{display:none}}
+@media(min-width:769px){.swish-mobile{display:none}}
+
+/* ============================================================================
+   CLUB PAGE STYLES
+   ============================================================================ */
+
+.club-hero{background:var(--color-bg-surface);border-radius:var(--radius-lg);box-shadow:var(--shadow-md);overflow:hidden;margin-bottom:var(--space-lg)}
+.club-hero .hero-accent-bar{height:4px;background:linear-gradient(90deg,var(--color-accent),#004a98)}
+.club-hero .hero-content{padding:var(--space-lg)}
+.club-hero .hero-top{display:flex;gap:var(--space-lg);align-items:center}
+.club-logo-container{flex-shrink:0;position:relative}
+.ranking-badge{position:absolute;top:-8px;right:-8px;background:linear-gradient(135deg,#FFD700,#FFA500);color:var(--color-primary,#171717);min-width:44px;padding:6px 8px;border-radius:var(--radius-sm);display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:800;box-shadow:var(--shadow-md);border:2px solid var(--color-bg-surface)}
+.ranking-badge .rank-label{font-size:0.55rem;text-transform:uppercase;opacity:0.9;line-height:1}
+.ranking-badge .rank-number{font-size:1rem;line-height:1.1}
+.club-logo{width:96px;height:96px;border-radius:var(--radius-lg);background:linear-gradient(135deg,#f3f4f6,#e5e7eb);display:flex;align-items:center;justify-content:center;border:3px solid var(--color-bg-surface);box-shadow:var(--shadow-lg);overflow:hidden}
+.club-logo img{width:100%;height:100%;object-fit:contain}
+.club-logo svg{width:45%;height:45%;stroke:#9ca3af}
+.hero-info{flex:1}
+.club-name{font-size:1.5rem;font-weight:800;color:var(--color-text);margin:0 0 var(--space-xs) 0}
+.club-location{font-size:0.9rem;color:var(--color-text-muted);display:block;margin-bottom:var(--space-sm)}
+.club-badges{display:flex;flex-wrap:wrap;gap:var(--space-sm)}
+.club-badge{display:inline-flex;align-items:center;padding:6px 12px;background:var(--color-bg-sunken);color:var(--color-text);font-size:0.8rem;font-weight:600;border-radius:var(--radius-full)}
+.club-badge--accent{background:var(--color-accent);color:white}
+.hero-contact{display:flex;flex-wrap:wrap;gap:var(--space-md);margin-top:var(--space-md);padding-top:var(--space-md);border-top:1px solid var(--color-border)}
+.contact-link{display:flex;align-items:center;gap:var(--space-sm);color:var(--color-text-muted);font-size:0.85rem;text-decoration:none;transition:color 0.2s}
+.contact-link:hover{color:var(--color-accent)}
+.contact-link svg{flex-shrink:0}
+
+/* Stats Grid (shared across pages) */
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:var(--space-md)}
+.stat-card{text-align:center;padding:var(--space-md);background:var(--color-bg-sunken);border-radius:var(--radius-md)}
+.stat-card--accent{background:var(--color-accent);color:var(--color-text-inverse)}
+.stat-card--accent .stat-label{color:rgba(255,255,255,0.8)}
+.stat-value{font-size:var(--text-2xl);font-weight:var(--weight-bold)}
+.stat-label{font-size:var(--text-xs);color:var(--color-text-muted);margin-top:var(--space-2xs)}
+.rider-year{font-size:var(--text-xs);color:var(--color-text-muted);margin-left:var(--space-xs)}
+.podium-badge{font-size:var(--text-sm)}
+.position-badge{font-weight:var(--weight-semibold)}
+.points-value{font-weight:var(--weight-semibold);color:var(--color-accent-text)}
+@media(max-width:599px){.stats-grid{grid-template-columns:repeat(2,1fr)}}
+
+/* ============================================================================
+   RIDERS DATABASE PAGE STYLES
+   ============================================================================ */
+
+.search-form{display:flex;gap:var(--space-sm);margin-bottom:var(--space-lg)}
+.search-form input{flex:1}
+.riders-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:var(--space-md)}
+.rider-card{background:var(--color-bg-card);border-radius:var(--radius-lg);padding:var(--space-md);text-decoration:none;color:inherit;transition:all var(--transition-fast);border:1px solid var(--color-border)}
+.rider-card:hover{transform:translateY(-2px);box-shadow:var(--shadow-md);border-color:var(--color-accent)}
+.rider-card-header{display:flex;align-items:center;gap:var(--space-md);margin-bottom:var(--space-sm)}
+.rider-avatar{width:48px;height:48px;border-radius:var(--radius-full);background:var(--color-accent);color:white;display:flex;align-items:center;justify-content:center;font-weight:var(--weight-bold)}
+.rider-card-name{font-weight:var(--weight-semibold);font-size:var(--text-md)}
+.rider-card-club{font-size:var(--text-sm);color:var(--color-text-muted)}
