@@ -95,6 +95,9 @@ $cssVersion = function($file) use ($cssDir) {
 $currentPage = $pageInfo['page'] ?? null;
 $pageCssDir = __DIR__ . '/../assets/css/pages/';
 
+// DEBUG: Output what page CSS loader sees
+echo "<!-- Page CSS Loader: page='" . htmlspecialchars($currentPage ?? 'null') . "' -->\n";
+
 if ($currentPage) {
     // Sanitize page name (only allow alphanumeric and hyphens)
     $safePage = preg_replace('/[^a-z0-9\-]/', '', strtolower($currentPage));
@@ -103,6 +106,8 @@ if ($currentPage) {
     if (file_exists($pageCssFile)) {
         $pageCssVersion = filemtime($pageCssFile);
         echo '<link rel="stylesheet" href="' . hub_asset('css/pages/' . $safePage . '.css') . '?v=' . $pageCssVersion . '">' . "\n";
+    } else {
+        echo "<!-- Page CSS: No file at " . htmlspecialchars($safePage) . ".css -->\n";
     }
 }
 ?>
