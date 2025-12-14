@@ -87,16 +87,21 @@ $cssVersion = function($file) use ($cssDir) {
  * Loads page-specific CSS from /assets/css/pages/ if it exists.
  * This allows gradual migration of inline styles to external files.
  *
- * Naming convention:
- *   - /pages/event.php  -> /assets/css/pages/event.css
- *   - /pages/rider.php  -> /assets/css/pages/rider.css
- *   - /pages/results.php -> /assets/css/pages/results.css
+ * Naming convention (from router.php):
+ *   - Section routes use: {section}-{subpage}.css
+ *   - Examples:
+ *     /results        -> results-index.css
+ *     /results/123    -> results-event.css
+ *     /calendar       -> calendar-index.css
+ *     /calendar/123   -> calendar-event.css
+ *     /database/rider -> database-rider.css
+ *     /profile/edit   -> profile-edit.css
+ *   - Legacy single pages use: {page}.css
+ *     /event/123      -> event.css
+ *     /rider/123      -> rider.css
  */
 $currentPage = $pageInfo['page'] ?? null;
 $pageCssDir = __DIR__ . '/../assets/css/pages/';
-
-// DEBUG: Output what page CSS loader sees
-echo "<!-- Page CSS Loader: page='" . htmlspecialchars($currentPage ?? 'null') . "' -->\n";
 
 if ($currentPage) {
     // Sanitize page name (only allow alphanumeric and hyphens)
@@ -106,8 +111,6 @@ if ($currentPage) {
     if (file_exists($pageCssFile)) {
         $pageCssVersion = filemtime($pageCssFile);
         echo '<link rel="stylesheet" href="' . hub_asset('css/pages/' . $safePage . '.css') . '?v=' . $pageCssVersion . '">' . "\n";
-    } else {
-        echo "<!-- Page CSS: No file at " . htmlspecialchars($safePage) . ".css -->\n";
     }
 }
 ?>
