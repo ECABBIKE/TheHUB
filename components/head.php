@@ -81,7 +81,7 @@ $cssVersion = function($file) use ($cssDir) {
 <!-- Dynamic Branding System -->
 <?php
 /**
- * Load custom colors from admin branding panel
+ * Load custom colors and responsive settings from admin branding panel
  * File: /uploads/branding.json
  * Admin panel: /admin/branding.php
  */
@@ -90,29 +90,71 @@ $brandingFile = __DIR__ . '/../uploads/branding.json';
 if (file_exists($brandingFile)) {
     $brandingData = json_decode(file_get_contents($brandingFile), true);
 
-    // Validate and output custom CSS variables
-    if (is_array($brandingData) && !empty($brandingData['colors'])) {
-        $colorCount = 0;
+    if (is_array($brandingData)) {
         $cssOutput = '';
+        $colorCount = 0;
 
-        foreach ($brandingData['colors'] as $cssVar => $value) {
-            // Security: Only allow CSS custom properties (start with --)
-            if (strpos($cssVar, '--') === 0) {
-                // Security: Sanitize value
-                $safeValue = htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
+        // Process custom colors
+        if (!empty($brandingData['colors'])) {
+            foreach ($brandingData['colors'] as $cssVar => $value) {
+                // Security: Only allow CSS custom properties (start with --)
+                if (strpos($cssVar, '--') === 0) {
+                    // Security: Sanitize value
+                    $safeValue = htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
 
-                // Validate it's a reasonable CSS value (hex, rgb, rgba, hsl, etc.)
-                if (preg_match('/^(#[0-9A-Fa-f]{3,8}|rgba?\([^)]+\)|hsla?\([^)]+\)|[a-z]+)$/', $value)) {
-                    $cssOutput .= $cssVar . ':' . $safeValue . ';';
-                    $colorCount++;
+                    // Validate it's a reasonable CSS value (hex, rgb, rgba, hsl, etc.)
+                    if (preg_match('/^(#[0-9A-Fa-f]{3,8}|rgba?\([^)]+\)|hsla?\([^)]+\)|[a-z]+)$/', $value)) {
+                        $cssOutput .= $cssVar . ':' . $safeValue . ';';
+                        $colorCount++;
+                    }
                 }
             }
         }
 
-        // Only output if we have valid colors
-        if ($colorCount > 0) {
+        // Process responsive layout settings
+        $responsive = $brandingData['responsive'] ?? null;
+        $responsiveCss = '';
+
+        if ($responsive) {
+            // Desktop defaults (1024px+) - set in :root
+            $desktopPadding = intval($responsive['desktop']['padding'] ?? 32);
+            $desktopRadius = intval($responsive['desktop']['radius'] ?? 12);
+            $cssOutput .= '--container-padding:' . $desktopPadding . 'px;';
+            $cssOutput .= '--radius-sm:' . $desktopRadius . 'px;';
+            $cssOutput .= '--radius-md:' . $desktopRadius . 'px;';
+            $cssOutput .= '--radius-lg:' . $desktopRadius . 'px;';
+            $cssOutput .= '--radius-xl:' . $desktopRadius . 'px;';
+
+            // Tablet / Landscape (768-1023px)
+            $tabletPadding = intval($responsive['tablet']['padding'] ?? 24);
+            $tabletRadius = intval($responsive['tablet']['radius'] ?? 8);
+            $responsiveCss .= '@media (min-width:768px) and (max-width:1023px){';
+            $responsiveCss .= ':root{';
+            $responsiveCss .= '--container-padding:' . $tabletPadding . 'px;';
+            $responsiveCss .= '--radius-sm:' . $tabletRadius . 'px;';
+            $responsiveCss .= '--radius-md:' . $tabletRadius . 'px;';
+            $responsiveCss .= '--radius-lg:' . $tabletRadius . 'px;';
+            $responsiveCss .= '--radius-xl:' . $tabletRadius . 'px;';
+            $responsiveCss .= '}}';
+
+            // Mobile Portrait (0-767px)
+            $mobilePadding = intval($responsive['mobile_portrait']['padding'] ?? 12);
+            $mobileRadius = intval($responsive['mobile_portrait']['radius'] ?? 0);
+            $responsiveCss .= '@media (max-width:767px){';
+            $responsiveCss .= ':root{';
+            $responsiveCss .= '--container-padding:' . $mobilePadding . 'px;';
+            $responsiveCss .= '--radius-sm:' . $mobileRadius . 'px;';
+            $responsiveCss .= '--radius-md:' . $mobileRadius . 'px;';
+            $responsiveCss .= '--radius-lg:' . $mobileRadius . 'px;';
+            $responsiveCss .= '--radius-xl:' . $mobileRadius . 'px;';
+            $responsiveCss .= '}}';
+        }
+
+        // Output if we have anything to output
+        if ($colorCount > 0 || $responsiveCss) {
             echo '<style id="custom-branding" data-colors="' . $colorCount . '">';
             echo ':root{' . $cssOutput . '}';
+            echo $responsiveCss;
             echo '</style>';
         }
     }

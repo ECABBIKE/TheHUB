@@ -84,6 +84,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         $branding['colors'] = $customColors;
+
+        // Save responsive layout settings
+        $branding['responsive'] = [
+            'mobile_portrait' => [
+                'padding' => $_POST['mobile_portrait_padding'] ?? '12',
+                'radius' => $_POST['mobile_portrait_radius'] ?? '0'
+            ],
+            'tablet' => [
+                'padding' => $_POST['tablet_padding'] ?? '24',
+                'radius' => $_POST['tablet_radius'] ?? '8'
+            ],
+            'desktop' => [
+                'padding' => $_POST['desktop_padding'] ?? '32',
+                'radius' => $_POST['desktop_radius'] ?? '12'
+            ]
+        ];
+
         saveBranding($brandingFile, $branding);
         $message = 'Branding sparad!';
         $messageType = 'success';
@@ -682,6 +699,137 @@ include __DIR__ . '/components/unified-layout.php';
         </div>
     </div>
 
+    <!-- Responsive Layout Section -->
+    <div class="card mb-lg">
+        <div class="card-header">
+            <h2>
+                <i data-lucide="layout"></i>
+                Responsiv Layout
+            </h2>
+        </div>
+        <div class="card-body">
+            <p class="text-secondary mb-lg">
+                Justera padding och rundning för varje plattform. Samma värde appliceras på alla kort/element inom plattformen.
+            </p>
+
+            <?php
+            $responsive = $branding['responsive'] ?? [];
+            $mobilePortrait = $responsive['mobile_portrait'] ?? ['padding' => '12', 'radius' => '0'];
+            $tablet = $responsive['tablet'] ?? ['padding' => '24', 'radius' => '8'];
+            $desktop = $responsive['desktop'] ?? ['padding' => '32', 'radius' => '12'];
+            ?>
+
+            <!-- MOBILE PORTRAIT (0-767px) -->
+            <div class="device-settings" style="margin-bottom: 1.5rem; padding: 1.5rem; background: var(--color-bg-surface); border-radius: var(--radius-lg); border-left: 4px solid #3B9EFF;">
+                <h4 style="margin: 0 0 1rem 0; display: flex; align-items: center; gap: 0.5rem;">
+                    <i data-lucide="smartphone"></i>
+                    Mobile Portrait (0-767px)
+                </h4>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <div>
+                        <label style="display: block; font-size: 0.875rem; color: var(--color-text-secondary); margin-bottom: 0.5rem;">Container Padding</label>
+                        <select name="mobile_portrait_padding" class="form-control" style="width: 100%;" onchange="previewResponsive('portrait', 'padding', this.value)">
+                            <option value="8" <?= $mobilePortrait['padding'] === '8' ? 'selected' : '' ?>>8px - Extra Tight</option>
+                            <option value="10" <?= $mobilePortrait['padding'] === '10' ? 'selected' : '' ?>>10px - Tight</option>
+                            <option value="12" <?= $mobilePortrait['padding'] === '12' ? 'selected' : '' ?>>12px - Compact</option>
+                            <option value="16" <?= $mobilePortrait['padding'] === '16' ? 'selected' : '' ?>>16px - Normal</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="display: block; font-size: 0.875rem; color: var(--color-text-secondary); margin-bottom: 0.5rem;">Border Radius</label>
+                        <select name="mobile_portrait_radius" class="form-control" style="width: 100%;" onchange="previewResponsive('portrait', 'radius', this.value)">
+                            <option value="0" <?= $mobilePortrait['radius'] === '0' ? 'selected' : '' ?>>0px - Kantigt (Edge-to-edge)</option>
+                            <option value="4" <?= $mobilePortrait['radius'] === '4' ? 'selected' : '' ?>>4px - Lätt rundat</option>
+                            <option value="6" <?= $mobilePortrait['radius'] === '6' ? 'selected' : '' ?>>6px - Rundat</option>
+                            <option value="8" <?= $mobilePortrait['radius'] === '8' ? 'selected' : '' ?>>8px - Mycket rundat</option>
+                        </select>
+                    </div>
+                </div>
+                <small style="display: block; margin-top: 0.75rem; opacity: 0.7; font-size: 0.75rem;">
+                    Rekommenderat: 12px padding + 0px radius för edge-to-edge känsla
+                </small>
+            </div>
+
+            <!-- TABLET / LANDSCAPE (768-1023px) -->
+            <div class="device-settings" style="margin-bottom: 1.5rem; padding: 1.5rem; background: var(--color-bg-surface); border-radius: var(--radius-lg); border-left: 4px solid #10B981;">
+                <h4 style="margin: 0 0 1rem 0; display: flex; align-items: center; gap: 0.5rem;">
+                    <i data-lucide="tablet"></i>
+                    Landscape / Tablet (768-1023px)
+                </h4>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <div>
+                        <label style="display: block; font-size: 0.875rem; color: var(--color-text-secondary); margin-bottom: 0.5rem;">Container Padding</label>
+                        <select name="tablet_padding" class="form-control" style="width: 100%;" onchange="previewResponsive('tablet', 'padding', this.value)">
+                            <option value="16" <?= $tablet['padding'] === '16' ? 'selected' : '' ?>>16px - Compact</option>
+                            <option value="20" <?= $tablet['padding'] === '20' ? 'selected' : '' ?>>20px - Normal</option>
+                            <option value="24" <?= $tablet['padding'] === '24' ? 'selected' : '' ?>>24px - Luftigt</option>
+                            <option value="32" <?= $tablet['padding'] === '32' ? 'selected' : '' ?>>32px - Extra luftigt</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="display: block; font-size: 0.875rem; color: var(--color-text-secondary); margin-bottom: 0.5rem;">Border Radius</label>
+                        <select name="tablet_radius" class="form-control" style="width: 100%;" onchange="previewResponsive('tablet', 'radius', this.value)">
+                            <option value="0" <?= $tablet['radius'] === '0' ? 'selected' : '' ?>>0px - Kantigt</option>
+                            <option value="6" <?= $tablet['radius'] === '6' ? 'selected' : '' ?>>6px - Lätt rundat</option>
+                            <option value="8" <?= $tablet['radius'] === '8' ? 'selected' : '' ?>>8px - Rundat</option>
+                            <option value="12" <?= $tablet['radius'] === '12' ? 'selected' : '' ?>>12px - Mycket rundat</option>
+                            <option value="16" <?= $tablet['radius'] === '16' ? 'selected' : '' ?>>16px - Extra rundat</option>
+                        </select>
+                    </div>
+                </div>
+                <small style="display: block; margin-top: 0.75rem; opacity: 0.7; font-size: 0.75rem;">
+                    Rekommenderat: 24px padding + 8px radius för balanserad design
+                </small>
+            </div>
+
+            <!-- DESKTOP (1024px+) -->
+            <div class="device-settings" style="padding: 1.5rem; background: var(--color-bg-surface); border-radius: var(--radius-lg); border-left: 4px solid #8B5CF6;">
+                <h4 style="margin: 0 0 1rem 0; display: flex; align-items: center; gap: 0.5rem;">
+                    <i data-lucide="monitor"></i>
+                    Desktop (1024px+)
+                </h4>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <div>
+                        <label style="display: block; font-size: 0.875rem; color: var(--color-text-secondary); margin-bottom: 0.5rem;">Container Padding</label>
+                        <select name="desktop_padding" class="form-control" style="width: 100%;" onchange="previewResponsive('desktop', 'padding', this.value)">
+                            <option value="24" <?= $desktop['padding'] === '24' ? 'selected' : '' ?>>24px - Compact</option>
+                            <option value="32" <?= $desktop['padding'] === '32' ? 'selected' : '' ?>>32px - Normal</option>
+                            <option value="40" <?= $desktop['padding'] === '40' ? 'selected' : '' ?>>40px - Luftigt</option>
+                            <option value="48" <?= $desktop['padding'] === '48' ? 'selected' : '' ?>>48px - Extra luftigt</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="display: block; font-size: 0.875rem; color: var(--color-text-secondary); margin-bottom: 0.5rem;">Border Radius</label>
+                        <select name="desktop_radius" class="form-control" style="width: 100%;" onchange="previewResponsive('desktop', 'radius', this.value)">
+                            <option value="6" <?= $desktop['radius'] === '6' ? 'selected' : '' ?>>6px - Lätt rundat</option>
+                            <option value="8" <?= $desktop['radius'] === '8' ? 'selected' : '' ?>>8px - Rundat</option>
+                            <option value="12" <?= $desktop['radius'] === '12' ? 'selected' : '' ?>>12px - Mycket rundat</option>
+                            <option value="16" <?= $desktop['radius'] === '16' ? 'selected' : '' ?>>16px - Extra rundat</option>
+                            <option value="20" <?= $desktop['radius'] === '20' ? 'selected' : '' ?>>20px - Max rundat</option>
+                        </select>
+                    </div>
+                </div>
+                <small style="display: block; margin-top: 0.75rem; opacity: 0.7; font-size: 0.75rem;">
+                    Rekommenderat: 32px padding + 12px radius för professionell look
+                </small>
+            </div>
+
+            <!-- Info Box -->
+            <div style="margin-top: 1.5rem; padding: 1rem; background: var(--color-bg-sunken); border-radius: var(--radius-md); border: 1px solid var(--color-border);">
+                <p style="margin: 0; font-size: 0.875rem; color: var(--color-text-secondary); display: flex; align-items: start; gap: 0.5rem;">
+                    <i data-lucide="info" style="width: 16px; height: 16px; margin-top: 2px; flex-shrink: 0;"></i>
+                    <span>
+                        <strong>Så fungerar det:</strong> Samma radius appliceras på ALLA kort, knappar och containers inom varje plattform.
+                        Spara och ladda om sidan för att se effekten, eller ändra din browser-storlek för att testa olika breakpoints.
+                    </span>
+                </p>
+            </div>
+        </div>
+    </div>
+
     <!-- Live Preview -->
     <div class="live-preview">
         <h3 class="mb-md">
@@ -769,6 +917,32 @@ function updateSeriesPreview(input) {
     const swatch = input.closest('.color-swatch-mini');
     if (swatch) {
         swatch.style.background = input.value;
+    }
+}
+
+// Live preview for responsive settings
+function previewResponsive(device, type, value) {
+    const width = window.innerWidth;
+
+    // Determine if current viewport matches device
+    let applies = false;
+    if (device === 'portrait' && width <= 767) applies = true;
+    if (device === 'tablet' && width >= 768 && width <= 1023) applies = true;
+    if (device === 'desktop' && width >= 1024) applies = true;
+
+    if (!applies) {
+        console.log(`Preview skipped - current viewport (${width}px) doesn't match ${device}`);
+        return;
+    }
+
+    // Apply preview
+    if (type === 'padding') {
+        document.documentElement.style.setProperty('--container-padding', value + 'px');
+    } else if (type === 'radius') {
+        document.documentElement.style.setProperty('--radius-sm', value + 'px');
+        document.documentElement.style.setProperty('--radius-md', value + 'px');
+        document.documentElement.style.setProperty('--radius-lg', value + 'px');
+        document.documentElement.style.setProperty('--radius-xl', value + 'px');
     }
 }
 
