@@ -109,6 +109,19 @@ foreach ($registrations as $reg) {
     }
     $regByClass[$className][] = $reg;
 }
+
+// Fetch other events in the same series
+$seriesEvents = [];
+if ($event['series_id']) {
+    $seriesStmt = $pdo->prepare("
+        SELECT id, name, date
+        FROM events
+        WHERE series_id = ? AND active = 1
+        ORDER BY date ASC
+    ");
+    $seriesStmt->execute([$event['series_id']]);
+    $seriesEvents = $seriesStmt->fetchAll(PDO::FETCH_ASSOC);
+}
 ?>
 
 <div class="page-header">
@@ -116,6 +129,22 @@ foreach ($registrations as $reg) {
         <a href="/calendar">← Kalender</a>
     </nav>
 </div>
+
+<?php if (count($seriesEvents) > 1): ?>
+<div class="series-nav">
+    <label for="series-event-select" class="series-nav-label">
+        <?= hub_icon('calendar', 'icon-sm') ?>
+        <?= htmlspecialchars($event['series_name']) ?>
+    </label>
+    <select id="series-event-select" class="series-nav-select" onchange="if(this.value) window.location.href='/calendar/' + this.value">
+        <?php foreach ($seriesEvents as $sEvent): ?>
+            <option value="<?= $sEvent['id'] ?>" <?= $sEvent['id'] == $eventId ? 'selected' : '' ?>>
+                <?= date('j M', strtotime($sEvent['date'])) ?> – <?= htmlspecialchars($sEvent['name']) ?>
+            </option>
+        <?php endforeach; ?>
+    </select>
+</div>
+<?php endif; ?>
 
 <div class="event-detail">
     <!-- Event Header -->
@@ -201,6 +230,48 @@ foreach ($registrations as $reg) {
 </div>
 
 <style>
+.series-nav {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    padding: var(--space-sm) var(--space-md);
+    background: var(--color-bg-card);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    margin-bottom: var(--space-md);
+}
+
+.series-nav-label {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    color: var(--color-accent);
+    white-space: nowrap;
+}
+
+.series-nav-select {
+    flex: 1;
+    padding: var(--space-xs) var(--space-sm);
+    padding-right: var(--space-lg);
+    background: var(--color-bg-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    color: var(--color-text-primary);
+    font-size: var(--text-sm);
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236b7280' d='M3 4.5L6 7.5L9 4.5'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+}
+
+.series-nav-select:focus {
+    outline: none;
+    border-color: var(--color-accent);
+}
+
 .event-detail {
     max-width: 900px;
 }
