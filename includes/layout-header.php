@@ -302,11 +302,16 @@ if ($userTheme === 'auto') {
 
             .sidebar .sidebar-link {
                 padding: 6px 4px !important;
-                gap: 2px !important;
-                font-size: 9px !important;
+                gap: 1px !important;
+                flex-direction: column !important;
             }
 
-            .sidebar .sidebar-icon svg {
+            .sidebar .sidebar-label {
+                display: none !important;
+            }
+
+            .sidebar .sidebar-icon svg,
+            .sidebar .sidebar-icon-svg {
                 width: 20px !important;
                 height: 20px !important;
             }
