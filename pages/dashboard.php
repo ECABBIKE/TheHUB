@@ -79,10 +79,10 @@ try {
   <section class="card grid-full">
     <h2 class="card-title mb-md">Snabblänkar</h2>
     <div class="flex flex-wrap gap-sm">
-      <a href="/riders" class="btn btn--primary">👥 Åkare</a>
-      <a href="/clubs" class="btn btn--primary">🛡️ Klubbar</a>
-      <a href="/results" class="btn btn--primary">🏁 Resultat</a>
-      <a href="/series" class="btn btn--primary">🏆 Serier</a>
+      <a href="/riders" class="btn btn--primary"><i data-lucide="users" style="width:16px;height:16px;"></i> Åkare</a>
+      <a href="/clubs" class="btn btn--primary"><i data-lucide="shield" style="width:16px;height:16px;"></i> Klubbar</a>
+      <a href="/results" class="btn btn--primary"><i data-lucide="flag" style="width:16px;height:16px;"></i> Resultat</a>
+      <a href="/series" class="btn btn--primary"><i data-lucide="trophy" style="width:16px;height:16px;"></i> Serier</a>
     </div>
   </section>
 
