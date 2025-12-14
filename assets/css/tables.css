@@ -82,10 +82,10 @@
 
   .result-list{
     display:block;
-    /* Edge-to-edge: break out of card padding (card has 16px padding on mobile portrait) */
-    margin-left:-16px;
-    margin-right:-16px;
-    width:calc(100% + 32px);
+    /* Edge-to-edge: break out of card padding using CSS variable */
+    margin-left:calc(-1 * var(--card-padding));
+    margin-right:calc(-1 * var(--card-padding));
+    width:calc(100% + 2 * var(--card-padding));
   }
 
   .result-item{
