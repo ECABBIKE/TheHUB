@@ -100,17 +100,17 @@ $disciplineNames = [
 <div class="view-toggle mb-lg">
   <a href="/ranking?discipline=<?= $discipline ?>&view=riders"
      class="view-btn <?= $view === 'riders' ? 'active' : '' ?>">
-    👤 Åkare
+    <i data-lucide="user"></i> Åkare
   </a>
   <a href="/ranking?discipline=<?= $discipline ?>&view=clubs"
      class="view-btn <?= $view === 'clubs' ? 'active' : '' ?>">
-    🛡️ Klubbar
+    <i data-lucide="shield"></i> Klubbar
   </a>
 </div>
 
 <!-- Info Banner -->
 <div class="info-banner mb-lg">
-  <span class="info-icon">ℹ️</span>
+  <span class="info-icon"><i data-lucide="info"></i></span>
   <span>24 månaders rullande ranking. Poäng viktas efter fältstorlek och eventtyp.</span>
 </div>
 
@@ -124,7 +124,7 @@ $disciplineNames = [
 <?php if (!$hasRankingSystem): ?>
 <div class="card text-center">
   <div class="empty-state">
-    <div class="empty-state-icon">⚙️</div>
+    <div class="empty-state-icon"><i data-lucide="settings"></i></div>
     <h3>Rankingsystemet är inte konfigurerat</h3>
     <p class="text-muted">Kontakta administratör.</p>
   </div>
@@ -132,7 +132,7 @@ $disciplineNames = [
 <?php elseif ($view === 'riders' && empty($ranking['riders'])): ?>
 <div class="card text-center">
   <div class="empty-state">
-    <div class="empty-state-icon">🏆</div>
+    <div class="empty-state-icon"><i data-lucide="trophy"></i></div>
     <h3>Ingen <?= $disciplineNames[$discipline] ?>-ranking ännu</h3>
     <p class="text-muted">Rankingen uppdateras efter att resultat har registrerats.</p>
   </div>
@@ -140,7 +140,7 @@ $disciplineNames = [
 <?php elseif ($view === 'clubs' && empty($ranking['clubs'])): ?>
 <div class="card text-center">
   <div class="empty-state">
-    <div class="empty-state-icon">🛡️</div>
+    <div class="empty-state-icon"><i data-lucide="shield"></i></div>
     <h3>Ingen klubbranking ännu</h3>
     <p class="text-muted">Klubbranking beräknas baserat på åkarnas poäng.</p>
   </div>
