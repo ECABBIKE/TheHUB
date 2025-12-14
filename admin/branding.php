@@ -116,17 +116,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 // Fetch active series for branding
 $seriesList = [];
+$seriesDebug = '';
 try {
+    // First try with status filter
     $seriesList = $db->getAll("
         SELECT id, name, slug,
                COALESCE(gradient_start, '#004A98') as gradient_start,
                COALESCE(gradient_end, '#002a5c') as gradient_end,
                COALESCE(accent_color, '#61CE70') as accent_color,
-               logo_dark
+               logo_dark, status
         FROM series
         WHERE status IN ('active', 'completed')
         ORDER BY name ASC
     ");
+
+    // If no results, try getting ALL series as fallback
+    if (empty($seriesList)) {
+        $seriesList = $db->getAll("
+            SELECT id, name, slug,
+                   COALESCE(gradient_start, '#004A98') as gradient_start,
+                   COALESCE(gradient_end, '#002a5c') as gradient_end,
+                   COALESCE(accent_color, '#61CE70') as accent_color,
+                   logo_dark, status
+            FROM series
+            ORDER BY name ASC
+        ");
+        if (!empty($seriesList)) {
+            $statuses = array_unique(array_column($seriesList, 'status'));
+            $seriesDebug = 'Visar alla serier. Status-värden i databasen: ' . implode(', ', array_map(function($s) { return "'" . ($s ?: 'NULL') . "'"; }, $statuses));
+        }
+    }
 } catch (Exception $e) {
     // Try without logo_dark column
     try {
@@ -135,14 +154,13 @@ try {
                    COALESCE(gradient_start, '#004A98') as gradient_start,
                    COALESCE(gradient_end, '#002a5c') as gradient_end,
                    COALESCE(accent_color, '#61CE70') as accent_color,
-                   NULL as logo_dark
+                   NULL as logo_dark, status
             FROM series
-            WHERE status IN ('active', 'completed')
             ORDER BY name ASC
         ");
     } catch (Exception $e2) {
         // Last resort - just get basic series info
-        $seriesList = $db->getAll("SELECT id, name, slug FROM series WHERE status IN ('active', 'completed') ORDER BY name ASC");
+        $seriesList = $db->getAll("SELECT id, name, slug, NULL as logo_dark FROM series ORDER BY name ASC");
     }
 }
 
@@ -795,9 +813,15 @@ include __DIR__ . '/components/unified-layout.php';
         <?php if (empty($seriesList)): ?>
         <div class="alert alert--warning">
             <i data-lucide="alert-triangle"></i>
-            Inga aktiva serier hittades. Se till att det finns serier med <code>status = 'active'</code> eller <code>status = 'completed'</code> i databasen.
+            Inga serier hittades i databasen.
         </div>
         <?php else: ?>
+        <?php if ($seriesDebug): ?>
+        <div class="alert alert--info" style="margin-bottom: 1rem;">
+            <i data-lucide="info"></i>
+            <?= htmlspecialchars($seriesDebug) ?>
+        </div>
+        <?php endif; ?>
         <div class="series-color-grid">
             <?php foreach ($seriesList as $series): ?>
             <div class="series-color-card">
