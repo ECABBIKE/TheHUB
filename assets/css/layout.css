@@ -96,7 +96,9 @@
 .mobile-nav-icon svg{width:24px;height:24px;stroke-width:2}
 
 /* Responsive - Uses --container-padding from branding (set via responsive media queries in head.php) */
-@media(max-width:899px){
+
+/* PORTRAIT: Bottom nav, no sidebar */
+@media(max-width:899px) and (orientation:portrait){
   .app-layout{padding-left:0}
   .sidebar{display:none}
   .mobile-nav{display:block}
@@ -108,16 +110,20 @@
 
 @media(max-width:599px) and (orientation:portrait){
   .page-grid{grid-template-columns:1fr!important}
-  .main-content{
-    padding:var(--container-padding);
-    padding-bottom:calc(var(--container-padding) + var(--mobile-nav-height) + env(safe-area-inset-bottom) + 60px);
-  }
   /* Compact mobile nav for narrow portrait screens */
   .mobile-nav-link{min-width:40px;padding:var(--space-2xs);font-size:9px}
   .mobile-nav-icon svg{width:20px;height:20px}
 }
 
+/* LANDSCAPE: Sidebar, no bottom nav - more vertical space for content */
 @media(max-width:899px) and (orientation:landscape){
+  .app-layout{padding-left:var(--sidebar-width)}
+  .sidebar{display:flex}
+  .mobile-nav{display:none}
+  .main-content{
+    padding:var(--container-padding);
+    padding-bottom:var(--container-padding);
+  }
   .page-grid{grid-template-columns:1fr 1fr!important}
 }
 
