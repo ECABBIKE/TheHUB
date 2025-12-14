@@ -239,8 +239,8 @@ if ($userTheme === 'auto') {
             visibility: visible;
         }
 
-        /* Mobile behavior */
-        @media (max-width: 1023px) {
+        /* Mobile PORTRAIT behavior - bottom nav, hidden sidebar */
+        @media (max-width: 1023px) and (orientation: portrait) {
             .sidebar {
                 position: fixed !important;
                 left: 0 !important;
@@ -265,25 +265,49 @@ if ($userTheme === 'auto') {
                 display: flex !important;
             }
 
-            /* Ensure main content has no sidebar offset on mobile */
+            /* Ensure main content has no sidebar offset on mobile portrait */
             .main-content {
                 margin-left: 0 !important;
                 width: 100% !important;
             }
 
-            /* CRITICAL: Bottom nav must be fixed on mobile */
-            .nav-bottom {
-                position: fixed !important;
-                bottom: 0 !important;
-                left: 0 !important;
-                right: 0 !important;
-                z-index: 300 !important;
+            /* Bottom nav visible on portrait */
+            .nav-bottom, .mobile-nav {
                 display: flex !important;
-                justify-content: space-around !important;
-                background: #FFFFFF !important;
-                border-top: 1px solid #E5E7EB !important;
-                padding: 8px 12px !important;
-                padding-bottom: calc(8px + env(safe-area-inset-bottom, 0)) !important;
+            }
+        }
+
+        /* Mobile LANDSCAPE behavior - sidebar visible, no bottom nav */
+        @media (max-width: 1023px) and (orientation: landscape) {
+            .sidebar {
+                position: fixed !important;
+                left: 0 !important;
+                top: var(--header-height, 60px) !important;
+                width: 140px !important;
+                height: calc(100vh - var(--header-height, 60px)) !important;
+                height: calc(100dvh - var(--header-height, 60px)) !important;
+                background: var(--color-bg-surface, #fff) !important;
+                transform: translateX(0) !important;
+                z-index: 200 !important;
+                padding-top: 0 !important;
+                display: flex !important;
+                flex-direction: column !important;
+                border-right: 1px solid var(--color-border, #e5e7eb) !important;
+            }
+
+            .mobile-menu-toggle {
+                display: none !important;
+            }
+
+            /* Main content offset for sidebar on landscape */
+            .main-content {
+                margin-left: 140px !important;
+                width: calc(100% - 140px) !important;
+            }
+
+            /* Hide bottom nav on landscape - more vertical space */
+            .nav-bottom, .mobile-nav {
+                display: none !important;
             }
         }
     </style>
