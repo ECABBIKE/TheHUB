@@ -101,6 +101,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ]
         ];
 
+        // Save layout settings
+        $branding['layout'] = [
+            'content_max_width' => $_POST['content_max_width'] ?? '1400',
+            'sidebar_width' => $_POST['sidebar_width'] ?? '72',
+            'header_height' => $_POST['header_height'] ?? '60'
+        ];
+
         saveBranding($brandingFile, $branding);
         $message = 'Branding sparad!';
         $messageType = 'success';
@@ -670,6 +677,100 @@ include __DIR__ . '/components/unified-layout.php';
                     <span>
                         <strong>Så fungerar det:</strong> Samma radius appliceras på ALLA kort, knappar och containers inom varje plattform.
                         Spara och ladda om sidan för att se effekten, eller ändra din browser-storlek för att testa olika breakpoints.
+                    </span>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Layout Section -->
+    <div class="card mb-lg">
+        <div class="card-header">
+            <h2>
+                <i data-lucide="maximize-2"></i>
+                Layout-dimensioner
+            </h2>
+        </div>
+        <div class="card-body">
+            <p class="text-secondary mb-lg">
+                Styr bredden pa huvudinnehallet och andra globala layout-dimensioner.
+            </p>
+
+            <?php
+            $layout = $branding['layout'] ?? [];
+            $contentMaxWidth = $layout['content_max_width'] ?? '1400';
+            $sidebarWidth = $layout['sidebar_width'] ?? '72';
+            $headerHeight = $layout['header_height'] ?? '60';
+            ?>
+
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: var(--space-lg);">
+                <!-- Content Max Width -->
+                <div class="device-settings" style="padding: 1.5rem; background: var(--color-bg-surface); border-radius: var(--radius-lg); border-left: 4px solid #F59E0B;">
+                    <h4 style="margin: 0 0 1rem 0; display: flex; align-items: center; gap: 0.5rem;">
+                        <i data-lucide="monitor"></i>
+                        Max innehallsbredd
+                    </h4>
+                    <div>
+                        <label style="display: block; font-size: 0.875rem; color: var(--color-text-secondary); margin-bottom: 0.5rem;">Desktop (1024px+)</label>
+                        <select name="content_max_width" class="form-control" style="width: 100%;">
+                            <option value="1200" <?= $contentMaxWidth === '1200' ? 'selected' : '' ?>>1200px - Kompakt</option>
+                            <option value="1400" <?= $contentMaxWidth === '1400' ? 'selected' : '' ?>>1400px - Standard</option>
+                            <option value="1600" <?= $contentMaxWidth === '1600' ? 'selected' : '' ?>>1600px - Bred</option>
+                            <option value="1800" <?= $contentMaxWidth === '1800' ? 'selected' : '' ?>>1800px - Extra bred</option>
+                            <option value="none" <?= $contentMaxWidth === 'none' ? 'selected' : '' ?>>Ingen grans (full bredd)</option>
+                        </select>
+                    </div>
+                    <small style="display: block; margin-top: 0.75rem; opacity: 0.7; font-size: 0.75rem;">
+                        Begransar bredden pa huvudinnehallet. Paverkar inte Event-sidor.
+                    </small>
+                </div>
+
+                <!-- Sidebar Width -->
+                <div class="device-settings" style="padding: 1.5rem; background: var(--color-bg-surface); border-radius: var(--radius-lg); border-left: 4px solid #10B981;">
+                    <h4 style="margin: 0 0 1rem 0; display: flex; align-items: center; gap: 0.5rem;">
+                        <i data-lucide="sidebar"></i>
+                        Sidopanelens bredd
+                    </h4>
+                    <div>
+                        <label style="display: block; font-size: 0.875rem; color: var(--color-text-secondary); margin-bottom: 0.5rem;">Desktop sidebar</label>
+                        <select name="sidebar_width" class="form-control" style="width: 100%;">
+                            <option value="56" <?= $sidebarWidth === '56' ? 'selected' : '' ?>>56px - Kompakt</option>
+                            <option value="72" <?= $sidebarWidth === '72' ? 'selected' : '' ?>>72px - Standard</option>
+                            <option value="88" <?= $sidebarWidth === '88' ? 'selected' : '' ?>>88px - Bred</option>
+                        </select>
+                    </div>
+                    <small style="display: block; margin-top: 0.75rem; opacity: 0.7; font-size: 0.75rem;">
+                        Endast synlig pa desktop (900px+)
+                    </small>
+                </div>
+
+                <!-- Header Height -->
+                <div class="device-settings" style="padding: 1.5rem; background: var(--color-bg-surface); border-radius: var(--radius-lg); border-left: 4px solid #8B5CF6;">
+                    <h4 style="margin: 0 0 1rem 0; display: flex; align-items: center; gap: 0.5rem;">
+                        <i data-lucide="panel-top"></i>
+                        Headerns hojd
+                    </h4>
+                    <div>
+                        <label style="display: block; font-size: 0.875rem; color: var(--color-text-secondary); margin-bottom: 0.5rem;">Global header</label>
+                        <select name="header_height" class="form-control" style="width: 100%;">
+                            <option value="48" <?= $headerHeight === '48' ? 'selected' : '' ?>>48px - Kompakt</option>
+                            <option value="56" <?= $headerHeight === '56' ? 'selected' : '' ?>>56px - Lag</option>
+                            <option value="60" <?= $headerHeight === '60' ? 'selected' : '' ?>>60px - Standard</option>
+                            <option value="64" <?= $headerHeight === '64' ? 'selected' : '' ?>>64px - Hog</option>
+                        </select>
+                    </div>
+                    <small style="display: block; margin-top: 0.75rem; opacity: 0.7; font-size: 0.75rem;">
+                        Paverkar toppbaren pa alla sidor
+                    </small>
+                </div>
+            </div>
+
+            <!-- Info Box -->
+            <div style="margin-top: 1.5rem; padding: 1rem; background: var(--color-bg-sunken); border-radius: var(--radius-md); border: 1px solid var(--color-border);">
+                <p style="margin: 0; font-size: 0.875rem; color: var(--color-text-secondary); display: flex; align-items: start; gap: 0.5rem;">
+                    <i data-lucide="info" style="width: 16px; height: 16px; margin-top: 2px; flex-shrink: 0;"></i>
+                    <span>
+                        <strong>CSS-variabler:</strong> Dessa varden satter <code>--content-max-width</code>, <code>--sidebar-width</code> och <code>--header-height</code>.
                     </span>
                 </p>
             </div>
