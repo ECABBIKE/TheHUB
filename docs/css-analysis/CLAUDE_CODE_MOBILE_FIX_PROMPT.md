@@ -21,37 +21,55 @@ Du behöver undersöka VARFÖR CSS inte appliceras:
 
 ### STEG 1: IDENTIFIERA FAKTISKA CSS-KLASSER
 
-Analysera dessa filer för att hitta exakta klassnamn:
+**VIKTIGT:** v2/ är GAMLA BACKUPS - använd pages/ istället!
+
+Analysera dessa PRODUKTIONSFILER:
 
 ```bash
-# Result cards
-v2/results.php
+# Result displays
+pages/event.php          # 100KB - huvudfil för resultat
+pages/results.php        # Result listings
+pages/series-single.php  # Serie-standings
+pages/ranking.php        # Ranking tables
 
-# Event cards  
-v2/events.php
-
-# Container struktur
-includes/layout-header.php
-components/head.php
+# Components
+components/head.php      # CSS loading
 ```
 
-**Hittade klasser:**
-- Result cards: `.card`, `.gs-result-card`, `.gs-event-card-transition`
-- Event cards: `.card`, `.card-hover`, `.event-card-horizontal`, `.gs-event-card-transition`
-- Filter: `.card`
-- Container: Okänd - HIT TA REDA PÅ!
+**Faktiska klasser (från pages/event.php):**
+
+**Desktop:**
+- `.results-table` (table container)
+- `.result-row` (table rows)
+- `.col-place` (placement column)
+- `.col-place--1`, `.col-place--2`, `.col-place--3` (podium highlighting)
+
+**Mobile:**
+- `.result-list` (container)
+- `.result-item` (each result card - är en `<a>` tag!)
+- `.result-place` (placement indicator)
+- `.result-info` (rider info)
+- `.result-name` (name)
+- `.result-club` (club)
+- `.result-time-col` (time column)
+
+**Container:**
+- `.card` (standard card wrapper)
+- `.class-section` (class grouping)
 
 ### STEG 2: HITTA VAR INLINE STYLES FINNS
+
+**KRITISKT:** Kolla pages/ (produktion), INTE v2/ (gamla backups)!
 
 Sök efter `<style>` taggar i PHP-filer:
 
 ```bash
-grep -r "<style>" v2/*.php
+grep -r "<style>" pages/*.php
 ```
 
 **Känt problem:**
-- `v2/events.php` har inline styles som definierar `.event-card-horizontal` grid
-- `v2/results.php` har liknande inline styles
+- `pages/event.php` kan ha inline styles
+- `pages/series-single.php` kan ha inline styles
 - Dessa kan overrida extern CSS!
 
 ### STEG 3: CACHE-BUSTING
@@ -102,7 +120,7 @@ ELLER ändra alla till:
 **B) I assets/css/components.css** - Ersätt rad 56-102:
 
 ```css
-/* MOBILE EDGE-TO-EDGE SYSTEM - SPECIFIKT FÖR THEHUB */
+/* MOBILE EDGE-TO-EDGE SYSTEM - PRODUKTIONSFILER (pages/) */
 @media (max-width: 767px) {
   /* Säkerställ container har rätt padding */
   .container,
@@ -114,8 +132,7 @@ ELLER ändra alla till:
 
   /* ALLA KORT: Edge-to-edge */
   .card,
-  .gs-result-card,
-  .event-card-horizontal,
+  .class-section,
   .filter-row,
   .filters-bar,
   .alert {
@@ -128,25 +145,32 @@ ELLER ändra alla till:
     max-width: none !important;
   }
 
+  /* Result lists (mobile cards) */
+  .result-list {
+    margin-left: calc(-1 * var(--container-padding)) !important;
+    margin-right: calc(-1 * var(--container-padding)) !important;
+  }
+
+  /* Result items are clickable links */
+  .result-item {
+    border-radius: 0 !important;
+    border-left: none !important;
+    border-right: none !important;
+  }
+
   /* Återställ padding inuti kort */
   .card-header,
   .card-body,
-  .gs-result-info,
-  .event-info-right {
+  .result-info,
+  .result-item {
     padding-left: var(--container-padding);
     padding-right: var(--container-padding);
   }
 
-  /* Специальные случаи */
-  .event-card-horizontal {
-    padding: var(--container-padding);
-  }
-
-  /* Listor och tabeller */
+  /* Tables */
   .table-responsive,
   .table-wrapper,
-  .result-list,
-  .event-list {
+  .results-table {
     margin-left: calc(-1 * var(--container-padding)) !important;
     margin-right: calc(-1 * var(--container-padding)) !important;
   }
@@ -155,13 +179,15 @@ ELLER ändra alla till:
 
 **C) FIXA INLINE STYLES**
 
-I **v2/events.php** och **v2/results.php**, hitta `<style>` taggar och lägg till:
+I **pages/event.php** och **pages/series-single.php**, hitta `<style>` taggar och lägg till:
 
 ```css
 /* Lägg till i befintlig <style> block */
 @media (max-width: 767px) {
-  .event-card-horizontal,
-  .gs-result-card {
+  .result-list,
+  .result-item,
+  .card,
+  .class-section {
     margin-left: -16px !important;
     margin-right: -16px !important;
     border-radius: 0 !important;
@@ -171,10 +197,8 @@ I **v2/events.php** och **v2/results.php**, hitta `<style>` taggar och lägg til
     max-width: none !important;
   }
   
-  .event-card-horizontal {
-    padding: 16px !important;
-    grid-template-columns: 100px 1fr !important;
-    gap: 12px !important;
+  .result-item {
+    padding: 12px 16px !important;
   }
 }
 ```
@@ -184,7 +208,7 @@ I **v2/events.php** och **v2/results.php**, hitta `<style>` taggar och lägg til
 Kolla vilken wrapper som faktiskt används:
 
 ```bash
-grep -B 20 "events-two-column\|event-list" v2/events.php | grep -E "<main|<div class"
+grep -B 20 "result-list\|class-section" pages/event.php | grep -E "<main|<div class"
 ```
 
 Om main-taggen INTE har padding → Lägg till:
@@ -198,13 +222,14 @@ main {
 ### STEG 6: TESTA
 
 1. Rensa browser cache (Cmd+Shift+R på iPhone i Safari)
-2. Öppna v2/events.php på mobil
-3. Öppna v2/results.php på mobil
-4. Verifiera:
-   - [ ] Event cards går kant-till-kant
+2. Öppna pages/event.php?id=[något event] på mobil
+3. Öppna pages/results.php på mobil
+4. Öppna pages/series-single.php?id=[någon serie] på mobil
+5. Verifiera:
    - [ ] Result cards går kant-till-kant
-   - [ ] Filter-kort går kant-till-kant
-   - [ ] Sponsor-kort går kant-till-kant
+   - [ ] .result-item cards går kant-till-kant
+   - [ ] .class-section går kant-till-kant
+   - [ ] Inga horisontella scrollbars
 
 ### STEG 7: DEBUG OM DET INTE FUNGERAR
 
@@ -319,16 +344,17 @@ Om kort fortfarande har margins:
 ```bash
 # Hitta alla .card definitioner
 grep -r "\.card" assets/css/*.css
+grep -r "\.result-" assets/css/*.css
 
-# Hitta inline styles
-grep -r "style=" v2/*.php | grep -i card
+# Hitta inline styles i produktion
+grep -r "style=" pages/*.php | grep -i "card\|result"
 
 # Kolla om JavaScript sätter styles
-grep -r "\.style\." v2/*.php
-grep -r "setAttribute.*style" v2/*.php
+grep -r "\.style\." pages/*.php
+grep -r "setAttribute.*style" pages/*.php
 
 # Verifiera container padding
-grep -r "container.*padding" assets/css/*.css
+grep -r "container.*padding\|main.*padding" assets/css/*.css
 ```
 
 ---
@@ -344,8 +370,11 @@ cat assets/css/components.css | grep -A 30 "max-width:767px"
 # Se om cache-busting finns
 grep "filemtime\|time()" components/head.php
 
-# Lista inline styles
-grep -n "<style>" v2/events.php v2/results.php
+# Lista inline styles i produktion
+grep -n "<style>" pages/event.php pages/series-single.php pages/results.php
+
+# Hitta faktiska klassnamn
+grep "class.*result\|class.*card" pages/event.php | head -20
 ```
 
 Sedan fortsätt med STEG 1-8 ovan!
