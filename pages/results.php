@@ -281,20 +281,7 @@ try {
 
 <?php endif; ?>
 
-<?php
-/**
- * CSS MIGRATED to /assets/css/pages/results.css
- * Date: 2025-12-14
- *
- * The external CSS file is automatically loaded by components/head.php
- * based on the page name. No manual linking required.
- *
- * If something breaks, restore the CSS by uncommenting the block below.
- */
-?>
-
-<?php /* BACKUP - Inline CSS migrated to external file
-
+<!-- Note: CSS also available in /assets/css/pages/results.css -->
 <style>
 .page-header {
   margin-bottom: var(--space-xl);
@@ -554,5 +541,3 @@ try {
   }
 }
 </style>
-
-*/ ?>
