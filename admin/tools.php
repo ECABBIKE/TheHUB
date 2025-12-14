@@ -293,21 +293,40 @@ include __DIR__ . '/components/unified-layout.php';
 <h3 class="section-title">UCI & Licenshantering</h3>
 
 <div class="tools-grid">
-    <!-- Format UCI ID -->
+    <!-- Fix UCI ID Format (Database) -->
+    <div class="tool-card">
+        <div class="tool-card-header">
+            <div class="tool-icon warning">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+            </div>
+            <div>
+                <h4 class="tool-title">Fixa UCI-ID i databasen</h4>
+                <p class="tool-description">Skanna och fixa alla felformaterade UCI-ID automatiskt</p>
+            </div>
+        </div>
+        <div class="tool-actions">
+            <a href="/admin/fix-uci-format" class="btn-admin btn-admin-primary" style="flex: 1;">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px;"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+                Skanna &amp; Fixa
+            </a>
+        </div>
+    </div>
+
+    <!-- Format UCI ID (Manual) -->
     <div class="tool-card">
         <div class="tool-card-header">
             <div class="tool-icon">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7V4h16v3"/><path d="M9 20h6"/><path d="M12 4v16"/></svg>
             </div>
             <div>
-                <h4 class="tool-title">Formatera UCI-ID</h4>
-                <p class="tool-description">Konvertera UCI-ID till standardformat: XXX XXX XXX XX</p>
+                <h4 class="tool-title">Formatera UCI-ID (manuellt)</h4>
+                <p class="tool-description">Konvertera enskilda UCI-ID till standardformat</p>
             </div>
         </div>
         <div class="tool-actions">
-            <a href="/admin/format-uci-id" class="btn-admin btn-admin-primary" style="flex: 1;">
+            <a href="/admin/format-uci-id" class="btn-admin btn-admin-secondary" style="flex: 1;">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px;"><path d="M4 7V4h16v3"/><path d="M9 20h6"/><path d="M12 4v16"/></svg>
-                Formatera UCI-ID
+                Formatera manuellt
             </a>
         </div>
     </div>
