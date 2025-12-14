@@ -77,6 +77,7 @@ $cssVersion = function($file) use ($cssDir) {
 <link rel="stylesheet" href="<?= hub_asset('css/utilities.css') ?>?v=<?= $cssVersion('utilities.css') ?>">
 <link rel="stylesheet" href="<?= hub_asset('css/badge-system.css') ?>?v=<?= $cssVersion('badge-system.css') ?>">
 <link rel="stylesheet" href="<?= hub_asset('css/pwa.css') ?>?v=<?= $cssVersion('pwa.css') ?>">
+<link rel="stylesheet" href="<?= hub_asset('css/viewport.css') ?>?v=<?= $cssVersion('viewport.css') ?>">
 
 <!-- Dynamic Branding System -->
 <?php

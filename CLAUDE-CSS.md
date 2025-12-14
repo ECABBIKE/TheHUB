@@ -450,5 +450,102 @@ Andringar sparas i `/uploads/branding.json` och appliceras direkt via `head.php`
 
 ---
 
-**Version:** 1.0.0
+## 15. VIEWPORT-SYSTEM (Dynamiska hojder)
+
+Viewport-systemet laster av skarmens upplösning och sätter CSS-variabler i realtid.
+
+### CSS-filer
+- `assets/css/viewport.css` - Tokens och utility-klasser
+- `assets/js/viewport.js` - JavaScript som uppdaterar variablerna
+
+### Viewport-variabler
+
+| Token | Beskrivning |
+|-------|-------------|
+| `--vh` | 1% av faktisk viewport-hojd (i px) |
+| `--vw` | 1% av faktisk viewport-bredd (i px) |
+| `--vh-100` | 100% av viewport-hojd |
+| `--vh-50` | 50% av viewport-hojd |
+| `--content-height` | Viewport minus header |
+
+### Kart-specifika variabler
+
+| Token | Mobil | Tablet | Desktop |
+|-------|-------|--------|---------|
+| `--map-height-mobile` | 60vh | - | - |
+| `--map-height-tablet` | - | 65vh | - |
+| `--map-height-desktop` | - | - | 70vh |
+| `--map-min-height` | 400px | 400px | 400px |
+| `--map-max-height` | 800px | 800px | 800px |
+
+### Anvandning i CSS
+
+```css
+/* Karta som anpassar sig till viewport */
+#map {
+    height: var(--map-height-desktop);
+    min-height: var(--map-min-height);
+    max-height: var(--map-max-height);
+}
+
+/* Fullskarm minus header */
+.fullscreen-content {
+    height: var(--content-height);
+}
+
+/* Anpassad procent */
+.half-screen {
+    height: var(--vh-50);
+}
+```
+
+### Utility-klasser
+
+```html
+<!-- Fasta viewport-hojder -->
+<div class="h-vh-100">100% viewport</div>
+<div class="h-vh-50">50% viewport</div>
+
+<!-- Kartor -->
+<div class="map-viewport">Standard karta</div>
+<div class="map-viewport--fill">Karta som fyller allt</div>
+<div class="map-viewport--16x9">16:9 aspect ratio</div>
+```
+
+### JavaScript API
+
+```javascript
+// Hamta aktuell viewport-storlek
+TheHUB.viewport.height  // Hojd i px
+TheHUB.viewport.width   // Bredd i px
+TheHUB.viewport.getVh(50)  // 50vh i px
+
+// Lyssna pa andringar
+TheHUB.viewport.onChange(function(data) {
+    console.log('Viewport andrad:', data.height, data.width);
+});
+
+// Satt elements hojd dynamiskt
+TheHUB.viewport.setElementHeight('#map', 70, {
+    min: 400,
+    max: 800,
+    offset: 60  // Minus header
+});
+```
+
+### Data-attribut
+
+```html
+<!-- Element far 70vh hojd automatiskt -->
+<div data-vh-height="70">Karta</div>
+
+<!-- Med min/max -->
+<div data-vh-height="70" data-vh-min-height="40" data-vh-max-height="80">
+    Karta med begransningar
+</div>
+```
+
+---
+
+**Version:** 1.1.0
 **Senast uppdaterad:** 2025-12-14

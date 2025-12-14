@@ -129,5 +129,8 @@
 
     <!-- Theme script removed - always light theme -->
     <script src="/assets/js/dropdown.js?v=<?= filemtime(__DIR__ . '/../assets/js/dropdown.js') ?>"></script>
+
+    <!-- Viewport System - dynamic vh/vw for responsive heights -->
+    <script src="/assets/js/viewport.js?v=<?= filemtime(__DIR__ . '/../assets/js/viewport.js') ?>"></script>
 </body>
 </html>
