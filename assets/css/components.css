@@ -53,81 +53,107 @@ body{
 /* ============================================================================
    EDGE-TO-EDGE MOBILE STANDARD 2025
    SINGLE SOURCE OF TRUTH - All mobile edge-to-edge rules go here ONLY
+   Uses CSS variables for maintainability
    ============================================================================ */
 
-/* Tablet/Mobile: container has 16px padding */
-@media(max-width:899px){
+/* Mobile Edge-to-Edge System - Clean & Maintainable */
+@media (max-width: 767px) {
+  /* Ensure container has correct padding */
+  .container,
+  .page-content {
+    padding-left: var(--container-padding);
+    padding-right: var(--container-padding);
+  }
+
+  /* Cards break out to edges */
   .card,
+  .result-card,
+  .event-card,
   .filter-row,
   .filters-bar,
-  .table-responsive,
-  .table-wrapper,
-  .event-row,
   .alert,
+  .event-row,
   .event-header-banner,
   .event-header,
   .event-sponsor-banner,
   .event-sponsor-logos,
   .event-tabs-wrapper {
-    margin-left:-16px!important;
-    margin-right:-16px!important;
-    border-radius:0!important;
-    border-left:none!important;
-    border-right:none!important;
-    width:calc(100% + 32px)!important;
-  }
-  .card-header,.card-body{padding-left:16px!important;padding-right:16px!important}
+    /* Negative margin equals container padding */
+    margin-left: calc(-1 * var(--container-padding));
+    margin-right: calc(-1 * var(--container-padding));
 
-  /* Tables/lists inside cards break out of card-body padding (24px) */
+    /* Remove borders and radius on sides */
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+
+    /* Let it expand naturally */
+    width: auto;
+    max-width: none;
+  }
+
+  /* Tables and lists also break out */
+  .table-responsive,
+  .table-wrapper,
+  .result-list {
+    margin-left: calc(-1 * var(--container-padding));
+    margin-right: calc(-1 * var(--container-padding));
+    width: auto;
+    max-width: none;
+  }
+
+  /* Restore padding inside cards */
+  .card-header,
+  .card-body {
+    padding-left: var(--container-padding);
+    padding-right: var(--container-padding);
+  }
+
+  /* Tables inside cards need to break out of card padding too */
   .card .table-wrapper,
+  .card .result-list,
   .card .table-responsive,
   .card table {
-    margin-left:-24px!important;
-    margin-right:-24px!important;
-    width:calc(100% + 48px)!important;
+    margin-left: calc(-1 * var(--container-padding));
+    margin-right: calc(-1 * var(--container-padding));
+    width: auto;
+  }
+
+  /* Restore cell padding in tables */
+  .card table th,
+  .card table td {
+    padding-left: var(--container-padding);
+  }
+  .card table th:last-child,
+  .card table td:last-child {
+    padding-right: var(--container-padding);
   }
 }
 
-/* Mobile portrait: container has 8px padding - minimal */
-@media(max-width:599px) and (orientation:portrait){
-  .card,
-  .filter-row,
-  .filters-bar,
-  .table-responsive,
-  .table-wrapper,
-  .event-row,
-  .alert,
-  .event-header-banner,
-  .event-header,
-  .event-sponsor-banner,
-  .event-sponsor-logos,
-  .event-tabs-wrapper {
-    margin-left:-8px!important;
-    margin-right:-8px!important;
-    width:calc(100% + 16px)!important;
-    border-radius:0!important;
-    border-left:none!important;
-    border-right:none!important;
-  }
-  .card-header,.card-body{padding-left:8px!important;padding-right:8px!important}
-
-  /* Tables/lists inside cards - break out of card-body padding (16px) */
-  .card .table-wrapper,
-  .card .table-responsive,
-  .card table {
-    margin-left:-16px!important;
-    margin-right:-16px!important;
-    width:calc(100% + 32px)!important;
+/* Extra small phones - less padding */
+@media (max-width: 599px) and (orientation: portrait) {
+  .container,
+  .page-content {
+    padding-left: var(--container-padding-sm);
+    padding-right: var(--container-padding-sm);
   }
 
   /* Result items edge-to-edge */
+  .result-list > *,
+  .result-card,
+  .event-list > *,
+  .event-row,
   .card .result-list .result-item,
   .result-item {
-    margin-left:0!important;
-    margin-right:0!important;
-    border-radius:0!important;
-    border-left:none!important;
-    border-right:none!important;
+    margin-left: calc(-1 * var(--container-padding-sm));
+    margin-right: calc(-1 * var(--container-padding-sm));
+    width: auto;
+    max-width: none;
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+    padding-left: var(--container-padding-sm);
+    padding-right: var(--container-padding-sm);
   }
 }
 

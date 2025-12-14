@@ -25,6 +25,10 @@
   --sidebar-width:72px;--header-height:60px;--mobile-nav-height:64px;
   --content-max-width:1400px;
 
+  /* Container padding - responsive */
+  --container-padding:16px;
+  --container-padding-sm:8px;
+
   --z-dropdown:100;--z-sticky:200;--z-fixed:300;--z-modal:500;--z-toast:600;
 
   --transition-fast:150ms ease;--transition-base:250ms ease;
