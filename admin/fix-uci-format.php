@@ -3,6 +3,10 @@
  * Fix UCI-ID Format Tool
  * Scans database for incorrectly formatted UCI IDs and fixes them
  * Correct format: XXX XXX XXX XX (11 digits with spaces)
+ *
+ * Checks BOTH:
+ * - uci_id column (dedicated UCI ID field)
+ * - license_number column (UCI IDs mixed with SWE licenses)
  */
 require_once __DIR__ . '/../config.php';
 require_admin();
@@ -13,11 +17,32 @@ $db = getDB();
 $message = '';
 $messageType = '';
 
-// Find all riders with UCI IDs that need fixing
+/**
+ * Check if a string looks like a UCI ID (all digits, 10-11 chars when stripped)
+ */
+function looksLikeUciId($value) {
+    if (empty($value)) return false;
+    // Skip SWE licenses
+    if (stripos($value, 'SWE') === 0) return false;
+    // Strip non-digits and check length
+    $digits = preg_replace('/[^0-9]/', '', $value);
+    return strlen($digits) >= 10 && strlen($digits) <= 11;
+}
+
+/**
+ * Check if UCI ID is correctly formatted: XXX XXX XXX XX
+ */
+function isCorrectlyFormatted($value) {
+    return preg_match('/^[0-9]{3} [0-9]{3} [0-9]{3} [0-9]{2}$/', $value);
+}
+
+// Find all riders with UCI IDs that need fixing (both columns)
 function findMalformedUciIds($db) {
-    // Get all riders with uci_id set
+    $malformed = [];
+
+    // 1. Check uci_id column
     $riders = $db->getAll("
-        SELECT id, firstname, lastname, uci_id
+        SELECT id, firstname, lastname, uci_id, license_number
         FROM riders
         WHERE uci_id IS NOT NULL
           AND uci_id != ''
@@ -25,19 +50,63 @@ function findMalformedUciIds($db) {
         ORDER BY lastname, firstname
     ");
 
-    $malformed = [];
     foreach ($riders as $rider) {
         $original = $rider['uci_id'];
         $normalized = normalizeUciId($original);
+        $digits = preg_replace('/[^0-9]/', '', $normalized);
 
-        // Check if normalization actually changes anything
-        if ($original !== $normalized) {
-            // Verify it's a valid 11-digit UCI ID after normalization
-            $digits = preg_replace('/[^0-9]/', '', $normalized);
-            $rider['normalized'] = $normalized;
-            $rider['is_valid'] = strlen($digits) === 11;
-            $malformed[] = $rider;
+        $malformed[] = [
+            'id' => $rider['id'],
+            'firstname' => $rider['firstname'],
+            'lastname' => $rider['lastname'],
+            'original' => $original,
+            'normalized' => $normalized,
+            'is_valid' => strlen($digits) === 11,
+            'column' => 'uci_id',
+            'license_number' => $rider['license_number']
+        ];
+    }
+
+    // 2. Check license_number column for UCI-like IDs (not SWE)
+    $riders = $db->getAll("
+        SELECT id, firstname, lastname, uci_id, license_number
+        FROM riders
+        WHERE license_number IS NOT NULL
+          AND license_number != ''
+          AND license_number NOT LIKE 'SWE%'
+          AND license_number NOT REGEXP '^[0-9]{3} [0-9]{3} [0-9]{3} [0-9]{2}$'
+        ORDER BY lastname, firstname
+    ");
+
+    foreach ($riders as $rider) {
+        $original = $rider['license_number'];
+
+        // Only process if it looks like a UCI ID
+        if (!looksLikeUciId($original)) continue;
+
+        // Skip if already in list from uci_id column
+        $alreadyAdded = false;
+        foreach ($malformed as $m) {
+            if ($m['id'] === $rider['id'] && $m['column'] === 'license_number') {
+                $alreadyAdded = true;
+                break;
+            }
         }
+        if ($alreadyAdded) continue;
+
+        $normalized = normalizeUciId($original);
+        $digits = preg_replace('/[^0-9]/', '', $normalized);
+
+        $malformed[] = [
+            'id' => $rider['id'],
+            'firstname' => $rider['firstname'],
+            'lastname' => $rider['lastname'],
+            'original' => $original,
+            'normalized' => $normalized,
+            'is_valid' => strlen($digits) === 11,
+            'column' => 'license_number',
+            'uci_id' => $rider['uci_id']
+        ];
     }
 
     return $malformed;
@@ -55,8 +124,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         foreach ($malformed as $rider) {
             if ($rider['is_valid']) {
                 try {
+                    $column = $rider['column'];
                     $db->update('riders', [
-                        'uci_id' => $rider['normalized']
+                        $column => $rider['normalized']
                     ], 'id = ?', [$rider['id']]);
                     $fixed++;
                 } catch (Exception $e) {
@@ -73,14 +143,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         }
         $messageType = 'success';
 
-    } elseif ($_POST['action'] === 'fix_single' && isset($_POST['rider_id'])) {
+    } elseif ($_POST['action'] === 'fix_single' && isset($_POST['rider_id']) && isset($_POST['column'])) {
         $riderId = intval($_POST['rider_id']);
-        $rider = $db->getRow("SELECT id, uci_id FROM riders WHERE id = ?", [$riderId]);
+        $column = $_POST['column'] === 'license_number' ? 'license_number' : 'uci_id';
+        $rider = $db->getRow("SELECT id, uci_id, license_number FROM riders WHERE id = ?", [$riderId]);
 
-        if ($rider) {
-            $normalized = normalizeUciId($rider['uci_id']);
-            $db->update('riders', ['uci_id' => $normalized], 'id = ?', [$riderId]);
-            $message = "UCI-ID för deltagare #$riderId har normaliserats.";
+        if ($rider && !empty($rider[$column])) {
+            $normalized = normalizeUciId($rider[$column]);
+            $db->update('riders', [$column => $normalized], 'id = ?', [$riderId]);
+            $message = "UCI-ID för deltagare #$riderId har normaliserats i $column.";
             $messageType = 'success';
         }
     }
@@ -88,7 +159,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
 // Get current state
 $malformed = findMalformedUciIds($db);
-$totalRiders = $db->getRow("SELECT COUNT(*) as cnt FROM riders WHERE uci_id IS NOT NULL AND uci_id != ''")['cnt'] ?? 0;
+
+// Count stats for both columns
+$uciIdCount = $db->getRow("
+    SELECT COUNT(*) as cnt FROM riders
+    WHERE uci_id IS NOT NULL AND uci_id != ''
+")['cnt'] ?? 0;
+
+$licenseUciCount = $db->getRow("
+    SELECT COUNT(*) as cnt FROM riders
+    WHERE license_number IS NOT NULL
+      AND license_number != ''
+      AND license_number NOT LIKE 'SWE%'
+")['cnt'] ?? 0;
+
+$totalRiders = $uciIdCount + $licenseUciCount;
 $validCount = $totalRiders - count($malformed);
 
 // Page config
@@ -193,6 +278,25 @@ include __DIR__ . '/components/unified-layout.php';
     font-weight: 600;
 }
 
+.badge-column {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: var(--radius-sm);
+    font-size: var(--text-xs);
+    font-weight: 600;
+    font-family: var(--font-mono);
+}
+
+.badge-uci {
+    background: rgba(59, 158, 255, 0.15);
+    color: #3B9EFF;
+}
+
+.badge-license {
+    background: rgba(139, 92, 246, 0.15);
+    color: #8B5CF6;
+}
+
 .action-bar {
     display: flex;
     justify-content: space-between;
@@ -233,6 +337,15 @@ include __DIR__ . '/components/unified-layout.php';
 </div>
 <?php endif; ?>
 
+<!-- Info banner -->
+<div class="alert alert--info mb-lg">
+    <i data-lucide="info"></i>
+    <span>
+        <strong>Skannar båda kolumnerna:</strong> Detta verktyg kontrollerar UCI-ID i både <code>uci_id</code> och <code>license_number</code> kolumnerna.
+        Svenska licensnummer (SWE...) ignoreras automatiskt.
+    </span>
+</div>
+
 <!-- Statistics -->
 <div class="stats-row">
     <div class="stat-card success">
@@ -245,7 +358,7 @@ include __DIR__ . '/components/unified-layout.php';
     </div>
     <div class="stat-card">
         <div class="stat-value"><?= number_format($totalRiders) ?></div>
-        <div class="stat-label">Totalt med UCI-ID</div>
+        <div class="stat-label">Totalt (uci_id + license_number)</div>
     </div>
 </div>
 
@@ -295,7 +408,8 @@ include __DIR__ . '/components/unified-layout.php';
                     <tr>
                         <th>ID</th>
                         <th>Namn</th>
-                        <th>Nuvarande UCI-ID</th>
+                        <th>Kolumn</th>
+                        <th>Nuvarande</th>
                         <th>Normaliserat</th>
                         <th style="width: 100px;"></th>
                     </tr>
@@ -310,7 +424,12 @@ include __DIR__ . '/components/unified-layout.php';
                             </a>
                         </td>
                         <td>
-                            <span class="uci-original"><?= h($rider['uci_id']) ?></span>
+                            <span class="badge-column <?= $rider['column'] === 'uci_id' ? 'badge-uci' : 'badge-license' ?>">
+                                <?= $rider['column'] === 'uci_id' ? 'uci_id' : 'license_number' ?>
+                            </span>
+                        </td>
+                        <td>
+                            <span class="uci-original"><?= h($rider['original']) ?></span>
                         </td>
                         <td>
                             <?php if ($rider['is_valid']): ?>
@@ -326,6 +445,7 @@ include __DIR__ . '/components/unified-layout.php';
                                 <?= csrf_field() ?>
                                 <input type="hidden" name="action" value="fix_single">
                                 <input type="hidden" name="rider_id" value="<?= $rider['id'] ?>">
+                                <input type="hidden" name="column" value="<?= $rider['column'] ?>">
                                 <button type="submit" class="btn btn--sm btn--secondary">
                                     Fixa
                                 </button>
