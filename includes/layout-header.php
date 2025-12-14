@@ -277,22 +277,35 @@ if ($userTheme === 'auto') {
             }
         }
 
-        /* Mobile LANDSCAPE behavior - sidebar visible, no bottom nav */
+        /* Mobile LANDSCAPE behavior - icon-only sidebar (like bottom nav), no bottom nav */
         @media (max-width: 1023px) and (orientation: landscape) {
             .sidebar {
                 position: fixed !important;
                 left: 0 !important;
                 top: var(--header-height, 60px) !important;
-                width: 140px !important;
+                width: 56px !important;
                 height: calc(100vh - var(--header-height, 60px)) !important;
                 height: calc(100dvh - var(--header-height, 60px)) !important;
                 background: var(--color-bg-surface, #fff) !important;
                 transform: translateX(0) !important;
                 z-index: 200 !important;
-                padding-top: 0 !important;
+                padding: 8px 0 !important;
                 display: flex !important;
                 flex-direction: column !important;
                 border-right: 1px solid var(--color-border, #e5e7eb) !important;
+                align-items: center !important;
+            }
+
+            /* Icon-only sidebar links - hide text labels */
+            .sidebar .sidebar-link span:not(.sidebar-icon),
+            .sidebar .sidebar-label,
+            .sidebar .nav-text {
+                display: none !important;
+            }
+
+            .sidebar .sidebar-link {
+                padding: 12px !important;
+                min-width: 44px !important;
             }
 
             .mobile-menu-toggle {
@@ -301,8 +314,8 @@ if ($userTheme === 'auto') {
 
             /* Main content offset for sidebar on landscape */
             .main-content {
-                margin-left: 140px !important;
-                width: calc(100% - 140px) !important;
+                margin-left: 56px !important;
+                width: calc(100% - 56px) !important;
             }
 
             /* Hide bottom nav on landscape - more vertical space */

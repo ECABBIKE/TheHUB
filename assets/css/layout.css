@@ -115,21 +115,17 @@
   .mobile-nav-icon svg{width:20px;height:20px}
 }
 
-/* LANDSCAPE: Wider sidebar (140px), no bottom nav - more vertical space for content */
+/* LANDSCAPE: Icon-only sidebar (56px like bottom nav), no bottom nav - max vertical space */
 @media(max-width:1023px) and (orientation:landscape){
-  .app-layout{padding-left:140px}
+  .app-layout{padding-left:56px}
   .sidebar{
     display:flex;
-    width:140px;
-    padding:var(--space-sm);
+    width:56px;
+    align-items:center;
   }
-  .sidebar-link{
-    flex-direction:row;
-    justify-content:flex-start;
-    gap:var(--space-sm);
-    padding:var(--space-sm) var(--space-md);
-  }
-  .sidebar-icon{min-width:24px}
+  /* Hide text labels - icon only */
+  .sidebar-link span:last-child{display:none}
+  .sidebar-link{padding:var(--space-sm)}
   .mobile-nav{display:none}
   .main-content{
     padding:var(--container-padding);
