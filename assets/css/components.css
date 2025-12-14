@@ -65,16 +65,15 @@ body{
     padding-right: var(--container-padding);
   }
 
-  /* Cards break out to edges - includes v2 specific classes */
+  /* Cards break out to edges - PRODUCTION selectors from pages/ */
   .card,
+  .class-section,
   .result-card,
   .event-card,
-  .gs-result-card,
-  .event-card-horizontal,
+  .event-row,
   .filter-row,
   .filters-bar,
   .alert,
-  .event-row,
   .event-header-banner,
   .event-header,
   .event-sponsor-banner,
@@ -105,18 +104,17 @@ body{
     max-width: none !important;
   }
 
-  /* Restore padding inside cards - includes v2 interior classes */
+  /* Restore padding inside cards - PRODUCTION selectors */
   .card-header,
   .card-body,
-  .gs-result-info,
-  .event-info-right {
+  .result-info,
+  .event-info {
     padding-left: var(--container-padding);
     padding-right: var(--container-padding);
   }
 
-  /* v2 card specific - restore internal padding */
-  .gs-result-card,
-  .event-card-horizontal {
+  /* Event row specific - restore internal padding */
+  .event-row {
     padding: var(--container-padding) !important;
   }
 
