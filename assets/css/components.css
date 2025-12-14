@@ -56,7 +56,7 @@ body{
    ============================================================================ */
 
 /* Tablet/Mobile: container has 16px padding */
-@media(max-width:767px){
+@media(max-width:899px){
   .card,
   .filter-row,
   .filters-bar,
