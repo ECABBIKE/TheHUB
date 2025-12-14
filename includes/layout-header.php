@@ -323,7 +323,7 @@ if ($userTheme === 'auto') {
             /* Main content offset for sidebar on landscape */
             .main-content {
                 margin-left: 0 !important;
-                padding-left: 12px !important;
+                padding-left: 4px !important;
                 width: 100% !important;
             }
 
