@@ -119,10 +119,10 @@
 
 /* LANDSCAPE MOBILE/TABLET (up to 1023px): Compact sidebar, NO bottom nav */
 @media(max-width:1023px) and (orientation:landscape){
-  .app-layout{padding-left:64px}
+  .app-layout{padding-left:64px !important}
   .sidebar{
-    display:flex;
-    width:64px;
+    display:flex !important;
+    width:64px !important;
     padding:4px 0;
     gap:0;
   }
@@ -136,11 +136,11 @@
   .sidebar-icon svg{width:20px;height:20px}
   .mobile-nav{display:none !important}
   .main-content{
-    padding:var(--container-padding);
-    padding-left:var(--landscape-sidebar-gap, 4px);
-    padding-bottom:var(--container-padding);
-    margin-left:0;
-    width:100%;
+    padding:var(--container-padding) !important;
+    padding-left:var(--landscape-sidebar-gap, 4px) !important;
+    padding-bottom:var(--container-padding) !important;
+    margin-left:0 !important;
+    width:100% !important;
   }
   .page-grid{grid-template-columns:1fr 1fr!important}
 }
