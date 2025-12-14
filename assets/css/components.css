@@ -56,7 +56,7 @@ body{
    ============================================================================ */
 
 /* Tablet/Mobile: container has 16px padding */
-@media(max-width:767px){
+@media(max-width:899px){
   .card,
   .filter-row,
   .filters-bar,
@@ -69,22 +69,22 @@ body{
   .event-sponsor-banner,
   .event-sponsor-logos,
   .event-tabs-wrapper {
-    margin-left:-16px;
-    margin-right:-16px;
+    margin-left:-16px!important;
+    margin-right:-16px!important;
     border-radius:0!important;
     border-left:none!important;
     border-right:none!important;
-    width:calc(100% + 32px);
+    width:calc(100% + 32px)!important;
   }
-  .card-header,.card-body{padding-left:16px;padding-right:16px}
+  .card-header,.card-body{padding-left:16px!important;padding-right:16px!important}
 
   /* Tables/lists inside cards break out of card-body padding (24px) */
   .card .table-wrapper,
   .card .table-responsive,
   .card table {
-    margin-left:-24px;
-    margin-right:-24px;
-    width:calc(100% + 48px);
+    margin-left:-24px!important;
+    margin-right:-24px!important;
+    width:calc(100% + 48px)!important;
   }
 }
 
@@ -102,32 +102,32 @@ body{
   .event-sponsor-banner,
   .event-sponsor-logos,
   .event-tabs-wrapper {
-    margin-left:-8px;
-    margin-right:-8px;
-    width:calc(100% + 16px);
+    margin-left:-8px!important;
+    margin-right:-8px!important;
+    width:calc(100% + 16px)!important;
     border-radius:0!important;
     border-left:none!important;
     border-right:none!important;
   }
-  .card-header,.card-body{padding-left:8px;padding-right:8px}
+  .card-header,.card-body{padding-left:8px!important;padding-right:8px!important}
 
   /* Tables/lists inside cards - break out of card-body padding (16px) */
   .card .table-wrapper,
   .card .table-responsive,
   .card table {
-    margin-left:-16px;
-    margin-right:-16px;
-    width:calc(100% + 32px);
+    margin-left:-16px!important;
+    margin-right:-16px!important;
+    width:calc(100% + 32px)!important;
   }
 
   /* Result items edge-to-edge */
   .card .result-list .result-item,
   .result-item {
-    margin-left:0;
-    margin-right:0;
-    border-radius:0;
-    border-left:none;
-    border-right:none;
+    margin-left:0!important;
+    margin-right:0!important;
+    border-radius:0!important;
+    border-left:none!important;
+    border-right:none!important;
   }
 }
 
