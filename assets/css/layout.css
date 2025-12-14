@@ -97,7 +97,7 @@
 
 /* Responsive - Uses --container-padding from branding (set via responsive media queries in head.php) */
 
-/* PORTRAIT: Bottom nav, no sidebar */
+/* PORTRAIT MOBILE (up to 899px): Bottom nav, no sidebar */
 @media(max-width:899px) and (orientation:portrait){
   .app-layout{padding-left:0}
   .sidebar{display:none}
@@ -105,6 +105,8 @@
   .main-content{
     padding:var(--container-padding);
     padding-bottom:calc(var(--container-padding) + var(--mobile-nav-height) + env(safe-area-inset-bottom) + 60px);
+    margin-left:0;
+    width:100%;
   }
 }
 
@@ -115,22 +117,29 @@
   .mobile-nav-icon svg{width:20px;height:20px}
 }
 
-/* LANDSCAPE: Icon-only sidebar (56px like bottom nav), no bottom nav - max vertical space */
-@media(max-width:1023px) and (orientation:landscape){
-  .app-layout{padding-left:56px}
+/* LANDSCAPE MOBILE (up to 899px): Compact sidebar, NO bottom nav */
+@media(max-width:899px) and (orientation:landscape){
+  .app-layout{padding-left:64px}
   .sidebar{
     display:flex;
-    width:56px;
-    align-items:center;
+    width:64px;
+    padding:4px 0;
+    gap:0;
   }
-  /* Hide text labels - icon only */
-  .sidebar-link span:last-child{display:none}
-  .sidebar-link{padding:var(--space-sm)}
-  .mobile-nav{display:none}
+  .sidebar-nav{gap:0;padding:0 4px}
+  .sidebar-link{
+    padding:6px 4px;
+    gap:2px;
+    font-size:9px;
+    border-radius:var(--radius-sm);
+  }
+  .sidebar-icon svg{width:20px;height:20px}
+  .mobile-nav{display:none !important}
   .main-content{
     padding:var(--container-padding);
     padding-bottom:var(--container-padding);
     margin-left:0;
+    width:100%;
   }
   .page-grid{grid-template-columns:1fr 1fr!important}
 }

@@ -240,7 +240,7 @@ if ($userTheme === 'auto') {
         }
 
         /* Mobile PORTRAIT behavior - bottom nav, hidden sidebar */
-        @media (max-width: 1023px) and (orientation: portrait) {
+        @media (max-width: 899px) and (orientation: portrait) {
             .sidebar {
                 position: fixed !important;
                 left: 0 !important;
@@ -277,35 +277,38 @@ if ($userTheme === 'auto') {
             }
         }
 
-        /* Mobile LANDSCAPE behavior - icon-only sidebar (like bottom nav), no bottom nav */
-        @media (max-width: 1023px) and (orientation: landscape) {
+        /* Mobile LANDSCAPE behavior - compact sidebar with small labels (like bottom nav) */
+        @media (max-width: 899px) and (orientation: landscape) {
             .sidebar {
                 position: fixed !important;
                 left: 0 !important;
                 top: var(--header-height, 60px) !important;
-                width: 56px !important;
+                width: 64px !important;
                 height: calc(100vh - var(--header-height, 60px)) !important;
                 height: calc(100dvh - var(--header-height, 60px)) !important;
                 background: var(--color-bg-surface, #fff) !important;
                 transform: translateX(0) !important;
                 z-index: 200 !important;
-                padding: 8px 0 !important;
+                padding: 4px 0 !important;
                 display: flex !important;
                 flex-direction: column !important;
                 border-right: 1px solid var(--color-border, #e5e7eb) !important;
-                align-items: center !important;
             }
 
-            /* Icon-only sidebar links - hide text labels */
-            .sidebar .sidebar-link span:not(.sidebar-icon),
-            .sidebar .sidebar-label,
-            .sidebar .nav-text {
-                display: none !important;
+            .sidebar .sidebar-nav {
+                gap: 0 !important;
+                padding: 0 4px !important;
             }
 
             .sidebar .sidebar-link {
-                padding: 12px !important;
-                min-width: 44px !important;
+                padding: 6px 4px !important;
+                gap: 2px !important;
+                font-size: 9px !important;
+            }
+
+            .sidebar .sidebar-icon svg {
+                width: 20px !important;
+                height: 20px !important;
             }
 
             .mobile-menu-toggle {
@@ -314,8 +317,8 @@ if ($userTheme === 'auto') {
 
             /* Main content offset for sidebar on landscape */
             .main-content {
-                margin-left: 56px !important;
-                width: calc(100% - 56px) !important;
+                margin-left: 64px !important;
+                width: calc(100% - 64px) !important;
             }
 
             /* Hide bottom nav on landscape - more vertical space */
