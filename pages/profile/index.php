@@ -58,7 +58,7 @@ $recentResults = $resultStmt->fetchAll(PDO::FETCH_ASSOC);
 
 <div class="page-header">
     <h1 class="page-title">
-        <span class="page-icon">👤</span>
+        <i data-lucide="user" class="page-icon"></i>
         Min Sida
     </h1>
 </div>
@@ -79,7 +79,7 @@ $recentResults = $resultStmt->fetchAll(PDO::FETCH_ASSOC);
             $clubStmt->execute([$currentUser['club_id']]);
             $clubName = $clubStmt->fetchColumn();
             ?>
-            <p class="profile-club">🛡️ <?= htmlspecialchars($clubName) ?></p>
+            <p class="profile-club"><i data-lucide="shield" style="width: 14px; height: 14px; vertical-align: middle;"></i> <?= htmlspecialchars($clubName) ?></p>
         <?php endif; ?>
     </div>
     <a href="/profile/edit" class="btn btn-outline">Redigera profil</a>
@@ -88,30 +88,30 @@ $recentResults = $resultStmt->fetchAll(PDO::FETCH_ASSOC);
 <!-- Quick Links -->
 <div class="quick-links">
     <a href="/profile/registrations" class="quick-link">
-        <span class="quick-link-icon">📝</span>
+        <span class="quick-link-icon"><i data-lucide="clipboard-list"></i></span>
         <span class="quick-link-label">Mina anmälningar</span>
         <span class="quick-link-arrow">›</span>
     </a>
     <a href="/profile/results" class="quick-link">
-        <span class="quick-link-icon">🏁</span>
+        <span class="quick-link-icon"><i data-lucide="flag"></i></span>
         <span class="quick-link-label">Mina resultat</span>
         <span class="quick-link-arrow">›</span>
     </a>
     <a href="/profile/receipts" class="quick-link">
-        <span class="quick-link-icon">🧾</span>
+        <span class="quick-link-icon"><i data-lucide="receipt"></i></span>
         <span class="quick-link-label">Kvitton</span>
         <span class="quick-link-arrow">›</span>
     </a>
     <?php if (!empty($linkedChildren)): ?>
         <a href="/profile/children" class="quick-link">
-            <span class="quick-link-icon">👨‍👩‍👧</span>
+            <span class="quick-link-icon"><i data-lucide="users"></i></span>
             <span class="quick-link-label">Kopplade barn (<?= count($linkedChildren) ?>)</span>
             <span class="quick-link-arrow">›</span>
         </a>
     <?php endif; ?>
     <?php if (!empty($adminClubs)): ?>
         <a href="/profile/club-admin" class="quick-link">
-            <span class="quick-link-icon">⚙️</span>
+            <span class="quick-link-icon"><i data-lucide="settings"></i></span>
             <span class="quick-link-label">Klubb-admin</span>
             <span class="quick-link-arrow">›</span>
         </a>
@@ -185,197 +185,5 @@ $recentResults = $resultStmt->fetchAll(PDO::FETCH_ASSOC);
     <a href="/logout" class="btn btn-outline btn-danger">Logga ut</a>
 </div>
 
-<style>
-.profile-card {
-    display: flex;
-    align-items: center;
-    gap: var(--space-lg);
-    padding: var(--space-lg);
-    background: var(--color-bg-card);
-    border-radius: var(--radius-xl);
-    margin-bottom: var(--space-lg);
-}
-.profile-avatar {
-    width: 80px;
-    height: 80px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: var(--color-accent);
-    color: white;
-    border-radius: var(--radius-full);
-    font-size: var(--text-2xl);
-    font-weight: var(--weight-bold);
-}
-.profile-info {
-    flex: 1;
-}
-.profile-name {
-    font-size: var(--text-xl);
-    font-weight: var(--weight-bold);
-    margin-bottom: var(--space-2xs);
-}
-.profile-email, .profile-club {
-    color: var(--color-text-secondary);
-    font-size: var(--text-sm);
-}
 
-.quick-links {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-xs);
-    margin-bottom: var(--space-xl);
-}
-.quick-link {
-    display: flex;
-    align-items: center;
-    gap: var(--space-md);
-    padding: var(--space-md);
-    background: var(--color-bg-card);
-    border-radius: var(--radius-lg);
-    text-decoration: none;
-    color: inherit;
-    transition: all var(--transition-fast);
-}
-.quick-link:hover {
-    transform: translateX(4px);
-    background: var(--color-bg-hover);
-}
-.quick-link-icon {
-    font-size: var(--text-xl);
-}
-.quick-link-label {
-    flex: 1;
-    font-weight: var(--weight-medium);
-}
-.quick-link-arrow {
-    color: var(--color-text-secondary);
-    font-size: var(--text-xl);
-}
-
-.section {
-    margin-bottom: var(--space-xl);
-}
-.section-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: var(--space-md);
-}
-.section-header h2 {
-    font-size: var(--text-lg);
-}
-.section-link {
-    color: var(--color-accent);
-    text-decoration: none;
-    font-size: var(--text-sm);
-}
-
-.upcoming-list, .results-list {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-xs);
-}
-.upcoming-item, .result-item {
-    display: flex;
-    align-items: center;
-    gap: var(--space-md);
-    padding: var(--space-md);
-    background: var(--color-bg-card);
-    border-radius: var(--radius-lg);
-    text-decoration: none;
-    color: inherit;
-    transition: all var(--transition-fast);
-}
-.upcoming-item:hover, .result-item:hover {
-    transform: translateX(4px);
-}
-.upcoming-date {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    min-width: 48px;
-    padding: var(--space-xs);
-    background: var(--color-accent);
-    border-radius: var(--radius-md);
-    color: white;
-}
-.upcoming-day {
-    font-size: var(--text-lg);
-    font-weight: var(--weight-bold);
-    line-height: 1;
-}
-.upcoming-month {
-    font-size: var(--text-xs);
-    text-transform: uppercase;
-}
-.upcoming-info, .result-info {
-    flex: 1;
-    min-width: 0;
-}
-.upcoming-name, .result-event {
-    display: block;
-    font-weight: var(--weight-medium);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-.upcoming-class, .result-class {
-    font-size: var(--text-sm);
-    color: var(--color-text-secondary);
-}
-.result-position {
-    font-size: var(--text-xl);
-    font-weight: var(--weight-bold);
-    min-width: 48px;
-    text-align: center;
-}
-.medal-icon {
-    width: 24px;
-    height: 24px;
-    vertical-align: middle;
-    display: inline-block;
-}
-.result-date {
-    font-size: var(--text-sm);
-    color: var(--color-text-secondary);
-}
-
-.logout-section {
-    padding-top: var(--space-xl);
-    border-top: 1px solid var(--color-border);
-}
-.btn-danger {
-    color: var(--color-error);
-    border-color: var(--color-error);
-}
-.btn-danger:hover {
-    background: var(--color-error);
-    color: white;
-}
-
-.btn-outline {
-    background: transparent;
-    border: 1px solid var(--color-border);
-    padding: var(--space-sm) var(--space-md);
-    border-radius: var(--radius-md);
-    text-decoration: none;
-    cursor: pointer;
-    transition: all var(--transition-fast);
-}
-
-/* Theme Picker - REMOVED: Always light theme */
-
-@media (max-width: 600px) {
-    .profile-card {
-        flex-direction: column;
-        text-align: center;
-    }
-}
-</style>
-
-<script>
-// Theme picker - DISABLED: Always light theme
-// Force light theme on this page
-document.documentElement.setAttribute('data-theme', 'light');
-</script>
+<!-- CSS loaded from /assets/css/pages/profile-index.css -->
