@@ -16,8 +16,22 @@ $pagesWithOwnNav = [
     'profile-receipts'
 ];
 
-// Don't show back link on dashboard/home/welcome or pages with their own navigation
-if ($currentPage !== 'dashboard' && $currentPage !== 'welcome' && !in_array($currentPage, $pagesWithOwnNav)):
+// Index pages - no back link needed (they ARE the destination from nav)
+$indexPages = [
+    'calendar-index',
+    'results-index',
+    'series-index',
+    'database-index',
+    'ranking-index',
+    'profile-index'
+];
+
+// Don't show back link on:
+// - dashboard/welcome (home pages)
+// - pages with their own navigation
+// - index pages (main section entry points)
+$isIndexPage = in_array($currentPage, $indexPages) || str_ends_with($currentPage, '-index');
+if ($currentPage !== 'dashboard' && $currentPage !== 'welcome' && !in_array($currentPage, $pagesWithOwnNav) && !$isIndexPage):
 ?>
 <nav class="back-nav" aria-label="Navigation">
   <a href="javascript:history.back()" class="back-link">
