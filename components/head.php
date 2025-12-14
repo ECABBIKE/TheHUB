@@ -77,6 +77,7 @@ $cssVersion = function($file) use ($cssDir) {
 <link rel="stylesheet" href="<?= hub_asset('css/utilities.css') ?>?v=<?= $cssVersion('utilities.css') ?>">
 <link rel="stylesheet" href="<?= hub_asset('css/badge-system.css') ?>?v=<?= $cssVersion('badge-system.css') ?>">
 <link rel="stylesheet" href="<?= hub_asset('css/pwa.css') ?>?v=<?= $cssVersion('pwa.css') ?>">
+<link rel="stylesheet" href="<?= hub_asset('css/viewport.css') ?>?v=<?= $cssVersion('viewport.css') ?>">
 
 <!-- Dynamic Branding System -->
 <?php
@@ -177,8 +178,28 @@ if (file_exists($brandingFile)) {
             $responsiveCss .= '}}';
         }
 
+        // Process layout settings (content-max-width, sidebar-width, header-height)
+        $layout = $brandingData['layout'] ?? null;
+        if ($layout) {
+            // Content max width
+            $contentMaxWidth = $layout['content_max_width'] ?? '1400';
+            if ($contentMaxWidth === 'none') {
+                $cssOutput .= '--content-max-width:none;';
+            } else {
+                $cssOutput .= '--content-max-width:' . intval($contentMaxWidth) . 'px;';
+            }
+
+            // Sidebar width
+            $sidebarWidth = intval($layout['sidebar_width'] ?? 72);
+            $cssOutput .= '--sidebar-width:' . $sidebarWidth . 'px;';
+
+            // Header height
+            $headerHeight = intval($layout['header_height'] ?? 60);
+            $cssOutput .= '--header-height:' . $headerHeight . 'px;';
+        }
+
         // Output if we have anything to output
-        if ($colorCount > 0 || $responsiveCss) {
+        if ($colorCount > 0 || $responsiveCss || $layout) {
             echo '<style id="custom-branding" data-colors="' . $colorCount . '">';
             echo ':root{' . $cssOutput . '}';
             echo $responsiveCss;

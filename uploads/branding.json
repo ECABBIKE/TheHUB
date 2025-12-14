@@ -13,5 +13,10 @@
             "padding": "32",
             "radius": "12"
         }
+    },
+    "layout": {
+        "content_max_width": "1400",
+        "sidebar_width": "72",
+        "header_height": "60"
     }
 }
