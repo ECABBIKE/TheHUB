@@ -75,7 +75,16 @@ body{
   .event-header,
   .event-sponsor-banner,
   .event-sponsor-logos,
-  .event-tabs-wrapper {
+  .event-tabs-wrapper,
+  /* Rider page elements */
+  .profile-hero,
+  .events-dropdown,
+  .rider-stats-trend,
+  .form-section,
+  .highlights-section,
+  .ranking-section,
+  .results-achievements-grid,
+  .trend-card {
     /* Negative margin equals container padding */
     margin-left: calc(-1 * var(--container-padding)) !important;
     margin-right: calc(-1 * var(--container-padding)) !important;
@@ -105,9 +114,21 @@ body{
   .card-header,
   .card-body,
   .result-info,
-  .event-info {
+  .event-info,
+  /* Rider page internal padding (for child elements inside edge-to-edge containers) */
+  .hero-content,
+  .events-dropdown-header,
+  .events-dropdown-content {
     padding-left: var(--container-padding);
     padding-right: var(--container-padding);
+  }
+
+  /* Rider sections that already have internal padding - override to use container-padding */
+  .form-section,
+  .highlights-section,
+  .ranking-section,
+  .trend-card {
+    padding: var(--container-padding) !important;
   }
 
   /* Event row specific - restore internal padding */
