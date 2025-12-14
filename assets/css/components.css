@@ -84,7 +84,9 @@ body{
   .highlights-section,
   .ranking-section,
   .results-achievements-grid,
-  .trend-card {
+  .trend-card,
+  .series-tabs,
+  .results-card {
     /* Negative margin equals container padding */
     margin-left: calc(-1 * var(--container-padding)) !important;
     margin-right: calc(-1 * var(--container-padding)) !important;
@@ -127,8 +129,18 @@ body{
   .form-section,
   .highlights-section,
   .ranking-section,
-  .trend-card {
+  .trend-card,
+  .results-card {
     padding: var(--container-padding) !important;
+  }
+
+  /* Series tabs internal padding */
+  .series-nav,
+  .series-content,
+  .series-panel,
+  .section-header-styled {
+    padding-left: var(--container-padding);
+    padding-right: var(--container-padding);
   }
 
   /* Event row specific - restore internal padding */
