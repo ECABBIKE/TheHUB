@@ -25,9 +25,8 @@
   --sidebar-width:72px;--header-height:60px;--mobile-nav-height:64px;
   --content-max-width:1400px;
 
-  /* Container padding - responsive */
+  /* Container padding - 2025 mobile-first standard */
   --container-padding:16px;
-  --container-padding-sm:8px;
 
   --z-dropdown:100;--z-sticky:200;--z-fixed:300;--z-modal:500;--z-toast:600;
 
@@ -39,6 +38,20 @@
 
   /* Brand colors for UI elements */
   --color-enduro:#FFD700;--color-enduro-hover:#E6BD00;
+}
+
+/* Container padding - tablet gets more breathing room */
+@media (min-width: 768px) {
+  :root {
+    --container-padding:24px;
+  }
+}
+
+/* Container padding - desktop gets full spacing */
+@media (min-width: 1024px) {
+  :root {
+    --container-padding:32px;
+  }
 }
 
 /* Responsive font sizes for mobile */

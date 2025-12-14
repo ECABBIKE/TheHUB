@@ -65,10 +65,12 @@ body{
     padding-right: var(--container-padding);
   }
 
-  /* Cards break out to edges */
+  /* Cards break out to edges - includes v2 specific classes */
   .card,
   .result-card,
   .event-card,
+  .gs-result-card,
+  .event-card-horizontal,
   .filter-row,
   .filters-bar,
   .alert,
@@ -79,34 +81,43 @@ body{
   .event-sponsor-logos,
   .event-tabs-wrapper {
     /* Negative margin equals container padding */
-    margin-left: calc(-1 * var(--container-padding));
-    margin-right: calc(-1 * var(--container-padding));
+    margin-left: calc(-1 * var(--container-padding)) !important;
+    margin-right: calc(-1 * var(--container-padding)) !important;
 
     /* Remove borders and radius on sides */
-    border-radius: 0;
-    border-left: none;
-    border-right: none;
+    border-radius: 0 !important;
+    border-left: none !important;
+    border-right: none !important;
 
     /* Let it expand naturally */
-    width: auto;
-    max-width: none;
+    width: auto !important;
+    max-width: none !important;
   }
 
   /* Tables and lists also break out */
   .table-responsive,
   .table-wrapper,
-  .result-list {
-    margin-left: calc(-1 * var(--container-padding));
-    margin-right: calc(-1 * var(--container-padding));
-    width: auto;
-    max-width: none;
+  .result-list,
+  .event-list {
+    margin-left: calc(-1 * var(--container-padding)) !important;
+    margin-right: calc(-1 * var(--container-padding)) !important;
+    width: auto !important;
+    max-width: none !important;
   }
 
-  /* Restore padding inside cards */
+  /* Restore padding inside cards - includes v2 interior classes */
   .card-header,
-  .card-body {
+  .card-body,
+  .gs-result-info,
+  .event-info-right {
     padding-left: var(--container-padding);
     padding-right: var(--container-padding);
+  }
+
+  /* v2 card specific - restore internal padding */
+  .gs-result-card,
+  .event-card-horizontal {
+    padding: var(--container-padding) !important;
   }
 
   /* Tables inside cards need to break out of card padding too */
@@ -130,32 +141,11 @@ body{
   }
 }
 
-/* Extra small phones - less padding */
-@media (max-width: 599px) and (orientation: portrait) {
-  .container,
-  .page-content {
-    padding-left: var(--container-padding-sm);
-    padding-right: var(--container-padding-sm);
-  }
-
-  /* Result items edge-to-edge */
-  .result-list > *,
-  .result-card,
-  .event-list > *,
-  .event-row,
-  .card .result-list .result-item,
-  .result-item {
-    margin-left: calc(-1 * var(--container-padding-sm));
-    margin-right: calc(-1 * var(--container-padding-sm));
-    width: auto;
-    max-width: none;
-    border-radius: 0;
-    border-left: none;
-    border-right: none;
-    padding-left: var(--container-padding-sm);
-    padding-right: var(--container-padding-sm);
-  }
-}
+/*
+   NOTE 2025: The 599px portrait breakpoint with 8px padding has been removed.
+   Modern phones (360-430px) work great with 16px padding.
+   See docs/css-analysis/README_START_HÄR.md for rationale.
+*/
 
 .card--elevated{background:var(--color-bg-elevated);box-shadow:var(--shadow-md)}
 .card--clickable{cursor:pointer;transition:transform var(--transition-fast),box-shadow var(--transition-fast)}
