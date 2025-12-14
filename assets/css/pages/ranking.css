@@ -62,6 +62,9 @@
   gap: var(--space-sm);
 }
 .view-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
   padding: var(--space-sm) var(--space-md);
   border-radius: var(--radius-md);
   font-weight: var(--weight-medium);
@@ -69,6 +72,11 @@
   background: var(--color-bg-surface);
   border: 1px solid var(--color-border);
   transition: all var(--transition-fast);
+  text-decoration: none;
+}
+.view-btn i, .view-btn svg {
+  width: 16px;
+  height: 16px;
 }
 .view-btn:hover {
   background: var(--color-bg-hover);
@@ -90,30 +98,50 @@
   color: var(--color-text-secondary);
 }
 .info-icon {
+  display: flex;
+  align-items: center;
   flex-shrink: 0;
+}
+.info-icon i, .info-icon svg {
+  width: 16px;
+  height: 16px;
+  color: var(--color-text-muted);
+}
+
+/* Empty state icons */
+.empty-state-icon i, .empty-state-icon svg {
+  width: 48px;
+  height: 48px;
+  color: var(--color-text-muted);
 }
 
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: var(--space-md);
+  gap: var(--space-md, 16px);
+  width: 100%;
 }
 .stat-card {
-  background: var(--color-bg-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  padding: var(--space-md);
+  background: var(--color-bg-surface, var(--color-bg-card, #fff));
+  border: 1px solid var(--color-border, #e5e7eb);
+  border-radius: var(--radius-md, 10px);
+  padding: var(--space-md, 16px);
   text-align: center;
 }
 .stat-value {
-  font-size: var(--text-2xl);
-  font-weight: var(--weight-bold);
-  color: var(--color-accent-text);
+  display: block;
+  font-size: var(--text-2xl, 1.5rem);
+  font-weight: var(--weight-bold, 700);
+  color: var(--color-accent, #61CE70);
+  line-height: 1.2;
 }
 .stat-label {
-  font-size: var(--text-xs);
-  color: var(--color-text-muted);
-  margin-top: var(--space-2xs);
+  display: block;
+  font-size: var(--text-xs, 0.75rem);
+  color: var(--color-text-muted, #7A7A7A);
+  margin-top: var(--space-2xs, 4px);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 .medal-icon {
