@@ -281,9 +281,9 @@ function isAdminPageActive($item, $requestUri) {
 }
 
 /* ========================================================================
-   MOBILE LANDSCAPE - Compact icon-only sidebar
+   MOBILE/TABLET LANDSCAPE - Compact icon-only sidebar
    ======================================================================== */
-@media (max-width: 899px) and (orientation: landscape) {
+@media (max-width: 1023px) and (orientation: landscape) {
     .sidebar-link {
         flex-direction: column !important;
         padding: 6px 4px !important;
