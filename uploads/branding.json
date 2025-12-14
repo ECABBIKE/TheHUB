@@ -1,0 +1,17 @@
+{
+    "colors": {},
+    "responsive": {
+        "mobile_portrait": {
+            "padding": "12",
+            "radius": "0"
+        },
+        "tablet": {
+            "padding": "24",
+            "radius": "8"
+        },
+        "desktop": {
+            "padding": "32",
+            "radius": "12"
+        }
+    }
+}

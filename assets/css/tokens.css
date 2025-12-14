@@ -1,6 +1,13 @@
 :root{
+  /* Core spacing scale */
   --space-2xs:4px;--space-xs:8px;--space-sm:12px;--space-md:16px;
   --space-lg:24px;--space-xl:32px;--space-2xl:48px;--space-3xl:64px;
+
+  /* Branding-controlled tokens (can be overridden by /admin/branding) */
+  --card-padding:16px;
+  --content-padding:16px;
+  --table-cell-padding-y:12px;
+  --table-cell-padding-x:16px;
 
   /* Typography - Font Families */
   --font-heading:'Oswald', sans-serif;
