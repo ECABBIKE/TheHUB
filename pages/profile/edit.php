@@ -187,3 +187,94 @@ $clubs = $pdo->query("SELECT id, name FROM clubs ORDER BY name")->fetchAll(PDO::
     </div>
 </form>
 
+<style>
+.profile-form {
+    max-width: 600px;
+}
+.form-section {
+    background: var(--color-bg-card);
+    border-radius: var(--radius-lg);
+    padding: var(--space-lg);
+    margin-bottom: var(--space-lg);
+}
+.form-section h2 {
+    font-size: var(--text-lg);
+    margin-bottom: var(--space-lg);
+    padding-bottom: var(--space-sm);
+    border-bottom: 1px solid var(--color-border);
+}
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-md);
+}
+.form-group {
+    margin-bottom: var(--space-md);
+}
+.form-group label {
+    display: block;
+    margin-bottom: var(--space-xs);
+    font-weight: var(--weight-medium);
+    font-size: var(--text-sm);
+}
+.form-group input,
+.form-group select {
+    width: 100%;
+    padding: var(--space-md);
+    background: var(--color-bg-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    font-size: var(--text-md);
+    color: var(--color-text-primary);
+}
+.form-group input:focus,
+.form-group select:focus {
+    outline: none;
+    border-color: var(--color-accent);
+}
+.form-actions {
+    display: flex;
+    gap: var(--space-md);
+}
+.btn {
+    padding: var(--space-md) var(--space-xl);
+    border-radius: var(--radius-md);
+    font-weight: var(--weight-medium);
+    cursor: pointer;
+    text-decoration: none;
+    border: none;
+}
+.btn-primary {
+    background: var(--color-accent);
+    color: white;
+}
+.btn-outline {
+    background: transparent;
+    border: 1px solid var(--color-border);
+    color: var(--color-text-primary);
+}
+.alert {
+    padding: var(--space-md);
+    border-radius: var(--radius-md);
+    margin-bottom: var(--space-lg);
+}
+.alert-success {
+    background: var(--color-success-bg, rgba(34, 197, 94, 0.1));
+    color: var(--color-success, #22c55e);
+}
+.alert-error {
+    background: var(--color-error-bg, rgba(239, 68, 68, 0.1));
+    color: var(--color-error, #ef4444);
+}
+.form-help {
+    font-size: var(--text-sm);
+    color: var(--color-text-muted, #666);
+    margin-bottom: var(--space-md);
+}
+.social-icon {
+    margin-right: var(--space-xs);
+}
+@media (max-width: 600px) {
+    .form-row { grid-template-columns: 1fr; }
+}
+</style>

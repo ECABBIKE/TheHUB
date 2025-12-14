@@ -137,3 +137,99 @@ usort($upcoming, fn($a, $b) => strcmp($a['event_date'], $b['event_date']));
     </section>
 <?php endif; ?>
 
+<style>
+.registrations-section {
+    margin-bottom: var(--space-xl);
+}
+.registrations-section h2 {
+    font-size: var(--text-lg);
+    margin-bottom: var(--space-md);
+    color: var(--color-text-secondary);
+}
+.registration-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+}
+.registration-card {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    padding: var(--space-md);
+    background: var(--color-bg-card);
+    border-radius: var(--radius-lg);
+    text-decoration: none;
+    color: inherit;
+    transition: all var(--transition-fast);
+}
+.registration-card:hover {
+    transform: translateX(4px);
+}
+.registration-card.past {
+    opacity: 0.7;
+}
+.reg-date {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 48px;
+    padding: var(--space-xs);
+    background: var(--color-accent);
+    border-radius: var(--radius-md);
+    color: white;
+}
+.reg-day {
+    font-size: var(--text-lg);
+    font-weight: var(--weight-bold);
+    line-height: 1;
+}
+.reg-month {
+    font-size: var(--text-xs);
+    text-transform: uppercase;
+}
+.reg-info {
+    flex: 1;
+    min-width: 0;
+}
+.reg-event {
+    display: block;
+    font-weight: var(--weight-medium);
+}
+.reg-details {
+    font-size: var(--text-sm);
+    color: var(--color-text-secondary);
+}
+.reg-series {
+    display: block;
+    font-size: var(--text-xs);
+    color: var(--color-accent);
+}
+.reg-status {
+    font-size: var(--text-sm);
+    padding: var(--space-2xs) var(--space-sm);
+    border-radius: var(--radius-full);
+}
+.status-confirmed {
+    background: var(--color-success-bg, rgba(34, 197, 94, 0.1));
+    color: var(--color-success, #22c55e);
+}
+.status-pending {
+    background: var(--color-warning-bg, rgba(234, 179, 8, 0.1));
+    color: var(--color-warning, #eab308);
+}
+.empty-state {
+    text-align: center;
+    padding: var(--space-xl);
+    background: var(--color-bg-card);
+    border-radius: var(--radius-lg);
+}
+.btn-primary {
+    display: inline-block;
+    margin-top: var(--space-md);
+    padding: var(--space-sm) var(--space-lg);
+    background: var(--color-accent);
+    color: white;
+    border-radius: var(--radius-md);
+    text-decoration: none;
+}
+</style>
