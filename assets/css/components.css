@@ -36,18 +36,15 @@ body{
   .page-icon{width:24px;height:24px}
 }
 
-/* Cards */
+/* Cards - Uses --card-padding from branding for responsive control */
 .card{
   background:var(--color-bg-surface);
   border:1px solid var(--color-border);
   border-radius:var(--radius-lg);
-  padding:var(--space-lg);
+  padding:var(--card-padding);
   box-shadow:var(--shadow-sm);
   max-width:100%;
   overflow:hidden;
-}
-@media(max-width:599px) and (orientation:portrait){
-  .card{padding:var(--space-md)}
 }
 
 /* ============================================================================

@@ -119,7 +119,18 @@ if (file_exists($brandingFile)) {
             // Desktop defaults (1024px+) - set in :root
             $desktopPadding = intval($responsive['desktop']['padding'] ?? 32);
             $desktopRadius = intval($responsive['desktop']['radius'] ?? 12);
+
+            // Desktop spacing tokens (derived from padding)
+            $desktopCardPadding = max(16, $desktopPadding - 8);  // Slightly less than container
+            $desktopSpaceMd = 16;  // Standard
+            $desktopSpaceSm = 12;
+            $desktopSpaceLg = 24;
+
             $cssOutput .= '--container-padding:' . $desktopPadding . 'px;';
+            $cssOutput .= '--card-padding:' . $desktopCardPadding . 'px;';
+            $cssOutput .= '--content-padding:' . $desktopCardPadding . 'px;';
+            $cssOutput .= '--table-cell-padding-y:' . $desktopSpaceSm . 'px;';
+            $cssOutput .= '--table-cell-padding-x:' . $desktopSpaceMd . 'px;';
             $cssOutput .= '--radius-sm:' . $desktopRadius . 'px;';
             $cssOutput .= '--radius-md:' . $desktopRadius . 'px;';
             $cssOutput .= '--radius-lg:' . $desktopRadius . 'px;';
@@ -128,9 +139,17 @@ if (file_exists($brandingFile)) {
             // Tablet / Landscape (768-1023px)
             $tabletPadding = intval($responsive['tablet']['padding'] ?? 24);
             $tabletRadius = intval($responsive['tablet']['radius'] ?? 8);
+            $tabletCardPadding = max(12, $tabletPadding - 8);
+            $tabletSpaceSm = 10;
+            $tabletSpaceMd = 14;
+
             $responsiveCss .= '@media (min-width:768px) and (max-width:1023px){';
             $responsiveCss .= ':root{';
             $responsiveCss .= '--container-padding:' . $tabletPadding . 'px;';
+            $responsiveCss .= '--card-padding:' . $tabletCardPadding . 'px;';
+            $responsiveCss .= '--content-padding:' . $tabletCardPadding . 'px;';
+            $responsiveCss .= '--table-cell-padding-y:' . $tabletSpaceSm . 'px;';
+            $responsiveCss .= '--table-cell-padding-x:' . $tabletSpaceMd . 'px;';
             $responsiveCss .= '--radius-sm:' . $tabletRadius . 'px;';
             $responsiveCss .= '--radius-md:' . $tabletRadius . 'px;';
             $responsiveCss .= '--radius-lg:' . $tabletRadius . 'px;';
@@ -140,9 +159,17 @@ if (file_exists($brandingFile)) {
             // Mobile Portrait (0-767px)
             $mobilePadding = intval($responsive['mobile_portrait']['padding'] ?? 12);
             $mobileRadius = intval($responsive['mobile_portrait']['radius'] ?? 0);
+            $mobileCardPadding = max(8, $mobilePadding - 4);
+            $mobileSpaceSm = 8;
+            $mobileSpaceMd = 12;
+
             $responsiveCss .= '@media (max-width:767px){';
             $responsiveCss .= ':root{';
             $responsiveCss .= '--container-padding:' . $mobilePadding . 'px;';
+            $responsiveCss .= '--card-padding:' . $mobileCardPadding . 'px;';
+            $responsiveCss .= '--content-padding:' . $mobileCardPadding . 'px;';
+            $responsiveCss .= '--table-cell-padding-y:' . $mobileSpaceSm . 'px;';
+            $responsiveCss .= '--table-cell-padding-x:' . $mobileSpaceMd . 'px;';
             $responsiveCss .= '--radius-sm:' . $mobileRadius . 'px;';
             $responsiveCss .= '--radius-md:' . $mobileRadius . 'px;';
             $responsiveCss .= '--radius-lg:' . $mobileRadius . 'px;';
