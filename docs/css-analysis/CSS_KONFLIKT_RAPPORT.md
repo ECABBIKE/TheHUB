@@ -136,36 +136,57 @@ map.css:            1 !important
 
 ### 5. INKONSISTENTA MOBILE BREAKPOINTS
 
-**Hittade breakpoints:**
+**Hittade breakpoints (problematiska):**
 ```css
-max-width: 480px   ← Vad är detta?
-max-width: 599px   ← Extra small phones
-max-width: 640px   ← ???
-max-width: 767px   ← Standard mobile
-max-width: 768px   ← Tablet (off by 1px!)
-max-width: 900px   ← Vad är detta?
-max-width: 1023px  ← Desktop?
+max-width: 480px   ← Föråldrad (320px phones finns inte)
+max-width: 599px   ← Onödig komplexitet med orientation
+max-width: 640px   ← Arbiträr, ingen standard
+max-width: 767px   ← OK för mobile max
+max-width: 768px   ← Tablet (off by 1px vs 767!)
+max-width: 899px   ← Inkonsekvent
+max-width: 900px   ← Duplicat
+max-width: 1023px  ← OK för tablet max
 ```
 
 **Problem:**
-- 767px vs 768px (off by 1 pixel!)
-- För många breakpoints skapar underhållsproblem
-- Ingen standard följs
+- För många breakpoints = underhållsmardröm
+- Orientation queries lägger till komplexitet utan nytta
+- 8px padding var för 320px telefoner som knappt finns 2025
 
-**REKOMMENDATION: Konsolidera till:**
+**REKOMMENDATION 2025 - Mobile-first med 3 breakpoints:**
 ```css
-/* Mobile portrait: 0-599px */
-@media (max-width: 599px) and (orientation: portrait) { }
+/*
+┌──────────────┬──────────────┬──────────────┐
+│  0-767px     │  768-1023px  │  1024px+     │
+│  Mobile      │  Tablet      │  Desktop     │
+├──────────────┼──────────────┼──────────────┤
+│ 16px padding │ 24px padding │ 32px padding │
+│ Edge-to-edge │ Rounded      │ Full layout  │
+│ 1 column     │ 2 columns    │ 3+ columns   │
+└──────────────┴──────────────┴──────────────┘
+*/
 
-/* Mobile landscape: 600-767px */  
-@media (min-width: 600px) and (max-width: 767px) { }
+/* Mobile är BASE - skriv CSS för mobil först */
+:root {
+  --container-padding: 16px;
+}
 
-/* Tablet: 768-1023px */
-@media (min-width: 768px) and (max-width: 1023px) { }
+/* Tablet: 768px+ */
+@media (min-width: 768px) {
+  :root { --container-padding: 24px; }
+}
 
 /* Desktop: 1024px+ */
-@media (min-width: 1024px) { }
+@media (min-width: 1024px) {
+  :root { --container-padding: 32px; }
+}
 ```
+
+**VARFÖR 16px ÄR STANDARD 2025:**
+- Apple HIG och Material Design 3 rekommenderar 16px
+- Moderna mobiler: iPhone 15 (393px), Samsung S24 (360px), Pixel 8 (412px)
+- 16px på 360px telefon = 92% content area (328px användbart)
+- 8px såg cramped ut och var designat för 320px telefoner
 
 ### 6. EDGE-TO-EDGE MOBILE PROBLEM
 
@@ -190,61 +211,52 @@ max-width: 1023px  ← Desktop?
 3. `!important` gör det omöjligt att overrida specifika fall
 4. Ingen `max-width: none` → kan vara begränsad ändå
 
-**BÄTTRE LÖSNING:**
+**BÄTTRE LÖSNING (2025 Mobile-First):**
 ```css
-/* Sätt explicit container padding */
-.container {
-  padding-left: 16px;
-  padding-right: 16px;
-  max-width: 100%;
+/* tokens.css - Mobile-first padding */
+:root {
+  --container-padding: 16px;  /* Base för alla mobiler */
 }
 
-/* Breakout pattern - enklare och mer förutsägbar */
+@media (min-width: 768px) {
+  :root { --container-padding: 24px; }  /* Tablet */
+}
+
+@media (min-width: 1024px) {
+  :root { --container-padding: 32px; }  /* Desktop */
+}
+```
+
+```css
+/* components.css - Edge-to-edge cards */
 @media (max-width: 767px) {
   .card,
   .result-card {
     /* Negativt margin = bredd av container padding */
-    margin-left: calc(-1 * var(--container-padding, 16px));
-    margin-right: calc(-1 * var(--container-padding, 16px));
-    
+    margin-left: calc(-1 * var(--container-padding));
+    margin-right: calc(-1 * var(--container-padding));
+
     /* Ta bort rundade hörn på mobil */
     border-radius: 0;
     border-left: none;
     border-right: none;
-    
+
     /* Garantera full bredd */
-    width: auto; /* Inte calc! */
+    width: auto;
     max-width: none;
   }
-  
+
   /* Återställ padding inuti */
   .card-header,
   .card-body {
-    padding-left: var(--container-padding, 16px);
-    padding-right: var(--container-padding, 16px);
-  }
-}
-
-/* Extra small phones */
-@media (max-width: 599px) and (orientation: portrait) {
-  :root {
-    --container-padding: 8px;
+    padding-left: var(--container-padding);
+    padding-right: var(--container-padding);
   }
 }
 ```
 
-**NYA VARIABLER att lägga till i tokens.css:**
-```css
-:root {
-  --container-padding: 16px;
-}
-
-@media (max-width: 599px) and (orientation: portrait) {
-  :root {
-    --container-padding: 8px;
-  }
-}
-```
+**OBS: Ingen 8px-variant behövs längre!**
+Moderna mobiler (360-430px) fungerar utmärkt med 16px padding.
 
 ---
 
@@ -284,18 +296,26 @@ mv public/css/gravityseries-*.css uploads/backup/css-backup-20241214/
 mv assets/gravityseries-theme.css uploads/backup/css-backup-20241214/
 ```
 
-#### TASK 5: Konsolidera breakpoints
+#### TASK 5: Konsolidera till 3 breakpoints (2025 standard)
 **Filer att ändra:**
 - `assets/css/responsive.css`
 - `assets/css/components.css`
 - `assets/css/tables.css`
+- `assets/css/tokens.css`
 
-**Sök & ersätt:**
+**Nytt system (mobile-first):**
+```css
+/* Base: Mobile 0-767px (16px) - ingen query */
+/* Tablet: 768px+ (24px) - @media (min-width: 768px) */
+/* Desktop: 1024px+ (32px) - @media (min-width: 1024px) */
 ```
-max-width: 768px  →  max-width: 767px (mobil)
-max-width: 900px  →  max-width: 1023px (tablet)
-Ta bort: 480px, 640px breakpoints
-```
+
+**Ta bort dessa breakpoints:**
+- `max-width: 480px` - föråldrad
+- `max-width: 599px` och orientation queries - onödig komplexitet
+- `max-width: 640px` - arbiträr
+- `max-width: 768px` - använd `767px` för mobile max
+- `max-width: 899px/900px` - inkonsekvent
 
 #### TASK 6: Minska !important användning
 **Strategi:**

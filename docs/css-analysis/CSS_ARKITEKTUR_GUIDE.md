@@ -178,27 +178,39 @@
 └─────────────────────────────────────────────────────────┘
 ```
 
-## 📱 RESPONSIVE BREAKPOINTS
+## 📱 RESPONSIVE BREAKPOINTS 2025
 
 ```
-┌──────────────┬──────────────┬──────────────┬──────────────┐
-│  0-599px     │  600-767px   │  768-1023px  │  1024px+     │
-│  Portrait    │  Landscape   │  Tablet      │  Desktop     │
-│  Mobile      │  Mobile      │              │              │
-├──────────────┼──────────────┼──────────────┼──────────────┤
-│              │              │              │              │
-│  8px padding │ 16px padding │ 24px padding │ 32px padding │
-│              │              │              │              │
-│  Cards       │ Cards        │ Cards with   │ Full layout  │
-│  edge-to-    │ edge-to-     │ rounded      │ with sidebar │
-│  edge        │ edge         │ corners      │              │
-│              │              │              │              │
-│  1 column    │ 1 column     │ 2 columns    │ 3+ columns   │
-│              │              │              │              │
-│  Bottom nav  │ Bottom nav   │ Top nav      │ Top nav +    │
-│  only        │ + top bar    │ visible      │ sidebar      │
-│              │              │              │              │
-└──────────────┴──────────────┴──────────────┴──────────────┘
+┌──────────────┬──────────────┬──────────────┐
+│  0-767px     │  768-1023px  │  1024px+     │
+│  Mobile      │  Tablet      │  Desktop     │
+├──────────────┼──────────────┼──────────────┤
+│              │              │              │
+│ 16px padding │ 24px padding │ 32px padding │
+│              │              │              │
+│  Cards       │ Cards with   │ Full layout  │
+│  edge-to-    │ rounded      │ with sidebar │
+│  edge        │ corners      │              │
+│              │              │              │
+│  1 column    │ 2 columns    │ 3+ columns   │
+│              │              │              │
+│  Bottom nav  │ Top nav      │ Top nav +    │
+│  only        │ visible      │ sidebar      │
+│              │              │              │
+└──────────────┴──────────────┴──────────────┘
+
+MODERN MOBILE DEVICES 2025:
+- iPhone 15 Pro: 393px      ← All these work great
+- iPhone 15 Pro Max: 430px     with 16px padding!
+- Samsung Galaxy S24: 360px
+- Samsung Galaxy S24 Ultra: 412px
+- Google Pixel 8 Pro: 412px
+
+WHY 16px IS THE NEW STANDARD:
+- Apple HIG recommends 16px margins
+- Material Design 3 uses 16px
+- 16px on 360px phone = 92% content area (328px)
+- 8px was designed for 320px phones (now extinct)
 ```
 
 ## 🔧 MOBILE EDGE-TO-EDGE SYSTEM
@@ -335,20 +347,25 @@ PRINCIPLE:
 }
 ```
 
-### ❌ DÅLIGT: Fixed breakpoints överallt
+### ❌ DÅLIGT: För många breakpoints
 ```css
 @media (max-width: 768px) { }
 @media (max-width: 767px) { }
 @media (max-width: 640px) { }
+@media (max-width: 599px) and (orientation: portrait) { }
 @media (max-width: 480px) { }
 ```
 
-### ✅ BRA: Konsistenta breakpoints
+### ✅ BRA: Mobile-first med 3 breakpoints (2025 standard)
 ```css
-@media (max-width: 599px) and (orientation: portrait) { }
-@media (max-width: 767px) { }
-@media (min-width: 768px) and (max-width: 1023px) { }
-@media (min-width: 1024px) { }
+/* Mobile är BASE - ingen query behövs */
+:root { --container-padding: 16px; }
+
+/* Tablet */
+@media (min-width: 768px) { --container-padding: 24px; }
+
+/* Desktop */
+@media (min-width: 1024px) { --container-padding: 32px; }
 ```
 
 ## 🗂️ FILSTRUKTUR
