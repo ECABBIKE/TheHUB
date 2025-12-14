@@ -5,36 +5,28 @@
 
 /* ============================================================
    FIX 1: CONTAINER SYSTEM (lägg till i tokens.css)
-   Mobile-first approach for 2025
+   UPPDATERAD 2025: Moderna breakpoints för iPhone 15, S24, Pixel 8
    ============================================================ */
 
 /* Lägg till EFTER rad 26 i assets/css/tokens.css */
 :root {
-  /* Container padding - mobile-first (16px is Apple HIG/Material Design standard) */
-  --container-padding: 16px;
+  /* Container padding - mobile-first för 2025 */
+  --container-padding: 16px;  /* Modern standard (Apple HIG, Material Design 3) */
 }
 
-/* Tablet: more breathing room */
+/* Tablet får mer andrum */
 @media (min-width: 768px) {
   :root {
     --container-padding: 24px;
   }
 }
 
-/* Desktop: full spacing */
+/* Desktop får max padding */
 @media (min-width: 1024px) {
   :root {
     --container-padding: 32px;
   }
 }
-
-/*
-   RATIONALE 2025:
-   - Modern mobiles are 360-430px wide (iPhone 15: 393px, Samsung S24: 360px)
-   - 16px padding gives 92% content area on a 360px phone (328px usable)
-   - 8px was too cramped and looked dated
-   - Simpler code = fewer edge cases = easier maintenance
-*/
 
 /* ============================================================
    FIX 2: EDGE-TO-EDGE CARDS (Ersätt rad 56-102 i components.css)
@@ -124,12 +116,6 @@
     padding-right: var(--container-padding);
   }
 }
-
-/*
-   NOTE: No special "extra small phone" breakpoint needed for 2025!
-   Modern phones (360-430px) work great with 16px padding.
-   The old 8px padding was designed for 320px phones which are rare now.
-*/
 
 /* ============================================================
    FIX 3: RESULT CARDS SPECIFIC (lägg till om result-card inte fungerar)
@@ -258,57 +244,40 @@
 */
 
 /* ============================================================
-   BREAKPOINTS 2025 - MOBILE-FIRST STANDARD
+   KONSOLIDERING AV BREAKPOINTS - MODERNA 2025
    ============================================================ */
 
-/*
-┌──────────────┬──────────────┬──────────────┐
-│  0-767px     │  768-1023px  │  1024px+     │
-│  Mobile      │  Tablet      │  Desktop     │
-├──────────────┼──────────────┼──────────────┤
-│ 16px padding │ 24px padding │ 32px padding │
-│ Edge-to-edge │ Rounded      │ Full layout  │
-│ 1 column     │ 2 columns    │ 3+ columns   │
-│ Bottom nav   │ Top nav      │ Nav+Sidebar  │
-└──────────────┴──────────────┴──────────────┘
-*/
+/* Standardiserade breakpoints för moderna mobiler (360-430px): */
 
-/* Base: Mobile (0-767px) - DEFAULT, no media query needed */
-/* 16px padding, edge-to-edge cards, single column */
-
-/* Tablet (768-1023px) */
-@media (min-width: 768px) {
-  /* 24px padding, rounded corners, 2 columns */
+/* Mobile (alla smartphones 2024-2025) */
+@media (max-width: 767px) {
+  /* 
+   Täcker: iPhone 15 Pro (393px), S24 (360px), Pixel 8 (412px)
+   Edge-to-edge layouts, staplade element, 16px padding 
+  */
 }
 
-/* Desktop (1024px+) */
+/* Tablet */
+@media (min-width: 768px) and (max-width: 1023px) {
+  /* 2-kolumns grid, 24px padding */
+}
+
+/* Desktop */
 @media (min-width: 1024px) {
-  /* 32px padding, full layout with sidebar */
+  /* Full layout med sidebar, 32px padding */
 }
 
-/* Large Desktop (1400px+) - optional */
+/* Large Desktop */
 @media (min-width: 1400px) {
-  /* Max content width constraint */
+  /* Max content width, extra spacing */
 }
 
 /* ============================================================
-   FÖRÅLDRADE BREAKPOINTS - TA BORT DESSA
+   TA BORT DESSA BREAKPOINTS (föråldrade från 320px-eran)
    ============================================================ */
 
-/* TA BORT: max-width: 480px   - 320px phones are extinct */
-/* TA BORT: max-width: 599px   - orientation queries add complexity */
-/* TA BORT: max-width: 640px   - arbitrary, not standard */
-/* TA BORT: max-width: 768px   - use 767px for mobile instead */
-/* TA BORT: max-width: 899px   - inconsistent */
-/* TA BORT: max-width: 900px   - use 1023px for tablet max */
-
-/*
-   MODERN MOBILE SIZES 2025:
-   - iPhone 15 Pro: 393px
-   - iPhone 15 Pro Max: 430px
-   - Samsung Galaxy S24: 360px
-   - Samsung Galaxy S24 Ultra: 412px
-   - Google Pixel 8 Pro: 412px
-
-   All work perfectly with 16px padding!
-*/
+/* TA BORT max-width: 480px  - För gammal (iPhone 5) */
+/* TA BORT max-width: 599px  - Onödig komplexitet */
+/* TA BORT max-width: 640px  - Oanvänd */
+/* TA BORT max-width: 768px  - Använd 767px istället */
+/* TA BORT max-width: 900px  - Oanvänd */

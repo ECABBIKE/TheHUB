@@ -178,12 +178,13 @@
 └─────────────────────────────────────────────────────────┘
 ```
 
-## 📱 RESPONSIVE BREAKPOINTS 2025
+## 📱 RESPONSIVE BREAKPOINTS (MODERNA 2025)
 
 ```
 ┌──────────────┬──────────────┬──────────────┐
 │  0-767px     │  768-1023px  │  1024px+     │
 │  Mobile      │  Tablet      │  Desktop     │
+│  (360-430px) │              │              │
 ├──────────────┼──────────────┼──────────────┤
 │              │              │              │
 │ 16px padding │ 24px padding │ 32px padding │
@@ -195,22 +196,16 @@
 │  1 column    │ 2 columns    │ 3+ columns   │
 │              │              │              │
 │  Bottom nav  │ Top nav      │ Top nav +    │
-│  only        │ visible      │ sidebar      │
+│              │ visible      │ sidebar      │
 │              │              │              │
 └──────────────┴──────────────┴──────────────┘
 
-MODERN MOBILE DEVICES 2025:
-- iPhone 15 Pro: 393px      ← All these work great
-- iPhone 15 Pro Max: 430px     with 16px padding!
-- Samsung Galaxy S24: 360px
-- Samsung Galaxy S24 Ultra: 412px
-- Google Pixel 8 Pro: 412px
-
-WHY 16px IS THE NEW STANDARD:
-- Apple HIG recommends 16px margins
-- Material Design 3 uses 16px
-- 16px on 360px phone = 92% content area (328px)
-- 8px was designed for 320px phones (now extinct)
+VARFÖR 16PX PÅ MOBIL?
+- Moderna mobiler: iPhone 15 Pro (393px), S24 (360px), Pixel 8 (412px)
+- Apple HIG 2025: 16-20px margins
+- Material Design 3: 16px standard
+- 16px ger 92% content area - perfekt balans!
+- 8px var för trångt för 2020-talet (från 320px iPhone 5-eran)
 ```
 
 ## 🔧 MOBILE EDGE-TO-EDGE SYSTEM
@@ -347,25 +342,20 @@ PRINCIPLE:
 }
 ```
 
-### ❌ DÅLIGT: För många breakpoints
+### ❌ DÅLIGT: Fixed breakpoints överallt
 ```css
 @media (max-width: 768px) { }
 @media (max-width: 767px) { }
 @media (max-width: 640px) { }
-@media (max-width: 599px) and (orientation: portrait) { }
 @media (max-width: 480px) { }
 ```
 
-### ✅ BRA: Mobile-first med 3 breakpoints (2025 standard)
+### ✅ BRA: Konsistenta breakpoints
 ```css
-/* Mobile är BASE - ingen query behövs */
-:root { --container-padding: 16px; }
-
-/* Tablet */
-@media (min-width: 768px) { --container-padding: 24px; }
-
-/* Desktop */
-@media (min-width: 1024px) { --container-padding: 32px; }
+@media (max-width: 599px) and (orientation: portrait) { }
+@media (max-width: 767px) { }
+@media (min-width: 768px) and (max-width: 1023px) { }
+@media (min-width: 1024px) { }
 ```
 
 ## 🗂️ FILSTRUKTUR

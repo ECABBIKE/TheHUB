@@ -149,43 +149,35 @@ html[data-theme="light"] {
 
 ---
 
-## 📱 MOBILE BREAKPOINTS 2025
+## 📱 MOBILE BREAKPOINTS (MODERNA 2025)
 
-**MOBILE-FIRST STANDARD:**
-```
-┌──────────────┬──────────────┬──────────────┐
-│  0-767px     │  768-1023px  │  1024px+     │
-│  Mobile      │  Tablet      │  Desktop     │
-├──────────────┼──────────────┼──────────────┤
-│ 16px padding │ 24px padding │ 32px padding │
-│ Edge-to-edge │ Rounded      │ Full layout  │
-│ 1 column     │ 2 columns    │ 3+ columns   │
-│ Bottom nav   │ Top nav      │ Nav+Sidebar  │
-└──────────────┴──────────────┴──────────────┘
-```
-
-**ANVÄND DESSA (mobile-first):**
+**ANVÄND DESSA:**
 ```css
-/* Mobile är BASE - ingen media query behövs */
-:root { --container-padding: 16px; }
+/* Mobile (moderna smartphones 360-430px bred) */
+@media (max-width: 767px) { 
+  /* iPhone 15 Pro (393px), S24 (360px), Pixel 8 (412px) */
+  /* 16px padding - modern UX-standard */
+}
 
 /* Tablet */
-@media (min-width: 768px) { --container-padding: 24px; }
+@media (min-width: 768px) and (max-width: 1023px) { }
 
 /* Desktop */
-@media (min-width: 1024px) { --container-padding: 32px; }
+@media (min-width: 1024px) { }
 ```
 
-**VARFÖR 16px ÄR STANDARD 2025:**
-- Apple HIG och Material Design 3 rekommenderar 16px
-- Moderna mobiler är 360-430px breda (iPhone 15: 393px, Samsung S24: 360px)
-- 16px ger 92% content area på 360px telefon (328px användbart)
-- 8px var för 320px telefoner som knappt finns längre
+**TA BORT DESSA:**
+- 480px (för gammal - iPhone 5-eran)
+- 599px (onödig komplexitet)
+- 640px (oanvänd)
+- 768px (använd 767px istället)
+- 900px (oanvänd)
 
-**TA BORT DESSA (föråldrade):**
-- 480px, 599px, 640px, 768px, 899px, 900px
-- Orientation-baserade queries (`and (orientation: portrait)`)
-- 8px padding (för trångt för moderna mobiler)
+**VARFÖR 16PX PADDING?**
+- Apple HIG 2025: 16-20px margins
+- Material Design 3: 16px standard  
+- Moderna mobiler 360-430px breda (inte 320px längre)
+- 16px ger 92% content area = optimal läsbarhet
 
 ---
 
