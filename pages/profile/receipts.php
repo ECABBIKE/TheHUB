@@ -46,7 +46,7 @@ try {
         <span>Kvitton</span>
     </nav>
     <h1 class="page-title">
-        <span class="page-icon">🧾</span>
+        <i data-lucide="receipt" class="page-icon"></i>
         Kvitton
     </h1>
 </div>
@@ -66,7 +66,7 @@ try {
 <!-- Receipts List -->
 <?php if (empty($payments)): ?>
     <div class="empty-state">
-        <div class="empty-icon">🧾</div>
+        <div class="empty-icon"><i data-lucide="receipt" style="width: 48px; height: 48px;"></i></div>
         <h3>Inga kvitton</h3>
         <p>Dina betalningar och kvitton visas här.</p>
     </div>
@@ -90,78 +90,5 @@ try {
     </div>
 <?php endif; ?>
 
-<style>
-.summary-card {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: var(--space-md);
-    margin-bottom: var(--space-xl);
-}
-.summary-stat {
-    background: var(--color-bg-card);
-    border-radius: var(--radius-lg);
-    padding: var(--space-lg);
-    text-align: center;
-}
-.summary-value {
-    display: block;
-    font-size: var(--text-2xl);
-    font-weight: var(--weight-bold);
-}
-.summary-label {
-    font-size: var(--text-sm);
-    color: var(--color-text-secondary);
-}
 
-.receipts-list {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-md);
-}
-.receipt-card {
-    background: var(--color-bg-card);
-    border-radius: var(--radius-lg);
-    padding: var(--space-lg);
-}
-.receipt-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: var(--space-sm);
-}
-.receipt-event {
-    font-weight: var(--weight-semibold);
-}
-.receipt-amount {
-    font-weight: var(--weight-bold);
-    color: var(--color-accent);
-}
-.receipt-details {
-    display: flex;
-    justify-content: space-between;
-    font-size: var(--text-sm);
-    color: var(--color-text-secondary);
-    margin-bottom: var(--space-sm);
-}
-.receipt-footer {
-    padding-top: var(--space-sm);
-    border-top: 1px solid var(--color-border);
-}
-.receipt-status {
-    font-size: var(--text-sm);
-}
-.status-paid {
-    color: var(--color-success, #22c55e);
-}
-
-.empty-state {
-    text-align: center;
-    padding: var(--space-2xl);
-    background: var(--color-bg-card);
-    border-radius: var(--radius-lg);
-}
-.empty-icon {
-    font-size: 3rem;
-    margin-bottom: var(--space-md);
-}
-</style>
+<!-- CSS loaded from /assets/css/pages/profile-receipts.css -->
