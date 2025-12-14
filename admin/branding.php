@@ -91,6 +91,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'padding' => $_POST['mobile_portrait_padding'] ?? '12',
                 'radius' => $_POST['mobile_portrait_radius'] ?? '0'
             ],
+            'mobile_landscape' => [
+                'sidebar_gap' => $_POST['mobile_landscape_sidebar_gap'] ?? '4'
+            ],
             'tablet' => [
                 'padding' => $_POST['tablet_padding'] ?? '24',
                 'radius' => $_POST['tablet_radius'] ?? '8'
@@ -586,6 +589,7 @@ include __DIR__ . '/components/unified-layout.php';
             <?php
             $responsive = $branding['responsive'] ?? [];
             $mobilePortrait = $responsive['mobile_portrait'] ?? ['padding' => '12', 'radius' => '0'];
+            $mobileLandscape = $responsive['mobile_landscape'] ?? ['sidebar_gap' => '4'];
             $tablet = $responsive['tablet'] ?? ['padding' => '24', 'radius' => '8'];
             $desktop = $responsive['desktop'] ?? ['padding' => '32', 'radius' => '12'];
             ?>
@@ -619,6 +623,30 @@ include __DIR__ . '/components/unified-layout.php';
                 </div>
                 <small style="display: block; margin-top: 0.75rem; opacity: 0.7; font-size: 0.75rem;">
                     Rekommenderat: 12px padding + 0px radius för edge-to-edge känsla
+                </small>
+            </div>
+
+            <!-- MOBILE LANDSCAPE (0-1023px landscape) -->
+            <div class="device-settings" style="margin-bottom: 1.5rem; padding: 1.5rem; background: var(--color-bg-surface); border-radius: var(--radius-lg); border-left: 4px solid #F59E0B;">
+                <h4 style="margin: 0 0 1rem 0; display: flex; align-items: center; gap: 0.5rem;">
+                    <i data-lucide="smartphone" style="transform: rotate(90deg);"></i>
+                    Mobile Landscape (0-1023px liggande)
+                </h4>
+
+                <div style="display: grid; grid-template-columns: 1fr; gap: 1rem;">
+                    <div>
+                        <label style="display: block; font-size: 0.875rem; color: var(--color-text-secondary); margin-bottom: 0.5rem;">Avstånd mellan sidebar och innehåll</label>
+                        <select name="mobile_landscape_sidebar_gap" class="form-control" style="width: 100%;">
+                            <option value="0" <?= $mobileLandscape['sidebar_gap'] === '0' ? 'selected' : '' ?>>0px - Ingen marginal</option>
+                            <option value="4" <?= $mobileLandscape['sidebar_gap'] === '4' ? 'selected' : '' ?>>4px - Minimal</option>
+                            <option value="8" <?= $mobileLandscape['sidebar_gap'] === '8' ? 'selected' : '' ?>>8px - Liten</option>
+                            <option value="12" <?= $mobileLandscape['sidebar_gap'] === '12' ? 'selected' : '' ?>>12px - Normal</option>
+                            <option value="16" <?= $mobileLandscape['sidebar_gap'] === '16' ? 'selected' : '' ?>>16px - Luftig</option>
+                        </select>
+                    </div>
+                </div>
+                <small style="display: block; margin-top: 0.75rem; opacity: 0.7; font-size: 0.75rem;">
+                    I liggande läge visas en kompakt sidebar istället för botten-navigation
                 </small>
             </div>
 

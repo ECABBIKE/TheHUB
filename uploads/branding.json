@@ -5,6 +5,9 @@
             "padding": "12",
             "radius": "0"
         },
+        "mobile_landscape": {
+            "sidebar_gap": "4"
+        },
         "tablet": {
             "padding": "24",
             "radius": "8"

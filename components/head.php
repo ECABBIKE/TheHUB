@@ -212,6 +212,13 @@ if (file_exists($brandingFile)) {
             $responsiveCss .= '--radius-lg:' . $mobileRadius . 'px;';
             $responsiveCss .= '--radius-xl:' . $mobileRadius . 'px;';
             $responsiveCss .= '}}';
+
+            // Mobile Landscape (sidebar gap)
+            $landscapeSidebarGap = intval($responsive['mobile_landscape']['sidebar_gap'] ?? 4);
+            $responsiveCss .= '@media (max-width:1023px) and (orientation:landscape){';
+            $responsiveCss .= ':root{';
+            $responsiveCss .= '--landscape-sidebar-gap:' . $landscapeSidebarGap . 'px;';
+            $responsiveCss .= '}}';
         }
 
         // Process layout settings (content-max-width, sidebar-width, header-height)
