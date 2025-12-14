@@ -306,11 +306,19 @@ include __DIR__ . '/includes/layout-header.php';
   color: var(--color-text-muted);
 }
 
-@media (max-width: 640px) {
+/* Mobile edge-to-edge - 2025 standard */
+@media (max-width: 767px) {
   .gs-result-card {
     grid-template-columns: 80px 1fr;
     gap: var(--space-sm);
-    padding: var(--space-sm);
+    margin-left: -16px !important;
+    margin-right: -16px !important;
+    padding: 16px !important;
+    border-radius: 0 !important;
+    border-left: none !important;
+    border-right: none !important;
+    width: calc(100% + 32px) !important;
+    max-width: none !important;
   }
 
   .gs-result-logo img {

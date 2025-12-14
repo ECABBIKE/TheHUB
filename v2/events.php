@@ -233,17 +233,29 @@ include __DIR__ . '/includes/layout-header.php';
    font-size: 0.875rem;
    color: #718096;
    }
-   @media (max-width: 640px) {
+   /* Mobile edge-to-edge - 2025 standard */
+   @media (max-width: 767px) {
    .event-card-horizontal {
     grid-template-columns: 80px 1fr;
     gap: 0.75rem;
-    padding: 0.75rem;
+    margin-left: -16px !important;
+    margin-right: -16px !important;
+    padding: 16px !important;
+    border-radius: 0 !important;
+    border-left: none !important;
+    border-right: none !important;
+    width: calc(100% + 32px) !important;
+    max-width: none !important;
    }
    .event-logo-container img {
     max-height: 50px;
    }
    .event-title {
     font-size: 1rem;
+   }
+   .event-list {
+    margin-left: -16px;
+    margin-right: -16px;
    }
    }
   </style>

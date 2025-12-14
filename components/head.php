@@ -60,16 +60,23 @@ if (!function_exists('hub_asset')) {
 
 <title><?= htmlspecialchars($pageTitle) ?></title>
 
-<!-- CSS with cache busting -->
-<link rel="stylesheet" href="<?= hub_asset('css/reset.css') ?>">
-<link rel="stylesheet" href="<?= hub_asset('css/tokens.css') ?>">
-<link rel="stylesheet" href="<?= hub_asset('css/theme.css') ?>">
-<link rel="stylesheet" href="<?= hub_asset('css/layout.css') ?>">
-<link rel="stylesheet" href="<?= hub_asset('css/components.css') ?>">
-<link rel="stylesheet" href="<?= hub_asset('css/tables.css') ?>">
-<link rel="stylesheet" href="<?= hub_asset('css/utilities.css') ?>">
-<link rel="stylesheet" href="<?= hub_asset('css/badge-system.css') ?>">
-<link rel="stylesheet" href="<?= hub_asset('css/pwa.css') ?>">
+<!-- CSS with cache busting (filemtime) -->
+<?php
+$cssDir = __DIR__ . '/../assets/css/';
+$cssVersion = function($file) use ($cssDir) {
+    $path = $cssDir . $file;
+    return file_exists($path) ? filemtime($path) : time();
+};
+?>
+<link rel="stylesheet" href="<?= hub_asset('css/reset.css') ?>?v=<?= $cssVersion('reset.css') ?>">
+<link rel="stylesheet" href="<?= hub_asset('css/tokens.css') ?>?v=<?= $cssVersion('tokens.css') ?>">
+<link rel="stylesheet" href="<?= hub_asset('css/theme.css') ?>?v=<?= $cssVersion('theme.css') ?>">
+<link rel="stylesheet" href="<?= hub_asset('css/layout.css') ?>?v=<?= $cssVersion('layout.css') ?>">
+<link rel="stylesheet" href="<?= hub_asset('css/components.css') ?>?v=<?= $cssVersion('components.css') ?>">
+<link rel="stylesheet" href="<?= hub_asset('css/tables.css') ?>?v=<?= $cssVersion('tables.css') ?>">
+<link rel="stylesheet" href="<?= hub_asset('css/utilities.css') ?>?v=<?= $cssVersion('utilities.css') ?>">
+<link rel="stylesheet" href="<?= hub_asset('css/badge-system.css') ?>?v=<?= $cssVersion('badge-system.css') ?>">
+<link rel="stylesheet" href="<?= hub_asset('css/pwa.css') ?>?v=<?= $cssVersion('pwa.css') ?>">
 
 <!-- Dynamic Branding System -->
 <?php
