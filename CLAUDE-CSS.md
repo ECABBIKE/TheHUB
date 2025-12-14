@@ -547,5 +547,72 @@ TheHUB.viewport.setElementHeight('#map', 70, {
 
 ---
 
-**Version:** 1.1.0
+## 16. SID-SPECIFIK CSS (Page CSS)
+
+Sid-specifik CSS laddas villkorligt fran `assets/css/pages/` baserat pa vilken sida som visas.
+
+### Hur det fungerar
+
+1. CSS-filer namnges efter sidan: `event.css`, `rider.css`, `results.css`
+2. `components/head.php` laddar automatiskt ratt fil baserat pa `$pageInfo['page']`
+3. Om filen inte finns, laddas ingen extra CSS
+
+### Filstruktur
+
+```
+assets/css/pages/
+├── _README.md      # Dokumentation
+├── event.css       # /pages/event.php
+├── rider.css       # /pages/rider.php
+├── results.css     # /pages/results.php
+├── ranking.css     # /pages/ranking.php
+└── calendar.css    # /pages/calendar/*
+```
+
+### Migrationsprocess (inline -> extern)
+
+1. **Kopiera** inline `<style>` fran PHP-filen till CSS-filen
+2. **Testa** att sidan ser likadan ut
+3. **Kommentera ut** inline CSS i PHP (behall som backup)
+4. **Testa igen**
+5. **Ta bort** kommenterad CSS nar allt fungerar
+
+### Exempel: Migrera event.php
+
+```bash
+# 1. Skapa CSS-filen
+touch assets/css/pages/event.css
+
+# 2. Kopiera innehallet fran <style> i pages/event.php till event.css
+
+# 3. Kommentera ut i event.php:
+# <?php /* MIGRATED TO assets/css/pages/event.css
+# <style>
+# ...
+# </style>
+# */ ?>
+
+# 4. Testa - om OK, ta bort kommenterad kod
+```
+
+### Laddningsordning
+
+Page-CSS laddas **efter** alla globala CSS-filer men **fore** branding-overrides:
+
+1. reset.css
+2. tokens.css
+3. theme.css
+4. layout.css
+5. components.css
+6. tables.css
+7. utilities.css
+8. badge-system.css
+9. pwa.css
+10. viewport.css
+11. **pages/{page}.css** <- Sid-specifik
+12. custom-branding (inline) <- Branding overrides
+
+---
+
+**Version:** 1.2.0
 **Senast uppdaterad:** 2025-12-14
