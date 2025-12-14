@@ -418,3 +418,258 @@ foreach (['jpg', 'jpeg', 'png', 'webp', 'svg'] as $ext) {
   <?php endif; ?>
 </section>
 
+<style>
+/* Club Hero */
+.club-hero {
+  background: var(--color-bg-surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
+  margin-bottom: var(--space-lg);
+}
+
+.club-hero .hero-accent-bar {
+  height: 4px;
+  background: linear-gradient(90deg, var(--color-accent), #004a98);
+}
+
+.club-hero .hero-content {
+  padding: var(--space-lg);
+}
+
+.club-hero .hero-top {
+  display: flex;
+  gap: var(--space-lg);
+  align-items: center;
+}
+
+.club-logo-container {
+  flex-shrink: 0;
+  position: relative;
+}
+
+.ranking-badge {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  background: linear-gradient(135deg, #FFD700, #FFA500);
+  color: var(--color-primary, #171717);
+  min-width: 44px;
+  padding: 6px 8px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  box-shadow: var(--shadow-md);
+  border: 2px solid var(--color-bg-surface);
+}
+
+.ranking-badge .rank-label {
+  font-size: 0.55rem;
+  text-transform: uppercase;
+  opacity: 0.9;
+  letter-spacing: 0.02em;
+  line-height: 1;
+}
+
+.ranking-badge .rank-number {
+  font-size: 1rem;
+  line-height: 1.1;
+}
+
+.club-logo {
+  width: 96px;
+  height: 96px;
+  border-radius: var(--radius-lg);
+  background: linear-gradient(135deg, #f3f4f6, #e5e7eb);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 3px solid var(--color-bg-surface);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+}
+
+.club-logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.club-logo svg {
+  width: 45%;
+  height: 45%;
+  stroke: #9ca3af;
+}
+
+.hero-info {
+  flex: 1;
+}
+
+.club-name {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--color-text);
+  margin: 0 0 var(--space-xs) 0;
+}
+
+.club-location {
+  font-size: 0.9rem;
+  color: var(--color-text-muted);
+  display: block;
+  margin-bottom: var(--space-sm);
+}
+
+.club-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+}
+
+.club-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 12px;
+  background: var(--color-bg-sunken);
+  color: var(--color-text);
+  font-size: 0.8rem;
+  font-weight: 600;
+  border-radius: var(--radius-full);
+}
+
+.club-badge--accent {
+  background: var(--color-accent);
+  color: white;
+}
+
+.hero-contact {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-md);
+  margin-top: var(--space-md);
+  padding-top: var(--space-md);
+  border-top: 1px solid var(--color-border);
+}
+
+.contact-link {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.contact-link:hover {
+  color: var(--color-accent);
+}
+
+.contact-link svg {
+  flex-shrink: 0;
+}
+
+/* Utilities */
+.mb-md { margin-bottom: var(--space-md); }
+.mb-lg { margin-bottom: var(--space-lg); }
+.text-muted { color: var(--color-text-muted); }
+
+/* Legacy support */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-md);
+}
+.stat-card {
+  text-align: center;
+  padding: var(--space-md);
+  background: var(--color-bg-sunken);
+  border-radius: var(--radius-md);
+}
+.stat-card--accent {
+  background: var(--color-accent);
+  color: var(--color-text-inverse);
+}
+.stat-card--accent .stat-label {
+  color: rgba(255,255,255,0.8);
+}
+.stat-value {
+  font-size: var(--text-2xl);
+  font-weight: var(--weight-bold);
+}
+.stat-label {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  margin-top: var(--space-2xs);
+}
+
+.rider-link {
+  color: var(--color-text);
+  font-weight: var(--weight-medium);
+}
+.rider-link:hover {
+  color: var(--color-accent-text);
+}
+.rider-year {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  margin-left: var(--space-xs);
+}
+.podium-badge {
+  font-size: var(--text-sm);
+}
+.position-badge {
+  font-weight: var(--weight-semibold);
+}
+.medal-icon {
+  width: 24px;
+  height: 24px;
+  vertical-align: middle;
+  display: inline-block;
+}
+.points-value {
+  font-weight: var(--weight-semibold);
+  color: var(--color-accent-text);
+}
+
+.result-place.top-3 {
+  background: var(--color-accent-light);
+}
+.result-points {
+  text-align: right;
+}
+.points-big {
+  font-size: var(--text-lg);
+  font-weight: var(--weight-bold);
+  color: var(--color-accent-text);
+}
+.points-label {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+
+.empty-state {
+  text-align: center;
+  padding: var(--space-2xl);
+  color: var(--color-text-muted);
+}
+.empty-state-icon {
+  font-size: 48px;
+  margin-bottom: var(--space-md);
+}
+
+@media (max-width: 599px) {
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .page-title {
+    font-size: var(--text-xl);
+  }
+  .club-contact {
+    flex-direction: column;
+    gap: var(--space-sm);
+  }
+}
+</style>

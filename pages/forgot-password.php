@@ -130,6 +130,164 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </div>
 </div>
 
+<style>
+.auth-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 60vh;
+    padding: var(--space-lg);
+}
+.auth-card {
+    width: 100%;
+    max-width: 400px;
+    background: var(--color-bg-card);
+    border-radius: var(--radius-xl);
+    padding: var(--space-xl);
+}
+.auth-header {
+    text-align: center;
+    margin-bottom: var(--space-lg);
+}
+.auth-header h1 {
+    font-size: var(--text-2xl);
+    margin-bottom: var(--space-xs);
+}
+.auth-header p {
+    color: var(--color-text-secondary);
+}
+.auth-form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+}
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+}
+.form-group label {
+    font-weight: var(--weight-medium);
+    font-size: var(--text-sm);
+}
+.form-group input {
+    padding: var(--space-sm) var(--space-md);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    font-size: var(--text-base);
+    background: var(--color-bg-surface);
+    color: var(--color-text-primary);
+}
+.form-group input:focus {
+    outline: none;
+    border-color: var(--color-accent);
+    box-shadow: 0 0 0 3px var(--color-accent-light);
+}
+.btn {
+    padding: var(--space-sm) var(--space-md);
+    border-radius: var(--radius-md);
+    font-weight: var(--weight-medium);
+    cursor: pointer;
+    border: none;
+    transition: all var(--transition-fast);
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+.btn--primary {
+    background: var(--color-accent);
+    color: white;
+}
+.btn--primary:hover {
+    background: var(--color-accent-hover);
+}
+.btn--block {
+    width: 100%;
+}
+.btn--sm {
+    padding: var(--space-xs) var(--space-sm);
+    font-size: var(--text-sm);
+}
+.auth-footer {
+    margin-top: var(--space-lg);
+    text-align: center;
+}
+.auth-footer a {
+    color: var(--color-accent);
+    text-decoration: none;
+}
+.alert {
+    padding: var(--space-md);
+    border-radius: var(--radius-md);
+    margin-bottom: var(--space-md);
+}
+.alert--success {
+    background: var(--color-success-light);
+    color: var(--color-success);
+    border: 1px solid var(--color-success);
+}
+.alert--error {
+    background: var(--color-error-light);
+    color: var(--color-error);
+    border: 1px solid var(--color-error);
+}
+.alert--warning {
+    background: rgba(245, 158, 11, 0.1);
+    color: #b45309;
+    border: 1px solid rgba(245, 158, 11, 0.3);
+}
+.alert--info {
+    background: rgba(59, 130, 246, 0.1);
+    color: #1d4ed8;
+    border: 1px solid rgba(59, 130, 246, 0.3);
+}
+[data-theme="dark"] .alert--warning {
+    background: rgba(245, 158, 11, 0.15);
+    color: #fbbf24;
+}
+[data-theme="dark"] .alert--info {
+    background: rgba(59, 130, 246, 0.15);
+    color: #93c5fd;
+}
+.success-info {
+    text-align: center;
+    padding: var(--space-md);
+}
+.success-info .note {
+    font-size: var(--text-sm);
+    color: var(--color-text-secondary);
+    margin-top: var(--space-sm);
+}
+.reset-link-box {
+    background: var(--color-bg-sunken);
+    padding: var(--space-md);
+    border-radius: var(--radius-md);
+    margin-bottom: var(--space-md);
+}
+.reset-link-input {
+    display: flex;
+    gap: var(--space-xs);
+    margin: var(--space-sm) 0;
+}
+.reset-link-input input {
+    flex: 1;
+    padding: var(--space-sm);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    font-size: var(--text-sm);
+    font-family: var(--font-mono);
+    background: var(--color-bg-surface);
+    color: var(--color-text-primary);
+}
+.reset-note {
+    font-size: var(--text-sm);
+    color: var(--color-text-secondary);
+}
+.mt-md {
+    margin-top: var(--space-md);
+}
+</style>
 
 <script>
 function copyLink() {

@@ -200,3 +200,232 @@ foreach ($registrations as $reg) {
     <?php endif; ?>
 </div>
 
+<style>
+.event-detail {
+    max-width: 900px;
+}
+
+.event-hero {
+    display: flex;
+    gap: var(--space-lg);
+    padding: var(--space-lg);
+    background: var(--color-bg-card);
+    border-radius: var(--radius-lg);
+    margin-bottom: var(--space-lg);
+    border: 1px solid var(--color-border);
+}
+
+.event-date-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: var(--space-md) var(--space-lg);
+    background: var(--color-accent);
+    border-radius: var(--radius-lg);
+    color: white;
+    min-width: 80px;
+}
+
+.event-day {
+    font-size: var(--text-3xl);
+    font-weight: var(--weight-bold);
+    line-height: 1;
+}
+
+.event-month {
+    font-size: var(--text-sm);
+    text-transform: uppercase;
+}
+
+.event-year {
+    font-size: var(--text-xs);
+    opacity: 0.8;
+}
+
+.event-info {
+    flex: 1;
+}
+
+.event-title {
+    font-size: var(--text-2xl);
+    font-weight: var(--weight-bold);
+    margin: 0 0 var(--space-xs);
+}
+
+.event-series {
+    display: inline-block;
+    color: var(--color-accent);
+    text-decoration: none;
+    font-weight: var(--weight-medium);
+    margin-bottom: var(--space-xs);
+}
+
+.event-series:hover {
+    text-decoration: underline;
+}
+
+.event-location {
+    color: var(--color-text-secondary);
+    margin: var(--space-sm) 0 0;
+}
+
+.event-status {
+    flex-shrink: 0;
+}
+
+.status-badge {
+    display: inline-block;
+    padding: var(--space-xs) var(--space-md);
+    border-radius: var(--radius-full);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+}
+
+.status-badge.past {
+    background: var(--color-text-secondary);
+    color: white;
+}
+
+.status-badge.upcoming {
+    background: var(--color-success-bg);
+    color: var(--color-success);
+}
+
+.card {
+    background: var(--color-bg-card);
+    border-radius: var(--radius-lg);
+    padding: var(--space-lg);
+    margin-bottom: var(--space-lg);
+    border: 1px solid var(--color-border);
+}
+
+.card h2 {
+    font-size: var(--text-lg);
+    margin: 0 0 var(--space-md);
+}
+
+.prose {
+    color: var(--color-text-secondary);
+    line-height: 1.6;
+}
+
+.class-section {
+    margin-bottom: var(--space-xl);
+}
+
+.class-section:last-child {
+    margin-bottom: 0;
+}
+
+.class-title {
+    font-size: var(--text-md);
+    color: var(--color-accent);
+    margin: 0 0 var(--space-sm);
+    padding-bottom: var(--space-xs);
+    border-bottom: 2px solid var(--color-accent);
+}
+
+.participant-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: var(--space-sm);
+}
+
+.participant-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    padding: var(--space-sm);
+    border-radius: var(--radius-md);
+    text-decoration: none;
+    color: inherit;
+    transition: background var(--transition-fast);
+}
+
+.participant-item:hover {
+    background: var(--color-bg-hover);
+}
+
+.participant-avatar {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--color-accent);
+    color: white;
+    border-radius: var(--radius-full);
+    font-weight: var(--weight-bold);
+    font-size: var(--text-sm);
+    flex-shrink: 0;
+}
+
+.participant-info {
+    min-width: 0;
+}
+
+.participant-name {
+    display: block;
+    font-weight: var(--weight-medium);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.participant-club {
+    display: block;
+    font-size: var(--text-sm);
+    color: var(--color-text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-sm);
+    padding: var(--space-sm) var(--space-lg);
+    border-radius: var(--radius-md);
+    text-decoration: none;
+    font-weight: var(--weight-medium);
+    transition: all var(--transition-fast);
+    border: none;
+    cursor: pointer;
+}
+
+.btn-primary {
+    background: var(--color-accent);
+    color: white;
+}
+
+.btn-primary:hover {
+    opacity: 0.9;
+}
+
+.btn-lg {
+    width: 100%;
+    padding: var(--space-md);
+    font-size: var(--text-lg);
+}
+
+@media (max-width: 600px) {
+    .event-hero {
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .event-date-box {
+        align-self: center;
+    }
+
+    .event-status {
+        align-self: center;
+    }
+
+    .participant-grid {
+        grid-template-columns: 1fr;
+    }
+}
+</style>

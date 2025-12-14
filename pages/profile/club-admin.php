@@ -147,6 +147,165 @@ $stats = $statsStmt->fetch(PDO::FETCH_ASSOC);
     <?php endif; ?>
 </div>
 
+<style>
+.club-selector {
+    display: flex;
+    gap: var(--space-xs);
+    margin-bottom: var(--space-lg);
+}
+.club-tab {
+    padding: var(--space-sm) var(--space-lg);
+    background: var(--color-bg-card);
+    border-radius: var(--radius-md);
+    text-decoration: none;
+    color: var(--color-text-secondary);
+    transition: all var(--transition-fast);
+}
+.club-tab:hover {
+    background: var(--color-bg-hover);
+}
+.club-tab.active {
+    background: var(--color-accent);
+    color: white;
+}
+
+.card {
+    background: var(--color-bg-card);
+    border-radius: var(--radius-lg);
+    padding: var(--space-lg);
+    margin-bottom: var(--space-lg);
+}
+
+.club-header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-lg);
+}
+.club-avatar {
+    width: 64px;
+    height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--color-bg-surface);
+    border-radius: var(--radius-lg);
+    font-weight: var(--weight-bold);
+    font-size: var(--text-lg);
+}
+.club-info {
+    flex: 1;
+}
+.club-info h2 {
+    margin-bottom: var(--space-2xs);
+}
+.club-link {
+    color: var(--color-accent);
+    text-decoration: none;
+    font-size: var(--text-sm);
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--space-md);
+    margin-bottom: var(--space-xl);
+}
+.stat-card {
+    background: var(--color-bg-card);
+    border-radius: var(--radius-lg);
+    padding: var(--space-lg);
+    text-align: center;
+}
+.stat-value {
+    display: block;
+    font-size: var(--text-2xl);
+    font-weight: var(--weight-bold);
+    color: var(--color-accent);
+}
+.stat-label {
+    font-size: var(--text-sm);
+    color: var(--color-text-secondary);
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--space-md);
+}
+.section-header h2 {
+    font-size: var(--text-lg);
+}
+
+.members-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+}
+.member-card {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    padding: var(--space-md);
+    background: var(--color-bg-card);
+    border-radius: var(--radius-lg);
+}
+.member-avatar {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--color-accent);
+    color: white;
+    border-radius: var(--radius-full);
+    font-weight: var(--weight-bold);
+}
+.member-info {
+    flex: 1;
+}
+.member-name {
+    display: block;
+    font-weight: var(--weight-medium);
+    text-decoration: none;
+    color: inherit;
+}
+.member-name:hover {
+    color: var(--color-accent);
+}
+.member-stats {
+    font-size: var(--text-sm);
+    color: var(--color-text-secondary);
+}
+
+.btn {
+    padding: var(--space-sm) var(--space-md);
+    border-radius: var(--radius-md);
+    text-decoration: none;
+    cursor: pointer;
+    border: none;
+}
+.btn-primary {
+    background: var(--color-accent);
+    color: white;
+}
+.btn-outline {
+    background: transparent;
+    border: 1px solid var(--color-border);
+}
+.btn-sm {
+    padding: var(--space-xs) var(--space-sm);
+    font-size: var(--text-sm);
+}
+
+.empty-state {
+    text-align: center;
+    padding: var(--space-xl);
+    background: var(--color-bg-card);
+    border-radius: var(--radius-lg);
+    color: var(--color-text-secondary);
+}
+</style>
 
 <script>
 function removeMember(riderId, name) {
