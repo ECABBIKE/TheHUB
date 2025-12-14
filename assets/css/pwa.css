@@ -16,8 +16,8 @@
   }
 
   .main-content {
-    padding-left: max(var(--space-lg), env(safe-area-inset-left));
-    padding-right: max(var(--space-lg), env(safe-area-inset-right));
+    padding-left: max(var(--container-padding), env(safe-area-inset-left));
+    padding-right: max(var(--container-padding), env(safe-area-inset-right));
   }
 }
 
