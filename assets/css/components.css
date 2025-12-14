@@ -355,16 +355,17 @@ h1 svg.lucide {
 
 /* ============================================================================
    FILTER BAR - Standardized filter component
+   Supports both .filter-bar and .filters-bar for compatibility
    ============================================================================ */
-.filter-bar{
+.filter-bar,.filters-bar{
   display:flex;flex-wrap:wrap;gap:var(--space-md);align-items:flex-end;
   margin-bottom:var(--space-lg);padding:var(--space-md);
   background:var(--color-bg-card);border-radius:var(--radius-lg);
   border:1px solid var(--color-border);
 }
-.filter-select-wrapper{
+.filter-select-wrapper,.filter-group{
   display:flex;flex-direction:column;gap:var(--space-2xs);
-  flex:1;min-width:140px;max-width:220px;
+  flex:1;min-width:140px;
 }
 .filter-search-wrapper{flex:2;max-width:280px}
 .filter-label{
@@ -388,10 +389,60 @@ h1 svg.lucide {
 }
 .filter-btn{align-self:flex-end;white-space:nowrap}
 @media(max-width:599px){
-  .filter-bar{flex-direction:column;padding:var(--space-sm);gap:var(--space-sm)}
-  .filter-select-wrapper,.filter-search-wrapper{width:100%;max-width:none;min-width:0}
+  .filter-bar,.filters-bar{flex-direction:column;padding:var(--space-sm);gap:var(--space-sm)}
+  .filter-select-wrapper,.filter-search-wrapper,.filter-group{width:100%;max-width:none;min-width:0}
   .filter-select,.filter-input{width:100%}
   .filter-btn{width:100%}
+}
+
+/* ============================================================================
+   EVENT ROW/CARD - Clickable event list items (results, calendar)
+   ============================================================================ */
+.event-row,.event-card{
+  display:flex;align-items:center;gap:var(--space-md);
+  padding:var(--space-md);
+  background:var(--color-bg-card);border:1px solid var(--color-border);
+  border-radius:var(--radius-lg);
+  transition:all var(--transition-fast);
+  text-decoration:none;color:inherit;
+}
+.event-row:hover,.event-card:hover{
+  border-color:var(--color-accent);
+  transform:translateY(-2px);
+  box-shadow:0 4px 12px rgba(0,0,0,0.1);
+}
+.event-date-col,.event-card-date{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  min-width:56px;height:56px;padding:var(--space-sm);
+  background:var(--color-accent);border-radius:var(--radius-md);
+  color:white;text-align:center;
+}
+.event-day,.event-day-num{font-size:var(--text-xl);font-weight:var(--weight-bold);line-height:1}
+.event-month,.event-day-name{font-size:var(--text-xs);text-transform:uppercase;opacity:0.9;font-weight:var(--weight-medium)}
+.event-main,.event-card-content{flex:1;min-width:0}
+.event-name,.event-card-title{font-weight:var(--weight-medium);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.event-details{display:flex;gap:var(--space-sm);font-size:var(--text-sm);color:var(--color-text-muted)}
+.event-series,.event-card-series{color:var(--color-accent-text)}
+.event-stats,.event-card-meta{display:flex;flex-direction:column;align-items:center;text-align:center}
+.event-arrow{color:var(--color-text-muted);font-size:var(--text-lg)}
+@media(max-width:599px){
+  .event-row,.event-card{padding:var(--space-sm);gap:var(--space-sm)}
+  .event-row:hover,.event-card:hover{transform:none}
+  .event-date-col,.event-card-date{min-width:48px;height:48px}
+  .event-day,.event-day-num{font-size:var(--text-lg)}
+  .event-details{flex-direction:column;gap:var(--space-3xs)}
+  .event-stats,.event-arrow{display:none}
+}
+
+/* ============================================================================
+   STATS GRID - Grid of stat cards (database, ranking)
+   ============================================================================ */
+.stats-grid{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));
+  gap:var(--space-md);margin-bottom:var(--space-xl);
+}
+@media(max-width:599px){
+  .stats-grid{grid-template-columns:repeat(2,1fr);gap:var(--space-sm)}
 }
 
 /* ============================================================================
