@@ -281,11 +281,3 @@ try {
 
 <?php endif; ?>
 
-<style>
-/* Results-specific styles only - common styles in components.css */
-.events-list{display:flex;flex-direction:column;gap:var(--space-xs)}
-.year-divider-line{flex:1;height:1px;background:var(--color-border)}
-.year-divider-label{font-size:var(--text-sm);font-weight:var(--weight-semibold);color:var(--color-text-muted);text-transform:uppercase;letter-spacing:0.05em}
-.empty-state{text-align:center;padding:var(--space-2xl);color:var(--color-text-muted)}
-.empty-state-icon{font-size:48px;margin-bottom:var(--space-md)}
-</style>

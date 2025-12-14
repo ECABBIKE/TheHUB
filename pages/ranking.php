@@ -330,35 +330,3 @@ $disciplineNames = [
 
 <?php endif; ?>
 
-<style>
-/* Ranking-specific styles only - common styles in components.css/utilities.css */
-.discipline-tabs{display:flex;gap:var(--space-xs);background:var(--color-bg-sunken);padding:var(--space-xs);border-radius:var(--radius-lg);overflow-x:auto}
-.discipline-tab{flex:1;padding:var(--space-sm) var(--space-md);text-align:center;border-radius:var(--radius-md);font-weight:var(--weight-medium);color:var(--color-text-secondary);white-space:nowrap;transition:all var(--transition-fast)}
-.discipline-tab:hover{background:var(--color-bg-hover);color:var(--color-text)}
-.discipline-tab.active{background:var(--color-accent);color:var(--color-text-inverse)}
-.view-toggle{display:flex;gap:var(--space-sm)}
-.view-btn{padding:var(--space-sm) var(--space-md);border-radius:var(--radius-md);font-weight:var(--weight-medium);color:var(--color-text-secondary);background:var(--color-bg-surface);border:1px solid var(--color-border);transition:all var(--transition-fast)}
-.view-btn:hover{background:var(--color-bg-hover)}
-.view-btn.active{background:var(--color-accent-light);color:var(--color-accent-text);border-color:var(--color-accent)}
-.info-banner{display:flex;align-items:center;gap:var(--space-sm);padding:var(--space-sm) var(--space-md);background:var(--color-bg-sunken);border-radius:var(--radius-md);font-size:var(--text-sm);color:var(--color-text-secondary)}
-.medal-icon{width:24px;height:24px;vertical-align:middle;display:inline-block}
-.rank-number{font-weight:var(--weight-semibold);color:var(--color-text-secondary)}
-.rider-link,.club-link{color:var(--color-text);font-weight:var(--weight-medium)}
-.rider-link:hover,.club-link:hover{color:var(--color-accent-text)}
-.points-value{font-weight:var(--weight-bold);color:var(--color-accent-text)}
-.result-place.top-3{background:var(--color-accent-light)}
-.result-points{text-align:right}
-.points-big{font-size:var(--text-lg);font-weight:var(--weight-bold);color:var(--color-accent-text)}
-.points-label{font-size:var(--text-xs);color:var(--color-text-muted)}
-.pagination{display:flex;justify-content:center;align-items:center;gap:var(--space-md)}
-.pagination-info{font-size:var(--text-sm);color:var(--color-text-secondary)}
-.empty-state{padding:var(--space-2xl)}
-.empty-state-icon{font-size:48px;margin-bottom:var(--space-md)}
-.empty-state h3{margin:0 0 var(--space-sm) 0}
-@media(max-width:599px){
-  .discipline-tabs{gap:2px;padding:2px}
-  .discipline-tab{padding:var(--space-xs) var(--space-sm);font-size:var(--text-sm)}
-  .view-toggle{flex-direction:column}
-  .view-btn{text-align:center}
-}
-</style>
