@@ -109,8 +109,8 @@
 @media(max-width:599px) and (orientation:portrait){
   .page-grid{grid-template-columns:1fr!important}
   .main-content{
-    padding:var(--space-sm);
-    padding-bottom:calc(var(--space-sm) + var(--mobile-nav-height) + env(safe-area-inset-bottom) + 60px);
+    padding:var(--space-xs);
+    padding-bottom:calc(var(--space-xs) + var(--mobile-nav-height) + env(safe-area-inset-bottom) + 60px);
   }
   /* Compact mobile nav for narrow portrait screens */
   .mobile-nav-link{min-width:40px;padding:var(--space-2xs);font-size:9px}
