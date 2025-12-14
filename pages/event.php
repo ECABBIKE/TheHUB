@@ -70,7 +70,7 @@ if (!function_exists('getEventContent')) {
 }
 
 try {
-    // Fetch event details with venue info and header banner
+    // Fetch event details with venue info, header banner, and organizer club
     $stmt = $db->prepare("
         SELECT
             e.*,
@@ -82,11 +82,14 @@ try {
             v.name as venue_name,
             v.city as venue_city,
             v.address as venue_address,
-            hb.filepath as header_banner_url
+            hb.filepath as header_banner_url,
+            oc.name as organizer_club_name,
+            oc.id as organizer_club_id_ref
         FROM events e
         LEFT JOIN series s ON e.series_id = s.id
         LEFT JOIN venues v ON e.venue_id = v.id
         LEFT JOIN media hb ON e.header_banner_media_id = hb.id
+        LEFT JOIN clubs oc ON e.organizer_club_id = oc.id
         WHERE e.id = ?
     ");
     $stmt->execute([$eventId]);
@@ -593,6 +596,16 @@ if (!empty($event['header_banner_url'])): ?>
                 </a>
                 <?php endif; ?>
             </div>
+
+            <?php if (!empty($event['organizer_club_name'])): ?>
+            <div class="event-organizer-club">
+                <i data-lucide="users"></i>
+                Arrangör:
+                <a href="/club/<?= $event['organizer_club_id_ref'] ?>" class="organizer-club-link">
+                    <?= h($event['organizer_club_name']) ?>
+                </a>
+            </div>
+            <?php endif; ?>
 
             <div class="event-meta">
                 <span class="event-meta-item">
