@@ -5,21 +5,36 @@
 
 /* ============================================================
    FIX 1: CONTAINER SYSTEM (lägg till i tokens.css)
+   Mobile-first approach for 2025
    ============================================================ */
 
 /* Lägg till EFTER rad 26 i assets/css/tokens.css */
 :root {
-  /* Container padding - responsivt */
+  /* Container padding - mobile-first (16px is Apple HIG/Material Design standard) */
   --container-padding: 16px;
-  --container-padding-sm: 8px;
 }
 
-/* Mobile portrait gets less padding */
-@media (max-width: 599px) and (orientation: portrait) {
+/* Tablet: more breathing room */
+@media (min-width: 768px) {
   :root {
-    --container-padding: 8px;
+    --container-padding: 24px;
   }
 }
+
+/* Desktop: full spacing */
+@media (min-width: 1024px) {
+  :root {
+    --container-padding: 32px;
+  }
+}
+
+/*
+   RATIONALE 2025:
+   - Modern mobiles are 360-430px wide (iPhone 15: 393px, Samsung S24: 360px)
+   - 16px padding gives 92% content area on a 360px phone (328px usable)
+   - 8px was too cramped and looked dated
+   - Simpler code = fewer edge cases = easier maintenance
+*/
 
 /* ============================================================
    FIX 2: EDGE-TO-EDGE CARDS (Ersätt rad 56-102 i components.css)
@@ -110,14 +125,11 @@
   }
 }
 
-/* Extra small phones - less padding */
-@media (max-width: 599px) and (orientation: portrait) {
-  .container,
-  .page-content {
-    padding-left: var(--container-padding-sm);
-    padding-right: var(--container-padding-sm);
-  }
-}
+/*
+   NOTE: No special "extra small phone" breakpoint needed for 2025!
+   Modern phones (360-430px) work great with 16px padding.
+   The old 8px padding was designed for 320px phones which are rare now.
+*/
 
 /* ============================================================
    FIX 3: RESULT CARDS SPECIFIC (lägg till om result-card inte fungerar)
@@ -246,42 +258,57 @@
 */
 
 /* ============================================================
-   KONSOLIDERING AV BREAKPOINTS
+   BREAKPOINTS 2025 - MOBILE-FIRST STANDARD
    ============================================================ */
 
-/* Standardiserade breakpoints att använda överallt: */
+/*
+┌──────────────┬──────────────┬──────────────┐
+│  0-767px     │  768-1023px  │  1024px+     │
+│  Mobile      │  Tablet      │  Desktop     │
+├──────────────┼──────────────┼──────────────┤
+│ 16px padding │ 24px padding │ 32px padding │
+│ Edge-to-edge │ Rounded      │ Full layout  │
+│ 1 column     │ 2 columns    │ 3+ columns   │
+│ Bottom nav   │ Top nav      │ Nav+Sidebar  │
+└──────────────┴──────────────┴──────────────┘
+*/
 
-/* Mobile Portrait (mycket små skärmar) */
-@media (max-width: 599px) and (orientation: portrait) {
-  /* Mindre padding, mindre text */
+/* Base: Mobile (0-767px) - DEFAULT, no media query needed */
+/* 16px padding, edge-to-edge cards, single column */
+
+/* Tablet (768-1023px) */
+@media (min-width: 768px) {
+  /* 24px padding, rounded corners, 2 columns */
 }
 
-/* Mobile (alla mobiler) */
-@media (max-width: 767px) {
-  /* Edge-to-edge layouts, staplade element */
-}
-
-/* Tablet */
-@media (min-width: 768px) and (max-width: 1023px) {
-  /* 2-kolumns grid, medium padding */
-}
-
-/* Desktop */
+/* Desktop (1024px+) */
 @media (min-width: 1024px) {
-  /* Full layout med sidebar, större text */
+  /* 32px padding, full layout with sidebar */
 }
 
-/* Large Desktop */
+/* Large Desktop (1400px+) - optional */
 @media (min-width: 1400px) {
-  /* Max content width, extra spacing */
+  /* Max content width constraint */
 }
 
 /* ============================================================
-   TA BORT DESSA BREAKPOINTS (föråldrade)
+   FÖRÅLDRADE BREAKPOINTS - TA BORT DESSA
    ============================================================ */
 
-/* TA BORT max-width: 480px  - för specifik */
-/* TA BORT max-width: 640px  - för specifik */
-/* TA BORT max-width: 768px  - använd 767px istället */
-/* TA BORT max-width: 900px  - oanvänd */
-/* TA BORT max-width: 899px  - duplicat */
+/* TA BORT: max-width: 480px   - 320px phones are extinct */
+/* TA BORT: max-width: 599px   - orientation queries add complexity */
+/* TA BORT: max-width: 640px   - arbitrary, not standard */
+/* TA BORT: max-width: 768px   - use 767px for mobile instead */
+/* TA BORT: max-width: 899px   - inconsistent */
+/* TA BORT: max-width: 900px   - use 1023px for tablet max */
+
+/*
+   MODERN MOBILE SIZES 2025:
+   - iPhone 15 Pro: 393px
+   - iPhone 15 Pro Max: 430px
+   - Samsung Galaxy S24: 360px
+   - Samsung Galaxy S24 Ultra: 412px
+   - Google Pixel 8 Pro: 412px
+
+   All work perfectly with 16px padding!
+*/

@@ -200,53 +200,58 @@ echo $customColors;
 ?>
 ```
 
-### FIX 3: FIXA EDGE-TO-EDGE MOBIL
-**I components.css, ersätt med:**
+### FIX 3: FIXA EDGE-TO-EDGE MOBIL (2025 Standard)
 
+**I tokens.css, lägg till mobile-first padding:**
 ```css
-/* MOBILE EDGE-TO-EDGE - Fixed version */
-@media(max-width:767px){
+:root {
+  --container-padding: 16px;  /* Base för alla mobiler */
+}
+
+@media (min-width: 768px) {
+  :root { --container-padding: 24px; }  /* Tablet */
+}
+
+@media (min-width: 1024px) {
+  :root { --container-padding: 32px; }  /* Desktop */
+}
+```
+
+**I components.css, ersätt edge-to-edge med:**
+```css
+/* MOBILE EDGE-TO-EDGE - 2025 Mobile-first */
+@media (max-width: 767px) {
   .container {
-    padding-left: 16px;
-    padding-right: 16px;
+    padding-left: var(--container-padding);
+    padding-right: var(--container-padding);
   }
-  
-  /* Cards should be full-width */
+
+  /* Cards break out to full width */
   .card,
   .result-list > *,
   .event-row {
-    margin-left: -16px;
-    margin-right: -16px;
+    margin-left: calc(-1 * var(--container-padding));
+    margin-right: calc(-1 * var(--container-padding));
     border-radius: 0;
     border-left: none;
     border-right: none;
-    width: calc(100% + 32px);
+    width: auto;
     max-width: none;
   }
-  
+
   /* Restore padding inside */
   .card-header,
   .card-body {
-    padding-left: 16px;
-    padding-right: 16px;
-  }
-}
-
-@media(max-width:599px) and (orientation:portrait){
-  .container {
-    padding-left: 8px;
-    padding-right: 8px;
-  }
-  
-  .card,
-  .result-list > *,
-  .event-row {
-    margin-left: -8px;
-    margin-right: -8px;
-    width: calc(100% + 16px);
+    padding-left: var(--container-padding);
+    padding-right: var(--container-padding);
   }
 }
 ```
+
+**OBS: Ingen 8px-variant behövs!**
+- Moderna mobiler (360-430px) fungerar utmärkt med 16px
+- Apple HIG och Material Design 3 rekommenderar 16px
+- 16px ger 92% content area på 360px telefon
 
 ### FIX 4: KONSOLIDERA CSS-VARIABLER
 **Skapa ny fil:** `assets/css/custom-properties.css`
