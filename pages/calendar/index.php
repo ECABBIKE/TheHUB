@@ -142,13 +142,3 @@ function applyFilters() {
 }
 </script>
 
-<style>
-/* Calendar-specific styles only - common styles in components.css */
-.calendar-month{margin-bottom:var(--space-xl)}
-.calendar-month-title{font-size:var(--text-lg);font-weight:var(--weight-semibold);color:var(--color-text-secondary);margin-bottom:var(--space-md);text-transform:capitalize}
-.event-cards{display:flex;flex-direction:column;gap:var(--space-sm)}
-.event-card-location{display:block;font-size:var(--text-sm);color:var(--color-text-secondary)}
-.event-badge{font-size:var(--text-xs);padding:var(--space-2xs) var(--space-sm);border-radius:var(--radius-full)}
-.event-badge-open{background:var(--color-success-bg);color:var(--color-success)}
-.event-participants{font-size:var(--text-sm);color:var(--color-text-secondary)}
-</style>
