@@ -79,6 +79,34 @@ $cssVersion = function($file) use ($cssDir) {
 <link rel="stylesheet" href="<?= hub_asset('css/pwa.css') ?>?v=<?= $cssVersion('pwa.css') ?>">
 <link rel="stylesheet" href="<?= hub_asset('css/viewport.css') ?>?v=<?= $cssVersion('viewport.css') ?>">
 
+<!-- Page-Specific CSS (loaded conditionally based on current page) -->
+<?php
+/**
+ * Conditional Page CSS Loader
+ *
+ * Loads page-specific CSS from /assets/css/pages/ if it exists.
+ * This allows gradual migration of inline styles to external files.
+ *
+ * Naming convention:
+ *   - /pages/event.php  -> /assets/css/pages/event.css
+ *   - /pages/rider.php  -> /assets/css/pages/rider.css
+ *   - /pages/results.php -> /assets/css/pages/results.css
+ */
+$currentPage = $pageInfo['page'] ?? null;
+$pageCssDir = __DIR__ . '/../assets/css/pages/';
+
+if ($currentPage) {
+    // Sanitize page name (only allow alphanumeric and hyphens)
+    $safePage = preg_replace('/[^a-z0-9\-]/', '', strtolower($currentPage));
+    $pageCssFile = $pageCssDir . $safePage . '.css';
+
+    if (file_exists($pageCssFile)) {
+        $pageCssVersion = filemtime($pageCssFile);
+        echo '<link rel="stylesheet" href="' . hub_asset('css/pages/' . $safePage . '.css') . '?v=' . $pageCssVersion . '">' . "\n";
+    }
+}
+?>
+
 <!-- Dynamic Branding System -->
 <?php
 /**
