@@ -2712,6 +2712,7 @@ td.col-place {
 
     /* Edge-to-edge handled in components.css */
 
+    /* Event-specific sponsor styling */
     .event-sponsor-logos {
         padding: var(--space-sm);
     }

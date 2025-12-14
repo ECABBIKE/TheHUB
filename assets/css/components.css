@@ -77,12 +77,9 @@ body{
     border-right:none!important;
     width:calc(100% + var(--space-md) * 2);
   }
-  .card-header,.card-body{
-    padding-left:var(--space-md);
-    padding-right:var(--space-md);
-  }
+  .card-header,.card-body{padding-left:var(--space-md);padding-right:var(--space-md)}
 
-  /* Tables inside cards break out of card padding */
+  /* Tables/lists inside cards break out of card-body padding (--space-lg) */
   .card .table-wrapper,
   .card .table-responsive,
   .card table {
@@ -109,19 +106,29 @@ body{
     margin-left:calc(var(--space-sm) * -1);
     margin-right:calc(var(--space-sm) * -1);
     width:calc(100% + var(--space-sm) * 2);
+    border-radius:0!important;
+    border-left:none!important;
+    border-right:none!important;
   }
-  .card-header,.card-body{
-    padding-left:var(--space-sm);
-    padding-right:var(--space-sm);
-  }
+  .card-header,.card-body{padding-left:var(--space-sm);padding-right:var(--space-sm)}
 
-  /* Tables inside cards (card has --space-md padding at this size) */
+  /* Tables/lists inside cards - break out of card-body padding */
   .card .table-wrapper,
   .card .table-responsive,
   .card table {
     margin-left:calc(var(--space-md) * -1);
     margin-right:calc(var(--space-md) * -1);
     width:calc(100% + var(--space-md) * 2);
+  }
+  
+  /* Result items edge-to-edge */
+  .card .result-list .result-item,
+  .result-item {
+    margin-left:0;
+    margin-right:0;
+    border-radius:0;
+    border-left:none;
+    border-right:none;
   }
 }
 
