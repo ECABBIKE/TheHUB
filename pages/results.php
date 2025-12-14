@@ -476,25 +476,25 @@ try {
   margin-bottom: var(--space-md);
 }
 
-/* EDGE-TO-EDGE MOBILE */
-@media (max-width: 768px) {
+/* EDGE-TO-EDGE MOBILE - Uses branding variables */
+@media (max-width: 767px) {
   .filters-bar,
   .event-row {
-    margin-left: -16px;
-    margin-right: -16px;
-    border-radius: 0 !important;
+    margin-left: calc(-1 * var(--container-padding));
+    margin-right: calc(-1 * var(--container-padding));
+    border-radius: var(--radius-sm) !important;
     border-left: none !important;
     border-right: none !important;
-    width: calc(100% + 32px);
+    width: calc(100% + 2 * var(--container-padding));
   }
   .event-row {
-    padding: var(--space-md);
+    padding: var(--card-padding);
   }
   .year-divider {
-    margin-left: -16px;
-    margin-right: -16px;
-    width: calc(100% + 32px);
-    padding: var(--space-xs) 16px;
+    margin-left: calc(-1 * var(--container-padding));
+    margin-right: calc(-1 * var(--container-padding));
+    width: calc(100% + 2 * var(--container-padding));
+    padding: var(--space-xs) var(--container-padding);
   }
 }
 
