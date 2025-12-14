@@ -16,6 +16,7 @@ $filterFormat = $_GET['format'] ?? '';
 $sql = "
     SELECT e.*, s.name as series_name, s.id as series_id,
            v.name as venue_name, v.city as venue_city,
+           e.registration_deadline,
            COUNT(DISTINCT er.id) as registration_count
     FROM events e
     LEFT JOIN series s ON e.series_id = s.id
@@ -51,6 +52,32 @@ $eventsByMonth = [];
 foreach ($events as $event) {
     $month = date('Y-m', strtotime($event['date']));
     $eventsByMonth[$month][] = $event;
+}
+
+// Helper function for deadline text
+function getDeadlineInfo($deadline) {
+    if (empty($deadline)) {
+        return null;
+    }
+
+    $now = new DateTime();
+    $deadlineDate = new DateTime($deadline);
+    $diff = $now->diff($deadlineDate);
+
+    if ($deadlineDate < $now) {
+        return ['text' => 'Stängd', 'class' => 'event-deadline-closed', 'days' => -1];
+    }
+
+    $days = $diff->days;
+    if ($days == 0) {
+        return ['text' => 'Sista dagen', 'class' => 'event-deadline-soon', 'days' => 0];
+    } elseif ($days == 1) {
+        return ['text' => '1 dag kvar', 'class' => 'event-deadline-soon', 'days' => 1];
+    } elseif ($days <= 3) {
+        return ['text' => $days . ' dagar kvar', 'class' => 'event-deadline-soon', 'days' => $days];
+    } else {
+        return ['text' => $days . ' dagar kvar', 'class' => '', 'days' => $days];
+    }
 }
 ?>
 
@@ -95,9 +122,10 @@ foreach ($events as $event) {
                     <?php foreach ($monthEvents as $event): ?>
                         <?php
                         $eventDate = strtotime($event['date']);
-                        $isRegistrationOpen = $event['registration_open'] ?? false;
                         $dayName = hub_day_short($eventDate);
                         $dayNum = date('j', $eventDate);
+                        $deadlineInfo = getDeadlineInfo($event['registration_deadline']);
+                        $location = $event['venue_city'] ?: $event['location'];
                         ?>
                         <a href="/calendar/<?= $event['id'] ?>" class="event-card">
                             <div class="event-card-date">
@@ -106,22 +134,30 @@ foreach ($events as $event) {
                             </div>
                             <div class="event-card-content">
                                 <h3 class="event-card-title"><?= htmlspecialchars($event['name']) ?></h3>
-                                <?php if ($event['series_name']): ?>
-                                    <span class="event-card-series"><?= htmlspecialchars($event['series_name']) ?></span>
-                                <?php endif; ?>
-                                <?php if ($event['location']): ?>
-                                    <span class="event-card-location">
-                                        <i data-lucide="map-pin"></i> <?= htmlspecialchars($event['location']) ?>
-                                    </span>
-                                <?php endif; ?>
+                                <div class="event-card-info">
+                                    <?php if ($event['series_name']): ?>
+                                        <span class="event-card-series"><?= htmlspecialchars($event['series_name']) ?></span>
+                                    <?php endif; ?>
+                                    <?php if ($location): ?>
+                                        <span class="event-card-location">
+                                            <i data-lucide="map-pin"></i><?= htmlspecialchars($location) ?>
+                                        </span>
+                                    <?php endif; ?>
+                                </div>
                             </div>
                             <div class="event-card-meta">
-                                <?php if ($isRegistrationOpen): ?>
-                                    <span class="event-badge event-badge-open">Anmälan öppen</span>
-                                <?php endif; ?>
                                 <?php if ($event['registration_count'] > 0): ?>
                                     <span class="event-participants">
-                                        <i data-lucide="users"></i> <?= $event['registration_count'] ?>
+                                        <i data-lucide="users"></i><?= $event['registration_count'] ?> anmälda
+                                    </span>
+                                <?php endif; ?>
+                                <?php if ($deadlineInfo && $deadlineInfo['days'] >= 0): ?>
+                                    <span class="event-deadline <?= $deadlineInfo['class'] ?>">
+                                        <i data-lucide="clock"></i><?= $deadlineInfo['text'] ?>
+                                    </span>
+                                <?php elseif ($deadlineInfo && $deadlineInfo['days'] < 0): ?>
+                                    <span class="event-deadline event-deadline-closed">
+                                        <i data-lucide="lock"></i>Stängd
                                     </span>
                                 <?php endif; ?>
                             </div>
