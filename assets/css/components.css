@@ -148,6 +148,21 @@ body{
     padding: var(--container-padding) !important;
   }
 
+  /* Highlight items break out of parent padding to go edge-to-edge */
+  .highlights-list,
+  .highlight-item {
+    margin-left: calc(-1 * var(--container-padding)) !important;
+    margin-right: calc(-1 * var(--container-padding)) !important;
+    border-radius: 0 !important;
+    width: auto !important;
+  }
+
+  .highlight-item {
+    padding-left: var(--container-padding) !important;
+    padding-right: var(--container-padding) !important;
+  }
+
+
   /* Tables inside cards need to break out of card padding too */
   .card .table-wrapper,
   .card .result-list,
