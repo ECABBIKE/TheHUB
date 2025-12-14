@@ -124,7 +124,7 @@ try {
                COALESCE(accent_color, '#61CE70') as accent_color,
                logo_dark
         FROM series
-        WHERE active = 1
+        WHERE status IN ('active', 'completed')
         ORDER BY name ASC
     ");
 } catch (Exception $e) {
@@ -137,12 +137,12 @@ try {
                    COALESCE(accent_color, '#61CE70') as accent_color,
                    NULL as logo_dark
             FROM series
-            WHERE active = 1
+            WHERE status IN ('active', 'completed')
             ORDER BY name ASC
         ");
     } catch (Exception $e2) {
         // Last resort - just get basic series info
-        $seriesList = $db->getAll("SELECT id, name, slug FROM series WHERE active = 1 ORDER BY name ASC");
+        $seriesList = $db->getAll("SELECT id, name, slug FROM series WHERE status IN ('active', 'completed') ORDER BY name ASC");
     }
 }
 
@@ -795,7 +795,7 @@ include __DIR__ . '/components/unified-layout.php';
         <?php if (empty($seriesList)): ?>
         <div class="alert alert--warning">
             <i data-lucide="alert-triangle"></i>
-            Inga aktiva serier hittades. Se till att det finns serier med <code>active = 1</code> i databasen.
+            Inga aktiva serier hittades. Se till att det finns serier med <code>status = 'active'</code> eller <code>status = 'completed'</code> i databasen.
         </div>
         <?php else: ?>
         <div class="series-color-grid">
