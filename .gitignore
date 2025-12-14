@@ -29,6 +29,7 @@ tmp/*
 
 # Backup files
 *.backup
+uploads/backup/
 
 # Deployment packages
 *.zip
