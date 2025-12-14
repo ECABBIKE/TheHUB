@@ -253,9 +253,9 @@ function isAdminPageActive($item, $requestUri) {
 }
 
 /* ========================================================================
-   MOBILE - Show labels, hide tooltips
+   MOBILE PORTRAIT - Slide-out menu with horizontal links
    ======================================================================== */
-@media (max-width: 899px) {
+@media (max-width: 899px) and (orientation: portrait) {
     .sidebar-link {
         flex-direction: row;
         justify-content: flex-start;
@@ -277,6 +277,33 @@ function isAdminPageActive($item, $requestUri) {
 
     .sidebar-link.is-active::before {
         left: 0;
+    }
+}
+
+/* ========================================================================
+   MOBILE LANDSCAPE - Compact icon-only sidebar
+   ======================================================================== */
+@media (max-width: 899px) and (orientation: landscape) {
+    .sidebar-link {
+        flex-direction: column !important;
+        padding: 6px 4px !important;
+        gap: 1px !important;
+        margin: 0 !important;
+        width: auto !important;
+    }
+
+    .sidebar-label {
+        display: none !important;
+    }
+
+    .sidebar-icon-svg {
+        width: 20px !important;
+        height: 20px !important;
+    }
+
+    .sidebar-link.is-active::before {
+        left: -4px !important;
+        height: 20px !important;
     }
 }
 </style>
