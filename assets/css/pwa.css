@@ -361,5 +361,6 @@ body.pwa-installed .browser-hint {
     height: calc(100dvh - var(--header-height, 60px) - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
     margin-left: 64px;
     width: calc(100% - 64px);
+    padding-left: 12px !important;
   }
 }
