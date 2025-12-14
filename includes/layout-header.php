@@ -322,8 +322,9 @@ if ($userTheme === 'auto') {
 
             /* Main content offset for sidebar on landscape */
             .main-content {
-                margin-left: 64px !important;
-                width: calc(100% - 64px) !important;
+                margin-left: 0 !important;
+                padding-left: 12px !important;
+                width: 100% !important;
             }
 
             /* Hide bottom nav on landscape - more vertical space */
