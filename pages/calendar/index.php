@@ -10,18 +10,19 @@ $currentUser = hub_current_user();
 // Filters
 $filterSeries = $_GET['series'] ?? '';
 
-// Get upcoming events with series colors and logo
+// Get upcoming events with series colors and logo from brand
 $sql = "
     SELECT e.*,
            s.name as series_name,
            s.id as series_id,
-           s.logo as series_logo,
-           s.accent_color as series_accent,
+           sb.logo as series_logo,
+           sb.accent_color as series_accent,
            v.name as venue_name,
            v.city as venue_city,
            COUNT(DISTINCT er.id) as registration_count
     FROM events e
     LEFT JOIN series s ON e.series_id = s.id
+    LEFT JOIN series_brands sb ON s.brand_id = sb.id
     LEFT JOIN venues v ON e.venue_id = v.id
     LEFT JOIN event_registrations er ON e.id = er.event_id AND er.status != 'cancelled'
     WHERE e.date >= CURDATE() AND e.active = 1
@@ -39,10 +40,11 @@ $stmt = $pdo->prepare($sql);
 $stmt->execute($params);
 $events = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-// Get series for filter - only series that have upcoming events
+// Get series for filter - only series that have upcoming events (color from brand)
 $seriesStmt = $pdo->query("
-    SELECT DISTINCT s.id, s.name, s.accent_color
+    SELECT DISTINCT s.id, s.name, sb.accent_color
     FROM series s
+    LEFT JOIN series_brands sb ON s.brand_id = sb.id
     INNER JOIN events e ON s.id = e.series_id
     WHERE e.date >= CURDATE() AND e.active = 1 AND s.active = 1
     ORDER BY s.name
