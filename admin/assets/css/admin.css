@@ -2362,14 +2362,58 @@ h2 svg.lucide {
     }
 }
 
-/* LANDSCAPE: Hide mobile nav, use sidebar instead */
+/* LANDSCAPE: Hide mobile nav, show compact sidebar instead */
 @media (max-width: 1024px) and (orientation: landscape) {
     .admin-mobile-nav {
         display: none !important;
     }
 
+    /* Compact sidebar in landscape - flush to left edge */
+    .admin-sidebar {
+        display: flex !important;
+        transform: translateX(0) !important;
+        width: 64px !important;
+        left: 0 !important;
+        padding: 4px 0;
+        gap: 0;
+    }
+
+    .admin-nav {
+        gap: 0;
+        padding: 0 4px;
+    }
+
+    .admin-sidebar .nav-item {
+        flex-direction: column;
+        justify-content: center;
+        gap: 2px;
+        padding: var(--space-xs);
+        font-size: 9px;
+        min-height: 44px;
+    }
+
+    .admin-sidebar .nav-item svg {
+        width: 20px;
+        height: 20px;
+    }
+
+    .admin-sidebar .nav-label {
+        font-size: 9px;
+    }
+
+    .admin-sidebar .sidebar-link {
+        flex-direction: column;
+        justify-content: center;
+        gap: 2px;
+        padding: var(--space-xs);
+        font-size: 9px;
+    }
+
+    /* Main content with sidebar offset */
     .admin-main {
+        margin-left: 64px !important;
         padding-bottom: var(--space-lg);
+        padding-left: var(--space-sm) !important;
     }
 }
 
