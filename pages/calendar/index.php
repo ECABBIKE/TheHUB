@@ -60,28 +60,30 @@ foreach ($events as $event) {
 }
 
 // Helper function for deadline text
-function getDeadlineInfo($deadline) {
-    if (empty($deadline)) {
-        return null;
-    }
+if (!function_exists('getDeadlineInfo')) {
+    function getDeadlineInfo($deadline) {
+        if (empty($deadline)) {
+            return null;
+        }
 
-    $now = new DateTime();
-    $deadlineDate = new DateTime($deadline);
-    $diff = $now->diff($deadlineDate);
+        $now = new DateTime();
+        $deadlineDate = new DateTime($deadline);
+        $diff = $now->diff($deadlineDate);
 
-    if ($deadlineDate < $now) {
-        return ['text' => 'Stängd', 'class' => 'closed', 'days' => -1];
-    }
+        if ($deadlineDate < $now) {
+            return ['text' => 'Stängd', 'class' => 'closed', 'days' => -1];
+        }
 
-    $days = $diff->days;
-    if ($days == 0) {
-        return ['text' => 'Sista dagen!', 'class' => 'urgent', 'days' => 0];
-    } elseif ($days == 1) {
-        return ['text' => '1 dag', 'class' => 'soon', 'days' => 1];
-    } elseif ($days <= 7) {
-        return ['text' => $days . ' dagar', 'class' => 'soon', 'days' => $days];
-    } else {
-        return ['text' => $days . ' dagar', 'class' => '', 'days' => $days];
+        $days = $diff->days;
+        if ($days == 0) {
+            return ['text' => 'Sista dagen!', 'class' => 'urgent', 'days' => 0];
+        } elseif ($days == 1) {
+            return ['text' => '1 dag', 'class' => 'soon', 'days' => 1];
+        } elseif ($days <= 7) {
+            return ['text' => $days . ' dagar', 'class' => 'soon', 'days' => $days];
+        } else {
+            return ['text' => $days . ' dagar', 'class' => '', 'days' => $days];
+        }
     }
 }
 ?>
