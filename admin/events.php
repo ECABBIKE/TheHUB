@@ -954,7 +954,17 @@ async function saveBulkChanges() {
         const responseText = await response.text();
         console.log('Response text:', responseText);
 
-        const result = JSON.parse(responseText);
+        let result;
+        try {
+            result = JSON.parse(responseText);
+        } catch (parseError) {
+            // JSON parse failed - show raw response
+            alert('Server svarade med felaktig data:\n\n' + responseText.substring(0, 500));
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = originalText;
+            return;
+        }
+
         console.log('Parsed result:', result);
 
         if (result.success) {
@@ -971,10 +981,14 @@ async function saveBulkChanges() {
             setTimeout(() => location.reload(), 1000);
         } else {
             console.error('Bulk update failed:', result);
-            let errorMsg = 'Fel: ' + (result.error || 'Kunde inte spara ändringar');
+            let errorMsg = 'BULK UPDATE FEL:\n\n';
+            errorMsg += 'Status: ' + response.status + ' ' + response.statusText + '\n\n';
+            errorMsg += 'Error: ' + (result.error || 'Okänt fel') + '\n\n';
             if (result.errors && result.errors.length > 0) {
-                errorMsg += '\n\nDetaljer:\n' + result.errors.join('\n');
+                errorMsg += 'Detaljer:\n' + result.errors.join('\n');
             }
+            errorMsg += '\n\nAntal ändringar: ' + count;
+            errorMsg += '\n\nRaw response:\n' + responseText.substring(0, 300);
             alert(errorMsg);
             saveBtn.disabled = false;
             saveBtn.innerHTML = originalText;
