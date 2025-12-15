@@ -957,13 +957,23 @@ async function saveBulkChanges() {
             // Optionally reload page to show updated data
             setTimeout(() => location.reload(), 1000);
         } else {
-            alert('Fel: ' + (result.error || 'Kunde inte spara ändringar'));
+            console.error('Bulk update failed:', result);
+            let errorMsg = 'Fel: ' + (result.error || 'Kunde inte spara ändringar');
+            if (result.errors && result.errors.length > 0) {
+                errorMsg += '\n\nDetaljer:\n' + result.errors.join('\n');
+            }
+            alert(errorMsg);
             saveBtn.disabled = false;
             saveBtn.innerHTML = originalText;
         }
     } catch (error) {
-        console.error('Error:', error);
-        alert('Fel vid sparande av ändringar');
+        console.error('Catch error:', error);
+        console.error('Error details:', {
+            message: error.message,
+            stack: error.stack,
+            bulkChanges: bulkChanges
+        });
+        alert('Nätverksfel vid sparande:\n' + error.message + '\n\nKolla Console (F12) för mer info');
         saveBtn.disabled = false;
         saveBtn.innerHTML = originalText;
     }
