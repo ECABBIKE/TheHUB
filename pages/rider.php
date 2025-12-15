@@ -373,12 +373,45 @@ try {
     // Get ranking position
     $rankingPosition = null;
     $rankingPoints = 0;
+    $rankingEvents = [];
     $parentDb = function_exists('getDB') ? getDB() : null;
     if ($rankingFunctionsLoaded && $parentDb && function_exists('getRiderRankingDetails')) {
         $riderRankingDetails = getRiderRankingDetails($parentDb, $riderId, 'GRAVITY');
         if ($riderRankingDetails) {
             $rankingPoints = $riderRankingDetails['total_ranking_points'] ?? 0;
             $rankingPosition = $riderRankingDetails['ranking_position'] ?? null;
+
+            // Get events that contribute to ranking (top 5 results)
+            try {
+                $rankingEventsStmt = $db->prepare("
+                    SELECT
+                        e.id,
+                        e.name as event_name,
+                        e.date as event_date,
+                        r.position,
+                        r.points as base_points,
+                        r.points as weighted_points,
+                        r.class_id,
+                        cls.display_name as class_name,
+                        e.event_level,
+                        1.0 as level_multiplier,
+                        1.0 as field_multiplier,
+                        1.0 as time_multiplier
+                    FROM results r
+                    JOIN events e ON r.event_id = e.id
+                    LEFT JOIN classes cls ON r.class_id = cls.id
+                    WHERE r.cyclist_id = ?
+                        AND r.status = 'finished'
+                        AND e.discipline = 'GRAVITY'
+                        AND YEAR(e.date) = YEAR(CURDATE())
+                    ORDER BY r.points DESC
+                    LIMIT 5
+                ");
+                $rankingEventsStmt->execute([$riderId]);
+                $rankingEvents = $rankingEventsStmt->fetchAll(PDO::FETCH_ASSOC);
+            } catch (Exception $e) {
+                $rankingEvents = [];
+            }
         }
     }
 
