@@ -173,6 +173,70 @@ foreach ($clubs as $club) {
  $clubGroups[$normalized][] = $club;
 }
 
+// Also find fuzzy duplicates - clubs with similar normalized names
+$normalizedNames = [];
+foreach ($clubs as $club) {
+    $normalized = normalizeClubName($club['name']);
+    $normalizedNames[$club['id']] = $normalized;
+}
+
+// Check for fuzzy matches using Levenshtein distance
+$fuzzyPairs = [];
+$clubIds = array_keys($normalizedNames);
+$numClubs = count($clubIds);
+
+for ($i = 0; $i < $numClubs - 1; $i++) {
+    for ($j = $i + 1; $j < $numClubs; $j++) {
+        $id1 = $clubIds[$i];
+        $id2 = $clubIds[$j];
+        $name1 = $normalizedNames[$id1];
+        $name2 = $normalizedNames[$id2];
+
+        // Skip if already exact match (handled above)
+        if ($name1 === $name2) continue;
+
+        // Skip very short names
+        if (strlen($name1) < 3 || strlen($name2) < 3) continue;
+
+        // Check if one contains the other (e.g., "naten" in "natensater")
+        $containsMatch = false;
+        if (strlen($name1) >= 4 && strlen($name2) >= 4) {
+            if (strpos($name2, $name1) === 0 || strpos($name1, $name2) === 0) {
+                $containsMatch = true;
+            }
+        }
+
+        // Calculate Levenshtein distance
+        $maxLen = max(strlen($name1), strlen($name2));
+        $distance = levenshtein(substr($name1, 0, 50), substr($name2, 0, 50));
+        $similarity = round((1 - $distance / $maxLen) * 100);
+
+        // Match if: contains match OR high similarity (>75%)
+        if ($containsMatch || $similarity >= 75) {
+            $key = min($name1, $name2) . '|' . max($name1, $name2);
+            if (!isset($fuzzyPairs[$key])) {
+                $fuzzyPairs[$key] = [];
+            }
+            // Find the club objects
+            foreach ($clubs as $club) {
+                if ($club['id'] == $id1 || $club['id'] == $id2) {
+                    $fuzzyPairs[$key][$club['id']] = $club;
+                }
+            }
+        }
+    }
+}
+
+// Add fuzzy pairs to club groups with special key
+foreach ($fuzzyPairs as $key => $pair) {
+    if (count($pair) >= 2) {
+        $groupKey = 'fuzzy_' . $key;
+        if (!isset($clubGroups[$groupKey])) {
+            $clubGroups[$groupKey] = array_values($pair);
+        }
+    }
+}
+
 // Filter to only show groups with potential duplicates (2+ clubs) and not ignored
 $duplicateGroups = array_filter($clubGroups, function($group, $key) use ($ignoredDuplicates) {
  return count($group) >= 2 && !in_array($key, $ignoredDuplicates);
