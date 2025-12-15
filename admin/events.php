@@ -9,6 +9,7 @@ global $pdo;
 // Get filter parameters
 $filterBrand = isset($_GET['brand']) ? trim($_GET['brand']) : null;
 $filterYear = isset($_GET['year']) && is_numeric($_GET['year']) ? intval($_GET['year']) : null;
+$filterDiscipline = isset($_GET['discipline']) ? trim($_GET['discipline']) : null;
 
 // Check if series_events table exists
 $seriesEventsTableExists = false;
@@ -39,6 +40,11 @@ if ($filterBrand) {
 if ($filterYear) {
     $where[] = "YEAR(e.date) = ?";
     $params[] = $filterYear;
+}
+
+if ($filterDiscipline) {
+    $where[] = "e.discipline = ?";
+    $params[] = $filterDiscipline;
 }
 
 $whereClause = !empty($where) ? 'WHERE ' . implode(' AND ', $where) : '';
@@ -78,6 +84,13 @@ try {
     $allYears = $pdo->query("SELECT DISTINCT YEAR(date) as year FROM events WHERE date IS NOT NULL ORDER BY year DESC")->fetchAll(PDO::FETCH_ASSOC);
 } catch (Exception $e) {
     $allYears = [];
+}
+
+// Get unique disciplines for filter
+try {
+    $allDisciplines = $pdo->query("SELECT DISTINCT discipline FROM events WHERE discipline IS NOT NULL AND discipline != '' ORDER BY discipline")->fetchAll(PDO::FETCH_COLUMN);
+} catch (Exception $e) {
+    $allDisciplines = [];
 }
 
 // Get unique brands (series names without year) for filter
@@ -173,10 +186,23 @@ include __DIR__ . '/components/unified-layout.php';
                     <?php endforeach; ?>
                 </select>
             </div>
+
+            <!-- Discipline Filter -->
+            <div class="admin-form-group" style="margin-bottom: 0;">
+                <label for="discipline-filter" class="admin-form-label">Format</label>
+                <select id="discipline-filter" name="discipline" class="admin-form-select" onchange="this.form.submit()">
+                    <option value="">Alla format</option>
+                    <?php foreach ($allDisciplines as $discipline): ?>
+                        <option value="<?= htmlspecialchars($discipline) ?>" <?= $filterDiscipline === $discipline ? 'selected' : '' ?>>
+                            <?= htmlspecialchars($discipline) ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
         </form>
 
         <!-- Active Filters Info -->
-        <?php if ($filterBrand || $filterYear): ?>
+        <?php if ($filterBrand || $filterYear || $filterDiscipline): ?>
             <div style="margin-top: var(--space-md); padding-top: var(--space-md); border-top: 1px solid var(--color-border); display: flex; align-items: center; gap: var(--space-sm); flex-wrap: wrap;">
                 <span style="font-size: var(--text-sm); color: var(--color-text-secondary);">Visar:</span>
                 <?php if ($filterBrand): ?>
@@ -184,6 +210,9 @@ include __DIR__ . '/components/unified-layout.php';
                 <?php endif; ?>
                 <?php if ($filterYear): ?>
                     <span class="admin-badge admin-badge-warning"><?= $filterYear ?></span>
+                <?php endif; ?>
+                <?php if ($filterDiscipline): ?>
+                    <span class="admin-badge admin-badge-success"><?= htmlspecialchars($filterDiscipline) ?></span>
                 <?php endif; ?>
                 <a href="/admin/events" class="btn-admin btn-admin-sm btn-admin-secondary">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 14px; height: 14px;"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
