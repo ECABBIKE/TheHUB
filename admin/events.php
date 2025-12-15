@@ -113,9 +113,9 @@ try {
     $allDisciplines = [];
 }
 
-// Get all active series for dropdown in table
+// Get all active series for dropdown in table (with year for filtering)
 try {
-    $allSeriesForDropdown = $pdo->query("SELECT id, name FROM series WHERE active = 1 ORDER BY year DESC, name")->fetchAll(PDO::FETCH_ASSOC);
+    $allSeriesForDropdown = $pdo->query("SELECT id, name, year FROM series WHERE active = 1 ORDER BY year DESC, name")->fetchAll(PDO::FETCH_ASSOC);
 } catch (Exception $e) {
     $allSeriesForDropdown = [];
 }
@@ -286,9 +286,19 @@ include __DIR__ . '/components/unified-layout.php';
                                     </a>
                                 </td>
                                 <td>
+                                    <?php
+                                    // Filter series to only show those from the same year as the event
+                                    $eventYear = $event['date'] ? date('Y', strtotime($event['date'])) : null;
+                                    $filteredSeries = [];
+                                    foreach ($allSeriesForDropdown as $series) {
+                                        if (!$eventYear || $series['year'] == $eventYear) {
+                                            $filteredSeries[] = $series;
+                                        }
+                                    }
+                                    ?>
                                     <select class="admin-form-select" style="min-width: 200px; padding: var(--space-xs) var(--space-sm); font-size: 0.875rem;" onchange="updateSeries(<?= $event['id'] ?>, this.value)">
                                         <option value="">-</option>
-                                        <?php foreach ($allSeriesForDropdown as $series): ?>
+                                        <?php foreach ($filteredSeries as $series): ?>
                                             <option value="<?= $series['id'] ?>" <?= ($event['series_id'] ?? '') == $series['id'] ? 'selected' : '' ?>>
                                                 <?= htmlspecialchars($series['name']) ?>
                                             </option>
