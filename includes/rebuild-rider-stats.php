@@ -303,16 +303,19 @@ function getRiderSeriesStandings($pdo, $rider_id, $year = null) {
 
     // First get the series and their count_best_results setting
     // Exclude motion classes (awards_points = 0 or name contains 'motion')
+    // Join series_brands to get the accent color
     $stmt = $pdo->prepare("
         SELECT DISTINCT
             s.id as series_id,
             s.name as series_name,
             s.count_best_results,
             r.class_id,
-            c.display_name as class_name
+            c.display_name as class_name,
+            sb.accent_color as series_color
         FROM results r
         JOIN events e ON r.event_id = e.id
         JOIN series s ON e.series_id = s.id
+        LEFT JOIN series_brands sb ON s.brand_id = sb.id
         JOIN classes c ON r.class_id = c.id
         WHERE r.cyclist_id = ? AND YEAR(e.date) = ? AND r.status = 'finished'
           AND COALESCE(c.awards_points, 1) = 1
@@ -362,7 +365,8 @@ function getRiderSeriesStandings($pdo, $rider_id, $year = null) {
             'total_points' => $countedPoints,
             'events_count' => count($results),
             'wins' => $wins,
-            'podiums' => $podiums
+            'podiums' => $podiums,
+            'series_color' => $sc['series_color'] ?? null
         ];
     }
 
@@ -376,8 +380,10 @@ function getRiderSeriesStandings($pdo, $rider_id, $year = null) {
         $standing['total_riders'] = getTotalRidersInClass($pdo, $standing['series_id'], $standing['class_id'], $year);
         $standing['gap_to_podium'] = calculateGapToPodium($pdo, $standing['series_id'], $rider_id, $standing['class_id'], $year, $standing['count_best_results']);
         $standing['results'] = getSeriesResults($pdo, $standing['series_id'], $rider_id, $year);
-        // Default series color based on series name
-        $standing['series_color'] = getSeriesColor($standing['series_name']);
+        // Use brand color from database, fallback to name-based color
+        if (empty($standing['series_color'])) {
+            $standing['series_color'] = getSeriesColor($standing['series_name']);
+        }
     }
 
     return $standings;
