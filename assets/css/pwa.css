@@ -353,6 +353,23 @@ body.pwa-installed .browser-hint {
     display: none !important;
   }
 
+  /* Sidebar must be flush to left edge in landscape standalone */
+  .sidebar {
+    position: fixed !important;
+    top: var(--header-height, 60px) !important;
+    left: 0 !important;
+    right: auto !important;
+    margin: 0 !important;
+    transform: none !important;
+    width: 64px !important;
+  }
+
+  /* App layout padding for sidebar */
+  .app-layout {
+    padding-left: 64px !important;
+    margin-left: 0 !important;
+  }
+
   /* Recalculate height without mobile-nav-height */
   .main-content,
   .gs-main-content,
