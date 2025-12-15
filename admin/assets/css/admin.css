@@ -2123,3 +2123,154 @@ h2 svg.lucide {
     width: 16px !important;
     height: 16px !important;
 }
+
+/* ========================================================================
+   ADMIN MOBILE NAVIGATION - SCROLLABLE BOTTOM NAV
+   Mobile-first bottom navigation for admin pages on smaller screens
+   ======================================================================== */
+
+.admin-mobile-nav {
+    display: none;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: var(--mobile-nav-height, 64px);
+    padding-bottom: env(safe-area-inset-bottom);
+    background: var(--color-bg-surface);
+    border-top: 1px solid var(--color-border);
+    z-index: var(--z-fixed, 1000);
+}
+
+.admin-mobile-nav-inner {
+    display: flex;
+    align-items: center;
+    height: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    padding: 0 var(--space-xs);
+    gap: var(--space-2xs);
+}
+
+.admin-mobile-nav-inner::-webkit-scrollbar {
+    display: none;
+}
+
+.admin-mobile-nav-link {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    min-width: 56px;
+    padding: var(--space-xs) var(--space-sm);
+    color: var(--color-text-muted);
+    font-size: 10px;
+    font-weight: var(--weight-medium);
+    text-decoration: none;
+    border-radius: var(--radius-md);
+    transition: color 0.15s ease, background 0.15s ease;
+    flex-shrink: 0;
+}
+
+.admin-mobile-nav-link:hover {
+    color: var(--color-text-secondary);
+    background: var(--color-bg-hover);
+}
+
+.admin-mobile-nav-link.active {
+    color: var(--color-accent-text);
+    background: var(--color-accent-light);
+}
+
+.admin-mobile-nav-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.admin-mobile-nav-icon svg {
+    width: 20px;
+    height: 20px;
+    stroke-width: 2;
+}
+
+.admin-mobile-nav-label {
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    max-width: 52px;
+}
+
+/* Show mobile nav on tablet/mobile */
+@media (max-width: 899px) {
+    .admin-mobile-nav {
+        display: block;
+    }
+
+    /* Add padding to main content for bottom nav */
+    .admin-main {
+        padding-bottom: calc(var(--space-lg) + var(--mobile-nav-height, 64px) + env(safe-area-inset-bottom));
+    }
+}
+
+/* Compact mobile nav on very small screens */
+@media (max-width: 400px) {
+    .admin-mobile-nav-link {
+        min-width: 48px;
+        padding: var(--space-2xs) var(--space-xs);
+        font-size: 9px;
+    }
+
+    .admin-mobile-nav-icon svg {
+        width: 18px;
+        height: 18px;
+    }
+
+    .admin-mobile-nav-label {
+        max-width: 44px;
+    }
+}
+
+/* Scroll indicator gradients */
+.admin-mobile-nav::before,
+.admin-mobile-nav::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: env(safe-area-inset-bottom);
+    width: 24px;
+    pointer-events: none;
+    z-index: 1;
+}
+
+.admin-mobile-nav::before {
+    left: 0;
+    background: linear-gradient(to right, var(--color-bg-surface), transparent);
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.admin-mobile-nav::after {
+    right: 0;
+    background: linear-gradient(to left, var(--color-bg-surface), transparent);
+}
+
+.admin-mobile-nav.scrolled-start::before {
+    opacity: 0;
+}
+
+.admin-mobile-nav.scrolled-end::after {
+    opacity: 0;
+}
+
+.admin-mobile-nav.can-scroll-left::before {
+    opacity: 1;
+}
+
+.admin-mobile-nav.can-scroll-right::after {
+    opacity: 1;
+}

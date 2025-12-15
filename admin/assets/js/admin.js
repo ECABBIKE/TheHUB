@@ -105,6 +105,36 @@ function toggleTheme() {
 }
 
 /**
+ * Initialize mobile navigation scroll indicators
+ */
+function initMobileNavScrollIndicators() {
+    const nav = document.querySelector('.admin-mobile-nav');
+    const inner = document.querySelector('.admin-mobile-nav-inner');
+
+    if (!nav || !inner) return;
+
+    function updateScrollIndicators() {
+        const canScrollLeft = inner.scrollLeft > 10;
+        const canScrollRight = inner.scrollLeft < (inner.scrollWidth - inner.clientWidth - 10);
+
+        nav.classList.toggle('can-scroll-left', canScrollLeft);
+        nav.classList.toggle('can-scroll-right', canScrollRight);
+    }
+
+    inner.addEventListener('scroll', updateScrollIndicators);
+    window.addEventListener('resize', updateScrollIndicators);
+
+    // Initial check
+    setTimeout(updateScrollIndicators, 100);
+
+    // Scroll active item into view on load
+    const activeLink = inner.querySelector('.admin-mobile-nav-link.active');
+    if (activeLink) {
+        activeLink.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+    }
+}
+
+/**
  * Initialize theme based on stored preference or system setting
  */
 function initTheme() {
@@ -127,6 +157,9 @@ function initTheme() {
 document.addEventListener('DOMContentLoaded', function() {
     // Initialize theme
     initTheme();
+
+    // Initialize mobile nav scroll indicators
+    initMobileNavScrollIndicators();
 
     // Close dropdowns when clicking outside
     document.addEventListener('click', function(event) {
