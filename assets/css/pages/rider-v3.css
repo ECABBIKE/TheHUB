@@ -440,6 +440,189 @@
     display: block;
 }
 
+/* Series Panel Content */
+.series-position-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--space-md);
+}
+
+.series-rank-display {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-xs);
+}
+
+.series-rank-number {
+    font-size: 3rem;
+    font-weight: var(--weight-bold);
+    color: var(--color-accent);
+    line-height: 1;
+}
+
+.series-rank-text {
+    font-size: var(--text-lg);
+    color: var(--color-text-muted);
+}
+
+.series-trend {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    padding: var(--space-xs) var(--space-sm);
+    border-radius: var(--radius-md);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+}
+
+.series-trend.trend-up {
+    background: rgba(97, 206, 112, 0.1);
+    color: var(--color-success);
+}
+
+.series-trend.trend-down {
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--color-danger);
+}
+
+.series-trend i {
+    width: 16px;
+    height: 16px;
+}
+
+.series-progress-bar {
+    margin-bottom: var(--space-lg);
+}
+
+.series-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: var(--space-sm);
+    margin-bottom: var(--space-lg);
+}
+
+.series-stat-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: var(--space-sm);
+    background: var(--color-bg-surface);
+    border-radius: var(--radius-md);
+}
+
+.series-stat-box .stat-value {
+    font-size: var(--text-lg);
+    font-weight: var(--weight-bold);
+    color: var(--color-text-primary);
+}
+
+.series-stat-box .stat-label {
+    font-size: var(--text-xs);
+    color: var(--color-text-muted);
+    margin-top: var(--space-xs);
+}
+
+.series-events-list {
+    border-top: 1px solid var(--color-border);
+    padding-top: var(--space-md);
+}
+
+.series-events-header {
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    color: var(--color-text-secondary);
+    margin-bottom: var(--space-sm);
+}
+
+.series-event-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    padding: var(--space-sm);
+    border-radius: var(--radius-md);
+    transition: background 0.2s;
+    text-decoration: none;
+    color: inherit;
+}
+
+.series-event-row:hover {
+    background: var(--color-bg-surface);
+}
+
+.event-date-col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 40px;
+}
+
+.event-day {
+    font-size: var(--text-lg);
+    font-weight: var(--weight-bold);
+    color: var(--color-text-primary);
+    line-height: 1;
+}
+
+.event-month {
+    font-size: var(--text-xs);
+    color: var(--color-text-muted);
+    text-transform: uppercase;
+}
+
+.event-info-col {
+    flex: 1;
+}
+
+.event-name {
+    font-size: var(--text-sm);
+    color: var(--color-text-primary);
+}
+
+.event-result-col {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+}
+
+.event-position {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 32px;
+    padding: var(--space-xs) var(--space-sm);
+    border-radius: var(--radius-md);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    background: var(--color-bg-surface);
+}
+
+.event-position.p1 {
+    background: #FFD700;
+    color: white;
+}
+
+.event-position.p2 {
+    background: #C0C0C0;
+    color: white;
+}
+
+.event-position.p3 {
+    background: #CD7F32;
+    color: white;
+}
+
+.event-points {
+    font-size: var(--text-sm);
+    color: var(--color-text-muted);
+}
+
+.event-status {
+    font-size: var(--text-sm);
+    color: var(--color-text-muted);
+    font-style: italic;
+}
+
 /* ============================================================================
    RIGHT COLUMN CARDS
    ============================================================================ */
@@ -712,6 +895,19 @@
 
     .form-points-huge {
         font-size: 2.5rem;
+    }
+
+    /* Series panel mobile adjustments */
+    .series-rank-number {
+        font-size: 2.5rem;
+    }
+
+    .series-stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .series-tab-btn {
+        font-size: var(--text-xs);
     }
 }
 

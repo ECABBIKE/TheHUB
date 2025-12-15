@@ -578,9 +578,94 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
             </div>
 
             <!-- Series content panels -->
-            <?php foreach ($seriesStandings as $idx => $standing): ?>
+            <?php foreach ($seriesStandings as $idx => $standing):
+                // Get events for this series
+                $eventsStmt = $db->prepare("
+                    SELECT r.position, r.points, r.status, e.id as event_id, e.name as event_name, e.date as event_date
+                    FROM results r
+                    JOIN events e ON r.event_id = e.id
+                    WHERE r.cyclist_id = ? AND e.series_id = ? AND r.class_id = ?
+                    ORDER BY e.date DESC
+                ");
+                $eventsStmt->execute([$riderId, $standing['series_id'], $standing['class_id']]);
+                $seriesEvents = $eventsStmt->fetchAll(PDO::FETCH_ASSOC);
+
+                // Calculate progress percentage (inverted - lower rank is better)
+                $rankPercent = max(5, min(100, 100 - (($standing['ranking'] - 1) / max(1, $standing['total_riders'] - 1)) * 100));
+            ?>
             <div class="series-panel-v3 <?= $idx === 0 ? 'active' : '' ?>" id="series-<?= $idx ?>">
-                <!-- Panel content here -->
+
+                <!-- Position Header -->
+                <div class="series-position-header">
+                    <div class="series-rank-display">
+                        <span class="series-rank-number"><?= $standing['ranking'] ?></span>
+                        <span class="series-rank-text">av <?= $standing['total_riders'] ?></span>
+                    </div>
+                    <?php if ($standing['trend'] != 0): ?>
+                    <div class="series-trend <?= $standing['trend'] > 0 ? 'trend-up' : 'trend-down' ?>">
+                        <i data-lucide="<?= $standing['trend'] > 0 ? 'trending-up' : 'trending-down' ?>"></i>
+                        <span><?= $standing['trend'] > 0 ? '+' : '' ?><?= $standing['trend'] ?></span>
+                    </div>
+                    <?php endif; ?>
+                </div>
+
+                <!-- Progress Bar -->
+                <div class="series-progress-bar">
+                    <div class="progress-track">
+                        <div class="progress-fill" style="width: <?= $rankPercent ?>%; background: <?= htmlspecialchars($standing['series_color'] ?? 'var(--color-accent)') ?>"></div>
+                    </div>
+                    <div class="progress-labels">
+                        <span>#<?= $standing['total_riders'] ?></span>
+                        <span>#1</span>
+                    </div>
+                </div>
+
+                <!-- Stats Grid -->
+                <div class="series-stats-grid">
+                    <div class="series-stat-box">
+                        <span class="stat-value"><?= number_format($standing['total_points'], 1) ?></span>
+                        <span class="stat-label">Poäng</span>
+                    </div>
+                    <div class="series-stat-box">
+                        <span class="stat-value"><?= $standing['events_count'] ?></span>
+                        <span class="stat-label">Tävlingar</span>
+                    </div>
+                    <div class="series-stat-box">
+                        <span class="stat-value"><?= $standing['wins'] ?></span>
+                        <span class="stat-label">Vinster</span>
+                    </div>
+                    <div class="series-stat-box">
+                        <span class="stat-value"><?= $standing['podiums'] ?></span>
+                        <span class="stat-label">Pallplatser</span>
+                    </div>
+                </div>
+
+                <!-- Events List -->
+                <?php if (!empty($seriesEvents)): ?>
+                <div class="series-events-list">
+                    <h4 class="series-events-header">Tävlingar</h4>
+                    <?php foreach ($seriesEvents as $event): ?>
+                    <a href="/calendar/<?= $event['event_id'] ?>" class="series-event-row">
+                        <div class="event-date-col">
+                            <span class="event-day"><?= date('j', strtotime($event['event_date'])) ?></span>
+                            <span class="event-month"><?= strtoupper(substr(date('M', strtotime($event['event_date'])), 0, 3)) ?></span>
+                        </div>
+                        <div class="event-info-col">
+                            <span class="event-name"><?= htmlspecialchars($event['event_name']) ?></span>
+                        </div>
+                        <div class="event-result-col">
+                            <?php if ($event['status'] === 'finished'): ?>
+                                <span class="event-position p<?= $event['position'] ?>">#<?= $event['position'] ?></span>
+                                <span class="event-points"><?= number_format($event['points'], 1) ?>p</span>
+                            <?php else: ?>
+                                <span class="event-status"><?= htmlspecialchars($event['status']) ?></span>
+                            <?php endif; ?>
+                        </div>
+                    </a>
+                    <?php endforeach; ?>
+                </div>
+                <?php endif; ?>
+
             </div>
             <?php endforeach; ?>
         </div>
@@ -923,6 +1008,27 @@ document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') {
         closeRankingModal();
     }
+});
+
+// Series Tabs Switching
+document.addEventListener('DOMContentLoaded', function() {
+    const seriesTabs = document.querySelectorAll('.series-tab-btn');
+    seriesTabs.forEach(tab => {
+        tab.addEventListener('click', function() {
+            const targetId = this.getAttribute('data-target');
+
+            // Remove active class from all tabs and panels
+            document.querySelectorAll('.series-tab-btn').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.series-panel-v3').forEach(p => p.classList.remove('active'));
+
+            // Add active class to clicked tab and corresponding panel
+            this.classList.add('active');
+            const targetPanel = document.getElementById(targetId);
+            if (targetPanel) {
+                targetPanel.classList.add('active');
+            }
+        });
+    });
 });
 </script>
 
