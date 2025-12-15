@@ -39,10 +39,15 @@ function nav_icon($name, $class = 'sidebar-icon-svg') {
 ?>
 
 <aside class="sidebar" role="navigation" aria-label="Huvudnavigering">
-    <!-- Logo -->
+    <!-- Logo from branding settings -->
+    <?php
+    $sidebarLogo = getBranding('logos.sidebar');
+    if ($sidebarLogo):
+    ?>
     <a href="/" class="sidebar-logo" aria-label="TheHUB Hem">
-        <img src="/assets/logo-gs.svg" alt="GS TheHUB" width="40" height="40">
+        <img src="<?= h($sidebarLogo) ?>" alt="TheHUB" width="40" height="40">
     </a>
+    <?php endif; ?>
 
     <nav class="sidebar-nav">
         <!-- PUBLIC NAVIGATION -->

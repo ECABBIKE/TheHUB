@@ -28,6 +28,7 @@ foreach ($folderStats as $stat) {
 
 // Define folders
 $folders = [
+    ['id' => 'branding', 'name' => 'Branding', 'icon' => 'palette'],
     ['id' => 'general', 'name' => 'Allmänt', 'icon' => 'folder'],
     ['id' => 'series', 'name' => 'Serier', 'icon' => 'trophy'],
     ['id' => 'sponsors', 'name' => 'Sponsorer', 'icon' => 'handshake'],

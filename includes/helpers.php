@@ -48,6 +48,40 @@ function calculateAge($birthYear) {
   return date('Y') - $birthYear;
 }
 
+/**
+ * Get branding settings from branding.json
+ * @param string|null $key Optional specific key to return (e.g., 'logos.sidebar')
+ * @return mixed Full branding array or specific value
+ */
+function getBranding($key = null) {
+    static $branding = null;
+
+    if ($branding === null) {
+        $brandingFile = __DIR__ . '/../uploads/branding.json';
+        if (file_exists($brandingFile)) {
+            $data = json_decode(file_get_contents($brandingFile), true);
+            $branding = is_array($data) ? $data : [];
+        } else {
+            $branding = [];
+        }
+    }
+
+    if ($key === null) {
+        return $branding;
+    }
+
+    // Support dot notation like 'logos.sidebar'
+    $keys = explode('.', $key);
+    $value = $branding;
+    foreach ($keys as $k) {
+        if (!isset($value[$k])) {
+            return null;
+        }
+        $value = $value[$k];
+    }
+    return $value;
+}
+
 function checkLicense($rider) {
   $currentYear = (int)date('Y');
 

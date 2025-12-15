@@ -88,10 +88,17 @@ if ($isLoggedIn) {
 }
 ?>
 
+<?php
+// Get homepage logo from branding (ONLY for homepage)
+$homepageLogo = getBranding('logos.homepage');
+?>
 <div class="welcome-page">
     <!-- Header with Logo -->
     <div class="welcome-header">
         <div class="welcome-logo">
+            <?php if ($homepageLogo): ?>
+            <img src="<?= h($homepageLogo) ?>" alt="TheHUB" style="width: 80px; height: 80px; object-fit: contain;">
+            <?php else: ?>
             <svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <rect width="80" height="80" rx="16" fill="var(--color-accent, #004a98)"/>
                 <path d="M20 25 L40 15 L60 25 L60 55 L40 65 L20 55 Z" fill="none" stroke="white" stroke-width="2.5" stroke-linejoin="round"/>
@@ -100,6 +107,7 @@ if ($isLoggedIn) {
                 <path d="M60 25 L20 55" stroke="white" stroke-width="2" stroke-linecap="round"/>
                 <circle cx="40" cy="40" r="8" fill="white"/>
             </svg>
+            <?php endif; ?>
         </div>
         <h1 class="welcome-title">TheHUB</h1>
         <p class="welcome-subtitle">GravitySeries Competition Platform</p>
