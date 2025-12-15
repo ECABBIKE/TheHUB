@@ -8,8 +8,31 @@ $pdo = hub_db();
 
 // Get filter parameters
 $filterSeries = isset($_GET['series']) && is_numeric($_GET['series']) ? intval($_GET['series']) : null;
+$filterYear = isset($_GET['year']) && is_numeric($_GET['year']) ? intval($_GET['year']) : null;
 
 try {
+    // Get years that have results (for filter dropdown)
+    $yearsStmt = $pdo->query("
+        SELECT DISTINCT YEAR(e.date) as year
+        FROM events e
+        INNER JOIN results r ON e.id = r.event_id
+        WHERE e.date IS NOT NULL
+        ORDER BY year DESC
+    ");
+    $yearsList = $yearsStmt->fetchAll(PDO::FETCH_COLUMN);
+
+    // Get series for filter - only series that have results (with brand info)
+    $seriesStmt = $pdo->query("
+        SELECT DISTINCT s.id, s.name, sb.accent_color
+        FROM series s
+        LEFT JOIN series_brands sb ON s.brand_id = sb.id
+        INNER JOIN events e ON s.id = e.series_id
+        INNER JOIN results r ON e.id = r.event_id
+        WHERE s.active = 1
+        ORDER BY s.name
+    ");
+    $seriesList = $seriesStmt->fetchAll(PDO::FETCH_ASSOC);
+
     // Get events with results, including brand colors and logo
     $sql = "
         SELECT e.id, e.name, e.date, e.location,
@@ -33,23 +56,16 @@ try {
         $params[] = $filterSeries;
     }
 
+    if ($filterYear) {
+        $sql .= " AND YEAR(e.date) = ?";
+        $params[] = $filterYear;
+    }
+
     $sql .= " GROUP BY e.id ORDER BY e.date DESC LIMIT 100";
 
     $stmt = $pdo->prepare($sql);
     $stmt->execute($params);
     $events = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-    // Get series for filter - only series that have results (with brand info)
-    $seriesStmt = $pdo->query("
-        SELECT DISTINCT s.id, s.name, sb.accent_color
-        FROM series s
-        LEFT JOIN series_brands sb ON s.brand_id = sb.id
-        INNER JOIN events e ON s.id = e.series_id
-        INNER JOIN results r ON e.id = r.event_id
-        WHERE s.active = 1
-        ORDER BY s.name
-    ");
-    $seriesList = $seriesStmt->fetchAll(PDO::FETCH_ASSOC);
 
     // Group events by year (descending)
     $eventsByYear = [];
@@ -65,6 +81,7 @@ try {
 } catch (Exception $e) {
     $events = [];
     $seriesList = [];
+    $yearsList = [];
     $eventsByYear = [];
     $totalEvents = 0;
     $error = $e->getMessage();
@@ -88,6 +105,17 @@ try {
             <?php foreach ($seriesList as $series): ?>
                 <option value="<?= $series['id'] ?>" <?= $filterSeries == $series['id'] ? 'selected' : '' ?>>
                     <?= htmlspecialchars($series['name']) ?>
+                </option>
+            <?php endforeach; ?>
+        </select>
+    </div>
+    <div class="filter-group">
+        <label for="filter-year" class="filter-label">År</label>
+        <select id="filter-year" class="filter-select" onchange="applyFilters()">
+            <option value="">Alla år</option>
+            <?php foreach ($yearsList as $year): ?>
+                <option value="<?= $year ?>" <?= $filterYear == $year ? 'selected' : '' ?>>
+                    <?= $year ?>
                 </option>
             <?php endforeach; ?>
         </select>
@@ -178,8 +206,10 @@ try {
 <script>
 function applyFilters() {
     const series = document.getElementById('filter-series').value;
+    const year = document.getElementById('filter-year').value;
     const params = new URLSearchParams();
     if (series) params.set('series', series);
+    if (year) params.set('year', year);
     window.location.href = '/results' + (params.toString() ? '?' + params : '');
 }
 </script>
