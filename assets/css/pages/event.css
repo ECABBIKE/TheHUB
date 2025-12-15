@@ -139,8 +139,8 @@
     .class-sponsor-label-mobile { display: inline; }
 }
 .class-sponsor-logo {
-    max-height: 24px;
-    max-width: 80px;
+    max-height: 36px;
+    max-width: 120px;
     object-fit: contain;
 }
 .class-sponsor-name {

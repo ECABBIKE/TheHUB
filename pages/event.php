@@ -903,7 +903,7 @@ if (!empty($eventSponsors['content'])): ?>
         $smallLogo = $resultSponsor ? get_sponsor_logo_for_placement($resultSponsor, 'sidebar') : null;
         if ($resultSponsor && $smallLogo): ?>
         <a href="<?= h($resultSponsor['website'] ?? '#') ?>" target="_blank" rel="noopener sponsored" class="class-sponsor" title="Resultat sponsrat av <?= h($resultSponsor['name']) ?>">
-            <span class="class-sponsor-label-desktop">Resultaten sponsrade av</span>
+            <span class="class-sponsor-label-desktop">Resultaten presenteras av</span>
             <span class="class-sponsor-label-mobile">Sponsor</span>
             <img src="<?= h($smallLogo) ?>" alt="<?= h($resultSponsor['name']) ?>" class="class-sponsor-logo">
         </a>
