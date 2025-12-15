@@ -394,10 +394,10 @@ include __DIR__ . '/components/unified-layout.php';
         </div>
         <div class="card-body">
             <p class="text-secondary mb-lg">
-                Ladda upp logotyper i <a href="/admin/media?folder=branding">Mediabiblioteket (Branding)</a> och klistra in URL:en nedan.
+                Välj logotyper från <a href="/admin/media?folder=branding">Mediabiblioteket</a> eller ladda upp nya där först.
             </p>
 
-            <div class="branding-grid" style="grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));">
+            <div class="branding-grid" style="grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));">
                 <!-- Sidebar Logo -->
                 <div class="color-group">
                     <h3>
@@ -405,15 +405,21 @@ include __DIR__ . '/components/unified-layout.php';
                         Sidebar-logga
                     </h3>
                     <p class="text-secondary text-sm mb-md">Visas i navigationens övre del på alla sidor.</p>
-                    <div style="display: flex; align-items: center; gap: var(--space-md); margin-bottom: var(--space-md);">
-                        <div style="width: 60px; height: 60px; background: var(--color-bg-sunken); border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center; overflow: hidden;">
-                            <?php if ($sidebarLogo): ?>
-                                <img src="<?= h($sidebarLogo) ?>" alt="Sidebar logo" style="max-width: 100%; max-height: 100%; object-fit: contain;">
-                            <?php else: ?>
-                                <i data-lucide="image-off" style="color: var(--color-text-muted);"></i>
-                            <?php endif; ?>
-                        </div>
-                        <input type="text" name="logo_sidebar" class="input" style="flex: 1;" value="<?= h($sidebarLogo) ?>" placeholder="https://... eller /uploads/media/branding/...">
+                    <input type="hidden" name="logo_sidebar" id="logoSidebarInput" value="<?= h($sidebarLogo) ?>">
+                    <div id="logoSidebarPreview" class="logo-preview-box" onclick="openMediaPicker('sidebar')" style="width: 100%; height: 80px; background: var(--color-bg-sunken); border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center; overflow: hidden; cursor: pointer; border: 2px dashed var(--color-border); transition: border-color 0.2s;">
+                        <?php if ($sidebarLogo): ?>
+                            <img src="<?= h($sidebarLogo) ?>" alt="Sidebar logo" style="max-width: 100%; max-height: 100%; object-fit: contain;">
+                        <?php else: ?>
+                            <span style="color: var(--color-text-muted); font-size: var(--text-sm);">Klicka för att välja bild</span>
+                        <?php endif; ?>
+                    </div>
+                    <div style="display: flex; gap: var(--space-sm); margin-top: var(--space-sm);">
+                        <button type="button" class="btn btn--secondary btn--sm" onclick="openMediaPicker('sidebar')">
+                            <i data-lucide="image"></i> Välj bild
+                        </button>
+                        <button type="button" class="btn btn--ghost btn--sm" onclick="clearLogo('sidebar')" <?= $sidebarLogo ? '' : 'disabled' ?>>
+                            <i data-lucide="x"></i> Ta bort
+                        </button>
                     </div>
                 </div>
 
@@ -424,15 +430,21 @@ include __DIR__ . '/components/unified-layout.php';
                         Startsida-logga
                     </h3>
                     <p class="text-secondary text-sm mb-md">Visas endast på startsidan (stor logga).</p>
-                    <div style="display: flex; align-items: center; gap: var(--space-md); margin-bottom: var(--space-md);">
-                        <div style="width: 60px; height: 60px; background: var(--color-bg-sunken); border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center; overflow: hidden;">
-                            <?php if ($homepageLogo): ?>
-                                <img src="<?= h($homepageLogo) ?>" alt="Homepage logo" style="max-width: 100%; max-height: 100%; object-fit: contain;">
-                            <?php else: ?>
-                                <i data-lucide="image-off" style="color: var(--color-text-muted);"></i>
-                            <?php endif; ?>
-                        </div>
-                        <input type="text" name="logo_homepage" class="input" style="flex: 1;" value="<?= h($homepageLogo) ?>" placeholder="https://... eller /uploads/media/branding/...">
+                    <input type="hidden" name="logo_homepage" id="logoHomepageInput" value="<?= h($homepageLogo) ?>">
+                    <div id="logoHomepagePreview" class="logo-preview-box" onclick="openMediaPicker('homepage')" style="width: 100%; height: 80px; background: var(--color-bg-sunken); border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center; overflow: hidden; cursor: pointer; border: 2px dashed var(--color-border); transition: border-color 0.2s;">
+                        <?php if ($homepageLogo): ?>
+                            <img src="<?= h($homepageLogo) ?>" alt="Homepage logo" style="max-width: 100%; max-height: 100%; object-fit: contain;">
+                        <?php else: ?>
+                            <span style="color: var(--color-text-muted); font-size: var(--text-sm);">Klicka för att välja bild</span>
+                        <?php endif; ?>
+                    </div>
+                    <div style="display: flex; gap: var(--space-sm); margin-top: var(--space-sm);">
+                        <button type="button" class="btn btn--secondary btn--sm" onclick="openMediaPicker('homepage')">
+                            <i data-lucide="image"></i> Välj bild
+                        </button>
+                        <button type="button" class="btn btn--ghost btn--sm" onclick="clearLogo('homepage')" <?= $homepageLogo ? '' : 'disabled' ?>>
+                            <i data-lucide="x"></i> Ta bort
+                        </button>
                     </div>
                 </div>
 
@@ -443,15 +455,21 @@ include __DIR__ . '/components/unified-layout.php';
                         Favicon
                     </h3>
                     <p class="text-secondary text-sm mb-md">Ikon som visas i webbläsarfliken (SVG rekommenderas).</p>
-                    <div style="display: flex; align-items: center; gap: var(--space-md); margin-bottom: var(--space-md);">
-                        <div style="width: 60px; height: 60px; background: var(--color-bg-sunken); border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center; overflow: hidden;">
-                            <?php if ($faviconLogo): ?>
-                                <img src="<?= h($faviconLogo) ?>" alt="Favicon" style="max-width: 100%; max-height: 100%; object-fit: contain;">
-                            <?php else: ?>
-                                <i data-lucide="image-off" style="color: var(--color-text-muted);"></i>
-                            <?php endif; ?>
-                        </div>
-                        <input type="text" name="logo_favicon" class="input" style="flex: 1;" value="<?= h($faviconLogo) ?>" placeholder="https://... eller /uploads/media/branding/...">
+                    <input type="hidden" name="logo_favicon" id="logoFaviconInput" value="<?= h($faviconLogo) ?>">
+                    <div id="logoFaviconPreview" class="logo-preview-box" onclick="openMediaPicker('favicon')" style="width: 100%; height: 80px; background: var(--color-bg-sunken); border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center; overflow: hidden; cursor: pointer; border: 2px dashed var(--color-border); transition: border-color 0.2s;">
+                        <?php if ($faviconLogo): ?>
+                            <img src="<?= h($faviconLogo) ?>" alt="Favicon" style="max-width: 100%; max-height: 100%; object-fit: contain;">
+                        <?php else: ?>
+                            <span style="color: var(--color-text-muted); font-size: var(--text-sm);">Klicka för att välja bild</span>
+                        <?php endif; ?>
+                    </div>
+                    <div style="display: flex; gap: var(--space-sm); margin-top: var(--space-sm);">
+                        <button type="button" class="btn btn--secondary btn--sm" onclick="openMediaPicker('favicon')">
+                            <i data-lucide="image"></i> Välj bild
+                        </button>
+                        <button type="button" class="btn btn--ghost btn--sm" onclick="clearLogo('favicon')" <?= $faviconLogo ? '' : 'disabled' ?>>
+                            <i data-lucide="x"></i> Ta bort
+                        </button>
                     </div>
                 </div>
             </div>
@@ -942,6 +960,148 @@ document.addEventListener('DOMContentLoaded', function() {
         lucide.createIcons();
     }
 });
+
+// ============================================================================
+// MEDIA PICKER FUNCTIONS
+// ============================================================================
+
+let currentLogoField = null;
+let mediaData = [];
+
+async function openMediaPicker(field) {
+    currentLogoField = field;
+    const modal = document.getElementById('mediaPickerModal');
+    const grid = document.getElementById('mediaGrid');
+
+    grid.innerHTML = '<div style="text-align: center; padding: 40px; color: var(--color-text-secondary);">Laddar bilder...</div>';
+    modal.classList.add('active');
+
+    try {
+        const response = await fetch('/api/media.php?action=list&folder=branding&limit=100');
+        const result = await response.json();
+
+        if (result.success && result.data.length > 0) {
+            mediaData = result.data;
+            renderMediaGrid();
+        } else {
+            grid.innerHTML = `
+                <div style="text-align: center; padding: 40px; color: var(--color-text-secondary); grid-column: 1/-1;">
+                    <p style="margin-bottom: 16px;">Inga bilder i branding-mappen.</p>
+                    <a href="/admin/media?folder=branding" target="_blank" class="btn btn--primary">
+                        <i data-lucide="upload"></i>
+                        Ladda upp bilder
+                    </a>
+                </div>
+            `;
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+        }
+    } catch (error) {
+        console.error('Error loading media:', error);
+        grid.innerHTML = '<div style="text-align: center; padding: 40px; color: var(--color-danger);">Kunde inte ladda bilder</div>';
+    }
+}
+
+function renderMediaGrid() {
+    const grid = document.getElementById('mediaGrid');
+    grid.innerHTML = mediaData.map(media => `
+        <div class="media-item" onclick="selectMedia('${media.filepath}')" style="cursor: pointer; border: 2px solid transparent; border-radius: 8px; padding: 8px; transition: border-color 0.2s; background: var(--color-bg-surface);">
+            <img src="/${media.filepath}" alt="${media.original_filename || ''}" style="width: 100%; height: 80px; object-fit: contain; background: var(--color-bg-sunken); border-radius: 4px;">
+            <div style="font-size: 0.75rem; color: var(--color-text-secondary); margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: center;">
+                ${media.original_filename || 'Bild'}
+            </div>
+        </div>
+    `).join('');
+}
+
+function selectMedia(filepath) {
+    if (!currentLogoField) return;
+
+    const capitalizedField = currentLogoField.charAt(0).toUpperCase() + currentLogoField.slice(1);
+    const inputId = 'logo' + capitalizedField + 'Input';
+    const previewId = 'logo' + capitalizedField + 'Preview';
+    const url = '/' + filepath.replace(/^\//, '');
+
+    document.getElementById(inputId).value = url;
+    document.getElementById(previewId).innerHTML = `<img src="${url}" alt="Logo" style="max-width: 100%; max-height: 100%; object-fit: contain;">`;
+
+    // Enable remove button
+    const colorGroup = document.getElementById(previewId).closest('.color-group');
+    const removeBtn = colorGroup.querySelector('button[onclick*="clearLogo"]');
+    if (removeBtn) removeBtn.disabled = false;
+
+    closeMediaModal();
+}
+
+function clearLogo(field) {
+    const capitalizedField = field.charAt(0).toUpperCase() + field.slice(1);
+    const inputId = 'logo' + capitalizedField + 'Input';
+    const previewId = 'logo' + capitalizedField + 'Preview';
+
+    document.getElementById(inputId).value = '';
+    document.getElementById(previewId).innerHTML = `<span style="color: var(--color-text-muted); font-size: var(--text-sm);">Klicka för att välja bild</span>`;
+
+    // Disable remove button
+    const colorGroup = document.getElementById(previewId).closest('.color-group');
+    const removeBtn = colorGroup.querySelector('button[onclick*="clearLogo"]');
+    if (removeBtn) removeBtn.disabled = true;
+}
+
+function closeMediaModal() {
+    document.getElementById('mediaPickerModal').classList.remove('active');
+    currentLogoField = null;
+}
+
+// Close modal on escape
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        closeMediaModal();
+    }
+});
+
+// Close modal on backdrop click
+document.getElementById('mediaPickerModal')?.addEventListener('click', (e) => {
+    if (e.target.id === 'mediaPickerModal') closeMediaModal();
+});
+
+// Hover effect for preview boxes
+document.querySelectorAll('.logo-preview-box').forEach(box => {
+    box.addEventListener('mouseenter', () => box.style.borderColor = 'var(--color-accent)');
+    box.addEventListener('mouseleave', () => box.style.borderColor = 'var(--color-border)');
+});
 </script>
+
+<!-- Media Picker Modal -->
+<div class="modal" id="mediaPickerModal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;">
+    <div class="modal-content" style="background: var(--color-bg-surface); border-radius: var(--radius-lg); max-width: 700px; width: 90%; max-height: 80vh; display: flex; flex-direction: column; box-shadow: var(--shadow-lg);">
+        <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; padding: var(--space-lg); border-bottom: 1px solid var(--color-border);">
+            <h3 style="margin: 0; font-size: var(--text-lg);">Välj bild från Mediabiblioteket</h3>
+            <button type="button" onclick="closeMediaModal()" style="background: none; border: none; cursor: pointer; padding: 8px; color: var(--color-text-secondary);">
+                <i data-lucide="x" style="width: 20px; height: 20px;"></i>
+            </button>
+        </div>
+        <div class="modal-body" style="padding: var(--space-lg); overflow-y: auto; flex: 1;">
+            <div id="mediaGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 12px;">
+                <!-- Media items will be loaded here -->
+            </div>
+        </div>
+        <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center; padding: var(--space-md) var(--space-lg); border-top: 1px solid var(--color-border); background: var(--color-bg-sunken);">
+            <a href="/admin/media?folder=branding" target="_blank" class="btn btn--secondary btn--sm">
+                <i data-lucide="external-link"></i>
+                Öppna Mediabiblioteket
+            </a>
+            <button type="button" class="btn btn--ghost btn--sm" onclick="closeMediaModal()">Avbryt</button>
+        </div>
+    </div>
+</div>
+
+<style>
+.modal.active {
+    display: flex !important;
+}
+.media-item:hover {
+    border-color: var(--color-accent) !important;
+    background: var(--color-bg-elevated) !important;
+}
+</style>
 
 <?php include __DIR__ . '/components/unified-layout-footer.php'; ?>
