@@ -662,7 +662,7 @@
 
 .results-table .col-rider {
     position: sticky;
-    left: calc(50px + var(--space-md));
+    left: 50px;
     background: var(--color-bg-card);
     z-index: 2;
 }
