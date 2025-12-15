@@ -61,12 +61,16 @@ $seriesIdSelect = $seriesEventsTableExists
 $sql = "SELECT
     e.id, e.name, e.date, e.location, e.discipline, e.status,
     e.event_level, e.event_format, e.pricing_template_id, e.advent_id,
+    e.organizer_club_id, e.website, e.contact_email, e.contact_phone,
+    e.registration_deadline, e.registration_deadline_time,
     v.name as venue_name,
+    c.name as organizer_name,
     {$seriesNameSelect} as series_name,
     {$seriesIdSelect} as series_id
 FROM events e
 LEFT JOIN venues v ON e.venue_id = v.id
 LEFT JOIN series s ON e.series_id = s.id
+LEFT JOIN clubs c ON e.organizer_club_id = c.id
 {$whereClause}
 ORDER BY e.date DESC
 LIMIT 200";
@@ -170,9 +174,13 @@ $breadcrumbs = [
     ['label' => 'Events']
 ];
 $page_actions = '
-<button id="bulk-edit-toggle" class="btn-admin btn-admin-secondary" onclick="toggleBulkEdit()" style="margin-right: var(--space-sm);">
+<button id="bulk-edit-toggle" class="btn-admin btn-admin-secondary" onclick="toggleBulkEdit(\'event\')" style="margin-right: var(--space-sm);">
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.375 2.625a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4Z"/></svg>
-    <span id="bulk-edit-label">Massredigering</span>
+    <span id="bulk-edit-label">Masseditering Tävling</span>
+</button>
+<button id="bulk-edit-organizer-toggle" class="btn-admin btn-admin-secondary" onclick="toggleBulkEdit(\'organizer\')" style="margin-right: var(--space-sm);">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+    <span id="bulk-edit-organizer-label">Masseditering Arrangör</span>
 </button>
 <a href="/admin/events/create" class="btn-admin btn-admin-primary">
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
@@ -283,6 +291,12 @@ include __DIR__ . '/components/unified-layout.php';
                             <th>Event Format</th>
                             <th>Prismall</th>
                             <th>Advent ID</th>
+                            <th class="organizer-field">Arrangör</th>
+                            <th class="organizer-field">Webbplats</th>
+                            <th class="organizer-field">Kontakt e-post</th>
+                            <th class="organizer-field">Kontakt telefon</th>
+                            <th class="organizer-field">Anmälningsfrist</th>
+                            <th class="organizer-field">Klockslag</th>
                             <th style="width: 100px;">Åtgärder</th>
                         </tr>
                     </thead>
@@ -355,10 +369,42 @@ include __DIR__ . '/components/unified-layout.php';
                                     </select>
                                 </td>
                                 <td>
-                                    <input type="text" class="admin-form-input" style="min-width: 80px; padding: var(--space-xs) var(--space-sm); font-size: 0.875rem;"
+                                    <input type="text" class="admin-form-input" style="min-width: 80px; padding: var(--space-xs) var(--space-sm); font-size: 0.7rem;"
                                            value="<?= htmlspecialchars($event['advent_id'] ?? '') ?>"
                                            onblur="updateAdventId(<?= $event['id'] ?>, this.value)"
                                            placeholder="-">
+                                </td>
+                                <td class="organizer-field">
+                                    <span class="organizer-display"><?= htmlspecialchars($event['organizer_name'] ?? '-') ?></span>
+                                </td>
+                                <td class="organizer-field">
+                                    <input type="text" class="admin-form-input organizer-input" style="min-width: 120px; padding: var(--space-xs) var(--space-sm); font-size: 0.875rem;"
+                                           value="<?= htmlspecialchars($event['website'] ?? '') ?>"
+                                           onblur="updateOrganizerField(<?= $event['id'] ?>, 'website', this.value)"
+                                           placeholder="https://">
+                                </td>
+                                <td class="organizer-field">
+                                    <input type="email" class="admin-form-input organizer-input" style="min-width: 150px; padding: var(--space-xs) var(--space-sm); font-size: 0.875rem;"
+                                           value="<?= htmlspecialchars($event['contact_email'] ?? '') ?>"
+                                           onblur="updateOrganizerField(<?= $event['id'] ?>, 'contact_email', this.value)"
+                                           placeholder="mail@example.com">
+                                </td>
+                                <td class="organizer-field">
+                                    <input type="tel" class="admin-form-input organizer-input" style="min-width: 120px; padding: var(--space-xs) var(--space-sm); font-size: 0.875rem;"
+                                           value="<?= htmlspecialchars($event['contact_phone'] ?? '') ?>"
+                                           onblur="updateOrganizerField(<?= $event['id'] ?>, 'contact_phone', this.value)"
+                                           placeholder="070-123 45 67">
+                                </td>
+                                <td class="organizer-field">
+                                    <input type="date" class="admin-form-input organizer-input" style="min-width: 130px; padding: var(--space-xs) var(--space-sm); font-size: 0.875rem;"
+                                           value="<?= htmlspecialchars($event['registration_deadline'] ?? '') ?>"
+                                           onblur="updateOrganizerField(<?= $event['id'] ?>, 'registration_deadline', this.value)">
+                                </td>
+                                <td class="organizer-field">
+                                    <input type="time" class="admin-form-input organizer-input" style="min-width: 100px; padding: var(--space-xs) var(--space-sm); font-size: 0.875rem;"
+                                           value="<?= htmlspecialchars($event['registration_deadline_time'] ?? '23:59') ?>"
+                                           onblur="updateOrganizerField(<?= $event['id'] ?>, 'registration_deadline_time', this.value)"
+                                           placeholder="23:59">
                                 </td>
                                 <td>
                                     <div class="table-actions">
@@ -557,7 +603,35 @@ async function updateAdventId(eventId, adventId) {
     }
 }
 
+async function updateOrganizerField(eventId, field, value) {
+    try {
+        const response = await fetch('/admin/api/update-organizer-field.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                event_id: eventId,
+                field: field,
+                value: value,
+                csrf_token: csrfToken
+            })
+        });
+
+        const result = await response.json();
+        if (!result.success) {
+            alert('Fel: ' + (result.error || 'Kunde inte uppdatera fält'));
+        } else {
+            showToast('Fält uppdaterat', 'success');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Fel vid uppdatering av fält');
+    }
+}
+
 // Bulk Edit Mode
+let bulkEditMode = null; // 'event' or 'organizer' or null
 let bulkEditMode = false;
 let bulkChanges = {};
 
