@@ -197,20 +197,41 @@ $emptyClubs = array_filter($clubs, function($club) {
  * Normalize club name for comparison
  */
 function normalizeClubName($name) {
- $name = mb_strtolower(trim($name), 'UTF-8');
+    $name = mb_strtolower(trim($name), 'UTF-8');
 
- // Remove common suffixes/variations
- $name = preg_replace('/\s*(ck|cykelklubb|cykel klubb|cykel|if|ik|sk|fk|bk|idrottssällskap|idrottsällskap|idrotts|enduro|mtb)\s*/u', '', $name);
+    // Remove common prefixes/suffixes/variations (including Swedish definite forms)
+    $patterns = [
+        '/^cykelklubben\s+/u',      // "Cykelklubben X" -> "X"
+        '/^cykelklubb\s+/u',        // "Cykelklubb X" -> "X"
+        '/^ck\s+/u',                // "CK X" -> "X"
+        '/^if\s+/u',                // "IF X" -> "X"
+        '/^ik\s+/u',                // "IK X" -> "X"
+        '/^sk\s+/u',                // "SK X" -> "X"
+        '/^fk\s+/u',                // "FK X" -> "X"
+        '/^bk\s+/u',                // "BK X" -> "X"
+        '/\s+ck$/u',                // "X CK" -> "X"
+        '/\s+cykelklubb$/u',        // "X Cykelklubb" -> "X"
+        '/\s+cykelklubben$/u',      // "X Cykelklubben" -> "X"
+        '/\s+if$/u',                // "X IF" -> "X"
+        '/\s+ik$/u',                // "X IK" -> "X"
+        '/\s+sk$/u',                // "X SK" -> "X"
+        '/\s+mtb$/u',               // "X MTB" -> "X"
+        '/\s+enduro$/u',            // "X Enduro" -> "X"
+    ];
 
- // Replace Swedish chars
- $name = preg_replace('/[åä]/u', 'a', $name);
- $name = preg_replace('/[ö]/u', 'o', $name);
- $name = preg_replace('/[é]/u', 'e', $name);
+    foreach ($patterns as $pattern) {
+        $name = preg_replace($pattern, '', $name);
+    }
 
- // Remove non-alphanumeric
- $name = preg_replace('/[^a-z0-9]/u', '', $name);
+    // Replace Swedish chars
+    $name = preg_replace('/[åä]/u', 'a', $name);
+    $name = preg_replace('/[ö]/u', 'o', $name);
+    $name = preg_replace('/[é]/u', 'e', $name);
 
- return $name;
+    // Remove non-alphanumeric
+    $name = preg_replace('/[^a-z0-9]/u', '', $name);
+
+    return $name;
 }
 
 // Page config for unified layout
