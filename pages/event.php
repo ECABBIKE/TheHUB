@@ -814,8 +814,8 @@ if (!empty($eventSponsors['content'])): ?>
         <?php endif; ?>
 
         <?php if (count($seriesEvents) > 1): ?>
-        <div class="event-tab event-tab--dropdown">
-            <i data-lucide="calendar-range"></i>
+        <div class="series-jump-wrapper">
+            <span class="series-jump-label"><?= h($event['series_name']) ?> <?= date('Y', strtotime($event['date'])) ?></span>
             <select onchange="if(this.value) window.location.href='/event/' + this.value" class="series-jump-select">
                 <?php foreach ($seriesEvents as $sEvent): ?>
                     <option value="<?= $sEvent['id'] ?>" <?= $sEvent['id'] == $eventId ? 'selected' : '' ?>>
