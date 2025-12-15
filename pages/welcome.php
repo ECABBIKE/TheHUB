@@ -93,32 +93,29 @@ if ($isLoggedIn) {
 $homepageLogo = getBranding('logos.homepage');
 ?>
 <div class="welcome-page">
-    <!-- Header with Logo -->
+    <!-- Big Logo Header -->
     <div class="welcome-header">
-        <div class="welcome-logo">
+        <div class="welcome-logo-large">
             <?php if ($homepageLogo): ?>
-            <img src="<?= h($homepageLogo) ?>" alt="TheHUB" style="width: 80px; height: 80px; object-fit: contain;">
+            <img src="<?= h($homepageLogo) ?>" alt="TheHUB">
             <?php else: ?>
-            <svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <rect width="80" height="80" rx="16" fill="var(--color-accent, #004a98)"/>
-                <path d="M20 25 L40 15 L60 25 L60 55 L40 65 L20 55 Z" fill="none" stroke="white" stroke-width="2.5" stroke-linejoin="round"/>
-                <path d="M40 15 L40 65" stroke="white" stroke-width="2" stroke-linecap="round"/>
-                <path d="M20 25 L60 55" stroke="white" stroke-width="2" stroke-linecap="round"/>
-                <path d="M60 25 L20 55" stroke="white" stroke-width="2" stroke-linecap="round"/>
-                <circle cx="40" cy="40" r="8" fill="white"/>
+            <svg viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect width="200" height="200" rx="32" fill="var(--color-accent, #004a98)"/>
+                <path d="M50 62.5 L100 37.5 L150 62.5 L150 137.5 L100 162.5 L50 137.5 Z" fill="none" stroke="white" stroke-width="5" stroke-linejoin="round"/>
+                <path d="M100 37.5 L100 162.5" stroke="white" stroke-width="4" stroke-linecap="round"/>
+                <path d="M50 62.5 L150 137.5" stroke="white" stroke-width="4" stroke-linecap="round"/>
+                <path d="M150 62.5 L50 137.5" stroke="white" stroke-width="4" stroke-linecap="round"/>
+                <circle cx="100" cy="100" r="20" fill="white"/>
             </svg>
             <?php endif; ?>
         </div>
-        <h1 class="welcome-title">TheHUB</h1>
-        <p class="welcome-subtitle">GravitySeries Competition Platform</p>
-<?php $versionInfo = function_exists('getVersionInfo') ? getVersionInfo() : null; ?>
-        <p class="welcome-version">v<?= APP_VERSION ?><?php if ($versionInfo && $versionInfo['deployment']): ?> [<?= APP_BUILD ?>.<?= str_pad($versionInfo['deployment'], 3, '0', STR_PAD_LEFT) ?>]<?php endif; ?></p>
     </div>
 
-    <!-- About Section -->
+    <!-- About Section with Title -->
     <div class="welcome-about">
-        <h2>Välkommen till TheHUB</h2>
-        <p>TheHUB är den centrala plattformen för GravitySeries och relaterade tävlingsserier. Här hittar du kalender, resultat, serieställningar, ranking och databas över åkare och klubbar.</p>
+        <h1 class="welcome-about-title">TheHUB</h1>
+        <p class="welcome-about-tagline">GravitySeries Competition Platform</p>
+        <p class="welcome-about-desc">TheHUB är den centrala plattformen för GravitySeries och relaterade tävlingsserier. Här hittar du kalender, resultat, serieställningar, ranking och databas över åkare och klubbar.</p>
         <?php if (!$isLoggedIn): ?>
         <p class="welcome-about-note">Logga in för att se statistik, kommande tävlingar och senaste resultat.</p>
         <?php endif; ?>
