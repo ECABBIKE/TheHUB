@@ -39,6 +39,11 @@ function nav_icon($name, $class = 'sidebar-icon-svg') {
 ?>
 
 <aside class="sidebar" role="navigation" aria-label="Huvudnavigering">
+    <!-- Logo -->
+    <a href="/" class="sidebar-logo" aria-label="TheHUB Hem">
+        <img src="/assets/logo-gs.svg" alt="GS TheHUB" width="40" height="40">
+    </a>
+
     <nav class="sidebar-nav">
         <!-- PUBLIC NAVIGATION -->
         <a href="/"
