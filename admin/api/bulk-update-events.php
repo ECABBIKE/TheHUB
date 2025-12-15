@@ -191,6 +191,15 @@ try {
     $pdo->commit();
     error_log("Transaction committed successfully");
 
+    // VERIFY: Check if changes were actually saved
+    foreach ($changes as $eventId => $fields) {
+        $eventId = intval($eventId);
+        $stmt = $pdo->prepare("SELECT * FROM events WHERE id = ?");
+        $stmt->execute([$eventId]);
+        $event = $stmt->fetch(PDO::FETCH_ASSOC);
+        error_log("VERIFY Event $eventId after commit: " . json_encode($event));
+    }
+
     echo json_encode([
         'success' => true,
         'updated' => $updateCount,
