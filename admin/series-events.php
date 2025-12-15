@@ -57,8 +57,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
  'sort_order' => $sortOrder
  ]);
 
- // Also update events.series_id for backward compatibility and sync
+ // Only set events.series_id if event doesn't already have a primary series
+ // This allows events to be in multiple series without losing their main series
+ $event = $db->getRow("SELECT series_id FROM events WHERE id = ?", [$eventId]);
+ if (empty($event['series_id'])) {
  $db->update('events', ['series_id' => $seriesId], 'id = ?', [$eventId]);
+ }
 
  // If a template was specified, calculate series points
  // NOTE: This only affects series_results, NOT results.points (ranking)
