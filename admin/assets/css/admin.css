@@ -2312,11 +2312,11 @@ h2 svg.lucide {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 2px;
+    gap: 4px;
     min-width: 56px;
     padding: var(--space-xs) var(--space-sm);
     color: var(--color-text-muted);
-    font-size: 10px;
+    font-size: var(--text-xs);
     font-weight: var(--weight-medium);
     text-decoration: none;
     border-radius: var(--radius-md);
@@ -2341,16 +2341,13 @@ h2 svg.lucide {
 }
 
 .admin-mobile-nav-icon svg {
-    width: 20px;
-    height: 20px;
+    width: 24px;
+    height: 24px;
     stroke-width: 2;
 }
 
 .admin-mobile-nav-label {
     white-space: nowrap;
-    text-overflow: ellipsis;
-    overflow: hidden;
-    max-width: 52px;
 }
 
 /* Show mobile nav on tablet/mobile */
@@ -2368,18 +2365,14 @@ h2 svg.lucide {
 /* Compact mobile nav on very small screens */
 @media (max-width: 400px) {
     .admin-mobile-nav-link {
-        min-width: 48px;
-        padding: var(--space-2xs) var(--space-xs);
+        min-width: 40px;
+        padding: var(--space-2xs);
         font-size: 9px;
     }
 
     .admin-mobile-nav-icon svg {
-        width: 18px;
-        height: 18px;
-    }
-
-    .admin-mobile-nav-label {
-        max-width: 44px;
+        width: 20px;
+        height: 20px;
     }
 }
 
