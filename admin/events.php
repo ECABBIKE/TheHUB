@@ -60,6 +60,7 @@ $seriesIdSelect = $seriesEventsTableExists
 
 $sql = "SELECT
     e.id, e.name, e.date, e.location, e.discipline, e.status,
+    e.event_level, e.event_format, e.pricing_template_id, e.advent_id,
     v.name as venue_name,
     {$seriesNameSelect} as series_name,
     {$seriesIdSelect} as series_id
@@ -278,6 +279,10 @@ include __DIR__ . '/components/unified-layout.php';
                             <th>Serie</th>
                             <th>Plats</th>
                             <th>Format</th>
+                            <th>Level</th>
+                            <th>Event Format</th>
+                            <th>Prismall</th>
+                            <th>Advent ID</th>
                             <th style="width: 100px;">Åtgärder</th>
                         </tr>
                     </thead>
@@ -324,6 +329,38 @@ include __DIR__ . '/components/unified-layout.php';
                                         <option value="GRAVEL" <?= ($event['discipline'] ?? '') === 'GRAVEL' ? 'selected' : '' ?>>Gravel</option>
                                         <option value="E-MTB" <?= ($event['discipline'] ?? '') === 'E-MTB' ? 'selected' : '' ?>>E-MTB</option>
                                     </select>
+                                </td>
+                                <td>
+                                    <select class="admin-form-select" style="min-width: 100px; padding: var(--space-xs) var(--space-sm);" onchange="updateEventLevel(<?= $event['id'] ?>, this.value)">
+                                        <option value="">-</option>
+                                        <option value="NATIONAL" <?= ($event['event_level'] ?? '') === 'NATIONAL' ? 'selected' : '' ?>>National</option>
+                                        <option value="REGIONAL" <?= ($event['event_level'] ?? '') === 'REGIONAL' ? 'selected' : '' ?>>Regional</option>
+                                        <option value="LOCAL" <?= ($event['event_level'] ?? '') === 'LOCAL' ? 'selected' : '' ?>>Lokal</option>
+                                        <option value="INTERNATIONAL" <?= ($event['event_level'] ?? '') === 'INTERNATIONAL' ? 'selected' : '' ?>>International</option>
+                                    </select>
+                                </td>
+                                <td>
+                                    <select class="admin-form-select" style="min-width: 100px; padding: var(--space-xs) var(--space-sm);" onchange="updateEventFormat(<?= $event['id'] ?>, this.value)">
+                                        <option value="">-</option>
+                                        <option value="RACE" <?= ($event['event_format'] ?? '') === 'RACE' ? 'selected' : '' ?>>Race</option>
+                                        <option value="TRAINING" <?= ($event['event_format'] ?? '') === 'TRAINING' ? 'selected' : '' ?>>Training</option>
+                                        <option value="PRACTICE" <?= ($event['event_format'] ?? '') === 'PRACTICE' ? 'selected' : '' ?>>Practice</option>
+                                        <option value="CAMP" <?= ($event['event_format'] ?? '') === 'CAMP' ? 'selected' : '' ?>>Camp</option>
+                                    </select>
+                                </td>
+                                <td>
+                                    <select class="admin-form-select" style="min-width: 120px; padding: var(--space-xs) var(--space-sm);" onchange="updatePricingTemplate(<?= $event['id'] ?>, this.value)">
+                                        <option value="">-</option>
+                                        <option value="1" <?= ($event['pricing_template_id'] ?? '') == '1' ? 'selected' : '' ?>>Standard</option>
+                                        <option value="2" <?= ($event['pricing_template_id'] ?? '') == '2' ? 'selected' : '' ?>>Premium</option>
+                                        <option value="3" <?= ($event['pricing_template_id'] ?? '') == '3' ? 'selected' : '' ?>>Gratis</option>
+                                    </select>
+                                </td>
+                                <td>
+                                    <input type="text" class="admin-form-input" style="min-width: 80px; padding: var(--space-xs) var(--space-sm); font-size: 0.875rem;"
+                                           value="<?= htmlspecialchars($event['advent_id'] ?? '') ?>"
+                                           onblur="updateAdventId(<?= $event['id'] ?>, this.value)"
+                                           placeholder="-">
                                 </td>
                                 <td>
                                     <div class="table-actions">
@@ -414,6 +451,114 @@ async function updateSeries(eventId, seriesId) {
     }
 }
 
+async function updateEventLevel(eventId, eventLevel) {
+    try {
+        const response = await fetch('/admin/api/update-event-field.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                event_id: eventId,
+                field: 'event_level',
+                value: eventLevel,
+                csrf_token: csrfToken
+            })
+        });
+
+        const result = await response.json();
+        if (!result.success) {
+            alert('Fel: ' + (result.error || 'Kunde inte uppdatera event level'));
+        } else {
+            showToast('Event Level uppdaterat', 'success');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Fel vid uppdatering av event level');
+    }
+}
+
+async function updateEventFormat(eventId, eventFormat) {
+    try {
+        const response = await fetch('/admin/api/update-event-field.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                event_id: eventId,
+                field: 'event_format',
+                value: eventFormat,
+                csrf_token: csrfToken
+            })
+        });
+
+        const result = await response.json();
+        if (!result.success) {
+            alert('Fel: ' + (result.error || 'Kunde inte uppdatera event format'));
+        } else {
+            showToast('Event Format uppdaterat', 'success');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Fel vid uppdatering av event format');
+    }
+}
+
+async function updatePricingTemplate(eventId, pricingTemplateId) {
+    try {
+        const response = await fetch('/admin/api/update-event-field.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                event_id: eventId,
+                field: 'pricing_template_id',
+                value: pricingTemplateId,
+                csrf_token: csrfToken
+            })
+        });
+
+        const result = await response.json();
+        if (!result.success) {
+            alert('Fel: ' + (result.error || 'Kunde inte uppdatera prismall'));
+        } else {
+            showToast('Prismall uppdaterad', 'success');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Fel vid uppdatering av prismall');
+    }
+}
+
+async function updateAdventId(eventId, adventId) {
+    try {
+        const response = await fetch('/admin/api/update-event-field.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                event_id: eventId,
+                field: 'advent_id',
+                value: adventId,
+                csrf_token: csrfToken
+            })
+        });
+
+        const result = await response.json();
+        if (!result.success) {
+            alert('Fel: ' + (result.error || 'Kunde inte uppdatera Advent ID'));
+        } else {
+            showToast('Advent ID uppdaterat', 'success');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Fel vid uppdatering av Advent ID');
+    }
+}
+
 // Bulk Edit Mode
 let bulkEditMode = false;
 let bulkChanges = {};
@@ -440,12 +585,19 @@ function toggleBulkEdit() {
 }
 
 function enableBulkEdit() {
-    // Disable individual onchange handlers and add bulk edit tracking
+    // Disable individual onchange/onblur handlers and add bulk edit tracking
     document.querySelectorAll('.admin-table select').forEach(select => {
         select.dataset.originalOnchange = select.getAttribute('onchange');
         select.removeAttribute('onchange');
         select.addEventListener('change', trackBulkChange);
         select.style.borderColor = 'var(--color-primary)';
+    });
+
+    document.querySelectorAll('.admin-table input[type="text"]').forEach(input => {
+        input.dataset.originalOnblur = input.getAttribute('onblur');
+        input.removeAttribute('onblur');
+        input.addEventListener('input', trackBulkChange);
+        input.style.borderColor = 'var(--color-primary)';
     });
 }
 
@@ -460,22 +612,32 @@ function disableBulkEdit() {
         select.style.borderColor = '';
         select.style.backgroundColor = '';
     });
+
+    document.querySelectorAll('.admin-table input[type="text"]').forEach(input => {
+        if (input.dataset.originalOnblur) {
+            input.setAttribute('onblur', input.dataset.originalOnblur);
+            delete input.dataset.originalOnblur;
+        }
+        input.removeEventListener('input', trackBulkChange);
+        input.style.borderColor = '';
+        input.style.backgroundColor = '';
+    });
 }
 
 function trackBulkChange(event) {
-    const select = event.target;
-    const row = select.closest('tr');
+    const element = event.target;
+    const row = element.closest('tr');
     const eventId = getEventIdFromRow(row);
-    const fieldType = getFieldType(select);
+    const fieldType = getFieldType(element);
 
     if (!bulkChanges[eventId]) {
         bulkChanges[eventId] = {};
     }
 
-    bulkChanges[eventId][fieldType] = select.value;
+    bulkChanges[eventId][fieldType] = element.value;
 
     // Visual feedback
-    select.style.backgroundColor = '#fff3cd';
+    element.style.backgroundColor = '#fff3cd';
 
     updateBulkSaveButton();
 }
@@ -490,13 +652,23 @@ function getEventIdFromRow(row) {
     return null;
 }
 
-function getFieldType(select) {
-    // Determine field type based on select classes or nearby content
-    if (select.closest('td').previousElementSibling?.previousElementSibling?.textContent.includes('Serie') ||
-        select.style.minWidth === '200px') {
+function getFieldType(element) {
+    // Determine field type based on element attributes
+    const onchange = element.dataset.originalOnchange || element.getAttribute('onchange') || '';
+    const onblur = element.dataset.originalOnblur || element.getAttribute('onblur') || '';
+
+    if (onchange.includes('updateSeries') || element.style.minWidth === '200px') {
         return 'series_id';
-    } else if (select.style.minWidth === '120px') {
+    } else if (onchange.includes('updateDiscipline')) {
         return 'discipline';
+    } else if (onchange.includes('updateEventLevel')) {
+        return 'event_level';
+    } else if (onchange.includes('updateEventFormat')) {
+        return 'event_format';
+    } else if (onchange.includes('updatePricingTemplate')) {
+        return 'pricing_template_id';
+    } else if (onblur.includes('updateAdventId')) {
+        return 'advent_id';
     }
     return 'unknown';
 }

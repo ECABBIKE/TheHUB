@@ -30,8 +30,10 @@ if (empty($changes)) {
     exit;
 }
 
-// Valid discipline values
+// Valid field values
 $validDisciplines = ['', 'ENDURO', 'DH', 'XC', 'XCO', 'XCM', 'DUAL_SLALOM', 'PUMPTRACK', 'GRAVEL', 'E-MTB'];
+$validEventLevels = ['', 'NATIONAL', 'REGIONAL', 'LOCAL', 'INTERNATIONAL'];
+$validEventFormats = ['', 'RACE', 'TRAINING', 'PRACTICE', 'CAMP'];
 
 try {
     global $pdo;
@@ -67,6 +69,42 @@ try {
                         $discipline = $value ?: null;
                         $stmt = $pdo->prepare("UPDATE events SET discipline = ? WHERE id = ?");
                         $stmt->execute([$discipline, $eventId]);
+                        $updateCount++;
+                        break;
+
+                    case 'event_level':
+                        if (!in_array($value, $validEventLevels)) {
+                            $errors[] = "Invalid event_level value for event $eventId: $value";
+                            continue 2;
+                        }
+                        $eventLevel = $value ?: null;
+                        $stmt = $pdo->prepare("UPDATE events SET event_level = ? WHERE id = ?");
+                        $stmt->execute([$eventLevel, $eventId]);
+                        $updateCount++;
+                        break;
+
+                    case 'event_format':
+                        if (!in_array($value, $validEventFormats)) {
+                            $errors[] = "Invalid event_format value for event $eventId: $value";
+                            continue 2;
+                        }
+                        $eventFormat = $value ?: null;
+                        $stmt = $pdo->prepare("UPDATE events SET event_format = ? WHERE id = ?");
+                        $stmt->execute([$eventFormat, $eventId]);
+                        $updateCount++;
+                        break;
+
+                    case 'pricing_template_id':
+                        $pricingTemplateId = ($value !== '' && $value !== null) ? intval($value) : null;
+                        $stmt = $pdo->prepare("UPDATE events SET pricing_template_id = ? WHERE id = ?");
+                        $stmt->execute([$pricingTemplateId, $eventId]);
+                        $updateCount++;
+                        break;
+
+                    case 'advent_id':
+                        $adventId = trim($value);
+                        $stmt = $pdo->prepare("UPDATE events SET advent_id = ? WHERE id = ?");
+                        $stmt->execute([$adventId, $eventId]);
                         $updateCount++;
                         break;
 
