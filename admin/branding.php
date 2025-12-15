@@ -25,7 +25,21 @@ function saveBranding($file, $data) {
     if (!is_dir($dir)) {
         mkdir($dir, 0755, true);
     }
-    return file_put_contents($file, json_encode($data, JSON_PRETTY_PRINT));
+
+    // Encode to JSON first to catch any issues
+    $json = json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+    if ($json === false) {
+        error_log('saveBranding: JSON encode failed - ' . json_last_error_msg());
+        return false;
+    }
+
+    // Write to file
+    $result = file_put_contents($file, $json);
+    if ($result === false) {
+        error_log('saveBranding: file_put_contents failed for ' . $file);
+    }
+
+    return $result;
 }
 
 $branding = loadBranding($brandingFile);
@@ -95,9 +109,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'favicon' => trim($_POST['logo_favicon'] ?? '')
         ];
 
-        saveBranding($brandingFile, $branding);
-        $message = 'Branding sparad!';
-        $messageType = 'success';
+        // Debug: Log what we're saving
+        error_log('Branding save - logos POST data: ' . json_encode([
+            'logo_sidebar' => $_POST['logo_sidebar'] ?? '(not set)',
+            'logo_homepage' => $_POST['logo_homepage'] ?? '(not set)',
+            'logo_favicon' => $_POST['logo_favicon'] ?? '(not set)'
+        ]));
+        error_log('Branding save - full data: ' . json_encode($branding));
+
+        $saveResult = saveBranding($brandingFile, $branding);
+        error_log('Branding save result: ' . ($saveResult !== false ? 'success (' . $saveResult . ' bytes)' : 'FAILED'));
+
+        if ($saveResult !== false) {
+            $message = 'Branding sparad!';
+            $messageType = 'success';
+
+            // Show more details if logos were set
+            $logoCount = count(array_filter($branding['logos']));
+            if ($logoCount > 0) {
+                $message .= " ({$logoCount} logotyp(er) sparade)";
+            }
+        } else {
+            $message = 'Fel: Kunde inte spara branding. Kontrollera filrättigheter.';
+            $messageType = 'error';
+        }
     }
 }
 
