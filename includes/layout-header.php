@@ -374,8 +374,12 @@ if ($userTheme === 'auto') {
     <meta name="apple-mobile-web-app-title" content="TheHUB">
     <link rel="apple-touch-icon" href="/assets/icons/icon-192.png">
 
-    <!-- Favicon -->
-    <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
+    <!-- Favicon (from branding or default) -->
+    <?php
+    $brandingFavicon = getBranding('logos.favicon');
+    $faviconUrl = $brandingFavicon ?: '/assets/favicon.svg';
+    ?>
+    <link rel="icon" type="image/svg+xml" href="<?= h($faviconUrl) ?>">
     <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png">
 
 </head>

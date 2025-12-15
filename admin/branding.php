@@ -88,6 +88,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'header_height' => $_POST['header_height'] ?? '60'
         ];
 
+        // Save logo settings
+        $branding['logos'] = [
+            'sidebar' => trim($_POST['logo_sidebar'] ?? ''),
+            'homepage' => trim($_POST['logo_homepage'] ?? ''),
+            'favicon' => trim($_POST['logo_favicon'] ?? '')
+        ];
+
         saveBranding($brandingFile, $branding);
         $message = 'Branding sparad!';
         $messageType = 'success';
@@ -369,6 +376,86 @@ include __DIR__ . '/components/unified-layout.php';
             <i data-lucide="save"></i>
             Spara ändringar
         </button>
+    </div>
+
+    <!-- Logos Section -->
+    <?php
+    $logos = $branding['logos'] ?? [];
+    $sidebarLogo = $logos['sidebar'] ?? '';
+    $homepageLogo = $logos['homepage'] ?? '';
+    $faviconLogo = $logos['favicon'] ?? '';
+    ?>
+    <div class="card mb-lg">
+        <div class="card-header">
+            <h2>
+                <i data-lucide="image"></i>
+                Logotyper
+            </h2>
+        </div>
+        <div class="card-body">
+            <p class="text-secondary mb-lg">
+                Ladda upp logotyper i <a href="/admin/media?folder=branding">Mediabiblioteket (Branding)</a> och klistra in URL:en nedan.
+            </p>
+
+            <div class="branding-grid" style="grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));">
+                <!-- Sidebar Logo -->
+                <div class="color-group">
+                    <h3>
+                        <i data-lucide="sidebar"></i>
+                        Sidebar-logga
+                    </h3>
+                    <p class="text-secondary text-sm mb-md">Visas i navigationens övre del på alla sidor.</p>
+                    <div style="display: flex; align-items: center; gap: var(--space-md); margin-bottom: var(--space-md);">
+                        <div style="width: 60px; height: 60px; background: var(--color-bg-sunken); border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center; overflow: hidden;">
+                            <?php if ($sidebarLogo): ?>
+                                <img src="<?= h($sidebarLogo) ?>" alt="Sidebar logo" style="max-width: 100%; max-height: 100%; object-fit: contain;">
+                            <?php else: ?>
+                                <i data-lucide="image-off" style="color: var(--color-text-muted);"></i>
+                            <?php endif; ?>
+                        </div>
+                        <input type="text" name="logo_sidebar" class="input" style="flex: 1;" value="<?= h($sidebarLogo) ?>" placeholder="https://... eller /uploads/media/branding/...">
+                    </div>
+                </div>
+
+                <!-- Homepage Logo -->
+                <div class="color-group">
+                    <h3>
+                        <i data-lucide="home"></i>
+                        Startsida-logga
+                    </h3>
+                    <p class="text-secondary text-sm mb-md">Visas endast på startsidan (stor logga).</p>
+                    <div style="display: flex; align-items: center; gap: var(--space-md); margin-bottom: var(--space-md);">
+                        <div style="width: 60px; height: 60px; background: var(--color-bg-sunken); border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center; overflow: hidden;">
+                            <?php if ($homepageLogo): ?>
+                                <img src="<?= h($homepageLogo) ?>" alt="Homepage logo" style="max-width: 100%; max-height: 100%; object-fit: contain;">
+                            <?php else: ?>
+                                <i data-lucide="image-off" style="color: var(--color-text-muted);"></i>
+                            <?php endif; ?>
+                        </div>
+                        <input type="text" name="logo_homepage" class="input" style="flex: 1;" value="<?= h($homepageLogo) ?>" placeholder="https://... eller /uploads/media/branding/...">
+                    </div>
+                </div>
+
+                <!-- Favicon -->
+                <div class="color-group">
+                    <h3>
+                        <i data-lucide="star"></i>
+                        Favicon
+                    </h3>
+                    <p class="text-secondary text-sm mb-md">Ikon som visas i webbläsarfliken (SVG rekommenderas).</p>
+                    <div style="display: flex; align-items: center; gap: var(--space-md); margin-bottom: var(--space-md);">
+                        <div style="width: 60px; height: 60px; background: var(--color-bg-sunken); border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center; overflow: hidden;">
+                            <?php if ($faviconLogo): ?>
+                                <img src="<?= h($faviconLogo) ?>" alt="Favicon" style="max-width: 100%; max-height: 100%; object-fit: contain;">
+                            <?php else: ?>
+                                <i data-lucide="image-off" style="color: var(--color-text-muted);"></i>
+                            <?php endif; ?>
+                        </div>
+                        <input type="text" name="logo_favicon" class="input" style="flex: 1;" value="<?= h($faviconLogo) ?>" placeholder="https://... eller /uploads/media/branding/...">
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Colors Section -->
