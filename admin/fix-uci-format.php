@@ -13,7 +13,8 @@ require_admin();
 
 require_once INCLUDES_PATH . '/helpers.php';
 
-$db = getDB();
+// Use the global PDO connection (same as hub_db())
+$pdo = $GLOBALS['pdo'];
 $message = '';
 $messageType = '';
 
@@ -37,11 +38,11 @@ function isCorrectlyFormatted($value) {
 }
 
 // Find all riders with UCI IDs that need fixing (both columns)
-function findMalformedUciIds($db) {
+function findMalformedUciIds($pdo) {
     $malformed = [];
 
     // 1. Check uci_id column
-    $riders = $db->getAll("
+    $stmt = $pdo->query("
         SELECT id, firstname, lastname, uci_id, license_number
         FROM riders
         WHERE uci_id IS NOT NULL
@@ -49,6 +50,7 @@ function findMalformedUciIds($db) {
           AND uci_id NOT REGEXP '^[0-9]{3} [0-9]{3} [0-9]{3} [0-9]{2}$'
         ORDER BY lastname, firstname
     ");
+    $riders = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     foreach ($riders as $rider) {
         $original = $rider['uci_id'];
@@ -68,7 +70,7 @@ function findMalformedUciIds($db) {
     }
 
     // 2. Check license_number column for UCI-like IDs (not SWE)
-    $riders = $db->getAll("
+    $stmt = $pdo->query("
         SELECT id, firstname, lastname, uci_id, license_number
         FROM riders
         WHERE license_number IS NOT NULL
@@ -77,6 +79,7 @@ function findMalformedUciIds($db) {
           AND license_number NOT REGEXP '^[0-9]{3} [0-9]{3} [0-9]{3} [0-9]{2}$'
         ORDER BY lastname, firstname
     ");
+    $riders = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     foreach ($riders as $rider) {
         $original = $rider['license_number'];
@@ -117,7 +120,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     checkCsrf();
 
     if ($_POST['action'] === 'fix_all') {
-        $malformed = findMalformedUciIds($db);
+        $malformed = findMalformedUciIds($pdo);
         $fixed = 0;
         $skipped = 0;
 
@@ -125,9 +128,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             if ($rider['is_valid']) {
                 try {
                     $column = $rider['column'];
-                    $db->update('riders', [
-                        $column => $rider['normalized']
-                    ], 'id = ?', [$rider['id']]);
+                    $stmt = $pdo->prepare("UPDATE riders SET $column = ? WHERE id = ?");
+                    $stmt->execute([$rider['normalized'], $rider['id']]);
                     $fixed++;
                 } catch (Exception $e) {
                     $skipped++;
@@ -146,11 +148,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     } elseif ($_POST['action'] === 'fix_single' && isset($_POST['rider_id']) && isset($_POST['column'])) {
         $riderId = intval($_POST['rider_id']);
         $column = $_POST['column'] === 'license_number' ? 'license_number' : 'uci_id';
-        $rider = $db->getRow("SELECT id, uci_id, license_number FROM riders WHERE id = ?", [$riderId]);
+        $stmt = $pdo->prepare("SELECT id, uci_id, license_number FROM riders WHERE id = ?");
+        $stmt->execute([$riderId]);
+        $rider = $stmt->fetch(PDO::FETCH_ASSOC);
 
         if ($rider && !empty($rider[$column])) {
             $normalized = normalizeUciId($rider[$column]);
-            $db->update('riders', [$column => $normalized], 'id = ?', [$riderId]);
+            $updateStmt = $pdo->prepare("UPDATE riders SET $column = ? WHERE id = ?");
+            $updateStmt->execute([$normalized, $riderId]);
             $message = "UCI-ID för deltagare #$riderId har normaliserats i $column.";
             $messageType = 'success';
         }
@@ -158,20 +163,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 }
 
 // Get current state
-$malformed = findMalformedUciIds($db);
+$malformed = findMalformedUciIds($pdo);
 
 // Count stats for both columns
-$uciIdCount = $db->getRow("
+$stmt = $pdo->query("
     SELECT COUNT(*) as cnt FROM riders
     WHERE uci_id IS NOT NULL AND uci_id != ''
-")['cnt'] ?? 0;
+");
+$uciIdCount = $stmt->fetch(PDO::FETCH_ASSOC)['cnt'] ?? 0;
 
-$licenseUciCount = $db->getRow("
+$stmt = $pdo->query("
     SELECT COUNT(*) as cnt FROM riders
     WHERE license_number IS NOT NULL
       AND license_number != ''
       AND license_number NOT LIKE 'SWE%'
-")['cnt'] ?? 0;
+");
+$licenseUciCount = $stmt->fetch(PDO::FETCH_ASSOC)['cnt'] ?? 0;
 
 $totalRiders = $uciIdCount + $licenseUciCount;
 $validCount = $totalRiders - count($malformed);
