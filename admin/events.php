@@ -1021,8 +1021,9 @@ async function saveBulkChanges() {
                 select.style.backgroundColor = '';
             });
 
-            // Optionally reload page to show updated data
-            setTimeout(() => location.reload(), 1000);
+            // TEMPORARILY DISABLED: Don't reload so we can see console output
+            // setTimeout(() => location.reload(), 1000);
+            console.log('✅ SAVE COMPLETE - Page reload disabled for debugging');
         } else {
             console.error('Bulk update failed:', result);
             let errorMsg = 'BULK UPDATE FEL:\n\n';
