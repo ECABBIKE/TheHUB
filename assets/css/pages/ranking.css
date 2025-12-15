@@ -183,14 +183,6 @@
   vertical-align: middle;
 }
 
-/* Remove striped background */
-.table--striped tbody tr:nth-child(odd) {
-  background: transparent;
-}
-
-.table--striped tbody tr:nth-child(odd):hover {
-  background: var(--color-bg-hover);
-}
 
 /* Medal and rank styling */
 .medal-icon {

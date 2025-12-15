@@ -642,15 +642,6 @@
     vertical-align: middle;
 }
 
-/* Override striped background for clean look */
-.table--striped.results-table tbody tr:nth-child(odd) {
-    background: transparent;
-}
-
-.table--striped.results-table tbody tr:nth-child(odd):hover {
-    background: var(--color-bg-hover);
-}
-
 /* Add padding to first and last columns for edge-to-edge tables */
 .results-table th:first-child,
 .results-table td:first-child {
