@@ -556,8 +556,11 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
         <div class="card form-card-v3">
             <h3 class="card-section-title"><i data-lucide="trending-up"></i> Form</h3>
             <?php if ($hasCompetitiveResults && !empty($formResults)):
-                $currentAvg = end($formResults)['running_avg'] ?? 0;
-                $avgDisplay = number_format($currentAvg, 2);
+                // Räkna snittplacering av senaste 5 tävlingarna
+                $last5 = array_slice($formResults, -5);
+                $positionSum = array_sum(array_column($last5, 'position'));
+                $avgPlacement = count($last5) > 0 ? $positionSum / count($last5) : 0;
+                $avgDisplay = number_format($avgPlacement, 1);
             ?>
             <div class="form-avg-display">
                 <div class="avg-value-box">
@@ -566,7 +569,7 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
                 </div>
                 <div class="avg-explanation">
                     <i data-lucide="info"></i>
-                    <span>Placering / Antal startande (1.0 = alltid först)</span>
+                    <span>Senaste <?= count($last5) ?> tävlingarna</span>
                 </div>
             </div>
 
