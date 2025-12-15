@@ -284,13 +284,13 @@ include __DIR__ . '/components/unified-layout.php';
                         <tr>
                             <th>Datum</th>
                             <th>Namn</th>
-                            <th>Serie</th>
+                            <th class="event-field">Serie</th>
                             <th>Plats</th>
-                            <th>Format</th>
-                            <th>Level</th>
-                            <th>Event Format</th>
-                            <th>Prismall</th>
-                            <th>Advent ID</th>
+                            <th class="event-field">Format</th>
+                            <th class="event-field">Level</th>
+                            <th class="event-field">Event Format</th>
+                            <th class="event-field">Prismall</th>
+                            <th class="event-field">Advent ID</th>
                             <th class="organizer-field">Arrangör</th>
                             <th class="organizer-field">Webbplats</th>
                             <th class="organizer-field">Kontakt e-post</th>
@@ -309,7 +309,7 @@ include __DIR__ . '/components/unified-layout.php';
                                         <?= htmlspecialchars($event['name']) ?>
                                     </a>
                                 </td>
-                                <td>
+                                <td class="event-field">
                                     <?php
                                     // Filter series to only show those from the same year as the event
                                     $eventYear = $event['date'] ? date('Y', strtotime($event['date'])) : null;
@@ -330,7 +330,7 @@ include __DIR__ . '/components/unified-layout.php';
                                     </select>
                                 </td>
                                 <td><?= htmlspecialchars($event['location'] ?? '-') ?></td>
-                                <td>
+                                <td class="event-field">
                                     <select class="admin-form-select" style="min-width: 120px; padding: var(--space-xs) var(--space-sm);" onchange="updateDiscipline(<?= $event['id'] ?>, this.value)">
                                         <option value="">-</option>
                                         <option value="ENDURO" <?= ($event['discipline'] ?? '') === 'ENDURO' ? 'selected' : '' ?>>Enduro</option>
@@ -344,14 +344,14 @@ include __DIR__ . '/components/unified-layout.php';
                                         <option value="E-MTB" <?= ($event['discipline'] ?? '') === 'E-MTB' ? 'selected' : '' ?>>E-MTB</option>
                                     </select>
                                 </td>
-                                <td>
+                                <td class="event-field">
                                     <select class="admin-form-select" style="min-width: 130px; padding: var(--space-xs) var(--space-sm);" onchange="updateEventLevel(<?= $event['id'] ?>, this.value)">
                                         <option value="">-</option>
                                         <option value="Nationell (100%)" <?= ($event['event_level'] ?? '') === 'Nationell (100%)' ? 'selected' : '' ?>>Nationell (100%)</option>
                                         <option value="Sportmotion (50%)" <?= ($event['event_level'] ?? '') === 'Sportmotion (50%)' ? 'selected' : '' ?>>Sportmotion (50%)</option>
                                     </select>
                                 </td>
-                                <td>
+                                <td class="event-field">
                                     <select class="admin-form-select" style="min-width: 150px; padding: var(--space-xs) var(--space-sm);" onchange="updateEventFormat(<?= $event['id'] ?>, this.value)">
                                         <option value="">-</option>
                                         <option value="Enduro (en tid)" <?= ($event['event_format'] ?? '') === 'Enduro (en tid)' ? 'selected' : '' ?>>Enduro (en tid)</option>
@@ -360,7 +360,7 @@ include __DIR__ . '/components/unified-layout.php';
                                         <option value="Dual Slalom" <?= ($event['event_format'] ?? '') === 'Dual Slalom' ? 'selected' : '' ?>>Dual Slalom</option>
                                     </select>
                                 </td>
-                                <td>
+                                <td class="event-field">
                                     <select class="admin-form-select" style="min-width: 120px; padding: var(--space-xs) var(--space-sm);" onchange="updatePricingTemplate(<?= $event['id'] ?>, this.value)">
                                         <option value="">-</option>
                                         <option value="1" <?= ($event['pricing_template_id'] ?? '') == '1' ? 'selected' : '' ?>>Standard</option>
@@ -368,7 +368,7 @@ include __DIR__ . '/components/unified-layout.php';
                                         <option value="3" <?= ($event['pricing_template_id'] ?? '') == '3' ? 'selected' : '' ?>>Gratis</option>
                                     </select>
                                 </td>
-                                <td>
+                                <td class="event-field">
                                     <input type="text" class="admin-form-input" style="min-width: 80px; padding: var(--space-xs) var(--space-sm); font-size: 0.7rem;"
                                            value="<?= htmlspecialchars($event['advent_id'] ?? '') ?>"
                                            onblur="updateAdventId(<?= $event['id'] ?>, this.value)"
@@ -630,42 +630,107 @@ async function updateOrganizerField(eventId, field, value) {
     }
 }
 
-// Bulk Edit Mode
-let bulkEditMode = null; // 'event' or 'organizer' or null
-let bulkEditMode = false;
+// Bulk Edit Mode - 'event' or 'organizer' or null
+let bulkEditMode = null;
 let bulkChanges = {};
 
-function toggleBulkEdit() {
-    bulkEditMode = !bulkEditMode;
-    const toggleBtn = document.getElementById('bulk-edit-toggle');
-    const label = document.getElementById('bulk-edit-label');
+// Hide editable fields by default
+document.addEventListener('DOMContentLoaded', function() {
+    const style = document.createElement('style');
+    style.textContent = `
+        .event-field,
+        .organizer-field {
+            display: none;
+        }
+        .bulk-edit-event-mode .event-field {
+            display: table-cell;
+        }
+        .bulk-edit-organizer-mode .organizer-field {
+            display: table-cell;
+        }
+    `;
+    document.head.appendChild(style);
+});
 
-    if (bulkEditMode) {
-        toggleBtn.classList.remove('btn-admin-secondary');
-        toggleBtn.classList.add('btn-admin-primary');
-        label.textContent = 'Avsluta massredigering';
-        enableBulkEdit();
-        showBulkSaveButton();
-    } else {
-        toggleBtn.classList.remove('btn-admin-primary');
-        toggleBtn.classList.add('btn-admin-secondary');
-        label.textContent = 'Massredigering';
+function toggleBulkEdit(mode) {
+    const eventBtn = document.getElementById('bulk-edit-toggle');
+    const eventLabel = document.getElementById('bulk-edit-label');
+    const organizerBtn = document.getElementById('bulk-edit-organizer-toggle');
+    const organizerLabel = document.getElementById('bulk-edit-organizer-label');
+    const table = document.querySelector('.admin-table');
+
+    // If clicking the same mode again, turn it off
+    if (bulkEditMode === mode) {
+        bulkEditMode = null;
+
+        // Reset both buttons
+        eventBtn.classList.remove('btn-admin-primary');
+        eventBtn.classList.add('btn-admin-secondary');
+        eventLabel.textContent = 'Masseditering Tävling';
+
+        organizerBtn.classList.remove('btn-admin-primary');
+        organizerBtn.classList.add('btn-admin-secondary');
+        organizerLabel.textContent = 'Masseditering Arrangör';
+
+        // Remove mode classes
+        table.classList.remove('bulk-edit-event-mode', 'bulk-edit-organizer-mode');
+
         disableBulkEdit();
         hideBulkSaveButton();
+        bulkChanges = {};
+    } else {
+        // Switch to new mode
+        bulkEditMode = mode;
+
+        if (mode === 'event') {
+            // Activate event mode
+            eventBtn.classList.remove('btn-admin-secondary');
+            eventBtn.classList.add('btn-admin-primary');
+            eventLabel.textContent = 'Avsluta massredigering';
+
+            // Deactivate organizer mode
+            organizerBtn.classList.remove('btn-admin-primary');
+            organizerBtn.classList.add('btn-admin-secondary');
+            organizerLabel.textContent = 'Masseditering Arrangör';
+
+            // Show event fields
+            table.classList.remove('bulk-edit-organizer-mode');
+            table.classList.add('bulk-edit-event-mode');
+        } else if (mode === 'organizer') {
+            // Activate organizer mode
+            organizerBtn.classList.remove('btn-admin-secondary');
+            organizerBtn.classList.add('btn-admin-primary');
+            organizerLabel.textContent = 'Avsluta massredigering';
+
+            // Deactivate event mode
+            eventBtn.classList.remove('btn-admin-primary');
+            eventBtn.classList.add('btn-admin-secondary');
+            eventLabel.textContent = 'Masseditering Tävling';
+
+            // Show organizer fields
+            table.classList.remove('bulk-edit-event-mode');
+            table.classList.add('bulk-edit-organizer-mode');
+        }
+
+        enableBulkEdit(mode);
+        showBulkSaveButton();
         bulkChanges = {};
     }
 }
 
-function enableBulkEdit() {
-    // Disable individual onchange/onblur handlers and add bulk edit tracking
-    document.querySelectorAll('.admin-table select').forEach(select => {
+function enableBulkEdit(mode) {
+    // Get selector for fields based on mode
+    const fieldSelector = mode === 'event' ? '.event-field' : '.organizer-field';
+
+    // Disable individual onchange/onblur handlers and add bulk edit tracking for visible fields only
+    document.querySelectorAll(`${fieldSelector} select`).forEach(select => {
         select.dataset.originalOnchange = select.getAttribute('onchange');
         select.removeAttribute('onchange');
         select.addEventListener('change', trackBulkChange);
         select.style.borderColor = 'var(--color-primary)';
     });
 
-    document.querySelectorAll('.admin-table input[type="text"]').forEach(input => {
+    document.querySelectorAll(`${fieldSelector} input[type="text"], ${fieldSelector} input[type="email"], ${fieldSelector} input[type="tel"], ${fieldSelector} input[type="date"], ${fieldSelector} input[type="time"]`).forEach(input => {
         input.dataset.originalOnblur = input.getAttribute('onblur');
         input.removeAttribute('onblur');
         input.addEventListener('input', trackBulkChange);
@@ -674,7 +739,7 @@ function enableBulkEdit() {
 }
 
 function disableBulkEdit() {
-    // Re-enable individual onchange handlers
+    // Re-enable individual onchange/onblur handlers for all fields
     document.querySelectorAll('.admin-table select').forEach(select => {
         if (select.dataset.originalOnchange) {
             select.setAttribute('onchange', select.dataset.originalOnchange);
@@ -685,7 +750,7 @@ function disableBulkEdit() {
         select.style.backgroundColor = '';
     });
 
-    document.querySelectorAll('.admin-table input[type="text"]').forEach(input => {
+    document.querySelectorAll('.admin-table input').forEach(input => {
         if (input.dataset.originalOnblur) {
             input.setAttribute('onblur', input.dataset.originalOnblur);
             delete input.dataset.originalOnblur;
@@ -729,6 +794,7 @@ function getFieldType(element) {
     const onchange = element.dataset.originalOnchange || element.getAttribute('onchange') || '';
     const onblur = element.dataset.originalOnblur || element.getAttribute('onblur') || '';
 
+    // Event fields
     if (onchange.includes('updateSeries') || element.style.minWidth === '200px') {
         return 'series_id';
     } else if (onchange.includes('updateDiscipline')) {
@@ -741,6 +807,18 @@ function getFieldType(element) {
         return 'pricing_template_id';
     } else if (onblur.includes('updateAdventId')) {
         return 'advent_id';
+    }
+    // Organizer fields
+    else if (onblur.includes("'website'")) {
+        return 'website';
+    } else if (onblur.includes("'contact_email'")) {
+        return 'contact_email';
+    } else if (onblur.includes("'contact_phone'")) {
+        return 'contact_phone';
+    } else if (onblur.includes("'registration_deadline'") && element.type === 'date') {
+        return 'registration_deadline';
+    } else if (onblur.includes("'registration_deadline_time'") || element.type === 'time') {
+        return 'registration_deadline_time';
     }
     return 'unknown';
 }

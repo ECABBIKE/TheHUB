@@ -108,6 +108,52 @@ try {
                         $updateCount++;
                         break;
 
+                    case 'website':
+                        $website = trim($value);
+                        $stmt = $pdo->prepare("UPDATE events SET website = ? WHERE id = ?");
+                        $stmt->execute([$website, $eventId]);
+                        $updateCount++;
+                        break;
+
+                    case 'contact_email':
+                        $contactEmail = trim($value);
+                        $stmt = $pdo->prepare("UPDATE events SET contact_email = ? WHERE id = ?");
+                        $stmt->execute([$contactEmail, $eventId]);
+                        $updateCount++;
+                        break;
+
+                    case 'contact_phone':
+                        $contactPhone = trim($value);
+                        $stmt = $pdo->prepare("UPDATE events SET contact_phone = ? WHERE id = ?");
+                        $stmt->execute([$contactPhone, $eventId]);
+                        $updateCount++;
+                        break;
+
+                    case 'registration_deadline':
+                        // Validate date format
+                        if ($value && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $value)) {
+                            $errors[] = "Invalid date format for event $eventId";
+                            continue 2;
+                        }
+                        $stmt = $pdo->prepare("UPDATE events SET registration_deadline = ? WHERE id = ?");
+                        $stmt->execute([$value, $eventId]);
+                        $updateCount++;
+                        break;
+
+                    case 'registration_deadline_time':
+                        // Validate time format or use default
+                        $time = $value;
+                        if (!$time || $time === '') {
+                            $time = '23:59';
+                        } elseif (!preg_match('/^\d{2}:\d{2}(:\d{2})?$/', $time)) {
+                            $errors[] = "Invalid time format for event $eventId";
+                            continue 2;
+                        }
+                        $stmt = $pdo->prepare("UPDATE events SET registration_deadline_time = ? WHERE id = ?");
+                        $stmt->execute([$time, $eventId]);
+                        $updateCount++;
+                        break;
+
                     default:
                         $errors[] = "Unknown field: $fieldName for event $eventId";
                 }
