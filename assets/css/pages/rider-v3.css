@@ -568,7 +568,7 @@
 }
 
 /* ============================================================================
-   MOBILE RESPONSIVE
+   MOBILE RESPONSIVE - EDGE-TO-EDGE STANDARD
    ============================================================================ */
 @media (max-width: 1024px) {
     .rider-profile-layout {
@@ -576,7 +576,7 @@
     }
 }
 
-@media (max-width: 768px) {
+@media (max-width: 767px) {
     .rider-profile-layout {
         grid-template-columns: 1fr;
     }
@@ -587,6 +587,24 @@
 
     .left-column {
         order: 1;
+    }
+
+    /* Edge-to-edge design för alla kort på mobil */
+    .card,
+    .profile-card-v3,
+    .form-card-v3,
+    .series-card-v3,
+    .ranking-card-v3,
+    .form-points-card-v3,
+    .highlights-card-v3,
+    .achievements-card-v3,
+    .history-card-full {
+        margin-left: -16px;
+        margin-right: -16px;
+        border-radius: 0 !important;
+        border-left: none !important;
+        border-right: none !important;
+        width: calc(100% + 32px);
     }
 
     .ranking-position-huge {
