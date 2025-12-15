@@ -32,8 +32,8 @@ if (empty($changes)) {
 
 // Valid field values
 $validDisciplines = ['', 'ENDURO', 'DH', 'XC', 'XCO', 'XCM', 'DUAL_SLALOM', 'PUMPTRACK', 'GRAVEL', 'E-MTB'];
-$validEventLevels = ['', 'NATIONAL', 'REGIONAL', 'LOCAL', 'INTERNATIONAL'];
-$validEventFormats = ['', 'RACE', 'TRAINING', 'PRACTICE', 'CAMP'];
+$validEventLevels = ['', 'Nationell (100%)', 'Sportmotion (50%)'];
+$validEventFormats = ['', 'Enduro (en tid)', 'Downhill Standard', 'SweCUP Downhill', 'Dual Slalom'];
 
 try {
     global $pdo;
