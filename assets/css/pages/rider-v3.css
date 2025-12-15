@@ -6,7 +6,7 @@
 /* Main Layout Grid */
 .rider-profile-layout {
     display: grid;
-    grid-template-columns: 1fr 400px;
+    grid-template-columns: 1fr 320px;
     gap: var(--space-lg);
     margin-bottom: var(--space-lg);
 }
@@ -39,8 +39,8 @@
 }
 
 .profile-photo-large {
-    width: 80px;
-    height: 80px;
+    width: 100px;
+    height: 100px;
     border-radius: var(--radius-lg);
     background: var(--color-bg-surface);
     display: flex;
@@ -542,6 +542,11 @@
     background: var(--color-bg-surface);
     border-radius: var(--radius-md);
     font-size: var(--text-sm);
+    border-bottom: 1px solid var(--color-border);
+}
+
+.highlight-item-v3:last-child {
+    border-bottom: none;
 }
 
 .highlight-item-v3 i {
@@ -556,6 +561,12 @@
     background: var(--color-bg-card);
     border-radius: var(--radius-lg);
     padding: var(--space-lg);
+    overflow: hidden;
+}
+
+.achievements-card-v3 * {
+    max-width: 100%;
+    box-sizing: border-box;
 }
 
 /* ============================================================================
