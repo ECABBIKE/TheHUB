@@ -1,4 +1,128 @@
 /* ============================================================================
+   RIDER PAGE GRID LAYOUT - New 2-column design
+   ============================================================================ */
+
+.rider-page-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--space-md);
+    margin-bottom: var(--space-lg);
+}
+
+/* Desktop: 2 columns */
+@media (min-width: 768px) {
+    .rider-page-grid {
+        grid-template-columns: 1fr 1fr;
+        gap: var(--space-lg);
+    }
+}
+
+/* Grid areas */
+.grid-profile { grid-column: 1; }
+.grid-ranking { grid-column: 1; }
+.grid-form { grid-column: 1; }
+.grid-highlights { grid-column: 1; }
+.grid-series { grid-column: 1; }
+.grid-achievements { grid-column: 1; }
+.grid-results { grid-column: 1; }
+
+@media (min-width: 768px) {
+    .grid-profile { grid-column: 1; }
+    .grid-ranking { grid-column: 2; grid-row: 1; }
+    .grid-form { grid-column: 1; }
+    .grid-highlights { grid-column: 2; }
+    .grid-series { grid-column: 1; }
+    .grid-achievements { grid-column: 2; }
+    .grid-results { grid-column: 1 / -1; } /* Full width */
+}
+
+/* Profile Card in Grid */
+.grid-profile.card {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+}
+
+.profile-card-content {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+}
+
+.profile-main {
+    display: flex;
+    align-items: center;
+    gap: var(--space-lg);
+}
+
+.profile-info {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+}
+
+.profile-footer {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-md);
+    padding-top: var(--space-md);
+    border-top: 1px solid var(--color-border);
+}
+
+/* Gravity ID Badge inline */
+.gid-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 10px;
+    background: linear-gradient(135deg, #FFD700, #FFA500);
+    color: #171717;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    font-weight: 700;
+    border-radius: var(--radius-full);
+}
+
+/* Ranking Card in Grid */
+.grid-ranking.card {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.ranking-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--space-md);
+}
+
+.ranking-position-large {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    padding: var(--space-lg);
+    background: linear-gradient(135deg, rgba(255,215,0,0.1), rgba(255,180,0,0.05));
+    border-radius: var(--radius-lg);
+    margin-bottom: var(--space-md);
+}
+
+.ranking-position-large .position-number {
+    font-family: var(--font-mono);
+    font-size: 3rem;
+    font-weight: 800;
+    color: var(--color-text);
+    line-height: 1;
+}
+
+.ranking-position-large .position-label {
+    font-size: var(--text-sm);
+    color: var(--color-text-muted);
+    margin-top: var(--space-xs);
+}
+
+/* ============================================================================
    EVENTS DROPDOWN - Collapsible event lists (duplicated from components.css)
    ============================================================================ */
 .events-dropdown {
@@ -339,25 +463,25 @@
 }
 
 .profile-name {
-    font-size: 1.25rem;
+    font-size: 1.5rem;
     font-weight: 800;
-    color: var(--color-text);
+    color: var(--color-text-primary);
     letter-spacing: -0.02em;
     margin: 0 0 var(--space-xs) 0;
 }
 
 .profile-age {
-    font-size: 0.9rem;
-    color: var(--color-text-muted);
+    font-size: 1rem;
+    color: var(--color-text-secondary);
     display: block;
     margin-bottom: var(--space-xs);
 }
 
 .profile-club {
-    color: #004a98;
-    font-weight: 600;
+    color: var(--color-accent);
+    font-weight: 700;
     text-decoration: none;
-    font-size: 0.9rem;
+    font-size: 1rem;
 }
 
 .profile-club:hover { text-decoration: underline; }
@@ -737,12 +861,12 @@
 }
 
 .section-title-styled {
-    font-size: 14px;
-    font-weight: 600;
+    font-size: 1rem;
+    font-weight: 700;
     display: flex;
     align-items: center;
     gap: var(--space-sm);
-    color: var(--color-text);
+    color: var(--color-text-primary);
     margin: 0;
 }
 
@@ -880,8 +1004,8 @@
 }
 
 .series-stat { text-align: center; }
-.series-stat-value { font-family: var(--font-mono); font-size: 1rem; font-weight: 700; color: var(--color-text); }
-.series-stat-label { font-size: 0.6rem; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.3px; }
+.series-stat-value { font-family: var(--font-mono); font-size: 1.25rem; font-weight: 700; color: var(--color-text-primary); }
+.series-stat-label { font-size: 0.7rem; color: var(--color-text-secondary); text-transform: uppercase; letter-spacing: 0.3px; font-weight: 600; }
 
 /* Achievements Card */
 .achievements-card {
@@ -1508,11 +1632,11 @@
 }
 
 .trend-section-title {
-    font-size: 0.7rem;
+    font-size: 0.85rem;
     font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 1px;
-    color: var(--color-text-muted);
+    letter-spacing: 0.5px;
+    color: var(--color-text-secondary);
     margin: 0 0 var(--space-md) 0;
 }
 
@@ -1588,10 +1712,10 @@
     align-items: center;
     justify-content: center;
     gap: var(--space-xs);
-    font-size: 0.8rem;
-    font-weight: 600;
-    padding: var(--space-xs) var(--space-sm);
-    border-radius: var(--radius-sm);
+    font-size: 0.9rem;
+    font-weight: 700;
+    padding: var(--space-sm) var(--space-md);
+    border-radius: var(--radius-md);
     background: var(--color-bg-sunken);
 }
 
@@ -1685,8 +1809,9 @@
 }
 
 .highlight-text {
-    font-weight: 500;
-    color: var(--color-text);
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: var(--color-text-primary);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -1724,9 +1849,9 @@
 
 .rank-number-large {
     font-family: var(--font-mono);
-    font-size: 1.75rem;
+    font-size: 2.5rem;
     font-weight: 800;
-    color: var(--color-text);
+    color: var(--color-text-primary);
     line-height: 1;
 }
 
