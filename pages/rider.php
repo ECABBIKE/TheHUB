@@ -569,10 +569,7 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
                 <?php foreach ($seriesStandings as $idx => $standing): ?>
                 <button class="series-tab-btn <?= $idx === 0 ? 'active' : '' ?>" data-target="series-<?= $idx ?>">
                     <span class="series-dot" style="background: <?= htmlspecialchars($standing['series_color'] ?? 'var(--color-accent)') ?>"></span>
-                    <span class="series-tab-name"><?= htmlspecialchars($standing['series_name']) ?></span>
-                    <span class="series-tab-score"><?= $standing['ranking'] ?> <?= htmlspecialchars($standing['class_name']) ?></span>
-                    <span class="series-tab-ratio"><?= $standing['ranking'] ?>/<?= $standing['total_riders'] ?></span>
-                    <span class="series-tab-points"><?= number_format($standing['total_points'] / max(1, $standing['total_riders']), 2) ?></span>
+                    <span><?= htmlspecialchars($standing['series_name']) ?></span>
                 </button>
                 <?php endforeach; ?>
             </div>
