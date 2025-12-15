@@ -819,40 +819,12 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
         }
         ?>
         <?php if (!empty($rankingEvents)): ?>
-        <!-- Ranking Breakdown Dropdown -->
-        <details class="ranking-breakdown-details">
-            <summary class="ranking-breakdown-summary">
-                <span class="breakdown-title">
-                    <i data-lucide="calculator"></i>
-                    Visa uträkning
-                    <span class="breakdown-formula-hint">(poäng × fält × typ × tid)</span>
-                </span>
-                <span class="breakdown-total"><?= number_format($rankingPoints, 1) ?> p</span>
-                <i data-lucide="chevron-down" class="breakdown-chevron"></i>
-            </summary>
-            <div class="ranking-breakdown-content">
-                <div class="breakdown-events-list">
-                    <?php foreach ($rankingEvents as $event): ?>
-                    <div class="breakdown-event">
-                        <div class="breakdown-event-row">
-                            <span class="breakdown-event-name"><?= htmlspecialchars($event['event_name'] ?? 'Event') ?></span>
-                            <span class="breakdown-event-date"><?= date('j/n', strtotime($event['event_date'])) ?></span>
-                            <span class="breakdown-event-points">+<?= number_format($event['weighted_points'] ?? 0, 0) ?></span>
-                        </div>
-                        <div class="breakdown-event-calc">
-                            <span class="calc-val"><?= number_format($event['original_points'] ?? 0, 0) ?></span>
-                            <span class="calc-op">×</span>
-                            <span class="calc-val <?= ($event['field_multiplier'] ?? 1) < 1 ? 'dim' : '' ?>"><?= number_format(($event['field_multiplier'] ?? 1) * 100, 0) ?>%</span>
-                            <span class="calc-op">×</span>
-                            <span class="calc-val <?= ($event['event_level_multiplier'] ?? 1) < 1 ? 'dim' : '' ?>"><?= number_format(($event['event_level_multiplier'] ?? 1) * 100, 0) ?>%</span>
-                            <span class="calc-op">×</span>
-                            <span class="calc-val <?= ($event['time_multiplier'] ?? 1) < 1 ? 'dim' : '' ?>"><?= number_format(($event['time_multiplier'] ?? 1) * 100, 0) ?>%</span>
-                        </div>
-                    </div>
-                    <?php endforeach; ?>
-                </div>
-            </div>
-        </details>
+        <!-- Ranking Calculation Button -->
+        <button type="button" class="ranking-calc-btn" onclick="openRankingModal()">
+            <i data-lucide="calculator"></i>
+            <span>Visa uträkning</span>
+            <span class="btn-points"><?= number_format($rankingPoints, 1) ?> p</span>
+        </button>
         <?php endif; ?>
     </div>
 </div>
@@ -1169,5 +1141,104 @@ function copyToClipboard(text) {
         setTimeout(() => { btn.innerHTML = originalHtml; }, 2000);
     });
 }
+
+// Ranking Modal Functions
+function openRankingModal() {
+    const modal = document.getElementById('rankingModal');
+    if (modal) {
+        modal.classList.add('active');
+        document.body.style.overflow = 'hidden';
+    }
+}
+
+function closeRankingModal() {
+    const modal = document.getElementById('rankingModal');
+    if (modal) {
+        modal.classList.remove('active');
+        document.body.style.overflow = '';
+    }
+}
+
+// Close modal on overlay click
+document.addEventListener('DOMContentLoaded', function() {
+    const modal = document.getElementById('rankingModal');
+    if (modal) {
+        modal.addEventListener('click', function(e) {
+            if (e.target === modal) {
+                closeRankingModal();
+            }
+        });
+    }
+});
+
+// Close modal on Escape key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        closeRankingModal();
+    }
+});
 </script>
+
+<?php if (!empty($rankingEvents)): ?>
+<!-- Ranking Calculation Modal -->
+<div id="rankingModal" class="ranking-modal-overlay">
+    <div class="ranking-modal">
+        <div class="ranking-modal-header">
+            <h3>
+                <i data-lucide="calculator"></i>
+                Rankinguträkning
+            </h3>
+            <button type="button" class="ranking-modal-close" onclick="closeRankingModal()">
+                <i data-lucide="x"></i>
+            </button>
+        </div>
+        <div class="ranking-modal-body">
+            <div class="ranking-modal-summary">
+                <span class="summary-label">Total poäng</span>
+                <span class="summary-value"><?= number_format($rankingPoints, 1) ?> p</span>
+            </div>
+
+            <div class="modal-formula-hint">
+                <i data-lucide="info"></i>
+                Formel: Baspoäng × Fältfaktor × Eventtypfaktor × Tidsfaktor
+            </div>
+
+            <div class="modal-events-list">
+                <?php foreach ($rankingEvents as $event): ?>
+                <div class="modal-event-item">
+                    <div class="modal-event-row">
+                        <div class="modal-event-info">
+                            <span class="modal-event-name"><?= htmlspecialchars($event['event_name'] ?? 'Event') ?></span>
+                            <span class="modal-event-date"><?= date('j M Y', strtotime($event['event_date'])) ?></span>
+                        </div>
+                        <span class="modal-event-points">+<?= number_format($event['weighted_points'] ?? 0, 0) ?></span>
+                    </div>
+                    <div class="modal-calc-row">
+                        <span class="modal-calc-item">
+                            <span class="modal-calc-label">Bas:</span>
+                            <span class="modal-calc-value"><?= number_format($event['original_points'] ?? 0, 0) ?></span>
+                        </span>
+                        <span class="modal-calc-op">×</span>
+                        <span class="modal-calc-item">
+                            <span class="modal-calc-label">Fält:</span>
+                            <span class="modal-calc-value <?= ($event['field_multiplier'] ?? 1) < 1 ? 'dim' : '' ?>"><?= number_format(($event['field_multiplier'] ?? 1) * 100, 0) ?>%</span>
+                        </span>
+                        <span class="modal-calc-op">×</span>
+                        <span class="modal-calc-item">
+                            <span class="modal-calc-label">Typ:</span>
+                            <span class="modal-calc-value <?= ($event['event_level_multiplier'] ?? 1) < 1 ? 'dim' : '' ?>"><?= number_format(($event['event_level_multiplier'] ?? 1) * 100, 0) ?>%</span>
+                        </span>
+                        <span class="modal-calc-op">×</span>
+                        <span class="modal-calc-item">
+                            <span class="modal-calc-label">Tid:</span>
+                            <span class="modal-calc-value <?= ($event['time_multiplier'] ?? 1) < 1 ? 'dim' : '' ?>"><?= number_format(($event['time_multiplier'] ?? 1) * 100, 0) ?>%</span>
+                        </span>
+                    </div>
+                </div>
+                <?php endforeach; ?>
+            </div>
+        </div>
+    </div>
+</div>
+<?php endif; ?>
 
