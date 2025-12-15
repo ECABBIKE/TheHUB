@@ -925,12 +925,18 @@ async function saveBulkChanges() {
 
     if (count === 0) return;
 
+    console.log('=== BULK SAVE DEBUG ===');
+    console.log('Changes to save:', bulkChanges);
+    console.log('Total changes:', count);
+    console.log('CSRF token:', csrfToken);
+
     const saveBtn = document.getElementById('bulk-save-btn');
     const originalText = saveBtn.innerHTML;
     saveBtn.disabled = true;
     saveBtn.innerHTML = '<span style="opacity: 0.7;">Sparar...</span>';
 
     try {
+        console.log('Sending request to /admin/api/bulk-update-events.php');
         const response = await fetch('/admin/api/bulk-update-events.php', {
             method: 'POST',
             headers: {
@@ -942,7 +948,14 @@ async function saveBulkChanges() {
             })
         });
 
-        const result = await response.json();
+        console.log('Response status:', response.status, response.statusText);
+        console.log('Response ok:', response.ok);
+
+        const responseText = await response.text();
+        console.log('Response text:', responseText);
+
+        const result = JSON.parse(responseText);
+        console.log('Parsed result:', result);
 
         if (result.success) {
             showToast(`${count} ändring${count !== 1 ? 'ar' : ''} sparade!`, 'success');
@@ -957,13 +970,23 @@ async function saveBulkChanges() {
             // Optionally reload page to show updated data
             setTimeout(() => location.reload(), 1000);
         } else {
-            alert('Fel: ' + (result.error || 'Kunde inte spara ändringar'));
+            console.error('Bulk update failed:', result);
+            let errorMsg = 'Fel: ' + (result.error || 'Kunde inte spara ändringar');
+            if (result.errors && result.errors.length > 0) {
+                errorMsg += '\n\nDetaljer:\n' + result.errors.join('\n');
+            }
+            alert(errorMsg);
             saveBtn.disabled = false;
             saveBtn.innerHTML = originalText;
         }
     } catch (error) {
-        console.error('Error:', error);
-        alert('Fel vid sparande av ändringar');
+        console.error('Catch error:', error);
+        console.error('Error details:', {
+            message: error.message,
+            stack: error.stack,
+            bulkChanges: bulkChanges
+        });
+        alert('Nätverksfel vid sparande:\n' + error.message + '\n\nKolla Console (F12) för mer info');
         saveBtn.disabled = false;
         saveBtn.innerHTML = originalText;
     }
