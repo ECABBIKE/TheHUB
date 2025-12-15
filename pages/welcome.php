@@ -113,9 +113,10 @@ $homepageLogo = getBranding('logos.homepage');
 
     <!-- About Section with Title -->
     <div class="welcome-about">
-        <h1 class="welcome-about-title">TheHUB</h1>
+        <h1 class="welcome-about-title">THEHUB</h1>
         <p class="welcome-about-tagline">GravitySeries Competition Platform</p>
-        <p class="welcome-about-desc">TheHUB är den centrala plattformen för GravitySeries och relaterade tävlingsserier. Här hittar du kalender, resultat, serieställningar, ranking och databas över åkare och klubbar.</p>
+        <p class="welcome-about-subtitle">Den centrala plattformen för Svensk Gravity</p>
+        <p class="welcome-about-desc">Här hittar du kalender, resultat, serieställningar, ranking och databas över åkare och klubbar.</p>
         <?php if (!$isLoggedIn): ?>
         <p class="welcome-about-note">Logga in för att se statistik, kommande tävlingar och senaste resultat.</p>
         <?php endif; ?>

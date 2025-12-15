@@ -53,9 +53,18 @@
 }
 
 .welcome-about-tagline {
-    font-size: var(--text-md);
-    color: var(--color-text-secondary);
+    font-size: var(--text-sm);
+    color: var(--color-text-muted);
     margin: 0 0 var(--space-sm);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+}
+
+.welcome-about-subtitle {
+    font-size: var(--text-lg);
+    font-weight: var(--weight-medium);
+    color: var(--color-text-primary);
+    margin: 0 0 var(--space-xs);
 }
 
 .welcome-about-desc {
