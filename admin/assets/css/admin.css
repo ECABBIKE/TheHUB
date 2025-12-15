@@ -2341,8 +2341,10 @@ h2 svg.lucide {
 }
 
 .admin-mobile-nav-icon svg {
-    width: 24px;
-    height: 24px;
+    width: 24px !important;
+    height: 24px !important;
+    min-width: 24px;
+    min-height: 24px;
     stroke-width: 2;
 }
 
@@ -2350,8 +2352,8 @@ h2 svg.lucide {
     white-space: nowrap;
 }
 
-/* Show mobile nav on tablet/mobile */
-@media (max-width: 899px) {
+/* Show mobile nav on tablet/mobile PORTRAIT only */
+@media (max-width: 899px) and (orientation: portrait) {
     .admin-mobile-nav {
         display: block;
     }
@@ -2359,6 +2361,61 @@ h2 svg.lucide {
     /* Add padding to main content for bottom nav */
     .admin-main {
         padding-bottom: calc(var(--space-lg) + var(--mobile-nav-height, 64px) + env(safe-area-inset-bottom));
+    }
+}
+
+/* LANDSCAPE: Hide mobile nav, show compact sidebar instead */
+@media (max-width: 1024px) and (orientation: landscape) {
+    .admin-mobile-nav {
+        display: none !important;
+    }
+
+    /* Compact sidebar in landscape - flush to left edge */
+    .admin-sidebar {
+        display: flex !important;
+        transform: translateX(0) !important;
+        width: 64px !important;
+        left: 0 !important;
+        padding: 4px 0;
+        gap: 0;
+    }
+
+    .admin-nav {
+        gap: 0;
+        padding: 0 4px;
+    }
+
+    .admin-sidebar .nav-item {
+        flex-direction: column;
+        justify-content: center;
+        gap: 2px;
+        padding: var(--space-xs);
+        font-size: 9px;
+        min-height: 44px;
+    }
+
+    .admin-sidebar .nav-item svg {
+        width: 24px;
+        height: 24px;
+    }
+
+    .admin-sidebar .nav-label {
+        font-size: 9px;
+    }
+
+    .admin-sidebar .sidebar-link {
+        flex-direction: column;
+        justify-content: center;
+        gap: 2px;
+        padding: var(--space-xs);
+        font-size: 9px;
+    }
+
+    /* Main content with sidebar offset */
+    .admin-main {
+        margin-left: 64px !important;
+        padding-bottom: var(--space-lg);
+        padding-left: var(--space-sm) !important;
     }
 }
 
@@ -2563,16 +2620,11 @@ h2 svg.lucide {
     }
 }
 
-/* Landscape standalone - hide mobile nav */
+/* Landscape standalone - adjust height (mobile-nav already hidden by landscape rule above) */
 @media (display-mode: standalone) and (orientation: landscape) and (max-width: 1024px),
        (display-mode: fullscreen) and (orientation: landscape) and (max-width: 1024px) {
-    .admin-mobile-nav {
-        display: none !important;
-    }
-
     .admin-main {
         height: calc(100vh - 60px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
         height: calc(100dvh - 60px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
-        padding-bottom: var(--space-lg);
     }
 }
