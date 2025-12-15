@@ -192,8 +192,12 @@ $disciplineNames = [
               <?= htmlspecialchars(($rider['firstname'] ?? '') . ' ' . ($rider['lastname'] ?? '')) ?>
             </a>
           </td>
-          <td class="table-col-hide-portrait text-muted">
-            <?= htmlspecialchars($rider['club_name'] ?? '-') ?>
+          <td class="table-col-hide-portrait">
+            <?php if (!empty($rider['club_id'])): ?>
+              <a href="/club/<?= $rider['club_id'] ?>" class="club-link"><?= htmlspecialchars($rider['club_name'] ?? '-') ?></a>
+            <?php else: ?>
+              <span class="text-muted"><?= htmlspecialchars($rider['club_name'] ?? '-') ?></span>
+            <?php endif; ?>
           </td>
           <td class="text-center table-col-hide-portrait">
             <?= $rider['events_count'] ?? 0 ?>
