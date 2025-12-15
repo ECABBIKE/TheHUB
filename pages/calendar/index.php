@@ -16,12 +16,9 @@ $sql = "
            s.name as series_name,
            s.id as series_id,
            s.logo as series_logo,
-           s.logo_light as series_logo_light,
            s.accent_color as series_accent,
-           s.gradient_start as series_gradient_start,
            v.name as venue_name,
            v.city as venue_city,
-           e.registration_deadline,
            COUNT(DISTINCT er.id) as registration_count
     FROM events e
     LEFT JOIN series s ON e.series_id = s.id
@@ -135,7 +132,7 @@ if (!function_exists('getDeadlineInfo')) {
                         $deadlineInfo = getDeadlineInfo($event['registration_deadline']);
                         $location = $event['venue_city'] ?: $event['location'];
                         $accentColor = $event['series_accent'] ?: '#61CE70';
-                        $seriesLogo = $event['series_logo_light'] ?: $event['series_logo'];
+                        $seriesLogo = $event['series_logo'] ?? '';
                         ?>
                         <a href="/calendar/<?= $event['id'] ?>" class="event-row" style="--event-accent: <?= htmlspecialchars($accentColor) ?>">
                             <div class="event-accent-bar"></div>
