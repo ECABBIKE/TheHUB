@@ -367,20 +367,35 @@ if ($userTheme === 'auto') {
 
 
     <!-- PWA Support -->
-    <link rel="manifest" href="/manifest.json">
-    <meta name="theme-color" content="#61CE70">
+    <link rel="manifest" href="/manifest.php">
+    <meta name="theme-color" content="#004A98">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="TheHUB">
-    <link rel="apple-touch-icon" href="/assets/icons/icon-192.png">
-
     <!-- Favicon (from branding or default) -->
     <?php
     $brandingFavicon = getBranding('logos.favicon');
     $faviconUrl = $brandingFavicon ?: '/assets/favicon.svg';
+
+    // Detect favicon MIME type from extension
+    $faviconExt = strtolower(pathinfo($faviconUrl, PATHINFO_EXTENSION));
+    $faviconMime = match($faviconExt) {
+        'svg' => 'image/svg+xml',
+        'png' => 'image/png',
+        'jpg', 'jpeg' => 'image/jpeg',
+        'ico' => 'image/x-icon',
+        'gif' => 'image/gif',
+        'webp' => 'image/webp',
+        default => 'image/png'
+    };
+
+    // Use branding favicon for apple-touch-icon - use favicon URL regardless of format
+    // iOS modern Safari supports SVG, older versions will use manifest icons
+    $appleTouchIcon = $faviconUrl;
     ?>
-    <link rel="icon" type="image/svg+xml" href="<?= h($faviconUrl) ?>">
-    <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png">
+    <link rel="apple-touch-icon" href="<?= h($appleTouchIcon) ?>">
+    <link rel="icon" type="<?= $faviconMime ?>" href="<?= h($faviconUrl) ?>">
+    <link rel="icon" type="<?= $faviconMime ?>" sizes="32x32" href="<?= h($faviconUrl) ?>">
 
 </head>
 <body class="<?= $bodyClass ?>">
