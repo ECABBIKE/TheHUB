@@ -154,10 +154,10 @@ foreach ($results as $result) {
 // Get recent results (last 5)
 $recentResults = array_slice($results, 0, 5);
 
-// Calculate FORM - normalized position (position / field_size) over time
+// Calculate FORM - running average position over time
 $formData = [];
 $formDataRaw = []; // For chart
-$totalNormalizedScore = 0;
+$totalPositionSum = 0;
 $formCount = 0;
 
 // Get field size for each race the rider participated in
@@ -173,26 +173,35 @@ foreach ($results as $idx => $result) {
     ", [$result['event_id'], $result['class_id']]);
 
     if ($fieldSize && $fieldSize > 0) {
-        $normalizedScore = $result['class_position'] / $fieldSize;
+        $formCount++;
+        $totalPositionSum += $result['class_position'];
+        $runningAverage = round($totalPositionSum / $formCount, 2);
+
         $formDataRaw[] = [
             'date' => $result['event_date'],
             'event' => $result['event_name'],
             'position' => $result['class_position'],
             'field_size' => $fieldSize,
-            'normalized' => round($normalizedScore, 3),
-            'percent' => round($normalizedScore * 100, 1)
+            'running_avg' => $runningAverage
         ];
-        $totalNormalizedScore += $normalizedScore;
-        $formCount++;
     }
 }
 
 // Reverse to show chronological order (oldest first)
 $formDataRaw = array_reverse($formDataRaw);
 
-// Calculate average form (lower is better)
-$averageForm = $formCount > 0 ? round($totalNormalizedScore / $formCount, 3) : null;
-$averageFormPercent = $averageForm !== null ? round($averageForm * 100, 1) : null;
+// Recalculate running averages in chronological order
+$chronoPositionSum = 0;
+$chronoCount = 0;
+foreach ($formDataRaw as &$fd) {
+    $chronoCount++;
+    $chronoPositionSum += $fd['position'];
+    $fd['running_avg'] = round($chronoPositionSum / $chronoCount, 2);
+}
+unset($fd);
+
+// Calculate final average position
+$averagePosition = $formCount > 0 ? round($totalPositionSum / $formCount, 2) : null;
 
 // Get GravitySeries Total stats (individual championship)
 $gravityTotalStats = null;
@@ -723,199 +732,196 @@ try {
  <div class="container">
 
   <!-- Back Button -->
-  <div class="mb-lg">
+  <div class="mb-md">
   <a href="/riders" class="btn btn--secondary btn--sm">
    <i data-lucide="arrow-left"></i>
-   Tillbaka till deltagare
+   Tillbaka
   </a>
   </div>
 
-  <!-- UCI License Card - COMPACT HORIZONTAL -->
-  <div class="license-card-container">
-  <div class="license-card">
-   <!-- Stripe -->
-   <div class="uci-stripe"></div>
-
-   <!-- Compact Content: Photo LEFT + Info RIGHT -->
-   <div class="license-content">
-   <!-- Photo Section LEFT -->
-   <div class="license-photo">
-    <?php if (!empty($rider['photo'])): ?>
-    <img src="<?= h($rider['photo']) ?>" alt="<?= h($rider['firstname'] . ' ' . $rider['lastname']) ?>">
-    <?php else: ?>
-    <div class="photo-placeholder"><i data-lucide="user"></i></div>
-    <?php endif; ?>
-   </div>
-
-   <!-- Info Section RIGHT -->
-   <div class="license-info">
-    <!-- Name on one line -->
-    <div class="rider-name">
-    <?= h($rider['firstname']) ?> <?= h($rider['lastname']) ?>
-    </div>
-
-    <!-- UCI License under name -->
-    <div class="license-id">
-    <?php
-    $isUciLicense = !empty($rider['license_number']) && strpos($rider['license_number'], 'SWE') !== 0;
-    if ($isUciLicense): ?>
-     UCI: <?= h($rider['license_number']) ?>
-    <?php elseif (!empty($rider['license_number'])): ?>
-     Licens: <?= h($rider['license_number']) ?>
-    <?php endif; ?>
-    </div>
-
-    <!-- License Type and Active Status -->
-    <?php if (!empty($rider['license_type']) && $rider['license_type'] !== 'None'): ?>
-    <div class="license-info-inline">
-     <span class="license-type-text"><?= h($rider['license_type']) ?></span>
-     <?php if (!empty($rider['license_year'])): ?>
-     <?php
-     $isActive = ($rider['license_year'] == $currentYear);
-     ?>
-     <span class="license-status-badge <?= $isActive ? 'active' : 'inactive' ?>">
-      <?= $isActive ? '✓ Aktiv ' . $currentYear : '✗ ' . $rider['license_year'] ?>
-     </span>
-     <?php endif; ?>
-    </div>
-    <?php endif; ?>
-
-    <!-- Gravity ID Badge -->
-    <?php if (!empty($rider['gravity_id'])): ?>
-    <div class="gravity-id-badge">
-     <span class="gravity-id-icon">★</span>
-     <span class="gravity-id-text">Gravity ID: <?= h($rider['gravity_id']) ?></span>
-    </div>
-    <?php endif; ?>
-
-    <!-- Compact Info: Age, Gender, Club -->
-    <div class="info-grid-compact">
-    <div class="info-box">
-     <div class="info-box-label">Ålder</div>
-     <div class="info-box-value">
-     <?= $age !== null ? $age : '–' ?>
-     </div>
-    </div>
-
-    <div class="info-box">
-     <div class="info-box-label">Kön</div>
-     <div class="info-box-value">
-     <?php
-     if ($rider['gender'] === 'M') {
-      echo 'Man';
-     } elseif (in_array($rider['gender'], ['F', 'K'])) {
-      echo 'Kvinna';
-     } else {
-      echo '–';
-     }
-     ?>
-     </div>
-    </div>
-
-    <div class="info-box">
-     <div class="info-box-label">Klubb</div>
-     <div class="info-box-value info-box-value-small">
-     <?php if ($rider['club_name'] && $rider['club_id']): ?>
-      <a href="/club/<?= $rider['club_id'] ?>" class="club-link" title="Se alla medlemmar i <?= h($rider['club_name']) ?>">
-      <?= h($rider['club_name']) ?>
-      </a>
-     <?php else: ?>
-      <?= $rider['club_name'] ? h($rider['club_name']) : '–' ?>
-     <?php endif; ?>
-     </div>
-    </div>
-    </div>
-   </div><!-- .license-info -->
-   </div><!-- .license-content -->
-  </div>
-  </div>
-
-  <!-- Quick Stats -->
+  <!-- Rider Profile Card - Clean centered design -->
   <style>
-  .rider-stats-top {
-   display: grid;
-   grid-template-columns: repeat(3, 1fr);
-   gap: 0.5rem;
-   margin-bottom: 0.5rem;
-  }
-  .rider-stats-bottom {
-   display: grid;
-   grid-template-columns: repeat(2, 1fr);
-   gap: 0.5rem;
-   margin-bottom: 1.5rem;
-  }
-  .rider-stats-top .stat-card-compact,
-  .rider-stats-bottom .stat-card-compact {
-   padding: 0.75rem 0.5rem;
+  .rider-profile-card {
+   background: var(--color-bg-surface, #fff);
+   border: 1px solid var(--color-border, #e5e7eb);
+   border-radius: var(--radius-lg, 12px);
+   padding: 1.5rem;
+   margin-bottom: 1rem;
    text-align: center;
   }
-  .rider-stats-top .stat-number-compact {
+  .rider-profile-photo {
+   width: 80px;
+   height: 80px;
+   border-radius: 50%;
+   background: var(--color-bg-sunken, #f3f4f6);
+   margin: 0 auto 1rem;
+   display: flex;
+   align-items: center;
+   justify-content: center;
+   overflow: hidden;
+   border: 3px solid var(--color-accent, #61CE70);
+  }
+  .rider-profile-photo img {
+   width: 100%;
+   height: 100%;
+   object-fit: cover;
+  }
+  .rider-profile-photo i {
+   width: 40px;
+   height: 40px;
+   color: var(--color-text-muted, #9ca3af);
+  }
+  .rider-profile-name {
    font-size: 1.5rem;
+   font-weight: 700;
+   color: var(--color-text-primary, #1f2937);
+   margin-bottom: 0.25rem;
   }
-  .rider-stats-bottom .stat-number-compact {
-   font-size: 1.25rem;
+  .rider-profile-meta {
+   font-size: 0.875rem;
+   color: var(--color-text-secondary, #6b7280);
+   margin-bottom: 0.75rem;
   }
-  .rider-stats-top .stat-label-compact,
-  .rider-stats-bottom .stat-label-compact {
-   font-size: 0.625rem;
+  .rider-profile-meta span {
+   display: inline-flex;
+   align-items: center;
+   gap: 0.25rem;
+  }
+  .rider-profile-meta span:not(:last-child)::after {
+   content: '•';
+   margin: 0 0.5rem;
+   color: var(--color-border, #e5e7eb);
+  }
+  .rider-profile-badges {
+   display: flex;
+   flex-wrap: wrap;
+   gap: 0.5rem;
+   justify-content: center;
+  }
+  .rider-profile-badges .badge {
+   font-size: 0.7rem;
+   padding: 0.25rem 0.5rem;
   }
   @media (min-width: 640px) {
-   .rider-stats-top .stat-number-compact {
-   font-size: 2rem;
+   .rider-profile-card {
+   padding: 2rem;
    }
-   .rider-stats-bottom .stat-number-compact {
-   font-size: 1.5rem;
+   .rider-profile-photo {
+   width: 100px;
+   height: 100px;
    }
-   .rider-stats-top .stat-label-compact,
-   .rider-stats-bottom .stat-label-compact {
-   font-size: 0.75rem;
+   .rider-profile-name {
+   font-size: 1.75rem;
    }
   }
   </style>
-  <div class="rider-stats-top">
-  <div class="card stat-card-compact">
-   <div class="stat-number-compact text-primary"><?= $totalRaces ?></div>
-   <div class="stat-label-compact">Race</div>
-  </div>
-  <div class="card stat-card-compact">
-   <div class="stat-number-compact text-warning"><?= $bestPosition ?? '-' ?></div>
-   <div class="stat-label-compact">Bästa</div>
-  </div>
-  <div class="card stat-card-compact">
-   <div class="stat-number-compact text-success"><?= $wins ?></div>
-   <div class="stat-label-compact">Segrar</div>
-  </div>
-  </div>
-  <div class="rider-stats-bottom">
-  <div class="card stat-card-compact">
-   <div class="stat-number-compact text-primary">
-   <?= $gravityTotalStats ? number_format($gravityTotalStats['total_points'] ?? 0) : '0' ?>
+
+  <div class="rider-profile-card">
+   <div class="rider-profile-photo">
+   <?php if (!empty($rider['photo'])): ?>
+    <img src="<?= h($rider['photo']) ?>" alt="<?= h($rider['firstname'] . ' ' . $rider['lastname']) ?>">
+   <?php else: ?>
+    <i data-lucide="user"></i>
+   <?php endif; ?>
    </div>
-   <div class="stat-label-compact">GravitySeries Total</div>
-   <?php if ($currentClassName || $gravityTotalPosition): ?>
-   <div class="text-xs text-secondary gs-mt-xs">
-    <?php if ($currentClassName): ?>
-    <?= h($currentClassName) ?>
-    <?php if ($gravityTotalPosition): ?>
-     • #<?= $gravityTotalPosition ?>/<?= $gravityTotalClassTotal ?>
+   <div class="rider-profile-name"><?= h($rider['firstname']) ?> <?= h($rider['lastname']) ?></div>
+   <div class="rider-profile-meta">
+   <span><?= $age !== null ? $age . ' år' : '' ?></span>
+   <span><?= $rider['gender'] === 'M' ? 'Man' : (in_array($rider['gender'], ['F', 'K']) ? 'Kvinna' : '') ?></span>
+   <?php if ($rider['club_name']): ?>
+   <span>
+    <?php if ($rider['club_id']): ?>
+    <a href="/club/<?= $rider['club_id'] ?>" style="color: inherit;"><?= h($rider['club_name']) ?></a>
+    <?php else: ?>
+    <?= h($rider['club_name']) ?>
     <?php endif; ?>
-    <?php elseif ($gravityTotalPosition): ?>
-    #<?= $gravityTotalPosition ?> av <?= $gravityTotalClassTotal ?>
-    <?php endif; ?>
+   </span>
+   <?php endif; ?>
+   </div>
+   <div class="rider-profile-badges">
+   <?php if (!empty($rider['gravity_id'])): ?>
+    <span class="badge badge-primary"><i data-lucide="star" class="icon-xs"></i> Gravity ID: <?= h($rider['gravity_id']) ?></span>
+   <?php endif; ?>
+   <?php if (!empty($rider['license_type']) && $rider['license_type'] !== 'None'): ?>
+    <?php $isActive = ($rider['license_year'] == $currentYear); ?>
+    <span class="badge <?= $isActive ? 'badge-success' : 'badge-secondary' ?>">
+    <?= h($rider['license_type']) ?> <?= $isActive ? $currentYear : '' ?>
+    </span>
+   <?php endif; ?>
+   </div>
+  </div>
+
+  <!-- Quick Highlights - Compact single row -->
+  <style>
+  .rider-highlights {
+   display: flex;
+   gap: 0.5rem;
+   margin-bottom: 1rem;
+   overflow-x: auto;
+   padding-bottom: 0.25rem;
+  }
+  .highlight-item {
+   flex: 1;
+   min-width: 60px;
+   background: var(--color-bg-surface, #fff);
+   border: 1px solid var(--color-border, #e5e7eb);
+   border-radius: var(--radius-md, 8px);
+   padding: 0.5rem;
+   text-align: center;
+  }
+  .highlight-value {
+   font-size: 1.25rem;
+   font-weight: 700;
+   line-height: 1;
+  }
+  .highlight-label {
+   font-size: 0.6rem;
+   color: var(--color-text-muted, #9ca3af);
+   text-transform: uppercase;
+   margin-top: 0.15rem;
+  }
+  @media (min-width: 640px) {
+   .highlight-item {
+   padding: 0.75rem;
+   }
+   .highlight-value {
+   font-size: 1.5rem;
+   }
+   .highlight-label {
+   font-size: 0.65rem;
+   }
+  }
+  </style>
+
+  <div class="rider-highlights">
+   <div class="highlight-item">
+   <div class="highlight-value text-primary"><?= $totalRaces ?></div>
+   <div class="highlight-label">Race</div>
+   </div>
+   <?php if ($wins > 0): ?>
+   <div class="highlight-item">
+   <div class="highlight-value text-success"><?= $wins ?></div>
+   <div class="highlight-label">Segrar</div>
    </div>
    <?php endif; ?>
-  </div>
-  <div class="card stat-card-compact">
-   <div class="stat-number-compact" style="color: #f59e0b;">
-   <?= $gravityTeamStats ? number_format($gravityTeamStats['total_points'] ?? 0, 1) : '0' ?>
-   </div>
-   <div class="stat-label-compact">GravitySeries Team</div>
-   <?php if ($gravityTeamPosition): ?>
-   <div class="text-xs text-secondary gs-mt-xs">
-    #<?= $gravityTeamPosition ?> av <?= $gravityTeamClassTotal ?> i klubben
+   <?php if ($podiums > 0): ?>
+   <div class="highlight-item">
+   <div class="highlight-value text-warning"><?= $podiums ?></div>
+   <div class="highlight-label">Pallplatser</div>
    </div>
    <?php endif; ?>
-  </div>
+   <?php if ($bestPosition && $bestPosition <= 10): ?>
+   <div class="highlight-item">
+   <div class="highlight-value" style="color: var(--color-accent);">#<?= $bestPosition ?></div>
+   <div class="highlight-label">Bästa</div>
+   </div>
+   <?php endif; ?>
+   <?php if ($averagePosition): ?>
+   <div class="highlight-item">
+   <div class="highlight-value text-secondary"><?= $averagePosition ?></div>
+   <div class="highlight-label">Snitt</div>
+   </div>
+   <?php endif; ?>
   </div>
 
   <!-- Main Profile Tabs -->
@@ -1800,76 +1806,49 @@ try {
    <?php if (!empty($formDataRaw)): ?>
    <h2 class="text-primary mb-lg">
     <i data-lucide="activity"></i>
-    Form - Snittplacering över tid
+    Form - Snittplacering
    </h2>
 
-   <!-- Form Stats -->
-   <div class="gs-ranking-stats-grid mb-lg">
-    <div class="gs-stat-box">
-    <div class="stat-label">Snittplacering</div>
-    <div class="stat-value text-primary"><?= $averageFormPercent ?>%</div>
-    <div class="text-xs text-secondary">av fältet</div>
+   <!-- Form Stats - Compact -->
+   <div class="gs-ranking-stats-grid mb-md" style="grid-template-columns: repeat(2, 1fr);">
+    <div class="gs-stat-box" style="padding: 0.5rem;">
+    <div class="stat-label" style="font-size: 0.7rem;">Snittplacering</div>
+    <div class="stat-value text-primary" style="font-size: 1.5rem;"><?= $averagePosition ?></div>
     </div>
-    <div class="gs-stat-box">
-    <div class="stat-label">Antal race</div>
-    <div class="stat-value text-success"><?= $formCount ?></div>
-    </div>
-    <div class="gs-stat-box">
-    <div class="stat-label">Formvärde</div>
-    <div class="stat-value <?= $averageForm <= 0.25 ? 'text-success' : ($averageForm <= 0.5 ? 'text-warning' : 'text-danger') ?>">
-     <?php
-     if ($averageForm <= 0.1) echo 'Elit';
-     elseif ($averageForm <= 0.25) echo 'Topp';
-     elseif ($averageForm <= 0.4) echo 'Bra';
-     elseif ($averageForm <= 0.6) echo 'Medel';
-     else echo 'Utvecklas';
-     ?>
-    </div>
+    <div class="gs-stat-box" style="padding: 0.5rem;">
+    <div class="stat-label" style="font-size: 0.7rem;">Antal race</div>
+    <div class="stat-value text-success" style="font-size: 1.5rem;"><?= $formCount ?></div>
     </div>
    </div>
 
-   <p class="text-secondary text-sm mb-lg">
-    <i data-lucide="info" class="icon-sm"></i>
-    Snittplaceringen visar hur åkaren presterar relativt fältets storlek.
-    Lägre värde = bättre prestanda. 25% betyder att åkaren i snitt slutar i topp 25%.
-   </p>
-
-   <!-- Form Chart -->
-   <div class="card gs-bg-light mb-lg">
-    <div class="card-body">
-    <h4 class="text-primary mb-md">
-     <i data-lucide="line-chart"></i>
-     Formkurva
-    </h4>
-    <div style="height: 250px; position: relative;">
+   <!-- Form Chart - Compact -->
+   <div class="card mb-md" style="border-radius: var(--radius-md);">
+    <div class="card-body" style="padding: 0.75rem;">
+    <div style="height: 180px; position: relative;">
      <canvas id="formChart"></canvas>
     </div>
     </div>
    </div>
 
-   <!-- Form Data Table -->
-   <div class="card gs-bg-light">
-    <div class="card-body">
-    <h4 class="text-primary mb-md">
-     <i data-lucide="table"></i>
-     Detaljerad data
-    </h4>
+   <!-- Form Data Table - Compact -->
+   <div class="card" style="border-radius: var(--radius-md);">
+    <div class="card-body" style="padding: 0.5rem;">
     <div class="table-responsive">
-     <table class="table table-compact">
+     <table class="table table-compact" style="font-size: 0.75rem;">
      <thead>
       <tr>
       <th>Datum</th>
       <th>Event</th>
-      <th class="text-center">Placering</th>
+      <th class="text-center">Plac</th>
       <th class="text-center">Fält</th>
-      <th class="text-right">Snitt %</th>
+      <th class="text-right">Snitt</th>
       </tr>
      </thead>
      <tbody>
       <?php foreach (array_reverse($formDataRaw) as $fd): ?>
       <tr>
-      <td class="gs-text-nowrap"><?= date('Y-m-d', strtotime($fd['date'])) ?></td>
-      <td><?= h($fd['event']) ?></td>
+      <td class="gs-text-nowrap"><?= date('m-d', strtotime($fd['date'])) ?></td>
+      <td style="max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"><?= h($fd['event']) ?></td>
       <td class="text-center">
        <?php if ($fd['position'] <= 3): ?>
        <span class="badge badge-<?= $fd['position'] == 1 ? 'gold' : ($fd['position'] == 2 ? 'silver' : 'bronze') ?> position-badge">
@@ -1880,8 +1859,8 @@ try {
        <?php endif; ?>
       </td>
       <td class="text-center"><?= $fd['field_size'] ?></td>
-      <td class="text-right font-bold <?= $fd['percent'] <= 25 ? 'text-success' : ($fd['percent'] <= 50 ? 'text-warning' : 'text-danger') ?>">
-       <?= $fd['percent'] ?>%
+      <td class="text-right font-bold <?= $fd['running_avg'] <= 2 ? 'text-success' : ($fd['running_avg'] <= 5 ? 'text-warning' : 'text-secondary') ?>">
+       <?= $fd['running_avg'] ?>
       </td>
       </tr>
       <?php endforeach; ?>
@@ -1900,20 +1879,13 @@ try {
     if (formData.length > 0 && document.getElementById('formChart')) {
      const ctx = document.getElementById('formChart').getContext('2d');
 
-     // Prepare data
+     // Prepare data - position and running average
      const labels = formData.map(d => d.date.substring(5)); // MM-DD format
-     const dataPoints = formData.map(d => d.percent);
+     const positions = formData.map(d => d.position);
+     const runningAvg = formData.map(d => d.running_avg);
 
-     // Calculate moving average (3 races)
-     const movingAvg = [];
-     for (let i = 0; i < dataPoints.length; i++) {
-     if (i < 2) {
-      movingAvg.push(null);
-     } else {
-      const avg = (dataPoints[i] + dataPoints[i-1] + dataPoints[i-2]) / 3;
-      movingAvg.push(Math.round(avg * 10) / 10);
-     }
-     }
+     // Find max position for Y-axis
+     const maxPos = Math.max(...positions, ...runningAvg) + 1;
 
      new Chart(ctx, {
      type: 'line',
@@ -1921,22 +1893,22 @@ try {
       labels: labels,
       datasets: [
       {
-       label: 'Placering %',
-       data: dataPoints,
-       borderColor: 'rgb(97, 206, 112)',
-       backgroundColor: 'rgba(97, 206, 112, 0.1)',
+       label: 'Placering',
+       data: positions,
+       borderColor: 'var(--color-accent, #61CE70)',
+       backgroundColor: 'rgba(97, 206, 112, 0.15)',
        borderWidth: 2,
        fill: true,
-       tension: 0.3,
-       pointRadius: 4,
-       pointHoverRadius: 6
+       tension: 0.2,
+       pointRadius: 5,
+       pointBackgroundColor: 'var(--color-accent, #61CE70)',
+       pointHoverRadius: 7
       },
       {
-       label: 'Glidande snitt (3 race)',
-       data: movingAvg,
-       borderColor: 'rgb(59, 130, 246)',
-       borderWidth: 2,
-       borderDash: [5, 5],
+       label: 'Snittplacering',
+       data: runningAvg,
+       borderColor: 'var(--color-warning, #f59e0b)',
+       borderWidth: 3,
        fill: false,
        tension: 0.3,
        pointRadius: 0
@@ -1952,7 +1924,9 @@ try {
       },
       plugins: {
       legend: {
-       position: 'bottom'
+       display: true,
+       position: 'bottom',
+       labels: { boxWidth: 12, padding: 8, font: { size: 10 } }
       },
       tooltip: {
        callbacks: {
@@ -1960,35 +1934,31 @@ try {
         const idx = context.dataIndex;
         const d = formData[idx];
         if (context.datasetIndex === 0) {
-        return `${d.event}: #${d.position}/${d.field_size} (${d.percent}%)`;
+        return `#${d.position} av ${d.field_size}`;
         }
-        return `Snitt: ${context.parsed.y}%`;
+        return `Snitt: ${d.running_avg}`;
        }
        }
       }
       },
       scales: {
       y: {
-       reverse: true, // Lower is better
-       min: 0,
-       max: 100,
+       reverse: true, // 1 at top (best)
+       min: 1,
+       max: maxPos,
        title: {
-       display: true,
-       text: 'Position i fält (%)',
-       font: { size: 11 }
+       display: false
        },
        ticks: {
-       callback: function(value) {
-        return value + '%';
-       }
+       stepSize: 1,
+       font: { size: 10 }
        }
       },
       x: {
        title: {
-       display: true,
-       text: 'Datum',
-       font: { size: 11 }
-       }
+       display: false
+       },
+       ticks: { font: { size: 9 } }
       }
       }
      }
