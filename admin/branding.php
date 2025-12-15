@@ -7,7 +7,8 @@
 require_once __DIR__ . '/../config.php';
 require_admin();
 
-$db = getDB();
+// Use the global PDO connection (same as hub_db())
+$pdo = $GLOBALS['pdo'];
 
 // Branding settings file
 $brandingFile = __DIR__ . '/../uploads/branding.json';
@@ -55,11 +56,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if ($seriesId > 0) {
             try {
-                $db->update('series', [
-                    'gradient_start' => $gradientStart,
-                    'gradient_end' => $gradientEnd,
-                    'accent_color' => $accentColor
-                ], 'id = ?', [$seriesId]);
+                $stmt = $pdo->prepare("UPDATE series SET gradient_start = ?, gradient_end = ?, accent_color = ? WHERE id = ?");
+                $stmt->execute([$gradientStart, $gradientEnd, $accentColor, $seriesId]);
                 $message = 'Seriefärger sparade!';
                 $messageType = 'success';
             } catch (Exception $e) {
@@ -122,8 +120,8 @@ $seriesList = [];
 $seriesDebug = '';
 try {
     // Get all series with colors - use simple query first
-    $seriesList = $db->getAll("
-        SELECT id, name, slug, logo, logo_dark,
+    $stmt = $pdo->query("
+        SELECT id, name, slug, logo,
                COALESCE(gradient_start, '#004A98') as gradient_start,
                COALESCE(gradient_end, '#002a5c') as gradient_end,
                COALESCE(accent_color, '#61CE70') as accent_color,
@@ -132,11 +130,12 @@ try {
         WHERE active = 1
         ORDER BY name ASC
     ");
+    $seriesList = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     // If no active series, get all series
     if (empty($seriesList)) {
-        $seriesList = $db->getAll("
-            SELECT id, name, slug, logo, logo_dark,
+        $stmt = $pdo->query("
+            SELECT id, name, slug, logo,
                    COALESCE(gradient_start, '#004A98') as gradient_start,
                    COALESCE(gradient_end, '#002a5c') as gradient_end,
                    COALESCE(accent_color, '#61CE70') as accent_color,
@@ -144,6 +143,7 @@ try {
             FROM series
             ORDER BY name ASC
         ");
+        $seriesList = $stmt->fetchAll(PDO::FETCH_ASSOC);
         if (!empty($seriesList)) {
             $seriesDebug = 'Visar alla serier (inklusive inaktiva).';
         }
@@ -838,7 +838,7 @@ include __DIR__ . '/components/unified-layout.php';
         <div class="series-color-grid">
             <?php foreach ($seriesList as $series): ?>
             <div class="series-color-card">
-                <?php $seriesLogoPath = $series['logo_dark'] ?: $series['logo']; ?>
+                <?php $seriesLogoPath = $series['logo'] ?? ''; ?>
                 <div class="series-color-preview" style="background: linear-gradient(135deg, <?= h($series['gradient_start'] ?? '#004A98') ?>, <?= h($series['gradient_end'] ?? '#002a5c') ?>);">
                     <?php if ($seriesLogoPath): ?>
                         <img src="<?= h($seriesLogoPath) ?>" alt="<?= h($series['name']) ?>" class="series-logo">
