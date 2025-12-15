@@ -41,75 +41,84 @@ function isCorrectlyFormatted($value) {
 function findMalformedUciIds($pdo) {
     $malformed = [];
 
-    // 1. Check uci_id column
-    $stmt = $pdo->query("
-        SELECT id, firstname, lastname, uci_id, license_number
-        FROM riders
-        WHERE uci_id IS NOT NULL
-          AND uci_id != ''
-          AND uci_id NOT REGEXP '^[0-9]{3} [0-9]{3} [0-9]{3} [0-9]{2}$'
-        ORDER BY lastname, firstname
-    ");
-    $riders = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    try {
+        // 1. Check uci_id column
+        $stmt = $pdo->query("
+            SELECT id, firstname, lastname, uci_id, license_number
+            FROM riders
+            WHERE uci_id IS NOT NULL
+              AND uci_id != ''
+              AND uci_id NOT REGEXP '^[0-9]{3} [0-9]{3} [0-9]{3} [0-9]{2}$'
+            ORDER BY lastname, firstname
+        ");
+        if ($stmt) {
+            $riders = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    foreach ($riders as $rider) {
-        $original = $rider['uci_id'];
-        $normalized = normalizeUciId($original);
-        $digits = preg_replace('/[^0-9]/', '', $normalized);
+            foreach ($riders as $rider) {
+                $original = $rider['uci_id'];
+                $normalized = normalizeUciId($original);
+                $digits = preg_replace('/[^0-9]/', '', $normalized);
 
-        $malformed[] = [
-            'id' => $rider['id'],
-            'firstname' => $rider['firstname'],
-            'lastname' => $rider['lastname'],
-            'original' => $original,
-            'normalized' => $normalized,
-            'is_valid' => strlen($digits) === 11,
-            'column' => 'uci_id',
-            'license_number' => $rider['license_number']
-        ];
-    }
-
-    // 2. Check license_number column for UCI-like IDs (not SWE)
-    $stmt = $pdo->query("
-        SELECT id, firstname, lastname, uci_id, license_number
-        FROM riders
-        WHERE license_number IS NOT NULL
-          AND license_number != ''
-          AND license_number NOT LIKE 'SWE%'
-          AND license_number NOT REGEXP '^[0-9]{3} [0-9]{3} [0-9]{3} [0-9]{2}$'
-        ORDER BY lastname, firstname
-    ");
-    $riders = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-    foreach ($riders as $rider) {
-        $original = $rider['license_number'];
-
-        // Only process if it looks like a UCI ID
-        if (!looksLikeUciId($original)) continue;
-
-        // Skip if already in list from uci_id column
-        $alreadyAdded = false;
-        foreach ($malformed as $m) {
-            if ($m['id'] === $rider['id'] && $m['column'] === 'license_number') {
-                $alreadyAdded = true;
-                break;
+                $malformed[] = [
+                    'id' => $rider['id'],
+                    'firstname' => $rider['firstname'],
+                    'lastname' => $rider['lastname'],
+                    'original' => $original,
+                    'normalized' => $normalized,
+                    'is_valid' => strlen($digits) === 11,
+                    'column' => 'uci_id',
+                    'license_number' => $rider['license_number']
+                ];
             }
         }
-        if ($alreadyAdded) continue;
 
-        $normalized = normalizeUciId($original);
-        $digits = preg_replace('/[^0-9]/', '', $normalized);
+        // 2. Check license_number column for UCI-like IDs (not SWE)
+        $stmt = $pdo->query("
+            SELECT id, firstname, lastname, uci_id, license_number
+            FROM riders
+            WHERE license_number IS NOT NULL
+              AND license_number != ''
+              AND license_number NOT LIKE 'SWE%'
+              AND license_number NOT REGEXP '^[0-9]{3} [0-9]{3} [0-9]{3} [0-9]{2}$'
+            ORDER BY lastname, firstname
+        ");
+        if ($stmt) {
+            $riders = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        $malformed[] = [
-            'id' => $rider['id'],
-            'firstname' => $rider['firstname'],
-            'lastname' => $rider['lastname'],
-            'original' => $original,
-            'normalized' => $normalized,
-            'is_valid' => strlen($digits) === 11,
-            'column' => 'license_number',
-            'uci_id' => $rider['uci_id']
-        ];
+            foreach ($riders as $rider) {
+                $original = $rider['license_number'];
+
+                // Only process if it looks like a UCI ID
+                if (!looksLikeUciId($original)) continue;
+
+                // Skip if already in list from uci_id column
+                $alreadyAdded = false;
+                foreach ($malformed as $m) {
+                    if ($m['id'] === $rider['id'] && $m['column'] === 'license_number') {
+                        $alreadyAdded = true;
+                        break;
+                    }
+                }
+                if ($alreadyAdded) continue;
+
+                $normalized = normalizeUciId($original);
+                $digits = preg_replace('/[^0-9]/', '', $normalized);
+
+                $malformed[] = [
+                    'id' => $rider['id'],
+                    'firstname' => $rider['firstname'],
+                    'lastname' => $rider['lastname'],
+                    'original' => $original,
+                    'normalized' => $normalized,
+                    'is_valid' => strlen($digits) === 11,
+                    'column' => 'license_number',
+                    'uci_id' => $rider['uci_id']
+                ];
+            }
+        }
+    } catch (Exception $e) {
+        // Return empty array on error
+        return [];
     }
 
     return $malformed;
@@ -166,19 +175,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 $malformed = findMalformedUciIds($pdo);
 
 // Count stats for both columns
-$stmt = $pdo->query("
-    SELECT COUNT(*) as cnt FROM riders
-    WHERE uci_id IS NOT NULL AND uci_id != ''
-");
-$uciIdCount = $stmt->fetch(PDO::FETCH_ASSOC)['cnt'] ?? 0;
+$uciIdCount = 0;
+$licenseUciCount = 0;
 
-$stmt = $pdo->query("
-    SELECT COUNT(*) as cnt FROM riders
-    WHERE license_number IS NOT NULL
-      AND license_number != ''
-      AND license_number NOT LIKE 'SWE%'
-");
-$licenseUciCount = $stmt->fetch(PDO::FETCH_ASSOC)['cnt'] ?? 0;
+try {
+    $stmt = $pdo->query("
+        SELECT COUNT(*) as cnt FROM riders
+        WHERE uci_id IS NOT NULL AND uci_id != ''
+    ");
+    if ($stmt) {
+        $uciIdCount = $stmt->fetch(PDO::FETCH_ASSOC)['cnt'] ?? 0;
+    }
+
+    $stmt = $pdo->query("
+        SELECT COUNT(*) as cnt FROM riders
+        WHERE license_number IS NOT NULL
+          AND license_number != ''
+          AND license_number NOT LIKE 'SWE%'
+    ");
+    if ($stmt) {
+        $licenseUciCount = $stmt->fetch(PDO::FETCH_ASSOC)['cnt'] ?? 0;
+    }
+} catch (Exception $e) {
+    // Continue with zero counts on error
+}
 
 $totalRiders = $uciIdCount + $licenseUciCount;
 $validCount = $totalRiders - count($malformed);
