@@ -76,13 +76,14 @@
     text-align: center !important;
 }
 
-.welcome-about-desc {
+.welcome-page .welcome-about .welcome-about-desc {
     font-size: var(--text-md);
     color: var(--color-text-secondary);
-    margin: 0 auto;
+    margin: 0 auto !important;
     line-height: 1.6;
     max-width: 700px;
     text-align: center !important;
+    display: block;
 }
 
 .welcome-about h2 {
@@ -93,12 +94,13 @@
     text-align: center !important;
 }
 
-.welcome-about p {
+.welcome-page .welcome-about p {
     font-size: var(--text-md);
     color: var(--color-text-secondary);
     margin: 0;
     line-height: 1.6;
     text-align: center !important;
+    display: block;
 }
 
 .welcome-about-note {
