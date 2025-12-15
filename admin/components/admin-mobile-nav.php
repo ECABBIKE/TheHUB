@@ -4,39 +4,44 @@
  * Horizontally scrollable bottom nav for admin pages
  * CSS styles are in /admin/assets/css/admin.css
  * JS functionality is in /admin/assets/js/admin.js
+ *
+ * Navigation matches sidebar groups from admin-tabs-config.php
  */
 require_once __DIR__ . '/../../v3-config.php';
 require_once __DIR__ . '/../../components/icons.php';
+require_once __DIR__ . '/../../includes/config/admin-tabs-config.php';
 
-// Admin navigation items - SYNCED with admin-sidebar.php
-// Keep these in sync with the sidebar navigation
+// Admin navigation - matches sidebar groups
 $adminNav = [
-    ['id' => 'dashboard', 'label' => 'Dashboard', 'icon' => 'layout-dashboard', 'url' => '/admin/dashboard'],
-    ['id' => 'events', 'label' => 'Events', 'icon' => 'calendar', 'url' => '/admin/events'],
-    ['id' => 'series', 'label' => 'Serier', 'icon' => 'trophy', 'url' => '/admin/series'],
-    ['id' => 'riders', 'label' => 'Deltagare', 'icon' => 'users', 'url' => '/admin/riders'],
-    ['id' => 'clubs', 'label' => 'Klubbar', 'icon' => 'building', 'url' => '/admin/clubs'],
-    ['id' => 'import', 'label' => 'Import', 'icon' => 'upload', 'url' => '/admin/import'],
-    ['id' => 'ranking', 'label' => 'Ranking', 'icon' => 'bar-chart-2', 'url' => '/admin/ranking'],
-    ['id' => 'media', 'label' => 'Media', 'icon' => 'image', 'url' => '/admin/media'],
-    ['id' => 'sponsors', 'label' => 'Sponsorer', 'icon' => 'heart', 'url' => '/admin/sponsors'],
-    ['id' => 'settings', 'label' => 'Inst.', 'icon' => 'settings', 'url' => '/admin/settings'],
+    ['id' => 'dashboard', 'label' => 'Dashboard', 'icon' => 'layout-dashboard', 'url' => '/admin/dashboard', 'pages' => ['dashboard.php', 'index.php']],
+    ['id' => 'competitions', 'label' => 'Tävlingar', 'icon' => 'calendar-check', 'url' => '/admin/events.php', 'pages' => get_pages_in_group('competitions')],
+    ['id' => 'standings', 'label' => 'Serier', 'icon' => 'medal', 'url' => '/admin/series.php', 'pages' => get_pages_in_group('standings')],
+    ['id' => 'database', 'label' => 'Databas', 'icon' => 'database', 'url' => '/admin/riders.php', 'pages' => get_pages_in_group('database')],
+    ['id' => 'config', 'label' => 'Konfig', 'icon' => 'sliders', 'url' => '/admin/classes.php', 'pages' => get_pages_in_group('config')],
+    ['id' => 'import', 'label' => 'Import', 'icon' => 'upload', 'url' => '/admin/import.php', 'pages' => get_pages_in_group('import')],
+    ['id' => 'settings', 'label' => 'System', 'icon' => 'settings', 'url' => '/admin/users.php', 'pages' => get_pages_in_group('settings')],
 ];
 
 // Determine active page from URL
 $requestUri = $_SERVER['REQUEST_URI'] ?? '';
-function isAdminNavActive($id, $uri) {
-    // Special case for dashboard - must be exact match
-    if ($id === 'dashboard') {
-        return preg_match('#^/admin/(dashboard)?$#', parse_url($uri, PHP_URL_PATH));
+$currentPage = basename(parse_url($requestUri, PHP_URL_PATH));
+
+function isAdminNavActiveByPages($item, $currentPage) {
+    // Dashboard special case
+    if ($item['id'] === 'dashboard') {
+        return in_array($currentPage, ['dashboard.php', 'index.php', '']) || $currentPage === 'admin';
     }
-    return strpos($uri, '/admin/' . $id) !== false;
+    // Check if current page is in this group's pages
+    if (isset($item['pages']) && is_array($item['pages'])) {
+        return in_array($currentPage, $item['pages']);
+    }
+    return false;
 }
 ?>
 <nav class="admin-mobile-nav" role="navigation" aria-label="Admin navigering">
     <div class="admin-mobile-nav-inner">
         <?php foreach ($adminNav as $item): ?>
-            <?php $isActive = isAdminNavActive($item['id'], $requestUri); ?>
+            <?php $isActive = isAdminNavActiveByPages($item, $currentPage); ?>
             <a href="<?= htmlspecialchars($item['url']) ?>"
                class="admin-mobile-nav-link<?= $isActive ? ' active' : '' ?>"
                <?= $isActive ? 'aria-current="page"' : '' ?>>
