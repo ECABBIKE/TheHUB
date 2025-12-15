@@ -168,7 +168,12 @@ $page_title = 'Events';
 $breadcrumbs = [
     ['label' => 'Events']
 ];
-$page_actions = '<a href="/admin/events/create" class="btn-admin btn-admin-primary">
+$page_actions = '
+<button id="bulk-edit-toggle" class="btn-admin btn-admin-secondary" onclick="toggleBulkEdit()" style="margin-right: var(--space-sm);">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.375 2.625a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4Z"/></svg>
+    <span id="bulk-edit-label">Massredigering</span>
+</button>
+<a href="/admin/events/create" class="btn-admin btn-admin-primary">
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
     Nytt Event
 </a>';
@@ -407,6 +412,196 @@ async function updateSeries(eventId, seriesId) {
         console.error('Error:', error);
         alert('Fel vid uppdatering av serie');
     }
+}
+
+// Bulk Edit Mode
+let bulkEditMode = false;
+let bulkChanges = {};
+
+function toggleBulkEdit() {
+    bulkEditMode = !bulkEditMode;
+    const toggleBtn = document.getElementById('bulk-edit-toggle');
+    const label = document.getElementById('bulk-edit-label');
+
+    if (bulkEditMode) {
+        toggleBtn.classList.remove('btn-admin-secondary');
+        toggleBtn.classList.add('btn-admin-primary');
+        label.textContent = 'Avsluta massredigering';
+        enableBulkEdit();
+        showBulkSaveButton();
+    } else {
+        toggleBtn.classList.remove('btn-admin-primary');
+        toggleBtn.classList.add('btn-admin-secondary');
+        label.textContent = 'Massredigering';
+        disableBulkEdit();
+        hideBulkSaveButton();
+        bulkChanges = {};
+    }
+}
+
+function enableBulkEdit() {
+    // Disable individual onchange handlers and add bulk edit tracking
+    document.querySelectorAll('.admin-table select').forEach(select => {
+        select.dataset.originalOnchange = select.getAttribute('onchange');
+        select.removeAttribute('onchange');
+        select.addEventListener('change', trackBulkChange);
+        select.style.borderColor = 'var(--color-primary)';
+    });
+}
+
+function disableBulkEdit() {
+    // Re-enable individual onchange handlers
+    document.querySelectorAll('.admin-table select').forEach(select => {
+        if (select.dataset.originalOnchange) {
+            select.setAttribute('onchange', select.dataset.originalOnchange);
+            delete select.dataset.originalOnchange;
+        }
+        select.removeEventListener('change', trackBulkChange);
+        select.style.borderColor = '';
+        select.style.backgroundColor = '';
+    });
+}
+
+function trackBulkChange(event) {
+    const select = event.target;
+    const row = select.closest('tr');
+    const eventId = getEventIdFromRow(row);
+    const fieldType = getFieldType(select);
+
+    if (!bulkChanges[eventId]) {
+        bulkChanges[eventId] = {};
+    }
+
+    bulkChanges[eventId][fieldType] = select.value;
+
+    // Visual feedback
+    select.style.backgroundColor = '#fff3cd';
+
+    updateBulkSaveButton();
+}
+
+function getEventIdFromRow(row) {
+    // Extract event ID from the edit button or delete button
+    const editBtn = row.querySelector('a[href*="/admin/events/edit/"]');
+    if (editBtn) {
+        const match = editBtn.href.match(/\/edit\/(\d+)/);
+        if (match) return match[1];
+    }
+    return null;
+}
+
+function getFieldType(select) {
+    // Determine field type based on select classes or nearby content
+    if (select.closest('td').previousElementSibling?.previousElementSibling?.textContent.includes('Serie') ||
+        select.style.minWidth === '200px') {
+        return 'series_id';
+    } else if (select.style.minWidth === '120px') {
+        return 'discipline';
+    }
+    return 'unknown';
+}
+
+function showBulkSaveButton() {
+    if (!document.getElementById('bulk-save-container')) {
+        const container = document.createElement('div');
+        container.id = 'bulk-save-container';
+        container.style.cssText = 'position: fixed; bottom: 20px; right: 20px; z-index: 1000; background: white; padding: var(--space-md); border-radius: var(--radius-md); box-shadow: var(--shadow-lg); display: flex; gap: var(--space-sm); align-items: center;';
+
+        container.innerHTML = `
+            <span id="bulk-change-count" style="font-weight: 500; color: var(--color-text);">0 ändringar</span>
+            <button onclick="saveBulkChanges()" class="btn-admin btn-admin-primary" id="bulk-save-btn" disabled>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                Spara alla ändringar
+            </button>
+            <button onclick="cancelBulkEdit()" class="btn-admin btn-admin-secondary">Avbryt</button>
+        `;
+
+        document.body.appendChild(container);
+    }
+}
+
+function hideBulkSaveButton() {
+    const container = document.getElementById('bulk-save-container');
+    if (container) {
+        container.remove();
+    }
+}
+
+function updateBulkSaveButton() {
+    const count = Object.keys(bulkChanges).reduce((total, eventId) => {
+        return total + Object.keys(bulkChanges[eventId]).length;
+    }, 0);
+
+    const countEl = document.getElementById('bulk-change-count');
+    const saveBtn = document.getElementById('bulk-save-btn');
+
+    if (countEl) {
+        countEl.textContent = `${count} ändring${count !== 1 ? 'ar' : ''}`;
+    }
+
+    if (saveBtn) {
+        saveBtn.disabled = count === 0;
+    }
+}
+
+async function saveBulkChanges() {
+    const count = Object.keys(bulkChanges).reduce((total, eventId) => {
+        return total + Object.keys(bulkChanges[eventId]).length;
+    }, 0);
+
+    if (count === 0) return;
+
+    const saveBtn = document.getElementById('bulk-save-btn');
+    const originalText = saveBtn.innerHTML;
+    saveBtn.disabled = true;
+    saveBtn.innerHTML = '<span style="opacity: 0.7;">Sparar...</span>';
+
+    try {
+        const response = await fetch('/admin/api/bulk-update-events.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                changes: bulkChanges,
+                csrf_token: csrfToken
+            })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            showToast(`${count} ändring${count !== 1 ? 'ar' : ''} sparade!`, 'success');
+            bulkChanges = {};
+            updateBulkSaveButton();
+
+            // Reset visual feedback
+            document.querySelectorAll('.admin-table select').forEach(select => {
+                select.style.backgroundColor = '';
+            });
+
+            // Optionally reload page to show updated data
+            setTimeout(() => location.reload(), 1000);
+        } else {
+            alert('Fel: ' + (result.error || 'Kunde inte spara ändringar'));
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = originalText;
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Fel vid sparande av ändringar');
+        saveBtn.disabled = false;
+        saveBtn.innerHTML = originalText;
+    }
+}
+
+function cancelBulkEdit() {
+    if (Object.keys(bulkChanges).length > 0) {
+        if (!confirm('Du har osparade ändringar. Vill du verkligen avbryta?')) {
+            return;
+        }
+    }
+    toggleBulkEdit();
 }
 </script>
 
