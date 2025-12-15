@@ -908,6 +908,76 @@ textarea.input:focus {
 .badge-lg { padding: 6px 12px; font-size: 0.875rem; }
 
 /* ============================================
+   BADGE VARIANTS
+   ============================================ */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border-radius: 9999px;
+}
+
+.badge-success {
+  background: var(--color-success-light, #dcfce7);
+  color: var(--color-success, #22c55e);
+}
+
+.badge-warning {
+  background: var(--color-warning-light, #fef3c7);
+  color: var(--color-warning, #d97706);
+}
+
+.badge-danger {
+  background: var(--color-error-light, #fee2e2);
+  color: var(--color-error, #ef4444);
+}
+
+.badge-secondary {
+  background: var(--color-bg-sunken, #f3f4f6);
+  color: var(--color-text-secondary, #6b7280);
+}
+
+.badge-primary {
+  background: var(--color-accent-light, #d1fae5);
+  color: var(--color-accent, #61CE70);
+}
+
+/* Medal Position Badges */
+.badge-gold {
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  color: #92400e;
+  border: 1px solid #fbbf24;
+}
+
+.badge-silver {
+  background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+  color: #4b5563;
+  border: 1px solid #9ca3af;
+}
+
+.badge-bronze {
+  background: linear-gradient(135deg, #fed7aa 0%, #fdba74 100%);
+  color: #9a3412;
+  border: 1px solid #fb923c;
+}
+
+/* Position badge compact styling */
+.position-badge {
+  font-size: 0.7rem;
+  padding: 0.15rem 0.4rem;
+  gap: 0.2rem;
+}
+
+.position-badge i,
+.position-badge svg {
+  width: 12px;
+  height: 12px;
+}
+
+/* ============================================
    ICON SIZES
    ============================================ */
 .icon-xs { width: 12px; height: 12px; }

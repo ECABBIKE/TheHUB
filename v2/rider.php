@@ -154,6 +154,46 @@ foreach ($results as $result) {
 // Get recent results (last 5)
 $recentResults = array_slice($results, 0, 5);
 
+// Calculate FORM - normalized position (position / field_size) over time
+$formData = [];
+$formDataRaw = []; // For chart
+$totalNormalizedScore = 0;
+$formCount = 0;
+
+// Get field size for each race the rider participated in
+foreach ($results as $idx => $result) {
+    if ($result['status'] !== 'finished') continue;
+    if (!isset($result['class_position']) || !$result['class_position']) continue;
+
+    // Get field size for this event/class combination
+    $fieldSize = $db->getOne("
+        SELECT COUNT(*)
+        FROM results
+        WHERE event_id = ? AND class_id = ? AND status = 'finished'
+    ", [$result['event_id'], $result['class_id']]);
+
+    if ($fieldSize && $fieldSize > 0) {
+        $normalizedScore = $result['class_position'] / $fieldSize;
+        $formDataRaw[] = [
+            'date' => $result['event_date'],
+            'event' => $result['event_name'],
+            'position' => $result['class_position'],
+            'field_size' => $fieldSize,
+            'normalized' => round($normalizedScore, 3),
+            'percent' => round($normalizedScore * 100, 1)
+        ];
+        $totalNormalizedScore += $normalizedScore;
+        $formCount++;
+    }
+}
+
+// Reverse to show chronological order (oldest first)
+$formDataRaw = array_reverse($formDataRaw);
+
+// Calculate average form (lower is better)
+$averageForm = $formCount > 0 ? round($totalNormalizedScore / $formCount, 3) : null;
+$averageFormPercent = $averageForm !== null ? round($averageForm * 100, 1) : null;
+
 // Get GravitySeries Total stats (individual championship)
 $gravityTotalStats = null;
 $gravityTotalPosition = null;
@@ -703,7 +743,7 @@ try {
     <?php if (!empty($rider['photo'])): ?>
     <img src="<?= h($rider['photo']) ?>" alt="<?= h($rider['firstname'] . ' ' . $rider['lastname']) ?>">
     <?php else: ?>
-    <div class="photo-placeholder">👤</div>
+    <div class="photo-placeholder"><i data-lucide="user"></i></div>
     <?php endif; ?>
    </div>
 
@@ -897,6 +937,10 @@ try {
    <button class="event-tab" data-main-tab="results-tab">
     <i data-lucide="list"></i>
     Tävlingsresultat
+   </button>
+   <button class="event-tab" data-main-tab="form-tab">
+    <i data-lucide="activity"></i>
+    Form
    </button>
    </div>
   </div>
@@ -1164,10 +1208,10 @@ try {
          <?php if (!empty($raceDetail['position'])): ?>
           <?php
           $pos = $raceDetail['position'];
-          if ($pos == 1) echo '<span class="badge badge-success" style="font-size: 0.7rem; padding: 0.15rem 0.3rem;">🥇</span>';
-          elseif ($pos == 2) echo '<span class="badge badge-secondary" style="font-size: 0.7rem; padding: 0.15rem 0.3rem;">🥈</span>';
-          elseif ($pos == 3) echo '<span class="badge badge-warning" style="font-size: 0.7rem; padding: 0.15rem 0.3rem;">🥉</span>';
-          else echo '<span class="badge badge-secondary" style="font-size: 0.7rem; padding: 0.15rem 0.3rem;">#' . $pos . '</span>';
+          if ($pos == 1) echo '<span class="badge badge-gold position-badge"><i data-lucide="trophy"></i> 1</span>';
+          elseif ($pos == 2) echo '<span class="badge badge-silver position-badge"><i data-lucide="medal"></i> 2</span>';
+          elseif ($pos == 3) echo '<span class="badge badge-bronze position-badge"><i data-lucide="award"></i> 3</span>';
+          else echo '<span class="badge badge-secondary position-badge">#' . $pos . '</span>';
           ?>
          <?php else: ?>
           <span class="text-secondary">-</span>
@@ -1391,10 +1435,10 @@ try {
        <td class="text-center">
         <?php
         $pos = $raceDetail['class_position'];
-        if ($pos == 1) echo '<span class="badge badge-success" style="font-size: 0.7rem; padding: 0.15rem 0.3rem;">🥇</span>';
-        elseif ($pos == 2) echo '<span class="badge badge-secondary" style="font-size: 0.7rem; padding: 0.15rem 0.3rem;">🥈</span>';
-        elseif ($pos == 3) echo '<span class="badge badge-warning" style="font-size: 0.7rem; padding: 0.15rem 0.3rem;">🥉</span>';
-        else echo '<span class="badge badge-secondary" style="font-size: 0.7rem; padding: 0.15rem 0.3rem;">#' . ($pos ?? '-') . '</span>';
+        if ($pos == 1) echo '<span class="badge badge-gold position-badge"><i data-lucide="trophy"></i> 1</span>';
+        elseif ($pos == 2) echo '<span class="badge badge-silver position-badge"><i data-lucide="medal"></i> 2</span>';
+        elseif ($pos == 3) echo '<span class="badge badge-bronze position-badge"><i data-lucide="award"></i> 3</span>';
+        else echo '<span class="badge badge-secondary position-badge">#' . ($pos ?? '-') . '</span>';
         ?>
        </td>
        <td>
@@ -1672,19 +1716,19 @@ try {
       <tr>
        <td class="text-center">
        <?php if ($result['status'] === 'dnf'): ?>
-        <span class="badge badge-danger" style="font-size: 0.7rem; padding: 0.15rem 0.3rem;">DNF</span>
+        <span class="badge badge-danger position-badge">DNF</span>
        <?php elseif ($displayPos): ?>
         <?php if ($displayPos == 1): ?>
-        <span class="badge badge-success" style="font-size: 0.7rem; padding: 0.15rem 0.3rem;">🥇</span>
+        <span class="badge badge-gold position-badge"><i data-lucide="trophy"></i> 1</span>
         <?php elseif ($displayPos == 2): ?>
-        <span class="badge badge-secondary" style="font-size: 0.7rem; padding: 0.15rem 0.3rem;">🥈</span>
+        <span class="badge badge-silver position-badge"><i data-lucide="medal"></i> 2</span>
         <?php elseif ($displayPos == 3): ?>
-        <span class="badge badge-warning" style="font-size: 0.7rem; padding: 0.15rem 0.3rem;">🥉</span>
+        <span class="badge badge-bronze position-badge"><i data-lucide="award"></i> 3</span>
         <?php else: ?>
-        <span class="badge badge-secondary" style="font-size: 0.7rem; padding: 0.15rem 0.3rem;">#<?= $displayPos ?></span>
+        <span class="badge badge-secondary position-badge">#<?= $displayPos ?></span>
         <?php endif; ?>
        <?php elseif ($result['status'] === 'finished' && !$awardsPoints): ?>
-        <span class="text-secondary" style="font-size: 0.65rem;">Ej tävling</span>
+        <span class="text-secondary text-xs">Ej tävling</span>
        <?php else: ?>
         <span class="text-secondary">-</span>
        <?php endif; ?>
@@ -1746,6 +1790,218 @@ try {
     <h3 class="mb-sm">Inga resultat ännu</h3>
     <p class="text-secondary">
     Denna deltagare har inte några tävlingsresultat uppladdat.
+    </p>
+   </div>
+   <?php endif; ?>
+  </div>
+
+  <!-- Tab 5: Form -->
+  <div class="gs-main-tab-content" id="form-tab">
+   <?php if (!empty($formDataRaw)): ?>
+   <h2 class="text-primary mb-lg">
+    <i data-lucide="activity"></i>
+    Form - Snittplacering över tid
+   </h2>
+
+   <!-- Form Stats -->
+   <div class="gs-ranking-stats-grid mb-lg">
+    <div class="gs-stat-box">
+    <div class="stat-label">Snittplacering</div>
+    <div class="stat-value text-primary"><?= $averageFormPercent ?>%</div>
+    <div class="text-xs text-secondary">av fältet</div>
+    </div>
+    <div class="gs-stat-box">
+    <div class="stat-label">Antal race</div>
+    <div class="stat-value text-success"><?= $formCount ?></div>
+    </div>
+    <div class="gs-stat-box">
+    <div class="stat-label">Formvärde</div>
+    <div class="stat-value <?= $averageForm <= 0.25 ? 'text-success' : ($averageForm <= 0.5 ? 'text-warning' : 'text-danger') ?>">
+     <?php
+     if ($averageForm <= 0.1) echo 'Elit';
+     elseif ($averageForm <= 0.25) echo 'Topp';
+     elseif ($averageForm <= 0.4) echo 'Bra';
+     elseif ($averageForm <= 0.6) echo 'Medel';
+     else echo 'Utvecklas';
+     ?>
+    </div>
+    </div>
+   </div>
+
+   <p class="text-secondary text-sm mb-lg">
+    <i data-lucide="info" class="icon-sm"></i>
+    Snittplaceringen visar hur åkaren presterar relativt fältets storlek.
+    Lägre värde = bättre prestanda. 25% betyder att åkaren i snitt slutar i topp 25%.
+   </p>
+
+   <!-- Form Chart -->
+   <div class="card gs-bg-light mb-lg">
+    <div class="card-body">
+    <h4 class="text-primary mb-md">
+     <i data-lucide="line-chart"></i>
+     Formkurva
+    </h4>
+    <div style="height: 250px; position: relative;">
+     <canvas id="formChart"></canvas>
+    </div>
+    </div>
+   </div>
+
+   <!-- Form Data Table -->
+   <div class="card gs-bg-light">
+    <div class="card-body">
+    <h4 class="text-primary mb-md">
+     <i data-lucide="table"></i>
+     Detaljerad data
+    </h4>
+    <div class="table-responsive">
+     <table class="table table-compact">
+     <thead>
+      <tr>
+      <th>Datum</th>
+      <th>Event</th>
+      <th class="text-center">Placering</th>
+      <th class="text-center">Fält</th>
+      <th class="text-right">Snitt %</th>
+      </tr>
+     </thead>
+     <tbody>
+      <?php foreach (array_reverse($formDataRaw) as $fd): ?>
+      <tr>
+      <td class="gs-text-nowrap"><?= date('Y-m-d', strtotime($fd['date'])) ?></td>
+      <td><?= h($fd['event']) ?></td>
+      <td class="text-center">
+       <?php if ($fd['position'] <= 3): ?>
+       <span class="badge badge-<?= $fd['position'] == 1 ? 'gold' : ($fd['position'] == 2 ? 'silver' : 'bronze') ?> position-badge">
+        <?= $fd['position'] ?>
+       </span>
+       <?php else: ?>
+       #<?= $fd['position'] ?>
+       <?php endif; ?>
+      </td>
+      <td class="text-center"><?= $fd['field_size'] ?></td>
+      <td class="text-right font-bold <?= $fd['percent'] <= 25 ? 'text-success' : ($fd['percent'] <= 50 ? 'text-warning' : 'text-danger') ?>">
+       <?= $fd['percent'] ?>%
+      </td>
+      </tr>
+      <?php endforeach; ?>
+     </tbody>
+     </table>
+    </div>
+    </div>
+   </div>
+
+   <!-- Chart.js for Form Chart -->
+   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+   <script>
+   document.addEventListener('DOMContentLoaded', function() {
+    const formData = <?= json_encode($formDataRaw) ?>;
+
+    if (formData.length > 0 && document.getElementById('formChart')) {
+     const ctx = document.getElementById('formChart').getContext('2d');
+
+     // Prepare data
+     const labels = formData.map(d => d.date.substring(5)); // MM-DD format
+     const dataPoints = formData.map(d => d.percent);
+
+     // Calculate moving average (3 races)
+     const movingAvg = [];
+     for (let i = 0; i < dataPoints.length; i++) {
+     if (i < 2) {
+      movingAvg.push(null);
+     } else {
+      const avg = (dataPoints[i] + dataPoints[i-1] + dataPoints[i-2]) / 3;
+      movingAvg.push(Math.round(avg * 10) / 10);
+     }
+     }
+
+     new Chart(ctx, {
+     type: 'line',
+     data: {
+      labels: labels,
+      datasets: [
+      {
+       label: 'Placering %',
+       data: dataPoints,
+       borderColor: 'rgb(97, 206, 112)',
+       backgroundColor: 'rgba(97, 206, 112, 0.1)',
+       borderWidth: 2,
+       fill: true,
+       tension: 0.3,
+       pointRadius: 4,
+       pointHoverRadius: 6
+      },
+      {
+       label: 'Glidande snitt (3 race)',
+       data: movingAvg,
+       borderColor: 'rgb(59, 130, 246)',
+       borderWidth: 2,
+       borderDash: [5, 5],
+       fill: false,
+       tension: 0.3,
+       pointRadius: 0
+      }
+      ]
+     },
+     options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: {
+      intersect: false,
+      mode: 'index'
+      },
+      plugins: {
+      legend: {
+       position: 'bottom'
+      },
+      tooltip: {
+       callbacks: {
+       label: function(context) {
+        const idx = context.dataIndex;
+        const d = formData[idx];
+        if (context.datasetIndex === 0) {
+        return `${d.event}: #${d.position}/${d.field_size} (${d.percent}%)`;
+        }
+        return `Snitt: ${context.parsed.y}%`;
+       }
+       }
+      }
+      },
+      scales: {
+      y: {
+       reverse: true, // Lower is better
+       min: 0,
+       max: 100,
+       title: {
+       display: true,
+       text: 'Position i fält (%)',
+       font: { size: 11 }
+       },
+       ticks: {
+       callback: function(value) {
+        return value + '%';
+       }
+       }
+      },
+      x: {
+       title: {
+       display: true,
+       text: 'Datum',
+       font: { size: 11 }
+       }
+      }
+      }
+     }
+     });
+    }
+   });
+   </script>
+   <?php else: ?>
+   <div class="gs-empty-state text-center py-xl">
+    <i data-lucide="activity" class="gs-empty-icon"></i>
+    <h3 class="mb-sm">Ingen formdata ännu</h3>
+    <p class="text-secondary">
+    Denna deltagare har inte tillräckligt med avslutade race för att beräkna form.
     </p>
    </div>
    <?php endif; ?>
