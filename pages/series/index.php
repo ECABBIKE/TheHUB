@@ -184,5 +184,3 @@ if ($filterSeriesName && !empty($seriesList)) {
         <?php endforeach; ?>
     </div>
 <?php endif; ?>
-
-<!-- CSS loaded from /assets/css/pages/series-index.css -->
