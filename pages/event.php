@@ -924,9 +924,6 @@ if (!empty($eventSponsors['content'])): ?>
                     <th class="col-time">Bästa</th>
                     <?php else: ?>
                     <th class="col-time">Tid</th>
-                    <?php if ($isTimeRanked): ?>
-                    <th class="col-gap table-col-hide-mobile">+Tid</th>
-                    <?php endif; ?>
                     <?php foreach ($classSplits as $ss): ?>
                     <?php if ($isMotionOrKids): ?>
                     <th class="col-split split-time-col table-col-hide-mobile"><?= $stageNames[$ss] ?? 'SS' . $ss ?></th>
@@ -991,11 +988,15 @@ if (!empty($eventSponsors['content'])): ?>
                     </td>
                     <?php else: ?>
                     <td class="col-time">
-                        <?= ($result['status'] === 'finished' && $result['finish_time']) ? formatDisplayTime($result['finish_time']) : '-' ?>
+                        <?php if ($result['status'] === 'finished' && $result['finish_time']): ?>
+                        <div class="split-time-main"><?= formatDisplayTime($result['finish_time']) ?></div>
+                        <?php if ($isTimeRanked && !empty($result['time_behind']) && $result['time_behind'] !== '-'): ?>
+                        <div class="split-time-details"><?= $result['time_behind'] ?></div>
+                        <?php endif; ?>
+                        <?php else: ?>
+                        -
+                        <?php endif; ?>
                     </td>
-                    <?php if ($isTimeRanked): ?>
-                    <td class="col-gap table-col-hide-mobile"><?= $result['time_behind'] ?? '-' ?></td>
-                    <?php endif; ?>
                     <?php foreach ($classSplits as $ss):
                         $splitTime = $result['ss' . $ss] ?? '';
                         $splitClass = '';

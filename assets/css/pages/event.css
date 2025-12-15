@@ -612,9 +612,43 @@
 
 .results-table {
     width: 100%;
-    border-collapse: separate;
-    border-spacing: 0;
+    border-collapse: collapse;
     table-layout: fixed;
+}
+
+/* Clean table styling - matching database/ranking pages */
+.results-table thead th {
+    padding: var(--space-sm) var(--space-md);
+    font-size: var(--text-xs);
+    font-weight: var(--weight-semibold);
+    color: var(--color-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-bottom: 1px solid var(--color-border);
+    background: transparent;
+}
+
+.results-table tbody tr {
+    border-bottom: 1px solid var(--color-border-light);
+    transition: background var(--transition-fast);
+}
+
+.results-table tbody tr:last-child {
+    border-bottom: none;
+}
+
+.results-table tbody td {
+    padding: var(--space-sm) var(--space-md);
+    vertical-align: middle;
+}
+
+/* Override striped background for clean look */
+.table--striped.results-table tbody tr:nth-child(odd) {
+    background: transparent;
+}
+
+.table--striped.results-table tbody tr:nth-child(odd):hover {
+    background: var(--color-bg-hover);
 }
 
 /* Add padding to first and last columns for edge-to-edge tables */
