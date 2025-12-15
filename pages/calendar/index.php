@@ -9,6 +9,7 @@ $currentUser = hub_current_user();
 
 // Filters
 $filterSeries = $_GET['series'] ?? '';
+$filterFormat = $_GET['format'] ?? '';
 
 // Get upcoming events with series colors and logo from brand
 $sql = "
@@ -34,6 +35,11 @@ if ($filterSeries) {
     $params[] = $filterSeries;
 }
 
+if ($filterFormat) {
+    $sql .= " AND e.discipline = ?";
+    $params[] = $filterFormat;
+}
+
 $sql .= " GROUP BY e.id ORDER BY e.date ASC LIMIT 50";
 
 $stmt = $pdo->prepare($sql);
@@ -50,6 +56,28 @@ $seriesStmt = $pdo->query("
     ORDER BY s.name
 ");
 $seriesList = $seriesStmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Get formats for filter - only formats that have upcoming events
+$formatStmt = $pdo->query("
+    SELECT DISTINCT discipline
+    FROM events
+    WHERE date >= CURDATE() AND active = 1 AND discipline IS NOT NULL AND discipline != ''
+    ORDER BY discipline
+");
+$formatList = $formatStmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Format display names
+$formatNames = [
+    'ENDURO' => 'Enduro',
+    'DH' => 'Downhill',
+    'XC' => 'XC',
+    'XCO' => 'XCO',
+    'XCM' => 'XCM',
+    'DUAL_SLALOM' => 'Dual Slalom',
+    'PUMPTRACK' => 'Pumptrack',
+    'GRAVEL' => 'Gravel',
+    'E-MTB' => 'E-MTB'
+];
 
 // Group events by month
 $eventsByMonth = [];
@@ -108,6 +136,17 @@ if (!function_exists('getDeadlineInfo')) {
             <?php endforeach; ?>
         </select>
     </div>
+    <div class="filter-group">
+        <label for="filter-format" class="filter-label">Format</label>
+        <select id="filter-format" class="filter-select" onchange="applyFilters()">
+            <option value="">Alla format</option>
+            <?php foreach ($formatList as $format): ?>
+                <option value="<?= htmlspecialchars($format['discipline']) ?>" <?= $filterFormat == $format['discipline'] ? 'selected' : '' ?>>
+                    <?= htmlspecialchars($formatNames[$format['discipline']] ?? $format['discipline']) ?>
+                </option>
+            <?php endforeach; ?>
+        </select>
+    </div>
 </div>
 
 <!-- Events List -->
@@ -161,6 +200,9 @@ if (!function_exists('getDeadlineInfo')) {
                                     <?php if ($event['series_name']): ?>
                                         <span class="event-series"><?= htmlspecialchars($event['series_name']) ?></span>
                                     <?php endif; ?>
+                                    <?php if (!empty($event['discipline'])): ?>
+                                        <span class="event-format"><?= htmlspecialchars($formatNames[$event['discipline']] ?? $event['discipline']) ?></span>
+                                    <?php endif; ?>
                                     <?php if ($location): ?>
                                         <span class="event-location">
                                             <i data-lucide="map-pin"></i><?= htmlspecialchars($location) ?>
@@ -199,8 +241,10 @@ if (!function_exists('getDeadlineInfo')) {
 <script>
 function applyFilters() {
     const series = document.getElementById('filter-series').value;
+    const format = document.getElementById('filter-format').value;
     const params = new URLSearchParams();
     if (series) params.set('series', series);
+    if (format) params.set('format', format);
     window.location.href = '/calendar' + (params.toString() ? '?' + params : '');
 }
 </script>
