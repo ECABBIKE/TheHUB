@@ -84,7 +84,7 @@
 }
 .sponsor-logos-grid {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(5, 1fr);
     gap: var(--space-md);
     align-items: center;
     justify-items: center;
@@ -1113,7 +1113,13 @@ td.col-place {
     }
 
     .sponsor-logos-grid {
+        grid-template-columns: repeat(3, 1fr);
         gap: var(--space-sm);
+    }
+
+    /* Larger sponsor logos on mobile */
+    .sponsor-logo-item img {
+        max-height: 65px;
     }
 
     /* Compact event header on mobile */
