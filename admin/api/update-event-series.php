@@ -31,14 +31,14 @@ if (!$eventId) {
 }
 
 try {
-    $db = getDB();
+    global $pdo;
 
-    // Update the event
-    $db->update('events', [
-        'series_id' => $seriesId
-    ], 'id = ?', [$eventId]);
+    // Update the event using direct PDO
+    $stmt = $pdo->prepare("UPDATE events SET series_id = ? WHERE id = ?");
+    $stmt->execute([$seriesId, $eventId]);
 
     echo json_encode(['success' => true]);
 } catch (Exception $e) {
+    error_log("Series update error: " . $e->getMessage() . " | Event ID: $eventId | Series ID: " . var_export($seriesId, true));
     echo json_encode(['success' => false, 'error' => $e->getMessage()]);
 }
