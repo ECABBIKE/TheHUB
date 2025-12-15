@@ -629,7 +629,7 @@
 }
 
 .results-table tbody tr {
-    border-bottom: 1px solid var(--color-border-light);
+    border-bottom: 1px solid var(--color-divider, rgba(0,0,0,0.08));
     transition: background var(--transition-fast);
 }
 

@@ -16,6 +16,7 @@
 
   --color-border:#2D3139;
   --color-border-strong:#3F444D;
+  --color-border-light:#1F2128;
   --color-divider:#1F2128;
 
   --color-accent:#3B9EFF;
@@ -53,6 +54,7 @@ html[data-theme="light"]{
 
   --color-border:#E5E7EB;
   --color-border-strong:#D1D5DB;
+  --color-border-light:#F3F4F6;
   --color-divider:#F3F4F6;
 
   --color-accent:#004A98;
