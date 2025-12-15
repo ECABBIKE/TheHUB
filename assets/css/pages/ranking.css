@@ -144,39 +144,97 @@
   letter-spacing: 0.05em;
 }
 
+/* ============================================================================
+   TABLE STYLING - Matching database page design
+   ============================================================================ */
+
+/* Override striped table to use clean separator lines */
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table thead th {
+  padding: var(--space-sm) var(--space-md);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid var(--color-border);
+  background: transparent;
+}
+
+.table tbody tr {
+  border-bottom: 1px solid var(--color-border-light);
+  transition: background var(--transition-fast);
+}
+
+.table tbody tr:last-child {
+  border-bottom: none;
+}
+
+.table tbody tr:hover {
+  background: var(--color-bg-hover);
+}
+
+.table tbody td {
+  padding: var(--space-sm) var(--space-md);
+  vertical-align: middle;
+}
+
+/* Remove striped background */
+.table--striped tbody tr:nth-child(odd) {
+  background: transparent;
+}
+
+.table--striped tbody tr:nth-child(odd):hover {
+  background: var(--color-bg-hover);
+}
+
+/* Medal and rank styling */
 .medal-icon {
   width: 24px;
   height: 24px;
   vertical-align: middle;
   display: inline-block;
 }
+
 .rank-number {
   font-weight: var(--weight-semibold);
-  color: var(--color-text-secondary);
+  color: var(--color-text-muted);
 }
+
 .rider-link, .club-link {
-  color: var(--color-text);
+  color: var(--color-text-primary);
   font-weight: var(--weight-medium);
+  text-decoration: none;
 }
+
 .rider-link:hover, .club-link:hover {
   color: var(--color-accent-text);
 }
+
 .points-value {
   font-weight: var(--weight-bold);
   color: var(--color-accent-text);
 }
 
+/* Mobile card styling */
 .result-place.top-3 {
   background: var(--color-accent-light);
 }
+
 .result-points {
   text-align: right;
 }
+
 .points-big {
   font-size: var(--text-lg);
   font-weight: var(--weight-bold);
   color: var(--color-accent-text);
 }
+
 .points-label {
   font-size: var(--text-xs);
   color: var(--color-text-muted);
