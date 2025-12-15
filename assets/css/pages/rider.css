@@ -2500,24 +2500,38 @@
     padding: 0 2px;
 }
 
-/* Mobile Modal */
+/* Mobile Modal - Fullscreen */
 @media (max-width: 599px) {
     .ranking-modal-overlay {
-        padding: var(--space-sm);
-        align-items: flex-end;
+        padding: 0;
+        align-items: stretch;
     }
 
     .ranking-modal {
-        max-height: 90vh;
-        border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+        max-height: 100vh;
+        height: 100vh;
+        width: 100vw;
+        max-width: 100vw;
+        border-radius: 0;
+        display: flex;
+        flex-direction: column;
     }
 
     .ranking-modal-header {
-        padding: var(--space-sm) var(--space-md);
+        padding: var(--space-md);
+        flex-shrink: 0;
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        background: #ffffff;
     }
 
     .ranking-modal-body {
         padding: var(--space-md);
+        flex: 1;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        max-height: none;
     }
 
     .modal-event-item {
@@ -2526,5 +2540,19 @@
 
     .modal-calc-row {
         font-size: 10px;
+    }
+
+    /* Larger close button on mobile */
+    .ranking-modal-close {
+        width: 44px;
+        height: 44px;
+        background: var(--color-bg-sunken);
+        border-radius: var(--radius-md);
+    }
+
+    .ranking-modal-close i,
+    .ranking-modal-close svg {
+        width: 24px;
+        height: 24px;
     }
 }
