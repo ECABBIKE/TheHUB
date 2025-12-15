@@ -28,11 +28,11 @@ if ($filterBrand) {
     // Filter by brand (series name without year)
     // Match series names that start with the brand name
     if ($seriesEventsTableExists) {
-        $where[] = "(s.name LIKE CONCAT(?, '%') OR e.id IN (SELECT se.event_id FROM series_events se INNER JOIN series s2 ON se.series_id = s2.id WHERE s2.name LIKE CONCAT(?, '%')))";
+        $where[] = "(s.name COLLATE utf8mb4_unicode_ci LIKE CONCAT(?, '%') OR e.id IN (SELECT se.event_id FROM series_events se INNER JOIN series s2 ON se.series_id = s2.id WHERE s2.name COLLATE utf8mb4_unicode_ci LIKE CONCAT(?, '%')))";
         $params[] = $filterBrand;
         $params[] = $filterBrand;
     } else {
-        $where[] = "s.name LIKE CONCAT(?, '%')";
+        $where[] = "s.name COLLATE utf8mb4_unicode_ci LIKE CONCAT(?, '%')";
         $params[] = $filterBrand;
     }
 }
