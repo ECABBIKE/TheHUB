@@ -46,9 +46,27 @@ if (!function_exists('hub_asset')) {
 <link rel="manifest" href="<?= $hubUrl ?>/manifest.json">
 
 <!-- Favicon -->
-<link rel="icon" type="image/png" sizes="32x32" href="/uploads/icons/GSIkon.png">
-<link rel="icon" type="image/png" sizes="16x16" href="/uploads/icons/GSIkon.png">
-<link rel="icon" type="image/png" href="/uploads/icons/GSIkon.png">
+<?php
+// Load custom favicon from branding.json if set
+$faviconPath = '/uploads/icons/GSIkon.png'; // Default
+$brandingJsonFile = __DIR__ . '/../uploads/branding.json';
+if (file_exists($brandingJsonFile)) {
+    $brandingJson = json_decode(file_get_contents($brandingJsonFile), true);
+    if (!empty($brandingJson['logos']['favicon'])) {
+        $faviconPath = $brandingJson['logos']['favicon'];
+    }
+}
+// Determine icon type based on file extension
+$iconType = 'image/png';
+if (strpos($faviconPath, '.svg') !== false) {
+    $iconType = 'image/svg+xml';
+} elseif (strpos($faviconPath, '.ico') !== false) {
+    $iconType = 'image/x-icon';
+}
+?>
+<link rel="icon" type="<?= $iconType ?>" sizes="32x32" href="<?= htmlspecialchars($faviconPath) ?>">
+<link rel="icon" type="<?= $iconType ?>" sizes="16x16" href="<?= htmlspecialchars($faviconPath) ?>">
+<link rel="icon" type="<?= $iconType ?>" href="<?= htmlspecialchars($faviconPath) ?>">
 
 <!-- Preconnect & Google Fonts -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
