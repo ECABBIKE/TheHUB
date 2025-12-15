@@ -607,6 +607,10 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
                 $rankPercent = max(5, min(100, 100 - (($rankingPosition - 1) / max(1, $totalRankedRiders - 1)) * 100));
             ?>
             <div class="ranking-position-huge">#<?= $rankingPosition ?></div>
+            <div class="ranking-points-display">
+                <span class="ranking-points-value"><?= number_format($rankingPoints, 1) ?></span>
+                <span class="ranking-points-label">poäng</span>
+            </div>
             <div class="ranking-progress-bar-v3">
                 <div class="progress-track">
                     <div class="progress-fill" style="width: <?= $rankPercent ?>%"></div>
@@ -616,14 +620,91 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
                     <span>#1</span>
                 </div>
             </div>
+            <button type="button" class="btn-calc-ranking" onclick="openRankingModal()">
+                <i data-lucide="calculator"></i>
+                <span>Visa uträkning</span>
+            </button>
             <?php endif; ?>
         </div>
 
-        <!-- FORM POINTS CARD -->
-        <div class="card form-points-card-v3">
-            <h3 class="card-section-title-sm"><i data-lucide="activity"></i> Form</h3>
-            <div class="form-points-huge"><?= number_format($rankingPoints, 1) ?></div>
-            <div class="form-points-label">poäng</div>
+        <!-- FORM CARD -->
+        <div class="card form-card-v3">
+            <h3 class="card-section-title-sm"><i data-lucide="trending-up"></i> Form</h3>
+            <?php if ($hasCompetitiveResults && !empty($formResults)):
+                // Räkna snittplacering av senaste 5 tävlingarna
+                $last5 = array_slice($formResults, -5);
+                $positionSum = array_sum(array_column($last5, 'position'));
+                $avgPlacement = count($last5) > 0 ? $positionSum / count($last5) : 0;
+                $avgDisplay = number_format($avgPlacement, 1);
+            ?>
+            <div class="form-avg-compact">
+                <span class="form-avg-number"><?= $avgDisplay ?></span>
+                <span class="form-avg-text">snitt</span>
+            </div>
+
+            <!-- Mini Form Graph -->
+            <div class="form-mini-chart">
+                <?php
+                $chartWidth = 280;
+                $chartHeight = 80;
+                $paddingX = 20;
+                $paddingY = 10;
+                $numResults = count($last5);
+
+                if ($numResults > 0) {
+                    $xStep = $numResults > 1 ? ($chartWidth - $paddingX * 2) / ($numResults - 1) : 0;
+                    $positions = array_column($last5, 'position');
+                    $maxPos = max($positions);
+                    $minPos = min($positions);
+                    $range = max(1, $maxPos - $minPos);
+
+                    $points = [];
+                    $circles = [];
+
+                    foreach ($last5 as $idx => $fr) {
+                        $x = $paddingX + ($idx * $xStep);
+                        $y = $paddingY + (($fr['position'] - $minPos) / $range) * ($chartHeight - $paddingY * 2);
+                        $points[] = "$x,$y";
+
+                        $fillColor = $fr['position'] == 1 ? '#FFD700' :
+                                    ($fr['position'] == 2 ? '#C0C0C0' :
+                                    ($fr['position'] == 3 ? '#CD7F32' : 'var(--color-accent)'));
+
+                        $circles[] = [
+                            'x' => $x,
+                            'y' => $y,
+                            'fill' => $fillColor,
+                            'pos' => $fr['position']
+                        ];
+                    }
+                    $polyPoints = implode(' ', $points);
+                ?>
+                <svg viewBox="0 0 <?= $chartWidth ?> <?= $chartHeight ?>" class="form-mini-svg">
+                    <defs>
+                        <linearGradient id="formMiniGradient" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stop-color="var(--color-accent)" stop-opacity="0.2"/>
+                            <stop offset="100%" stop-color="var(--color-accent)" stop-opacity="0.01"/>
+                        </linearGradient>
+                    </defs>
+                    <!-- Area fill -->
+                    <polygon points="<?= $polyPoints ?> <?= $paddingX + (($numResults - 1) * $xStep) ?>,<?= $chartHeight - $paddingY ?> <?= $paddingX ?>,<?= $chartHeight - $paddingY ?>" fill="url(#formMiniGradient)"/>
+                    <!-- Trend line -->
+                    <polyline points="<?= $polyPoints ?>" fill="none" stroke="var(--color-accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <!-- Data points -->
+                    <?php foreach ($circles as $c): ?>
+                    <circle cx="<?= $c['x'] ?>" cy="<?= $c['y'] ?>" r="4" fill="<?= $c['fill'] ?>" stroke="var(--color-bg-card)" stroke-width="1.5"/>
+                    <?php endforeach; ?>
+                </svg>
+                <?php } ?>
+            </div>
+
+            <!-- Last 5 results -->
+            <div class="form-last-5">
+                <?php foreach ($last5 as $fr): ?>
+                <div class="form-position-badge p<?= $fr['position'] ?>"><?= $fr['position'] ?></div>
+                <?php endforeach; ?>
+            </div>
+            <?php endif; ?>
         </div>
 
         <!-- HIGHLIGHTS CARD -->
