@@ -108,6 +108,13 @@ try {
                         $updateCount++;
                         break;
 
+                    case 'organizer_club_id':
+                        $organizerClubId = ($value !== '' && $value !== null) ? intval($value) : null;
+                        $stmt = $pdo->prepare("UPDATE events SET organizer_club_id = ? WHERE id = ?");
+                        $stmt->execute([$organizerClubId, $eventId]);
+                        $updateCount++;
+                        break;
+
                     case 'website':
                         $website = trim($value);
                         $stmt = $pdo->prepare("UPDATE events SET website = ? WHERE id = ?");

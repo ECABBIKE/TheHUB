@@ -125,6 +125,20 @@ try {
     $allSeriesForDropdown = [];
 }
 
+// Get all active clubs for organizer dropdown
+try {
+    $allClubs = $pdo->query("SELECT id, name FROM clubs WHERE active = 1 ORDER BY name")->fetchAll(PDO::FETCH_ASSOC);
+} catch (Exception $e) {
+    $allClubs = [];
+}
+
+// Get all pricing templates for pricing template dropdown
+try {
+    $allPricingTemplates = $pdo->query("SELECT id, name FROM pricing_templates ORDER BY is_default DESC, name")->fetchAll(PDO::FETCH_ASSOC);
+} catch (Exception $e) {
+    $allPricingTemplates = [];
+}
+
 // Get unique brands (series names without year) for filter
 try {
     if ($filterYear) {
@@ -361,11 +375,13 @@ include __DIR__ . '/components/unified-layout.php';
                                     </select>
                                 </td>
                                 <td class="event-field">
-                                    <select class="admin-form-select" style="min-width: 120px; padding: var(--space-xs) var(--space-sm);" onchange="updatePricingTemplate(<?= $event['id'] ?>, this.value)">
+                                    <select class="admin-form-select" style="min-width: 150px; padding: var(--space-xs) var(--space-sm); font-size: 0.875rem;" onchange="updatePricingTemplate(<?= $event['id'] ?>, this.value)">
                                         <option value="">-</option>
-                                        <option value="1" <?= ($event['pricing_template_id'] ?? '') == '1' ? 'selected' : '' ?>>Standard</option>
-                                        <option value="2" <?= ($event['pricing_template_id'] ?? '') == '2' ? 'selected' : '' ?>>Premium</option>
-                                        <option value="3" <?= ($event['pricing_template_id'] ?? '') == '3' ? 'selected' : '' ?>>Gratis</option>
+                                        <?php foreach ($allPricingTemplates as $template): ?>
+                                            <option value="<?= $template['id'] ?>" <?= ($event['pricing_template_id'] ?? '') == $template['id'] ? 'selected' : '' ?>>
+                                                <?= htmlspecialchars($template['name']) ?>
+                                            </option>
+                                        <?php endforeach; ?>
                                     </select>
                                 </td>
                                 <td class="event-field">
@@ -375,7 +391,14 @@ include __DIR__ . '/components/unified-layout.php';
                                            placeholder="-">
                                 </td>
                                 <td class="organizer-field">
-                                    <span class="organizer-display"><?= htmlspecialchars($event['organizer_name'] ?? '-') ?></span>
+                                    <select class="admin-form-select" style="min-width: 150px; padding: var(--space-xs) var(--space-sm); font-size: 0.875rem;" onchange="updateOrganizerClub(<?= $event['id'] ?>, this.value)">
+                                        <option value="">-</option>
+                                        <?php foreach ($allClubs as $club): ?>
+                                            <option value="<?= $club['id'] ?>" <?= ($event['organizer_club_id'] ?? '') == $club['id'] ? 'selected' : '' ?>>
+                                                <?= htmlspecialchars($club['name']) ?>
+                                            </option>
+                                        <?php endforeach; ?>
+                                    </select>
                                 </td>
                                 <td class="organizer-field">
                                     <input type="text" class="admin-form-input organizer-input" style="min-width: 120px; padding: var(--space-xs) var(--space-sm); font-size: 0.875rem;"
@@ -603,6 +626,33 @@ async function updateAdventId(eventId, adventId) {
     }
 }
 
+async function updateOrganizerClub(eventId, clubId) {
+    try {
+        const response = await fetch('/admin/api/update-organizer-field.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                event_id: eventId,
+                field: 'organizer_club_id',
+                value: clubId,
+                csrf_token: csrfToken
+            })
+        });
+
+        const result = await response.json();
+        if (!result.success) {
+            alert('Fel: ' + (result.error || 'Kunde inte uppdatera arrangör'));
+        } else {
+            showToast('Arrangör uppdaterad', 'success');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Fel vid uppdatering av arrangör');
+    }
+}
+
 async function updateOrganizerField(eventId, field, value) {
     try {
         const response = await fetch('/admin/api/update-organizer-field.php', {
@@ -809,7 +859,9 @@ function getFieldType(element) {
         return 'advent_id';
     }
     // Organizer fields
-    else if (onblur.includes("'website'")) {
+    else if (onchange.includes('updateOrganizerClub')) {
+        return 'organizer_club_id';
+    } else if (onblur.includes("'website'")) {
         return 'website';
     } else if (onblur.includes("'contact_email'")) {
         return 'contact_email';
