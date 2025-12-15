@@ -112,13 +112,13 @@ $homepageLogo = getBranding('logos.homepage');
     </div>
 
     <!-- About Section with Title -->
-    <div class="welcome-about">
-        <h1 class="welcome-about-title">THEHUB</h1>
-        <p class="welcome-about-tagline">GravitySeries Competition Platform</p>
-        <p class="welcome-about-subtitle">Den centrala plattformen för Svensk Gravity</p>
-        <p class="welcome-about-desc">Här hittar du kalender, resultat, serieställningar, ranking och databas över åkare och klubbar.</p>
+    <div class="welcome-about" style="text-align: center;">
+        <h1 class="welcome-about-title" style="text-align: center;">THEHUB</h1>
+        <p class="welcome-about-tagline" style="text-align: center;">GravitySeries Competition Platform</p>
+        <p class="welcome-about-subtitle" style="text-align: center;">Den centrala plattformen för Svensk Gravity</p>
+        <p class="welcome-about-desc" style="text-align: center; margin: 0 auto; max-width: 700px;">Här hittar du kalender, resultat, serieställningar, ranking och databas över åkare och klubbar.</p>
         <?php if (!$isLoggedIn): ?>
-        <p class="welcome-about-note">Logga in för att se statistik, kommande tävlingar och senaste resultat.</p>
+        <p class="welcome-about-note" style="text-align: center;">Logga in för att se statistik, kommande tävlingar och senaste resultat.</p>
         <?php endif; ?>
     </div>
 
