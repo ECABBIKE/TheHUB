@@ -2233,6 +2233,375 @@
     padding: 0 30px;
 }
 
+/* ============================================
+   PROFILE ID BADGES
+   ============================================ */
+
+.profile-id-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-sm);
+    padding-top: var(--space-md);
+    border-top: 1px solid var(--color-border);
+}
+
+.id-badge-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: var(--space-sm) var(--space-md);
+    background: var(--color-bg-sunken);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    min-width: 80px;
+}
+
+.id-badge-box.gravity-id {
+    background: linear-gradient(135deg, rgba(255,215,0,0.1), rgba(255,180,0,0.05));
+    border-color: rgba(255,215,0,0.3);
+}
+
+.id-badge-box.license.active {
+    background: linear-gradient(135deg, rgba(97,206,112,0.1), rgba(97,206,112,0.05));
+    border-color: rgba(97,206,112,0.3);
+}
+
+.id-badge-box.license.inactive {
+    opacity: 0.6;
+}
+
+.id-badge-box.uci {
+    background: linear-gradient(135deg, rgba(0,74,152,0.1), rgba(0,74,152,0.05));
+    border-color: rgba(0,74,152,0.3);
+}
+
+.id-badge-label {
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--color-text-muted);
+    margin-bottom: 2px;
+}
+
+.id-badge-value {
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--color-text-primary);
+}
+
+/* ============================================
+   PROFILE SOCIAL LINKS
+   ============================================ */
+
+.profile-social {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-sm);
+    padding-top: var(--space-sm);
+}
+
+/* ============================================
+   PROFILE ACTIONS ROW
+   ============================================ */
+
+.profile-actions-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-sm);
+    padding-top: var(--space-md);
+    border-top: 1px solid var(--color-border);
+}
+
+.btn-action {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-xs);
+    padding: var(--space-sm) var(--space-md);
+    background: var(--color-bg-sunken);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    color: var(--color-text-secondary);
+    font-size: var(--text-sm);
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: inherit;
+}
+
+.btn-action:hover {
+    background: var(--color-bg-hover);
+    border-color: var(--color-text-muted);
+    color: var(--color-text-primary);
+}
+
+.btn-action.primary {
+    background: var(--color-accent);
+    border-color: var(--color-accent);
+    color: white;
+}
+
+.btn-action.primary:hover {
+    opacity: 0.9;
+}
+
+.btn-action i, .btn-action svg {
+    width: 16px;
+    height: 16px;
+}
+
+/* ============================================
+   RANKING PROGRESS BAR
+   ============================================ */
+
+.ranking-progress-bar {
+    margin-bottom: var(--space-md);
+}
+
+.ranking-progress-bar .progress-track {
+    position: relative;
+    height: 8px;
+    background: var(--color-bg-sunken);
+    border-radius: var(--radius-full);
+    overflow: visible;
+}
+
+.ranking-progress-bar .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--color-accent), #4CAF50);
+    border-radius: var(--radius-full);
+    transition: width 0.6s ease;
+}
+
+.ranking-progress-bar .progress-marker {
+    position: absolute;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 14px;
+    height: 14px;
+    background: var(--color-accent);
+    border: 3px solid var(--color-bg-card);
+    border-radius: 50%;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+}
+
+.ranking-progress-bar .progress-labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: var(--text-xs);
+    color: var(--color-text-muted);
+    margin-top: var(--space-xs);
+}
+
+/* ============================================
+   RANKING POINTS ROW
+   ============================================ */
+
+.ranking-points-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: var(--space-md);
+    border-top: 1px solid var(--color-border);
+}
+
+.points-display {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-xs);
+}
+
+.points-value {
+    font-family: var(--font-mono);
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--color-accent);
+}
+
+.points-label {
+    font-size: var(--text-sm);
+    color: var(--color-text-muted);
+}
+
+/* ============================================
+   FORM CARD - AVERAGE PLACEMENT
+   ============================================ */
+
+.form-avg-display {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-md);
+    margin-bottom: var(--space-md);
+    flex-wrap: wrap;
+}
+
+.avg-value-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: var(--space-md);
+    background: linear-gradient(135deg, rgba(97,206,112,0.1), rgba(97,206,112,0.05));
+    border: 1px solid rgba(97,206,112,0.3);
+    border-radius: var(--radius-lg);
+    min-width: 100px;
+}
+
+.avg-value {
+    font-family: var(--font-mono);
+    font-size: 1.75rem;
+    font-weight: 800;
+    color: var(--color-accent);
+    line-height: 1;
+}
+
+.avg-label {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--color-text-muted);
+    margin-top: var(--space-xs);
+}
+
+.avg-explanation {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    font-size: var(--text-xs);
+    color: var(--color-text-muted);
+    flex: 1;
+    min-width: 150px;
+}
+
+.avg-explanation i, .avg-explanation svg {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+}
+
+/* Form Chart Container */
+.form-chart-container {
+    margin-bottom: var(--space-md);
+    padding: var(--space-sm);
+    background: var(--color-bg-sunken);
+    border-radius: var(--radius-md);
+}
+
+.form-chart-svg {
+    width: 100%;
+    height: auto;
+    max-height: 120px;
+}
+
+/* Form Results List */
+.form-results-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+    margin-bottom: var(--space-md);
+}
+
+.form-result-row {
+    display: grid;
+    grid-template-columns: 32px 1fr auto auto;
+    gap: var(--space-sm);
+    align-items: center;
+    padding: var(--space-xs) var(--space-sm);
+    background: var(--color-bg-sunken);
+    border-radius: var(--radius-sm);
+    font-size: var(--text-sm);
+}
+
+.form-pos-badge {
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--color-bg-card);
+    border-radius: var(--radius-sm);
+    font-weight: 700;
+    font-size: var(--text-xs);
+    color: var(--color-text-secondary);
+}
+
+.form-pos-badge.gold { background: rgba(255,215,0,0.2); color: #b8860b; }
+.form-pos-badge.silver { background: rgba(192,192,192,0.2); color: #6b7280; }
+.form-pos-badge.bronze { background: rgba(205,127,50,0.2); color: #92400e; }
+
+.form-medal-sm {
+    width: 20px;
+    height: 20px;
+}
+
+.form-result-event {
+    color: var(--color-text-primary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.form-result-ratio {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    color: var(--color-text-muted);
+    background: var(--color-bg-card);
+    padding: 2px 6px;
+    border-radius: var(--radius-xs);
+}
+
+.form-result-avg {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    font-weight: 600;
+    color: var(--color-accent);
+    min-width: 35px;
+    text-align: right;
+}
+
+/* Mobile adjustments */
+@media (max-width: 599px) {
+    .profile-id-badges {
+        justify-content: center;
+    }
+
+    .id-badge-box {
+        flex: 1;
+        min-width: 70px;
+    }
+
+    .profile-social {
+        justify-content: center;
+    }
+
+    .profile-actions-row {
+        justify-content: center;
+    }
+
+    .form-avg-display {
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .avg-value-box {
+        width: 100%;
+    }
+
+    .avg-explanation {
+        justify-content: center;
+        text-align: center;
+    }
+
+    .form-result-row {
+        grid-template-columns: 28px 1fr auto;
+    }
+
+    .form-result-avg {
+        display: none;
+    }
+}
+
 /* Ranking Progress Bar (fallback) */
 .ranking-bar-container {
     margin-top: var(--space-md);
