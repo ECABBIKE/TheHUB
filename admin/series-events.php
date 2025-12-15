@@ -20,6 +20,43 @@ if (!$series) {
  redirect('/admin/series.php');
 }
 
+// AUTO-SYNC: Add events locked to this series (events.series_id) to series_events table
+// This ensures events with series_id set always appear in the series
+$lockedEvents = $db->getAll("
+    SELECT e.id, e.date
+    FROM events e
+    WHERE e.series_id = ? AND e.active = 1
+    AND e.id NOT IN (SELECT event_id FROM series_events WHERE series_id = ?)
+", [$seriesId, $seriesId]);
+
+foreach ($lockedEvents as $ev) {
+    // Get sort order based on date (to maintain chronological order)
+    $existingCount = $db->getRow("SELECT COUNT(*) as cnt FROM series_events WHERE series_id = ?", [$seriesId]);
+    $db->insert('series_events', [
+        'series_id' => $seriesId,
+        'event_id' => $ev['id'],
+        'template_id' => null,
+        'sort_order' => ($existingCount['cnt'] ?? 0) + 1
+    ]);
+}
+
+// Re-sort all events by date
+if (!empty($lockedEvents)) {
+    $allSeriesEvents = $db->getAll("
+        SELECT se.id, e.date
+        FROM series_events se
+        JOIN events e ON se.event_id = e.id
+        WHERE se.series_id = ?
+        ORDER BY e.date ASC
+    ", [$seriesId]);
+
+    $sortOrder = 1;
+    foreach ($allSeriesEvents as $se) {
+        $db->update('series_events', ['sort_order' => $sortOrder], 'id = ?', [$se['id']]);
+        $sortOrder++;
+    }
+}
+
 $message = '';
 $messageType = 'info';
 
@@ -57,8 +94,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
  'sort_order' => $sortOrder
  ]);
 
- // Also update events.series_id for backward compatibility and sync
+ // Only set events.series_id if event doesn't already have a primary series
+ // This allows events to be in multiple series without losing their main series
+ $event = $db->getRow("SELECT series_id FROM events WHERE id = ?", [$eventId]);
+ if (empty($event['series_id'])) {
  $db->update('events', ['series_id' => $seriesId], 'id = ?', [$eventId]);
+ }
 
  // If a template was specified, calculate series points
  // NOTE: This only affects series_results, NOT results.points (ranking)
@@ -239,16 +280,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
  }
 }
 
-// Get events in this series - sorted by sort_order (user-defined order)
+// Get events in this series - sorted by event date (chronological order)
+// Events with series_id = this series are auto-synced and marked as "locked"
 // Uses point_scales for templates (same as ranking system, but points stored separately in series_results)
 $seriesEvents = $db->getAll("
  SELECT se.*, e.name as event_name, e.date as event_date, e.location, e.discipline,
+ e.series_id as event_series_id,
  ps.name as template_name
  FROM series_events se
  JOIN events e ON se.event_id = e.id
  LEFT JOIN point_scales ps ON se.template_id = ps.id
  WHERE se.series_id = ?
- ORDER BY se.sort_order ASC
+ ORDER BY e.date ASC
 ", [$seriesId]);
 
 // Get series year for matching
@@ -589,6 +632,7 @@ include __DIR__ . '/components/unified-layout.php';
   <i data-lucide="list"></i>
   Events i serien (<?= count($seriesEvents) ?>)
   </h2>
+  <p class="text-sm text-secondary" style="margin-top: 4px;">Sorteras automatiskt efter datum. Events med huvudserie markeras med <span class="badge badge-success badge-sm">Låst</span></p>
   </div>
   <div class="card-body">
   <?php if (empty($seriesEvents)): ?>
@@ -625,7 +669,7 @@ include __DIR__ . '/components/unified-layout.php';
    <th class="table-col-w-60">
     <input type="checkbox" id="selectAll" title="Markera alla">
    </th>
-   <th class="table-col-w-80">Ordning</th>
+   <th class="table-col-w-60 text-center">#</th>
    <th>Event</th>
    <th>Datum</th>
    <th>Plats</th>
@@ -640,35 +684,14 @@ include __DIR__ . '/components/unified-layout.php';
    <td>
     <input type="checkbox" class="event-checkbox" name="series_event_ids[]" value="<?= $se['id'] ?>" form="bulkForm">
    </td>
-   <td>
-    <div class="flex items-center gap-xs">
+   <td class="text-center">
     <span class="badge badge-primary badge-sm">#<?= $eventNumber ?></span>
-    <div class="flex flex-col gs-gap-xxs">
-    <?php if ($eventNumber > 1): ?>
-    <form method="POST" class="gs-display-inline">
-    <?= csrf_field() ?>
-    <input type="hidden" name="action" value="move_up">
-    <input type="hidden" name="series_event_id" value="<?= $se['id'] ?>">
-    <button type="submit" class="btn btn-xs btn--secondary" title="Flytta upp">
-     <i data-lucide="chevron-up" class="gs-icon-12"></i>
-    </button>
-    </form>
-    <?php endif; ?>
-    <?php if ($eventNumber < $totalEvents): ?>
-    <form method="POST" class="gs-display-inline">
-    <?= csrf_field() ?>
-    <input type="hidden" name="action" value="move_down">
-    <input type="hidden" name="series_event_id" value="<?= $se['id'] ?>">
-    <button type="submit" class="btn btn-xs btn--secondary" title="Flytta ner">
-     <i data-lucide="chevron-down" class="gs-icon-12"></i>
-    </button>
-    </form>
-    <?php endif; ?>
-    </div>
-    </div>
    </td>
    <td>
     <strong><?= h($se['event_name']) ?></strong>
+    <?php if ($se['event_series_id'] == $seriesId): ?>
+    <span class="badge badge-success badge-sm" title="Huvudserie - låst till denna serie"><i data-lucide="lock" style="width:10px;height:10px;"></i> Låst</span>
+    <?php endif; ?>
     <?php if ($se['discipline']): ?>
     <br><span class="text-xs text-secondary"><?= h($se['discipline']) ?></span>
     <?php endif; ?>
