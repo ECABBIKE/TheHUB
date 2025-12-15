@@ -8,6 +8,11 @@
     max-width: var(--content-max-width, 1400px);
     margin: 0 auto;
     padding: var(--space-sm);
+    text-align: center;
+}
+
+.welcome-page * {
+    text-align: center;
 }
 
 /* Header - Big Logo */
