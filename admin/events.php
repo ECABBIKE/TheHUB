@@ -132,11 +132,11 @@ try {
     $allClubs = [];
 }
 
-// Get all active point scales for pricing template dropdown
+// Get all pricing templates for pricing template dropdown
 try {
-    $allPointScales = $pdo->query("SELECT id, name FROM point_scales WHERE active = 1 ORDER BY name")->fetchAll(PDO::FETCH_ASSOC);
+    $allPricingTemplates = $pdo->query("SELECT id, name FROM pricing_templates ORDER BY is_default DESC, name")->fetchAll(PDO::FETCH_ASSOC);
 } catch (Exception $e) {
-    $allPointScales = [];
+    $allPricingTemplates = [];
 }
 
 // Get unique brands (series names without year) for filter
@@ -377,9 +377,9 @@ include __DIR__ . '/components/unified-layout.php';
                                 <td class="event-field">
                                     <select class="admin-form-select" style="min-width: 150px; padding: var(--space-xs) var(--space-sm); font-size: 0.875rem;" onchange="updatePricingTemplate(<?= $event['id'] ?>, this.value)">
                                         <option value="">-</option>
-                                        <?php foreach ($allPointScales as $scale): ?>
-                                            <option value="<?= $scale['id'] ?>" <?= ($event['pricing_template_id'] ?? '') == $scale['id'] ? 'selected' : '' ?>>
-                                                <?= htmlspecialchars($scale['name']) ?>
+                                        <?php foreach ($allPricingTemplates as $template): ?>
+                                            <option value="<?= $template['id'] ?>" <?= ($event['pricing_template_id'] ?? '') == $template['id'] ? 'selected' : '' ?>>
+                                                <?= htmlspecialchars($template['name']) ?>
                                             </option>
                                         <?php endforeach; ?>
                                     </select>
