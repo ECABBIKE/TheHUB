@@ -3,6 +3,8 @@
  * Fix UCI-ID Format Tool
  * Converts UCI IDs to standard format: XXX XXX XXX XX
  * Based on normalize-names.php structure
+ *
+ * Note: normalizeUciId() is defined in includes/helpers.php
  */
 require_once __DIR__ . '/../config.php';
 require_admin();
@@ -10,27 +12,6 @@ require_admin();
 $db = getDB();
 $message = '';
 $messageType = '';
-
-/**
- * Normalize UCI-ID to standard format: XXX XXX XXX XX
- */
-function normalizeUciId($uciId) {
-    if (empty($uciId)) return '';
-
-    // Strip all non-digits
-    $digits = preg_replace('/[^0-9]/', '', $uciId);
-
-    // If we have 11 digits, format as XXX XXX XXX XX
-    if (strlen($digits) === 11) {
-        return substr($digits, 0, 3) . ' ' .
-               substr($digits, 3, 3) . ' ' .
-               substr($digits, 6, 3) . ' ' .
-               substr($digits, 9, 2);
-    }
-
-    // Otherwise return cleaned version
-    return $digits;
-}
 
 /**
  * Check if UCI-ID needs normalization (not in XXX XXX XXX XX format)
