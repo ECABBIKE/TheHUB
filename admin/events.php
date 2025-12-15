@@ -86,11 +86,38 @@ try {
     $allYears = [];
 }
 
-// Get unique disciplines for filter
+// Define valid disciplines with display names
+$disciplineMapping = [
+    'ENDURO' => 'Enduro',
+    'DH' => 'Downhill',
+    'XC' => 'XC',
+    'XCO' => 'XCO',
+    'XCM' => 'XCM',
+    'DUAL_SLALOM' => 'Dual Slalom',
+    'PUMPTRACK' => 'Pumptrack',
+    'GRAVEL' => 'Gravel',
+    'E-MTB' => 'E-MTB'
+];
+
+// Get which disciplines are actually used in events
 try {
-    $allDisciplines = $pdo->query("SELECT DISTINCT discipline FROM events WHERE discipline IS NOT NULL AND discipline != '' ORDER BY discipline")->fetchAll(PDO::FETCH_COLUMN);
+    $usedDisciplines = $pdo->query("SELECT DISTINCT discipline FROM events WHERE discipline IS NOT NULL AND discipline != '' ORDER BY discipline")->fetchAll(PDO::FETCH_COLUMN);
+    // Only show disciplines that exist in the database
+    $allDisciplines = [];
+    foreach ($usedDisciplines as $disc) {
+        if (isset($disciplineMapping[$disc])) {
+            $allDisciplines[$disc] = $disciplineMapping[$disc];
+        }
+    }
 } catch (Exception $e) {
     $allDisciplines = [];
+}
+
+// Get all active series for dropdown in table
+try {
+    $allSeriesForDropdown = $pdo->query("SELECT id, name FROM series WHERE active = 1 ORDER BY year DESC, name")->fetchAll(PDO::FETCH_ASSOC);
+} catch (Exception $e) {
+    $allSeriesForDropdown = [];
 }
 
 // Get unique brands (series names without year) for filter
@@ -192,9 +219,9 @@ include __DIR__ . '/components/unified-layout.php';
                 <label for="discipline-filter" class="admin-form-label">Format</label>
                 <select id="discipline-filter" name="discipline" class="admin-form-select" onchange="this.form.submit()">
                     <option value="">Alla format</option>
-                    <?php foreach ($allDisciplines as $discipline): ?>
-                        <option value="<?= htmlspecialchars($discipline) ?>" <?= $filterDiscipline === $discipline ? 'selected' : '' ?>>
-                            <?= htmlspecialchars($discipline) ?>
+                    <?php foreach ($allDisciplines as $code => $displayName): ?>
+                        <option value="<?= htmlspecialchars($code) ?>" <?= $filterDiscipline === $code ? 'selected' : '' ?>>
+                            <?= htmlspecialchars($displayName) ?>
                         </option>
                     <?php endforeach; ?>
                 </select>
@@ -212,7 +239,7 @@ include __DIR__ . '/components/unified-layout.php';
                     <span class="admin-badge admin-badge-warning"><?= $filterYear ?></span>
                 <?php endif; ?>
                 <?php if ($filterDiscipline): ?>
-                    <span class="admin-badge admin-badge-success"><?= htmlspecialchars($filterDiscipline) ?></span>
+                    <span class="admin-badge admin-badge-success"><?= htmlspecialchars($disciplineMapping[$filterDiscipline] ?? $filterDiscipline) ?></span>
                 <?php endif; ?>
                 <a href="/admin/events" class="btn-admin btn-admin-sm btn-admin-secondary">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 14px; height: 14px;"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
@@ -258,7 +285,16 @@ include __DIR__ . '/components/unified-layout.php';
                                         <?= htmlspecialchars($event['name']) ?>
                                     </a>
                                 </td>
-                                <td><?= htmlspecialchars($event['series_name'] ?? '-') ?></td>
+                                <td>
+                                    <select class="admin-form-select" style="min-width: 200px; padding: var(--space-xs) var(--space-sm); font-size: 0.875rem;" onchange="updateSeries(<?= $event['id'] ?>, this.value)">
+                                        <option value="">-</option>
+                                        <?php foreach ($allSeriesForDropdown as $series): ?>
+                                            <option value="<?= $series['id'] ?>" <?= ($event['series_id'] ?? '') == $series['id'] ? 'selected' : '' ?>>
+                                                <?= htmlspecialchars($series['name']) ?>
+                                            </option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </td>
                                 <td><?= htmlspecialchars($event['location'] ?? '-') ?></td>
                                 <td>
                                     <select class="admin-form-select" style="min-width: 120px; padding: var(--space-xs) var(--space-sm);" onchange="updateDiscipline(<?= $event['id'] ?>, this.value)">
@@ -334,6 +370,32 @@ async function updateDiscipline(eventId, discipline) {
     } catch (error) {
         console.error('Error:', error);
         alert('Fel vid uppdatering av tävlingsformat');
+    }
+}
+
+async function updateSeries(eventId, seriesId) {
+    try {
+        const response = await fetch('/admin/api/update-event-series.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                event_id: eventId,
+                series_id: seriesId,
+                csrf_token: csrfToken
+            })
+        });
+
+        const result = await response.json();
+        if (!result.success) {
+            alert('Fel: ' + (result.error || 'Kunde inte uppdatera serie'));
+        } else {
+            showToast('Serie uppdaterad', 'success');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Fel vid uppdatering av serie');
     }
 }
 </script>
