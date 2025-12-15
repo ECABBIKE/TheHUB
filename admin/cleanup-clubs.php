@@ -195,20 +195,47 @@ $emptyClubs = array_filter($clubs, function($club) {
 
 /**
  * Normalize club name for comparison
+ * Handles variations like: CK Fix, Ck Fix, Cykelklubben Fix, Cykelklubb Fix
  */
 function normalizeClubName($name) {
  $name = mb_strtolower(trim($name), 'UTF-8');
 
- // Remove common suffixes/variations
- $name = preg_replace('/\s*(ck|cykelklubb|cykel klubb|cykel|if|ik|sk|fk|bk|idrottssällskap|idrottsällskap|idrotts|enduro|mtb)\s*/u', '', $name);
+ // Remove common prefixes/suffixes (order matters - longer patterns first)
+ $patterns = [
+  '/^cykelklubben\s+/u',           // "Cykelklubben Fix" -> "fix"
+  '/^cykelklubb\s+/u',             // "Cykelklubb Fix" -> "fix"
+  '/^cykelföreningen\s+/u',        // "Cykelföreningen X" -> "x"
+  '/^ck\s+/u',                     // "CK Fix" -> "fix"
+  '/^if\s+/u',                     // "IF Ceres" -> "ceres"
+  '/^ik\s+/u',                     // "IK X" -> "x"
+  '/^sk\s+/u',                     // "SK X" -> "x"
+  '/^fk\s+/u',                     // "FK X" -> "x"
+  '/^bk\s+/u',                     // "BK X" -> "x"
+  '/\s+ck$/u',                     // "Fix CK" -> "fix"
+  '/\s+cykelklubb$/u',             // "Fix Cykelklubb" -> "fix"
+  '/\s+cykelklubben$/u',           // "Fix Cykelklubben" -> "fix"
+  '/\s+if$/u',                     // "Fix IF" -> "fix"
+  '/\s+mtb$/u',                    // "Fix MTB" -> "fix"
+  '/\s+enduro$/u',                 // "Fix Enduro" -> "fix"
+  '/\s+idrottssällskap$/u',
+  '/\s+idrottsällskap$/u',
+  '/\s+idrottsförening$/u',
+ ];
 
- // Replace Swedish chars
+ foreach ($patterns as $pattern) {
+  $name = preg_replace($pattern, '', $name);
+ }
+
+ // Replace Swedish chars for comparison
  $name = preg_replace('/[åä]/u', 'a', $name);
  $name = preg_replace('/[ö]/u', 'o', $name);
  $name = preg_replace('/[é]/u', 'e', $name);
 
- // Remove non-alphanumeric
+ // Remove non-alphanumeric (keeps only letters and numbers)
  $name = preg_replace('/[^a-z0-9]/u', '', $name);
+
+ // Remove trailing 's' to match singular/plural (e.g., "masters" vs "master")
+ $name = preg_replace('/s$/u', '', $name);
 
  return $name;
 }
@@ -471,7 +498,7 @@ include __DIR__ . '/components/unified-layout.php';
  <?php endif; ?>
 
  <div class="gs-py-sm">
-  <small class="text-secondary">Cleanup Clubs v1.1.0 [2025-12-13]</small>
+  <small class="text-secondary">Cleanup Clubs v1.2.0 [2025-12-15]</small>
  </div>
 
 <?php include __DIR__ . '/components/unified-layout-footer.php'; ?>
