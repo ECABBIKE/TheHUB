@@ -21,5 +21,10 @@
         "content_max_width": "1400",
         "sidebar_width": "72",
         "header_height": "60"
+    },
+    "logos": {
+        "sidebar": "",
+        "homepage": "",
+        "favicon": "/assets/favicon.svg"
     }
 }
