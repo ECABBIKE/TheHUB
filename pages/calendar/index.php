@@ -139,7 +139,7 @@ if (!function_exists('getDeadlineInfo')) {
 
                             <?php if ($seriesLogo): ?>
                             <div class="event-logo">
-                                <img src="/uploads/<?= htmlspecialchars($seriesLogo) ?>" alt="<?= htmlspecialchars($event['series_name']) ?>">
+                                <img src="<?= htmlspecialchars($seriesLogo) ?>" alt="<?= htmlspecialchars($event['series_name']) ?>">
                             </div>
                             <?php else: ?>
                             <div class="event-logo event-logo-placeholder">

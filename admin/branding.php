@@ -121,50 +121,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $seriesList = [];
 $seriesDebug = '';
 try {
-    // First try with status filter
+    // Get all series with colors - use simple query first
     $seriesList = $db->getAll("
-        SELECT id, name, slug,
+        SELECT id, name, slug, logo, logo_dark,
                COALESCE(gradient_start, '#004A98') as gradient_start,
                COALESCE(gradient_end, '#002a5c') as gradient_end,
                COALESCE(accent_color, '#61CE70') as accent_color,
-               logo_dark, status
+               active
         FROM series
-        WHERE status IN ('active', 'completed')
+        WHERE active = 1
         ORDER BY name ASC
     ");
 
-    // If no results, try getting ALL series as fallback
+    // If no active series, get all series
     if (empty($seriesList)) {
         $seriesList = $db->getAll("
-            SELECT id, name, slug,
+            SELECT id, name, slug, logo, logo_dark,
                    COALESCE(gradient_start, '#004A98') as gradient_start,
                    COALESCE(gradient_end, '#002a5c') as gradient_end,
                    COALESCE(accent_color, '#61CE70') as accent_color,
-                   logo_dark, status
+                   active
             FROM series
             ORDER BY name ASC
         ");
         if (!empty($seriesList)) {
-            $statuses = array_unique(array_column($seriesList, 'status'));
-            $seriesDebug = 'Visar alla serier. Status-värden i databasen: ' . implode(', ', array_map(function($s) { return "'" . ($s ?: 'NULL') . "'"; }, $statuses));
+            $seriesDebug = 'Visar alla serier (inklusive inaktiva).';
         }
     }
 } catch (Exception $e) {
-    // Try without logo_dark column
-    try {
-        $seriesList = $db->getAll("
-            SELECT id, name, slug,
-                   COALESCE(gradient_start, '#004A98') as gradient_start,
-                   COALESCE(gradient_end, '#002a5c') as gradient_end,
-                   COALESCE(accent_color, '#61CE70') as accent_color,
-                   NULL as logo_dark, status
-            FROM series
-            ORDER BY name ASC
-        ");
-    } catch (Exception $e2) {
-        // Last resort - just get basic series info
-        $seriesList = $db->getAll("SELECT id, name, slug, NULL as logo_dark FROM series ORDER BY name ASC");
-    }
+    $seriesDebug = 'Databasfel: ' . $e->getMessage();
 }
 
 // Define color groups for display
@@ -853,9 +838,10 @@ include __DIR__ . '/components/unified-layout.php';
         <div class="series-color-grid">
             <?php foreach ($seriesList as $series): ?>
             <div class="series-color-card">
+                <?php $seriesLogoPath = $series['logo_dark'] ?: $series['logo']; ?>
                 <div class="series-color-preview" style="background: linear-gradient(135deg, <?= h($series['gradient_start'] ?? '#004A98') ?>, <?= h($series['gradient_end'] ?? '#002a5c') ?>);">
-                    <?php if ($series['logo_dark']): ?>
-                        <img src="/uploads/series/<?= h($series['logo_dark']) ?>" alt="<?= h($series['name']) ?>" class="series-logo">
+                    <?php if ($seriesLogoPath): ?>
+                        <img src="<?= h($seriesLogoPath) ?>" alt="<?= h($series['name']) ?>" class="series-logo">
                     <?php else: ?>
                         <span class="series-name-overlay"><?= h($series['name']) ?></span>
                     <?php endif; ?>
