@@ -92,6 +92,7 @@
     font-weight: var(--weight-semibold);
     color: var(--color-text-primary);
     margin: 0 0 var(--space-sm);
+    text-align: center !important;
 }
 
 .welcome-about p {
@@ -99,6 +100,7 @@
     color: var(--color-text-secondary);
     margin: 0;
     line-height: 1.6;
+    text-align: center !important;
 }
 
 .welcome-about-note {
