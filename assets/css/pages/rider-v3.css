@@ -6,7 +6,7 @@
 /* Main Layout Grid */
 .rider-profile-layout {
     display: grid;
-    grid-template-columns: 1fr 320px;
+    grid-template-columns: 60% 40%;
     gap: var(--space-lg);
     margin-bottom: var(--space-lg);
 }
