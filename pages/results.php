@@ -7,7 +7,7 @@
 $pdo = hub_db();
 
 // Get filter parameters
-$filterSeries = isset($_GET['series']) && is_numeric($_GET['series']) ? intval($_GET['series']) : null;
+$filterBrand = isset($_GET['brand']) && is_numeric($_GET['brand']) ? intval($_GET['brand']) : null;
 $filterYear = isset($_GET['year']) && is_numeric($_GET['year']) ? intval($_GET['year']) : null;
 
 try {
@@ -21,22 +21,23 @@ try {
     ");
     $yearsList = $yearsStmt->fetchAll(PDO::FETCH_COLUMN);
 
-    // Get series for filter - only series that have results (with brand info)
-    $seriesStmt = $pdo->query("
-        SELECT DISTINCT s.id, s.name, sb.accent_color
-        FROM series s
-        LEFT JOIN series_brands sb ON s.brand_id = sb.id
+    // Get brands for filter - only brands that have results
+    $brandsStmt = $pdo->query("
+        SELECT DISTINCT sb.id, sb.name, sb.accent_color
+        FROM series_brands sb
+        INNER JOIN series s ON s.brand_id = sb.id
         INNER JOIN events e ON s.id = e.series_id
         INNER JOIN results r ON e.id = r.event_id
-        WHERE s.active = 1
-        ORDER BY s.name
+        WHERE sb.active = 1
+        ORDER BY sb.name
     ");
-    $seriesList = $seriesStmt->fetchAll(PDO::FETCH_ASSOC);
+    $brandsList = $brandsStmt->fetchAll(PDO::FETCH_ASSOC);
 
     // Get events with results, including brand colors and logo
     $sql = "
         SELECT e.id, e.name, e.date, e.location,
                s.id as series_id, s.name as series_name,
+               sb.id as brand_id, sb.name as brand_name,
                sb.logo as series_logo,
                sb.accent_color as series_accent,
                v.name as venue_name, v.city as venue_city,
@@ -51,9 +52,9 @@ try {
     ";
     $params = [];
 
-    if ($filterSeries) {
-        $sql .= " AND e.series_id = ?";
-        $params[] = $filterSeries;
+    if ($filterBrand) {
+        $sql .= " AND s.brand_id = ?";
+        $params[] = $filterBrand;
     }
 
     if ($filterYear) {
@@ -80,7 +81,7 @@ try {
 
 } catch (Exception $e) {
     $events = [];
-    $seriesList = [];
+    $brandsList = [];
     $yearsList = [];
     $eventsByYear = [];
     $totalEvents = 0;
@@ -99,12 +100,12 @@ try {
 <!-- Filters -->
 <div class="filters-bar">
     <div class="filter-group">
-        <label for="filter-series" class="filter-label">Serie</label>
-        <select id="filter-series" class="filter-select" onchange="applyFilters()">
+        <label for="filter-brand" class="filter-label">Serie</label>
+        <select id="filter-brand" class="filter-select" onchange="applyFilters()">
             <option value="">Alla serier</option>
-            <?php foreach ($seriesList as $series): ?>
-                <option value="<?= $series['id'] ?>" <?= $filterSeries == $series['id'] ? 'selected' : '' ?>>
-                    <?= htmlspecialchars($series['name']) ?>
+            <?php foreach ($brandsList as $brand): ?>
+                <option value="<?= $brand['id'] ?>" <?= $filterBrand == $brand['id'] ? 'selected' : '' ?>>
+                    <?= htmlspecialchars($brand['name']) ?>
                 </option>
             <?php endforeach; ?>
         </select>
@@ -157,7 +158,7 @@ try {
 
                             <?php if ($seriesLogo): ?>
                             <div class="event-logo">
-                                <img src="<?= htmlspecialchars($seriesLogo) ?>" alt="<?= htmlspecialchars($event['series_name']) ?>">
+                                <img src="<?= htmlspecialchars($seriesLogo) ?>" alt="<?= htmlspecialchars($event['brand_name']) ?>">
                             </div>
                             <?php else: ?>
                             <div class="event-logo event-logo-placeholder">
@@ -174,8 +175,8 @@ try {
                             <div class="event-main">
                                 <h3 class="event-title"><?= htmlspecialchars($event['name']) ?></h3>
                                 <div class="event-details">
-                                    <?php if ($event['series_name']): ?>
-                                        <span class="event-series"><?= htmlspecialchars($event['series_name']) ?></span>
+                                    <?php if ($event['brand_name']): ?>
+                                        <span class="event-series"><?= htmlspecialchars($event['brand_name']) ?></span>
                                     <?php endif; ?>
                                     <?php if ($location): ?>
                                         <span class="event-location">
@@ -205,10 +206,10 @@ try {
 
 <script>
 function applyFilters() {
-    const series = document.getElementById('filter-series').value;
+    const brand = document.getElementById('filter-brand').value;
     const year = document.getElementById('filter-year').value;
     const params = new URLSearchParams();
-    if (series) params.set('series', series);
+    if (brand) params.set('brand', brand);
     if (year) params.set('year', year);
     window.location.href = '/results' + (params.toString() ? '?' + params : '');
 }
