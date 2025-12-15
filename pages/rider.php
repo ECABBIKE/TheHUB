@@ -519,7 +519,14 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
                 </div>
                 <?php if ($gidNumber): ?>
                 <div class="id-badge-box gravity-id">
-                    <span class="id-badge-value"><?= htmlspecialchars($gidNumber) ?> <?= htmlspecialchars(substr($rider['license_number'] ?: '', -3)) ?> <?= htmlspecialchars(substr($rider['license_year'] ?: date('y'), -2)) ?></span>
+                    <span class="id-badge-label">Gravity ID</span>
+                    <span class="id-badge-value">#<?= htmlspecialchars($gidNumber) ?></span>
+                </div>
+                <?php endif; ?>
+                <?php if ($rider['license_number']): ?>
+                <div class="id-badge-box uci-badge">
+                    <span class="id-badge-label">UCI</span>
+                    <span class="id-badge-value"><?= htmlspecialchars($rider['license_number']) ?></span>
                 </div>
                 <?php endif; ?>
             </div>
@@ -550,54 +557,6 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
                     <span>Dela</span>
                 </button>
             </div>
-        </div>
-
-        <!-- FORM CARD -->
-        <div class="card form-card-v3">
-            <h3 class="card-section-title"><i data-lucide="trending-up"></i> Form</h3>
-            <?php if ($hasCompetitiveResults && !empty($formResults)):
-                // Räkna snittplacering av senaste 5 tävlingarna
-                $last5 = array_slice($formResults, -5);
-                $positionSum = array_sum(array_column($last5, 'position'));
-                $avgPlacement = count($last5) > 0 ? $positionSum / count($last5) : 0;
-                $avgDisplay = number_format($avgPlacement, 1);
-            ?>
-            <div class="form-avg-display">
-                <div class="avg-value-box">
-                    <span class="avg-value"><?= $avgDisplay ?></span>
-                    <span class="avg-label">SNITTPLACERING</span>
-                </div>
-                <div class="avg-explanation">
-                    <i data-lucide="info"></i>
-                    <span>Senaste <?= count($last5) ?> tävlingarna</span>
-                </div>
-            </div>
-
-            <!-- Graph would go here -->
-            <div class="form-graph-placeholder" style="height: 120px; background: var(--color-bg-surface); border-radius: var(--radius-md); margin: var(--space-md) 0;"></div>
-
-            <!-- Recent results -->
-            <div class="form-results-compact">
-                <?php
-                $displayResults = array_slice($formResults, -5);
-                foreach ($displayResults as $fr):
-                    $pos = $fr['position'];
-                    $total = $fr['total_in_class'];
-                ?>
-                <div class="form-result-row-v3">
-                    <span class="form-pos-badge"><?= $pos ?></span>
-                    <span class="form-event-name"><?= htmlspecialchars(mb_substr($fr['event_name'], 0, 20)) ?></span>
-                    <span class="form-ratio"><?= $pos ?>/<?= $total ?></span>
-                    <span class="form-avg-v3"><?= number_format($fr['running_avg'], 2) ?></span>
-                </div>
-                <?php endforeach; ?>
-            </div>
-
-            <div class="fallande-form-link">
-                <i data-lucide="trending-down"></i>
-                <span>Fallande form</span>
-            </div>
-            <?php endif; ?>
         </div>
 
         <!-- SERIES STANDINGS CARD -->
