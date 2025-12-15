@@ -4,15 +4,22 @@ $currentUser = function_exists('hub_current_user') ? hub_current_user() : null;
 $isLoggedIn = function_exists('hub_is_logged_in') ? hub_is_logged_in() : false;
 $isAdmin = function_exists('hub_is_admin') ? hub_is_admin() : false;
 $hubUrl = defined('HUB_V3_URL') ? HUB_V3_URL : '';
+
+// Get sidebar logo from branding settings
+$headerLogo = function_exists('getBranding') ? getBranding('logos.sidebar') : null;
 ?>
 
 <header class="header" role="banner">
     <a href="<?= $hubUrl ?>/" class="header-brand" aria-label="TheHUB - Gå till startsidan">
+        <?php if ($headerLogo): ?>
+        <img src="<?= htmlspecialchars($headerLogo) ?>" alt="TheHUB" class="header-logo" width="40" height="40">
+        <?php else: ?>
         <svg class="header-logo" viewBox="0 0 40 40" aria-hidden="true">
             <circle cx="20" cy="20" r="18" fill="currentColor" opacity="0.1"/>
             <circle cx="20" cy="20" r="18" fill="none" stroke="currentColor" stroke-width="2"/>
             <text x="20" y="25" text-anchor="middle" fill="currentColor" font-size="12" font-weight="bold">HUB</text>
         </svg>
+        <?php endif; ?>
         <span class="header-title">TheHUB</span>
     </a>
 

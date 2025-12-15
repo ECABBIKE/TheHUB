@@ -13,7 +13,7 @@ body{
   padding-top:var(--header-height);
 }
 .header-brand{display:flex;align-items:center;gap:var(--space-sm);font-size:var(--text-lg);font-weight:var(--weight-bold)}
-.header-logo{width:32px;height:32px}
+.header-logo{width:32px;height:32px;border-radius:var(--radius-sm);object-fit:contain}
 .header-actions{display:flex;align-items:center;gap:var(--space-md)}
 .header-version{
   font-size:var(--text-xs);color:var(--color-text-muted);
