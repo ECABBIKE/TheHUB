@@ -164,12 +164,16 @@ foreach ($globalTexts as $gt) {
  $globalTextMap[$gt['field_key']] = $gt['content'];
 }
 
-$pageTitle = 'Skapa Event';
-$pageType = 'admin';
-include __DIR__ . '/../includes/layout-header.php';
+// Page config for unified layout
+$page_title = 'Skapa Event';
+$breadcrumbs = [
+    ['label' => 'Events', 'url' => '/admin/events'],
+    ['label' => 'Skapa Event']
+];
+include __DIR__ . '/components/unified-layout.php';
 ?>
 
-<main class="main-content">
+<div class="admin-card">
  <div class="container" class="gs-max-w-800">
  <!-- Header -->
  <div class="flex items-center justify-between mb-lg">
@@ -1091,6 +1095,6 @@ include __DIR__ . '/../includes/layout-header.php';
  </form>
  </div>
  </div>
-</main>
+</div>
 
-<?php include __DIR__ . '/../includes/layout-footer.php'; ?>
+<?php include __DIR__ . '/components/unified-layout-footer.php'; ?>

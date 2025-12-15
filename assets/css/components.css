@@ -43,7 +43,6 @@ body{
   border-radius:var(--radius-lg);
   padding:var(--card-padding);
   box-shadow:var(--shadow-sm);
-  max-width:100%;
   overflow:hidden;
 }
 
