@@ -259,41 +259,49 @@ $emptyClubs = array_filter($clubs, function($club) {
 
 /**
  * Normalize club name for comparison
+ * Handles variations like: CK Fix, Ck Fix, Cykelklubben Fix, Cykelklubb Fix
  */
 function normalizeClubName($name) {
     $name = mb_strtolower(trim($name), 'UTF-8');
 
-    // Remove common prefixes/suffixes/variations (including Swedish definite forms)
+    // Remove common prefixes/suffixes (order matters - longer patterns first)
     $patterns = [
-        '/^cykelklubben\s+/u',      // "Cykelklubben X" -> "X"
-        '/^cykelklubb\s+/u',        // "Cykelklubb X" -> "X"
-        '/^ck\s+/u',                // "CK X" -> "X"
-        '/^if\s+/u',                // "IF X" -> "X"
-        '/^ik\s+/u',                // "IK X" -> "X"
-        '/^sk\s+/u',                // "SK X" -> "X"
-        '/^fk\s+/u',                // "FK X" -> "X"
-        '/^bk\s+/u',                // "BK X" -> "X"
-        '/\s+ck$/u',                // "X CK" -> "X"
-        '/\s+cykelklubb$/u',        // "X Cykelklubb" -> "X"
-        '/\s+cykelklubben$/u',      // "X Cykelklubben" -> "X"
-        '/\s+if$/u',                // "X IF" -> "X"
-        '/\s+ik$/u',                // "X IK" -> "X"
-        '/\s+sk$/u',                // "X SK" -> "X"
-        '/\s+mtb$/u',               // "X MTB" -> "X"
-        '/\s+enduro$/u',            // "X Enduro" -> "X"
+        '/^cykelklubben\s+/u',           // "Cykelklubben Fix" -> "fix"
+        '/^cykelklubb\s+/u',             // "Cykelklubb Fix" -> "fix"
+        '/^cykelföreningen\s+/u',        // "Cykelföreningen X" -> "x"
+        '/^ck\s+/u',                     // "CK Fix" -> "fix"
+        '/^if\s+/u',                     // "IF Ceres" -> "ceres"
+        '/^ik\s+/u',                     // "IK X" -> "x"
+        '/^sk\s+/u',                     // "SK X" -> "x"
+        '/^fk\s+/u',                     // "FK X" -> "x"
+        '/^bk\s+/u',                     // "BK X" -> "x"
+        '/\s+ck$/u',                     // "Fix CK" -> "fix"
+        '/\s+cykelklubb$/u',             // "Fix Cykelklubb" -> "fix"
+        '/\s+cykelklubben$/u',           // "Fix Cykelklubben" -> "fix"
+        '/\s+if$/u',                     // "Fix IF" -> "fix"
+        '/\s+ik$/u',                     // "X IK" -> "X"
+        '/\s+sk$/u',                     // "X SK" -> "X"
+        '/\s+mtb$/u',                    // "Fix MTB" -> "fix"
+        '/\s+enduro$/u',                 // "Fix Enduro" -> "fix"
+        '/\s+idrottssällskap$/u',
+        '/\s+idrottsällskap$/u',
+        '/\s+idrottsförening$/u',
     ];
 
     foreach ($patterns as $pattern) {
         $name = preg_replace($pattern, '', $name);
     }
 
-    // Replace Swedish chars
+    // Replace Swedish chars for comparison
     $name = preg_replace('/[åä]/u', 'a', $name);
     $name = preg_replace('/[ö]/u', 'o', $name);
     $name = preg_replace('/[é]/u', 'e', $name);
 
-    // Remove non-alphanumeric
+    // Remove non-alphanumeric (keeps only letters and numbers)
     $name = preg_replace('/[^a-z0-9]/u', '', $name);
+
+    // Remove trailing 's' to match singular/plural (e.g., "masters" vs "master")
+    $name = preg_replace('/s$/u', '', $name);
 
     return $name;
 }
@@ -556,7 +564,7 @@ include __DIR__ . '/components/unified-layout.php';
  <?php endif; ?>
 
  <div class="gs-py-sm">
-  <small class="text-secondary">Cleanup Clubs v1.1.0 [2025-12-13]</small>
+  <small class="text-secondary">Cleanup Clubs v1.2.0 [2025-12-15]</small>
  </div>
 
 <?php include __DIR__ . '/components/unified-layout-footer.php'; ?>
