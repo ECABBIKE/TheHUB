@@ -1010,7 +1010,9 @@ async function saveBulkChanges() {
         console.log('Parsed result:', result);
 
         if (result.success) {
-            showToast(`${count} ändring${count !== 1 ? 'ar' : ''} sparade!`, 'success');
+            console.log('SUCCESS! Updated:', result.updated, 'records');
+            console.log('Server message:', result.message);
+            showToast(`${result.updated || count} ändring${count !== 1 ? 'ar' : ''} sparade!`, 'success');
             bulkChanges = {};
             updateBulkSaveButton();
 
