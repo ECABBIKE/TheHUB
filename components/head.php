@@ -38,9 +38,21 @@ if (!function_exists('hub_asset')) {
 <meta name="apple-mobile-web-app-title" content="TheHUB">
 
 <!-- iOS Icons -->
-<link rel="apple-touch-icon" href="/uploads/icons/GSIkon.png">
-<link rel="apple-touch-icon" sizes="180x180" href="/uploads/icons/GSIkon.png">
-<link rel="apple-touch-icon" sizes="167x167" href="/uploads/icons/GSIkon.png">
+<?php
+// iOS requires PNG format - use branding favicon if it's PNG, otherwise use a default SVG->PNG fallback
+$appleTouchIcon = '/assets/favicon.svg'; // Default
+$brandingJsonFileApple = __DIR__ . '/../uploads/branding.json';
+if (file_exists($brandingJsonFileApple)) {
+    $brandingJsonApple = json_decode(file_get_contents($brandingJsonFileApple), true);
+    if (!empty($brandingJsonApple['logos']['favicon'])) {
+        // iOS prefers PNG, but can handle other formats
+        $appleTouchIcon = $brandingJsonApple['logos']['favicon'];
+    }
+}
+?>
+<link rel="apple-touch-icon" href="<?= htmlspecialchars($appleTouchIcon) ?>">
+<link rel="apple-touch-icon" sizes="180x180" href="<?= htmlspecialchars($appleTouchIcon) ?>">
+<link rel="apple-touch-icon" sizes="167x167" href="<?= htmlspecialchars($appleTouchIcon) ?>">
 
 <!-- Web App Manifest -->
 <link rel="manifest" href="<?= $hubUrl ?>/manifest.json">
