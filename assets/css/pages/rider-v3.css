@@ -1,0 +1,624 @@
+/**
+ * Rider Profile V3 Layout
+ * 2-column design with left content column and right sidebar
+ */
+
+/* Main Layout Grid */
+.rider-profile-layout {
+    display: grid;
+    grid-template-columns: 1fr 400px;
+    gap: var(--space-lg);
+    margin-bottom: var(--space-lg);
+}
+
+.left-column {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-lg);
+}
+
+.right-column {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-lg);
+}
+
+/* ============================================================================
+   PROFILE CARD V3
+   ============================================================================ */
+.profile-card-v3 {
+    background: var(--color-bg-card);
+    border-radius: var(--radius-lg);
+    padding: var(--space-lg);
+}
+
+.profile-header {
+    display: flex;
+    gap: var(--space-md);
+    margin-bottom: var(--space-md);
+}
+
+.profile-photo-large {
+    width: 80px;
+    height: 80px;
+    border-radius: var(--radius-lg);
+    background: var(--color-bg-surface);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    overflow: hidden;
+}
+
+.profile-photo-large img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.profile-photo-large svg {
+    width: 40px;
+    height: 40px;
+    color: var(--color-text-muted);
+}
+
+.profile-info {
+    flex: 1;
+}
+
+.profile-name-large {
+    font-size: var(--text-xl);
+    font-weight: var(--weight-bold);
+    margin: 0 0 var(--space-2xs);
+}
+
+.profile-age-large {
+    display: block;
+    font-size: var(--text-sm);
+    color: var(--color-text-secondary);
+    margin-bottom: var(--space-xs);
+}
+
+.profile-club-link {
+    display: inline-block;
+    font-size: var(--text-sm);
+    color: var(--color-accent);
+    text-decoration: none;
+}
+
+.profile-club-link:hover {
+    text-decoration: underline;
+}
+
+/* ID Badges */
+.profile-id-badges {
+    display: flex;
+    gap: var(--space-sm);
+    margin-bottom: var(--space-md);
+}
+
+.id-badge-box {
+    flex: 1;
+    padding: var(--space-sm) var(--space-md);
+    background: var(--color-bg-surface);
+    border-radius: var(--radius-md);
+    text-align: center;
+}
+
+.id-badge-box.year-badge {
+    background: var(--color-bg-surface);
+}
+
+.id-badge-box.gravity-id {
+    background: linear-gradient(135deg, var(--color-accent) 0%, #4ab55a 100%);
+    color: white;
+}
+
+.id-badge-label {
+    display: block;
+    font-size: var(--text-xs);
+    text-transform: uppercase;
+    margin-bottom: var(--space-2xs);
+    opacity: 0.8;
+}
+
+.id-badge-value {
+    display: block;
+    font-size: var(--text-md);
+    font-weight: var(--weight-bold);
+}
+
+/* Social Media Links */
+.profile-social {
+    display: flex;
+    gap: var(--space-sm);
+    margin-bottom: var(--space-md);
+}
+
+.social-link {
+    width: 40px;
+    height: 40px;
+    border-radius: var(--radius-md);
+    background: var(--color-bg-surface);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    transition: all var(--transition-fast);
+}
+
+.social-link svg {
+    width: 20px;
+    height: 20px;
+    fill: var(--color-text-secondary);
+}
+
+.social-link:hover {
+    transform: translateY(-2px);
+}
+
+.social-link.instagram:hover {
+    background: linear-gradient(45deg, #f09433 0%,#e6683c 25%,#dc2743 50%,#cc2366 75%,#bc1888 100%);
+}
+
+.social-link.instagram:hover svg {
+    fill: white;
+}
+
+.social-link.strava:hover {
+    background: #FC4C02;
+}
+
+.social-link.strava:hover svg {
+    fill: white;
+}
+
+.social-link.facebook:hover {
+    background: #1877F2;
+}
+
+.social-link.facebook:hover svg {
+    fill: white;
+}
+
+.social-link.youtube:hover {
+    background: #FF0000;
+}
+
+.social-link.youtube:hover svg {
+    fill: white;
+}
+
+.social-link.tiktok:hover {
+    background: #000000;
+}
+
+.social-link.tiktok:hover svg {
+    fill: white;
+}
+
+.social-link.empty {
+    opacity: 0.3;
+    pointer-events: none;
+}
+
+/* Share Button */
+.profile-actions-row {
+    display: flex;
+    gap: var(--space-sm);
+}
+
+.btn-share {
+    flex: 1;
+    padding: var(--space-sm) var(--space-md);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    background: var(--color-bg-surface);
+    color: var(--color-text-primary);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-xs);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.btn-share:hover {
+    background: var(--color-bg-hover);
+    border-color: var(--color-accent);
+}
+
+/* ============================================================================
+   FORM CARD V3
+   ============================================================================ */
+.form-card-v3 {
+    background: var(--color-bg-card);
+    border-radius: var(--radius-lg);
+    padding: var(--space-lg);
+}
+
+.card-section-title {
+    font-size: var(--text-md);
+    font-weight: var(--weight-bold);
+    margin: 0 0 var(--space-md);
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    color: var(--color-text-primary);
+}
+
+.card-section-title i {
+    color: var(--color-accent);
+}
+
+.form-avg-display {
+    margin-bottom: var(--space-md);
+}
+
+.avg-value-box {
+    text-align: center;
+    padding: var(--space-md);
+    background: var(--color-bg-surface);
+    border-radius: var(--radius-md);
+    margin-bottom: var(--space-sm);
+}
+
+.avg-value {
+    display: block;
+    font-size: 3rem;
+    font-weight: var(--weight-bold);
+    color: var(--color-accent);
+    line-height: 1;
+}
+
+.avg-label {
+    display: block;
+    font-size: var(--text-xs);
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+    letter-spacing: 1px;
+    margin-top: var(--space-xs);
+}
+
+.avg-explanation {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    font-size: var(--text-xs);
+    color: var(--color-text-secondary);
+}
+
+.avg-explanation i {
+    width: 14px;
+    height: 14px;
+}
+
+/* Form Results */
+.form-results-compact {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+    margin-bottom: var(--space-md);
+}
+
+.form-result-row-v3 {
+    display: grid;
+    grid-template-columns: 40px 1fr 60px 60px;
+    gap: var(--space-sm);
+    align-items: center;
+    padding: var(--space-xs);
+    border-radius: var(--radius-sm);
+    transition: background var(--transition-fast);
+}
+
+.form-result-row-v3:hover {
+    background: var(--color-bg-hover);
+}
+
+.form-pos-badge {
+    width: 32px;
+    height: 32px;
+    border-radius: var(--radius-sm);
+    background: var(--color-bg-surface);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: var(--weight-bold);
+    font-size: var(--text-sm);
+}
+
+.form-event-name {
+    font-size: var(--text-sm);
+    color: var(--color-text-primary);
+}
+
+.form-ratio {
+    font-size: var(--text-xs);
+    color: var(--color-text-secondary);
+    text-align: right;
+}
+
+.form-avg-v3 {
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    color: var(--color-accent);
+    text-align: right;
+}
+
+/* Fallande Form Link */
+.fallande-form-link {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    padding: var(--space-sm);
+    border-radius: var(--radius-md);
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--color-danger);
+    font-size: var(--text-sm);
+}
+
+.fallande-form-link i {
+    width: 16px;
+    height: 16px;
+}
+
+/* ============================================================================
+   SERIES CARD V3
+   ============================================================================ */
+.series-card-v3 {
+    background: var(--color-bg-card);
+    border-radius: var(--radius-lg);
+    padding: var(--space-lg);
+}
+
+.series-tabs-v3 {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+}
+
+.series-tab-btn {
+    width: 100%;
+    padding: var(--space-sm) var(--space-md);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    background: var(--color-bg-surface);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    display: grid;
+    grid-template-columns: auto 1fr auto auto auto;
+    gap: var(--space-sm);
+    align-items: center;
+}
+
+.series-tab-btn:hover {
+    background: var(--color-bg-hover);
+}
+
+.series-tab-btn.active {
+    background: var(--color-accent);
+    border-color: var(--color-accent);
+    color: white;
+}
+
+.series-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: var(--radius-full);
+}
+
+.series-tab-name {
+    font-weight: var(--weight-medium);
+    font-size: var(--text-sm);
+    text-align: left;
+}
+
+.series-tab-score {
+    font-size: var(--text-xs);
+    opacity: 0.8;
+}
+
+.series-tab-ratio {
+    font-size: var(--text-xs);
+    opacity: 0.8;
+}
+
+.series-tab-points {
+    font-weight: var(--weight-bold);
+    font-size: var(--text-sm);
+}
+
+.series-panel-v3 {
+    display: none;
+    margin-top: var(--space-md);
+}
+
+.series-panel-v3.active {
+    display: block;
+}
+
+/* ============================================================================
+   RIGHT COLUMN CARDS
+   ============================================================================ */
+.card-section-title-sm {
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    margin: 0 0 var(--space-md);
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    color: var(--color-text-secondary);
+}
+
+.card-section-title-sm i {
+    width: 16px;
+    height: 16px;
+}
+
+/* Ranking Card */
+.ranking-card-v3 {
+    background: var(--color-bg-card);
+    border-radius: var(--radius-lg);
+    padding: var(--space-lg);
+    text-align: center;
+}
+
+.ranking-position-huge {
+    font-size: 4rem;
+    font-weight: var(--weight-bold);
+    color: var(--color-accent);
+    line-height: 1;
+    margin-bottom: var(--space-md);
+}
+
+.ranking-progress-bar-v3 {
+    margin-bottom: var(--space-md);
+}
+
+.progress-track {
+    height: 8px;
+    background: var(--color-bg-surface);
+    border-radius: var(--radius-full);
+    position: relative;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--color-accent) 0%, #4ab55a 100%);
+    border-radius: var(--radius-full);
+    transition: width 0.3s ease;
+}
+
+.progress-labels {
+    display: flex;
+    justify-content: space-between;
+    margin-top: var(--space-xs);
+    font-size: var(--text-xs);
+    color: var(--color-text-muted);
+}
+
+/* Form Points Card */
+.form-points-card-v3 {
+    background: var(--color-bg-card);
+    border-radius: var(--radius-lg);
+    padding: var(--space-lg);
+    text-align: center;
+}
+
+.form-points-huge {
+    font-size: 3rem;
+    font-weight: var(--weight-bold);
+    color: var(--color-accent);
+    line-height: 1;
+    margin-bottom: var(--space-xs);
+}
+
+.form-points-label {
+    font-size: var(--text-sm);
+    color: var(--color-text-muted);
+}
+
+/* Highlights Card */
+.highlights-card-v3 {
+    background: var(--color-bg-card);
+    border-radius: var(--radius-lg);
+    padding: var(--space-lg);
+}
+
+.highlights-list-v3 {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+}
+
+.highlight-item-v3 {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    padding: var(--space-sm);
+    background: var(--color-bg-surface);
+    border-radius: var(--radius-md);
+    font-size: var(--text-sm);
+}
+
+.highlight-item-v3 i {
+    width: 16px;
+    height: 16px;
+    color: var(--color-accent);
+    flex-shrink: 0;
+}
+
+/* Achievements Card */
+.achievements-card-v3 {
+    background: var(--color-bg-card);
+    border-radius: var(--radius-lg);
+    padding: var(--space-lg);
+}
+
+/* ============================================================================
+   HISTORY CARD (FULL WIDTH)
+   ============================================================================ */
+.history-card-full {
+    background: var(--color-bg-card);
+    border-radius: var(--radius-lg);
+    padding: var(--space-lg);
+}
+
+/* ============================================================================
+   MOBILE RESPONSIVE
+   ============================================================================ */
+@media (max-width: 1024px) {
+    .rider-profile-layout {
+        grid-template-columns: 1fr 300px;
+    }
+}
+
+@media (max-width: 768px) {
+    .rider-profile-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .right-column {
+        order: 2;
+    }
+
+    .left-column {
+        order: 1;
+    }
+
+    .ranking-position-huge {
+        font-size: 3rem;
+    }
+
+    .form-points-huge {
+        font-size: 2.5rem;
+    }
+}
+
+@media (max-width: 600px) {
+    .profile-header {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+    }
+
+    .profile-photo-large {
+        width: 100px;
+        height: 100px;
+    }
+
+    .profile-id-badges {
+        flex-direction: column;
+    }
+
+    .form-result-row-v3 {
+        grid-template-columns: 30px 1fr 50px;
+    }
+
+    .form-ratio {
+        display: none;
+    }
+}
