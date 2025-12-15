@@ -38,13 +38,18 @@ $validEventFormats = ['', 'Enduro (en tid)', 'Downhill Standard', 'SweCUP Downhi
 try {
     global $pdo;
 
+    error_log("=== BULK UPDATE START ===");
+    error_log("Changes received: " . json_encode($changes));
+
     $pdo->beginTransaction();
+    error_log("Transaction started");
 
     $updateCount = 0;
     $errors = [];
 
     foreach ($changes as $eventId => $fields) {
         $eventId = intval($eventId);
+        error_log("Processing event ID: $eventId");
 
         if ($eventId <= 0) {
             $errors[] = "Invalid event ID: $eventId";
@@ -52,6 +57,7 @@ try {
         }
 
         foreach ($fields as $fieldName => $value) {
+            error_log("  Updating field $fieldName to: " . var_export($value, true));
             try {
                 switch ($fieldName) {
                     case 'series_id':
@@ -171,6 +177,7 @@ try {
     }
 
     if (!empty($errors)) {
+        error_log("Rolling back due to errors: " . json_encode($errors));
         $pdo->rollBack();
         echo json_encode([
             'success' => false,
@@ -180,7 +187,9 @@ try {
         exit;
     }
 
+    error_log("Committing transaction with $updateCount updates");
     $pdo->commit();
+    error_log("Transaction committed successfully");
 
     echo json_encode([
         'success' => true,
