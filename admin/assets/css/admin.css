@@ -2350,8 +2350,8 @@ h2 svg.lucide {
     white-space: nowrap;
 }
 
-/* Show mobile nav on tablet/mobile */
-@media (max-width: 899px) {
+/* Show mobile nav on tablet/mobile PORTRAIT only */
+@media (max-width: 899px) and (orientation: portrait) {
     .admin-mobile-nav {
         display: block;
     }
@@ -2359,6 +2359,17 @@ h2 svg.lucide {
     /* Add padding to main content for bottom nav */
     .admin-main {
         padding-bottom: calc(var(--space-lg) + var(--mobile-nav-height, 64px) + env(safe-area-inset-bottom));
+    }
+}
+
+/* LANDSCAPE: Hide mobile nav, use sidebar instead */
+@media (max-width: 1024px) and (orientation: landscape) {
+    .admin-mobile-nav {
+        display: none !important;
+    }
+
+    .admin-main {
+        padding-bottom: var(--space-lg);
     }
 }
 
@@ -2563,16 +2574,11 @@ h2 svg.lucide {
     }
 }
 
-/* Landscape standalone - hide mobile nav */
+/* Landscape standalone - adjust height (mobile-nav already hidden by landscape rule above) */
 @media (display-mode: standalone) and (orientation: landscape) and (max-width: 1024px),
        (display-mode: fullscreen) and (orientation: landscape) and (max-width: 1024px) {
-    .admin-mobile-nav {
-        display: none !important;
-    }
-
     .admin-main {
         height: calc(100vh - 60px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
         height: calc(100dvh - 60px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
-        padding-bottom: var(--space-lg);
     }
 }
