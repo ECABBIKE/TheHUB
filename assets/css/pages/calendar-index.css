@@ -5,7 +5,7 @@
 
 /* Month Section */
 .calendar-month {
-    margin-bottom: var(--space-xl);
+    margin-bottom: var(--space-md);
 }
 
 .calendar-month-title {
@@ -14,7 +14,7 @@
     color: var(--color-text-muted);
     text-transform: uppercase;
     letter-spacing: 0.1em;
-    margin-bottom: var(--space-sm);
+    margin-bottom: var(--space-xs);
 }
 
 /* Event List */
