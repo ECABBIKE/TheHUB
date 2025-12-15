@@ -331,21 +331,19 @@ include __DIR__ . '/components/unified-layout.php';
                                     </select>
                                 </td>
                                 <td>
-                                    <select class="admin-form-select" style="min-width: 100px; padding: var(--space-xs) var(--space-sm);" onchange="updateEventLevel(<?= $event['id'] ?>, this.value)">
+                                    <select class="admin-form-select" style="min-width: 130px; padding: var(--space-xs) var(--space-sm);" onchange="updateEventLevel(<?= $event['id'] ?>, this.value)">
                                         <option value="">-</option>
-                                        <option value="NATIONAL" <?= ($event['event_level'] ?? '') === 'NATIONAL' ? 'selected' : '' ?>>National</option>
-                                        <option value="REGIONAL" <?= ($event['event_level'] ?? '') === 'REGIONAL' ? 'selected' : '' ?>>Regional</option>
-                                        <option value="LOCAL" <?= ($event['event_level'] ?? '') === 'LOCAL' ? 'selected' : '' ?>>Lokal</option>
-                                        <option value="INTERNATIONAL" <?= ($event['event_level'] ?? '') === 'INTERNATIONAL' ? 'selected' : '' ?>>International</option>
+                                        <option value="Nationell (100%)" <?= ($event['event_level'] ?? '') === 'Nationell (100%)' ? 'selected' : '' ?>>Nationell (100%)</option>
+                                        <option value="Sportmotion (50%)" <?= ($event['event_level'] ?? '') === 'Sportmotion (50%)' ? 'selected' : '' ?>>Sportmotion (50%)</option>
                                     </select>
                                 </td>
                                 <td>
-                                    <select class="admin-form-select" style="min-width: 100px; padding: var(--space-xs) var(--space-sm);" onchange="updateEventFormat(<?= $event['id'] ?>, this.value)">
+                                    <select class="admin-form-select" style="min-width: 150px; padding: var(--space-xs) var(--space-sm);" onchange="updateEventFormat(<?= $event['id'] ?>, this.value)">
                                         <option value="">-</option>
-                                        <option value="RACE" <?= ($event['event_format'] ?? '') === 'RACE' ? 'selected' : '' ?>>Race</option>
-                                        <option value="TRAINING" <?= ($event['event_format'] ?? '') === 'TRAINING' ? 'selected' : '' ?>>Training</option>
-                                        <option value="PRACTICE" <?= ($event['event_format'] ?? '') === 'PRACTICE' ? 'selected' : '' ?>>Practice</option>
-                                        <option value="CAMP" <?= ($event['event_format'] ?? '') === 'CAMP' ? 'selected' : '' ?>>Camp</option>
+                                        <option value="Enduro (en tid)" <?= ($event['event_format'] ?? '') === 'Enduro (en tid)' ? 'selected' : '' ?>>Enduro (en tid)</option>
+                                        <option value="Downhill Standard" <?= ($event['event_format'] ?? '') === 'Downhill Standard' ? 'selected' : '' ?>>Downhill Standard</option>
+                                        <option value="SweCUP Downhill" <?= ($event['event_format'] ?? '') === 'SweCUP Downhill' ? 'selected' : '' ?>>SweCUP Downhill</option>
+                                        <option value="Dual Slalom" <?= ($event['event_format'] ?? '') === 'Dual Slalom' ? 'selected' : '' ?>>Dual Slalom</option>
                                     </select>
                                 </td>
                                 <td>
