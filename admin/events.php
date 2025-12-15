@@ -7,7 +7,7 @@ require_once __DIR__ . '/../config.php';
 global $pdo;
 
 // Get filter parameters
-$filterSeries = isset($_GET['series_id']) && is_numeric($_GET['series_id']) ? intval($_GET['series_id']) : null;
+$filterBrand = isset($_GET['brand']) ? trim($_GET['brand']) : null;
 $filterYear = isset($_GET['year']) && is_numeric($_GET['year']) ? intval($_GET['year']) : null;
 
 // Check if series_events table exists
@@ -23,15 +23,16 @@ try {
 $where = [];
 $params = [];
 
-if ($filterSeries) {
-    // Check both direct series_id link AND series_events junction table
+if ($filterBrand) {
+    // Filter by brand (series name without year)
+    // Match series names that start with the brand name
     if ($seriesEventsTableExists) {
-        $where[] = "(e.series_id = ? OR e.id IN (SELECT event_id FROM series_events WHERE series_id = ?))";
-        $params[] = $filterSeries;
-        $params[] = $filterSeries;
+        $where[] = "(s.name LIKE CONCAT(?, '%') OR e.id IN (SELECT se.event_id FROM series_events se INNER JOIN series s2 ON se.series_id = s2.id WHERE s2.name LIKE CONCAT(?, '%')))";
+        $params[] = $filterBrand;
+        $params[] = $filterBrand;
     } else {
-        $where[] = "e.series_id = ?";
-        $params[] = $filterSeries;
+        $where[] = "s.name LIKE CONCAT(?, '%')";
+        $params[] = $filterBrand;
     }
 }
 
@@ -79,13 +80,13 @@ try {
     $allYears = [];
 }
 
-// Get series for filter (check both direct link and junction table)
+// Get unique brands (series names without year) for filter
 try {
     if ($filterYear) {
         if ($seriesEventsTableExists) {
-            // Get series that have events in this year (via either linking method)
+            // Get brands that have events in this year
             $stmt = $pdo->prepare("
-                SELECT DISTINCT s.id, s.name, s.year
+                SELECT DISTINCT s.name
                 FROM series s
                 WHERE s.active = 1 AND (
                     s.id IN (SELECT DISTINCT series_id FROM events WHERE series_id IS NOT NULL AND YEAR(date) = ?)
@@ -96,7 +97,7 @@ try {
             $stmt->execute([$filterYear, $filterYear]);
         } else {
             $stmt = $pdo->prepare("
-                SELECT DISTINCT s.id, s.name, s.year
+                SELECT DISTINCT s.name
                 FROM series s
                 INNER JOIN events e ON s.id = e.series_id
                 WHERE s.active = 1 AND YEAR(e.date) = ?
@@ -104,12 +105,22 @@ try {
             ");
             $stmt->execute([$filterYear]);
         }
-        $allSeries = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $seriesNames = $stmt->fetchAll(PDO::FETCH_COLUMN);
     } else {
-        $allSeries = $pdo->query("SELECT id, name, year FROM series WHERE active = 1 ORDER BY year DESC, name")->fetchAll(PDO::FETCH_ASSOC);
+        $seriesNames = $pdo->query("SELECT DISTINCT name FROM series WHERE active = 1 ORDER BY name")->fetchAll(PDO::FETCH_COLUMN);
     }
+
+    // Extract brands (remove year suffix like " (2025)")
+    $allBrands = [];
+    foreach ($seriesNames as $name) {
+        $brand = preg_replace('/ \(\d{4}\)$/', '', $name);
+        if (!in_array($brand, $allBrands)) {
+            $allBrands[] = $brand;
+        }
+    }
+    sort($allBrands);
 } catch (Exception $e) {
-    $allSeries = [];
+    $allBrands = [];
 }
 
 // Page config
@@ -136,7 +147,20 @@ include __DIR__ . '/components/unified-layout.php';
 <!-- Filter Section -->
 <div class="admin-card">
     <div class="admin-card-body">
-        <form method="GET" action="/admin/events" class="admin-form-row">
+        <form method="GET" action="/admin/events" class="admin-form-row" id="filter-form">
+            <!-- Brand Filter -->
+            <div class="admin-form-group" style="margin-bottom: 0;">
+                <label for="brand-filter" class="admin-form-label">Varumärke<?= $filterYear ? ' (' . $filterYear . ')' : '' ?></label>
+                <select id="brand-filter" name="brand" class="admin-form-select" onchange="this.form.submit()">
+                    <option value="">Alla varumärken</option>
+                    <?php foreach ($allBrands as $brand): ?>
+                        <option value="<?= htmlspecialchars($brand) ?>" <?= $filterBrand === $brand ? 'selected' : '' ?>>
+                            <?= htmlspecialchars($brand) ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+
             <!-- Year Filter -->
             <div class="admin-form-group" style="margin-bottom: 0;">
                 <label for="year-filter" class="admin-form-label">År</label>
@@ -149,34 +173,14 @@ include __DIR__ . '/components/unified-layout.php';
                     <?php endforeach; ?>
                 </select>
             </div>
-
-            <!-- Series Filter -->
-            <div class="admin-form-group" style="margin-bottom: 0;">
-                <label for="series-filter" class="admin-form-label">Serie<?= $filterYear ? ' (' . $filterYear . ')' : '' ?></label>
-                <select id="series-filter" name="series_id" class="admin-form-select" onchange="this.form.submit()">
-                    <option value="">Alla serier</option>
-                    <?php foreach ($allSeries as $series): ?>
-                        <option value="<?= $series['id'] ?>" <?= $filterSeries == $series['id'] ? 'selected' : '' ?>>
-                            <?= htmlspecialchars($series['name']) ?><?= !empty($series['year']) ? ' (' . $series['year'] . ')' : '' ?>
-                        </option>
-                    <?php endforeach; ?>
-                </select>
-            </div>
         </form>
 
         <!-- Active Filters Info -->
-        <?php if ($filterSeries || $filterYear): ?>
+        <?php if ($filterBrand || $filterYear): ?>
             <div style="margin-top: var(--space-md); padding-top: var(--space-md); border-top: 1px solid var(--color-border); display: flex; align-items: center; gap: var(--space-sm); flex-wrap: wrap;">
                 <span style="font-size: var(--text-sm); color: var(--color-text-secondary);">Visar:</span>
-                <?php if ($filterSeries): ?>
-                    <span class="admin-badge admin-badge-info">
-                        <?php
-                        $seriesName = array_filter($allSeries, function($s) use ($filterSeries) {
-                            return $s['id'] == $filterSeries;
-                        });
-                        echo $seriesName ? htmlspecialchars(reset($seriesName)['name']) : 'Serie #' . $filterSeries;
-                        ?>
-                    </span>
+                <?php if ($filterBrand): ?>
+                    <span class="admin-badge admin-badge-info"><?= htmlspecialchars($filterBrand) ?></span>
                 <?php endif; ?>
                 <?php if ($filterYear): ?>
                     <span class="admin-badge admin-badge-warning"><?= $filterYear ?></span>
