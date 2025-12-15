@@ -122,6 +122,358 @@
     margin-top: var(--space-xs);
 }
 
+/* Profile Photo Large */
+.profile-photo-large {
+    width: 100px;
+    height: 100px;
+    flex-shrink: 0;
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    background: var(--color-bg-sunken);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 3px solid var(--color-border);
+}
+.profile-photo-large img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+.profile-photo-large svg {
+    width: 50%;
+    height: 50%;
+    color: var(--color-text-muted);
+}
+
+@media (min-width: 768px) {
+    .profile-photo-large {
+        width: 120px;
+        height: 120px;
+    }
+}
+
+/* Profile Info */
+.profile-name-large {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--color-text-primary);
+    line-height: 1.2;
+    margin: 0;
+}
+.profile-age-large {
+    font-size: 1rem;
+    color: var(--color-text-secondary);
+}
+.profile-club-link {
+    font-size: var(--text-sm);
+    color: var(--color-accent);
+    text-decoration: none;
+}
+.profile-club-link:hover {
+    text-decoration: underline;
+}
+
+/* Badge Items */
+.badge-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    background: var(--color-bg-sunken);
+    color: var(--color-text-secondary);
+    font-size: var(--text-sm);
+    border-radius: var(--radius-full);
+}
+.badge-item.active {
+    background: var(--color-success-light);
+    color: var(--color-success);
+}
+.badge-item.experience {
+    background: var(--color-accent-light);
+    color: var(--color-accent);
+}
+
+/* Profile Actions Inline */
+.profile-actions-inline {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    margin-left: auto;
+}
+.btn-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    background: var(--color-bg-hover);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    transition: all 0.15s;
+    text-decoration: none;
+}
+.btn-icon:hover {
+    background: var(--color-bg-active);
+    color: var(--color-text-primary);
+}
+.btn-icon i, .btn-icon svg {
+    width: 18px;
+    height: 18px;
+}
+
+/* Card Title */
+.card-title {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--color-text-primary);
+    margin: 0 0 var(--space-md) 0;
+}
+.card-title i, .card-title svg {
+    width: 20px;
+    height: 20px;
+    color: var(--color-text-muted);
+}
+
+/* Ranking Change */
+.ranking-change {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-xs);
+    font-size: var(--text-sm);
+    padding: var(--space-xs) var(--space-sm);
+    border-radius: var(--radius-sm);
+    margin-bottom: var(--space-md);
+}
+.ranking-change.up {
+    background: var(--color-success-light);
+    color: var(--color-success);
+}
+.ranking-change.down {
+    background: var(--color-error-light);
+    color: var(--color-error);
+}
+
+/* Empty State Small */
+.empty-state-small {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-sm);
+    padding: var(--space-xl);
+    text-align: center;
+    color: var(--color-text-muted);
+}
+.empty-state-small i, .empty-state-small svg {
+    width: 32px;
+    height: 32px;
+    opacity: 0.5;
+}
+
+/* Form Results Grid */
+.form-results-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-sm);
+    margin-bottom: var(--space-md);
+}
+.form-race-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: var(--space-xs);
+    background: var(--color-bg-sunken);
+    border-radius: var(--radius-sm);
+    min-width: 60px;
+}
+.form-position {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--color-bg-card);
+    border-radius: var(--radius-sm);
+    font-weight: 700;
+    font-size: var(--text-sm);
+}
+.form-position.gold { background: rgba(255,215,0,0.2); color: #FFD700; }
+.form-position.silver { background: rgba(192,192,192,0.2); color: #C0C0C0; }
+.form-position.bronze { background: rgba(205,127,50,0.2); color: #CD7F32; }
+.form-position .form-medal {
+    width: 24px;
+    height: 24px;
+}
+.form-pos-num {
+    font-size: var(--text-sm);
+    color: var(--color-text-secondary);
+}
+.form-event-name {
+    font-size: 0.7rem;
+    color: var(--color-text-muted);
+    text-align: center;
+    max-width: 70px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Form Trend Indicator */
+.form-trend-indicator {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    font-size: var(--text-sm);
+    padding: var(--space-xs) var(--space-sm);
+    border-radius: var(--radius-sm);
+    background: var(--color-bg-sunken);
+}
+.form-trend-indicator.up { color: var(--color-success); }
+.form-trend-indicator.down { color: var(--color-error); }
+.form-trend-indicator .trend-arrow { font-size: 1.2em; }
+
+/* Motion Info */
+.motion-info {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    padding: var(--space-md);
+    background: var(--color-bg-sunken);
+    border-radius: var(--radius-md);
+    color: var(--color-text-secondary);
+}
+.motion-info i, .motion-info svg {
+    width: 24px;
+    height: 24px;
+}
+
+/* Highlights List Grid */
+.highlights-list-grid {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+}
+.highlight-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    padding: var(--space-sm);
+    background: var(--color-bg-sunken);
+    border-radius: var(--radius-sm);
+}
+.highlight-row.active {
+    background: var(--color-accent-light);
+}
+.hl-icon {
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--color-bg-card);
+    border-radius: var(--radius-sm);
+    color: var(--color-accent);
+}
+.hl-icon i, .hl-icon svg {
+    width: 16px;
+    height: 16px;
+}
+.hl-text {
+    font-size: var(--text-sm);
+    color: var(--color-text-primary);
+}
+
+/* Results List Compact */
+.results-list-compact {
+    max-height: 400px;
+    overflow-y: auto;
+}
+.result-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    padding: var(--space-sm) var(--space-xs);
+    text-decoration: none;
+    color: inherit;
+    border-bottom: 1px solid var(--color-divider);
+    transition: background 0.15s;
+}
+.result-row:hover {
+    background: var(--color-bg-hover);
+}
+.result-row:last-child {
+    border-bottom: none;
+}
+.result-pos {
+    width: 32px;
+    height: 32px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--color-bg-sunken);
+    border-radius: var(--radius-sm);
+    font-weight: 600;
+    font-size: var(--text-sm);
+}
+.result-pos.p1 { background: rgba(255,215,0,0.15); color: #FFD700; }
+.result-pos.p2 { background: rgba(192,192,192,0.15); color: #C0C0C0; }
+.result-pos.p3 { background: rgba(205,127,50,0.15); color: #CD7F32; }
+.result-pos.motion { color: var(--color-success); }
+.result-pos .medal-icon-sm {
+    width: 20px;
+    height: 20px;
+}
+.result-date {
+    font-size: var(--text-sm);
+    color: var(--color-text-muted);
+    width: 50px;
+    flex-shrink: 0;
+}
+.result-name {
+    flex: 1;
+    font-size: var(--text-sm);
+    color: var(--color-text-primary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.result-series {
+    font-size: var(--text-xs);
+    color: var(--color-text-muted);
+    max-width: 80px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Year Divider */
+.year-divider {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    padding: var(--space-xs) 0;
+    margin-top: var(--space-sm);
+}
+.year-label {
+    font-size: var(--text-sm);
+    font-weight: 600;
+    color: var(--color-text-secondary);
+}
+.year-line {
+    flex: 1;
+    height: 1px;
+    background: var(--color-border);
+}
+
 /* ============================================================================
    EVENTS DROPDOWN - Collapsible event lists (duplicated from components.css)
    ============================================================================ */
