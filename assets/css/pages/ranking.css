@@ -162,11 +162,11 @@
   text-transform: uppercase;
   letter-spacing: 0.05em;
   border-bottom: 1px solid var(--color-border);
-  background: transparent;
+  background: var(--color-bg-sunken);
 }
 
 .table tbody tr {
-  border-bottom: 1px solid var(--color-divider, rgba(0,0,0,0.08));
+  border-bottom: 1px solid var(--color-divider, rgba(0,0,0,0.06));
   transition: background var(--transition-fast);
 }
 
@@ -179,8 +179,21 @@
 }
 
 .table tbody td {
-  padding: var(--space-sm) var(--space-md);
+  padding: var(--space-md) var(--space-md);
   vertical-align: middle;
+  font-size: var(--text-sm);
+}
+
+/* Rider name column */
+.table tbody td.col-rider .rider-link,
+.table tbody td .rider-link {
+  font-size: var(--text-base);
+  font-weight: var(--weight-medium);
+}
+
+/* Club column */
+.table tbody td.table-col-hide-portrait {
+  color: var(--color-text-secondary);
 }
 
 
@@ -197,19 +210,36 @@
   color: var(--color-text-muted);
 }
 
-.rider-link, .club-link {
+.rider-link {
   color: var(--color-text-primary);
   font-weight: var(--weight-medium);
   text-decoration: none;
 }
 
-.rider-link:hover, .club-link:hover {
-  color: var(--color-accent-text);
+.rider-link:hover {
+  color: var(--color-accent);
+}
+
+.club-link {
+  color: var(--color-text-secondary);
+  font-weight: var(--weight-normal, 400);
+  text-decoration: none;
+}
+
+.club-link:hover {
+  color: var(--color-accent);
+}
+
+/* Club column in table - secondary styling */
+.table tbody td.text-muted,
+.table tbody td .club-text {
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
 }
 
 .points-value {
   font-weight: var(--weight-bold);
-  color: var(--color-accent-text);
+  color: var(--color-accent);
 }
 
 /* Mobile card styling */
