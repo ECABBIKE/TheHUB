@@ -21,6 +21,7 @@
     display: flex;
     flex-direction: column;
     gap: var(--space-lg);
+    align-content: start;
 }
 
 /* ============================================================================
@@ -30,13 +31,14 @@
     background: var(--color-bg-card);
     border-radius: var(--radius-lg);
     padding: var(--space-xl);
-    min-height: 508px;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
 }
 
 .profile-header {
     display: flex;
     gap: var(--space-md);
-    margin-bottom: var(--space-md);
 }
 
 .profile-photo-large {
@@ -95,7 +97,6 @@
 .profile-id-badges {
     display: flex;
     gap: var(--space-sm);
-    margin-bottom: var(--space-md);
 }
 
 .id-badge-box {
@@ -142,7 +143,6 @@
 .profile-social {
     display: flex;
     gap: var(--space-sm);
-    margin-bottom: var(--space-md);
     justify-content: center;
 }
 
@@ -642,25 +642,22 @@
 .ranking-card-v3 {
     background: var(--color-bg-card);
     border-radius: var(--radius-lg);
-    padding: var(--space-md);
+    padding: var(--space-lg);
     text-align: center;
-    height: 140px;
     display: flex;
     flex-direction: column;
-    justify-content: space-between;
+    gap: var(--space-md);
 }
 
 .ranking-position-huge {
-    font-size: 2.25rem;
+    font-size: clamp(2rem, 5vw, 2.5rem);
     font-weight: var(--weight-bold);
     color: var(--color-accent);
     line-height: 1;
-    margin: 0;
 }
 
 .ranking-points-display {
     text-align: center;
-    margin: 0;
 }
 
 .ranking-points-value {
@@ -678,7 +675,7 @@
 
 .btn-calc-ranking {
     width: 100%;
-    padding: var(--space-xs) var(--space-sm);
+    padding: var(--space-sm);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-sm);
     background: var(--color-bg-surface);
@@ -691,7 +688,6 @@
     gap: var(--space-xs);
     cursor: pointer;
     transition: all var(--transition-fast);
-    margin: 0;
 }
 
 .btn-calc-ranking i {
@@ -706,7 +702,7 @@
 }
 
 .ranking-progress-bar-v3 {
-    margin: 0;
+    width: 100%;
 }
 
 .progress-track {
@@ -737,20 +733,18 @@
 .form-card-v3 {
     background: var(--color-bg-card);
     border-radius: var(--radius-lg);
-    padding: var(--space-md);
-    height: 140px;
+    padding: var(--space-lg);
     display: flex;
     flex-direction: column;
-    justify-content: space-between;
+    gap: var(--space-md);
 }
 
 .form-avg-compact {
     text-align: center;
-    margin: 0;
 }
 
 .form-avg-number {
-    font-size: 2rem;
+    font-size: clamp(1.75rem, 4vw, 2.25rem);
     font-weight: var(--weight-bold);
     color: var(--color-accent);
     line-height: 1;
@@ -765,8 +759,9 @@
 }
 
 .form-mini-chart {
-    margin: 0;
-    height: 40px;
+    min-height: 50px;
+    display: flex;
+    align-items: center;
 }
 
 .form-mini-svg {
@@ -841,11 +836,10 @@
 .highlights-card-v3 {
     background: var(--color-bg-card);
     border-radius: var(--radius-lg);
-    padding: var(--space-md);
-    height: 180px;
+    padding: var(--space-lg);
     display: flex;
     flex-direction: column;
-    overflow-y: auto;
+    gap: var(--space-sm);
 }
 
 .highlights-list-v3 {
@@ -883,11 +877,10 @@
 .achievements-card-v3 {
     background: var(--color-bg-card);
     border-radius: var(--radius-lg);
-    padding: var(--space-md);
-    overflow: hidden;
-    flex: 1;
+    padding: var(--space-lg);
     display: flex;
     flex-direction: column;
+    gap: var(--space-sm);
 }
 
 .achievements-card-v3 * {
@@ -895,27 +888,24 @@
     box-sizing: border-box;
 }
 
-/* Scale down achievements to fit */
-.achievements-card-v3 .achievement-item {
-    transform: scale(0.85);
-    transform-origin: top left;
-}
-
+/* Achievements scaling - adapts to available space */
 .achievements-card-v3 .achievement-grid {
-    gap: var(--space-xs) !important;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+    gap: var(--space-sm);
 }
 
 .achievements-card-v3 .achievement-icon {
-    width: 40px !important;
-    height: 40px !important;
+    width: clamp(32px, 5vw, 48px);
+    height: clamp(32px, 5vw, 48px);
 }
 
 .achievements-card-v3 .achievement-title {
-    font-size: var(--text-xs) !important;
+    font-size: clamp(0.6875rem, 1.5vw, 0.875rem);
 }
 
 .achievements-card-v3 .achievement-desc {
-    font-size: 10px !important;
+    font-size: clamp(0.625rem, 1.2vw, 0.75rem);
 }
 
 /* ============================================================================
