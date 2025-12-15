@@ -368,11 +368,15 @@ if ($userTheme === 'auto') {
 
     <!-- PWA Support -->
     <link rel="manifest" href="/manifest.json">
-    <meta name="theme-color" content="#2563EB">
+    <meta name="theme-color" content="#61CE70">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="TheHUB">
     <link rel="apple-touch-icon" href="/assets/icons/icon-192.png">
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
+    <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png">
 
 </head>
 <body class="<?= $bodyClass ?>">

@@ -553,6 +553,19 @@ try {
     // Ticketing info
     $ticketingEnabled = !empty($event['ticketing_enabled']);
 
+    // Fetch other events in the same series for navigation
+    $seriesEvents = [];
+    if (!empty($event['series_id'])) {
+        $seriesEventsStmt = $db->prepare("
+            SELECT id, name, date
+            FROM events
+            WHERE series_id = ? AND active = 1
+            ORDER BY date ASC
+        ");
+        $seriesEventsStmt->execute([$event['series_id']]);
+        $seriesEvents = $seriesEventsStmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
 } catch (Exception $e) {
     $error = $e->getMessage();
     $event = null;
@@ -799,6 +812,19 @@ if (!empty($eventSponsors['content'])): ?>
             Biljetter
         </a>
         <?php endif; ?>
+
+        <?php if (count($seriesEvents) > 1): ?>
+        <div class="series-jump-wrapper">
+            <span class="series-jump-label"><?= h($event['series_name']) ?> <?= date('Y', strtotime($event['date'])) ?></span>
+            <select onchange="if(this.value) window.location.href='/event/' + this.value" class="series-jump-select">
+                <?php foreach ($seriesEvents as $sEvent): ?>
+                    <option value="<?= $sEvent['id'] ?>" <?= $sEvent['id'] == $eventId ? 'selected' : '' ?>>
+                        <?= date('j M', strtotime($sEvent['date'])) ?> – <?= h($sEvent['name']) ?>
+                    </option>
+                <?php endforeach; ?>
+            </select>
+        </div>
+        <?php endif; ?>
     </div>
 </div>
 
@@ -898,9 +924,6 @@ if (!empty($eventSponsors['content'])): ?>
                     <th class="col-time">Bästa</th>
                     <?php else: ?>
                     <th class="col-time">Tid</th>
-                    <?php if ($isTimeRanked): ?>
-                    <th class="col-gap table-col-hide-mobile">+Tid</th>
-                    <?php endif; ?>
                     <?php foreach ($classSplits as $ss): ?>
                     <?php if ($isMotionOrKids): ?>
                     <th class="col-split split-time-col table-col-hide-mobile"><?= $stageNames[$ss] ?? 'SS' . $ss ?></th>
@@ -965,11 +988,15 @@ if (!empty($eventSponsors['content'])): ?>
                     </td>
                     <?php else: ?>
                     <td class="col-time">
-                        <?= ($result['status'] === 'finished' && $result['finish_time']) ? formatDisplayTime($result['finish_time']) : '-' ?>
+                        <?php if ($result['status'] === 'finished' && $result['finish_time']): ?>
+                        <div class="split-time-main"><?= formatDisplayTime($result['finish_time']) ?></div>
+                        <?php if ($isTimeRanked && !empty($result['time_behind']) && $result['time_behind'] !== '-'): ?>
+                        <div class="split-time-details"><?= $result['time_behind'] ?></div>
+                        <?php endif; ?>
+                        <?php else: ?>
+                        -
+                        <?php endif; ?>
                     </td>
-                    <?php if ($isTimeRanked): ?>
-                    <td class="col-gap table-col-hide-mobile"><?= $result['time_behind'] ?? '-' ?></td>
-                    <?php endif; ?>
                     <?php foreach ($classSplits as $ss):
                         $splitTime = $result['ss' . $ss] ?? '';
                         $splitClass = '';

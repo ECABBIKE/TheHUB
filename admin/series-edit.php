@@ -31,6 +31,7 @@ if ($id <= 0 && !$isNew) {
 }
 
 // Set default values for new series (must be before POST handler)
+// Note: Logo is inherited from brand, not stored per series
 $series = [
     'id' => 0,
     'name' => '',
@@ -42,7 +43,6 @@ $series = [
     'end_date' => '',
     'description' => '',
     'organizer' => '',
-    'logo' => '',
     'brand_id' => null,
     'swish_number' => '',
     'swish_name' => '',
@@ -174,28 +174,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $message = 'År är obligatoriskt - ange vilket år serien gäller';
         $messageType = 'error';
     } else {
-        // Handle logo upload
-        $logoPath = $series['logo'] ?? null;
-        if (isset($_FILES['logo']) && $_FILES['logo']['error'] === UPLOAD_ERR_OK) {
-            $uploadDir = __DIR__ . '/../uploads/series/';
-            if (!is_dir($uploadDir)) {
-                mkdir($uploadDir, 0755, true);
-            }
-
-            $fileExtension = strtolower(pathinfo($_FILES['logo']['name'], PATHINFO_EXTENSION));
-            $allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'];
-
-            if (in_array($fileExtension, $allowedExtensions)) {
-                $fileName = uniqid('series_') . '.' . $fileExtension;
-                $targetPath = $uploadDir . $fileName;
-
-                if (move_uploaded_file($_FILES['logo']['tmp_name'], $targetPath)) {
-                    $logoPath = '/uploads/series/' . $fileName;
-                }
-            }
-        }
-
-        // Prepare series data
+        // Prepare series data (logo inherited from brand, not uploaded per series)
         $seriesData = [
             'name' => $name,
             'type' => trim($_POST['type'] ?? ''),
@@ -204,7 +183,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'end_date' => !empty($_POST['end_date']) ? trim($_POST['end_date']) : null,
             'description' => trim($_POST['description'] ?? ''),
             'organizer' => trim($_POST['organizer'] ?? ''),
-            'logo' => $logoPath,
         ];
 
         // Year is always required now
@@ -409,7 +387,7 @@ include __DIR__ . '/components/unified-layout.php';
 </div>
 <?php endif; ?>
 
-<form method="POST" enctype="multipart/form-data">
+<form method="POST">
     <?= csrf_field() ?>
     <input type="hidden" name="calculate_champions" id="calculate_champions" value="0">
 
@@ -634,28 +612,6 @@ include __DIR__ . '/components/unified-layout.php';
         </div>
     </div>
     <?php endif; ?>
-
-    <!-- Logo -->
-    <div class="admin-card">
-        <div class="admin-card-header">
-            <h2>
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 20px; height: 20px;"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
-                Logotyp
-            </h2>
-        </div>
-        <div class="admin-card-body">
-            <div class="admin-form-group">
-                <label for="logo" class="admin-form-label">Ladda upp logotyp</label>
-                <input type="file" id="logo" name="logo" class="admin-form-input" accept="image/*">
-                <?php if (!empty($series['logo'])): ?>
-                <div style="margin-top: var(--space-md); padding: var(--space-md); background: var(--color-bg-secondary); border-radius: var(--radius-md);">
-                    <strong style="display: block; margin-bottom: var(--space-sm);">Nuvarande logotyp:</strong>
-                    <img src="<?= htmlspecialchars($series['logo']) ?>" alt="Logotyp" style="max-width: 200px; max-height: 100px; border-radius: var(--radius-sm);">
-                </div>
-                <?php endif; ?>
-            </div>
-        </div>
-    </div>
 
     <!-- Sponsors -->
     <?php if (!empty($allSponsors)): ?>

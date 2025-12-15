@@ -39,7 +39,7 @@ $totalPoints = array_sum(array_column($results, 'points'));
         <span>Mina resultat</span>
     </nav>
     <h1 class="page-title">
-        <span class="page-icon">🏁</span>
+        <i data-lucide="flag" class="page-icon"></i>
         Mina resultat
     </h1>
 </div>
@@ -52,7 +52,7 @@ $totalPoints = array_sum(array_column($results, 'points'));
     </div>
     <div class="stat-card">
         <span class="stat-value"><?= $wins ?></span>
-        <span class="stat-label">Segrar 🥇</span>
+        <span class="stat-label">Segrar</span>
     </div>
     <div class="stat-card">
         <span class="stat-value"><?= $podiums ?></span>
@@ -67,7 +67,7 @@ $totalPoints = array_sum(array_column($results, 'points'));
 <!-- Results List -->
 <?php if (empty($results)): ?>
     <div class="empty-state">
-        <div class="empty-icon">🏁</div>
+        <div class="empty-icon"><i data-lucide="flag" style="width: 48px; height: 48px;"></i></div>
         <h3>Inga resultat ännu</h3>
         <p>Dina tävlingsresultat kommer visas här efter att du tävlat.</p>
     </div>
@@ -114,104 +114,5 @@ $totalPoints = array_sum(array_column($results, 'points'));
     </div>
 <?php endif; ?>
 
-<style>
-.stats-grid {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: var(--space-md);
-    margin-bottom: var(--space-xl);
-}
-.stat-card {
-    background: var(--color-bg-card);
-    border-radius: var(--radius-lg);
-    padding: var(--space-lg);
-    text-align: center;
-}
-.stat-value {
-    display: block;
-    font-size: var(--text-2xl);
-    font-weight: var(--weight-bold);
-    color: var(--color-accent);
-}
-.stat-label {
-    font-size: var(--text-sm);
-    color: var(--color-text-secondary);
-}
 
-.year-header {
-    font-size: var(--text-lg);
-    color: var(--color-text-secondary);
-    margin: var(--space-lg) 0 var(--space-md);
-    padding-bottom: var(--space-xs);
-    border-bottom: 1px solid var(--color-border);
-}
-.year-header:first-of-type {
-    margin-top: 0;
-}
-
-.results-list {
-    margin-bottom: var(--space-xl);
-}
-.result-card {
-    display: flex;
-    align-items: center;
-    gap: var(--space-md);
-    padding: var(--space-md);
-    background: var(--color-bg-card);
-    border-radius: var(--radius-lg);
-    margin-bottom: var(--space-xs);
-    text-decoration: none;
-    color: inherit;
-    transition: all var(--transition-fast);
-}
-.result-card:hover {
-    transform: translateX(4px);
-}
-.result-position {
-    min-width: 48px;
-    text-align: center;
-    font-size: var(--text-xl);
-}
-.position-number {
-    font-weight: var(--weight-bold);
-    color: var(--color-text-secondary);
-}
-.medal-icon {
-    width: 24px;
-    height: 24px;
-    vertical-align: middle;
-    display: inline-block;
-}
-.result-info {
-    flex: 1;
-}
-.result-event {
-    display: block;
-    font-weight: var(--weight-medium);
-}
-.result-meta {
-    font-size: var(--text-sm);
-    color: var(--color-text-secondary);
-}
-.result-points {
-    font-weight: var(--weight-semibold);
-    color: var(--color-accent);
-}
-
-.empty-state {
-    text-align: center;
-    padding: var(--space-2xl);
-    background: var(--color-bg-card);
-    border-radius: var(--radius-lg);
-}
-.empty-icon {
-    font-size: 3rem;
-    margin-bottom: var(--space-md);
-}
-
-@media (max-width: 600px) {
-    .stats-grid {
-        grid-template-columns: repeat(2, 1fr);
-    }
-}
-</style>
+<!-- CSS loaded from /assets/css/pages/profile-results.css -->

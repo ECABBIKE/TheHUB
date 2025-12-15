@@ -61,7 +61,7 @@
 
 /* Variants */
 .table--compact th,.table--compact td{padding:calc(var(--table-cell-padding-y) * 0.67) calc(var(--table-cell-padding-x) * 0.75);font-size:var(--text-sm)}
-.table--striped tbody tr:nth-child(even){background:var(--color-bg-sunken)}
+.table--striped tbody tr:nth-child(even){background:transparent}
 .table--striped tbody tr:hover{background:var(--color-bg-hover)}
 .table--clickable tbody tr{cursor:pointer}
 .table--clickable tbody tr:active{background:var(--color-bg-active)}

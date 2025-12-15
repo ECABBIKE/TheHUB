@@ -44,6 +44,13 @@
   z-index:var(--z-sticky);
 }
 
+/* Sidebar Logo */
+.sidebar-logo{
+  display:flex;align-items:center;justify-content:center;
+  padding:var(--space-sm);margin-bottom:var(--space-sm);
+}
+.sidebar-logo img{width:40px;height:40px;border-radius:var(--radius-sm)}
+
 .sidebar-nav{display:flex;flex-direction:column;gap:var(--space-2xs);padding:0 var(--space-sm)}
 
 .sidebar-link{

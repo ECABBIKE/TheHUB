@@ -153,10 +153,46 @@ try {
 
     // === TREND SECTION DATA ===
 
-    // 1. Form curve - Last 5 races with positions
+    // 1. Form curve - Last 10 races with positions and relative placement
     $finishedResults = array_filter($results, fn($r) => $r['status'] === 'finished' && $r['position'] > 0);
-    $formResults = array_slice($finishedResults, 0, 5);
-    $formResults = array_reverse($formResults); // Chronological order (oldest first)
+    $formResultsRaw = array_slice($finishedResults, 0, 10);
+    $formResultsRaw = array_reverse($formResultsRaw); // Chronological order (oldest first)
+
+    // Calculate relative position (position/total) for each race
+    $formResults = [];
+    $runningSum = 0;
+    $runningCount = 0;
+
+    foreach ($formResultsRaw as $idx => $fr) {
+        // Get total participants in same class for this event
+        $totalInClass = 1;
+        try {
+            $countStmt = $db->prepare("
+                SELECT COUNT(*) as cnt
+                FROM results
+                WHERE event_id = ? AND class_id = ? AND status = 'finished'
+            ");
+            $countStmt->execute([$fr['event_id'], $fr['class_id']]);
+            $countResult = $countStmt->fetch(PDO::FETCH_ASSOC);
+            if ($countResult && $countResult['cnt'] > 0) {
+                $totalInClass = $countResult['cnt'];
+            }
+        } catch (Exception $e) {}
+
+        // Calculate relative position (lower is better, 0.0 = 1st, 1.0 = last)
+        $relativePos = $totalInClass > 1 ? ($fr['position'] - 1) / ($totalInClass - 1) : 0;
+
+        // Running average of position/total
+        $runningSum += $fr['position'] / $totalInClass;
+        $runningCount++;
+        $runningAvg = $runningSum / $runningCount;
+
+        $formResults[] = array_merge($fr, [
+            'total_in_class' => $totalInClass,
+            'relative_pos' => $relativePos,
+            'running_avg' => $runningAvg
+        ]);
+    }
 
     // Calculate form trend (compare avg of first half vs second half)
     $formTrend = 'stable';
@@ -408,6 +444,11 @@ if (!$rider) {
 }
 
 $fullName = htmlspecialchars($rider['firstname'] . ' ' . $rider['lastname']);
+$gidNumber = '';
+if ($rider['gravity_id']) {
+    $gidNumber = preg_replace('/^.*?-?(\d+)$/', '$1', $rider['gravity_id']);
+    $gidNumber = ltrim($gidNumber, '0') ?: '0';
+}
 
 // Process achievements for display
 $achievementCounts = ['gold' => 0, 'silver' => 0, 'bronze' => 0, 'hot_streak' => 0];
@@ -441,351 +482,107 @@ foreach ($achievements as $ach) {
 $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 0;
 ?>
 
-<!-- Profile Hero -->
-<section class="profile-hero">
-    <div class="hero-accent-bar"></div>
-    <?php if ($rider['gravity_id']):
-        $gidNumber = preg_replace('/^.*?-?(\d+)$/', '$1', $rider['gravity_id']);
-        $gidNumber = ltrim($gidNumber, '0') ?: '0';
-    ?>
-    <div class="gravity-id-badge">
-        <span class="gid-label">Gravity ID</span>
-        <span class="gid-number">#<?= htmlspecialchars($gidNumber) ?></span>
-    </div>
-    <?php endif; ?>
-    <div class="hero-content">
-        <!-- Top row: Photo + Name -->
-        <div class="hero-top">
-            <div class="hero-left">
-                <div class="profile-photo-container">
-                    <div class="profile-photo">
-                        <?php if ($profileImage): ?>
-                            <img src="<?= htmlspecialchars($profileImage) ?>" alt="<?= $fullName ?>">
-                        <?php else: ?>
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-                                <circle cx="12" cy="7" r="4"/>
-                            </svg>
-                        <?php endif; ?>
-                    </div>
-                    <?php if ($rankingPosition): ?>
-                    <div class="ranking-badge">
-                        <span class="rank-label">Ranking</span>
-                        <span class="rank-number">#<?= $rankingPosition ?></span>
-                    </div>
+<!-- New Grid Layout -->
+<div class="rider-page-grid">
+    <!-- Row 1: Profile Card (Enhanced) -->
+    <div class="card grid-profile">
+        <div class="profile-card-content">
+            <!-- Top: Photo + Info -->
+            <div class="profile-main">
+                <div class="profile-photo-large">
+                    <?php if ($profileImage): ?>
+                        <img src="<?= htmlspecialchars($profileImage) ?>" alt="<?= $fullName ?>">
+                    <?php else: ?>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                            <circle cx="12" cy="7" r="4"/>
+                        </svg>
+                    <?php endif; ?>
+                </div>
+                <div class="profile-info">
+                    <h1 class="profile-name-large"><?= $fullName ?></h1>
+                    <?php if ($age): ?><span class="profile-age-large"><?= $age ?> år</span><?php endif; ?>
+                    <?php if ($rider['club_name']): ?>
+                    <a href="/club/<?= $rider['club_id'] ?>" class="profile-club-link"><?= htmlspecialchars($rider['club_name']) ?></a>
                     <?php endif; ?>
                 </div>
             </div>
 
-            <div class="hero-center">
-                <h1 class="profile-name"><?= $fullName ?></h1>
-                <?php if ($age): ?><span class="profile-age"><?= $age ?> år</span><?php endif; ?>
-                <?php if ($rider['club_name']): ?>
-                <a href="/club/<?= $rider['club_id'] ?>" class="profile-club"><?= htmlspecialchars($rider['club_name']) ?></a>
+            <!-- ID Badges Row -->
+            <div class="profile-id-badges">
+                <?php if ($gidNumber): ?>
+                <div class="id-badge-box gravity-id">
+                    <span class="id-badge-label">Gravity ID</span>
+                    <span class="id-badge-value">#<?= htmlspecialchars($gidNumber) ?></span>
+                </div>
                 <?php endif; ?>
-            </div>
-
-            <div class="hero-right"></div>
-        </div>
-
-        <!-- Bottom row: Badges + Social -->
-        <div class="hero-bottom">
-            <div class="profile-badges">
                 <?php if ($hasLicense): ?>
-                <span class="class-badge"><?= $licenseActive ? '✓' : '✗' ?> <?= htmlspecialchars($rider['license_type']) ?></span>
-                <?php endif; ?>
-                <?php if ($licenseActive): ?>
-                <span class="license-badge">Licens <?= date('Y') ?> ✓</span>
-                <?php endif; ?>
-                <?php if ($experienceLevel > 1): ?>
-                <span class="experience-badge <?= $expInfo['class'] ?>"><?= $expInfo['name'] ?></span>
+                <div class="id-badge-box license <?= $licenseActive ? 'active' : 'inactive' ?>">
+                    <span class="id-badge-label"><?= htmlspecialchars($rider['license_type'] ?: 'Licens') ?></span>
+                    <span class="id-badge-value"><?= $licenseActive ? 'Aktiv ' . date('Y') : 'Ej aktiv' ?></span>
+                </div>
                 <?php endif; ?>
                 <?php if ($rider['license_number']): ?>
-                <span class="uci-badge">UCI <?= htmlspecialchars($rider['license_number']) ?></span>
+                <div class="id-badge-box uci">
+                    <span class="id-badge-label">UCI</span>
+                    <span class="id-badge-value"><?= htmlspecialchars($rider['license_number']) ?></span>
+                </div>
                 <?php endif; ?>
             </div>
 
-            <div class="hero-social">
+            <!-- Social Media Links -->
             <?php
             $hasSocialLinks = !empty($socialProfiles['instagram']) || !empty($socialProfiles['strava']) ||
                               !empty($socialProfiles['facebook']) || !empty($socialProfiles['youtube']) ||
                               !empty($socialProfiles['tiktok']);
             ?>
-            <?php if ($isOwnProfile && !$hasSocialLinks): ?>
-            <a href="/profile/edit" class="add-social-prompt" title="Lägg till sociala medier">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <circle cx="12" cy="12" r="10"/>
-                    <line x1="12" y1="8" x2="12" y2="16"/>
-                    <line x1="8" y1="12" x2="16" y2="12"/>
-                </svg>
-                <span>Lägg till sociala medier</span>
-            </a>
-            <?php else: ?>
-            <a href="<?= $socialProfiles['instagram']['url'] ?? '#' ?>" class="social-link instagram <?= empty($socialProfiles['instagram']) ? 'empty' : '' ?>" title="Instagram" <?= !empty($socialProfiles['instagram']) ? 'target="_blank"' : '' ?>>
-                <svg viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
-            </a>
-            <a href="<?= $socialProfiles['strava']['url'] ?? '#' ?>" class="social-link strava <?= empty($socialProfiles['strava']) ? 'empty' : '' ?>" title="Strava" <?= !empty($socialProfiles['strava']) ? 'target="_blank"' : '' ?>>
-                <svg viewBox="0 0 24 24"><path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169"/></svg>
-            </a>
-            <a href="<?= $socialProfiles['facebook']['url'] ?? '#' ?>" class="social-link facebook <?= empty($socialProfiles['facebook']) ? 'empty' : '' ?>" title="Facebook" <?= !empty($socialProfiles['facebook']) ? 'target="_blank"' : '' ?>>
-                <svg viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
-            </a>
-            <a href="<?= $socialProfiles['youtube']['url'] ?? '#' ?>" class="social-link youtube <?= empty($socialProfiles['youtube']) ? 'empty' : '' ?>" title="YouTube" <?= !empty($socialProfiles['youtube']) ? 'target="_blank"' : '' ?>>
-                <svg viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
-            </a>
-            <a href="<?= $socialProfiles['tiktok']['url'] ?? '#' ?>" class="social-link tiktok <?= empty($socialProfiles['tiktok']) ? 'empty' : '' ?>" title="TikTok" <?= !empty($socialProfiles['tiktok']) ? 'target="_blank"' : '' ?>>
-                <svg viewBox="0 0 24 24"><path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z"/></svg>
-            </a>
-            <?php endif; ?>
+            <div class="profile-social">
+                <?php if ($isOwnProfile && !$hasSocialLinks): ?>
+                <a href="/profile/edit" class="add-social-prompt">
+                    <i data-lucide="plus-circle"></i>
+                    <span>Lägg till sociala medier</span>
+                </a>
+                <?php else: ?>
+                <a href="<?= $socialProfiles['instagram']['url'] ?? '#' ?>" class="social-link instagram <?= empty($socialProfiles['instagram']) ? 'empty' : '' ?>" title="Instagram" <?= !empty($socialProfiles['instagram']) ? 'target="_blank"' : '' ?>>
+                    <svg viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
+                </a>
+                <a href="<?= $socialProfiles['strava']['url'] ?? '#' ?>" class="social-link strava <?= empty($socialProfiles['strava']) ? 'empty' : '' ?>" title="Strava" <?= !empty($socialProfiles['strava']) ? 'target="_blank"' : '' ?>>
+                    <svg viewBox="0 0 24 24"><path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169"/></svg>
+                </a>
+                <a href="<?= $socialProfiles['facebook']['url'] ?? '#' ?>" class="social-link facebook <?= empty($socialProfiles['facebook']) ? 'empty' : '' ?>" title="Facebook" <?= !empty($socialProfiles['facebook']) ? 'target="_blank"' : '' ?>>
+                    <svg viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+                </a>
+                <a href="<?= $socialProfiles['youtube']['url'] ?? '#' ?>" class="social-link youtube <?= empty($socialProfiles['youtube']) ? 'empty' : '' ?>" title="YouTube" <?= !empty($socialProfiles['youtube']) ? 'target="_blank"' : '' ?>>
+                    <svg viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+                </a>
+                <a href="<?= $socialProfiles['tiktok']['url'] ?? '#' ?>" class="social-link tiktok <?= empty($socialProfiles['tiktok']) ? 'empty' : '' ?>" title="TikTok" <?= !empty($socialProfiles['tiktok']) ? 'target="_blank"' : '' ?>>
+                    <svg viewBox="0 0 24 24"><path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z"/></svg>
+                </a>
+                <?php endif; ?>
             </div>
 
-            <div class="profile-actions">
-                <button type="button" class="share-profile-btn" onclick="shareProfile(<?= $riderId ?>)" title="Dela profil">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <circle cx="18" cy="5" r="3"/>
-                        <circle cx="6" cy="12" r="3"/>
-                        <circle cx="18" cy="19" r="3"/>
-                        <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/>
-                        <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
-                    </svg>
-                    Dela
+            <!-- Actions Row -->
+            <div class="profile-actions-row">
+                <button type="button" class="btn-action" onclick="shareProfile(<?= $riderId ?>)">
+                    <i data-lucide="share-2"></i>
+                    <span>Dela</span>
                 </button>
                 <?php if ($isOwnProfile): ?>
-                <a href="/profile/edit" class="edit-profile-btn">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-                    </svg>
-                    Redigera
+                <a href="/profile/edit" class="btn-action primary">
+                    <i data-lucide="pencil"></i>
+                    <span>Redigera profil</span>
                 </a>
                 <?php endif; ?>
             </div>
         </div>
     </div>
-</section>
 
-<?php if ($hasCompetitiveResults): ?>
-<!-- Rider Stats Trend Section -->
-<div class="rider-stats-trend">
-    <div class="stats-row">
-        <!-- Form Section -->
-        <div class="form-section">
-            <h4 class="trend-section-title">Form</h4>
-            <?php if (!empty($formResults)): ?>
-            <div class="form-results">
-                <?php foreach ($formResults as $idx => $fr):
-                    $pos = $fr['position'];
-                    $posClass = $pos == 1 ? 'gold' : ($pos == 2 ? 'silver' : ($pos == 3 ? 'bronze' : ''));
-                ?>
-                <div class="form-race">
-                    <span class="form-position <?= $posClass ?>">
-                        <?php if ($pos == 1): ?>
-                            <img src="/assets/icons/medal-1st.svg" alt="1:a" class="form-medal">
-                        <?php elseif ($pos == 2): ?>
-                            <img src="/assets/icons/medal-2nd.svg" alt="2:a" class="form-medal">
-                        <?php elseif ($pos == 3): ?>
-                            <img src="/assets/icons/medal-3rd.svg" alt="3:e" class="form-medal">
-                        <?php else: ?>
-                            <span class="form-pos-number"><?= $pos ?></span>
-                        <?php endif; ?>
-                    </span>
-                    <span class="form-event"><?= htmlspecialchars(mb_substr($fr['event_name'], 0, 10)) ?></span>
-                </div>
-                <?php endforeach; ?>
-            </div>
-
-            <!-- Visual Form Chart -->
-            <div class="form-chart">
-                <?php
-                // Generate SVG points for form curve
-                $chartWidth = 200;
-                $chartHeight = 50;
-                $padding = 15;
-                $numResults = count($formResults);
-
-                if ($numResults > 0) {
-                    $xStep = $numResults > 1 ? ($chartWidth - $padding * 2) / ($numResults - 1) : 0;
-                    $points = [];
-                    $circles = [];
-                    $maxPos = max(array_column($formResults, 'position'));
-                    $minPos = min(array_column($formResults, 'position'));
-                    $range = max(1, $maxPos - $minPos);
-
-                    foreach ($formResults as $idx => $fr) {
-                        $x = $padding + ($idx * $xStep);
-                        // Invert Y so lower positions are higher on chart
-                        $y = $padding + (($fr['position'] - $minPos) / $range) * ($chartHeight - $padding * 2);
-                        $points[] = "$x,$y";
-
-                        // Circle color based on position
-                        $fillColor = $fr['position'] == 1 ? '#FFD700' :
-                                    ($fr['position'] == 2 ? '#C0C0C0' :
-                                    ($fr['position'] == 3 ? '#CD7F32' : '#7A7A7A'));
-                        $circles[] = ['x' => $x, 'y' => $y, 'fill' => $fillColor];
-                    }
-                    $polyPoints = implode(' ', $points);
-                ?>
-                <svg viewBox="0 0 <?= $chartWidth ?> <?= $chartHeight ?>" preserveAspectRatio="xMidYMid meet" class="form-chart-svg">
-                    <!-- Trend line -->
-                    <polyline
-                        points="<?= $polyPoints ?>"
-                        fill="none"
-                        stroke="var(--color-accent)"
-                        stroke-width="3"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"/>
-                    <!-- Data points -->
-                    <?php foreach ($circles as $c): ?>
-                    <circle cx="<?= $c['x'] ?>" cy="<?= $c['y'] ?>" r="6" fill="<?= $c['fill'] ?>" stroke="white" stroke-width="2"/>
-                    <?php endforeach; ?>
-                </svg>
-                <?php } ?>
-            </div>
-
-            <div class="form-trend <?= $formTrend ?>">
-                <?php if ($formTrend === 'up'): ?>
-                <span class="trend-arrow">↗</span>
-                <span class="trend-text">Stigande form</span>
-                <?php elseif ($formTrend === 'down'): ?>
-                <span class="trend-arrow">↘</span>
-                <span class="trend-text">Fallande form</span>
-                <?php else: ?>
-                <span class="trend-arrow">→</span>
-                <span class="trend-text">Stabil form</span>
-                <?php endif; ?>
-            </div>
-            <?php else: ?>
-            <div class="form-empty">
-                <span class="empty-icon"><i data-lucide="flag"></i></span>
-                <span>Inga resultat ännu</span>
-            </div>
-            <?php endif; ?>
-        </div>
-
-        <!-- Highlights Section -->
-        <div class="highlights-section">
-            <h4 class="trend-section-title">Säsongens Highlights</h4>
-            <?php if (!empty($highlights)): ?>
-            <div class="highlights-list">
-                <?php foreach ($highlights as $hl): ?>
-                <div class="highlight-item <?= $hl['type'] ?> <?= !empty($hl['active']) ? 'active' : '' ?>">
-                    <span class="highlight-icon"><i data-lucide="<?= htmlspecialchars($hl['icon']) ?>"></i></span>
-                    <span class="highlight-text"><?= $hl['text'] ?></span>
-                </div>
-                <?php endforeach; ?>
-            </div>
-            <?php else: ?>
-            <div class="highlights-empty">
-                <span class="empty-icon"><i data-lucide="clock"></i></span>
-                <span>Bygg din statistik genom att tävla!</span>
-            </div>
-            <?php endif; ?>
-        </div>
-    </div>
-
-    <!-- Ranking Section -->
-    <div class="ranking-section">
-        <div class="ranking-header">
-            <h4 class="trend-section-title">Ranking</h4>
-            <?php if ($rankingPosition): ?>
-            <div class="ranking-current">
-                <span class="rank-number-large">#<?= $rankingPosition ?></span>
-                <?php if ($rankingChange != 0): ?>
-                <span class="rank-change <?= $rankingChange > 0 ? 'up' : 'down' ?>">
-                    <?= $rankingChange > 0 ? '↑' : '↓' ?><?= abs($rankingChange) ?> från start
-                </span>
-                <?php endif; ?>
-            </div>
-            <?php endif; ?>
-        </div>
-
-        <?php if (!empty($rankingHistory) && count($rankingHistory) > 1): ?>
-        <!-- Ranking Chart -->
-        <div class="ranking-chart">
-            <?php
-            // Calculate chart dimensions
-            $chartWidth = 300;
-            $chartHeight = 80;
-            $padding = 30;
-            $numPoints = count($rankingHistory);
-
-            // Find min/max positions for scaling
-            $positions = array_column($rankingHistory, 'ranking_position');
-            $minRank = min($positions);
-            $maxRank = max($positions);
-            $rankRange = max(1, $maxRank - $minRank);
-
-            // Add some padding to range
-            $minRank = max(1, $minRank - 1);
-            $maxRank = $maxRank + 1;
-            $rankRange = $maxRank - $minRank;
-
-            $xStep = $numPoints > 1 ? ($chartWidth - $padding * 2) / ($numPoints - 1) : 0;
-            $points = [];
-            $areaPoints = [];
-
-            foreach ($rankingHistory as $idx => $h) {
-                $x = $padding + ($idx * $xStep);
-                // Invert Y so rank #1 is at top
-                $y = $padding + (($h['ranking_position'] - $minRank) / $rankRange) * ($chartHeight - $padding * 2);
-                $points[] = "$x,$y";
-                $areaPoints[] = ['x' => $x, 'y' => $y, 'pos' => $h['ranking_position']];
-            }
-
-            // Create area fill polygon
-            $polyPoints = implode(' ', $points);
-            $firstX = $areaPoints[0]['x'];
-            $lastX = $areaPoints[count($areaPoints) - 1]['x'];
-            $bottomY = $chartHeight - $padding;
-            $areaPolygon = $polyPoints . " $lastX,$bottomY $firstX,$bottomY";
-            ?>
-            <svg viewBox="0 0 <?= $chartWidth ?> <?= $chartHeight ?>">
-                <defs>
-                    <linearGradient id="rankingGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stop-color="var(--color-accent)"/>
-                        <stop offset="100%" stop-color="var(--color-accent)" stop-opacity="0"/>
-                    </linearGradient>
-                </defs>
-
-                <!-- Grid lines -->
-                <line x1="<?= $padding ?>" y1="<?= $padding ?>" x2="<?= $chartWidth - $padding ?>" y2="<?= $padding ?>" stroke="var(--color-border)" stroke-width="1" opacity="0.5"/>
-                <line x1="<?= $padding ?>" y1="<?= $chartHeight / 2 ?>" x2="<?= $chartWidth - $padding ?>" y2="<?= $chartHeight / 2 ?>" stroke="var(--color-border)" stroke-width="1" stroke-dasharray="4" opacity="0.3"/>
-                <line x1="<?= $padding ?>" y1="<?= $chartHeight - $padding ?>" x2="<?= $chartWidth - $padding ?>" y2="<?= $chartHeight - $padding ?>" stroke="var(--color-border)" stroke-width="1" opacity="0.5"/>
-
-                <!-- Y-axis labels -->
-                <text x="5" y="<?= $padding + 4 ?>" font-size="10" fill="var(--color-text-muted)">#<?= $minRank ?></text>
-                <text x="5" y="<?= $chartHeight - $padding + 4 ?>" font-size="10" fill="var(--color-text-muted)">#<?= $maxRank ?></text>
-
-                <!-- Area fill -->
-                <polygon points="<?= $areaPolygon ?>" fill="url(#rankingGradient)" opacity="0.3"/>
-
-                <!-- Ranking line -->
-                <polyline
-                    points="<?= $polyPoints ?>"
-                    fill="none"
-                    stroke="var(--color-accent)"
-                    stroke-width="3"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"/>
-
-                <!-- Current position marker -->
-                <?php $lastPoint = end($areaPoints); ?>
-                <circle cx="<?= $lastPoint['x'] ?>" cy="<?= $lastPoint['y'] ?>" r="8" fill="var(--color-accent)" stroke="white" stroke-width="2"/>
-            </svg>
-        </div>
-
-        <!-- Month labels -->
-        <div class="ranking-months">
-            <?php foreach ($rankingHistory as $h): ?>
-            <span><?= $h['month_short'] ?></span>
-            <?php endforeach; ?>
-        </div>
-        <?php elseif ($rankingPosition): ?>
-        <!-- Simple progress bar if no history -->
-        <div class="ranking-bar-container">
-            <?php
-            // Get total riders for percentage
-            $totalRankedRiders = 100; // Default estimate
+    <!-- Row 1: Ranking Card -->
+    <div class="card grid-ranking">
+        <h3 class="card-title"><i data-lucide="bar-chart-2"></i> Ranking</h3>
+        <?php if ($rankingPosition):
+            // Get total ranked riders for progress bar
+            $totalRankedRiders = 100;
             try {
                 $countStmt = $db->prepare("SELECT COUNT(DISTINCT rider_id) as cnt FROM ranking_snapshots WHERE discipline = 'GRAVITY'");
                 $countStmt->execute();
@@ -795,99 +592,229 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
                 }
             } catch (Exception $e) {}
             $rankPercent = max(5, min(100, 100 - (($rankingPosition - 1) / max(1, $totalRankedRiders - 1)) * 100));
-            ?>
-            <div class="ranking-bar">
-                <div class="ranking-fill" style="width: <?= $rankPercent ?>%"></div>
+        ?>
+        <div class="ranking-position-large">
+            <span class="position-number">#<?= $rankingPosition ?></span>
+            <span class="position-label">av <?= $totalRankedRiders ?> rankade</span>
+        </div>
+
+        <!-- Progress Bar -->
+        <div class="ranking-progress-bar">
+            <div class="progress-track">
+                <div class="progress-fill" style="width: <?= $rankPercent ?>%"></div>
+                <div class="progress-marker" style="left: <?= $rankPercent ?>%"></div>
             </div>
-            <div class="ranking-labels">
+            <div class="progress-labels">
                 <span>#<?= $totalRankedRiders ?></span>
                 <span>#1</span>
             </div>
         </div>
-        <?php else: ?>
-        <div class="ranking-empty">
-            <span class="empty-icon"><i data-lucide="bar-chart-2"></i></span>
-            <span>Ingen ranking tillgänglig</span>
+
+        <?php if ($rankingChange != 0): ?>
+        <div class="ranking-change <?= $rankingChange > 0 ? 'up' : 'down' ?>">
+            <?= $rankingChange > 0 ? '↑' : '↓' ?> <?= abs($rankingChange) ?> positioner sedan start
         </div>
         <?php endif; ?>
 
-        <?php
-        // Get ranking events breakdown
-        $rankingEvents = [];
-        if (isset($riderRankingDetails) && !empty($riderRankingDetails['events'])) {
-            $rankingEvents = $riderRankingDetails['events'];
-        }
-        ?>
-        <?php if (!empty($rankingEvents)): ?>
-        <!-- Ranking Breakdown Dropdown -->
-        <details class="ranking-breakdown-details">
-            <summary class="ranking-breakdown-summary">
-                <span class="breakdown-title">
-                    <i data-lucide="calculator"></i>
-                    Visa uträkning
-                    <span class="breakdown-formula-hint">(poäng × fält × typ × tid)</span>
-                </span>
-                <span class="breakdown-total"><?= number_format($rankingPoints, 1) ?> p</span>
-                <i data-lucide="chevron-down" class="breakdown-chevron"></i>
-            </summary>
-            <div class="ranking-breakdown-content">
-                <div class="breakdown-events-list">
-                    <?php foreach ($rankingEvents as $event): ?>
-                    <div class="breakdown-event">
-                        <div class="breakdown-event-row">
-                            <span class="breakdown-event-name"><?= htmlspecialchars($event['event_name'] ?? 'Event') ?></span>
-                            <span class="breakdown-event-date"><?= date('j/n', strtotime($event['event_date'])) ?></span>
-                            <span class="breakdown-event-points">+<?= number_format($event['weighted_points'] ?? 0, 0) ?></span>
-                        </div>
-                        <div class="breakdown-event-calc">
-                            <span class="calc-val"><?= number_format($event['original_points'] ?? 0, 0) ?></span>
-                            <span class="calc-op">×</span>
-                            <span class="calc-val <?= ($event['field_multiplier'] ?? 1) < 1 ? 'dim' : '' ?>"><?= number_format(($event['field_multiplier'] ?? 1) * 100, 0) ?>%</span>
-                            <span class="calc-op">×</span>
-                            <span class="calc-val <?= ($event['event_level_multiplier'] ?? 1) < 1 ? 'dim' : '' ?>"><?= number_format(($event['event_level_multiplier'] ?? 1) * 100, 0) ?>%</span>
-                            <span class="calc-op">×</span>
-                            <span class="calc-val <?= ($event['time_multiplier'] ?? 1) < 1 ? 'dim' : '' ?>"><?= number_format(($event['time_multiplier'] ?? 1) * 100, 0) ?>%</span>
-                        </div>
-                    </div>
-                    <?php endforeach; ?>
-                </div>
+        <!-- Points & Calculation Button -->
+        <div class="ranking-points-row">
+            <div class="points-display">
+                <span class="points-value"><?= number_format($rankingPoints, 1) ?></span>
+                <span class="points-label">poäng</span>
             </div>
-        </details>
+            <?php if (!empty($rankingEvents)): ?>
+            <button type="button" class="ranking-calc-btn" onclick="openRankingModal()">
+                <i data-lucide="calculator"></i>
+                <span>Visa uträkning</span>
+            </button>
+            <?php endif; ?>
+        </div>
+        <?php else: ?>
+        <div class="empty-state-small">
+            <i data-lucide="bar-chart-2"></i>
+            <span>Ingen ranking ännu</span>
+        </div>
         <?php endif; ?>
     </div>
-</div>
-<?php elseif ($motionStarts > 0): ?>
-<!-- Highlight Card - Motion/Hobby deltagare -->
-<div class="highlight-card">
-    <div class="highlight-icon"><i data-lucide="bike"></i></div>
-    <div class="highlight-content">
-        <h3 class="highlight-title">Motion</h3>
-        <p class="highlight-text"><strong><?= $motionStarts ?></strong> starter, <strong><?= $motionFinished ?></strong> fullföljda</p>
-        <p class="highlight-subtext">Icke-tävlande klass utan ranking.</p>
-    </div>
-</div>
-<?php else: ?>
-<!-- No results yet -->
-<div class="highlight-card">
-    <div class="highlight-icon"><i data-lucide="user"></i></div>
-    <div class="highlight-content">
-        <h3 class="highlight-title">Välkommen!</h3>
-        <p class="highlight-text">Inga resultat registrerade ännu.</p>
-        <p class="highlight-subtext">Anmäl dig till ett event för att komma igång!</p>
-    </div>
-</div>
-<?php endif; ?>
 
-<div class="content-layout">
-    <div class="content-main">
-        <!-- Series Standings -->
-        <?php if (!empty($seriesStandings)): ?>
-        <section class="section">
-            <div class="section-header-styled">
-                <h3 class="section-title-styled">Serieställning</h3>
+    <!-- Row 2: Form Card -->
+    <div class="card grid-form">
+        <h3 class="card-title"><i data-lucide="trending-up"></i> Form</h3>
+        <?php if ($hasCompetitiveResults && !empty($formResults)): ?>
+
+        <?php
+        // Calculate current running average for display
+        $currentAvg = end($formResults)['running_avg'] ?? 0;
+        $avgDisplay = number_format($currentAvg, 2);
+        ?>
+
+        <!-- Average Placement Display -->
+        <div class="form-avg-display">
+            <div class="avg-value-box">
+                <span class="avg-value"><?= $avgDisplay ?></span>
+                <span class="avg-label">Snittplacering</span>
             </div>
+            <div class="avg-explanation">
+                <i data-lucide="info"></i>
+                <span>Placering / Antal startande (1.0 = alltid först)</span>
+            </div>
+        </div>
 
-            <div class="series-tabs">
+        <!-- Running Average Graph -->
+        <div class="form-chart-container">
+            <?php
+            $chartWidth = 320;
+            $chartHeight = 100;
+            $paddingX = 35;
+            $paddingY = 15;
+            $numResults = count($formResults);
+
+            if ($numResults > 0) {
+                $xStep = $numResults > 1 ? ($chartWidth - $paddingX * 2) / ($numResults - 1) : 0;
+
+                // Get running averages for the graph
+                $avgValues = array_column($formResults, 'running_avg');
+                $maxAvg = max($avgValues);
+                $minAvg = min($avgValues);
+                $range = max(0.1, $maxAvg - $minAvg);
+
+                // Build points for the line
+                $points = [];
+                $circles = [];
+
+                foreach ($formResults as $idx => $fr) {
+                    $x = $paddingX + ($idx * $xStep);
+                    // Invert Y so lower avg (better) is higher on chart
+                    $y = $paddingY + (1 - (($maxAvg - $fr['running_avg']) / $range)) * ($chartHeight - $paddingY * 2);
+                    $points[] = "$x,$y";
+
+                    // Color based on position
+                    $fillColor = $fr['position'] == 1 ? '#FFD700' :
+                                ($fr['position'] == 2 ? '#C0C0C0' :
+                                ($fr['position'] == 3 ? '#CD7F32' : 'var(--color-accent)'));
+
+                    $circles[] = [
+                        'x' => $x,
+                        'y' => $y,
+                        'fill' => $fillColor,
+                        'avg' => number_format($fr['running_avg'], 2),
+                        'pos' => $fr['position'],
+                        'total' => $fr['total_in_class'],
+                        'name' => mb_substr($fr['event_name'], 0, 6)
+                    ];
+                }
+                $polyPoints = implode(' ', $points);
+
+                // Y-axis labels
+                $yTop = number_format($minAvg, 1);
+                $yBottom = number_format($maxAvg, 1);
+            ?>
+            <svg viewBox="0 0 <?= $chartWidth ?> <?= $chartHeight ?>" class="form-chart-svg" preserveAspectRatio="xMidYMid meet">
+                <defs>
+                    <linearGradient id="avgGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stop-color="var(--color-accent)" stop-opacity="0.25"/>
+                        <stop offset="100%" stop-color="var(--color-accent)" stop-opacity="0.02"/>
+                    </linearGradient>
+                </defs>
+
+                <!-- Y-axis labels -->
+                <text x="5" y="<?= $paddingY + 4 ?>" font-size="9" fill="var(--color-text-muted)"><?= $yTop ?></text>
+                <text x="5" y="<?= $chartHeight - $paddingY + 4 ?>" font-size="9" fill="var(--color-text-muted)"><?= $yBottom ?></text>
+
+                <!-- Grid lines -->
+                <line x1="<?= $paddingX ?>" y1="<?= $paddingY ?>" x2="<?= $chartWidth - $paddingX ?>" y2="<?= $paddingY ?>" stroke="var(--color-border)" stroke-width="1" stroke-dasharray="3,3"/>
+                <line x1="<?= $paddingX ?>" y1="<?= $chartHeight - $paddingY ?>" x2="<?= $chartWidth - $paddingX ?>" y2="<?= $chartHeight - $paddingY ?>" stroke="var(--color-border)" stroke-width="1" stroke-dasharray="3,3"/>
+
+                <!-- Area fill -->
+                <polygon points="<?= $polyPoints ?> <?= $paddingX + (($numResults - 1) * $xStep) ?>,<?= $chartHeight - $paddingY ?> <?= $paddingX ?>,<?= $chartHeight - $paddingY ?>" fill="url(#avgGradient)"/>
+
+                <!-- Trend line -->
+                <polyline points="<?= $polyPoints ?>" fill="none" stroke="var(--color-accent)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+
+                <!-- Data points with position indicator -->
+                <?php foreach ($circles as $c): ?>
+                <circle cx="<?= $c['x'] ?>" cy="<?= $c['y'] ?>" r="6" fill="<?= $c['fill'] ?>" stroke="var(--color-bg-card)" stroke-width="2"/>
+                <?php endforeach; ?>
+            </svg>
+            <?php } ?>
+        </div>
+
+        <!-- Race Results Row with position/total -->
+        <div class="form-results-list">
+            <?php
+            // Show last 5 for the compact list
+            $displayResults = array_slice($formResults, -5);
+            foreach ($displayResults as $idx => $fr):
+                $pos = $fr['position'];
+                $total = $fr['total_in_class'];
+                $posClass = $pos == 1 ? 'gold' : ($pos == 2 ? 'silver' : ($pos == 3 ? 'bronze' : ''));
+            ?>
+            <div class="form-result-row">
+                <span class="form-pos-badge <?= $posClass ?>">
+                    <?php if ($pos == 1): ?>
+                        <img src="/assets/icons/medal-1st.svg" alt="1:a" class="form-medal-sm">
+                    <?php elseif ($pos == 2): ?>
+                        <img src="/assets/icons/medal-2nd.svg" alt="2:a" class="form-medal-sm">
+                    <?php elseif ($pos == 3): ?>
+                        <img src="/assets/icons/medal-3rd.svg" alt="3:e" class="form-medal-sm">
+                    <?php else: ?>
+                        <?= $pos ?>
+                    <?php endif; ?>
+                </span>
+                <span class="form-result-event"><?= htmlspecialchars(mb_substr($fr['event_name'], 0, 12)) ?></span>
+                <span class="form-result-ratio"><?= $pos ?>/<?= $total ?></span>
+                <span class="form-result-avg"><?= number_format($fr['running_avg'], 2) ?></span>
+            </div>
+            <?php endforeach; ?>
+        </div>
+
+        <div class="form-trend-indicator <?= $formTrend ?>">
+            <?php if ($formTrend === 'up'): ?>
+            <span class="trend-arrow">↗</span> Stigande form
+            <?php elseif ($formTrend === 'down'): ?>
+            <span class="trend-arrow">↘</span> Fallande form
+            <?php else: ?>
+            <span class="trend-arrow">→</span> Stabil form
+            <?php endif; ?>
+        </div>
+        <?php elseif ($motionStarts > 0): ?>
+        <div class="motion-info">
+            <i data-lucide="bike"></i>
+            <span><strong><?= $motionStarts ?></strong> motionsstarter</span>
+        </div>
+        <?php else: ?>
+        <div class="empty-state-small">
+            <i data-lucide="flag"></i>
+            <span>Inga resultat ännu</span>
+        </div>
+        <?php endif; ?>
+    </div>
+
+    <!-- Row 2: Highlights Card -->
+    <div class="card grid-highlights">
+        <h3 class="card-title"><i data-lucide="star"></i> Highlights</h3>
+        <?php if (!empty($highlights)): ?>
+        <div class="highlights-list-grid">
+            <?php foreach ($highlights as $hl): ?>
+            <div class="highlight-row <?= $hl['type'] ?> <?= !empty($hl['active']) ? 'active' : '' ?>">
+                <span class="hl-icon"><i data-lucide="<?= htmlspecialchars($hl['icon']) ?>"></i></span>
+                <span class="hl-text"><?= $hl['text'] ?></span>
+            </div>
+            <?php endforeach; ?>
+        </div>
+        <?php else: ?>
+        <div class="empty-state-small">
+            <i data-lucide="clock"></i>
+            <span>Bygg statistik genom att tävla!</span>
+        </div>
+        <?php endif; ?>
+    </div>
+
+    <!-- Row 3: Series Standings Card -->
+    <?php if (!empty($seriesStandings)): ?>
+    <div class="card grid-series">
+        <h3 class="card-title"><i data-lucide="trophy"></i> Serieställning</h3>
+        <div class="series-tabs">
                 <nav class="series-nav">
                     <?php foreach ($seriesStandings as $idx => $standing): ?>
                     <button class="series-tab <?= $idx === 0 ? 'active' : '' ?>" data-target="series-panel-<?= $idx ?>">
@@ -992,12 +919,11 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
                     <?php endforeach; ?>
                 </div>
             </div>
-        </section>
-        <?php endif; ?>
-    </div>
+        </div>
+    <?php endif; ?>
 
-    <!-- Sidebar: Achievements & Results -->
-    <aside class="content-sidebar">
+    <!-- Row 3: Achievements Card -->
+    <div class="card grid-achievements">
         <link rel="stylesheet" href="/assets/css/achievements.css?v=<?= file_exists(dirname(__DIR__) . '/assets/css/achievements.css') ? filemtime(dirname(__DIR__) . '/assets/css/achievements.css') : time() ?>">
         <?php
         // Build stats array for the achievements component
@@ -1019,67 +945,60 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
             echo renderRiderAchievements($db, $riderId, $riderStats);
         }
         ?>
+    </div>
 
-        <!-- All Results -->
-        <section class="section">
-            <?php if (empty($results)): ?>
-            <div class="card results-card">
-                <div class="empty-state">
-                    <div class="empty-icon"><i data-lucide="flag"></i></div>
-                    <p>Inga resultat registrerade</p>
-                </div>
+    <!-- Row 4: Historical Results (Full Width) -->
+    <div class="card grid-results">
+        <h3 class="card-title"><i data-lucide="history"></i> Resultathistorik</h3>
+        <?php if (empty($results)): ?>
+        <div class="empty-state-small">
+            <i data-lucide="flag"></i>
+            <p>Inga resultat registrerade</p>
+        </div>
+        <?php else: ?>
+        <div class="results-list-compact">
+            <?php
+            $currentYear = null;
+            foreach ($results as $result):
+                $resultYear = date('Y', strtotime($result['event_date']));
+                if ($resultYear !== $currentYear):
+                    $currentYear = $resultYear;
+            ?>
+            <div class="year-divider">
+                <span class="year-label"><?= $currentYear ?></span>
+                <span class="year-line"></span>
             </div>
-            <?php else: ?>
-            <details class="events-dropdown" open>
-                <summary class="events-dropdown-header">
-                    <span>Historiska resultat</span>
-                    <span class="events-count"><?= count($results) ?> st</span>
-                    <span class="dropdown-arrow">▾</span>
-                </summary>
-                <div class="events-dropdown-content">
-                    <?php
-                    $currentYear = null;
-                    foreach ($results as $result):
-                        $resultYear = date('Y', strtotime($result['event_date']));
-                        if ($resultYear !== $currentYear):
-                            $currentYear = $resultYear;
-                    ?>
-                    <div class="year-divider">
-                        <span class="year-label"><?= $currentYear ?></span>
-                        <span class="year-line"></span>
-                    </div>
-                    <?php endif; ?>
-                    <a href="/event/<?= $result['event_id'] ?>" class="event-dropdown-item">
-                        <?php if ($result['is_motion']): ?>
-                        <span class="event-position motion">
-                            <i data-lucide="check"></i>
-                        </span>
-                        <?php else: ?>
-                        <span class="event-position <?= $result['status'] === 'finished' && $result['position'] <= 3 ? 'p' . $result['position'] : '' ?>">
-                            <?php if ($result['status'] !== 'finished'): ?>
-                                <?= strtoupper(substr($result['status'], 0, 3)) ?>
-                            <?php elseif ($result['position'] == 1): ?>
-                                <img src="/assets/icons/medal-1st.svg" alt="1:a" class="medal-icon">
-                            <?php elseif ($result['position'] == 2): ?>
-                                <img src="/assets/icons/medal-2nd.svg" alt="2:a" class="medal-icon">
-                            <?php elseif ($result['position'] == 3): ?>
-                                <img src="/assets/icons/medal-3rd.svg" alt="3:e" class="medal-icon">
-                            <?php else: ?>
-                                <?= $result['position'] ?>
-                            <?php endif; ?>
-                        </span>
-                        <?php endif; ?>
-                        <span class="event-date"><?= date('j M', strtotime($result['event_date'])) ?></span>
-                        <span class="event-name"><?= htmlspecialchars($result['event_name']) ?></span>
-                        <span class="event-results"><?= $result['is_motion'] ? 'Motion' : htmlspecialchars($result['series_name'] ?? '') ?></span>
-                    </a>
-                    <?php endforeach; ?>
-                </div>
-            </details>
             <?php endif; ?>
-        </section>
-    </aside>
-</div>
+            <a href="/event/<?= $result['event_id'] ?>" class="result-row">
+                <?php if ($result['is_motion']): ?>
+                <span class="result-pos motion">
+                    <i data-lucide="check"></i>
+                </span>
+                <?php else: ?>
+                <span class="result-pos <?= $result['status'] === 'finished' && $result['position'] <= 3 ? 'p' . $result['position'] : '' ?>">
+                    <?php if ($result['status'] !== 'finished'): ?>
+                        <?= strtoupper(substr($result['status'], 0, 3)) ?>
+                    <?php elseif ($result['position'] == 1): ?>
+                        <img src="/assets/icons/medal-1st.svg" alt="1:a" class="medal-icon-sm">
+                    <?php elseif ($result['position'] == 2): ?>
+                        <img src="/assets/icons/medal-2nd.svg" alt="2:a" class="medal-icon-sm">
+                    <?php elseif ($result['position'] == 3): ?>
+                        <img src="/assets/icons/medal-3rd.svg" alt="3:e" class="medal-icon-sm">
+                    <?php else: ?>
+                        <?= $result['position'] ?>
+                    <?php endif; ?>
+                </span>
+                <?php endif; ?>
+                <span class="result-date"><?= date('j M', strtotime($result['event_date'])) ?></span>
+                <span class="result-name"><?= htmlspecialchars($result['event_name']) ?></span>
+                <span class="result-series"><?= $result['is_motion'] ? 'Motion' : htmlspecialchars($result['series_name'] ?? '') ?></span>
+            </a>
+            <?php endforeach; ?>
+        </div>
+        <?php endif; ?>
+    </div>
+
+</div><!-- End rider-page-grid -->
 
 <script>
 // Series Tab Switching
@@ -1169,5 +1088,104 @@ function copyToClipboard(text) {
         setTimeout(() => { btn.innerHTML = originalHtml; }, 2000);
     });
 }
+
+// Ranking Modal Functions
+function openRankingModal() {
+    const modal = document.getElementById('rankingModal');
+    if (modal) {
+        modal.classList.add('active');
+        document.body.style.overflow = 'hidden';
+    }
+}
+
+function closeRankingModal() {
+    const modal = document.getElementById('rankingModal');
+    if (modal) {
+        modal.classList.remove('active');
+        document.body.style.overflow = '';
+    }
+}
+
+// Close modal on overlay click
+document.addEventListener('DOMContentLoaded', function() {
+    const modal = document.getElementById('rankingModal');
+    if (modal) {
+        modal.addEventListener('click', function(e) {
+            if (e.target === modal) {
+                closeRankingModal();
+            }
+        });
+    }
+});
+
+// Close modal on Escape key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        closeRankingModal();
+    }
+});
 </script>
+
+<?php if (!empty($rankingEvents)): ?>
+<!-- Ranking Calculation Modal -->
+<div id="rankingModal" class="ranking-modal-overlay">
+    <div class="ranking-modal">
+        <div class="ranking-modal-header">
+            <h3>
+                <i data-lucide="calculator"></i>
+                Rankinguträkning
+            </h3>
+            <button type="button" class="ranking-modal-close" onclick="closeRankingModal()">
+                <i data-lucide="x"></i>
+            </button>
+        </div>
+        <div class="ranking-modal-body">
+            <div class="ranking-modal-summary">
+                <span class="summary-label">Total poäng</span>
+                <span class="summary-value"><?= number_format($rankingPoints, 1) ?> p</span>
+            </div>
+
+            <div class="modal-formula-hint">
+                <i data-lucide="info"></i>
+                Formel: Baspoäng × Fältfaktor × Eventtypfaktor × Tidsfaktor
+            </div>
+
+            <div class="modal-events-list">
+                <?php foreach ($rankingEvents as $event): ?>
+                <div class="modal-event-item">
+                    <div class="modal-event-row">
+                        <div class="modal-event-info">
+                            <span class="modal-event-name"><?= htmlspecialchars($event['event_name'] ?? 'Event') ?></span>
+                            <span class="modal-event-date"><?= date('j M Y', strtotime($event['event_date'])) ?></span>
+                        </div>
+                        <span class="modal-event-points">+<?= number_format($event['weighted_points'] ?? 0, 0) ?></span>
+                    </div>
+                    <div class="modal-calc-row">
+                        <span class="modal-calc-item">
+                            <span class="modal-calc-label">Bas:</span>
+                            <span class="modal-calc-value"><?= number_format($event['original_points'] ?? 0, 0) ?></span>
+                        </span>
+                        <span class="modal-calc-op">×</span>
+                        <span class="modal-calc-item">
+                            <span class="modal-calc-label">Fält:</span>
+                            <span class="modal-calc-value <?= ($event['field_multiplier'] ?? 1) < 1 ? 'dim' : '' ?>"><?= number_format(($event['field_multiplier'] ?? 1) * 100, 0) ?>%</span>
+                        </span>
+                        <span class="modal-calc-op">×</span>
+                        <span class="modal-calc-item">
+                            <span class="modal-calc-label">Typ:</span>
+                            <span class="modal-calc-value <?= ($event['event_level_multiplier'] ?? 1) < 1 ? 'dim' : '' ?>"><?= number_format(($event['event_level_multiplier'] ?? 1) * 100, 0) ?>%</span>
+                        </span>
+                        <span class="modal-calc-op">×</span>
+                        <span class="modal-calc-item">
+                            <span class="modal-calc-label">Tid:</span>
+                            <span class="modal-calc-value <?= ($event['time_multiplier'] ?? 1) < 1 ? 'dim' : '' ?>"><?= number_format(($event['time_multiplier'] ?? 1) * 100, 0) ?>%</span>
+                        </span>
+                    </div>
+                </div>
+                <?php endforeach; ?>
+            </div>
+        </div>
+    </div>
+</div>
+<?php endif; ?>
 

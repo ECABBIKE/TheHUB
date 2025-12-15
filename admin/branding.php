@@ -7,8 +7,6 @@
 require_once __DIR__ . '/../config.php';
 require_admin();
 
-$db = getDB();
-
 // Branding settings file
 $brandingFile = __DIR__ . '/../uploads/branding.json';
 
@@ -46,27 +44,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         saveBranding($brandingFile, $branding);
         $message = 'Branding återställt till standard!';
         $messageType = 'success';
-    } elseif ($action === 'save_series') {
-        // Save series colors to database
-        $seriesId = intval($_POST['series_id'] ?? 0);
-        $gradientStart = $_POST['gradient_start'] ?? '';
-        $gradientEnd = $_POST['gradient_end'] ?? '';
-        $accentColor = $_POST['accent_color'] ?? '';
-
-        if ($seriesId > 0) {
-            try {
-                $db->update('series', [
-                    'gradient_start' => $gradientStart,
-                    'gradient_end' => $gradientEnd,
-                    'accent_color' => $accentColor
-                ], 'id = ?', [$seriesId]);
-                $message = 'Seriefärger sparade!';
-                $messageType = 'success';
-            } catch (Exception $e) {
-                $message = 'Kunde inte spara: ' . $e->getMessage();
-                $messageType = 'error';
-            }
-        }
     } else {
         // Save custom colors
         $customColors = [];
@@ -114,56 +91,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         saveBranding($brandingFile, $branding);
         $message = 'Branding sparad!';
         $messageType = 'success';
-    }
-}
-
-// Fetch active series for branding
-$seriesList = [];
-$seriesDebug = '';
-try {
-    // First try with status filter
-    $seriesList = $db->getAll("
-        SELECT id, name, slug,
-               COALESCE(gradient_start, '#004A98') as gradient_start,
-               COALESCE(gradient_end, '#002a5c') as gradient_end,
-               COALESCE(accent_color, '#61CE70') as accent_color,
-               logo_dark, status
-        FROM series
-        WHERE status IN ('active', 'completed')
-        ORDER BY name ASC
-    ");
-
-    // If no results, try getting ALL series as fallback
-    if (empty($seriesList)) {
-        $seriesList = $db->getAll("
-            SELECT id, name, slug,
-                   COALESCE(gradient_start, '#004A98') as gradient_start,
-                   COALESCE(gradient_end, '#002a5c') as gradient_end,
-                   COALESCE(accent_color, '#61CE70') as accent_color,
-                   logo_dark, status
-            FROM series
-            ORDER BY name ASC
-        ");
-        if (!empty($seriesList)) {
-            $statuses = array_unique(array_column($seriesList, 'status'));
-            $seriesDebug = 'Visar alla serier. Status-värden i databasen: ' . implode(', ', array_map(function($s) { return "'" . ($s ?: 'NULL') . "'"; }, $statuses));
-        }
-    }
-} catch (Exception $e) {
-    // Try without logo_dark column
-    try {
-        $seriesList = $db->getAll("
-            SELECT id, name, slug,
-                   COALESCE(gradient_start, '#004A98') as gradient_start,
-                   COALESCE(gradient_end, '#002a5c') as gradient_end,
-                   COALESCE(accent_color, '#61CE70') as accent_color,
-                   NULL as logo_dark, status
-            FROM series
-            ORDER BY name ASC
-        ");
-    } catch (Exception $e2) {
-        // Last resort - just get basic series info
-        $seriesList = $db->getAll("SELECT id, name, slug, NULL as logo_dark FROM series ORDER BY name ASC");
     }
 }
 
@@ -419,85 +346,6 @@ include __DIR__ . '/components/unified-layout.php';
     margin-top: var(--space-md);
 }
 
-/* Series Colors */
-.series-color-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: var(--space-lg);
-}
-
-.series-color-card {
-    background: var(--color-bg-card);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-lg);
-    overflow: hidden;
-}
-
-.series-color-preview {
-    height: 80px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    position: relative;
-}
-
-.series-color-preview .series-logo {
-    max-height: 50px;
-    max-width: 150px;
-    object-fit: contain;
-    filter: brightness(0) invert(1);
-}
-
-.series-color-preview .series-name-overlay {
-    color: white;
-    font-weight: var(--weight-bold);
-    font-size: var(--text-lg);
-    text-transform: uppercase;
-    text-shadow: 0 2px 4px rgba(0,0,0,0.3);
-}
-
-.series-color-form {
-    padding: var(--space-md);
-}
-
-.series-color-form h4 {
-    margin: 0 0 var(--space-md);
-    font-size: var(--text-base);
-}
-
-.series-color-row {
-    display: flex;
-    gap: var(--space-md);
-    margin-bottom: var(--space-md);
-    flex-wrap: wrap;
-}
-
-.series-color-row label {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-2xs);
-    font-size: var(--text-xs);
-    color: var(--color-text-secondary);
-}
-
-.color-swatch-mini {
-    width: 32px;
-    height: 32px;
-    border-radius: var(--radius-sm);
-    border: 2px solid var(--color-border);
-    cursor: pointer;
-    position: relative;
-    overflow: hidden;
-}
-
-.color-swatch-mini input[type="color"] {
-    position: absolute;
-    inset: -5px;
-    width: calc(100% + 10px);
-    height: calc(100% + 10px);
-    opacity: 0;
-    cursor: pointer;
-}
 </style>
 
 <?php if ($message): ?>
@@ -824,82 +672,6 @@ include __DIR__ . '/components/unified-layout.php';
     </div>
 </form>
 
-<!-- Series Colors Section (separate forms for each series) -->
-<div class="card mb-lg">
-    <div class="card-header">
-        <h2>
-            <i data-lucide="trophy"></i>
-            Seriefärger
-        </h2>
-        <span class="badge"><?= count($seriesList) ?> serier</span>
-    </div>
-    <div class="card-body">
-        <p class="text-secondary mb-lg">
-            Varje serie har egna färger som används för datumboxar, topbar och andra serierelaterade element.
-        </p>
-
-        <?php if (empty($seriesList)): ?>
-        <div class="alert alert--warning">
-            <i data-lucide="alert-triangle"></i>
-            Inga serier hittades i databasen.
-        </div>
-        <?php else: ?>
-        <?php if ($seriesDebug): ?>
-        <div class="alert alert--info" style="margin-bottom: 1rem;">
-            <i data-lucide="info"></i>
-            <?= htmlspecialchars($seriesDebug) ?>
-        </div>
-        <?php endif; ?>
-        <div class="series-color-grid">
-            <?php foreach ($seriesList as $series): ?>
-            <div class="series-color-card">
-                <div class="series-color-preview" style="background: linear-gradient(135deg, <?= h($series['gradient_start'] ?? '#004A98') ?>, <?= h($series['gradient_end'] ?? '#002a5c') ?>);">
-                    <?php if ($series['logo_dark']): ?>
-                        <img src="/uploads/series/<?= h($series['logo_dark']) ?>" alt="<?= h($series['name']) ?>" class="series-logo">
-                    <?php else: ?>
-                        <span class="series-name-overlay"><?= h($series['name']) ?></span>
-                    <?php endif; ?>
-                </div>
-                <form method="POST" class="series-color-form">
-                    <?= csrf_field() ?>
-                    <input type="hidden" name="action" value="save_series">
-                    <input type="hidden" name="series_id" value="<?= $series['id'] ?>">
-
-                    <h4><?= h($series['name']) ?></h4>
-
-                    <div class="series-color-row">
-                        <label>
-                            <span>Gradient start</span>
-                            <div class="color-swatch-mini" style="background: <?= h($series['gradient_start'] ?? '#004A98') ?>;">
-                                <input type="color" name="gradient_start" value="<?= h($series['gradient_start'] ?? '#004A98') ?>" onchange="updateSeriesPreview(this)">
-                            </div>
-                        </label>
-                        <label>
-                            <span>Gradient slut</span>
-                            <div class="color-swatch-mini" style="background: <?= h($series['gradient_end'] ?? '#002a5c') ?>;">
-                                <input type="color" name="gradient_end" value="<?= h($series['gradient_end'] ?? '#002a5c') ?>" onchange="updateSeriesPreview(this)">
-                            </div>
-                        </label>
-                        <label>
-                            <span>Accent</span>
-                            <div class="color-swatch-mini" style="background: <?= h($series['accent_color'] ?? '#61CE70') ?>;">
-                                <input type="color" name="accent_color" value="<?= h($series['accent_color'] ?? '#61CE70') ?>" onchange="updateSeriesPreview(this)">
-                            </div>
-                        </label>
-                    </div>
-
-                    <button type="submit" class="btn btn--sm btn--primary">
-                        <i data-lucide="save"></i>
-                        Spara
-                    </button>
-                </form>
-            </div>
-            <?php endforeach; ?>
-        </div>
-        <?php endif; ?>
-    </div>
-</div>
-
 <!-- Display-only Design System Reference Sections -->
 
 <!-- Typography Section -->
@@ -1049,25 +821,6 @@ function updateFromText(input) {
 
     // Apply live preview
     document.documentElement.style.setProperty('--color-' + varKey, value);
-}
-
-// Update series preview when changing colors
-function updateSeriesPreview(input) {
-    const card = input.closest('.series-color-card');
-    const preview = card.querySelector('.series-color-preview');
-    const form = input.closest('form');
-
-    const gradientStart = form.querySelector('[name="gradient_start"]').value;
-    const gradientEnd = form.querySelector('[name="gradient_end"]').value;
-
-    // Update the preview gradient
-    preview.style.background = `linear-gradient(135deg, ${gradientStart}, ${gradientEnd})`;
-
-    // Update the mini swatch
-    const swatch = input.closest('.color-swatch-mini');
-    if (swatch) {
-        swatch.style.background = input.value;
-    }
 }
 
 // Live preview for responsive settings

@@ -173,6 +173,70 @@ foreach ($clubs as $club) {
  $clubGroups[$normalized][] = $club;
 }
 
+// Also find fuzzy duplicates - clubs with similar normalized names
+$normalizedNames = [];
+foreach ($clubs as $club) {
+    $normalized = normalizeClubName($club['name']);
+    $normalizedNames[$club['id']] = $normalized;
+}
+
+// Check for fuzzy matches using Levenshtein distance
+$fuzzyPairs = [];
+$clubIds = array_keys($normalizedNames);
+$numClubs = count($clubIds);
+
+for ($i = 0; $i < $numClubs - 1; $i++) {
+    for ($j = $i + 1; $j < $numClubs; $j++) {
+        $id1 = $clubIds[$i];
+        $id2 = $clubIds[$j];
+        $name1 = $normalizedNames[$id1];
+        $name2 = $normalizedNames[$id2];
+
+        // Skip if already exact match (handled above)
+        if ($name1 === $name2) continue;
+
+        // Skip very short names
+        if (strlen($name1) < 3 || strlen($name2) < 3) continue;
+
+        // Check if one contains the other (e.g., "naten" in "natensater")
+        $containsMatch = false;
+        if (strlen($name1) >= 4 && strlen($name2) >= 4) {
+            if (strpos($name2, $name1) === 0 || strpos($name1, $name2) === 0) {
+                $containsMatch = true;
+            }
+        }
+
+        // Calculate Levenshtein distance
+        $maxLen = max(strlen($name1), strlen($name2));
+        $distance = levenshtein(substr($name1, 0, 50), substr($name2, 0, 50));
+        $similarity = round((1 - $distance / $maxLen) * 100);
+
+        // Match if: contains match OR high similarity (>75%)
+        if ($containsMatch || $similarity >= 75) {
+            $key = min($name1, $name2) . '|' . max($name1, $name2);
+            if (!isset($fuzzyPairs[$key])) {
+                $fuzzyPairs[$key] = [];
+            }
+            // Find the club objects
+            foreach ($clubs as $club) {
+                if ($club['id'] == $id1 || $club['id'] == $id2) {
+                    $fuzzyPairs[$key][$club['id']] = $club;
+                }
+            }
+        }
+    }
+}
+
+// Add fuzzy pairs to club groups with special key
+foreach ($fuzzyPairs as $key => $pair) {
+    if (count($pair) >= 2) {
+        $groupKey = 'fuzzy_' . $key;
+        if (!isset($clubGroups[$groupKey])) {
+            $clubGroups[$groupKey] = array_values($pair);
+        }
+    }
+}
+
 // Filter to only show groups with potential duplicates (2+ clubs) and not ignored
 $duplicateGroups = array_filter($clubGroups, function($group, $key) use ($ignoredDuplicates) {
  return count($group) >= 2 && !in_array($key, $ignoredDuplicates);
@@ -198,46 +262,48 @@ $emptyClubs = array_filter($clubs, function($club) {
  * Handles variations like: CK Fix, Ck Fix, Cykelklubben Fix, Cykelklubb Fix
  */
 function normalizeClubName($name) {
- $name = mb_strtolower(trim($name), 'UTF-8');
+    $name = mb_strtolower(trim($name), 'UTF-8');
 
- // Remove common prefixes/suffixes (order matters - longer patterns first)
- $patterns = [
-  '/^cykelklubben\s+/u',           // "Cykelklubben Fix" -> "fix"
-  '/^cykelklubb\s+/u',             // "Cykelklubb Fix" -> "fix"
-  '/^cykelföreningen\s+/u',        // "Cykelföreningen X" -> "x"
-  '/^ck\s+/u',                     // "CK Fix" -> "fix"
-  '/^if\s+/u',                     // "IF Ceres" -> "ceres"
-  '/^ik\s+/u',                     // "IK X" -> "x"
-  '/^sk\s+/u',                     // "SK X" -> "x"
-  '/^fk\s+/u',                     // "FK X" -> "x"
-  '/^bk\s+/u',                     // "BK X" -> "x"
-  '/\s+ck$/u',                     // "Fix CK" -> "fix"
-  '/\s+cykelklubb$/u',             // "Fix Cykelklubb" -> "fix"
-  '/\s+cykelklubben$/u',           // "Fix Cykelklubben" -> "fix"
-  '/\s+if$/u',                     // "Fix IF" -> "fix"
-  '/\s+mtb$/u',                    // "Fix MTB" -> "fix"
-  '/\s+enduro$/u',                 // "Fix Enduro" -> "fix"
-  '/\s+idrottssällskap$/u',
-  '/\s+idrottsällskap$/u',
-  '/\s+idrottsförening$/u',
- ];
+    // Remove common prefixes/suffixes (order matters - longer patterns first)
+    $patterns = [
+        '/^cykelklubben\s+/u',           // "Cykelklubben Fix" -> "fix"
+        '/^cykelklubb\s+/u',             // "Cykelklubb Fix" -> "fix"
+        '/^cykelföreningen\s+/u',        // "Cykelföreningen X" -> "x"
+        '/^ck\s+/u',                     // "CK Fix" -> "fix"
+        '/^if\s+/u',                     // "IF Ceres" -> "ceres"
+        '/^ik\s+/u',                     // "IK X" -> "x"
+        '/^sk\s+/u',                     // "SK X" -> "x"
+        '/^fk\s+/u',                     // "FK X" -> "x"
+        '/^bk\s+/u',                     // "BK X" -> "x"
+        '/\s+ck$/u',                     // "Fix CK" -> "fix"
+        '/\s+cykelklubb$/u',             // "Fix Cykelklubb" -> "fix"
+        '/\s+cykelklubben$/u',           // "Fix Cykelklubben" -> "fix"
+        '/\s+if$/u',                     // "Fix IF" -> "fix"
+        '/\s+ik$/u',                     // "X IK" -> "X"
+        '/\s+sk$/u',                     // "X SK" -> "X"
+        '/\s+mtb$/u',                    // "Fix MTB" -> "fix"
+        '/\s+enduro$/u',                 // "Fix Enduro" -> "fix"
+        '/\s+idrottssällskap$/u',
+        '/\s+idrottsällskap$/u',
+        '/\s+idrottsförening$/u',
+    ];
 
- foreach ($patterns as $pattern) {
-  $name = preg_replace($pattern, '', $name);
- }
+    foreach ($patterns as $pattern) {
+        $name = preg_replace($pattern, '', $name);
+    }
 
- // Replace Swedish chars for comparison
- $name = preg_replace('/[åä]/u', 'a', $name);
- $name = preg_replace('/[ö]/u', 'o', $name);
- $name = preg_replace('/[é]/u', 'e', $name);
+    // Replace Swedish chars for comparison
+    $name = preg_replace('/[åä]/u', 'a', $name);
+    $name = preg_replace('/[ö]/u', 'o', $name);
+    $name = preg_replace('/[é]/u', 'e', $name);
 
- // Remove non-alphanumeric (keeps only letters and numbers)
- $name = preg_replace('/[^a-z0-9]/u', '', $name);
+    // Remove non-alphanumeric (keeps only letters and numbers)
+    $name = preg_replace('/[^a-z0-9]/u', '', $name);
 
- // Remove trailing 's' to match singular/plural (e.g., "masters" vs "master")
- $name = preg_replace('/s$/u', '', $name);
+    // Remove trailing 's' to match singular/plural (e.g., "masters" vs "master")
+    $name = preg_replace('/s$/u', '', $name);
 
- return $name;
+    return $name;
 }
 
 // Page config for unified layout
