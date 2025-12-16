@@ -487,24 +487,25 @@ include __DIR__ . '/components/unified-layout.php';
                         $segDisplayName = !empty($seg['segment_name']) ? $seg['segment_name'] : "Sektion " . ($segIdx + 1);
                     ?>
                     <div class="admin-segment-item <?= $hasSponsor ? 'has-sponsor' : '' ?>"
-                         onclick="zoomToExistingSegment(<?= $segStart ?>, <?= $segEnd ?>, '<?= addslashes($segDisplayName) ?> (<?= $typeLabel ?>)')"
+                         onclick="selectSegment(<?= $segIdx ?>, <?= $segStart ?>, <?= $segEnd ?>)"
                          style="cursor: pointer;"
                          data-start="<?= $segStart ?>"
-                         data-end="<?= $segEnd ?>">
+                         data-end="<?= $segEnd ?>"
+                         data-segment-id="<?= $seg['id'] ?>">
                         <span class="color-dot" style="background: <?= htmlspecialchars($seg['color']) ?>;"></span>
                         <i data-lucide="<?= $iconName ?>" style="width: 14px; height: 14px; flex-shrink: 0;"></i>
                         <input type="text" class="admin-segment-name-input" value="<?= htmlspecialchars($seg['segment_name'] ?? '') ?>" placeholder="Namn..." onclick="event.stopPropagation()" onchange="changeSegmentName(<?= $seg['id'] ?>, this.value)" title="Segmentnamn (t.ex. SS1, Powerstage)">
                         <?php if ($hasSponsor): ?>
                         <span class="segment-sponsor-badge" title="<?= htmlspecialchars($seg['sponsor_name']) ?>">
-                            <span class="sponsor-by">By</span>
+                            <span class="sponsor-by">by</span>
                             <?php if (!empty($seg['sponsor_logo'])): ?>
-                            <img src="/uploads/sponsors/<?= htmlspecialchars($seg['sponsor_logo']) ?>" alt="<?= htmlspecialchars($seg['sponsor_name']) ?>" class="sponsor-logo-mini">
+                            <img src="<?= htmlspecialchars($seg['sponsor_logo']) ?>" alt="<?= htmlspecialchars($seg['sponsor_name']) ?>" class="sponsor-logo-mini">
                             <?php else: ?>
                             <span class="sponsor-name-mini"><?= htmlspecialchars($seg['sponsor_name']) ?></span>
                             <?php endif; ?>
                         </span>
                         <?php endif; ?>
-                        <span class="admin-text-muted"><?= number_format($seg['distance_km'], 1) ?>km</span>
+                        <span class="admin-text-muted segment-distance"><?= number_format($seg['distance_km'], 1) ?>km</span>
                         <select onclick="event.stopPropagation()" onchange="changeSegmentType(<?= $seg['id'] ?>, this.value)" class="admin-form-select admin-form-select-xs">
                             <option value="liaison" <?= $seg['segment_type'] === 'liaison' ? 'selected' : '' ?>>T</option>
                             <option value="stage" <?= $seg['segment_type'] === 'stage' ? 'selected' : '' ?>>SS</option>
@@ -610,8 +611,25 @@ include __DIR__ . '/components/unified-layout.php';
 
     <!-- Main: Map -->
     <div class="admin-main-content">
+        <!-- Sponsor Banner (shown when segment with sponsor is selected) -->
+        <div id="sponsor-banner" class="sponsor-banner" style="display: none;">
+            <div class="sponsor-banner-content">
+                <span class="sponsor-banner-label">Sponsrad av</span>
+                <img id="sponsor-banner-logo" src="" alt="" class="sponsor-banner-logo">
+                <span id="sponsor-banner-name" class="sponsor-banner-name"></span>
+            </div>
+        </div>
+
         <div class="admin-card">
-            <div class="admin-card-body" style="padding: 0;">
+            <div class="admin-card-body" style="padding: 0; position: relative;">
+                <!-- Segment info overlay (mobile) -->
+                <div id="segment-info-overlay" class="segment-info-overlay" style="display: none;">
+                    <div class="segment-info-content">
+                        <i data-lucide="flag" id="segment-info-icon"></i>
+                        <span id="segment-info-name"></span>
+                        <span id="segment-info-distance" class="segment-info-distance"></span>
+                    </div>
+                </div>
                 <div id="map" style="height: calc(100vh - 280px); min-height: 500px;"></div>
             </div>
         </div>
@@ -847,6 +865,93 @@ include __DIR__ . '/components/unified-layout.php';
     border-color: var(--color-accent);
 }
 
+/* Sponsor Banner */
+.sponsor-banner {
+    background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
+    color: white;
+    padding: var(--space-sm) var(--space-md);
+    margin-bottom: var(--space-sm);
+    border-radius: var(--radius-md);
+    animation: slideDown 0.3s ease;
+}
+@keyframes slideDown {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+.sponsor-banner-content {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-md);
+}
+.sponsor-banner-label {
+    font-size: var(--text-sm);
+    opacity: 0.8;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+.sponsor-banner-logo {
+    height: 32px;
+    width: auto;
+    max-width: 120px;
+    object-fit: contain;
+    background: white;
+    padding: 4px 8px;
+    border-radius: var(--radius-sm);
+}
+.sponsor-banner-name {
+    font-weight: var(--weight-semibold);
+    font-size: var(--text-base);
+}
+
+/* Segment Info Overlay (on map) */
+.segment-info-overlay {
+    position: absolute;
+    top: var(--space-sm);
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1000;
+    background: rgba(23, 23, 23, 0.9);
+    color: white;
+    padding: var(--space-sm) var(--space-md);
+    border-radius: var(--radius-md);
+    backdrop-filter: blur(4px);
+    animation: fadeIn 0.2s ease;
+}
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+.segment-info-content {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+}
+.segment-info-content svg {
+    width: 16px;
+    height: 16px;
+}
+.segment-info-distance {
+    opacity: 0.7;
+    font-weight: normal;
+}
+
+/* Selected segment in list */
+.admin-segment-item.selected {
+    background: var(--color-accent) !important;
+    color: white;
+    border-radius: var(--radius-sm);
+}
+.admin-segment-item.selected .admin-text-muted,
+.admin-segment-item.selected .sponsor-by {
+    color: rgba(255,255,255,0.8);
+}
+.admin-segment-item.selected .color-dot {
+    border: 2px solid white;
+}
+
 /* Mobile responsive */
 @media (max-width: 768px) {
     .admin-grid-sidebar {
@@ -855,10 +960,10 @@ include __DIR__ . '/components/unified-layout.php';
         gap: var(--space-md);
     }
     .admin-sidebar-narrow {
-        order: 1;
+        order: 2;
     }
     .admin-main-content {
-        order: 2;
+        order: 1;
     }
     #map {
         height: 50vh !important;
@@ -867,6 +972,12 @@ include __DIR__ . '/components/unified-layout.php';
     .admin-segment-item {
         flex-wrap: wrap;
         gap: var(--space-xs);
+        padding: var(--space-sm);
+    }
+    .admin-segment-item.selected {
+        margin: 0 calc(var(--space-sm) * -1);
+        padding-left: var(--space-md);
+        padding-right: var(--space-md);
     }
     .admin-segment-name {
         width: 100%;
@@ -875,6 +986,16 @@ include __DIR__ . '/components/unified-layout.php';
     .admin-segment-name-input {
         max-width: none;
         flex: 1;
+    }
+    .segment-distance {
+        display: none;
+    }
+    .sponsor-banner {
+        margin: 0 calc(var(--space-md) * -1) var(--space-sm);
+        border-radius: 0;
+    }
+    .sponsor-banner-logo {
+        height: 28px;
     }
 }
 </style>
@@ -900,13 +1021,19 @@ include __DIR__ . '/components/unified-layout.php';
 const mapData = <?= json_encode($mapData) ?>;
 const waypoints = <?= json_encode($trackWaypoints) ?>;
 const currentTrackId = <?= $selectedTrackId ?: 'null' ?>;
+const savedSegments = <?= json_encode($currentTrack['segments'] ?? []) ?>;
 console.log('EVENT-MAP DEBUG:', {
     waypointsCount: waypoints?.length || 0,
     currentTrackId: currentTrackId,
     hasMapData: !!mapData,
-    tracksCount: mapData?.tracks?.length || 0
+    tracksCount: mapData?.tracks?.length || 0,
+    savedSegmentsCount: savedSegments?.length || 0
 });
 let map, baseTrackLine, tempMarker;
+let highlightedSegmentLine = null;
+let startMarker = null;
+let finishMarker = null;
+let selectedSegmentIdx = null;
 
 // Segment colors
 const SEGMENT_COLORS = {
@@ -1200,13 +1327,139 @@ function showFullTrack() {
     }
     // Show full elevation profile
     drawElevationProfile(0, null, 'Hela banan');
-    // Remove highlight
-    document.querySelectorAll('.admin-segment-item').forEach(item => {
-        item.style.background = '';
-    });
+    // Clear selection
+    clearSegmentSelection();
 }
 
-// Zoom to an existing/saved segment using start/end waypoint indices
+// Clear segment selection UI
+function clearSegmentSelection() {
+    selectedSegmentIdx = null;
+    // Remove highlight from list
+    document.querySelectorAll('.admin-segment-item').forEach(item => {
+        item.classList.remove('selected');
+    });
+    // Hide sponsor banner
+    document.getElementById('sponsor-banner').style.display = 'none';
+    // Hide segment info overlay
+    document.getElementById('segment-info-overlay').style.display = 'none';
+    // Remove highlighted line
+    if (highlightedSegmentLine) {
+        map.removeLayer(highlightedSegmentLine);
+        highlightedSegmentLine = null;
+    }
+    // Remove start/finish markers
+    if (startMarker) {
+        map.removeLayer(startMarker);
+        startMarker = null;
+    }
+    if (finishMarker) {
+        map.removeLayer(finishMarker);
+        finishMarker = null;
+    }
+}
+
+// Select a segment - show sponsor banner, highlight on map, show start/finish
+function selectSegment(segIdx, startIdx, endIdx) {
+    if (!waypoints || waypoints.length < 2) return;
+    if (!savedSegments || !savedSegments[segIdx]) return;
+
+    const segment = savedSegments[segIdx];
+    console.log('selectSegment:', { segIdx, segment });
+
+    // Clear previous selection
+    clearSegmentSelection();
+    selectedSegmentIdx = segIdx;
+
+    // Validate indices
+    startIdx = Math.max(0, Math.min(startIdx, waypoints.length - 1));
+    endIdx = Math.max(0, Math.min(endIdx, waypoints.length - 1));
+    if (startIdx >= endIdx) return;
+
+    // Highlight in list
+    document.querySelectorAll('.admin-existing-segments .admin-segment-item').forEach((item, idx) => {
+        if (idx === segIdx) {
+            item.classList.add('selected');
+        } else {
+            item.classList.remove('selected');
+        }
+    });
+
+    // Show sponsor banner if segment has sponsor
+    if (segment.sponsor_name) {
+        const banner = document.getElementById('sponsor-banner');
+        const logoEl = document.getElementById('sponsor-banner-logo');
+        const nameEl = document.getElementById('sponsor-banner-name');
+
+        if (segment.sponsor_logo) {
+            logoEl.src = segment.sponsor_logo;
+            logoEl.alt = segment.sponsor_name;
+            logoEl.style.display = 'block';
+            nameEl.style.display = 'none';
+        } else {
+            logoEl.style.display = 'none';
+            nameEl.textContent = segment.sponsor_name;
+            nameEl.style.display = 'block';
+        }
+        banner.style.display = 'block';
+    }
+
+    // Show segment info overlay
+    const overlay = document.getElementById('segment-info-overlay');
+    const typeLabels = { stage: 'SS', liaison: 'Transport', lift: 'Lift' };
+    const segName = segment.segment_name || ('Sektion ' + (segIdx + 1));
+    const typeLabel = typeLabels[segment.segment_type] || 'SS';
+    document.getElementById('segment-info-name').textContent = segName;
+    document.getElementById('segment-info-distance').textContent = parseFloat(segment.distance_km).toFixed(1) + ' km';
+    overlay.style.display = 'block';
+
+    // Get segment waypoints
+    const segWaypoints = waypoints.slice(startIdx, endIdx + 1);
+    if (segWaypoints.length < 2) return;
+
+    // Create highlighted polyline (thicker, with glow effect)
+    const latlngs = segWaypoints.map(w => [w.lat, w.lng]);
+    highlightedSegmentLine = L.polyline(latlngs, {
+        color: segment.color || '#EF4444',
+        weight: 8,
+        opacity: 1,
+        lineCap: 'round',
+        lineJoin: 'round'
+    }).addTo(map);
+
+    // Add start marker (green circle)
+    const startPoint = segWaypoints[0];
+    startMarker = L.circleMarker([startPoint.lat, startPoint.lng], {
+        radius: 10,
+        fillColor: '#22C55E',
+        fillOpacity: 1,
+        color: '#fff',
+        weight: 3
+    }).addTo(map).bindTooltip('Start', { permanent: false, direction: 'top' });
+
+    // Add finish marker (checkered flag style - red circle)
+    const endPoint = segWaypoints[segWaypoints.length - 1];
+    finishMarker = L.circleMarker([endPoint.lat, endPoint.lng], {
+        radius: 10,
+        fillColor: '#EF4444',
+        fillOpacity: 1,
+        color: '#fff',
+        weight: 3
+    }).addTo(map).bindTooltip('Mål', { permanent: false, direction: 'top' });
+
+    // Calculate bounds and zoom
+    const lats = segWaypoints.map(w => w.lat);
+    const lngs = segWaypoints.map(w => w.lng);
+    const bounds = L.latLngBounds(
+        [Math.min(...lats), Math.min(...lngs)],
+        [Math.max(...lats), Math.max(...lngs)]
+    );
+    map.fitBounds(bounds, { padding: [60, 60] });
+
+    // Draw elevation profile
+    drawElevationProfile(startIdx, endIdx, segName);
+}
+
+// Zoom to an existing/saved segment using start/end waypoint indices (legacy, now calls selectSegment)
 function zoomToExistingSegment(startIdx, endIdx, title) {
     console.log('zoomToExistingSegment called:', {startIdx, endIdx, title, waypointsLength: waypoints?.length});
     if (!waypoints || waypoints.length < 2) {
