@@ -204,13 +204,26 @@ if (!function_exists('hub_current_user')) {
 
         // Check admin session (from includes/auth.php)
         if (isset($_SESSION['admin_logged_in']) && $_SESSION['admin_logged_in'] === true) {
+            // Map admin_role string to role_id
+            $roleMap = [
+                'super_admin' => ROLE_SUPER_ADMIN,
+                'admin' => ROLE_ADMIN,
+                'promotor' => ROLE_PROMOTOR,
+            ];
+            $adminRole = $_SESSION['admin_role'] ?? 'admin';
+            $roleId = $roleMap[$adminRole] ?? ROLE_ADMIN;
+
+            // Parse name into first/last
+            $fullName = $_SESSION['admin_name'] ?? 'Admin';
+            $nameParts = explode(' ', $fullName, 2);
+
             return [
                 'id' => $_SESSION['admin_id'] ?? 0,
-                'email' => 'admin@thehub.se',
-                'firstname' => $_SESSION['admin_name'] ?? 'Admin',
-                'lastname' => '',
-                'role_id' => ROLE_SUPER_ADMIN,
-                'is_admin' => 1,
+                'email' => $_SESSION['admin_email'] ?? '',
+                'firstname' => $nameParts[0] ?? 'Admin',
+                'lastname' => $nameParts[1] ?? '',
+                'role_id' => $roleId,
+                'is_admin' => $roleId >= ROLE_ADMIN ? 1 : 0,
                 'active' => 1
             ];
         }
