@@ -114,7 +114,7 @@ try {
     // Fetch sponsors - series sponsors take priority over event sponsors
     // Include all logo fields for placement-specific logos
     require_once INCLUDES_PATH . '/sponsor-functions.php';
-    $eventSponsors = ['header' => [], 'content' => [], 'sidebar' => [], 'footer' => []];
+    $eventSponsors = ['header' => [], 'content' => [], 'sidebar' => [], 'footer' => [], 'partner' => []];
 
     // First, try series sponsors (these override event sponsors)
     if (!empty($event['series_id'])) {
@@ -1559,6 +1559,28 @@ render_event_map($eventId, $db, [
     </div>
 </section>
 
+<?php endif; ?>
+
+<?php
+// Partner sponsors (bottom of page, max 3)
+$partnerSponsorsWithLogos = array_filter($eventSponsors['partner'] ?? [], function($s) {
+    return get_sponsor_logo_for_placement($s, 'content') !== null;
+});
+if (!empty($partnerSponsorsWithLogos)): ?>
+<section class="event-partner-sponsors mt-xl mb-lg">
+    <div class="partner-sponsors-header">
+        <span class="partner-sponsors-label">Samarbetspartners</span>
+    </div>
+    <div class="partner-sponsors-grid">
+        <?php foreach (array_slice($partnerSponsorsWithLogos, 0, 3) as $sponsor):
+            $partnerLogo = get_sponsor_logo_for_placement($sponsor, 'content');
+        ?>
+        <a href="<?= h($sponsor['website'] ?? '#') ?>" target="_blank" rel="noopener sponsored" class="partner-sponsor-item" title="<?= h($sponsor['name']) ?>">
+            <img src="<?= h($partnerLogo) ?>" alt="<?= h($sponsor['name']) ?>">
+        </a>
+        <?php endforeach; ?>
+    </div>
+</section>
 <?php endif; ?>
 
 <script>

@@ -703,7 +703,7 @@ if (!function_exists('hub_can_manage_event')) {
             $pdo = hub_db();
 
             // Check direct event assignment
-            $stmt = $pdo->prepare("SELECT 1 FROM promotor_events WHERE rider_id = ? AND event_id = ?");
+            $stmt = $pdo->prepare("SELECT 1 FROM promotor_events WHERE user_id = ? AND event_id = ?");
             $stmt->execute([$userId, $eventId]);
             if ($stmt->fetchColumn()) {
                 return true;
@@ -713,7 +713,7 @@ if (!function_exists('hub_can_manage_event')) {
             $stmt = $pdo->prepare("
                 SELECT 1 FROM promotor_series ps
                 JOIN events e ON e.series_id = ps.series_id
-                WHERE ps.rider_id = ? AND e.id = ?
+                WHERE ps.user_id = ? AND e.id = ?
             ");
             $stmt->execute([$userId, $eventId]);
             if ($stmt->fetchColumn()) {
@@ -741,7 +741,7 @@ if (!function_exists('hub_can_manage_series')) {
 
         // Promotor - check specific assignment
         if (hub_is_promotor($userId)) {
-            $stmt = hub_db()->prepare("SELECT 1 FROM promotor_series WHERE rider_id = ? AND series_id = ?");
+            $stmt = hub_db()->prepare("SELECT 1 FROM promotor_series WHERE user_id = ? AND series_id = ?");
             $stmt->execute([$userId, $seriesId]);
             return (bool) $stmt->fetchColumn();
         }
@@ -774,8 +774,8 @@ if (!function_exists('hub_get_promotor_events')) {
                    CASE WHEN pe.id IS NOT NULL THEN 'event' ELSE 'series' END as assigned_via
             FROM events e
             LEFT JOIN series s ON e.series_id = s.id
-            LEFT JOIN promotor_events pe ON pe.event_id = e.id AND pe.rider_id = ?
-            LEFT JOIN promotor_series ps ON ps.series_id = e.series_id AND ps.rider_id = ?
+            LEFT JOIN promotor_events pe ON pe.event_id = e.id AND pe.user_id = ?
+            LEFT JOIN promotor_series ps ON ps.series_id = e.series_id AND ps.user_id = ?
             WHERE (pe.id IS NOT NULL OR ps.id IS NOT NULL)
             ORDER BY e.date DESC
         ");
