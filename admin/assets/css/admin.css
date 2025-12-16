@@ -2581,6 +2581,104 @@ h2 svg.lucide {
     .table-responsive table {
         border-radius: 0;
     }
+
+    /* Mobile form optimizations */
+    .admin-card-body [style*="grid-template-columns: repeat(2"],
+    .admin-card-body [style*="grid-template-columns:repeat(2"] {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: var(--space-md) !important;
+    }
+
+    .admin-card-body [style*="grid-column: span 2"],
+    .admin-card-body [style*="grid-column:span 2"] {
+        grid-column: auto !important;
+    }
+
+    /* Larger touch targets for inputs */
+    .admin-form-input,
+    .admin-form-select,
+    .admin-form-textarea {
+        min-height: 48px;
+        font-size: 16px; /* Prevents iOS zoom */
+        padding: var(--space-sm) var(--space-md);
+    }
+
+    /* Card headers - more prominent on mobile */
+    .admin-card-header {
+        padding: var(--space-md);
+        background: var(--color-bg-secondary);
+    }
+
+    .admin-card-header h2 {
+        font-size: var(--text-base);
+        font-weight: var(--weight-semibold);
+    }
+
+    /* Card body padding */
+    .admin-card-body {
+        padding: var(--space-md);
+    }
+
+    /* Form labels - larger on mobile */
+    .admin-form-label {
+        font-size: var(--text-sm);
+        font-weight: var(--weight-medium);
+        margin-bottom: var(--space-xs);
+    }
+
+    /* Details/summary sections (collapsible) */
+    details.admin-card > summary.admin-card-header {
+        padding: var(--space-md);
+        background: var(--color-bg-secondary);
+        list-style: none;
+    }
+
+    details.admin-card > summary.admin-card-header::before {
+        content: '';
+        display: inline-block;
+        width: 0;
+        height: 0;
+        border-left: 5px solid transparent;
+        border-right: 5px solid transparent;
+        border-top: 6px solid currentColor;
+        margin-right: var(--space-sm);
+        transition: transform 0.2s;
+        vertical-align: middle;
+    }
+
+    details.admin-card[open] > summary.admin-card-header::before {
+        transform: rotate(180deg);
+    }
+
+    /* Checkbox groups - better touch targets */
+    .sponsor-checkbox-label,
+    label[style*="display: flex"][style*="align-items: center"] {
+        min-height: 44px;
+        padding: var(--space-xs) 0;
+    }
+
+    /* Page header actions - stack on mobile */
+    .page-header {
+        flex-direction: column;
+        align-items: flex-start !important;
+        gap: var(--space-md);
+    }
+
+    .page-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--space-xs);
+        width: 100%;
+    }
+
+    .page-actions .btn-admin {
+        flex: 1;
+        min-width: auto;
+        justify-content: center;
+        font-size: var(--text-xs);
+        padding: var(--space-sm);
+    }
 }
 
 /* ========================================================================
