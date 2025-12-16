@@ -1128,6 +1128,27 @@ document.addEventListener('DOMContentLoaded', function() {
                 </div>
                 <?php endif; ?>
             </div>
+
+            <!-- Close button at bottom for better mobile UX -->
+            <div style="padding: var(--space-md) var(--space-lg); border-top: 1px solid #e5e7eb; text-align: center;">
+                <button type="button" onclick="closeRankingModal()" style="
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    gap: var(--space-xs);
+                    padding: var(--space-sm) var(--space-xl);
+                    background: var(--color-bg-sunken, #f3f4f6);
+                    border: 1px solid #e5e7eb;
+                    border-radius: var(--radius-md);
+                    font-size: var(--text-sm);
+                    font-weight: 500;
+                    color: #171717;
+                    cursor: pointer;
+                ">
+                    <i data-lucide="x" style="width: 18px; height: 18px;"></i>
+                    Stäng
+                </button>
+            </div>
         </div>
     </div>
 </div>
