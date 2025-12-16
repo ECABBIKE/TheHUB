@@ -1134,6 +1134,12 @@ include __DIR__ . '/components/unified-layout.php';
                 <small class="form-help block mt-sm">
                     Visas i en egen sektion längst ner på event-sidan. 4 i bredd på desktop, 2 på mobil.
                 </small>
+
+                <!-- Quick add sponsor button -->
+                <button type="button" class="btn btn-secondary mt-md" onclick="openQuickSponsorModal()">
+                    <i data-lucide="plus" class="icon-sm"></i>
+                    Lägg till ny partner
+                </button>
             </div>
         </div>
     </div>
@@ -1211,6 +1217,285 @@ document.addEventListener('DOMContentLoaded', function() {
     setupCheckboxLimit('#logoRowSponsors', 5, 'logoRowCount');
     setupCheckboxLimit('#partnerSponsors', 0, 'partnerCount'); // 0 = unlimited
 });
+
+// Quick Sponsor Modal Functions
+function openQuickSponsorModal() {
+    document.getElementById('quickSponsorModal').classList.add('active');
+    document.getElementById('quickSponsorForm').reset();
+    document.getElementById('logoPreviewImg').style.display = 'none';
+    document.getElementById('logoPreviewPlaceholder').style.display = 'flex';
+    document.getElementById('quickSponsorError').style.display = 'none';
+    document.getElementById('quickSponsorSuccess').style.display = 'none';
+}
+
+function closeQuickSponsorModal() {
+    document.getElementById('quickSponsorModal').classList.remove('active');
+}
+
+function previewLogo(input) {
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const img = document.getElementById('logoPreviewImg');
+            img.src = e.target.result;
+            img.style.display = 'block';
+            document.getElementById('logoPreviewPlaceholder').style.display = 'none';
+        };
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+
+async function submitQuickSponsor(event) {
+    event.preventDefault();
+
+    const form = document.getElementById('quickSponsorForm');
+    const submitBtn = form.querySelector('button[type="submit"]');
+    const errorDiv = document.getElementById('quickSponsorError');
+    const successDiv = document.getElementById('quickSponsorSuccess');
+
+    // Reset messages
+    errorDiv.style.display = 'none';
+    successDiv.style.display = 'none';
+
+    // Validate
+    const name = document.getElementById('quickSponsorName').value.trim();
+    const logo = document.getElementById('quickSponsorLogo').files[0];
+
+    if (!name) {
+        errorDiv.textContent = 'Ange sponsorns namn';
+        errorDiv.style.display = 'block';
+        return;
+    }
+
+    if (!logo) {
+        errorDiv.textContent = 'Välj en logotyp att ladda upp';
+        errorDiv.style.display = 'block';
+        return;
+    }
+
+    // Disable button
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i data-lucide="loader-2" class="icon-sm spin"></i> Laddar upp...';
+
+    try {
+        const formData = new FormData(form);
+
+        const response = await fetch('/admin/api/create-event-sponsor.php', {
+            method: 'POST',
+            body: formData
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            // Add the new sponsor checkbox
+            const container = document.getElementById('partnerSponsors');
+            const label = document.createElement('label');
+            label.className = 'sponsor-checkbox';
+            label.innerHTML = `
+                <input type="checkbox" name="sponsor_partner[]" value="${result.sponsor.id}" class="partner-checkbox" checked>
+                ${result.sponsor.name}
+            `;
+            container.appendChild(label);
+
+            // Update count
+            const checked = container.querySelectorAll('input[type="checkbox"]:checked').length;
+            document.getElementById('partnerCount').textContent = `(${checked} valda)`;
+
+            // Show success
+            successDiv.textContent = 'Sponsor skapad och tillagd!';
+            successDiv.style.display = 'block';
+
+            // Close modal after delay
+            setTimeout(() => {
+                closeQuickSponsorModal();
+                // Reinitialize lucide icons
+                if (window.lucide) lucide.createIcons();
+            }, 1500);
+
+        } else {
+            errorDiv.textContent = result.error || 'Ett fel uppstod';
+            errorDiv.style.display = 'block';
+        }
+    } catch (err) {
+        console.error('Upload error:', err);
+        errorDiv.textContent = 'Nätverksfel. Försök igen.';
+        errorDiv.style.display = 'block';
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i data-lucide="upload" class="icon-sm"></i> Skapa sponsor';
+        if (window.lucide) lucide.createIcons();
+    }
+}
+
+// Close modal on escape key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        closeQuickSponsorModal();
+    }
+});
 </script>
+
+<!-- Quick Sponsor Upload Modal -->
+<div class="modal-overlay" id="quickSponsorModal" onclick="if(event.target === this) closeQuickSponsorModal()">
+    <div class="modal-content" style="max-width: 500px;">
+        <div class="modal-header">
+            <h3>Lägg till ny partner</h3>
+            <button type="button" class="btn-icon" onclick="closeQuickSponsorModal()">
+                <i data-lucide="x"></i>
+            </button>
+        </div>
+
+        <form id="quickSponsorForm" onsubmit="submitQuickSponsor(event)" enctype="multipart/form-data">
+            <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
+            <input type="hidden" name="event_id" value="<?= $eventId ?>">
+
+            <div class="modal-body">
+                <!-- Instructions -->
+                <div class="alert alert-info mb-md">
+                    <strong>Bildformat:</strong> PNG eller JPG med transparent eller vit bakgrund.<br>
+                    <strong>Storlek:</strong> Minst 400x120 pixlar (bredd x höjd).<br>
+                    <small class="text-secondary">Bilden sparas automatiskt i eventets mapp och skalas till rätt storlek.</small>
+                </div>
+
+                <!-- Error/Success messages -->
+                <div id="quickSponsorError" class="alert alert-danger mb-md" style="display: none;"></div>
+                <div id="quickSponsorSuccess" class="alert alert-success mb-md" style="display: none;"></div>
+
+                <!-- Logo upload -->
+                <div class="form-group mb-md">
+                    <label class="form-label">Logotyp <span class="text-danger">*</span></label>
+                    <div class="logo-upload-area">
+                        <div class="logo-preview-box" id="logoPreviewBox" onclick="document.getElementById('quickSponsorLogo').click()">
+                            <div id="logoPreviewPlaceholder" class="logo-placeholder">
+                                <i data-lucide="image-plus" style="width: 32px; height: 32px; color: var(--color-text-muted);"></i>
+                                <span>Klicka för att välja bild</span>
+                            </div>
+                            <img id="logoPreviewImg" src="" alt="Förhandsvisning" style="display: none; max-width: 100%; max-height: 100%; object-fit: contain;">
+                        </div>
+                        <input type="file" id="quickSponsorLogo" name="logo" accept="image/png,image/jpeg,image/webp" onchange="previewLogo(this)" style="display: none;">
+                        <button type="button" class="btn btn-secondary btn-sm mt-sm" onclick="document.getElementById('quickSponsorLogo').click()">
+                            <i data-lucide="upload" class="icon-sm"></i>
+                            Välj fil
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Name -->
+                <div class="form-group mb-md">
+                    <label class="form-label" for="quickSponsorName">Namn <span class="text-danger">*</span></label>
+                    <input type="text" id="quickSponsorName" name="name" class="form-input" placeholder="T.ex. Lokala Cykelbutiken" required>
+                </div>
+
+                <!-- Website (optional) -->
+                <div class="form-group">
+                    <label class="form-label" for="quickSponsorWebsite">Webbplats <span class="text-secondary">(valfritt)</span></label>
+                    <input type="url" id="quickSponsorWebsite" name="website" class="form-input" placeholder="https://example.com">
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn btn-ghost" onclick="closeQuickSponsorModal()">Avbryt</button>
+                <button type="submit" class="btn btn-primary">
+                    <i data-lucide="upload" class="icon-sm"></i>
+                    Skapa sponsor
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+/* Quick Sponsor Modal Styles */
+.modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    z-index: 1000;
+    justify-content: center;
+    align-items: flex-start;
+    padding: var(--space-xl);
+    overflow-y: auto;
+}
+.modal-overlay.active {
+    display: flex;
+}
+.modal-content {
+    background: var(--color-bg-card);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+    width: 100%;
+    max-width: 500px;
+    margin-top: var(--space-xl);
+}
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--space-md) var(--space-lg);
+    border-bottom: 1px solid var(--color-border);
+}
+.modal-header h3 {
+    margin: 0;
+    font-size: var(--text-lg);
+}
+.modal-body {
+    padding: var(--space-lg);
+}
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--space-sm);
+    padding: var(--space-md) var(--space-lg);
+    border-top: 1px solid var(--color-border);
+    background: var(--color-bg-sunken);
+    border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+}
+
+.logo-upload-area {
+    text-align: center;
+}
+.logo-preview-box {
+    width: 100%;
+    height: 120px;
+    background: var(--color-bg-sunken);
+    border: 2px dashed var(--color-border);
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: border-color 0.2s;
+}
+.logo-preview-box:hover {
+    border-color: var(--color-accent);
+}
+.logo-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-xs);
+    color: var(--color-text-muted);
+    font-size: var(--text-sm);
+}
+
+.alert-info {
+    background: rgba(59, 130, 246, 0.1);
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    color: var(--color-text-primary);
+    padding: var(--space-md);
+    border-radius: var(--radius-md);
+    font-size: var(--text-sm);
+}
+
+.spin {
+    animation: spin 1s linear infinite;
+}
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+</style>
 
 <?php include __DIR__ . '/components/unified-layout-footer.php'; ?>
