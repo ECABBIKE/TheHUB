@@ -7,7 +7,11 @@
 
 $current_page = basename($_SERVER['PHP_SELF']);
 $current_path = $_SERVER['PHP_SELF'];
-$is_admin = isLoggedIn();
+
+// Check user roles properly
+$is_logged_in = isLoggedIn();
+$is_promotor = hasRole('promotor');  // promotor or higher
+$is_admin = hasRole('admin');        // admin or higher
 $is_super_admin = hasRole('super_admin');
 
 /**
@@ -99,8 +103,8 @@ function nav_icon($name, $class = 'sidebar-icon-svg') {
             <span class="sidebar-label">Ranking</span>
         </a>
 
-        <?php if ($is_admin): ?>
-        <!-- ADMIN NAVIGATION -->
+        <?php if ($is_promotor): ?>
+        <!-- ADMIN NAVIGATION (promotor and above) -->
         <div class="sidebar-divider"></div>
 
         <a href="/admin/dashboard.php"
@@ -119,6 +123,8 @@ function nav_icon($name, $class = 'sidebar-icon-svg') {
             <span class="sidebar-label">Tävlingar</span>
         </a>
 
+        <?php if ($is_admin): ?>
+        <!-- Admin and above see more sections -->
         <a href="/admin/series.php"
            class="sidebar-link<?= strpos($current_path, '/admin/series') !== false || strpos($current_path, '/admin/ranking') !== false || strpos($current_path, '/admin/club-points') !== false ? ' active' : '' ?>"
            aria-label="Serier"
@@ -150,10 +156,11 @@ function nav_icon($name, $class = 'sidebar-icon-svg') {
             <?= nav_icon('upload') ?>
             <span class="sidebar-label">Import</span>
         </a>
+        <?php endif; ?>
 
         <?php if ($is_super_admin): ?>
         <a href="/admin/users.php"
-           class="sidebar-link<?= strpos($current_path, '/admin/users') !== false || strpos($current_path, '/admin/role-') !== false || strpos($current_path, '/admin/system-') !== false || strpos($current_path, '/admin/settings') !== false || strpos($current_path, '/admin/setup-') !== false || strpos($current_path, '/admin/run-') !== false ? ' active' : '' ?>"
+           class="sidebar-link<?= strpos($current_path, '/admin/users') !== false || strpos($current_path, '/admin/role-') !== false || strpos($current_path, '/admin/system-') !== false || strpos($current_path, '/admin/settings') !== false || strpos($current_path, '/admin/setup-') !== false || strpos($current_path, '/admin/run-') !== false || strpos($current_path, '/admin/tools') !== false ? ' active' : '' ?>"
            aria-label="System"
            <?= strpos($current_path, '/admin/users') !== false ? 'aria-current="page"' : '' ?>>
             <?= nav_icon('settings') ?>
