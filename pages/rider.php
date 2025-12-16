@@ -1040,8 +1040,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
 <?php if ($rankingPosition): ?>
 <!-- Ranking Calculation Modal -->
-<div id="rankingModal" class="ranking-modal-overlay">
-    <div class="ranking-modal">
+<div id="rankingModal" class="ranking-modal-overlay" style="padding-top: var(--header-height, 60px);">
+    <div class="ranking-modal" style="max-height: calc(100vh - var(--header-height, 60px) - var(--space-lg, 24px));">
         <div class="ranking-modal-header">
             <h3>
                 <i data-lucide="calculator"></i>
