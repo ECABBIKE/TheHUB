@@ -918,10 +918,12 @@ $eventName = htmlspecialchars($event['name']);
             <i data-lucide="mountain" class="nav-icon"></i>
             <span>Höjd</span>
         </button>
+        <!-- 3D temporarily disabled - needs improvement
         <button class="nav-item" onclick="toggle3DMode()" id="nav-3d">
             <i data-lucide="box" class="nav-icon"></i>
             <span>3D</span>
         </button>
+        -->
         <button class="nav-item" id="nav-location" onclick="toggleLocation()">
             <i data-lucide="locate" class="nav-icon"></i>
             <span>Din plats</span>
@@ -931,7 +933,9 @@ $eventName = htmlspecialchars($event['name']);
     <!-- Desktop bottom controls -->
     <div class="controls-bottom">
         <a href="/event/<?= $eventId ?>" class="btn-circle" title="Tillbaka till event" style="text-decoration: none;"><i data-lucide="x" style="width: 20px; height: 20px;"></i></a>
+        <!-- 3D temporarily disabled - needs improvement
         <button class="btn-circle" id="btn-3d" onclick="toggle3DMode()" title="3D-vy"><i data-lucide="box" style="width: 20px; height: 20px;"></i></button>
+        -->
         <button class="btn-circle" id="location-btn" onclick="toggleLocation()" title="Min plats"><i data-lucide="locate" style="width: 20px; height: 20px;"></i></button>
     </div>
 
