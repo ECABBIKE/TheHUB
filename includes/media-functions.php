@@ -445,3 +445,273 @@ function get_media_thumbnail($id, $size = 'medium') {
     }
     return '/assets/images/placeholder.png';
 }
+
+/**
+ * Resize an image to specific dimensions
+ * Maintains aspect ratio and pads with transparent background if needed
+ *
+ * @param string $sourcePath Path to source image
+ * @param string $destPath Path to save resized image
+ * @param int $targetWidth Target width in pixels
+ * @param int $targetHeight Target height in pixels
+ * @param bool $fitInside If true, image fits inside dimensions (may have padding). If false, fills dimensions (may crop)
+ * @return bool Success
+ */
+function resize_image($sourcePath, $destPath, $targetWidth, $targetHeight, $fitInside = true) {
+    if (!file_exists($sourcePath)) {
+        return false;
+    }
+
+    $imageInfo = getimagesize($sourcePath);
+    if (!$imageInfo) {
+        return false;
+    }
+
+    $mimeType = $imageInfo['mime'];
+    $origWidth = $imageInfo[0];
+    $origHeight = $imageInfo[1];
+
+    // Create source image
+    switch ($mimeType) {
+        case 'image/jpeg':
+            $srcImage = imagecreatefromjpeg($sourcePath);
+            break;
+        case 'image/png':
+            $srcImage = imagecreatefrompng($sourcePath);
+            break;
+        case 'image/gif':
+            $srcImage = imagecreatefromgif($sourcePath);
+            break;
+        case 'image/webp':
+            $srcImage = imagecreatefromwebp($sourcePath);
+            break;
+        default:
+            return false;
+    }
+
+    if (!$srcImage) {
+        return false;
+    }
+
+    // Calculate new dimensions maintaining aspect ratio
+    $origRatio = $origWidth / $origHeight;
+    $targetRatio = $targetWidth / $targetHeight;
+
+    if ($fitInside) {
+        // Fit inside: image fits completely inside target dimensions
+        if ($origRatio > $targetRatio) {
+            $newWidth = $targetWidth;
+            $newHeight = (int)($targetWidth / $origRatio);
+        } else {
+            $newHeight = $targetHeight;
+            $newWidth = (int)($targetHeight * $origRatio);
+        }
+    } else {
+        // Fill: image fills target dimensions (may crop)
+        if ($origRatio > $targetRatio) {
+            $newHeight = $targetHeight;
+            $newWidth = (int)($targetHeight * $origRatio);
+        } else {
+            $newWidth = $targetWidth;
+            $newHeight = (int)($targetWidth / $origRatio);
+        }
+    }
+
+    // Create destination image with transparent background
+    $dstImage = imagecreatetruecolor($targetWidth, $targetHeight);
+
+    // For PNG/WebP: preserve transparency
+    if (in_array($mimeType, ['image/png', 'image/webp', 'image/gif'])) {
+        imagealphablending($dstImage, false);
+        imagesavealpha($dstImage, true);
+        $transparent = imagecolorallocatealpha($dstImage, 255, 255, 255, 127);
+        imagefilledrectangle($dstImage, 0, 0, $targetWidth, $targetHeight, $transparent);
+    } else {
+        // For JPEG: white background
+        $white = imagecolorallocate($dstImage, 255, 255, 255);
+        imagefilledrectangle($dstImage, 0, 0, $targetWidth, $targetHeight, $white);
+    }
+
+    // Center the image
+    $x = (int)(($targetWidth - $newWidth) / 2);
+    $y = (int)(($targetHeight - $newHeight) / 2);
+
+    // Resize and copy
+    imagecopyresampled($dstImage, $srcImage, $x, $y, 0, 0, $newWidth, $newHeight, $origWidth, $origHeight);
+
+    // Save based on destination extension
+    $ext = strtolower(pathinfo($destPath, PATHINFO_EXTENSION));
+    $success = false;
+
+    switch ($ext) {
+        case 'jpg':
+        case 'jpeg':
+            $success = imagejpeg($dstImage, $destPath, 90);
+            break;
+        case 'png':
+            $success = imagepng($dstImage, $destPath, 9);
+            break;
+        case 'gif':
+            $success = imagegif($dstImage, $destPath);
+            break;
+        case 'webp':
+            $success = imagewebp($dstImage, $destPath, 90);
+            break;
+    }
+
+    // Clean up
+    imagedestroy($srcImage);
+    imagedestroy($dstImage);
+
+    return $success;
+}
+
+/**
+ * Upload a sponsor logo with automatic resizing to 400x120px
+ *
+ * @param array $file $_FILES array element
+ * @param string $folder Folder path (e.g., 'sponsors/gravity-series/jarvsofjellet')
+ * @param int|null $uploadedBy User ID who uploaded
+ * @return array Result with success, id, url, etc.
+ */
+function upload_sponsor_logo($file, $folder, $uploadedBy = null) {
+    global $pdo;
+
+    $allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    $maxSize = 10 * 1024 * 1024; // 10MB
+
+    // Sponsor logo target size
+    $targetWidth = 400;
+    $targetHeight = 120;
+
+    // Validate file
+    if (!isset($file['tmp_name']) || !is_uploaded_file($file['tmp_name'])) {
+        return ['success' => false, 'error' => 'Ingen fil uppladdad'];
+    }
+
+    if ($file['size'] > $maxSize) {
+        return ['success' => false, 'error' => 'Filen är för stor (max 10MB)'];
+    }
+
+    $mimeType = mime_content_type($file['tmp_name']);
+    if (!in_array($mimeType, $allowedTypes)) {
+        return ['success' => false, 'error' => 'Filtypen stöds inte. Använd JPG, PNG, GIF eller WebP.'];
+    }
+
+    // Generate filename - prefer PNG for transparency support
+    $originalExt = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+    $ext = in_array($originalExt, ['png', 'webp']) ? $originalExt : 'png';
+    $filename = uniqid('sponsor_') . '_' . time() . '.' . $ext;
+    $relativeFilepath = "uploads/media/{$folder}/{$filename}";
+
+    // Use absolute path for file operations
+    $rootPath = defined('ROOT_PATH') ? ROOT_PATH : dirname(__DIR__);
+    $absoluteFilepath = $rootPath . '/' . $relativeFilepath;
+
+    // Create directory if needed
+    $dir = dirname($absoluteFilepath);
+    if (!is_dir($dir)) {
+        mkdir($dir, 0755, true);
+    }
+
+    // Resize and save
+    if (!resize_image($file['tmp_name'], $absoluteFilepath, $targetWidth, $targetHeight)) {
+        return ['success' => false, 'error' => 'Kunde inte bearbeta bilden'];
+    }
+
+    // Get final file size
+    $finalSize = filesize($absoluteFilepath);
+
+    // Save to database
+    try {
+        $stmt = $pdo->prepare("
+            INSERT INTO media (filename, original_filename, filepath, mime_type, size, width, height, folder, uploaded_by, uploaded_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
+        ");
+        $stmt->execute([
+            $filename,
+            $file['name'],
+            $relativeFilepath,
+            'image/' . $ext,
+            $finalSize,
+            $targetWidth,
+            $targetHeight,
+            $folder,
+            $uploadedBy
+        ]);
+
+        $mediaId = $pdo->lastInsertId();
+
+        return [
+            'success' => true,
+            'id' => $mediaId,
+            'url' => '/' . $relativeFilepath,
+            'filename' => $filename,
+            'width' => $targetWidth,
+            'height' => $targetHeight
+        ];
+    } catch (PDOException $e) {
+        error_log("upload_sponsor_logo error: " . $e->getMessage());
+        @unlink($absoluteFilepath);
+        return ['success' => false, 'error' => 'Databasfel'];
+    }
+}
+
+/**
+ * Create a media folder path for event-specific sponsor logos
+ *
+ * @param string $seriesName Name of the series
+ * @param string $eventName Name of the event
+ * @return string Folder path like 'sponsors/gravity-series/jarvsofjellet'
+ */
+function create_event_sponsor_folder($seriesName, $eventName) {
+    $seriesSlug = slugify($seriesName);
+    $eventSlug = slugify($eventName);
+
+    return "sponsors/{$seriesSlug}/{$eventSlug}";
+}
+
+/**
+ * Create URL-safe slug from string
+ */
+function slugify($text) {
+    // Convert Swedish characters
+    $text = str_replace(['å', 'ä', 'Å', 'Ä'], 'a', $text);
+    $text = str_replace(['ö', 'Ö'], 'o', $text);
+
+    // Lowercase and replace non-alphanumeric with hyphens
+    $text = strtolower(trim($text));
+    $text = preg_replace('/[^a-z0-9]+/', '-', $text);
+    $text = trim($text, '-');
+
+    return $text ?: 'unknown';
+}
+
+/**
+ * Get event sponsor folder path
+ * Uses series name if available, otherwise 'events'
+ */
+function get_event_sponsor_folder($eventId) {
+    global $pdo;
+
+    try {
+        $stmt = $pdo->prepare("
+            SELECT e.name as event_name, s.name as series_name
+            FROM events e
+            LEFT JOIN series s ON e.series_id = s.id
+            WHERE e.id = ?
+        ");
+        $stmt->execute([$eventId]);
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if ($result) {
+            $seriesName = $result['series_name'] ?: 'events';
+            $eventName = $result['event_name'];
+            return create_event_sponsor_folder($seriesName, $eventName);
+        }
+    } catch (PDOException $e) {
+        error_log("get_event_sponsor_folder error: " . $e->getMessage());
+    }
+
+    return 'sponsors/events';
+}

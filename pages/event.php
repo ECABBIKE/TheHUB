@@ -1562,7 +1562,7 @@ render_event_map($eventId, $db, [
 <?php endif; ?>
 
 <?php
-// Partner sponsors (bottom of page, max 3)
+// Partner sponsors (bottom of page - unlimited)
 $partnerSponsorsWithLogos = array_filter($eventSponsors['partner'] ?? [], function($s) {
     return get_sponsor_logo_for_placement($s, 'content') !== null;
 });
@@ -1572,7 +1572,7 @@ if (!empty($partnerSponsorsWithLogos)): ?>
         <span class="partner-sponsors-label">Samarbetspartners</span>
     </div>
     <div class="partner-sponsors-grid">
-        <?php foreach (array_slice($partnerSponsorsWithLogos, 0, 3) as $sponsor):
+        <?php foreach ($partnerSponsorsWithLogos as $sponsor):
             $partnerLogo = get_sponsor_logo_for_placement($sponsor, 'content');
         ?>
         <a href="<?= h($sponsor['website'] ?? '#') ?>" target="_blank" rel="noopener sponsored" class="partner-sponsor-item" title="<?= h($sponsor['name']) ?>">
