@@ -552,6 +552,14 @@ include __DIR__ . '/components/unified-layout.php';
     <?= csrf_field() ?>
 
     <!-- BASIC INFO - Locked for promotors -->
+    <?php if ($isPromotorOnly): ?>
+    <!-- Hidden fields to preserve locked values for promotors -->
+    <input type="hidden" name="name" value="<?= h($event['name']) ?>">
+    <input type="hidden" name="date" value="<?= h($event['date']) ?>">
+    <input type="hidden" name="advent_id" value="<?= h($event['advent_id'] ?? '') ?>">
+    <input type="hidden" name="location" value="<?= h($event['location'] ?? '') ?>">
+    <input type="hidden" name="venue_id" value="<?= h($event['venue_id'] ?? '') ?>">
+    <?php endif; ?>
     <div class="admin-card mb-lg <?= $isPromotorOnly ? 'locked-section' : '' ?>">
         <div class="admin-card-header">
             <h2>Grundläggande information</h2>
@@ -565,12 +573,12 @@ include __DIR__ . '/components/unified-layout.php';
             <div class="form-grid form-grid-2">
                 <div class="admin-form-group form-full-width">
                     <label class="admin-form-label">Namn <span class="required">*</span></label>
-                    <input type="text" name="name" class="admin-form-input" required value="<?= h($event['name']) ?>">
+                    <input type="text" class="admin-form-input" <?= $isPromotorOnly ? '' : 'name="name" required' ?> value="<?= h($event['name']) ?>">
                 </div>
 
                 <div class="admin-form-group">
                     <label class="admin-form-label">Datum <span class="required">*</span></label>
-                    <input type="date" name="date" class="admin-form-input" required value="<?= h($event['date']) ?>">
+                    <input type="date" class="admin-form-input" <?= $isPromotorOnly ? '' : 'name="date" required' ?> value="<?= h($event['date']) ?>">
                 </div>
 
                 <div class="admin-form-group">
@@ -599,6 +607,17 @@ include __DIR__ . '/components/unified-layout.php';
     </div>
 
     <!-- COMPETITION SETTINGS - Locked for promotors -->
+    <?php if ($isPromotorOnly): ?>
+    <!-- Hidden fields to preserve locked values for promotors -->
+    <input type="hidden" name="discipline" value="<?= h($event['discipline'] ?? '') ?>">
+    <input type="hidden" name="series_id" value="<?= h($event['series_id'] ?? '') ?>">
+    <input type="hidden" name="event_level" value="<?= h($event['event_level'] ?? 'national') ?>">
+    <input type="hidden" name="event_format" value="<?= h($event['event_format'] ?? 'ENDURO') ?>">
+    <input type="hidden" name="pricing_template_id" value="<?= h($event['pricing_template_id'] ?? '') ?>">
+    <input type="hidden" name="distance" value="<?= h($event['distance'] ?? '') ?>">
+    <input type="hidden" name="elevation_gain" value="<?= h($event['elevation_gain'] ?? '') ?>">
+    <input type="hidden" name="stage_names" value="<?= h($event['stage_names'] ?? '') ?>">
+    <?php endif; ?>
     <div class="admin-card mb-lg <?= $isPromotorOnly ? 'locked-section' : '' ?>">
         <div class="admin-card-header">
             <h2>Tävlingsinställningar</h2>
@@ -801,6 +820,9 @@ include __DIR__ . '/components/unified-layout.php';
 
     <!-- PAYMENT SETTINGS - Locked for promotors -->
     <?php if ($paymentRecipientColumnExists && !empty($paymentRecipients)): ?>
+    <?php if ($isPromotorOnly): ?>
+    <input type="hidden" name="payment_recipient_id" value="<?= h($event['payment_recipient_id'] ?? '') ?>">
+    <?php endif; ?>
     <div class="admin-card mb-lg <?= $isPromotorOnly ? 'locked-section' : '' ?>">
         <div class="admin-card-header">
             <h2>Betalning</h2>
