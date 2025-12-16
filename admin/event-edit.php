@@ -537,15 +537,17 @@ include __DIR__ . '/components/unified-layout.php';
     <input type="hidden" name="location" value="<?= h($event['location'] ?? '') ?>">
     <input type="hidden" name="venue_id" value="<?= h($event['venue_id'] ?? '') ?>">
     <?php endif; ?>
-    <div class="admin-card mb-lg <?= $isPromotorOnly ? 'locked-section' : '' ?>">
-        <div class="admin-card-header">
+    <details class="admin-card mb-lg <?= $isPromotorOnly ? 'locked-section' : '' ?>">
+        <summary class="admin-card-header collapsible-header">
             <h2>Grundläggande information</h2>
             <?php if ($isPromotorOnly): ?>
             <span class="locked-badge">
                 <i data-lucide="lock"></i> Låst
             </span>
+            <?php else: ?>
+            <span class="text-secondary text-sm">Klicka för att expandera/minimera</span>
             <?php endif; ?>
-        </div>
+        </summary>
         <fieldset class="admin-card-body fieldset-reset" <?= $isPromotorOnly ? 'disabled' : '' ?>>
             <div class="form-grid form-grid-2">
                 <div class="admin-form-group form-full-width">
@@ -581,7 +583,7 @@ include __DIR__ . '/components/unified-layout.php';
                 </div>
             </div>
         </fieldset>
-    </div>
+    </details>
 
     <!-- COMPETITION SETTINGS - Locked for promotors -->
     <?php if ($isPromotorOnly): ?>
@@ -595,15 +597,17 @@ include __DIR__ . '/components/unified-layout.php';
     <input type="hidden" name="elevation_gain" value="<?= h($event['elevation_gain'] ?? '') ?>">
     <input type="hidden" name="stage_names" value="<?= h($event['stage_names'] ?? '') ?>">
     <?php endif; ?>
-    <div class="admin-card mb-lg <?= $isPromotorOnly ? 'locked-section' : '' ?>">
-        <div class="admin-card-header">
+    <details class="admin-card mb-lg <?= $isPromotorOnly ? 'locked-section' : '' ?>">
+        <summary class="admin-card-header collapsible-header">
             <h2>Tävlingsinställningar</h2>
             <?php if ($isPromotorOnly): ?>
             <span class="locked-badge">
                 <i data-lucide="lock"></i> Låst
             </span>
+            <?php else: ?>
+            <span class="text-secondary text-sm">Klicka för att expandera/minimera</span>
             <?php endif; ?>
-        </div>
+        </summary>
         <fieldset class="admin-card-body fieldset-reset" <?= $isPromotorOnly ? 'disabled' : '' ?>>
             <div class="form-grid form-grid-2">
                 <div class="admin-form-group">
@@ -703,18 +707,21 @@ include __DIR__ . '/components/unified-layout.php';
                 <small class="form-help">Anpassade namn. Lämna tomt för standard.</small>
             </div>
         </fieldset>
-    </div>
+    </details>
 
     <!-- EVENT CLASSES - Hidden for promotors -->
     <?php if (!$isPromotorOnly): ?>
-    <div class="admin-card mb-lg">
-        <div class="admin-card-header flex justify-between items-center">
+    <details class="admin-card mb-lg">
+        <summary class="admin-card-header collapsible-header flex justify-between items-center">
             <h2>Klasser</h2>
-            <a href="/admin/event-pricing.php?id=<?= $id ?>" class="btn-admin btn-admin-sm btn-admin-secondary">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-sm"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
-                Hantera klasser
-            </a>
-        </div>
+            <span class="flex items-center gap-sm">
+                <span class="text-secondary text-sm">Klicka för att expandera</span>
+                <a href="/admin/event-pricing.php?id=<?= $id ?>" class="btn-admin btn-admin-sm btn-admin-secondary" onclick="event.stopPropagation()">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-sm"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+                    Hantera klasser
+                </a>
+            </span>
+        </summary>
         <div class="admin-card-body">
             <?php if (empty($eventClasses)): ?>
                 <div class="text-secondary text-center p-lg">
@@ -744,14 +751,15 @@ include __DIR__ . '/components/unified-layout.php';
                 </p>
             <?php endif; ?>
         </div>
-    </div>
+    </details>
     <?php endif; /* End hide Klasser for promotors */ ?>
 
     <!-- ORGANIZER & CONTACT - Editable for promotors -->
-    <div class="admin-card mb-lg">
-        <div class="admin-card-header">
+    <details class="admin-card mb-lg" open>
+        <summary class="admin-card-header collapsible-header">
             <h2>Arrangör & Kontakt</h2>
-        </div>
+            <span class="text-secondary text-sm">Klicka för att expandera/minimera</span>
+        </summary>
         <div class="admin-card-body">
             <div class="form-grid form-grid-2">
                 <div class="admin-form-group">
@@ -793,22 +801,24 @@ include __DIR__ . '/components/unified-layout.php';
                 </div>
             </div>
         </div>
-    </div>
+    </details>
 
     <!-- PAYMENT SETTINGS - Locked for promotors -->
     <?php if ($paymentRecipientColumnExists && !empty($paymentRecipients)): ?>
     <?php if ($isPromotorOnly): ?>
     <input type="hidden" name="payment_recipient_id" value="<?= h($event['payment_recipient_id'] ?? '') ?>">
     <?php endif; ?>
-    <div class="admin-card mb-lg <?= $isPromotorOnly ? 'locked-section' : '' ?>">
-        <div class="admin-card-header">
+    <details class="admin-card mb-lg <?= $isPromotorOnly ? 'locked-section' : '' ?>">
+        <summary class="admin-card-header collapsible-header">
             <h2>Betalning</h2>
             <?php if ($isPromotorOnly): ?>
             <span class="locked-badge">
                 <i data-lucide="lock"></i> Låst
             </span>
+            <?php else: ?>
+            <span class="text-secondary text-sm">Klicka för att expandera/minimera</span>
             <?php endif; ?>
-        </div>
+        </summary>
         <fieldset class="admin-card-body fieldset-reset" <?= $isPromotorOnly ? 'disabled' : '' ?>>
             <div class="admin-form-group">
                 <label class="admin-form-label">Betalningsmottagare (Swish)</label>
@@ -826,14 +836,15 @@ include __DIR__ . '/components/unified-layout.php';
                 </small>
             </div>
         </fieldset>
-    </div>
+    </details>
     <?php endif; ?>
 
     <!-- LOCATION DETAILS - Editable for promotors -->
-    <div class="admin-card mb-lg">
-        <div class="admin-card-header">
+    <details class="admin-card mb-lg" open>
+        <summary class="admin-card-header collapsible-header">
             <h2>Platsdetaljer</h2>
-        </div>
+            <span class="text-secondary text-sm">Klicka för att expandera/minimera</span>
+        </summary>
         <div class="admin-card-body">
             <div class="form-grid form-grid-2">
                 <div class="admin-form-group">
@@ -852,7 +863,7 @@ include __DIR__ . '/components/unified-layout.php';
                 </div>
             </div>
         </div>
-    </div>
+    </details>
 
     <!-- INVITATION & FACILITIES - Editable for promotors -->
     <details class="admin-card mb-lg" open>
