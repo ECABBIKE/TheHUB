@@ -6,21 +6,37 @@
  * JS functionality is in /admin/assets/js/admin.js
  *
  * Navigation matches sidebar groups from admin-tabs-config.php
+ *
+ * Role-based access:
+ * - promotor: Only tävlingar (their assigned events)
+ * - admin/super_admin: Full access
  */
 require_once __DIR__ . '/../../v3-config.php';
 require_once __DIR__ . '/../../components/icons.php';
 require_once __DIR__ . '/../../includes/config/admin-tabs-config.php';
 
+// Get current user's role for filtering
+$currentAdminRole = $_SESSION['admin_role'] ?? 'admin';
+$roleHierarchy = ['promotor' => 1, 'admin' => 2, 'super_admin' => 3];
+$userRoleLevel = $roleHierarchy[$currentAdminRole] ?? 0;
+
 // Admin navigation - matches sidebar groups
+// 'min_role': 'promotor' = all, 'admin' = admin+super, 'super_admin' = super only
 $adminNav = [
-    ['id' => 'dashboard', 'label' => 'Dashboard', 'icon' => 'layout-dashboard', 'url' => '/admin/dashboard', 'pages' => ['dashboard.php', 'index.php']],
-    ['id' => 'competitions', 'label' => 'Tävlingar', 'icon' => 'calendar-check', 'url' => '/admin/events.php', 'pages' => get_pages_in_group('competitions')],
-    ['id' => 'standings', 'label' => 'Serier', 'icon' => 'medal', 'url' => '/admin/series.php', 'pages' => get_pages_in_group('standings')],
-    ['id' => 'database', 'label' => 'Databas', 'icon' => 'database', 'url' => '/admin/riders.php', 'pages' => get_pages_in_group('database')],
-    ['id' => 'config', 'label' => 'Konfig', 'icon' => 'sliders', 'url' => '/admin/classes.php', 'pages' => get_pages_in_group('config')],
-    ['id' => 'import', 'label' => 'Import', 'icon' => 'upload', 'url' => '/admin/import.php', 'pages' => get_pages_in_group('import')],
-    ['id' => 'settings', 'label' => 'System', 'icon' => 'settings', 'url' => '/admin/users.php', 'pages' => get_pages_in_group('settings')],
+    ['id' => 'dashboard', 'label' => 'Dashboard', 'icon' => 'layout-dashboard', 'url' => '/admin/dashboard', 'pages' => ['dashboard.php', 'index.php'], 'min_role' => 'admin'],
+    ['id' => 'competitions', 'label' => 'Tävlingar', 'icon' => 'calendar-check', 'url' => '/admin/events.php', 'pages' => get_pages_in_group('competitions'), 'min_role' => 'promotor'],
+    ['id' => 'standings', 'label' => 'Serier', 'icon' => 'medal', 'url' => '/admin/series.php', 'pages' => get_pages_in_group('standings'), 'min_role' => 'admin'],
+    ['id' => 'database', 'label' => 'Databas', 'icon' => 'database', 'url' => '/admin/riders.php', 'pages' => get_pages_in_group('database'), 'min_role' => 'admin'],
+    ['id' => 'config', 'label' => 'Konfig', 'icon' => 'sliders', 'url' => '/admin/classes.php', 'pages' => get_pages_in_group('config'), 'min_role' => 'admin'],
+    ['id' => 'import', 'label' => 'Import', 'icon' => 'upload', 'url' => '/admin/import.php', 'pages' => get_pages_in_group('import'), 'min_role' => 'admin'],
+    ['id' => 'settings', 'label' => 'System', 'icon' => 'settings', 'url' => '/admin/users.php', 'pages' => get_pages_in_group('settings'), 'min_role' => 'admin'],
 ];
+
+// Filter navigation based on user role
+$adminNav = array_filter($adminNav, function($item) use ($roleHierarchy, $userRoleLevel) {
+    $requiredLevel = $roleHierarchy[$item['min_role'] ?? 'admin'] ?? 2;
+    return $userRoleLevel >= $requiredLevel;
+});
 
 // Determine active page from URL
 $requestUri = $_SERVER['REQUEST_URI'] ?? '';

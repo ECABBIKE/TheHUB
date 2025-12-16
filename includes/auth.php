@@ -170,6 +170,7 @@ function login($username, $password) {
         $_SESSION['admin_logged_in'] = true;
         $_SESSION['admin_id'] = $user['id'];
         $_SESSION['admin_username'] = $user['username'];
+        $_SESSION['admin_email'] = $user['email'] ?? '';
         $_SESSION['admin_role'] = $user['role'];
         $_SESSION['admin_name'] = $user['full_name'] ?? $user['username'];
         $_SESSION['session_regenerated'] = true;
@@ -218,6 +219,7 @@ function getCurrentAdmin() {
     return [
         'id' => $_SESSION['admin_id'] ?? null,
         'username' => $_SESSION['admin_username'] ?? null,
+        'email' => $_SESSION['admin_email'] ?? null,
         'role' => $_SESSION['admin_role'] ?? null,
         'name' => $_SESSION['admin_name'] ?? null
     ];
