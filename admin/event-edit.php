@@ -225,6 +225,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'venue_map_url' => trim($_POST['venue_map_url'] ?? ''),
             'pm_content' => trim($_POST['pm_content'] ?? ''),
             'pm_use_global' => isset($_POST['pm_use_global']) ? 1 : 0,
+            'pm_publish_at' => !empty($_POST['pm_publish_at']) ? trim($_POST['pm_publish_at']) : null,
             'jury_communication' => trim($_POST['jury_communication'] ?? ''),
             'jury_use_global' => isset($_POST['jury_use_global']) ? 1 : 0,
             'competition_schedule' => trim($_POST['competition_schedule'] ?? ''),
@@ -853,6 +854,63 @@ include __DIR__ . '/components/unified-layout.php';
         </div>
     </div>
 
+    <!-- INVITATION & FACILITIES - Editable for promotors -->
+    <details class="admin-card mb-lg" open>
+        <summary class="admin-card-header collapsible-header">
+            <h2>Inbjudan</h2>
+            <span class="text-secondary text-sm">Klicka för att expandera/minimera</span>
+        </summary>
+        <div class="admin-card-body">
+            <!-- Invitation field - shown first -->
+            <div class="admin-form-group mb-lg pb-lg border-bottom">
+                <label class="admin-form-label text-base font-semibold">
+                    Inbjudningstext
+                    <label class="checkbox-inline">
+                        <input type="checkbox" name="invitation_use_global" <?= !empty($event['invitation_use_global']) ? 'checked' : '' ?>>
+                        <span class="text-xs">Global</span>
+                    </label>
+                </label>
+                <textarea name="invitation" class="admin-form-input" rows="4" placeholder="Välkommen till... (visas högst upp på Inbjudan-fliken)"><?= h($event['invitation'] ?? '') ?></textarea>
+                <small class="form-help">Inledande text som visas högst upp på Inbjudan-fliken på event-sidan.</small>
+            </div>
+
+            <p class="text-secondary text-sm mb-lg">
+                <strong>Faciliteter & Logistik</strong> - Övrig information för Inbjudan-fliken.
+            </p>
+
+            <?php
+            $facilityFields = [
+                ['key' => 'hydration_stations', 'label' => 'Vätskekontroller', 'global_key' => 'hydration_use_global'],
+                ['key' => 'toilets_showers', 'label' => 'Toaletter/Dusch', 'global_key' => 'toilets_use_global'],
+                ['key' => 'bike_wash', 'label' => 'Cykeltvätt', 'global_key' => 'bike_wash_use_global'],
+                ['key' => 'food_cafe', 'label' => 'Mat/Café', 'global_key' => 'food_use_global'],
+                ['key' => 'shops_info', 'label' => 'Affärer', 'global_key' => 'shops_use_global'],
+                ['key' => 'exhibitors', 'label' => 'Utställare', 'global_key' => 'exhibitors_use_global'],
+                ['key' => 'parking_detailed', 'label' => 'Parkering', 'global_key' => 'parking_use_global'],
+                ['key' => 'hotel_accommodation', 'label' => 'Hotell/Boende', 'global_key' => 'hotel_use_global'],
+                ['key' => 'local_info', 'label' => 'Lokal information', 'global_key' => 'local_use_global'],
+                ['key' => 'media_production', 'label' => 'Media', 'global_key' => 'media_use_global'],
+                ['key' => 'contacts_info', 'label' => 'Kontakter', 'global_key' => 'contacts_use_global'],
+            ];
+            ?>
+
+            <div class="form-grid form-grid-2">
+                <?php foreach ($facilityFields as $field): ?>
+                    <div class="admin-form-group">
+                        <label class="admin-form-label">
+                            <?= $field['label'] ?>
+                            <label class="checkbox-inline">
+                                <input type="checkbox" name="<?= $field['global_key'] ?>" <?= !empty($event[$field['global_key']]) ? 'checked' : '' ?>>
+                                <span class="text-xs">Global</span>
+                            </label>
+                        </label>
+                        <textarea name="<?= $field['key'] ?>" class="admin-form-input" rows="2"><?= h($event[$field['key']] ?? '') ?></textarea>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+        </div>
+    </details>
+
     <!-- PM (PROMEMORIA) - Collapsible -->
     <details class="admin-card mb-lg">
         <summary class="admin-card-header collapsible-header">
@@ -860,6 +918,21 @@ include __DIR__ . '/components/unified-layout.php';
             <span class="text-secondary text-sm">Klicka för att expandera</span>
         </summary>
         <div class="admin-card-body">
+            <!-- Publish date/time for PM -->
+            <div class="admin-form-group mb-lg pb-md border-bottom">
+                <div class="flex items-center gap-sm flex-wrap">
+                    <label class="text-sm font-medium whitespace-nowrap">
+                        <i data-lucide="calendar-clock" class="icon-sm inline-block"></i>
+                        Publiceras:
+                    </label>
+                    <input type="datetime-local" name="pm_publish_at"
+                           class="admin-form-input admin-form-input-sm"
+                           style="max-width: 220px;"
+                           value="<?= !empty($event['pm_publish_at']) ? date('Y-m-d\TH:i', strtotime($event['pm_publish_at'])) : '' ?>">
+                    <small class="form-help text-xs">Lämna tomt = synlig direkt</small>
+                </div>
+            </div>
+
             <p class="text-secondary text-sm mb-lg">
                 Innehåll för PM-fliken. Markera "Global" för att använda standardtext.
             </p>
@@ -962,72 +1035,16 @@ include __DIR__ . '/components/unified-layout.php';
         </div>
     </details>
 
-    <!-- INVITATION & FACILITIES - Editable for promotors -->
-    <details class="admin-card mb-lg" open>
-        <summary class="admin-card-header collapsible-header">
-            <h2>Inbjudan</h2>
-            <span class="text-secondary text-sm">Klicka för att expandera/minimera</span>
-        </summary>
-        <div class="admin-card-body">
-            <!-- Invitation field - shown first -->
-            <div class="admin-form-group mb-lg pb-lg border-bottom">
-                <label class="admin-form-label text-base font-semibold">
-                    Inbjudningstext
-                    <label class="checkbox-inline">
-                        <input type="checkbox" name="invitation_use_global" <?= !empty($event['invitation_use_global']) ? 'checked' : '' ?>>
-                        <span class="text-xs">Global</span>
-                    </label>
-                </label>
-                <textarea name="invitation" class="admin-form-input" rows="4" placeholder="Välkommen till... (visas högst upp på Inbjudan-fliken)"><?= h($event['invitation'] ?? '') ?></textarea>
-                <small class="form-help">Inledande text som visas högst upp på Inbjudan-fliken på event-sidan.</small>
-            </div>
-
-            <p class="text-secondary text-sm mb-lg">
-                <strong>Faciliteter & Logistik</strong> - Övrig information för Inbjudan-fliken.
-            </p>
-
-            <?php
-            $facilityFields = [
-                ['key' => 'hydration_stations', 'label' => 'Vätskekontroller', 'global_key' => 'hydration_use_global'],
-                ['key' => 'toilets_showers', 'label' => 'Toaletter/Dusch', 'global_key' => 'toilets_use_global'],
-                ['key' => 'bike_wash', 'label' => 'Cykeltvätt', 'global_key' => 'bike_wash_use_global'],
-                ['key' => 'food_cafe', 'label' => 'Mat/Café', 'global_key' => 'food_use_global'],
-                ['key' => 'shops_info', 'label' => 'Affärer', 'global_key' => 'shops_use_global'],
-                ['key' => 'exhibitors', 'label' => 'Utställare', 'global_key' => 'exhibitors_use_global'],
-                ['key' => 'parking_detailed', 'label' => 'Parkering', 'global_key' => 'parking_use_global'],
-                ['key' => 'hotel_accommodation', 'label' => 'Hotell/Boende', 'global_key' => 'hotel_use_global'],
-                ['key' => 'local_info', 'label' => 'Lokal information', 'global_key' => 'local_use_global'],
-                ['key' => 'media_production', 'label' => 'Media', 'global_key' => 'media_use_global'],
-                ['key' => 'contacts_info', 'label' => 'Kontakter', 'global_key' => 'contacts_use_global'],
-            ];
-            ?>
-
-            <div class="form-grid form-grid-2">
-                <?php foreach ($facilityFields as $field): ?>
-                    <div class="admin-form-group">
-                        <label class="admin-form-label">
-                            <?= $field['label'] ?>
-                            <label class="checkbox-inline">
-                                <input type="checkbox" name="<?= $field['global_key'] ?>" <?= !empty($event[$field['global_key']]) ? 'checked' : '' ?>>
-                                <span class="text-xs">Global</span>
-                            </label>
-                        </label>
-                        <textarea name="<?= $field['key'] ?>" class="admin-form-input" rows="2"><?= h($event[$field['key']] ?? '') ?></textarea>
-                    </div>
-                <?php endforeach; ?>
-            </div>
-        </div>
-    </details>
-
     <!-- SPONSORS - Editable for promotors -->
     <?php if (!empty($allSponsors)): ?>
-    <div class="admin-card mb-lg">
-        <div class="admin-card-header">
+    <details class="admin-card mb-lg" open>
+        <summary class="admin-card-header collapsible-header">
             <h2>
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-md"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
                 Sponsorer
             </h2>
-        </div>
+            <span class="text-secondary text-sm">Klicka för att expandera/minimera</span>
+        </summary>
         <div class="admin-card-body">
             <p class="mb-md text-secondary text-sm">
                 Välj sponsorer specifikt för detta event. <strong>OBS:</strong> Seriens sponsorer visas om inga event-sponsorer anges.
@@ -1101,16 +1118,17 @@ include __DIR__ . '/components/unified-layout.php';
                 </div>
             </div>
         </div>
-    </div>
+    </details>
 
     <!-- SAMARBETSPARTNERS - Partner logo row at bottom -->
-    <div class="admin-card mb-lg">
-        <div class="admin-card-header">
+    <details class="admin-card mb-lg" open>
+        <summary class="admin-card-header collapsible-header">
             <h2>
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-md"><path d="M11 17a1 1 0 0 1 2 0c0 .5-.34 3-.5 4.5a.5.5 0 0 1-1 0c-.16-1.5-.5-4-.5-4.5Z"/><path d="M8 14a6 6 0 1 1 8 0"/><path d="M12 2v1"/><path d="m4.93 4.93.71.71"/><path d="M2 12h1"/><path d="m4.93 19.07.71-.71"/><path d="m19.07 4.93-.71.71"/><path d="M22 12h-1"/><path d="m19.07 19.07-.71-.71"/></svg>
                 Samarbetspartners
             </h2>
-        </div>
+            <span class="text-secondary text-sm">Klicka för att expandera/minimera</span>
+        </summary>
         <div class="admin-card-body">
             <p class="mb-md text-secondary text-sm">
                 Visa lokala samarbetspartners längst ner på event-sidan.
@@ -1142,7 +1160,7 @@ include __DIR__ . '/components/unified-layout.php';
                 </button>
             </div>
         </div>
-    </div>
+    </details>
     <?php endif; ?>
 
     <!-- STATUS & ACTIONS -->
