@@ -96,6 +96,20 @@ if (!$event) {
     exit;
 }
 
+// Check if user is promotor (can only edit certain sections)
+$isPromotorOnly = function_exists('isRole') && isRole('promotor');
+
+// If promotor, verify they have access to this event
+if ($isPromotorOnly) {
+    $canAccess = function_exists('canAccessEvent') && canAccessEvent($id);
+    if (!$canAccess) {
+        $_SESSION['message'] = 'Du har inte behörighet att redigera detta event';
+        $_SESSION['messageType'] = 'error';
+        header('Location: /admin/events');
+        exit;
+    }
+}
+
 // Function to save sponsor assignments for events
 function saveEventSponsorAssignments($db, $eventId, $postData) {
     $pdo = $db->getPdo();
@@ -103,14 +117,12 @@ function saveEventSponsorAssignments($db, $eventId, $postData) {
     error_log("saveEventSponsorAssignments called for event $eventId");
     error_log("POST data: sponsor_header=" . ($postData['sponsor_header'] ?? 'empty') . ", sponsor_content=" . json_encode($postData['sponsor_content'] ?? []) . ", sponsor_sidebar=" . ($postData['sponsor_sidebar'] ?? 'empty'));
 
-    // CRITICAL FIX: Ensure 'content' is a valid ENUM value
-    // The ENUM might be missing 'content' if created with old migration
+    // CRITICAL FIX: Ensure placement ENUM includes all values
     try {
-        $pdo->exec("ALTER TABLE event_sponsors MODIFY COLUMN placement ENUM('header', 'sidebar', 'footer', 'content') DEFAULT 'sidebar'");
-        $pdo->exec("ALTER TABLE series_sponsors MODIFY COLUMN placement ENUM('header', 'sidebar', 'footer', 'content') DEFAULT 'sidebar'");
-        error_log("ENUM FIX: Updated placement columns to include 'content'");
+        $pdo->exec("ALTER TABLE event_sponsors MODIFY COLUMN placement ENUM('header', 'sidebar', 'footer', 'content', 'partner') DEFAULT 'sidebar'");
+        $pdo->exec("ALTER TABLE series_sponsors MODIFY COLUMN placement ENUM('header', 'sidebar', 'footer', 'content', 'partner') DEFAULT 'sidebar'");
     } catch (Exception $e) {
-        error_log("ENUM FIX: Could not update ENUM (may already be correct): " . $e->getMessage());
+        // May already be correct
     }
 
     // First, delete existing sponsor assignments for this event
@@ -144,10 +156,16 @@ function saveEventSponsorAssignments($db, $eventId, $postData) {
     if (!empty($postData['sponsor_sidebar'])) {
         $insertStmt->execute([$eventId, (int)$postData['sponsor_sidebar'], 'sidebar', 0]);
         $insertedCount++;
-        error_log("Inserted sidebar sponsor: " . $postData['sponsor_sidebar']);
     }
 
-    error_log("Total sponsors inserted: $insertedCount for event $eventId");
+    // Partner sponsors (bottom logo row - max 3)
+    if (!empty($postData['sponsor_partner']) && is_array($postData['sponsor_partner'])) {
+        $order = 0;
+        foreach (array_slice($postData['sponsor_partner'], 0, 3) as $sponsorId) {
+            $insertStmt->execute([$eventId, (int)$sponsorId, 'partner', $order++]);
+            $insertedCount++;
+        }
+    }
 
     // VERIFY: Check what was actually saved
     $verifyStmt = $pdo->prepare("SELECT sponsor_id, placement FROM event_sponsors WHERE event_id = ?");
@@ -244,6 +262,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'timing_use_global' => isset($_POST['timing_use_global']) ? 1 : 0,
             'lift_info' => trim($_POST['lift_info'] ?? ''),
             'lift_use_global' => isset($_POST['lift_use_global']) ? 1 : 0,
+            'invitation' => trim($_POST['invitation'] ?? ''),
+            'invitation_use_global' => isset($_POST['invitation_use_global']) ? 1 : 0,
             'hydration_stations' => trim($_POST['hydration_stations'] ?? ''),
             'hydration_use_global' => isset($_POST['hydration_use_global']) ? 1 : 0,
             'toilets_showers' => trim($_POST['toilets_showers'] ?? ''),
@@ -471,7 +491,7 @@ try {
 
 // Get all sponsors for selection
 $allSponsors = [];
-$eventSponsors = ['header' => [], 'content' => [], 'sidebar' => []];
+$eventSponsors = ['header' => [], 'content' => [], 'sidebar' => [], 'partner' => []];
 try {
     $allSponsors = $db->getAll("SELECT id, name, logo, tier FROM sponsors WHERE active = 1 ORDER BY tier ASC, name ASC");
 
@@ -480,23 +500,16 @@ try {
         FROM event_sponsors
         WHERE event_id = ?
     ", [$id]);
-    error_log("SPONSOR LOAD DEBUG: Raw assignments from DB: " . json_encode($sponsorAssignments));
     foreach ($sponsorAssignments as $sa) {
         $placement = $sa['placement'] ?? 'sidebar';
+        if (!isset($eventSponsors[$placement])) {
+            $eventSponsors[$placement] = [];
+        }
         $eventSponsors[$placement][] = (int)$sa['sponsor_id'];
     }
-    error_log("SPONSOR LOAD DEBUG: Parsed sponsors - content: " . json_encode($eventSponsors['content']) . ", header: " . json_encode($eventSponsors['header']) . ", sidebar: " . json_encode($eventSponsors['sidebar']));
 } catch (Exception $e) {
     error_log("EVENT EDIT: Could not load sponsors: " . $e->getMessage());
 }
-
-// DEBUG: Store what was loaded for display
-$debugSponsorLoad = [
-    'raw' => $sponsorAssignments ?? [],
-    'content' => $eventSponsors['content'],
-    'header' => $eventSponsors['header'],
-    'sidebar' => $eventSponsors['sidebar']
-];
 
 // Page config
 $page_title = 'Redigera Event';
@@ -538,12 +551,17 @@ include __DIR__ . '/components/unified-layout.php';
 <form method="POST">
     <?= csrf_field() ?>
 
-    <!-- BASIC INFO -->
-    <div class="admin-card" style="margin-bottom: var(--space-lg);">
+    <!-- BASIC INFO - Locked for promotors -->
+    <div class="admin-card" style="margin-bottom: var(--space-lg); <?= $isPromotorOnly ? 'opacity: 0.7;' : '' ?>">
         <div class="admin-card-header">
             <h2>Grundläggande information</h2>
+            <?php if ($isPromotorOnly): ?>
+            <span style="font-size: 0.75rem; color: var(--color-text-secondary); background: var(--color-bg-secondary); padding: 2px 8px; border-radius: 4px;">
+                <i data-lucide="lock" style="width:12px;height:12px;display:inline-block;vertical-align:middle;"></i> Låst
+            </span>
+            <?php endif; ?>
         </div>
-        <div class="admin-card-body">
+        <fieldset class="admin-card-body" <?= $isPromotorOnly ? 'disabled' : '' ?> style="border:none;margin:0;padding:0;">
             <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--space-md);">
                 <div class="admin-form-group" style="grid-column: span 2;">
                     <label class="admin-form-label">Namn <span style="color: var(--color-error);">*</span></label>
@@ -577,15 +595,20 @@ include __DIR__ . '/components/unified-layout.php';
                     </select>
                 </div>
             </div>
-        </div>
+        </fieldset>
     </div>
 
-    <!-- COMPETITION SETTINGS -->
-    <div class="admin-card" style="margin-bottom: var(--space-lg);">
+    <!-- COMPETITION SETTINGS - Locked for promotors -->
+    <div class="admin-card" style="margin-bottom: var(--space-lg); <?= $isPromotorOnly ? 'opacity: 0.7;' : '' ?>">
         <div class="admin-card-header">
             <h2>Tävlingsinställningar</h2>
+            <?php if ($isPromotorOnly): ?>
+            <span style="font-size: 0.75rem; color: var(--color-text-secondary); background: var(--color-bg-secondary); padding: 2px 8px; border-radius: 4px;">
+                <i data-lucide="lock" style="width:12px;height:12px;display:inline-block;vertical-align:middle;"></i> Låst
+            </span>
+            <?php endif; ?>
         </div>
-        <div class="admin-card-body">
+        <fieldset class="admin-card-body" <?= $isPromotorOnly ? 'disabled' : '' ?> style="border:none;margin:0;padding:0;">
             <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--space-md);">
                 <div class="admin-form-group">
                     <label class="admin-form-label">Tävlingsformat</label>
@@ -683,10 +706,11 @@ include __DIR__ . '/components/unified-layout.php';
                 <input type="text" name="stage_names" class="admin-form-input" value="<?= h($event['stage_names'] ?? '') ?>" placeholder='{"1":"SS1","2":"SS2","3":"SS3"}'>
                 <small style="color: var(--color-text-secondary);">Anpassade namn. Lämna tomt för standard.</small>
             </div>
-        </div>
+        </fieldset>
     </div>
 
-    <!-- EVENT CLASSES -->
+    <!-- EVENT CLASSES - Hidden for promotors -->
+    <?php if (!$isPromotorOnly): ?>
     <div class="admin-card" style="margin-bottom: var(--space-lg);">
         <div class="admin-card-header" style="display: flex; justify-content: space-between; align-items: center;">
             <h2>Klasser</h2>
@@ -725,8 +749,9 @@ include __DIR__ . '/components/unified-layout.php';
             <?php endif; ?>
         </div>
     </div>
+    <?php endif; /* End hide Klasser for promotors */ ?>
 
-    <!-- ORGANIZER & CONTACT -->
+    <!-- ORGANIZER & CONTACT - Editable for promotors -->
     <div class="admin-card" style="margin-bottom: var(--space-lg);">
         <div class="admin-card-header">
             <h2>Arrangör & Kontakt</h2>
@@ -774,13 +799,18 @@ include __DIR__ . '/components/unified-layout.php';
         </div>
     </div>
 
-    <!-- PAYMENT SETTINGS -->
+    <!-- PAYMENT SETTINGS - Locked for promotors -->
     <?php if ($paymentRecipientColumnExists && !empty($paymentRecipients)): ?>
-    <div class="admin-card" style="margin-bottom: var(--space-lg);">
+    <div class="admin-card" style="margin-bottom: var(--space-lg); <?= $isPromotorOnly ? 'opacity: 0.7;' : '' ?>">
         <div class="admin-card-header">
             <h2>Betalning</h2>
+            <?php if ($isPromotorOnly): ?>
+            <span style="font-size: 0.75rem; color: var(--color-text-secondary); background: var(--color-bg-secondary); padding: 2px 8px; border-radius: 4px;">
+                <i data-lucide="lock" style="width:12px;height:12px;display:inline-block;vertical-align:middle;"></i> Låst
+            </span>
+            <?php endif; ?>
         </div>
-        <div class="admin-card-body">
+        <fieldset class="admin-card-body" <?= $isPromotorOnly ? 'disabled' : '' ?> style="border:none;margin:0;padding:0;">
             <div class="admin-form-group">
                 <label class="admin-form-label">Betalningsmottagare (Swish)</label>
                 <select name="payment_recipient_id" class="admin-form-select">
@@ -796,11 +826,11 @@ include __DIR__ . '/components/unified-layout.php';
                     <a href="/admin/payment-recipients" style="color: var(--color-accent);">Hantera mottagare</a>
                 </small>
             </div>
-        </div>
+        </fieldset>
     </div>
     <?php endif; ?>
 
-    <!-- LOCATION DETAILS -->
+    <!-- LOCATION DETAILS - Editable for promotors -->
     <div class="admin-card" style="margin-bottom: var(--space-lg);">
         <div class="admin-card-header">
             <h2>Platsdetaljer</h2>
@@ -935,15 +965,28 @@ include __DIR__ . '/components/unified-layout.php';
         </div>
     </details>
 
-    <!-- FACILITIES - Collapsible -->
-    <details class="admin-card" style="margin-bottom: var(--space-lg);">
+    <!-- INVITATION & FACILITIES - Editable for promotors -->
+    <details class="admin-card" style="margin-bottom: var(--space-lg);" open>
         <summary class="admin-card-header" style="cursor: pointer; user-select: none;">
-            <h2>Faciliteter & Logistik (Information-fliken)</h2>
-            <span style="color: var(--color-text-secondary); font-size: var(--text-sm);">Klicka för att expandera</span>
+            <h2>Inbjudan</h2>
+            <span style="color: var(--color-text-secondary); font-size: var(--text-sm);">Klicka för att expandera/minimera</span>
         </summary>
         <div class="admin-card-body">
+            <!-- Invitation field - shown first -->
+            <div class="admin-form-group" style="margin-bottom: var(--space-lg); padding-bottom: var(--space-lg); border-bottom: 1px solid var(--color-border);">
+                <label class="admin-form-label" style="font-size: 1rem; font-weight: 600;">
+                    Inbjudningstext
+                    <label style="display: inline-flex; align-items: center; gap: 4px; margin-left: var(--space-sm); font-weight: normal; cursor: pointer;">
+                        <input type="checkbox" name="invitation_use_global" <?= !empty($event['invitation_use_global']) ? 'checked' : '' ?>>
+                        <span style="font-size: var(--text-xs);">Global</span>
+                    </label>
+                </label>
+                <textarea name="invitation" class="admin-form-input" rows="4" placeholder="Välkommen till... (visas högst upp på Inbjudan-fliken)"><?= h($event['invitation'] ?? '') ?></textarea>
+                <small style="color: var(--color-text-secondary);">Inledande text som visas högst upp på Inbjudan-fliken på event-sidan.</small>
+            </div>
+
             <p style="color: var(--color-text-secondary); font-size: var(--text-sm); margin-bottom: var(--space-lg);">
-                Innehåll för Information-fliken på event-sidan.
+                <strong>Faciliteter & Logistik</strong> - Övrig information för Inbjudan-fliken.
             </p>
 
             <?php
@@ -979,7 +1022,7 @@ include __DIR__ . '/components/unified-layout.php';
         </div>
     </details>
 
-    <!-- SPONSORS -->
+    <!-- SPONSORS - Editable for promotors -->
     <?php if (!empty($allSponsors)): ?>
     <div class="admin-card" style="margin-bottom: var(--space-lg);">
         <div class="admin-card-header">
@@ -992,15 +1035,6 @@ include __DIR__ . '/components/unified-layout.php';
             <p style="margin-bottom: var(--space-md); color: var(--color-text-secondary); font-size: 0.875rem;">
                 Välj sponsorer specifikt för detta event. <strong>OBS:</strong> Seriens sponsorer visas om inga event-sponsorer anges.
             </p>
-
-            <!-- DEBUG: Show loaded sponsor data -->
-            <div style="background: #fff3cd; border: 1px solid #ffc107; padding: 10px; margin-bottom: var(--space-md); border-radius: 6px; font-size: 0.8rem;">
-                <strong>DEBUG - Laddade sponsorer från DB:</strong><br>
-                Header: <?= json_encode($eventSponsors['header']) ?><br>
-                Content (Logo-rad): <?= json_encode($eventSponsors['content']) ?><br>
-                Sidebar: <?= json_encode($eventSponsors['sidebar']) ?><br>
-                <small>Raw: <?= json_encode($debugSponsorLoad['raw'] ?? []) ?></small>
-            </div>
 
             <div style="display: grid; gap: var(--space-lg);">
                 <!-- Header Banner from Media Library -->
@@ -1035,17 +1069,25 @@ include __DIR__ . '/components/unified-layout.php';
                     </small>
                 </div>
 
-                <!-- Content Logo Row -->
+                <!-- Content Logo Row - Max 5 -->
                 <div class="admin-form-group">
-                    <label class="admin-form-label">Logo-rad (under event-info)</label>
-                    <div style="display: flex; flex-wrap: wrap; gap: var(--space-sm);">
+                    <label class="admin-form-label">
+                        Logo-rad (under event-info)
+                        <span id="logoRowCount" style="font-weight: normal; color: var(--color-text-secondary); margin-left: var(--space-sm);">
+                            (<?= count($eventSponsors['content']) ?>/5 valda)
+                        </span>
+                    </label>
+                    <div id="logoRowSponsors" style="display: flex; flex-wrap: wrap; gap: var(--space-sm);">
                         <?php foreach ($allSponsors as $sp): ?>
-                        <label style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; background: var(--color-bg-secondary); border-radius: var(--radius-sm); cursor: pointer; font-size: 0.875rem;">
-                            <input type="checkbox" name="sponsor_content[]" value="<?= $sp['id'] ?>" <?= in_array((int)$sp['id'], $eventSponsors['content']) ? 'checked' : '' ?>>
+                        <label class="sponsor-checkbox-label" style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; background: var(--color-bg-secondary); border-radius: var(--radius-sm); cursor: pointer; font-size: 0.875rem;">
+                            <input type="checkbox" name="sponsor_content[]" value="<?= $sp['id'] ?>" class="logo-row-checkbox" <?= in_array((int)$sp['id'], $eventSponsors['content']) ? 'checked' : '' ?>>
                             <?= htmlspecialchars($sp['name']) ?>
                         </label>
                         <?php endforeach; ?>
                     </div>
+                    <small style="color: var(--color-text-secondary); margin-top: var(--space-xs); display: block;">
+                        Max 5 sponsorer i logo-raden. Visas på desktop i en rad, mobil i 3-kolumner.
+                    </small>
                 </div>
 
                 <!-- Results Sponsor -->
@@ -1060,6 +1102,41 @@ include __DIR__ . '/components/unified-layout.php';
                         <?php endforeach; ?>
                     </select>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SAMARBETSPARTNERS - Partner logo row at bottom -->
+    <div class="admin-card" style="margin-bottom: var(--space-lg);">
+        <div class="admin-card-header">
+            <h2>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 20px; height: 20px;"><path d="M11 17a1 1 0 0 1 2 0c0 .5-.34 3-.5 4.5a.5.5 0 0 1-1 0c-.16-1.5-.5-4-.5-4.5Z"/><path d="M8 14a6 6 0 1 1 8 0"/><path d="M12 2v1"/><path d="m4.93 4.93.71.71"/><path d="M2 12h1"/><path d="m4.93 19.07.71-.71"/><path d="m19.07 4.93-.71.71"/><path d="M22 12h-1"/><path d="m19.07 19.07-.71-.71"/></svg>
+                Samarbetspartners
+            </h2>
+        </div>
+        <div class="admin-card-body">
+            <p style="margin-bottom: var(--space-md); color: var(--color-text-secondary); font-size: 0.875rem;">
+                Visa lokala samarbetspartners längst ner på event-sidan. Max 3 stycken.
+            </p>
+
+            <div class="admin-form-group">
+                <label class="admin-form-label">
+                    Partner-logorad (längst ner på sidan)
+                    <span id="partnerCount" style="font-weight: normal; color: var(--color-text-secondary); margin-left: var(--space-sm);">
+                        (<?= count($eventSponsors['partner']) ?>/3 valda)
+                    </span>
+                </label>
+                <div id="partnerSponsors" style="display: flex; flex-wrap: wrap; gap: var(--space-sm);">
+                    <?php foreach ($allSponsors as $sp): ?>
+                    <label class="sponsor-checkbox-label" style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; background: var(--color-bg-secondary); border-radius: var(--radius-sm); cursor: pointer; font-size: 0.875rem;">
+                        <input type="checkbox" name="sponsor_partner[]" value="<?= $sp['id'] ?>" class="partner-checkbox" <?= in_array((int)$sp['id'], $eventSponsors['partner']) ? 'checked' : '' ?>>
+                        <?= htmlspecialchars($sp['name']) ?>
+                    </label>
+                    <?php endforeach; ?>
+                </div>
+                <small style="color: var(--color-text-secondary); margin-top: var(--space-xs); display: block;">
+                    Max 3 samarbetspartners. Visas i en egen sektion längst ner på event-sidan.
+                </small>
             </div>
         </div>
     </div>
@@ -1093,5 +1170,44 @@ include __DIR__ . '/components/unified-layout.php';
         </div>
     </div>
 </form>
+
+<script>
+// Limit checkbox selections for sponsor rows
+function setupCheckboxLimit(containerSelector, maxCount, countDisplayId) {
+    const container = document.querySelector(containerSelector);
+    if (!container) return;
+
+    const checkboxes = container.querySelectorAll('input[type="checkbox"]');
+    const countDisplay = document.getElementById(countDisplayId);
+
+    function updateCount() {
+        const checked = container.querySelectorAll('input[type="checkbox"]:checked').length;
+        if (countDisplay) {
+            countDisplay.textContent = `(${checked}/${maxCount} valda)`;
+            countDisplay.style.color = checked >= maxCount ? 'var(--color-warning)' : 'var(--color-text-secondary)';
+        }
+        return checked;
+    }
+
+    checkboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            const checked = updateCount();
+            if (checked > maxCount) {
+                this.checked = false;
+                updateCount();
+                alert(`Max ${maxCount} val tillåtet`);
+            }
+        });
+    });
+
+    updateCount();
+}
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
+    setupCheckboxLimit('#logoRowSponsors', 5, 'logoRowCount');
+    setupCheckboxLimit('#partnerSponsors', 3, 'partnerCount');
+});
+</script>
 
 <?php include __DIR__ . '/components/unified-layout-footer.php'; ?>
