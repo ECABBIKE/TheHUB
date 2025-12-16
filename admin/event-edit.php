@@ -518,15 +518,15 @@ $breadcrumbs = [
     ['label' => htmlspecialchars($event['name'])]
 ];
 $page_actions = '<a href="/event/' . $id . '" target="_blank" class="btn-admin btn-admin-secondary">
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" x2="21" y1="14" y2="3"/></svg>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon-sm"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" x2="21" y1="14" y2="3"/></svg>
     Visa event
 </a>
 <a href="/admin/event-pricing.php?id=' . $id . '" class="btn-admin btn-admin-secondary">
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon-sm"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
     Klasser &amp; Priser
 </a>
 <a href="/admin/event-map.php?id=' . $id . '" class="btn-admin btn-admin-secondary">
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/><line x1="9" x2="9" y1="3" y2="18"/><line x1="15" x2="15" y1="6" y2="21"/></svg>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon-sm"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/><line x1="9" x2="9" y1="3" y2="18"/><line x1="15" x2="15" y1="6" y2="21"/></svg>
     Karta &amp; POI
 </a>';
 
@@ -534,13 +534,13 @@ include __DIR__ . '/components/unified-layout.php';
 ?>
 
 <?php if ($message): ?>
-    <div class="alert alert-<?= $messageType === 'success' ? 'success' : ($messageType === 'error' ? 'error' : 'info') ?>" style="margin-bottom: var(--space-lg);">
+    <div class="alert alert-<?= $messageType === 'success' ? 'success' : ($messageType === 'error' ? 'error' : 'info') ?> mb-lg">
         <?= htmlspecialchars($message) ?>
     </div>
 <?php endif; ?>
 
 <?php if ($debugPostSponsors): ?>
-    <div style="background: #d4edda; border: 1px solid #28a745; padding: 10px; margin-bottom: var(--space-lg); border-radius: 6px; font-size: 0.8rem;">
+    <div class="alert-debug mb-lg">
         <strong>DEBUG - POST data som skickades:</strong><br>
         sponsor_header: <?= htmlspecialchars(json_encode($debugPostSponsors['sponsor_header'])) ?><br>
         sponsor_content (Logo-rad): <?= htmlspecialchars(json_encode($debugPostSponsors['sponsor_content'])) ?><br>
@@ -552,16 +552,16 @@ include __DIR__ . '/components/unified-layout.php';
     <?= csrf_field() ?>
 
     <!-- BASIC INFO - Locked for promotors -->
-    <div class="admin-card" style="margin-bottom: var(--space-lg); <?= $isPromotorOnly ? 'opacity: 0.7;' : '' ?>">
+    <div class="admin-card mb-lg <?= $isPromotorOnly ? 'locked-section' : '' ?>">
         <div class="admin-card-header">
             <h2>Grundläggande information</h2>
             <?php if ($isPromotorOnly): ?>
-            <span style="font-size: 0.75rem; color: var(--color-text-secondary); background: var(--color-bg-secondary); padding: 2px 8px; border-radius: 4px;">
-                <i data-lucide="lock" style="width:12px;height:12px;display:inline-block;vertical-align:middle;"></i> Låst
+            <span class="locked-badge">
+                <i data-lucide="lock"></i> Låst
             </span>
             <?php endif; ?>
         </div>
-        <fieldset class="admin-card-body" <?= $isPromotorOnly ? 'disabled' : '' ?> style="border:none;margin:0;padding:0;">
+        <fieldset class="admin-card-body fieldset-reset" <?= $isPromotorOnly ? 'disabled' : '' ?>>
             <div class="form-grid form-grid-2">
                 <div class="admin-form-group form-full-width">
                     <label class="admin-form-label">Namn <span class="required">*</span></label>
@@ -599,16 +599,16 @@ include __DIR__ . '/components/unified-layout.php';
     </div>
 
     <!-- COMPETITION SETTINGS - Locked for promotors -->
-    <div class="admin-card" style="margin-bottom: var(--space-lg); <?= $isPromotorOnly ? 'opacity: 0.7;' : '' ?>">
+    <div class="admin-card mb-lg <?= $isPromotorOnly ? 'locked-section' : '' ?>">
         <div class="admin-card-header">
             <h2>Tävlingsinställningar</h2>
             <?php if ($isPromotorOnly): ?>
-            <span style="font-size: 0.75rem; color: var(--color-text-secondary); background: var(--color-bg-secondary); padding: 2px 8px; border-radius: 4px;">
-                <i data-lucide="lock" style="width:12px;height:12px;display:inline-block;vertical-align:middle;"></i> Låst
+            <span class="locked-badge">
+                <i data-lucide="lock"></i> Låst
             </span>
             <?php endif; ?>
         </div>
-        <fieldset class="admin-card-body" <?= $isPromotorOnly ? 'disabled' : '' ?> style="border:none;margin:0;padding:0;">
+        <fieldset class="admin-card-body fieldset-reset" <?= $isPromotorOnly ? 'disabled' : '' ?>>
             <div class="form-grid form-grid-2">
                 <div class="admin-form-group">
                     <label class="admin-form-label">Tävlingsformat</label>
@@ -628,9 +628,9 @@ include __DIR__ . '/components/unified-layout.php';
                 <div class="admin-form-group">
                     <label class="admin-form-label">
                         Serie (direktkoppling)
-                        <span style="font-size: 0.75rem; color: var(--color-text-secondary); font-weight: normal;">
+                        <span class="text-xs text-secondary font-normal">
                             - eventet läggs också till via
-                            <a href="/admin/series" style="color: var(--color-accent);">seriehantering</a>
+                            <a href="/admin/series" class="text-accent">seriehantering</a>
                         </span>
                     </label>
                     <select name="series_id" id="series_id" class="admin-form-select">
@@ -653,9 +653,9 @@ include __DIR__ . '/components/unified-layout.php';
                             </optgroup>
                         <?php endforeach; ?>
                     </select>
-                    <small style="color: var(--color-text-secondary);">
+                    <small class="form-help">
                         Välj serie som matchar eventets år (<?= $eventYear ?>).
-                        ✓ = matchar år. [Avslutad] = serien är markerad som avslutad.
+                        = matchar år. [Avslutad] = serien är markerad som avslutad.
                     </small>
                 </div>
 
@@ -665,7 +665,7 @@ include __DIR__ . '/components/unified-layout.php';
                         <option value="national" <?= ($event['event_level'] ?? 'national') === 'national' ? 'selected' : '' ?>>Nationell (100%)</option>
                         <option value="sportmotion" <?= ($event['event_level'] ?? 'national') === 'sportmotion' ? 'selected' : '' ?>>Sportmotion (50%)</option>
                     </select>
-                    <small style="color: var(--color-text-secondary);">Styr rankingpoäng</small>
+                    <small class="form-help">Styr rankingpoäng</small>
                 </div>
 
                 <div class="admin-form-group">
@@ -701,50 +701,50 @@ include __DIR__ . '/components/unified-layout.php';
                 </div>
             </div>
 
-            <div class="admin-form-group" style="margin-top: var(--space-md);">
+            <div class="admin-form-group mt-md">
                 <label class="admin-form-label">Sträcknamn (JSON)</label>
                 <input type="text" name="stage_names" class="admin-form-input" value="<?= h($event['stage_names'] ?? '') ?>" placeholder='{"1":"SS1","2":"SS2","3":"SS3"}'>
-                <small style="color: var(--color-text-secondary);">Anpassade namn. Lämna tomt för standard.</small>
+                <small class="form-help">Anpassade namn. Lämna tomt för standard.</small>
             </div>
         </fieldset>
     </div>
 
     <!-- EVENT CLASSES - Hidden for promotors -->
     <?php if (!$isPromotorOnly): ?>
-    <div class="admin-card" style="margin-bottom: var(--space-lg);">
-        <div class="admin-card-header" style="display: flex; justify-content: space-between; align-items: center;">
+    <div class="admin-card mb-lg">
+        <div class="admin-card-header flex justify-between items-center">
             <h2>Klasser</h2>
             <a href="/admin/event-pricing.php?id=<?= $id ?>" class="btn-admin btn-admin-sm btn-admin-secondary">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-sm"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
                 Hantera klasser
             </a>
         </div>
         <div class="admin-card-body">
             <?php if (empty($eventClasses)): ?>
-                <div style="text-align: center; padding: var(--space-lg); color: var(--color-text-secondary);">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:48px;height:48px;opacity:0.5;margin-bottom:var(--space-sm);"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-                    <p style="margin-bottom: var(--space-sm);">Inga klasser konfigurerade för detta event.</p>
+                <div class="text-secondary text-center p-lg">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-xl mb-sm opacity-50"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                    <p class="mb-sm">Inga klasser konfigurerade för detta event.</p>
                     <a href="/admin/event-pricing.php?id=<?= $id ?>" class="btn-admin btn-admin-primary">
                         Konfigurera klasser & priser
                     </a>
                 </div>
             <?php else: ?>
-                <div style="display: flex; flex-wrap: wrap; gap: var(--space-sm);">
+                <div class="tag-list">
                     <?php foreach ($eventClasses as $class): ?>
-                        <div style="display: inline-flex; align-items: center; gap: var(--space-xs); padding: var(--space-xs) var(--space-sm); background: var(--color-bg-secondary); border-radius: var(--radius-sm); font-size: 0.875rem;">
-                            <span style="font-weight: 500;"><?= htmlspecialchars($class['display_name'] ?? $class['name']) ?></span>
+                        <div class="tag-item">
+                            <span class="font-medium"><?= htmlspecialchars($class['display_name'] ?? $class['name']) ?></span>
                             <?php if ($class['gender'] === 'M'): ?>
-                                <span class="admin-badge admin-badge-info" style="font-size: 0.7rem;">H</span>
+                                <span class="admin-badge admin-badge-info text-xs">H</span>
                             <?php elseif ($class['gender'] === 'K' || $class['gender'] === 'F'): ?>
-                                <span class="admin-badge admin-badge-info" style="font-size: 0.7rem;">D</span>
+                                <span class="admin-badge admin-badge-info text-xs">D</span>
                             <?php endif; ?>
-                            <span style="color: var(--color-text-secondary);"><?= number_format($class['base_price'], 0) ?> kr</span>
+                            <span class="text-secondary"><?= number_format($class['base_price'], 0) ?> kr</span>
                         </div>
                     <?php endforeach; ?>
                 </div>
-                <p style="margin-top: var(--space-md); font-size: 0.875rem; color: var(--color-text-secondary);">
+                <p class="mt-md text-sm text-secondary">
                     <?= count($eventClasses) ?> klass<?= count($eventClasses) !== 1 ? 'er' : '' ?> konfigurerade.
-                    <a href="/admin/event-pricing.php?id=<?= $id ?>" style="color: var(--color-accent);">Redigera priser och klasser</a>
+                    <a href="/admin/event-pricing.php?id=<?= $id ?>" class="text-accent">Redigera priser och klasser</a>
                 </p>
             <?php endif; ?>
         </div>
@@ -752,7 +752,7 @@ include __DIR__ . '/components/unified-layout.php';
     <?php endif; /* End hide Klasser for promotors */ ?>
 
     <!-- ORGANIZER & CONTACT - Editable for promotors -->
-    <div class="admin-card" style="margin-bottom: var(--space-lg);">
+    <div class="admin-card mb-lg">
         <div class="admin-card-header">
             <h2>Arrangör & Kontakt</h2>
         </div>
@@ -793,7 +793,7 @@ include __DIR__ . '/components/unified-layout.php';
                 <div class="admin-form-group">
                     <label class="admin-form-label">Anmälningsfrist (klockslag)</label>
                     <input type="time" name="registration_deadline_time" class="admin-form-input" value="<?= h($event['registration_deadline_time'] ?? '') ?>">
-                    <small style="color: var(--color-text-secondary);">Lämna tomt för 23:59</small>
+                    <small class="form-help">Lämna tomt för 23:59</small>
                 </div>
             </div>
         </div>
@@ -801,16 +801,16 @@ include __DIR__ . '/components/unified-layout.php';
 
     <!-- PAYMENT SETTINGS - Locked for promotors -->
     <?php if ($paymentRecipientColumnExists && !empty($paymentRecipients)): ?>
-    <div class="admin-card" style="margin-bottom: var(--space-lg); <?= $isPromotorOnly ? 'opacity: 0.7;' : '' ?>">
+    <div class="admin-card mb-lg <?= $isPromotorOnly ? 'locked-section' : '' ?>">
         <div class="admin-card-header">
             <h2>Betalning</h2>
             <?php if ($isPromotorOnly): ?>
-            <span style="font-size: 0.75rem; color: var(--color-text-secondary); background: var(--color-bg-secondary); padding: 2px 8px; border-radius: 4px;">
-                <i data-lucide="lock" style="width:12px;height:12px;display:inline-block;vertical-align:middle;"></i> Låst
+            <span class="locked-badge">
+                <i data-lucide="lock"></i> Låst
             </span>
             <?php endif; ?>
         </div>
-        <fieldset class="admin-card-body" <?= $isPromotorOnly ? 'disabled' : '' ?> style="border:none;margin:0;padding:0;">
+        <fieldset class="admin-card-body fieldset-reset" <?= $isPromotorOnly ? 'disabled' : '' ?>>
             <div class="admin-form-group">
                 <label class="admin-form-label">Betalningsmottagare (Swish)</label>
                 <select name="payment_recipient_id" class="admin-form-select">
@@ -821,9 +821,9 @@ include __DIR__ . '/components/unified-layout.php';
                         </option>
                     <?php endforeach; ?>
                 </select>
-                <small style="color: var(--color-text-secondary);">
+                <small class="form-help">
                     Välj en specifik mottagare för detta event, eller lämna tomt för att använda seriens mottagare.
-                    <a href="/admin/payment-recipients" style="color: var(--color-accent);">Hantera mottagare</a>
+                    <a href="/admin/payment-recipients" class="text-accent">Hantera mottagare</a>
                 </small>
             </div>
         </fieldset>
@@ -831,7 +831,7 @@ include __DIR__ . '/components/unified-layout.php';
     <?php endif; ?>
 
     <!-- LOCATION DETAILS - Editable for promotors -->
-    <div class="admin-card" style="margin-bottom: var(--space-lg);">
+    <div class="admin-card mb-lg">
         <div class="admin-card-header">
             <h2>Platsdetaljer</h2>
         </div>
@@ -856,13 +856,13 @@ include __DIR__ . '/components/unified-layout.php';
     </div>
 
     <!-- PM (PROMEMORIA) - Collapsible -->
-    <details class="admin-card" style="margin-bottom: var(--space-lg);">
-        <summary class="admin-card-header" style="cursor: pointer; user-select: none;">
+    <details class="admin-card mb-lg">
+        <summary class="admin-card-header collapsible-header">
             <h2>PM (Promemoria)</h2>
-            <span style="color: var(--color-text-secondary); font-size: var(--text-sm);">Klicka för att expandera</span>
+            <span class="text-secondary text-sm">Klicka för att expandera</span>
         </summary>
         <div class="admin-card-body">
-            <p style="color: var(--color-text-secondary); font-size: var(--text-sm); margin-bottom: var(--space-lg);">
+            <p class="text-secondary text-sm mb-lg">
                 Innehåll för PM-fliken. Markera "Global" för att använda standardtext.
             </p>
 
@@ -886,9 +886,9 @@ include __DIR__ . '/components/unified-layout.php';
                     <div class="admin-form-group">
                         <label class="admin-form-label">
                             <?= $field['label'] ?>
-                            <label style="display: inline-flex; align-items: center; gap: 4px; margin-left: var(--space-sm); font-weight: normal; cursor: pointer;">
+                            <label class="checkbox-inline">
                                 <input type="checkbox" name="<?= $field['global_key'] ?>" <?= !empty($event[$field['global_key']]) ? 'checked' : '' ?>>
-                                <span style="font-size: var(--text-xs);">Global</span>
+                                <span class="text-xs">Global</span>
                             </label>
                         </label>
                         <textarea name="<?= $field['key'] ?>" class="admin-form-input" rows="3"><?= h($event[$field['key']] ?? '') ?></textarea>
@@ -899,13 +899,13 @@ include __DIR__ . '/components/unified-layout.php';
     </details>
 
     <!-- ÖVRIGA EVENT-FLIKAR - Collapsible -->
-    <details class="admin-card" style="margin-bottom: var(--space-lg);">
-        <summary class="admin-card-header" style="cursor: pointer; user-select: none;">
+    <details class="admin-card mb-lg">
+        <summary class="admin-card-header collapsible-header">
             <h2>Övriga event-flikar</h2>
-            <span style="color: var(--color-text-secondary); font-size: var(--text-sm);">Jury, Schema, Starttider</span>
+            <span class="text-secondary text-sm">Jury, Schema, Starttider</span>
         </summary>
         <div class="admin-card-body">
-            <p style="color: var(--color-text-secondary); font-size: var(--text-sm); margin-bottom: var(--space-lg);">
+            <p class="text-secondary text-sm mb-lg">
                 Separata flikar som visas om innehåll finns (eller global text aktiverad).
             </p>
 
@@ -922,23 +922,22 @@ include __DIR__ . '/components/unified-layout.php';
                     <div class="admin-form-group">
                         <label class="admin-form-label">
                             <?= $field['label'] ?>
-                            <label style="display: inline-flex; align-items: center; gap: 4px; margin-left: var(--space-sm); font-weight: normal; cursor: pointer;">
+                            <label class="checkbox-inline">
                                 <input type="checkbox" name="<?= $field['global_key'] ?>" <?= !empty($event[$field['global_key']]) ? 'checked' : '' ?>>
-                                <span style="font-size: var(--text-xs);">Global</span>
+                                <span class="text-xs">Global</span>
                             </label>
                         </label>
                         <textarea name="<?= $field['key'] ?>" class="admin-form-input" rows="3"><?= h($event[$field['key']] ?? '') ?></textarea>
                         <?php if (!empty($field['publish_key'])): ?>
-                        <div style="margin-top: var(--space-xs); display: flex; align-items: center; gap: var(--space-sm);">
-                            <label style="font-size: var(--text-xs); color: var(--color-text-secondary); white-space: nowrap;">
-                                <i data-lucide="calendar-clock" style="width: 12px; height: 12px; display: inline;"></i>
+                        <div class="mt-sm flex items-center gap-sm">
+                            <label class="text-xs text-secondary whitespace-nowrap">
+                                <i data-lucide="calendar-clock" class="icon-xs inline-block"></i>
                                 Publiceras:
                             </label>
                             <input type="datetime-local" name="<?= $field['publish_key'] ?>"
-                                   class="admin-form-input"
-                                   style="padding: 4px 8px; font-size: var(--text-xs);"
+                                   class="admin-form-input text-xs"
                                    value="<?= !empty($event[$field['publish_key']]) ? date('Y-m-d\TH:i', strtotime($event[$field['publish_key']])) : '' ?>">
-                            <small style="color: var(--color-text-secondary); font-size: var(--text-xs);">Lämna tomt = synlig direkt</small>
+                            <small class="form-help text-xs">Lämna tomt = synlig direkt</small>
                         </div>
                         <?php endif; ?>
                     </div>
@@ -946,9 +945,9 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
 
             <!-- Map Image URL - separate field -->
-            <div class="admin-form-group" style="margin-top: var(--space-lg);">
+            <div class="admin-form-group mt-lg">
                 <label class="admin-form-label">Kartbild URL (statisk bild)</label>
-                <div style="display: flex; gap: var(--space-sm);">
+                <div class="flex gap-sm">
                     <input type="text" name="map_image_url" class="admin-form-input"
                            value="<?= h($event['map_image_url'] ?? '') ?>"
                            placeholder="https://... eller /media/events/karta.jpg">
@@ -960,32 +959,32 @@ include __DIR__ . '/components/unified-layout.php';
                     </button>
                     <?php endif; ?>
                 </div>
-                <small style="color: var(--color-text-secondary);">Lägg till URL till en statisk kartbild. Ladda upp bilder via <a href="/admin/media.php" target="_blank">Mediabiblioteket</a>.</small>
+                <small class="form-help">Lägg till URL till en statisk kartbild. Ladda upp bilder via <a href="/admin/media.php" target="_blank">Mediabiblioteket</a>.</small>
             </div>
         </div>
     </details>
 
     <!-- INVITATION & FACILITIES - Editable for promotors -->
-    <details class="admin-card" style="margin-bottom: var(--space-lg);" open>
-        <summary class="admin-card-header" style="cursor: pointer; user-select: none;">
+    <details class="admin-card mb-lg" open>
+        <summary class="admin-card-header collapsible-header">
             <h2>Inbjudan</h2>
-            <span style="color: var(--color-text-secondary); font-size: var(--text-sm);">Klicka för att expandera/minimera</span>
+            <span class="text-secondary text-sm">Klicka för att expandera/minimera</span>
         </summary>
         <div class="admin-card-body">
             <!-- Invitation field - shown first -->
-            <div class="admin-form-group" style="margin-bottom: var(--space-lg); padding-bottom: var(--space-lg); border-bottom: 1px solid var(--color-border);">
-                <label class="admin-form-label" style="font-size: 1rem; font-weight: 600;">
+            <div class="admin-form-group mb-lg pb-lg border-bottom">
+                <label class="admin-form-label text-base font-semibold">
                     Inbjudningstext
-                    <label style="display: inline-flex; align-items: center; gap: 4px; margin-left: var(--space-sm); font-weight: normal; cursor: pointer;">
+                    <label class="checkbox-inline">
                         <input type="checkbox" name="invitation_use_global" <?= !empty($event['invitation_use_global']) ? 'checked' : '' ?>>
-                        <span style="font-size: var(--text-xs);">Global</span>
+                        <span class="text-xs">Global</span>
                     </label>
                 </label>
                 <textarea name="invitation" class="admin-form-input" rows="4" placeholder="Välkommen till... (visas högst upp på Inbjudan-fliken)"><?= h($event['invitation'] ?? '') ?></textarea>
-                <small style="color: var(--color-text-secondary);">Inledande text som visas högst upp på Inbjudan-fliken på event-sidan.</small>
+                <small class="form-help">Inledande text som visas högst upp på Inbjudan-fliken på event-sidan.</small>
             </div>
 
-            <p style="color: var(--color-text-secondary); font-size: var(--text-sm); margin-bottom: var(--space-lg);">
+            <p class="text-secondary text-sm mb-lg">
                 <strong>Faciliteter & Logistik</strong> - Övrig information för Inbjudan-fliken.
             </p>
 
@@ -1010,9 +1009,9 @@ include __DIR__ . '/components/unified-layout.php';
                     <div class="admin-form-group">
                         <label class="admin-form-label">
                             <?= $field['label'] ?>
-                            <label style="display: inline-flex; align-items: center; gap: 4px; margin-left: var(--space-sm); font-weight: normal; cursor: pointer;">
+                            <label class="checkbox-inline">
                                 <input type="checkbox" name="<?= $field['global_key'] ?>" <?= !empty($event[$field['global_key']]) ? 'checked' : '' ?>>
-                                <span style="font-size: var(--text-xs);">Global</span>
+                                <span class="text-xs">Global</span>
                             </label>
                         </label>
                         <textarea name="<?= $field['key'] ?>" class="admin-form-input" rows="2"><?= h($event[$field['key']] ?? '') ?></textarea>
@@ -1024,19 +1023,19 @@ include __DIR__ . '/components/unified-layout.php';
 
     <!-- SPONSORS - Editable for promotors -->
     <?php if (!empty($allSponsors)): ?>
-    <div class="admin-card" style="margin-bottom: var(--space-lg);">
+    <div class="admin-card mb-lg">
         <div class="admin-card-header">
             <h2>
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 20px; height: 20px;"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-md"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
                 Sponsorer
             </h2>
         </div>
         <div class="admin-card-body">
-            <p style="margin-bottom: var(--space-md); color: var(--color-text-secondary); font-size: 0.875rem;">
+            <p class="mb-md text-secondary text-sm">
                 Välj sponsorer specifikt för detta event. <strong>OBS:</strong> Seriens sponsorer visas om inga event-sponsorer anges.
             </p>
 
-            <div style="display: grid; gap: var(--space-lg);">
+            <div class="flex flex-col gap-lg">
                 <!-- Header Banner from Media Library -->
                 <div class="admin-form-group">
                     <label class="admin-form-label">Header-banner (stor banner högst upp)</label>
@@ -1048,7 +1047,7 @@ include __DIR__ . '/components/unified-layout.php';
                         </option>
                         <?php endforeach; ?>
                     </select>
-                    <small style="color: var(--color-text-secondary); margin-top: var(--space-xs); display: block;">
+                    <small class="form-help block mt-sm">
                         Välj bild från <a href="/admin/media?folder=events" target="_blank">Mediabiblioteket (Event-mappen)</a>
                     </small>
                 </div>
@@ -1064,7 +1063,7 @@ include __DIR__ . '/components/unified-layout.php';
                         </option>
                         <?php endforeach; ?>
                     </select>
-                    <small style="color: var(--color-text-secondary); margin-top: var(--space-xs); display: block;">
+                    <small class="form-help block mt-sm">
                         Sponsorns banner-logo visas som bred banner högst upp på event-sidan
                     </small>
                 </div>
@@ -1073,19 +1072,19 @@ include __DIR__ . '/components/unified-layout.php';
                 <div class="admin-form-group">
                     <label class="admin-form-label">
                         Logo-rad (under event-info)
-                        <span id="logoRowCount" style="font-weight: normal; color: var(--color-text-secondary); margin-left: var(--space-sm);">
+                        <span id="logoRowCount" class="font-normal text-secondary ml-sm">
                             (<?= count($eventSponsors['content']) ?>/5 valda)
                         </span>
                     </label>
-                    <div id="logoRowSponsors" style="display: flex; flex-wrap: wrap; gap: var(--space-sm);">
+                    <div id="logoRowSponsors" class="tag-list">
                         <?php foreach ($allSponsors as $sp): ?>
-                        <label class="sponsor-checkbox-label" style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; background: var(--color-bg-secondary); border-radius: var(--radius-sm); cursor: pointer; font-size: 0.875rem;">
+                        <label class="sponsor-checkbox">
                             <input type="checkbox" name="sponsor_content[]" value="<?= $sp['id'] ?>" class="logo-row-checkbox" <?= in_array((int)$sp['id'], $eventSponsors['content']) ? 'checked' : '' ?>>
                             <?= htmlspecialchars($sp['name']) ?>
                         </label>
                         <?php endforeach; ?>
                     </div>
-                    <small style="color: var(--color-text-secondary); margin-top: var(--space-xs); display: block;">
+                    <small class="form-help block mt-sm">
                         Max 5 sponsorer i logo-raden. Visas på desktop i en rad, mobil i 3-kolumner.
                     </small>
                 </div>
@@ -1107,35 +1106,35 @@ include __DIR__ . '/components/unified-layout.php';
     </div>
 
     <!-- SAMARBETSPARTNERS - Partner logo row at bottom -->
-    <div class="admin-card" style="margin-bottom: var(--space-lg);">
+    <div class="admin-card mb-lg">
         <div class="admin-card-header">
             <h2>
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 20px; height: 20px;"><path d="M11 17a1 1 0 0 1 2 0c0 .5-.34 3-.5 4.5a.5.5 0 0 1-1 0c-.16-1.5-.5-4-.5-4.5Z"/><path d="M8 14a6 6 0 1 1 8 0"/><path d="M12 2v1"/><path d="m4.93 4.93.71.71"/><path d="M2 12h1"/><path d="m4.93 19.07.71-.71"/><path d="m19.07 4.93-.71.71"/><path d="M22 12h-1"/><path d="m19.07 19.07-.71-.71"/></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-md"><path d="M11 17a1 1 0 0 1 2 0c0 .5-.34 3-.5 4.5a.5.5 0 0 1-1 0c-.16-1.5-.5-4-.5-4.5Z"/><path d="M8 14a6 6 0 1 1 8 0"/><path d="M12 2v1"/><path d="m4.93 4.93.71.71"/><path d="M2 12h1"/><path d="m4.93 19.07.71-.71"/><path d="m19.07 4.93-.71.71"/><path d="M22 12h-1"/><path d="m19.07 19.07-.71-.71"/></svg>
                 Samarbetspartners
             </h2>
         </div>
         <div class="admin-card-body">
-            <p style="margin-bottom: var(--space-md); color: var(--color-text-secondary); font-size: 0.875rem;">
-                Visa lokala samarbetspartners längst ner på event-sidan. Max 3 stycken.
+            <p class="mb-md text-secondary text-sm">
+                Visa lokala samarbetspartners längst ner på event-sidan.
             </p>
 
             <div class="admin-form-group">
                 <label class="admin-form-label">
                     Partner-logorad (längst ner på sidan)
-                    <span id="partnerCount" style="font-weight: normal; color: var(--color-text-secondary); margin-left: var(--space-sm);">
-                        (<?= count($eventSponsors['partner']) ?>/3 valda)
+                    <span id="partnerCount" class="font-normal text-secondary ml-sm">
+                        (<?= count($eventSponsors['partner']) ?> valda)
                     </span>
                 </label>
-                <div id="partnerSponsors" style="display: flex; flex-wrap: wrap; gap: var(--space-sm);">
+                <div id="partnerSponsors" class="partner-grid">
                     <?php foreach ($allSponsors as $sp): ?>
-                    <label class="sponsor-checkbox-label" style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; background: var(--color-bg-secondary); border-radius: var(--radius-sm); cursor: pointer; font-size: 0.875rem;">
+                    <label class="sponsor-checkbox">
                         <input type="checkbox" name="sponsor_partner[]" value="<?= $sp['id'] ?>" class="partner-checkbox" <?= in_array((int)$sp['id'], $eventSponsors['partner']) ? 'checked' : '' ?>>
                         <?= htmlspecialchars($sp['name']) ?>
                     </label>
                     <?php endforeach; ?>
                 </div>
-                <small style="color: var(--color-text-secondary); margin-top: var(--space-xs); display: block;">
-                    Max 3 samarbetspartners. Visas i en egen sektion längst ner på event-sidan.
+                <small class="form-help block mt-sm">
+                    Visas i en egen sektion längst ner på event-sidan. 4 i bredd på desktop, 2 på mobil.
                 </small>
             </div>
         </div>
@@ -1145,24 +1144,24 @@ include __DIR__ . '/components/unified-layout.php';
     <!-- STATUS & ACTIONS -->
     <div class="admin-card">
         <div class="admin-card-body">
-            <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--space-md);">
-                <label style="display: flex; align-items: center; gap: var(--space-sm); cursor: pointer;">
+            <div class="flex items-center justify-between flex-wrap gap-md">
+                <label class="flex items-center gap-sm cursor-pointer">
                     <input type="checkbox" name="active" <?= $event['active'] ? 'checked' : '' ?>>
                     <span>Aktivt event</span>
                 </label>
 
-                <label style="display: flex; align-items: center; gap: var(--space-sm); cursor: pointer;">
+                <label class="flex items-center gap-sm cursor-pointer">
                     <input type="checkbox" name="is_championship" value="1" <?= !empty($event['is_championship']) ? 'checked' : '' ?>>
-                    <span>🏆 Svenskt Mästerskap</span>
+                    <span><i data-lucide="trophy" class="icon-sm"></i> Svenskt Mästerskap</span>
                     <?php if (!empty($event['is_championship'])): ?>
-                    <span style="background: var(--color-success); color: white; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; margin-left: 8px;">SM</span>
+                    <span class="admin-badge admin-badge-success text-xs ml-sm">SM</span>
                     <?php endif; ?>
                 </label>
 
-                <div style="display: flex; gap: var(--space-sm);">
+                <div class="flex gap-sm">
                     <a href="/admin/events" class="btn-admin btn-admin-secondary">Avbryt</a>
                     <button type="submit" class="btn-admin btn-admin-primary">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px;"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-sm"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
                         Spara Ändringar
                     </button>
                 </div>
