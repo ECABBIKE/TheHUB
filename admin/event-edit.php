@@ -185,24 +185,9 @@ if (isset($_GET['saved']) && $_GET['saved'] == '1' && isset($_SESSION['message']
     unset($_SESSION['message'], $_SESSION['messageType']);
 }
 
-// Get debug POST data if available
-$debugPostSponsors = $_SESSION['debug_post_sponsors'] ?? null;
-unset($_SESSION['debug_post_sponsors']);
-
 // Handle form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     checkCsrf();
-
-    // DEBUG: Store POST sponsor data for display
-    $_SESSION['debug_post_sponsors'] = [
-        'sponsor_header' => $_POST['sponsor_header'] ?? 'NOT SET',
-        'sponsor_content' => $_POST['sponsor_content'] ?? 'NOT SET (no checkboxes selected)',
-        'sponsor_sidebar' => $_POST['sponsor_sidebar'] ?? 'NOT SET'
-    ];
-    error_log("FORM SUBMIT DEBUG: sponsor_content = " . json_encode($_POST['sponsor_content'] ?? 'NOT SET'));
-
-    // Debug: Log is_championship value
-    error_log("EVENT EDIT DEBUG: is_championship POST value = " . (isset($_POST['is_championship']) ? 'SET' : 'NOT SET'));
 
     $name = trim($_POST['name'] ?? '');
     $date = trim($_POST['date'] ?? '');
@@ -536,15 +521,6 @@ include __DIR__ . '/components/unified-layout.php';
 <?php if ($message): ?>
     <div class="alert alert-<?= $messageType === 'success' ? 'success' : ($messageType === 'error' ? 'error' : 'info') ?> mb-lg">
         <?= htmlspecialchars($message) ?>
-    </div>
-<?php endif; ?>
-
-<?php if ($debugPostSponsors): ?>
-    <div class="alert-debug mb-lg">
-        <strong>DEBUG - POST data som skickades:</strong><br>
-        sponsor_header: <?= htmlspecialchars(json_encode($debugPostSponsors['sponsor_header'])) ?><br>
-        sponsor_content (Logo-rad): <?= htmlspecialchars(json_encode($debugPostSponsors['sponsor_content'])) ?><br>
-        sponsor_sidebar: <?= htmlspecialchars(json_encode($debugPostSponsors['sponsor_sidebar'])) ?>
     </div>
 <?php endif; ?>
 
