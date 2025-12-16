@@ -66,7 +66,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $message = 'Event-behörighet uppdaterad!';
                 } else {
                     // Insert new
-                    $db->insert('promotor_events', [
+                    $insertId = $db->insert('promotor_events', [
                         'user_id' => $id,
                         'event_id' => $eventId,
                         'can_edit' => $canEdit,
@@ -74,9 +74,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         'can_manage_registrations' => $canRegistrations,
                         'granted_by' => $currentAdmin['id']
                     ]);
-                    $message = 'Event tillagt!';
+                    if ($insertId) {
+                        $message = 'Event tillagt!';
+                        $messageType = 'success';
+                    } else {
+                        $message = 'Kunde inte lägga till event. Kontrollera att tabellen promotor_events finns.';
+                        $messageType = 'error';
+                    }
                 }
-                $messageType = 'success';
             } catch (Exception $e) {
                 $message = 'Ett fel uppstod: ' . $e->getMessage();
                 $messageType = 'error';
@@ -126,6 +131,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $seriesEvents = $db->getAll("SELECT id FROM events WHERE series_id = ?", [$seriesId]);
                 $addedCount = 0;
 
+                $failedCount = 0;
                 foreach ($seriesEvents as $event) {
                     $existing = $db->getRow(
                         "SELECT id FROM promotor_events WHERE user_id = ? AND event_id = ?",
@@ -133,7 +139,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     );
 
                     if (!$existing) {
-                        $db->insert('promotor_events', [
+                        $insertId = $db->insert('promotor_events', [
                             'user_id' => $id,
                             'event_id' => $event['id'],
                             'can_edit' => $canEdit,
@@ -141,11 +147,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             'can_manage_registrations' => $canRegistrations,
                             'granted_by' => $currentAdmin['id']
                         ]);
-                        $addedCount++;
+                        if ($insertId) {
+                            $addedCount++;
+                        } else {
+                            $failedCount++;
+                        }
                     }
                 }
-                $message = "$addedCount event från serien tillagda!";
-                $messageType = 'success';
+                if ($failedCount > 0) {
+                    $message = "Kunde inte lägga till events. Kontrollera att tabellen promotor_events finns.";
+                    $messageType = 'error';
+                } elseif ($addedCount > 0) {
+                    $message = "$addedCount event från serien tillagda!";
+                    $messageType = 'success';
+                } else {
+                    $message = "Alla events i serien var redan tilldelade.";
+                    $messageType = 'info';
+                }
             } catch (Exception $e) {
                 $message = 'Ett fel uppstod: ' . $e->getMessage();
                 $messageType = 'error';
