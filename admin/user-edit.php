@@ -126,8 +126,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
   try {
   if ($isNew) {
-   $db->insert('admin_users', $userData);
-   $newId = $db->lastInsertId();
+   $newId = $db->insert('admin_users', $userData);
    header('Location: /admin/user-edit.php?id=' . $newId . '&created=1');
    exit;
   } else {
