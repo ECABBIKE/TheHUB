@@ -364,7 +364,7 @@ if (!function_exists('hub_attempt_login')) {
     /**
      * Attempt to log in a user with email/password
      * Works with the riders table using password_hash
-     * Also supports default admin login from config.php
+     * Also supports admin_users table and default admin login from config.php
      */
     function hub_attempt_login(string $email, string $password): array {
         $pdo = hub_db();
@@ -392,6 +392,56 @@ if (!function_exists('hub_attempt_login')) {
                 ];
                 hub_set_user_session($adminUser);
                 return ['success' => true, 'user' => $adminUser];
+            }
+        }
+
+        // =====================================================================
+        // Check admin_users table (by username or email)
+        // =====================================================================
+        $stmt = $pdo->prepare("
+            SELECT id, username, email, password_hash, full_name, role, active
+            FROM admin_users
+            WHERE (username = ? OR email = ?) AND active = 1
+            LIMIT 1
+        ");
+        $stmt->execute([$email, $email]);
+        $adminUser = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if ($adminUser && !empty($adminUser['password_hash'])) {
+            if (password_verify($password, $adminUser['password_hash'])) {
+                // Map admin role to role_id
+                $roleMap = [
+                    'super_admin' => ROLE_SUPER_ADMIN,
+                    'admin' => ROLE_ADMIN,
+                    'promotor' => ROLE_PROMOTOR,
+                    'editor' => ROLE_RIDER,
+                    'rider' => ROLE_RIDER
+                ];
+                $roleId = $roleMap[$adminUser['role']] ?? ROLE_RIDER;
+
+                // Parse full_name into firstname/lastname
+                $nameParts = explode(' ', $adminUser['full_name'] ?? $adminUser['username'], 2);
+                $firstname = $nameParts[0] ?? $adminUser['username'];
+                $lastname = $nameParts[1] ?? '';
+
+                $user = [
+                    'id' => $adminUser['id'],
+                    'email' => $adminUser['email'],
+                    'firstname' => $firstname,
+                    'lastname' => $lastname,
+                    'is_admin' => $roleId >= ROLE_ADMIN ? 1 : 0,
+                    'role_id' => $roleId,
+                    'admin_user' => true,  // Flag to identify admin_users
+                    'admin_role' => $adminUser['role']
+                ];
+
+                hub_set_user_session($user);
+
+                // Update last login
+                $stmt = $pdo->prepare("UPDATE admin_users SET last_login = NOW() WHERE id = ?");
+                $stmt->execute([$adminUser['id']]);
+
+                return ['success' => true, 'user' => $user];
             }
         }
 
@@ -461,22 +511,32 @@ if (!function_exists('hub_set_user_session')) {
         // =====================================================================
         // ADMIN PANEL COMPATIBILITY
         // Set admin_* session variables so /admin/ pages recognize the login
+        // For admin_users table: always set (they're admin panel users)
+        // For riders table: only if role >= ROLE_ADMIN
         // =====================================================================
-        if ($roleId >= ROLE_ADMIN) {
+        $isAdminUser = !empty($user['admin_user']);  // Flag from admin_users table
+        $hasAdminRole = $roleId >= ROLE_ADMIN;
+
+        if ($isAdminUser || $hasAdminRole) {
             $_SESSION['admin_logged_in'] = true;
             $_SESSION['admin_id'] = $user['id'];
-            $_SESSION['admin_username'] = $user['email'];
+            $_SESSION['admin_username'] = $user['email'] ?? $user['username'] ?? '';
             $_SESSION['admin_name'] = $userName;
             $_SESSION['last_activity'] = time();
 
-            // Map role_id to admin role string
-            $roleMap = [
-                ROLE_RIDER => 'rider',
-                ROLE_PROMOTOR => 'promotor',
-                ROLE_ADMIN => 'admin',
-                ROLE_SUPER_ADMIN => 'super_admin'
-            ];
-            $_SESSION['admin_role'] = $roleMap[$roleId] ?? 'rider';
+            // Use admin_role from user if available (from admin_users table)
+            // Otherwise map from role_id
+            if (!empty($user['admin_role'])) {
+                $_SESSION['admin_role'] = $user['admin_role'];
+            } else {
+                $roleMap = [
+                    ROLE_RIDER => 'rider',
+                    ROLE_PROMOTOR => 'promotor',
+                    ROLE_ADMIN => 'admin',
+                    ROLE_SUPER_ADMIN => 'super_admin'
+                ];
+                $_SESSION['admin_role'] = $roleMap[$roleId] ?? 'rider';
+            }
         }
     }
 }
