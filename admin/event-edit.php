@@ -525,7 +525,7 @@ include __DIR__ . '/components/unified-layout.php';
     </div>
 <?php endif; ?>
 
-<form method="POST">
+<form method="POST" id="eventEditForm">
     <?= csrf_field() ?>
 
     <!-- BASIC INFO - Locked for promotors -->
@@ -1203,6 +1203,48 @@ include __DIR__ . '/components/unified-layout.php';
     </div>
 </form>
 
+<!-- Floating Save Button -->
+<div class="floating-save-bar">
+    <div class="floating-save-content">
+        <a href="/admin/events" class="btn-admin btn-admin-secondary">Avbryt</a>
+        <button type="submit" form="eventEditForm" class="btn-admin btn-admin-primary">
+            <i data-lucide="save" class="icon-sm"></i>
+            Spara Ändringar
+        </button>
+    </div>
+</div>
+
+<style>
+.floating-save-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: var(--color-bg);
+    border-top: 1px solid var(--color-border);
+    box-shadow: 0 -4px 12px rgba(0,0,0,0.1);
+    padding: var(--space-sm) var(--space-md);
+    z-index: 1000;
+    padding-bottom: calc(var(--space-sm) + env(safe-area-inset-bottom, 0));
+}
+@media (min-width: 769px) {
+    .floating-save-bar {
+        left: var(--sidebar-width, 280px);
+    }
+}
+.floating-save-content {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--space-sm);
+    max-width: 1200px;
+    margin: 0 auto;
+}
+/* Add padding at bottom of page to account for floating bar */
+.admin-content {
+    padding-bottom: 80px !important;
+}
+</style>
+
 <script>
 // Limit checkbox selections for sponsor rows (maxCount = 0 means unlimited)
 function setupCheckboxLimit(containerSelector, maxCount, countDisplayId) {
@@ -1377,7 +1419,7 @@ document.addEventListener('keydown', function(e) {
 
         <form id="quickSponsorForm" onsubmit="submitQuickSponsor(event)" enctype="multipart/form-data">
             <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
-            <input type="hidden" name="event_id" value="<?= $eventId ?>">
+            <input type="hidden" name="event_id" value="<?= $id ?>">
 
             <div class="modal-body">
                 <!-- Instructions -->

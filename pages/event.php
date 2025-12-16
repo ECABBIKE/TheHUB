@@ -540,14 +540,12 @@ try {
     $pmPublished = empty($event['pm_publish_at']) || strtotime($event['pm_publish_at']) <= time();
 
     // Determine active tab based on event state
-    // Priority: 1. Results (if exists) 2. Registration (if open) 3. Information
+    // Priority: 1. Results (if exists) 2. Inbjudan (default for upcoming events)
     $hasResults = !empty($results);
     if ($hasResults) {
         $defaultTab = 'resultat';
-    } elseif ($registrationOpen) {
-        $defaultTab = 'anmalan';
     } else {
-        $defaultTab = 'info';
+        $defaultTab = 'info'; // Inbjudan is default for upcoming events
     }
     $activeTab = isset($_GET['tab']) ? $_GET['tab'] : $defaultTab;
 
@@ -759,17 +757,17 @@ if (!empty($eventSponsors['content'])): ?>
         </a>
         <?php endif; ?>
 
-        <a href="?id=<?= $eventId ?>&tab=info" class="event-tab <?= $activeTab === 'info' ? 'active' : '' ?>">
-            <i data-lucide="info"></i>
-            Information
-        </a>
-
         <?php if ($showAllTabs && $registrationOpen): ?>
         <a href="?id=<?= $eventId ?>&tab=anmalan" class="event-tab <?= $activeTab === 'anmalan' ? 'active' : '' ?>">
             <i data-lucide="edit-3"></i>
             Anmälan
         </a>
         <?php endif; ?>
+
+        <a href="?id=<?= $eventId ?>&tab=info" class="event-tab <?= $activeTab === 'info' ? 'active' : '' ?>">
+            <i data-lucide="file-text"></i>
+            Inbjudan
+        </a>
 
         <?php if ($showAllTabs && $pmPublished && (!empty($event['pm_content']) || !empty($event['pm_use_global']))): ?>
         <a href="?id=<?= $eventId ?>&tab=pm" class="event-tab <?= $activeTab === 'pm' ? 'active' : '' ?>">
@@ -1182,8 +1180,11 @@ if (!empty($eventSponsors['content'])): ?>
 <?php endif; ?>
 
 <?php elseif ($activeTab === 'info'): ?>
-<!-- INFORMATION TAB - Facilities & Logistics -->
+<!-- INBJUDAN TAB - Invitation + Facilities & Logistics -->
 <?php
+// Get invitation content
+$invitationText = getEventContent($event, 'invitation', 'invitation_use_global', $globalTextMap);
+
 // Get all facility content
 $hydrationInfo = getEventContent($event, 'hydration_stations', 'hydration_use_global', $globalTextMap);
 $toiletsInfo = getEventContent($event, 'toilets_showers', 'toilets_use_global', $globalTextMap);
@@ -1199,6 +1200,21 @@ $mediaInfo = getEventContent($event, 'media_production', 'media_use_global', $gl
 $contactsInfo = getEventContent($event, 'contacts_info', 'contacts_use_global', $globalTextMap);
 $hasFacilities = $hydrationInfo || $toiletsInfo || $bikeWashInfo || $foodCafe || $shopsInfo || $exhibitorsInfo || $parkingInfo || $hotelInfo || $localInfo || $medicalInfo || $mediaInfo || $contactsInfo;
 ?>
+
+<?php if (!empty($invitationText)): ?>
+<section class="card mb-lg">
+    <div class="card-header">
+        <h2 class="card-title">
+            <i data-lucide="mail-open"></i>
+            Inbjudan
+        </h2>
+    </div>
+    <div class="card-body">
+        <div class="prose"><?= nl2br(h($invitationText)) ?></div>
+    </div>
+</section>
+<?php endif; ?>
+
 <section class="card">
     <div class="card-header">
         <h2 class="card-title">
