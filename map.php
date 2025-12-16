@@ -1034,8 +1034,13 @@ $eventName = htmlspecialchars($event['name']);
             // Re-initialize Lucide icons for markers
             setTimeout(() => lucide.createIcons(), 50);
 
-            // Zoom to segment with extra padding for mobile
-            map.fitBounds(highlightLayer.getBounds(), { padding: [80, 80], maxZoom: 16 });
+            // Zoom to segment with padding for sponsor banner (top) and elevation (bottom)
+            // Top: ~100px for sponsor banner, Bottom: ~220px for elevation + bottom bar
+            map.fitBounds(highlightLayer.getBounds(), {
+                paddingTopLeft: [40, 120],
+                paddingBottomRight: [40, 240],
+                maxZoom: 16
+            });
         }
 
         // Show sponsor banner if segment has sponsor
