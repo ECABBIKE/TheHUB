@@ -6,6 +6,22 @@ require_once __DIR__ . '/../config.php';
 
 global $pdo;
 
+// Check if user is a promotor (not admin/super_admin)
+$isPromotorOnly = isRole('promotor');
+$promotorEventIds = [];
+
+if ($isPromotorOnly) {
+    // Get only the events this promotor has access to
+    $promotorEvents = getPromotorEvents();
+    $promotorEventIds = array_column($promotorEvents, 'id');
+
+    // If promotor has no assigned events, show empty list
+    if (empty($promotorEventIds)) {
+        $events = [];
+        $noEventsMessage = 'Du har inga tilldelade events. Kontakta administratören för att få tillgång till events.';
+    }
+}
+
 // Get filter parameters
 $filterBrand = isset($_GET['brand']) ? trim($_GET['brand']) : null;
 $filterYear = isset($_GET['year']) && is_numeric($_GET['year']) ? intval($_GET['year']) : null;
@@ -23,6 +39,13 @@ try {
 // Build WHERE clause
 $where = [];
 $params = [];
+
+// Filter for promotor - only show assigned events
+if ($isPromotorOnly && !empty($promotorEventIds)) {
+    $placeholders = implode(',', array_fill(0, count($promotorEventIds), '?'));
+    $where[] = "e.id IN ($placeholders)";
+    $params = array_merge($params, $promotorEventIds);
+}
 
 if ($filterBrand) {
     // Filter by brand (series name without year)
@@ -75,13 +98,16 @@ LEFT JOIN clubs c ON e.organizer_club_id = c.id
 ORDER BY e.date DESC
 LIMIT 200";
 
-try {
-    $stmt = $pdo->prepare($sql);
-    $stmt->execute($params);
-    $events = $stmt->fetchAll(PDO::FETCH_ASSOC);
-} catch (Exception $e) {
-    $events = [];
-    $error = $e->getMessage();
+// Only run query if not a promotor with no events
+if (!isset($noEventsMessage)) {
+    try {
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+        $events = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (Exception $e) {
+        $events = [];
+        $error = $e->getMessage();
+    }
 }
 
 // Get all years from events
@@ -287,9 +313,14 @@ include __DIR__ . '/components/unified-layout.php';
         <?php if (empty($events)): ?>
             <div class="admin-empty-state">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg>
-                <h3>Inga events hittades</h3>
-                <p>Prova att ändra filtren eller skapa ett nytt event.</p>
-                <a href="/admin/events/create" class="btn-admin btn-admin-primary">Skapa event</a>
+                <?php if (isset($noEventsMessage)): ?>
+                    <h3>Inga tilldelade events</h3>
+                    <p><?= h($noEventsMessage) ?></p>
+                <?php else: ?>
+                    <h3>Inga events hittades</h3>
+                    <p>Prova att ändra filtren eller skapa ett nytt event.</p>
+                    <a href="/admin/events/create" class="btn-admin btn-admin-primary">Skapa event</a>
+                <?php endif; ?>
             </div>
         <?php else: ?>
             <div class="admin-table-container">

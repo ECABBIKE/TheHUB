@@ -7,7 +7,11 @@
 
 $current_page = basename($_SERVER['PHP_SELF']);
 $current_path = $_SERVER['PHP_SELF'];
-$is_admin = isLoggedIn();
+
+// Check user roles properly
+$is_logged_in = isLoggedIn();
+$is_promotor = hasRole('promotor');  // promotor or higher
+$is_admin = hasRole('admin');        // admin or higher
 $is_super_admin = hasRole('super_admin');
 
 /**
@@ -100,7 +104,7 @@ function nav_icon($name, $class = 'sidebar-icon-svg') {
         </a>
 
         <?php if ($is_admin): ?>
-        <!-- ADMIN NAVIGATION -->
+        <!-- ADMIN NAVIGATION (admin and super_admin only) -->
         <div class="sidebar-divider"></div>
 
         <a href="/admin/dashboard.php"
@@ -153,7 +157,7 @@ function nav_icon($name, $class = 'sidebar-icon-svg') {
 
         <?php if ($is_super_admin): ?>
         <a href="/admin/users.php"
-           class="sidebar-link<?= strpos($current_path, '/admin/users') !== false || strpos($current_path, '/admin/role-') !== false || strpos($current_path, '/admin/system-') !== false || strpos($current_path, '/admin/settings') !== false || strpos($current_path, '/admin/setup-') !== false || strpos($current_path, '/admin/run-') !== false ? ' active' : '' ?>"
+           class="sidebar-link<?= strpos($current_path, '/admin/users') !== false || strpos($current_path, '/admin/role-') !== false || strpos($current_path, '/admin/system-') !== false || strpos($current_path, '/admin/settings') !== false || strpos($current_path, '/admin/setup-') !== false || strpos($current_path, '/admin/run-') !== false || strpos($current_path, '/admin/tools') !== false ? ' active' : '' ?>"
            aria-label="System"
            <?= strpos($current_path, '/admin/users') !== false ? 'aria-current="page"' : '' ?>>
             <?= nav_icon('settings') ?>
