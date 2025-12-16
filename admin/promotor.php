@@ -263,6 +263,7 @@ $pageTitle = 'Mina Tävlingar';
         @media (max-width: 640px) {
             .promotor-content {
                 padding: var(--space-md);
+                padding-bottom: calc(var(--space-md) + 80px);
             }
             .event-card-header {
                 flex-direction: column;
@@ -270,6 +271,52 @@ $pageTitle = 'Mina Tävlingar';
             .stats-grid {
                 grid-template-columns: repeat(2, 1fr);
             }
+        }
+        /* Bottom Navigation */
+        .promotor-bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 64px;
+            padding-bottom: env(safe-area-inset-bottom);
+            background: var(--color-bg-surface);
+            border-top: 1px solid var(--color-border);
+            z-index: 100;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .promotor-bottom-nav-inner {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            width: 100%;
+            max-width: 400px;
+            height: 100%;
+        }
+        .promotor-nav-link {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            padding: var(--space-xs) var(--space-md);
+            color: var(--color-text-secondary);
+            font-size: var(--text-xs);
+            font-weight: 500;
+            text-decoration: none;
+            min-width: 72px;
+            transition: color 0.15s ease;
+        }
+        .promotor-nav-link:hover {
+            color: var(--color-text-primary);
+        }
+        .promotor-nav-link.active {
+            color: var(--color-accent);
+        }
+        .promotor-nav-link i {
+            width: 24px;
+            height: 24px;
         }
     </style>
 </head>
@@ -365,6 +412,20 @@ $pageTitle = 'Mina Tävlingar';
     </div>
     <?php endif; ?>
 </main>
+
+<!-- Bottom Navigation -->
+<nav class="promotor-bottom-nav">
+    <div class="promotor-bottom-nav-inner">
+        <a href="/" class="promotor-nav-link">
+            <i data-lucide="home"></i>
+            <span>Hem</span>
+        </a>
+        <a href="/admin/promotor.php" class="promotor-nav-link active">
+            <i data-lucide="calendar-check"></i>
+            <span>Tävlingar</span>
+        </a>
+    </div>
+</nav>
 
 <script>
     lucide.createIcons();

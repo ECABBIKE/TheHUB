@@ -5,6 +5,11 @@
  */
 require_once __DIR__ . '/../config.php';
 
+// Promotors should use their own simplified panel
+if (isRole('promotor')) {
+    redirect('/admin/promotor.php');
+}
+
 global $pdo;
 
 // Get statistics
