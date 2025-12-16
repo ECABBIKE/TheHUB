@@ -1,14 +1,9 @@
 <?php
 require_once __DIR__ . '/../config.php';
 
-// If already logged in, redirect appropriately
+// If already logged in, redirect to homepage
 if (is_admin()) {
- // Promotors go to homepage, admins go to dashboard
- if (isRole('promotor')) {
-  redirect('/');
- } else {
-  redirect('/admin/dashboard.php');
- }
+ redirect('/');
 }
 
 // Handle login
@@ -27,12 +22,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
  if (isLoginRateLimited($username)) {
  $error = 'För många inloggningsförsök. Vänta 15 minuter och försök igen.';
  } elseif (login_admin($username, $password)) {
- // Promotors go to homepage, admins go to dashboard
- if (isRole('promotor')) {
-  redirect('/');
- } else {
-  redirect('/admin/dashboard.php');
- }
+ // All users go to homepage after login
+ redirect('/');
  } else {
  $error = 'Felaktigt användarnamn eller lösenord';
  }
