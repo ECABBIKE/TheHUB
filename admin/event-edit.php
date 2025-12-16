@@ -158,10 +158,10 @@ function saveEventSponsorAssignments($db, $eventId, $postData) {
         $insertedCount++;
     }
 
-    // Partner sponsors (bottom logo row - max 3)
+    // Partner sponsors (bottom logo row - unlimited)
     if (!empty($postData['sponsor_partner']) && is_array($postData['sponsor_partner'])) {
         $order = 0;
-        foreach (array_slice($postData['sponsor_partner'], 0, 3) as $sponsorId) {
+        foreach ($postData['sponsor_partner'] as $sponsorId) {
             $insertStmt->execute([$eventId, (int)$sponsorId, 'partner', $order++]);
             $insertedCount++;
         }
@@ -1193,19 +1193,25 @@ include __DIR__ . '/components/unified-layout.php';
 </form>
 
 <script>
-// Limit checkbox selections for sponsor rows
+// Limit checkbox selections for sponsor rows (maxCount = 0 means unlimited)
 function setupCheckboxLimit(containerSelector, maxCount, countDisplayId) {
     const container = document.querySelector(containerSelector);
     if (!container) return;
 
     const checkboxes = container.querySelectorAll('input[type="checkbox"]');
     const countDisplay = document.getElementById(countDisplayId);
+    const unlimited = maxCount === 0;
 
     function updateCount() {
         const checked = container.querySelectorAll('input[type="checkbox"]:checked').length;
         if (countDisplay) {
-            countDisplay.textContent = `(${checked}/${maxCount} valda)`;
-            countDisplay.style.color = checked >= maxCount ? 'var(--color-warning)' : 'var(--color-text-secondary)';
+            if (unlimited) {
+                countDisplay.textContent = `(${checked} valda)`;
+                countDisplay.style.color = 'var(--color-text-secondary)';
+            } else {
+                countDisplay.textContent = `(${checked}/${maxCount} valda)`;
+                countDisplay.style.color = checked >= maxCount ? 'var(--color-warning)' : 'var(--color-text-secondary)';
+            }
         }
         return checked;
     }
@@ -1213,7 +1219,7 @@ function setupCheckboxLimit(containerSelector, maxCount, countDisplayId) {
     checkboxes.forEach(checkbox => {
         checkbox.addEventListener('change', function() {
             const checked = updateCount();
-            if (checked > maxCount) {
+            if (!unlimited && checked > maxCount) {
                 this.checked = false;
                 updateCount();
                 alert(`Max ${maxCount} val tillåtet`);
@@ -1227,7 +1233,7 @@ function setupCheckboxLimit(containerSelector, maxCount, countDisplayId) {
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', function() {
     setupCheckboxLimit('#logoRowSponsors', 5, 'logoRowCount');
-    setupCheckboxLimit('#partnerSponsors', 3, 'partnerCount');
+    setupCheckboxLimit('#partnerSponsors', 0, 'partnerCount'); // 0 = unlimited
 });
 </script>
 
