@@ -433,7 +433,7 @@ $eventName = htmlspecialchars($event['name']);
             color: white;
         }
 
-        /* Elevation panel - always visible */
+        /* Elevation panel */
         .elevation {
             position: fixed;
             bottom: calc(52px + env(safe-area-inset-bottom, 0));
@@ -443,6 +443,7 @@ $eventName = htmlspecialchars($event['name']);
             z-index: 900;
             border-top: 1px solid var(--color-border);
             box-shadow: 0 -4px 12px rgba(0,0,0,0.08);
+            transition: transform 0.3s ease, opacity 0.3s ease;
         }
         @media (min-width: 769px) {
             .elevation {
@@ -450,6 +451,11 @@ $eventName = htmlspecialchars($event['name']);
                 left: 340px;
                 border-radius: var(--radius-lg) var(--radius-lg) 0 0;
             }
+        }
+        .elevation.hidden {
+            transform: translateY(100%);
+            opacity: 0;
+            pointer-events: none;
         }
         .elevation-header {
             display: flex;
@@ -793,6 +799,10 @@ $eventName = htmlspecialchars($event['name']);
             <span>POIs</span>
         </button>
         <?php endif; ?>
+        <button class="nav-item" onclick="toggleElevation()" id="nav-elevation">
+            <i data-lucide="mountain" class="nav-icon"></i>
+            <span>Höjd</span>
+        </button>
         <button class="nav-item" id="nav-location" onclick="toggleLocation()">
             <i data-lucide="locate" class="nav-icon"></i>
             <span>Din plats</span>
@@ -896,6 +906,9 @@ $eventName = htmlspecialchars($event['name']);
 
         // Initialize Lucide icons
         lucide.createIcons();
+
+        // Set elevation button as active since elevation is visible by default
+        document.getElementById('nav-elevation')?.classList.add('active');
 
         // Close dropdowns and mobile menus when clicking on map
         document.addEventListener('click', e => {
@@ -1022,7 +1035,7 @@ $eventName = htmlspecialchars($event['name']);
             setTimeout(() => lucide.createIcons(), 50);
 
             // Zoom to segment with extra padding for mobile
-            map.fitBounds(highlightLayer.getBounds(), { padding: [80, 80] });
+            map.fitBounds(highlightLayer.getBounds(), { padding: [80, 80], maxZoom: 16 });
         }
 
         // Show sponsor banner if segment has sponsor
@@ -1128,6 +1141,19 @@ $eventName = htmlspecialchars($event['name']);
         // Toggle the clicked menu
         if (!isVisible) {
             menu.style.display = 'block';
+        }
+    }
+
+    function toggleElevation() {
+        const el = document.getElementById('elevation');
+        const navBtn = document.getElementById('nav-elevation');
+        // Hide menus when showing elevation
+        document.querySelectorAll('#mobile-dropdowns .dropdown').forEach(d => d.style.display = 'none');
+
+        el.classList.toggle('hidden');
+        navBtn?.classList.toggle('active', !el.classList.contains('hidden'));
+        if (!el.classList.contains('hidden')) {
+            setTimeout(updateElevation, 350);
         }
     }
 
