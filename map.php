@@ -107,6 +107,60 @@ $eventName = htmlspecialchars($event['name']);
             z-index: 1;
         }
 
+        /* Sponsor Banner */
+        .sponsor-banner {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1001;
+            background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
+            color: white;
+            padding: calc(env(safe-area-inset-top) + var(--space-sm)) var(--space-md) var(--space-sm);
+            display: none;
+            animation: slideDown 0.3s ease;
+        }
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-100%); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .sponsor-banner.visible {
+            display: block;
+        }
+        .sponsor-banner-content {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: var(--space-md);
+        }
+        .sponsor-banner-label {
+            font-size: 0.75rem;
+            opacity: 0.8;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .sponsor-banner-logo {
+            height: 36px;
+            width: auto;
+            max-width: 140px;
+            object-fit: contain;
+            background: white;
+            padding: 4px 10px;
+            border-radius: var(--radius-sm);
+            display: none;
+        }
+        .sponsor-banner-name {
+            font-weight: 600;
+            font-size: 1rem;
+            display: none;
+        }
+        @media (min-width: 769px) {
+            .sponsor-banner {
+                left: 340px;
+                padding-top: var(--space-sm);
+            }
+        }
+
         /* Desktop sidebar - card style matching admin */
         .sidebar {
             display: none;
@@ -523,6 +577,15 @@ $eventName = htmlspecialchars($event['name']);
 <body>
     <div id="map"></div>
 
+    <!-- Sponsor Banner (shown when segment with sponsor is selected) -->
+    <div id="sponsor-banner" class="sponsor-banner">
+        <div class="sponsor-banner-content">
+            <span class="sponsor-banner-label">Sponsrad av</span>
+            <img id="sponsor-banner-logo" src="" alt="" class="sponsor-banner-logo">
+            <span id="sponsor-banner-name" class="sponsor-banner-name"></span>
+        </div>
+    </div>
+
     <!-- Desktop Sidebar -->
     <div class="sidebar">
         <div class="sidebar-header">
@@ -748,6 +811,8 @@ $eventName = htmlspecialchars($event['name']);
     let visiblePoiTypes = new Set();
     let selectedSegment = null;
     let highlightLayer = null;
+    let startMarker = null;
+    let finishMarker = null;
 
     // Init
     document.addEventListener('DOMContentLoaded', () => {
@@ -828,9 +893,14 @@ $eventName = htmlspecialchars($event['name']);
     }
 
     function selectTrack(id) {
-        // Clear selected segment
+        // Clear selected segment and markers
         selectedSegment = null;
         if (highlightLayer) { map.removeLayer(highlightLayer); highlightLayer = null; }
+        if (startMarker) { map.removeLayer(startMarker); startMarker = null; }
+        if (finishMarker) { map.removeLayer(finishMarker); finishMarker = null; }
+
+        // Hide sponsor banner
+        document.getElementById('sponsor-banner').classList.remove('visible');
 
         // Show only this track
         Object.keys(trackLayers).forEach(tid => {
@@ -881,20 +951,65 @@ $eventName = htmlspecialchars($event['name']);
 
         selectedSegment = { trackId, segmentId, segment };
 
-        // Remove old highlight
+        // Remove old highlight and markers
         if (highlightLayer) { map.removeLayer(highlightLayer); highlightLayer = null; }
+        if (startMarker) { map.removeLayer(startMarker); startMarker = null; }
+        if (finishMarker) { map.removeLayer(finishMarker); finishMarker = null; }
 
         // Highlight the segment
         if (segment.coordinates && segment.coordinates.length > 0) {
             const coords = segment.coordinates.map(c => [c.lat, c.lng]);
             highlightLayer = L.polyline(coords, {
                 color: '#F59E0B',
-                weight: 6,
-                opacity: 1
+                weight: 8,
+                opacity: 1,
+                lineCap: 'round',
+                lineJoin: 'round'
             }).addTo(map);
 
-            // Zoom to segment
-            map.fitBounds(highlightLayer.getBounds(), { padding: [50, 50] });
+            // Add start marker (green circle)
+            const startPoint = segment.coordinates[0];
+            startMarker = L.circleMarker([startPoint.lat, startPoint.lng], {
+                radius: 12,
+                fillColor: '#22C55E',
+                fillOpacity: 1,
+                color: '#fff',
+                weight: 3
+            }).addTo(map).bindTooltip('Start', { permanent: false, direction: 'top' });
+
+            // Add finish marker (red circle)
+            const endPoint = segment.coordinates[segment.coordinates.length - 1];
+            finishMarker = L.circleMarker([endPoint.lat, endPoint.lng], {
+                radius: 12,
+                fillColor: '#EF4444',
+                fillOpacity: 1,
+                color: '#fff',
+                weight: 3
+            }).addTo(map).bindTooltip('Mål', { permanent: false, direction: 'top' });
+
+            // Zoom to segment with extra padding for mobile
+            map.fitBounds(highlightLayer.getBounds(), { padding: [80, 80] });
+        }
+
+        // Show sponsor banner if segment has sponsor
+        const banner = document.getElementById('sponsor-banner');
+        if (segment.sponsor_name) {
+            const logoEl = document.getElementById('sponsor-banner-logo');
+            const nameEl = document.getElementById('sponsor-banner-name');
+
+            if (segment.sponsor_logo) {
+                logoEl.src = segment.sponsor_logo;
+                logoEl.alt = segment.sponsor_name;
+                logoEl.style.display = 'block';
+                nameEl.style.display = 'none';
+            } else {
+                logoEl.style.display = 'none';
+                nameEl.textContent = segment.sponsor_name;
+                nameEl.style.display = 'block';
+            }
+            banner.classList.add('visible');
+        } else {
+            banner.classList.remove('visible');
         }
 
         // Update UI
@@ -917,6 +1032,11 @@ $eventName = htmlspecialchars($event['name']);
         // Clear selected segment
         selectedSegment = null;
         if (highlightLayer) { map.removeLayer(highlightLayer); highlightLayer = null; }
+        if (startMarker) { map.removeLayer(startMarker); startMarker = null; }
+        if (finishMarker) { map.removeLayer(finishMarker); finishMarker = null; }
+
+        // Hide sponsor banner
+        document.getElementById('sponsor-banner').classList.remove('visible');
 
         // Reset UI
         document.querySelectorAll('#track-dropdown .dropdown-item').forEach(i => i.classList.remove('active'));
