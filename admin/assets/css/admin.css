@@ -2535,6 +2535,182 @@ h2 svg.lucide {
 }
 
 /* ========================================================================
+   UTILITY CLASSES
+   Reusable helper classes to eliminate inline styles
+   ======================================================================== */
+
+/* Spacing - Margins */
+.mb-sm { margin-bottom: var(--space-sm); }
+.mb-md { margin-bottom: var(--space-md); }
+.mb-lg { margin-bottom: var(--space-lg); }
+.mb-xl { margin-bottom: var(--space-xl); }
+.mt-sm { margin-top: var(--space-sm); }
+.mt-md { margin-top: var(--space-md); }
+.mt-lg { margin-top: var(--space-lg); }
+.mt-xl { margin-top: var(--space-xl); }
+
+/* Spacing - Padding */
+.p-lg { padding: var(--space-lg); }
+.pb-lg { padding-bottom: var(--space-lg); }
+.pt-lg { padding-top: var(--space-lg); }
+
+/* Borders */
+.border-bottom { border-bottom: 1px solid var(--color-border); }
+
+/* Text colors */
+.text-secondary { color: var(--color-text-secondary); }
+.text-accent { color: var(--color-accent); }
+.text-success { color: var(--color-success); }
+.text-error { color: var(--color-error); }
+
+/* Text sizes */
+.text-xs { font-size: var(--text-xs); }
+.text-sm { font-size: var(--text-sm); }
+.text-base { font-size: var(--text-base); }
+.text-lg { font-size: var(--text-lg); }
+
+/* Font weights */
+.font-normal { font-weight: normal; }
+.font-medium { font-weight: 500; }
+.font-semibold { font-weight: 600; }
+
+/* Flexbox utilities */
+.flex { display: flex; }
+.inline-flex { display: inline-flex; }
+.flex-wrap { flex-wrap: wrap; }
+.flex-col { flex-direction: column; }
+.items-center { align-items: center; }
+.justify-between { justify-content: space-between; }
+.justify-center { justify-content: center; }
+.gap-xs { gap: var(--space-xs); }
+.gap-sm { gap: var(--space-sm); }
+.gap-md { gap: var(--space-md); }
+.gap-lg { gap: var(--space-lg); }
+
+/* Icon sizes */
+.icon-xs { width: 12px; height: 12px; }
+.icon-sm { width: 16px; height: 16px; }
+.icon-md { width: 20px; height: 20px; }
+.icon-lg { width: 24px; height: 24px; }
+.icon-xl { width: 48px; height: 48px; }
+
+/* Cursor */
+.cursor-pointer { cursor: pointer; }
+.select-none { user-select: none; }
+
+/* Display */
+.block { display: block; }
+.inline-block { display: inline-block; }
+.hidden { display: none; }
+
+/* Text utilities */
+.text-center { text-align: center; }
+.whitespace-nowrap { white-space: nowrap; }
+
+/* Margin left */
+.ml-sm { margin-left: var(--space-sm); }
+.ml-md { margin-left: var(--space-md); }
+
+/* Opacity */
+.opacity-50 { opacity: 0.5; }
+
+/* Locked/disabled sections */
+.locked-section { opacity: 0.7; }
+.locked-badge {
+    font-size: 0.75rem;
+    color: var(--color-text-secondary);
+    background: var(--color-bg-secondary);
+    padding: 2px 8px;
+    border-radius: 4px;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-xs);
+}
+.locked-badge i { width: 12px; height: 12px; }
+
+/* Fieldset reset for styling */
+.fieldset-reset {
+    border: none;
+    margin: 0;
+    padding: 0;
+}
+
+/* Collapsible headers (details/summary) */
+.collapsible-header {
+    cursor: pointer;
+    user-select: none;
+}
+
+/* Inline checkbox label */
+.checkbox-inline {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-left: var(--space-sm);
+    font-weight: normal;
+    cursor: pointer;
+}
+
+/* Sponsor/partner checkbox label */
+.sponsor-checkbox {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    background: var(--color-bg-secondary);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-size: 0.875rem;
+}
+
+/* Help text under form fields */
+.form-help {
+    color: var(--color-text-secondary);
+    font-size: var(--text-sm);
+    margin-top: var(--space-xs);
+}
+
+/* Tag/pill display */
+.tag-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-sm);
+}
+
+.tag-item {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-xs);
+    padding: var(--space-xs) var(--space-sm);
+    background: var(--color-bg-secondary);
+    border-radius: var(--radius-sm);
+    font-size: 0.875rem;
+}
+
+/* Debug alert (green background) */
+.alert-debug {
+    background: #d4edda;
+    border: 1px solid #28a745;
+    padding: 10px;
+    border-radius: 6px;
+    font-size: 0.8rem;
+}
+
+/* Partner/sponsor grid - 4 columns desktop, 2 on mobile, centered */
+.partner-grid {
+    display: grid;
+    grid-template-columns: repeat(4, auto);
+    gap: var(--space-sm);
+    justify-content: center;
+}
+
+@media (max-width: 767px) {
+    .partner-grid {
+        grid-template-columns: repeat(2, auto);
+    }
+}
+
+/* ========================================================================
    EDGE-TO-EDGE ON MOBILE
    Cards, tables, alerts go full-width on mobile for maximum data space
    ======================================================================== */
