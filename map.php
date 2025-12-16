@@ -612,10 +612,125 @@ $eventName = htmlspecialchars($event['name']);
             position: relative;
             z-index: 1;
         }
+
+        /* 3D Map */
+        .map3d {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 2000;
+            display: none;
+            background: #1a1a1a;
+        }
+        .map3d.active {
+            display: block;
+        }
+        .map3d-controls {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 2001;
+            padding: calc(env(safe-area-inset-top) + var(--space-sm)) var(--space-md) var(--space-sm);
+            background: linear-gradient(180deg, rgba(0,0,0,0.7) 0%, transparent 100%);
+            display: none;
+        }
+        .map3d.active ~ .map3d-controls,
+        .map3d-controls.active {
+            display: block;
+        }
+        .map3d-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            color: white;
+            font-weight: 600;
+        }
+        .btn-close-3d {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            border-radius: 50%;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            color: white;
+        }
+        .btn-close-3d:hover {
+            background: rgba(255,255,255,0.3);
+        }
+        .map3d-actions {
+            margin-top: var(--space-sm);
+        }
+        .btn-flyover {
+            display: inline-flex;
+            align-items: center;
+            gap: var(--space-sm);
+            background: var(--color-accent);
+            color: white;
+            border: none;
+            padding: var(--space-sm) var(--space-md);
+            border-radius: var(--radius-sm);
+            font-weight: 500;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .btn-flyover:hover {
+            background: #4db85e;
+        }
+        .btn-flyover:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        .btn-flyover.playing {
+            background: var(--color-danger);
+        }
+
+        /* 3D Loading indicator */
+        .map3d-loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            text-align: center;
+        }
+        .map3d-loading .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(255,255,255,0.2);
+            border-top-color: var(--color-accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto var(--space-sm);
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
     </style>
 </head>
 <body>
     <div id="map"></div>
+    <div id="map3d" class="map3d"></div>
+
+    <!-- 3D Controls overlay -->
+    <div id="map3d-controls" class="map3d-controls">
+        <div class="map3d-header">
+            <span>3D-vy</span>
+            <button class="btn-close-3d" onclick="toggle3DMode()"><i data-lucide="x" style="width: 20px; height: 20px;"></i></button>
+        </div>
+        <div class="map3d-actions">
+            <button class="btn-flyover" onclick="startFlyover()" id="btn-flyover">
+                <i data-lucide="plane" style="width: 16px; height: 16px;"></i>
+                <span>Starta överflygning</span>
+            </button>
+        </div>
+    </div>
 
     <!-- Sponsor Banner (shown when segment with sponsor is selected) -->
     <div id="sponsor-banner" class="sponsor-banner">
@@ -803,6 +918,10 @@ $eventName = htmlspecialchars($event['name']);
             <i data-lucide="mountain" class="nav-icon"></i>
             <span>Höjd</span>
         </button>
+        <button class="nav-item" onclick="toggle3DMode()" id="nav-3d">
+            <i data-lucide="box" class="nav-icon"></i>
+            <span>3D</span>
+        </button>
         <button class="nav-item" id="nav-location" onclick="toggleLocation()">
             <i data-lucide="locate" class="nav-icon"></i>
             <span>Din plats</span>
@@ -812,6 +931,7 @@ $eventName = htmlspecialchars($event['name']);
     <!-- Desktop bottom controls -->
     <div class="controls-bottom">
         <a href="/event/<?= $eventId ?>" class="btn-circle" title="Tillbaka till event" style="text-decoration: none;"><i data-lucide="x" style="width: 20px; height: 20px;"></i></a>
+        <button class="btn-circle" id="btn-3d" onclick="toggle3DMode()" title="3D-vy"><i data-lucide="box" style="width: 20px; height: 20px;"></i></button>
         <button class="btn-circle" id="location-btn" onclick="toggleLocation()" title="Min plats"><i data-lucide="locate" style="width: 20px; height: 20px;"></i></button>
     </div>
 
@@ -1325,6 +1445,276 @@ $eventName = htmlspecialchars($event['name']);
     }
 
     window.addEventListener('resize', () => setTimeout(updateElevation, 100));
+
+    // ============================================
+    // 3D MAP FUNCTIONALITY (loads on-demand)
+    // ============================================
+    let map3d = null;
+    let map3dLoaded = false;
+    let flyoverAnimation = null;
+    let is3DMode = false;
+
+    function toggle3DMode() {
+        const container = document.getElementById('map3d');
+        const controls = document.getElementById('map3d-controls');
+        const nav3d = document.getElementById('nav-3d');
+        const btn3d = document.getElementById('btn-3d');
+
+        is3DMode = !is3DMode;
+
+        if (is3DMode) {
+            container.classList.add('active');
+            controls.classList.add('active');
+            nav3d?.classList.add('active');
+            btn3d?.classList.add('active');
+
+            // Load MapLibre on first use
+            if (!map3dLoaded) {
+                load3DMap();
+            } else if (map3d) {
+                map3d.resize();
+            }
+        } else {
+            container.classList.remove('active');
+            controls.classList.remove('active');
+            nav3d?.classList.remove('active');
+            btn3d?.classList.remove('active');
+            stopFlyover();
+        }
+    }
+
+    function load3DMap() {
+        const container = document.getElementById('map3d');
+
+        // Show loading
+        container.innerHTML = '<div class="map3d-loading"><div class="spinner"></div><div>Laddar 3D-karta...</div></div>';
+
+        // Load MapLibre CSS
+        const css = document.createElement('link');
+        css.rel = 'stylesheet';
+        css.href = 'https://unpkg.com/maplibre-gl@4.1.0/dist/maplibre-gl.css';
+        document.head.appendChild(css);
+
+        // Load MapLibre JS
+        const script = document.createElement('script');
+        script.src = 'https://unpkg.com/maplibre-gl@4.1.0/dist/maplibre-gl.js';
+        script.onload = () => {
+            init3DMap();
+        };
+        script.onerror = () => {
+            container.innerHTML = '<div class="map3d-loading"><div>Kunde inte ladda 3D-kartan.<br>Kontrollera din internetanslutning.</div></div>';
+        };
+        document.head.appendChild(script);
+    }
+
+    function init3DMap() {
+        const container = document.getElementById('map3d');
+        container.innerHTML = '';
+
+        // Get center from current bounds
+        const bounds = mapData.bounds;
+        const center = bounds ? [(bounds[0][1] + bounds[1][1]) / 2, (bounds[0][0] + bounds[1][0]) / 2] : [15, 62];
+
+        // Create MapLibre map with 3D terrain
+        map3d = new maplibregl.Map({
+            container: 'map3d',
+            style: {
+                version: 8,
+                sources: {
+                    'osm': {
+                        type: 'raster',
+                        tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
+                        tileSize: 256,
+                        attribution: '&copy; OpenStreetMap'
+                    },
+                    'terrain': {
+                        type: 'raster-dem',
+                        tiles: ['https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png'],
+                        tileSize: 256,
+                        encoding: 'terrarium'
+                    }
+                },
+                layers: [
+                    {
+                        id: 'osm-layer',
+                        type: 'raster',
+                        source: 'osm',
+                        minzoom: 0,
+                        maxzoom: 19
+                    }
+                ],
+                terrain: {
+                    source: 'terrain',
+                    exaggeration: 1.5
+                },
+                sky: {}
+            },
+            center: center,
+            zoom: 13,
+            pitch: 60,
+            bearing: 0,
+            maxPitch: 85
+        });
+
+        map3d.on('load', () => {
+            map3dLoaded = true;
+            add3DTracks();
+
+            // Add navigation controls
+            map3d.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), 'bottom-right');
+        });
+    }
+
+    function add3DTracks() {
+        if (!map3d || !mapData.tracks) return;
+
+        // Collect all coordinates for tracks
+        const allCoords = [];
+
+        mapData.tracks.forEach((track, trackIdx) => {
+            if (!track.segments) return;
+
+            track.segments.forEach((segment, segIdx) => {
+                if (!segment.coordinates || segment.coordinates.length < 2) return;
+
+                const coords = segment.coordinates.map((c, i) => {
+                    const ele = segment.elevation_data?.[i] ?? c.ele ?? 0;
+                    allCoords.push([c.lng, c.lat, ele]);
+                    return [c.lng, c.lat, ele];
+                });
+
+                const segType = segment.segment_type || 'stage';
+                const color = segType === 'stage' ? '#EF4444' : segType === 'lift' ? '#F59E0B' : '#61CE70';
+
+                // Add line source and layer
+                const sourceId = `track-${trackIdx}-seg-${segIdx}`;
+                map3d.addSource(sourceId, {
+                    type: 'geojson',
+                    data: {
+                        type: 'Feature',
+                        geometry: {
+                            type: 'LineString',
+                            coordinates: coords
+                        }
+                    }
+                });
+
+                map3d.addLayer({
+                    id: sourceId,
+                    type: 'line',
+                    source: sourceId,
+                    paint: {
+                        'line-color': color,
+                        'line-width': 4,
+                        'line-opacity': 0.9
+                    }
+                });
+            });
+        });
+
+        // Fit to bounds
+        if (allCoords.length > 0) {
+            const lngs = allCoords.map(c => c[0]);
+            const lats = allCoords.map(c => c[1]);
+            map3d.fitBounds([
+                [Math.min(...lngs), Math.min(...lats)],
+                [Math.max(...lngs), Math.max(...lats)]
+            ], { padding: 50, pitch: 60, duration: 1000 });
+        }
+    }
+
+    // Collect all track coordinates for flyover
+    function getTrackCoordinates() {
+        const coords = [];
+        if (!mapData.tracks) return coords;
+
+        mapData.tracks.forEach(track => {
+            if (!track.segments) return;
+            track.segments.forEach(segment => {
+                if (!segment.coordinates) return;
+                segment.coordinates.forEach((c, i) => {
+                    const ele = segment.elevation_data?.[i] ?? c.ele ?? 0;
+                    coords.push({ lng: c.lng, lat: c.lat, ele: ele });
+                });
+            });
+        });
+        return coords;
+    }
+
+    function startFlyover() {
+        if (!map3d) return;
+
+        const btn = document.getElementById('btn-flyover');
+        if (flyoverAnimation) {
+            stopFlyover();
+            return;
+        }
+
+        const coords = getTrackCoordinates();
+        if (coords.length < 2) return;
+
+        btn.classList.add('playing');
+        btn.querySelector('span').textContent = 'Stoppa';
+
+        let currentIdx = 0;
+        const step = Math.max(1, Math.floor(coords.length / 200)); // ~200 steps total
+
+        function animate() {
+            if (currentIdx >= coords.length - 1) {
+                stopFlyover();
+                return;
+            }
+
+            const current = coords[currentIdx];
+            const next = coords[Math.min(currentIdx + step, coords.length - 1)];
+
+            // Calculate bearing
+            const bearing = calculateBearing(current.lat, current.lng, next.lat, next.lng);
+
+            map3d.easeTo({
+                center: [current.lng, current.lat],
+                bearing: bearing,
+                pitch: 70,
+                zoom: 15,
+                duration: 100
+            });
+
+            currentIdx += step;
+            flyoverAnimation = setTimeout(animate, 100);
+        }
+
+        // Start from beginning
+        map3d.easeTo({
+            center: [coords[0].lng, coords[0].lat],
+            bearing: calculateBearing(coords[0].lat, coords[0].lng, coords[1].lat, coords[1].lng),
+            pitch: 70,
+            zoom: 15,
+            duration: 1000
+        });
+
+        setTimeout(animate, 1000);
+    }
+
+    function stopFlyover() {
+        if (flyoverAnimation) {
+            clearTimeout(flyoverAnimation);
+            flyoverAnimation = null;
+        }
+
+        const btn = document.getElementById('btn-flyover');
+        btn?.classList.remove('playing');
+        if (btn) btn.querySelector('span').textContent = 'Starta överflygning';
+    }
+
+    function calculateBearing(lat1, lng1, lat2, lng2) {
+        const toRad = x => x * Math.PI / 180;
+        const toDeg = x => x * 180 / Math.PI;
+
+        const dLng = toRad(lng2 - lng1);
+        const y = Math.sin(dLng) * Math.cos(toRad(lat2));
+        const x = Math.cos(toRad(lat1)) * Math.sin(toRad(lat2)) - Math.sin(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.cos(dLng);
+        return (toDeg(Math.atan2(y, x)) + 360) % 360;
+    }
     </script>
 </body>
 </html>
