@@ -1354,8 +1354,8 @@ document.addEventListener('keydown', function(e) {
                 <!-- Instructions -->
                 <div class="alert alert-info mb-md">
                     <strong>Bildformat:</strong> PNG eller JPG med transparent eller vit bakgrund.<br>
-                    <strong>Storlek:</strong> Minst 400x120 pixlar (bredd x höjd).<br>
-                    <small class="text-secondary">Bilden sparas automatiskt i eventets mapp och skalas till rätt storlek.</small>
+                    <strong>Storlek:</strong> 400x120 pixlar <span class="text-secondary">(liggande 10:3 format)</span><br>
+                    <small class="text-secondary">Använd en bred, liggande logotyp - inte fyrkantig. Bilden skalas automatiskt.</small>
                 </div>
 
                 <!-- Error/Success messages -->
