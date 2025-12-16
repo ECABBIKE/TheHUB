@@ -114,9 +114,10 @@ $eventName = htmlspecialchars($event['name']);
             left: 0;
             right: 0;
             z-index: 1001;
-            background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
-            color: white;
-            padding: calc(env(safe-area-inset-top) + var(--space-sm)) var(--space-md) var(--space-sm);
+            background: var(--color-bg);
+            border-bottom: 1px solid var(--color-border);
+            box-shadow: var(--shadow-sm);
+            padding: calc(env(safe-area-inset-top) + var(--space-md)) var(--space-md) var(--space-md);
             display: none;
             animation: slideDown 0.3s ease;
         }
@@ -134,30 +135,28 @@ $eventName = htmlspecialchars($event['name']);
             gap: var(--space-md);
         }
         .sponsor-banner-label {
-            font-size: 0.75rem;
-            opacity: 0.8;
+            font-size: 0.7rem;
+            color: var(--color-text);
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }
         .sponsor-banner-logo {
-            height: 36px;
+            height: 48px;
             width: auto;
-            max-width: 140px;
+            max-width: 180px;
             object-fit: contain;
-            background: white;
-            padding: 4px 10px;
-            border-radius: var(--radius-sm);
             display: none;
         }
         .sponsor-banner-name {
             font-weight: 600;
-            font-size: 1rem;
+            font-size: 1.1rem;
+            color: var(--color-text-dark);
             display: none;
         }
         @media (min-width: 769px) {
             .sponsor-banner {
                 left: 340px;
-                padding-top: var(--space-sm);
+                padding-top: var(--space-md);
             }
         }
 
@@ -434,7 +433,7 @@ $eventName = htmlspecialchars($event['name']);
             color: white;
         }
 
-        /* Elevation panel */
+        /* Elevation panel - always visible */
         .elevation {
             position: fixed;
             bottom: calc(52px + env(safe-area-inset-bottom, 0));
@@ -442,7 +441,6 @@ $eventName = htmlspecialchars($event['name']);
             right: 0;
             background: var(--color-bg);
             z-index: 900;
-            transition: transform 0.3s ease, opacity 0.3s ease;
             border-top: 1px solid var(--color-border);
             box-shadow: 0 -4px 12px rgba(0,0,0,0.08);
         }
@@ -452,11 +450,6 @@ $eventName = htmlspecialchars($event['name']);
                 left: 340px;
                 border-radius: var(--radius-lg) var(--radius-lg) 0 0;
             }
-        }
-        .elevation.hidden {
-            transform: translateY(100%);
-            opacity: 0;
-            pointer-events: none;
         }
         .elevation-header {
             display: flex;
@@ -572,6 +565,47 @@ $eventName = htmlspecialchars($event['name']);
             margin: var(--space-sm) var(--space-md) !important;
             font-size: 0.85rem !important;
         }
+
+        /* Start/Finish marker icons */
+        .marker-icon-container {
+            background: transparent !important;
+            border: none !important;
+        }
+        .marker-icon {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            box-shadow: var(--shadow-md);
+            border: 3px solid white;
+        }
+        .marker-icon.start-marker {
+            background: #22C55E;
+        }
+        .marker-icon.finish-marker {
+            background: #171717;
+            position: relative;
+            overflow: hidden;
+        }
+        .marker-icon.finish-marker::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background:
+                linear-gradient(45deg, #fff 25%, transparent 25%),
+                linear-gradient(-45deg, #fff 25%, transparent 25%),
+                linear-gradient(45deg, transparent 75%, #fff 75%),
+                linear-gradient(-45deg, transparent 75%, #fff 75%);
+            background-size: 8px 8px;
+            background-position: 0 0, 0 4px, 4px -4px, -4px 0;
+            border-radius: 50%;
+        }
+        .marker-icon i {
+            position: relative;
+            z-index: 1;
+        }
     </style>
 </head>
 <body>
@@ -636,8 +670,8 @@ $eventName = htmlspecialchars($event['name']);
     <div class="controls-top" id="mobile-dropdowns">
         <!-- Track & Segment dropdown menu (opens from bottom bar) -->
         <?php if (count($tracks) > 0): ?>
-        <div class="dropdown" id="track-dropdown" style="position: fixed; bottom: calc(56px + env(safe-area-inset-bottom) + var(--space-sm)); left: var(--space-sm); display: none; max-width: calc(100vw - var(--space-md));">
-            <div class="dropdown-menu" style="position: static; display: block; max-height: 50vh; overflow-y: auto;">
+        <div class="dropdown" id="track-dropdown" style="position: fixed; bottom: calc(56px + env(safe-area-inset-bottom) + 170px + var(--space-sm)); left: var(--space-sm); display: none; max-width: calc(100vw - var(--space-md));">
+            <div class="dropdown-menu" style="position: static; display: block; max-height: 40vh; overflow-y: auto;">
                 <div class="dropdown-section-title">Banor</div>
                 <?php foreach ($tracks as $track): ?>
                 <div class="dropdown-item <?= $track['is_primary'] ? 'active' : '' ?>" data-track-id="<?= $track['id'] ?>" onclick="selectTrack(<?= $track['id'] ?>)">
@@ -721,8 +755,8 @@ $eventName = htmlspecialchars($event['name']);
 
         <!-- POI dropdown menu (opens from bottom bar) -->
         <?php if (!empty($pois)): ?>
-        <div class="dropdown" id="poi-dropdown" style="position: fixed; bottom: calc(56px + env(safe-area-inset-bottom) + var(--space-sm)); left: 50%; transform: translateX(-50%); display: none; max-width: calc(100vw - var(--space-md));">
-            <div class="dropdown-menu" style="position: static; display: block; max-height: 50vh;">
+        <div class="dropdown" id="poi-dropdown" style="position: fixed; bottom: calc(56px + env(safe-area-inset-bottom) + 170px + var(--space-sm)); left: 50%; transform: translateX(-50%); display: none; max-width: calc(100vw - var(--space-md));">
+            <div class="dropdown-menu" style="position: static; display: block; max-height: 40vh;">
                 <?php foreach ($poiGroups as $type => $group): ?>
                 <div class="dropdown-section-title"><i data-lucide="<?= htmlspecialchars($group['icon']) ?>" style="width: 12px; height: 12px; color: <?= htmlspecialchars($group['color']) ?>; vertical-align: middle;"></i> <?= htmlspecialchars($group['label']) ?> (<?= count($group['items']) ?>)</div>
                 <?php foreach ($group['items'] as $idx => $poi):
@@ -759,10 +793,6 @@ $eventName = htmlspecialchars($event['name']);
             <span>POIs</span>
         </button>
         <?php endif; ?>
-        <button class="nav-item" onclick="toggleElevation()" id="nav-elevation">
-            <i data-lucide="mountain" class="nav-icon"></i>
-            <span>Höjd</span>
-        </button>
         <button class="nav-item" id="nav-location" onclick="toggleLocation()">
             <i data-lucide="locate" class="nav-icon"></i>
             <span>Din plats</span>
@@ -776,12 +806,11 @@ $eventName = htmlspecialchars($event['name']);
     </div>
 
     <!-- Elevation -->
-    <div class="elevation hidden" id="elevation">
+    <div class="elevation" id="elevation">
         <div class="elevation-header">
             <i data-lucide="mountain" style="width: 18px; height: 18px; color: var(--color-icon);"></i>
             <span id="elevation-title">Höjdprofil</span>
             <button class="elevation-close" id="elevation-clear-btn" onclick="clearSegmentSelection()" style="display: none;" title="Visa hela banan"><i data-lucide="rotate-ccw" style="width: 14px; height: 14px;"></i></button>
-            <button class="elevation-close" onclick="toggleElevation()"><i data-lucide="x" style="width: 14px; height: 14px;"></i></button>
         </div>
         <div class="elevation-stats" id="elevation-stats">
             <div class="stat">
@@ -967,25 +996,30 @@ $eventName = htmlspecialchars($event['name']);
                 lineJoin: 'round'
             }).addTo(map);
 
-            // Add start marker (green circle)
+            // Add start marker (green with play icon)
             const startPoint = segment.coordinates[0];
-            startMarker = L.circleMarker([startPoint.lat, startPoint.lng], {
-                radius: 12,
-                fillColor: '#22C55E',
-                fillOpacity: 1,
-                color: '#fff',
-                weight: 3
-            }).addTo(map).bindTooltip('Start', { permanent: false, direction: 'top' });
+            startMarker = L.marker([startPoint.lat, startPoint.lng], {
+                icon: L.divIcon({
+                    className: 'marker-icon-container',
+                    html: '<div class="marker-icon start-marker"><i data-lucide="play" style="width: 14px; height: 14px; color: white; margin-left: 2px;"></i></div>',
+                    iconSize: [32, 32],
+                    iconAnchor: [16, 16]
+                })
+            }).addTo(map).bindTooltip('Start', { permanent: false, direction: 'top', offset: [0, -16] });
 
-            // Add finish marker (red circle)
+            // Add finish marker (checkered flag pattern)
             const endPoint = segment.coordinates[segment.coordinates.length - 1];
-            finishMarker = L.circleMarker([endPoint.lat, endPoint.lng], {
-                radius: 12,
-                fillColor: '#EF4444',
-                fillOpacity: 1,
-                color: '#fff',
-                weight: 3
-            }).addTo(map).bindTooltip('Mål', { permanent: false, direction: 'top' });
+            finishMarker = L.marker([endPoint.lat, endPoint.lng], {
+                icon: L.divIcon({
+                    className: 'marker-icon-container',
+                    html: '<div class="marker-icon finish-marker"><i data-lucide="flag" style="width: 14px; height: 14px; color: white;"></i></div>',
+                    iconSize: [32, 32],
+                    iconAnchor: [16, 16]
+                })
+            }).addTo(map).bindTooltip('Mål', { permanent: false, direction: 'top', offset: [0, -16] });
+
+            // Re-initialize Lucide icons for markers
+            setTimeout(() => lucide.createIcons(), 50);
 
             // Zoom to segment with extra padding for mobile
             map.fitBounds(highlightLayer.getBounds(), { padding: [80, 80] });
@@ -1091,9 +1125,6 @@ $eventName = htmlspecialchars($event['name']);
         const isVisible = menu.style.display !== 'none';
         // Hide all menus first
         document.querySelectorAll('#mobile-dropdowns .dropdown').forEach(d => d.style.display = 'none');
-        // Hide elevation if showing menu
-        document.getElementById('elevation').classList.add('hidden');
-        document.getElementById('nav-elevation')?.classList.remove('active');
         // Toggle the clicked menu
         if (!isVisible) {
             menu.style.display = 'block';
@@ -1137,16 +1168,6 @@ $eventName = htmlspecialchars($event['name']);
         );
     }
 
-    function toggleElevation() {
-        const el = document.getElementById('elevation');
-        const navBtn = document.getElementById('nav-elevation');
-        // Hide menus when showing elevation
-        document.querySelectorAll('#mobile-dropdowns .dropdown').forEach(d => d.style.display = 'none');
-
-        el.classList.toggle('hidden');
-        navBtn?.classList.toggle('active', !el.classList.contains('hidden'));
-        setTimeout(updateElevation, 350);
-    }
 
     function updateElevation(singleSegment = null) {
         const canvas = document.getElementById('elevation-canvas');
