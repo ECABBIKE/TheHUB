@@ -733,6 +733,29 @@
     gap: var(--space-lg);
 }
 
+/* Responsive form grid - use with form-grid-2, form-grid-3, etc */
+.form-grid {
+    display: grid;
+    gap: var(--space-md);
+}
+
+.form-grid-2 {
+    grid-template-columns: repeat(2, 1fr);
+}
+
+.form-grid-3 {
+    grid-template-columns: repeat(3, 1fr);
+}
+
+.form-grid .form-full-width {
+    grid-column: 1 / -1;
+}
+
+/* Required field indicator */
+.required {
+    color: var(--color-error);
+}
+
 .admin-form-actions {
     display: flex;
     gap: var(--space-md);
@@ -2582,17 +2605,15 @@ h2 svg.lucide {
         border-radius: 0;
     }
 
-    /* Mobile form optimizations */
-    .admin-card-body [style*="grid-template-columns: repeat(2"],
-    .admin-card-body [style*="grid-template-columns:repeat(2"] {
+    /* Mobile form grids - stack vertically */
+    .form-grid {
         display: flex !important;
         flex-direction: column !important;
         gap: var(--space-md) !important;
     }
 
-    .admin-card-body [style*="grid-column: span 2"],
-    .admin-card-body [style*="grid-column:span 2"] {
-        grid-column: auto !important;
+    .form-grid .form-full-width {
+        width: 100%;
     }
 
     /* Larger touch targets for inputs */
