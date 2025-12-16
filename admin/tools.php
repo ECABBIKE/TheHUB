@@ -624,6 +624,25 @@ include __DIR__ . '/components/unified-layout.php';
             </a>
         </div>
     </div>
+
+    <!-- Add Rider Role (Migration 065) -->
+    <div class="tool-card">
+        <div class="tool-card-header">
+            <div class="tool-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" x2="19" y1="8" y2="14"/><line x1="22" x2="16" y1="11" y2="11"/></svg>
+            </div>
+            <div>
+                <h4 class="tool-title">Lägg till rider-roll</h4>
+                <p class="tool-description">Migration 065: Lägger till rider som giltig användarroll</p>
+            </div>
+        </div>
+        <div class="tool-actions">
+            <a href="/admin/migrations/add-rider-role.php" class="btn-admin btn-admin-primary" style="flex: 1;">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px;"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+                Kör migration
+            </a>
+        </div>
+    </div>
 </div>
 
 <!-- Warning Box -->
