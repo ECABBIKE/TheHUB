@@ -3,6 +3,11 @@
 $currentUser = function_exists('hub_current_user') ? hub_current_user() : null;
 $isLoggedIn = function_exists('hub_is_logged_in') ? hub_is_logged_in() : false;
 $isAdmin = function_exists('hub_is_admin') ? hub_is_admin() : false;
+// Promotors should NOT see admin link - they only get edit pen on their events
+$isPromotorOnly = function_exists('isRole') && isRole('promotor');
+if ($isPromotorOnly) {
+    $isAdmin = false;
+}
 $hubUrl = defined('HUB_V3_URL') ? HUB_V3_URL : '';
 
 // Get sidebar logo from branding settings

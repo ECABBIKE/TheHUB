@@ -20,7 +20,13 @@ require_once __DIR__ . '/icons.php';
 
 $currentPage = $pageInfo['page'] ?? 'dashboard';
 $currentSection = $pageInfo['section'] ?? '';
+// Promotors are NOT admins - they only get edit pen on their events
+$isPromotorOnly = function_exists('isRole') && isRole('promotor');
 $isAdminUser = function_exists('hub_is_admin') ? hub_is_admin() : false;
+// Promotors should not see admin section at all
+if ($isPromotorOnly) {
+    $isAdminUser = false;
+}
 $isAdminSection = strpos($_SERVER['REQUEST_URI'], '/admin') === 0;
 
 // Fallback for hub_is_nav_active if not defined
