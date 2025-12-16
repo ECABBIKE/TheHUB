@@ -562,14 +562,14 @@ include __DIR__ . '/components/unified-layout.php';
             <?php endif; ?>
         </div>
         <fieldset class="admin-card-body" <?= $isPromotorOnly ? 'disabled' : '' ?> style="border:none;margin:0;padding:0;">
-            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--space-md);">
-                <div class="admin-form-group" style="grid-column: span 2;">
-                    <label class="admin-form-label">Namn <span style="color: var(--color-error);">*</span></label>
+            <div class="form-grid form-grid-2">
+                <div class="admin-form-group form-full-width">
+                    <label class="admin-form-label">Namn <span class="required">*</span></label>
                     <input type="text" name="name" class="admin-form-input" required value="<?= h($event['name']) ?>">
                 </div>
 
                 <div class="admin-form-group">
-                    <label class="admin-form-label">Datum <span style="color: var(--color-error);">*</span></label>
+                    <label class="admin-form-label">Datum <span class="required">*</span></label>
                     <input type="date" name="date" class="admin-form-input" required value="<?= h($event['date']) ?>">
                 </div>
 
@@ -609,7 +609,7 @@ include __DIR__ . '/components/unified-layout.php';
             <?php endif; ?>
         </div>
         <fieldset class="admin-card-body" <?= $isPromotorOnly ? 'disabled' : '' ?> style="border:none;margin:0;padding:0;">
-            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--space-md);">
+            <div class="form-grid form-grid-2">
                 <div class="admin-form-group">
                     <label class="admin-form-label">Tävlingsformat</label>
                     <select name="discipline" class="admin-form-select">
@@ -757,7 +757,7 @@ include __DIR__ . '/components/unified-layout.php';
             <h2>Arrangör & Kontakt</h2>
         </div>
         <div class="admin-card-body">
-            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--space-md);">
+            <div class="form-grid form-grid-2">
                 <div class="admin-form-group">
                     <label class="admin-form-label">Arrangör (klubb)</label>
                     <select name="organizer_club_id" class="admin-form-select">
@@ -836,7 +836,7 @@ include __DIR__ . '/components/unified-layout.php';
             <h2>Platsdetaljer</h2>
         </div>
         <div class="admin-card-body">
-            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--space-md);">
+            <div class="form-grid form-grid-2">
                 <div class="admin-form-group">
                     <label class="admin-form-label">GPS-koordinater</label>
                     <input type="text" name="venue_coordinates" class="admin-form-input" value="<?= h($event['venue_coordinates'] ?? '') ?>" placeholder="59.3293, 18.0686">
@@ -847,7 +847,7 @@ include __DIR__ . '/components/unified-layout.php';
                     <input type="url" name="venue_map_url" class="admin-form-input" value="<?= h($event['venue_map_url'] ?? '') ?>">
                 </div>
 
-                <div class="admin-form-group" style="grid-column: span 2;">
+                <div class="admin-form-group form-full-width">
                     <label class="admin-form-label">Platsdetaljer</label>
                     <textarea name="venue_details" class="admin-form-input" rows="3"><?= h($event['venue_details'] ?? '') ?></textarea>
                 </div>
@@ -881,7 +881,7 @@ include __DIR__ . '/components/unified-layout.php';
             ];
             ?>
 
-            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--space-md);">
+            <div class="form-grid form-grid-2">
                 <?php foreach ($pmFields as $field): ?>
                     <div class="admin-form-group">
                         <label class="admin-form-label">
@@ -917,7 +917,7 @@ include __DIR__ . '/components/unified-layout.php';
             ];
             ?>
 
-            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--space-md);">
+            <div class="form-grid form-grid-2">
                 <?php foreach ($otherTabFields as $field): ?>
                     <div class="admin-form-group">
                         <label class="admin-form-label">
@@ -1005,7 +1005,7 @@ include __DIR__ . '/components/unified-layout.php';
             ];
             ?>
 
-            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--space-md);">
+            <div class="form-grid form-grid-2">
                 <?php foreach ($facilityFields as $field): ?>
                     <div class="admin-form-group">
                         <label class="admin-form-label">
