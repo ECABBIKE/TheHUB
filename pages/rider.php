@@ -1062,7 +1062,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 
-<?php if (!empty($rankingEvents)): ?>
+<?php if ($rankingPosition): ?>
 <!-- Ranking Calculation Modal -->
 <div id="rankingModal" class="ranking-modal-overlay">
     <div class="ranking-modal">
@@ -1087,6 +1087,7 @@ document.addEventListener('DOMContentLoaded', function() {
             </div>
 
             <div class="modal-events-list">
+                <?php if (!empty($rankingEvents)): ?>
                 <?php foreach ($rankingEvents as $event): ?>
                 <div class="modal-event-item">
                     <div class="modal-event-row">
@@ -1119,6 +1120,13 @@ document.addEventListener('DOMContentLoaded', function() {
                     </div>
                 </div>
                 <?php endforeach; ?>
+                <?php else: ?>
+                <div class="modal-empty-state" style="text-align: center; padding: var(--space-lg); color: var(--color-text-secondary);">
+                    <i data-lucide="info" style="width: 32px; height: 32px; margin-bottom: var(--space-sm); opacity: 0.5;"></i>
+                    <p>Inga tävlingar hittades för beräkning ännu.</p>
+                    <p style="font-size: var(--text-xs); margin-top: var(--space-xs);">Rankingpoäng baseras på dina resultat i Gravity-tävlingar.</p>
+                </div>
+                <?php endif; ?>
             </div>
         </div>
     </div>
