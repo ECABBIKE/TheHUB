@@ -1,9 +1,14 @@
 <?php
 require_once __DIR__ . '/../config.php';
 
-// If already logged in, redirect to dashboard
+// If already logged in, redirect appropriately
 if (is_admin()) {
- redirect('/admin/dashboard.php');
+ // Promotors go to homepage, admins go to dashboard
+ if (isRole('promotor')) {
+  redirect('/');
+ } else {
+  redirect('/admin/dashboard.php');
+ }
 }
 
 // Handle login
