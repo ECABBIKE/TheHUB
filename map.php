@@ -1080,9 +1080,16 @@ $eventName = htmlspecialchars($event['name']);
             }
         });
 
-        // Zoom to track bounds
+        // Zoom to track bounds using the Leaflet layer's actual bounds
         const track = mapData.tracks.find(t => t.id === id);
-        if (track && track.bounds) {
+        const layer = trackLayers[id];
+        if (layer && layer.getBounds) {
+            const bounds = layer.getBounds();
+            if (bounds.isValid()) {
+                map.fitBounds(bounds, { padding: [50, 50] });
+            }
+        } else if (track && track.bounds) {
+            // Fallback to pre-calculated bounds if available
             map.fitBounds(track.bounds, { padding: [50, 50] });
         }
 

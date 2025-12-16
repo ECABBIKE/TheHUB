@@ -36,7 +36,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $pageTitle = 'Logga in';
 ?>
 <!DOCTYPE html>
-<html lang="sv">
+<html lang="sv" data-theme="light">
 <head>
  <meta charset="UTF-8">
  <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -51,11 +51,11 @@ $pageTitle = 'Logga in';
    display: flex;
    align-items: center;
    justify-content: center;
-   background: var(--color-bg-subtle);
+   background: var(--color-bg-page);
    padding: var(--space-lg);
   }
   .login-card {
-   background: var(--color-bg);
+   background: var(--color-bg-surface);
    border-radius: var(--radius-lg);
    box-shadow: var(--shadow-lg);
    padding: var(--space-2xl);
@@ -69,7 +69,7 @@ $pageTitle = 'Logga in';
   .login-header h1 {
    font-size: 1.75rem;
    font-weight: 700;
-   color: var(--color-text);
+   color: var(--color-text-primary);
    margin-bottom: var(--space-xs);
   }
   .login-header p {
@@ -83,7 +83,7 @@ $pageTitle = 'Logga in';
    display: block;
    font-size: var(--text-sm);
    font-weight: 500;
-   color: var(--color-text);
+   color: var(--color-text-primary);
    margin-bottom: var(--space-xs);
   }
   .login-form .form-input {
@@ -92,8 +92,8 @@ $pageTitle = 'Logga in';
    font-size: 1rem;
    border: 1px solid var(--color-border);
    border-radius: var(--radius-md);
-   background: var(--color-bg);
-   color: var(--color-text);
+   background: var(--color-bg-surface);
+   color: var(--color-text-primary);
    transition: border-color 0.2s, box-shadow 0.2s;
   }
   .login-form .form-input:focus {
