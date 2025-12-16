@@ -27,21 +27,36 @@ $db = getDB();
 $currentUser = getCurrentAdmin();
 $userId = $currentUser['id'] ?? 0;
 
-// Get promotor's events
+// Get promotor's events with optimized query (using JOINs instead of subqueries)
 $events = [];
 try {
     $events = $db->getAll("
         SELECT e.*,
                s.name as series_name,
                s.logo as series_logo,
-               (SELECT COUNT(*) FROM event_registrations WHERE event_id = e.id) as registration_count,
-               (SELECT COUNT(*) FROM event_registrations WHERE event_id = e.id AND status = 'confirmed') as confirmed_count,
-               (SELECT COUNT(*) FROM event_registrations WHERE event_id = e.id AND status = 'pending') as pending_count,
-               (SELECT COALESCE(SUM(total_amount), 0) FROM orders WHERE event_id = e.id AND payment_status = 'paid') as total_paid,
-               (SELECT COALESCE(SUM(total_amount), 0) FROM orders WHERE event_id = e.id AND payment_status = 'pending') as total_pending
+               COALESCE(reg.registration_count, 0) as registration_count,
+               COALESCE(reg.confirmed_count, 0) as confirmed_count,
+               COALESCE(reg.pending_count, 0) as pending_count,
+               COALESCE(ord.total_paid, 0) as total_paid,
+               COALESCE(ord.total_pending, 0) as total_pending
         FROM events e
         LEFT JOIN series s ON e.series_id = s.id
         JOIN promotor_events pe ON pe.event_id = e.id
+        LEFT JOIN (
+            SELECT event_id,
+                   COUNT(*) as registration_count,
+                   SUM(CASE WHEN status = 'confirmed' THEN 1 ELSE 0 END) as confirmed_count,
+                   SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending_count
+            FROM event_registrations
+            GROUP BY event_id
+        ) reg ON reg.event_id = e.id
+        LEFT JOIN (
+            SELECT event_id,
+                   SUM(CASE WHEN payment_status = 'paid' THEN total_amount ELSE 0 END) as total_paid,
+                   SUM(CASE WHEN payment_status = 'pending' THEN total_amount ELSE 0 END) as total_pending
+            FROM orders
+            GROUP BY event_id
+        ) ord ON ord.event_id = e.id
         WHERE pe.user_id = ?
         ORDER BY e.date DESC
     ", [$userId]);
@@ -52,7 +67,7 @@ try {
 $pageTitle = 'Mina Tävlingar';
 ?>
 <!DOCTYPE html>
-<html lang="sv">
+<html lang="sv" data-theme="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -65,10 +80,10 @@ $pageTitle = 'Mina Tävlingar';
     <style>
         .promotor-page {
             min-height: 100vh;
-            background: var(--color-bg-subtle);
+            background: var(--color-bg-page);
         }
         .promotor-header {
-            background: var(--color-bg);
+            background: var(--color-bg-surface);
             border-bottom: 1px solid var(--color-border);
             padding: var(--space-md) var(--space-lg);
             display: flex;
@@ -78,7 +93,7 @@ $pageTitle = 'Mina Tävlingar';
         .promotor-header h1 {
             font-size: 1.5rem;
             font-weight: 600;
-            color: var(--color-text);
+            color: var(--color-text-primary);
             display: flex;
             align-items: center;
             gap: var(--space-sm);
@@ -100,14 +115,14 @@ $pageTitle = 'Mina Tävlingar';
             font-size: var(--text-sm);
         }
         .back-link:hover {
-            color: var(--color-text);
+            color: var(--color-text-primary);
         }
         .event-grid {
             display: grid;
             gap: var(--space-lg);
         }
         .event-card {
-            background: var(--color-bg);
+            background: var(--color-bg-surface);
             border-radius: var(--radius-lg);
             border: 1px solid var(--color-border);
             overflow: hidden;
@@ -126,7 +141,7 @@ $pageTitle = 'Mina Tävlingar';
         .event-title {
             font-size: 1.25rem;
             font-weight: 600;
-            color: var(--color-text);
+            color: var(--color-text-primary);
             margin-bottom: var(--space-xs);
         }
         .event-meta {
@@ -137,7 +152,7 @@ $pageTitle = 'Mina Tävlingar';
             color: var(--color-text-secondary);
         }
         .event-meta-item {
-            display: flex;
+            display: inline-flex;
             align-items: center;
             gap: var(--space-xs);
         }
@@ -150,7 +165,7 @@ $pageTitle = 'Mina Tävlingar';
             align-items: center;
             gap: var(--space-xs);
             padding: var(--space-xs) var(--space-sm);
-            background: var(--color-bg-subtle);
+            background: var(--color-bg-sunken);
             border-radius: var(--radius-full);
             font-size: var(--text-xs);
             font-weight: 500;
@@ -172,13 +187,13 @@ $pageTitle = 'Mina Tävlingar';
         .stat-box {
             text-align: center;
             padding: var(--space-md);
-            background: var(--color-bg-subtle);
+            background: var(--color-bg-sunken);
             border-radius: var(--radius-md);
         }
         .stat-value {
             font-size: 1.5rem;
             font-weight: 700;
-            color: var(--color-text);
+            color: var(--color-text-primary);
         }
         .stat-value.pending {
             color: var(--color-warning);
@@ -221,8 +236,8 @@ $pageTitle = 'Mina Tävlingar';
             opacity: 0.9;
         }
         .btn-secondary {
-            background: var(--color-bg);
-            color: var(--color-text);
+            background: var(--color-bg-surface);
+            color: var(--color-text-primary);
             border: 1px solid var(--color-border);
         }
         .btn-secondary:hover {
@@ -242,7 +257,7 @@ $pageTitle = 'Mina Tävlingar';
         .empty-state h2 {
             font-size: 1.25rem;
             font-weight: 600;
-            color: var(--color-text);
+            color: var(--color-text-primary);
             margin-bottom: var(--space-sm);
         }
         @media (max-width: 640px) {

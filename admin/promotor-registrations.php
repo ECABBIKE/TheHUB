@@ -148,7 +148,7 @@ $classes = $db->getAll("
 $pageTitle = 'Anmälningar - ' . $event['name'];
 ?>
 <!DOCTYPE html>
-<html lang="sv">
+<html lang="sv" data-theme="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -161,10 +161,10 @@ $pageTitle = 'Anmälningar - ' . $event['name'];
     <style>
         .promotor-page {
             min-height: 100vh;
-            background: var(--color-bg-subtle);
+            background: var(--color-bg-page);
         }
         .promotor-header {
-            background: var(--color-bg);
+            background: var(--color-bg-surface);
             border-bottom: 1px solid var(--color-border);
             padding: var(--space-md) var(--space-lg);
         }
@@ -180,7 +180,7 @@ $pageTitle = 'Anmälningar - ' . $event['name'];
         .promotor-header h1 {
             font-size: 1.25rem;
             font-weight: 600;
-            color: var(--color-text);
+            color: var(--color-text-primary);
             display: flex;
             align-items: center;
             gap: var(--space-sm);
@@ -207,7 +207,7 @@ $pageTitle = 'Anmälningar - ' . $event['name'];
             font-size: var(--text-sm);
         }
         .back-link:hover {
-            color: var(--color-text);
+            color: var(--color-text-primary);
         }
         .stats-grid {
             display: grid;
@@ -216,7 +216,7 @@ $pageTitle = 'Anmälningar - ' . $event['name'];
             margin-bottom: var(--space-lg);
         }
         .stat-box {
-            background: var(--color-bg);
+            background: var(--color-bg-surface);
             border: 1px solid var(--color-border);
             border-radius: var(--radius-md);
             text-align: center;
