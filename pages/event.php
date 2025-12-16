@@ -679,6 +679,7 @@ if (!empty($event['header_banner_url'])): ?>
                 <img src="<?= h($event['series_logo']) ?>" alt="<?= h($event['series_name'] ?? 'Serie') ?>">
             </div>
             <?php endif; ?>
+            <?php if ($totalParticipants > 0): ?>
             <div class="event-stat">
                 <span class="event-stat-value"><?= $totalParticipants ?></span>
                 <span class="event-stat-label">deltagare</span>
@@ -687,6 +688,12 @@ if (!empty($event['header_banner_url'])): ?>
                 <span class="event-stat-value"><?= $totalFinished ?></span>
                 <span class="event-stat-label">i mål</span>
             </div>
+            <?php elseif ($totalRegistrations > 0): ?>
+            <div class="event-stat">
+                <span class="event-stat-value"><?= $totalRegistrations ?></span>
+                <span class="event-stat-label">anmälda</span>
+            </div>
+            <?php endif; ?>
         </div>
     </div>
 </section>
