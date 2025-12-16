@@ -281,9 +281,22 @@ function isAdminPageActive($item, $requestUri) {
 }
 
 /* ========================================================================
-   MOBILE/TABLET LANDSCAPE - Compact icon-only sidebar
+   MOBILE/TABLET LANDSCAPE - Compact icon-only sidebar flush to left
    ======================================================================== */
 @media (max-width: 1023px) and (orientation: landscape) {
+    /* Sidebar must be flush to left edge */
+    .sidebar {
+        position: fixed !important;
+        top: var(--header-height, 60px) !important;
+        left: 0 !important;
+        right: auto !important;
+        margin: 0 !important;
+        margin-left: 0 !important;
+        transform: none !important;
+        width: 64px !important;
+        padding: 4px 0 !important;
+    }
+
     .sidebar-link {
         flex-direction: column !important;
         padding: 6px 4px !important;
@@ -297,8 +310,8 @@ function isAdminPageActive($item, $requestUri) {
     }
 
     .sidebar-icon-svg {
-        width: 20px !important;
-        height: 20px !important;
+        width: 24px !important;
+        height: 24px !important;
     }
 
     .sidebar-link.is-active::before {
