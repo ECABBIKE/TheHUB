@@ -103,8 +103,8 @@ function nav_icon($name, $class = 'sidebar-icon-svg') {
             <span class="sidebar-label">Ranking</span>
         </a>
 
-        <?php if ($is_promotor): ?>
-        <!-- ADMIN NAVIGATION (promotor and above) -->
+        <?php if ($is_admin): ?>
+        <!-- ADMIN NAVIGATION (admin and super_admin only) -->
         <div class="sidebar-divider"></div>
 
         <a href="/admin/dashboard.php"
@@ -123,8 +123,6 @@ function nav_icon($name, $class = 'sidebar-icon-svg') {
             <span class="sidebar-label">Tävlingar</span>
         </a>
 
-        <?php if ($is_admin): ?>
-        <!-- Admin and above see more sections -->
         <a href="/admin/series.php"
            class="sidebar-link<?= strpos($current_path, '/admin/series') !== false || strpos($current_path, '/admin/ranking') !== false || strpos($current_path, '/admin/club-points') !== false ? ' active' : '' ?>"
            aria-label="Serier"
@@ -156,7 +154,6 @@ function nav_icon($name, $class = 'sidebar-icon-svg') {
             <?= nav_icon('upload') ?>
             <span class="sidebar-label">Import</span>
         </a>
-        <?php endif; ?>
 
         <?php if ($is_super_admin): ?>
         <a href="/admin/users.php"
