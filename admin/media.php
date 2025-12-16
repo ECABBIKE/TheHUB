@@ -14,6 +14,10 @@ global $pdo;
 $currentFolder = $_GET['folder'] ?? null;
 $searchQuery = $_GET['search'] ?? '';
 
+// Check if we're in a subfolder
+$isSubfolder = $currentFolder && strpos($currentFolder, '/') !== false;
+$parentFolder = $isSubfolder ? explode('/', $currentFolder)[0] : null;
+
 // Get folder statistics
 $folderStats = get_media_stats();
 $statsByFolder = [];
@@ -21,9 +25,21 @@ $totalFiles = 0;
 $totalSize = 0;
 
 foreach ($folderStats as $stat) {
-    $statsByFolder[$stat['folder']] = $stat;
+    // Group subfolders under parent for stats
+    $mainFolder = explode('/', $stat['folder'])[0];
+    if (!isset($statsByFolder[$mainFolder])) {
+        $statsByFolder[$mainFolder] = ['count' => 0, 'total_size' => 0];
+    }
+    $statsByFolder[$mainFolder]['count'] += (int) $stat['count'];
+    $statsByFolder[$mainFolder]['total_size'] += (int) $stat['total_size'];
     $totalFiles += (int) $stat['count'];
     $totalSize += (int) $stat['total_size'];
+}
+
+// Get subfolders if viewing sponsors folder
+$sponsorSubfolders = [];
+if ($currentFolder === 'sponsors' || $parentFolder === 'sponsors') {
+    $sponsorSubfolders = get_media_subfolders('sponsors');
 }
 
 // Define folders
@@ -54,12 +70,21 @@ if ($searchQuery) {
 // Page config
 $page_title = 'Mediabibliotek';
 $breadcrumbs = [
-    ['label' => 'Mediabibliotek']
+    ['label' => 'Mediabibliotek', 'url' => '/admin/media']
 ];
 
 if ($currentFolder) {
-    $folderName = array_column($folders, 'name', 'id')[$currentFolder] ?? ucfirst($currentFolder);
-    $breadcrumbs[] = ['label' => $folderName];
+    if ($isSubfolder) {
+        // Add parent folder first
+        $parentName = array_column($folders, 'name', 'id')[$parentFolder] ?? ucfirst($parentFolder);
+        $breadcrumbs[] = ['label' => $parentName, 'url' => '/admin/media?folder=' . $parentFolder];
+        // Add current subfolder
+        $subfolderName = ucfirst(basename($currentFolder));
+        $breadcrumbs[] = ['label' => $subfolderName];
+    } else {
+        $folderName = array_column($folders, 'name', 'id')[$currentFolder] ?? ucfirst($currentFolder);
+        $breadcrumbs[] = ['label' => $folderName];
+    }
 }
 
 // Include unified layout
@@ -467,11 +492,25 @@ include __DIR__ . '/components/unified-layout.php';
             </li>
             <?php foreach ($folders as $folder): ?>
             <li>
-                <a href="/admin/media?folder=<?= $folder['id'] ?>" class="folder-item <?= $currentFolder === $folder['id'] ? 'active' : '' ?>">
+                <a href="/admin/media?folder=<?= $folder['id'] ?>" class="folder-item <?= $currentFolder === $folder['id'] || $parentFolder === $folder['id'] ? 'active' : '' ?>">
                     <svg class="folder-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
                     <span class="folder-name"><?= htmlspecialchars($folder['name']) ?></span>
                     <span class="folder-count"><?= $folder['count'] ?></span>
                 </a>
+                <?php if ($folder['id'] === 'sponsors' && !empty($sponsorSubfolders)): ?>
+                <!-- Sponsor subfolders -->
+                <ul class="subfolder-list" style="margin-left: var(--space-md); margin-top: 2px;">
+                    <?php foreach ($sponsorSubfolders as $sub): ?>
+                    <li>
+                        <a href="/admin/media?folder=<?= urlencode($sub['path']) ?>" class="folder-item <?= $currentFolder === $sub['path'] ? 'active' : '' ?>" style="padding: var(--space-xs) var(--space-sm); font-size: 0.8rem;">
+                            <svg class="folder-icon" style="width: 14px; height: 14px;" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                            <span class="folder-name"><?= htmlspecialchars(ucfirst($sub['name'])) ?></span>
+                            <span class="folder-count" style="font-size: 0.65rem;"><?= $sub['count'] ?></span>
+                        </a>
+                    </li>
+                    <?php endforeach; ?>
+                </ul>
+                <?php endif; ?>
             </li>
             <?php endforeach; ?>
         </ul>
@@ -502,6 +541,26 @@ include __DIR__ . '/components/unified-layout.php';
                 <div class="progress-text" id="progressText">Laddar upp...</div>
             </div>
         </div>
+
+        <?php if ($currentFolder === 'sponsors'): ?>
+        <!-- Create sponsor subfolder -->
+        <div class="create-subfolder-box" style="background: var(--color-bg-surface); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: var(--space-md); margin-bottom: var(--space-lg);">
+            <h4 style="margin: 0 0 var(--space-sm); font-size: 0.875rem; display: flex; align-items: center; gap: var(--space-sm);">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 10v6"/><path d="m15 13-3-3-3 3"/><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2v11z"/></svg>
+                Skapa sponsor-mapp
+            </h4>
+            <p style="font-size: 0.8rem; color: var(--color-text-secondary); margin-bottom: var(--space-sm);">
+                Skapa en undermapp för att organisera alla bilder för en sponsor.
+            </p>
+            <div style="display: flex; gap: var(--space-sm);">
+                <input type="text" id="newSubfolderName" placeholder="Sponsornamn (t.ex. Husqvarna)" style="flex: 1; padding: var(--space-sm); border: 1px solid var(--color-border); border-radius: var(--radius-sm);">
+                <button type="button" class="btn btn-primary" onclick="createSponsorSubfolder()">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" x2="12" y1="5" y2="19"/><line x1="5" x2="19" y1="12" y2="12"/></svg>
+                    Skapa
+                </button>
+            </div>
+        </div>
+        <?php endif; ?>
 
         <!-- Toolbar -->
         <div class="media-toolbar">
@@ -650,6 +709,32 @@ const currentFolder = <?= json_encode($currentFolder ?? 'general') ?>;
 
 let selectedIds = new Set();
 let currentMediaId = null;
+
+// Create sponsor subfolder
+function createSponsorSubfolder() {
+    const input = document.getElementById('newSubfolderName');
+    const name = input.value.trim();
+
+    if (!name) {
+        alert('Ange ett namn för mappen');
+        return;
+    }
+
+    // Generate slug from name
+    let slug = name.toLowerCase()
+        .replace(/[åä]/g, 'a')
+        .replace(/ö/g, 'o')
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-|-$/g, '');
+
+    if (!slug) {
+        alert('Ogiltigt namn');
+        return;
+    }
+
+    // Navigate to the new subfolder
+    window.location.href = '/admin/media?folder=sponsors/' + encodeURIComponent(slug);
+}
 
 // Upload zone events
 uploadZone.addEventListener('click', () => fileInput.click());

@@ -28,23 +28,31 @@ function get_media_stats() {
 
 /**
  * Get media files by folder
+ * Supports subfolders with LIKE matching (e.g., "sponsors" matches "sponsors/mysponsor")
  */
-function get_media_by_folder($folder = null, $limit = 50, $offset = 0) {
+function get_media_by_folder($folder = null, $limit = 50, $offset = 0, $includeSubfolders = false) {
     global $pdo;
-    
+
     try {
         $sql = "SELECT * FROM media";
         $params = [];
-        
+
         if ($folder) {
-            $sql .= " WHERE folder = ?";
-            $params[] = $folder;
+            if ($includeSubfolders) {
+                // Match folder and all subfolders
+                $sql .= " WHERE (folder = ? OR folder LIKE ?)";
+                $params[] = $folder;
+                $params[] = $folder . '/%';
+            } else {
+                $sql .= " WHERE folder = ?";
+                $params[] = $folder;
+            }
         }
-        
+
         $sql .= " ORDER BY uploaded_at DESC LIMIT ? OFFSET ?";
         $params[] = (int)$limit;
         $params[] = (int)$offset;
-        
+
         $stmt = $pdo->prepare($sql);
         $stmt->execute($params);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -55,24 +63,89 @@ function get_media_by_folder($folder = null, $limit = 50, $offset = 0) {
 }
 
 /**
- * Search media files
+ * Get subfolders within a parent folder
  */
-function search_media($query, $folder = null, $limit = 50) {
+function get_media_subfolders($parentFolder) {
     global $pdo;
-    
+
+    try {
+        $stmt = $pdo->prepare("
+            SELECT
+                folder,
+                COUNT(*) as count,
+                SUM(size) as total_size
+            FROM media
+            WHERE folder LIKE ?
+            GROUP BY folder
+            ORDER BY folder
+        ");
+        $stmt->execute([$parentFolder . '/%']);
+        $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Extract subfolder names
+        $subfolders = [];
+        foreach ($results as $row) {
+            // Get the subfolder name (part after parent/)
+            $subPath = substr($row['folder'], strlen($parentFolder) + 1);
+            // Only include direct subfolders (not nested)
+            if (strpos($subPath, '/') === false) {
+                $subfolders[] = [
+                    'name' => $subPath,
+                    'path' => $row['folder'],
+                    'count' => (int)$row['count'],
+                    'size' => (int)$row['total_size']
+                ];
+            }
+        }
+
+        return $subfolders;
+    } catch (PDOException $e) {
+        error_log("get_media_subfolders error: " . $e->getMessage());
+        return [];
+    }
+}
+
+/**
+ * Create a media subfolder for a sponsor
+ * Returns the folder path
+ */
+function create_sponsor_media_folder($sponsorName) {
+    // Generate slug from sponsor name
+    $slug = strtolower(trim($sponsorName));
+    $slug = preg_replace('/[åä]/u', 'a', $slug);
+    $slug = preg_replace('/[ö]/u', 'o', $slug);
+    $slug = preg_replace('/[^a-z0-9]+/', '-', $slug);
+    $slug = trim($slug, '-');
+
+    return 'sponsors/' . $slug;
+}
+
+/**
+ * Search media files
+ * Supports searching in subfolders with LIKE matching
+ */
+function search_media($query, $folder = null, $limit = 50, $includeSubfolders = true) {
+    global $pdo;
+
     try {
         $sql = "SELECT * FROM media WHERE (original_filename LIKE ? OR alt_text LIKE ? OR caption LIKE ?)";
         $searchTerm = "%{$query}%";
         $params = [$searchTerm, $searchTerm, $searchTerm];
-        
+
         if ($folder) {
-            $sql .= " AND folder = ?";
-            $params[] = $folder;
+            if ($includeSubfolders) {
+                $sql .= " AND (folder = ? OR folder LIKE ?)";
+                $params[] = $folder;
+                $params[] = $folder . '/%';
+            } else {
+                $sql .= " AND folder = ?";
+                $params[] = $folder;
+            }
         }
-        
+
         $sql .= " ORDER BY uploaded_at DESC LIMIT ?";
         $params[] = (int)$limit;
-        
+
         $stmt = $pdo->prepare($sql);
         $stmt->execute($params);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
