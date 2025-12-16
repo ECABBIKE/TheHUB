@@ -1013,6 +1013,14 @@ if (!function_exists('render_event_map')) {
                 visibleTracks.delete(intId);
             }
         });
+        // Zoom to selected track bounds
+        const selectedLayer = trackLayers[trackId];
+        if (selectedLayer && selectedLayer.getBounds) {
+            const bounds = selectedLayer.getBounds();
+            if (bounds.isValid()) {
+                map.fitBounds(bounds, { padding: [50, 50] });
+            }
+        }
         document.getElementById(mapId + '-current-name').textContent = name;
         document.getElementById(mapId + '-current-dot').style.background = color;
         document.querySelectorAll('#' + mapId + '-track-dropdown .emap-dropdown-item').forEach(item => {
