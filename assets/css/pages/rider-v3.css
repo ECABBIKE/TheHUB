@@ -1131,6 +1131,54 @@
     font-weight: 400;
 }
 
+.modal-close-footer {
+    padding: var(--space-md) var(--space-lg);
+    border-top: 1px solid #e5e7eb;
+    text-align: center;
+}
+
+.modal-close-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-xs);
+    padding: var(--space-sm) var(--space-xl);
+    background: var(--color-bg-sunken, #f3f4f6);
+    border: 1px solid #e5e7eb;
+    border-radius: var(--radius-md);
+    font-size: var(--text-sm);
+    font-weight: 500;
+    color: #171717;
+    cursor: pointer;
+}
+
+.modal-close-btn i {
+    width: 18px;
+    height: 18px;
+}
+
+.modal-empty-state {
+    text-align: center;
+    padding: var(--space-lg);
+    color: var(--color-text-secondary);
+}
+
+.modal-empty-state i {
+    width: 32px;
+    height: 32px;
+    margin-bottom: var(--space-sm);
+    opacity: 0.5;
+}
+
+.modal-empty-state p {
+    margin: 0;
+}
+
+.modal-empty-hint {
+    font-size: var(--text-xs);
+    margin-top: var(--space-xs) !important;
+}
+
 /* ============================================================================
    MOBILE RESPONSIVE - EDGE-TO-EDGE STANDARD
    ============================================================================ */
@@ -1192,7 +1240,7 @@
         font-size: var(--text-xs);
     }
 
-    /* Ranking Modal Mobile */
+    /* Ranking Modal Mobile - Compact Design */
     .ranking-modal-overlay {
         padding: 0;
         align-items: stretch;
@@ -1209,7 +1257,7 @@
     }
 
     .ranking-modal-header {
-        padding: var(--space-md);
+        padding: var(--space-sm) var(--space-md);
         flex-shrink: 0;
         position: sticky;
         top: 0;
@@ -1217,16 +1265,70 @@
         background: #ffffff;
     }
 
+    .ranking-modal-header h3 {
+        font-size: var(--text-base);
+        gap: var(--space-xs);
+    }
+
     .ranking-modal-body {
-        padding: var(--space-md);
+        padding: var(--space-sm) var(--space-md);
         flex: 1;
         overflow-y: auto;
         -webkit-overflow-scrolling: touch;
         max-height: none;
     }
 
-    .modal-event-item {
+    .ranking-modal-summary {
         padding: var(--space-sm);
+        margin-bottom: var(--space-sm);
+    }
+
+    .ranking-modal-summary .summary-label {
+        font-size: 11px;
+    }
+
+    .ranking-modal-summary .summary-value {
+        font-size: var(--text-lg);
+    }
+
+    .modal-formula-hint {
+        font-size: 10px !important;
+        padding: var(--space-xs) var(--space-sm) !important;
+        margin-bottom: var(--space-sm) !important;
+    }
+
+    .modal-events-list {
+        gap: var(--space-xs);
+    }
+
+    .modal-event-item {
+        padding: var(--space-xs) var(--space-sm);
+    }
+
+    .modal-event-row {
+        margin-bottom: var(--space-2xs);
+    }
+
+    .modal-event-name {
+        font-size: 13px;
+    }
+
+    .modal-event-date {
+        font-size: 11px;
+    }
+
+    .modal-event-points {
+        font-size: var(--text-base);
+    }
+
+    .modal-calc-row {
+        padding: var(--space-xs);
+        gap: 4px;
+        font-size: 10px;
+    }
+
+    .modal-calc-item {
+        gap: 2px;
     }
 
     .ranking-modal-close {
@@ -1239,6 +1341,39 @@
     .ranking-modal-close i {
         width: 24px;
         height: 24px;
+    }
+
+    .modal-close-footer {
+        padding: var(--space-sm) var(--space-md);
+    }
+
+    .modal-close-btn {
+        padding: var(--space-xs) var(--space-lg);
+        font-size: 13px;
+        gap: 4px;
+    }
+
+    .modal-close-btn i {
+        width: 16px;
+        height: 16px;
+    }
+
+    .modal-empty-state {
+        padding: var(--space-md);
+    }
+
+    .modal-empty-state i {
+        width: 24px;
+        height: 24px;
+        margin-bottom: var(--space-xs);
+    }
+
+    .modal-empty-state p {
+        font-size: 13px;
+    }
+
+    .modal-empty-hint {
+        font-size: 11px !important;
     }
 }
 
