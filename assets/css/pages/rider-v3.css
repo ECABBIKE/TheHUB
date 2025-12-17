@@ -1235,14 +1235,12 @@
     .highlights-card-v3,
     .achievements-card-v3,
     .history-card-full {
+        margin-left: -16px !important;
+        margin-right: -16px !important;
         border-radius: 0 !important;
         border-left: none !important;
         border-right: none !important;
-        /* Use 100vw to span full viewport width, offset by scroll bar */
-        width: 100vw !important;
-        margin-left: 50% !important;
-        transform: translateX(-50%);
-        max-width: none !important;
+        width: calc(100% + 32px) !important;
     }
 
     /* Profile card mobile - compact badges */
