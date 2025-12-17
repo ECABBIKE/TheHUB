@@ -1137,7 +1137,7 @@
 }
 
 .modal-calc-label {
-    color: #6b7280;
+    color: #4b5563;
     font-weight: 500;
 }
 
@@ -1147,7 +1147,7 @@
 }
 
 .modal-calc-value.dim {
-    opacity: 0.5;
+    color: #6b7280;
 }
 
 .modal-calc-op {
@@ -1225,7 +1225,7 @@
         order: 1;
     }
 
-    /* Edge-to-edge design för alla kort på mobil */
+    /* Edge-to-edge design för alla kort på mobil - styrs av --container-padding från branding */
     .card,
     .profile-card-v3,
     .form-card-v3,
@@ -1235,14 +1235,12 @@
     .highlights-card-v3,
     .achievements-card-v3,
     .history-card-full {
-        border-radius: 0 !important;
+        margin-left: calc(-1 * var(--container-padding, 16px)) !important;
+        margin-right: calc(-1 * var(--container-padding, 16px)) !important;
+        border-radius: var(--radius-md, 0) !important;
         border-left: none !important;
         border-right: none !important;
-        /* Use 100vw to span full viewport width, offset by scroll bar */
-        width: 100vw !important;
-        margin-left: 50% !important;
-        transform: translateX(-50%);
-        max-width: none !important;
+        width: calc(100% + (2 * var(--container-padding, 16px))) !important;
     }
 
     /* Profile card mobile - compact badges */
