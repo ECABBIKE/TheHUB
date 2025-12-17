@@ -1096,9 +1096,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
 <?php if ($rankingPosition): ?>
 <!-- Ranking Calculation Modal -->
-<div id="rankingModal" class="ranking-modal-overlay" style="padding-top: var(--header-height, 60px);">
-    <div class="ranking-modal" style="max-height: calc(100vh - var(--header-height, 60px) - var(--space-lg, 24px));">
-        <div class="ranking-modal-header">
+<div id="rankingModal" class="ranking-modal-overlay" style="padding-top: calc(var(--header-height, 60px) + 10px);">
+    <div class="ranking-modal" style="max-height: calc(100vh - var(--header-height, 60px) - 40px);">
+        <div class="ranking-modal-header" style="padding-top: var(--space-md);">
             <h3>
                 <i data-lucide="calculator"></i>
                 Rankinguträkning
@@ -1153,31 +1153,18 @@ document.addEventListener('DOMContentLoaded', function() {
                 </div>
                 <?php endforeach; ?>
                 <?php else: ?>
-                <div class="modal-empty-state" style="text-align: center; padding: var(--space-lg); color: var(--color-text-secondary);">
-                    <i data-lucide="info" style="width: 32px; height: 32px; margin-bottom: var(--space-sm); opacity: 0.5;"></i>
+                <div class="modal-empty-state">
+                    <i data-lucide="info"></i>
                     <p>Inga tävlingar hittades för beräkning ännu.</p>
-                    <p style="font-size: var(--text-xs); margin-top: var(--space-xs);">Rankingpoäng baseras på dina resultat i Gravity-tävlingar.</p>
+                    <p class="modal-empty-hint">Rankingpoäng baseras på dina resultat i Gravity-tävlingar.</p>
                 </div>
                 <?php endif; ?>
             </div>
 
             <!-- Close button at bottom for better mobile UX -->
-            <div style="padding: var(--space-md) var(--space-lg); border-top: 1px solid #e5e7eb; text-align: center;">
-                <button type="button" onclick="closeRankingModal()" style="
-                    display: inline-flex;
-                    align-items: center;
-                    justify-content: center;
-                    gap: var(--space-xs);
-                    padding: var(--space-sm) var(--space-xl);
-                    background: var(--color-bg-sunken, #f3f4f6);
-                    border: 1px solid #e5e7eb;
-                    border-radius: var(--radius-md);
-                    font-size: var(--text-sm);
-                    font-weight: 500;
-                    color: #171717;
-                    cursor: pointer;
-                ">
-                    <i data-lucide="x" style="width: 18px; height: 18px;"></i>
+            <div class="modal-close-footer">
+                <button type="button" onclick="closeRankingModal()" class="modal-close-btn">
+                    <i data-lucide="x"></i>
                     Stäng
                 </button>
             </div>
