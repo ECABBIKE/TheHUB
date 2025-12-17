@@ -73,6 +73,17 @@
     font-size: var(--text-xl);
     font-weight: var(--weight-bold);
     margin: 0 0 var(--space-2xs);
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    flex-wrap: wrap;
+}
+
+.profile-flag {
+    height: 18px;
+    width: auto;
+    border-radius: 2px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
 }
 
 .profile-age-large {
@@ -1219,25 +1230,211 @@
         width: calc(100% + (2 * var(--container-padding, 16px)));
     }
 
+    /* Profile card mobile - compact badges */
+    .profile-card-v3 {
+        padding: var(--space-md);
+        gap: var(--space-sm);
+    }
+
+    .profile-id-badges {
+        gap: var(--space-xs);
+    }
+
+    .id-badge-box {
+        padding: var(--space-xs) var(--space-sm);
+    }
+
+    .id-badge-label {
+        font-size: 10px;
+        margin-bottom: 2px;
+    }
+
+    .id-badge-value {
+        font-size: var(--text-sm);
+    }
+
+    /* Ranking card mobile - compact */
+    .ranking-card-v3 {
+        padding: var(--space-md);
+        gap: var(--space-sm);
+    }
+
     .ranking-position-huge {
-        font-size: 3rem;
-    }
-
-    .form-points-huge {
         font-size: 2.5rem;
     }
 
-    /* Series panel mobile adjustments */
+    .ranking-points-display {
+        margin-top: -4px;
+    }
+
+    .ranking-progress-bar-v3 {
+        margin-top: var(--space-xs);
+    }
+
+    .btn-calc-ranking {
+        padding: var(--space-xs);
+        font-size: 11px;
+    }
+
+    /* Form card mobile - compact */
+    .form-card-v3 {
+        padding: var(--space-md);
+        gap: var(--space-sm);
+    }
+
+    .form-avg-number {
+        font-size: 1.75rem;
+    }
+
+    .form-mini-chart {
+        min-height: 40px;
+    }
+
+    .form-last-5 {
+        gap: 4px;
+    }
+
+    .form-medal-icon {
+        width: 24px;
+        height: 24px;
+    }
+
+    .form-position-badge {
+        width: 24px;
+        height: 24px;
+        font-size: 11px;
+    }
+
+    /* Series card mobile - compact */
+    .series-card-v3 {
+        padding: var(--space-md);
+    }
+
+    .series-panel-v3 {
+        margin-top: var(--space-sm);
+    }
+
+    .series-position-header {
+        margin-bottom: var(--space-sm);
+    }
+
     .series-rank-number {
-        font-size: 2.5rem;
+        font-size: 2rem;
+    }
+
+    .series-rank-text {
+        font-size: var(--text-sm);
+    }
+
+    .series-progress-bar {
+        margin-bottom: var(--space-sm);
     }
 
     .series-stats-grid {
-        grid-template-columns: repeat(2, 1fr);
+        grid-template-columns: repeat(4, 1fr);
+        gap: var(--space-xs);
+        margin-bottom: var(--space-sm);
+    }
+
+    .series-stat-box {
+        padding: var(--space-xs);
+    }
+
+    .series-stat-box .stat-value {
+        font-size: var(--text-base);
+    }
+
+    .series-stat-box .stat-label {
+        font-size: 10px;
+        margin-top: 2px;
+    }
+
+    .series-events-list {
+        padding-top: var(--space-sm);
+    }
+
+    .series-events-header {
+        font-size: 12px;
+        margin-bottom: var(--space-xs);
+    }
+
+    .series-event-row {
+        padding: var(--space-xs);
+        gap: var(--space-sm);
+    }
+
+    .event-date-col {
+        min-width: 32px;
+    }
+
+    .event-day {
+        font-size: var(--text-base);
+    }
+
+    .event-month {
+        font-size: 10px;
+    }
+
+    .event-name {
+        font-size: 13px;
+    }
+
+    .event-position {
+        min-width: 28px;
+        padding: 2px var(--space-xs);
+        font-size: 12px;
+    }
+
+    .event-points {
+        font-size: 12px;
     }
 
     .series-tab-btn {
         font-size: var(--text-xs);
+        padding: var(--space-xs) var(--space-sm);
+    }
+
+    /* History card mobile - no scroll, show all */
+    .history-card-full {
+        padding: var(--space-md);
+    }
+
+    .results-list-compact {
+        max-height: none !important;
+        overflow: visible !important;
+    }
+
+    .result-row {
+        padding: var(--space-xs) 0;
+        gap: var(--space-xs);
+    }
+
+    .result-pos {
+        width: 28px;
+        height: 28px;
+        font-size: 12px;
+    }
+
+    .result-date {
+        font-size: 12px;
+        width: 40px;
+    }
+
+    .result-name {
+        font-size: 13px;
+    }
+
+    .result-series {
+        display: none;
+    }
+
+    .year-divider {
+        margin-top: var(--space-sm);
+        padding: var(--space-xs) 0;
+    }
+
+    .year-label {
+        font-size: 12px;
     }
 
     /* Ranking Modal Mobile - Compact Design */
