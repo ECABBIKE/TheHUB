@@ -575,25 +575,26 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
                     <?php if ($rider['club_name']): ?>
                     <a href="/club/<?= $rider['club_id'] ?>" class="profile-club-link"><?= htmlspecialchars($rider['club_name']) ?></a>
                     <?php endif; ?>
+
+                    <!-- ID Numbers as text -->
+                    <div class="profile-ids-text">
+                        <?php if ($rider['license_number']): ?>
+                        <span class="profile-id-text">UCI: <?= htmlspecialchars($rider['license_number']) ?></span>
+                        <?php endif; ?>
+                    </div>
                 </div>
             </div>
 
-            <!-- ID Badges Row -->
+            <!-- ID Badges Row - Only Licens and Gravity ID -->
             <div class="profile-id-badges">
-                <div class="id-badge-box year-badge">
-                    <span class="id-badge-label">Aktiv</span>
+                <div class="id-badge-box license-badge">
+                    <span class="id-badge-label">Licens</span>
                     <span class="id-badge-value"><?= date('Y') ?></span>
                 </div>
                 <?php if ($gidNumber): ?>
                 <div class="id-badge-box gravity-id">
                     <span class="id-badge-label">Gravity ID</span>
                     <span class="id-badge-value">#<?= htmlspecialchars($gidNumber) ?></span>
-                </div>
-                <?php endif; ?>
-                <?php if ($rider['license_number']): ?>
-                <div class="id-badge-box uci-badge">
-                    <span class="id-badge-label">UCI</span>
-                    <span class="id-badge-value"><?= htmlspecialchars($rider['license_number']) ?></span>
                 </div>
                 <?php endif; ?>
             </div>

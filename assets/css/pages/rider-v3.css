@@ -104,6 +104,21 @@
     text-decoration: underline;
 }
 
+/* ID Numbers as text under club */
+.profile-ids-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin-top: var(--space-xs);
+}
+
+.profile-id-text {
+    font-size: var(--text-xs);
+    color: var(--color-text-muted);
+    font-family: var(--font-mono, monospace);
+    letter-spacing: 0.5px;
+}
+
 /* ID Badges */
 .profile-id-badges {
     display: flex;
@@ -118,22 +133,20 @@
     text-align: center;
 }
 
-.id-badge-box.year-badge {
+.id-badge-box.license-badge {
     background: linear-gradient(135deg, rgba(97, 206, 112, 0.15) 0%, rgba(97, 206, 112, 0.05) 100%);
+    border: 1px solid rgba(97, 206, 112, 0.2);
 }
 
 .id-badge-box.gravity-id {
     background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
     color: white;
+    box-shadow: 0 2px 8px rgba(255, 165, 0, 0.3);
 }
 
 .id-badge-box.gravity-id .id-badge-label,
 .id-badge-box.gravity-id .id-badge-value {
     color: white;
-}
-
-.id-badge-box.uci-badge {
-    background: linear-gradient(135deg, rgba(97, 206, 112, 0.15) 0%, rgba(97, 206, 112, 0.05) 100%);
 }
 
 .id-badge-label {
@@ -1222,12 +1235,14 @@
     .highlights-card-v3,
     .achievements-card-v3,
     .history-card-full {
-        margin-left: calc(-1 * var(--container-padding, 16px));
-        margin-right: calc(-1 * var(--container-padding, 16px));
         border-radius: 0 !important;
         border-left: none !important;
         border-right: none !important;
-        width: calc(100% + (2 * var(--container-padding, 16px)));
+        /* Use 100vw to span full viewport width, offset by scroll bar */
+        width: 100vw !important;
+        margin-left: 50% !important;
+        transform: translateX(-50%);
+        max-width: none !important;
     }
 
     /* Profile card mobile - compact badges */
