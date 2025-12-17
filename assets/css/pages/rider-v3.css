@@ -1225,7 +1225,7 @@
         order: 1;
     }
 
-    /* Edge-to-edge design för alla kort på mobil */
+    /* Edge-to-edge design för alla kort på mobil - styrs av --container-padding från branding */
     .card,
     .profile-card-v3,
     .form-card-v3,
@@ -1235,12 +1235,12 @@
     .highlights-card-v3,
     .achievements-card-v3,
     .history-card-full {
-        margin-left: -16px !important;
-        margin-right: -16px !important;
-        border-radius: 0 !important;
+        margin-left: calc(-1 * var(--container-padding, 16px)) !important;
+        margin-right: calc(-1 * var(--container-padding, 16px)) !important;
+        border-radius: var(--radius-md, 0) !important;
         border-left: none !important;
         border-right: none !important;
-        width: calc(100% + 32px) !important;
+        width: calc(100% + (2 * var(--container-padding, 16px))) !important;
     }
 
     /* Profile card mobile - compact badges */
