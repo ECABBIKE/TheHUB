@@ -492,6 +492,54 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
 ?>
 
 <link rel="stylesheet" href="/assets/css/pages/rider-v3.css?v=<?= filemtime(__DIR__ . '/../assets/css/pages/rider-v3.css') ?>">
+<style>
+/* Medal icons in form card */
+.form-medal-icon {
+    width: 24px;
+    height: 24px;
+}
+.form-position-badge {
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: 600;
+    background: var(--color-bg-sunken);
+    border-radius: var(--radius-full);
+    color: var(--color-text-secondary);
+}
+/* Slimmer cards on mobile */
+@media (max-width: 599px) {
+    .card {
+        padding: var(--space-sm) !important;
+    }
+    .card-section-title-sm {
+        font-size: 0.75rem;
+        margin-bottom: var(--space-xs);
+    }
+    .form-avg-compact {
+        margin-bottom: var(--space-xs);
+    }
+    .form-avg-number {
+        font-size: 1.5rem;
+    }
+    .form-mini-chart {
+        height: 60px;
+        margin-bottom: var(--space-xs);
+    }
+    .form-last-5 {
+        gap: var(--space-2xs);
+    }
+    .highlights-card-v3 {
+        padding: var(--space-sm);
+    }
+    .highlight-item-v3 {
+        padding: var(--space-xs) 0;
+    }
+}
+</style>
 
 <!-- New 2-Column Layout -->
 <div class="rider-profile-layout">
@@ -789,10 +837,18 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
                 <?php } ?>
             </div>
 
-            <!-- Last 5 results -->
+            <!-- Last 5 results as medals -->
             <div class="form-last-5">
                 <?php foreach ($last5 as $fr): ?>
-                <div class="form-position-badge p<?= $fr['position'] ?>"><?= $fr['position'] ?></div>
+                <?php if ($fr['position'] == 1): ?>
+                    <img src="/assets/icons/medal-1st.svg" alt="1:a" class="form-medal-icon">
+                <?php elseif ($fr['position'] == 2): ?>
+                    <img src="/assets/icons/medal-2nd.svg" alt="2:a" class="form-medal-icon">
+                <?php elseif ($fr['position'] == 3): ?>
+                    <img src="/assets/icons/medal-3rd.svg" alt="3:e" class="form-medal-icon">
+                <?php else: ?>
+                    <div class="form-position-badge"><?= $fr['position'] ?></div>
+                <?php endif; ?>
                 <?php endforeach; ?>
             </div>
             <?php endif; ?>
