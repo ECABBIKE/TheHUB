@@ -381,37 +381,13 @@ try {
             $rankingPoints = $riderRankingDetails['total_ranking_points'] ?? 0;
             $rankingPosition = $riderRankingDetails['ranking_position'] ?? null;
 
-            // Get events that contribute to ranking (top 5 results)
-            try {
-                $rankingEventsStmt = $db->prepare("
-                    SELECT
-                        e.id,
-                        e.name as event_name,
-                        e.date as event_date,
-                        r.position,
-                        r.points as base_points,
-                        r.points as weighted_points,
-                        r.class_id,
-                        cls.display_name as class_name,
-                        e.event_level,
-                        1.0 as level_multiplier,
-                        1.0 as field_multiplier,
-                        1.0 as time_multiplier
-                    FROM results r
-                    JOIN events e ON r.event_id = e.id
-                    LEFT JOIN classes cls ON r.class_id = cls.id
-                    WHERE r.cyclist_id = ?
-                        AND r.status = 'finished'
-                        AND e.discipline = 'GRAVITY'
-                        AND YEAR(e.date) = YEAR(CURDATE())
-                    ORDER BY r.points DESC
-                    LIMIT 5
-                ");
-                $rankingEventsStmt->execute([$riderId]);
-                $rankingEvents = $rankingEventsStmt->fetchAll(PDO::FETCH_ASSOC);
-            } catch (Exception $e) {
-                $rankingEvents = [];
-            }
+            // Use events from ranking details (already has multipliers calculated)
+            // Sort by weighted_points and take top results
+            $allEvents = $riderRankingDetails['events'] ?? [];
+            usort($allEvents, function($a, $b) {
+                return ($b['weighted_points'] ?? 0) <=> ($a['weighted_points'] ?? 0);
+            });
+            $rankingEvents = array_slice($allEvents, 0, 10); // Top 10 events
         }
     }
 
@@ -516,6 +492,54 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
 ?>
 
 <link rel="stylesheet" href="/assets/css/pages/rider-v3.css?v=<?= filemtime(__DIR__ . '/../assets/css/pages/rider-v3.css') ?>">
+<style>
+/* Medal icons in form card */
+.form-medal-icon {
+    width: 24px;
+    height: 24px;
+}
+.form-position-badge {
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: 600;
+    background: var(--color-bg-sunken);
+    border-radius: var(--radius-full);
+    color: var(--color-text-secondary);
+}
+/* Slimmer cards on mobile */
+@media (max-width: 599px) {
+    .card {
+        padding: var(--space-sm) !important;
+    }
+    .card-section-title-sm {
+        font-size: 0.75rem;
+        margin-bottom: var(--space-xs);
+    }
+    .form-avg-compact {
+        margin-bottom: var(--space-xs);
+    }
+    .form-avg-number {
+        font-size: 1.5rem;
+    }
+    .form-mini-chart {
+        height: 60px;
+        margin-bottom: var(--space-xs);
+    }
+    .form-last-5 {
+        gap: var(--space-2xs);
+    }
+    .highlights-card-v3 {
+        padding: var(--space-sm);
+    }
+    .highlight-item-v3 {
+        padding: var(--space-xs) 0;
+    }
+}
+</style>
 
 <!-- New 2-Column Layout -->
 <div class="rider-profile-layout">
@@ -813,10 +837,18 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
                 <?php } ?>
             </div>
 
-            <!-- Last 5 results -->
+            <!-- Last 5 results as medals -->
             <div class="form-last-5">
                 <?php foreach ($last5 as $fr): ?>
-                <div class="form-position-badge p<?= $fr['position'] ?>"><?= $fr['position'] ?></div>
+                <?php if ($fr['position'] == 1): ?>
+                    <img src="/assets/icons/medal-1st.svg" alt="1:a" class="form-medal-icon">
+                <?php elseif ($fr['position'] == 2): ?>
+                    <img src="/assets/icons/medal-2nd.svg" alt="2:a" class="form-medal-icon">
+                <?php elseif ($fr['position'] == 3): ?>
+                    <img src="/assets/icons/medal-3rd.svg" alt="3:e" class="form-medal-icon">
+                <?php else: ?>
+                    <div class="form-position-badge"><?= $fr['position'] ?></div>
+                <?php endif; ?>
                 <?php endforeach; ?>
             </div>
             <?php endif; ?>
@@ -1064,8 +1096,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
 <?php if ($rankingPosition): ?>
 <!-- Ranking Calculation Modal -->
-<div id="rankingModal" class="ranking-modal-overlay">
-    <div class="ranking-modal">
+<div id="rankingModal" class="ranking-modal-overlay" style="padding-top: var(--header-height, 60px);">
+    <div class="ranking-modal" style="max-height: calc(100vh - var(--header-height, 60px) - var(--space-lg, 24px));">
         <div class="ranking-modal-header">
             <h3>
                 <i data-lucide="calculator"></i>
@@ -1127,6 +1159,27 @@ document.addEventListener('DOMContentLoaded', function() {
                     <p style="font-size: var(--text-xs); margin-top: var(--space-xs);">Rankingpoäng baseras på dina resultat i Gravity-tävlingar.</p>
                 </div>
                 <?php endif; ?>
+            </div>
+
+            <!-- Close button at bottom for better mobile UX -->
+            <div style="padding: var(--space-md) var(--space-lg); border-top: 1px solid #e5e7eb; text-align: center;">
+                <button type="button" onclick="closeRankingModal()" style="
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    gap: var(--space-xs);
+                    padding: var(--space-sm) var(--space-xl);
+                    background: var(--color-bg-sunken, #f3f4f6);
+                    border: 1px solid #e5e7eb;
+                    border-radius: var(--radius-md);
+                    font-size: var(--text-sm);
+                    font-weight: 500;
+                    color: #171717;
+                    cursor: pointer;
+                ">
+                    <i data-lucide="x" style="width: 18px; height: 18px;"></i>
+                    Stäng
+                </button>
             </div>
         </div>
     </div>
