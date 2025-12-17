@@ -1137,7 +1137,7 @@
 }
 
 .modal-calc-label {
-    color: #6b7280;
+    color: #4b5563;
     font-weight: 500;
 }
 
@@ -1147,7 +1147,7 @@
 }
 
 .modal-calc-value.dim {
-    opacity: 0.5;
+    color: #6b7280;
 }
 
 .modal-calc-op {
