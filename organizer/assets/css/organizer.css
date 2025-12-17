@@ -1,0 +1,836 @@
+/**
+ * Organizer Registration App - iPad-optimerad CSS
+ *
+ * Designprinciper:
+ * - Stora touch-targets (minst 48px, helst 60px+)
+ * - Stor text för läsbarhet utomhus
+ * - Tydliga kontraster
+ * - Minimal scrollning
+ * - Snabb interaktion
+ */
+
+/* =============================================================================
+   CSS VARIABLER - ÄRVER FRÅN base.css MEN ÖVERSKRIVER FÖR TOUCH
+   ============================================================================= */
+
+:root {
+    /* Använd befintliga variabler från TheHUB */
+    --org-touch-min: 56px;
+    --org-touch-large: 72px;
+    --org-font-large: 20px;
+    --org-font-xlarge: 24px;
+    --org-font-xxlarge: 32px;
+
+    /* Status-färger med bra kontrast */
+    --org-status-paid: #16a34a;
+    --org-status-pending: #ea580c;
+    --org-status-unpaid: #dc2626;
+}
+
+/* =============================================================================
+   GRUNDLÄGGANDE LAYOUT
+   ============================================================================= */
+
+* {
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+}
+
+html, body {
+    margin: 0;
+    padding: 0;
+    min-height: 100vh;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-size: var(--org-font-large);
+    background: var(--color-star-fade, #f9f9f9);
+    color: var(--color-primary, #171717);
+    -webkit-font-smoothing: antialiased;
+}
+
+.org-app {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+/* =============================================================================
+   HEADER
+   ============================================================================= */
+
+.org-header {
+    background: var(--color-primary, #171717);
+    color: white;
+    padding: var(--space-md, 16px) var(--space-lg, 24px);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+.org-header__title {
+    font-size: var(--org-font-xlarge);
+    font-weight: 600;
+    margin: 0;
+}
+
+.org-header__subtitle {
+    font-size: 16px;
+    opacity: 0.7;
+    margin-top: 4px;
+}
+
+.org-header__actions {
+    display: flex;
+    gap: var(--space-sm, 8px);
+}
+
+/* =============================================================================
+   MAIN CONTENT
+   ============================================================================= */
+
+.org-main {
+    flex: 1;
+    padding: var(--space-lg, 24px);
+    max-width: 1200px;
+    margin: 0 auto;
+    width: 100%;
+}
+
+/* =============================================================================
+   KNAPPAR - STORA TOUCH TARGETS
+   ============================================================================= */
+
+.org-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-sm, 8px);
+    min-height: var(--org-touch-min);
+    padding: var(--space-md, 16px) var(--space-lg, 24px);
+    font-size: var(--org-font-large);
+    font-weight: 600;
+    border: none;
+    border-radius: var(--radius-md, 10px);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.org-btn:active {
+    transform: scale(0.98);
+}
+
+.org-btn--primary {
+    background: var(--color-accent, #61CE70);
+    color: white;
+}
+
+.org-btn--primary:hover {
+    background: #4fb85e;
+}
+
+.org-btn--secondary {
+    background: var(--color-secondary, #323539);
+    color: white;
+}
+
+.org-btn--secondary:hover {
+    background: #3d4247;
+}
+
+.org-btn--danger {
+    background: var(--color-danger, #ef4444);
+    color: white;
+}
+
+.org-btn--ghost {
+    background: transparent;
+    color: var(--color-primary, #171717);
+    border: 2px solid var(--color-border, #e5e7eb);
+}
+
+.org-btn--ghost:hover {
+    background: var(--color-star-fade, #f9f9f9);
+}
+
+.org-btn--large {
+    min-height: var(--org-touch-large);
+    font-size: var(--org-font-xlarge);
+    padding: var(--space-lg, 24px) var(--space-xl, 32px);
+}
+
+.org-btn--block {
+    width: 100%;
+}
+
+.org-btn--icon {
+    min-width: var(--org-touch-min);
+    padding: var(--space-md, 16px);
+}
+
+.org-btn[disabled] {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* =============================================================================
+   FORMULÄR - STORA INPUTS
+   ============================================================================= */
+
+.org-form-group {
+    margin-bottom: var(--space-lg, 24px);
+}
+
+.org-label {
+    display: block;
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: var(--space-sm, 8px);
+    color: var(--color-secondary, #323539);
+}
+
+.org-input,
+.org-select {
+    width: 100%;
+    min-height: var(--org-touch-min);
+    padding: var(--space-md, 16px);
+    font-size: var(--org-font-large);
+    border: 2px solid var(--color-border, #e5e7eb);
+    border-radius: var(--radius-md, 10px);
+    background: white;
+    color: var(--color-primary, #171717);
+    transition: border-color 0.15s ease;
+}
+
+.org-input:focus,
+.org-select:focus {
+    outline: none;
+    border-color: var(--color-accent, #61CE70);
+}
+
+.org-input::placeholder {
+    color: var(--color-text, #7A7A7A);
+}
+
+.org-input--large {
+    min-height: var(--org-touch-large);
+    font-size: var(--org-font-xlarge);
+}
+
+/* Sökfält med ikon */
+.org-search {
+    position: relative;
+}
+
+.org-search__icon {
+    position: absolute;
+    left: var(--space-md, 16px);
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--color-text, #7A7A7A);
+    pointer-events: none;
+}
+
+.org-search .org-input {
+    padding-left: 52px;
+}
+
+/* =============================================================================
+   KORT & PANELER
+   ============================================================================= */
+
+.org-card {
+    background: white;
+    border-radius: var(--radius-lg, 16px);
+    box-shadow: var(--shadow-md, 0 4px 12px rgba(0,0,0,0.08));
+    overflow: hidden;
+}
+
+.org-card__header {
+    padding: var(--space-lg, 24px);
+    border-bottom: 1px solid var(--color-border, #e5e7eb);
+}
+
+.org-card__title {
+    font-size: var(--org-font-xlarge);
+    font-weight: 600;
+    margin: 0;
+}
+
+.org-card__body {
+    padding: var(--space-lg, 24px);
+}
+
+.org-card--highlight {
+    border: 3px solid var(--color-accent, #61CE70);
+}
+
+/* =============================================================================
+   EVENT-LISTA
+   ============================================================================= */
+
+.org-event-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md, 16px);
+}
+
+.org-event-card {
+    background: white;
+    border-radius: var(--radius-lg, 16px);
+    padding: var(--space-lg, 24px);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: var(--shadow-sm, 0 1px 2px rgba(0,0,0,0.05));
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    text-decoration: none;
+    color: inherit;
+}
+
+.org-event-card:hover {
+    border-color: var(--color-accent, #61CE70);
+    box-shadow: var(--shadow-md, 0 4px 12px rgba(0,0,0,0.08));
+}
+
+.org-event-card:active {
+    transform: scale(0.99);
+}
+
+.org-event-card__info {
+    flex: 1;
+}
+
+.org-event-card__name {
+    font-size: var(--org-font-xlarge);
+    font-weight: 600;
+    margin: 0 0 8px 0;
+}
+
+.org-event-card__meta {
+    font-size: 18px;
+    color: var(--color-text, #7A7A7A);
+}
+
+.org-event-card__count {
+    background: var(--color-star-fade, #f9f9f9);
+    padding: var(--space-sm, 8px) var(--space-md, 16px);
+    border-radius: var(--radius-md, 10px);
+    font-size: 18px;
+    font-weight: 600;
+}
+
+/* =============================================================================
+   ÅKAR-LISTA (sökresultat)
+   ============================================================================= */
+
+.org-rider-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm, 8px);
+}
+
+.org-rider-item {
+    background: white;
+    border: 2px solid var(--color-border, #e5e7eb);
+    border-radius: var(--radius-md, 10px);
+    padding: var(--space-md, 16px) var(--space-lg, 24px);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.org-rider-item:hover {
+    border-color: var(--color-accent, #61CE70);
+    background: var(--color-star-fade, #f9f9f9);
+}
+
+.org-rider-item:active {
+    transform: scale(0.99);
+}
+
+.org-rider-item__name {
+    font-size: var(--org-font-large);
+    font-weight: 600;
+}
+
+.org-rider-item__details {
+    font-size: 16px;
+    color: var(--color-text, #7A7A7A);
+    margin-top: 4px;
+}
+
+/* =============================================================================
+   KLASS-VÄLJARE
+   ============================================================================= */
+
+.org-class-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: var(--space-md, 16px);
+}
+
+.org-class-btn {
+    background: white;
+    border: 2px solid var(--color-border, #e5e7eb);
+    border-radius: var(--radius-lg, 16px);
+    padding: var(--space-lg, 24px);
+    text-align: left;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.org-class-btn:hover {
+    border-color: var(--color-accent, #61CE70);
+}
+
+.org-class-btn:active {
+    transform: scale(0.98);
+}
+
+.org-class-btn--selected {
+    border-color: var(--color-accent, #61CE70);
+    background: rgba(97, 206, 112, 0.1);
+}
+
+.org-class-btn__name {
+    font-size: var(--org-font-xlarge);
+    font-weight: 600;
+    margin: 0 0 8px 0;
+}
+
+.org-class-btn__price {
+    font-size: var(--org-font-large);
+    color: var(--color-accent, #61CE70);
+    font-weight: 600;
+}
+
+/* =============================================================================
+   BETALNING
+   ============================================================================= */
+
+.org-payment {
+    text-align: center;
+}
+
+.org-payment__amount {
+    font-size: var(--org-font-xxlarge);
+    font-weight: 700;
+    margin-bottom: var(--space-lg, 24px);
+}
+
+.org-payment__qr {
+    background: white;
+    padding: var(--space-lg, 24px);
+    border-radius: var(--radius-lg, 16px);
+    display: inline-block;
+    margin-bottom: var(--space-lg, 24px);
+}
+
+.org-payment__qr img {
+    width: 200px;
+    height: 200px;
+}
+
+.org-payment__swish-info {
+    font-size: 18px;
+    color: var(--color-text, #7A7A7A);
+    margin-bottom: var(--space-lg, 24px);
+}
+
+.org-payment__swish-number {
+    font-size: var(--org-font-xlarge);
+    font-weight: 600;
+    font-family: monospace;
+}
+
+.org-payment__actions {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md, 16px);
+    max-width: 400px;
+    margin: 0 auto;
+}
+
+/* =============================================================================
+   BEKRÄFTELSE
+   ============================================================================= */
+
+.org-confirmation {
+    text-align: center;
+    padding: var(--space-2xl, 48px) var(--space-lg, 24px);
+}
+
+.org-confirmation__icon {
+    width: 80px;
+    height: 80px;
+    background: var(--color-accent, #61CE70);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto var(--space-lg, 24px);
+}
+
+.org-confirmation__icon svg {
+    width: 48px;
+    height: 48px;
+    color: white;
+}
+
+.org-confirmation__title {
+    font-size: var(--org-font-xxlarge);
+    font-weight: 700;
+    margin: 0 0 var(--space-md, 16px) 0;
+}
+
+.org-confirmation__bib {
+    font-size: 64px;
+    font-weight: 800;
+    color: var(--color-accent, #61CE70);
+    margin: var(--space-lg, 24px) 0;
+}
+
+/* =============================================================================
+   DELTAGARLISTA
+   ============================================================================= */
+
+.org-participant-list {
+    display: flex;
+    flex-direction: column;
+}
+
+.org-participant-row {
+    display: grid;
+    grid-template-columns: 80px 1fr 150px 120px;
+    gap: var(--space-md, 16px);
+    padding: var(--space-md, 16px) var(--space-lg, 24px);
+    align-items: center;
+    border-bottom: 1px solid var(--color-border, #e5e7eb);
+}
+
+.org-participant-row:last-child {
+    border-bottom: none;
+}
+
+.org-participant-row--header {
+    background: var(--color-star-fade, #f9f9f9);
+    font-weight: 600;
+    font-size: 16px;
+    color: var(--color-text, #7A7A7A);
+}
+
+.org-participant__bib {
+    font-size: var(--org-font-xlarge);
+    font-weight: 700;
+    text-align: center;
+}
+
+.org-participant__name {
+    font-size: var(--org-font-large);
+    font-weight: 600;
+}
+
+.org-participant__class {
+    font-size: 18px;
+    color: var(--color-text, #7A7A7A);
+}
+
+/* =============================================================================
+   STATUS BADGES
+   ============================================================================= */
+
+.org-status {
+    display: inline-flex;
+    align-items: center;
+    padding: var(--space-xs, 4px) var(--space-sm, 8px);
+    border-radius: var(--radius-sm, 6px);
+    font-size: 14px;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.org-status--paid {
+    background: rgba(22, 163, 74, 0.15);
+    color: var(--org-status-paid);
+}
+
+.org-status--pending {
+    background: rgba(234, 88, 12, 0.15);
+    color: var(--org-status-pending);
+}
+
+.org-status--unpaid {
+    background: rgba(220, 38, 38, 0.15);
+    color: var(--org-status-unpaid);
+}
+
+/* =============================================================================
+   STATISTIK
+   ============================================================================= */
+
+.org-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: var(--space-md, 16px);
+    margin-bottom: var(--space-lg, 24px);
+}
+
+.org-stat {
+    background: white;
+    border-radius: var(--radius-md, 10px);
+    padding: var(--space-md, 16px);
+    text-align: center;
+}
+
+.org-stat__value {
+    font-size: var(--org-font-xxlarge);
+    font-weight: 700;
+    color: var(--color-accent, #61CE70);
+}
+
+.org-stat__label {
+    font-size: 16px;
+    color: var(--color-text, #7A7A7A);
+    margin-top: 4px;
+}
+
+/* =============================================================================
+   MODAL / ÖVERLAGER
+   ============================================================================= */
+
+.org-modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-lg, 24px);
+    z-index: 1000;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.2s ease;
+}
+
+.org-modal.active {
+    opacity: 1;
+    visibility: visible;
+}
+
+.org-modal__content {
+    background: white;
+    border-radius: var(--radius-lg, 16px);
+    max-width: 600px;
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+    transform: scale(0.95);
+    transition: transform 0.2s ease;
+}
+
+.org-modal.active .org-modal__content {
+    transform: scale(1);
+}
+
+.org-modal__header {
+    padding: var(--space-lg, 24px);
+    border-bottom: 1px solid var(--color-border, #e5e7eb);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.org-modal__title {
+    font-size: var(--org-font-xlarge);
+    font-weight: 600;
+    margin: 0;
+}
+
+.org-modal__body {
+    padding: var(--space-lg, 24px);
+}
+
+.org-modal__footer {
+    padding: var(--space-lg, 24px);
+    border-top: 1px solid var(--color-border, #e5e7eb);
+    display: flex;
+    gap: var(--space-md, 16px);
+    justify-content: flex-end;
+}
+
+/* =============================================================================
+   LOGIN-SIDA
+   ============================================================================= */
+
+.org-login {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-lg, 24px);
+    background: linear-gradient(135deg, var(--color-primary, #171717) 0%, var(--color-secondary, #323539) 100%);
+}
+
+.org-login__box {
+    background: white;
+    border-radius: var(--radius-lg, 16px);
+    padding: var(--space-2xl, 48px);
+    width: 100%;
+    max-width: 480px;
+    box-shadow: var(--shadow-lg, 0 10px 30px rgba(0,0,0,0.12));
+}
+
+.org-login__logo {
+    text-align: center;
+    margin-bottom: var(--space-xl, 32px);
+}
+
+.org-login__logo img {
+    height: 60px;
+}
+
+.org-login__title {
+    font-size: var(--org-font-xxlarge);
+    font-weight: 700;
+    text-align: center;
+    margin: 0 0 var(--space-xs, 4px) 0;
+}
+
+.org-login__subtitle {
+    font-size: 18px;
+    color: var(--color-text, #7A7A7A);
+    text-align: center;
+    margin: 0 0 var(--space-xl, 32px) 0;
+}
+
+/* =============================================================================
+   ALERTS
+   ============================================================================= */
+
+.org-alert {
+    padding: var(--space-md, 16px) var(--space-lg, 24px);
+    border-radius: var(--radius-md, 10px);
+    margin-bottom: var(--space-lg, 24px);
+    font-size: 18px;
+}
+
+.org-alert--error {
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--color-danger, #ef4444);
+    border: 1px solid var(--color-danger, #ef4444);
+}
+
+.org-alert--success {
+    background: rgba(97, 206, 112, 0.1);
+    color: var(--color-accent, #61CE70);
+    border: 1px solid var(--color-accent, #61CE70);
+}
+
+.org-alert--warning {
+    background: rgba(245, 158, 11, 0.1);
+    color: var(--color-warning, #f59e0b);
+    border: 1px solid var(--color-warning, #f59e0b);
+}
+
+/* =============================================================================
+   STEG-INDIKATOR
+   ============================================================================= */
+
+.org-steps {
+    display: flex;
+    justify-content: center;
+    gap: var(--space-sm, 8px);
+    margin-bottom: var(--space-xl, 32px);
+}
+
+.org-step {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--color-border, #e5e7eb);
+}
+
+.org-step--active {
+    background: var(--color-accent, #61CE70);
+}
+
+.org-step--completed {
+    background: var(--color-accent, #61CE70);
+}
+
+/* =============================================================================
+   UTILITY CLASSES
+   ============================================================================= */
+
+.org-text-center { text-align: center; }
+.org-text-muted { color: var(--color-text, #7A7A7A); }
+.org-mt-md { margin-top: var(--space-md, 16px); }
+.org-mt-lg { margin-top: var(--space-lg, 24px); }
+.org-mb-md { margin-bottom: var(--space-md, 16px); }
+.org-mb-lg { margin-bottom: var(--space-lg, 24px); }
+.org-hidden { display: none !important; }
+.org-flex { display: flex; }
+.org-flex-center { align-items: center; justify-content: center; }
+.org-gap-md { gap: var(--space-md, 16px); }
+.org-gap-lg { gap: var(--space-lg, 24px); }
+
+/* =============================================================================
+   LOADING SPINNER
+   ============================================================================= */
+
+.org-spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid var(--color-border, #e5e7eb);
+    border-top-color: var(--color-accent, #61CE70);
+    border-radius: 50%;
+    animation: org-spin 0.8s linear infinite;
+}
+
+@keyframes org-spin {
+    to { transform: rotate(360deg); }
+}
+
+/* =============================================================================
+   RESPONSIVE - MOBIL
+   ============================================================================= */
+
+@media (max-width: 768px) {
+    .org-main {
+        padding: var(--space-md, 16px);
+    }
+
+    .org-participant-row {
+        grid-template-columns: 60px 1fr 100px;
+    }
+
+    .org-participant-row > :nth-child(4) {
+        display: none;
+    }
+
+    .org-class-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* =============================================================================
+   LANDSCAPE IPAD SPECIFIKT
+   ============================================================================= */
+
+@media (min-width: 1024px) and (orientation: landscape) {
+    .org-class-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+
+    .org-participant-row {
+        grid-template-columns: 80px 1fr 180px 150px 120px;
+    }
+}
