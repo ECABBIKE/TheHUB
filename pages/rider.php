@@ -49,7 +49,7 @@ try {
     try {
         $stmt = $db->prepare("
             SELECT
-                r.id, r.firstname, r.lastname, r.birth_year, r.gender,
+                r.id, r.firstname, r.lastname, r.birth_year, r.gender, r.nationality,
                 r.license_number, r.license_type, r.license_year, r.license_valid_until, r.gravity_id, r.active,
                 r.social_instagram, r.social_facebook, r.social_strava, r.social_youtube, r.social_tiktok,
                 r.stats_total_starts, r.stats_total_finished, r.stats_total_wins, r.stats_total_podiums,
@@ -70,7 +70,7 @@ try {
     if (!$rider && !$hasNewColumns) {
         $stmt = $db->prepare("
             SELECT
-                r.id, r.firstname, r.lastname, r.birth_year, r.gender,
+                r.id, r.firstname, r.lastname, r.birth_year, r.gender, r.nationality,
                 r.license_number, r.license_type, r.license_year, r.license_valid_until, r.gravity_id, r.active,
                 c.id as club_id, c.name as club_name, c.city as club_city
             FROM riders r
@@ -560,7 +560,17 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
                     <?php endif; ?>
                 </div>
                 <div class="profile-info">
-                    <h1 class="profile-name-large"><?= $fullName ?></h1>
+                    <h1 class="profile-name-large">
+                        <?= $fullName ?>
+                        <?php
+                        $nationality = $rider['nationality'] ?? 'SWE';
+                        $countryCode = strtolower($nationality);
+                        ?>
+                        <img src="https://flagcdn.com/24x18/<?= $countryCode === 'swe' ? 'se' : ($countryCode === 'nor' ? 'no' : ($countryCode === 'den' ? 'dk' : ($countryCode === 'fin' ? 'fi' : $countryCode))) ?>.png"
+                             alt="<?= $nationality ?>"
+                             class="profile-flag"
+                             onerror="this.style.display='none'">
+                    </h1>
                     <?php if ($age): ?><span class="profile-age-large"><?= $age ?> år</span><?php endif; ?>
                     <?php if ($rider['club_name']): ?>
                     <a href="/club/<?= $rider['club_id'] ?>" class="profile-club-link"><?= htmlspecialchars($rider['club_name']) ?></a>
