@@ -1163,12 +1163,12 @@
     .highlights-card-v3,
     .achievements-card-v3,
     .history-card-full {
-        margin-left: -16px;
-        margin-right: -16px;
+        margin-left: calc(-1 * var(--container-padding, 16px));
+        margin-right: calc(-1 * var(--container-padding, 16px));
         border-radius: 0 !important;
         border-left: none !important;
         border-right: none !important;
-        width: calc(100% + 32px);
+        width: calc(100% + (2 * var(--container-padding, 16px)));
     }
 
     .ranking-position-huge {
