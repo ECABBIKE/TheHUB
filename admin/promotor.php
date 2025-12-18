@@ -393,7 +393,11 @@ $pageTitle = 'Mina Tävlingar';
                 </div>
 
                 <div class="event-actions">
-                    <a href="/admin/promotor-registrations.php?event_id=<?= $event['id'] ?>" class="btn btn-primary">
+                    <a href="/organizer/register.php?event=<?= $event['id'] ?>" class="btn btn-primary">
+                        <i data-lucide="user-plus"></i>
+                        Platsregistrering
+                    </a>
+                    <a href="/admin/promotor-registrations.php?event_id=<?= $event['id'] ?>" class="btn btn-secondary">
                         <i data-lucide="users"></i>
                         Anmälningar
                     </a>
@@ -423,6 +427,10 @@ $pageTitle = 'Mina Tävlingar';
         <a href="/admin/promotor.php" class="promotor-nav-link active">
             <i data-lucide="calendar-check"></i>
             <span>Tävlingar</span>
+        </a>
+        <a href="/organizer/" class="promotor-nav-link">
+            <i data-lucide="user-plus"></i>
+            <span>Platsreg</span>
         </a>
     </div>
 </nav>
