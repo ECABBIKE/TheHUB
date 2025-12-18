@@ -164,7 +164,7 @@ include __DIR__ . '/includes/header.php';
         <div id="pay-amount" style="font-size: 48px; font-weight: 700; margin-bottom: 24px;"></div>
 
         <div style="background: white; padding: 16px; border-radius: 12px; display: inline-block; margin-bottom: 16px;">
-            <img id="qr-code" src="https://chart.googleapis.com/chart?cht=qr&chs=200x200&chl=DEMO-BETALNING" alt="QR" style="width: 160px; height: 160px;">
+            <img id="qr-code" src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=DEMO-BETALNING" alt="QR" style="width: 160px; height: 160px;">
         </div>
 
         <div style="font-size: 24px; font-weight: 600; color: var(--color-accent); margin-bottom: 24px;">
