@@ -29,6 +29,13 @@ $filterClass = $_GET['class'] ?? '';
 // Hämta registreringar
 global $pdo;
 
+// Kolla om registration_source-kolumnen finns
+$hasSourceColumn = false;
+try {
+    $check = $pdo->query("SHOW COLUMNS FROM event_registrations LIKE 'registration_source'");
+    $hasSourceColumn = $check->rowCount() > 0;
+} catch (Exception $e) {}
+
 $sql = "
     SELECT er.*,
            r.firstname as rider_firstname, r.lastname as rider_lastname
@@ -38,10 +45,12 @@ $sql = "
 ";
 $params = [$eventId];
 
-if ($filterSource === 'onsite') {
-    $sql .= " AND er.registration_source = 'onsite'";
-} elseif ($filterSource === 'online') {
-    $sql .= " AND (er.registration_source = 'online' OR er.registration_source IS NULL)";
+if ($hasSourceColumn) {
+    if ($filterSource === 'onsite') {
+        $sql .= " AND er.registration_source = 'onsite'";
+    } elseif ($filterSource === 'online') {
+        $sql .= " AND (er.registration_source = 'online' OR er.registration_source IS NULL)";
+    }
 }
 
 if ($filterStatus === 'paid') {

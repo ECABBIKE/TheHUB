@@ -45,43 +45,80 @@ try {
         $bibNumber = ONSITE_BIB_PREFIX . $bibNumber;
     }
 
-    // Skapa registrering
-    $stmt = $pdo->prepare("
-        INSERT INTO event_registrations (
-            event_id, rider_id,
-            first_name, last_name, email, phone,
-            birth_year, gender, club_name, license_number,
-            category, bib_number,
-            status, payment_status,
-            registration_source, registered_by_user_id,
-            registration_date
-        ) VALUES (
-            ?, ?,
-            ?, ?, ?, ?,
-            ?, ?, ?, ?,
-            ?, ?,
-            'confirmed', ?,
-            'onsite', ?,
-            NOW()
-        )
-    ");
+    // Försök skapa registrering med nya kolumner
+    try {
+        $stmt = $pdo->prepare("
+            INSERT INTO event_registrations (
+                event_id, rider_id,
+                first_name, last_name, email, phone,
+                birth_year, gender, club_name, license_number,
+                category, bib_number,
+                status, payment_status,
+                registration_source, registered_by_user_id,
+                registration_date
+            ) VALUES (
+                ?, ?,
+                ?, ?, ?, ?,
+                ?, ?, ?, ?,
+                ?, ?,
+                'confirmed', ?,
+                'onsite', ?,
+                NOW()
+            )
+        ");
 
-    $stmt->execute([
-        $eventId,
-        $input['rider_id'] ?: null,
-        $firstName,
-        $lastName,
-        $input['email'] ?: null,
-        $input['phone'] ?: null,
-        $input['birth_year'] ?: null,
-        $input['gender'] ?: null,
-        $input['club_name'] ?: null,
-        $input['license_number'] ?: null,
-        $className,
-        $bibNumber,
-        $input['payment_status'] ?? 'unpaid',
-        $_SESSION['admin_id']
-    ]);
+        $stmt->execute([
+            $eventId,
+            $input['rider_id'] ?: null,
+            $firstName,
+            $lastName,
+            $input['email'] ?: null,
+            $input['phone'] ?: null,
+            $input['birth_year'] ?: null,
+            $input['gender'] ?: null,
+            $input['club_name'] ?: null,
+            $input['license_number'] ?: null,
+            $className,
+            $bibNumber,
+            $input['payment_status'] ?? 'unpaid',
+            $_SESSION['admin_id']
+        ]);
+    } catch (PDOException $e) {
+        // Fallback utan nya kolumner om de inte finns
+        $stmt = $pdo->prepare("
+            INSERT INTO event_registrations (
+                event_id, rider_id,
+                first_name, last_name, email, phone,
+                birth_year, gender, club_name, license_number,
+                category, bib_number,
+                status, payment_status,
+                registration_date
+            ) VALUES (
+                ?, ?,
+                ?, ?, ?, ?,
+                ?, ?, ?, ?,
+                ?, ?,
+                'confirmed', ?,
+                NOW()
+            )
+        ");
+
+        $stmt->execute([
+            $eventId,
+            $input['rider_id'] ?: null,
+            $firstName,
+            $lastName,
+            $input['email'] ?: null,
+            $input['phone'] ?: null,
+            $input['birth_year'] ?: null,
+            $input['gender'] ?: null,
+            $input['club_name'] ?: null,
+            $input['license_number'] ?: null,
+            $className,
+            $bibNumber,
+            $input['payment_status'] ?? 'unpaid'
+        ]);
+    }
 
     $registrationId = $pdo->lastInsertId();
 
