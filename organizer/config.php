@@ -129,21 +129,36 @@ function requireEventAccess(int $eventId) {
 }
 
 /**
- * Hämta events som användaren har tillgång till
+ * Hämta events som användaren har tillgång till via promotor_events
  */
 function getAccessibleEvents(): array {
     global $pdo;
 
-    // Hämta kommande events
+    $currentUser = getCurrentAdmin();
+    $userId = $currentUser['id'] ?? 0;
+
+    if (!$userId) {
+        return [];
+    }
+
+    // Hämta endast events som användaren är kopplad till via promotor_events
     $stmt = $pdo->prepare("
         SELECT e.*, s.name as series_name,
-               47 as registration_count
+               COALESCE(reg.registration_count, 0) as registration_count
         FROM events e
         LEFT JOIN series s ON e.series_id = s.id
-        WHERE e.active = 1 AND e.date >= CURDATE() - INTERVAL 7 DAY
+        JOIN promotor_events pe ON pe.event_id = e.id
+        LEFT JOIN (
+            SELECT event_id, COUNT(*) as registration_count
+            FROM event_registrations
+            GROUP BY event_id
+        ) reg ON reg.event_id = e.id
+        WHERE pe.user_id = ?
+          AND e.active = 1
+          AND e.date >= CURDATE() - INTERVAL 7 DAY
         ORDER BY e.date ASC
-        LIMIT 10
+        LIMIT 20
     ");
-    $stmt->execute();
+    $stmt->execute([$userId]);
     return $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
