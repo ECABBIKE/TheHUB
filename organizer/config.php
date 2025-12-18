@@ -2,62 +2,36 @@
 /**
  * Organizer Registration App - Configuration
  *
- * Fristående app för platsregistreringar på tävlingsdagen.
- * 100% iPad-optimerad för snabb hantering.
+ * DEMO VERSION - Förenklat skal för demonstration
+ * Full funktionalitet kommer efter anmälningsplattformen är klar
  */
 
 // Ladda huvudkonfigurationen
 require_once __DIR__ . '/../config.php';
 
-// Visa fel under utveckling (EFTER main config som sätter display_errors=0)
-ini_set('display_errors', '1');
-error_reporting(E_ALL);
-
-// Definiera hub_db() om den inte finns (krävs av payment.php)
-if (!function_exists('hub_db')) {
-    function hub_db() {
-        global $pdo;
-        return $pdo;
-    }
-}
-
-require_once __DIR__ . '/../includes/payment.php';
-
 // =============================================================================
 // APP-KONFIGURATION
 // =============================================================================
 
-// URL-konfiguration (ändra här om appen flyttas till subdomän)
 define('ORGANIZER_BASE_URL', SITE_URL . '/organizer');
 define('ORGANIZER_APP_NAME', 'Platsregistrering');
-
-// Startnummer-konfiguration
-define('ONSITE_BIB_PREFIX', ''); // Prefix för platsen-startnummer (t.ex. 'P' ger P001, P002...)
-define('ONSITE_BIB_START', 200); // Startnummer börjar från detta nummer om inget annat finns
-
-// Session-timeout för organizer (i sekunder) - längre än admin pga tävlingsdag
 define('ORGANIZER_SESSION_TIMEOUT', 28800); // 8 timmar
 
 // =============================================================================
-// HJÄLPFUNKTIONER
+// DEMO DATA
 // =============================================================================
 
 /**
- * Hämta event med alla klasser och priser
+ * Hämta demo-event
  */
 function getEventWithClasses(int $eventId): ?array {
     global $pdo;
 
-    // Hämta event
+    // Hämta riktigt event från databasen
     $stmt = $pdo->prepare("
-        SELECT e.*,
-               s.name as series_name,
-               v.name as venue_name,
-               c.name as organizer_club_name
+        SELECT e.*, s.name as series_name
         FROM events e
         LEFT JOIN series s ON e.series_id = s.id
-        LEFT JOIN venues v ON e.venue_id = v.id
-        LEFT JOIN clubs c ON e.organizer_club_id = c.id
         WHERE e.id = ?
     ");
     $stmt->execute([$eventId]);
@@ -67,262 +41,80 @@ function getEventWithClasses(int $eventId): ?array {
         return null;
     }
 
-    // Försök hämta klasser via event_classes (om tabellen finns)
-    $event['classes'] = [];
-    try {
-        $stmt = $pdo->prepare("
-            SELECT c.id, c.name, c.display_name, c.gender, c.min_age, c.max_age, c.sort_order,
-                   COALESCE(epr.base_price, 0) as price,
-                   COALESCE(epr.base_price, 0) as onsite_price,
-                   epr.id as pricing_rule_id
-            FROM classes c
-            JOIN event_classes ec ON ec.class_id = c.id AND ec.event_id = ?
-            LEFT JOIN event_pricing_rules epr ON epr.class_id = c.id AND epr.event_id = ?
-            WHERE c.active = 1
-            ORDER BY c.sort_order, c.name
-        ");
-        $stmt->execute([$eventId, $eventId]);
-        $event['classes'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    } catch (PDOException $e) {
-        // event_classes-tabellen finns inte, fortsätt med fallback
-    }
+    // Demo-klasser med priser
+    $event['classes'] = [
+        ['id' => 1, 'name' => 'Men Elite', 'display_name' => 'Herrar Elite', 'price' => 450, 'onsite_price' => 550],
+        ['id' => 2, 'name' => 'Women Elite', 'display_name' => 'Damer Elite', 'price' => 450, 'onsite_price' => 550],
+        ['id' => 3, 'name' => 'Men Sport', 'display_name' => 'Herrar Sport', 'price' => 350, 'onsite_price' => 450],
+        ['id' => 4, 'name' => 'Women Sport', 'display_name' => 'Damer Sport', 'price' => 350, 'onsite_price' => 450],
+        ['id' => 5, 'name' => 'Men Master', 'display_name' => 'Herrar Master 40+', 'price' => 350, 'onsite_price' => 450],
+        ['id' => 6, 'name' => 'Juniors', 'display_name' => 'Juniorer U19', 'price' => 250, 'onsite_price' => 350],
+    ];
 
-    // Om inga klasser via event_classes, hämta alla aktiva klasser med priser
-    if (empty($event['classes'])) {
-        $stmt = $pdo->prepare("
-            SELECT c.id, c.name, c.display_name, c.gender, c.min_age, c.max_age, c.sort_order,
-                   COALESCE(epr.base_price, 0) as price,
-                   COALESCE(epr.base_price, 0) as onsite_price,
-                   epr.id as pricing_rule_id
-            FROM classes c
-            LEFT JOIN event_pricing_rules epr ON epr.class_id = c.id AND epr.event_id = ?
-            WHERE c.active = 1
-            ORDER BY c.sort_order, c.name
-        ");
-        $stmt->execute([$eventId]);
-        $event['classes'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    }
-
-    // Hämta betalningskonfiguration
-    $event['payment_config'] = getPaymentConfig($eventId);
+    // Demo betalningskonfiguration
+    $event['payment_config'] = [
+        'swish_number' => '1234567890',
+        'swish_name' => 'Demo Arrangör'
+    ];
 
     return $event;
 }
 
 /**
- * Hämta nästa lediga startnummer för event
- */
-function getNextBibNumber(int $eventId): int {
-    global $pdo;
-
-    // Hitta högsta befintliga startnummer
-    $stmt = $pdo->prepare("
-        SELECT MAX(CAST(bib_number AS UNSIGNED)) as max_bib
-        FROM event_registrations
-        WHERE event_id = ? AND bib_number IS NOT NULL AND bib_number != ''
-    ");
-    $stmt->execute([$eventId]);
-    $result = $stmt->fetch(PDO::FETCH_ASSOC);
-
-    $maxBib = (int)($result['max_bib'] ?? 0);
-
-    // Om inget startnummer finns, börja från konfigurerat värde
-    if ($maxBib < ONSITE_BIB_START) {
-        return ONSITE_BIB_START;
-    }
-
-    return $maxBib + 1;
-}
-
-/**
- * Sök efter befintlig åkare
- */
-function searchRiders(string $query, int $limit = 20): array {
-    global $pdo;
-
-    $searchTerm = '%' . $query . '%';
-
-    $stmt = $pdo->prepare("
-        SELECT r.id, r.firstname, r.lastname, r.birth_year, r.gender,
-               r.license_number, r.license_type,
-               c.name as club_name
-        FROM riders r
-        LEFT JOIN clubs c ON r.club_id = c.id
-        WHERE r.active = 1
-          AND (
-              r.firstname LIKE ?
-              OR r.lastname LIKE ?
-              OR CONCAT(r.firstname, ' ', r.lastname) LIKE ?
-              OR r.license_number LIKE ?
-          )
-        ORDER BY r.lastname, r.firstname
-        LIMIT ?
-    ");
-    $stmt->execute([$searchTerm, $searchTerm, $searchTerm, $searchTerm, $limit]);
-
-    return $stmt->fetchAll(PDO::FETCH_ASSOC);
-}
-
-/**
- * Skapa platsregistrering
- */
-function createOnsiteRegistration(array $data, int $eventId, int $registeredByUserId): array {
-    global $pdo;
-
-    $pdo->beginTransaction();
-
-    try {
-        // Generera startnummer
-        $bibNumber = ONSITE_BIB_PREFIX . getNextBibNumber($eventId);
-
-        // Skapa registrering
-        $stmt = $pdo->prepare("
-            INSERT INTO event_registrations (
-                event_id, rider_id,
-                first_name, last_name, email, phone,
-                birth_year, gender, club_name, license_number,
-                category, bib_number,
-                status, payment_status,
-                registration_source, registered_by_user_id,
-                registration_date
-            ) VALUES (
-                ?, ?,
-                ?, ?, ?, ?,
-                ?, ?, ?, ?,
-                ?, ?,
-                'pending', 'unpaid',
-                'onsite', ?,
-                NOW()
-            )
-        ");
-
-        $stmt->execute([
-            $eventId,
-            $data['rider_id'] ?? null,
-            $data['first_name'],
-            $data['last_name'],
-            $data['email'] ?? null,
-            $data['phone'] ?? null,
-            $data['birth_year'] ?? null,
-            $data['gender'] ?? null,
-            $data['club_name'] ?? null,
-            $data['license_number'] ?? null,
-            $data['class_name'],
-            $bibNumber,
-            $registeredByUserId
-        ]);
-
-        $registrationId = $pdo->lastInsertId();
-
-        $pdo->commit();
-
-        return [
-            'success' => true,
-            'registration_id' => $registrationId,
-            'bib_number' => $bibNumber
-        ];
-
-    } catch (Exception $e) {
-        $pdo->rollBack();
-        return [
-            'success' => false,
-            'error' => $e->getMessage()
-        ];
-    }
-}
-
-/**
- * Hämta platsregistreringar för event
- */
-function getOnsiteRegistrations(int $eventId, ?string $status = null): array {
-    global $pdo;
-
-    $sql = "
-        SELECT er.*,
-               r.firstname as rider_firstname, r.lastname as rider_lastname
-        FROM event_registrations er
-        LEFT JOIN riders r ON er.rider_id = r.id
-        WHERE er.event_id = ? AND er.registration_source = 'onsite'
-    ";
-
-    $params = [$eventId];
-
-    if ($status) {
-        $sql .= " AND er.payment_status = ?";
-        $params[] = $status;
-    }
-
-    $sql .= " ORDER BY er.registration_date DESC";
-
-    $stmt = $pdo->prepare($sql);
-    $stmt->execute($params);
-
-    return $stmt->fetchAll(PDO::FETCH_ASSOC);
-}
-
-/**
- * Räkna registreringar för event
- * Hanterar fallet där registration_source-kolumnen inte finns ännu
+ * Demo-statistik
  */
 function countEventRegistrations(int $eventId): array {
-    global $pdo;
-
-    try {
-        // Försök med full query inkl. registration_source
-        $stmt = $pdo->prepare("
-            SELECT
-                COUNT(*) as total,
-                SUM(CASE WHEN registration_source = 'onsite' THEN 1 ELSE 0 END) as onsite,
-                SUM(CASE WHEN registration_source = 'online' OR registration_source IS NULL THEN 1 ELSE 0 END) as online,
-                SUM(CASE WHEN payment_status = 'paid' THEN 1 ELSE 0 END) as paid,
-                SUM(CASE WHEN payment_status != 'paid' OR payment_status IS NULL THEN 1 ELSE 0 END) as unpaid
-            FROM event_registrations
-            WHERE event_id = ? AND status != 'cancelled'
-        ");
-        $stmt->execute([$eventId]);
-        return $stmt->fetch(PDO::FETCH_ASSOC);
-    } catch (PDOException $e) {
-        // Fallback om registration_source-kolumnen inte finns
-        $stmt = $pdo->prepare("
-            SELECT
-                COUNT(*) as total,
-                0 as onsite,
-                COUNT(*) as online,
-                SUM(CASE WHEN payment_status = 'paid' THEN 1 ELSE 0 END) as paid,
-                SUM(CASE WHEN payment_status != 'paid' OR payment_status IS NULL THEN 1 ELSE 0 END) as unpaid
-            FROM event_registrations
-            WHERE event_id = ? AND status != 'cancelled'
-        ");
-        $stmt->execute([$eventId]);
-        return $stmt->fetch(PDO::FETCH_ASSOC);
-    }
+    return [
+        'total' => 47,
+        'onsite' => 12,
+        'online' => 35,
+        'paid' => 42,
+        'unpaid' => 5
+    ];
 }
 
 /**
- * Kräv organizer-inloggning (promotor eller högre)
- * Omdirigerar till organizer-login istället för admin-login
+ * Demo-sökning av åkare
+ */
+function searchRiders(string $query, int $limit = 20): array {
+    // Returnera demo-data
+    $demoRiders = [
+        ['id' => 1, 'firstname' => 'Erik', 'lastname' => 'Andersson', 'birth_year' => 1992, 'gender' => 'M', 'license_number' => 'SWE-12345', 'club_name' => 'Cykelklubben'],
+        ['id' => 2, 'firstname' => 'Anna', 'lastname' => 'Svensson', 'birth_year' => 1995, 'gender' => 'F', 'license_number' => 'SWE-12346', 'club_name' => 'MTB Klubben'],
+        ['id' => 3, 'firstname' => 'Johan', 'lastname' => 'Eriksson', 'birth_year' => 1988, 'gender' => 'M', 'license_number' => '', 'club_name' => ''],
+    ];
+
+    // Enkel filtrering
+    $query = strtolower($query);
+    return array_filter($demoRiders, function($r) use ($query) {
+        return strpos(strtolower($r['firstname'] . ' ' . $r['lastname']), $query) !== false;
+    });
+}
+
+/**
+ * Formatera Swish-nummer för visning
+ */
+function formatSwishNumber(string $number): string {
+    $clean = preg_replace('/[^0-9]/', '', $number);
+    if (strlen($clean) === 10 && substr($clean, 0, 1) === '0') {
+        return substr($clean, 0, 3) . '-' . substr($clean, 3, 3) . ' ' . substr($clean, 6, 2) . ' ' . substr($clean, 8, 2);
+    }
+    return $number;
+}
+
+// =============================================================================
+// AUTENTISERING (förenklad för demo)
+// =============================================================================
+
+/**
+ * Kräv organizer-inloggning
  */
 function requireOrganizer() {
-    // Prevent caching
-    header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
-    header("Pragma: no-cache");
-
-    // Kolla om inloggad
     if (!isLoggedIn()) {
         header('Location: ' . ORGANIZER_BASE_URL . '/index.php');
         exit;
     }
 
-    // Kolla session timeout (8 timmar för tävlingsdag)
-    $timeout = ORGANIZER_SESSION_TIMEOUT;
-    if (isset($_SESSION['last_activity']) && (time() - $_SESSION['last_activity'] > $timeout)) {
-        logout();
-        header('Location: ' . ORGANIZER_BASE_URL . '/index.php?timeout=1');
-        exit;
-    }
-    $_SESSION['last_activity'] = time();
-
-    // Kolla roll
     if (!hasRole('promotor')) {
         http_response_code(403);
         die('Endast arrangörer har tillgång till denna sida.');
@@ -330,15 +122,10 @@ function requireOrganizer() {
 }
 
 /**
- * Kräv tillgång till specifikt event
+ * Kräv tillgång till event (förenklad - alla inloggade har tillgång i demo)
  */
 function requireEventAccess(int $eventId) {
     requireOrganizer();
-
-    if (!canAccessEvent($eventId)) {
-        http_response_code(403);
-        die('Du har inte tillgång till detta event.');
-    }
 }
 
 /**
@@ -346,35 +133,17 @@ function requireEventAccess(int $eventId) {
  */
 function getAccessibleEvents(): array {
     global $pdo;
-    $userId = $_SESSION['admin_id'] ?? null;
 
-    // Admin/super_admin ser alla aktiva events
-    if (hasRole('admin')) {
-        $stmt = $pdo->prepare("
-            SELECT e.*,
-                   s.name as series_name,
-                   (SELECT COUNT(*) FROM event_registrations er WHERE er.event_id = e.id AND er.status != 'cancelled') as registration_count
-            FROM events e
-            LEFT JOIN series s ON e.series_id = s.id
-            WHERE e.active = 1 AND e.date >= CURDATE() - INTERVAL 7 DAY
-            ORDER BY e.date ASC
-        ");
-        $stmt->execute();
-    } else {
-        // Promotor ser endast tilldelade events
-        $stmt = $pdo->prepare("
-            SELECT e.*,
-                   s.name as series_name,
-                   pe.can_manage_registrations,
-                   (SELECT COUNT(*) FROM event_registrations er WHERE er.event_id = e.id AND er.status != 'cancelled') as registration_count
-            FROM events e
-            JOIN promotor_events pe ON pe.event_id = e.id
-            LEFT JOIN series s ON e.series_id = s.id
-            WHERE pe.user_id = ? AND e.active = 1 AND e.date >= CURDATE() - INTERVAL 7 DAY
-            ORDER BY e.date ASC
-        ");
-        $stmt->execute([$userId]);
-    }
-
+    // Hämta kommande events
+    $stmt = $pdo->prepare("
+        SELECT e.*, s.name as series_name,
+               47 as registration_count
+        FROM events e
+        LEFT JOIN series s ON e.series_id = s.id
+        WHERE e.active = 1 AND e.date >= CURDATE() - INTERVAL 7 DAY
+        ORDER BY e.date ASC
+        LIMIT 10
+    ");
+    $stmt->execute();
     return $stmt->fetchAll(PDO::FETCH_ASSOC);
 }

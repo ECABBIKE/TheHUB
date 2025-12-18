@@ -1,7 +1,6 @@
 <?php
 /**
- * Organizer App - Export
- * Exportera deltagarlista för tidtagningsprogram
+ * Organizer App - Export (DEMO)
  */
 
 require_once __DIR__ . '/config.php';
@@ -14,52 +13,31 @@ if (!$eventId) {
     exit;
 }
 
-requireEventAccess($eventId);
-
 $event = getEventWithClasses($eventId);
 if (!$event) {
     die('Eventet hittades inte.');
 }
 
+// Demo-data för export
+$demoRegistrations = [
+    ['bib_number' => '101', 'first_name' => 'Erik', 'last_name' => 'Andersson', 'class' => 'Men Elite', 'club_name' => 'Cykelklubben', 'license_number' => 'SWE-12345', 'gender' => 'M', 'birth_year' => '1992', 'email' => 'erik@example.com', 'phone' => '070-123 45 67', 'payment_status' => 'paid', 'registration_source' => 'online'],
+    ['bib_number' => '102', 'first_name' => 'Anna', 'last_name' => 'Svensson', 'class' => 'Women Elite', 'club_name' => 'MTB Klubben', 'license_number' => 'SWE-12346', 'gender' => 'F', 'birth_year' => '1995', 'email' => 'anna@example.com', 'phone' => '070-234 56 78', 'payment_status' => 'paid', 'registration_source' => 'online'],
+    ['bib_number' => '201', 'first_name' => 'Johan', 'last_name' => 'Eriksson', 'class' => 'Men Sport', 'club_name' => '', 'license_number' => '', 'gender' => 'M', 'birth_year' => '1988', 'email' => '', 'phone' => '070-345 67 89', 'payment_status' => 'unpaid', 'registration_source' => 'onsite'],
+];
+
 // Hantera export
 if (isset($_GET['download'])) {
-    global $pdo;
-
     $source = $_GET['source'] ?? 'all';
 
-    $sql = "
-        SELECT
-            er.bib_number,
-            er.first_name,
-            er.last_name,
-            er.category as class,
-            er.club_name,
-            er.license_number,
-            er.gender,
-            er.birth_year,
-            er.email,
-            er.phone,
-            er.payment_status,
-            er.registration_source
-        FROM event_registrations er
-        WHERE er.event_id = ? AND er.status != 'cancelled'
-    ";
-    $params = [$eventId];
-
+    $registrations = $demoRegistrations;
     if ($source === 'onsite') {
-        $sql .= " AND er.registration_source = 'onsite'";
+        $registrations = array_filter($registrations, fn($r) => $r['registration_source'] === 'onsite');
     } elseif ($source === 'online') {
-        $sql .= " AND (er.registration_source = 'online' OR er.registration_source IS NULL)";
+        $registrations = array_filter($registrations, fn($r) => $r['registration_source'] !== 'onsite');
     }
 
-    $sql .= " ORDER BY er.category, er.bib_number";
-
-    $stmt = $pdo->prepare($sql);
-    $stmt->execute($params);
-    $registrations = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
     // Skapa filnamn
-    $filename = sanitize_filename($event['name']) . '_' . date('Y-m-d') . '.csv';
+    $filename = 'demo_export_' . date('Y-m-d') . '.csv';
 
     // Skicka headers
     header('Content-Type: text/csv; charset=utf-8');
@@ -73,18 +51,8 @@ if (isset($_GET['download'])) {
 
     // Header
     fputcsv($output, [
-        'Startnummer',
-        'Förnamn',
-        'Efternamn',
-        'Klass',
-        'Klubb',
-        'Licens',
-        'Kön',
-        'Födelseår',
-        'E-post',
-        'Telefon',
-        'Betald',
-        'Källa'
+        'Startnummer', 'Förnamn', 'Efternamn', 'Klass', 'Klubb', 'Licens',
+        'Kön', 'Födelseår', 'E-post', 'Telefon', 'Betald', 'Källa'
     ], ';');
 
     // Data
@@ -109,14 +77,6 @@ if (isset($_GET['download'])) {
     exit;
 }
 
-// Hjälpfunktion för filnamn
-function sanitize_filename($name) {
-    $name = preg_replace('/[^a-zA-Z0-9åäöÅÄÖ\-_]/', '_', $name);
-    $name = preg_replace('/_+/', '_', $name);
-    return trim($name, '_');
-}
-
-// Räkna
 $counts = countEventRegistrations($eventId);
 
 $pageTitle = 'Exportera';
@@ -137,7 +97,6 @@ include __DIR__ . '/includes/header.php';
     <div class="org-card__body">
         <p class="org-mb-lg">
             Exportera deltagarlistan som CSV-fil för import till tidtagningsprogram.
-            Filen innehåller startnummer, namn, klass, klubb och kontaktuppgifter.
         </p>
 
         <div style="display: flex; flex-direction: column; gap: 16px; max-width: 500px;">
@@ -165,19 +124,10 @@ include __DIR__ . '/includes/header.php';
 </div>
 
 <div class="org-card org-mt-lg">
-    <div class="org-card__header">
-        <h2 class="org-card__title">CSV-format</h2>
-    </div>
-    <div class="org-card__body">
-        <p class="org-mb-md">Filen använder semikolon (;) som separator och UTF-8 encoding.</p>
-
-        <div style="background: var(--color-star-fade); padding: 16px; border-radius: 8px; font-family: monospace; font-size: 14px; overflow-x: auto;">
-            Startnummer;Förnamn;Efternamn;Klass;Klubb;Licens;Kön;Födelseår;E-post;Telefon;Betald;Källa
-        </div>
-
-        <p class="org-mt-lg org-text-muted" style="font-size: 16px;">
-            <strong>Tips:</strong> Om du behöver ett annat format för ditt tidtagningsprogram,
-            kontakta oss så kan vi lägga till fler exportalternativ.
+    <div class="org-card__body org-text-center" style="padding: 24px;">
+        <p class="org-text-muted" style="font-size: 14px;">
+            <i data-lucide="info" style="width: 16px; height: 16px; vertical-align: middle;"></i>
+            Demo-version - exporterar exempeldata
         </p>
     </div>
 </div>
