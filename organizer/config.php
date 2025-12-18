@@ -291,10 +291,29 @@ function countEventRegistrations(int $eventId): array {
 
 /**
  * Kräv organizer-inloggning (promotor eller högre)
+ * Omdirigerar till organizer-login istället för admin-login
  */
 function requireOrganizer() {
-    requireLogin();
+    // Prevent caching
+    header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
+    header("Pragma: no-cache");
 
+    // Kolla om inloggad
+    if (!isLoggedIn()) {
+        header('Location: ' . ORGANIZER_BASE_URL . '/index.php');
+        exit;
+    }
+
+    // Kolla session timeout (8 timmar för tävlingsdag)
+    $timeout = ORGANIZER_SESSION_TIMEOUT;
+    if (isset($_SESSION['last_activity']) && (time() - $_SESSION['last_activity'] > $timeout)) {
+        logout();
+        header('Location: ' . ORGANIZER_BASE_URL . '/index.php?timeout=1');
+        exit;
+    }
+    $_SESSION['last_activity'] = time();
+
+    // Kolla roll
     if (!hasRole('promotor')) {
         http_response_code(403);
         die('Endast arrangörer har tillgång till denna sida.');
