@@ -243,23 +243,40 @@ function getOnsiteRegistrations(int $eventId, ?string $status = null): array {
 
 /**
  * Räkna registreringar för event
+ * Hanterar fallet där registration_source-kolumnen inte finns ännu
  */
 function countEventRegistrations(int $eventId): array {
     global $pdo;
 
-    $stmt = $pdo->prepare("
-        SELECT
-            COUNT(*) as total,
-            SUM(CASE WHEN registration_source = 'onsite' THEN 1 ELSE 0 END) as onsite,
-            SUM(CASE WHEN registration_source = 'online' OR registration_source IS NULL THEN 1 ELSE 0 END) as online,
-            SUM(CASE WHEN payment_status = 'paid' THEN 1 ELSE 0 END) as paid,
-            SUM(CASE WHEN payment_status != 'paid' OR payment_status IS NULL THEN 1 ELSE 0 END) as unpaid
-        FROM event_registrations
-        WHERE event_id = ? AND status != 'cancelled'
-    ");
-    $stmt->execute([$eventId]);
-
-    return $stmt->fetch(PDO::FETCH_ASSOC);
+    try {
+        // Försök med full query inkl. registration_source
+        $stmt = $pdo->prepare("
+            SELECT
+                COUNT(*) as total,
+                SUM(CASE WHEN registration_source = 'onsite' THEN 1 ELSE 0 END) as onsite,
+                SUM(CASE WHEN registration_source = 'online' OR registration_source IS NULL THEN 1 ELSE 0 END) as online,
+                SUM(CASE WHEN payment_status = 'paid' THEN 1 ELSE 0 END) as paid,
+                SUM(CASE WHEN payment_status != 'paid' OR payment_status IS NULL THEN 1 ELSE 0 END) as unpaid
+            FROM event_registrations
+            WHERE event_id = ? AND status != 'cancelled'
+        ");
+        $stmt->execute([$eventId]);
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        // Fallback om registration_source-kolumnen inte finns
+        $stmt = $pdo->prepare("
+            SELECT
+                COUNT(*) as total,
+                0 as onsite,
+                COUNT(*) as online,
+                SUM(CASE WHEN payment_status = 'paid' THEN 1 ELSE 0 END) as paid,
+                SUM(CASE WHEN payment_status != 'paid' OR payment_status IS NULL THEN 1 ELSE 0 END) as unpaid
+            FROM event_registrations
+            WHERE event_id = ? AND status != 'cancelled'
+        ");
+        $stmt->execute([$eventId]);
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
 }
 
 /**
