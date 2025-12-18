@@ -1,7 +1,6 @@
 <?php
 /**
- * Organizer App - Deltagarlista
- * Visa alla registrerade deltagare för ett event
+ * Organizer App - Deltagarlista (DEMO)
  */
 
 require_once __DIR__ . '/config.php';
@@ -14,68 +13,40 @@ if (!$eventId) {
     exit;
 }
 
-requireEventAccess($eventId);
-
 $event = getEventWithClasses($eventId);
 if (!$event) {
     die('Eventet hittades inte.');
 }
 
 // Filter
-$filterSource = $_GET['source'] ?? 'all'; // all, onsite, online
-$filterStatus = $_GET['status'] ?? 'all'; // all, paid, unpaid
+$filterSource = $_GET['source'] ?? 'all';
+$filterStatus = $_GET['status'] ?? 'all';
 $filterClass = $_GET['class'] ?? '';
 
-// Hämta registreringar
-global $pdo;
+// Demo-registreringar
+$registrations = [
+    ['id' => 1, 'bib_number' => '101', 'first_name' => 'Erik', 'last_name' => 'Andersson', 'category' => 'Men Elite', 'club_name' => 'Cykelklubben', 'payment_status' => 'paid', 'registration_source' => 'online'],
+    ['id' => 2, 'bib_number' => '102', 'first_name' => 'Anna', 'last_name' => 'Svensson', 'category' => 'Women Elite', 'club_name' => 'MTB Klubben', 'payment_status' => 'paid', 'registration_source' => 'online'],
+    ['id' => 3, 'bib_number' => '201', 'first_name' => 'Johan', 'last_name' => 'Eriksson', 'category' => 'Men Sport', 'club_name' => '', 'payment_status' => 'unpaid', 'registration_source' => 'onsite'],
+    ['id' => 4, 'bib_number' => '103', 'first_name' => 'Maria', 'last_name' => 'Johansson', 'category' => 'Women Sport', 'club_name' => 'Team Gravity', 'payment_status' => 'paid', 'registration_source' => 'online'],
+    ['id' => 5, 'bib_number' => '202', 'first_name' => 'Anders', 'last_name' => 'Lindberg', 'category' => 'Men Master', 'club_name' => '', 'payment_status' => 'paid', 'registration_source' => 'onsite'],
+];
 
-// Kolla om registration_source-kolumnen finns
-$hasSourceColumn = false;
-try {
-    $check = $pdo->query("SHOW COLUMNS FROM event_registrations LIKE 'registration_source'");
-    $hasSourceColumn = $check->rowCount() > 0;
-} catch (Exception $e) {}
-
-$sql = "
-    SELECT er.*,
-           r.firstname as rider_firstname, r.lastname as rider_lastname
-    FROM event_registrations er
-    LEFT JOIN riders r ON er.rider_id = r.id
-    WHERE er.event_id = ? AND er.status != 'cancelled'
-";
-$params = [$eventId];
-
-if ($hasSourceColumn) {
-    if ($filterSource === 'onsite') {
-        $sql .= " AND er.registration_source = 'onsite'";
-    } elseif ($filterSource === 'online') {
-        $sql .= " AND (er.registration_source = 'online' OR er.registration_source IS NULL)";
-    }
+// Filtrering
+if ($filterSource !== 'all') {
+    $registrations = array_filter($registrations, fn($r) => $r['registration_source'] === $filterSource);
 }
-
 if ($filterStatus === 'paid') {
-    $sql .= " AND er.payment_status = 'paid'";
+    $registrations = array_filter($registrations, fn($r) => $r['payment_status'] === 'paid');
 } elseif ($filterStatus === 'unpaid') {
-    $sql .= " AND (er.payment_status != 'paid' OR er.payment_status IS NULL)";
+    $registrations = array_filter($registrations, fn($r) => $r['payment_status'] !== 'paid');
 }
-
 if ($filterClass) {
-    $sql .= " AND er.category = ?";
-    $params[] = $filterClass;
+    $registrations = array_filter($registrations, fn($r) => $r['category'] === $filterClass);
 }
 
-$sql .= " ORDER BY er.bib_number ASC, er.registration_date DESC";
-
-$stmt = $pdo->prepare($sql);
-$stmt->execute($params);
-$registrations = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-// Räkna
 $counts = countEventRegistrations($eventId);
-
-// Unika klasser för filter
-$classes = array_unique(array_column($registrations, 'category'));
-sort($classes);
+$classes = ['Men Elite', 'Women Elite', 'Men Sport', 'Women Sport', 'Men Master', 'Juniors'];
 
 $pageTitle = 'Deltagare';
 $showHeader = true;
@@ -164,15 +135,15 @@ include __DIR__ . '/includes/header.php';
             </div>
 
             <?php foreach ($registrations as $reg): ?>
-                <div class="org-participant-row" data-id="<?= $reg['id'] ?>">
+                <div class="org-participant-row">
                     <div class="org-participant__bib">
-                        <?= htmlspecialchars($reg['bib_number'] ?: '-') ?>
+                        <?= htmlspecialchars($reg['bib_number']) ?>
                     </div>
                     <div>
                         <div class="org-participant__name">
                             <?= htmlspecialchars($reg['first_name'] . ' ' . $reg['last_name']) ?>
                         </div>
-                        <div class="org-participant__class">
+                        <div class="org-participant__club">
                             <?= htmlspecialchars($reg['club_name'] ?: '') ?>
                             <?php if ($reg['registration_source'] === 'onsite'): ?>
                                 <span style="color: var(--color-accent);">&bull; Plats</span>
@@ -184,12 +155,7 @@ include __DIR__ . '/includes/header.php';
                         <?php if ($reg['payment_status'] === 'paid'): ?>
                             <span class="org-status org-status--paid">Betald</span>
                         <?php else: ?>
-                            <button type="button"
-                                    class="org-status org-status--unpaid btn-mark-paid"
-                                    data-id="<?= $reg['id'] ?>"
-                                    style="cursor: pointer; border: none;">
-                                Obetald
-                            </button>
+                            <span class="org-status org-status--unpaid">Obetald</span>
                         <?php endif; ?>
                     </div>
                 </div>
@@ -198,36 +164,13 @@ include __DIR__ . '/includes/header.php';
     <?php endif; ?>
 </div>
 
-<?php
-$pageScripts = <<<'SCRIPT'
-<script>
-document.querySelectorAll('.btn-mark-paid').forEach(btn => {
-    btn.addEventListener('click', async function() {
-        const id = this.dataset.id;
+<div class="org-card org-mt-lg">
+    <div class="org-card__body org-text-center" style="padding: 24px;">
+        <p class="org-text-muted" style="font-size: 14px;">
+            <i data-lucide="info" style="width: 16px; height: 16px; vertical-align: middle;"></i>
+            Demo-version - visar exempeldata
+        </p>
+    </div>
+</div>
 
-        if (!confirm('Markera som betald?')) return;
-
-        try {
-            const data = await OrgApp.api('confirm-payment.php', {
-                registration_id: id
-            });
-
-            if (data.success) {
-                // Uppdatera UI
-                this.className = 'org-status org-status--paid';
-                this.textContent = 'Betald';
-                this.style.cursor = 'default';
-                this.disabled = true;
-            } else {
-                OrgApp.showAlert(data.error || 'Kunde inte uppdatera');
-            }
-        } catch (err) {
-            OrgApp.showAlert('Nätverksfel');
-        }
-    });
-});
-</script>
-SCRIPT;
-
-include __DIR__ . '/includes/footer.php';
-?>
+<?php include __DIR__ . '/includes/footer.php'; ?>
