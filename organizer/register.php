@@ -226,11 +226,12 @@ include __DIR__ . '/includes/header.php';
 </div>
 
 <?php
+$swishNum = $event['payment_config']['swish_number'] ?? '';
 $pageScripts = <<<SCRIPT
 <script>
 (function() {
     const eventId = {$eventId};
-    const swishNumber = '{$event['payment_config']['swish_number']}';
+    const swishNumber = '{$swishNum}';
 
     let rider = null;
     let selectedClass = null;
