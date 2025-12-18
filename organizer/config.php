@@ -6,12 +6,12 @@
  * 100% iPad-optimerad för snabb hantering.
  */
 
-// Visa fel under utveckling
-ini_set('display_errors', '1');
-error_reporting(E_ALL);
-
 // Ladda huvudkonfigurationen
 require_once __DIR__ . '/../config.php';
+
+// Visa fel under utveckling (EFTER main config som sätter display_errors=0)
+ini_set('display_errors', '1');
+error_reporting(E_ALL);
 
 // Definiera hub_db() om den inte finns (krävs av payment.php)
 if (!function_exists('hub_db')) {
