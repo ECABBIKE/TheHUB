@@ -6,12 +6,12 @@
  * 100% iPad-optimerad för snabb hantering.
  */
 
-// Visa fel under utveckling
-ini_set('display_errors', '1');
-error_reporting(E_ALL);
-
 // Ladda huvudkonfigurationen
 require_once __DIR__ . '/../config.php';
+
+// Visa fel under utveckling (EFTER main config som sätter display_errors=0)
+ini_set('display_errors', '1');
+error_reporting(E_ALL);
 
 // Definiera hub_db() om den inte finns (krävs av payment.php)
 if (!function_exists('hub_db')) {
@@ -67,22 +67,27 @@ function getEventWithClasses(int $eventId): ?array {
         return null;
     }
 
-    // Hämta klasser med priser för detta event
-    $stmt = $pdo->prepare("
-        SELECT c.id, c.name, c.display_name, c.gender, c.min_age, c.max_age, c.sort_order,
-               COALESCE(epr.base_price, epr.onsite_price, 0) as price,
-               COALESCE(epr.onsite_price, epr.base_price, 0) as onsite_price,
-               epr.id as pricing_rule_id
-        FROM classes c
-        JOIN event_classes ec ON ec.class_id = c.id AND ec.event_id = ?
-        LEFT JOIN event_pricing_rules epr ON epr.class_id = c.id AND epr.event_id = ?
-        WHERE c.active = 1
-        ORDER BY c.sort_order, c.name
-    ");
-    $stmt->execute([$eventId, $eventId]);
-    $event['classes'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    // Försök hämta klasser via event_classes (om tabellen finns)
+    $event['classes'] = [];
+    try {
+        $stmt = $pdo->prepare("
+            SELECT c.id, c.name, c.display_name, c.gender, c.min_age, c.max_age, c.sort_order,
+                   COALESCE(epr.base_price, epr.onsite_price, 0) as price,
+                   COALESCE(epr.onsite_price, epr.base_price, 0) as onsite_price,
+                   epr.id as pricing_rule_id
+            FROM classes c
+            JOIN event_classes ec ON ec.class_id = c.id AND ec.event_id = ?
+            LEFT JOIN event_pricing_rules epr ON epr.class_id = c.id AND epr.event_id = ?
+            WHERE c.active = 1
+            ORDER BY c.sort_order, c.name
+        ");
+        $stmt->execute([$eventId, $eventId]);
+        $event['classes'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        // event_classes-tabellen finns inte, fortsätt med fallback
+    }
 
-    // Om inga klasser via event_classes, försök hämta alla aktiva klasser
+    // Om inga klasser via event_classes, hämta alla aktiva klasser med priser
     if (empty($event['classes'])) {
         $stmt = $pdo->prepare("
             SELECT c.id, c.name, c.display_name, c.gender, c.min_age, c.max_age, c.sort_order,
