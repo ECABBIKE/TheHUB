@@ -60,30 +60,32 @@ include __DIR__ . '/includes/header.php';
             </button>
         </div>
 
-        <!-- Steg 2: Ny deltagare -->
-        <div id="step-new" class="org-hidden">
-            <h2 class="org-text-center" style="margin: 0 0 var(--space-lg) 0;">Ny deltagare</h2>
+        <!-- Steg 2: Fyll i uppgifter -->
+        <div id="step-form" class="org-hidden">
+            <h2 class="org-text-center" style="margin: 0 0 var(--space-lg) 0;">Dina uppgifter</h2>
 
-            <form id="form-new-rider">
+            <form id="form-rider">
+                <input type="hidden" id="rider_id" name="rider_id" value="">
+
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-md);">
                     <div class="org-form-group">
                         <label class="org-label">Förnamn *</label>
-                        <input type="text" name="first_name" class="org-input" required>
+                        <input type="text" id="first_name" name="first_name" class="org-input" required>
                     </div>
                     <div class="org-form-group">
                         <label class="org-label">Efternamn *</label>
-                        <input type="text" name="last_name" class="org-input" required>
+                        <input type="text" id="last_name" name="last_name" class="org-input" required>
                     </div>
                 </div>
 
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-md);">
                     <div class="org-form-group">
                         <label class="org-label">Födelseår</label>
-                        <input type="number" name="birth_year" class="org-input" placeholder="1990" min="1920" max="<?= date('Y') ?>">
+                        <input type="number" id="birth_year" name="birth_year" class="org-input" placeholder="1990" min="1920" max="<?= date('Y') ?>">
                     </div>
                     <div class="org-form-group">
                         <label class="org-label">Kön</label>
-                        <select name="gender" class="org-select">
+                        <select id="gender" name="gender" class="org-select">
                             <option value="">Välj...</option>
                             <option value="M">Man</option>
                             <option value="F">Kvinna</option>
@@ -93,12 +95,27 @@ include __DIR__ . '/includes/header.php';
 
                 <div class="org-form-group">
                     <label class="org-label">E-post</label>
-                    <input type="email" name="email" class="org-input" placeholder="namn@exempel.se">
+                    <input type="email" id="email" name="email" class="org-input" placeholder="namn@exempel.se">
                 </div>
 
                 <div class="org-form-group">
-                    <label class="org-label">Klubb</label>
-                    <input type="text" name="club_name" class="org-input" placeholder="Valfritt">
+                    <label class="org-label">Telefon</label>
+                    <input type="tel" id="phone" name="phone" class="org-input" placeholder="070-123 45 67">
+                </div>
+
+                <div class="org-form-group">
+                    <label class="org-label">Klubb / Team</label>
+                    <input type="text" id="club_name" name="club_name" class="org-input" placeholder="Valfritt">
+                </div>
+
+                <div class="org-form-group">
+                    <label class="org-label">Licensnummer</label>
+                    <input type="text" id="license_number" name="license_number" class="org-input" placeholder="Valfritt">
+                </div>
+
+                <div class="org-form-group">
+                    <label class="org-label">ICE (nödkontakt)</label>
+                    <input type="text" id="ice_contact" name="ice_contact" class="org-input" placeholder="Namn och telefon">
                 </div>
 
                 <div style="display: flex; gap: var(--space-md); margin-top: var(--space-lg);">
@@ -141,7 +158,7 @@ include __DIR__ . '/includes/header.php';
             </div>
 
             <div style="margin-top: var(--space-lg);">
-                <button type="button" class="org-btn org-btn--ghost" onclick="goBack()">
+                <button type="button" class="org-btn org-btn--ghost" onclick="showStep('form')">
                     <i data-lucide="arrow-left"></i>
                     Tillbaka
                 </button>
@@ -217,7 +234,6 @@ $pageScripts = <<<SCRIPT
 
     let rider = null;
     let selectedClass = null;
-    let fromNewForm = false;
 
     // Sök
     const searchInput = document.getElementById('search-rider');
@@ -246,10 +262,9 @@ $pageScripts = <<<SCRIPT
 
                 searchResults.querySelectorAll('.org-event-card').forEach(el => {
                     el.addEventListener('click', function() {
-                        rider = JSON.parse(this.dataset.rider);
-                        fromNewForm = false;
-                        showStep('class');
-                        updateRiderDisplay();
+                        const r = JSON.parse(this.dataset.rider);
+                        fillForm(r);
+                        showStep('form');
                     });
                 });
             } else {
@@ -261,22 +276,47 @@ $pageScripts = <<<SCRIPT
 
     searchInput.addEventListener('input', function() { doSearch(this.value); });
 
-    // Ny deltagare
-    document.getElementById('btn-new-rider').addEventListener('click', () => showStep('new'));
+    // Ny deltagare - töm formuläret
+    document.getElementById('btn-new-rider').addEventListener('click', () => {
+        clearForm();
+        showStep('form');
+    });
 
-    document.getElementById('form-new-rider').addEventListener('submit', function(e) {
+    // Fyll i formuläret med data
+    function fillForm(r) {
+        document.getElementById('rider_id').value = r.id || '';
+        document.getElementById('first_name').value = r.firstname || '';
+        document.getElementById('last_name').value = r.lastname || '';
+        document.getElementById('birth_year').value = r.birth_year || '';
+        document.getElementById('gender').value = r.gender || '';
+        document.getElementById('email').value = r.email || '';
+        document.getElementById('phone').value = r.phone || '';
+        document.getElementById('club_name').value = r.club_name || '';
+        document.getElementById('license_number').value = r.license_number || '';
+        document.getElementById('ice_contact').value = r.ice_contact || '';
+    }
+
+    function clearForm() {
+        document.getElementById('form-rider').reset();
+        document.getElementById('rider_id').value = '';
+    }
+
+    // Formulär submit
+    document.getElementById('form-rider').addEventListener('submit', function(e) {
         e.preventDefault();
         const fd = new FormData(this);
         rider = {
-            id: null,
+            id: fd.get('rider_id') || null,
             firstname: fd.get('first_name'),
             lastname: fd.get('last_name'),
             birth_year: fd.get('birth_year') || null,
             gender: fd.get('gender') || null,
             email: fd.get('email') || null,
-            club_name: fd.get('club_name') || null
+            phone: fd.get('phone') || null,
+            club_name: fd.get('club_name') || null,
+            license_number: fd.get('license_number') || null,
+            ice_contact: fd.get('ice_contact') || null
         };
-        fromNewForm = true;
         showStep('class');
         updateRiderDisplay();
     });
@@ -331,7 +371,10 @@ $pageScripts = <<<SCRIPT
                 birth_year: rider.birth_year,
                 gender: rider.gender,
                 email: rider.email,
+                phone: rider.phone,
                 club_name: rider.club_name,
+                license_number: rider.license_number,
+                ice_contact: rider.ice_contact,
                 class_id: selectedClass.id,
                 class_name: selectedClass.name,
                 payment_status: status
@@ -366,21 +409,17 @@ $pageScripts = <<<SCRIPT
         selectedClass = null;
         searchInput.value = '';
         searchResults.classList.add('org-hidden');
-        document.getElementById('form-new-rider').reset();
+        clearForm();
         document.querySelectorAll('.org-class-btn').forEach(b => b.classList.remove('org-class-btn--selected'));
         showStep('search');
     }
 
     window.showStep = function(step) {
-        ['search', 'new', 'class', 'payment', 'done'].forEach(s => {
+        ['search', 'form', 'class', 'payment', 'done'].forEach(s => {
             document.getElementById('step-' + s).classList.add('org-hidden');
         });
         document.getElementById('step-' + step).classList.remove('org-hidden');
         lucide.createIcons();
-    };
-
-    window.goBack = function() {
-        showStep(fromNewForm ? 'new' : 'search');
     };
 
     lucide.createIcons();
