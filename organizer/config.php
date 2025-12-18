@@ -74,21 +74,35 @@ function countEventRegistrations(int $eventId): array {
 }
 
 /**
- * Demo-sökning av åkare
+ * Sök åkare i databasen
  */
 function searchRiders(string $query, int $limit = 20): array {
-    // Returnera demo-data
-    $demoRiders = [
-        ['id' => 1, 'firstname' => 'Erik', 'lastname' => 'Andersson', 'birth_year' => 1992, 'gender' => 'M', 'license_number' => 'SWE-12345', 'club_name' => 'Cykelklubben'],
-        ['id' => 2, 'firstname' => 'Anna', 'lastname' => 'Svensson', 'birth_year' => 1995, 'gender' => 'F', 'license_number' => 'SWE-12346', 'club_name' => 'MTB Klubben'],
-        ['id' => 3, 'firstname' => 'Johan', 'lastname' => 'Eriksson', 'birth_year' => 1988, 'gender' => 'M', 'license_number' => '', 'club_name' => ''],
-    ];
+    global $pdo;
 
-    // Enkel filtrering
-    $query = strtolower($query);
-    return array_filter($demoRiders, function($r) use ($query) {
-        return strpos(strtolower($r['firstname'] . ' ' . $r['lastname']), $query) !== false;
-    });
+    $query = trim($query);
+    if (strlen($query) < 2) {
+        return [];
+    }
+
+    $searchTerm = '%' . $query . '%';
+
+    $stmt = $pdo->prepare("
+        SELECT r.id, r.firstname, r.lastname, r.birth_year, r.gender,
+               r.license_number, c.name as club_name
+        FROM riders r
+        LEFT JOIN clubs c ON r.club_id = c.id
+        WHERE r.active = 1
+          AND (
+              CONCAT(r.firstname, ' ', r.lastname) LIKE ?
+              OR r.license_number LIKE ?
+              OR r.firstname LIKE ?
+              OR r.lastname LIKE ?
+          )
+        ORDER BY r.lastname, r.firstname
+        LIMIT ?
+    ");
+    $stmt->execute([$searchTerm, $searchTerm, $searchTerm, $searchTerm, $limit]);
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
 
 /**
