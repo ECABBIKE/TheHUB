@@ -114,10 +114,17 @@ html, body {
 /* Header-knappar */
 .org-header .org-btn--ghost {
     color: white;
-    border-color: transparent;
+    background: transparent;
+    border: none;
     min-width: 44px;
     min-height: 44px;
     padding: 8px;
+}
+
+.org-header .org-btn--ghost svg {
+    width: 24px;
+    height: 24px;
+    stroke: white;
 }
 
 .org-header .org-btn--ghost:active {
