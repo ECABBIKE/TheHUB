@@ -37,7 +37,7 @@ if (!canAccessEvent($eventId)) {
 }
 
 try {
-    $pdo = hub_db();
+    global $pdo;
 
     // Generera startnummer
     $bibNumber = getNextBibNumber($eventId);

@@ -23,7 +23,7 @@ if (!$event) {
 
 // Hantera export
 if (isset($_GET['download'])) {
-    $pdo = hub_db();
+    global $pdo;
 
     $source = $_GET['source'] ?? 'all';
 

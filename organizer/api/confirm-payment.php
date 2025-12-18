@@ -25,7 +25,7 @@ if (!$registrationId) {
 }
 
 try {
-    $pdo = hub_db();
+    global $pdo;
 
     // Hämta registreringen för att verifiera tillgång
     $stmt = $pdo->prepare("SELECT event_id FROM event_registrations WHERE id = ?");
