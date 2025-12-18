@@ -32,7 +32,7 @@ define('ORGANIZER_SESSION_TIMEOUT', 28800); // 8 timmar
  * Hämta event med alla klasser och priser
  */
 function getEventWithClasses(int $eventId): ?array {
-    $pdo = hub_db();
+    global $pdo;
 
     // Hämta event
     $stmt = $pdo->prepare("
@@ -94,7 +94,7 @@ function getEventWithClasses(int $eventId): ?array {
  * Hämta nästa lediga startnummer för event
  */
 function getNextBibNumber(int $eventId): int {
-    $pdo = hub_db();
+    global $pdo;
 
     // Hitta högsta befintliga startnummer
     $stmt = $pdo->prepare("
@@ -119,7 +119,7 @@ function getNextBibNumber(int $eventId): int {
  * Sök efter befintlig åkare
  */
 function searchRiders(string $query, int $limit = 20): array {
-    $pdo = hub_db();
+    global $pdo;
 
     $searchTerm = '%' . $query . '%';
 
@@ -148,7 +148,7 @@ function searchRiders(string $query, int $limit = 20): array {
  * Skapa platsregistrering
  */
 function createOnsiteRegistration(array $data, int $eventId, int $registeredByUserId): array {
-    $pdo = hub_db();
+    global $pdo;
 
     $pdo->beginTransaction();
 
@@ -216,7 +216,7 @@ function createOnsiteRegistration(array $data, int $eventId, int $registeredByUs
  * Hämta platsregistreringar för event
  */
 function getOnsiteRegistrations(int $eventId, ?string $status = null): array {
-    $pdo = hub_db();
+    global $pdo;
 
     $sql = "
         SELECT er.*,
@@ -245,7 +245,7 @@ function getOnsiteRegistrations(int $eventId, ?string $status = null): array {
  * Räkna registreringar för event
  */
 function countEventRegistrations(int $eventId): array {
-    $pdo = hub_db();
+    global $pdo;
 
     $stmt = $pdo->prepare("
         SELECT
@@ -290,7 +290,7 @@ function requireEventAccess(int $eventId) {
  * Hämta events som användaren har tillgång till
  */
 function getAccessibleEvents(): array {
-    $pdo = hub_db();
+    global $pdo;
     $userId = $_SESSION['admin_id'] ?? null;
 
     // Admin/super_admin ser alla aktiva events

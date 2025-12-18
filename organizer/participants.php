@@ -27,7 +27,7 @@ $filterStatus = $_GET['status'] ?? 'all'; // all, paid, unpaid
 $filterClass = $_GET['class'] ?? '';
 
 // Hämta registreringar
-$pdo = hub_db();
+global $pdo;
 
 $sql = "
     SELECT er.*,
