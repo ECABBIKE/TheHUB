@@ -72,8 +72,8 @@ function getEventWithClasses(int $eventId): ?array {
     try {
         $stmt = $pdo->prepare("
             SELECT c.id, c.name, c.display_name, c.gender, c.min_age, c.max_age, c.sort_order,
-                   COALESCE(epr.base_price, epr.onsite_price, 0) as price,
-                   COALESCE(epr.onsite_price, epr.base_price, 0) as onsite_price,
+                   COALESCE(epr.base_price, 0) as price,
+                   COALESCE(epr.base_price, 0) as onsite_price,
                    epr.id as pricing_rule_id
             FROM classes c
             JOIN event_classes ec ON ec.class_id = c.id AND ec.event_id = ?
@@ -92,7 +92,7 @@ function getEventWithClasses(int $eventId): ?array {
         $stmt = $pdo->prepare("
             SELECT c.id, c.name, c.display_name, c.gender, c.min_age, c.max_age, c.sort_order,
                    COALESCE(epr.base_price, 0) as price,
-                   COALESCE(epr.onsite_price, epr.base_price, 0) as onsite_price,
+                   COALESCE(epr.base_price, 0) as onsite_price,
                    epr.id as pricing_rule_id
             FROM classes c
             LEFT JOIN event_pricing_rules epr ON epr.class_id = c.id AND epr.event_id = ?
