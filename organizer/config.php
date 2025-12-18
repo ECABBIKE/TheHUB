@@ -9,6 +9,16 @@
 // Ladda huvudkonfigurationen
 require_once __DIR__ . '/../config.php';
 
+// Definiera hub_db() om den inte finns (krävs av payment.php)
+if (!function_exists('hub_db')) {
+    function hub_db() {
+        global $pdo;
+        return $pdo;
+    }
+}
+
+require_once __DIR__ . '/../includes/payment.php';
+
 // =============================================================================
 // APP-KONFIGURATION
 // =============================================================================
