@@ -9,7 +9,7 @@ if (!defined('THEHUB_INIT')) {
 }
 ?>
 <!DOCTYPE html>
-<html lang="sv">
+<html lang="sv" data-theme="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -28,8 +28,13 @@ if (!defined('THEHUB_INIT')) {
     <link rel="icon" type="image/svg+xml" href="<?= ORGANIZER_BASE_URL ?>/assets/icons/icon.svg">
     <link rel="apple-touch-icon" href="<?= ORGANIZER_BASE_URL ?>/assets/icons/icon.svg">
 
-    <!-- CSS -->
-    <link rel="stylesheet" href="<?= SITE_URL ?>/assets/css/base.css">
+    <!-- Global CSS -->
+    <link rel="stylesheet" href="<?= SITE_URL ?>/assets/css/reset.css">
+    <link rel="stylesheet" href="<?= SITE_URL ?>/assets/css/tokens.css">
+    <link rel="stylesheet" href="<?= SITE_URL ?>/assets/css/theme.css">
+    <link rel="stylesheet" href="<?= SITE_URL ?>/assets/css/components.css">
+    <link rel="stylesheet" href="<?= SITE_URL ?>/assets/css/pwa.css">
+    <!-- App-specific overrides -->
     <link rel="stylesheet" href="<?= ORGANIZER_BASE_URL ?>/assets/css/organizer.css">
 
     <!-- Lucide Icons -->
@@ -52,8 +57,8 @@ if (!defined('THEHUB_INIT')) {
     <header class="org-header">
         <div class="org-header__left">
             <?php if (isset($showBackButton) && $showBackButton): ?>
-                <a href="<?= htmlspecialchars($backUrl ?? 'dashboard.php') ?>" class="org-btn org-btn--ghost org-btn--icon" aria-label="Tillbaka">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>
+                <a href="<?= htmlspecialchars($backUrl ?? 'dashboard.php') ?>" aria-label="Tillbaka">
+                    <i data-lucide="arrow-left"></i>
                 </a>
             <?php endif; ?>
         </div>
@@ -65,8 +70,8 @@ if (!defined('THEHUB_INIT')) {
         </div>
         <div class="org-header__right">
             <?php if (isset($showLogout) && $showLogout): ?>
-                <a href="logout.php" class="org-btn org-btn--ghost org-btn--icon" title="Logga ut" aria-label="Logga ut">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>
+                <a href="logout.php" title="Logga ut" aria-label="Logga ut">
+                    <i data-lucide="log-out"></i>
                 </a>
             <?php endif; ?>
         </div>
