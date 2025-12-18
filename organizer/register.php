@@ -1,7 +1,6 @@
 <?php
 /**
- * Organizer App - Platsregistrering
- * Enkel vy för deltagare att registrera sig på plats
+ * Organizer App - Platsregistrering (Demo)
  */
 
 require_once __DIR__ . '/config.php';
@@ -12,8 +11,6 @@ if (!$eventId) {
     header('Location: dashboard.php');
     exit;
 }
-
-requireEventAccess($eventId);
 
 $event = getEventWithClasses($eventId);
 if (!$event) {
@@ -29,262 +26,229 @@ $backUrl = 'dashboard.php';
 include __DIR__ . '/includes/header.php';
 ?>
 
-<div class="org-card">
+<!-- Steg 1: Sök eller ny -->
+<div id="step-search" class="org-card">
     <div class="org-card__body">
+        <h2 style="text-align: center; margin: 0 0 24px 0;">Sök deltagare</h2>
 
-        <!-- Steg 1: Sök ditt namn -->
-        <div id="step-search">
-            <h2 class="org-text-center" style="margin: 0 0 var(--space-lg) 0;">Sök ditt namn</h2>
-
-            <div class="org-search" style="margin-bottom: var(--space-lg);">
-                <i data-lucide="search" class="org-search__icon"></i>
-                <input
-                    type="text"
-                    id="search-rider"
-                    class="org-input"
-                    placeholder="Skriv ditt namn..."
-                    autocomplete="off"
-                    style="font-size: var(--text-lg);"
-                >
-            </div>
-
-            <div id="search-results" class="org-hidden" style="margin-bottom: var(--space-lg);"></div>
-
-            <div class="org-text-center" style="margin-bottom: var(--space-md);">
-                <span class="org-text-muted">Hittar du inte dig själv?</span>
-            </div>
-
-            <button type="button" id="btn-new-rider" class="org-btn org-btn--ghost org-btn--large org-btn--block">
-                <i data-lucide="user-plus"></i>
-                Registrera ny deltagare
-            </button>
+        <div class="org-search" style="margin-bottom: 24px;">
+            <i data-lucide="search" class="org-search__icon"></i>
+            <input type="text" id="search-input" class="org-input" placeholder="Skriv namn..." autocomplete="off">
         </div>
 
-        <!-- Steg 2: Fyll i uppgifter -->
-        <div id="step-form" class="org-hidden">
-            <h2 class="org-text-center" style="margin: 0 0 var(--space-lg) 0;">Dina uppgifter</h2>
+        <div id="search-results" style="display: none; margin-bottom: 24px;"></div>
 
-            <form id="form-rider">
-                <input type="hidden" id="rider_id" name="rider_id" value="">
+        <div style="text-align: center; margin-bottom: 16px; color: var(--color-text-muted);">eller</div>
 
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-md);">
-                    <div class="org-form-group">
-                        <label class="org-label">Förnamn *</label>
-                        <input type="text" id="first_name" name="first_name" class="org-input" required>
-                    </div>
-                    <div class="org-form-group">
-                        <label class="org-label">Efternamn *</label>
-                        <input type="text" id="last_name" name="last_name" class="org-input" required>
-                    </div>
-                </div>
-
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-md);">
-                    <div class="org-form-group">
-                        <label class="org-label">Födelseår</label>
-                        <input type="number" id="birth_year" name="birth_year" class="org-input" placeholder="1990" min="1920" max="<?= date('Y') ?>">
-                    </div>
-                    <div class="org-form-group">
-                        <label class="org-label">Kön</label>
-                        <select id="gender" name="gender" class="org-select">
-                            <option value="">Välj...</option>
-                            <option value="M">Man</option>
-                            <option value="F">Kvinna</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div class="org-form-group">
-                    <label class="org-label">E-post</label>
-                    <input type="email" id="email" name="email" class="org-input" placeholder="namn@exempel.se">
-                </div>
-
-                <div class="org-form-group">
-                    <label class="org-label">Telefon</label>
-                    <input type="tel" id="phone" name="phone" class="org-input" placeholder="070-123 45 67">
-                </div>
-
-                <div class="org-form-group">
-                    <label class="org-label">Klubb / Team</label>
-                    <input type="text" id="club_name" name="club_name" class="org-input" placeholder="Valfritt">
-                </div>
-
-                <div class="org-form-group">
-                    <label class="org-label">Licensnummer</label>
-                    <input type="text" id="license_number" name="license_number" class="org-input" placeholder="Valfritt">
-                </div>
-
-                <div class="org-form-group">
-                    <label class="org-label">ICE (nödkontakt)</label>
-                    <input type="text" id="ice_contact" name="ice_contact" class="org-input" placeholder="Namn och telefon">
-                </div>
-
-                <div style="display: flex; gap: var(--space-md); margin-top: var(--space-lg);">
-                    <button type="button" class="org-btn org-btn--ghost" onclick="showStep('search')">
-                        <i data-lucide="arrow-left"></i>
-                        Tillbaka
-                    </button>
-                    <button type="submit" class="org-btn org-btn--primary" style="flex: 1;">
-                        Välj klass
-                        <i data-lucide="arrow-right"></i>
-                    </button>
-                </div>
-            </form>
-        </div>
-
-        <!-- Steg 3: Välj klass -->
-        <div id="step-class" class="org-hidden">
-            <div id="rider-info" class="org-text-center" style="margin-bottom: var(--space-lg);">
-                <div id="rider-name" style="font-size: var(--text-xl); font-weight: var(--weight-semibold);"></div>
-                <div id="rider-club" class="org-text-muted"></div>
-            </div>
-
-            <h2 class="org-text-center" style="margin: 0 0 var(--space-lg) 0;">Välj klass</h2>
-
-            <div id="class-grid" class="org-class-grid">
-                <?php foreach ($event['classes'] as $class): ?>
-                    <button type="button"
-                            class="org-class-btn"
-                            data-class-id="<?= $class['id'] ?>"
-                            data-class-name="<?= htmlspecialchars($class['display_name'] ?: $class['name']) ?>"
-                            data-class-price="<?= (int)$class['onsite_price'] ?>">
-                        <div class="org-class-btn__name">
-                            <?= htmlspecialchars($class['display_name'] ?: $class['name']) ?>
-                        </div>
-                        <div class="org-class-btn__price">
-                            <?= (int)$class['onsite_price'] ?> kr
-                        </div>
-                    </button>
-                <?php endforeach; ?>
-            </div>
-
-            <div style="margin-top: var(--space-lg);">
-                <button type="button" class="org-btn org-btn--ghost" onclick="showStep('form')">
-                    <i data-lucide="arrow-left"></i>
-                    Tillbaka
-                </button>
-            </div>
-        </div>
-
-        <!-- Steg 4: Betalning -->
-        <div id="step-payment" class="org-hidden">
-            <div class="org-text-center">
-                <div id="payment-info" style="margin-bottom: var(--space-lg);">
-                    <div id="payment-name" style="font-size: var(--text-lg); font-weight: var(--weight-semibold);"></div>
-                    <div id="payment-class" class="org-text-muted"></div>
-                </div>
-
-                <div id="payment-amount" style="font-size: 48px; font-weight: var(--weight-bold); margin-bottom: var(--space-lg);"></div>
-
-                <?php if (!empty($event['payment_config']['swish_number'])): ?>
-                    <div style="background: var(--color-bg-surface); padding: var(--space-md); border-radius: var(--radius-lg); display: inline-block; margin-bottom: var(--space-md); border: 1px solid var(--color-border);">
-                        <img id="swish-qr" src="" alt="Swish QR" style="width: 160px; height: 160px;">
-                    </div>
-                    <div class="org-text-muted" style="margin-bottom: var(--space-lg);">
-                        Swish: <strong><?= formatSwishNumber($event['payment_config']['swish_number']) ?></strong>
-                    </div>
-                <?php endif; ?>
-
-                <div style="display: flex; flex-direction: column; gap: var(--space-sm);">
-                    <button type="button" id="btn-paid" class="org-btn org-btn--primary org-btn--large">
-                        <i data-lucide="check"></i>
-                        Jag har betalat
-                    </button>
-                    <button type="button" id="btn-pay-later" class="org-btn org-btn--ghost">
-                        Betala senare
-                    </button>
-                    <button type="button" class="org-btn org-btn--ghost" onclick="showStep('class')">
-                        <i data-lucide="arrow-left"></i>
-                        Ändra klass
-                    </button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Steg 5: Klart -->
-        <div id="step-done" class="org-hidden">
-            <div class="org-text-center" style="padding: var(--space-xl) 0;">
-                <div style="width: 64px; height: 64px; background: var(--color-success); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto var(--space-md);">
-                    <i data-lucide="check" style="width: 32px; height: 32px; color: white;"></i>
-                </div>
-
-                <h1 style="margin: 0 0 var(--space-xs) 0;">Registrerad!</h1>
-                <div id="done-name" style="font-size: var(--text-lg);"></div>
-                <div id="done-class" class="org-text-muted" style="margin-bottom: var(--space-lg);"></div>
-
-                <div id="done-bib" style="font-size: 64px; font-weight: var(--weight-bold); color: var(--color-accent); margin-bottom: var(--space-lg);"></div>
-
-                <div id="done-status" style="margin-bottom: var(--space-xl);"></div>
-
-                <button type="button" id="btn-next" class="org-btn org-btn--primary org-btn--large org-btn--block">
-                    <i data-lucide="plus"></i>
-                    Nästa deltagare
-                </button>
-            </div>
-        </div>
-
+        <button type="button" id="btn-new" class="org-btn org-btn--ghost org-btn--large org-btn--block">
+            <i data-lucide="user-plus"></i>
+            Ny deltagare
+        </button>
     </div>
 </div>
 
-<?php
-$swishNum = $event['payment_config']['swish_number'] ?? '';
-$pageScripts = <<<SCRIPT
+<!-- Steg 2: Formulär -->
+<div id="step-form" class="org-card" style="display: none;">
+    <div class="org-card__body">
+        <h2 style="text-align: center; margin: 0 0 24px 0;">Uppgifter</h2>
+
+        <form id="rider-form">
+            <input type="hidden" id="rider_id" value="">
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                <div class="org-form-group">
+                    <label class="org-label">Förnamn *</label>
+                    <input type="text" id="first_name" class="org-input" required>
+                </div>
+                <div class="org-form-group">
+                    <label class="org-label">Efternamn *</label>
+                    <input type="text" id="last_name" class="org-input" required>
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                <div class="org-form-group">
+                    <label class="org-label">Födelseår</label>
+                    <input type="number" id="birth_year" class="org-input" placeholder="1990">
+                </div>
+                <div class="org-form-group">
+                    <label class="org-label">Kön</label>
+                    <select id="gender" class="org-select">
+                        <option value="">Välj...</option>
+                        <option value="M">Man</option>
+                        <option value="F">Kvinna</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="org-form-group">
+                <label class="org-label">E-post</label>
+                <input type="email" id="email" class="org-input" placeholder="namn@exempel.se">
+            </div>
+
+            <div class="org-form-group">
+                <label class="org-label">Telefon</label>
+                <input type="tel" id="phone" class="org-input" placeholder="070-123 45 67">
+            </div>
+
+            <div class="org-form-group">
+                <label class="org-label">Klubb</label>
+                <input type="text" id="club" class="org-input" placeholder="Klubbnamn">
+            </div>
+
+            <div style="display: flex; gap: 16px; margin-top: 24px;">
+                <button type="button" class="org-btn org-btn--ghost" onclick="showStep('search')">
+                    <i data-lucide="arrow-left"></i> Tillbaka
+                </button>
+                <button type="submit" class="org-btn org-btn--primary" style="flex: 1;">
+                    Välj klass <i data-lucide="arrow-right"></i>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Steg 3: Välj klass -->
+<div id="step-class" class="org-card" style="display: none;">
+    <div class="org-card__body">
+        <div id="rider-display" style="text-align: center; margin-bottom: 24px;">
+            <div id="display-name" style="font-size: 20px; font-weight: 600;"></div>
+            <div id="display-club" style="color: var(--color-text-muted);"></div>
+        </div>
+
+        <h2 style="text-align: center; margin: 0 0 24px 0;">Välj klass</h2>
+
+        <div class="org-class-grid">
+            <button type="button" class="org-class-btn" data-class="Elite Herr" data-price="450">
+                <div class="org-class-btn__name">Elite Herr</div>
+                <div class="org-class-btn__price">450 kr</div>
+            </button>
+            <button type="button" class="org-class-btn" data-class="Elite Dam" data-price="450">
+                <div class="org-class-btn__name">Elite Dam</div>
+                <div class="org-class-btn__price">450 kr</div>
+            </button>
+            <button type="button" class="org-class-btn" data-class="Sport Herr" data-price="350">
+                <div class="org-class-btn__name">Sport Herr</div>
+                <div class="org-class-btn__price">350 kr</div>
+            </button>
+            <button type="button" class="org-class-btn" data-class="Sport Dam" data-price="350">
+                <div class="org-class-btn__name">Sport Dam</div>
+                <div class="org-class-btn__price">350 kr</div>
+            </button>
+            <button type="button" class="org-class-btn" data-class="Junior" data-price="250">
+                <div class="org-class-btn__name">Junior</div>
+                <div class="org-class-btn__price">250 kr</div>
+            </button>
+            <button type="button" class="org-class-btn" data-class="Barn" data-price="150">
+                <div class="org-class-btn__name">Barn</div>
+                <div class="org-class-btn__price">150 kr</div>
+            </button>
+        </div>
+
+        <div style="margin-top: 24px;">
+            <button type="button" class="org-btn org-btn--ghost" onclick="showStep('form')">
+                <i data-lucide="arrow-left"></i> Tillbaka
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Steg 4: Betalning -->
+<div id="step-pay" class="org-card" style="display: none;">
+    <div class="org-card__body" style="text-align: center;">
+        <div id="pay-info" style="margin-bottom: 24px;">
+            <div id="pay-name" style="font-size: 18px; font-weight: 600;"></div>
+            <div id="pay-class" style="color: var(--color-text-muted);"></div>
+        </div>
+
+        <div id="pay-amount" style="font-size: 48px; font-weight: 700; margin-bottom: 24px;"></div>
+
+        <div style="background: white; padding: 16px; border-radius: 12px; display: inline-block; margin-bottom: 16px;">
+            <img id="qr-code" src="https://chart.googleapis.com/chart?cht=qr&chs=200x200&chl=DEMO-BETALNING" alt="QR" style="width: 160px; height: 160px;">
+        </div>
+
+        <div style="font-size: 24px; font-weight: 600; color: var(--color-accent); margin-bottom: 24px;">
+            BETALA
+        </div>
+
+        <button type="button" class="org-btn org-btn--primary org-btn--large org-btn--block" onclick="showStep('done')">
+            <i data-lucide="check"></i> Klar
+        </button>
+
+        <button type="button" class="org-btn org-btn--ghost" style="margin-top: 12px;" onclick="showStep('class')">
+            <i data-lucide="arrow-left"></i> Ändra klass
+        </button>
+    </div>
+</div>
+
+<!-- Steg 5: Klart -->
+<div id="step-done" class="org-card" style="display: none;">
+    <div class="org-card__body" style="text-align: center; padding: 48px 24px;">
+        <div style="width: 64px; height: 64px; background: var(--color-success); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px;">
+            <i data-lucide="check" style="width: 32px; height: 32px; color: white;"></i>
+        </div>
+
+        <h1 style="margin: 0 0 8px 0;">Registrerad!</h1>
+        <div id="done-name" style="font-size: 18px;"></div>
+        <div id="done-class" style="color: var(--color-text-muted); margin-bottom: 24px;"></div>
+
+        <div id="done-bib" style="font-size: 64px; font-weight: 700; color: var(--color-accent); margin-bottom: 32px;">#42</div>
+
+        <button type="button" class="org-btn org-btn--primary org-btn--large org-btn--block" onclick="resetAll()">
+            <i data-lucide="plus"></i> Nästa deltagare
+        </button>
+    </div>
+</div>
+
 <script>
 (function() {
-    const eventId = {$eventId};
-    const swishNumber = '{$swishNum}';
-
-    let rider = null;
-    let selectedClass = null;
+    let riderData = {};
+    let selectedClass = '';
+    let selectedPrice = 0;
 
     // Sök
-    const searchInput = document.getElementById('search-rider');
+    const searchInput = document.getElementById('search-input');
     const searchResults = document.getElementById('search-results');
 
-    const doSearch = OrgApp.debounce(async function(q) {
+    searchInput.addEventListener('input', function() {
+        const q = this.value.trim();
         if (q.length < 2) {
-            searchResults.classList.add('org-hidden');
+            searchResults.style.display = 'none';
             return;
         }
 
-        try {
-            const data = await OrgApp.api('search-rider.php', { query: q });
+        // Simulera sökning (demo)
+        fetch('api/search-rider.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ query: q })
+        })
+        .then(r => r.json())
+        .then(data => {
             if (data.riders && data.riders.length > 0) {
-                searchResults.innerHTML = data.riders.map(r => \`
-                    <div class="org-event-card" style="cursor: pointer;" data-rider='\${JSON.stringify(r).replace(/'/g, "&#39;")}'>
+                searchResults.innerHTML = data.riders.map(r => `
+                    <div class="org-event-card" style="cursor: pointer; margin-bottom: 8px;" onclick='selectRider(${JSON.stringify(r)})'>
                         <div class="org-event-card__info">
-                            <div class="org-event-card__name">\${r.firstname} \${r.lastname}</div>
-                            <div class="org-event-card__meta">\${r.club_name || ''} \${r.birth_year ? '• ' + r.birth_year : ''}</div>
+                            <div class="org-event-card__name">${r.firstname} ${r.lastname}</div>
+                            <div class="org-event-card__meta">${r.club_name || ''} ${r.birth_year ? '• ' + r.birth_year : ''}</div>
                         </div>
-                        <i data-lucide="chevron-right" style="width: 20px; height: 20px; color: var(--color-text-muted);"></i>
                     </div>
-                \`).join('');
-                searchResults.classList.remove('org-hidden');
+                `).join('');
+                searchResults.style.display = 'block';
                 lucide.createIcons();
-
-                searchResults.querySelectorAll('.org-event-card').forEach(el => {
-                    el.addEventListener('click', function() {
-                        const r = JSON.parse(this.dataset.rider);
-                        fillForm(r);
-                        showStep('form');
-                    });
-                });
             } else {
-                searchResults.innerHTML = '<div class="org-text-center org-text-muted" style="padding: var(--space-lg);">Ingen träff. Klicka "Registrera ny deltagare".</div>';
-                searchResults.classList.remove('org-hidden');
+                searchResults.innerHTML = '<div style="padding: 16px; text-align: center; color: var(--color-text-muted);">Ingen träff</div>';
+                searchResults.style.display = 'block';
             }
-        } catch(e) { console.error(e); }
-    }, 300);
-
-    searchInput.addEventListener('input', function() { doSearch(this.value); });
-
-    // Ny deltagare - töm formuläret
-    document.getElementById('btn-new-rider').addEventListener('click', () => {
-        clearForm();
-        showStep('form');
+        })
+        .catch(() => {
+            searchResults.innerHTML = '<div style="padding: 16px; text-align: center; color: var(--color-text-muted);">Ingen träff</div>';
+            searchResults.style.display = 'block';
+        });
     });
 
-    // Fyll i formuläret med data
-    function fillForm(r) {
+    // Välj från sök
+    window.selectRider = function(r) {
         document.getElementById('rider_id').value = r.id || '';
         document.getElementById('first_name').value = r.firstname || '';
         document.getElementById('last_name').value = r.lastname || '';
@@ -292,40 +256,29 @@ $pageScripts = <<<SCRIPT
         document.getElementById('gender').value = r.gender || '';
         document.getElementById('email').value = r.email || '';
         document.getElementById('phone').value = r.phone || '';
-        document.getElementById('club_name').value = r.club_name || '';
-        document.getElementById('license_number').value = r.license_number || '';
-        document.getElementById('ice_contact').value = r.ice_contact || '';
-    }
+        document.getElementById('club').value = r.club_name || '';
+        showStep('form');
+    };
 
-    function clearForm() {
-        document.getElementById('form-rider').reset();
+    // Ny deltagare
+    document.getElementById('btn-new').addEventListener('click', function() {
+        document.getElementById('rider-form').reset();
         document.getElementById('rider_id').value = '';
-    }
-
-    // Formulär submit
-    document.getElementById('form-rider').addEventListener('submit', function(e) {
-        e.preventDefault();
-        const fd = new FormData(this);
-        rider = {
-            id: fd.get('rider_id') || null,
-            firstname: fd.get('first_name'),
-            lastname: fd.get('last_name'),
-            birth_year: fd.get('birth_year') || null,
-            gender: fd.get('gender') || null,
-            email: fd.get('email') || null,
-            phone: fd.get('phone') || null,
-            club_name: fd.get('club_name') || null,
-            license_number: fd.get('license_number') || null,
-            ice_contact: fd.get('ice_contact') || null
-        };
-        showStep('class');
-        updateRiderDisplay();
+        showStep('form');
     });
 
-    function updateRiderDisplay() {
-        document.getElementById('rider-name').textContent = rider.firstname + ' ' + rider.lastname;
-        document.getElementById('rider-club').textContent = rider.club_name || '';
-    }
+    // Formulär
+    document.getElementById('rider-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        riderData = {
+            first_name: document.getElementById('first_name').value,
+            last_name: document.getElementById('last_name').value,
+            club: document.getElementById('club').value
+        };
+        document.getElementById('display-name').textContent = riderData.first_name + ' ' + riderData.last_name;
+        document.getElementById('display-club').textContent = riderData.club || '';
+        showStep('class');
+    });
 
     // Klassval
     document.querySelectorAll('.org-class-btn').forEach(btn => {
@@ -333,100 +286,47 @@ $pageScripts = <<<SCRIPT
             document.querySelectorAll('.org-class-btn').forEach(b => b.classList.remove('org-class-btn--selected'));
             this.classList.add('org-class-btn--selected');
 
-            selectedClass = {
-                id: this.dataset.classId,
-                name: this.dataset.className,
-                price: parseInt(this.dataset.classPrice, 10)
-            };
+            selectedClass = this.dataset.class;
+            selectedPrice = this.dataset.price;
 
-            showStep('payment');
-            updatePayment();
+            document.getElementById('pay-name').textContent = riderData.first_name + ' ' + riderData.last_name;
+            document.getElementById('pay-class').textContent = selectedClass;
+            document.getElementById('pay-amount').textContent = selectedPrice + ' kr';
+
+            showStep('pay');
         });
     });
 
-    function updatePayment() {
-        document.getElementById('payment-name').textContent = rider.firstname + ' ' + rider.lastname;
-        document.getElementById('payment-class').textContent = selectedClass.name;
-        document.getElementById('payment-amount').textContent = selectedClass.price + ' kr';
+    // Visa steg
+    window.showStep = function(step) {
+        ['search', 'form', 'class', 'pay', 'done'].forEach(s => {
+            document.getElementById('step-' + s).style.display = 'none';
+        });
+        document.getElementById('step-' + step).style.display = 'block';
 
-        if (swishNumber && selectedClass.price > 0) {
-            const qr = \`https://chart.googleapis.com/chart?cht=qr&chs=200x200&chl=C\${swishNumber.replace(/[^0-9]/g, '')};\${selectedClass.price * 100};&choe=UTF-8\`;
-            document.getElementById('swish-qr').src = qr;
+        if (step === 'done') {
+            document.getElementById('done-name').textContent = riderData.first_name + ' ' + riderData.last_name;
+            document.getElementById('done-class').textContent = selectedClass;
+            document.getElementById('done-bib').textContent = '#' + Math.floor(Math.random() * 100 + 1);
         }
-    }
 
-    // Betalning
-    document.getElementById('btn-paid').addEventListener('click', () => createReg('paid'));
-    document.getElementById('btn-pay-later').addEventListener('click', () => createReg('unpaid'));
+        lucide.createIcons();
+    };
 
-    async function createReg(status) {
-        const btn = event.target;
-        OrgApp.showLoading(btn);
-
-        try {
-            const data = await OrgApp.api('create-registration.php', {
-                event_id: eventId,
-                rider_id: rider.id,
-                first_name: rider.firstname,
-                last_name: rider.lastname,
-                birth_year: rider.birth_year,
-                gender: rider.gender,
-                email: rider.email,
-                phone: rider.phone,
-                club_name: rider.club_name,
-                license_number: rider.license_number,
-                ice_contact: rider.ice_contact,
-                class_id: selectedClass.id,
-                class_name: selectedClass.name,
-                payment_status: status
-            });
-
-            if (data.success) {
-                showDone(data.bib_number, status);
-            } else {
-                OrgApp.showAlert(data.error || 'Något gick fel');
-            }
-        } catch(e) {
-            OrgApp.showAlert('Nätverksfel');
-        } finally {
-            OrgApp.hideLoading(btn);
-        }
-    }
-
-    function showDone(bib, status) {
-        document.getElementById('done-name').textContent = rider.firstname + ' ' + rider.lastname;
-        document.getElementById('done-class').textContent = selectedClass.name;
-        document.getElementById('done-bib').textContent = '#' + bib;
-        document.getElementById('done-status').innerHTML = status === 'paid'
-            ? '<span class="org-status org-status--paid">BETALD</span>'
-            : '<span class="org-status org-status--unpaid">EJ BETALD</span>';
-        showStep('done');
-    }
-
-    document.getElementById('btn-next').addEventListener('click', reset);
-
-    function reset() {
-        rider = null;
-        selectedClass = null;
-        searchInput.value = '';
-        searchResults.classList.add('org-hidden');
-        clearForm();
+    // Reset
+    window.resetAll = function() {
+        riderData = {};
+        selectedClass = '';
+        selectedPrice = 0;
+        document.getElementById('rider-form').reset();
+        document.getElementById('search-input').value = '';
+        searchResults.style.display = 'none';
         document.querySelectorAll('.org-class-btn').forEach(b => b.classList.remove('org-class-btn--selected'));
         showStep('search');
-    }
-
-    window.showStep = function(step) {
-        ['search', 'form', 'class', 'payment', 'done'].forEach(s => {
-            document.getElementById('step-' + s).classList.add('org-hidden');
-        });
-        document.getElementById('step-' + step).classList.remove('org-hidden');
-        lucide.createIcons();
     };
 
     lucide.createIcons();
 })();
 </script>
-SCRIPT;
 
-include __DIR__ . '/includes/footer.php';
-?>
+<?php include __DIR__ . '/includes/footer.php'; ?>
