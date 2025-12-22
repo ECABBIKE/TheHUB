@@ -105,10 +105,17 @@ function toggleTheme() {
 
     // Update theme toggle button
     updateThemeToggleButton(newTheme);
+
+    // Update theme color meta tag
+    const metaThemeColor = document.querySelector('meta[name="theme-color"]');
+    if (metaThemeColor) {
+        metaThemeColor.setAttribute('content', newTheme === 'dark' ? '#0A0C14' : '#F4F5F7');
+    }
 }
 
 /**
  * Update theme toggle button appearance
+ * Icons auto-hide via CSS based on [data-theme], we just update label
  */
 function updateThemeToggleButton(theme) {
     const btn = document.getElementById('themeToggleBtn');
@@ -117,9 +124,11 @@ function updateThemeToggleButton(theme) {
     const label = btn.querySelector('.theme-label');
 
     if (theme === 'dark') {
+        // Dark mode - show "Ljust" to indicate switching to light
         if (label) label.textContent = 'Ljust';
         btn.setAttribute('title', 'Byt till ljust tema');
     } else {
+        // Light mode - show "Mörkt" to indicate switching to dark
         if (label) label.textContent = 'Mörkt';
         btn.setAttribute('title', 'Byt till mörkt tema');
     }
@@ -170,7 +179,7 @@ function initTheme() {
 
     document.documentElement.setAttribute('data-theme', theme);
 
-    // Update theme toggle button to show correct icon/label
+    // Update theme toggle button to show correct icon
     updateThemeToggleButton(theme);
 }
 

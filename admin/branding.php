@@ -144,6 +144,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $branding['gradient'] = ['enabled' => false];
         }
 
+        // Save dark mode colors (bike app colors)
+        $darkColors = [];
+        if (!empty($_POST['dark_bg_page']) && preg_match('/^#[0-9A-Fa-f]{6}$/', $_POST['dark_bg_page'])) {
+            $darkColors['bg_page'] = $_POST['dark_bg_page'];
+        }
+        if (!empty($_POST['dark_bg_card']) && preg_match('/^#[0-9A-Fa-f]{6}$/', $_POST['dark_bg_card'])) {
+            $darkColors['bg_card'] = $_POST['dark_bg_card'];
+        }
+        if (!empty($_POST['dark_accent']) && preg_match('/^#[0-9A-Fa-f]{6}$/', $_POST['dark_accent'])) {
+            $darkColors['accent'] = $_POST['dark_accent'];
+        }
+
+        if (!empty($darkColors)) {
+            $branding['dark_colors'] = $darkColors;
+        } else {
+            unset($branding['dark_colors']);
+        }
+
         // Save logo settings
         $branding['logos'] = [
             'sidebar' => trim($_POST['logo_sidebar'] ?? ''),
@@ -914,10 +932,159 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
     </div>
+
+    <!-- Gradient Section (from main branch - auto-generates from bg-page) -->
+    <div class="card mb-lg">
+        <div class="card-header">
+            <h2>
+                <i data-lucide="palette"></i>
+                Bakgrundsgradient
+            </h2>
+        </div>
+        <div class="card-body">
+            <p class="text-secondary mb-lg">
+                Gradienten genereras automatiskt från <strong>Sidbakgrund</strong>-färgen i Färger-sektionen ovan.
+                Aktivera eller inaktivera gradient här.
+            </p>
+
+            <?php
+            $gradient = $branding['gradient'] ?? [];
+            $gradientEnabled = !empty($gradient['enabled']);
+            $gradientStart = $gradient['start'] ?? '#E8ECF1';
+            $gradientEnd = $gradient['end'] ?? '#F8F9FB';
+            ?>
+
+            <div style="display: flex; flex-direction: column; gap: var(--space-lg);">
+                <!-- Enable Toggle -->
+                <div style="display: flex; align-items: center; gap: var(--space-md); padding: var(--space-lg); background: var(--color-bg-surface); border-radius: var(--radius-md); border-left: 4px solid #F59E0B;">
+                    <input type="checkbox"
+                           id="gradient_enabled"
+                           name="gradient_enabled"
+                           <?= $gradientEnabled ? 'checked' : '' ?>
+                           style="width: 20px; height: 20px; cursor: pointer;">
+                    <label for="gradient_enabled" style="font-weight: var(--weight-medium); cursor: pointer; margin: 0; flex: 1;">
+                        Aktivera bakgrundsgradient
+                    </label>
+                    <i data-lucide="zap" style="color: var(--color-warning); width: 20px; height: 20px;"></i>
+                </div>
+
+                <!-- Preview -->
+                <div style="padding: var(--space-lg); background: var(--color-bg-surface); border-radius: var(--radius-lg);">
+                    <h4 style="margin: 0 0 1rem 0; display: flex; align-items: center; gap: 0.5rem;">
+                        <i data-lucide="eye"></i>
+                        Förhandsvisning
+                    </h4>
+                    <div id="gradient-preview" style="height: 120px; border-radius: var(--radius-md); background: linear-gradient(135deg, <?= htmlspecialchars($gradientStart) ?>, <?= htmlspecialchars($gradientEnd) ?>); border: 1px solid var(--color-border);"></div>
+                    <div style="display: flex; justify-content: space-between; margin-top: var(--space-sm); font-size: var(--text-xs); font-family: var(--font-mono); color: var(--color-text-secondary);">
+                        <span id="gradient-start-value">Start: <?= htmlspecialchars($gradientStart) ?></span>
+                        <span id="gradient-end-value">Slut: <?= htmlspecialchars($gradientEnd) ?></span>
+                    </div>
+                    <small style="display: block; margin-top: var(--space-md); opacity: 0.7; font-size: var(--text-xs); text-align: center;">
+                        💡 <strong>Tips:</strong> Ändra <strong>Sidbakgrund</strong>-färgen i "Färger"-sektionen för att justera gradienten
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TEMPORARILY HIDDEN - Dark Mode Colors Section (Bike App Style) -->
+    <?php
+    // DISABLED: Hiding this section until functionality is verified
+    if (false): // Change to true to re-enable
+    $darkColors = $branding['dark_colors'] ?? [];
+    $darkBgPage = $darkColors['bg_page'] ?? '#242C3B';
+    $darkBgCard = $darkColors['bg_card'] ?? '#353F54';
+    $darkAccent = $darkColors['accent'] ?? '#37B6E9';
+    ?>
+    <div class="card mb-lg" style="display:none;">
+        <div class="card-header">
+            <h2>
+                <i data-lucide="moon"></i>
+                Mörkt tema
+            </h2>
+        </div>
+        <div class="card-body">
+            <p class="text-secondary mb-lg">
+                Anpassa färger för mörkt läge. Baserat på bike app-designen.
+            </p>
+
+            <div class="branding-grid" style="grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));">
+                <!-- Huvudbakgrund -->
+                <div class="color-group">
+                    <h3><i data-lucide="square"></i> Huvudbakgrund</h3>
+                    <div style="display: flex; align-items: center; gap: var(--space-md); padding: var(--space-md); background: var(--color-bg-surface); border-radius: var(--radius-md);">
+                        <input type="color"
+                               name="dark_bg_page"
+                               id="dark_bg_page"
+                               value="<?= htmlspecialchars($darkBgPage) ?>"
+                               style="width: 50px; height: 50px; border: 2px solid var(--color-border); border-radius: var(--radius-md); cursor: pointer;">
+                        <div style="flex: 1;">
+                            <div style="font-weight: var(--weight-medium); margin-bottom: 0.25rem;">
+                                Sidbakgrund
+                            </div>
+                            <div style="font-family: var(--font-mono); font-size: var(--text-sm); color: var(--color-text-secondary);">
+                                <?= htmlspecialchars($darkBgPage) ?>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Kortbakgrund -->
+                <div class="color-group">
+                    <h3><i data-lucide="layers"></i> Kort & Paneler</h3>
+                    <div style="display: flex; align-items: center; gap: var(--space-md); padding: var(--space-md); background: var(--color-bg-surface); border-radius: var(--radius-md);">
+                        <input type="color"
+                               name="dark_bg_card"
+                               id="dark_bg_card"
+                               value="<?= htmlspecialchars($darkBgCard) ?>"
+                               style="width: 50px; height: 50px; border: 2px solid var(--color-border); border-radius: var(--radius-md); cursor: pointer;">
+                        <div style="flex: 1;">
+                            <div style="font-weight: var(--weight-medium); margin-bottom: 0.25rem;">
+                                Kortytor
+                            </div>
+                            <div style="font-family: var(--font-mono); font-size: var(--text-sm); color: var(--color-text-secondary);">
+                                <?= htmlspecialchars($darkBgCard) ?>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Accent -->
+                <div class="color-group">
+                    <h3><i data-lucide="zap"></i> Accentfärg</h3>
+                    <div style="display: flex; align-items: center; gap: var(--space-md); padding: var(--space-md); background: var(--color-bg-surface); border-radius: var(--radius-md);">
+                        <input type="color"
+                               name="dark_accent"
+                               id="dark_accent"
+                               value="<?= htmlspecialchars($darkAccent) ?>"
+                               style="width: 50px; height: 50px; border: 2px solid var(--color-border); border-radius: var(--radius-md); cursor: pointer;">
+                        <div style="flex: 1;">
+                            <div style="font-weight: var(--weight-medium); margin-bottom: 0.25rem;">
+                                Länkar & Knappar
+                            </div>
+                            <div style="font-family: var(--font-mono); font-size: var(--text-sm); color: var(--color-text-secondary);">
+                                <?= htmlspecialchars($darkAccent) ?>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div style="margin-top: var(--space-lg); padding: var(--space-md); background: var(--color-bg-surface); border-radius: var(--radius-md); border-left: 4px solid #37B6E9;">
+                <p style="margin: 0; font-size: 0.875rem; color: var(--color-text-secondary); display: flex; align-items: start; gap: 0.5rem;">
+                    <i data-lucide="info" style="width: 16px; height: 16px; margin-top: 2px; flex-shrink: 0;"></i>
+                    <span>
+                        Övriga färger (gradient, text, kanter) genereras automatiskt från dessa basfärger.
+                    </span>
+                </p>
+            </div>
+        </div>
+    </div>
+    <?php endif; // End of dark mode section (disabled) ?>
 </form>
 
 <script>
-// Auto-update gradient preview when bg-page color changes
+// Auto-update gradient preview when bg-page color changes (from main branch)
 function updateGradientFromBgPage(bgColor) {
     // Only update if gradient is enabled
     const gradientCheckbox = document.getElementById('gradient_enabled');
@@ -951,6 +1118,7 @@ function updateGradientFromBgPage(bgColor) {
     if (startValue) startValue.textContent = `Start: ${startColor}`;
     if (endValue) endValue.textContent = `Slut: ${endColor}`;
 }
+
 </script>
 
 <!-- Display-only Design System Reference Sections -->
