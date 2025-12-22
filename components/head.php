@@ -294,15 +294,9 @@ if (file_exists($brandingFile)) {
         // Output if we have anything to output
         if ($colorCount > 0 || $responsiveCss || $layout || $gradient) {
             echo '<style id="custom-branding" data-colors="' . $colorCount . '">';
-            // Apply custom colors with HIGH SPECIFICITY to override theme.css
-            // Apply to both :root, dark, and light mode selectors
-            if ($colorCount > 0) {
-                echo ':root,' . "\n";
-                echo 'html[data-theme="dark"],' . "\n";
-                echo 'html[data-theme="light"]{' . $cssOutput . '}' . "\n";
-            } else {
-                echo ':root{' . $cssOutput . '}' . "\n";
-            }
+            // Apply custom colors ONLY to :root (not to theme selectors)
+            // This allows theme.css to handle light/dark mode properly
+            echo ':root{' . $cssOutput . '}';
             echo $responsiveCss;
             echo '</style>';
         }
