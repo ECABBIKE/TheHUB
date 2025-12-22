@@ -454,17 +454,29 @@
 
     /* More compact login CTA on mobile */
     .welcome-login-cta {
-        padding: var(--space-md);
-        margin-bottom: var(--space-md);
+        padding: var(--space-sm);
+        margin-bottom: var(--space-sm);
+        gap: var(--space-sm);
     }
 
     .welcome-login-icon {
-        width: 32px;
-        height: 32px;
+        width: 24px;
+        height: 24px;
     }
 
     .welcome-login-cta h3 {
-        font-size: var(--text-sm);
+        font-size: var(--text-xs);
+        margin-bottom: 2px;
+    }
+
+    .welcome-login-cta p {
+        font-size: var(--text-xs);
+        line-height: 1.4;
+    }
+
+    .welcome-login-cta .btn {
+        padding: var(--space-xs) var(--space-sm);
+        font-size: var(--text-xs);
     }
 
     .welcome-stat {
