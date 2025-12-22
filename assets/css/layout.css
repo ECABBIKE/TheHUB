@@ -194,3 +194,30 @@
     padding-right: var(--space-xl);
   }
 }
+
+/* ============================================================================
+   BRANDING PADDING ENFORCEMENT
+   Force all page containers to use branding-controlled padding
+   ============================================================================ */
+.ranking-page,
+.results-page,
+.calendar-page,
+.database-page,
+.series-page,
+.profile-page {
+  padding: var(--container-padding) !important;
+}
+
+/* Page-specific containers that wrap content */
+.page-container,
+.content-wrapper,
+.page-wrapper {
+  padding: var(--container-padding);
+}
+
+/* Search boxes and filter rows should use card padding */
+.search-box,
+.filter-row,
+.filters-bar {
+  padding: var(--card-padding);
+}
