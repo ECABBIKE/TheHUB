@@ -246,6 +246,40 @@ body{
 .btn--ghost{background:transparent;color:var(--color-text-secondary)}
 .btn--ghost:hover{background:var(--color-bg-hover);color:var(--color-text-primary)}
 
+/* Tabs - Unified tab system for all pages */
+.tabs-nav{display:flex;gap:var(--space-sm);margin-bottom:var(--space-lg);border-bottom:2px solid var(--color-border)}
+.tab{
+  padding:var(--space-sm) var(--space-lg);
+  background:transparent;
+  color:var(--color-text-secondary);
+  font-size:var(--text-base);
+  font-weight:var(--weight-medium);
+  border:none;
+  border-bottom:3px solid transparent;
+  cursor:pointer;
+  transition:all var(--transition-fast);
+  white-space:nowrap;
+}
+.tab:hover{color:var(--color-text-primary);background:var(--color-bg-hover)}
+.tab.active{
+  color:var(--color-accent);
+  border-bottom-color:var(--color-accent);
+  background:transparent;
+}
+/* Tab variant: Pill style (alternative) */
+.tab-pill{
+  padding:var(--space-sm) var(--space-md);
+  border-radius:var(--radius-md);
+  border:1px solid var(--color-border);
+  background:transparent;
+}
+.tab-pill:hover{background:var(--color-bg-hover);border-color:var(--color-border-strong)}
+.tab-pill.active{
+  background:var(--color-accent);
+  color:var(--color-text-inverse);
+  border-color:var(--color-accent);
+}
+
 /* Breadcrumb */
 .breadcrumb{display:flex;align-items:center;gap:var(--space-xs);font-size:var(--text-sm);color:var(--color-text-tertiary);margin-bottom:var(--space-lg)}
 .breadcrumb-link{color:var(--color-text-secondary);transition:color var(--transition-fast)}

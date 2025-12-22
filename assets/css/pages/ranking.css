@@ -6,15 +6,7 @@
 .page-header {
   margin-bottom: var(--space-xl);
 }
-.page-title {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-  font-size: var(--text-2xl);
-  font-weight: var(--weight-bold);
-  margin: 0 0 var(--space-xs) 0;
-  color: var(--color-text-primary);
-}
+/* NOTE: .page-title is now defined in components.css */
 .page-icon {
   width: 32px;
   height: 32px;
@@ -30,32 +22,7 @@
   color: var(--color-text-muted);
 }
 
-.discipline-tabs {
-  display: flex;
-  gap: var(--space-xs);
-  background: var(--color-bg-sunken);
-  padding: var(--space-xs);
-  border-radius: var(--radius-lg);
-  overflow-x: auto;
-}
-.discipline-tab {
-  flex: 1;
-  padding: var(--space-sm) var(--space-md);
-  text-align: center;
-  border-radius: var(--radius-md);
-  font-weight: var(--weight-medium);
-  color: var(--color-text-secondary);
-  white-space: nowrap;
-  transition: all var(--transition-fast);
-}
-.discipline-tab:hover {
-  background: var(--color-bg-hover);
-  color: var(--color-text);
-}
-.discipline-tab.active {
-  background: var(--color-accent);
-  color: var(--color-text-inverse);
-}
+/* NOTE: Tab styles now use unified .tab-pill from components.css */
 
 .view-toggle {
   display: flex;
@@ -448,14 +415,6 @@
 }
 
 @media (max-width: 599px) {
-  .discipline-tabs {
-    gap: 2px;
-    padding: 2px;
-  }
-  .discipline-tab {
-    padding: var(--space-xs) var(--space-sm);
-    font-size: var(--text-sm);
-  }
   .view-toggle {
     flex-direction: column;
   }
@@ -464,8 +423,4 @@
   }
   .stats-grid {
     grid-template-columns: 1fr 1fr;
-  }
-  .page-title {
-    font-size: var(--text-xl);
-  }
-}
+  }}

@@ -7,15 +7,7 @@
   margin-bottom: var(--space-xl);
 }
 
-.page-title {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-  font-size: var(--text-2xl);
-  font-weight: var(--weight-bold);
-  margin: 0 0 var(--space-xs) 0;
-  color: var(--color-text-primary);
-}
+/* NOTE: .page-title is now defined in components.css */
 
 .page-icon {
   width: 32px;
@@ -69,34 +61,7 @@
   border: 1px solid var(--color-border);
 }
 
-.search-tabs {
-  display: flex;
-  gap: var(--space-sm);
-  margin-bottom: var(--space-md);
-}
-
-.search-tab {
-  flex: 1;
-  padding: var(--space-sm) var(--space-md);
-  border: 2px solid var(--color-border);
-  border-radius: var(--radius-md);
-  background: transparent;
-  color: var(--color-text-secondary);
-  font-weight: var(--weight-medium);
-  cursor: pointer;
-  transition: all var(--transition-fast);
-}
-
-.search-tab:hover {
-  border-color: var(--color-accent);
-  color: var(--color-accent);
-}
-
-.search-tab.active {
-  background: var(--color-accent);
-  border-color: var(--color-accent);
-  color: white;
-}
+/* NOTE: Tab styles now use unified .tab-pill from components.css */
 
 .search-box {
   position: relative;
@@ -309,16 +274,11 @@
 }
 
 .ranking-stats .stat.gold {
-  background: #fef3c7;
-  color: #92400e;
+  background: var(--color-warning-light);
+  color: var(--color-warning);
 }
 
 /* Lucide icons in tabs and titles */
-.search-tab i, .search-tab svg {
-  width: 16px;
-  height: 16px;
-  vertical-align: -3px;
-}
 .card-title i, .card-title svg {
   width: 20px;
   height: 20px;
@@ -402,15 +362,6 @@
   .search-card {
     padding: var(--space-md);
     margin-bottom: var(--space-md);
-  }
-  .search-tabs {
-    gap: var(--space-xs);
-    margin-bottom: var(--space-sm);
-  }
-  .search-tab {
-    padding: var(--space-xs) var(--space-sm);
-    font-size: var(--text-sm);
-    border-width: 1px;
   }
   .search-input {
     padding: var(--space-sm) var(--space-sm) var(--space-sm) calc(var(--space-sm) + 1.5em);

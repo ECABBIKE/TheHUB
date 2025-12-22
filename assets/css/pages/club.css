@@ -247,11 +247,7 @@
 @media (max-width: 599px) {
   .stats-grid {
     grid-template-columns: repeat(2, 1fr);
-  }
-  .page-title {
-    font-size: var(--text-xl);
-  }
-  .club-contact {
+  }  .club-contact {
     flex-direction: column;
     gap: var(--space-sm);
   }

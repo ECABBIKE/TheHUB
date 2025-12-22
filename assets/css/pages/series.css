@@ -10,15 +10,7 @@
 .page-header {
     margin-bottom: var(--space-lg);
 }
-.page-title {
-    display: flex;
-    align-items: center;
-    gap: var(--space-sm);
-    font-size: var(--text-2xl);
-    font-weight: var(--weight-bold);
-    margin: 0 0 var(--space-xs) 0;
-    color: var(--color-text-primary);
-}
+/* NOTE: .page-title is now defined in components.css */
 .page-icon {
     width: 32px;
     height: 32px;
