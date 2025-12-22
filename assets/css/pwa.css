@@ -296,15 +296,11 @@ body.pwa-installed .browser-hint {
 /* iOS standalone mode */
 @media (display-mode: standalone), (display-mode: fullscreen) {
   html {
-    /* Prevent overscroll bounce on iOS */
-    overscroll-behavior: none;
     height: 100%;
     height: -webkit-fill-available;
   }
 
   body {
-    /* Prevent pull-to-refresh but allow normal scrolling */
-    overscroll-behavior-y: contain;
     min-height: 100%;
     min-height: -webkit-fill-available;
   }
