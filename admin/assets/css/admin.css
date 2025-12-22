@@ -127,16 +127,22 @@
 }
 
 .theme-icon-light,
-.theme-icon-dark {
+.theme-icon-dark,
+.icon-sun,
+.icon-moon {
     width: 18px;
     height: 18px;
 }
 
-[data-theme="light"] .theme-icon-dark {
+/* Hide sun icon in light mode (show moon to switch to dark) */
+[data-theme="light"] .theme-icon-dark,
+[data-theme="light"] .icon-sun {
     display: none;
 }
 
-[data-theme="dark"] .theme-icon-light {
+/* Hide moon icon in dark mode (show sun to switch to light) */
+[data-theme="dark"] .theme-icon-light,
+[data-theme="dark"] .icon-moon {
     display: none;
 }
 

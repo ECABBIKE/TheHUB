@@ -291,8 +291,77 @@ if (file_exists($brandingFile)) {
             }
         }
 
+        // TEMPORARILY DISABLED - Process dark mode colors (bike app style)
+        // Disabled until site functionality is verified
+        /*
+        $darkColors = $brandingData['dark_colors'] ?? null;
+        $darkModeCss = '';
+
+        if ($darkColors && is_array($darkColors)) {
+            // Apply ONLY to html[data-theme="dark"] - does NOT affect light mode!
+            $darkModeCss .= 'html[data-theme="dark"]{';
+
+            // Huvudbakgrund (page background)
+            if (!empty($darkColors['bg_page']) && preg_match('/^#[0-9A-Fa-f]{6}$/', $darkColors['bg_page'])) {
+                $bgPage = $darkColors['bg_page'];
+                $darkModeCss .= '--color-bg-page:' . htmlspecialchars($bgPage, ENT_QUOTES, 'UTF-8') . ';';
+
+                // Auto-generate sunken (darker)
+                list($r, $g, $b) = sscanf($bgPage, "#%02x%02x%02x");
+                $sunkenR = max(0, (int)($r * 0.7));
+                $sunkenG = max(0, (int)($g * 0.7));
+                $sunkenB = max(0, (int)($b * 0.7));
+                $darkModeCss .= '--color-bg-sunken:#' . sprintf('%02X%02X%02X', $sunkenR, $sunkenG, $sunkenB) . ';';
+
+                // Auto-generate gradient from bg-page
+                $startR = min(255, (int)($r * 0.95));
+                $startG = min(255, (int)($g * 0.95));
+                $startB = min(255, (int)($b * 0.95));
+                $darkModeCss .= '--gradient-start:#' . sprintf('%02X%02X%02X', $startR, $startG, $startB) . ';';
+
+                $endR = max(0, (int)($r * 1.1));
+                $endG = max(0, (int)($g * 1.1));
+                $endB = max(0, (int)($b * 1.1));
+                $darkModeCss .= '--gradient-end:#' . sprintf('%02X%02X%02X', $endR, $endG, $endB) . ';';
+            }
+
+            // Kortbakgrund (card background)
+            if (!empty($darkColors['bg_card']) && preg_match('/^#[0-9A-Fa-f]{6}$/', $darkColors['bg_card'])) {
+                $bgCard = $darkColors['bg_card'];
+                $darkModeCss .= '--color-bg-card:' . htmlspecialchars($bgCard, ENT_QUOTES, 'UTF-8') . ';';
+                $darkModeCss .= '--color-bg-surface:' . htmlspecialchars($bgCard, ENT_QUOTES, 'UTF-8') . ';';
+                $darkModeCss .= '--color-bg-elevated:' . htmlspecialchars($bgCard, ENT_QUOTES, 'UTF-8') . ';';
+
+                // Update glass effect background to match card color
+                list($r, $g, $b) = sscanf($bgCard, "#%02x%02x%02x");
+                $darkModeCss .= '--glass-bg:rgba(' . $r . ',' . $g . ',' . $b . ',0.75);';
+            }
+
+            // Accentfärg
+            if (!empty($darkColors['accent']) && preg_match('/^#[0-9A-Fa-f]{6}$/', $darkColors['accent'])) {
+                $accent = $darkColors['accent'];
+                $darkModeCss .= '--color-accent:' . htmlspecialchars($accent, ENT_QUOTES, 'UTF-8') . ';';
+                $darkModeCss .= '--color-accent-text:' . htmlspecialchars($accent, ENT_QUOTES, 'UTF-8') . ';';
+
+                // Auto-generate hover (lighter)
+                list($r, $g, $b) = sscanf($accent, "#%02x%02x%02x");
+                $hoverR = min(255, (int)($r * 1.2));
+                $hoverG = min(255, (int)($g * 1.2));
+                $hoverB = min(255, (int)($b * 1.2));
+                $darkModeCss .= '--color-accent-hover:#' . sprintf('%02X%02X%02X', $hoverR, $hoverG, $hoverB) . ';';
+
+                // Auto-generate light variant (rgba with low opacity)
+                $darkModeCss .= '--color-accent-light:rgba(' . $r . ',' . $g . ',' . $b . ',0.15);';
+                $darkModeCss .= '--accent-glow:rgba(' . $r . ',' . $g . ',' . $b . ',0.2);';
+            }
+
+            $darkModeCss .= '}';
+        }
+        */
+        $darkModeCss = ''; // Set to empty while disabled
+
         // Output if we have anything to output
-        if ($colorCount > 0 || $responsiveCss || $layout || $gradient) {
+        if ($colorCount > 0 || $responsiveCss || $layout || $gradient || $darkModeCss) {
             echo '<style id="custom-branding" data-colors="' . $colorCount . '">';
             // Apply custom colors with HIGH SPECIFICITY to override theme.css
             // Apply to both :root, dark, and light mode selectors
@@ -304,6 +373,7 @@ if (file_exists($brandingFile)) {
                 echo ':root{' . $cssOutput . '}' . "\n";
             }
             echo $responsiveCss;
+            echo $darkModeCss;
             echo '</style>';
         }
     }
