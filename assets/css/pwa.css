@@ -4,17 +4,17 @@
  */
 
 /* ========== SAFE AREA HANDLING (Notch, etc) ========== */
+/* NOTE: Header safe-area is now ONLY applied in standalone PWA mode (see below)
+   to prevent the header from becoming too tall in regular browser mode */
+
 @supports (padding-top: env(safe-area-inset-top)) {
-  .header {
-    padding-top: env(safe-area-inset-top);
-    height: calc(var(--header-height) + env(safe-area-inset-top));
-  }
-
-  .mobile-nav {
+  /* Bottom nav needs safe-area in all modes for home indicator */
+  .mobile-nav,
+  .nav-bottom {
     padding-bottom: env(safe-area-inset-bottom);
-    height: calc(var(--mobile-nav-height) + env(safe-area-inset-bottom));
   }
 
+  /* Side padding for landscape notch devices */
   .main-content {
     padding-left: max(var(--container-padding), env(safe-area-inset-left));
     padding-right: max(var(--container-padding), env(safe-area-inset-right));
@@ -277,9 +277,12 @@ body.pwa-installed .browser-hint {
 
 /* ========== STANDALONE MODE ADJUSTMENTS ========== */
 @media (display-mode: standalone) {
-  /* Extra padding for notch/status bar when in app mode */
+  /* Header safe-area handling - only in PWA mode, not regular browser
+     This adds padding for notch/status bar AND increases height to match */
   .header {
-    padding-top: max(var(--space-sm), env(safe-area-inset-top));
+    padding-top: env(safe-area-inset-top, 0px);
+    /* Height increases to account for safe-area padding */
+    height: calc(var(--header-height, 60px) + env(safe-area-inset-top, 0px));
   }
 
   /* Hide install prompts */
@@ -353,10 +356,11 @@ body.pwa-installed .browser-hint {
     display: none !important;
   }
 
-  /* Sidebar must be flush to left edge in landscape standalone */
+  /* Sidebar must be flush to left edge in landscape standalone
+     Position accounts for header height + safe-area */
   .sidebar {
     position: fixed !important;
-    top: var(--header-height, 60px) !important;
+    top: calc(var(--header-height, 60px) + env(safe-area-inset-top, 0px)) !important;
     left: 0 !important;
     right: auto !important;
     margin: 0 !important;
