@@ -11,7 +11,7 @@
  * - promotor: Only tävlingar (their assigned events)
  * - admin/super_admin: Full access
  */
-require_once __DIR__ . '/../../v3-config.php';
+require_once __DIR__ . '/../../hub-config.php';
 require_once __DIR__ . '/../../components/icons.php';
 require_once __DIR__ . '/../../includes/config/admin-tabs-config.php';
 

@@ -1,18 +1,18 @@
 <?php
 /**
- * TheHUB V3.5 - Sidebar Navigation
+ * TheHUB Sidebar Navigation
  * Uses Lucide-style SVG icons
  * Includes admin navigation for admin users
  */
 
-// Ensure v3-config is loaded
-if (!defined('HUB_V3_ROOT')) {
-    $v3Config = __DIR__ . '/../v3-config.php';
-    if (file_exists($v3Config)) {
-        require_once $v3Config;
+// Ensure hub-config is loaded
+if (!defined('HUB_ROOT')) {
+    $hubConfig = __DIR__ . '/../hub-config.php';
+    if (file_exists($hubConfig)) {
+        require_once $hubConfig;
     } else {
         // Fallback definition
-        define('HUB_V3_ROOT', dirname(__DIR__));
+        define('HUB_ROOT', dirname(__DIR__));
     }
 }
 

@@ -5,7 +5,7 @@
  */
 
 require_once __DIR__ . '/../config.php';
-require_once __DIR__ . '/../v3-config.php';
+require_once __DIR__ . '/../hub-config.php';
 
 // Basic HTML output
 header('Content-Type: text/html; charset=utf-8');

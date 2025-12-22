@@ -18,7 +18,7 @@
  */
 
 // Ladda konfiguration
-require_once __DIR__ . '/../../v3-config.php';
+require_once __DIR__ . '/../../hub-config.php';
 require_once __DIR__ . '/../../config.php';
 require_once __DIR__ . '/../../includes/config/economy-tabs-config.php';
 

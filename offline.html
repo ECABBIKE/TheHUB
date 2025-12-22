@@ -111,10 +111,10 @@
   <script>
     // Show cached pages if available
     if ('caches' in window) {
-      caches.open('thehub-v3-cache-v1').then(cache => {
+      caches.open('thehub-cache-v1').then(cache => {
         cache.keys().then(requests => {
           const pages = requests
-            .filter(r => r.url.includes('/v3/') && !r.url.match(/\.(css|js|png|jpg|svg)$/))
+            .filter(r => !r.url.match(/\.(css|js|png|jpg|svg|json)$/))
             .map(r => new URL(r.url).pathname);
 
           if (pages.length > 1) {
@@ -123,7 +123,7 @@
             uniquePages.forEach(page => {
               const link = document.createElement('a');
               link.href = page;
-              link.textContent = page.replace('/v3/', '/').replace(/\/$/, '') || 'Dashboard';
+              link.textContent = page.replace(/\/$/, '') || 'Dashboard';
               container.appendChild(link);
             });
             document.getElementById('cached-pages').style.display = 'block';
