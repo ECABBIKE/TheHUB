@@ -124,7 +124,7 @@ if (!function_exists('getDeadlineInfo')) {
 </div>
 
 <!-- Filters -->
-<div class="filters-bar">
+<div class="filter-bar">
     <div class="filter-group">
         <label for="filter-series" class="filter-label">Serie</label>
         <select id="filter-series" class="filter-select" onchange="applyFilters()">

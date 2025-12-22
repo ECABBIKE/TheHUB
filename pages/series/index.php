@@ -127,7 +127,7 @@ if ($filterSeriesName && !empty($seriesList)) {
 </div>
 
 <!-- Filters -->
-<div class="filters-bar">
+<div class="filter-bar">
     <div class="filter-group">
         <label class="filter-label">Serie</label>
         <select class="filter-select" onchange="window.location=this.value">

@@ -98,7 +98,7 @@ try {
 </div>
 
 <!-- Filters -->
-<div class="filters-bar">
+<div class="filter-bar">
     <div class="filter-group">
         <label for="filter-brand" class="filter-label">Serie</label>
         <select id="filter-brand" class="filter-select" onchange="applyFilters()">
