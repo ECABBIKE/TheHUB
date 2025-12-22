@@ -102,37 +102,46 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'header_height' => $_POST['header_height'] ?? '60'
         ];
 
-        // Save gradient settings (auto-generate from base color)
+        // Auto-generate gradient from bg-page color
         $gradientEnabled = !empty($_POST['gradient_enabled']);
-        $gradientBase = trim($_POST['gradient_base'] ?? '');
 
-        if ($gradientEnabled && $gradientBase && preg_match('/^#[0-9A-Fa-f]{6}$/', $gradientBase)) {
-            // Auto-generate gradient colors from base
-            list($r, $g, $b) = sscanf($gradientBase, "#%02x%02x%02x");
+        if ($gradientEnabled) {
+            // Get bg-page color from saved colors, or use default
+            $bgPageColor = $customColors['--color-bg-page'] ?? null;
 
-            // Generate lighter version (start) - lighten by 8%
-            $startR = min(255, $r + round($r * 0.08));
-            $startG = min(255, $g + round($g * 0.08));
-            $startB = min(255, $b + round($b * 0.08));
-            $gradientStart = sprintf('#%02X%02X%02X', $startR, $startG, $startB);
+            // If no custom bg-page, read from current theme
+            if (!$bgPageColor) {
+                $currentTheme = $_COOKIE['hub_theme'] ?? 'dark';
+                $bgPageColor = $currentTheme === 'light' ? '#F4F5F7' : '#0A0C14';
+            }
 
-            // Generate darker version (end) - darken by 12%
-            $endR = max(0, $r - round($r * 0.12));
-            $endG = max(0, $g - round($g * 0.12));
-            $endB = max(0, $b - round($b * 0.12));
-            $gradientEnd = sprintf('#%02X%02X%02X', $endR, $endG, $endB);
+            // Parse color - support both hex and rgba
+            if (preg_match('/^#[0-9A-Fa-f]{6}$/', $bgPageColor)) {
+                list($r, $g, $b) = sscanf($bgPageColor, "#%02x%02x%02x");
 
-            $branding['gradient'] = [
-                'enabled' => true,
-                'base' => $gradientBase,
-                'angle' => 135,
-                'start' => $gradientStart,
-                'end' => $gradientEnd
-            ];
+                // Generate lighter (start) - lighten by 5%
+                $startR = min(255, $r + round($r * 0.05));
+                $startG = min(255, $g + round($g * 0.05));
+                $startB = min(255, $b + round($b * 0.05));
+                $gradientStart = sprintf('#%02X%02X%02X', $startR, $startG, $startB);
+
+                // Generate darker (end) - darken by 8%
+                $endR = max(0, $r - round($r * 0.08));
+                $endG = max(0, $g - round($g * 0.08));
+                $endB = max(0, $b - round($b * 0.08));
+                $gradientEnd = sprintf('#%02X%02X%02X', $endR, $endG, $endB);
+
+                $branding['gradient'] = [
+                    'enabled' => true,
+                    'angle' => 135,
+                    'start' => $gradientStart,
+                    'end' => $gradientEnd
+                ];
+            } else {
+                $branding['gradient'] = ['enabled' => false];
+            }
         } else {
-            $branding['gradient'] = [
-                'enabled' => false
-            ];
+            $branding['gradient'] = ['enabled' => false];
         }
 
         // Save logo settings
@@ -857,55 +866,29 @@ include __DIR__ . '/components/unified-layout.php';
         </div>
         <div class="card-body">
             <p class="text-secondary mb-lg">
-                Välj en basfärg så genererar systemet automatiskt en snygg gradient.
+                Gradienten genereras automatiskt från <strong>Sidbakgrund</strong>-färgen i Färger-sektionen ovan.
+                Aktivera eller inaktivera gradient här.
             </p>
 
             <?php
             $gradient = $branding['gradient'] ?? [];
             $gradientEnabled = !empty($gradient['enabled']);
-            $gradientBase = $gradient['base'] ?? '#E8ECF1';
             $gradientStart = $gradient['start'] ?? '#E8ECF1';
             $gradientEnd = $gradient['end'] ?? '#F8F9FB';
             ?>
 
             <div style="display: flex; flex-direction: column; gap: var(--space-lg);">
                 <!-- Enable Toggle -->
-                <div style="display: flex; align-items: center; gap: var(--space-md); padding: var(--space-md); background: var(--color-bg-surface); border-radius: var(--radius-md);">
+                <div style="display: flex; align-items: center; gap: var(--space-md); padding: var(--space-lg); background: var(--color-bg-surface); border-radius: var(--radius-md); border-left: 4px solid #F59E0B;">
                     <input type="checkbox"
                            id="gradient_enabled"
                            name="gradient_enabled"
                            <?= $gradientEnabled ? 'checked' : '' ?>
                            style="width: 20px; height: 20px; cursor: pointer;">
-                    <label for="gradient_enabled" style="font-weight: var(--weight-medium); cursor: pointer; margin: 0;">
+                    <label for="gradient_enabled" style="font-weight: var(--weight-medium); cursor: pointer; margin: 0; flex: 1;">
                         Aktivera bakgrundsgradient
                     </label>
-                </div>
-
-                <!-- Color Picker -->
-                <div style="padding: var(--space-lg); background: var(--color-bg-surface); border-radius: var(--radius-lg); border-left: 4px solid #F59E0B;">
-                    <h4 style="margin: 0 0 1rem 0; display: flex; align-items: center; gap: 0.5rem;">
-                        <i data-lucide="droplet"></i>
-                        Basfärg
-                    </h4>
-                    <div style="display: flex; align-items: center; gap: var(--space-md);">
-                        <input type="color"
-                               name="gradient_base"
-                               id="gradient_base"
-                               value="<?= htmlspecialchars($gradientBase) ?>"
-                               onchange="updateGradientPreview(this.value)"
-                               style="width: 60px; height: 60px; border: 2px solid var(--color-border); border-radius: var(--radius-md); cursor: pointer;">
-                        <div style="flex: 1;">
-                            <div style="font-weight: var(--weight-medium); margin-bottom: 0.25rem;">
-                                Vald färg
-                            </div>
-                            <div style="font-family: var(--font-mono); font-size: var(--text-sm); color: var(--color-text-secondary);" id="gradient-base-value">
-                                <?= htmlspecialchars($gradientBase) ?>
-                            </div>
-                        </div>
-                    </div>
-                    <small style="display: block; margin-top: 0.75rem; opacity: 0.7; font-size: 0.75rem;">
-                        Systemet genererar automatiskt ljusare (start) och mörkare (slut) färger
-                    </small>
+                    <i data-lucide="zap" style="color: var(--color-warning); width: 20px; height: 20px;"></i>
                 </div>
 
                 <!-- Preview -->
@@ -919,6 +902,9 @@ include __DIR__ . '/components/unified-layout.php';
                         <span id="gradient-start-value">Start: <?= htmlspecialchars($gradientStart) ?></span>
                         <span id="gradient-end-value">Slut: <?= htmlspecialchars($gradientEnd) ?></span>
                     </div>
+                    <small style="display: block; margin-top: var(--space-md); opacity: 0.7; font-size: var(--text-xs); text-align: center;">
+                        💡 <strong>Tips:</strong> Ändra <strong>Sidbakgrund</strong>-färgen i "Färger"-sektionen för att justera gradienten
+                    </small>
                 </div>
             </div>
         </div>
@@ -926,32 +912,39 @@ include __DIR__ . '/components/unified-layout.php';
 </form>
 
 <script>
-// Live gradient preview
-function updateGradientPreview(baseColor) {
-    // Update base color display
-    document.getElementById('gradient-base-value').textContent = baseColor;
+// Auto-update gradient preview when bg-page color changes
+function updateGradientFromBgPage(bgColor) {
+    // Only update if gradient is enabled
+    const gradientCheckbox = document.getElementById('gradient_enabled');
+    if (!gradientCheckbox || !gradientCheckbox.checked) return;
 
     // Parse RGB
-    const r = parseInt(baseColor.substr(1, 2), 16);
-    const g = parseInt(baseColor.substr(3, 2), 16);
-    const b = parseInt(baseColor.substr(5, 2), 16);
+    const r = parseInt(bgColor.substr(1, 2), 16);
+    const g = parseInt(bgColor.substr(3, 2), 16);
+    const b = parseInt(bgColor.substr(5, 2), 16);
 
-    // Generate lighter (start) - lighten by 8%
-    const startR = Math.min(255, Math.round(r + r * 0.08));
-    const startG = Math.min(255, Math.round(g + g * 0.08));
-    const startB = Math.min(255, Math.round(b + b * 0.08));
+    // Generate lighter (start) - lighten by 5%
+    const startR = Math.min(255, Math.round(r + r * 0.05));
+    const startG = Math.min(255, Math.round(g + g * 0.05));
+    const startB = Math.min(255, Math.round(b + b * 0.05));
     const startColor = `#${startR.toString(16).padStart(2, '0')}${startG.toString(16).padStart(2, '0')}${startB.toString(16).padStart(2, '0')}`.toUpperCase();
 
-    // Generate darker (end) - darken by 12%
-    const endR = Math.max(0, Math.round(r - r * 0.12));
-    const endG = Math.max(0, Math.round(g - g * 0.12));
-    const endB = Math.max(0, Math.round(b - b * 0.12));
+    // Generate darker (end) - darken by 8%
+    const endR = Math.max(0, Math.round(r - r * 0.08));
+    const endG = Math.max(0, Math.round(g - g * 0.08));
+    const endB = Math.max(0, Math.round(b - b * 0.08));
     const endColor = `#${endR.toString(16).padStart(2, '0')}${endG.toString(16).padStart(2, '0')}${endB.toString(16).padStart(2, '0')}`.toUpperCase();
 
     // Update preview
-    document.getElementById('gradient-preview').style.background = `linear-gradient(135deg, ${startColor}, ${endColor})`;
-    document.getElementById('gradient-start-value').textContent = `Start: ${startColor}`;
-    document.getElementById('gradient-end-value').textContent = `Slut: ${endColor}`;
+    const preview = document.getElementById('gradient-preview');
+    if (preview) {
+        preview.style.background = `linear-gradient(135deg, ${startColor}, ${endColor})`;
+    }
+
+    const startValue = document.getElementById('gradient-start-value');
+    const endValue = document.getElementById('gradient-end-value');
+    if (startValue) startValue.textContent = `Start: ${startColor}`;
+    if (endValue) endValue.textContent = `Slut: ${endColor}`;
 }
 </script>
 
@@ -1085,6 +1078,11 @@ function updateColorPreview(input, varKey) {
 
     // Apply live preview
     document.documentElement.style.setProperty('--color-' + varKey, input.value);
+
+    // If bg-page color changed, update gradient preview
+    if (varKey === 'bg-page') {
+        updateGradientFromBgPage(input.value);
+    }
 }
 
 function updateFromText(input) {
@@ -1104,6 +1102,11 @@ function updateFromText(input) {
 
     // Apply live preview
     document.documentElement.style.setProperty('--color-' + varKey, value);
+
+    // If bg-page color changed, update gradient preview
+    if (varKey === 'bg-page' && /^#[0-9A-Fa-f]{6}$/.test(value)) {
+        updateGradientFromBgPage(value);
+    }
 }
 
 // Live preview for responsive settings
