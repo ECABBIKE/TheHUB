@@ -222,7 +222,7 @@ if ($event['series_id']) {
 
     <?php if ($isPast): ?>
     <div class="card">
-        <a href="/event/<?= $eventId ?>" class="btn btn-primary btn-lg">
+        <a href="/event/<?= $eventId ?>" class="btn btn--primary btn-lg">
             <?= hub_icon('trending-up', 'icon') ?> Visa resultat
         </a>
     </div>

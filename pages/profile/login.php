@@ -46,7 +46,7 @@ $error = $_GET['error'] ?? '';
                 <input type="password" id="password" name="password" required autocomplete="current-password">
             </div>
 
-            <button type="submit" class="btn btn-primary btn-lg btn-block">Logga in</button>
+            <button type="submit" class="btn btn--primary btn-lg btn-block">Logga in</button>
 
             <div class="login-links">
                 <a href="/rider-forgot-password.php">Glömt lösenord?</a>

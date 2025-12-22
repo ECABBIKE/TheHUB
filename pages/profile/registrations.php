@@ -76,7 +76,7 @@ usort($upcoming, fn($a, $b) => strcmp($a['event_date'], $b['event_date']));
     <?php if (empty($upcoming)): ?>
         <div class="empty-state">
             <p>Inga kommande anmälningar.</p>
-            <a href="/calendar" class="btn btn-primary">Hitta tävlingar</a>
+            <a href="/calendar" class="btn btn--primary">Hitta tävlingar</a>
         </div>
     <?php else: ?>
         <div class="registration-list">

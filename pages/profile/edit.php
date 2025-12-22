@@ -182,7 +182,7 @@ $clubs = $pdo->query("SELECT id, name FROM clubs ORDER BY name")->fetchAll(PDO::
     </div>
 
     <div class="form-actions">
-        <button type="submit" class="btn btn-primary">Spara ändringar</button>
+        <button type="submit" class="btn btn--primary">Spara ändringar</button>
         <a href="/profile" class="btn btn-outline">Avbryt</a>
     </div>
 </form>
