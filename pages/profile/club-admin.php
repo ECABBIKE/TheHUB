@@ -115,7 +115,7 @@ $stats = $statsStmt->fetch(PDO::FETCH_ASSOC);
 <div class="members-section">
     <div class="section-header">
         <h2>Medlemmar (<?= count($members) ?>)</h2>
-        <a href="/profile/add-member/<?= $selectedClubId ?>" class="btn btn-primary btn-sm">+ Lägg till</a>
+        <a href="/profile/add-member/<?= $selectedClubId ?>" class="btn btn--primary btn-sm">+ Lägg till</a>
     </div>
 
     <?php if (empty($members)): ?>

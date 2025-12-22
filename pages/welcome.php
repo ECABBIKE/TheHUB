@@ -152,7 +152,7 @@ $homepageLogo = getBranding('logos.homepage');
                 <p>Se statistik, kommande tävlingar, senaste resultat och hantera din profil.</p>
             </div>
         </div>
-        <a href="/login" class="btn btn-primary">Logga in</a>
+        <a href="/login" class="btn btn--primary">Logga in</a>
     </div>
     <?php endif; ?>
 

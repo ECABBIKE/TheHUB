@@ -486,7 +486,7 @@ unset($club);
                 <label class="filter-label">Sök namn</label>
                 <input type="search" name="search" id="name-search" class="filter-select" value="<?= htmlspecialchars($searchName) ?>" placeholder="Skriv namn...">
             </div>
-            <button type="submit" class="btn btn-primary filter-btn">Sök</button>
+            <button type="submit" class="btn btn--primary filter-btn">Sök</button>
         </form>
 
         <!-- Individual Standings -->
