@@ -102,6 +102,27 @@ function toggleTheme() {
 
     // Set cookie for server-side detection
     document.cookie = 'hub_theme=' + newTheme + ';path=/;max-age=31536000';
+
+    // Update theme toggle button
+    updateThemeToggleButton(newTheme);
+}
+
+/**
+ * Update theme toggle button appearance
+ */
+function updateThemeToggleButton(theme) {
+    const btn = document.getElementById('themeToggleBtn');
+    if (!btn) return;
+
+    const label = btn.querySelector('.theme-label');
+
+    if (theme === 'dark') {
+        if (label) label.textContent = 'Ljust';
+        btn.setAttribute('title', 'Byt till ljust tema');
+    } else {
+        if (label) label.textContent = 'Mörkt';
+        btn.setAttribute('title', 'Byt till mörkt tema');
+    }
 }
 
 /**
@@ -148,6 +169,9 @@ function initTheme() {
     }
 
     document.documentElement.setAttribute('data-theme', theme);
+
+    // Update theme toggle button to show correct icon/label
+    updateThemeToggleButton(theme);
 }
 
 // ========================================================================
