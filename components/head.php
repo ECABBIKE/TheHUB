@@ -272,8 +272,41 @@ if (file_exists($brandingFile)) {
             $cssOutput .= '--header-height:' . $headerHeight . 'px;';
         }
 
+        // Process gradient settings
+        $gradient = $brandingData['gradient'] ?? null;
+        $gradientEnabled = false;
+        $gradientType = 'linear';
+
+        if ($gradient) {
+            // Enabled flag
+            $gradientEnabled = !empty($gradient['enabled']);
+
+            // Gradient type (linear or radial)
+            $gradientType = ($gradient['type'] ?? 'linear') === 'radial' ? 'radial' : 'linear';
+
+            // Gradient angle (0-360 degrees)
+            $angle = intval($gradient['angle'] ?? 135);
+            $angle = max(0, min(360, $angle)); // Clamp to 0-360
+            $cssOutput .= '--gradient-angle:' . $angle . 'deg;';
+
+            // Gradient colors (validate hex format)
+            $startColor = $gradient['start'] ?? null;
+            $endColor = $gradient['end'] ?? null;
+
+            if ($startColor && preg_match('/^#[0-9A-Fa-f]{6}$/', $startColor)) {
+                $cssOutput .= '--gradient-start:' . htmlspecialchars($startColor, ENT_QUOTES, 'UTF-8') . ';';
+            }
+
+            if ($endColor && preg_match('/^#[0-9A-Fa-f]{6}$/', $endColor)) {
+                $cssOutput .= '--gradient-end:' . htmlspecialchars($endColor, ENT_QUOTES, 'UTF-8') . ';';
+            }
+
+            // Enabled flag
+            $cssOutput .= '--gradient-enabled:' . ($gradientEnabled ? '1' : '0') . ';';
+        }
+
         // Output if we have anything to output
-        if ($colorCount > 0 || $responsiveCss || $layout) {
+        if ($colorCount > 0 || $responsiveCss || $layout || $gradient) {
             echo '<style id="custom-branding" data-colors="' . $colorCount . '">';
             echo ':root{' . $cssOutput . '}';
             echo $responsiveCss;
