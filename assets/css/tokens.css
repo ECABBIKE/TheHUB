@@ -67,6 +67,13 @@
   --tint-gotaland:rgba(234, 88, 12, 0.12);
   --tint-gravity-dh:rgba(22, 163, 74, 0.12);
   --tint-gravity-enduro:rgba(202, 138, 4, 0.12);
+
+  /* Background gradients - can be overridden via branding.json */
+  --gradient-angle:135deg;
+  --gradient-start:#E8ECF1;
+  --gradient-end:#F8F9FB;
+  --gradient-type:linear;
+  --gradient-enabled:1;
 }
 
 /* Container padding - tablet gets more breathing room */

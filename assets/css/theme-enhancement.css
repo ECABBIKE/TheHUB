@@ -26,6 +26,11 @@ html[data-theme="light"] {
 
   /* Accent glow for interactive elements */
   --hub-accent-glow: var(--hub-accent-glow-light, rgba(0, 74, 152, 0.2));
+
+  /* Default gradient for light mode - subtle and elegant */
+  --gradient-start: #E8ECF1;
+  --gradient-end: #F8F9FB;
+  --gradient-angle: 135deg;
 }
 
 /* ==========================================================================
@@ -41,6 +46,47 @@ html[data-theme="dark"] {
 
   /* Accent glow for interactive elements */
   --hub-accent-glow: var(--hub-accent-glow-dark, rgba(59, 158, 255, 0.25));
+
+  /* Default gradient for dark mode - deep space aesthetic */
+  --gradient-start: #06080E;
+  --gradient-end: #12141C;
+  --gradient-angle: 135deg;
+}
+
+/* ==========================================================================
+   BACKGROUND GRADIENT - Subtle, elegant, customizable via branding.json
+   ========================================================================== */
+
+body {
+  /* Apply gradient only if enabled (--gradient-enabled: 1) */
+  background:
+    linear-gradient(
+      var(--gradient-angle),
+      var(--gradient-start),
+      var(--gradient-end)
+    );
+  background-attachment: fixed;
+
+  /* Fallback for when gradient is disabled */
+  background-color: var(--color-bg-page);
+}
+
+/* Disable gradient if --gradient-enabled is 0 */
+body[data-gradient="disabled"],
+html[data-gradient="disabled"] body {
+  background: var(--color-bg-page) !important;
+  background-attachment: unset !important;
+}
+
+/* Radial gradient option (if --gradient-type: radial) */
+body[data-gradient-type="radial"] {
+  background:
+    radial-gradient(
+      ellipse at top,
+      var(--gradient-start),
+      var(--gradient-end)
+    );
+  background-attachment: fixed;
 }
 
 /* ==========================================================================
