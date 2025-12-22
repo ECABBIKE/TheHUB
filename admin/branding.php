@@ -518,7 +518,10 @@ include __DIR__ . '/components/unified-layout.php';
                 <i data-lucide="palette"></i>
                 Färger
             </h2>
-            <span class="badge">Mörkt tema</span>
+            <span class="badge" id="theme-badge">
+                <span class="theme-light-text" style="display:none;">Ljust tema</span>
+                <span class="theme-dark-text" style="display:none;">Mörkt tema</span>
+            </span>
         </div>
         <div class="card-body">
             <p class="text-secondary mb-lg">
@@ -1102,6 +1105,28 @@ document.getElementById('mediaPickerModal')?.addEventListener('click', (e) => {
 document.querySelectorAll('.logo-preview-box').forEach(box => {
     box.addEventListener('mouseenter', () => box.style.borderColor = 'var(--color-accent)');
     box.addEventListener('mouseleave', () => box.style.borderColor = 'var(--color-border)');
+});
+
+// Update theme badge to show actual active theme
+function updateThemeBadge() {
+    const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
+    const lightText = document.querySelector('.theme-light-text');
+    const darkText = document.querySelector('.theme-dark-text');
+
+    if (currentTheme === 'light') {
+        lightText.style.display = 'inline';
+        darkText.style.display = 'none';
+    } else {
+        lightText.style.display = 'none';
+        darkText.style.display = 'inline';
+    }
+}
+
+// Run on load and watch for theme changes
+updateThemeBadge();
+new MutationObserver(updateThemeBadge).observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ['data-theme']
 });
 </script>
 

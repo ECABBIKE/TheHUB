@@ -50,10 +50,21 @@ if (!function_exists('render_series_badge')) {
         $status = $series['status'] ?? 'active';
         $eventCount = $series['event_count'] ?? 0;
 
-        // Logo handling
+        // Logo handling with fallback to branding logo
         $logo = $series['logo'] ?? '';
         $logoLight = $series['logo_light'] ?? $logo;
         $logoDark = $series['logo_dark'] ?? $logo;
+
+        // Fallback to branding homepage logo if no series logo
+        if (empty($logo) && empty($logoLight) && empty($logoDark)) {
+            $brandingFile = __DIR__ . '/../uploads/branding.json';
+            if (file_exists($brandingFile)) {
+                $branding = json_decode(file_get_contents($brandingFile), true);
+                if (!empty($branding['logos']['homepage'])) {
+                    $logo = $logoLight = $logoDark = $branding['logos']['homepage'];
+                }
+            }
+        }
 
         // Gradient colors
         $gradientStart = $series['gradient_start'] ?? '#004A98';
