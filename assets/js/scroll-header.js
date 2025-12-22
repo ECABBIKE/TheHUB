@@ -86,28 +86,6 @@
   }
 
   /**
-   * Initialize gradient data attributes
-   */
-  function initGradientAttributes() {
-    // Get computed gradient settings
-    const root = document.documentElement;
-    const computedStyle = getComputedStyle(root);
-
-    // Read gradient-enabled and gradient-type from CSS variables
-    const gradientEnabled = computedStyle.getPropertyValue('--gradient-enabled').trim();
-    const gradientType = computedStyle.getPropertyValue('--gradient-type').trim();
-
-    // Set data attributes on body
-    if (gradientEnabled === '0') {
-      document.body.setAttribute('data-gradient', 'disabled');
-    }
-
-    if (gradientType === 'radial') {
-      document.body.setAttribute('data-gradient-type', 'radial');
-    }
-  }
-
-  /**
    * Initialize
    */
   function init() {
@@ -115,9 +93,6 @@
     if (window.pageYOffset <= 10) {
       document.body.classList.add('at-top');
     }
-
-    // Initialize gradient attributes
-    initGradientAttributes();
 
     // Add scroll listener (passive for better performance)
     window.addEventListener('scroll', onScroll, { passive: true });
