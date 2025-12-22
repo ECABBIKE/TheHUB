@@ -282,9 +282,9 @@
 
 .result-item:hover {
   background: var(--color-bg-hover);
-  margin: 0 calc(var(--space-sm) * -1);
-  padding-left: var(--space-sm);
-  padding-right: var(--space-sm);
+  margin: 0 calc(var(--container-padding) * -1);
+  padding-left: var(--container-padding);
+  padding-right: var(--container-padding);
   border-radius: var(--radius-md);
 }
 

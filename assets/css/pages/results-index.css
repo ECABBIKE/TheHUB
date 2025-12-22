@@ -36,7 +36,7 @@
   flex-wrap: wrap;
   gap: var(--space-md);
   margin-bottom: var(--space-lg);
-  padding: var(--space-md);
+  padding: var(--container-padding);
   background: var(--color-bg-card);
   border-radius: var(--radius-lg);
   border: 1px solid var(--color-border);
@@ -131,7 +131,7 @@
   grid-template-columns: 4px 56px 72px 1fr auto 32px;
   align-items: center;
   gap: var(--space-md);
-  padding: var(--space-md) var(--space-md) var(--space-md) 0;
+  padding: var(--container-padding) var(--container-padding) var(--container-padding) 0;
   background: var(--color-bg-card);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
@@ -380,13 +380,13 @@
 @media (max-width: 599px) {
   .filters-bar {
     flex-direction: column;
-    padding: var(--space-sm);
-    margin-left: calc(-1 * var(--space-md));
-    margin-right: calc(-1 * var(--space-md));
+    padding: var(--container-padding);
+    margin-left: calc(-1 * var(--container-padding));
+    margin-right: calc(-1 * var(--container-padding));
     border-radius: 0;
     border-left: none;
     border-right: none;
-    width: calc(100% + var(--space-md) * 2);
+    width: calc(100% + var(--container-padding) * 2);
   }
 
   .filter-group {
@@ -399,9 +399,9 @@
   }
 
   .event-list {
-    margin-left: calc(-1 * var(--space-md));
-    margin-right: calc(-1 * var(--space-md));
-    width: calc(100% + var(--space-md) * 2);
+    margin-left: calc(-1 * var(--container-padding));
+    margin-right: calc(-1 * var(--container-padding));
+    width: calc(100% + var(--container-padding) * 2);
     gap: 0;
   }
 
@@ -462,6 +462,6 @@
   }
 
   .calendar-month-title {
-    padding-left: var(--space-md);
+    padding-left: var(--container-padding);
   }
 }

@@ -506,8 +506,8 @@ input.filter-select {
     .table-responsive {
         overflow-x: auto;
         -webkit-overflow-scrolling: touch;
-        margin: 0 calc(-1 * var(--space-md));
-        padding: 0 var(--space-md);
+        margin: 0 calc(-1 * var(--container-padding));
+        padding: 0 var(--container-padding);
     }
     .standings-table {
         min-width: 700px;
