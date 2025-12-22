@@ -1,9 +1,9 @@
 /**
- * TheHUB V3 Service Worker
+ * TheHUB Service Worker
  * Handles caching and offline functionality
  */
 
-const CACHE_NAME = 'thehub-v3-cache-v2';
+const CACHE_NAME = 'thehub-cache-v1';
 const OFFLINE_URL = '/offline.html';
 
 // Assets to cache immediately on install

@@ -6,7 +6,7 @@ echo "<h1>File Structure</h1>";
 
 $files = [
     'config.php',
-    'v3-config.php',
+    'hub-config.php',
     'router.php',
     'index.php',
     'includes/helpers.php',

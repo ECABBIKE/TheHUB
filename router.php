@@ -1,15 +1,15 @@
 <?php
 /**
- * TheHUB V3.5 Router
+ * TheHUB Router
  * Handles URL routing for the SPA structure
  *
  * AUTHENTICATION: All pages require login except welcome and login
  */
 
-// Ensure v3-config is loaded
-$v3ConfigPath = __DIR__ . '/v3-config.php';
-if (file_exists($v3ConfigPath)) {
-    require_once $v3ConfigPath;
+// Ensure hub-config is loaded
+$hubConfigPath = __DIR__ . '/hub-config.php';
+if (file_exists($hubConfigPath)) {
+    require_once $hubConfigPath;
 }
 
 // Fallback for hub_is_logged_in if not defined
@@ -19,9 +19,13 @@ if (!function_exists('hub_is_logged_in')) {
     }
 }
 
-// Ensure HUB_V3_ROOT is defined
+// Ensure HUB_ROOT is defined
+if (!defined('HUB_ROOT')) {
+    define('HUB_ROOT', __DIR__);
+}
+// Backward compatibility
 if (!defined('HUB_V3_ROOT')) {
-    define('HUB_V3_ROOT', __DIR__);
+    define('HUB_V3_ROOT', HUB_ROOT);
 }
 
 /**
