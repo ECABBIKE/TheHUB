@@ -32,7 +32,8 @@ body {
    ========================================================================== */
 
 /* Target all card-like components - pronounced glass effect */
-.card,
+/* Exclude child elements like card-header, card-body to prevent double effects */
+.card:not(.card-header):not(.card-body):not(.card-footer),
 .panel,
 .stats-card,
 .info-card,
@@ -41,8 +42,8 @@ body {
 .event-card,
 .rider-card,
 .series-logo-card,
-[class*="card-"],
-[class*="-card"],
+.result-card,
+.class-section,
 .table-wrapper,
 .filter-bar,
 .filters-bar,
@@ -54,6 +55,15 @@ body {
   /* Subtle border for definition */
   border: 1px solid var(--glass-border) !important;
   box-shadow: var(--glass-shadow) !important;
+}
+
+/* Ensure card children have transparent backgrounds */
+.card-header,
+.card-body,
+.card-footer {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
 }
 
 /* Elevated cards (modals, dropdowns) get stronger effect */
