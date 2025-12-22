@@ -348,7 +348,7 @@ a:hover {
     z-index: var(--z-fixed);
     background: var(--color-bg-surface);
     border-top: 1px solid var(--color-border);
-    padding: var(--space-sm) var(--space-sm) var(--space-xs);
+    padding: var(--space-xs) var(--space-sm);
     padding-bottom: calc(var(--space-xs) + env(safe-area-inset-bottom, 0));
 }
 
