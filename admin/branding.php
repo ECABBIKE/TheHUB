@@ -178,6 +178,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
+// Detect current theme to show correct default colors
+$currentTheme = $_COOKIE['hub_theme'] ?? 'dark';
+
 // Define color groups for display
 $colorGroups = [
     'Bakgrunder' => [
@@ -579,7 +582,9 @@ include __DIR__ . '/components/unified-layout.php';
                     </h3>
                     <?php foreach ($colors as $varKey => $colorInfo):
                         $fullVar = '--color-' . $varKey;
-                        $currentValue = $branding['colors'][$fullVar] ?? $colorInfo['dark'];
+                        // Use current theme's color as fallback, not always dark
+                        $defaultColor = $currentTheme === 'light' ? $colorInfo['light'] : $colorInfo['dark'];
+                        $currentValue = $branding['colors'][$fullVar] ?? $defaultColor;
                         $inputName = 'color_' . str_replace('-', '_', $varKey);
                     ?>
                     <div class="color-item">
@@ -602,6 +607,60 @@ include __DIR__ . '/components/unified-layout.php';
                     <?php endforeach; ?>
                 </div>
                 <?php endforeach; ?>
+            </div>
+        </div>
+    </div>
+
+    <!-- Gradient Section -->
+    <div class="card mb-lg">
+        <div class="card-header">
+            <h2>
+                <i data-lucide="palette"></i>
+                Bakgrundsgradient
+            </h2>
+        </div>
+        <div class="card-body">
+            <p class="text-secondary mb-lg">
+                Gradienten genereras automatiskt från <strong>Sidbakgrund</strong>-färgen i Färger-sektionen ovan.
+                Aktivera eller inaktivera gradient här.
+            </p>
+
+            <?php
+            $gradient = $branding['gradient'] ?? [];
+            $gradientEnabled = !empty($gradient['enabled']);
+            $gradientStart = $gradient['start'] ?? '#E8ECF1';
+            $gradientEnd = $gradient['end'] ?? '#F8F9FB';
+            ?>
+
+            <div style="display: flex; flex-direction: column; gap: var(--space-lg);">
+                <!-- Enable Toggle -->
+                <div style="display: flex; align-items: center; gap: var(--space-md); padding: var(--space-lg); background: var(--color-bg-surface); border-radius: var(--radius-md); border-left: 4px solid #F59E0B;">
+                    <input type="checkbox"
+                           id="gradient_enabled"
+                           name="gradient_enabled"
+                           <?= $gradientEnabled ? 'checked' : '' ?>
+                           style="width: 20px; height: 20px; cursor: pointer;">
+                    <label for="gradient_enabled" style="font-weight: var(--weight-medium); cursor: pointer; margin: 0; flex: 1;">
+                        Aktivera bakgrundsgradient
+                    </label>
+                    <i data-lucide="zap" style="color: var(--color-warning); width: 20px; height: 20px;"></i>
+                </div>
+
+                <!-- Preview -->
+                <div style="padding: var(--space-lg); background: var(--color-bg-surface); border-radius: var(--radius-lg);">
+                    <h4 style="margin: 0 0 1rem 0; display: flex; align-items: center; gap: 0.5rem;">
+                        <i data-lucide="eye"></i>
+                        Förhandsvisning
+                    </h4>
+                    <div id="gradient-preview" style="height: 120px; border-radius: var(--radius-md); background: linear-gradient(135deg, <?= htmlspecialchars($gradientStart) ?>, <?= htmlspecialchars($gradientEnd) ?>); border: 1px solid var(--color-border);"></div>
+                    <div style="display: flex; justify-content: space-between; margin-top: var(--space-sm); font-size: var(--text-xs); font-family: var(--font-mono); color: var(--color-text-secondary);">
+                        <span id="gradient-start-value">Start: <?= htmlspecialchars($gradientStart) ?></span>
+                        <span id="gradient-end-value">Slut: <?= htmlspecialchars($gradientEnd) ?></span>
+                    </div>
+                    <small style="display: block; margin-top: var(--space-md); opacity: 0.7; font-size: var(--text-xs); text-align: center;">
+                        💡 <strong>Tips:</strong> Ändra <strong>Sidbakgrund</strong>-färgen i "Färger"-sektionen för att justera gradienten
+                    </small>
+                </div>
             </div>
         </div>
     </div>
@@ -852,60 +911,6 @@ include __DIR__ . '/components/unified-layout.php';
                         <strong>CSS-variabler:</strong> Dessa varden satter <code>--content-max-width</code>, <code>--sidebar-width</code> och <code>--header-height</code>.
                     </span>
                 </p>
-            </div>
-        </div>
-    </div>
-
-    <!-- Gradient Section -->
-    <div class="card mb-lg">
-        <div class="card-header">
-            <h2>
-                <i data-lucide="palette"></i>
-                Bakgrundsgradient
-            </h2>
-        </div>
-        <div class="card-body">
-            <p class="text-secondary mb-lg">
-                Gradienten genereras automatiskt från <strong>Sidbakgrund</strong>-färgen i Färger-sektionen ovan.
-                Aktivera eller inaktivera gradient här.
-            </p>
-
-            <?php
-            $gradient = $branding['gradient'] ?? [];
-            $gradientEnabled = !empty($gradient['enabled']);
-            $gradientStart = $gradient['start'] ?? '#E8ECF1';
-            $gradientEnd = $gradient['end'] ?? '#F8F9FB';
-            ?>
-
-            <div style="display: flex; flex-direction: column; gap: var(--space-lg);">
-                <!-- Enable Toggle -->
-                <div style="display: flex; align-items: center; gap: var(--space-md); padding: var(--space-lg); background: var(--color-bg-surface); border-radius: var(--radius-md); border-left: 4px solid #F59E0B;">
-                    <input type="checkbox"
-                           id="gradient_enabled"
-                           name="gradient_enabled"
-                           <?= $gradientEnabled ? 'checked' : '' ?>
-                           style="width: 20px; height: 20px; cursor: pointer;">
-                    <label for="gradient_enabled" style="font-weight: var(--weight-medium); cursor: pointer; margin: 0; flex: 1;">
-                        Aktivera bakgrundsgradient
-                    </label>
-                    <i data-lucide="zap" style="color: var(--color-warning); width: 20px; height: 20px;"></i>
-                </div>
-
-                <!-- Preview -->
-                <div style="padding: var(--space-lg); background: var(--color-bg-surface); border-radius: var(--radius-lg);">
-                    <h4 style="margin: 0 0 1rem 0; display: flex; align-items: center; gap: 0.5rem;">
-                        <i data-lucide="eye"></i>
-                        Förhandsvisning
-                    </h4>
-                    <div id="gradient-preview" style="height: 120px; border-radius: var(--radius-md); background: linear-gradient(135deg, <?= htmlspecialchars($gradientStart) ?>, <?= htmlspecialchars($gradientEnd) ?>); border: 1px solid var(--color-border);"></div>
-                    <div style="display: flex; justify-content: space-between; margin-top: var(--space-sm); font-size: var(--text-xs); font-family: var(--font-mono); color: var(--color-text-secondary);">
-                        <span id="gradient-start-value">Start: <?= htmlspecialchars($gradientStart) ?></span>
-                        <span id="gradient-end-value">Slut: <?= htmlspecialchars($gradientEnd) ?></span>
-                    </div>
-                    <small style="display: block; margin-top: var(--space-md); opacity: 0.7; font-size: var(--text-xs); text-align: center;">
-                        💡 <strong>Tips:</strong> Ändra <strong>Sidbakgrund</strong>-färgen i "Färger"-sektionen för att justera gradienten
-                    </small>
-                </div>
             </div>
         </div>
     </div>
