@@ -31,8 +31,7 @@ body {
    LIQUID GLASS EFFECTS - Apply to cards and panels
    ========================================================================== */
 
-/* Liquid Glass - COMPATIBLE mode: backdrop-filter ONLY */
-/* Preserves ALL existing backgrounds, borders, and layouts */
+/* Liquid Glass - FULL mode with background, border, shadow */
 .card,
 .panel,
 .stats-card,
@@ -49,9 +48,53 @@ body {
 .filters-bar,
 .search-box,
 .modal-content {
-  /* Apply glass blur without changing ANYTHING else */
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
+  /* Light mode glass effect */
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+}
+
+/* Light mode specific styling */
+html[data-theme="light"] .card,
+html[data-theme="light"] .panel,
+html[data-theme="light"] .stats-card,
+html[data-theme="light"] .info-card,
+html[data-theme="light"] .info-box,
+html[data-theme="light"] .alert,
+html[data-theme="light"] .event-card,
+html[data-theme="light"] .rider-card,
+html[data-theme="light"] .series-logo-card,
+html[data-theme="light"] .result-card,
+html[data-theme="light"] .class-section,
+html[data-theme="light"] .table-wrapper,
+html[data-theme="light"] .filter-bar,
+html[data-theme="light"] .filters-bar,
+html[data-theme="light"] .search-box,
+html[data-theme="light"] .modal-content {
+  background: rgba(255, 255, 255, 0.65) !important;
+  border: 1px solid rgba(0, 0, 0, 0.06) !important;
+  box-shadow: 0 2px 16px rgba(0, 50, 100, 0.08) !important;
+}
+
+/* Dark mode specific styling */
+html[data-theme="dark"] .card,
+html[data-theme="dark"] .panel,
+html[data-theme="dark"] .stats-card,
+html[data-theme="dark"] .info-card,
+html[data-theme="dark"] .info-box,
+html[data-theme="dark"] .alert,
+html[data-theme="dark"] .event-card,
+html[data-theme="dark"] .rider-card,
+html[data-theme="dark"] .series-logo-card,
+html[data-theme="dark"] .result-card,
+html[data-theme="dark"] .class-section,
+html[data-theme="dark"] .table-wrapper,
+html[data-theme="dark"] .filter-bar,
+html[data-theme="dark"] .filters-bar,
+html[data-theme="dark"] .search-box,
+html[data-theme="dark"] .modal-content {
+  background: rgba(26, 29, 40, 0.75) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4), 0 12px 32px rgba(0, 0, 0, 0.3) !important;
 }
 
 /* Elevated cards (modals, dropdowns) get stronger effect */
