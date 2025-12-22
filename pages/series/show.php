@@ -470,7 +470,7 @@ unset($club);
     <!-- Individual Standings Section -->
     <div id="individual-standings">
         <!-- Filters -->
-        <form method="get" class="filters-bar">
+        <form method="get" class="filter-bar">
             <div class="filter-group">
                 <label class="filter-label">Klass</label>
                 <select name="class" id="class-filter" class="filter-select" onchange="this.form.submit()">
