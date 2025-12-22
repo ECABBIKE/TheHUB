@@ -865,7 +865,7 @@ include __DIR__ . '/components/unified-layout.php';
         </div>
     </div>
 
-    <!-- Gradient Section -->
+    <!-- Gradient Section (from main branch - auto-generates from bg-page) -->
     <div class="card mb-lg">
         <div class="card-header">
             <h2>
@@ -875,55 +875,29 @@ include __DIR__ . '/components/unified-layout.php';
         </div>
         <div class="card-body">
             <p class="text-secondary mb-lg">
-                Välj en basfärg så genererar systemet automatiskt en snygg gradient.
+                Gradienten genereras automatiskt från <strong>Sidbakgrund</strong>-färgen i Färger-sektionen ovan.
+                Aktivera eller inaktivera gradient här.
             </p>
 
             <?php
             $gradient = $branding['gradient'] ?? [];
             $gradientEnabled = !empty($gradient['enabled']);
-            $gradientBase = $gradient['base'] ?? '#E8ECF1';
             $gradientStart = $gradient['start'] ?? '#E8ECF1';
             $gradientEnd = $gradient['end'] ?? '#F8F9FB';
             ?>
 
             <div style="display: flex; flex-direction: column; gap: var(--space-lg);">
                 <!-- Enable Toggle -->
-                <div style="display: flex; align-items: center; gap: var(--space-md); padding: var(--space-md); background: var(--color-bg-surface); border-radius: var(--radius-md);">
+                <div style="display: flex; align-items: center; gap: var(--space-md); padding: var(--space-lg); background: var(--color-bg-surface); border-radius: var(--radius-md); border-left: 4px solid #F59E0B;">
                     <input type="checkbox"
                            id="gradient_enabled"
                            name="gradient_enabled"
                            <?= $gradientEnabled ? 'checked' : '' ?>
                            style="width: 20px; height: 20px; cursor: pointer;">
-                    <label for="gradient_enabled" style="font-weight: var(--weight-medium); cursor: pointer; margin: 0;">
+                    <label for="gradient_enabled" style="font-weight: var(--weight-medium); cursor: pointer; margin: 0; flex: 1;">
                         Aktivera bakgrundsgradient
                     </label>
-                </div>
-
-                <!-- Color Picker -->
-                <div style="padding: var(--space-lg); background: var(--color-bg-surface); border-radius: var(--radius-lg); border-left: 4px solid #F59E0B;">
-                    <h4 style="margin: 0 0 1rem 0; display: flex; align-items: center; gap: 0.5rem;">
-                        <i data-lucide="droplet"></i>
-                        Basfärg
-                    </h4>
-                    <div style="display: flex; align-items: center; gap: var(--space-md);">
-                        <input type="color"
-                               name="gradient_base"
-                               id="gradient_base"
-                               value="<?= htmlspecialchars($gradientBase) ?>"
-                               onchange="updateGradientPreview(this.value)"
-                               style="width: 60px; height: 60px; border: 2px solid var(--color-border); border-radius: var(--radius-md); cursor: pointer;">
-                        <div style="flex: 1;">
-                            <div style="font-weight: var(--weight-medium); margin-bottom: 0.25rem;">
-                                Vald färg
-                            </div>
-                            <div style="font-family: var(--font-mono); font-size: var(--text-sm); color: var(--color-text-secondary);" id="gradient-base-value">
-                                <?= htmlspecialchars($gradientBase) ?>
-                            </div>
-                        </div>
-                    </div>
-                    <small style="display: block; margin-top: 0.75rem; opacity: 0.7; font-size: 0.75rem;">
-                        Systemet genererar automatiskt ljusare (start) och mörkare (slut) färger
-                    </small>
+                    <i data-lucide="zap" style="color: var(--color-warning); width: 20px; height: 20px;"></i>
                 </div>
 
                 <!-- Preview -->
@@ -937,6 +911,9 @@ include __DIR__ . '/components/unified-layout.php';
                         <span id="gradient-start-value">Start: <?= htmlspecialchars($gradientStart) ?></span>
                         <span id="gradient-end-value">Slut: <?= htmlspecialchars($gradientEnd) ?></span>
                     </div>
+                    <small style="display: block; margin-top: var(--space-md); opacity: 0.7; font-size: var(--text-xs); text-align: center;">
+                        💡 <strong>Tips:</strong> Ändra <strong>Sidbakgrund</strong>-färgen i "Färger"-sektionen för att justera gradienten
+                    </small>
                 </div>
             </div>
         </div>
@@ -1039,33 +1016,7 @@ include __DIR__ . '/components/unified-layout.php';
 </form>
 
 <script>
-// Live gradient preview
-function updateGradientPreview(baseColor) {
-    // Update base color display
-    document.getElementById('gradient-base-value').textContent = baseColor;
-
-    // Parse RGB
-    const r = parseInt(baseColor.substr(1, 2), 16);
-    const g = parseInt(baseColor.substr(3, 2), 16);
-    const b = parseInt(baseColor.substr(5, 2), 16);
-
-    // Generate lighter (start) - lighten by 8%
-    const startR = Math.min(255, Math.round(r + r * 0.08));
-    const startG = Math.min(255, Math.round(g + g * 0.08));
-    const startB = Math.min(255, Math.round(b + b * 0.08));
-    const startColor = `#${startR.toString(16).padStart(2, '0')}${startG.toString(16).padStart(2, '0')}${startB.toString(16).padStart(2, '0')}`.toUpperCase();
-
-    // Generate darker (end) - darken by 12%
-    const endR = Math.max(0, Math.round(r - r * 0.12));
-    const endG = Math.max(0, Math.round(g - g * 0.12));
-    const endB = Math.max(0, Math.round(b - b * 0.12));
-    const endColor = `#${endR.toString(16).padStart(2, '0')}${endG.toString(16).padStart(2, '0')}${endB.toString(16).padStart(2, '0')}`.toUpperCase();
-
-    // Update preview
-    document.getElementById('gradient-preview').style.background = `linear-gradient(135deg, ${startColor}, ${endColor})`;
-    document.getElementById('gradient-start-value').textContent = `Start: ${startColor}`;
-    document.getElementById('gradient-end-value').textContent = `Slut: ${endColor}`;
-}
+// Note: Gradient preview JavaScript removed - gradient now auto-generates from bg-page color in backend
 </script>
 
 <!-- Display-only Design System Reference Sections -->
