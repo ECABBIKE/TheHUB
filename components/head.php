@@ -108,6 +108,7 @@ $cssVersion = function($file) use ($cssDir) {
 <link rel="stylesheet" href="<?= hub_asset('css/badge-system.css') ?>?v=<?= $cssVersion('badge-system.css') ?>">
 <link rel="stylesheet" href="<?= hub_asset('css/pwa.css') ?>?v=<?= $cssVersion('pwa.css') ?>">
 <link rel="stylesheet" href="<?= hub_asset('css/viewport.css') ?>?v=<?= $cssVersion('viewport.css') ?>">
+<link rel="stylesheet" href="<?= hub_asset('css/theme-enhancement.css') ?>?v=<?= $cssVersion('theme-enhancement.css') ?>">
 
 <!-- Page-Specific CSS (loaded conditionally based on current page) -->
 <?php

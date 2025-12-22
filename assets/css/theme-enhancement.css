@@ -1,0 +1,266 @@
+/**
+ * THEME ENHANCEMENT - Liquid Glass + Dark Mode Preparation
+ *
+ * This file adds modern glass morphism effects and prepares for dark mode.
+ * It's designed to be REVERSIBLE - removing this file won't break the site.
+ *
+ * All effects use CSS variables that can be overridden via branding.json
+ */
+
+/* ==========================================================================
+   LIGHT MODE ENHANCEMENTS - Tone down harsh white
+   ========================================================================== */
+
+html[data-theme="light"] {
+  /* Replace harsh white (#FFFFFF) with soft off-white */
+  --color-bg-page: var(--hub-bg-base, #F0F2F5);
+  --color-bg-surface: var(--hub-bg-elevated, #F8F9FB);
+  --color-bg-card: var(--hub-bg-elevated, #F8F9FB);
+  --color-bg-elevated: #FFFFFF;
+
+  /* Glass morphism tokens for light mode */
+  --hub-glass-bg: var(--hub-glass-bg-light, rgba(255, 255, 255, 0.65));
+  --hub-glass-border: var(--hub-glass-border-light, rgba(0, 0, 0, 0.06));
+  --hub-glass-blur: var(--hub-glass-blur-light, blur(20px) saturate(180%));
+  --hub-glass-shadow: 0 2px 16px rgba(0, 50, 100, 0.08);
+
+  /* Accent glow for interactive elements */
+  --hub-accent-glow: var(--hub-accent-glow-light, rgba(0, 74, 152, 0.2));
+}
+
+/* ==========================================================================
+   DARK MODE GLASS ENHANCEMENTS
+   ========================================================================== */
+
+html[data-theme="dark"] {
+  /* Glass morphism tokens for dark mode */
+  --hub-glass-bg: var(--hub-glass-bg-dark, rgba(26, 29, 40, 0.7));
+  --hub-glass-border: var(--hub-glass-border-dark, rgba(255, 255, 255, 0.08));
+  --hub-glass-blur: var(--hub-glass-blur-dark, blur(20px) saturate(150%));
+  --hub-glass-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+
+  /* Accent glow for interactive elements */
+  --hub-accent-glow: var(--hub-accent-glow-dark, rgba(59, 158, 255, 0.25));
+}
+
+/* ==========================================================================
+   LIQUID GLASS EFFECTS - Apply to cards and panels
+   ========================================================================== */
+
+/* Target all card-like components */
+.card,
+.panel,
+.stats-card,
+.info-card,
+.event-card,
+.rider-card,
+[class*="card-"],
+.table-wrapper,
+.filter-bar,
+.search-box,
+.modal-content {
+  background: var(--hub-glass-bg) !important;
+  backdrop-filter: var(--hub-glass-blur);
+  -webkit-backdrop-filter: var(--hub-glass-blur);
+  border: 1px solid var(--hub-glass-border) !important;
+  box-shadow: var(--hub-glass-shadow) !important;
+}
+
+/* Elevated cards (modals, dropdowns) get stronger effect */
+.modal,
+.dropdown-menu,
+.popover,
+.toast {
+  background: var(--hub-glass-bg) !important;
+  backdrop-filter: blur(24px) saturate(190%);
+  -webkit-backdrop-filter: blur(24px) saturate(190%);
+  border: 1px solid var(--hub-glass-border) !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12) !important;
+}
+
+/* Tables get subtle glass effect */
+.table-responsive,
+table.table {
+  background: var(--hub-glass-bg);
+  backdrop-filter: var(--hub-glass-blur);
+  -webkit-backdrop-filter: var(--hub-glass-blur);
+}
+
+/* ==========================================================================
+   INTERACTIVE GLOW EFFECTS
+   ========================================================================== */
+
+/* Buttons get subtle glow on hover */
+.btn-primary:hover,
+.btn-accent:hover,
+button[type="submit"]:hover {
+  box-shadow:
+    0 0 0 3px var(--hub-accent-glow),
+    var(--hub-glass-shadow) !important;
+  transition: box-shadow var(--transition-base);
+}
+
+/* Links get glow on hover */
+a:hover:not(.btn) {
+  text-shadow: 0 0 8px var(--hub-accent-glow);
+  transition: text-shadow var(--transition-fast);
+}
+
+/* Input focus glow */
+input:focus,
+select:focus,
+textarea:focus {
+  box-shadow:
+    0 0 0 3px var(--hub-accent-glow),
+    inset 0 1px 3px rgba(0, 0, 0, 0.1) !important;
+  transition: box-shadow var(--transition-base);
+}
+
+/* ==========================================================================
+   HEADER SCROLL BEHAVIOR - Hide on scroll down, show on scroll up
+   ========================================================================== */
+
+.main-header {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-sticky);
+  transition: transform 350ms cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform;
+
+  /* Glass effect for header */
+  background: var(--hub-glass-bg) !important;
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  border-bottom: 1px solid var(--hub-glass-border) !important;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08) !important;
+}
+
+/* Hide header when scrolling down */
+.main-header.header-hidden {
+  transform: translateY(-100%);
+}
+
+/* Show header when scrolling up */
+.main-header.header-visible {
+  transform: translateY(0);
+}
+
+/* Always show header at top of page */
+body.at-top .main-header {
+  transform: translateY(0) !important;
+}
+
+/* ==========================================================================
+   SERIES-SPECIFIC GLASS TINTS (for future use)
+   ========================================================================== */
+
+/* Swecup - Mörkblå tint */
+[data-series="swecup"] .card,
+.series-swecup {
+  background: rgba(30, 58, 95, 0.15) !important;
+  border-color: rgba(30, 58, 95, 0.3) !important;
+}
+
+/* Capital - Cyan tint */
+[data-series="capital"] .card,
+.series-capital {
+  background: rgba(8, 145, 178, 0.12) !important;
+  border-color: rgba(8, 145, 178, 0.25) !important;
+}
+
+/* Götaland - Orange tint */
+[data-series="gotaland"] .card,
+.series-gotaland {
+  background: rgba(234, 88, 12, 0.12) !important;
+  border-color: rgba(234, 88, 12, 0.25) !important;
+}
+
+/* GravitySERIES DH - Grön tint */
+[data-series="gravity-dh"] .card,
+.series-gravity-dh {
+  background: rgba(22, 163, 74, 0.12) !important;
+  border-color: rgba(22, 163, 74, 0.25) !important;
+}
+
+/* GravitySERIES Enduro - Guld tint */
+[data-series="gravity-enduro"] .card,
+.series-gravity-enduro {
+  background: rgba(202, 138, 4, 0.12) !important;
+  border-color: rgba(202, 138, 4, 0.25) !important;
+}
+
+/* ==========================================================================
+   PERFORMANCE OPTIMIZATIONS
+   ========================================================================== */
+
+/* Optimize backdrop-filter rendering */
+@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+  .card,
+  .panel,
+  .main-header {
+    /* Use GPU acceleration */
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
+  }
+}
+
+/* Fallback for browsers that don't support backdrop-filter */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .card,
+  .panel,
+  .main-header {
+    background: var(--color-bg-card) !important;
+    box-shadow: var(--shadow-md) !important;
+  }
+}
+
+/* ==========================================================================
+   MOBILE OPTIMIZATIONS - Reduce blur on mobile for performance
+   ========================================================================== */
+
+@media (max-width: 767px) {
+  html[data-theme="light"] {
+    --hub-glass-blur: blur(12px) saturate(160%);
+  }
+
+  html[data-theme="dark"] {
+    --hub-glass-blur: blur(12px) saturate(140%);
+  }
+
+  /* Lighter header blur on mobile */
+  .main-header {
+    backdrop-filter: blur(10px) saturate(150%);
+    -webkit-backdrop-filter: blur(10px) saturate(150%);
+  }
+}
+
+/* ==========================================================================
+   ACCESSIBILITY - Respect reduced motion preferences
+   ========================================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  .main-header,
+  .btn-primary,
+  a,
+  input,
+  select,
+  textarea {
+    transition: none !important;
+    animation: none !important;
+  }
+
+  .main-header {
+    transform: none !important;
+  }
+}
+
+/* ==========================================================================
+   DEBUG MODE - Add outline to glass elements (for development)
+   ========================================================================== */
+
+html[data-debug="glass"] .card,
+html[data-debug="glass"] .panel,
+html[data-debug="glass"] .main-header {
+  outline: 2px dashed rgba(255, 0, 255, 0.5);
+  outline-offset: -2px;
+}
