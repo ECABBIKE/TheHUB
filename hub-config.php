@@ -1,8 +1,8 @@
 <?php
 /**
- * TheHUB V3 Configuration
+ * TheHUB Configuration
  *
- * Parallel evaluation structure using the same database as production
+ * Core configuration for TheHUB platform
  */
 
 // Enable error reporting for debugging (remove in production)
@@ -26,15 +26,18 @@ if (!isset($GLOBALS['pdo'])) {
 }
 
 // ============================================================================
-// V3.6 VERSION INFO
+// VERSION INFO
 // ============================================================================
-if (!defined('HUB_VERSION')) define('HUB_VERSION', '3.6.0');
-if (!defined('CSS_VERSION')) define('CSS_VERSION', '3.6.0');
-if (!defined('JS_VERSION')) define('JS_VERSION', '3.6.0');
+if (!defined('HUB_VERSION')) define('HUB_VERSION', '1.0.0');
+if (!defined('CSS_VERSION')) define('CSS_VERSION', '1.0.0');
+if (!defined('JS_VERSION')) define('JS_VERSION', '1.0.0');
 
-if (!defined('HUB_V3_ROOT')) define('HUB_V3_ROOT', __DIR__);
-if (!defined('HUB_V3_URL')) define('HUB_V3_URL', '');
-if (!defined('HUB_V2_ROOT')) define('HUB_V2_ROOT', __DIR__ . '/v2');
+if (!defined('HUB_ROOT')) define('HUB_ROOT', __DIR__);
+if (!defined('HUB_URL')) define('HUB_URL', '');
+
+// Backward compatibility aliases (will be removed in future versions)
+if (!defined('HUB_V3_ROOT')) define('HUB_V3_ROOT', HUB_ROOT);
+if (!defined('HUB_V3_URL')) define('HUB_V3_URL', HUB_URL);
 
 // WooCommerce integration
 if (!defined('WC_CHECKOUT_URL')) define('WC_CHECKOUT_URL', '/checkout');
@@ -57,7 +60,7 @@ if (!defined('ROLE_RIDER')) {
 }
 
 // ============================================================================
-// V3.5 NAVIGATION (6 main sections)
+// NAVIGATION (6 main sections)
 // ============================================================================
 if (!defined('HUB_NAV')) {
     define('HUB_NAV', [

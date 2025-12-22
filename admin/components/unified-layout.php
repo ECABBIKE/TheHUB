@@ -11,8 +11,8 @@
  * The content should be placed in $admin_content variable before including this file.
  */
 
-// Ensure we have the V3 config
-require_once __DIR__ . '/../../v3-config.php';
+// Ensure we have the hub config
+require_once __DIR__ . '/../../hub-config.php';
 require_once __DIR__ . '/../../config.php';
 
 // Ensure admin authentication

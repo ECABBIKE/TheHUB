@@ -1,6 +1,6 @@
 <?php
 /**
- * TheHUB V3.5 - Search API
+ * TheHUB Search API
  * Live search endpoint for riders and clubs
  * Respects public_riders_display setting from admin
  */
@@ -24,7 +24,7 @@ if (strlen($query) < 2) {
 }
 
 try {
-    // Use global $pdo from config.php (hub_db() is only in v3-config.php)
+    // Use global $pdo from config.php (hub_db() is only in hub-config.php)
     global $pdo;
     $results = [];
 

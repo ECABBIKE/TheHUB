@@ -334,7 +334,7 @@ if ($userTheme === 'auto') {
         }
     </style>
 
-    <!-- V3.5 Design System - Complete Migration (FAS 1) -->
+    <!-- Design System CSS -->
     <!-- 1. CSS Reset -->
     <link rel="stylesheet" href="/assets/css/reset.css?v=<?= filemtime(__DIR__ . '/../assets/css/reset.css') ?>">
 
@@ -407,7 +407,7 @@ if ($userTheme === 'auto') {
     </button>
 
     <!-- Navigation -->
-    <?php include __DIR__ . '/navigation-v3.php'; ?>
+    <?php include __DIR__ . '/navigation.php'; ?>
 
     <!-- Overlay (hidden on desktop via inline CSS) -->
     <div class="sidebar-overlay" onclick="closeMenu()"></div>

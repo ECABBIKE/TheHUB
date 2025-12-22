@@ -30,7 +30,7 @@
         echo "<h2>2. File Check</h2>";
         $criticalFiles = [
             'config.php' => 'Main configuration',
-            'v3-config.php' => 'V3 configuration',
+            'hub-config.php' => 'Hub configuration',
             'router.php' => 'URL router',
             'index.php' => 'Main entry point',
             'includes/helpers.php' => 'Helper functions',
@@ -99,23 +99,23 @@
             echo "<pre>File: " . $e->getFile() . "\nLine: " . $e->getLine() . "</pre>";
         }
 
-        echo "<h2>5. Load Test - v3-config.php</h2>";
+        echo "<h2>5. Load Test - hub-config.php</h2>";
         try {
             ob_start();
-            require_once __DIR__ . '/v3-config.php';
+            require_once __DIR__ . '/hub-config.php';
             $output = ob_get_clean();
-            echo "<p class='success'>✓ v3-config.php loaded successfully</p>";
+            echo "<p class='success'>✓ hub-config.php loaded successfully</p>";
             if ($output) {
-                echo "<p class='warning'>Output from v3-config.php:</p><pre>" . htmlspecialchars($output) . "</pre>";
+                echo "<p class='warning'>Output from hub-config.php:</p><pre>" . htmlspecialchars($output) . "</pre>";
             }
 
             // Check constants
-            echo "<p>HUB_V3_ROOT: " . (defined('HUB_V3_ROOT') ? HUB_V3_ROOT : '<span class="error">NOT DEFINED</span>') . "</p>";
+            echo "<p>HUB_ROOT: " . (defined('HUB_ROOT') ? HUB_ROOT : '<span class="error">NOT DEFINED</span>') . "</p>";
             echo "<p>HUB_NAV defined: " . (defined('HUB_NAV') ? '<span class="success">YES</span>' : '<span class="error">NO</span>') . "</p>";
 
         } catch (Throwable $e) {
             ob_end_clean();
-            echo "<p class='error'>✗ v3-config.php error: " . htmlspecialchars($e->getMessage()) . "</p>";
+            echo "<p class='error'>✗ hub-config.php error: " . htmlspecialchars($e->getMessage()) . "</p>";
             echo "<pre>File: " . $e->getFile() . "\nLine: " . $e->getLine() . "</pre>";
         }
 

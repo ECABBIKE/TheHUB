@@ -13,9 +13,9 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 
 // Load config files
-$v3ConfigPath = __DIR__ . '/v3-config.php';
-if (file_exists($v3ConfigPath)) {
-    require_once $v3ConfigPath;
+$hubConfigPath = __DIR__ . '/hub-config.php';
+if (file_exists($hubConfigPath)) {
+    require_once $hubConfigPath;
 }
 
 $routerPath = __DIR__ . '/router.php';

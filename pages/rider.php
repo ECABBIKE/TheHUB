@@ -491,7 +491,7 @@ foreach ($achievements as $ach) {
 $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 0;
 ?>
 
-<link rel="stylesheet" href="/assets/css/pages/rider-v3.css?v=<?= filemtime(__DIR__ . '/../assets/css/pages/rider-v3.css') ?>">
+<link rel="stylesheet" href="/assets/css/pages/rider.css?v=<?= filemtime(__DIR__ . '/../assets/css/pages/rider.css') ?>">
 <style>
 /* Medal icons in form card */
 .form-medal-icon {
@@ -532,10 +532,10 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
     .form-last-5 {
         gap: var(--space-2xs);
     }
-    .highlights-card-v3 {
+    .highlights-card {
         padding: var(--space-sm);
     }
-    .highlight-item-v3 {
+    .highlight-item {
         padding: var(--space-xs) 0;
     }
 }
@@ -547,7 +547,7 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
     <div class="left-column">
 
         <!-- PROFILE CARD -->
-        <div class="card profile-card-v3">
+        <div class="card profile-card">
             <div class="profile-header">
                 <div class="profile-photo-large">
                     <?php if ($profileImage): ?>
@@ -629,11 +629,11 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
 
         <!-- SERIES STANDINGS CARD -->
         <?php if (!empty($seriesStandings)): ?>
-        <div class="card series-card-v3">
+        <div class="card series-card">
             <h3 class="card-section-title"><i data-lucide="trophy"></i> Serieställning</h3>
 
             <!-- Series tabs -->
-            <div class="series-tabs-v3">
+            <div class="series-tabs">
                 <?php foreach ($seriesStandings as $idx => $standing): ?>
                 <button class="series-tab-btn <?= $idx === 0 ? 'active' : '' ?>" data-target="series-<?= $idx ?>">
                     <span class="series-dot" style="background: <?= htmlspecialchars($standing['series_color'] ?? 'var(--color-accent)') ?>"></span>
@@ -658,7 +658,7 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
                 // Calculate progress percentage (inverted - lower rank is better)
                 $rankPercent = max(5, min(100, 100 - (($standing['ranking'] - 1) / max(1, $standing['total_riders'] - 1)) * 100));
             ?>
-            <div class="series-panel-v3 <?= $idx === 0 ? 'active' : '' ?>" id="series-<?= $idx ?>">
+            <div class="series-panel <?= $idx === 0 ? 'active' : '' ?>" id="series-<?= $idx ?>">
 
                 <!-- Position Header -->
                 <div class="series-position-header">
@@ -742,7 +742,7 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
     <div class="right-column">
 
         <!-- RANKING CARD -->
-        <div class="card ranking-card-v3">
+        <div class="card ranking-card">
             <h3 class="card-section-title-sm"><i data-lucide="bar-chart-2"></i> Ranking</h3>
             <?php if ($rankingPosition):
                 $totalRankedRiders = 100;
@@ -761,7 +761,7 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
                 <span class="ranking-points-value"><?= number_format($rankingPoints, 1) ?></span>
                 <span class="ranking-points-label">poäng</span>
             </div>
-            <div class="ranking-progress-bar-v3">
+            <div class="ranking-progress-bar">
                 <div class="progress-track">
                     <div class="progress-fill" style="width: <?= $rankPercent ?>%"></div>
                 </div>
@@ -778,7 +778,7 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
         </div>
 
         <!-- FORM CARD -->
-        <div class="card form-card-v3">
+        <div class="card form-card">
             <h3 class="card-section-title-sm"><i data-lucide="trending-up"></i> Form</h3>
             <?php if ($hasCompetitiveResults && !empty($formResults)):
                 // Räkna snittplacering av senaste 5 tävlingarna
@@ -866,12 +866,12 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
         </div>
 
         <!-- HIGHLIGHTS CARD -->
-        <div class="card highlights-card-v3">
+        <div class="card highlights-card">
             <h3 class="card-section-title-sm"><i data-lucide="star"></i> Highlights</h3>
             <?php if (!empty($highlights)): ?>
-            <div class="highlights-list-v3">
+            <div class="highlights-list">
                 <?php foreach ($highlights as $hl): ?>
-                <div class="highlight-item-v3">
+                <div class="highlight-item">
                     <i data-lucide="<?= htmlspecialchars($hl['icon']) ?>"></i>
                     <span><?= $hl['text'] ?></span>
                 </div>
@@ -881,7 +881,7 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
         </div>
 
         <!-- ACHIEVEMENTS CARD -->
-        <div class="card achievements-card-v3">
+        <div class="card achievements-card">
             <link rel="stylesheet" href="/assets/css/achievements.css?v=<?= file_exists(dirname(__DIR__) . '/assets/css/achievements.css') ? filemtime(dirname(__DIR__) . '/assets/css/achievements.css') : time() ?>">
             <?php
             $riderStats = [
@@ -1092,7 +1092,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
             // Remove active class from all tabs and panels
             document.querySelectorAll('.series-tab-btn').forEach(t => t.classList.remove('active'));
-            document.querySelectorAll('.series-panel-v3').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.series-panel').forEach(p => p.classList.remove('active'));
 
             // Add active class to clicked tab and corresponding panel
             this.classList.add('active');

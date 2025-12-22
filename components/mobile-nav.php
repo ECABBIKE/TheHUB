@@ -1,14 +1,14 @@
 <?php
 /**
- * TheHUB V3.5 Bottom Navigation
+ * TheHUB Bottom Navigation
  * Uses SVG icons (Lucide-style)
  */
 
-// Ensure v3-config is loaded (may already be loaded by parent)
-if (!defined('HUB_V3_ROOT')) {
-    $v3Config = __DIR__ . '/../v3-config.php';
-    if (file_exists($v3Config)) {
-        require_once $v3Config;
+// Ensure hub-config is loaded (may already be loaded by parent)
+if (!defined('HUB_ROOT')) {
+    $hubConfig = __DIR__ . '/../hub-config.php';
+    if (file_exists($hubConfig)) {
+        require_once $hubConfig;
     }
 }
 

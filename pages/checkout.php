@@ -1,13 +1,13 @@
 <?php
 /**
- * TheHUB V3.5 - Checkout Page
+ * TheHUB Checkout Page
  *
  * Displays payment options for event registrations:
  * - Swish (direct link on mobile, QR on desktop)
  * - Card via WooCommerce (fallback)
  */
 
-require_once __DIR__ . '/../v3-config.php';
+require_once __DIR__ . '/../hub-config.php';
 require_once __DIR__ . '/../includes/payment.php';
 
 // Get order ID from URL
