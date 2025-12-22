@@ -96,14 +96,14 @@ $disciplineNames = [
   </a>
 </div>
 
-<!-- View Toggle -->
-<div class="view-toggle mb-lg">
+<!-- View Toggle - matches database page style -->
+<div class="tabs-nav tabs-nav--noborder mb-lg">
   <a href="/ranking?discipline=<?= $discipline ?>&view=riders"
-     class="view-btn <?= $view === 'riders' ? 'active' : '' ?>">
-    <i data-lucide="user"></i> Åkare
+     class="tab-pill <?= $view === 'riders' ? 'active' : '' ?>">
+    <i data-lucide="users"></i> Åkare
   </a>
   <a href="/ranking?discipline=<?= $discipline ?>&view=clubs"
-     class="view-btn <?= $view === 'clubs' ? 'active' : '' ?>">
+     class="tab-pill <?= $view === 'clubs' ? 'active' : '' ?>">
     <i data-lucide="shield"></i> Klubbar
   </a>
 </div>

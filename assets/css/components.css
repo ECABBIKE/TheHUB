@@ -248,6 +248,7 @@ body{
 
 /* Tabs - Unified tab system for all pages */
 .tabs-nav{display:flex;gap:var(--space-sm);margin-bottom:var(--space-lg);border-bottom:2px solid var(--color-border)}
+.tabs-nav--noborder{border-bottom:none}
 .tab{
   padding:var(--space-sm) var(--space-lg);
   background:transparent;
@@ -266,14 +267,21 @@ body{
   border-bottom-color:var(--color-accent);
   background:transparent;
 }
-/* Tab variant: Pill style (alternative) */
+/* Tab variant: Pill style (alternative) - stands out from white background */
 .tab-pill{
+  display:inline-flex;align-items:center;gap:var(--space-xs);
   padding:var(--space-sm) var(--space-md);
   border-radius:var(--radius-md);
   border:1px solid var(--color-border);
-  background:transparent;
+  background:var(--color-bg-surface);
+  font-weight:var(--weight-medium);
+  color:var(--color-text-secondary);
+  text-decoration:none;
+  cursor:pointer;
+  transition:all var(--transition-fast);
 }
-.tab-pill:hover{background:var(--color-bg-hover);border-color:var(--color-border-strong)}
+.tab-pill i,.tab-pill svg{width:16px;height:16px}
+.tab-pill:hover{background:var(--color-bg-hover);border-color:var(--color-border-strong);color:var(--color-text-primary)}
 .tab-pill.active{
   background:var(--color-accent);
   color:var(--color-text-inverse);

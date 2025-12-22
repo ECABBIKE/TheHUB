@@ -415,12 +415,15 @@
 }
 
 @media (max-width: 599px) {
-  .view-toggle {
-    flex-direction: column;
-  }
-  .view-btn {
-    text-align: center;
+  /* Tabs stay horizontal (handled by tabs-nav) */
+  .tabs-nav--noborder {
+    gap: var(--space-xs);
   }
   .stats-grid {
     grid-template-columns: 1fr 1fr;
-  }}
+  }
+  .info-banner {
+    font-size: var(--text-xs);
+    padding: var(--space-xs) var(--space-sm);
+  }
+}

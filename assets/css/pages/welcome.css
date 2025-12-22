@@ -417,21 +417,24 @@
     }
 
     .welcome-header {
-        padding: var(--space-xs) 0;
+        padding: 0;
     }
 
+    /* Smaller logo on mobile to save space */
     .welcome-logo-large {
-        width: 200px;
-        max-height: 120px;
+        width: 160px;
+        max-height: 90px;
         margin: 0 auto;
     }
 
     .welcome-about {
         padding: var(--space-sm);
+        margin-bottom: var(--space-sm);
     }
 
     .welcome-about-title {
-        font-size: var(--text-xl);
+        font-size: var(--text-lg);
+        margin-bottom: 0;
     }
 
     .welcome-about-tagline {
@@ -439,7 +442,28 @@
         margin-bottom: var(--space-xs);
     }
 
+    .welcome-about-subtitle {
+        font-size: var(--text-sm);
+        margin-bottom: 0;
+    }
+
     .welcome-about-desc {
+        font-size: var(--text-sm);
+        display: none; /* Hide on small screens - info is repeated in login CTA */
+    }
+
+    /* More compact login CTA on mobile */
+    .welcome-login-cta {
+        padding: var(--space-md);
+        margin-bottom: var(--space-md);
+    }
+
+    .welcome-login-icon {
+        width: 32px;
+        height: 32px;
+    }
+
+    .welcome-login-cta h3 {
         font-size: var(--text-sm);
     }
 
