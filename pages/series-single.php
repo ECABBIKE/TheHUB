@@ -503,10 +503,10 @@ if (!$series) {
 
 <!-- Standings Type Tabs -->
 <div class="standings-tabs mb-md">
-  <button class="standings-tab active" data-tab="individual" onclick="switchStandingsTab('individual')">
+  <button class="tab-pill active" data-tab="individual" onclick="switchStandingsTab('individual')">
     👤 Individuellt
   </button>
-  <button class="standings-tab" data-tab="club" onclick="switchStandingsTab('club')">
+  <button class="tab-pill" data-tab="club" onclick="switchStandingsTab('club')">
     🛡️ Klubbmästerskap
   </button>
 </div>
@@ -797,7 +797,7 @@ function applyFilters() {
 
 function switchStandingsTab(tab) {
   // Update tab buttons
-  document.querySelectorAll('.standings-tab').forEach(btn => {
+  document.querySelectorAll('.tab-pill').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.tab === tab);
   });
   // Show/hide sections

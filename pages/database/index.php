@@ -261,9 +261,9 @@ if (empty($clubRankings)) {
 
 <!-- Search Section -->
 <div class="search-card">
-    <div class="search-tabs">
-        <button class="search-tab active" data-tab="riders"><i data-lucide="users"></i> Sök Åkare</button>
-        <button class="search-tab" data-tab="clubs"><i data-lucide="shield"></i> Sök Klubbar</button>
+    <div class="tabs-nav">
+        <button class="tab-pill active" data-tab="riders"><i data-lucide="users"></i> Sök Åkare</button>
+        <button class="tab-pill" data-tab="clubs"><i data-lucide="shield"></i> Sök Klubbar</button>
     </div>
 
     <div class="search-box">
@@ -356,7 +356,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const searchResults = document.getElementById('search-results');
     const searchHint = document.getElementById('search-hint');
     const searchClear = document.querySelector('.search-clear');
-    const searchTabs = document.querySelectorAll('.search-tab');
+    const searchTabs = document.querySelectorAll('.tab-pill');
 
     let searchTimeout;
     let currentType = 'riders';

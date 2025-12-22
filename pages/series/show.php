@@ -458,11 +458,11 @@ unset($club);
     </details>
 
     <!-- Toggle Buttons: Individual / Clubs -->
-    <div class="standings-tabs">
-        <button class="standings-tab active" data-tab="individual" onclick="switchTab('individual')">
+    <div class="tabs-nav">
+        <button class="tab-pill active" data-tab="individual" onclick="switchTab('individual')">
             <i data-lucide="user" class="standings-tab-icon"></i> Individuellt
         </button>
-        <button class="standings-tab" data-tab="club" onclick="switchTab('club')">
+        <button class="tab-pill" data-tab="club" onclick="switchTab('club')">
             <i data-lucide="shield" class="standings-tab-icon"></i> Klubbmästarskap
         </button>
     </div>
@@ -639,7 +639,7 @@ unset($club);
 
 <script>
 function switchTab(tab) {
-    document.querySelectorAll('.standings-tab').forEach(btn => {
+    document.querySelectorAll('.tab-pill').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.tab === tab);
     });
     document.getElementById('individual-standings').style.display = tab === 'individual' ? '' : 'none';
