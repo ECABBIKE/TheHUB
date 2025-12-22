@@ -40,9 +40,9 @@ define('EVENTS_PER_PAGE', 20);
 
 // Version info
 define('APP_VERSION', '3.5');
-define('APP_VERSION_NAME', 'Liquid Glass');
+define('APP_VERSION_NAME', 'Beta');
 define('APP_BUILD', '2025-12-22');
-define('DEPLOYMENT_OFFSET', 454); // Total version number
+define('DEPLOYMENT_OFFSET', 131); // Deployments before git repo
 
 try {
     $pdo = new PDO(

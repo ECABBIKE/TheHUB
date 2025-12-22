@@ -28,18 +28,6 @@ if (!$series) {
     return;
 }
 
-// Add fallback to branding logo if series has no logo
-if (empty($series['logo'])) {
-    $brandingFile = __DIR__ . '/../../uploads/branding.json';
-    if (file_exists($brandingFile)) {
-        $branding = json_decode(file_get_contents($brandingFile), true);
-        if (!empty($branding['logos']['homepage'])) {
-            $series['logo'] = $branding['logos']['homepage'];
-            $series['logo_is_fallback'] = true;
-        }
-    }
-}
-
 // Check if series_events table exists
 $useSeriesEvents = false;
 try {

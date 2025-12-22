@@ -109,25 +109,6 @@ $stmt = $pdo->prepare($sql);
 $stmt->execute($params);
 $seriesList = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-// Add fallback to branding logo for series without logo
-$brandingFile = __DIR__ . '/../../uploads/branding.json';
-$brandingLogo = null;
-if (file_exists($brandingFile)) {
-    $branding = json_decode(file_get_contents($brandingFile), true);
-    if (!empty($branding['logos']['homepage'])) {
-        $brandingLogo = $branding['logos']['homepage'];
-    }
-}
-
-// Apply fallback logo to series without logo
-foreach ($seriesList as &$series) {
-    if (empty($series['logo']) && $brandingLogo) {
-        $series['logo'] = $brandingLogo;
-        $series['logo_is_fallback'] = true;
-    }
-}
-unset($series); // Break reference
-
 // Page title
 $pageTitle = 'Tävlingsserier';
 if ($filterSeriesName && !empty($seriesList)) {

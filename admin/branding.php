@@ -102,66 +102,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'header_height' => $_POST['header_height'] ?? '60'
         ];
 
-        // Auto-generate gradient from bg-page color
-        $gradientEnabled = !empty($_POST['gradient_enabled']);
-
-        if ($gradientEnabled) {
-            // Get bg-page color from saved colors, or use default
-            $bgPageColor = $customColors['--color-bg-page'] ?? null;
-
-            // If no custom bg-page, read from current theme
-            if (!$bgPageColor) {
-                $currentTheme = $_COOKIE['hub_theme'] ?? 'dark';
-                $bgPageColor = $currentTheme === 'light' ? '#F4F5F7' : '#0A0C14';
-            }
-
-            // Parse color - support both hex and rgba
-            if (preg_match('/^#[0-9A-Fa-f]{6}$/', $bgPageColor)) {
-                list($r, $g, $b) = sscanf($bgPageColor, "#%02x%02x%02x");
-
-                // Generate lighter (start) - lighten by 5%
-                $startR = min(255, $r + round($r * 0.05));
-                $startG = min(255, $g + round($g * 0.05));
-                $startB = min(255, $b + round($b * 0.05));
-                $gradientStart = sprintf('#%02X%02X%02X', $startR, $startG, $startB);
-
-                // Generate darker (end) - darken by 8%
-                $endR = max(0, $r - round($r * 0.08));
-                $endG = max(0, $g - round($g * 0.08));
-                $endB = max(0, $b - round($b * 0.08));
-                $gradientEnd = sprintf('#%02X%02X%02X', $endR, $endG, $endB);
-
-                $branding['gradient'] = [
-                    'enabled' => true,
-                    'angle' => 135,
-                    'start' => $gradientStart,
-                    'end' => $gradientEnd
-                ];
-            } else {
-                $branding['gradient'] = ['enabled' => false];
-            }
-        } else {
-            $branding['gradient'] = ['enabled' => false];
-        }
-
-        // Save dark mode colors (bike app colors)
-        $darkColors = [];
-        if (!empty($_POST['dark_bg_page']) && preg_match('/^#[0-9A-Fa-f]{6}$/', $_POST['dark_bg_page'])) {
-            $darkColors['bg_page'] = $_POST['dark_bg_page'];
-        }
-        if (!empty($_POST['dark_bg_card']) && preg_match('/^#[0-9A-Fa-f]{6}$/', $_POST['dark_bg_card'])) {
-            $darkColors['bg_card'] = $_POST['dark_bg_card'];
-        }
-        if (!empty($_POST['dark_accent']) && preg_match('/^#[0-9A-Fa-f]{6}$/', $_POST['dark_accent'])) {
-            $darkColors['accent'] = $_POST['dark_accent'];
-        }
-
-        if (!empty($darkColors)) {
-            $branding['dark_colors'] = $darkColors;
-        } else {
-            unset($branding['dark_colors']);
-        }
-
         // Save logo settings
         $branding['logos'] = [
             'sidebar' => trim($_POST['logo_sidebar'] ?? ''),
@@ -195,9 +135,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 }
-
-// Detect current theme to show correct default colors
-$currentTheme = $_COOKIE['hub_theme'] ?? 'dark';
 
 // Define color groups for display
 $colorGroups = [
@@ -581,10 +518,7 @@ include __DIR__ . '/components/unified-layout.php';
                 <i data-lucide="palette"></i>
                 Färger
             </h2>
-            <span class="badge" id="theme-badge">
-                <span class="theme-light-text" style="display:none;">Ljust tema</span>
-                <span class="theme-dark-text" style="display:none;">Mörkt tema</span>
-            </span>
+            <span class="badge">Mörkt tema</span>
         </div>
         <div class="card-body">
             <p class="text-secondary mb-lg">
@@ -600,9 +534,7 @@ include __DIR__ . '/components/unified-layout.php';
                     </h3>
                     <?php foreach ($colors as $varKey => $colorInfo):
                         $fullVar = '--color-' . $varKey;
-                        // Use current theme's color as fallback, not always dark
-                        $defaultColor = $currentTheme === 'light' ? $colorInfo['light'] : $colorInfo['dark'];
-                        $currentValue = $branding['colors'][$fullVar] ?? $defaultColor;
+                        $currentValue = $branding['colors'][$fullVar] ?? $colorInfo['dark'];
                         $inputName = 'color_' . str_replace('-', '_', $varKey);
                     ?>
                     <div class="color-item">
@@ -625,60 +557,6 @@ include __DIR__ . '/components/unified-layout.php';
                     <?php endforeach; ?>
                 </div>
                 <?php endforeach; ?>
-            </div>
-        </div>
-    </div>
-
-    <!-- Gradient Section -->
-    <div class="card mb-lg">
-        <div class="card-header">
-            <h2>
-                <i data-lucide="palette"></i>
-                Bakgrundsgradient
-            </h2>
-        </div>
-        <div class="card-body">
-            <p class="text-secondary mb-lg">
-                Gradienten genereras automatiskt från <strong>Sidbakgrund</strong>-färgen i Färger-sektionen ovan.
-                Aktivera eller inaktivera gradient här.
-            </p>
-
-            <?php
-            $gradient = $branding['gradient'] ?? [];
-            $gradientEnabled = !empty($gradient['enabled']);
-            $gradientStart = $gradient['start'] ?? '#E8ECF1';
-            $gradientEnd = $gradient['end'] ?? '#F8F9FB';
-            ?>
-
-            <div style="display: flex; flex-direction: column; gap: var(--space-lg);">
-                <!-- Enable Toggle -->
-                <div style="display: flex; align-items: center; gap: var(--space-md); padding: var(--space-lg); background: var(--color-bg-surface); border-radius: var(--radius-md); border-left: 4px solid #F59E0B;">
-                    <input type="checkbox"
-                           id="gradient_enabled"
-                           name="gradient_enabled"
-                           <?= $gradientEnabled ? 'checked' : '' ?>
-                           style="width: 20px; height: 20px; cursor: pointer;">
-                    <label for="gradient_enabled" style="font-weight: var(--weight-medium); cursor: pointer; margin: 0; flex: 1;">
-                        Aktivera bakgrundsgradient
-                    </label>
-                    <i data-lucide="zap" style="color: var(--color-warning); width: 20px; height: 20px;"></i>
-                </div>
-
-                <!-- Preview -->
-                <div style="padding: var(--space-lg); background: var(--color-bg-surface); border-radius: var(--radius-lg);">
-                    <h4 style="margin: 0 0 1rem 0; display: flex; align-items: center; gap: 0.5rem;">
-                        <i data-lucide="eye"></i>
-                        Förhandsvisning
-                    </h4>
-                    <div id="gradient-preview" style="height: 120px; border-radius: var(--radius-md); background: linear-gradient(135deg, <?= htmlspecialchars($gradientStart) ?>, <?= htmlspecialchars($gradientEnd) ?>); border: 1px solid var(--color-border);"></div>
-                    <div style="display: flex; justify-content: space-between; margin-top: var(--space-sm); font-size: var(--text-xs); font-family: var(--font-mono); color: var(--color-text-secondary);">
-                        <span id="gradient-start-value">Start: <?= htmlspecialchars($gradientStart) ?></span>
-                        <span id="gradient-end-value">Slut: <?= htmlspecialchars($gradientEnd) ?></span>
-                    </div>
-                    <small style="display: block; margin-top: var(--space-md); opacity: 0.7; font-size: var(--text-xs); text-align: center;">
-                        💡 <strong>Tips:</strong> Ändra <strong>Sidbakgrund</strong>-färgen i "Färger"-sektionen för att justera gradienten
-                    </small>
-                </div>
             </div>
         </div>
     </div>
@@ -932,194 +810,7 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
     </div>
-
-    <!-- Gradient Section (from main branch - auto-generates from bg-page) -->
-    <div class="card mb-lg">
-        <div class="card-header">
-            <h2>
-                <i data-lucide="palette"></i>
-                Bakgrundsgradient
-            </h2>
-        </div>
-        <div class="card-body">
-            <p class="text-secondary mb-lg">
-                Gradienten genereras automatiskt från <strong>Sidbakgrund</strong>-färgen i Färger-sektionen ovan.
-                Aktivera eller inaktivera gradient här.
-            </p>
-
-            <?php
-            $gradient = $branding['gradient'] ?? [];
-            $gradientEnabled = !empty($gradient['enabled']);
-            $gradientStart = $gradient['start'] ?? '#E8ECF1';
-            $gradientEnd = $gradient['end'] ?? '#F8F9FB';
-            ?>
-
-            <div style="display: flex; flex-direction: column; gap: var(--space-lg);">
-                <!-- Enable Toggle -->
-                <div style="display: flex; align-items: center; gap: var(--space-md); padding: var(--space-lg); background: var(--color-bg-surface); border-radius: var(--radius-md); border-left: 4px solid #F59E0B;">
-                    <input type="checkbox"
-                           id="gradient_enabled"
-                           name="gradient_enabled"
-                           <?= $gradientEnabled ? 'checked' : '' ?>
-                           style="width: 20px; height: 20px; cursor: pointer;">
-                    <label for="gradient_enabled" style="font-weight: var(--weight-medium); cursor: pointer; margin: 0; flex: 1;">
-                        Aktivera bakgrundsgradient
-                    </label>
-                    <i data-lucide="zap" style="color: var(--color-warning); width: 20px; height: 20px;"></i>
-                </div>
-
-                <!-- Preview -->
-                <div style="padding: var(--space-lg); background: var(--color-bg-surface); border-radius: var(--radius-lg);">
-                    <h4 style="margin: 0 0 1rem 0; display: flex; align-items: center; gap: 0.5rem;">
-                        <i data-lucide="eye"></i>
-                        Förhandsvisning
-                    </h4>
-                    <div id="gradient-preview" style="height: 120px; border-radius: var(--radius-md); background: linear-gradient(135deg, <?= htmlspecialchars($gradientStart) ?>, <?= htmlspecialchars($gradientEnd) ?>); border: 1px solid var(--color-border);"></div>
-                    <div style="display: flex; justify-content: space-between; margin-top: var(--space-sm); font-size: var(--text-xs); font-family: var(--font-mono); color: var(--color-text-secondary);">
-                        <span id="gradient-start-value">Start: <?= htmlspecialchars($gradientStart) ?></span>
-                        <span id="gradient-end-value">Slut: <?= htmlspecialchars($gradientEnd) ?></span>
-                    </div>
-                    <small style="display: block; margin-top: var(--space-md); opacity: 0.7; font-size: var(--text-xs); text-align: center;">
-                        💡 <strong>Tips:</strong> Ändra <strong>Sidbakgrund</strong>-färgen i "Färger"-sektionen för att justera gradienten
-                    </small>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- TEMPORARILY HIDDEN - Dark Mode Colors Section (Bike App Style) -->
-    <?php
-    // DISABLED: Hiding this section until functionality is verified
-    if (false): // Change to true to re-enable
-    $darkColors = $branding['dark_colors'] ?? [];
-    $darkBgPage = $darkColors['bg_page'] ?? '#242C3B';
-    $darkBgCard = $darkColors['bg_card'] ?? '#353F54';
-    $darkAccent = $darkColors['accent'] ?? '#37B6E9';
-    ?>
-    <div class="card mb-lg" style="display:none;">
-        <div class="card-header">
-            <h2>
-                <i data-lucide="moon"></i>
-                Mörkt tema
-            </h2>
-        </div>
-        <div class="card-body">
-            <p class="text-secondary mb-lg">
-                Anpassa färger för mörkt läge. Baserat på bike app-designen.
-            </p>
-
-            <div class="branding-grid" style="grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));">
-                <!-- Huvudbakgrund -->
-                <div class="color-group">
-                    <h3><i data-lucide="square"></i> Huvudbakgrund</h3>
-                    <div style="display: flex; align-items: center; gap: var(--space-md); padding: var(--space-md); background: var(--color-bg-surface); border-radius: var(--radius-md);">
-                        <input type="color"
-                               name="dark_bg_page"
-                               id="dark_bg_page"
-                               value="<?= htmlspecialchars($darkBgPage) ?>"
-                               style="width: 50px; height: 50px; border: 2px solid var(--color-border); border-radius: var(--radius-md); cursor: pointer;">
-                        <div style="flex: 1;">
-                            <div style="font-weight: var(--weight-medium); margin-bottom: 0.25rem;">
-                                Sidbakgrund
-                            </div>
-                            <div style="font-family: var(--font-mono); font-size: var(--text-sm); color: var(--color-text-secondary);">
-                                <?= htmlspecialchars($darkBgPage) ?>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Kortbakgrund -->
-                <div class="color-group">
-                    <h3><i data-lucide="layers"></i> Kort & Paneler</h3>
-                    <div style="display: flex; align-items: center; gap: var(--space-md); padding: var(--space-md); background: var(--color-bg-surface); border-radius: var(--radius-md);">
-                        <input type="color"
-                               name="dark_bg_card"
-                               id="dark_bg_card"
-                               value="<?= htmlspecialchars($darkBgCard) ?>"
-                               style="width: 50px; height: 50px; border: 2px solid var(--color-border); border-radius: var(--radius-md); cursor: pointer;">
-                        <div style="flex: 1;">
-                            <div style="font-weight: var(--weight-medium); margin-bottom: 0.25rem;">
-                                Kortytor
-                            </div>
-                            <div style="font-family: var(--font-mono); font-size: var(--text-sm); color: var(--color-text-secondary);">
-                                <?= htmlspecialchars($darkBgCard) ?>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Accent -->
-                <div class="color-group">
-                    <h3><i data-lucide="zap"></i> Accentfärg</h3>
-                    <div style="display: flex; align-items: center; gap: var(--space-md); padding: var(--space-md); background: var(--color-bg-surface); border-radius: var(--radius-md);">
-                        <input type="color"
-                               name="dark_accent"
-                               id="dark_accent"
-                               value="<?= htmlspecialchars($darkAccent) ?>"
-                               style="width: 50px; height: 50px; border: 2px solid var(--color-border); border-radius: var(--radius-md); cursor: pointer;">
-                        <div style="flex: 1;">
-                            <div style="font-weight: var(--weight-medium); margin-bottom: 0.25rem;">
-                                Länkar & Knappar
-                            </div>
-                            <div style="font-family: var(--font-mono); font-size: var(--text-sm); color: var(--color-text-secondary);">
-                                <?= htmlspecialchars($darkAccent) ?>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div style="margin-top: var(--space-lg); padding: var(--space-md); background: var(--color-bg-surface); border-radius: var(--radius-md); border-left: 4px solid #37B6E9;">
-                <p style="margin: 0; font-size: 0.875rem; color: var(--color-text-secondary); display: flex; align-items: start; gap: 0.5rem;">
-                    <i data-lucide="info" style="width: 16px; height: 16px; margin-top: 2px; flex-shrink: 0;"></i>
-                    <span>
-                        Övriga färger (gradient, text, kanter) genereras automatiskt från dessa basfärger.
-                    </span>
-                </p>
-            </div>
-        </div>
-    </div>
-    <?php endif; // End of dark mode section (disabled) ?>
 </form>
-
-<script>
-// Auto-update gradient preview when bg-page color changes (from main branch)
-function updateGradientFromBgPage(bgColor) {
-    // Only update if gradient is enabled
-    const gradientCheckbox = document.getElementById('gradient_enabled');
-    if (!gradientCheckbox || !gradientCheckbox.checked) return;
-
-    // Parse RGB
-    const r = parseInt(bgColor.substr(1, 2), 16);
-    const g = parseInt(bgColor.substr(3, 2), 16);
-    const b = parseInt(bgColor.substr(5, 2), 16);
-
-    // Generate lighter (start) - lighten by 5%
-    const startR = Math.min(255, Math.round(r + r * 0.05));
-    const startG = Math.min(255, Math.round(g + g * 0.05));
-    const startB = Math.min(255, Math.round(b + b * 0.05));
-    const startColor = `#${startR.toString(16).padStart(2, '0')}${startG.toString(16).padStart(2, '0')}${startB.toString(16).padStart(2, '0')}`.toUpperCase();
-
-    // Generate darker (end) - darken by 8%
-    const endR = Math.max(0, Math.round(r - r * 0.08));
-    const endG = Math.max(0, Math.round(g - g * 0.08));
-    const endB = Math.max(0, Math.round(b - b * 0.08));
-    const endColor = `#${endR.toString(16).padStart(2, '0')}${endG.toString(16).padStart(2, '0')}${endB.toString(16).padStart(2, '0')}`.toUpperCase();
-
-    // Update preview
-    const preview = document.getElementById('gradient-preview');
-    if (preview) {
-        preview.style.background = `linear-gradient(135deg, ${startColor}, ${endColor})`;
-    }
-
-    const startValue = document.getElementById('gradient-start-value');
-    const endValue = document.getElementById('gradient-end-value');
-    if (startValue) startValue.textContent = `Start: ${startColor}`;
-    if (endValue) endValue.textContent = `Slut: ${endColor}`;
-}
-
-</script>
 
 <!-- Display-only Design System Reference Sections -->
 
@@ -1251,11 +942,6 @@ function updateColorPreview(input, varKey) {
 
     // Apply live preview
     document.documentElement.style.setProperty('--color-' + varKey, input.value);
-
-    // If bg-page color changed, update gradient preview
-    if (varKey === 'bg-page') {
-        updateGradientFromBgPage(input.value);
-    }
 }
 
 function updateFromText(input) {
@@ -1275,11 +961,6 @@ function updateFromText(input) {
 
     // Apply live preview
     document.documentElement.style.setProperty('--color-' + varKey, value);
-
-    // If bg-page color changed, update gradient preview
-    if (varKey === 'bg-page' && /^#[0-9A-Fa-f]{6}$/.test(value)) {
-        updateGradientFromBgPage(value);
-    }
 }
 
 // Live preview for responsive settings
@@ -1421,28 +1102,6 @@ document.getElementById('mediaPickerModal')?.addEventListener('click', (e) => {
 document.querySelectorAll('.logo-preview-box').forEach(box => {
     box.addEventListener('mouseenter', () => box.style.borderColor = 'var(--color-accent)');
     box.addEventListener('mouseleave', () => box.style.borderColor = 'var(--color-border)');
-});
-
-// Update theme badge to show actual active theme
-function updateThemeBadge() {
-    const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
-    const lightText = document.querySelector('.theme-light-text');
-    const darkText = document.querySelector('.theme-dark-text');
-
-    if (currentTheme === 'light') {
-        lightText.style.display = 'inline';
-        darkText.style.display = 'none';
-    } else {
-        lightText.style.display = 'none';
-        darkText.style.display = 'inline';
-    }
-}
-
-// Run on load and watch for theme changes
-updateThemeBadge();
-new MutationObserver(updateThemeBadge).observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: ['data-theme']
 });
 </script>
 

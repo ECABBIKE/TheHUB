@@ -57,6 +57,3 @@ if (function_exists('getVersionInfo')) {
     }
 }
 </style>
-
-<!-- Scroll-aware header behavior -->
-<script src="/assets/js/scroll-header.js?v=<?= filemtime(__DIR__ . '/../assets/js/scroll-header.js') ?>"></script>
