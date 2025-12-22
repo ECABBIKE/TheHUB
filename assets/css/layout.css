@@ -66,8 +66,8 @@
 
 /* Main Content - Uses --container-padding from branding for responsive control */
 .main-content{
-  padding:var(--container-padding);
-  padding-bottom:calc(var(--container-padding) + var(--mobile-nav-height) + env(safe-area-inset-bottom));
+  padding:var(--container-padding) !important;
+  padding-bottom:calc(var(--container-padding) + var(--mobile-nav-height) + env(safe-area-inset-bottom)) !important;
   max-width:var(--content-max-width);margin:0 auto;width:100%;
   overflow-x:hidden;
 }
@@ -193,31 +193,4 @@
     padding-left: var(--space-xl);
     padding-right: var(--space-xl);
   }
-}
-
-/* ============================================================================
-   BRANDING PADDING ENFORCEMENT
-   Force all page containers to use branding-controlled padding
-   ============================================================================ */
-.ranking-page,
-.results-page,
-.calendar-page,
-.database-page,
-.series-page,
-.profile-page {
-  padding: var(--container-padding) !important;
-}
-
-/* Page-specific containers that wrap content */
-.page-container,
-.content-wrapper,
-.page-wrapper {
-  padding: var(--container-padding);
-}
-
-/* Search boxes and filter rows should use card padding */
-.search-box,
-.filter-row,
-.filters-bar {
-  padding: var(--card-padding);
 }
