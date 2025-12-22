@@ -316,8 +316,8 @@ body.pwa-installed .browser-hint {
   .main-content,
   .gs-main-content,
   main {
-    height: calc(100vh - var(--header-height, 60px) - var(--mobile-nav-height, 64px) - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
-    height: calc(100dvh - var(--header-height, 60px) - var(--mobile-nav-height, 64px) - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+    min-height: calc(100vh - var(--header-height, 60px) - var(--mobile-nav-height, 64px) - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+    min-height: calc(100dvh - var(--header-height, 60px) - var(--mobile-nav-height, 64px) - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
     overflow-y: auto;
     overflow-x: hidden;
     -webkit-overflow-scrolling: touch;
@@ -378,8 +378,8 @@ body.pwa-installed .browser-hint {
   .main-content,
   .gs-main-content,
   main {
-    height: calc(100vh - var(--header-height, 60px) - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
-    height: calc(100dvh - var(--header-height, 60px) - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+    min-height: calc(100vh - var(--header-height, 60px) - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+    min-height: calc(100dvh - var(--header-height, 60px) - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
     margin-left: 0 !important;
     width: 100% !important;
     padding-left: var(--landscape-sidebar-gap, 4px) !important;
