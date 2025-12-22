@@ -272,37 +272,23 @@ if (file_exists($brandingFile)) {
             $cssOutput .= '--header-height:' . $headerHeight . 'px;';
         }
 
-        // Process gradient settings
+        // Process gradient settings (simplified - just colors and angle)
         $gradient = $brandingData['gradient'] ?? null;
-        $gradientEnabled = false;
-        $gradientType = 'linear';
 
-        if ($gradient) {
-            // Enabled flag
-            $gradientEnabled = !empty($gradient['enabled']);
-
-            // Gradient type (linear or radial)
-            $gradientType = ($gradient['type'] ?? 'linear') === 'radial' ? 'radial' : 'linear';
-
+        if ($gradient && !empty($gradient['enabled'])) {
             // Gradient angle (0-360 degrees)
             $angle = intval($gradient['angle'] ?? 135);
-            $angle = max(0, min(360, $angle)); // Clamp to 0-360
+            $angle = max(0, min(360, $angle));
             $cssOutput .= '--gradient-angle:' . $angle . 'deg;';
 
             // Gradient colors (validate hex format)
-            $startColor = $gradient['start'] ?? null;
-            $endColor = $gradient['end'] ?? null;
-
-            if ($startColor && preg_match('/^#[0-9A-Fa-f]{6}$/', $startColor)) {
-                $cssOutput .= '--gradient-start:' . htmlspecialchars($startColor, ENT_QUOTES, 'UTF-8') . ';';
+            if (!empty($gradient['start']) && preg_match('/^#[0-9A-Fa-f]{6}$/', $gradient['start'])) {
+                $cssOutput .= '--gradient-start:' . htmlspecialchars($gradient['start'], ENT_QUOTES, 'UTF-8') . ';';
             }
 
-            if ($endColor && preg_match('/^#[0-9A-Fa-f]{6}$/', $endColor)) {
-                $cssOutput .= '--gradient-end:' . htmlspecialchars($endColor, ENT_QUOTES, 'UTF-8') . ';';
+            if (!empty($gradient['end']) && preg_match('/^#[0-9A-Fa-f]{6}$/', $gradient['end'])) {
+                $cssOutput .= '--gradient-end:' . htmlspecialchars($gradient['end'], ENT_QUOTES, 'UTF-8') . ';';
             }
-
-            // Enabled flag
-            $cssOutput .= '--gradient-enabled:' . ($gradientEnabled ? '1' : '0') . ';';
         }
 
         // Output if we have anything to output

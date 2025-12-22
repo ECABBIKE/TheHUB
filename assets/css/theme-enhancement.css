@@ -15,38 +15,15 @@
    This file only applies them to components */
 
 /* ==========================================================================
-   BACKGROUND GRADIENT - Subtle, elegant, customizable via branding.json
+   BACKGROUND GRADIENT - Subtle, elegant
    ========================================================================== */
 
 body {
-  /* Apply gradient only if enabled (--gradient-enabled: 1) */
-  background:
-    linear-gradient(
-      var(--gradient-angle),
-      var(--gradient-start),
-      var(--gradient-end)
-    );
-  background-attachment: fixed;
-
-  /* Fallback for when gradient is disabled */
-  background-color: var(--color-bg-page);
-}
-
-/* Disable gradient if --gradient-enabled is 0 */
-body[data-gradient="disabled"],
-html[data-gradient="disabled"] body {
-  background: var(--color-bg-page) !important;
-  background-attachment: unset !important;
-}
-
-/* Radial gradient option (if --gradient-type: radial) */
-body[data-gradient-type="radial"] {
-  background:
-    radial-gradient(
-      ellipse at top,
-      var(--gradient-start),
-      var(--gradient-end)
-    );
+  background: linear-gradient(
+    var(--gradient-angle, 135deg),
+    var(--gradient-start, var(--color-bg-page)),
+    var(--gradient-end, var(--color-bg-page))
+  );
   background-attachment: fixed;
 }
 
