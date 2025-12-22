@@ -291,7 +291,9 @@ if (file_exists($brandingFile)) {
             }
         }
 
-        // Process dark mode colors (bike app style)
+        // TEMPORARILY DISABLED - Process dark mode colors (bike app style)
+        // Disabled until site functionality is verified
+        /*
         $darkColors = $brandingData['dark_colors'] ?? null;
         $darkModeCss = '';
 
@@ -355,6 +357,8 @@ if (file_exists($brandingFile)) {
 
             $darkModeCss .= '}';
         }
+        */
+        $darkModeCss = ''; // Set to empty while disabled
 
         // Output if we have anything to output
         if ($colorCount > 0 || $responsiveCss || $layout || $gradient || $darkModeCss) {

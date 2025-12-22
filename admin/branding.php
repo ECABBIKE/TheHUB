@@ -942,14 +942,16 @@ include __DIR__ . '/components/unified-layout.php';
         </div>
     </div>
 
-    <!-- Dark Mode Colors Section (Bike App Style) -->
+    <!-- TEMPORARILY HIDDEN - Dark Mode Colors Section (Bike App Style) -->
     <?php
+    // DISABLED: Hiding this section until functionality is verified
+    if (false): // Change to true to re-enable
     $darkColors = $branding['dark_colors'] ?? [];
     $darkBgPage = $darkColors['bg_page'] ?? '#242C3B';
     $darkBgCard = $darkColors['bg_card'] ?? '#353F54';
     $darkAccent = $darkColors['accent'] ?? '#37B6E9';
     ?>
-    <div class="card mb-lg">
+    <div class="card mb-lg" style="display:none;">
         <div class="card-header">
             <h2>
                 <i data-lucide="moon"></i>
@@ -1033,6 +1035,7 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
     </div>
+    <?php endif; // End of dark mode section (disabled) ?>
 </form>
 
 <script>
