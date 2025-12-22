@@ -6,11 +6,7 @@
 .page-header {
   margin-bottom: var(--space-lg);
 }
-.page-title {
-  font-size: var(--text-2xl);
-  font-weight: var(--weight-bold);
-  margin: 0 0 var(--space-sm) 0;
-}
+/* NOTE: .page-title is now defined in components.css */
 .page-meta {
   display: flex;
   gap: var(--space-sm);
@@ -131,8 +127,4 @@
   }
   .search-form .btn {
     width: 100%;
-  }
-  .page-title {
-    font-size: var(--text-xl);
-  }
-}
+  }}

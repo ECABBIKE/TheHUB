@@ -196,33 +196,7 @@ input.filter-select {
 }
 
 /* Toggle Tabs */
-.standings-tabs {
-    display: flex;
-    gap: var(--space-xs);
-    background: var(--color-bg-card);
-    padding: var(--space-xs);
-    border-radius: var(--radius-lg);
-    margin-bottom: var(--space-lg);
-}
-.standings-tab {
-    flex: 1;
-    padding: var(--space-sm) var(--space-md);
-    border: none;
-    border-radius: var(--radius-md);
-    background: transparent;
-    color: var(--color-text-secondary);
-    font-weight: var(--weight-medium);
-    font-size: var(--text-sm);
-    cursor: pointer;
-    transition: all 0.15s;
-}
-.standings-tab:hover {
-    background: var(--color-bg-hover);
-}
-.standings-tab.active {
-    background: var(--color-accent);
-    color: white;
-}
+/* NOTE: Tab styles now use unified .tab and .tab-pill from components.css */
 
 /* Cards */
 .card {
@@ -490,16 +464,6 @@ input.filter-select {
     .event-results {
         font-size: 0.65rem;
         white-space: nowrap;
-    }
-
-    /* Compact tabs */
-    .standings-tabs {
-        margin-bottom: var(--space-md);
-        padding: 2px;
-    }
-    .standings-tab {
-        padding: var(--space-xs) var(--space-sm);
-        font-size: var(--text-xs);
     }
 
     /* Hide columns in table */
