@@ -33,14 +33,26 @@
   --shadow-md:0 4px 12px rgba(0,0,0,0.4);
   --shadow-lg:0 8px 24px rgba(0,0,0,0.5);
 
+  /* Liquid glass effects */
+  --glass-bg:rgba(26, 29, 40, 0.7);
+  --glass-border:rgba(255, 255, 255, 0.08);
+  --glass-blur:blur(20px) saturate(150%);
+  --glass-shadow:0 4px 20px rgba(0, 0, 0, 0.4);
+  --accent-glow:rgba(59, 158, 255, 0.25);
+
+  /* Gradient defaults */
+  --gradient-start:#06080E;
+  --gradient-end:#12141C;
+  --gradient-angle:135deg;
+
   color-scheme:dark;
 }
 
 /* Light mode is OPT-IN */
 html[data-theme="light"]{
-  --color-bg-page:#F4F5F7;
-  --color-bg-surface:#FFFFFF;
-  --color-bg-card:#FFFFFF;
+  --color-bg-page:#F0F2F5;
+  --color-bg-surface:#F8F9FB;
+  --color-bg-card:#F8F9FB;
   --color-bg-elevated:#FFFFFF;
   --color-bg-sunken:#E9EBEE;
   --color-bg-hover:rgba(0,0,0,0.04);
@@ -70,6 +82,18 @@ html[data-theme="light"]{
   --shadow-sm:0 1px 2px rgba(0,0,0,0.05);
   --shadow-md:0 4px 12px rgba(0,0,0,0.08);
   --shadow-lg:0 8px 24px rgba(0,0,0,0.12);
+
+  /* Liquid glass effects */
+  --glass-bg:rgba(255, 255, 255, 0.65);
+  --glass-border:rgba(0, 0, 0, 0.06);
+  --glass-blur:blur(20px) saturate(180%);
+  --glass-shadow:0 2px 16px rgba(0, 50, 100, 0.08);
+  --accent-glow:rgba(0, 74, 152, 0.2);
+
+  /* Gradient defaults */
+  --gradient-start:#E8ECF1;
+  --gradient-end:#F8F9FB;
+  --gradient-angle:135deg;
 
   color-scheme:light;
 }
