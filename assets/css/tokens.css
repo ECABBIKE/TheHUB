@@ -45,6 +45,28 @@
 
   /* Brand colors for UI elements */
   --color-enduro:#FFD700;--color-enduro-hover:#E6BD00;
+
+  /* Theme Enhancement - Liquid Glass + Dark Mode Preparation */
+  /* Light mode glass tokens */
+  --hub-bg-base:#F0F2F5;
+  --hub-bg-elevated:#F8F9FB;
+  --hub-glass-bg-light:rgba(255, 255, 255, 0.65);
+  --hub-glass-border-light:rgba(0, 0, 0, 0.06);
+  --hub-glass-blur-light:blur(20px) saturate(180%);
+  --hub-accent-glow-light:rgba(0, 74, 152, 0.2);
+
+  /* Dark mode glass tokens */
+  --hub-glass-bg-dark:rgba(26, 29, 40, 0.7);
+  --hub-glass-border-dark:rgba(255, 255, 255, 0.08);
+  --hub-glass-blur-dark:blur(20px) saturate(150%);
+  --hub-accent-glow-dark:rgba(59, 158, 255, 0.25);
+
+  /* Series color tints (for glass effects) */
+  --tint-swecup:rgba(30, 58, 95, 0.15);
+  --tint-capital:rgba(8, 145, 178, 0.12);
+  --tint-gotaland:rgba(234, 88, 12, 0.12);
+  --tint-gravity-dh:rgba(22, 163, 74, 0.12);
+  --tint-gravity-enduro:rgba(202, 138, 4, 0.12);
 }
 
 /* Container padding - tablet gets more breathing room */
