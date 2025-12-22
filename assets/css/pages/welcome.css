@@ -7,7 +7,7 @@
 .welcome-page {
     max-width: var(--content-max-width, 1400px);
     margin: 0 auto;
-    padding: var(--space-sm);
+    padding: var(--container-padding);
     text-align: center;
 }
 
