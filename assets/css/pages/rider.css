@@ -941,6 +941,13 @@
     padding: var(--space-lg);
 }
 
+/* Medal icon in result history */
+.medal-icon-sm {
+    width: 24px;
+    height: 24px;
+    display: block;
+}
+
 /* ============================================================================
    RANKING MODAL
    ============================================================================ */
@@ -1426,6 +1433,12 @@
         width: 28px;
         height: 28px;
         font-size: 12px;
+    }
+
+    .medal-icon-sm {
+        width: 20px;
+        height: 20px;
+        display: block;
     }
 
     .result-date {
