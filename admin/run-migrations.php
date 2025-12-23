@@ -268,7 +268,7 @@ include __DIR__ . '/components/unified-layout.php';
     <?php if (!empty($todaysMigrations)): ?>
     <div class="card mb-lg" style="border: 2px solid var(--color-warning);">
         <div class="card-header" style="background: var(--color-warning); color: white;">
-            <h3 style="margin: 0;">Nya migrationer idag (<?= date('Y-m-d') ?>)</h3>
+            <h3 class="m-0">Nya migrationer idag (<?= date('Y-m-d') ?>)</h3>
         </div>
         <div class="card-body">
             <p class="text-muted mb-md">Dessa migrationer skapades idag och bör köras:</p>

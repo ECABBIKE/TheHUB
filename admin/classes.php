@@ -221,7 +221,7 @@ include __DIR__ . '/components/unified-layout.php';
                         <?php foreach ($classes as $class): ?>
                             <tr>
                                 <td><strong><?= htmlspecialchars($class['display_name']) ?></strong></td>
-                                <td style="color: var(--color-text-secondary);"><?= htmlspecialchars($class['name']) ?></td>
+                                <td class="text-secondary"><?= htmlspecialchars($class['name']) ?></td>
                                 <td>
                                     <?php if ($class['discipline']):
                                         $discs = explode(',', $class['discipline']);
@@ -247,7 +247,7 @@ include __DIR__ . '/components/unified-layout.php';
                                 </td>
                                 <td>
                                     <?php if ($class['awards_points'] && $class['series_eligible']): ?>
-                                        <span style="color: var(--color-text-secondary);">Standard</span>
+                                        <span class="text-secondary">Standard</span>
                                     <?php elseif (!$class['awards_points'] && !$class['series_eligible']): ?>
                                         <!-- Classes intentionally without points/series (Motion, E-bike etc) - no warning needed -->
                                         <span style="color: var(--color-text-tertiary);">-</span>
@@ -288,7 +288,7 @@ include __DIR__ . '/components/unified-layout.php';
 </div>
 
 <!-- Class Modal -->
-<div id="classModal" class="admin-modal" style="display: none;">
+<div id="classModal" class="admin-modal" class="hidden">
     <div class="admin-modal-overlay" onclick="closeClassModal()"></div>
     <div class="admin-modal-content" style="max-width: 700px;">
         <div class="admin-modal-header">
@@ -357,7 +357,7 @@ include __DIR__ . '/components/unified-layout.php';
                 </div>
 
                 <div style="border-top: 1px solid var(--color-border); padding-top: var(--space-md); margin-top: var(--space-md);">
-                    <h4 style="margin-bottom: var(--space-md);">Klassinställningar</h4>
+                    <h4 class="mb-md">Klassinställningar</h4>
 
                     <div class="admin-form-group">
                         <label class="admin-checkbox-label">

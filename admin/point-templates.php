@@ -320,7 +320,7 @@ include __DIR__ . '/components/unified-layout.php';
                         <div>
                             <h3 style="margin: 0 0 var(--space-xs) 0;"><?= htmlspecialchars($template['name']) ?></h3>
                             <?php if (!empty($template['description'])): ?>
-                                <p class="text-secondary text-sm" style="margin: 0;"><?= htmlspecialchars($template['description']) ?></p>
+                                <p class="text-secondary text-sm" class="m-0"><?= htmlspecialchars($template['description']) ?></p>
                             <?php endif; ?>
                         </div>
                         <div style="display: flex; gap: var(--space-xs);">
@@ -348,7 +348,7 @@ include __DIR__ . '/components/unified-layout.php';
                             <?php endforeach; ?>
                         </div>
                     <?php else: ?>
-                        <p class="text-secondary text-sm" style="margin: 0;">Ingen poängfördelning angiven</p>
+                        <p class="text-secondary text-sm" class="m-0">Ingen poängfördelning angiven</p>
                     <?php endif; ?>
                 </div>
             <?php endforeach; ?>
@@ -386,7 +386,7 @@ include __DIR__ . '/components/unified-layout.php';
 
                 <div class="admin-form-group">
                     <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--space-sm);">
-                        <label class="admin-form-label" style="margin: 0;">Poängfördelning per placering</label>
+                        <label class="admin-form-label" class="m-0">Poängfördelning per placering</label>
                         <button type="button" class="btn-admin btn-admin-sm btn-admin-secondary" onclick="addPointRow()">
                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 12px; height: 12px;"><line x1="12" x2="12" y1="5" y2="19"/><line x1="5" x2="19" y1="12" y2="12"/></svg>
                             Lägg till rad
@@ -453,7 +453,7 @@ CSV format:
                     </svg>
                     <div>
                         <p style="margin: 0 0 var(--space-xs) 0;"><strong>JSON format:</strong> Klistra in exporterad JSON-data</p>
-                        <p style="margin: 0;"><strong>CSV format:</strong> En rad per placering: placering,poäng</p>
+                        <p class="m-0"><strong>CSV format:</strong> En rad per placering: placering,poäng</p>
                     </div>
                 </div>
             </div>

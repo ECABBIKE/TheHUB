@@ -620,11 +620,11 @@ include __DIR__ . '/components/unified-layout.php';
     </div>
     <div class="card-body">
         <form method="GET" class="flex gap-md mb-md" style="flex-wrap: wrap; align-items: flex-end;">
-            <div class="form-group" style="margin: 0;">
+            <div class="form-group" class="m-0">
                 <label class="form-label">Åkare 1 (ID)</label>
                 <input type="number" name="rider1" value="<?= htmlspecialchars($_GET['rider1'] ?? '') ?>" class="form-input" placeholder="t.ex. 10670" style="width: 120px;">
             </div>
-            <div class="form-group" style="margin: 0;">
+            <div class="form-group" class="m-0">
                 <label class="form-label">Åkare 2 (ID)</label>
                 <input type="number" name="rider2" value="<?= htmlspecialchars($_GET['rider2'] ?? '') ?>" class="form-input" placeholder="t.ex. 7374" style="width: 120px;">
             </div>

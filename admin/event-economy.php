@@ -145,7 +145,7 @@ try {
 </div>
 
 <!-- Snabbåtgärder -->
-<div class="card" style="margin-top: var(--space-lg);">
+<div class="card" class="mt-lg">
     <div class="card-header">
         <h3>Snabbåtgärder</h3>
     </div>
@@ -168,7 +168,7 @@ try {
 </div>
 
 <!-- Event-info -->
-<div class="card" style="margin-top: var(--space-lg);">
+<div class="card" class="mt-lg">
     <div class="card-header">
         <h3>Event-information</h3>
     </div>

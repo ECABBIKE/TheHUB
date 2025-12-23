@@ -356,7 +356,7 @@ include __DIR__ . '/components/unified-layout.php';
  <?php endif; ?>
 
 <!-- License Assignment Modal -->
-<div id="license-modal" class="gs-modal" style="display: none;">
+<div id="license-modal" class="gs-modal" class="hidden">
  <div class="gs-modal-backdrop"></div>
  <div class="gs-modal-content" style="max-width: 400px;">
  <div class="gs-modal-header">

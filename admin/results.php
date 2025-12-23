@@ -170,8 +170,8 @@ include __DIR__ . '/components/unified-layout.php';
                         <th>Event</th>
                         <th>Plats</th>
                         <th>Serie</th>
-                        <th style="text-align: center;">Deltagare</th>
-                        <th style="text-align: right;">Åtgärder</th>
+                        <th class="text-center">Deltagare</th>
+                        <th class="text-right">Åtgärder</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -188,7 +188,7 @@ include __DIR__ . '/components/unified-layout.php';
                             </td>
                             <td><?= h($event['location'] ?? '-') ?></td>
                             <td><?= h($event['series_name'] ?? '-') ?></td>
-                            <td style="text-align: center;">
+                            <td class="text-center">
                                 <span class="admin-badge admin-badge-<?= $event['result_count'] > 0 ? 'success' : 'info' ?>">
                                     <?= $event['result_count'] ?>
                                 </span>

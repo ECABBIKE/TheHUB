@@ -199,7 +199,7 @@ include __DIR__ . '/components/economy-layout.php';
                 </table>
             </div>
 
-            <div style="margin-top: var(--space-lg);">
+            <div class="mt-lg">
                 <button type="submit" class="btn btn-primary">
                     <i data-lucide="save"></i>
                     Spara alla priser
@@ -210,7 +210,7 @@ include __DIR__ . '/components/economy-layout.php';
 </div>
 
 <!-- Tips -->
-<div class="card" style="margin-top: var(--space-lg);">
+<div class="card" class="mt-lg">
     <div class="card-header">
         <h3>Tips</h3>
     </div>

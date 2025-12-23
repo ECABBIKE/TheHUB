@@ -290,7 +290,7 @@ include __DIR__ . '/components/unified-layout.php';
                     Välj CSV-fil
                 </label>
                 <input type="file" name="csv_file" accept=".csv" required class="admin-form-input">
-                <small style="color: var(--color-text-secondary);">Max 10 MB. Format: CSV (komma-separerad)</small>
+                <small class="text-secondary">Max 10 MB. Format: CSV (komma-separerad)</small>
             </div>
 
             <div class="flex gap-md">

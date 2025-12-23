@@ -1430,8 +1430,8 @@ document.addEventListener('keydown', function(e) {
                 </div>
 
                 <!-- Error/Success messages -->
-                <div id="quickSponsorError" class="alert alert-danger mb-md" style="display: none;"></div>
-                <div id="quickSponsorSuccess" class="alert alert-success mb-md" style="display: none;"></div>
+                <div id="quickSponsorError" class="alert alert-danger mb-md" class="hidden"></div>
+                <div id="quickSponsorSuccess" class="alert alert-success mb-md" class="hidden"></div>
 
                 <!-- Logo upload -->
                 <div class="form-group mb-md">
@@ -1444,7 +1444,7 @@ document.addEventListener('keydown', function(e) {
                             </div>
                             <img id="logoPreviewImg" src="" alt="Förhandsvisning" style="display: none; max-width: 100%; max-height: 100%; object-fit: contain;">
                         </div>
-                        <input type="file" id="quickSponsorLogo" name="logo" accept="image/png,image/jpeg,image/webp" onchange="previewLogo(this)" style="display: none;">
+                        <input type="file" id="quickSponsorLogo" name="logo" accept="image/png,image/jpeg,image/webp" onchange="previewLogo(this)" class="hidden">
                         <button type="button" class="btn btn-secondary btn-sm mt-sm" onclick="document.getElementById('quickSponsorLogo').click()">
                             <i data-lucide="upload" class="icon-sm"></i>
                             Välj fil

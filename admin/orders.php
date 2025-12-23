@@ -339,7 +339,7 @@ include __DIR__ . '/components/unified-layout.php';
 </div>
 
 <!-- Confirm Payment Modal -->
-<div id="confirm-modal" class="admin-modal" style="display: none;">
+<div id="confirm-modal" class="admin-modal" class="hidden">
     <div class="admin-modal-overlay" onclick="closeModal('confirm-modal')"></div>
     <div class="admin-modal-content" style="max-width: 500px;">
         <div class="admin-modal-header">

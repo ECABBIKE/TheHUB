@@ -407,7 +407,7 @@ include __DIR__ . '/components/unified-layout.php';
 
  <!-- Delete form (hidden) -->
  <?php if (!$isNew): ?>
- <form id="deleteForm" method="POST" style="display: none;">
+ <form id="deleteForm" method="POST" class="hidden">
   <?= csrf_field() ?>
   <input type="hidden" name="action" value="delete">
  </form>

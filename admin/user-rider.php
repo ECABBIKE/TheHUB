@@ -255,12 +255,12 @@ include __DIR__ . '/../includes/layout-header.php';
   </div>
   </div>
 
-  <div id="searchResults" class="mb-lg" style="display: none;">
+  <div id="searchResults" class="mb-lg" class="hidden">
   <label class="label">Sökresultat</label>
   <div id="resultsList" class="border gs-rounded" style="max-height: 300px; overflow-y: auto;"></div>
   </div>
 
-  <form method="POST" id="linkForm" style="display: none;">
+  <form method="POST" id="linkForm" class="hidden">
   <?= csrf_field() ?>
   <input type="hidden" name="action" value="link">
   <input type="hidden" name="rider_id" id="selectedRiderId">

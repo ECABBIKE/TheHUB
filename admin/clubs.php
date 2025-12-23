@@ -336,8 +336,8 @@ include __DIR__ . '/components/unified-layout.php';
                                         <?= htmlspecialchars($club['short_name'] ?? substr($club['name'], 0, 3)) ?>
                                     </span>
                                 </td>
-                                <td style="color: var(--color-text-secondary);"><?= htmlspecialchars($club['city'] ?? '-') ?></td>
-                                <td style="color: var(--color-text-secondary);"><?= htmlspecialchars($club['country'] ?? 'Sverige') ?></td>
+                                <td class="text-secondary"><?= htmlspecialchars($club['city'] ?? '-') ?></td>
+                                <td class="text-secondary"><?= htmlspecialchars($club['country'] ?? 'Sverige') ?></td>
                                 <td>
                                     <a href="/admin/riders?club_id=<?= $club['id'] ?>" class="btn-admin btn-admin-sm btn-admin-secondary">
                                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
