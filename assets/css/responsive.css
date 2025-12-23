@@ -204,20 +204,19 @@
     }
 
     /* ===== STAT CARDS ===== */
-    .stat-card,
+    /* NOTE: .stat-card, .stat-value, .stat-label responsive styles now in components.css */
     .gs-stat-card {
         padding: 0.75rem;
     }
 
     .stat-number,
     .gs-stat-number {
-        font-size: 1.25rem !important;
+        font-size: 1.25rem;
         margin-bottom: 0.25rem;
     }
 
-    .stat-label,
     .gs-stat-label {
-        font-size: 0.625rem !important;
+        font-size: 0.625rem;
     }
 
     /* Hide buttons in stat cards on mobile */

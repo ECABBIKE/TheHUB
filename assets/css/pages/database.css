@@ -280,12 +280,7 @@
     grid-template-columns: repeat(2, 1fr);
     gap: var(--space-sm);
   }
-  .stat-card {
-    padding: var(--space-md);
-  }
-  .stat-value {
-    font-size: var(--text-xl);
-  }
+  /* NOTE: .stat-card, .stat-value responsive styles now in components.css */
   .database-grid {
     grid-template-columns: 1fr;
   }
@@ -312,26 +307,13 @@
     font-size: var(--text-sm);
   }
 
-  /* Stats grid - tighter */
+  /* Stats grid - tighter on mobile, keep 4 columns for database */
   .stats-grid {
     grid-template-columns: repeat(4, 1fr);
     gap: var(--space-xs);
     margin-bottom: var(--space-md);
   }
-  .stat-card {
-    padding: var(--space-sm) var(--space-xs);
-    border-radius: var(--radius-md);
-  }
-  .stat-value {
-    font-size: var(--text-lg);
-    line-height: 1;
-  }
-  .stat-label {
-    font-size: 9px;
-    letter-spacing: 0;
-    line-height: 1.2;
-    margin-top: 2px;
-  }
+  /* NOTE: .stat-card, .stat-value, .stat-label responsive styles now in components.css */
 
   /* Search card - edge-to-edge */
   .search-card {
