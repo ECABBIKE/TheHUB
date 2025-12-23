@@ -516,7 +516,7 @@ include __DIR__ . '/components/unified-layout.php';
   <select id="club_id" name="club_id" class="input">
   <option value="">Ingen klubb</option>
   <?php foreach ($clubs as $club): ?>
-  <option value="<?= $club['id'] ?>" <?= $rider['club_id'] == $club['id'] ? 'selected' : '' ?><?= !$club['active'] ? ' style="color: var(--color-text-secondary);"' : '' ?>>
+  <option value="<?= $club['id'] ?>" <?= $rider['club_id'] == $club['id'] ? 'selected' : '' ?><?= !$club['active'] ? ' class="text-secondary"' : '' ?>>
    <?= h($club['name']) ?><?= !$club['active'] ? ' (inaktiv)' : '' ?>
   </option>
   <?php endforeach; ?>
@@ -1080,7 +1080,7 @@ include __DIR__ . '/components/unified-layout.php';
   </div>
   </form>
 
-  <form id="deleteAccountForm" method="POST" style="display: none;">
+  <form id="deleteAccountForm" method="POST" class="hidden">
   <?= csrf_field() ?>
   <input type="hidden" name="action" value="delete_account">
   </form>

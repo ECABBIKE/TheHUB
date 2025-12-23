@@ -944,7 +944,7 @@ $eventName = htmlspecialchars($event['name']);
         <div class="elevation-header">
             <i data-lucide="mountain" style="width: 18px; height: 18px; color: var(--color-icon);"></i>
             <span id="elevation-title">Höjdprofil</span>
-            <button class="elevation-close" id="elevation-clear-btn" onclick="clearSegmentSelection()" style="display: none;" title="Visa hela banan"><i data-lucide="rotate-ccw" style="width: 14px; height: 14px;"></i></button>
+            <button class="elevation-close" id="elevation-clear-btn" onclick="clearSegmentSelection()" class="hidden" title="Visa hela banan"><i data-lucide="rotate-ccw" style="width: 14px; height: 14px;"></i></button>
         </div>
         <div class="elevation-stats" id="elevation-stats">
             <div class="stat">

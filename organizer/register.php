@@ -29,14 +29,14 @@ include __DIR__ . '/includes/header.php';
 <!-- Steg 1: Sök eller ny -->
 <div id="step-search" class="org-card">
     <div class="org-card__body">
-        <h2 style="text-align: center; margin: 0 0 24px 0;">Sök deltagare</h2>
+        <h2 class="text-center mb-lg">Sök deltagare</h2>
 
         <div class="org-search mb-lg">
             <i data-lucide="search" class="org-search__icon"></i>
             <input type="text" id="search-input" class="org-input" placeholder="Skriv namn..." autocomplete="off">
         </div>
 
-        <div id="search-results" class="mb-lg" style="display: none;"></div>
+        <div id="search-results" class="mb-lg" class="hidden"></div>
 
         <div style="text-align: center; margin-bottom: 16px; color: var(--color-text-muted);">eller</div>
 
@@ -48,9 +48,9 @@ include __DIR__ . '/includes/header.php';
 </div>
 
 <!-- Steg 2: Formulär -->
-<div id="step-form" class="org-card" style="display: none;">
+<div id="step-form" class="org-card" class="hidden">
     <div class="org-card__body">
-        <h2 style="text-align: center; margin: 0 0 24px 0;">Uppgifter</h2>
+        <h2 class="text-center mb-lg">Uppgifter</h2>
 
         <form id="rider-form">
             <input type="hidden" id="rider_id" value="">
@@ -109,14 +109,14 @@ include __DIR__ . '/includes/header.php';
 </div>
 
 <!-- Steg 3: Välj klass -->
-<div id="step-class" class="org-card" style="display: none;">
+<div id="step-class" class="org-card" class="hidden">
     <div class="org-card__body">
-        <div id="rider-display" class="mb-lg" style="text-align: center;">
+        <div id="rider-display" class="mb-lg" class="text-center">
             <div id="display-name" style="font-size: 20px; font-weight: 600;"></div>
-            <div id="display-club" style="color: var(--color-text-muted);"></div>
+            <div id="display-club" class="text-muted"></div>
         </div>
 
-        <h2 style="text-align: center; margin: 0 0 24px 0;">Välj klass</h2>
+        <h2 class="text-center mb-lg">Välj klass</h2>
 
         <div class="org-class-grid">
             <button type="button" class="org-class-btn" data-class="Elite Herr" data-price="450">
@@ -154,11 +154,11 @@ include __DIR__ . '/includes/header.php';
 </div>
 
 <!-- Steg 4: Betalning -->
-<div id="step-pay" class="org-card" style="display: none;">
-    <div class="org-card__body" style="text-align: center;">
+<div id="step-pay" class="org-card" class="hidden">
+    <div class="org-card__body" class="text-center">
         <div id="pay-info" class="mb-lg">
             <div id="pay-name" style="font-size: 18px; font-weight: 600;"></div>
-            <div id="pay-class" style="color: var(--color-text-muted);"></div>
+            <div id="pay-class" class="text-muted"></div>
         </div>
 
         <div id="pay-amount" class="mb-lg" style="font-size: 48px; font-weight: 700;"></div>
@@ -175,22 +175,22 @@ include __DIR__ . '/includes/header.php';
             <i data-lucide="check"></i> Klar
         </button>
 
-        <button type="button" class="org-btn org-btn--ghost" style="margin-top: 12px;" onclick="showStep('class')">
+        <button type="button" class="org-btn org-btn--ghost" class="mt-sm" onclick="showStep('class')">
             <i data-lucide="arrow-left"></i> Ändra klass
         </button>
     </div>
 </div>
 
 <!-- Steg 5: Klart -->
-<div id="step-done" class="org-card" style="display: none;">
+<div id="step-done" class="org-card" class="hidden">
     <div class="org-card__body" style="text-align: center; padding: 48px 24px;">
         <div style="width: 64px; height: 64px; background: var(--color-success); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px;">
             <i data-lucide="check" style="width: 32px; height: 32px; color: white;"></i>
         </div>
 
-        <h1 style="margin: 0 0 8px 0;">Registrerad!</h1>
+        <h1 class="mb-xs">Registrerad!</h1>
         <div id="done-name" style="font-size: 18px;"></div>
-        <div id="done-class" class="mb-lg" style="color: var(--color-text-muted);"></div>
+        <div id="done-class" class="mb-lg" class="text-muted"></div>
 
         <div id="done-bib" class="text-accent" style="font-size: 64px; font-weight: 700; margin-bottom: 32px;">#42</div>
 
@@ -227,7 +227,7 @@ include __DIR__ . '/includes/header.php';
         .then(data => {
             if (data.riders && data.riders.length > 0) {
                 searchResults.innerHTML = data.riders.map(r => `
-                    <div class="org-event-card cursor-pointer" style="margin-bottom: 8px;" onclick='selectRider(${JSON.stringify(r)})'>
+                    <div class="org-event-card cursor-pointer" class="mb-xs" onclick='selectRider(${JSON.stringify(r)})'>
                         <div class="org-event-card__info">
                             <div class="org-event-card__name">${r.firstname} ${r.lastname}</div>
                             <div class="org-event-card__meta">${r.club_name || ''} ${r.birth_year ? '• ' + r.birth_year : ''}</div>
