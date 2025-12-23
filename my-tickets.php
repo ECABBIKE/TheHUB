@@ -320,7 +320,7 @@ include __DIR__ . '/includes/layout-header.php';
 </main>
 
 <!-- Refund Modal -->
-<div id="refundModal" class="gs-modal" style="display: none;">
+<div id="refundModal" class="gs-modal" class="hidden">
  <div class="gs-modal-backdrop" onclick="closeRefundModal()"></div>
  <div class="gs-modal-content">
  <div class="gs-modal-header">

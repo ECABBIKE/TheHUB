@@ -241,7 +241,7 @@ include __DIR__ . '/components/unified-layout.php';
                                 <td class="text-secondary">
                                     <?= date('Y-m-d', strtotime($user['created_at'])) ?>
                                 </td>
-                                <td style="text-align: right;">
+                                <td class="text-right">
                                     <div class="table-actions justify-end">
                                         <a href="/admin/users/edit/<?= $user['id'] ?>" class="btn-admin btn-admin-sm btn-admin-secondary" title="Redigera">
                                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-xs"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>

@@ -203,7 +203,7 @@ include __DIR__ . '/components/unified-layout.php';
                                         </div>
                                     </div>
                                 </td>
-                                <td style="color: var(--color-text-secondary);">
+                                <td class="text-secondary">
                                     <?php if ($venue['city'] || $venue['region']): ?>
                                         <?= htmlspecialchars($venue['city']) ?><?= $venue['city'] && $venue['region'] ? ', ' : '' ?><?= htmlspecialchars($venue['region']) ?>
                                     <?php else: ?>-<?php endif; ?>
@@ -222,7 +222,7 @@ include __DIR__ . '/components/unified-layout.php';
                                             <?= $venue['event_count'] ?>
                                         </a>
                                     <?php else: ?>
-                                        <span style="color: var(--color-text-secondary);">0</span>
+                                        <span class="text-secondary">0</span>
                                     <?php endif; ?>
                                 </td>
                                 <td>

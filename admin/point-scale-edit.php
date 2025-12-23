@@ -204,8 +204,8 @@ include __DIR__ . '/components/unified-layout.php';
                             <tr>
                                 <th style="width: 80px;">Pos</th>
                                 <th class="standard-col">Poäng</th>
-                                <th class="dh-col" style="display: none;">Kval</th>
-                                <th class="dh-col" style="display: none;">Final</th>
+                                <th class="dh-col" class="hidden">Kval</th>
+                                <th class="dh-col" class="hidden">Final</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -224,12 +224,12 @@ include __DIR__ . '/components/unified-layout.php';
                                            value="<?= $posValue['points'] ? h($posValue['points']) : '' ?>"
                                            placeholder="0">
                                 </td>
-                                <td class="dh-col" style="display: none;">
+                                <td class="dh-col" class="hidden">
                                     <input type="number" name="run_1_points[]" step="0.01" class="input input--sm"
                                            value="<?= $posValue['run_1_points'] ? h($posValue['run_1_points']) : '' ?>"
                                            placeholder="0">
                                 </td>
-                                <td class="dh-col" style="display: none;">
+                                <td class="dh-col" class="hidden">
                                     <input type="number" name="run_2_points[]" step="0.01" class="input input--sm"
                                            value="<?= $posValue['run_2_points'] ? h($posValue['run_2_points']) : '' ?>"
                                            placeholder="0">

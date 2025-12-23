@@ -161,7 +161,7 @@ include __DIR__ . '/components/unified-layout.php';
             </svg>
             <div>
                 <h3 style="margin: 0 0 var(--space-xs) 0;">Swish-mottagare</h3>
-                <p class="text-secondary" style="margin: 0;">
+                <p class="text-secondary" class="m-0">
                     Skapa betalningsmottagare här och koppla dem till serier eller enskilda event.
                     Ett event utan egen mottagare använder seriens mottagare automatiskt.
                 </p>
@@ -275,7 +275,7 @@ include __DIR__ . '/components/unified-layout.php';
 </div>
 
 <!-- Modal for create/edit -->
-<div id="recipientModal" class="modal" style="display: none;">
+<div id="recipientModal" class="modal" class="hidden">
     <div class="modal-backdrop" onclick="hideModal()"></div>
     <div class="modal-content">
         <div class="modal-header">

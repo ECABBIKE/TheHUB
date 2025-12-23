@@ -167,7 +167,7 @@ include __DIR__ . '/components/unified-layout.php';
                                     <?php if ($brand['logo']): ?>
                                         <img src="<?= htmlspecialchars($brand['logo']) ?>" alt="" style="max-width: 40px; max-height: 40px; object-fit: contain;">
                                     <?php else: ?>
-                                        <span style="color: var(--color-text-secondary);">-</span>
+                                        <span class="text-secondary">-</span>
                                     <?php endif; ?>
                                 </td>
                                 <td>

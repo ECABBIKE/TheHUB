@@ -115,7 +115,7 @@ function hub_email_template(string $template, array $vars = []): string {
             <p>Hej {{name}},</p>
             <p>Vi har fått en förfrågan om att återställa lösenordet för ditt konto på TheHUB.</p>
             <p>Klicka på knappen nedan för att välja ett nytt lösenord:</p>
-            <p style="text-align: center;">
+            <p class="text-center">
                 <a href="{{reset_link}}" class="btn">Återställ lösenord</a>
             </p>
             <p class="note">Eller kopiera och klistra in denna länk i din webbläsare:</p>
@@ -131,7 +131,7 @@ function hub_email_template(string $template, array $vars = []): string {
             <p>Hej {{name}},</p>
             <p>Ditt konto har skapats på TheHUB - plattformen för gravity racing i Sverige.</p>
             <p>Du kan nu logga in och se dina resultat, anmäla dig till tävlingar och mer.</p>
-            <p style="text-align: center;">
+            <p class="text-center">
                 <a href="{{login_link}}" class="btn">Logga in</a>
             </p>
         ',
@@ -144,7 +144,7 @@ function hub_email_template(string $template, array $vars = []): string {
             <p>Hej {{name}},</p>
             <p>Vi har hittat ditt konto i TheHUB - plattformen för gravity racing i Sverige.</p>
             <p>För att aktivera ditt konto och skapa ett lösenord, klicka på knappen nedan:</p>
-            <p style="text-align: center;">
+            <p class="text-center">
                 <a href="{{activation_link}}" class="btn">Aktivera konto</a>
             </p>
             <p class="note">Eller kopiera och klistra in denna länk i din webbläsare:</p>

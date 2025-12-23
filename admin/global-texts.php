@@ -200,7 +200,7 @@ include __DIR__ . '/components/unified-layout.php';
  <?php endif; ?>
 
 <!-- Add Modal -->
-<div id="addModal" class="gs-modal" style="display: none;">
+<div id="addModal" class="gs-modal" class="hidden">
  <div class="gs-modal-overlay" onclick="closeAddModal()"></div>
  <div class="gs-modal-content" style="max-width: 500px;">
  <div class="gs-modal-header">

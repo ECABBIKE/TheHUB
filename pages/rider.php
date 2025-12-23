@@ -1112,7 +1112,7 @@ document.addEventListener('DOMContentLoaded', function() {
 <!-- Ranking Calculation Modal -->
 <div id="rankingModal" class="ranking-modal-overlay" style="padding-top: calc(var(--header-height, 60px) + 10px);">
     <div class="ranking-modal" style="max-height: calc(100vh - var(--header-height, 60px) - 40px);">
-        <div class="ranking-modal-header" style="padding-top: var(--space-md);">
+        <div class="ranking-modal-header" class="pt-md">
             <h3>
                 <i data-lucide="calculator"></i>
                 Rankinguträkning

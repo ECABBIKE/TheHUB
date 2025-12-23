@@ -599,7 +599,7 @@ include __DIR__ . '/components/unified-layout.php';
         </h2>
     </div>
     <div class="admin-card-body">
-        <p style="margin-bottom: var(--space-md);">
+        <p class="mb-md">
             Denna import uppdaterar befintliga riders med UCI-ID, e-post och födelseår.
             Klubbtillhörighet sätts för valt säsongsår.
         </p>
@@ -632,7 +632,7 @@ include __DIR__ . '/components/unified-layout.php';
         </div>
 
         <div class="info-box">
-            <p class="text-secondary text-sm" style="margin-bottom: var(--space-sm);"><strong>Exempel på CSV (tab-separerad):</strong></p>
+            <p class="text-secondary text-sm" class="mb-sm"><strong>Exempel på CSV (tab-separerad):</strong></p>
             <pre class="text-xs" style="overflow-x: auto; white-space: pre-wrap;">Startnr.	Förnamn	Efternamn	Kön	Klubb/Företag	Klass	Födelsedag	...	Deltagarens email	Födelseår	ID Medlemsnummer
 	Zakarias Blom	JOHANSEN	M	Ibis enduro racing team	Tävling Herrar	25-11-1992	...	zakarias@email.com	1992	10006911232
 1	Thorwout	WARNTJES	M	Mera lera MTB	Tävling Herrar	21-06-2001	...	thorwout@email.com	2001	10022409711</pre>
@@ -723,11 +723,11 @@ include __DIR__ . '/components/unified-layout.php';
 <div class="grid" style="grid-template-columns: repeat(2, 1fr); gap: var(--space-lg);">
     <div class="admin-card">
         <div class="admin-card-body">
-            <h4 style="margin-bottom: var(--space-sm);">
+            <h4 class="mb-sm">
                 <i data-lucide="history"></i>
                 Importhistorik
             </h4>
-            <p class="text-secondary text-sm" style="margin-bottom: var(--space-md);">
+            <p class="text-secondary text-sm" class="mb-md">
                 Se tidigare importer och ångra vid behov.
             </p>
             <a href="/admin/import-history.php" class="btn-admin btn-admin-secondary btn-admin-sm">
@@ -739,11 +739,11 @@ include __DIR__ . '/components/unified-layout.php';
 
     <div class="admin-card">
         <div class="admin-card-body">
-            <h4 style="margin-bottom: var(--space-sm);">
+            <h4 class="mb-sm">
                 <i data-lucide="users"></i>
                 Alla riders
             </h4>
-            <p class="text-secondary text-sm" style="margin-bottom: var(--space-md);">
+            <p class="text-secondary text-sm" class="mb-md">
                 Granska och redigera riders manuellt.
             </p>
             <a href="/admin/riders.php" class="btn-admin btn-admin-secondary btn-admin-sm">

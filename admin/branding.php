@@ -1007,7 +1007,7 @@ async function openMediaPicker(field) {
         } else {
             grid.innerHTML = `
                 <div style="text-align: center; padding: 40px; color: var(--color-text-secondary); grid-column: 1/-1;">
-                    <p style="margin-bottom: 16px;">Inga bilder i branding-mappen.</p>
+                    <p class="mb-md">Inga bilder i branding-mappen.</p>
                     <a href="/admin/media?folder=branding" target="_blank" class="btn btn--primary">
                         <i data-lucide="upload"></i>
                         Ladda upp bilder
