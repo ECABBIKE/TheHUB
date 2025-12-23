@@ -122,12 +122,14 @@ try {
             res.event_id, res.class_id,
             e.id as event_id, e.name as event_name, e.date as event_date, e.location,
             s.id as series_id, s.name as series_name,
+            sb.accent_color as series_color,
             cls.display_name as class_name,
             COALESCE(cls.awards_points, 1) as awards_podiums,
             CASE WHEN LOWER(COALESCE(cls.display_name, cls.name, '')) LIKE '%motion%' THEN 1 ELSE 0 END as is_motion
         FROM results res
         JOIN events e ON res.event_id = e.id
         LEFT JOIN series s ON e.series_id = s.id
+        LEFT JOIN series_brands sb ON s.brand_id = sb.id
         LEFT JOIN classes c ON res.class_id = c.id
         LEFT JOIN classes cls ON res.class_id = cls.id
         WHERE res.cyclist_id = ? AND res.status != 'dns'
@@ -930,7 +932,7 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
             <span class="year-line"></span>
         </div>
         <?php endif; ?>
-        <a href="/event/<?= $result['event_id'] ?>" class="result-row" data-series="<?= htmlspecialchars($result['series_name'] ?? 'none') ?>">
+        <a href="/event/<?= $result['event_id'] ?>" class="result-row" <?php if (!empty($result['series_color'])): ?>style="--result-accent: <?= htmlspecialchars($result['series_color']) ?>;"<?php endif; ?>>
             <span class="result-accent-bar"></span>
             <?php if ($result['is_motion']): ?>
             <span class="result-pos motion">
