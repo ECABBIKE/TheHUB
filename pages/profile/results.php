@@ -67,7 +67,7 @@ $totalPoints = array_sum(array_column($results, 'points'));
 <!-- Results List -->
 <?php if (empty($results)): ?>
     <div class="empty-state">
-        <div class="empty-icon"><i data-lucide="flag" style="width: 48px; height: 48px;"></i></div>
+        <div class="empty-icon"><i data-lucide="flag" class="icon-xl"></i></div>
         <h3>Inga resultat ännu</h3>
         <p>Dina tävlingsresultat kommer visas här efter att du tävlat.</p>
     </div>

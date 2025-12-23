@@ -66,7 +66,7 @@ try {
 <!-- Receipts List -->
 <?php if (empty($payments)): ?>
     <div class="empty-state">
-        <div class="empty-icon"><i data-lucide="receipt" style="width: 48px; height: 48px;"></i></div>
+        <div class="empty-icon"><i data-lucide="receipt" class="icon-xl"></i></div>
         <h3>Inga kvitton</h3>
         <p>Dina betalningar och kvitton visas här.</p>
     </div>

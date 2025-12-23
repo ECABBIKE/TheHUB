@@ -36,7 +36,7 @@ $message = $_GET['msg'] ?? '';
 
 <?php if (empty($linkedChildren)): ?>
     <div class="empty-state card">
-        <div class="empty-icon"><i data-lucide="users" style="width: 48px; height: 48px;"></i></div>
+        <div class="empty-icon"><i data-lucide="users" class="icon-xl"></i></div>
         <h3>Inga kopplade barn</h3>
         <p>Du har inga barn kopplade till din profil ännu. Koppla barn för att kunna anmäla dem till tävlingar.</p>
     </div>

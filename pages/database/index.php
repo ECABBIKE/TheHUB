@@ -274,7 +274,7 @@ if (empty($clubRankings)) {
                placeholder="Skriv namn för att söka..."
                autocomplete="off"
                data-type="riders">
-        <button type="button" class="search-clear" style="display:none;"><i data-lucide="x"></i></button>
+        <button type="button" class="search-clear hidden"><i data-lucide="x"></i></button>
     </div>
 
     <div class="search-results" id="search-results"></div>

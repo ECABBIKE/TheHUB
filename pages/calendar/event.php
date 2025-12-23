@@ -41,7 +41,7 @@ $eventId = (int) $eventId;
 
 if (!$eventId) {
     ?>
-    <div class="card" style="padding:var(--space-xl);text-align:center;">
+    <div class="card p-xl text-center">
         <h2>Inget event valt</h2>
         <p>Ga tillbaka till <a href="/calendar">kalendern</a> och valj ett event.</p>
     </div>
@@ -67,7 +67,7 @@ $event = $stmt->fetch(PDO::FETCH_ASSOC);
 
 if (!$event) {
     ?>
-    <div class="card" style="padding:var(--space-xl);text-align:center;">
+    <div class="card p-xl text-center">
         <h2>Event hittades inte</h2>
         <p>Event med ID <?= (int)$eventId ?> finns inte.</p>
         <a href="/calendar" class="btn">← Tillbaka till kalendern</a>
