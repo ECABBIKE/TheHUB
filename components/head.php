@@ -189,7 +189,7 @@ if (file_exists($brandingFile)) {
             $desktopRadius = intval($responsive['desktop']['radius'] ?? 12);
 
             // Desktop spacing tokens (derived from padding)
-            $desktopCardPadding = max(16, $desktopPadding - 8);  // Slightly less than container
+            $desktopCardPadding = $desktopPadding;  // Same as container - controlled by branding
             $desktopSpaceMd = 16;  // Standard
             $desktopSpaceSm = 12;
             $desktopSpaceLg = 24;
@@ -207,7 +207,7 @@ if (file_exists($brandingFile)) {
             // Tablet / Landscape (768-1023px)
             $tabletPadding = intval($responsive['tablet']['padding'] ?? 24);
             $tabletRadius = intval($responsive['tablet']['radius'] ?? 8);
-            $tabletCardPadding = max(12, $tabletPadding - 8);
+            $tabletCardPadding = $tabletPadding;  // Same as container - controlled by branding
             $tabletSpaceSm = 10;
             $tabletSpaceMd = 14;
 
@@ -227,7 +227,7 @@ if (file_exists($brandingFile)) {
             // Mobile Portrait (0-767px)
             $mobilePadding = intval($responsive['mobile_portrait']['padding'] ?? 12);
             $mobileRadius = intval($responsive['mobile_portrait']['radius'] ?? 0);
-            $mobileCardPadding = max(8, $mobilePadding - 4);
+            $mobileCardPadding = $mobilePadding;  // Same as container - controlled by branding
             $mobileSpaceSm = 8;
             $mobileSpaceMd = 12;
 
