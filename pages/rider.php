@@ -102,9 +102,9 @@ try {
         ?>
         <div class="page-grid">
             <section class="card grid-full text-center p-lg">
-                <div style="font-size:4rem;margin-bottom:var(--space-md)">🚴‍♂️❓</div>
+                <div class="text-4xl mb-md">🚴‍♂️❓</div>
                 <h1 class="text-2xl font-bold mb-sm">Åkare hittades inte</h1>
-                <p class="text-secondary mb-lg">Åkare med ID <code style="background:var(--color-bg-sunken);padding:2px 6px;border-radius:4px"><?= $riderId ?></code> finns inte i databasen.</p>
+                <p class="text-secondary mb-lg">Åkare med ID <code class="code"><?= $riderId ?></code> finns inte i databasen.</p>
                 <div class="flex justify-center gap-md">
                     <a href="/database" class="btn btn--primary">Sök åkare</a>
                     <a href="/riders" class="btn btn--secondary">Visa alla åkare</a>
@@ -438,11 +438,11 @@ if (!$rider) {
     ?>
     <div class="page-grid">
         <section class="card grid-full text-center p-lg">
-            <div style="font-size:4rem;margin-bottom:var(--space-md)">🚴‍♂️❓</div>
+            <div class="text-4xl mb-md">🚴‍♂️❓</div>
             <h1 class="text-2xl font-bold mb-sm">Åkare hittades inte</h1>
-            <p class="text-secondary mb-lg">Åkare med ID <code style="background:var(--color-bg-sunken);padding:2px 6px;border-radius:4px"><?= $riderId ?></code> finns inte i databasen.</p>
+            <p class="text-secondary mb-lg">Åkare med ID <code class="code"><?= $riderId ?></code> finns inte i databasen.</p>
             <?php if (isset($error)): ?>
-            <p class="text-secondary mb-md" style="font-size:0.8rem;color:var(--color-danger)">Fel: <?= htmlspecialchars($error) ?></p>
+            <p class="text-sm text-error mb-md">Fel: <?= htmlspecialchars($error) ?></p>
             <?php endif; ?>
             <div class="flex justify-center gap-md">
                 <a href="/database" class="btn btn--primary">Sök åkare</a>

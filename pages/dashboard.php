@@ -69,7 +69,7 @@ try {
 <h1 class="text-2xl font-bold mb-lg">Dashboard</h1>
 
 <?php if (isset($error)): ?>
-<div class="card mb-lg" style="background:var(--color-error-light);border-color:var(--color-error)">
+<div class="card mb-lg bg-error">
   <p class="text-error">Databasfel: <?= htmlspecialchars($error) ?></p>
 </div>
 <?php endif; ?>
@@ -79,10 +79,10 @@ try {
   <section class="card grid-full">
     <h2 class="card-title mb-md">Snabblänkar</h2>
     <div class="flex flex-wrap gap-sm">
-      <a href="/riders" class="btn btn--primary"><i data-lucide="users" style="width:16px;height:16px;"></i> Åkare</a>
-      <a href="/clubs" class="btn btn--primary"><i data-lucide="shield" style="width:16px;height:16px;"></i> Klubbar</a>
-      <a href="/results" class="btn btn--primary"><i data-lucide="flag" style="width:16px;height:16px;"></i> Resultat</a>
-      <a href="/series" class="btn btn--primary"><i data-lucide="trophy" style="width:16px;height:16px;"></i> Serier</a>
+      <a href="/riders" class="btn btn--primary"><i data-lucide="users" class="icon-sm"></i> Åkare</a>
+      <a href="/clubs" class="btn btn--primary"><i data-lucide="shield" class="icon-sm"></i> Klubbar</a>
+      <a href="/results" class="btn btn--primary"><i data-lucide="flag" class="icon-sm"></i> Resultat</a>
+      <a href="/series" class="btn btn--primary"><i data-lucide="trophy" class="icon-sm"></i> Serier</a>
     </div>
   </section>
 

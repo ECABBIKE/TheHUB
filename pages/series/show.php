@@ -414,7 +414,7 @@ unset($club);
             <?php if ($series['logo']): ?>
                 <img src="<?= htmlspecialchars($series['logo']) ?>" alt="<?= htmlspecialchars($series['name']) ?>">
             <?php else: ?>
-                <span class="series-logo-placeholder"><i data-lucide="trophy" style="width: 48px; height: 48px;"></i></span>
+                <span class="series-logo-placeholder"><i data-lucide="trophy" class="icon-xl"></i></span>
             <?php endif; ?>
         </div>
         <div class="series-hero-info">
@@ -564,7 +564,7 @@ unset($club);
     </div>
 
     <!-- Club Standings Section -->
-    <div id="club-standings" style="display: none;">
+    <div id="club-standings" class="hidden">
         <div class="card">
             <h2 class="card-title"><i data-lucide="shield" class="card-title-icon"></i> Klubbmästarskap</h2>
             <p class="text-muted standings-note"><?= count($clubStandings) ?> klubbar - Basta akare per klass: 100%, nast basta: 50%</p>
@@ -614,7 +614,7 @@ unset($club);
                                 <td class="col-total"><strong><?= $club['total_points'] ?></strong></td>
                             </tr>
                             <?php foreach ($club['riders'] as $clubRider): ?>
-                            <tr class="club-rider-row" data-parent="<?= $club['club_id'] ?>" style="display: none;">
+                            <tr class="club-rider-row" data-parent="<?= $club['club_id'] ?>" class="hidden">
                                 <td></td>
                                 <td colspan="2" class="club-rider-cell">
                                     <a href="/rider/<?= $clubRider['rider_id'] ?>">
