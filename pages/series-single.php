@@ -443,7 +443,7 @@ if (!$series) {
 
 <?php if (isset($error)): ?>
 <section class="card mb-lg">
-  <div class="card-title" style="color: var(--color-error)">Fel</div>
+  <div class="card-title text-error">Fel</div>
   <p><?= htmlspecialchars($error) ?></p>
 </section>
 <?php endif; ?>
@@ -561,7 +561,7 @@ if (!$series) {
           <th class="col-club table-col-hide-portrait">Klubb</th>
           <?php $eventNum = 1; ?>
           <?php foreach ($eventsWithPoints as $event): ?>
-          <th class="col-event" style="display:table-cell !important;visibility:visible !important;" title="<?= htmlspecialchars($event['name']) ?>">
+          <th class="col-event" class="col-fixed" title="<?= htmlspecialchars($event['name']) ?>">
             #<?= $eventNum ?>
           </th>
           <?php $eventNum++; ?>
@@ -573,7 +573,7 @@ if (!$series) {
         <?php foreach ($classData['riders'] as $pos => $rider):
             $searchData = strtolower($rider['firstname'] . ' ' . $rider['lastname'] . ' ' . ($rider['club_name'] ?? ''));
         ?>
-        <tr class="result-row" onclick="window.location='/rider/<?= $rider['rider_id'] ?>'" style="cursor:pointer" data-search="<?= htmlspecialchars($searchData) ?>">
+        <tr class="result-row" onclick="window.location='/rider/<?= $rider['rider_id'] ?>'" class="cursor-pointer" data-search="<?= htmlspecialchars($searchData) ?>">
           <td class="col-place <?= ($pos + 1) <= 3 ? 'col-place--' . ($pos + 1) : '' ?>">
             <?php if ($pos == 0): ?>🥇
             <?php elseif ($pos == 1): ?>🥈
@@ -594,7 +594,7 @@ if (!$series) {
           $pts = $rider['event_points'][$event['id']] ?? 0;
           $isExcluded = isset($rider['excluded_events'][$event['id']]);
           ?>
-          <td class="col-event <?= $pts > 0 ? 'has-points' : '' ?> <?= $isExcluded ? 'excluded' : '' ?>" style="display:table-cell !important;visibility:visible !important;">
+          <td class="col-event <?= $pts > 0 ? 'has-points' : '' ?> <?= $isExcluded ? 'excluded' : '' ?>" class="col-fixed">
             <?php if ($pts > 0): ?>
               <?php if ($isExcluded): ?>
                 <span class="excluded-points" title="Räknas ej"><?= $pts ?></span>
@@ -647,7 +647,7 @@ if (!$series) {
 </div><!-- End individual-standings -->
 
 <!-- Club Standings Section -->
-<div id="club-standings" style="display: none;">
+<div id="club-standings" class="hidden">
 
 <?php if (empty($clubStandings)): ?>
 <section class="card">
@@ -675,7 +675,7 @@ if (!$series) {
           <th class="col-riders table-col-hide-portrait">Åkare</th>
           <?php $eventNum = 1; ?>
           <?php foreach ($eventsWithPoints as $event): ?>
-          <th class="col-event" style="display:table-cell !important;visibility:visible !important;" title="<?= htmlspecialchars($event['name']) ?>">
+          <th class="col-event" class="col-fixed" title="<?= htmlspecialchars($event['name']) ?>">
             #<?= $eventNum ?>
           </th>
           <?php $eventNum++; ?>
@@ -705,7 +705,7 @@ if (!$series) {
           </td>
           <?php foreach ($eventsWithPoints as $event): ?>
           <?php $pts = $club['event_points'][$event['id']] ?? 0; ?>
-          <td class="col-event <?= $pts > 0 ? 'has-points' : '' ?>" style="display:table-cell !important;visibility:visible !important;">
+          <td class="col-event <?= $pts > 0 ? 'has-points' : '' ?>" class="col-fixed">
             <?= $pts > 0 ? $pts : '–' ?>
           </td>
           <?php endforeach; ?>
@@ -715,7 +715,7 @@ if (!$series) {
         </tr>
         <!-- Hidden club riders sub-rows -->
         <?php foreach ($club['riders'] as $rIdx => $clubRider): ?>
-        <tr class="club-rider-row" data-parent-club="<?= htmlspecialchars($club['club_name']) ?>" style="display: none;">
+        <tr class="club-rider-row" data-parent-club="<?= htmlspecialchars($club['club_name']) ?>" class="hidden">
           <td class="col-place"></td>
           <td class="col-club-name" colspan="2">
             <a href="/rider/<?= $clubRider['rider_id'] ?>" class="club-rider-link">
@@ -724,7 +724,7 @@ if (!$series) {
             </a>
           </td>
           <?php foreach ($eventsWithPoints as $event): ?>
-          <td class="col-event" style="display:table-cell !important;visibility:visible !important;"></td>
+          <td class="col-event" class="col-fixed"></td>
           <?php endforeach; ?>
           <td class="col-total text-muted"><?= $clubRider['points'] ?> p</td>
         </tr>

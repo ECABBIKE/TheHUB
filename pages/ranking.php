@@ -116,7 +116,7 @@ $disciplineNames = [
 
 <?php if ($error): ?>
 <div class="card mb-lg">
-  <div class="card-title" style="color: var(--color-error)">Fel</div>
+  <div class="card-title text-error">Fel</div>
   <p><?= htmlspecialchars($error) ?></p>
 </div>
 <?php endif; ?>
@@ -166,7 +166,7 @@ $disciplineNames = [
     <table class="table table--striped table--hover">
       <thead>
         <tr>
-          <th class="text-center" style="width:60px">#</th>
+          <th class="text-center w-60">#</th>
           <th class="col-rider">Åkare</th>
           <th class="table-col-hide-portrait">Klubb</th>
           <th class="text-center table-col-hide-portrait">Events</th>
@@ -175,7 +175,7 @@ $disciplineNames = [
       </thead>
       <tbody>
         <?php foreach ($ranking['riders'] as $rider): ?>
-        <tr onclick="window.location='/rider/<?= $rider['rider_id'] ?>'" style="cursor:pointer">
+        <tr onclick="window.location='/rider/<?= $rider['rider_id'] ?>'" class="cursor-pointer">
           <td class="text-center">
             <?php if ($rider['ranking_position'] == 1): ?>
               <img src="/assets/icons/medal-1st.svg" alt="1:a" class="medal-icon">
@@ -251,7 +251,7 @@ $disciplineNames = [
     <table class="table table--striped table--hover">
       <thead>
         <tr>
-          <th class="text-center" style="width:60px">#</th>
+          <th class="text-center w-60">#</th>
           <th class="col-club">Klubb</th>
           <th class="text-center table-col-hide-portrait">Åkare</th>
           <th class="text-right">Poäng</th>
@@ -259,7 +259,7 @@ $disciplineNames = [
       </thead>
       <tbody>
         <?php foreach ($ranking['clubs'] as $club): ?>
-        <tr onclick="window.location='/club/<?= $club['club_id'] ?>'" style="cursor:pointer">
+        <tr onclick="window.location='/club/<?= $club['club_id'] ?>'" class="cursor-pointer">
           <td class="text-center">
             <?php if ($club['ranking_position'] == 1): ?>
               <img src="/assets/icons/medal-1st.svg" alt="1:a" class="medal-icon">

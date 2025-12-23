@@ -112,10 +112,10 @@ $homepageLogo = getBranding('logos.homepage');
     </div>
 
     <!-- About Section with Title -->
-    <div class="welcome-about" style="text-align: center;">
-        <h1 class="welcome-about-title" style="text-align: center;">THEHUB</h1>
-        <p class="welcome-about-subtitle" style="text-align: center;">Välkommen till Svensk Gravity</p>
-        <p class="welcome-about-desc" style="text-align: center; margin: 0 auto; max-width: 700px;">Här hittar du kalender, resultat, serieställningar, ranking och databas över åkare och klubbar.</p>
+    <div class="welcome-about text-center">
+        <h1 class="welcome-about-title">THEHUB</h1>
+        <p class="welcome-about-subtitle">Välkommen till Svensk Gravity</p>
+        <p class="welcome-about-desc">Här hittar du kalender, resultat, serieställningar, ranking och databas över åkare och klubbar.</p>
     </div>
 
     <?php if ($isLoggedIn): ?>
