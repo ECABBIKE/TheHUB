@@ -930,7 +930,8 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
             <span class="year-line"></span>
         </div>
         <?php endif; ?>
-        <a href="/event/<?= $result['event_id'] ?>" class="result-row">
+        <a href="/event/<?= $result['event_id'] ?>" class="result-row" data-series="<?= htmlspecialchars($result['series_name'] ?? 'none') ?>">
+            <span class="result-accent-bar"></span>
             <?php if ($result['is_motion']): ?>
             <span class="result-pos motion">
                 <i data-lucide="check"></i>
@@ -946,7 +947,7 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
                 <?php elseif ($result['position'] == 3): ?>
                     <img src="/assets/icons/medal-3rd.svg" alt="3:e" class="medal-icon-sm">
                 <?php else: ?>
-                    <?= $result['position'] ?>
+                    #<?= $result['position'] ?>
                 <?php endif; ?>
             </span>
             <?php endif; ?>

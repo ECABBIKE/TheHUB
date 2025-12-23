@@ -976,22 +976,54 @@
     background: var(--color-border);
 }
 
-/* Result Row - Matching event-row design */
+/* Result Row - Matching event-row design with color accent */
 .result-row {
+    --result-accent: #61CE70;
+    position: relative;
     display: flex;
     align-items: center;
     gap: var(--space-md);
     padding: var(--space-sm) var(--space-md);
+    padding-left: calc(var(--space-sm) + 4px);
     background: var(--color-bg-card);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-md);
     text-decoration: none;
     color: inherit;
+    overflow: hidden;
     transition: all var(--transition-fast);
 }
 
+/* Color accent bar (4px bred färgstapel) */
+.result-accent-bar {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    background: var(--result-accent);
+    border-radius: var(--radius-sm) 0 0 var(--radius-sm);
+}
+
+/* Serie-färgkodning */
+.result-row[data-series*="Gravity Series"] {
+    --result-accent: #61CE70;
+}
+
+.result-row[data-series*="Gravity Enduro Series"] {
+    --result-accent: #EF761F;
+}
+
+.result-row[data-series*="Gothenburg"] {
+    --result-accent: #8A9A5B;
+}
+
+.result-row[data-series*="Motion"] {
+    --result-accent: #61CE70;
+}
+
 .result-row:hover {
-    border-color: var(--color-accent);
+    border-color: var(--result-accent);
     box-shadow: var(--shadow-sm);
     transform: translateY(-1px);
 }
@@ -1528,11 +1560,15 @@
     }
 
     .result-row {
-        padding: var(--space-sm) var(--space-md) var(--space-sm) 0;
+        padding: var(--space-sm) var(--space-md) var(--space-sm) calc(var(--space-sm) + 4px);
         border-radius: 0;
         border-left: none;
         border-right: none;
         border-bottom: none;
+    }
+
+    .result-accent-bar {
+        border-radius: 0;
     }
 
     .result-row:first-child {
