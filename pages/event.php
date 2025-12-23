@@ -1084,7 +1084,7 @@ if (!empty($eventSponsors['content'])): ?>
 
 <!-- Total Split Times Section (hidden by default, shown when toggle is active) -->
 <?php if ($hasSplitTimes && !$isDH && count($globalSplitResults) > 0): ?>
-<section class="card mb-lg total-split-section" id="total-split-section" style="display: none;">
+<section class="card mb-lg total-split-section hidden" id="total-split-section">
     <div class="card-header">
         <div>
             <h2 class="card-title">Sträcktider Total</h2>

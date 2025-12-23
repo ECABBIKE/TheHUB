@@ -129,7 +129,7 @@ try {
 
 <?php if (isset($error)): ?>
 <section class="card mb-lg">
-  <div class="card-title" style="color: var(--color-error)">Fel</div>
+  <div class="card-title text-error">Fel</div>
   <p><?= htmlspecialchars($error) ?></p>
 </section>
 <?php endif; ?>
@@ -172,7 +172,7 @@ try {
       </thead>
       <tbody>
         <?php foreach ($riders as $rider): ?>
-        <tr onclick="window.location='/rider/<?= $rider['id'] ?>'" style="cursor:pointer">
+        <tr onclick="window.location='/rider/<?= $rider['id'] ?>'" class="cursor-pointer">
           <td class="col-rider">
             <a href="/rider/<?= $rider['id'] ?>" class="rider-link">
               <?= htmlspecialchars($rider['firstname'] . ' ' . $rider['lastname']) ?>

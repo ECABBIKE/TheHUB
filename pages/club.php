@@ -234,7 +234,7 @@ foreach (['jpg', 'jpeg', 'png', 'webp', 'svg'] as $ext) {
 
 <?php if (isset($error)): ?>
 <section class="card mb-lg">
-  <div class="card-title" style="color: var(--color-error)">Fel</div>
+  <div class="card-title text-error">Fel</div>
   <p><?= htmlspecialchars($error) ?></p>
 </section>
 <?php endif; ?>
@@ -340,7 +340,7 @@ foreach (['jpg', 'jpeg', 'png', 'webp', 'svg'] as $ext) {
       </thead>
       <tbody>
         <?php foreach ($members as $member): ?>
-        <tr onclick="window.location='/rider/<?= $member['id'] ?>'" style="cursor:pointer">
+        <tr onclick="window.location='/rider/<?= $member['id'] ?>'" class="cursor-pointer">
           <td class="col-rider">
             <a href="/rider/<?= $member['id'] ?>" class="rider-link">
               <?= htmlspecialchars($member['firstname'] . ' ' . $member['lastname']) ?>

@@ -154,7 +154,7 @@ if ($filterSeriesName && !empty($seriesList)) {
 
 <?php if (empty($seriesList)): ?>
     <div class="empty-state">
-        <i data-lucide="trophy" style="width: 48px; height: 48px; color: var(--color-text-muted); margin-bottom: var(--space-md);"></i>
+        <i data-lucide="trophy" class="icon-xl text-muted mb-md"></i>
         <h2>Inga serier hittades</h2>
         <p>Prova ett annat filter.</p>
     </div>
@@ -166,7 +166,7 @@ if ($filterSeriesName && !empty($seriesList)) {
                 <?php if ($s['logo']): ?>
                     <img src="<?= htmlspecialchars($s['logo']) ?>" alt="<?= htmlspecialchars($s['name']) ?>" class="series-logo-img">
                 <?php else: ?>
-                    <div class="series-logo-placeholder"><i data-lucide="trophy" style="width: 48px; height: 48px; color: var(--color-text-muted);"></i></div>
+                    <div class="series-logo-placeholder"><i data-lucide="trophy" class="icon-xl text-muted"></i></div>
                 <?php endif; ?>
                 <span class="series-year-badge"><?= $s['year'] ?></span>
             </div>

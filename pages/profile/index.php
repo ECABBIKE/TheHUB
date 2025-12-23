@@ -79,7 +79,7 @@ $recentResults = $resultStmt->fetchAll(PDO::FETCH_ASSOC);
             $clubStmt->execute([$currentUser['club_id']]);
             $clubName = $clubStmt->fetchColumn();
             ?>
-            <p class="profile-club"><i data-lucide="shield" style="width: 14px; height: 14px; vertical-align: middle;"></i> <?= htmlspecialchars($clubName) ?></p>
+            <p class="profile-club"><i data-lucide="shield" class="icon-xs align-middle"></i> <?= htmlspecialchars($clubName) ?></p>
         <?php endif; ?>
     </div>
     <a href="/profile/edit" class="btn btn-outline">Redigera profil</a>
