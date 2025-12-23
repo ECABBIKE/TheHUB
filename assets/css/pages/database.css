@@ -21,36 +21,11 @@
   margin: 0;
 }
 
-/* Stats Grid */
+/* Stats Grid - 4 columns for database page stats */
 .stats-grid {
-  display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: var(--space-md);
-  margin-bottom: var(--space-xl);
 }
-
-.stat-card {
-  background: var(--color-bg-card);
-  border-radius: var(--radius-lg);
-  padding: var(--space-lg);
-  text-align: center;
-  border: 1px solid var(--color-border);
-}
-
-.stat-value {
-  display: block;
-  font-size: var(--text-3xl);
-  font-weight: var(--weight-bold);
-  color: var(--color-accent);
-  line-height: 1.2;
-}
-
-.stat-label {
-  font-size: var(--text-sm);
-  color: var(--color-text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
+/* NOTE: .stat-card, .stat-value, .stat-label now in components.css */
 
 /* Search Card */
 .search-card {
