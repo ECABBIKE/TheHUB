@@ -368,20 +368,20 @@ include __DIR__ . '/components/unified-layout.php';
 <?php endif; ?>
 
 <?php if ($readyToComplete): ?>
-<div class="alert alert-warning" style="display: flex; align-items: center; justify-content: space-between; gap: var(--space-md);">
-    <div style="display: flex; align-items: center; gap: var(--space-sm);">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 20px; height: 20px; flex-shrink: 0;">
+<div class="alert alert-warning flex items-center justify-between gap-md">
+    <div class="flex items-center gap-sm">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-md flex-shrink-0">
             <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/>
         </svg>
         <div>
             <strong>Alla <?= $eventsCount ?> events har resultat!</strong>
-            <span style="color: var(--color-text-secondary);">
+            <span class="text-secondary">
                 Ändra status till "Avslutad" för att beräkna seriemästare.
             </span>
         </div>
     </div>
     <button type="button" onclick="document.getElementById('status').value='completed'; document.getElementById('status').dispatchEvent(new Event('change'));"
-            class="btn-admin btn-admin-warning" style="white-space: nowrap;">
+            class="btn-admin btn-admin-warning nowrap">
         Markera avslutad
     </button>
 </div>
@@ -401,10 +401,10 @@ include __DIR__ . '/components/unified-layout.php';
         </div>
         <div class="admin-card-body">
             <?php if ($brandColumnExists && !empty($brands)): ?>
-            <div class="admin-form-group" style="background: var(--color-bg-secondary); padding: var(--space-md); border-radius: var(--radius-md); margin-bottom: var(--space-md);">
-                <label for="brand_id" class="admin-form-label" style="font-weight: 600;">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px; display: inline; vertical-align: middle; margin-right: 4px;"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>
-                    Huvudserie (Varumärke) <span style="color: var(--color-error);">*</span>
+            <div class="admin-form-group admin-form-group--highlight mb-md">
+                <label for="brand_id" class="admin-form-label font-semibold">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-sm inline align-middle mr-xs"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>
+                    Huvudserie (Varumärke) <span class="text-error">*</span>
                 </label>
                 <select id="brand_id" name="brand_id" class="admin-form-select" required onchange="updateSeriesName()">
                     <option value="">-- Välj huvudserie --</option>
@@ -414,31 +414,31 @@ include __DIR__ . '/components/unified-layout.php';
                     </option>
                     <?php endforeach; ?>
                 </select>
-                <small style="color: var(--color-text-secondary); font-size: 0.75rem;">
+                <small class="text-secondary text-xs">
                     Detta är den övergripande serien (t.ex. "Swecup", "GravitySeries Enduro").
-                    <a href="/admin/series/brands" style="color: var(--color-accent);">Hantera huvudserier</a>
+                    <a href="/admin/series/brands" class="text-accent">Hantera huvudserier</a>
                 </small>
             </div>
             <?php endif; ?>
 
             <div class="admin-form-row">
-                <div class="admin-form-group" style="flex: 1;">
+                <div class="admin-form-group flex-1">
                     <label for="year" class="admin-form-label">
-                        Säsong/År <span style="color: var(--color-error);">*</span>
+                        Säsong/År <span class="text-error">*</span>
                     </label>
                     <input type="number" id="year" name="year" class="admin-form-input" required
                            value="<?= htmlspecialchars($series['year'] ?? date('Y')) ?>"
                            min="2000" max="2100">
-                    <small style="color: var(--color-text-secondary); font-size: 0.75rem;">
+                    <small class="text-secondary text-xs">
                         Vilket år gäller denna säsong? Avgör vilka event som tillhör serien.
                     </small>
                 </div>
-                <div class="admin-form-group" style="flex: 2;">
-                    <label for="name" class="admin-form-label">Serienamn <span style="color: var(--color-error);">*</span></label>
+                <div class="admin-form-group flex-2">
+                    <label for="name" class="admin-form-label">Serienamn <span class="text-error">*</span></label>
                     <input type="text" id="name" name="name" class="admin-form-input" required
                            value="<?= htmlspecialchars($series['name'] ?? '') ?>"
                            placeholder="T.ex. Swecup">
-                    <small style="color: var(--color-text-secondary); font-size: 0.75rem;">
+                    <small class="text-secondary text-xs">
                         År visas separat som badge - skriv ej år i namnet
                     </small>
                 </div>
@@ -468,22 +468,22 @@ include __DIR__ . '/components/unified-layout.php';
                         <option value="completed" <?= ($series['status'] ?? '') === 'completed' ? 'selected' : '' ?>>Avslutad ✓</option>
                         <option value="cancelled" <?= ($series['status'] ?? '') === 'cancelled' ? 'selected' : '' ?>>Inställd</option>
                     </select>
-                    <small style="color: var(--color-text-secondary); font-size: 0.75rem;">
+                    <small class="text-secondary text-xs">
                         "Avslutad" beräknar seriemästare automatiskt
                     </small>
                 </div>
             </div>
 
-            <details style="margin-top: var(--space-sm);">
-                <summary style="cursor: pointer; color: var(--color-text-secondary); font-size: 0.85rem;">
+            <details class="mt-sm">
+                <summary class="cursor-pointer text-secondary text-sm">
                     Valfritt: Specifika datum (normalt beräknas detta från events)
                 </summary>
-                <div class="admin-form-row" style="margin-top: var(--space-sm);">
+                <div class="admin-form-row mt-sm">
                     <div class="admin-form-group">
                         <label for="start_date" class="admin-form-label">Startdatum</label>
                         <input type="date" id="start_date" name="start_date" class="admin-form-input"
                                value="<?= htmlspecialchars($series['start_date'] ?? '') ?>">
-                        <small style="color: var(--color-text-secondary); font-size: 0.75rem;">
+                        <small class="text-secondary text-xs">
                             Lämna tomt för att använda första eventets datum
                         </small>
                     </div>
@@ -491,7 +491,7 @@ include __DIR__ . '/components/unified-layout.php';
                         <label for="end_date" class="admin-form-label">Slutdatum</label>
                         <input type="date" id="end_date" name="end_date" class="admin-form-input"
                                value="<?= htmlspecialchars($series['end_date'] ?? '') ?>">
-                        <small style="color: var(--color-text-secondary); font-size: 0.75rem;">
+                        <small class="text-secondary text-xs">
                             Lämna tomt för att använda sista eventets datum
                         </small>
                     </div>
@@ -529,12 +529,12 @@ include __DIR__ . '/components/unified-layout.php';
     <div class="admin-card">
         <div class="admin-card-header">
             <h2>
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 20px; height: 20px;"><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-md"><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/></svg>
                 Betalningsmottagare (Swish)
             </h2>
         </div>
         <div class="admin-card-body">
-            <p style="color: var(--color-text-secondary); margin-bottom: var(--space-md);">
+            <p class="text-secondary mb-md">
                 Välj vem som tar emot Swish-betalningar för denna serie. Event utan egen mottagare använder seriens.
             </p>
             <div class="admin-form-group">
@@ -547,8 +547,8 @@ include __DIR__ . '/components/unified-layout.php';
                     </option>
                     <?php endforeach; ?>
                 </select>
-                <small style="color: var(--color-text-secondary);">
-                    <a href="/admin/payment-recipients" style="color: var(--color-accent);">Hantera betalningsmottagare</a>
+                <small class="text-secondary">
+                    <a href="/admin/payment-recipients" class="text-accent">Hantera betalningsmottagare</a>
                 </small>
             </div>
 
@@ -565,14 +565,14 @@ include __DIR__ . '/components/unified-layout.php';
             }
             if ($selectedRecipient):
             ?>
-            <div style="margin-top: var(--space-md); padding: var(--space-md); background: var(--color-bg-secondary); border-radius: var(--radius-md);">
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-sm);">
+            <div class="info-box mt-md">
+                <div class="grid-2-col">
                     <div>
-                        <span style="color: var(--color-text-secondary); font-size: 0.75rem;">Swish-nummer:</span><br>
+                        <span class="text-secondary text-xs">Swish-nummer:</span><br>
                         <strong><?= htmlspecialchars($selectedRecipient['swish_number']) ?></strong>
                     </div>
                     <div>
-                        <span style="color: var(--color-text-secondary); font-size: 0.75rem;">Visas som:</span><br>
+                        <span class="text-secondary text-xs">Visas som:</span><br>
                         <strong><?= htmlspecialchars($selectedRecipient['swish_name']) ?></strong>
                     </div>
                 </div>
@@ -585,12 +585,12 @@ include __DIR__ . '/components/unified-layout.php';
     <div class="admin-card">
         <div class="admin-card-header">
             <h2>
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 20px; height: 20px;"><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-md"><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/></svg>
                 Betalning (Swish)
             </h2>
         </div>
         <div class="admin-card-body">
-            <p style="color: var(--color-text-secondary); margin-bottom: var(--space-md);">
+            <p class="text-secondary mb-md">
                 Swish-uppgifter för serieanmälningar. Event kan välja att betalning går till serien.
             </p>
             <div class="admin-form-row">
@@ -599,14 +599,14 @@ include __DIR__ . '/components/unified-layout.php';
                     <input type="text" id="swish_number" name="swish_number" class="admin-form-input"
                            value="<?= htmlspecialchars($series['swish_number'] ?? '') ?>"
                            placeholder="070-123 45 67 eller 123-456 78 90">
-                    <small style="color: var(--color-text-secondary);">Mobilnummer eller Swish-företagsnummer</small>
+                    <small class="text-secondary">Mobilnummer eller Swish-företagsnummer</small>
                 </div>
                 <div class="admin-form-group">
                     <label for="swish_name" class="admin-form-label">Mottagarnamn</label>
                     <input type="text" id="swish_name" name="swish_name" class="admin-form-input"
                            value="<?= htmlspecialchars($series['swish_name'] ?? '') ?>"
                            placeholder="Seriens namn">
-                    <small style="color: var(--color-text-secondary);">Visas för deltagare vid betalning</small>
+                    <small class="text-secondary">Visas för deltagare vid betalning</small>
                 </div>
             </div>
         </div>
@@ -618,16 +618,16 @@ include __DIR__ . '/components/unified-layout.php';
     <div class="admin-card">
         <div class="admin-card-header">
             <h2>
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 20px; height: 20px;"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-md"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
                 Sponsorer
             </h2>
         </div>
         <div class="admin-card-body">
-            <p style="margin-bottom: var(--space-md); color: var(--color-text-secondary); font-size: 0.875rem;">
+            <p class="text-secondary text-sm mb-md">
                 Välj sponsorer för denna serie. De visas på alla events i serien.
             </p>
 
-            <div style="display: grid; gap: var(--space-lg);">
+            <div class="flex flex-col gap-lg">
                 <!-- Header Banner Sponsor -->
                 <div class="admin-form-group">
                     <label class="admin-form-label">Header-banner (stor banner högst upp)</label>
@@ -644,9 +644,9 @@ include __DIR__ . '/components/unified-layout.php';
                 <!-- Content Logo Row -->
                 <div class="admin-form-group">
                     <label class="admin-form-label">Logo-rad (under event-info)</label>
-                    <div style="display: flex; flex-wrap: wrap; gap: var(--space-sm);">
+                    <div class="flex flex-wrap gap-sm">
                         <?php foreach ($allSponsors as $sp): ?>
-                        <label style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; background: var(--color-bg-secondary); border-radius: var(--radius-sm); cursor: pointer; font-size: 0.875rem;">
+                        <label class="checkbox-chip">
                             <input type="checkbox" name="sponsor_content[]" value="<?= $sp['id'] ?>" <?= in_array((int)$sp['id'], $seriesSponsors['content']) ? 'checked' : '' ?>>
                             <?= htmlspecialchars($sp['name']) ?>
                         </label>
@@ -676,7 +676,7 @@ include __DIR__ . '/components/unified-layout.php';
     <div class="admin-card">
         <div class="admin-card-header">
             <h2>
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 20px; height: 20px;"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-md"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
                 Statistik
             </h2>
         </div>
@@ -696,9 +696,9 @@ include __DIR__ . '/components/unified-layout.php';
                 </div>
             </div>
 
-            <div style="margin-top: var(--space-lg);">
+            <div class="mt-lg">
                 <a href="/admin/events?series_id=<?= $id ?>" class="btn-admin btn-admin-secondary">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px;"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-sm"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg>
                     Visa events i denna serie
                 </a>
             </div>
@@ -709,11 +709,11 @@ include __DIR__ . '/components/unified-layout.php';
     <!-- Actions -->
     <div class="admin-card">
         <div class="admin-card-body">
-            <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--space-md);">
-                <div style="display: flex; gap: var(--space-sm);">
+            <div class="flex items-center justify-between flex-wrap gap-md">
+                <div class="flex gap-sm">
                     <a href="/admin/series" class="btn-admin btn-admin-secondary">Avbryt</a>
                     <button type="submit" class="btn-admin btn-admin-primary">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px;"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-sm"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
                         <?= $isNew ? 'Skapa Serie' : 'Spara Ändringar' ?>
                     </button>
                 </div>
@@ -721,7 +721,7 @@ include __DIR__ . '/components/unified-layout.php';
                 <?php if (!$isNew): ?>
                 <button type="button" onclick="deleteSeries(<?= $id ?>, '<?= addslashes($series['name']) ?>')"
                         class="btn-admin btn-admin-danger">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px;"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-sm"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
                     Ta bort serie
                 </button>
                 <?php endif; ?>
