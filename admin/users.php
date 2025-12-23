@@ -81,7 +81,7 @@ include __DIR__ . '/components/unified-layout.php';
 
 <!-- Info about riders -->
 <div class="alert alert-info">
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 20px; height: 20px;"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="16" y2="12"/><line x1="12" x2="12.01" y1="8" y2="8"/></svg>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-md"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="16" y2="12"/><line x1="12" x2="12.01" y1="8" y2="8"/></svg>
     <span>
         <strong>Rider-användare</strong> hanteras via
         <a href="/admin/riders" style="color: var(--color-accent);">Deltagare</a> →
@@ -92,8 +92,8 @@ include __DIR__ . '/components/unified-layout.php';
 <!-- Role Stats -->
 <div class="admin-stats-grid">
     <div class="admin-stat-card">
-        <div class="admin-stat-icon" style="background: rgba(239, 68, 68, 0.1); color: var(--color-error);">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 24px; height: 24px;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        <div class="admin-stat-icon stat-icon-error">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-lg"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
         </div>
         <div class="admin-stat-content">
             <div class="admin-stat-value"><?= $roleStats['super_admin'] ?? 0 ?></div>
@@ -101,8 +101,8 @@ include __DIR__ . '/components/unified-layout.php';
         </div>
     </div>
     <div class="admin-stat-card">
-        <div class="admin-stat-icon" style="background: rgba(245, 158, 11, 0.1); color: var(--color-accent);">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 24px; height: 24px;"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+        <div class="admin-stat-icon stat-icon-accent">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-lg"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
         </div>
         <div class="admin-stat-content">
             <div class="admin-stat-value"><?= $roleStats['admin'] ?? 0 ?></div>
@@ -110,8 +110,8 @@ include __DIR__ . '/components/unified-layout.php';
         </div>
     </div>
     <div class="admin-stat-card">
-        <div class="admin-stat-icon" style="background: rgba(59, 130, 246, 0.1); color: #3b82f6;">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 24px; height: 24px;"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/><path d="m9 16 2 2 4-4"/></svg>
+        <div class="admin-stat-icon stat-icon-info">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-lg"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/><path d="m9 16 2 2 4-4"/></svg>
         </div>
         <div class="admin-stat-content">
             <div class="admin-stat-value"><?= $roleStats['promotor'] ?? 0 ?></div>
@@ -124,7 +124,7 @@ include __DIR__ . '/components/unified-layout.php';
 <div class="admin-card">
     <div class="admin-card-body">
         <form method="GET" class="admin-form-row" style="align-items: flex-end;">
-            <div class="admin-form-group" style="flex: 1; margin-bottom: 0;">
+            <div class="admin-form-group flex-1">
                 <label for="search" class="admin-form-label">Sök</label>
                 <input
                     type="text"
@@ -137,7 +137,7 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
             <div class="admin-form-group" style="margin-bottom: 0;">
                 <label for="role" class="admin-form-label">Roll</label>
-                <select name="role" id="role" class="admin-form-select" style="min-width: 140px;">
+                <select name="role" id="role" class="admin-form-select min-w-140">
                     <option value="">Alla roller</option>
                     <option value="super_admin" <?= $roleFilter === 'super_admin' ? 'selected' : '' ?>>Super Admin</option>
                     <option value="admin" <?= $roleFilter === 'admin' ? 'selected' : '' ?>>Admin</option>
@@ -146,19 +146,19 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
             <div class="admin-form-group" style="margin-bottom: 0;">
                 <label for="active" class="admin-form-label">Status</label>
-                <select name="active" id="active" class="admin-form-select" style="min-width: 120px;">
+                <select name="active" id="active" class="admin-form-select min-w-120">
                     <option value="">Alla status</option>
                     <option value="1" <?= $activeFilter === '1' ? 'selected' : '' ?>>Aktiva</option>
                     <option value="0" <?= $activeFilter === '0' ? 'selected' : '' ?>>Inaktiva</option>
                 </select>
             </div>
             <button type="submit" class="btn-admin btn-admin-primary btn-admin-sm">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;"><circle cx="11" cy="11" r="8"/><line x1="21" x2="16.65" y1="21" y2="16.65"/></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-xs"><circle cx="11" cy="11" r="8"/><line x1="21" x2="16.65" y1="21" y2="16.65"/></svg>
                 Sök
             </button>
             <?php if ($search || $roleFilter || $activeFilter !== ''): ?>
                 <a href="/admin/users" class="btn-admin btn-admin-secondary btn-admin-sm">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-xs"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
                     Rensa
                 </a>
             <?php endif; ?>
@@ -171,7 +171,7 @@ include __DIR__ . '/components/unified-layout.php';
     <div class="admin-card-header">
         <h2><?= count($users) ?> användare</h2>
     </div>
-    <div class="admin-card-body" style="padding: 0;">
+    <div class="admin-card-body p-0">
         <?php if (empty($users)): ?>
             <div class="admin-empty-state">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
@@ -195,13 +195,13 @@ include __DIR__ . '/components/unified-layout.php';
                         <?php foreach ($users as $user): ?>
                             <tr>
                                 <td>
-                                    <div style="display: flex; align-items: center; gap: var(--space-sm);">
+                                    <div class="flex items-center gap-sm">
                                         <div style="width: 32px; height: 32px; border-radius: 50%; background: var(--color-accent); color: white; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 12px;">
                                             <?= strtoupper(substr($user['username'], 0, 1)) ?>
                                         </div>
                                         <div>
-                                            <div style="font-weight: var(--weight-medium);"><?= htmlspecialchars($user['full_name'] ?: $user['username']) ?></div>
-                                            <div style="font-size: var(--text-xs); color: var(--color-text-secondary);"><?= htmlspecialchars($user['email']) ?></div>
+                                            <div class="font-medium"><?= htmlspecialchars($user['full_name'] ?: $user['username']) ?></div>
+                                            <div class="text-xs text-secondary"><?= htmlspecialchars($user['email']) ?></div>
                                         </div>
                                     </div>
                                 </td>
@@ -231,24 +231,24 @@ include __DIR__ . '/components/unified-layout.php';
                                         <span class="admin-badge" style="background: var(--color-bg-sunken); color: var(--color-text-secondary);">Inaktiv</span>
                                     <?php endif; ?>
                                 </td>
-                                <td style="color: var(--color-text-secondary);">
+                                <td class="text-secondary">
                                     <?php if ($user['last_login']): ?>
                                         <?= date('Y-m-d H:i', strtotime($user['last_login'])) ?>
                                     <?php else: ?>
-                                        <span style="color: var(--color-text-muted);">Aldrig</span>
+                                        <span class="text-muted">Aldrig</span>
                                     <?php endif; ?>
                                 </td>
-                                <td style="color: var(--color-text-secondary);">
+                                <td class="text-secondary">
                                     <?= date('Y-m-d', strtotime($user['created_at'])) ?>
                                 </td>
                                 <td style="text-align: right;">
-                                    <div class="table-actions" style="justify-content: flex-end;">
+                                    <div class="table-actions justify-end">
                                         <a href="/admin/users/edit/<?= $user['id'] ?>" class="btn-admin btn-admin-sm btn-admin-secondary" title="Redigera">
-                                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
+                                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-xs"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
                                         </a>
                                         <?php if ($user['role'] === 'promotor'): ?>
                                             <a href="/admin/user-events?id=<?= $user['id'] ?>" class="btn-admin btn-admin-sm btn-admin-secondary" title="Hantera events">
-                                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
+                                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-xs"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
                                             </a>
                                         <?php endif; ?>
                                     </div>
@@ -268,27 +268,27 @@ include __DIR__ . '/components/unified-layout.php';
         <h2>Rollbeskrivningar</h2>
     </div>
     <div class="admin-card-body">
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: var(--space-lg);">
+        <div class="grid-auto-250">
             <div>
                 <h3 style="font-weight: var(--weight-medium); color: var(--color-error); margin-bottom: var(--space-xs); display: flex; align-items: center; gap: var(--space-xs);">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-sm"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
                     Super Admin
                 </h3>
-                <p style="font-size: var(--text-sm); color: var(--color-text-secondary);">Full tillgång till allt. Kan hantera användare, systeminställningar och alla andra funktioner.</p>
+                <p class="text-sm text-secondary">Full tillgång till allt. Kan hantera användare, systeminställningar och alla andra funktioner.</p>
             </div>
             <div>
                 <h3 style="font-weight: var(--weight-medium); color: var(--color-accent); margin-bottom: var(--space-xs); display: flex; align-items: center; gap: var(--space-xs);">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px;"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-sm"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
                     Admin
                 </h3>
-                <p style="font-size: var(--text-sm); color: var(--color-text-secondary);">Kan hantera events, serier, riders, klubbar och importera data. Har inte tillgång till användarhantering.</p>
+                <p class="text-sm text-secondary">Kan hantera events, serier, riders, klubbar och importera data. Har inte tillgång till användarhantering.</p>
             </div>
             <div>
                 <h3 style="font-weight: var(--weight-medium); color: #3b82f6; margin-bottom: var(--space-xs); display: flex; align-items: center; gap: var(--space-xs);">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px;"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/><path d="m9 16 2 2 4-4"/></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-sm"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/><path d="m9 16 2 2 4-4"/></svg>
                     Promotor
                 </h3>
-                <p style="font-size: var(--text-sm); color: var(--color-text-secondary);">Kan endast hantera tilldelade events - redigera eventinfo, hantera resultat och registreringar.</p>
+                <p class="text-sm text-secondary">Kan endast hantera tilldelade events - redigera eventinfo, hantera resultat och registreringar.</p>
             </div>
         </div>
     </div>

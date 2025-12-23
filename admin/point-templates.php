@@ -266,7 +266,7 @@ include __DIR__ . '/components/unified-layout.php';
 </style>
 
 <?php if ($message): ?>
-<div class="alert alert-<?= $messageType === 'success' ? 'success' : ($messageType === 'error' ? 'danger' : 'info') ?>" style="margin-bottom: var(--space-lg);">
+<div class="alert alert-<?= $messageType === 'success' ? 'success' : ($messageType === 'error' ? 'danger' : 'info') ?> mb-lg">
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <?php if ($messageType === 'success'): ?>
             <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>
@@ -281,18 +281,18 @@ include __DIR__ . '/components/unified-layout.php';
 <?php endif; ?>
 
 <!-- Actions -->
-<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-lg);">
+<div class="mb-lg" style="display: flex; justify-content: space-between; align-items: center;">
     <a href="/admin/point-scales.php" class="btn-admin btn-admin-secondary">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px;"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-sm"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>
         Tillbaka till Poängmallar
     </a>
-    <div style="display: flex; gap: var(--space-sm);">
+    <div class="flex gap-sm">
         <button type="button" class="btn-admin btn-admin-secondary" onclick="openImportModal()">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-sm"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
             Importera
         </button>
         <button type="button" class="btn-admin btn-admin-primary" onclick="openTemplateModal()">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px;"><line x1="12" x2="12" y1="5" y2="19"/><line x1="5" x2="19" y1="12" y2="12"/></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-sm"><line x1="12" x2="12" y1="5" y2="19"/><line x1="5" x2="19" y1="12" y2="12"/></svg>
             Ny Mall
         </button>
     </div>
@@ -302,13 +302,13 @@ include __DIR__ . '/components/unified-layout.php';
 <div class="admin-card">
     <div class="admin-card-header">
         <h2>Kvalpoängmallar för Serier</h2>
-        <span style="color: var(--color-text-secondary); font-size: var(--text-sm);"><?= count($templates) ?> mallar</span>
+        <span class="text-secondary text-sm"><?= count($templates) ?> mallar</span>
     </div>
     <div class="admin-card-body">
         <?php if (empty($templates)): ?>
-            <div style="text-align: center; color: var(--color-text-secondary); padding: var(--space-xl);">
+            <div class="text-secondary" style="text-align: center; padding: var(--space-xl);">
                 <p>Inga kvalpoängmallar hittades.</p>
-                <button type="button" class="btn-admin btn-admin-primary" onclick="openTemplateModal()" style="margin-top: var(--space-md);">
+                <button type="button" class="btn-admin btn-admin-primary mt-lg" onclick="openTemplateModal()">
                     Skapa första kvalpoängmallen
                 </button>
             </div>
@@ -320,22 +320,22 @@ include __DIR__ . '/components/unified-layout.php';
                         <div>
                             <h3 style="margin: 0 0 var(--space-xs) 0;"><?= htmlspecialchars($template['name']) ?></h3>
                             <?php if (!empty($template['description'])): ?>
-                                <p style="color: var(--color-text-secondary); margin: 0; font-size: var(--text-sm);"><?= htmlspecialchars($template['description']) ?></p>
+                                <p class="text-secondary text-sm" style="margin: 0;"><?= htmlspecialchars($template['description']) ?></p>
                             <?php endif; ?>
                         </div>
                         <div style="display: flex; gap: var(--space-xs);">
                             <button type="button" class="btn-admin btn-admin-sm btn-admin-secondary" onclick="exportTemplate(<?= $template['id'] ?>)" title="Exportera">
-                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-xs"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
                             </button>
                             <a href="?edit=<?= $template['id'] ?>" class="btn-admin btn-admin-sm btn-admin-secondary" title="Redigera">
-                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-xs"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
                             </a>
                             <form method="POST" style="display: inline;" onsubmit="return confirm('Är du säker på att du vill ta bort \'<?= htmlspecialchars($template['name']) ?>\'?');">
                                 <?= csrf_field() ?>
                                 <input type="hidden" name="action" value="delete">
                                 <input type="hidden" name="id" value="<?= $template['id'] ?>">
                                 <button type="submit" class="btn-admin btn-admin-sm btn-admin-danger" title="Ta bort">
-                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-xs"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
                                 </button>
                             </form>
                         </div>
@@ -348,7 +348,7 @@ include __DIR__ . '/components/unified-layout.php';
                             <?php endforeach; ?>
                         </div>
                     <?php else: ?>
-                        <p style="color: var(--color-text-secondary); font-size: var(--text-sm); margin: 0;">Ingen poängfördelning angiven</p>
+                        <p class="text-secondary text-sm" style="margin: 0;">Ingen poängfördelning angiven</p>
                     <?php endif; ?>
                 </div>
             <?php endforeach; ?>
@@ -361,11 +361,11 @@ include __DIR__ . '/components/unified-layout.php';
     <div class="modal-content">
         <div class="modal-header">
             <h3>
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 20px; height: 20px;"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-md"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/></svg>
                 <span id="modalTitleText">Ny Kvalpoängmall</span>
             </h3>
             <button type="button" onclick="closeTemplateModal()" class="btn-admin btn-admin-sm btn-admin-secondary">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px;"><line x1="18" x2="6" y1="6" y2="18"/><line x1="6" x2="18" y1="6" y2="18"/></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-sm"><line x1="18" x2="6" y1="6" y2="18"/><line x1="6" x2="18" y1="6" y2="18"/></svg>
             </button>
         </div>
         <form method="POST" id="templateForm">
@@ -375,7 +375,7 @@ include __DIR__ . '/components/unified-layout.php';
 
             <div class="modal-body">
                 <div class="admin-form-group">
-                    <label class="admin-form-label">Namn <span style="color: var(--color-error);">*</span></label>
+                    <label class="admin-form-label">Namn <span class="text-error">*</span></label>
                     <input type="text" id="templateName" name="name" class="admin-form-input" required>
                 </div>
 
@@ -403,7 +403,7 @@ include __DIR__ . '/components/unified-layout.php';
                     Avbryt
                 </button>
                 <button type="submit" class="btn-admin btn-admin-primary">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px;"><polyline points="20 6 9 17 4 12"/></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-sm"><polyline points="20 6 9 17 4 12"/></svg>
                     <span id="submitButtonText">Skapa</span>
                 </button>
             </div>
@@ -416,11 +416,11 @@ include __DIR__ . '/components/unified-layout.php';
     <div class="modal-content">
         <div class="modal-header">
             <h3>
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 20px; height: 20px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-md"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
                 Importera Kvalpoängmall
             </h3>
             <button type="button" onclick="closeImportModal()" class="btn-admin btn-admin-sm btn-admin-secondary">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px;"><line x1="18" x2="6" y1="6" y2="18"/><line x1="6" x2="18" y1="6" y2="18"/></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-sm"><line x1="18" x2="6" y1="6" y2="18"/><line x1="6" x2="18" y1="6" y2="18"/></svg>
             </button>
         </div>
         <form method="POST">
@@ -463,7 +463,7 @@ CSV format:
                     Avbryt
                 </button>
                 <button type="submit" class="btn-admin btn-admin-primary">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-sm"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
                     Importera
                 </button>
             </div>

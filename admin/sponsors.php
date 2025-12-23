@@ -427,7 +427,7 @@ include __DIR__ . '/components/unified-layout.php';
     </div>
 
     <button class="btn btn-primary" onclick="openCreateModal()">
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" x2="12" y1="5" y2="19"/><line x1="5" x2="19" y1="12" y2="12"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-sm"><line x1="12" x2="12" y1="5" y2="19"/><line x1="5" x2="19" y1="12" y2="12"/></svg>
         Ny sponsor
     </button>
 </div>
@@ -515,11 +515,11 @@ include __DIR__ . '/components/unified-layout.php';
 
         <div class="sponsor-card-footer">
             <button class="btn btn-sm btn-ghost" onclick="editSponsor(<?= $sponsor['id'] ?>)">
-                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-xs"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
                 Redigera
             </button>
             <button class="btn btn-sm btn-danger" onclick="deleteSponsor(<?= $sponsor['id'] ?>, '<?= htmlspecialchars(addslashes($sponsor['name'])) ?>')">
-                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-xs"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
                 Radera
             </button>
         </div>
@@ -534,7 +534,7 @@ include __DIR__ . '/components/unified-layout.php';
         <div class="modal-header">
             <h3 id="modalTitle">Ny sponsor</h3>
             <button class="modal-close" onclick="closeModal()">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" x2="6" y1="6" y2="18"/><line x1="6" x2="18" y1="6" y2="18"/></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-lg"><line x1="18" x2="6" y1="6" y2="18"/><line x1="6" x2="18" y1="6" y2="18"/></svg>
             </button>
         </div>
         <form id="sponsorForm" onsubmit="saveSponsor(event)" enctype="multipart/form-data">
@@ -588,7 +588,7 @@ include __DIR__ . '/components/unified-layout.php';
                 <!-- Logo section with three sizes -->
                 <div style="background: var(--color-bg-sunken); padding: var(--space-md); border-radius: var(--radius-md); margin-bottom: var(--space-md);">
                     <h4 style="margin: 0 0 var(--space-md) 0; font-size: 0.9rem;">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: inline; vertical-align: middle; margin-right: 4px;"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-sm" style="display: inline; vertical-align: middle; margin-right: 4px;"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
                         Logotyper
                     </h4>
                     <p style="font-size: 0.8rem; color: var(--color-text-secondary); margin-bottom: var(--space-md);">
@@ -602,13 +602,13 @@ include __DIR__ . '/components/unified-layout.php';
                         </label>
                         <div class="logo-picker">
                             <div class="logo-preview" id="logoBannerPreview" style="width: 120px; height: 40px;">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-md"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
                             </div>
                             <input type="hidden" id="logoBannerId" name="logo_banner_id">
                             <button type="button" class="btn btn-sm btn-secondary" onclick="openMediaPicker('banner')">Välj från media</button>
                             <button type="button" class="btn btn-sm btn-ghost" onclick="clearLogoField('banner')">Ta bort</button>
                         </div>
-                        <small style="color: var(--color-text-secondary);">Stor banner högst upp på event-sidan</small>
+                        <small class="text-secondary">Stor banner högst upp på event-sidan</small>
                     </div>
 
                     <!-- Standard Logo (200x60) -->
@@ -618,13 +618,13 @@ include __DIR__ . '/components/unified-layout.php';
                         </label>
                         <div class="logo-picker">
                             <div class="logo-preview" id="logoStandardPreview">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-md"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
                             </div>
                             <input type="hidden" id="logoStandardId" name="logo_standard_id">
                             <button type="button" class="btn btn-sm btn-secondary" onclick="openMediaPicker('standard')">Välj från media</button>
                             <button type="button" class="btn btn-sm btn-ghost" onclick="clearLogoField('standard')">Ta bort</button>
                         </div>
-                        <small style="color: var(--color-text-secondary);">Logo-raden under event-info</small>
+                        <small class="text-secondary">Logo-raden under event-info</small>
                     </div>
 
                     <!-- Small Logo (160x40) -->
@@ -634,13 +634,13 @@ include __DIR__ . '/components/unified-layout.php';
                         </label>
                         <div class="logo-picker">
                             <div class="logo-preview" id="logoSmallPreview" style="width: 60px; height: 60px;">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-md"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
                             </div>
                             <input type="hidden" id="logoSmallId" name="logo_small_id">
                             <button type="button" class="btn btn-sm btn-secondary" onclick="openMediaPicker('small')">Välj från media</button>
                             <button type="button" class="btn btn-sm btn-ghost" onclick="clearLogoField('small')">Ta bort</button>
                         </div>
-                        <small style="color: var(--color-text-secondary);">"Resultat sponsrat av" vid klasserna</small>
+                        <small class="text-secondary">"Resultat sponsrat av" vid klasserna</small>
                     </div>
                 </div>
 
@@ -692,7 +692,7 @@ include __DIR__ . '/components/unified-layout.php';
         </div>
         <div class="modal-footer">
             <a href="/admin/media.php?folder=sponsors" target="_blank" class="btn btn-secondary">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 4px;"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" x2="21" y1="14" y2="3"/></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-sm" style="margin-right: 4px;"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" x2="21" y1="14" y2="3"/></svg>
                 Öppna Mediabiblioteket
             </a>
             <button type="button" class="btn btn-ghost" onclick="closeMediaModal()">Avbryt</button>

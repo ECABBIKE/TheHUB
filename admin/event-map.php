@@ -324,9 +324,9 @@ include __DIR__ . '/components/unified-layout.php';
 <!-- Map Publish Settings -->
 <div class="admin-card" style="margin-bottom: var(--space-md);">
     <div class="admin-card-body" style="display: flex; align-items: center; gap: var(--space-lg); flex-wrap: wrap;">
-        <div style="flex: 1; min-width: 200px;">
-            <strong><i data-lucide="calendar-clock" style="width: 16px; height: 16px;"></i> Karta publiceras</strong>
-            <p style="font-size: var(--text-sm); color: var(--color-text-secondary); margin: 0;">
+        <div class="flex-1" style="min-width: 200px;">
+            <strong><i data-lucide="calendar-clock" class="icon-sm"></i> Karta publiceras</strong>
+            <p class="text-sm text-secondary" style="margin: 0;">
                 <?php if (!empty($event['karta_publish_at'])): ?>
                     <?= date('Y-m-d H:i', strtotime($event['karta_publish_at'])) ?>
                     <?php if (strtotime($event['karta_publish_at']) > time()): ?>
@@ -339,7 +339,7 @@ include __DIR__ . '/components/unified-layout.php';
                 <?php endif; ?>
             </p>
         </div>
-        <form method="POST" style="display: flex; align-items: center; gap: var(--space-sm);">
+        <form method="POST" class="flex gap-sm" style="align-items: center;">
             <?= csrf_field() ?>
             <input type="hidden" name="action" value="update_publish_date">
             <input type="datetime-local" name="karta_publish_at" class="admin-form-input admin-form-input-sm"
@@ -470,7 +470,7 @@ include __DIR__ . '/components/unified-layout.php';
                 <!-- Save button -->
                 <div id="save-actions" style="display: none; margin-top: var(--space-sm);">
                     <button type="button" onclick="saveAllSegments()" class="btn-admin btn-admin-primary btn-admin-block">
-                        <i data-lucide="save" style="width: 14px; height: 14px;"></i> Spara alla sektioner
+                        <i data-lucide="save" class="icon-xs"></i> Spara alla sektioner
                     </button>
                 </div>
 
@@ -493,7 +493,7 @@ include __DIR__ . '/components/unified-layout.php';
                          data-end="<?= $segEnd ?>"
                          data-segment-id="<?= $seg['id'] ?>">
                         <span class="color-dot" style="background: <?= htmlspecialchars($seg['color']) ?>;"></span>
-                        <i data-lucide="<?= $iconName ?>" style="width: 14px; height: 14px; flex-shrink: 0;"></i>
+                        <i data-lucide="<?= $iconName ?>" class="icon-xs" style="flex-shrink: 0;"></i>
                         <input type="text" class="admin-segment-name-input" value="<?= htmlspecialchars($seg['segment_name'] ?? '') ?>" placeholder="Namn..." onclick="event.stopPropagation()" onchange="changeSegmentName(<?= $seg['id'] ?>, this.value)" title="Segmentnamn (t.ex. SS1, Powerstage)">
                         <?php if ($hasSponsor): ?>
                         <span class="segment-sponsor-badge" title="<?= htmlspecialchars($seg['sponsor_name']) ?>">
@@ -528,7 +528,7 @@ include __DIR__ . '/components/unified-layout.php';
                     </div>
                     <?php endforeach; ?>
                     <button type="button" onclick="editExistingSegments()" class="btn-admin btn-admin-secondary btn-admin-sm btn-admin-block" style="margin-top: var(--space-sm);">
-                        <i data-lucide="pencil" style="width: 14px; height: 14px;"></i> Redigera sektioner
+                        <i data-lucide="pencil" class="icon-xs"></i> Redigera sektioner
                     </button>
                 </div>
                 <?php endif; ?>
@@ -572,7 +572,7 @@ include __DIR__ . '/components/unified-layout.php';
                 <div class="admin-list admin-list-compact">
                     <?php foreach ($pois as $poi): ?>
                     <div class="admin-list-item">
-                        <i data-lucide="<?= htmlspecialchars($poi['type_icon'] ?? 'map-pin') ?>" style="width: 14px; height: 14px;"></i>
+                        <i data-lucide="<?= htmlspecialchars($poi['type_icon'] ?? 'map-pin') ?>" class="icon-xs"></i>
                         <span class="admin-list-item-text"><?= htmlspecialchars($poi['label'] ?: $poi['type_label'] ?? $poi['poi_type']) ?></span>
                         <form method="POST" class="inline-form">
                             <?= csrf_field() ?>
@@ -621,7 +621,7 @@ include __DIR__ . '/components/unified-layout.php';
         </div>
 
         <div class="admin-card">
-            <div class="admin-card-body" style="padding: 0; position: relative;">
+            <div class="admin-card-body p-0" style="position: relative;">
                 <!-- Segment info overlay (mobile) -->
                 <div id="segment-info-overlay" class="segment-info-overlay" style="display: none;">
                     <div class="segment-info-content">
@@ -1002,11 +1002,11 @@ include __DIR__ . '/components/unified-layout.php';
 
 <!-- Elevation Profile -->
 <?php if ($currentTrack): ?>
-<div class="admin-card" id="elevation-card" style="margin-top: var(--space-lg);">
+<div class="admin-card mt-lg" id="elevation-card">
     <div class="admin-card-header" style="display: flex; justify-content: space-between; align-items: center;">
         <h2 id="elevation-title">Höjdprofil</h2>
         <button type="button" onclick="showFullTrack()" class="btn btn-ghost btn-sm" style="display: flex; align-items: center; gap: var(--space-xs);">
-            <i data-lucide="maximize-2" style="width: 14px; height: 14px;"></i>
+            <i data-lucide="maximize-2" class="icon-xs"></i>
             Visa hela
         </button>
     </div>

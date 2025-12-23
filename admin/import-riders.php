@@ -618,7 +618,7 @@ include __DIR__ . '/components/unified-layout.php';
     <div class="admin-stat-icon" style="background: rgba(97, 206, 112, 0.1); color: var(--color-success);">
      <i data-lucide="check-circle"></i>
     </div>
-    <div class="admin-stat-value" style="color: var(--color-success);"><?= number_format($stats['success']) ?></div>
+    <div class="admin-stat-value text-success"><?= number_format($stats['success']) ?></div>
     <div class="admin-stat-label">Nya</div>
     </div>
     <div class="admin-stat-card">
@@ -647,7 +647,7 @@ include __DIR__ . '/components/unified-layout.php';
    <!-- Column Mappings (debug info) -->
    <?php if (!empty($columnMappings)): ?>
     <details style="margin-top: var(--space-lg); padding-top: var(--space-lg); border-top: 1px solid var(--color-border);">
-    <summary style="cursor: pointer; font-weight: 500; margin-bottom: var(--space-md); display: flex; align-items: center; gap: var(--space-sm);">
+    <summary class="cursor-pointer flex items-center gap-sm" style="font-weight: 500; margin-bottom: var(--space-md);">
      <i data-lucide="columns"></i>
      Kolumnmappning (<?= count($columnMappings) ?> kolumner)
     </summary>
@@ -673,16 +673,16 @@ include __DIR__ . '/components/unified-layout.php';
        <?php elseif ($important): ?>
         <span class="admin-badge admin-badge-info"><?= htmlspecialchars($cm['mapped']) ?></span>
        <?php else: ?>
-        <span style="color: var(--color-text-secondary);"><?= htmlspecialchars($cm['mapped']) ?></span>
+        <span class="text-secondary"><?= htmlspecialchars($cm['mapped']) ?></span>
        <?php endif; ?>
        </td>
        <td>
        <?php if ($cm['original'] === $cm['mapped']): ?>
-        <span style="color: var(--color-text-secondary);">Okänd kolumn</span>
+        <span class="text-secondary">Okänd kolumn</span>
        <?php elseif ($nameField): ?>
-        <span style="color: var(--color-success);">Namn-fält</span>
+        <span class="text-success">Namn-fält</span>
        <?php else: ?>
-        <span style="color: var(--color-success);">Mappat</span>
+        <span class="text-success">Mappat</span>
        <?php endif; ?>
        </td>
       </tr>
@@ -690,7 +690,7 @@ include __DIR__ . '/components/unified-layout.php';
      </tbody>
      </table>
     </div>
-    <p style="font-size: 0.75rem; color: var(--color-text-secondary); margin-top: var(--space-sm);">
+    <p class="text-secondary" style="font-size: 0.75rem; margin-top: var(--space-sm);">
      <strong>Tips:</strong> Om kolumner inte mappas korrekt, kontrollera att CSV-filen har rubriker som:
      Förnamn, Efternamn (eller Namn för fullständigt namn), Födelseår, Kön, Klubb, Licensnummer
     </p>
@@ -700,7 +700,7 @@ include __DIR__ . '/components/unified-layout.php';
    <!-- Verification Section -->
    <?php if (isset($stats['total_in_db'])): ?>
     <div style="margin-top: var(--space-lg); padding-top: var(--space-lg); border-top: 1px solid var(--color-border);">
-    <h3 style="margin-bottom: var(--space-md); display: flex; align-items: center; gap: var(--space-sm);">
+    <h3 class="flex items-center gap-sm" style="margin-bottom: var(--space-md);">
      <i data-lucide="database"></i>
      Verifiering
     </h3>
@@ -723,7 +723,7 @@ include __DIR__ . '/components/unified-layout.php';
    <!-- Skipped Rows Details -->
    <?php if (!empty($skippedRows)): ?>
     <div style="margin-top: var(--space-lg); padding-top: var(--space-lg); border-top: 1px solid var(--color-border);">
-    <h3 style="margin-bottom: var(--space-md); display: flex; align-items: center; gap: var(--space-sm); color: var(--color-warning);">
+    <h3 class="flex items-center gap-sm" style="margin-bottom: var(--space-md); color: var(--color-warning);">
      <i data-lucide="alert-circle"></i>
      Överhoppade rader (<?= count($skippedRows) ?>)
     </h3>
@@ -743,8 +743,8 @@ include __DIR__ . '/components/unified-layout.php';
       <tr>
        <td><code style="background: var(--color-bg-muted); padding: 2px 6px; border-radius: var(--radius-sm);"><?= $skip['row'] ?></code></td>
        <td><?= h($skip['name']) ?></td>
-       <td><code style="font-size: var(--text-sm);"><?= h($skip['license'] ?? '-') ?></code></td>
-       <td style="color: var(--color-text-secondary);"><?= h($skip['reason']) ?></td>
+       <td><code class="text-sm"><?= h($skip['license'] ?? '-') ?></code></td>
+       <td class="text-secondary"><?= h($skip['reason']) ?></td>
        <td>
        <?php if ($skip['type'] === 'duplicate'): ?>
         <span class="badge badge-warning">Dublett</span>
@@ -759,7 +759,7 @@ include __DIR__ . '/components/unified-layout.php';
      </tbody>
      </table>
      <?php if (count($skippedRows) > 100): ?>
-     <p style="margin-top: var(--space-sm); font-size: var(--text-sm); color: var(--color-text-secondary); font-style: italic;">
+     <p class="text-sm text-secondary" style="margin-top: var(--space-sm); font-style: italic;">
       Visar första 100 av <?= count($skippedRows) ?> överhoppade rader
      </p>
      <?php endif; ?>
@@ -769,18 +769,18 @@ include __DIR__ . '/components/unified-layout.php';
 
    <?php if (!empty($errors)): ?>
     <div style="margin-top: var(--space-lg); padding-top: var(--space-lg); border-top: 1px solid var(--color-border);">
-    <h3 style="margin-bottom: var(--space-md); display: flex; align-items: center; gap: var(--space-sm); color: var(--color-danger);">
+    <h3 class="flex items-center gap-sm" style="margin-bottom: var(--space-md); color: var(--color-danger);">
      <i data-lucide="alert-triangle"></i>
      Fel och varningar (<?= count($errors) ?>)
     </h3>
     <div style="max-height: 300px; overflow-y: auto; padding: var(--space-md); background: var(--color-bg-muted); border-radius: var(--radius-md);">
      <?php foreach (array_slice($errors, 0, 50) as $error): ?>
-     <div style="font-size: var(--text-sm); color: var(--color-text-secondary); margin-bottom: 4px;">
+     <div class="text-sm text-secondary" style="margin-bottom: 4px;">
       • <?= h($error) ?>
      </div>
      <?php endforeach; ?>
      <?php if (count($errors) > 50): ?>
-     <p style="margin-top: var(--space-sm); font-size: var(--text-sm); color: var(--color-text-secondary); font-style: italic;">
+     <p class="text-sm text-secondary" style="margin-top: var(--space-sm); font-style: italic;">
       ... och <?= count($errors) - 50 ?> fler
      </p>
      <?php endif; ?>
@@ -816,7 +816,7 @@ include __DIR__ . '/components/unified-layout.php';
     accept=".csv,.xlsx,.xls"
     required
     >
-    <small style="color: var(--color-text-secondary); font-size: var(--text-sm);">
+    <small class="text-secondary text-sm">
     Max storlek: <?= round(MAX_UPLOAD_SIZE / 1024 / 1024) ?>MB
     </small>
    </div>
@@ -838,7 +838,7 @@ include __DIR__ . '/components/unified-layout.php';
    </h2>
   </div>
   <div class="admin-card-body">
-   <p style="color: var(--color-text-secondary); margin-bottom: var(--space-md);">
+   <p class="text-secondary" style="margin-bottom: var(--space-md);">
    CSV-filen ska ha följande kolumner i första raden (header):
    </p>
 
