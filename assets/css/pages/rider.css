@@ -1005,30 +1005,7 @@
     border-radius: var(--radius-sm) 0 0 var(--radius-sm);
 }
 
-/* Serie-färgkodning */
-.result-row[data-series*="Gravity Series"] {
-    --result-accent: #61CE70;
-}
-
-.result-row[data-series*="Gravity Enduro Series"] {
-    --result-accent: #EF761F;
-}
-
-.result-row[data-series*="Capital Gravity Series"] {
-    --result-accent: #EF761F;
-}
-
-.result-row[data-series*="SweCup Enduro"] {
-    --result-accent: #004a98;
-}
-
-.result-row[data-series*="Gothenburg"] {
-    --result-accent: #8A9A5B;
-}
-
-.result-row[data-series*="Motion"] {
-    --result-accent: #61CE70;
-}
+/* Serie-färgkodning - Hämtas dynamiskt från series_brands via inline style */
 
 .result-row:hover {
     border-color: var(--result-accent);
