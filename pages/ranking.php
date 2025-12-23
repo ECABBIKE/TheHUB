@@ -150,12 +150,12 @@ $disciplineNames = [
 <!-- Stats -->
 <div class="stats-grid mb-lg">
   <div class="stat-card">
-    <div class="stat-value"><?= number_format($ranking['total'] ?? 0) ?></div>
-    <div class="stat-label"><?= $view === 'clubs' ? 'Klubbar' : 'Åkare' ?></div>
+    <span class="stat-value"><?= number_format($ranking['total'] ?? 0) ?></span>
+    <span class="stat-label"><?= $view === 'clubs' ? 'Klubbar' : 'Åkare' ?></span>
   </div>
   <div class="stat-card">
-    <div class="stat-value">24</div>
-    <div class="stat-label">Månader</div>
+    <span class="stat-value">24</span>
+    <span class="stat-label">Månader</span>
   </div>
 </div>
 
