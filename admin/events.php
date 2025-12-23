@@ -214,11 +214,11 @@ $breadcrumbs = [
     ['label' => 'Events']
 ];
 $page_actions = '
-<button id="bulk-edit-toggle" class="btn-admin btn-admin-secondary" onclick="toggleBulkEdit(\'event\')" style="margin-right: var(--space-sm);">
+<button id="bulk-edit-toggle" class="btn-admin btn-admin-secondary mr-sm" onclick="toggleBulkEdit(\'event\')">
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.375 2.625a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4Z"/></svg>
     <span id="bulk-edit-label">Masseditering Tävling</span>
 </button>
-<button id="bulk-edit-organizer-toggle" class="btn-admin btn-admin-secondary" onclick="toggleBulkEdit(\'organizer\')" style="margin-right: var(--space-sm);">
+<button id="bulk-edit-organizer-toggle" class="btn-admin btn-admin-secondary mr-sm" onclick="toggleBulkEdit(\'organizer\')">
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
     <span id="bulk-edit-organizer-label">Masseditering Arrangör</span>
 </button>
@@ -243,7 +243,7 @@ include __DIR__ . '/components/unified-layout.php';
     <div class="admin-card-body">
         <form method="GET" action="/admin/events" class="admin-form-row" id="filter-form">
             <!-- Brand Filter -->
-            <div class="admin-form-group" style="margin-bottom: 0;">
+            <div class="admin-form-group mb-0">
                 <label for="brand-filter" class="admin-form-label">Varumärke<?= $filterYear ? ' (' . $filterYear . ')' : '' ?></label>
                 <select id="brand-filter" name="brand" class="admin-form-select" onchange="this.form.submit()">
                     <option value="">Alla varumärken</option>
@@ -256,7 +256,7 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
 
             <!-- Year Filter -->
-            <div class="admin-form-group" style="margin-bottom: 0;">
+            <div class="admin-form-group mb-0">
                 <label for="year-filter" class="admin-form-label">År</label>
                 <select id="year-filter" name="year" class="admin-form-select" onchange="this.form.submit()">
                     <option value="">Alla år</option>
@@ -269,7 +269,7 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
 
             <!-- Discipline Filter -->
-            <div class="admin-form-group" style="margin-bottom: 0;">
+            <div class="admin-form-group mb-0">
                 <label for="discipline-filter" class="admin-form-label">Format</label>
                 <select id="discipline-filter" name="discipline" class="admin-form-select" onchange="this.form.submit()">
                     <option value="">Alla format</option>
@@ -284,8 +284,8 @@ include __DIR__ . '/components/unified-layout.php';
 
         <!-- Active Filters Info -->
         <?php if ($filterBrand || $filterYear || $filterDiscipline): ?>
-            <div style="margin-top: var(--space-md); padding-top: var(--space-md); border-top: 1px solid var(--color-border); display: flex; align-items: center; gap: var(--space-sm); flex-wrap: wrap;">
-                <span style="font-size: var(--text-sm); color: var(--color-text-secondary);">Visar:</span>
+            <div class="mt-md flex items-center gap-sm flex-wrap" style="padding-top: var(--space-md); border-top: 1px solid var(--color-border);">
+                <span class="text-sm text-secondary">Visar:</span>
                 <?php if ($filterBrand): ?>
                     <span class="admin-badge admin-badge-info"><?= htmlspecialchars($filterBrand) ?></span>
                 <?php endif; ?>
@@ -296,7 +296,7 @@ include __DIR__ . '/components/unified-layout.php';
                     <span class="admin-badge admin-badge-success"><?= htmlspecialchars($disciplineMapping[$filterDiscipline] ?? $filterDiscipline) ?></span>
                 <?php endif; ?>
                 <a href="/admin/events" class="btn-admin btn-admin-sm btn-admin-secondary">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 14px; height: 14px;"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon-xs"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
                     Visa alla
                 </a>
             </div>
@@ -309,7 +309,7 @@ include __DIR__ . '/components/unified-layout.php';
     <div class="admin-card-header">
         <h2><?= count($events) ?> events</h2>
     </div>
-    <div class="admin-card-body" style="padding: 0;">
+    <div class="admin-card-body p-0">
         <?php if (empty($events)): ?>
             <div class="admin-empty-state">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg>

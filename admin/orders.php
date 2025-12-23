@@ -159,7 +159,7 @@ include __DIR__ . '/components/unified-layout.php';
 <!-- Stats -->
 <div class="admin-stats-grid">
     <div class="admin-stat-card">
-        <div class="admin-stat-icon" style="background: var(--color-warning-light, rgba(234, 179, 8, 0.1)); color: var(--color-warning, #ca8a04);">
+        <div class="admin-stat-icon stat-icon-warning">
             <i data-lucide="clock"></i>
         </div>
         <div class="admin-stat-content">
@@ -168,7 +168,7 @@ include __DIR__ . '/components/unified-layout.php';
         </div>
     </div>
     <div class="admin-stat-card">
-        <div class="admin-stat-icon" style="background: var(--color-success-light); color: var(--color-success);">
+        <div class="admin-stat-icon stat-icon-success">
             <i data-lucide="check-circle"></i>
         </div>
         <div class="admin-stat-content">
@@ -177,7 +177,7 @@ include __DIR__ . '/components/unified-layout.php';
         </div>
     </div>
     <div class="admin-stat-card">
-        <div class="admin-stat-icon" style="background: var(--color-accent-light); color: var(--color-accent);">
+        <div class="admin-stat-icon stat-icon-accent">
             <i data-lucide="wallet"></i>
         </div>
         <div class="admin-stat-content">
@@ -191,7 +191,7 @@ include __DIR__ . '/components/unified-layout.php';
 <div class="admin-card mb-lg">
     <div class="admin-card-body">
         <form method="GET" class="flex flex-wrap gap-md items-end">
-            <div class="admin-form-group" style="margin-bottom: 0;">
+            <div class="admin-form-group mb-0">
                 <label class="admin-form-label">Status</label>
                 <select name="status" class="admin-form-select" onchange="this.form.submit()">
                     <option value="pending" <?= $filterStatus === 'pending' ? 'selected' : '' ?>>Väntar</option>
@@ -202,7 +202,7 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
 
             <?php if (!empty($events)): ?>
-            <div class="admin-form-group" style="margin-bottom: 0;">
+            <div class="admin-form-group mb-0">
                 <label class="admin-form-label">Event</label>
                 <select name="event_id" class="admin-form-select" onchange="this.form.submit()">
                     <option value="">Alla event</option>
@@ -215,7 +215,7 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
             <?php endif; ?>
 
-            <div class="admin-form-group" style="margin-bottom: 0; flex: 1; min-width: 200px;">
+            <div class="admin-form-group mb-0 flex-1 min-w-200">
                 <label class="admin-form-label">Sök</label>
                 <input type="text" name="search" class="admin-form-input"
                        value="<?= h($search) ?>"
@@ -235,7 +235,7 @@ include __DIR__ . '/components/unified-layout.php';
     <div class="admin-card-header">
         <h2><?= count($orders) ?> ordrar</h2>
     </div>
-    <div class="admin-card-body" style="padding: 0;">
+    <div class="admin-card-body p-0">
         <?php if (empty($orders)): ?>
         <div class="admin-empty-state">
             <i data-lucide="inbox"></i>
@@ -261,21 +261,21 @@ include __DIR__ . '/components/unified-layout.php';
                     <?php foreach ($orders as $order): ?>
                     <tr>
                         <td>
-                            <code style="font-weight: 500;"><?= h($order['order_number']) ?></code>
+                            <code class="font-medium"><?= h($order['order_number']) ?></code>
                         </td>
                         <td>
-                            <div style="font-weight: 500;">
+                            <div class="font-medium">
                                 <?= h($order['firstname'] . ' ' . $order['lastname']) ?>
                             </div>
-                            <div style="font-size: var(--text-xs); color: var(--color-text-secondary);"><?= h($order['customer_email']) ?></div>
+                            <div class="text-xs text-secondary"><?= h($order['customer_email']) ?></div>
                         </td>
                         <td>
                             <?php if ($order['event_name']): ?>
                             <div><?= h($order['event_name']) ?></div>
-                            <div style="font-size: var(--text-xs); color: var(--color-text-secondary);"><?= date('Y-m-d', strtotime($order['event_date'])) ?></div>
+                            <div class="text-xs text-secondary"><?= date('Y-m-d', strtotime($order['event_date'])) ?></div>
                             <?php endif; ?>
                         </td>
-                        <td style="font-weight: 500;">
+                        <td class="font-medium">
                             <?= number_format($order['total_amount'], 0) ?> kr
                         </td>
                         <td>
@@ -303,7 +303,7 @@ include __DIR__ . '/components/unified-layout.php';
                             ?>
                             <span class="admin-badge <?= $statusClass ?>"><?= $statusText ?></span>
                         </td>
-                        <td style="font-size: var(--text-sm); color: var(--color-text-secondary);">
+                        <td class="text-sm text-secondary">
                             <?= date('Y-m-d H:i', strtotime($order['created_at'])) ?>
                         </td>
                         <td>
@@ -313,7 +313,7 @@ include __DIR__ . '/components/unified-layout.php';
                                         onclick="openConfirmModal(<?= $order['id'] ?>, '<?= h($order['order_number']) ?>', '<?= h($order['swish_message']) ?>')">
                                     <i data-lucide="check"></i>
                                 </button>
-                                <form method="POST" style="display: inline;">
+                                <form method="POST" class="inline">
                                     <?= csrf_field() ?>
                                     <input type="hidden" name="action" value="cancel_order">
                                     <input type="hidden" name="order_id" value="<?= $order['id'] ?>">
@@ -324,7 +324,7 @@ include __DIR__ . '/components/unified-layout.php';
                                 </form>
                             </div>
                             <?php elseif ($order['payment_status'] === 'paid'): ?>
-                            <span style="font-size: var(--text-xs); color: var(--color-text-secondary);">
+                            <span class="text-xs text-secondary">
                                 Betald <?= $order['paid_at'] ? date('Y-m-d', strtotime($order['paid_at'])) : '' ?>
                             </span>
                             <?php endif; ?>
@@ -354,21 +354,21 @@ include __DIR__ . '/components/unified-layout.php';
             <input type="hidden" name="order_id" id="confirm-order-id">
 
             <div class="admin-modal-body">
-                <p style="margin-bottom: var(--space-md);">
+                <p class="mb-md">
                     Bekräfta att betalning mottagits för order
                     <strong id="confirm-order-number"></strong>
                 </p>
 
-                <div style="padding: var(--space-md); background: var(--color-bg-tertiary); border-radius: var(--radius-md); margin-bottom: var(--space-md);">
-                    <div style="font-size: var(--text-sm); color: var(--color-text-secondary);">Förväntat Swish-meddelande:</div>
-                    <code id="confirm-swish-ref" style="font-size: var(--text-lg);"></code>
+                <div class="p-md mb-md" style="background: var(--color-bg-tertiary); border-radius: var(--radius-md);">
+                    <div class="text-sm text-secondary">Förväntat Swish-meddelande:</div>
+                    <code class="text-lg" id="confirm-swish-ref"></code>
                 </div>
 
                 <div class="admin-form-group">
                     <label class="admin-form-label">Betalningsreferens (valfritt)</label>
                     <input type="text" name="payment_reference" class="admin-form-input"
                            placeholder="T.ex. Swish-transaktions-ID">
-                    <small style="color: var(--color-text-secondary);">Ange referens från Swish eller kontoutdrag</small>
+                    <small class="text-secondary">Ange referens från Swish eller kontoutdrag</small>
                 </div>
             </div>
 

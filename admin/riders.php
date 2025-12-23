@@ -160,8 +160,8 @@ include __DIR__ . '/components/unified-layout.php';
     <div class="alert alert-info">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="16" y2="12"/><line x1="12" x2="12.01" y1="8" y2="8"/></svg>
         <span>Visar deltagare från <strong><?= htmlspecialchars($selectedClub['name']) ?></strong></span>
-        <a href="/admin/riders" class="btn-admin btn-admin-sm btn-admin-secondary" style="margin-left: auto;">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+        <a href="/admin/riders" class="btn-admin btn-admin-sm btn-admin-secondary ml-auto">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-xs"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
             Rensa filter
         </a>
     </div>
@@ -170,12 +170,12 @@ include __DIR__ . '/components/unified-layout.php';
 <!-- Search and Filter -->
 <div class="admin-card">
     <div class="admin-card-body">
-        <form method="GET" id="searchForm" class="admin-form-row" style="align-items: flex-end;">
+        <form method="GET" id="searchForm" class="admin-form-row items-end">
             <?php if ($club_id): ?>
                 <input type="hidden" name="club_id" value="<?= $club_id ?>">
             <?php endif; ?>
 
-            <div class="admin-form-group" style="flex: 1; margin-bottom: 0;">
+            <div class="admin-form-group flex-1 mb-0">
                 <label for="searchInput" class="admin-form-label">Sök</label>
                 <input
                     type="text"
@@ -188,7 +188,7 @@ include __DIR__ . '/components/unified-layout.php';
                 >
             </div>
 
-            <div class="admin-form-group" style="margin-bottom: 0; min-width: 140px;">
+            <div class="admin-form-group mb-0 min-w-140">
                 <label class="admin-form-label">Nationalitet</label>
                 <select name="nationality" class="admin-form-select" onchange="this.form.submit()">
                     <option value="">Alla länder</option>
@@ -200,21 +200,21 @@ include __DIR__ . '/components/unified-layout.php';
                 </select>
             </div>
 
-            <div class="admin-form-group" style="margin-bottom: 0;">
+            <div class="admin-form-group mb-0">
                 <label class="admin-checkbox-label">
                     <input type="checkbox" name="with_results" value="1" <?= $onlyWithResults ? 'checked' : '' ?> onchange="this.form.submit()">
                     <span>Endast med resultat</span>
                 </label>
             </div>
 
-            <div class="admin-form-group" style="margin-bottom: 0;">
+            <div class="admin-form-group mb-0">
                 <label class="admin-checkbox-label">
                     <input type="checkbox" name="swe_only" value="1" <?= $onlySweId ? 'checked' : '' ?> onchange="this.form.submit()">
                     <span>Endast SWE-ID</span>
                 </label>
             </div>
 
-            <div class="admin-form-group" style="margin-bottom: 0;">
+            <div class="admin-form-group mb-0">
                 <label class="admin-checkbox-label">
                     <input type="checkbox" name="activated" value="1" <?= $onlyActivated ? 'checked' : '' ?> onchange="this.form.submit()">
                     <span>Aktiverade konton</span>
@@ -223,7 +223,7 @@ include __DIR__ . '/components/unified-layout.php';
 
             <?php if ($search || $nationality || $onlyWithResults || $onlySweId || $onlyActivated): ?>
                 <a href="/admin/riders<?= $club_id ? '?club_id=' . $club_id : '' ?>" class="btn-admin btn-admin-sm btn-admin-secondary">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-xs"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
                     Rensa
                 </a>
             <?php endif; ?>
@@ -236,7 +236,7 @@ include __DIR__ . '/components/unified-layout.php';
     <div class="admin-card-header">
         <h2><?= count($riders) ?> deltagare</h2>
     </div>
-    <div class="admin-card-body" style="padding: 0;">
+    <div class="admin-card-body p-0">
         <?php if (empty($riders)): ?>
             <div class="admin-empty-state">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
@@ -252,7 +252,7 @@ include __DIR__ . '/components/unified-layout.php';
                                 <a href="<?= buildSortUrl('name', $sortBy, $sortOrder, $search, $club_id, $nationality, $onlyWithResults, $onlySweId, $onlyActivated) ?>" class="admin-sortable">
                                     Namn
                                     <?php if ($sortBy === 'name'): ?>
-                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;">
+                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-xs">
                                             <?php if ($sortOrder === 'asc'): ?>
                                                 <path d="m18 15-6-6-6 6"/>
                                             <?php else: ?>
@@ -266,7 +266,7 @@ include __DIR__ . '/components/unified-layout.php';
                                 <a href="<?= buildSortUrl('nationality', $sortBy, $sortOrder, $search, $club_id, $nationality, $onlyWithResults, $onlySweId, $onlyActivated) ?>" class="admin-sortable">
                                     Land
                                     <?php if ($sortBy === 'nationality'): ?>
-                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;">
+                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-xs">
                                             <?php if ($sortOrder === 'asc'): ?>
                                                 <path d="m18 15-6-6-6 6"/>
                                             <?php else: ?>
@@ -280,7 +280,7 @@ include __DIR__ . '/components/unified-layout.php';
                                 <a href="<?= buildSortUrl('year', $sortBy, $sortOrder, $search, $club_id, $nationality, $onlyWithResults, $onlySweId, $onlyActivated) ?>" class="admin-sortable">
                                     År
                                     <?php if ($sortBy === 'year'): ?>
-                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;">
+                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-xs">
                                             <?php if ($sortOrder === 'asc'): ?>
                                                 <path d="m18 15-6-6-6 6"/>
                                             <?php else: ?>
@@ -294,7 +294,7 @@ include __DIR__ . '/components/unified-layout.php';
                                 <a href="<?= buildSortUrl('club', $sortBy, $sortOrder, $search, $club_id, $nationality, $onlyWithResults, $onlySweId, $onlyActivated) ?>" class="admin-sortable">
                                     Klubb
                                     <?php if ($sortBy === 'club'): ?>
-                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;">
+                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-xs">
                                             <?php if ($sortOrder === 'asc'): ?>
                                                 <path d="m18 15-6-6-6 6"/>
                                             <?php else: ?>
@@ -308,7 +308,7 @@ include __DIR__ . '/components/unified-layout.php';
                                 <a href="<?= buildSortUrl('license', $sortBy, $sortOrder, $search, $club_id, $nationality, $onlyWithResults, $onlySweId, $onlyActivated) ?>" class="admin-sortable">
                                     Licensnummer
                                     <?php if ($sortBy === 'license'): ?>
-                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;">
+                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-xs">
                                             <?php if ($sortOrder === 'asc'): ?>
                                                 <path d="m18 15-6-6-6 6"/>
                                             <?php else: ?>
@@ -322,7 +322,7 @@ include __DIR__ . '/components/unified-layout.php';
                                 <a href="<?= buildSortUrl('results', $sortBy, $sortOrder, $search, $club_id, $nationality, $onlyWithResults, $onlySweId, $onlyActivated) ?>" class="admin-sortable">
                                     Resultat
                                     <?php if ($sortBy === 'results'): ?>
-                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;">
+                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-xs">
                                             <?php if ($sortOrder === 'asc'): ?>
                                                 <path d="m18 15-6-6-6 6"/>
                                             <?php else: ?>
@@ -369,7 +369,7 @@ include __DIR__ . '/components/unified-layout.php';
                             ?>
                             <tr>
                                 <td>
-                                    <a href="/rider/<?= $rider['id'] ?>" style="color: var(--color-accent); text-decoration: none; font-weight: 500;">
+                                    <a href="/rider/<?= $rider['id'] ?>" class="color-accent no-underline font-medium">
                                         <?= htmlspecialchars($rider['firstname'] . ' ' . $rider['lastname']) ?>
                                     </a>
                                 </td>
@@ -385,7 +385,7 @@ include __DIR__ . '/components/unified-layout.php';
                                 <td>
                                     <?php if ($rider['birth_year']): ?>
                                         <strong><?= $rider['birth_year'] ?></strong>
-                                        <span style="color: var(--color-text-secondary); font-size: var(--text-xs);"> (<?= calculateAge($rider['birth_year']) ?> år)</span>
+                                        <span class="text-secondary text-xs"> (<?= calculateAge($rider['birth_year']) ?> år)</span>
                                     <?php else: ?>
                                         -
                                     <?php endif; ?>
@@ -395,7 +395,7 @@ include __DIR__ . '/components/unified-layout.php';
                                         <?php if ($club_id): ?>
                                             <?= htmlspecialchars($rider['club_name']) ?>
                                         <?php else: ?>
-                                            <a href="/admin/riders?club_id=<?= $rider['club_id'] ?>" style="color: var(--color-accent); text-decoration: none;">
+                                            <a href="/admin/riders?club_id=<?= $rider['club_id'] ?>" class="color-accent no-underline">
                                                 <?= htmlspecialchars($rider['club_name']) ?>
                                             </a>
                                         <?php endif; ?>
@@ -416,7 +416,7 @@ include __DIR__ . '/components/unified-layout.php';
                                     <?php if ($rider['result_count'] > 0): ?>
                                         <span class="admin-badge admin-badge-info"><?= $rider['result_count'] ?></span>
                                     <?php else: ?>
-                                        <span style="color: var(--color-text-secondary);">0</span>
+                                        <span class="text-secondary">0</span>
                                     <?php endif; ?>
                                 </td>
                                 <td>

@@ -141,7 +141,7 @@ include __DIR__ . '/components/unified-layout.php';
 
  <?php if ($tab === 'import'): ?>
   <!-- Import Options Grid -->
-  <div class="admin-import-grid" style="margin-bottom: var(--space-xl);">
+  <div class="admin-import-grid mb-xl">
    <!-- Deltagare -->
    <div class="admin-import-section" style="border-left: 3px solid var(--color-success);">
     <div class="admin-import-section-header">
@@ -259,11 +259,11 @@ include __DIR__ . '/components/unified-layout.php';
   </div>
 
   <!-- Import Tools -->
-  <h3 style="margin-bottom: var(--space-md); display: flex; align-items: center; gap: var(--space-sm); font-size: var(--text-base);">
+  <h3 class="mb-md flex items-center gap-sm text-base">
    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 18px; height: 18px;"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
    Verktyg
   </h3>
-  <div class="admin-import-grid" style="margin-bottom: var(--space-xl);">
+  <div class="admin-import-grid mb-xl">
    <!-- Berika Ryttardata -->
    <div class="admin-import-section" style="border-left: 3px solid var(--color-success);">
     <div class="admin-import-section-header">
@@ -325,8 +325,8 @@ include __DIR__ . '/components/unified-layout.php';
   <!-- Format Guide -->
   <div class="admin-card">
    <div class="admin-card-header">
-    <h2 style="display: flex; align-items: center; gap: var(--space-sm);">
-     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 20px; height: 20px;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+    <h2 class="flex items-center gap-sm">
+     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-md"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
      Format-guide
     </h2>
    </div>
@@ -424,7 +424,7 @@ include __DIR__ . '/components/unified-layout.php';
   </div>
 
   <!-- Stats -->
-  <div class="grid grid-stats grid-gap-md" style="margin-bottom: var(--space-lg);">
+  <div class="grid grid-stats grid-gap-md mb-lg">
   <div class="stat-card">
    <i data-lucide="database" class="icon-lg text-primary mb-md"></i>
    <div class="stat-number"><?= count($imports) ?></div>
