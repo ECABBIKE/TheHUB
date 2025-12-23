@@ -508,23 +508,23 @@ include __DIR__ . '/components/unified-layout.php';
     <p><strong><?= $message ?></strong></p>
 
     <?php if ($stats): ?>
-    <div style="margin-top: var(--space-md);">
-        <p><i data-lucide="bar-chart" style="width: 14px; height: 14px;"></i> <strong>Statistik:</strong></p>
-        <ul style="margin-left: var(--space-lg); margin-top: var(--space-sm);">
+    <div class="mt-md">
+        <p><i data-lucide="bar-chart" class="icon-xs"></i> <strong>Statistik:</strong></p>
+        <ul class="ml-lg mt-sm">
             <li>Totalt rader: <?= $stats['total'] ?></li>
-            <li style="color: var(--color-accent);">Uppdaterade: <?= $stats['updated'] ?></li>
-            <li style="color: var(--color-success);">Nya riders: <?= $stats['created'] ?></li>
-            <li style="color: var(--color-text-secondary);">Överhoppade: <?= $stats['skipped'] ?></li>
-            <li style="color: var(--color-error);">Misslyckade: <?= $stats['failed'] ?></li>
+            <li class="text-accent">Uppdaterade: <?= $stats['updated'] ?></li>
+            <li class="text-success">Nya riders: <?= $stats['created'] ?></li>
+            <li class="text-secondary">Överhoppade: <?= $stats['skipped'] ?></li>
+            <li class="text-error">Misslyckade: <?= $stats['failed'] ?></li>
             <li style="color: var(--color-gs-blue);">Klubbtillhörigheter satta: <?= $stats['clubs_set'] ?></li>
         </ul>
     </div>
     <?php endif; ?>
 
     <?php if (!empty($mapped_columns)): ?>
-    <details style="margin-top: var(--space-md);">
-        <summary style="cursor: pointer;"><i data-lucide="table" style="width: 14px; height: 14px;"></i> Matchade kolumner (<?= count($mapped_columns) ?>)</summary>
-        <div style="margin-left: var(--space-lg); margin-top: var(--space-sm); font-size: var(--text-sm); display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--space-xs);">
+    <details class="mt-md">
+        <summary class="cursor-pointer"><i data-lucide="table" class="icon-xs"></i> Matchade kolumner (<?= count($mapped_columns) ?>)</summary>
+        <div class="ml-lg mt-sm text-sm grid-2-col" style="gap: var(--space-xs);">
             <?php foreach ($mapped_columns as $field => $colName): ?>
             <div><strong><?= h($field) ?></strong>: <?= h($colName) ?></div>
             <?php endforeach; ?>
@@ -533,9 +533,9 @@ include __DIR__ . '/components/unified-layout.php';
     <?php endif; ?>
 
     <?php if (!empty($updated_riders)): ?>
-    <details style="margin-top: var(--space-md);">
-        <summary style="cursor: pointer;"><?= count($updated_riders) ?> uppdaterade riders</summary>
-        <ul style="margin-left: var(--space-lg); margin-top: var(--space-sm); font-size: var(--text-sm);">
+    <details class="mt-md">
+        <summary class="cursor-pointer"><?= count($updated_riders) ?> uppdaterade riders</summary>
+        <ul class="ml-lg mt-sm text-sm">
             <?php foreach (array_slice($updated_riders, 0, 30) as $rider): ?>
             <li><?= h($rider) ?></li>
             <?php endforeach; ?>
@@ -547,9 +547,9 @@ include __DIR__ . '/components/unified-layout.php';
     <?php endif; ?>
 
     <?php if (!empty($created_riders)): ?>
-    <details style="margin-top: var(--space-md);">
-        <summary style="cursor: pointer; color: var(--color-success);"><?= count($created_riders) ?> nya riders</summary>
-        <ul style="margin-left: var(--space-lg); margin-top: var(--space-sm); font-size: var(--text-sm);">
+    <details class="mt-md">
+        <summary class="cursor-pointer text-success"><?= count($created_riders) ?> nya riders</summary>
+        <ul class="ml-lg mt-sm text-sm">
             <?php foreach (array_slice($created_riders, 0, 30) as $rider): ?>
             <li><?= h($rider) ?></li>
             <?php endforeach; ?>
@@ -561,9 +561,9 @@ include __DIR__ . '/components/unified-layout.php';
     <?php endif; ?>
 
     <?php if (!empty($skipped_riders)): ?>
-    <details style="margin-top: var(--space-md);">
-        <summary style="cursor: pointer; color: var(--color-text-secondary);"><?= count($skipped_riders) ?> överhoppade</summary>
-        <ul style="margin-left: var(--space-lg); margin-top: var(--space-sm); font-size: var(--text-sm);">
+    <details class="mt-md">
+        <summary class="cursor-pointer text-secondary"><?= count($skipped_riders) ?> överhoppade</summary>
+        <ul class="ml-lg mt-sm text-sm">
             <?php foreach (array_slice($skipped_riders, 0, 30) as $rider): ?>
             <li><?= h($rider) ?></li>
             <?php endforeach; ?>
@@ -575,9 +575,9 @@ include __DIR__ . '/components/unified-layout.php';
     <?php endif; ?>
 
     <?php if (!empty($errors)): ?>
-    <details style="margin-top: var(--space-md);">
-        <summary style="cursor: pointer; color: var(--color-error);"><?= count($errors) ?> fel</summary>
-        <ul style="margin-left: var(--space-lg); margin-top: var(--space-sm); font-size: var(--text-sm);">
+    <details class="mt-md">
+        <summary class="cursor-pointer text-error"><?= count($errors) ?> fel</summary>
+        <ul class="ml-lg mt-sm text-sm">
             <?php foreach (array_slice($errors, 0, 20) as $error): ?>
             <li><?= h($error) ?></li>
             <?php endforeach; ?>
@@ -606,7 +606,7 @@ include __DIR__ . '/components/unified-layout.php';
 
         <h4 style="margin-bottom: var(--space-sm); color: var(--color-text);">Förväntade kolumner (med header):</h4>
         <div style="overflow-x: auto; margin-bottom: var(--space-md);">
-            <table class="table" style="font-size: var(--text-sm);">
+            <table class="table text-sm">
                 <thead>
                     <tr>
                         <th>Kolumnnamn</th>
@@ -631,15 +631,15 @@ include __DIR__ . '/components/unified-layout.php';
             </table>
         </div>
 
-        <div style="padding: var(--space-md); background: var(--color-bg-tertiary); border-radius: var(--radius-md);">
-            <p style="color: var(--color-text-secondary); font-size: var(--text-sm); margin-bottom: var(--space-sm);"><strong>Exempel på CSV (tab-separerad):</strong></p>
-            <pre style="font-size: var(--text-xs); overflow-x: auto; white-space: pre-wrap;">Startnr.	Förnamn	Efternamn	Kön	Klubb/Företag	Klass	Födelsedag	...	Deltagarens email	Födelseår	ID Medlemsnummer
+        <div class="info-box">
+            <p class="text-secondary text-sm" style="margin-bottom: var(--space-sm);"><strong>Exempel på CSV (tab-separerad):</strong></p>
+            <pre class="text-xs" style="overflow-x: auto; white-space: pre-wrap;">Startnr.	Förnamn	Efternamn	Kön	Klubb/Företag	Klass	Födelsedag	...	Deltagarens email	Födelseår	ID Medlemsnummer
 	Zakarias Blom	JOHANSEN	M	Ibis enduro racing team	Tävling Herrar	25-11-1992	...	zakarias@email.com	1992	10006911232
 1	Thorwout	WARNTJES	M	Mera lera MTB	Tävling Herrar	21-06-2001	...	thorwout@email.com	2001	10022409711</pre>
         </div>
 
-        <div class="alert alert-success" style="margin-top: var(--space-md);">
-            <p style="font-size: var(--text-sm);">
+        <div class="alert alert-success mt-md">
+            <p class="text-sm">
                 <strong>Vad som uppdateras:</strong><br>
                 - <strong>UCI-ID</strong> → uppdateras om rider har SWE-ID eller saknar licensnummer<br>
                 - <strong>E-post</strong> → uppdateras om rider saknar e-post<br>
@@ -665,14 +665,14 @@ include __DIR__ . '/components/unified-layout.php';
         <form method="POST" enctype="multipart/form-data">
             <?= csrf_field() ?>
 
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-md);">
+            <div class="grid-2-col">
                 <div class="admin-form-group">
                     <label class="admin-form-label">
                         <i data-lucide="file-text"></i>
                         CSV-fil med anmälningar
                     </label>
                     <input type="file" name="rider_file" accept=".csv" class="admin-form-input" required>
-                    <small style="color: var(--color-text-secondary);">
+                    <small class="text-secondary">
                         Endast CSV-filer. Max <?= MAX_UPLOAD_SIZE / 1024 / 1024 ?>MB.
                     </small>
                 </div>
@@ -689,23 +689,23 @@ include __DIR__ . '/components/unified-layout.php';
                         </option>
                         <?php endforeach; ?>
                     </select>
-                    <small style="color: var(--color-text-secondary);">
+                    <small class="text-secondary">
                         Klubbtillhörighet sätts för detta år. Kan inte ändras om rider har resultat.
                     </small>
                 </div>
             </div>
 
-            <div class="admin-form-group" style="margin-top: var(--space-md);">
-                <label style="display: flex; align-items: center; gap: var(--space-sm); cursor: pointer;">
+            <div class="admin-form-group mt-md">
+                <label class="flex items-center gap-sm cursor-pointer">
                     <input type="checkbox" name="create_missing" checked>
                     <span>Skapa nya riders om de inte hittas</span>
                 </label>
-                <small style="color: var(--color-text-secondary); margin-left: 24px;">
+                <small class="text-secondary" style="margin-left: 24px;">
                     Riders med UCI-ID och fullständig data skapas automatiskt. Avmarkera för att bara uppdatera befintliga.
                 </small>
             </div>
 
-            <div class="flex gap-md" style="margin-top: var(--space-lg);">
+            <div class="flex gap-md mt-lg">
                 <button type="submit" class="btn-admin btn-admin-primary">
                     <i data-lucide="upload"></i>
                     Importera och uppdatera
@@ -727,7 +727,7 @@ include __DIR__ . '/components/unified-layout.php';
                 <i data-lucide="history"></i>
                 Importhistorik
             </h4>
-            <p style="color: var(--color-text-secondary); font-size: var(--text-sm); margin-bottom: var(--space-md);">
+            <p class="text-secondary text-sm" style="margin-bottom: var(--space-md);">
                 Se tidigare importer och ångra vid behov.
             </p>
             <a href="/admin/import-history.php" class="btn-admin btn-admin-secondary btn-admin-sm">
@@ -743,7 +743,7 @@ include __DIR__ . '/components/unified-layout.php';
                 <i data-lucide="users"></i>
                 Alla riders
             </h4>
-            <p style="color: var(--color-text-secondary); font-size: var(--text-sm); margin-bottom: var(--space-md);">
+            <p class="text-secondary text-sm" style="margin-bottom: var(--space-md);">
                 Granska och redigera riders manuellt.
             </p>
             <a href="/admin/riders.php" class="btn-admin btn-admin-secondary btn-admin-sm">

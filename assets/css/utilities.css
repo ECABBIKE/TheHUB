@@ -87,6 +87,24 @@
 /* Checkbox chip (for sponsor selection etc) */
 .checkbox-chip{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;background:var(--color-bg-secondary);border-radius:var(--radius-sm);cursor:pointer;font-size:var(--text-sm)}
 
+/* Additional icon size */
+.icon-xs{width:14px;height:14px}
+
+/* Padding utilities */
+.p-0{padding:0}
+
+/* Min-width utilities */
+.min-w-120{min-width:120px}
+.min-w-140{min-width:140px}
+
+/* Grid span utilities */
+.col-span-2{grid-column:span 2}
+
+/* Stat card icon backgrounds */
+.stat-icon-error{background:rgba(239,68,68,0.1);color:var(--color-error)}
+.stat-icon-accent{background:rgba(245,158,11,0.1);color:var(--color-accent)}
+.stat-icon-info{background:rgba(59,130,246,0.1);color:#3b82f6}
+
 /* Grid auto-fill utilities */
 .grid-auto-280{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:var(--space-lg)}
 .grid-auto-250{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:var(--space-lg)}

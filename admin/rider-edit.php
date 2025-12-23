@@ -394,11 +394,11 @@ include __DIR__ . '/components/unified-layout.php';
   <?php if ($profileImage): ?>
   <img src="<?= h($profileImage) ?>" alt="Profilbild" style="width: 100%; height: 100%; object-fit: cover;">
   <?php else: ?>
-  <i data-lucide="user" style="width: 48px; height: 48px; opacity: 0.3;"></i>
+  <i data-lucide="user" class="icon-lg" style="opacity: 0.3;"></i>
   <?php endif; ?>
   </div>
   <div class="flex flex-col gap-sm">
-  <form method="POST" enctype="multipart/form-data" style="display: flex; gap: 0.5rem; align-items: center;">
+  <form method="POST" enctype="multipart/form-data" class="flex items-center gap-sm">
   <?= csrf_field() ?>
   <input type="hidden" name="action" value="upload_image">
   <input type="file" name="profile_image" accept="image/jpeg,image/png,image/webp" class="input" style="max-width: 200px;">
@@ -428,9 +428,9 @@ include __DIR__ . '/components/unified-layout.php';
  <?= csrf_field() ?>
 
  <div class="card-body">
- <div class="grid gap-lg" style="grid-template-columns: repeat(2, 1fr);">
+ <div class="grid gap-lg grid-2-col">
   <!-- Personal Information -->
-  <div style="grid-column: span 2;">
+  <div class="col-span-2">
   <h2 class="text-primary mb-md">
   <i data-lucide="user"></i>
   Personuppgifter
@@ -500,7 +500,7 @@ include __DIR__ . '/components/unified-layout.php';
   </div>
 
   <!-- License Information -->
-  <div style="grid-column: span 2; margin-top: var(--space-lg);">
+  <div class="col-span-2 mt-lg">
   <h2 class="text-primary mb-md">
   <i data-lucide="award"></i>
   Licensinformation
@@ -516,14 +516,14 @@ include __DIR__ . '/components/unified-layout.php';
   <select id="club_id" name="club_id" class="input">
   <option value="">Ingen klubb</option>
   <?php foreach ($clubs as $club): ?>
-  <option value="<?= $club['id'] ?>" <?= $rider['club_id'] == $club['id'] ? 'selected' : '' ?><?= !$club['active'] ? ' style="color: #999;"' : '' ?>>
+  <option value="<?= $club['id'] ?>" <?= $rider['club_id'] == $club['id'] ? 'selected' : '' ?><?= !$club['active'] ? ' style="color: var(--color-text-secondary);"' : '' ?>>
    <?= h($club['name']) ?><?= !$club['active'] ? ' (inaktiv)' : '' ?>
   </option>
   <?php endforeach; ?>
   </select>
   <?php if ($currentClub && !$currentClub['active']): ?>
   <small class="text-warning" style="display: block; margin-top: 0.25rem;">
-   <i data-lucide="alert-triangle" style="width: 12px; height: 12px;"></i>
+   <i data-lucide="alert-triangle" class="icon-xs"></i>
    Nuvarande klubb "<?= h($currentClub['name']) ?>" är inaktiv
   </small>
   <?php endif; ?>
@@ -591,7 +591,7 @@ include __DIR__ . '/components/unified-layout.php';
   </div>
 
   <!-- Read-only Fields -->
-  <div style="grid-column: span 2; margin-top: var(--space-lg);">
+  <div class="col-span-2 mt-lg">
   <h2 class="text-primary mb-md">
   <i data-lucide="database"></i>
   Systemdata (endast läsning)
@@ -629,7 +629,7 @@ include __DIR__ . '/components/unified-layout.php';
   </div>
 
   <!-- Disciplines Checkboxes (read-only from license) -->
-  <div style="grid-column: span 2;">
+  <div class="col-span-2">
   <label class="label">
   <i data-lucide="list"></i>
   Licensierade discipliner
@@ -661,9 +661,9 @@ include __DIR__ . '/components/unified-layout.php';
   <div style="display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 0.5rem;">
   <?php foreach ($allDisciplines as $code => $name): ?>
   <?php $isChecked = in_array(strtoupper($code), $riderDisciplines); ?>
-  <label style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.75rem; background: <?= $isChecked ? 'rgba(97, 206, 112, 0.15)' : 'var(--color-bg-sunken)' ?>; border: 1px solid <?= $isChecked ? 'var(--color-accent)' : 'var(--color-border)' ?>; border-radius: var(--radius-md); cursor: not-allowed; opacity: <?= $isChecked ? '1' : '0.6' ?>;">
+  <label class="flex items-center gap-sm" style="padding: 0.5rem 0.75rem; background: <?= $isChecked ? 'rgba(97, 206, 112, 0.15)' : 'var(--color-bg-sunken)' ?>; border: 1px solid <?= $isChecked ? 'var(--color-accent)' : 'var(--color-border)' ?>; border-radius: var(--radius-md); cursor: not-allowed; opacity: <?= $isChecked ? '1' : '0.6' ?>;">
   <input type="checkbox" <?= $isChecked ? 'checked' : '' ?> disabled style="accent-color: var(--color-accent);">
-  <span style="font-size: var(--text-sm); color: <?= $isChecked ? 'var(--color-accent)' : 'var(--color-text-secondary)' ?>;"><?= h($name) ?></span>
+  <span class="text-sm" style="color: <?= $isChecked ? 'var(--color-accent)' : 'var(--color-text-secondary)' ?>;"><?= h($name) ?></span>
   </label>
   <?php endforeach; ?>
   </div>
@@ -675,7 +675,7 @@ include __DIR__ . '/components/unified-layout.php';
   </div>
 
   <!-- Contact Information -->
-  <div style="grid-column: span 2; margin-top: var(--space-lg);">
+  <div class="col-span-2 mt-lg">
   <h2 class="text-primary mb-md">
   <i data-lucide="mail"></i>
   Kontaktuppgifter
@@ -715,7 +715,7 @@ include __DIR__ . '/components/unified-layout.php';
   </div>
 
   <!-- Social Media Links -->
-  <div style="grid-column: span 2; margin-top: var(--space-lg);">
+  <div class="col-span-2 mt-lg">
   <h2 class="text-primary mb-md">
   <i data-lucide="share-2"></i>
   Sociala medier
@@ -757,7 +757,7 @@ include __DIR__ . '/components/unified-layout.php';
   <!-- Strava -->
   <div>
   <label for="social_strava" class="label">
-  <svg viewBox="0 0 24 24" style="width: 16px; height: 16px; fill: currentColor;"><path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169"/></svg>
+  <svg viewBox="0 0 24 24" class="icon-sm" style="fill: currentColor;"><path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169"/></svg>
   Strava
   </label>
   <input
@@ -789,7 +789,7 @@ include __DIR__ . '/components/unified-layout.php';
   <!-- TikTok -->
   <div>
   <label for="social_tiktok" class="label">
-  <svg viewBox="0 0 24 24" style="width: 16px; height: 16px; fill: currentColor;"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z"/></svg>
+  <svg viewBox="0 0 24 24" class="icon-sm" style="fill: currentColor;"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z"/></svg>
   TikTok
   </label>
   <input
@@ -803,7 +803,7 @@ include __DIR__ . '/components/unified-layout.php';
   </div>
 
   <!-- Notes -->
-  <div style="grid-column: span 2;">
+  <div class="col-span-2">
   <label for="notes" class="label">
   <i data-lucide="file-text"></i>
   Anteckningar
@@ -819,7 +819,7 @@ include __DIR__ . '/components/unified-layout.php';
  </div>
 
  <div class="card-footer">
- <div class="flex gap-md" style="justify-content: flex-end;">
+ <div class="flex gap-md justify-end">
   <a href="/admin/riders.php" class="btn btn--secondary">
   <i data-lucide="x"></i>
   Avbryt
@@ -905,19 +905,19 @@ include __DIR__ . '/components/unified-layout.php';
    <td>
    <?php if ($isLocked): ?>
     <span class="badge badge-success">
-    <i data-lucide="lock" style="width: 12px; height: 12px;"></i>
+    <i data-lucide="lock" class="icon-xs"></i>
     Låst
     </span>
    <?php else: ?>
     <span class="badge badge-warning">
-    <i data-lucide="unlock" style="width: 12px; height: 12px;"></i>
+    <i data-lucide="unlock" class="icon-xs"></i>
     Kan ändras
     </span>
    <?php endif; ?>
    </td>
    <td>
    <?php if (!$isLocked): ?>
-    <form method="POST" style="display: flex; gap: 0.5rem; align-items: center;">
+    <form method="POST" class="flex items-center gap-sm">
     <?= csrf_field() ?>
     <input type="hidden" name="action" value="update_club_year">
     <input type="hidden" name="year" value="<?= $year ?>">
@@ -956,7 +956,7 @@ include __DIR__ . '/components/unified-layout.php';
    }
   }
   ?>
-  <form method="POST" style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+  <form method="POST" class="flex items-center gap-sm" style="flex-wrap: wrap;">
   <?= csrf_field() ?>
   <input type="hidden" name="action" value="update_club_year">
   <select name="year" class="input" style="width: 100px;">
@@ -997,8 +997,8 @@ include __DIR__ . '/components/unified-layout.php';
   <?= csrf_field() ?>
   <input type="hidden" name="action" value="update_account">
 
-  <div class="grid gap-lg" style="grid-template-columns: repeat(2, 1fr);">
-  <div style="grid-column: span 2;">
+  <div class="grid gap-lg grid-2-col">
+  <div class="col-span-2">
   <div class="alert alert--info">
    <i data-lucide="user-check"></i>
    <span>Denna deltagare har ett användarkonto: <strong><?= h($riderUser['username']) ?></strong></span>
@@ -1049,7 +1049,7 @@ include __DIR__ . '/components/unified-layout.php';
   <input type="text" class="input" value="<?= $riderUser['last_login'] ? date('Y-m-d H:i', strtotime($riderUser['last_login'])) : 'Aldrig' ?>" disabled>
   </div>
 
-  <div style="grid-column: span 2;">
+  <div class="col-span-2">
   <label class="label">Behörigheter</label>
   <div class="flex gap-lg flex-wrap">
    <label class="checkbox flex items-center gap-sm">
@@ -1095,7 +1095,7 @@ include __DIR__ . '/components/unified-layout.php';
   <span>Denna deltagare har inget användarkonto. Skapa ett för att låta dem logga in.</span>
   </div>
 
-  <div class="grid gap-lg" style="grid-template-columns: repeat(2, 1fr);">
+  <div class="grid gap-lg grid-2-col">
   <div>
   <label for="new_username" class="label">
    <i data-lucide="at-sign"></i>
