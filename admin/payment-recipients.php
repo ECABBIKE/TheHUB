@@ -37,7 +37,7 @@ if (!$tableExists) {
         <div class="admin-card-body">
             <p>Kör följande migration för att skapa tabellen:</p>
             <code>database/migrations/054_payment_recipients_central.sql</code>
-            <p style="margin-top: var(--space-md);">
+            <p class="mt-md">
                 <a href="/admin/migrations" class="btn-admin btn-admin-primary">Gå till migrationer</a>
             </p>
         </div>
@@ -155,13 +155,13 @@ include __DIR__ . '/components/unified-layout.php';
 <!-- Info box -->
 <div class="admin-card mb-lg">
     <div class="admin-card-body">
-        <div style="display: flex; align-items: flex-start; gap: var(--space-md);">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 24px; height: 24px; flex-shrink: 0; color: var(--color-accent);">
+        <div class="flex items-start gap-md">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-lg flex-shrink-0" style="color: var(--color-accent);">
                 <rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/>
             </svg>
             <div>
                 <h3 style="margin: 0 0 var(--space-xs) 0;">Swish-mottagare</h3>
-                <p style="margin: 0; color: var(--color-text-secondary);">
+                <p class="text-secondary" style="margin: 0;">
                     Skapa betalningsmottagare här och koppla dem till serier eller enskilda event.
                     Ett event utan egen mottagare använder seriens mottagare automatiskt.
                 </p>
@@ -173,7 +173,7 @@ include __DIR__ . '/components/unified-layout.php';
 <!-- Add new recipient button -->
 <div class="mb-lg">
     <button type="button" class="btn-admin btn-admin-primary" onclick="showModal('create')">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px;">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-sm">
             <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
         </svg>
         Lägg till mottagare
@@ -184,7 +184,7 @@ include __DIR__ . '/components/unified-layout.php';
 <div class="admin-card">
     <div class="admin-card-header">
         <h2>
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 20px; height: 20px;">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-md">
                 <rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/>
             </svg>
             Betalningsmottagare (<?= count($recipients) ?>)
@@ -192,8 +192,8 @@ include __DIR__ . '/components/unified-layout.php';
     </div>
     <div class="admin-card-body gs-p-0">
         <?php if (empty($recipients)): ?>
-        <div style="padding: var(--space-xl); text-align: center; color: var(--color-text-secondary);">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 48px; height: 48px; margin-bottom: var(--space-md); opacity: 0.3;">
+        <div class="text-center text-secondary" style="padding: var(--space-xl);">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="mb-md" style="width: 48px; height: 48px; opacity: 0.3;">
                 <rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/>
             </svg>
             <p>Inga betalningsmottagare ännu.</p>
@@ -218,7 +218,7 @@ include __DIR__ . '/components/unified-layout.php';
                         <td>
                             <strong><?= htmlspecialchars($r['name']) ?></strong>
                             <?php if ($r['description']): ?>
-                            <div style="font-size: 0.75rem; color: var(--color-text-secondary);">
+                            <div class="text-xs text-secondary">
                                 <?= htmlspecialchars($r['description']) ?>
                             </div>
                             <?php endif; ?>
@@ -234,7 +234,7 @@ include __DIR__ . '/components/unified-layout.php';
                             $usage = [];
                             if ($r['series_count'] > 0) $usage[] = $r['series_count'] . ' serier';
                             if ($r['events_count'] > 0) $usage[] = $r['events_count'] . ' event';
-                            echo $usage ? implode(', ', $usage) : '<span style="color: var(--color-text-secondary);">-</span>';
+                            echo $usage ? implode(', ', $usage) : '<span class="text-secondary">-</span>';
                             ?>
                         </td>
                         <td>
@@ -244,21 +244,21 @@ include __DIR__ . '/components/unified-layout.php';
                             <span class="badge badge-secondary">Inaktiv</span>
                             <?php endif; ?>
                         </td>
-                        <td style="text-align: right;">
+                        <td class="text-right">
                             <button type="button" class="btn-admin btn-admin-secondary btn-admin-sm"
                                     onclick='showModal("edit", <?= json_encode($r) ?>)'>
-                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-xs">
                                     <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/>
                                 </svg>
                             </button>
                             <?php if ($r['series_count'] == 0 && $r['events_count'] == 0): ?>
-                            <form method="POST" style="display: inline;">
+                            <form method="POST" class="inline">
                                 <?= csrf_field() ?>
                                 <input type="hidden" name="action" value="delete">
                                 <input type="hidden" name="id" value="<?= $r['id'] ?>">
                                 <button type="submit" class="btn-admin btn-admin-danger btn-admin-sm"
                                         onclick="return confirm('Ta bort <?= htmlspecialchars($r['name']) ?>?')">
-                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;">
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-xs">
                                         <path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
                                     </svg>
                                 </button>
@@ -289,10 +289,10 @@ include __DIR__ . '/components/unified-layout.php';
 
             <div class="modal-body">
                 <div class="admin-form-group">
-                    <label class="admin-form-label">Namn <span style="color: var(--color-error);">*</span></label>
+                    <label class="admin-form-label">Namn <span class="text-error">*</span></label>
                     <input type="text" name="name" id="formName" class="admin-form-input" required
                            placeholder="T.ex. GravitySeries, Järvsö IF">
-                    <small style="color: var(--color-text-secondary);">Internt namn för att identifiera mottagaren</small>
+                    <small class="text-secondary">Internt namn för att identifiera mottagaren</small>
                 </div>
 
                 <div class="admin-form-group">
@@ -303,26 +303,26 @@ include __DIR__ . '/components/unified-layout.php';
 
                 <div class="admin-form-row">
                     <div class="admin-form-group">
-                        <label class="admin-form-label">Swish-nummer <span style="color: var(--color-error);">*</span></label>
+                        <label class="admin-form-label">Swish-nummer <span class="text-error">*</span></label>
                         <input type="text" name="swish_number" id="formSwishNumber" class="admin-form-input" required
                                placeholder="070-123 45 67">
-                        <small style="color: var(--color-text-secondary);">Mobilnummer eller företagsnummer</small>
+                        <small class="text-secondary">Mobilnummer eller företagsnummer</small>
                     </div>
 
                     <div class="admin-form-group">
-                        <label class="admin-form-label">Mottagarnamn i Swish <span style="color: var(--color-error);">*</span></label>
+                        <label class="admin-form-label">Mottagarnamn i Swish <span class="text-error">*</span></label>
                         <input type="text" name="swish_name" id="formSwishName" class="admin-form-input" required
                                placeholder="GravitySeries">
-                        <small style="color: var(--color-text-secondary);">Visas för betalaren i Swish-appen</small>
+                        <small class="text-secondary">Visas för betalaren i Swish-appen</small>
                     </div>
                 </div>
 
                 <div class="admin-form-group">
-                    <label class="admin-form-label" style="display: flex; align-items: center; gap: var(--space-sm); cursor: pointer;">
+                    <label class="admin-form-label flex items-center gap-sm cursor-pointer">
                         <input type="checkbox" name="active" id="formActive" value="1" checked>
                         Aktiv
                     </label>
-                    <small style="color: var(--color-text-secondary);">Inaktiva mottagare kan inte väljas för nya serier/event</small>
+                    <small class="text-secondary">Inaktiva mottagare kan inte väljas för nya serier/event</small>
                 </div>
             </div>
 

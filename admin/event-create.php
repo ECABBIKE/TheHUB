@@ -693,7 +693,7 @@ include __DIR__ . '/components/unified-layout.php';
   <div>
   <label for="driver_meeting" class="label">
   <i data-lucide="users"></i> Förarmöte
-  <label class="checkbox-label ml-md" style="display: inline-flex; font-weight: normal;">
+  <label class="checkbox-label ml-md inline-flex font-normal">
    <input type="checkbox" name="driver_meeting_use_global" class="checkbox" <?= !empty($_POST['driver_meeting_use_global']) ? 'checked' : '' ?>>
    <span class="text-xs">Global</span>
   </label>
@@ -711,7 +711,7 @@ include __DIR__ . '/components/unified-layout.php';
   <div>
   <label for="training_info" class="label">
   <i data-lucide="dumbbell"></i> Träning
-  <label class="checkbox-label ml-md" style="display: inline-flex; font-weight: normal;">
+  <label class="checkbox-label ml-md inline-flex font-normal">
    <input type="checkbox" name="training_use_global" class="checkbox" <?= !empty($_POST['training_use_global']) ? 'checked' : '' ?>>
    <span class="text-xs">Global</span>
   </label>
@@ -729,7 +729,7 @@ include __DIR__ . '/components/unified-layout.php';
   <div>
   <label for="timing_info" class="label">
   <i data-lucide="timer"></i> Tidtagning
-  <label class="checkbox-label ml-md" style="display: inline-flex; font-weight: normal;">
+  <label class="checkbox-label ml-md inline-flex font-normal">
    <input type="checkbox" name="timing_use_global" class="checkbox" <?= !empty($_POST['timing_use_global']) ? 'checked' : '' ?>>
    <span class="text-xs">Global</span>
   </label>
@@ -747,7 +747,7 @@ include __DIR__ . '/components/unified-layout.php';
   <div>
   <label for="lift_info" class="label">
   <i data-lucide="mountain-snow"></i> Lift
-  <label class="checkbox-label ml-md" style="display: inline-flex; font-weight: normal;">
+  <label class="checkbox-label ml-md inline-flex font-normal">
    <input type="checkbox" name="lift_use_global" class="checkbox" <?= !empty($_POST['lift_use_global']) ? 'checked' : '' ?>>
    <span class="text-xs">Global</span>
   </label>
@@ -765,7 +765,7 @@ include __DIR__ . '/components/unified-layout.php';
   <div>
   <label for="hydration_stations" class="label">
   <i data-lucide="droplets"></i> Vätskekontroller
-  <label class="checkbox-label ml-md" style="display: inline-flex; font-weight: normal;">
+  <label class="checkbox-label ml-md inline-flex font-normal">
    <input type="checkbox" name="hydration_use_global" class="checkbox" <?= !empty($_POST['hydration_use_global']) ? 'checked' : '' ?>>
    <span class="text-xs">Global</span>
   </label>
@@ -783,7 +783,7 @@ include __DIR__ . '/components/unified-layout.php';
   <div>
   <label for="toilets_showers" class="label">
   <i data-lucide="bath"></i> Toaletter/Dusch
-  <label class="checkbox-label ml-md" style="display: inline-flex; font-weight: normal;">
+  <label class="checkbox-label ml-md inline-flex font-normal">
    <input type="checkbox" name="toilets_use_global" class="checkbox" <?= !empty($_POST['toilets_use_global']) ? 'checked' : '' ?>>
    <span class="text-xs">Global</span>
   </label>
@@ -801,7 +801,7 @@ include __DIR__ . '/components/unified-layout.php';
   <div>
   <label for="bike_wash" class="label">
   <i data-lucide="spray-can"></i> Cykeltvätt
-  <label class="checkbox-label ml-md" style="display: inline-flex; font-weight: normal;">
+  <label class="checkbox-label ml-md inline-flex font-normal">
    <input type="checkbox" name="bike_wash_use_global" class="checkbox" <?= !empty($_POST['bike_wash_use_global']) ? 'checked' : '' ?>>
    <span class="text-xs">Global</span>
   </label>
@@ -819,7 +819,7 @@ include __DIR__ . '/components/unified-layout.php';
   <div>
   <label for="food_cafe" class="label">
   <i data-lucide="coffee"></i> Mat/Café
-  <label class="checkbox-label ml-md" style="display: inline-flex; font-weight: normal;">
+  <label class="checkbox-label ml-md inline-flex font-normal">
    <input type="checkbox" name="food_use_global" class="checkbox" <?= !empty($_POST['food_use_global']) ? 'checked' : '' ?>>
    <span class="text-xs">Global</span>
   </label>
@@ -837,7 +837,7 @@ include __DIR__ . '/components/unified-layout.php';
   <div>
   <label for="shops_info" class="label">
   <i data-lucide="shopping-bag"></i> Affärer
-  <label class="checkbox-label ml-md" style="display: inline-flex; font-weight: normal;">
+  <label class="checkbox-label ml-md inline-flex font-normal">
    <input type="checkbox" name="shops_use_global" class="checkbox" <?= !empty($_POST['shops_use_global']) ? 'checked' : '' ?>>
    <span class="text-xs">Global</span>
   </label>
@@ -855,7 +855,7 @@ include __DIR__ . '/components/unified-layout.php';
   <div>
   <label for="exhibitors" class="label">
   <i data-lucide="tent"></i> Utställare
-  <label class="checkbox-label ml-md" style="display: inline-flex; font-weight: normal;">
+  <label class="checkbox-label ml-md inline-flex font-normal">
    <input type="checkbox" name="exhibitors_use_global" class="checkbox" <?= !empty($_POST['exhibitors_use_global']) ? 'checked' : '' ?>>
    <span class="text-xs">Global</span>
   </label>
@@ -873,7 +873,7 @@ include __DIR__ . '/components/unified-layout.php';
   <div>
   <label for="parking_detailed" class="label">
   <i data-lucide="car"></i> Parkering
-  <label class="checkbox-label ml-md" style="display: inline-flex; font-weight: normal;">
+  <label class="checkbox-label ml-md inline-flex font-normal">
    <input type="checkbox" name="parking_use_global" class="checkbox" <?= !empty($_POST['parking_use_global']) ? 'checked' : '' ?>>
    <span class="text-xs">Global</span>
   </label>
@@ -891,7 +891,7 @@ include __DIR__ . '/components/unified-layout.php';
   <div>
   <label for="hotel_accommodation" class="label">
   <i data-lucide="hotel"></i> Hotell och boende
-  <label class="checkbox-label ml-md" style="display: inline-flex; font-weight: normal;">
+  <label class="checkbox-label ml-md inline-flex font-normal">
    <input type="checkbox" name="hotel_use_global" class="checkbox" <?= !empty($_POST['hotel_use_global']) ? 'checked' : '' ?>>
    <span class="text-xs">Global</span>
   </label>
@@ -909,7 +909,7 @@ include __DIR__ . '/components/unified-layout.php';
   <div>
   <label for="local_info" class="label">
   <i data-lucide="landmark"></i> Lokal information
-  <label class="checkbox-label ml-md" style="display: inline-flex; font-weight: normal;">
+  <label class="checkbox-label ml-md inline-flex font-normal">
    <input type="checkbox" name="local_use_global" class="checkbox" <?= !empty($_POST['local_use_global']) ? 'checked' : '' ?>>
    <span class="text-xs">Global</span>
   </label>
@@ -935,7 +935,7 @@ include __DIR__ . '/components/unified-layout.php';
   <div>
   <label for="competition_rules" class="label">
   <i data-lucide="scale"></i> Tävlingsregler
-  <label class="checkbox-label ml-md" style="display: inline-flex; font-weight: normal;">
+  <label class="checkbox-label ml-md inline-flex font-normal">
    <input type="checkbox" name="rules_use_global" class="checkbox" <?= !empty($_POST['rules_use_global']) ? 'checked' : '' ?>>
    <span class="text-xs">Global</span>
   </label>
@@ -953,7 +953,7 @@ include __DIR__ . '/components/unified-layout.php';
   <div>
   <label for="insurance_info" class="label">
   <i data-lucide="shield-check"></i> Försäkring
-  <label class="checkbox-label ml-md" style="display: inline-flex; font-weight: normal;">
+  <label class="checkbox-label ml-md inline-flex font-normal">
    <input type="checkbox" name="insurance_use_global" class="checkbox" <?= !empty($_POST['insurance_use_global']) ? 'checked' : '' ?>>
    <span class="text-xs">Global</span>
   </label>
@@ -971,7 +971,7 @@ include __DIR__ . '/components/unified-layout.php';
   <div>
   <label for="equipment_info" class="label">
   <i data-lucide="hard-hat"></i> Utrustning
-  <label class="checkbox-label ml-md" style="display: inline-flex; font-weight: normal;">
+  <label class="checkbox-label ml-md inline-flex font-normal">
    <input type="checkbox" name="equipment_use_global" class="checkbox" <?= !empty($_POST['equipment_use_global']) ? 'checked' : '' ?>>
    <span class="text-xs">Global</span>
   </label>
@@ -996,7 +996,7 @@ include __DIR__ . '/components/unified-layout.php';
   <div>
   <label for="medical_info" class="label">
   <i data-lucide="heart-pulse"></i> Sjukvård
-  <label class="checkbox-label ml-md" style="display: inline-flex; font-weight: normal;">
+  <label class="checkbox-label ml-md inline-flex font-normal">
    <input type="checkbox" name="medical_use_global" class="checkbox" <?= !empty($_POST['medical_use_global']) ? 'checked' : '' ?>>
    <span class="text-xs">Global</span>
   </label>
@@ -1014,7 +1014,7 @@ include __DIR__ . '/components/unified-layout.php';
   <div>
   <label for="media_production" class="label">
   <i data-lucide="video"></i> Mediaproduktion
-  <label class="checkbox-label ml-md" style="display: inline-flex; font-weight: normal;">
+  <label class="checkbox-label ml-md inline-flex font-normal">
    <input type="checkbox" name="media_use_global" class="checkbox" <?= !empty($_POST['media_use_global']) ? 'checked' : '' ?>>
    <span class="text-xs">Global</span>
   </label>
@@ -1032,7 +1032,7 @@ include __DIR__ . '/components/unified-layout.php';
   <div>
   <label for="contacts_info" class="label">
   <i data-lucide="contact"></i> Kontakter (detaljerad)
-  <label class="checkbox-label ml-md" style="display: inline-flex; font-weight: normal;">
+  <label class="checkbox-label ml-md inline-flex font-normal">
    <input type="checkbox" name="contacts_use_global" class="checkbox" <?= !empty($_POST['contacts_use_global']) ? 'checked' : '' ?>>
    <span class="text-xs">Global</span>
   </label>
@@ -1050,7 +1050,7 @@ include __DIR__ . '/components/unified-layout.php';
   <div>
   <label for="scf_representatives" class="label">
   <i data-lucide="badge"></i> SCF Representanter
-  <label class="checkbox-label ml-md" style="display: inline-flex; font-weight: normal;">
+  <label class="checkbox-label ml-md inline-flex font-normal">
    <input type="checkbox" name="scf_use_global" class="checkbox" <?= !empty($_POST['scf_use_global']) ? 'checked' : '' ?>>
    <span class="text-xs">Global</span>
   </label>

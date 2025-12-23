@@ -421,59 +421,59 @@ include __DIR__ . '/components/unified-layout.php';
   <div class="card-body">
   <?php if (empty($potentialDuplicates)): ?>
    <div class="text-center py-lg">
-   <i data-lucide="check-circle" style="width: 48px; height: 48px; color: var(--gs-success);"></i>
+   <i data-lucide="check-circle" class="text-success" style="width: 48px; height: 48px;"></i>
    <p class="text-success mt-md">Inga potentiella dubbletter hittades!</p>
    </div>
   <?php else: ?>
    <?php foreach ($potentialDuplicates as $idx => $dup): ?>
    <div style="border: 2px solid #ffc107; border-radius: 8px; margin-bottom: 1rem; overflow: hidden;">
-   <div style="background: rgba(255,193,7,0.15); padding: 0.5rem 1rem; display: flex; justify-content: space-between; align-items: center;">
+   <div class="flex justify-between items-center" style="background: rgba(255,193,7,0.15); padding: 0.5rem 1rem;">
     <span class="badge <?= $dup['reason'] === 'Samma UCI ID' ? 'badge-danger' : 'badge-warning' ?>">
     <?= h($dup['reason']) ?>
     </span>
-    <span style="color: #666; font-size: 0.875rem;">#<?= $idx + 1 ?></span>
+    <span class="text-secondary text-sm">#<?= $idx + 1 ?></span>
    </div>
-   <div style="padding: 1rem; display: flex; gap: 1rem; flex-wrap: wrap;">
+   <div class="flex gap-md flex-wrap" style="padding: 1rem;">
     <?php foreach (['rider1', 'rider2'] as $key):
     $rider = $dup[$key];
     $isComplete = empty($rider['missing']);
     $borderColor = $isComplete ? '#28a745' : '#dc3545';
     $bgColor = $isComplete ? 'rgba(40,167,69,0.08)' : 'rgba(220,53,69,0.08)';
     ?>
-    <div style="flex: 1; min-width: 280px; padding: 1rem; background: <?= $bgColor ?>; border: 2px solid <?= $borderColor ?>; border-radius: 8px;">
-    <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+    <div class="flex-1" style="min-width: 280px; padding: 1rem; background: <?= $bgColor ?>; border: 2px solid <?= $borderColor ?>; border-radius: 8px;">
+    <div class="flex justify-between mb-sm">
      <div>
      <strong style="font-size: 1.1rem;"><?= h($rider['name']) ?></strong>
-     <div style="font-size: 0.75rem; color: #666;">ID: <?= $rider['id'] ?></div>
+     <div class="text-xs text-secondary">ID: <?= $rider['id'] ?></div>
      </div>
      <span class="badge badge-secondary"><?= $rider['results'] ?> resultat</span>
     </div>
 
     <?php if (!empty($rider['missing'])): ?>
-    <div style="background: rgba(255,193,7,0.2); padding: 0.5rem; border-radius: 4px; margin-bottom: 0.5rem; font-size: 0.875rem;">
+    <div class="mb-sm text-sm" style="background: rgba(255,193,7,0.2); padding: 0.5rem; border-radius: 4px;">
      <strong>Saknar:</strong> <?= implode(', ', $rider['missing']) ?>
     </div>
     <?php endif; ?>
 
-    <table style="width: 100%; font-size: 0.875rem;">
+    <table class="w-full text-sm">
      <tr>
-     <td style="color: #666; width: 80px;">Födelseår:</td>
-     <td><?= $rider['birth_year'] ?: '<span style="color: #dc3545;">-</span>' ?></td>
+     <td class="text-secondary" style="width: 80px;">Födelseår:</td>
+     <td><?= $rider['birth_year'] ?: '<span class="text-error">-</span>' ?></td>
      </tr>
      <tr>
-     <td style="color: #666;">License:</td>
+     <td class="text-secondary">License:</td>
      <td><code><?= h($rider['license'] ?: '-') ?></code></td>
      </tr>
      <tr>
-     <td style="color: #666;">Klubb:</td>
+     <td class="text-secondary">Klubb:</td>
      <td><?= h($rider['club'] ?: '-') ?></td>
      </tr>
      <tr>
-     <td style="color: #666;">E-post:</td>
+     <td class="text-secondary">E-post:</td>
      <td><?= h($rider['email'] ?: '-') ?></td>
      </tr>
      <tr>
-     <td style="color: #666;">Klasser:</td>
+     <td class="text-secondary">Klasser:</td>
      <td><?php if (!empty($rider['classes'])): ?>
       <?php foreach ($rider['classes'] as $cls): ?>
        <span class="badge badge-secondary" style="font-size: 0.7rem; margin-right: 2px;"><?= h($cls) ?></span>
@@ -484,7 +484,7 @@ include __DIR__ . '/components/unified-layout.php';
      </tr>
     </table>
 
-    <div style="margin-top: 1rem; display: flex; gap: 0.5rem;">
+    <div class="flex gap-sm mt-md">
      <a href="/rider/<?= $rider['id'] ?>" target="_blank" class="btn btn--sm btn--secondary" title="Visa profil">
      <i data-lucide="external-link"></i>
      </a>
@@ -492,7 +492,7 @@ include __DIR__ . '/components/unified-layout.php';
      $otherId = $key === 'rider1' ? $dup['rider2']['id'] : $dup['rider1']['id'];
      ?>
      <a href="?action=merge&keep=<?= $rider['id'] ?>&remove=<?= $otherId ?>"
-     class="btn btn--sm btn-success" style="flex: 1;"
+     class="btn btn--sm btn-success flex-1"
      onclick="return confirm('Behåll denna profil och ta bort den andra?\n\nResultat flyttas och data slås ihop.')">
      <i data-lucide="check"></i> Behåll denna
      </a>
