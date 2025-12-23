@@ -402,7 +402,7 @@ include __DIR__ . '/components/unified-layout.php';
     <input type="hidden" name="action" value="save">
 
     <!-- Action Buttons -->
-    <div class="flex gap-md mb-lg" style="justify-content: flex-end;">
+    <div class="flex gap-md mb-lg justify-end">
         <button type="button" class="btn btn--secondary" onclick="if(confirm('Återställa alla färger till standard?')) { document.querySelector('[name=action]').value='reset'; document.getElementById('brandingForm').submit(); }">
             <i data-lucide="rotate-ccw"></i>
             Återställ standard
@@ -432,7 +432,7 @@ include __DIR__ . '/components/unified-layout.php';
                 Välj logotyper från <a href="/admin/media?folder=branding">Mediabiblioteket</a> eller ladda upp nya där först.
             </p>
 
-            <div class="branding-grid" style="grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));">
+            <div class="branding-grid grid-auto-280">
                 <!-- Sidebar Logo -->
                 <div class="color-group">
                     <h3>
@@ -441,14 +441,14 @@ include __DIR__ . '/components/unified-layout.php';
                     </h3>
                     <p class="text-secondary text-sm mb-md">Visas i navigationens övre del på alla sidor.</p>
                     <input type="hidden" name="logo_sidebar" id="logoSidebarInput" value="<?= h($sidebarLogo) ?>">
-                    <div id="logoSidebarPreview" class="logo-preview-box" onclick="openMediaPicker('sidebar')" style="width: 100%; height: 80px; background: var(--color-bg-sunken); border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center; overflow: hidden; cursor: pointer; border: 2px dashed var(--color-border); transition: border-color 0.2s;">
+                    <div id="logoSidebarPreview" class="logo-preview-box" onclick="openMediaPicker('sidebar')">
                         <?php if ($sidebarLogo): ?>
-                            <img src="<?= h($sidebarLogo) ?>" alt="Sidebar logo" style="max-width: 100%; max-height: 100%; object-fit: contain;">
+                            <img src="<?= h($sidebarLogo) ?>" alt="Sidebar logo">
                         <?php else: ?>
-                            <span style="color: var(--color-text-muted); font-size: var(--text-sm);">Klicka för att välja bild</span>
+                            <span class="logo-preview-placeholder">Klicka för att välja bild</span>
                         <?php endif; ?>
                     </div>
-                    <div style="display: flex; gap: var(--space-sm); margin-top: var(--space-sm);">
+                    <div class="flex gap-sm mt-sm">
                         <button type="button" class="btn btn--secondary btn--sm" onclick="openMediaPicker('sidebar')">
                             <i data-lucide="image"></i> Välj bild
                         </button>
@@ -466,14 +466,14 @@ include __DIR__ . '/components/unified-layout.php';
                     </h3>
                     <p class="text-secondary text-sm mb-md">Visas endast på startsidan (stor logga).</p>
                     <input type="hidden" name="logo_homepage" id="logoHomepageInput" value="<?= h($homepageLogo) ?>">
-                    <div id="logoHomepagePreview" class="logo-preview-box" onclick="openMediaPicker('homepage')" style="width: 100%; height: 80px; background: var(--color-bg-sunken); border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center; overflow: hidden; cursor: pointer; border: 2px dashed var(--color-border); transition: border-color 0.2s;">
+                    <div id="logoHomepagePreview" class="logo-preview-box" onclick="openMediaPicker('homepage')">
                         <?php if ($homepageLogo): ?>
-                            <img src="<?= h($homepageLogo) ?>" alt="Homepage logo" style="max-width: 100%; max-height: 100%; object-fit: contain;">
+                            <img src="<?= h($homepageLogo) ?>" alt="Homepage logo">
                         <?php else: ?>
-                            <span style="color: var(--color-text-muted); font-size: var(--text-sm);">Klicka för att välja bild</span>
+                            <span class="logo-preview-placeholder">Klicka för att välja bild</span>
                         <?php endif; ?>
                     </div>
-                    <div style="display: flex; gap: var(--space-sm); margin-top: var(--space-sm);">
+                    <div class="flex gap-sm mt-sm">
                         <button type="button" class="btn btn--secondary btn--sm" onclick="openMediaPicker('homepage')">
                             <i data-lucide="image"></i> Välj bild
                         </button>
@@ -491,14 +491,14 @@ include __DIR__ . '/components/unified-layout.php';
                     </h3>
                     <p class="text-secondary text-sm mb-md">Ikon som visas i webbläsarfliken (SVG rekommenderas).</p>
                     <input type="hidden" name="logo_favicon" id="logoFaviconInput" value="<?= h($faviconLogo) ?>">
-                    <div id="logoFaviconPreview" class="logo-preview-box" onclick="openMediaPicker('favicon')" style="width: 100%; height: 80px; background: var(--color-bg-sunken); border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center; overflow: hidden; cursor: pointer; border: 2px dashed var(--color-border); transition: border-color 0.2s;">
+                    <div id="logoFaviconPreview" class="logo-preview-box" onclick="openMediaPicker('favicon')">
                         <?php if ($faviconLogo): ?>
-                            <img src="<?= h($faviconLogo) ?>" alt="Favicon" style="max-width: 100%; max-height: 100%; object-fit: contain;">
+                            <img src="<?= h($faviconLogo) ?>" alt="Favicon">
                         <?php else: ?>
-                            <span style="color: var(--color-text-muted); font-size: var(--text-sm);">Klicka för att välja bild</span>
+                            <span class="logo-preview-placeholder">Klicka för att välja bild</span>
                         <?php endif; ?>
                     </div>
-                    <div style="display: flex; gap: var(--space-sm); margin-top: var(--space-sm);">
+                    <div class="flex gap-sm mt-sm">
                         <button type="button" class="btn btn--secondary btn--sm" onclick="openMediaPicker('favicon')">
                             <i data-lucide="image"></i> Välj bild
                         </button>
@@ -583,16 +583,16 @@ include __DIR__ . '/components/unified-layout.php';
             ?>
 
             <!-- MOBILE PORTRAIT (0-767px) -->
-            <div class="device-settings" style="margin-bottom: 1.5rem; padding: 1.5rem; background: var(--color-bg-surface); border-radius: var(--radius-lg); border-left: 4px solid #3B9EFF;">
-                <h4 style="margin: 0 0 1rem 0; display: flex; align-items: center; gap: 0.5rem;">
+            <div class="device-settings device-settings--blue">
+                <h4 class="device-settings-header">
                     <i data-lucide="smartphone"></i>
                     Mobile Portrait (0-767px)
                 </h4>
 
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div class="grid-2-col">
                     <div>
-                        <label style="display: block; font-size: 0.875rem; color: var(--color-text-secondary); margin-bottom: 0.5rem;">Container Padding</label>
-                        <select name="mobile_portrait_padding" class="form-control" style="width: 100%;" onchange="previewResponsive('portrait', 'padding', this.value)">
+                        <label class="form-label-block">Container Padding</label>
+                        <select name="mobile_portrait_padding" class="form-control w-full" onchange="previewResponsive('portrait', 'padding', this.value)">
                             <option value="8" <?= $mobilePortrait['padding'] === '8' ? 'selected' : '' ?>>8px - Extra Tight</option>
                             <option value="10" <?= $mobilePortrait['padding'] === '10' ? 'selected' : '' ?>>10px - Tight</option>
                             <option value="12" <?= $mobilePortrait['padding'] === '12' ? 'selected' : '' ?>>12px - Compact</option>
@@ -600,8 +600,8 @@ include __DIR__ . '/components/unified-layout.php';
                         </select>
                     </div>
                     <div>
-                        <label style="display: block; font-size: 0.875rem; color: var(--color-text-secondary); margin-bottom: 0.5rem;">Border Radius</label>
-                        <select name="mobile_portrait_radius" class="form-control" style="width: 100%;" onchange="previewResponsive('portrait', 'radius', this.value)">
+                        <label class="form-label-block">Border Radius</label>
+                        <select name="mobile_portrait_radius" class="form-control w-full" onchange="previewResponsive('portrait', 'radius', this.value)">
                             <option value="0" <?= $mobilePortrait['radius'] === '0' ? 'selected' : '' ?>>0px - Kantigt (Edge-to-edge)</option>
                             <option value="4" <?= $mobilePortrait['radius'] === '4' ? 'selected' : '' ?>>4px - Lätt rundat</option>
                             <option value="6" <?= $mobilePortrait['radius'] === '6' ? 'selected' : '' ?>>6px - Rundat</option>
@@ -609,22 +609,20 @@ include __DIR__ . '/components/unified-layout.php';
                         </select>
                     </div>
                 </div>
-                <small style="display: block; margin-top: 0.75rem; opacity: 0.7; font-size: 0.75rem;">
-                    Rekommenderat: 12px padding + 0px radius för edge-to-edge känsla
-                </small>
+                <small>Rekommenderat: 12px padding + 0px radius för edge-to-edge känsla</small>
             </div>
 
             <!-- MOBILE LANDSCAPE (0-1023px landscape) -->
-            <div class="device-settings" style="margin-bottom: 1.5rem; padding: 1.5rem; background: var(--color-bg-surface); border-radius: var(--radius-lg); border-left: 4px solid #F59E0B;">
-                <h4 style="margin: 0 0 1rem 0; display: flex; align-items: center; gap: 0.5rem;">
-                    <i data-lucide="smartphone" style="transform: rotate(90deg);"></i>
+            <div class="device-settings device-settings--orange">
+                <h4 class="device-settings-header">
+                    <i data-lucide="smartphone" class="rotate-90"></i>
                     Mobile Landscape (0-1023px liggande)
                 </h4>
 
-                <div style="display: grid; grid-template-columns: 1fr; gap: 1rem;">
+                <div class="grid-1-col">
                     <div>
-                        <label style="display: block; font-size: 0.875rem; color: var(--color-text-secondary); margin-bottom: 0.5rem;">Avstånd mellan sidebar och innehåll</label>
-                        <select name="mobile_landscape_sidebar_gap" class="form-control" style="width: 100%;">
+                        <label class="form-label-block">Avstånd mellan sidebar och innehåll</label>
+                        <select name="mobile_landscape_sidebar_gap" class="form-control w-full">
                             <option value="0" <?= $mobileLandscape['sidebar_gap'] === '0' ? 'selected' : '' ?>>0px - Ingen marginal</option>
                             <option value="4" <?= $mobileLandscape['sidebar_gap'] === '4' ? 'selected' : '' ?>>4px - Minimal</option>
                             <option value="8" <?= $mobileLandscape['sidebar_gap'] === '8' ? 'selected' : '' ?>>8px - Liten</option>
@@ -633,22 +631,20 @@ include __DIR__ . '/components/unified-layout.php';
                         </select>
                     </div>
                 </div>
-                <small style="display: block; margin-top: 0.75rem; opacity: 0.7; font-size: 0.75rem;">
-                    I liggande läge visas en kompakt sidebar istället för botten-navigation
-                </small>
+                <small>I liggande läge visas en kompakt sidebar istället för botten-navigation</small>
             </div>
 
             <!-- TABLET / LANDSCAPE (768-1023px) -->
-            <div class="device-settings" style="margin-bottom: 1.5rem; padding: 1.5rem; background: var(--color-bg-surface); border-radius: var(--radius-lg); border-left: 4px solid #10B981;">
-                <h4 style="margin: 0 0 1rem 0; display: flex; align-items: center; gap: 0.5rem;">
+            <div class="device-settings device-settings--green">
+                <h4 class="device-settings-header">
                     <i data-lucide="tablet"></i>
                     Landscape / Tablet (768-1023px)
                 </h4>
 
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div class="grid-2-col">
                     <div>
-                        <label style="display: block; font-size: 0.875rem; color: var(--color-text-secondary); margin-bottom: 0.5rem;">Container Padding</label>
-                        <select name="tablet_padding" class="form-control" style="width: 100%;" onchange="previewResponsive('tablet', 'padding', this.value)">
+                        <label class="form-label-block">Container Padding</label>
+                        <select name="tablet_padding" class="form-control w-full" onchange="previewResponsive('tablet', 'padding', this.value)">
                             <option value="16" <?= $tablet['padding'] === '16' ? 'selected' : '' ?>>16px - Compact</option>
                             <option value="20" <?= $tablet['padding'] === '20' ? 'selected' : '' ?>>20px - Normal</option>
                             <option value="24" <?= $tablet['padding'] === '24' ? 'selected' : '' ?>>24px - Luftigt</option>
@@ -656,8 +652,8 @@ include __DIR__ . '/components/unified-layout.php';
                         </select>
                     </div>
                     <div>
-                        <label style="display: block; font-size: 0.875rem; color: var(--color-text-secondary); margin-bottom: 0.5rem;">Border Radius</label>
-                        <select name="tablet_radius" class="form-control" style="width: 100%;" onchange="previewResponsive('tablet', 'radius', this.value)">
+                        <label class="form-label-block">Border Radius</label>
+                        <select name="tablet_radius" class="form-control w-full" onchange="previewResponsive('tablet', 'radius', this.value)">
                             <option value="0" <?= $tablet['radius'] === '0' ? 'selected' : '' ?>>0px - Kantigt</option>
                             <option value="6" <?= $tablet['radius'] === '6' ? 'selected' : '' ?>>6px - Lätt rundat</option>
                             <option value="8" <?= $tablet['radius'] === '8' ? 'selected' : '' ?>>8px - Rundat</option>
@@ -666,22 +662,20 @@ include __DIR__ . '/components/unified-layout.php';
                         </select>
                     </div>
                 </div>
-                <small style="display: block; margin-top: 0.75rem; opacity: 0.7; font-size: 0.75rem;">
-                    Rekommenderat: 24px padding + 8px radius för balanserad design
-                </small>
+                <small>Rekommenderat: 24px padding + 8px radius för balanserad design</small>
             </div>
 
             <!-- DESKTOP (1024px+) -->
-            <div class="device-settings" style="padding: 1.5rem; background: var(--color-bg-surface); border-radius: var(--radius-lg); border-left: 4px solid #8B5CF6;">
-                <h4 style="margin: 0 0 1rem 0; display: flex; align-items: center; gap: 0.5rem;">
+            <div class="device-settings device-settings--purple">
+                <h4 class="device-settings-header">
                     <i data-lucide="monitor"></i>
                     Desktop (1024px+)
                 </h4>
 
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div class="grid-2-col">
                     <div>
-                        <label style="display: block; font-size: 0.875rem; color: var(--color-text-secondary); margin-bottom: 0.5rem;">Container Padding</label>
-                        <select name="desktop_padding" class="form-control" style="width: 100%;" onchange="previewResponsive('desktop', 'padding', this.value)">
+                        <label class="form-label-block">Container Padding</label>
+                        <select name="desktop_padding" class="form-control w-full" onchange="previewResponsive('desktop', 'padding', this.value)">
                             <option value="24" <?= $desktop['padding'] === '24' ? 'selected' : '' ?>>24px - Compact</option>
                             <option value="32" <?= $desktop['padding'] === '32' ? 'selected' : '' ?>>32px - Normal</option>
                             <option value="40" <?= $desktop['padding'] === '40' ? 'selected' : '' ?>>40px - Luftigt</option>
@@ -689,8 +683,8 @@ include __DIR__ . '/components/unified-layout.php';
                         </select>
                     </div>
                     <div>
-                        <label style="display: block; font-size: 0.875rem; color: var(--color-text-secondary); margin-bottom: 0.5rem;">Border Radius</label>
-                        <select name="desktop_radius" class="form-control" style="width: 100%;" onchange="previewResponsive('desktop', 'radius', this.value)">
+                        <label class="form-label-block">Border Radius</label>
+                        <select name="desktop_radius" class="form-control w-full" onchange="previewResponsive('desktop', 'radius', this.value)">
                             <option value="6" <?= $desktop['radius'] === '6' ? 'selected' : '' ?>>6px - Lätt rundat</option>
                             <option value="8" <?= $desktop['radius'] === '8' ? 'selected' : '' ?>>8px - Rundat</option>
                             <option value="12" <?= $desktop['radius'] === '12' ? 'selected' : '' ?>>12px - Mycket rundat</option>
@@ -699,15 +693,13 @@ include __DIR__ . '/components/unified-layout.php';
                         </select>
                     </div>
                 </div>
-                <small style="display: block; margin-top: 0.75rem; opacity: 0.7; font-size: 0.75rem;">
-                    Rekommenderat: 32px padding + 12px radius för professionell look
-                </small>
+                <small>Rekommenderat: 32px padding + 12px radius för professionell look</small>
             </div>
 
             <!-- Info Box -->
-            <div style="margin-top: 1.5rem; padding: 1rem; background: var(--color-bg-sunken); border-radius: var(--radius-md); border: 1px solid var(--color-border);">
-                <p style="margin: 0; font-size: 0.875rem; color: var(--color-text-secondary); display: flex; align-items: start; gap: 0.5rem;">
-                    <i data-lucide="info" style="width: 16px; height: 16px; margin-top: 2px; flex-shrink: 0;"></i>
+            <div class="info-box mt-lg">
+                <p>
+                    <i data-lucide="info"></i>
                     <span>
                         <strong>Så fungerar det:</strong> Samma radius appliceras på ALLA kort, knappar och containers inom varje plattform.
                         Spara och ladda om sidan för att se effekten, eller ändra din browser-storlek för att testa olika breakpoints.
@@ -737,16 +729,16 @@ include __DIR__ . '/components/unified-layout.php';
             $headerHeight = $layout['header_height'] ?? '60';
             ?>
 
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: var(--space-lg);">
+            <div class="grid-auto-250">
                 <!-- Content Max Width -->
-                <div class="device-settings" style="padding: 1.5rem; background: var(--color-bg-surface); border-radius: var(--radius-lg); border-left: 4px solid #F59E0B;">
-                    <h4 style="margin: 0 0 1rem 0; display: flex; align-items: center; gap: 0.5rem;">
+                <div class="device-settings device-settings--orange">
+                    <h4 class="device-settings-header">
                         <i data-lucide="monitor"></i>
                         Max innehallsbredd
                     </h4>
                     <div>
-                        <label style="display: block; font-size: 0.875rem; color: var(--color-text-secondary); margin-bottom: 0.5rem;">Desktop (1024px+)</label>
-                        <select name="content_max_width" class="form-control" style="width: 100%;">
+                        <label class="form-label-block">Desktop (1024px+)</label>
+                        <select name="content_max_width" class="form-control w-full">
                             <option value="1200" <?= $contentMaxWidth === '1200' ? 'selected' : '' ?>>1200px - Kompakt</option>
                             <option value="1400" <?= $contentMaxWidth === '1400' ? 'selected' : '' ?>>1400px - Standard</option>
                             <option value="1600" <?= $contentMaxWidth === '1600' ? 'selected' : '' ?>>1600px - Bred</option>
@@ -754,55 +746,49 @@ include __DIR__ . '/components/unified-layout.php';
                             <option value="none" <?= $contentMaxWidth === 'none' ? 'selected' : '' ?>>Ingen grans (full bredd)</option>
                         </select>
                     </div>
-                    <small style="display: block; margin-top: 0.75rem; opacity: 0.7; font-size: 0.75rem;">
-                        Begransar bredden pa huvudinnehallet. Paverkar inte Event-sidor.
-                    </small>
+                    <small>Begransar bredden pa huvudinnehallet. Paverkar inte Event-sidor.</small>
                 </div>
 
                 <!-- Sidebar Width -->
-                <div class="device-settings" style="padding: 1.5rem; background: var(--color-bg-surface); border-radius: var(--radius-lg); border-left: 4px solid #10B981;">
-                    <h4 style="margin: 0 0 1rem 0; display: flex; align-items: center; gap: 0.5rem;">
+                <div class="device-settings device-settings--green">
+                    <h4 class="device-settings-header">
                         <i data-lucide="sidebar"></i>
                         Sidopanelens bredd
                     </h4>
                     <div>
-                        <label style="display: block; font-size: 0.875rem; color: var(--color-text-secondary); margin-bottom: 0.5rem;">Desktop sidebar</label>
-                        <select name="sidebar_width" class="form-control" style="width: 100%;">
+                        <label class="form-label-block">Desktop sidebar</label>
+                        <select name="sidebar_width" class="form-control w-full">
                             <option value="56" <?= $sidebarWidth === '56' ? 'selected' : '' ?>>56px - Kompakt</option>
                             <option value="72" <?= $sidebarWidth === '72' ? 'selected' : '' ?>>72px - Standard</option>
                             <option value="88" <?= $sidebarWidth === '88' ? 'selected' : '' ?>>88px - Bred</option>
                         </select>
                     </div>
-                    <small style="display: block; margin-top: 0.75rem; opacity: 0.7; font-size: 0.75rem;">
-                        Endast synlig pa desktop (900px+)
-                    </small>
+                    <small>Endast synlig pa desktop (900px+)</small>
                 </div>
 
                 <!-- Header Height -->
-                <div class="device-settings" style="padding: 1.5rem; background: var(--color-bg-surface); border-radius: var(--radius-lg); border-left: 4px solid #8B5CF6;">
-                    <h4 style="margin: 0 0 1rem 0; display: flex; align-items: center; gap: 0.5rem;">
+                <div class="device-settings device-settings--purple">
+                    <h4 class="device-settings-header">
                         <i data-lucide="panel-top"></i>
                         Headerns hojd
                     </h4>
                     <div>
-                        <label style="display: block; font-size: 0.875rem; color: var(--color-text-secondary); margin-bottom: 0.5rem;">Global header</label>
-                        <select name="header_height" class="form-control" style="width: 100%;">
+                        <label class="form-label-block">Global header</label>
+                        <select name="header_height" class="form-control w-full">
                             <option value="48" <?= $headerHeight === '48' ? 'selected' : '' ?>>48px - Kompakt</option>
                             <option value="56" <?= $headerHeight === '56' ? 'selected' : '' ?>>56px - Lag</option>
                             <option value="60" <?= $headerHeight === '60' ? 'selected' : '' ?>>60px - Standard</option>
                             <option value="64" <?= $headerHeight === '64' ? 'selected' : '' ?>>64px - Hog</option>
                         </select>
                     </div>
-                    <small style="display: block; margin-top: 0.75rem; opacity: 0.7; font-size: 0.75rem;">
-                        Paverkar toppbaren pa alla sidor
-                    </small>
+                    <small>Paverkar toppbaren pa alla sidor</small>
                 </div>
             </div>
 
             <!-- Info Box -->
-            <div style="margin-top: 1.5rem; padding: 1rem; background: var(--color-bg-sunken); border-radius: var(--radius-md); border: 1px solid var(--color-border);">
-                <p style="margin: 0; font-size: 0.875rem; color: var(--color-text-secondary); display: flex; align-items: start; gap: 0.5rem;">
-                    <i data-lucide="info" style="width: 16px; height: 16px; margin-top: 2px; flex-shrink: 0;"></i>
+            <div class="info-box mt-lg">
+                <p>
+                    <i data-lucide="info"></i>
                     <span>
                         <strong>CSS-variabler:</strong> Dessa varden satter <code>--content-max-width</code>, <code>--sidebar-width</code> och <code>--header-height</code>.
                     </span>
@@ -1039,11 +1025,9 @@ async function openMediaPicker(field) {
 function renderMediaGrid() {
     const grid = document.getElementById('mediaGrid');
     grid.innerHTML = mediaData.map(media => `
-        <div class="media-item" onclick="selectMedia('${media.filepath}')" style="cursor: pointer; border: 2px solid transparent; border-radius: 8px; padding: 8px; transition: border-color 0.2s; background: var(--color-bg-surface);">
-            <img src="/${media.filepath}" alt="${media.original_filename || ''}" style="width: 100%; height: 80px; object-fit: contain; background: var(--color-bg-sunken); border-radius: 4px;">
-            <div style="font-size: 0.75rem; color: var(--color-text-secondary); margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: center;">
-                ${media.original_filename || 'Bild'}
-            </div>
+        <div class="media-item" onclick="selectMedia('${media.filepath}')">
+            <img src="/${media.filepath}" alt="${media.original_filename || ''}">
+            <div class="media-item-name">${media.original_filename || 'Bild'}</div>
         </div>
     `).join('');
 }
@@ -1057,7 +1041,7 @@ function selectMedia(filepath) {
     const url = '/' + filepath.replace(/^\//, '');
 
     document.getElementById(inputId).value = url;
-    document.getElementById(previewId).innerHTML = `<img src="${url}" alt="Logo" style="max-width: 100%; max-height: 100%; object-fit: contain;">`;
+    document.getElementById(previewId).innerHTML = `<img src="${url}" alt="Logo">`;
 
     // Enable remove button
     const colorGroup = document.getElementById(previewId).closest('.color-group');
@@ -1073,7 +1057,7 @@ function clearLogo(field) {
     const previewId = 'logo' + capitalizedField + 'Preview';
 
     document.getElementById(inputId).value = '';
-    document.getElementById(previewId).innerHTML = `<span style="color: var(--color-text-muted); font-size: var(--text-sm);">Klicka för att välja bild</span>`;
+    document.getElementById(previewId).innerHTML = `<span class="logo-preview-placeholder">Klicka för att välja bild</span>`;
 
     // Disable remove button
     const colorGroup = document.getElementById(previewId).closest('.color-group');
@@ -1106,20 +1090,20 @@ document.querySelectorAll('.logo-preview-box').forEach(box => {
 </script>
 
 <!-- Media Picker Modal -->
-<div class="modal" id="mediaPickerModal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;">
-    <div class="modal-content" style="background: var(--color-bg-surface); border-radius: var(--radius-lg); max-width: 700px; width: 90%; max-height: 80vh; display: flex; flex-direction: column; box-shadow: var(--shadow-lg);">
-        <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; padding: var(--space-lg); border-bottom: 1px solid var(--color-border);">
-            <h3 style="margin: 0; font-size: var(--text-lg);">Välj bild från Mediabiblioteket</h3>
-            <button type="button" onclick="closeMediaModal()" style="background: none; border: none; cursor: pointer; padding: 8px; color: var(--color-text-secondary);">
-                <i data-lucide="x" style="width: 20px; height: 20px;"></i>
+<div class="modal" id="mediaPickerModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Välj bild från Mediabiblioteket</h3>
+            <button type="button" class="modal-close" onclick="closeMediaModal()">
+                <i data-lucide="x"></i>
             </button>
         </div>
-        <div class="modal-body" style="padding: var(--space-lg); overflow-y: auto; flex: 1;">
-            <div id="mediaGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 12px;">
+        <div class="modal-body">
+            <div id="mediaGrid" class="media-grid">
                 <!-- Media items will be loaded here -->
             </div>
         </div>
-        <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center; padding: var(--space-md) var(--space-lg); border-top: 1px solid var(--color-border); background: var(--color-bg-sunken);">
+        <div class="modal-footer">
             <a href="/admin/media?folder=branding" target="_blank" class="btn btn--secondary btn--sm">
                 <i data-lucide="external-link"></i>
                 Öppna Mediabiblioteket
@@ -1128,15 +1112,5 @@ document.querySelectorAll('.logo-preview-box').forEach(box => {
         </div>
     </div>
 </div>
-
-<style>
-.modal.active {
-    display: flex !important;
-}
-.media-item:hover {
-    border-color: var(--color-accent) !important;
-    background: var(--color-bg-elevated) !important;
-}
-</style>
 
 <?php include __DIR__ . '/components/unified-layout-footer.php'; ?>

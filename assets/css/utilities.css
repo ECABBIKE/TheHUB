@@ -56,3 +56,88 @@
 .summary-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--space-md);padding-bottom:var(--space-md);border-bottom:1px solid var(--color-border)}
 .summary-row span{font-size:var(--text-lg)}
 .summary-row strong{font-size:var(--text-xl);color:var(--color-accent)}
+
+/* ==============================================
+   LAYOUT UTILITIES (for replacing inline flex/grid)
+   ============================================== */
+.justify-end{justify-content:flex-end}
+.justify-start{justify-content:flex-start}
+.flex-1{flex:1}
+.flex-2{flex:2}
+.w-full{width:100%}
+.rotate-90{transform:rotate(90deg)}
+.flex-shrink-0{flex-shrink:0}
+.nowrap{white-space:nowrap}
+.icon-sm{width:16px;height:16px}
+.icon-md{width:20px;height:20px}
+.icon-lg{width:24px;height:24px}
+.inline{display:inline}
+.align-middle{vertical-align:middle}
+.mr-xs{margin-right:var(--space-xs)}
+.ml-xs{margin-left:var(--space-xs)}
+.text-error{color:var(--color-error)}
+.text-warning{color:var(--color-warning)}
+.text-success{color:var(--color-success)}
+.text-info{color:var(--color-info)}
+.cursor-pointer{cursor:pointer}
+
+/* Admin form highlight */
+.admin-form-group--highlight{background:var(--color-bg-secondary);padding:var(--space-md);border-radius:var(--radius-md)}
+
+/* Checkbox chip (for sponsor selection etc) */
+.checkbox-chip{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;background:var(--color-bg-secondary);border-radius:var(--radius-sm);cursor:pointer;font-size:var(--text-sm)}
+
+/* Grid auto-fill utilities */
+.grid-auto-280{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:var(--space-lg)}
+.grid-auto-250{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:var(--space-lg)}
+.grid-2-col{display:grid;grid-template-columns:1fr 1fr;gap:var(--space-md)}
+.grid-1-col{display:grid;grid-template-columns:1fr;gap:var(--space-md)}
+
+/* ==============================================
+   LOGO/PREVIEW BOX (for branding page)
+   ============================================== */
+.logo-preview-box{width:100%;height:80px;background:var(--color-bg-sunken);border-radius:var(--radius-md);display:flex;align-items:center;justify-content:center;overflow:hidden;cursor:pointer;border:2px dashed var(--color-border);transition:border-color 0.2s}
+.logo-preview-box:hover{border-color:var(--color-accent)}
+.logo-preview-box img{max-width:100%;max-height:100%;object-fit:contain}
+.logo-preview-placeholder{color:var(--color-text-muted);font-size:var(--text-sm)}
+
+/* ==============================================
+   DEVICE/SETTINGS SECTIONS (branding page)
+   ============================================== */
+.device-settings{padding:var(--space-lg);background:var(--color-bg-surface);border-radius:var(--radius-lg);margin-bottom:var(--space-lg)}
+.device-settings:last-child{margin-bottom:0}
+.device-settings-header{margin:0 0 var(--space-md) 0;display:flex;align-items:center;gap:var(--space-sm)}
+.device-settings--blue{border-left:4px solid #3B9EFF}
+.device-settings--orange{border-left:4px solid #F59E0B}
+.device-settings--green{border-left:4px solid #10B981}
+.device-settings--purple{border-left:4px solid #8B5CF6}
+.device-settings small{display:block;margin-top:var(--space-sm);opacity:0.7;font-size:var(--text-xs)}
+
+/* Form label block style */
+.form-label-block{display:block;font-size:var(--text-sm);color:var(--color-text-secondary);margin-bottom:var(--space-sm)}
+
+/* ==============================================
+   INFO BOX (for contextual info)
+   ============================================== */
+.info-box{padding:var(--space-md);background:var(--color-bg-sunken);border-radius:var(--radius-md);border:1px solid var(--color-border)}
+.info-box p{margin:0;font-size:var(--text-sm);color:var(--color-text-secondary);display:flex;align-items:flex-start;gap:var(--space-sm)}
+.info-box svg,.info-box i{width:16px;height:16px;margin-top:2px;flex-shrink:0}
+
+/* ==============================================
+   MODAL UTILITIES (for media picker etc.)
+   ============================================== */
+.modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;align-items:center;justify-content:center}
+.modal.active{display:flex!important}
+.modal-content{background:var(--color-bg-surface);border-radius:var(--radius-lg);max-width:700px;width:90%;max-height:80vh;display:flex;flex-direction:column;box-shadow:var(--shadow-lg)}
+.modal-header{display:flex;justify-content:space-between;align-items:center;padding:var(--space-lg);border-bottom:1px solid var(--color-border)}
+.modal-header h3{margin:0;font-size:var(--text-lg)}
+.modal-close{background:none;border:none;cursor:pointer;padding:var(--space-sm);color:var(--color-text-secondary)}
+.modal-body{padding:var(--space-lg);overflow-y:auto;flex:1}
+.modal-footer{display:flex;justify-content:space-between;align-items:center;padding:var(--space-md) var(--space-lg);border-top:1px solid var(--color-border);background:var(--color-bg-sunken)}
+
+/* Media grid for picker */
+.media-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:var(--space-sm)}
+.media-item{cursor:pointer;border:2px solid transparent;border-radius:var(--radius-md);padding:var(--space-sm);transition:border-color 0.2s;background:var(--color-bg-surface)}
+.media-item:hover{border-color:var(--color-accent);background:var(--color-bg-elevated)}
+.media-item img{width:100%;height:80px;object-fit:contain;background:var(--color-bg-sunken);border-radius:var(--radius-sm)}
+.media-item-name{font-size:var(--text-xs);color:var(--color-text-secondary);margin-top:var(--space-xs);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:center}
