@@ -30,7 +30,7 @@
 .profile-card {
     background: var(--color-bg-card);
     border-radius: var(--radius-lg);
-    padding: var(--space-xl);
+    padding: var(--card-padding);
     display: flex;
     flex-direction: column;
     gap: var(--space-md);
@@ -271,7 +271,7 @@
 .form-card {
     background: var(--color-bg-card);
     border-radius: var(--radius-lg);
-    padding: var(--space-lg);
+    padding: var(--card-padding);
 }
 
 .card-section-title {
@@ -405,7 +405,7 @@
 .series-card {
     background: var(--color-bg-card);
     border-radius: var(--radius-lg);
-    padding: var(--space-lg);
+    padding: var(--card-padding);
 }
 
 .series-tabs {
@@ -666,7 +666,7 @@
 .ranking-card {
     background: var(--color-bg-card);
     border-radius: var(--radius-lg);
-    padding: var(--space-lg);
+    padding: var(--card-padding);
     text-align: center;
     display: flex;
     flex-direction: column;
@@ -757,7 +757,7 @@
 .form-card {
     background: var(--color-bg-card);
     border-radius: var(--radius-lg);
-    padding: var(--space-lg);
+    padding: var(--card-padding);
     display: flex;
     flex-direction: column;
     gap: var(--space-md);
@@ -860,7 +860,7 @@
 .highlights-card {
     background: var(--color-bg-card);
     border-radius: var(--radius-lg);
-    padding: var(--space-lg);
+    padding: var(--card-padding);
     display: flex;
     flex-direction: column;
     gap: var(--space-sm);
@@ -901,7 +901,7 @@
 .achievements-card {
     background: var(--color-bg-card);
     border-radius: var(--radius-lg);
-    padding: var(--space-lg);
+    padding: var(--card-padding);
     display: flex;
     flex-direction: column;
     gap: var(--space-sm);
@@ -938,7 +938,7 @@
 .history-card-full {
     background: var(--color-bg-card);
     border-radius: var(--radius-lg);
-    padding: var(--space-lg);
+    padding: var(--card-padding);
 }
 
 /* Results List */
@@ -1012,6 +1012,14 @@
 
 .result-row[data-series*="Gravity Enduro Series"] {
     --result-accent: #EF761F;
+}
+
+.result-row[data-series*="Capital Gravity Series"] {
+    --result-accent: #EF761F;
+}
+
+.result-row[data-series*="SweCup Enduro"] {
+    --result-accent: #004a98;
 }
 
 .result-row[data-series*="Gothenburg"] {
@@ -1171,7 +1179,7 @@
 }
 
 .ranking-modal-body {
-    padding: var(--space-lg);
+    padding: var(--card-padding);
     max-height: calc(85vh - 120px);
     overflow-y: auto;
 }
