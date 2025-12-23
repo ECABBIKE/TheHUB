@@ -646,7 +646,7 @@ include __DIR__ . '/components/unified-layout.php';
 
                 <hr style="margin: var(--space-lg) 0; border: none; border-top: 1px solid var(--color-border);">
 
-                <h4 style="margin-bottom: var(--space-md);">Kontaktperson</h4>
+                <h4 class="mb-md">Kontaktperson</h4>
 
                 <div class="form-group">
                     <label class="form-label">Namn</label>

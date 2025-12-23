@@ -532,7 +532,7 @@ include __DIR__ . '/components/unified-layout.php';
             </svg>
             <p class="upload-zone-text">Dra och släpp filer här eller klicka för att välja</p>
             <p class="upload-zone-hint">Max 10MB. Tillåtna format: JPG, PNG, GIF, WebP, SVG, PDF</p>
-            <input type="file" id="fileInput" multiple accept=".jpg,.jpeg,.png,.gif,.webp,.svg,.pdf,image/jpeg,image/png,image/gif,image/webp,image/svg+xml,application/pdf" style="display: none;">
+            <input type="file" id="fileInput" multiple accept=".jpg,.jpeg,.png,.gif,.webp,.svg,.pdf,image/jpeg,image/png,image/gif,image/webp,image/svg+xml,application/pdf" class="hidden">
 
             <div class="upload-progress" id="uploadProgress">
                 <div class="progress-bar">
@@ -574,7 +574,7 @@ include __DIR__ . '/components/unified-layout.php';
                 </form>
             </div>
 
-            <div id="bulkActions" style="display: none;">
+            <div id="bulkActions" class="hidden">
                 <button class="btn btn-sm btn-danger" onclick="deleteSelected()">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
                     Radera valda (<span id="selectedCount">0</span>)
@@ -685,7 +685,7 @@ include __DIR__ . '/components/unified-layout.php';
                     <input type="text" class="media-detail-input" id="detailUrl" readonly onclick="this.select()">
                 </div>
 
-                <div id="detailUsage" style="display: none;">
+                <div id="detailUsage" class="hidden">
                     <span class="media-detail-label">Används i</span>
                     <ul id="usageList" style="font-size: 0.875rem; margin: var(--space-xs) 0; padding-left: var(--space-md);"></ul>
                 </div>

@@ -426,7 +426,7 @@ include __DIR__ . '/components/unified-layout.php';
         <?php if (empty($scales)): ?>
             <div style="padding: var(--space-xl); text-align: center; color: var(--color-text-secondary);">
                 <p>Inga poängmallar hittades.</p>
-                <button type="button" class="btn-admin btn-admin-primary" onclick="openCreateModal()" style="margin-top: var(--space-md);">
+                <button type="button" class="btn-admin btn-admin-primary" onclick="openCreateModal()" class="mt-md">
                     Skapa första poängmallen
                 </button>
             </div>
@@ -439,7 +439,7 @@ include __DIR__ . '/components/unified-layout.php';
                         <th>Typ</th>
                         <th>Positioner</th>
                         <th>Status</th>
-                        <th style="text-align: right;">Åtgärder</th>
+                        <th class="text-right">Åtgärder</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -472,7 +472,7 @@ include __DIR__ . '/components/unified-layout.php';
                                 <span class="badge badge-inactive">Inaktiv</span>
                             <?php endif; ?>
                         </td>
-                        <td style="text-align: right;">
+                        <td class="text-right">
                             <div class="flex gap-xs justify-end" style="flex-wrap: wrap;">
                                 <a href="/admin/point-scale-edit.php?id=<?= $scale['id'] ?>" class="btn-admin btn-admin-sm btn-admin-secondary">
                                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-xs"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
@@ -512,7 +512,7 @@ include __DIR__ . '/components/unified-layout.php';
         <div style="display: flex; align-items: center; justify-content: space-between;">
             <div>
                 <h3 style="margin: 0 0 var(--space-xs) 0;">Kvalpoängmallar</h3>
-                <p class="text-secondary text-sm" style="margin: 0;">
+                <p class="text-secondary text-sm" class="m-0">
                     Hantera poängmallar för seriekvalificering
                 </p>
             </div>

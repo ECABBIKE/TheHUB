@@ -316,17 +316,17 @@ include __DIR__ . '/components/unified-layout.php';
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
 
 <?php if ($message): ?>
-<div class="alert alert-<?= $messageType === 'error' ? 'error' : 'success' ?>" style="margin-bottom: var(--space-md);">
+<div class="alert alert-<?= $messageType === 'error' ? 'error' : 'success' ?>" class="mb-md">
     <?= htmlspecialchars($message) ?>
 </div>
 <?php endif; ?>
 
 <!-- Map Publish Settings -->
-<div class="admin-card" style="margin-bottom: var(--space-md);">
+<div class="admin-card" class="mb-md">
     <div class="admin-card-body" style="display: flex; align-items: center; gap: var(--space-lg); flex-wrap: wrap;">
         <div class="flex-1" style="min-width: 200px;">
             <strong><i data-lucide="calendar-clock" class="icon-sm"></i> Karta publiceras</strong>
-            <p class="text-sm text-secondary" style="margin: 0;">
+            <p class="text-sm text-secondary" class="m-0">
                 <?php if (!empty($event['karta_publish_at'])): ?>
                     <?= date('Y-m-d H:i', strtotime($event['karta_publish_at'])) ?>
                     <?php if (strtotime($event['karta_publish_at']) > time()): ?>
@@ -339,11 +339,11 @@ include __DIR__ . '/components/unified-layout.php';
                 <?php endif; ?>
             </p>
         </div>
-        <form method="POST" class="flex gap-sm" style="align-items: center;">
+        <form method="POST" class="flex gap-sm" class="items-center">
             <?= csrf_field() ?>
             <input type="hidden" name="action" value="update_publish_date">
             <input type="datetime-local" name="karta_publish_at" class="admin-form-input admin-form-input-sm"
-                   style="width: auto;"
+                   class="w-auto"
                    value="<?= !empty($event['karta_publish_at']) ? date('Y-m-d\TH:i', strtotime($event['karta_publish_at'])) : '' ?>">
             <button type="submit" class="btn-admin btn-admin-primary btn-admin-sm">Spara</button>
             <?php if (!empty($event['karta_publish_at'])): ?>
@@ -457,7 +457,7 @@ include __DIR__ . '/components/unified-layout.php';
                     <strong>Steg 1:</strong> Klicka på banan för att sätta ut delningspunkter
                 </div>
 
-                <div id="markers-info" class="admin-info-box" style="display: none;">
+                <div id="markers-info" class="admin-info-box" class="hidden">
                     <span id="markers-count">0 punkter</span>
                     <button type="button" onclick="clearAllMarkers()" class="btn-admin btn-admin-ghost btn-admin-xs">Rensa alla</button>
                 </div>
@@ -477,7 +477,7 @@ include __DIR__ . '/components/unified-layout.php';
                 <!-- Existing segments (saved) -->
                 <?php if (!empty($currentTrack['segments'])): ?>
                 <div class="admin-existing-segments" style="margin-top: var(--space-md); padding-top: var(--space-md); border-top: 1px solid var(--color-border);">
-                    <div class="admin-text-muted admin-text-sm" style="margin-bottom: var(--space-xs);">Sparade sektioner:</div>
+                    <div class="admin-text-muted admin-text-sm" class="mb-xs">Sparade sektioner:</div>
                     <?php foreach ($currentTrack['segments'] as $segIdx => $seg):
                         $iconName = $seg['segment_type'] === 'stage' ? 'flag' : ($seg['segment_type'] === 'lift' ? 'cable-car' : 'route');
                         $hasSponsor = !empty($seg['sponsor_name']);
@@ -527,32 +527,32 @@ include __DIR__ . '/components/unified-layout.php';
                         </form>
                     </div>
                     <?php endforeach; ?>
-                    <button type="button" onclick="editExistingSegments()" class="btn-admin btn-admin-secondary btn-admin-sm btn-admin-block" style="margin-top: var(--space-sm);">
+                    <button type="button" onclick="editExistingSegments()" class="btn-admin btn-admin-secondary btn-admin-sm btn-admin-block" class="mt-sm">
                         <i data-lucide="pencil" class="icon-xs"></i> Redigera sektioner
                     </button>
                 </div>
                 <?php endif; ?>
 
                 <!-- Hidden form for saving -->
-                <form method="POST" id="save-segments-form" style="display: none;">
+                <form method="POST" id="save-segments-form" class="hidden">
                     <?= csrf_field() ?>
                     <input type="hidden" name="action" value="save_all_segments">
                     <input type="hidden" name="track_id" value="<?= $currentTrack['id'] ?>">
                     <input type="hidden" name="segments_data" id="segments-data" value="[]">
                 </form>
-                <form method="POST" id="update-type-form" style="display: none;">
+                <form method="POST" id="update-type-form" class="hidden">
                     <?= csrf_field() ?>
                     <input type="hidden" name="action" value="update_segment_type">
                     <input type="hidden" name="segment_id" id="update-seg-id" value="">
                     <input type="hidden" name="new_type" id="update-new-type" value="">
                 </form>
-                <form method="POST" id="update-name-form" style="display: none;">
+                <form method="POST" id="update-name-form" class="hidden">
                     <?= csrf_field() ?>
                     <input type="hidden" name="action" value="update_segment_name">
                     <input type="hidden" name="segment_id" id="update-name-seg-id" value="">
                     <input type="hidden" name="new_name" id="update-new-name" value="">
                 </form>
-                <form method="POST" id="update-sponsor-form" style="display: none;">
+                <form method="POST" id="update-sponsor-form" class="hidden">
                     <?= csrf_field() ?>
                     <input type="hidden" name="action" value="update_segment_sponsor">
                     <input type="hidden" name="segment_id" id="update-sponsor-seg-id" value="">
@@ -612,7 +612,7 @@ include __DIR__ . '/components/unified-layout.php';
     <!-- Main: Map -->
     <div class="admin-main-content">
         <!-- Sponsor Banner (shown when segment with sponsor is selected) -->
-        <div id="sponsor-banner" class="sponsor-banner" style="display: none;">
+        <div id="sponsor-banner" class="sponsor-banner" class="hidden">
             <div class="sponsor-banner-content">
                 <span class="sponsor-banner-label">Sponsrad av</span>
                 <img id="sponsor-banner-logo" src="" alt="" class="sponsor-banner-logo">
@@ -623,7 +623,7 @@ include __DIR__ . '/components/unified-layout.php';
         <div class="admin-card">
             <div class="admin-card-body p-0" style="position: relative;">
                 <!-- Segment info overlay (mobile) -->
-                <div id="segment-info-overlay" class="segment-info-overlay" style="display: none;">
+                <div id="segment-info-overlay" class="segment-info-overlay" class="hidden">
                     <div class="segment-info-content">
                         <i data-lucide="flag" id="segment-info-icon"></i>
                         <span id="segment-info-name"></span>

@@ -700,11 +700,11 @@ include __DIR__ . '/components/unified-layout.php';
    <!-- Verification Section -->
    <?php if (isset($stats['total_in_db'])): ?>
     <div style="margin-top: var(--space-lg); padding-top: var(--space-lg); border-top: 1px solid var(--color-border);">
-    <h3 class="flex items-center gap-sm" style="margin-bottom: var(--space-md);">
+    <h3 class="flex items-center gap-sm" class="mb-md">
      <i data-lucide="database"></i>
      Verifiering
     </h3>
-    <div class="alert alert-info" style="margin-bottom: var(--space-md);">
+    <div class="alert alert-info" class="mb-md">
      <strong>Totalt i databasen:</strong> <?= number_format($stats['total_in_db']) ?> cyklister
     </div>
     <div style="display: flex; gap: var(--space-md);">
@@ -838,7 +838,7 @@ include __DIR__ . '/components/unified-layout.php';
    </h2>
   </div>
   <div class="admin-card-body">
-   <p class="text-secondary" style="margin-bottom: var(--space-md);">
+   <p class="text-secondary" class="mb-md">
    CSV-filen ska ha följande kolumner i första raden (header):
    </p>
 

@@ -128,7 +128,7 @@ include __DIR__ . '/components/unified-layout.php';
  </div>
  <div class="admin-card-body">
   <!-- Column Info -->
-  <details style="margin-bottom: var(--space-lg);">
+  <details class="mb-lg">
    <summary style="cursor: pointer; font-weight: 600; color: var(--color-text-secondary);">
     <i data-lucide="columns"></i>
     Kolumner (<?= count($columns) ?>)
@@ -137,7 +137,7 @@ include __DIR__ . '/components/unified-layout.php';
     <?php foreach ($columns as $col): ?>
      <div style="padding: var(--space-sm); background: var(--color-bg-muted); border-radius: var(--radius-sm); font-size: var(--text-sm);">
       <strong><?= h($col['Field']) ?></strong>
-      <span style="color: var(--color-text-secondary);"><?= h($col['Type']) ?></span>
+      <span class="text-secondary"><?= h($col['Type']) ?></span>
       <?php if ($col['Key'] === 'PRI'): ?>
        <span class="badge badge-primary" style="font-size: 10px;">PK</span>
       <?php endif; ?>

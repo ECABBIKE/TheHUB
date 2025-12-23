@@ -788,7 +788,7 @@ if (!function_exists('render_event_map')) {
         <div class="emap-map" id="<?= $mapId ?>"></div>
 
         <!-- Sponsor Banner -->
-        <div class="emap-sponsor-banner" id="<?= $mapId ?>-sponsor-banner" style="display: none;">
+        <div class="emap-sponsor-banner" id="<?= $mapId ?>-sponsor-banner" class="hidden">
         <a id="<?= $mapId ?>-sponsor-link" href="#" target="_blank" rel="noopener">
             <img id="<?= $mapId ?>-sponsor-logo" src="" alt="Sponsor">
         </a>
@@ -879,7 +879,7 @@ if (!function_exists('render_event_map')) {
         <div class="emap-elevation-toggle" onclick="<?= $mapId ?>_toggleElevation()">
             <i data-lucide="chevron-up" class="chevron" style="width: 16px; height: 16px;"></i>
             <span id="<?= $mapId ?>-elevation-title">Höjdprofil</span>
-            <button class="emap-elevation-clear" id="<?= $mapId ?>-elevation-clear" onclick="event.stopPropagation(); <?= $mapId ?>_clearSegmentSelection()" style="display: none;">
+            <button class="emap-elevation-clear" id="<?= $mapId ?>-elevation-clear" onclick="event.stopPropagation(); <?= $mapId ?>_clearSegmentSelection()" class="hidden">
                 <i data-lucide="x" style="width: 14px; height: 14px;"></i>
             </button>
         </div>

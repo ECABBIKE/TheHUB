@@ -432,7 +432,7 @@ include __DIR__ . '/components/unified-layout.php';
 </div>
 
 <!-- Series Modal -->
-<div id="seriesModal" class="admin-modal" style="display: none;">
+<div id="seriesModal" class="admin-modal" class="hidden">
     <div class="admin-modal-overlay" onclick="closeSeriesModal()"></div>
     <div class="admin-modal-content">
         <div class="admin-modal-header">
