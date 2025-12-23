@@ -1,646 +1,311 @@
-# TheHUB Development Roadmap 2025
-**Created:** 2025-11-14
-**Budget Remaining:** $90
-**Current Version:** v2.0.0
-**Status:** Post-Comprehensive Audit
+# TheHUB - Komplett Projektsammanställning
+**Senast uppdaterad: 2025-12-23**
+**Projektägare: JALLE**
+**Status: Aktiv utveckling**
+**Version:** v3.5
 
 ---
 
-## 📊 CURRENT STATUS SUMMARY
+## 📋 PROJEKTÖVERSIKT
 
-### ✅ What's Working (Already Completed)
-- ✅ Complete CRUD operations (Events, Riders, Clubs, Series, Venues, Results)
-- ✅ UCI Import with encoding detection
-- ✅ Import History with Rollback functionality
-- ✅ Responsive UI with GravitySeries theme
-- ✅ Public pages (Home, Riders, Events, Series)
-- ✅ Admin authentication system
-- ✅ Database schema with all required tables
-- ✅ Security features (SQL injection, XSS, CSRF protection)
-- ✅ License management for riders
-- ✅ Category system
+**Vad är TheHUB?**
+En komplett plattform för svenska cykeltävlingar, specifikt GravitySeries. Hanterar resultat, serieställningar, ranking, ryttarprofiler, klubbar och event-administration.
 
-### ❌ Critical Issues Found
-- ❌ Authentication backdoor (CRITICAL)
-- ❌ Debug mode enabled in production (HIGH)
-- ❌ Weak default credentials (HIGH)
-- ❌ Database method bug (`getOne()` vs `getRow()`)
-- ❌ Missing public clubs page
-- ❌ No rate limiting on login
-
-### ⚠️ Missing Features (User Requested)
-- ⚠️ Results auto-import with event creation
-- ⚠️ Permanent sidebar on desktop (claimed fixed but verify)
-- ⚠️ Search/filter improvements
-- ⚠️ Results display enhancements
-- ⚠️ Series standings/leaderboards
-- ⚠️ Event registration system
+**Tech Stack:** PHP/MySQL (Uppsala WebHotell)
+**Användarbas:** ~3000 licensierade cyklister
+**Discipliner:** Enduro, Downhill, Cross Country, Dual Slalom, Gravel
 
 ---
 
-## 💰 BUDGET ALLOCATION ($90 Total)
+## 🎯 IMPLEMENTERADE FEATURES (Klart)
 
-### Reserve Fund: $10
-Keep for unexpected issues or final polish.
+### ✅ Core Platform
+- [x] Resultatvisning (alla serier)
+- [x] Serieställningar (Capital, Götaland, Total, SweCup m.fl.)
+- [x] Ryttarprofiler (rider cards)
+- [x] Klubbsidor
+- [x] Event-sidor
+- [x] Admin-panel (CRUD för allt)
+- [x] Resultatimport (flexibel CSV med SS1-SSX stöd)
+- [x] Licensregister (UCI-nummer)
+- [x] PWA-stöd (Progressive Web App)
 
-### Available for Work: $80
-Distributed across 3 priorities: Critical, High, Medium
+### ✅ Design System (V3)
+- [x] CSS-tokens och variabler
+- [x] Mobile-first responsiv design
+- [x] Light/Dark theme
+- [x] GravitySeries färgpalett
+- [x] Lucide-ikoner (ersatt emojis)
+- [x] Komponent-bibliotek
+- [x] Utility-klasser (Tailwind-liknande)
 
----
+### ✅ Säkerhet (Fixat 2025-11)
+- [x] ~~Backdoor borttagen~~
+- [x] ~~Debug mode avstängd~~
+- [x] CSRF-skydd
+- [x] Rate limiting
+- [x] Prepared statements (SQL injection)
+- [x] XSS-skydd
+- [x] Session-hantering
+- [x] HTTPS enforcement
+- [x] Security headers
 
-## 🔴 PHASE 1: CRITICAL FIXES ($25 Budget)
-**Timeline:** Complete within 1 day
-**Goal:** Make site secure and stable
-
-### 1.1 Remove Security Backdoor [$5]
-**File:** `admin/login.php`
-**Task:** Delete lines 4-10 (backdoor code)
-**Priority:** CRITICAL
-**Time:** 10 minutes
-**Testing:** Verify backdoor URL doesn't work
-
-```diff
-- // TEMPORARY BACKDOOR
-- if (isset($_GET['backdoor']) && $_GET['backdoor'] === 'dev2025') {
--     $_SESSION['admin_logged_in'] = true;
--     $_SESSION['admin_username'] = 'admin';
--     header('Location: dashboard.php');
--     exit;
-- }
-```
-
-**Acceptance Criteria:**
-- [ ] Code deleted
-- [ ] Backdoor URL returns login page
-- [ ] Normal login still works
-- [ ] Committed and pushed
-
----
-
-### 1.2 Disable Debug Mode [$2]
-**File:** `config.php`
-**Task:** Change `DEBUG` constant
-**Priority:** CRITICAL
-**Time:** 5 minutes
-
-```diff
-- define('DEBUG', true);
-+ define('DEBUG', false);
-```
-
-Or better:
-```php
-define('DEBUG', env('APP_ENV') === 'development');
-```
-
-**Acceptance Criteria:**
-- [ ] Debug disabled
-- [ ] Error pages don't show stack traces
-- [ ] Errors logged to file instead
-- [ ] Committed and pushed
+### ✅ Tidigare bugfixar (Nov 2025)
+- [x] Database method bug (`getOne()` → `getRow()`)
+- [x] Public clubs page skapad
+- [x] Import history med rollback
+- [x] Sidebar permanent på desktop
 
 ---
 
-### 1.3 Secure Admin Credentials [$8]
-**Files:** `config.php`, `admin/login.php`, `.env`
-**Task:**
-1. Create/update `.env` with strong credentials
-2. Remove hint from login page
-3. Force environment variables
+## 💳 BETALNINGS- & ANMÄLNINGSSYSTEM (Planerat)
 
-**Priority:** CRITICAL
-**Time:** 30 minutes
-
-**Steps:**
-1. Create `.env` if missing:
-```env
-ADMIN_USERNAME=admin_unique_name_2025
-ADMIN_PASSWORD=SecureP@ssw0rd!2025_ChangeMe
+### Payment Gateway Arkitektur
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                      PaymentManager                             │
+│                           │                                     │
+│         ┌─────────────────┼─────────────────┐                   │
+│         ▼                 ▼                 ▼                   │
+│   ┌──────────┐     ┌──────────┐     ┌──────────────┐            │
+│   │  Swish   │     │  Stripe  │     │   Klarna     │            │
+│   │ Gateway  │     │ Gateway  │     │   Gateway    │            │
+│   └──────────┘     └──────────┘     └──────────────┘            │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
-2. Remove hint from `login.php`:
-```diff
-- <p class="gs-text-secondary gs-text-sm">
--     <i data-lucide="info"></i>
--     Standard login: <strong>admin / admin</strong>
-- </p>
-```
+### Swish-integration
+| Läge | Beskrivning | Status |
+|------|-------------|--------|
+| **Manuell** | Visa Swish-nummer, admin markerar betalda | ✅ Klar |
+| **Swish Handel** | QR-kod, automatisk callback | 📋 Planerad |
+| **Multi-förening** | Varje klubb eget certifikat | 📋 Planerad |
 
-3. Add validation in `config.php`:
-```php
-$adminUser = env('ADMIN_USERNAME');
-$adminPass = env('ADMIN_PASSWORD');
-
-if (!$adminUser || !$adminPass || $adminUser === 'admin' || $adminPass === 'admin') {
-    error_log('SECURITY WARNING: Change admin credentials in .env file!');
-}
-```
-
-**Acceptance Criteria:**
-- [ ] `.env` file has strong password
-- [ ] Login hint removed
-- [ ] Old credentials don't work (if changed)
-- [ ] New credentials work
-- [ ] Committed (but NOT .env file!)
+### Stripe-integration
+- Stripe Connect för multi-förening (platform-modell)
+- Apple Pay / Google Pay stöd
+- Kortbetalning
+- Webhook-integration
 
 ---
 
-### 1.4 Fix Database Method Bug [$10]
-**Files:** `admin/riders.php`, `admin/events.php`, `admin/clubs.php`, `admin/series.php`, `admin/results.php`
-**Task:** Replace `getOne()` with `getRow()`
-**Priority:** CRITICAL
-**Time:** 1 hour
+## 🎫 CHECK-IN & STARTNUMMERSYSTEM (Planerat)
 
-**Search and Replace:**
-```bash
-grep -r "getOne(" admin/*.php
-# Replace all with getRow()
+### Check-in Flöde
+```
+ANMÄLAN → Betalar → Får QR-kod (email + "Min Sida")
+TÄVLINGSDAG → Visar QR → Scanner → ✅ Incheckad → Får startnummer
 ```
 
-**Acceptance Criteria:**
-- [ ] All `getOne()` replaced with `getRow()`
-- [ ] Rider editing works
-- [ ] Event editing works
-- [ ] All CRUD edit operations tested
-- [ ] No PHP errors
-- [ ] Committed and pushed
+### Startnummer-tilldelning
+**Ranking-källor:**
+- Nationell ranking
+- Serie-ranking (välj serie)
+- UCI-ranking
+- Ingen (anmälningsordning)
+
+**Guld-plåt #1:** Alltid till bäst rankade oavsett klass
 
 ---
 
-## 🟡 PHASE 2: HIGH PRIORITY FIXES ($30 Budget)
-**Timeline:** Complete within 1 week
-**Goal:** Complete missing features and improve stability
+## 🚀 ROADMAP - PLANERADE FEATURES
 
-### 2.1 Create Public Clubs Page [$8]
-**File:** `/clubs.php` (new)
-**Task:** Create public clubs listing page
-**Priority:** HIGH
-**Time:** 2 hours
+### 📌 FAS 1: CORE FÖRBÄTTRINGAR (Pågående)
 
-**Requirements:**
-- Show all active clubs
-- Display club info (name, city, region, website)
-- Show rider count per club
-- Link to filtered riders view
-- Search/filter functionality
-- Responsive design matching other public pages
+#### 1.1 Ryttarprofiler (Rider Cards)
+- [ ] Sociala profiler - Instagram, Facebook, Strava-länkar
+- [ ] Fysiskt licenskort-design
+- [ ] Serie-flikar - Visa standings per serie
+- [ ] Progress-bar för serieposition
 
-**Template:**
-```php
-<?php
-require_once __DIR__ . '/config.php';
-$db = getDB();
+#### 1.2 Badge/Achievement System 🏆
+**Placeringar:** Guld/Silver/Brons med räknare
+**Prestationer:** Pallserie, Fullföljare, Serieledare, Seriemästare, SM
+**Experience-nivåer:** 1:a året → Legend (5+ säsonger + serieseger)
+**Lojalitet:** Järnman, Comeback, Klubbhjälte, Trogen
+**Design:** Hexagonala badges, Rarity-system (Common → Legendary)
 
-$clubs = $db->getAll("
-    SELECT c.id, c.name, c.short_name, c.city, c.region, c.website,
-           COUNT(r.id) as rider_count
-    FROM clubs c
-    LEFT JOIN riders r ON c.club_id = r.id AND r.active = 1
-    WHERE c.active = 1
-    GROUP BY c.id
-    ORDER BY c.name
-");
-
-$pageTitle = 'Klubbar';
-$pageType = 'public';
-include __DIR__ . '/includes/layout-header.php';
-?>
-<!-- Grid of club cards -->
-```
-
-**Acceptance Criteria:**
-- [ ] Page created and loads
-- [ ] Shows all clubs with rider counts
-- [ ] Links to filtered rider view
-- [ ] Mobile responsive
-- [ ] Committed and pushed
+#### 1.3 CSS Cleanup (Pågående)
+- [x] Utility-klasser utökade (+100 nya)
+- [x] Auto-fix script skapat
+- [ ] Inline styles: 1426 → 774 (-46%) - fortsätt till <300
 
 ---
 
-### 2.2 Verify and Fix Import History [$5]
-**File:** `admin/import-history.php`
-**Task:** Test import history page and rollback
-**Priority:** HIGH
-**Time:** 1 hour
+### 📌 FAS 2: TÄVLINGSRELATERAT
 
-**Test Cases:**
-1. Import UCI CSV
-2. View import in history
-3. Rollback import
-4. Verify data deleted
-5. Re-import and check
+#### 2.1 Live-uppdateringar 📡
+- [ ] Real-time leaderboard under race
+- [ ] Push-notiser för favoritåkare
+- [ ] "Följ åkare" - prenumerera på resultat
+- [ ] Live-timing integration (SiTiming)
 
-**Acceptance Criteria:**
-- [ ] Import history page loads
-- [ ] Shows all imports
-- [ ] Rollback button works
-- [ ] Data actually gets deleted
-- [ ] Old values restored (for updates)
-- [ ] Status changes to "rolled_back"
+#### 2.2 Head-to-Head Jämförelser
+- [ ] Jämför två åkares historik
+- [ ] Gemensamma event och tidsskillnader
+
+#### 2.3 Event-kartsystem 🗺️
+- [ ] GPX-uppladdning
+- [ ] Stage/Liaison klassificering
+- [ ] POI-system (12 typer)
+- [ ] Höjdprofil med färgkodning
+- [ ] Offline-stöd
 
 ---
 
-### 2.3 Implement Login Rate Limiting [$12]
-**File:** `admin/login.php`, new `includes/rate-limit.php`
-**Task:** Prevent brute-force attacks
-**Priority:** HIGH
-**Time:** 3 hours
+### 📌 FAS 3: GAMIFICATION & COMMUNITY
 
-**Implementation:**
-```php
-// includes/rate-limit.php
-function checkRateLimit($identifier, $maxAttempts = 5, $windowSeconds = 900) {
-    $key = 'rate_limit_' . md5($identifier);
-    $attempts = $_SESSION[$key] ?? ['count' => 0, 'first_attempt' => time()];
+#### 3.1 Predictions / Fantasy League
+- [ ] Tippa resultat inför varje race
+- [ ] Poängsystem för korrekta tippningar
+- [ ] Säsongsliga
 
-    // Reset if window expired
-    if (time() - $attempts['first_attempt'] > $windowSeconds) {
-        $attempts = ['count' => 0, 'first_attempt' => time()];
-    }
-
-    // Check if blocked
-    if ($attempts['count'] >= $maxAttempts) {
-        $timeRemaining = $windowSeconds - (time() - $attempts['first_attempt']);
-        return ['blocked' => true, 'seconds' => $timeRemaining];
-    }
-
-    // Increment counter
-    $attempts['count']++;
-    $_SESSION[$key] = $attempts;
-
-    return ['blocked' => false];
-}
-```
-
-**Usage in login.php:**
-```php
-$rateLimit = checkRateLimit($_SERVER['REMOTE_ADDR']);
-if ($rateLimit['blocked']) {
-    $minutes = ceil($rateLimit['seconds'] / 60);
-    $error = "För många inloggningsförsök. Försök igen om $minutes minuter.";
-    // ... display error
-}
-```
-
-**Acceptance Criteria:**
-- [ ] Max 5 attempts per IP
-- [ ] 15-minute lockout
-- [ ] Clear error message
-- [ ] Rate limit resets after window
-- [ ] Tested with multiple failed attempts
-- [ ] Committed and pushed
+#### 3.2 Community Features
+- [ ] Hitta träningspartners
+- [ ] Spårstatusrapporter
+- [ ] Gemensam kalender
 
 ---
 
-### 2.4 Add Security Headers [$5]
-**File:** `includes/layout-header.php`
-**Task:** Add HTTP security headers
-**Priority:** MEDIUM (but included in HIGH)
-**Time:** 30 minutes
+### 📌 FAS 4: E-HANDEL & BETALNINGAR
 
-```php
-// Add at top of layout-header.php
-header("X-Frame-Options: DENY");
-header("X-Content-Type-Options: nosniff");
-header("Referrer-Policy: no-referrer");
-header("Permissions-Policy: geolocation=(), microphone=(), camera=()");
-```
+#### 4.1 Biljettförsäljning
+- [ ] Varukorg i TheHUB
+- [ ] Prismatris per klass/ålder/licenstyp
+- [ ] Early bird / Late fee
+- [ ] Familjeanmälan
 
-**Acceptance Criteria:**
-- [ ] Headers present in all responses
-- [ ] Verified with browser DevTools
-- [ ] No functionality broken
-- [ ] Committed and pushed
+#### 4.2 Marknadsplats
+- [ ] Begagnad utrustning
+- [ ] Kopplat till verifierad profil
+- [ ] Tjänster (mekaniker, coaching)
 
 ---
 
-## 🟢 PHASE 3: MEDIUM PRIORITY FEATURES ($20 Budget)
-**Timeline:** Complete within 2 weeks
-**Goal:** Enhance user experience and complete requested features
+### 📌 FAS 5: MEDIA & GALLERI
 
-### 3.1 Results Import with Auto-Create Events [$15]
-**File:** `admin/import-results.php` (enhance existing)
-**Task:** Smart event detection and creation during results import
-**Priority:** MEDIUM
-**Time:** 4 hours
+#### 5.1 Eventgallerier
+- [ ] Fotografer laddar upp per event
+- [ ] Automatisk taggning av åkare
+- [ ] Köp högupplösta bilder
 
-**Current Status:** File exists but needs enhancement
-
-**Requirements:**
-1. Parse event name/date from results CSV
-2. Search for matching event in database
-3. If not found, show confirmation dialog:
-   - "Event 'XYZ' on 2025-05-15 not found. Create it?"
-   - Pre-fill event details from CSV
-   - User confirms or edits
-4. Create event if confirmed
-5. Import results linked to event
-6. Track in import history
-
-**CSV Format Expected:**
-```csv
-Event Name,Date,Rider Name,Position,Time,Category
-"Gravity Enduro #1",2025-05-15,"John Doe",1,01:23:45,"Men Elite"
-```
-
-**Acceptance Criteria:**
-- [ ] CSV parsing works
-- [ ] Event detection logic
-- [ ] Confirmation dialog shows
-- [ ] Event auto-created
-- [ ] Results linked correctly
-- [ ] Import history tracked
-- [ ] Rollback works
-- [ ] Committed and pushed
+#### 5.2 Race Reports (Instagram)
+- [ ] Hashtag #GravitySeriesReport
+- [ ] Automatisk hämtning via API
+- [ ] Koppling till ryttarprofil
 
 ---
 
-### 3.2 Verify Sidebar Behavior on Desktop [$2]
-**Files:** `assets/gravityseries-theme.css`, all pages
-**Task:** Test and fix sidebar visibility
-**Priority:** MEDIUM
-**Time:** 30 minutes
+### 📌 FAS 6: AVANCERADE FEATURES
 
-**User Complaint:** "Sidebar not permanent on desktop even though I fixed it"
+#### 6.1 Statistik & Analytics
+- [ ] Dashboard med KPI:er
+- [ ] Event-statistik
+- [ ] Geografisk fördelning
 
-**Test Cases:**
-1. Load page on desktop (>1024px width)
-2. Sidebar should be visible by default
-3. Should NOT hide unless mobile
-4. Check all admin pages
-5. Check CSS media queries
+#### 6.2 PWA & Offline
+- [ ] Fullständig PWA
+- [ ] Offline-resultat
+- [ ] Push-notifikationer
 
-**Potential Issues:**
-- CSS not loaded
-- Media query wrong
-- JavaScript hiding it
-- Cache not cleared
+#### 6.3 API
+- [ ] Public API för tredjepartsintegrationer
+- [ ] Timing-system API
 
-**Fix if needed:**
+---
+
+## 🔗 THEHUB + GRAVITYSERIES INTEGRATION
+
+### Nuvarande struktur
+```
+gravityseries.se (WordPress) → Info, nyheter, licenser
+thehub.gravityseries.se (PHP) → Data, resultat, anmälan
+```
+
+### Långsiktig plan
+```
+Fas 1 (Nu): Hybrid - gemensam design, länka mellan systemen
+Fas 2: Bygg enkel CMS i TheHUB
+Fas 3: Eventuellt fasa ut WordPress helt
+```
+
+---
+
+## 🗃️ POÄNGSYSTEM
+
+### 1. Serie-poäng
+- Poäng baserat på placering
+- Strykmatch-system (bästa X av Y)
+- Automatisk beräkning vid resultatimport
+
+### 2. Ranking (24-månaders rolling)
+- Tidsdecay (äldre resultat väger mindre)
+- Fältstorlek-viktning
+
+### 3. Klubbpoäng
+- Topp X åkare per klubb räknas
+
+---
+
+## 🎨 DESIGN TOKENS (Quick Reference)
+
 ```css
-/* In gravityseries-theme.css */
-@media (min-width: 1024px) {
-    .gs-sidebar {
-        display: block !important;
-        position: fixed;
-        left: 0;
-        top: 0;
-        height: 100vh;
-    }
+/* Färger */
+--color-primary: #171717
+--color-accent: #61CE70
+--color-gs-blue: #004a98
+--color-ges-orange: #EF761F
 
-    .gs-hamburger {
-        display: none !important;
-    }
-}
+/* Typografi */
+--font-heading: 'Oswald'
+--font-body: 'Manrope'
+
+/* Spacing */
+--space-md: 16px
+--space-lg: 24px
 ```
 
-**Acceptance Criteria:**
-- [ ] Desktop sidebar always visible
-- [ ] Mobile hamburger menu works
-- [ ] Tested on multiple browsers
-- [ ] Cache-busting applied if needed
-- [ ] Committed and pushed
+---
+
+## 📦 IDÉBANK (Framtida)
+
+- [ ] Sponsorintegration
+- [ ] Premium-medlemskap
+- [ ] Coaching-plattform
+- [ ] Livestreaming
+- [ ] Virtuella tävlingar
+- [ ] UCI-poäng integration
+- [ ] Multi-language
+
+### Nekade idéer
+- ~~Forum~~ (finns Facebook-grupper)
+- ~~Chat~~ (finns Messenger)
+- ~~Intern betting~~ (juridiska problem)
 
 ---
 
-### 3.3 Series Standings/Leaderboards [$3]
-**File:** `/series.php`, `/series-standings.php` (new)
-**Task:** Show series leaderboards with points
-**Priority:** MEDIUM
-**Time:** 1 hour
+## 📝 CHANGE LOG
 
-**Requirements:**
-1. Click on series shows standings
-2. Calculate total points per rider
-3. Sort by points descending
-4. Show wins, podiums, total races
-5. Filter by category
-
-**Database Query:**
-```sql
-SELECT
-    r.id, r.firstname, r.lastname,
-    SUM(res.points) as total_points,
-    COUNT(res.id) as total_races,
-    COUNT(CASE WHEN res.position = 1 THEN 1 END) as wins,
-    COUNT(CASE WHEN res.position <= 3 THEN 1 END) as podiums
-FROM riders r
-JOIN results res ON r.id = res.cyclist_id
-JOIN events e ON res.event_id = e.id
-WHERE e.series_id = ?
-GROUP BY r.id
-ORDER BY total_points DESC, wins DESC
-```
-
-**Acceptance Criteria:**
-- [ ] Standings page created
-- [ ] Points calculated correctly
-- [ ] Sorted by points
-- [ ] Category filter works
-- [ ] Responsive design
-- [ ] Committed and pushed
+| Datum | Uppdatering |
+|-------|-------------|
+| 2025-12-23 | CSS cleanup: 1426→774 inline styles (-46%) |
+| 2025-12-23 | Roadmap sammanslagen och uppdaterad |
+| 2025-12-18 | Komplett projektsammanställning |
+| 2025-12-14 | CSS/Design system cleanup påbörjad |
+| 2025-11-14 | Säkerhetsfixar genomförda (backdoor, debug, rate limiting) |
+| 2025-11-14 | Database method bug fixad |
 
 ---
 
-## 🔵 PHASE 4: POLISH & ENHANCEMENTS ($5 Budget + $10 Reserve)
-**Timeline:** Future / As needed
-**Goal:** Final polish and nice-to-have features
+## 🎯 ANVÄNDNING FÖR CLAUDE CODE
 
-### 4.1 Search/Filter Improvements [$3]
-**Files:** Various public pages
-**Task:** Enhanced search on public pages
-**Priority:** LOW
-**Time:** 1 hour
-
-**Enhancements:**
-- Debounced search (wait 300ms before searching)
-- Search result count
-- Clear search button
-- Remember search in URL params
-- Highlight search terms
+**Innan du börjar utveckla:**
+1. Läs denna fil för projektöversikt
+2. Läs `CLAUDE.md` för tekniska krav och kodstandard
+3. Följ etablerade mönster och CSS-tokens
+4. Uppdatera denna fil när features är klara
 
 ---
 
-### 4.2 Export Functionality [$5]
-**File:** New `includes/export.php`
-**Task:** Export data to CSV/Excel
-**Priority:** LOW
-**Time:** 2 hours
-
-**Features:**
-- Export riders list to CSV
-- Export event results to CSV
-- Export series standings to PDF
-- Download button on list pages
-
----
-
-### 4.3 Email Notifications [$7]
-**File:** New `includes/email.php`
-**Task:** Send emails for imports
-**Priority:** LOW
-**Time:** 3 hours
-
-**Features:**
-- Email admin after successful import
-- Email on import errors
-- Summary of what was imported
-- Requires mail server setup
-
----
-
-## 📋 TESTING CHECKLIST
-
-After each phase, run these tests:
-
-### Security Tests
-- [ ] No backdoor access
-- [ ] Debug mode off
-- [ ] Strong credentials required
-- [ ] Rate limiting works
-- [ ] CSRF tokens present
-- [ ] XSS attempts blocked
-- [ ] SQL injection attempts blocked
-
-### Functionality Tests
-- [ ] Login/logout works
-- [ ] All CRUD operations work
-- [ ] Import works
-- [ ] Import history works
-- [ ] Rollback works
-- [ ] Public pages load
-- [ ] Search works
-- [ ] Filters work
-
-### UI/UX Tests
-- [ ] Mobile responsive
-- [ ] Sidebar correct on desktop
-- [ ] Hamburger works on mobile
-- [ ] Forms validate
-- [ ] Error messages clear
-- [ ] Success messages show
-- [ ] Loading states present
-
----
-
-## 🚀 DEPLOYMENT CHECKLIST
-
-Before deploying fixes:
-
-### Pre-Deployment
-- [ ] All changes committed
-- [ ] Tests passed locally
-- [ ] Database backups created
-- [ ] `.env` file configured
-- [ ] Debug mode disabled
-- [ ] Error logging enabled
-
-### Deployment Steps
-1. [ ] Upload files via FTP/deploy script
-2. [ ] Run database migrations if any
-3. [ ] Clear PHP opcode cache
-4. [ ] Clear browser cache
-5. [ ] Test critical functions
-6. [ ] Monitor error logs
-
-### Post-Deployment
-- [ ] Verify login works
-- [ ] Test CRUD operations
-- [ ] Check import functionality
-- [ ] Verify public pages load
-- [ ] Monitor for 24 hours
-
----
-
-## 📊 PRIORITY MATRIX
-
-| Task | Priority | Budget | Time | Impact | Effort |
-|------|----------|--------|------|--------|--------|
-| Remove backdoor | CRITICAL | $5 | 10m | HIGH | LOW |
-| Disable debug | CRITICAL | $2 | 5m | HIGH | LOW |
-| Secure credentials | CRITICAL | $8 | 30m | HIGH | LOW |
-| Fix DB methods | CRITICAL | $10 | 1h | HIGH | MED |
-| Clubs page | HIGH | $8 | 2h | MED | MED |
-| Import history | HIGH | $5 | 1h | MED | LOW |
-| Rate limiting | HIGH | $12 | 3h | HIGH | HIGH |
-| Security headers | HIGH | $5 | 30m | MED | LOW |
-| Results import | MEDIUM | $15 | 4h | HIGH | HIGH |
-| Sidebar fix | MEDIUM | $2 | 30m | LOW | LOW |
-| Leaderboards | MEDIUM | $3 | 1h | MED | LOW |
-| Search enhance | LOW | $3 | 1h | LOW | LOW |
-| Export | LOW | $5 | 2h | LOW | MED |
-| Email | LOW | $7 | 3h | LOW | HIGH |
-
----
-
-## 💡 RECOMMENDATIONS
-
-### Do First (Essential)
-1. Remove backdoor ← CRITICAL
-2. Disable debug ← CRITICAL
-3. Secure credentials ← CRITICAL
-4. Fix database methods ← Breaks editing
-
-### Do Next (Important)
-5. Rate limiting ← Security
-6. Clubs page ← Completeness
-7. Security headers ← Best practice
-
-### Do Later (Nice-to-have)
-8. Results import enhancement ← UX improvement
-9. Leaderboards ← Feature completion
-10. Search improvements ← Polish
-
----
-
-## 🎯 SUCCESS METRICS
-
-### Phase 1 Success (Critical Fixes)
-- ✅ No security vulnerabilities in audit
-- ✅ All CRUD operations work
-- ✅ Strong authentication required
-- ✅ No debug info leaked
-
-### Phase 2 Success (High Priority)
-- ✅ Rate limiting prevents brute force
-- ✅ All public pages functional
-- ✅ Import history complete
-- ✅ Security headers present
-
-### Phase 3 Success (Medium Priority)
-- ✅ Results import works end-to-end
-- ✅ Sidebar behaves correctly
-- ✅ Leaderboards display
-
-### Overall Success
-- ✅ Site secure and stable
-- ✅ All user-requested features complete
-- ✅ Professional production quality
-- ✅ Under $90 budget
-- ✅ Ready for public launch
-
----
-
-## 📞 NEXT STEPS
-
-1. **Review this roadmap** with stakeholders
-2. **Prioritize** based on business needs
-3. **Start Phase 1** immediately (critical security fixes)
-4. **Test thoroughly** after each phase
-5. **Deploy incrementally** rather than big bang
-6. **Monitor** production after deployment
-7. **Iterate** based on user feedback
-
----
-
-**Roadmap Version:** 1.0
-**Last Updated:** 2025-11-14
-**Budget Allocation:** $80 (+ $10 reserve)
-**Estimated Timeline:** 2-4 weeks for all phases
-
-For bug details, see `BUG-REPORT.md`
-For security details, see `SECURITY-AUDIT.md`
-
----
-
-*This roadmap is a living document. Adjust priorities based on business needs and user feedback.*
+**Dokumentägare:** JALLE
+**Status:** AKTIV UTVECKLING
