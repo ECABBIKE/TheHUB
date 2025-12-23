@@ -941,6 +941,110 @@
     padding: var(--space-lg);
 }
 
+/* Results List */
+.results-list-compact {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+}
+
+/* Year Divider */
+.year-divider {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    padding: var(--space-md) 0;
+    margin: var(--space-sm) 0;
+}
+
+.year-divider:first-child {
+    margin-top: 0;
+    padding-top: 0;
+}
+
+.year-label {
+    font-size: var(--text-sm);
+    font-weight: var(--weight-semibold);
+    color: var(--color-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.year-line {
+    flex: 1;
+    height: 1px;
+    background: var(--color-border);
+}
+
+/* Result Row - Matching event-row design */
+.result-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    padding: var(--space-sm) var(--space-md);
+    background: var(--color-bg-card);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    text-decoration: none;
+    color: inherit;
+    transition: all var(--transition-fast);
+}
+
+.result-row:hover {
+    border-color: var(--color-accent);
+    box-shadow: var(--shadow-sm);
+    transform: translateY(-1px);
+}
+
+.result-pos {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-md);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-bold);
+    background: var(--color-bg-surface);
+    flex-shrink: 0;
+}
+
+.result-pos.p1 {
+    background: transparent;
+}
+
+.result-pos.p2 {
+    background: transparent;
+}
+
+.result-pos.p3 {
+    background: transparent;
+}
+
+.result-pos.motion {
+    background: var(--color-success);
+    color: white;
+}
+
+.result-date {
+    font-size: var(--text-sm);
+    color: var(--color-text-secondary);
+    min-width: 60px;
+}
+
+.result-name {
+    flex: 1;
+    font-size: var(--text-md);
+    font-weight: var(--weight-medium);
+    color: var(--color-text-primary);
+}
+
+.result-series {
+    font-size: var(--text-sm);
+    color: var(--color-text-muted);
+    font-weight: var(--weight-medium);
+}
+
 /* Medal icon in result history */
 .medal-icon-sm {
     width: 24px;
@@ -1414,19 +1518,34 @@
         padding: var(--space-xs) var(--space-sm);
     }
 
-    /* History card mobile - no scroll, show all */
+    /* History card mobile - compact and clean */
     .history-card-full {
         padding: var(--space-md);
     }
 
     .results-list-compact {
-        max-height: none !important;
-        overflow: visible !important;
+        gap: 0;
     }
 
     .result-row {
-        padding: var(--space-xs) 0;
-        gap: var(--space-xs);
+        padding: var(--space-sm) var(--space-md) var(--space-sm) 0;
+        border-radius: 0;
+        border-left: none;
+        border-right: none;
+        border-bottom: none;
+    }
+
+    .result-row:first-child {
+        border-top: 1px solid var(--color-border);
+    }
+
+    .result-row:last-child {
+        border-bottom: 1px solid var(--color-border);
+    }
+
+    .result-row:hover {
+        transform: none;
+        box-shadow: none;
     }
 
     .result-pos {
@@ -1438,12 +1557,11 @@
     .medal-icon-sm {
         width: 20px;
         height: 20px;
-        display: block;
     }
 
     .result-date {
         font-size: 12px;
-        width: 40px;
+        min-width: 50px;
     }
 
     .result-name {
@@ -1455,7 +1573,7 @@
     }
 
     .year-divider {
-        margin-top: var(--space-sm);
+        margin: var(--space-sm) 0;
         padding: var(--space-xs) 0;
     }
 
