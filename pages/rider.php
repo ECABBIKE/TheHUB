@@ -697,7 +697,7 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
                 <div class="series-position-header">
                     <div class="series-rank-display">
                         <span class="series-rank-number"><?= $standing['ranking'] ?></span>
-                        <span class="series-rank-text">av <?= $standing['total_riders'] ?></span>
+                        <span class="series-rank-text">av <?= $standing['total_riders'] ?> i <?= htmlspecialchars($standing['class_name'] ?? 'klassen') ?></span>
                     </div>
                     <?php if ($standing['trend'] != 0): ?>
                     <div class="series-trend <?= $standing['trend'] > 0 ? 'trend-up' : 'trend-down' ?>">
@@ -742,25 +742,36 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
                 <?php if (!empty($seriesEvents)): ?>
                 <div class="series-events-list">
                     <h4 class="series-events-header">Tävlingar</h4>
-                    <?php foreach ($seriesEvents as $event): ?>
-                    <a href="/calendar/<?= $event['event_id'] ?>" class="series-event-row">
-                        <div class="event-date-col">
-                            <span class="event-day"><?= date('j', strtotime($event['event_date'])) ?></span>
-                            <span class="event-month"><?= strtoupper(substr(date('M', strtotime($event['event_date'])), 0, 3)) ?></span>
-                        </div>
-                        <div class="event-info-col">
-                            <span class="event-name"><?= htmlspecialchars($event['event_name']) ?></span>
-                        </div>
-                        <div class="event-result-col">
-                            <?php if ($event['status'] === 'finished'): ?>
-                                <span class="event-position p<?= $event['position'] ?>">#<?= $event['position'] ?></span>
-                                <span class="event-points"><?= number_format($event['points'], 1) ?>p</span>
+                    <div class="series-events-compact">
+                    <?php foreach ($seriesEvents as $event):
+                        $pos = (int)$event['position'];
+                        $seriesColor = $standing['series_color'] ?? 'var(--color-accent)';
+                    ?>
+                    <a href="/calendar/<?= $event['event_id'] ?>" class="result-row" style="--result-accent: <?= htmlspecialchars($seriesColor) ?>">
+                        <span class="result-accent-bar"></span>
+                        <span class="result-pos <?= $pos <= 3 ? 'p' . $pos : '' ?>">
+                            <?php if ($pos === 1): ?>
+                            <svg class="medal-icon-sm" viewBox="0 0 36 36"><circle cx="18" cy="18" r="16" fill="#FFD700" stroke="#DAA520" stroke-width="2"/><text x="18" y="23" font-size="14" font-weight="bold" fill="#fff" text-anchor="middle">1</text></svg>
+                            <?php elseif ($pos === 2): ?>
+                            <svg class="medal-icon-sm" viewBox="0 0 36 36"><circle cx="18" cy="18" r="16" fill="#C0C0C0" stroke="#A9A9A9" stroke-width="2"/><text x="18" y="23" font-size="14" font-weight="bold" fill="#fff" text-anchor="middle">2</text></svg>
+                            <?php elseif ($pos === 3): ?>
+                            <svg class="medal-icon-sm" viewBox="0 0 36 36"><circle cx="18" cy="18" r="16" fill="#CD7F32" stroke="#8B4513" stroke-width="2"/><text x="18" y="23" font-size="14" font-weight="bold" fill="#fff" text-anchor="middle">3</text></svg>
                             <?php else: ?>
-                                <span class="event-status"><?= htmlspecialchars($event['status']) ?></span>
+                            <?= $pos ?>
                             <?php endif; ?>
-                        </div>
+                        </span>
+                        <span class="result-date"><?= date('j M', strtotime($event['event_date'])) ?></span>
+                        <span class="result-details">
+                            <span class="result-name"><?= htmlspecialchars($event['event_name']) ?></span>
+                        </span>
+                        <?php if ($event['status'] === 'finished' && $event['points'] > 0): ?>
+                        <span class="result-points"><?= number_format($event['points'], 1) ?>p</span>
+                        <?php elseif ($event['status'] !== 'finished'): ?>
+                        <span class="result-status"><?= htmlspecialchars($event['status']) ?></span>
+                        <?php endif; ?>
                     </a>
                     <?php endforeach; ?>
+                    </div>
                 </div>
                 <?php endif; ?>
 
