@@ -549,22 +549,28 @@ function parseAndAnalyzeCSV($filepath, $db) {
   }
  }
 
- // Check club matching
+ // Check club matching using smart matching
  $clubName = trim($rowData['club_name'] ?? '');
- if (!empty($clubName) && !isset($clubCache[$clubName])) {
-  $club = $db->getRow(
-  "SELECT id, name FROM clubs WHERE name LIKE ?",
-  ['%' . $clubName . '%']
-  );
+ if (!empty($clubName)) {
+  // Normalize for cache key to catch variants like "CK Uni" vs "Ck Uni"
+  $normalizedClubName = normalizeClubName($clubName);
+  $cacheKey = !empty($normalizedClubName) ? $normalizedClubName : $clubName;
 
-  $clubCache[$clubName] = $club ? true : false;
+  if (!isset($clubCache[$cacheKey])) {
+   // Use smart matching (handles CK/Ck, OK/Ok variants, etc.)
+   $club = findClubByName($db, $clubName);
 
-  if ($club) {
-  $stats['clubs_existing']++;
-  } else {
-  $stats['clubs_new']++;
+   $clubCache[$cacheKey] = $club ? ['matched' => true, 'name' => $club['name']] : false;
+
+   if ($club) {
+    $stats['clubs_existing']++;
+    // Show the matched name so user knows what it matched to
+    $stats['clubs_list'][] = $clubName . ' → ' . $club['name'];
+   } else {
+    $stats['clubs_new']++;
+    $stats['clubs_list'][] = $clubName;
+   }
   }
-  $stats['clubs_list'][] = $clubName;
  }
 
  // Track classes
