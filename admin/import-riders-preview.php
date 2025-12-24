@@ -31,8 +31,145 @@ $matchingStats = [
     'riders_update' => 0,
     'clubs_existing' => 0,
     'clubs_new' => 0,
-    'clubs_list' => []
+    'clubs_list' => [],
+    'uci_found' => 0,
+    'uci_existing' => 0,
+    'uci_not_found' => 0
 ];
+
+/**
+ * Normalize string for comparison (for UCI ID lookup)
+ */
+function normalizeStringForSearch($str) {
+    $str = mb_strtolower(trim($str), 'UTF-8');
+    $str = preg_replace('/[åä]/u', 'a', $str);
+    $str = preg_replace('/[ö]/u', 'o', $str);
+    $str = preg_replace('/[é]/u', 'e', $str);
+    $str = preg_replace('/[^a-z0-9]/u', '', $str);
+    return $str;
+}
+
+/**
+ * Find rider in database to get UCI ID (license_number)
+ */
+function findRiderForUciId($db, $firstname, $lastname, $club, $birthYear = null) {
+    $normFirstname = normalizeStringForSearch($firstname);
+    $normLastname = normalizeStringForSearch($lastname);
+    $normClub = normalizeStringForSearch($club);
+
+    // Strategy 1: Exact match with birth year
+    if ($birthYear) {
+        try {
+            $riders = $db->getAll("
+                SELECT r.id, r.firstname, r.lastname, r.license_number,
+                    r.birth_year, c.name as club_name
+                FROM riders r
+                LEFT JOIN clubs c ON r.club_id = c.id
+                WHERE LOWER(r.firstname) = ?
+                    AND LOWER(r.lastname) = ?
+                    AND r.birth_year = ?
+                    AND r.license_number IS NOT NULL
+                    AND r.license_number != ''
+                ORDER BY r.license_year DESC
+                LIMIT 1
+            ", [strtolower($firstname), strtolower($lastname), $birthYear]);
+
+            if (!empty($riders)) {
+                return array_merge($riders[0], ['match_type' => 'exact', 'confidence' => 100]);
+            }
+        } catch (Exception $e) {}
+    }
+
+    // Strategy 2: Exact match with club
+    if (!empty($club)) {
+        try {
+            $riders = $db->getAll("
+                SELECT r.id, r.firstname, r.lastname, r.license_number,
+                    r.birth_year, c.name as club_name
+                FROM riders r
+                LEFT JOIN clubs c ON r.club_id = c.id
+                WHERE LOWER(r.firstname) = ?
+                    AND LOWER(r.lastname) = ?
+                    AND LOWER(c.name) LIKE ?
+                    AND r.license_number IS NOT NULL
+                    AND r.license_number != ''
+                ORDER BY r.license_year DESC
+                LIMIT 1
+            ", [strtolower($firstname), strtolower($lastname), '%' . strtolower($club) . '%']);
+
+            if (!empty($riders)) {
+                return array_merge($riders[0], ['match_type' => 'exact', 'confidence' => 95]);
+            }
+        } catch (Exception $e) {}
+    }
+
+    // Strategy 3: Exact name match (any club)
+    try {
+        $riders = $db->getAll("
+            SELECT r.id, r.firstname, r.lastname, r.license_number,
+                r.birth_year, c.name as club_name
+            FROM riders r
+            LEFT JOIN clubs c ON r.club_id = c.id
+            WHERE LOWER(r.firstname) = ?
+                AND LOWER(r.lastname) = ?
+                AND r.license_number IS NOT NULL
+                AND r.license_number != ''
+            ORDER BY r.license_year DESC
+            LIMIT 1
+        ", [strtolower($firstname), strtolower($lastname)]);
+
+        if (!empty($riders)) {
+            $rider = $riders[0];
+            $confidence = empty($club) ? 90 : (stripos($rider['club_name'] ?? '', $club) !== false ? 95 : 80);
+            return array_merge($rider, ['match_type' => 'exact', 'confidence' => $confidence]);
+        }
+    } catch (Exception $e) {}
+
+    // Strategy 4: Fuzzy match (normalized names)
+    try {
+        $riders = $db->getAll("
+            SELECT r.id, r.firstname, r.lastname, r.license_number,
+                r.birth_year, c.name as club_name
+            FROM riders r
+            LEFT JOIN clubs c ON r.club_id = c.id
+            WHERE r.license_number IS NOT NULL
+                AND r.license_number != ''
+            ORDER BY r.license_year DESC
+            LIMIT 500
+        ", []);
+
+        $bestMatch = null;
+        $bestScore = 0;
+
+        foreach ($riders as $rider) {
+            $riderNormFirst = normalizeStringForSearch($rider['firstname']);
+            $riderNormLast = normalizeStringForSearch($rider['lastname']);
+
+            if ($riderNormFirst === $normFirstname && $riderNormLast === $normLastname) {
+                $score = 85;
+                if (!empty($normClub) && !empty($rider['club_name'])) {
+                    $riderNormClub = normalizeStringForSearch($rider['club_name']);
+                    if (strpos($riderNormClub, $normClub) !== false || strpos($normClub, $riderNormClub) !== false) {
+                        $score = 90;
+                    }
+                }
+                if ($birthYear && $rider['birth_year'] == $birthYear) {
+                    $score = 95;
+                }
+                if ($score > $bestScore) {
+                    $bestScore = $score;
+                    $bestMatch = array_merge($rider, ['match_type' => 'fuzzy', 'confidence' => $score]);
+                }
+            }
+        }
+
+        if ($bestMatch) {
+            return $bestMatch;
+        }
+    } catch (Exception $e) {}
+
+    return null;
+}
 
 /**
  * Auto-detect CSV separator
@@ -213,8 +350,28 @@ try {
             }
         }
 
-        // UCI ID
+        // UCI ID - check in CSV first, then search if missing
         $uciId = isset($colMap['uci_id']) ? trim($row[$colMap['uci_id']] ?? '') : '';
+        $uciIdSource = 'csv'; // 'csv', 'found', or 'not_found'
+        $uciIdMatch = null;
+
+        if (!empty($uciId)) {
+            // Normalize existing UCI ID
+            $uciId = normalizeUciId($uciId);
+            $uciIdSource = 'csv';
+            $matchingStats['uci_existing']++;
+        } else {
+            // Search for UCI ID in database
+            $uciIdMatch = findRiderForUciId($db, $firstname, $lastname, $clubName, $birthYear);
+            if ($uciIdMatch && !empty($uciIdMatch['license_number'])) {
+                $uciId = normalizeUciId($uciIdMatch['license_number']);
+                $uciIdSource = 'found';
+                $matchingStats['uci_found']++;
+            } else {
+                $uciIdSource = 'not_found';
+                $matchingStats['uci_not_found']++;
+            }
+        }
 
         // Check if rider exists
         $riderKey = strtolower($firstname . '_' . $lastname . '_' . $birthYear);
@@ -267,6 +424,8 @@ try {
             'club' => $clubName,
             'club_status' => $clubStatus,
             'uci_id' => $uciId,
+            'uci_id_source' => $uciIdSource,
+            'uci_id_match' => $uciIdMatch,
             'rider_status' => $riderStatus,
             'existing_rider' => $existingRider
         ];
@@ -347,6 +506,22 @@ include __DIR__ . '/components/unified-layout.php';
             <div class="admin-stat-card">
                 <div class="admin-stat-value" style="color: var(--color-warning);"><?= number_format($matchingStats['clubs_new']) ?></div>
                 <div class="admin-stat-label">Nya klubbar</div>
+            </div>
+        </div>
+
+        <!-- UCI ID Stats -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: var(--space-md); margin-top: var(--space-md); padding-top: var(--space-md); border-top: 1px solid var(--color-border);">
+            <div class="admin-stat-card">
+                <div class="admin-stat-value"><?= number_format($matchingStats['uci_existing']) ?></div>
+                <div class="admin-stat-label">UCI-ID i fil</div>
+            </div>
+            <div class="admin-stat-card">
+                <div class="admin-stat-value text-success"><?= number_format($matchingStats['uci_found']) ?></div>
+                <div class="admin-stat-label">UCI-ID hittade</div>
+            </div>
+            <div class="admin-stat-card">
+                <div class="admin-stat-value text-secondary"><?= number_format($matchingStats['uci_not_found']) ?></div>
+                <div class="admin-stat-label">UCI-ID saknas</div>
             </div>
         </div>
 
@@ -519,7 +694,29 @@ include __DIR__ . '/components/unified-layout.php';
                             <span class="badge badge-warning" style="font-size: 0.65rem;">NY</span>
                             <?php endif; ?>
                         </td>
-                        <td><code class="text-xs"><?= h($row['uci_id']) ?: '-' ?></code></td>
+                        <td>
+                            <?php if (!empty($row['uci_id'])): ?>
+                                <?php if ($row['uci_id_source'] === 'found'): ?>
+                                    <code class="text-xs text-success" style="font-weight: 600;"><?= h($row['uci_id']) ?></code>
+                                    <span class="badge badge-success" style="font-size: 0.6rem; margin-left: 4px;">
+                                        <i data-lucide="search" style="width: 10px; height: 10px;"></i>
+                                        Hittad
+                                    </span>
+                                    <?php if ($row['uci_id_match']): ?>
+                                    <br><small class="text-secondary" style="font-size: 0.7rem;">
+                                        via <?= h($row['uci_id_match']['firstname'] . ' ' . $row['uci_id_match']['lastname']) ?>
+                                        <?php if ($row['uci_id_match']['confidence'] < 100): ?>
+                                        (<?= $row['uci_id_match']['confidence'] ?>%)
+                                        <?php endif; ?>
+                                    </small>
+                                    <?php endif; ?>
+                                <?php else: ?>
+                                    <code class="text-xs"><?= h($row['uci_id']) ?></code>
+                                <?php endif; ?>
+                            <?php else: ?>
+                                <span class="text-secondary">-</span>
+                            <?php endif; ?>
+                        </td>
                         <td>
                             <?php if ($row['rider_status'] === 'existing'): ?>
                             <span class="badge badge-success">Uppdateras</span>
