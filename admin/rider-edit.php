@@ -182,14 +182,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
  ];
 
  try {
+ // Debug logging
+ error_log("RIDER EDIT: Saving rider ID {$id}");
+ error_log("RIDER EDIT: club_id from POST = " . var_export($_POST['club_id'] ?? 'NOT SET', true));
+ error_log("RIDER EDIT: club_id in riderData = " . var_export($riderData['club_id'], true));
+
  $updateResult = $db->update('riders', $riderData, 'id = ?', [$id]);
+ error_log("RIDER EDIT: Update result (rows affected) = {$updateResult}");
 
  // Refresh rider data to verify the save worked
  $rider = $db->getRow("SELECT * FROM riders WHERE id = ?", [$id]);
 
  // Verify club_id was actually saved
  $savedClubId = $rider['club_id'];
- $expectedClubId = !empty($_POST['club_id']) ? intval($_POST['club_id']) : null;
+ $expectedClubId = $riderData['club_id']; // Use the actual data we tried to save
 
  if ($savedClubId != $expectedClubId) {
   $message = 'Varning: Klubben kunde inte sparas korrekt. Försökte sätta klubb-ID till ' . ($expectedClubId ?? 'null') . ' men värdet är ' . ($savedClubId ?? 'null');
@@ -202,6 +208,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
  } catch (Exception $e) {
  $message = 'Ett fel uppstod: ' . $e->getMessage();
  $messageType = 'error';
+ error_log("RIDER EDIT: Exception - " . $e->getMessage());
  }
  }
  } elseif ($action === 'update_license' && hasRole('super_admin')) {
@@ -370,20 +377,30 @@ foreach ($yearsWithResults as $yr) {
 
 // Handle club history update
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'update_club_year') {
-    checkCsrf();
+    // Note: checkCsrf already called in main POST handler above
     $updateYear = (int)($_POST['year'] ?? 0);
     $updateClubId = (int)($_POST['club_id'] ?? 0);
 
-    if ($updateYear > 0 && $updateClubId > 0) {
+    error_log("CLUB HISTORY: Updating year={$updateYear}, club_id={$updateClubId} for rider {$riderId}");
+
+    if ($updateYear <= 0) {
+        $message = 'Ogiltigt år valt';
+        $messageType = 'error';
+    } elseif ($updateClubId <= 0) {
+        $message = 'Du måste välja en klubb';
+        $messageType = 'error';
+    } else {
         $result = setRiderClubForYear($db, $riderId, $updateClubId, $updateYear);
         if ($result['success']) {
             $message = $result['message'];
             $messageType = 'success';
             // Refresh club history
             $clubHistory = getRiderClubHistory($db, $riderId);
+            error_log("CLUB HISTORY: Successfully updated");
         } else {
             $message = $result['message'];
             $messageType = 'error';
+            error_log("CLUB HISTORY: Failed - " . $result['message']);
         }
     }
 }
@@ -450,6 +467,7 @@ include __DIR__ . '/components/unified-layout.php';
  <!-- Edit Form -->
  <form method="POST" class="card">
  <?= csrf_field() ?>
+ <input type="hidden" name="action" value="save_rider">
 
  <div class="card-body">
  <div class="grid gap-lg grid-2-col">
@@ -962,7 +980,7 @@ include __DIR__ . '/components/unified-layout.php';
     <?= csrf_field() ?>
     <input type="hidden" name="action" value="update_club_year">
     <input type="hidden" name="year" value="<?= $year ?>">
-    <select name="club_id" class="input" style="min-width: 150px;">
+    <select name="club_id" class="input" style="min-width: 150px;" required>
      <option value="">Välj klubb...</option>
      <?php foreach ($clubs as $club): ?>
      <option value="<?= $club['id'] ?>" <?= ($data['club_id'] ?? '') == $club['id'] ? 'selected' : '' ?>>
@@ -1007,7 +1025,7 @@ include __DIR__ . '/components/unified-layout.php';
    <?php endif; ?>
    <?php endfor; ?>
   </select>
-  <select name="club_id" class="input" style="min-width: 200px;">
+  <select name="club_id" class="input" style="min-width: 200px;" required>
    <option value="">Välj klubb...</option>
    <?php foreach ($clubs as $club): ?>
    <option value="<?= $club['id'] ?>"><?= h($club['name']) ?></option>

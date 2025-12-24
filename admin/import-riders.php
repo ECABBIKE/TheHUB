@@ -456,6 +456,13 @@ function importRidersFromCSV($filepath, $db, $seasonYear = null) {
   'validuntil' => 'licensevaliduntil',
   'expiry' => 'licensevaliduntil',
 
+  // License year
+  'licensår' => 'licenseyear',
+  'licensar' => 'licenseyear',
+  'licensyear' => 'licenseyear',
+  'licenseyear' => 'licenseyear',
+  'licyear' => 'licenseyear',
+
   // Discipline
   'gren' => 'discipline',
   'discipline' => 'discipline',
@@ -606,6 +613,7 @@ function importRidersFromCSV($filepath, $db, $seasonYear = null) {
   $riderData['license_type'] = !empty($data['licensetype']) ? trim($data['licensetype']) : null;
   $riderData['discipline'] = !empty($data['discipline']) ? trim($data['discipline']) : null;
   $riderData['license_valid_until'] = !empty($data['licensevaliduntil']) ? trim($data['licensevaliduntil']) : null;
+  $riderData['license_year'] = !empty($data['licenseyear']) ? (int)$data['licenseyear'] : null;
 
   // License category - use provided or auto-suggest
   if (!empty($data['licensecategory'])) {
@@ -1147,6 +1155,30 @@ include __DIR__ . '/components/unified-layout.php';
      <td>Stad/Ort</td>
      <td>Stockholm</td>
     </tr>
+    <tr>
+     <td><code>license_type</code> eller <code>licenstyp</code></td>
+     <td><span class="badge badge-secondary">Nej</span></td>
+     <td>Licenstyp</td>
+     <td>Elit</td>
+    </tr>
+    <tr>
+     <td><code>license_year</code> eller <code>licensår</code></td>
+     <td><span class="badge badge-secondary">Nej</span></td>
+     <td>Licensår</td>
+     <td>2025</td>
+    </tr>
+    <tr>
+     <td><code>license_category</code> eller <code>kategori</code></td>
+     <td><span class="badge badge-secondary">Nej</span></td>
+     <td>Licenskategori</td>
+     <td>Herrar</td>
+    </tr>
+    <tr>
+     <td><code>discipline</code> eller <code>gren</code></td>
+     <td><span class="badge badge-secondary">Nej</span></td>
+     <td>Disciplin/gren</td>
+     <td>MTB</td>
+    </tr>
     </tbody>
    </table>
    </div>
@@ -1171,10 +1203,10 @@ include __DIR__ . '/components/unified-layout.php';
    <p class="text-sm text-secondary">
     <strong>Exempel på CSV-fil:</strong>
    </p>
-   <pre class="gs-code-block">firstname,lastname,birth_year,gender,club,license_number,email,phone,city
-Erik,Andersson,1995,M,Team GravitySeries,SWE-2025-1234,erik@example.com,070-1234567,Stockholm
-Anna,Karlsson,1998,F,CK Olympia,SWE-2025-2345,anna@example.com,070-2345678,Göteborg
-Johan,Svensson,1992,M,Uppsala CK,SWE-2025-3456,johan@example.com,070-3456789,Uppsala</pre>
+   <pre class="gs-code-block">firstname,lastname,birth_year,gender,club,license_number,license_type,license_year,email
+Erik,Andersson,1995,M,Team GravitySeries,SWE-2025-1234,Elit,2025,erik@example.com
+Anna,Karlsson,1998,F,CK Olympia,SWE-2025-2345,Motion,2025,anna@example.com
+Johan,Svensson,1992,M,Uppsala CK,SWE-2025-3456,Elit,2025,johan@example.com</pre>
    </div>
   </div>
   </div>

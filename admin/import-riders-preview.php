@@ -243,7 +243,12 @@ try {
         'birthday' => ['födelsedatum', 'födelsdag', 'birthday', 'birthdate', 'date of birth', 'dob'],
         'email' => ['email', 'e-post', 'epost', 'mail', 'e-mail'],
         'uci_id' => ['medlemsnummer', 'uci', 'licens', 'license', 'license_number', 'licensnummer', 'uci_id', 'uciid', 'id'],
-        'nationality' => ['nationalitet', 'nationality', 'land', 'country', 'nation']
+        'nationality' => ['nationalitet', 'nationality', 'land', 'country', 'nation'],
+        // License fields
+        'license_type' => ['licenstyp', 'license_type', 'licensetype', 'licensetyp', 'typ', 'type'],
+        'license_year' => ['licensår', 'licensar', 'license_year', 'licenseyear', 'licensyear', 'licyear'],
+        'license_category' => ['licenskategori', 'license_category', 'licensecategory', 'kategori', 'category'],
+        'discipline' => ['gren', 'discipline', 'disciplin', 'sport']
     ];
 
     // Auto-detect column mappings
