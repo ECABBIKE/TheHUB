@@ -474,10 +474,13 @@ function importRidersFromCSV($filepath, $db, $seasonYear = null) {
   'gender' => $gender,
   'license_number' => !empty($data['licensenumber']) ? trim($data['licensenumber']) : null,
   'email' => !empty($data['email']) ? trim($data['email']) : null,
-  'phone' => !empty($data['phone']) ? trim($data['phone']) : null,
-  'city' => !empty($data['city']) ? trim($data['city']) : null,
   'active' => 1
   ];
+
+  // Add district if city/region is provided (maps to district field)
+  if (!empty($data['city'])) {
+    $riderData['district'] = trim($data['city']);
+  }
 
   // Add new license fields
   $riderData['license_type'] = !empty($data['licensetype']) ? trim($data['licensetype']) : null;
@@ -610,8 +613,14 @@ function importRidersFromCSV($filepath, $db, $seasonYear = null) {
   } else {
   // Insert new rider
   $riderId = $db->insert('riders', $riderData);
-  $stats['success']++;
-  error_log("Import: Inserted new rider ID {$riderId} - {$riderData['firstname']} {$riderData['lastname']} (active={$riderData['active']})");
+  if ($riderId && $riderId > 0) {
+    $stats['success']++;
+    error_log("Import: Inserted new rider ID {$riderId} - {$riderData['firstname']} {$riderData['lastname']} (active={$riderData['active']})");
+  } else {
+    $stats['failed']++;
+    $errors[] = "Rad {$lineNumber}: Kunde inte spara {$riderData['firstname']} {$riderData['lastname']} till databasen";
+    error_log("Import FAILED: Could not insert rider - {$riderData['firstname']} {$riderData['lastname']}");
+  }
   }
 
   // Set club membership for the season year

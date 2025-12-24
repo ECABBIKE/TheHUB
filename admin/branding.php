@@ -995,7 +995,8 @@ async function openMediaPicker(field) {
     const grid = document.getElementById('mediaGrid');
 
     grid.innerHTML = '<div style="text-align: center; padding: 40px; color: var(--color-text-secondary);">Laddar bilder...</div>';
-    modal.classList.add('active');
+    modal.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
 
     try {
         const response = await fetch('/api/media.php?action=list&folder=branding&limit=100');
@@ -1066,7 +1067,9 @@ function clearLogo(field) {
 }
 
 function closeMediaModal() {
-    document.getElementById('mediaPickerModal').classList.remove('active');
+    const modal = document.getElementById('mediaPickerModal');
+    modal.style.display = 'none';
+    document.body.style.overflow = '';
     currentLogoField = null;
 }
 
@@ -1078,8 +1081,13 @@ document.addEventListener('keydown', (e) => {
 });
 
 // Close modal on backdrop click
-document.getElementById('mediaPickerModal')?.addEventListener('click', (e) => {
-    if (e.target.id === 'mediaPickerModal') closeMediaModal();
+document.addEventListener('DOMContentLoaded', function() {
+    const pickerModal = document.getElementById('mediaPickerModal');
+    if (pickerModal) {
+        pickerModal.addEventListener('click', (e) => {
+            if (e.target.id === 'mediaPickerModal') closeMediaModal();
+        });
+    }
 });
 
 // Hover effect for preview boxes
@@ -1098,20 +1106,20 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 
 <!-- Media Picker Modal (will be moved to body via JS) -->
-<div class="modal" id="mediaPickerModal">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h3>Välj bild från Mediabiblioteket</h3>
-            <button type="button" class="modal-close" onclick="closeMediaModal()">
+<div class="media-picker-modal-overlay" id="mediaPickerModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); z-index: 99999; align-items: center; justify-content: center;">
+    <div class="modal-content" style="background: var(--color-bg-surface); border-radius: var(--radius-lg); max-width: 700px; width: 90%; max-height: 80vh; display: flex; flex-direction: column; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);">
+        <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; padding: var(--space-lg); border-bottom: 1px solid var(--color-border);">
+            <h3 style="margin: 0; font-size: var(--text-lg);">Välj bild från Mediabiblioteket</h3>
+            <button type="button" class="modal-close" onclick="closeMediaModal()" style="background: none; border: none; cursor: pointer; padding: var(--space-sm); color: var(--color-text-secondary);">
                 <i data-lucide="x"></i>
             </button>
         </div>
-        <div class="modal-body">
+        <div class="modal-body" style="padding: var(--space-lg); overflow-y: auto; flex: 1;">
             <div id="mediaGrid" class="media-grid">
                 <!-- Media items will be loaded here -->
             </div>
         </div>
-        <div class="modal-footer">
+        <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center; padding: var(--space-md) var(--space-lg); border-top: 1px solid var(--color-border); background: var(--color-bg-sunken);">
             <a href="/admin/media?folder=branding" target="_blank" class="btn btn--secondary btn--sm">
                 <i data-lucide="external-link"></i>
                 Öppna Mediabiblioteket

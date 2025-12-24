@@ -539,6 +539,35 @@ include __DIR__ . '/components/unified-layout.php';
  </div>
 
  <!-- Results Table -->
+ <?php
+ // Sort results by match type: partial first (needs review), then fuzzy, then exact last (no review needed)
+ $sortOrder = ['partial' => 1, 'fuzzy' => 2, 'not_found' => 3, 'existing' => 4, 'exact' => 5];
+ $sortedResults = $results;
+ usort($sortedResults, function($a, $b) use ($sortOrder) {
+   $orderA = $sortOrder[$a['match_type']] ?? 99;
+   $orderB = $sortOrder[$b['match_type']] ?? 99;
+   return $orderA - $orderB;
+ });
+
+ // Group results by match type for section headers
+ $groupedResults = [];
+ foreach ($sortedResults as $result) {
+   $type = $result['match_type'];
+   if (!isset($groupedResults[$type])) {
+     $groupedResults[$type] = [];
+   }
+   $groupedResults[$type][] = $result;
+ }
+
+ $groupLabels = [
+   'partial' => ['label' => 'GRANSKA: Delvisa matchningar', 'icon' => 'alert-triangle', 'color' => 'warning'],
+   'fuzzy' => ['label' => 'GRANSKA: Fuzzy matchningar', 'icon' => 'help-circle', 'color' => 'info'],
+   'not_found' => ['label' => 'Ej hittade', 'icon' => 'x-circle', 'color' => 'danger'],
+   'existing' => ['label' => 'Befintliga (redan ifyllda)', 'icon' => 'database', 'color' => 'secondary'],
+   'exact' => ['label' => 'OK: Exakta matchningar', 'icon' => 'check-circle', 'color' => 'success']
+ ];
+ ?>
+
  <div class="card">
  <div class="card-header">
   <h2 class="">
@@ -562,7 +591,24 @@ include __DIR__ . '/components/unified-layout.php';
   </tr>
   </thead>
   <tbody>
-  <?php foreach ($results as $result): ?>
+  <?php
+  $displayOrder = ['partial', 'fuzzy', 'not_found', 'existing', 'exact'];
+  foreach ($displayOrder as $groupType):
+    if (!isset($groupedResults[$groupType]) || empty($groupedResults[$groupType])) continue;
+    $groupInfo = $groupLabels[$groupType];
+    $groupCount = count($groupedResults[$groupType]);
+  ?>
+  <!-- Group Header -->
+  <tr class="group-header" style="background: var(--color-bg-sunken);">
+    <td colspan="6" style="padding: var(--space-md); border-top: 2px solid var(--color-<?= $groupInfo['color'] ?>);">
+      <div style="display: flex; align-items: center; gap: var(--space-sm);">
+        <i data-lucide="<?= $groupInfo['icon'] ?>" style="color: var(--color-<?= $groupInfo['color'] ?>);"></i>
+        <strong style="font-size: 1.1em;"><?= $groupInfo['label'] ?></strong>
+        <span class="badge badge-<?= $groupInfo['color'] ?>"><?= $groupCount ?></span>
+      </div>
+    </td>
+  </tr>
+  <?php foreach ($groupedResults[$groupType] as $result): ?>
    <?php
    $rowClass = '';
    if ($result['match_type'] === 'not_found') {
@@ -588,8 +634,10 @@ include __DIR__ . '/components/unified-layout.php';
    $badgeClass = 'badge-danger';
    $matchLabel = 'Ej hittad';
    }
+
+   // Find original index for selection tracking
+   $rowIndex = array_search($result, $results);
    ?>
-   <?php $rowIndex = array_search($result, $results); ?>
    <tr class="<?= $rowClass ?>" data-match-type="<?= h($result['match_type']) ?>">
    <td>
    <input type="checkbox"
@@ -599,15 +647,21 @@ include __DIR__ . '/components/unified-layout.php';
     onchange="updateSelection()">
    </td>
    <td>
-   <strong><?= h($result['firstname'] . ' ' . $result['lastname']) ?></strong>
+   <div style="font-size: 1.1em; font-weight: 600;"><?= h($result['firstname'] . ' ' . $result['lastname']) ?></div>
    <?php if ($result['found_name'] && $result['found_name'] !== $result['firstname'] . ' ' . $result['lastname']): ?>
-   <br><small class="text-secondary">&rarr; <?= h($result['found_name']) ?></small>
+   <div style="font-size: 1.15em; font-weight: 700; color: var(--color-success); margin-top: 4px;">
+     <i data-lucide="arrow-right" style="width: 14px; height: 14px; display: inline;"></i>
+     <?= h($result['found_name']) ?>
+   </div>
    <?php endif; ?>
    </td>
    <td>
    <?= h($result['club']) ?>
    <?php if ($result['found_club'] && $result['found_club'] !== $result['club']): ?>
-   <br><small class="text-secondary">&rarr; <?= h($result['found_club']) ?></small>
+   <div style="color: var(--color-success); margin-top: 4px;">
+     <i data-lucide="arrow-right" style="width: 12px; height: 12px; display: inline;"></i>
+     <?= h($result['found_club']) ?>
+   </div>
    <?php endif; ?>
    </td>
    <td>
@@ -619,7 +673,7 @@ include __DIR__ . '/components/unified-layout.php';
    </td>
    <td>
    <?php if ($result['uci_id'] && $result['uci_id'] !== $result['original_uci_id']): ?>
-   <code class="text-success"><?= h($result['uci_id']) ?></code>
+   <code class="text-success" style="font-size: 1.05em; font-weight: 600;"><?= h($result['uci_id']) ?></code>
    <?php elseif ($result['uci_id']): ?>
    <code><?= h($result['uci_id']) ?></code>
    <?php else: ?>
@@ -635,6 +689,9 @@ include __DIR__ . '/components/unified-layout.php';
    </span>
    </td>
    </tr>
+  <?php endforeach; ?>
+  <!-- Spacer after group -->
+  <tr class="group-spacer"><td colspan="6" style="height: 20px; background: transparent; border: none;"></td></tr>
   <?php endforeach; ?>
   </tbody>
   </table>
