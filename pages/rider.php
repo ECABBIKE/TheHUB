@@ -945,7 +945,7 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
         <p>Inga resultat registrerade</p>
     </div>
     <?php else: ?>
-    <div class="results-history-simple">
+    <div class="results-list-compact">
         <?php
         $currentYear = null;
         foreach ($results as $result):
@@ -957,36 +957,33 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
             <span class="year-label"><?= $currentYear ?></span>
             <span class="year-line"></span>
         </div>
-        <?php endif;
-            // Format position text
-            if ($result['is_motion']) {
-                $posText = 'Genomförd';
-            } elseif ($result['status'] !== 'finished') {
-                $posText = strtoupper(substr($result['status'], 0, 3));
-            } else {
-                $pos = $result['position'];
-                if ($pos == 1) $posText = '1:a';
-                elseif ($pos == 2) $posText = '2:a';
-                elseif ($pos == 3) $posText = '3:e';
-                else $posText = $pos . ':e';
-            }
-
-            // Build the line: "29 sept - SweCup Enduro - Isaberg - Herrar Elit - 1:a"
-            $parts = [];
-            $parts[] = date('j M', strtotime($result['event_date']));
-            if (!empty($result['series_name'])) {
-                $parts[] = htmlspecialchars($result['series_name']);
-            }
-            if (!empty($result['location'])) {
-                $parts[] = htmlspecialchars($result['location']);
-            }
-            if (!empty($result['class_name'])) {
-                $parts[] = htmlspecialchars($result['class_name']);
-            }
-            $parts[] = $posText;
-        ?>
-        <a href="/event/<?= $result['event_id'] ?>" class="result-history-row">
-            <?= implode(' - ', $parts) ?>
+        <?php endif; ?>
+        <a href="/event/<?= $result['event_id'] ?>" class="result-row" <?php if (!empty($result['series_color'])): ?>style="--result-accent: <?= htmlspecialchars($result['series_color']) ?>;"<?php endif; ?>>
+            <span class="result-accent-bar"></span>
+            <?php if ($result['is_motion']): ?>
+            <span class="result-pos motion">
+                <i data-lucide="check"></i>
+            </span>
+            <?php else: ?>
+            <span class="result-pos <?= $result['status'] === 'finished' && $result['position'] <= 3 ? 'p' . $result['position'] : '' ?>">
+                <?php if ($result['status'] !== 'finished'): ?>
+                    <?= strtoupper(substr($result['status'], 0, 3)) ?>
+                <?php elseif ($result['position'] == 1): ?>
+                    <img src="/assets/icons/medal-1st.svg" alt="1:a" class="medal-icon-sm">
+                <?php elseif ($result['position'] == 2): ?>
+                    <img src="/assets/icons/medal-2nd.svg" alt="2:a" class="medal-icon-sm">
+                <?php elseif ($result['position'] == 3): ?>
+                    <img src="/assets/icons/medal-3rd.svg" alt="3:e" class="medal-icon-sm">
+                <?php else: ?>
+                    #<?= $result['position'] ?>
+                <?php endif; ?>
+            </span>
+            <?php endif; ?>
+            <span class="result-date"><?= date('j M', strtotime($result['event_date'])) ?></span>
+            <span class="result-details">
+                <span class="result-name"><?= htmlspecialchars($result['series_name'] ?? $result['event_name']) ?></span>
+                <span class="result-meta"><?= htmlspecialchars($result['location'] ?? '') ?><?= !empty($result['location']) && !empty($result['class_name']) ? ' · ' : '' ?><?= htmlspecialchars($result['class_name'] ?? '') ?></span>
+            </span>
         </a>
         <?php endforeach; ?>
     </div>
