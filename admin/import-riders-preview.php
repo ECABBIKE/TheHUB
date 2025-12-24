@@ -241,14 +241,25 @@ try {
         'club' => ['klubb', 'club', 'team', 'förening', 'forening', 'organisation', 'huvudförening', 'huvudforening'],
         'birth_year' => ['födelseår', 'fodelsear', 'birthyear', 'birth_year', 'year', 'år', 'ar', 'född', 'fodd', 'ålder', 'alder', 'age'],
         'birthday' => ['födelsedatum', 'födelsdag', 'birthday', 'birthdate', 'date of birth', 'dob'],
-        'email' => ['email', 'e-post', 'epost', 'mail', 'e-mail'],
-        'uci_id' => ['medlemsnummer', 'uci', 'licens', 'license', 'license_number', 'licensnummer', 'uci_id', 'uciid', 'id'],
+        'email' => ['email', 'e-post', 'epost', 'epostadress', 'mail', 'e-mail'],
+        'uci_id' => ['medlemsnummer', 'uci', 'ucikod', 'licens', 'license', 'license_number', 'licensnummer', 'uci_id', 'uciid', 'id'],
         'nationality' => ['nationalitet', 'nationality', 'land', 'country', 'nation'],
+        'district' => ['distrikt', 'district', 'region', 'län', 'lan'],
         // License fields
         'license_type' => ['licenstyp', 'license_type', 'licensetype', 'licensetyp', 'typ', 'type'],
         'license_year' => ['licensår', 'licensar', 'license_year', 'licenseyear', 'licensyear', 'licyear'],
         'license_category' => ['licenskategori', 'license_category', 'licensecategory', 'kategori', 'category'],
-        'discipline' => ['gren', 'discipline', 'disciplin', 'sport']
+        'discipline' => ['gren', 'discipline', 'disciplin', 'sport'],
+        // SCF discipline columns (individual checkboxes)
+        'discipline_road' => ['road'],
+        'discipline_track' => ['track'],
+        'discipline_bmx' => ['bmx'],
+        'discipline_cx' => ['cx'],
+        'discipline_trial' => ['trial'],
+        'discipline_para' => ['para'],
+        'discipline_mtb' => ['mtb'],
+        'discipline_ecycling' => ['e-cycling', 'ecycling'],
+        'discipline_gravel' => ['gravel']
     ];
 
     // Auto-detect column mappings

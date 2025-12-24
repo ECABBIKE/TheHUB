@@ -425,9 +425,25 @@ function importRidersFromCSV($filepath, $db, $seasonYear = null) {
   'lag' => 'club',
   'förening' => 'club',
   'forening' => 'club',
+  'huvudförening' => 'club',
+  'huvudforening' => 'club',
   'organisation' => 'club',
   'organization' => 'club',
   'org' => 'club',
+
+  // District/Region
+  'distrikt' => 'district',
+  'district' => 'district',
+  'region' => 'district',
+  'län' => 'district',
+  'lan' => 'district',
+
+  // Nationality
+  'land' => 'nationality',
+  'nationalitet' => 'nationality',
+  'nationality' => 'nationality',
+  'country' => 'nationality',
+  'nation' => 'nationality',
 
   // License
   'licensnummer' => 'licensenumber',
@@ -435,10 +451,22 @@ function importRidersFromCSV($filepath, $db, $seasonYear = null) {
   'licensenumber' => 'licensenumber',
   'licencenumber' => 'licensenumber',
   'uciid' => 'licensenumber',
+  'ucikod' => 'licensenumber',
   'uci' => 'licensenumber',
   'sweid' => 'licensenumber',
   'licens' => 'licensenumber',
   'license' => 'licensenumber',
+
+  // Discipline columns (SCF export has separate columns for each)
+  'road' => 'discipline_road',
+  'track' => 'discipline_track',
+  'bmx' => 'discipline_bmx',
+  'cx' => 'discipline_cx',
+  'trial' => 'discipline_trial',
+  'para' => 'discipline_para',
+  'mtb' => 'discipline_mtb',
+  'ecycling' => 'discipline_ecycling',
+  'gravel' => 'discipline_gravel',
 
   'licenstyp' => 'licensetype',
   'licensetype' => 'licensetype',
@@ -585,13 +613,33 @@ function importRidersFromCSV($filepath, $db, $seasonYear = null) {
 
   // Prepare rider data
   // Normalize gender: Woman/Female/Kvinna → F, Man/Male/Herr → M
-  $genderRaw = strtolower(trim($data['gender'] ?? 'M'));
-  if (in_array($genderRaw, ['woman', 'female', 'kvinna', 'dam', 'f'])) {
+  // Also check licensecategory for "Men"/"Women" if gender is not explicitly set
+  $genderRaw = strtolower(trim($data['gender'] ?? ''));
+  $gender = null;
+
+  if (in_array($genderRaw, ['woman', 'female', 'kvinna', 'dam', 'f', 'w'])) {
   $gender = 'F';
   } elseif (in_array($genderRaw, ['man', 'male', 'herr', 'm'])) {
   $gender = 'M';
-  } else {
+  } elseif (!empty($genderRaw)) {
   $gender = strtoupper(substr($genderRaw, 0, 1)); // Fallback: first letter
+  }
+
+  // If gender still not set, try to extract from license category (SCF format: "Men Elite", "Women Junior", etc.)
+  if (!$gender && !empty($data['licensecategory'])) {
+  $categoryLower = strtolower($data['licensecategory']);
+  if (strpos($categoryLower, 'women') !== false || strpos($categoryLower, 'dam') !== false ||
+    strpos($categoryLower, 'flickor') !== false || strpos($categoryLower, 'female') !== false) {
+    $gender = 'F';
+  } elseif (strpos($categoryLower, 'men') !== false || strpos($categoryLower, 'herr') !== false ||
+       strpos($categoryLower, 'pojk') !== false || strpos($categoryLower, 'male') !== false) {
+    $gender = 'M';
+  }
+  }
+
+  // Default to M if still not determined
+  if (!$gender) {
+  $gender = 'M';
   }
 
   $riderData = [
@@ -604,16 +652,61 @@ function importRidersFromCSV($filepath, $db, $seasonYear = null) {
   'active' => 1
   ];
 
-  // Add district if city/region is provided (maps to district field)
-  if (!empty($data['city'])) {
+  // Add district if provided (from 'district' or 'city' column)
+  if (!empty($data['district'])) {
+    $riderData['district'] = trim($data['district']);
+  } elseif (!empty($data['city'])) {
     $riderData['district'] = trim($data['city']);
+  }
+
+  // Add nationality if provided
+  if (!empty($data['nationality'])) {
+    $nat = strtoupper(trim($data['nationality']));
+    // Convert common country names to ISO codes
+    $nationalityMap = [
+      'SVERIGE' => 'SWE', 'SWEDEN' => 'SWE', 'SE' => 'SWE',
+      'NORGE' => 'NOR', 'NORWAY' => 'NOR', 'NO' => 'NOR',
+      'DANMARK' => 'DEN', 'DENMARK' => 'DEN', 'DK' => 'DEN',
+      'FINLAND' => 'FIN', 'FI' => 'FIN',
+      'TYSKLAND' => 'GER', 'GERMANY' => 'GER', 'DE' => 'GER',
+      'STORBRITANNIEN' => 'GBR', 'UK' => 'GBR', 'GB' => 'GBR', 'GREAT BRITAIN' => 'GBR',
+      'USA' => 'USA', 'UNITED STATES' => 'USA', 'US' => 'USA',
+    ];
+    $riderData['nationality'] = $nationalityMap[$nat] ?? (strlen($nat) === 3 ? $nat : 'SWE');
   }
 
   // Add new license fields
   $riderData['license_type'] = !empty($data['licensetype']) ? trim($data['licensetype']) : null;
-  $riderData['discipline'] = !empty($data['discipline']) ? trim($data['discipline']) : null;
   $riderData['license_valid_until'] = !empty($data['licensevaliduntil']) ? trim($data['licensevaliduntil']) : null;
   $riderData['license_year'] = !empty($data['licenseyear']) ? (int)$data['licenseyear'] : null;
+
+  // Handle disciplines - either single column or multiple SCF columns
+  $disciplines = [];
+  if (!empty($data['discipline'])) {
+    $disciplines[] = trim($data['discipline']);
+  }
+  // Check individual discipline columns (SCF export format)
+  $disciplineColumns = ['discipline_road', 'discipline_track', 'discipline_bmx', 'discipline_cx',
+             'discipline_trial', 'discipline_para', 'discipline_mtb', 'discipline_ecycling', 'discipline_gravel'];
+  $disciplineNames = ['Road' => 'LVG', 'Track' => 'BANA', 'BMX' => 'BMX', 'CX' => 'CX',
+            'Trial' => 'TRIAL', 'Para' => 'PARA', 'MTB' => 'MTB', 'E-cycling' => 'E-CYCLING', 'Gravel' => 'GRAVEL'];
+  foreach ($disciplineColumns as $col) {
+    if (!empty($data[$col]) && strtolower(trim($data[$col])) !== '' && strtolower(trim($data[$col])) !== 'nej' && strtolower(trim($data[$col])) !== 'no') {
+      $discName = str_replace('discipline_', '', $col);
+      $discName = ucfirst($discName);
+      if ($discName === 'Ecycling') $discName = 'E-cycling';
+      $disciplines[] = $disciplineNames[$discName] ?? strtoupper($discName);
+    }
+  }
+  $disciplines = array_unique(array_filter($disciplines));
+
+  if (!empty($disciplines)) {
+    $riderData['discipline'] = implode(',', $disciplines); // Legacy single field
+    $riderData['disciplines'] = json_encode(array_values($disciplines)); // New JSON field
+  } else {
+    $riderData['discipline'] = null;
+    $riderData['disciplines'] = null;
+  }
 
   // License category - use provided or auto-suggest
   if (!empty($data['licensecategory'])) {
