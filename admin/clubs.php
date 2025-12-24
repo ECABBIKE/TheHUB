@@ -169,6 +169,7 @@ $sql = "SELECT
     cl.short_name,
     cl.city,
     cl.country,
+    cl.logo,
     cl.active,
     COUNT(DISTINCT c.id) as rider_count
 FROM clubs cl
@@ -314,6 +315,7 @@ include __DIR__ . '/components/unified-layout.php';
                 <table class="admin-table">
                     <thead>
                         <tr>
+                            <th style="width: 50px;"></th>
                             <th>Namn</th>
                             <th>Förkortning</th>
                             <th>Stad</th>
@@ -326,6 +328,16 @@ include __DIR__ . '/components/unified-layout.php';
                     <tbody>
                         <?php foreach ($clubs as $club): ?>
                             <tr>
+                                <td>
+                                    <?php if (!empty($club['logo'])): ?>
+                                        <img src="<?= htmlspecialchars($club['logo']) ?>" alt="<?= htmlspecialchars($club['name']) ?>"
+                                             style="width: 36px; height: 36px; object-fit: contain; border-radius: var(--radius-sm); background: var(--color-bg-secondary);">
+                                    <?php else: ?>
+                                        <div style="width: 36px; height: 36px; border-radius: var(--radius-sm); background: var(--color-bg-secondary); display: flex; align-items: center; justify-content: center;">
+                                            <i data-lucide="building-2" style="width: 18px; height: 18px; opacity: 0.4;"></i>
+                                        </div>
+                                    <?php endif; ?>
+                                </td>
                                 <td>
                                     <a href="/admin/club-edit.php?id=<?= $club['id'] ?>" style="color: var(--color-accent); text-decoration: none; font-weight: 500;">
                                         <?= htmlspecialchars($club['name']) ?>
