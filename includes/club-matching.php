@@ -11,11 +11,29 @@
 function normalizeClubName($name) {
     $name = mb_strtolower(trim($name), 'UTF-8');
 
+    // Handle compound names: "Team A / Club B" - extract parts for matching
+    // Store both parts for potential matching
+    $parts = preg_split('/\s*[\/&]\s*/', $name);
+    if (count($parts) > 1) {
+        // Use the most likely "club" part (contains ck, cykel, etc.)
+        foreach ($parts as $part) {
+            if (preg_match('/(ck|cykel|klubb|if|ik|sk|fk|ok)\b/u', $part)) {
+                $name = trim($part);
+                break;
+            }
+        }
+        // If no club-like part found, use the last part
+        if (count($parts) > 1 && $name === mb_strtolower(trim($parts[0] . ' / ' . $parts[1]), 'UTF-8')) {
+            $name = trim(end($parts));
+        }
+    }
+
     // Remove common prefixes/suffixes (order matters - longer patterns first)
     $patterns = [
         '/^cykelklubben\s+/u',           // "Cykelklubben Fix" -> "fix"
         '/^cykelklubb\s+/u',             // "Cykelklubb Fix" -> "fix"
         '/^cykelföreningen\s+/u',        // "Cykelföreningen X" -> "x"
+        '/^ifk\s+/u',                    // "IFK Trampen" -> "trampen"
         '/^ok\s+/u',                     // "OK Tyr" -> "tyr"
         '/^ck\s+/u',                     // "CK Fix" -> "fix"
         '/^if\s+/u',                     // "IF Ceres" -> "ceres"
@@ -28,10 +46,12 @@ function normalizeClubName($name) {
         '/\s+cykelklubb$/u',             // "Fix Cykelklubb" -> "fix"
         '/\s+cykelklubben$/u',           // "Fix Cykelklubben" -> "fix"
         '/\s+if$/u',                     // "Fix IF" -> "fix"
+        '/\s+ifk$/u',                    // "X IFK" -> "x"
         '/\s+ik$/u',                     // "X IK" -> "X"
         '/\s+sk$/u',                     // "X SK" -> "X"
         '/\s+mtb$/u',                    // "Fix MTB" -> "fix"
         '/\s+enduro$/u',                 // "Fix Enduro" -> "fix"
+        '/\s+mountainbikeklubb$/u',      // "MTB Täby Mountainbikeklubb" -> "mtb täby"
         '/\s+idrottssällskap$/u',
         '/\s+idrottsällskap$/u',
         '/\s+idrottsförening$/u',
@@ -51,8 +71,9 @@ function normalizeClubName($name) {
     // Remove non-alphanumeric (keeps only letters and numbers)
     $name = preg_replace('/[^a-z0-9]/u', '', $name);
 
-    // Remove trailing 's' to match singular/plural (e.g., "masters" vs "master")
-    $name = preg_replace('/s$/u', '', $name);
+    // Remove trailing 's' for possessive forms (e.g., "ulricehamns" vs "ulricehamn")
+    // Only if it makes it match better - this is done in matching, not here
+    // $name = preg_replace('/s$/u', '', $name);
 
     return $name;
 }
@@ -63,7 +84,9 @@ function normalizeClubName($name) {
  * Tries matching in this order:
  * 1. Exact case-insensitive match
  * 2. Normalized name match (handles abbreviations like CK/Ck/Cykelklubben)
- * 3. Partial match if no exact match found
+ * 3. Normalized with trailing 's' variations (possessive forms)
+ * 4. Levenshtein distance for typos
+ * 5. Partial match if no exact match found
  *
  * @param object $db Database connection
  * @param string $clubName Name to search for
@@ -90,13 +113,20 @@ function findClubByName($db, $clubName) {
     // Get all clubs and normalize them for comparison
     // (This is cached per request so it's not too expensive)
     static $normalizedClubCache = null;
+    static $normalizedClubCacheNoS = null; // Also cache without trailing 's'
     if ($normalizedClubCache === null) {
         $allClubs = $db->getAll("SELECT id, name FROM clubs WHERE active = 1");
         $normalizedClubCache = [];
+        $normalizedClubCacheNoS = [];
         foreach ($allClubs as $c) {
             $normalized = normalizeClubName($c['name']);
             if (!isset($normalizedClubCache[$normalized])) {
                 $normalizedClubCache[$normalized] = $c;
+            }
+            // Also store without trailing 's' for possessive matching
+            $withoutS = preg_replace('/s$/u', '', $normalized);
+            if ($withoutS !== $normalized && !isset($normalizedClubCacheNoS[$withoutS])) {
+                $normalizedClubCacheNoS[$withoutS] = $c;
             }
         }
     }
@@ -106,19 +136,50 @@ function findClubByName($db, $clubName) {
         return $normalizedClubCache[$normalizedSearch];
     }
 
-    // 3. Try Levenshtein distance for very similar names (typos)
+    // 3. Try variations with/without trailing 's' (possessive forms)
+    // "Ulricehamns CK" -> "ulricehamn" should match "Ulricehamn CK"
+    $searchWithoutS = preg_replace('/s$/u', '', $normalizedSearch);
+    $searchWithS = $normalizedSearch . 's';
+
+    if ($searchWithoutS !== $normalizedSearch && isset($normalizedClubCache[$searchWithoutS])) {
+        return $normalizedClubCache[$searchWithoutS];
+    }
+    if (isset($normalizedClubCache[$searchWithS])) {
+        return $normalizedClubCache[$searchWithS];
+    }
+    if (isset($normalizedClubCacheNoS[$normalizedSearch])) {
+        return $normalizedClubCacheNoS[$normalizedSearch];
+    }
+    if (isset($normalizedClubCacheNoS[$searchWithoutS])) {
+        return $normalizedClubCacheNoS[$searchWithoutS];
+    }
+
+    // 4. Try Levenshtein distance for very similar names (typos)
     // Only if the normalized name is long enough
     if (strlen($normalizedSearch) >= 4) {
         $bestMatch = null;
         $bestDistance = PHP_INT_MAX;
 
+        // Calculate max allowed distance based on string length
+        // Longer strings can have more typos: 4-6 chars=1, 7-10 chars=2, 11+ chars=3
+        $maxDistance = strlen($normalizedSearch) <= 6 ? 1 : (strlen($normalizedSearch) <= 10 ? 2 : 3);
+
         foreach ($normalizedClubCache as $normalized => $c) {
             if (strlen($normalized) < 4) continue;
 
-            $distance = levenshtein($normalizedSearch, $normalized);
+            // Also compare without trailing 's'
+            $normalizedNoS = preg_replace('/s$/u', '', $normalized);
+            $searchNoS = preg_replace('/s$/u', '', $normalizedSearch);
 
-            // Only accept if distance is <= 2 and the match is significantly better
-            if ($distance <= 2 && $distance < $bestDistance) {
+            $distance = min(
+                levenshtein($normalizedSearch, $normalized),
+                levenshtein($searchNoS, $normalizedNoS),
+                levenshtein($searchNoS, $normalized),
+                levenshtein($normalizedSearch, $normalizedNoS)
+            );
+
+            // Accept if distance is within threshold and better than previous
+            if ($distance <= $maxDistance && $distance < $bestDistance) {
                 $bestDistance = $distance;
                 $bestMatch = $c;
             }
@@ -129,7 +190,7 @@ function findClubByName($db, $clubName) {
         }
     }
 
-    // 4. Fallback: try partial match (LIKE) - but be more careful
+    // 5. Fallback: try partial match (LIKE) - but be more careful
     // Only if the search term is long enough to be meaningful
     if (strlen($clubName) >= 5) {
         $club = $db->getRow(

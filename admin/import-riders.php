@@ -32,6 +32,32 @@ $errors = [];
 $skippedRows = [];
 $columnMappings = [];
 
+/**
+ * Suggest license category based on birth year and gender
+ * Swedish cycling categories: Herrar, Damer, Herrar Juniorer, Damer Juniorer, etc.
+ */
+function suggestLicenseCategory($birthYear, $gender) {
+    $currentYear = (int)date('Y');
+    $age = $currentYear - $birthYear;
+
+    // Normalize gender
+    $gender = strtolower(trim($gender));
+    $isFemale = in_array($gender, ['f', 'female', 'kvinna', 'dam', 'damer', 'w', 'women']);
+
+    // Determine category based on age
+    if ($age >= 19) {
+        return $isFemale ? 'Damer' : 'Herrar';
+    } elseif ($age >= 17) {
+        return $isFemale ? 'Damer Juniorer' : 'Herrar Juniorer';
+    } elseif ($age >= 15) {
+        return $isFemale ? 'Flickor 15-16' : 'Pojkar 15-16';
+    } elseif ($age >= 13) {
+        return $isFemale ? 'Flickor 13-14' : 'Pojkar 13-14';
+    } else {
+        return $isFemale ? 'Flickor' : 'Pojkar';
+    }
+}
+
 // Handle confirmed import from preview
 if (isset($_GET['do_import']) && isset($_SESSION['import_riders_confirmed']) && $_SESSION['import_riders_confirmed']) {
     $uploaded = $_SESSION['import_riders_file'] ?? null;
