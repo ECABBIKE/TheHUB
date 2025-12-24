@@ -95,6 +95,33 @@ if (isset($_GET['action']) && $_GET['action'] === 'merge') {
  throw new Exception("Förare med ID $keepId hittades inte i databasen");
  }
 
+ // MERGE DATA: Collect missing data from duplicates
+ $fieldsToMerge = ['birth_year', 'email', 'club_id', 'gender', 'nationality', 'license_number', 'license_category'];
+ $mergedData = [];
+ $mergeLog = [];
+
+ foreach ($mergeIds as $oldId) {
+  $oldRider = $db->getRow("SELECT * FROM riders WHERE id = ?", [$oldId]);
+  if (!$oldRider) continue;
+
+  foreach ($fieldsToMerge as $field) {
+   // If keepRider is missing this field but oldRider has it, use oldRider's value
+   if (empty($keepRider[$field]) && !empty($oldRider[$field])) {
+    if (!isset($mergedData[$field])) {
+     $mergedData[$field] = $oldRider[$field];
+     $mergeLog[] = "$field: '{$oldRider[$field]}' (från ID $oldId)";
+    }
+   }
+  }
+ }
+
+ // Apply merged data to kept rider
+ if (!empty($mergedData)) {
+  $db->update('riders', $mergedData, 'id = ?', [$keepId]);
+  // Refresh keepRider with merged data
+  $keepRider = $db->getRow("SELECT * FROM riders WHERE id = ?", [$keepId]);
+ }
+
  // Update all results to point to the kept rider
  $resultsUpdated = 0;
  $resultsDeleted = 0;
@@ -133,12 +160,15 @@ if (isset($_GET['action']) && $_GET['action'] === 'merge') {
 
  $db->pdo->commit();
 
- $msg ="Sammanfogade" . count($mergeIds) ." deltagare till" . $keepRider['firstname'] ."" . $keepRider['lastname'];
- $msg .=" ($resultsUpdated resultat flyttade";
+ $msg ="Sammanfogade " . count($mergeIds) . " deltagare till " . $keepRider['firstname'] . " " . $keepRider['lastname'];
+ $msg .= " ($resultsUpdated resultat flyttade";
  if ($resultsDeleted > 0) {
- $msg .=", $resultsDeleted dubbletter borttagna";
+  $msg .= ", $resultsDeleted dubbletter borttagna";
  }
- $msg .=")";
+ $msg .= ")";
+ if (!empty($mergeLog)) {
+  $msg .= ". Data överförd: " . implode(', ', $mergeLog);
+ }
  $_SESSION['cleanup_message'] = $msg;
  $_SESSION['cleanup_message_type'] = 'success';
  } catch (Exception $e) {
@@ -251,6 +281,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['auto_merge_by_lastnam
  $totalMerged = 0;
  $totalDeleted = 0;
 
+ $fieldsToMerge = ['birth_year', 'email', 'club_id', 'gender', 'nationality', 'license_number', 'license_category'];
+ $totalDataMerged = 0;
+
  foreach ($duplicates as $dup) {
  $ids = array_map('intval', explode(',', $dup['ids']));
  if (count($ids) < 2) continue;
@@ -259,6 +292,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['auto_merge_by_lastnam
  $keepRider = $db->getRow("SELECT * FROM riders WHERE id = ?", [$keepId]);
 
  if (!$keepRider) continue;
+
+ // Merge data from duplicates
+ $mergedData = [];
+ foreach ($ids as $oldId) {
+  $oldRider = $db->getRow("SELECT * FROM riders WHERE id = ?", [$oldId]);
+  if (!$oldRider) continue;
+
+  foreach ($fieldsToMerge as $field) {
+   if (empty($keepRider[$field]) && !empty($oldRider[$field]) && !isset($mergedData[$field])) {
+    $mergedData[$field] = $oldRider[$field];
+    $totalDataMerged++;
+   }
+  }
+ }
+
+ if (!empty($mergedData)) {
+  $db->update('riders', $mergedData, 'id = ?', [$keepId]);
+ }
 
  foreach ($ids as $oldId) {
  // Move all results (include class_id for multi-class support)
@@ -287,7 +338,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['auto_merge_by_lastnam
 
  $db->pdo->commit();
 
- $_SESSION['cleanup_message'] ="Auto-sammanslagning klar! $totalMerged resultat flyttade, $totalDeleted dubbletter borttagna.";
+ $msg = "Auto-sammanslagning klar! $totalMerged resultat flyttade, $totalDeleted dubbletter borttagna.";
+ if ($totalDataMerged > 0) {
+  $msg .= " $totalDataMerged datafält sammanfogade.";
+ }
+ $_SESSION['cleanup_message'] = $msg;
  $_SESSION['cleanup_message_type'] = 'success';
  } catch (Exception $e) {
  if ($db->pdo->inTransaction()) {
@@ -329,6 +384,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['auto_merge_all'])) {
  $totalResultsMoved = 0;
  $totalResultsDeleted = 0;
  $ridersDeleted = 0;
+ $totalDataMerged = 0;
+ $fieldsToMerge = ['birth_year', 'email', 'club_id', 'gender', 'nationality', 'license_category'];
 
  foreach ($duplicates as $dup) {
  $ids = array_map('intval', explode(',', $dup['ids']));
@@ -336,6 +393,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['auto_merge_all'])) {
 
  $keepId = $ids[0]; // First ID has most results (ordered by COUNT DESC)
  array_shift($ids); // Remove keep ID from list
+
+ $keepRider = $db->getRow("SELECT * FROM riders WHERE id = ?", [$keepId]);
+ if (!$keepRider) continue;
+
+ // Merge data from duplicates
+ $mergedData = [];
+ foreach ($ids as $oldId) {
+  $oldRider = $db->getRow("SELECT * FROM riders WHERE id = ?", [$oldId]);
+  if (!$oldRider) continue;
+
+  foreach ($fieldsToMerge as $field) {
+   if (empty($keepRider[$field]) && !empty($oldRider[$field]) && !isset($mergedData[$field])) {
+    $mergedData[$field] = $oldRider[$field];
+    $totalDataMerged++;
+   }
+  }
+ }
+
+ if (!empty($mergedData)) {
+  $db->update('riders', $mergedData, 'id = ?', [$keepId]);
+ }
 
  foreach ($ids as $oldId) {
  // Get results for duplicate rider (include class_id for multi-class support)
@@ -372,12 +450,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['auto_merge_all'])) {
 
  $db->pdo->commit();
 
- $msg ="Automatisk sammanslagning klar:";
- $msg .="$totalMerged dubblettgrupper,";
- $msg .="$ridersDeleted åkare borttagna,";
- $msg .="$totalResultsMoved resultat flyttade";
+ $msg = "Automatisk sammanslagning klar: ";
+ $msg .= "$totalMerged dubblettgrupper, ";
+ $msg .= "$ridersDeleted åkare borttagna, ";
+ $msg .= "$totalResultsMoved resultat flyttade";
  if ($totalResultsDeleted > 0) {
- $msg .=", $totalResultsDeleted dubbletter borttagna";
+  $msg .= ", $totalResultsDeleted dubbletter borttagna";
+ }
+ if ($totalDataMerged > 0) {
+  $msg .= ". $totalDataMerged datafält sammanfogade";
  }
 
  $_SESSION['cleanup_message'] = $msg;

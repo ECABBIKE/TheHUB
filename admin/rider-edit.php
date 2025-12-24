@@ -204,6 +204,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
  $messageType = 'error';
  }
  }
+ } elseif ($action === 'update_license' && hasRole('super_admin')) {
+ // Superadmin can update license number
+ $newLicense = trim($_POST['license_number'] ?? '');
+
+ try {
+  // Validate license format if not empty
+  if (!empty($newLicense)) {
+   // Normalize: remove spaces and dashes, uppercase
+   $newLicense = strtoupper(preg_replace('/[\s\-]/', '', $newLicense));
+
+   // Accept SWE format (SWE + 7-11 digits) or pure numeric (8-11 digits)
+   if (!preg_match('/^(SWE\d{7,11}|\d{8,11})$/i', $newLicense)) {
+    throw new Exception('Ogiltigt licensformat. Använd SWE-format (t.ex. SWE2500123) eller numeriskt (8-11 siffror).');
+   }
+  }
+
+  $db->update('riders', ['license_number' => $newLicense ?: null], 'id = ?', [$id]);
+  $rider = $db->getRow("SELECT * FROM riders WHERE id = ?", [$id]);
+  $message = 'Licensnummer uppdaterat till: ' . ($newLicense ?: '(tomt)');
+  $messageType = 'success';
+ } catch (Exception $e) {
+  $message = $e->getMessage();
+  $messageType = 'error';
+ }
  } elseif ($action === 'create_account' && hasRole('super_admin')) {
  // Create user account for this rider
  $username = trim($_POST['new_username'] ?? '');
@@ -529,12 +553,28 @@ include __DIR__ . '/components/unified-layout.php';
   <?php endif; ?>
   </div>
 
-  <!-- License Number (system-locked) -->
+  <!-- License Number -->
   <div>
   <label class="label">
   <i data-lucide="credit-card"></i>
   Licensnummer
   </label>
+  <?php if (hasRole('super_admin')): ?>
+  <div class="flex gap-sm items-center">
+   <input
+   type="text"
+   id="license_number_edit"
+   class="input"
+   value="<?= h($rider['license_number'] ?: '') ?>"
+   placeholder="SWE2500123"
+   style="flex: 1;"
+   >
+   <button type="button" class="btn btn--primary btn--sm" onclick="updateLicense()">
+   <i data-lucide="save"></i>
+   </button>
+  </div>
+  <small class="text-secondary">Superadmin: Redigera licensnummer (SWE-format utan bindestreck)</small>
+  <?php else: ?>
   <input
   type="text"
   class="input"
@@ -542,6 +582,7 @@ include __DIR__ . '/components/unified-layout.php';
   disabled
   >
   <small class="text-secondary">Importeras från SCF/UCI - kan inte ändras</small>
+  <?php endif; ?>
   </div>
 
   <!-- License Category (read-only) -->
@@ -1172,6 +1213,20 @@ include __DIR__ . '/components/unified-layout.php';
 function confirmDeleteAccount() {
  if (confirm('Är du säker på att du vill ta bort användarkontot? Deltagarprofilen behålls.')) {
  document.getElementById('deleteAccountForm').submit();
+ }
+}
+
+function updateLicense() {
+ var newLicense = document.getElementById('license_number_edit').value.trim();
+ if (confirm('Uppdatera licensnummer till: ' + (newLicense || '(tomt)') + '?')) {
+ // Create and submit form
+ var form = document.createElement('form');
+ form.method = 'POST';
+ form.innerHTML = '<?= csrf_field() ?>' +
+  '<input type="hidden" name="action" value="update_license">' +
+  '<input type="hidden" name="license_number" value="' + newLicense.replace(/"/g, '&quot;') + '">';
+ document.body.appendChild(form);
+ form.submit();
  }
 }
 </script>
