@@ -8,7 +8,7 @@ $db = hub_db();
 // Get all clubs with member counts
 $clubs = $db->query("
     SELECT
-        c.id, c.name, c.city,
+        c.id, c.name, c.city, c.logo,
         COUNT(DISTINCT r.id) as member_count,
         COUNT(DISTINCT res.id) as result_count,
         SUM(res.points) as total_points
@@ -59,6 +59,7 @@ $totalMembers = array_sum(array_column($clubs, 'member_count'));
       <table class="table table--striped table--clickable">
         <thead>
           <tr>
+            <th scope="col" style="width: 50px;"></th>
             <th scope="col">Klubb</th>
             <th scope="col" class="table-col-hide-portrait">Ort</th>
             <th scope="col" class="text-right">Medlemmar</th>
@@ -69,6 +70,16 @@ $totalMembers = array_sum(array_column($clubs, 'member_count'));
         <tbody>
           <?php foreach ($clubs as $club): ?>
           <tr data-href="/club/<?= $club['id'] ?>">
+            <td>
+              <?php if (!empty($club['logo'])): ?>
+                <img src="<?= htmlspecialchars($club['logo']) ?>" alt=""
+                     style="width: 32px; height: 32px; object-fit: contain; border-radius: var(--radius-sm); background: var(--color-bg-secondary);">
+              <?php else: ?>
+                <div style="width: 32px; height: 32px; border-radius: var(--radius-sm); background: var(--color-bg-secondary); display: flex; align-items: center; justify-content: center;">
+                  <i data-lucide="building-2" style="width: 16px; height: 16px; opacity: 0.4;"></i>
+                </div>
+              <?php endif; ?>
+            </td>
             <td class="col-rider"><?= htmlspecialchars($club['name']) ?></td>
             <td class="table-col-hide-portrait text-secondary"><?= htmlspecialchars($club['city'] ?? '-') ?></td>
             <td class="text-right"><?= $club['member_count'] ?></td>
@@ -84,12 +95,21 @@ $totalMembers = array_sum(array_column($clubs, 'member_count'));
     <div class="result-list">
       <?php foreach ($clubs as $club): ?>
       <a href="/club/<?= $club['id'] ?>" class="result-item">
-        <div class="result-place"><?= $club['member_count'] ?></div>
+        <div class="result-place" style="padding: 0;">
+          <?php if (!empty($club['logo'])): ?>
+            <img src="<?= htmlspecialchars($club['logo']) ?>" alt=""
+                 style="width: 40px; height: 40px; object-fit: contain; border-radius: var(--radius-sm); background: var(--color-bg-secondary);">
+          <?php else: ?>
+            <div style="width: 40px; height: 40px; border-radius: var(--radius-sm); background: var(--color-bg-secondary); display: flex; align-items: center; justify-content: center;">
+              <i data-lucide="building-2" style="width: 20px; height: 20px; opacity: 0.4;"></i>
+            </div>
+          <?php endif; ?>
+        </div>
         <div class="result-info">
           <div class="result-name"><?= htmlspecialchars($club['name']) ?></div>
           <div class="result-club"><?= htmlspecialchars($club['city'] ?? '') ?></div>
         </div>
-        <div class="result-time"><?= $club['result_count'] ?> res</div>
+        <div class="result-time"><?= $club['member_count'] ?> medl.</div>
       </a>
       <?php endforeach; ?>
     </div>
