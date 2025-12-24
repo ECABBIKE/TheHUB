@@ -66,38 +66,57 @@ function getRiderClubForYear($db, $riderId, $year, $createIfMissing = false) {
  * @return array ['success' => bool, 'message' => string]
  */
 function setRiderClubForYear($db, $riderId, $clubId, $year) {
-    // Check if there's an existing locked entry
-    $existing = $db->getRow(
-        "SELECT id, locked FROM rider_club_seasons WHERE rider_id = ? AND season_year = ?",
-        [$riderId, $year]
-    );
+    try {
+        // Check if there's an existing locked entry
+        $existing = $db->getRow(
+            "SELECT id, locked FROM rider_club_seasons WHERE rider_id = ? AND season_year = ?",
+            [$riderId, $year]
+        );
 
-    if ($existing) {
-        if ($existing['locked']) {
-            return [
-                'success' => false,
-                'message' => "Kan inte byta klubb för {$year} - åkaren har redan resultat det året"
-            ];
+        if ($existing) {
+            if ($existing['locked']) {
+                return [
+                    'success' => false,
+                    'message' => "Kan inte byta klubb för {$year} - åkaren har redan resultat det året"
+                ];
+            }
+
+            // Update existing unlocked entry
+            $result = $db->update('rider_club_seasons', [
+                'club_id' => $clubId
+            ], 'id = ?', [$existing['id']]);
+
+            error_log("setRiderClubForYear: Updated existing entry, result={$result}");
+        } else {
+            // Create new entry
+            $insertId = $db->insert('rider_club_seasons', [
+                'rider_id' => $riderId,
+                'club_id' => $clubId,
+                'season_year' => $year,
+                'locked' => 0
+            ]);
+
+            error_log("setRiderClubForYear: Created new entry, insertId={$insertId}");
+
+            if (!$insertId) {
+                return [
+                    'success' => false,
+                    'message' => "Kunde inte skapa klubbkoppling - kontrollera att tabellen rider_club_seasons finns"
+                ];
+            }
         }
 
-        // Update existing unlocked entry
-        $db->update('rider_club_seasons', [
-            'club_id' => $clubId
-        ], 'id = ?', [$existing['id']]);
-    } else {
-        // Create new entry
-        $db->insert('rider_club_seasons', [
-            'rider_id' => $riderId,
-            'club_id' => $clubId,
-            'season_year' => $year,
-            'locked' => 0
-        ]);
+        return [
+            'success' => true,
+            'message' => "Klubb uppdaterad för {$year}"
+        ];
+    } catch (Exception $e) {
+        error_log("setRiderClubForYear: Exception - " . $e->getMessage());
+        return [
+            'success' => false,
+            'message' => "Databasfel: " . $e->getMessage()
+        ];
     }
-
-    return [
-        'success' => true,
-        'message' => "Klubb uppdaterad för {$year}"
-    ];
 }
 
 /**
