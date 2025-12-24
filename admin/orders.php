@@ -339,7 +339,7 @@ include __DIR__ . '/components/unified-layout.php';
 </div>
 
 <!-- Confirm Payment Modal -->
-<div id="confirm-modal" class="admin-modal" class="hidden">
+<div id="confirm-modal" class="admin-modal hidden">
     <div class="admin-modal-overlay" onclick="closeModal('confirm-modal')"></div>
     <div class="admin-modal-content" style="max-width: 500px;">
         <div class="admin-modal-header">
@@ -385,8 +385,9 @@ include __DIR__ . '/components/unified-layout.php';
 
 <style>
 .admin-modal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 1000; display: flex; align-items: center; justify-content: center; }
+.admin-modal.hidden { display: none; }
 .admin-modal-overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.5); }
-.admin-modal-content { position: relative; background: var(--color-bg); border-radius: var(--radius-lg); box-shadow: var(--shadow-xl); width: 90%; max-width: 500px; max-height: 90vh; overflow: hidden; display: flex; flex-direction: column; }
+.admin-modal-content { position: relative; background: white; border-radius: var(--radius-lg); box-shadow: var(--shadow-xl); width: 90%; max-width: 500px; max-height: 90vh; overflow: hidden; display: flex; flex-direction: column; }
 .admin-modal-header { display: flex; align-items: center; justify-content: space-between; padding: var(--space-lg); border-bottom: 1px solid var(--color-border); }
 .admin-modal-header h2 { margin: 0; font-size: var(--text-xl); }
 .admin-modal-close { background: none; border: none; padding: var(--space-xs); cursor: pointer; color: var(--color-text-secondary); border-radius: var(--radius-sm); }
@@ -403,16 +404,16 @@ function openConfirmModal(orderId, orderNumber, swishRef) {
     document.getElementById('confirm-order-id').value = orderId;
     document.getElementById('confirm-order-number').textContent = orderNumber;
     document.getElementById('confirm-swish-ref').textContent = swishRef;
-    document.getElementById('confirm-modal').style.display = 'flex';
+    document.getElementById('confirm-modal').classList.remove('hidden');
 }
 
 function closeModal(modalId) {
-    document.getElementById(modalId).style.display = 'none';
+    document.getElementById(modalId).classList.add('hidden');
 }
 
 document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') {
-        document.querySelectorAll('.admin-modal').forEach(m => m.style.display = 'none');
+        document.querySelectorAll('.admin-modal').forEach(m => m.classList.add('hidden'));
     }
 });
 </script>
