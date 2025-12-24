@@ -807,36 +807,34 @@
     gap: var(--space-sm);
 }
 
-.form-chart-container {
-    position: relative;
-}
-
-.form-area-chart {
-    width: 100%;
-    height: 120px;
-    display: block;
-}
-
-.form-chart-avg {
-    position: absolute;
-    top: var(--space-sm);
-    left: var(--space-md);
+.form-chart-header {
     display: flex;
-    flex-direction: column;
+    align-items: baseline;
+    gap: var(--space-sm);
 }
 
 .form-avg-value {
-    font-size: 2rem;
+    font-size: 2.25rem;
     font-weight: var(--weight-bold);
     color: var(--color-text-primary);
     line-height: 1;
 }
 
 .form-avg-label {
-    font-size: 0.7rem;
+    font-size: 0.75rem;
     color: var(--color-text-muted);
     text-transform: uppercase;
     letter-spacing: 0.02em;
+}
+
+.form-chart-container {
+    margin-top: var(--space-xs);
+}
+
+.form-area-chart {
+    width: 100%;
+    height: 140px;
+    display: block;
 }
 
 /* Legacy form styles (keep for compatibility) */
