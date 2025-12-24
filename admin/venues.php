@@ -88,7 +88,11 @@ $totalEvents = array_sum(array_column($venues, 'event_count'));
 
 // Page config
 $page_title = 'Anläggningar';
-$page_actions = '<a href="/admin/venue-edit.php" class="btn-admin btn-admin-primary">
+$page_actions = '<a href="/admin/import-venues.php" class="btn-admin btn-admin-secondary mr-sm">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
+    Importera
+</a>
+<a href="/admin/venue-edit.php" class="btn-admin btn-admin-primary">
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
     Ny Anläggning
 </a>';
