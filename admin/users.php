@@ -118,6 +118,15 @@ include __DIR__ . '/components/unified-layout.php';
             <div class="admin-stat-label">Promotor</div>
         </div>
     </div>
+    <div class="admin-stat-card">
+        <div class="admin-stat-icon stat-icon-success">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-lg"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        </div>
+        <div class="admin-stat-content">
+            <div class="admin-stat-value"><?= $roleStats['rider'] ?? 0 ?></div>
+            <div class="admin-stat-label">Rider-konton</div>
+        </div>
+    </div>
 </div>
 
 <!-- Filters -->

@@ -33,6 +33,126 @@ $skippedRows = [];
 $columnMappings = [];
 
 /**
+ * Normalize string for comparison (for UCI ID lookup)
+ */
+function normalizeStringForImportSearch($str) {
+    $str = mb_strtolower(trim($str), 'UTF-8');
+    $str = preg_replace('/[åä]/u', 'a', $str);
+    $str = preg_replace('/[ö]/u', 'o', $str);
+    $str = preg_replace('/[é]/u', 'e', $str);
+    $str = preg_replace('/[^a-z0-9]/u', '', $str);
+    return $str;
+}
+
+/**
+ * Find rider in database to get UCI ID (license_number)
+ */
+function findRiderForUciIdImport($db, $firstname, $lastname, $club, $birthYear = null) {
+    $normFirstname = normalizeStringForImportSearch($firstname);
+    $normLastname = normalizeStringForImportSearch($lastname);
+    $normClub = normalizeStringForImportSearch($club);
+
+    // Strategy 1: Exact match with birth year
+    if ($birthYear) {
+        try {
+            $riders = $db->getAll("
+                SELECT r.id, r.firstname, r.lastname, r.license_number,
+                    r.birth_year, c.name as club_name
+                FROM riders r
+                LEFT JOIN clubs c ON r.club_id = c.id
+                WHERE LOWER(r.firstname) = ?
+                    AND LOWER(r.lastname) = ?
+                    AND r.birth_year = ?
+                    AND r.license_number IS NOT NULL
+                    AND r.license_number != ''
+                    AND r.license_number NOT LIKE 'SWE-%'
+                ORDER BY r.license_year DESC
+                LIMIT 1
+            ", [strtolower($firstname), strtolower($lastname), $birthYear]);
+
+            if (!empty($riders)) {
+                return $riders[0]['license_number'];
+            }
+        } catch (Exception $e) {}
+    }
+
+    // Strategy 2: Exact match with club
+    if (!empty($club)) {
+        try {
+            $riders = $db->getAll("
+                SELECT r.id, r.firstname, r.lastname, r.license_number,
+                    r.birth_year, c.name as club_name
+                FROM riders r
+                LEFT JOIN clubs c ON r.club_id = c.id
+                WHERE LOWER(r.firstname) = ?
+                    AND LOWER(r.lastname) = ?
+                    AND LOWER(c.name) LIKE ?
+                    AND r.license_number IS NOT NULL
+                    AND r.license_number != ''
+                    AND r.license_number NOT LIKE 'SWE-%'
+                ORDER BY r.license_year DESC
+                LIMIT 1
+            ", [strtolower($firstname), strtolower($lastname), '%' . strtolower($club) . '%']);
+
+            if (!empty($riders)) {
+                return $riders[0]['license_number'];
+            }
+        } catch (Exception $e) {}
+    }
+
+    // Strategy 3: Exact name match (any club)
+    try {
+        $riders = $db->getAll("
+            SELECT r.id, r.firstname, r.lastname, r.license_number,
+                r.birth_year, c.name as club_name
+            FROM riders r
+            LEFT JOIN clubs c ON r.club_id = c.id
+            WHERE LOWER(r.firstname) = ?
+                AND LOWER(r.lastname) = ?
+                AND r.license_number IS NOT NULL
+                AND r.license_number != ''
+                AND r.license_number NOT LIKE 'SWE-%'
+            ORDER BY r.license_year DESC
+            LIMIT 1
+        ", [strtolower($firstname), strtolower($lastname)]);
+
+        if (!empty($riders)) {
+            return $riders[0]['license_number'];
+        }
+    } catch (Exception $e) {}
+
+    // Strategy 4: Fuzzy match (normalized names)
+    try {
+        $riders = $db->getAll("
+            SELECT r.id, r.firstname, r.lastname, r.license_number,
+                r.birth_year, c.name as club_name
+            FROM riders r
+            LEFT JOIN clubs c ON r.club_id = c.id
+            WHERE r.license_number IS NOT NULL
+                AND r.license_number != ''
+                AND r.license_number NOT LIKE 'SWE-%'
+            ORDER BY r.license_year DESC
+            LIMIT 500
+        ", []);
+
+        foreach ($riders as $rider) {
+            $riderNormFirst = normalizeStringForImportSearch($rider['firstname']);
+            $riderNormLast = normalizeStringForImportSearch($rider['lastname']);
+
+            if ($riderNormFirst === $normFirstname && $riderNormLast === $normLastname) {
+                // Extra validation if birth year available
+                if ($birthYear && $rider['birth_year'] && $rider['birth_year'] != $birthYear) {
+                    continue; // Different birth year, skip
+                }
+                return $rider['license_number'];
+            }
+        }
+    } catch (Exception $e) {}
+
+    return null;
+}
+
+/**
  * Suggest license category based on birth year and gender
  * Swedish cycling categories: Herrar, Damer, Herrar Juniorer, Damer Juniorer, etc.
  */
@@ -497,12 +617,24 @@ function importRidersFromCSV($filepath, $db, $seasonYear = null) {
   $riderData['license_category'] = null;
   }
 
-  // Generate SWE-ID if no license number provided
+  // License number handling:
+  // 1. Use from CSV if provided
+  // 2. Otherwise search database for existing UCI ID
+  // 3. As last resort, generate SWE-ID
   if (empty($riderData['license_number']) && !empty($data['licensenumber'])) {
   $riderData['license_number'] = trim($data['licensenumber']);
   }
   if (empty($riderData['license_number'])) {
-  $riderData['license_number'] = generateSweId($db);
+  // Try to find existing UCI ID in database
+  $clubName = $data['club'] ?? '';
+  $foundUciId = findRiderForUciIdImport($db, $riderData['firstname'], $riderData['lastname'], $clubName, $riderData['birth_year']);
+  if ($foundUciId) {
+    $riderData['license_number'] = normalizeUciId($foundUciId);
+    error_log("Import: Found UCI ID {$riderData['license_number']} for {$riderData['firstname']} {$riderData['lastname']}");
+  } else {
+    // Generate new SWE-ID as fallback
+    $riderData['license_number'] = generateSweId($db);
+  }
   }
 
   // Handle club - fuzzy matching
