@@ -831,15 +831,14 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
                 $avgDisplay = number_format($avgPlacement, 1);
 
                 $chartWidth = 320;
-                $chartHeight = 120;
-                $paddingX = 10;
-                $paddingTop = 15;
-                $paddingBottom = 25;
+                $chartHeight = 140;
+                $paddingX = 15;
+                $paddingTop = 20;
+                $paddingBottom = 35;
                 $numResults = count($chartResults);
 
                 $maxPos = max($positions);
                 $minPos = min($positions);
-                // Lägg till lite marginal
                 $displayMin = max(1, $minPos - 1);
                 $displayMax = $maxPos + 2;
                 $range = max(1, $displayMax - $displayMin);
@@ -847,55 +846,49 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
                 $graphHeight = $chartHeight - $paddingTop - $paddingBottom;
                 $xStep = $numResults > 1 ? ($chartWidth - $paddingX * 2) / ($numResults - 1) : 0;
 
-                // Beräkna punkter för grafen (lägre Y = högre placering = bättre)
-                $points = [];
                 $dataPoints = [];
                 foreach ($chartResults as $idx => $fr) {
                     $x = $paddingX + ($idx * $xStep);
                     $y = $paddingTop + (($fr['position'] - $displayMin) / $range) * $graphHeight;
-                    $points[] = "$x,$y";
                     $dataPoints[] = ['x' => $x, 'y' => $y, 'pos' => $fr['position']];
                 }
 
-                // Genomsnitts-linjens Y-position
                 $avgY = $paddingTop + (($avgPlacement - $displayMin) / $range) * $graphHeight;
 
-                // Skapa smooth kurva med quadratic bezier
+                // Smooth kurva
                 $pathD = "M " . $dataPoints[0]['x'] . "," . $dataPoints[0]['y'];
                 for ($i = 1; $i < count($dataPoints); $i++) {
                     $cpX = ($dataPoints[$i-1]['x'] + $dataPoints[$i]['x']) / 2;
                     $pathD .= " Q " . $cpX . "," . $dataPoints[$i-1]['y'] . " " . $dataPoints[$i]['x'] . "," . $dataPoints[$i]['y'];
                 }
-
-                // Area path (stäng kurvan)
                 $areaPath = $pathD . " L " . end($dataPoints)['x'] . "," . ($chartHeight - $paddingBottom) . " L " . $dataPoints[0]['x'] . "," . ($chartHeight - $paddingBottom) . " Z";
             ?>
+            <div class="form-chart-header">
+                <span class="form-avg-value"><?= $avgDisplay ?></span>
+                <span class="form-avg-label">snittplacering</span>
+            </div>
             <div class="form-chart-container">
-                <svg viewBox="0 0 <?= $chartWidth ?> <?= $chartHeight ?>" class="form-area-chart" preserveAspectRatio="none">
+                <svg viewBox="0 0 <?= $chartWidth ?> <?= $chartHeight ?>" class="form-area-chart">
                     <defs>
                         <linearGradient id="formAreaGradient" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stop-color="#ef4444" stop-opacity="0.3"/>
-                            <stop offset="100%" stop-color="#ef4444" stop-opacity="0.02"/>
+                            <stop offset="0%" stop-color="#61CE70" stop-opacity="0.35"/>
+                            <stop offset="100%" stop-color="#61CE70" stop-opacity="0.05"/>
                         </linearGradient>
                     </defs>
                     <!-- Baseline -->
                     <line x1="<?= $paddingX ?>" y1="<?= $chartHeight - $paddingBottom ?>" x2="<?= $chartWidth - $paddingX ?>" y2="<?= $chartHeight - $paddingBottom ?>" stroke="var(--color-border)" stroke-width="1"/>
                     <!-- Average line -->
-                    <line x1="<?= $paddingX ?>" y1="<?= $avgY ?>" x2="<?= $chartWidth - $paddingX ?>" y2="<?= $avgY ?>" stroke="#f97316" stroke-width="1" stroke-dasharray="4,3" opacity="0.7"/>
-                    <text x="<?= $chartWidth - $paddingX - 3 ?>" y="<?= $avgY - 4 ?>" font-size="9" fill="#f97316" text-anchor="end" opacity="0.8">snitt</text>
+                    <line x1="<?= $paddingX ?>" y1="<?= $avgY ?>" x2="<?= $chartWidth - $paddingX ?>" y2="<?= $avgY ?>" stroke="#61CE70" stroke-width="1.5" stroke-dasharray="6,4" opacity="0.6"/>
                     <!-- Area fill -->
                     <path d="<?= $areaPath ?>" fill="url(#formAreaGradient)"/>
                     <!-- Trend line -->
-                    <path d="<?= $pathD ?>" fill="none" stroke="#ef4444" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-                    <!-- Data points -->
+                    <path d="<?= $pathD ?>" fill="none" stroke="#61CE70" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    <!-- Data points and labels -->
                     <?php foreach ($dataPoints as $dp): ?>
-                    <circle cx="<?= $dp['x'] ?>" cy="<?= $dp['y'] ?>" r="4" fill="#ef4444" stroke="white" stroke-width="2"/>
+                    <circle cx="<?= $dp['x'] ?>" cy="<?= $dp['y'] ?>" r="5" fill="#61CE70" stroke="white" stroke-width="2"/>
+                    <text x="<?= $dp['x'] ?>" y="<?= $chartHeight - $paddingBottom + 14 ?>" font-size="10" fill="var(--color-text-secondary)" text-anchor="middle" font-weight="500">#<?= $dp['pos'] ?></text>
                     <?php endforeach; ?>
                 </svg>
-                <div class="form-chart-avg">
-                    <span class="form-avg-value"><?= $avgDisplay ?></span>
-                    <span class="form-avg-label">snittplacering</span>
-                </div>
             </div>
             <?php endif; ?>
         </div>
