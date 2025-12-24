@@ -47,9 +47,9 @@ html[data-theme="light"]{
   --color-bg-active:rgba(0,0,0,0.08);
 
   --color-text-primary:#171717;
-  --color-text-secondary:#4B5563;
-  --color-text-tertiary:#6B7280;
-  --color-text-muted:#9CA3AF;
+  --color-text-secondary:#374151;
+  --color-text-tertiary:#4B5563;
+  --color-text-muted:#6B7280;
   --color-text-inverse:#FFFFFF;
 
   --color-border:#D1D5DB;
