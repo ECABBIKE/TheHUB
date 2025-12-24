@@ -482,7 +482,7 @@ if (!$series) {
 <!-- Collapsible Events Section -->
 <details class="events-dropdown mb-md">
   <summary class="events-dropdown-header">
-    <span class="events-dropdown-icon">📅</span>
+    <span class="events-dropdown-icon"><i data-lucide="calendar"></i></span>
     <span class="events-dropdown-title">Tävlingar i serien</span>
     <span class="events-dropdown-count"><?= count($seriesEvents) ?> st</span>
     <span class="events-dropdown-arrow">▾</span>
@@ -504,10 +504,10 @@ if (!$series) {
 <!-- Standings Type Tabs -->
 <div class="standings-tabs mb-md">
   <button class="tab-pill active" data-tab="individual" onclick="switchStandingsTab('individual')">
-    👤 Individuellt
+    <i data-lucide="user"></i> Individuellt
   </button>
   <button class="tab-pill" data-tab="club" onclick="switchStandingsTab('club')">
-    🛡️ Klubbmästerskap
+    <i data-lucide="shield"></i> Klubbmästerskap
   </button>
 </div>
 
@@ -537,7 +537,7 @@ if (!$series) {
 <?php if (empty($standingsByClass)): ?>
 <section class="card">
   <div class="empty-state">
-    <div class="empty-state-icon">🏆</div>
+    <div class="empty-state-icon"><i data-lucide="trophy"></i></div>
     <p><?= $searchName ? 'Inga resultat för "' . htmlspecialchars($searchName) . '"' : 'Inga resultat registrerade ännu' ?></p>
   </div>
 </section>
@@ -575,11 +575,7 @@ if (!$series) {
         ?>
         <tr class="result-row" onclick="window.location='/rider/<?= $rider['rider_id'] ?>'" class="cursor-pointer" data-search="<?= htmlspecialchars($searchData) ?>">
           <td class="col-place <?= ($pos + 1) <= 3 ? 'col-place--' . ($pos + 1) : '' ?>">
-            <?php if ($pos == 0): ?>🥇
-            <?php elseif ($pos == 1): ?>🥈
-            <?php elseif ($pos == 2): ?>🥉
-            <?php else: ?><?= $pos + 1 ?>
-            <?php endif; ?>
+            <?= $pos + 1 ?>
           </td>
           <td class="col-rider">
             <a href="/rider/<?= $rider['rider_id'] ?>" class="rider-link">
@@ -622,15 +618,19 @@ if (!$series) {
     ?>
     <a href="/rider/<?= $rider['rider_id'] ?>" class="result-item" data-search="<?= htmlspecialchars($searchData) ?>">
       <div class="result-place <?= ($pos + 1) <= 3 ? 'top-3' : '' ?>">
-        <?php if ($pos == 0): ?>🥇
-        <?php elseif ($pos == 1): ?>🥈
-        <?php elseif ($pos == 2): ?>🥉
-        <?php else: ?><?= $pos + 1 ?>
+        <?php if ($pos == 0): ?>
+          <img src="/assets/icons/medal-1st.svg" alt="1:a" class="medal-icon-mobile">
+        <?php elseif ($pos == 1): ?>
+          <img src="/assets/icons/medal-2nd.svg" alt="2:a" class="medal-icon-mobile">
+        <?php elseif ($pos == 2): ?>
+          <img src="/assets/icons/medal-3rd.svg" alt="3:e" class="medal-icon-mobile">
+        <?php else: ?>
+          <?= $pos + 1 ?>
         <?php endif; ?>
       </div>
       <div class="result-info">
         <div class="result-name"><?= htmlspecialchars($rider['firstname'] . ' ' . $rider['lastname']) ?></div>
-        <div class="result-club"><?= htmlspecialchars($rider['club_name'] ?? '-') ?></div>
+        <div class="result-club"><?= htmlspecialchars($rider['club_name'] ?? '-') ?> &middot; <span class="result-class"><?= htmlspecialchars($classData['class_display_name'] ?? $classData['class_name']) ?></span></div>
       </div>
       <div class="result-points">
         <div class="points-big"><?= $rider['total_points'] ?></div>
@@ -652,7 +652,7 @@ if (!$series) {
 <?php if (empty($clubStandings)): ?>
 <section class="card">
   <div class="empty-state">
-    <div class="empty-state-icon">🛡️</div>
+    <div class="empty-state-icon"><i data-lucide="shield"></i></div>
     <p>Inga klubbresultat ännu</p>
   </div>
 </section>
@@ -661,7 +661,7 @@ if (!$series) {
 <section class="card mb-lg standings-card">
   <div class="card-header">
     <div>
-      <h2 class="card-title">🛡️ Klubbmästerskap</h2>
+      <h2 class="card-title"><i data-lucide="shield"></i> Klubbmästerskap</h2>
       <p class="card-subtitle"><?= count($clubStandings) ?> klubbar • Bästa åkare per klass: 100%, näst bästa: 50%</p>
     </div>
   </div>
@@ -688,11 +688,7 @@ if (!$series) {
         <?php foreach ($clubStandings as $club): $clubPos++; ?>
         <tr class="result-row club-row" data-club="<?= htmlspecialchars($club['club_name']) ?>">
           <td class="col-place <?= $clubPos <= 3 ? 'col-place--' . $clubPos : '' ?>">
-            <?php if ($clubPos == 1): ?>🥇
-            <?php elseif ($clubPos == 2): ?>🥈
-            <?php elseif ($clubPos == 3): ?>🥉
-            <?php else: ?><?= $clubPos ?>
-            <?php endif; ?>
+            <?= $clubPos ?>
           </td>
           <td class="col-club-name">
             <div class="club-info">
@@ -740,10 +736,14 @@ if (!$series) {
     <?php foreach ($clubStandings as $club): $clubPos++; ?>
     <div class="club-result-item">
       <div class="result-place <?= $clubPos <= 3 ? 'top-3' : '' ?>">
-        <?php if ($clubPos == 1): ?>🥇
-        <?php elseif ($clubPos == 2): ?>🥈
-        <?php elseif ($clubPos == 3): ?>🥉
-        <?php else: ?><?= $clubPos ?>
+        <?php if ($clubPos == 1): ?>
+          <img src="/assets/icons/medal-1st.svg" alt="1:a" class="medal-icon-mobile">
+        <?php elseif ($clubPos == 2): ?>
+          <img src="/assets/icons/medal-2nd.svg" alt="2:a" class="medal-icon-mobile">
+        <?php elseif ($clubPos == 3): ?>
+          <img src="/assets/icons/medal-3rd.svg" alt="3:e" class="medal-icon-mobile">
+        <?php else: ?>
+          <?= $clubPos ?>
         <?php endif; ?>
       </div>
       <div class="result-info">
