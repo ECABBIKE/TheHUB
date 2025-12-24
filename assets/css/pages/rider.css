@@ -408,6 +408,50 @@
     padding: var(--card-padding);
 }
 
+.series-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--space-md);
+}
+
+.series-header .card-section-title {
+    margin-bottom: 0;
+}
+
+.series-header select {
+    padding: var(--space-xs) var(--space-sm);
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--color-border);
+    background: var(--color-bg-surface);
+    color: var(--color-text-primary);
+    font-size: var(--text-sm);
+    cursor: pointer;
+}
+
+.year-badge {
+    padding: var(--space-xs) var(--space-sm);
+    background: var(--color-accent-light);
+    color: var(--color-accent);
+    border-radius: var(--radius-sm);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+}
+
+.series-empty-state {
+    text-align: center;
+    padding: var(--space-xl) var(--space-md);
+}
+
+.series-empty-state i {
+    margin-bottom: var(--space-md);
+    color: var(--color-text-muted);
+}
+
+.series-empty-state p {
+    margin-bottom: var(--space-md);
+}
+
 .series-tabs {
     display: flex;
     gap: var(--space-xs);
