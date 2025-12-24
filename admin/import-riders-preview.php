@@ -85,6 +85,9 @@ try {
         throw new Exception('Tom fil eller ogiltigt format');
     }
 
+    // Store original headers for display
+    $originalHeader = $header;
+
     // Normalize header
     $header = array_map(function($col) {
         $col = mb_strtolower(trim($col), 'UTF-8');
@@ -92,29 +95,58 @@ try {
         return $col;
     }, $header);
 
-    // Map columns
+    // Define all possible column mappings with their matching patterns
+    $columnPatterns = [
+        'firstname' => ['förnamn', 'fornamn', 'firstname', 'first_name', 'first name', 'fname', 'given name', 'givenname'],
+        'lastname' => ['efternamn', 'lastname', 'last_name', 'last name', 'lname', 'surname', 'family name', 'familyname'],
+        'fullname' => ['namn', 'name', 'fullname', 'full name', 'åkare', 'akare', 'rider', 'deltagare', 'participant'],
+        'gender' => ['kön', 'kon', 'gender', 'sex'],
+        'club' => ['klubb', 'club', 'team', 'förening', 'forening', 'organisation', 'huvudförening', 'huvudforening'],
+        'birth_year' => ['födelseår', 'fodelsear', 'birthyear', 'birth_year', 'year', 'år', 'ar', 'född', 'fodd', 'ålder', 'alder', 'age'],
+        'birthday' => ['födelsedatum', 'födelsdag', 'birthday', 'birthdate', 'date of birth', 'dob'],
+        'email' => ['email', 'e-post', 'epost', 'mail', 'e-mail'],
+        'uci_id' => ['medlemsnummer', 'uci', 'licens', 'license', 'license_number', 'licensnummer', 'uci_id', 'uciid', 'id'],
+        'nationality' => ['nationalitet', 'nationality', 'land', 'country', 'nation']
+    ];
+
+    // Auto-detect column mappings
     $colMap = [];
+    $detectedColumns = []; // Track what was auto-detected
+
     foreach ($header as $idx => $col) {
-        if (strpos($col, 'förnamn') !== false || strpos($col, 'fornamn') !== false || $col === 'firstname') {
-            $colMap['firstname'] = $idx;
-        } elseif (strpos($col, 'efternamn') !== false || $col === 'lastname') {
-            $colMap['lastname'] = $idx;
-        } elseif ($col === 'kön' || $col === 'kon' || $col === 'gender') {
-            $colMap['gender'] = $idx;
-        } elseif (strpos($col, 'klubb') !== false || strpos($col, 'företag') !== false || $col === 'club') {
-            $colMap['club'] = $idx;
-        } elseif (strpos($col, 'födelseår') !== false || strpos($col, 'fodelsear') !== false || $col === 'birthyear') {
-            $colMap['birth_year'] = $idx;
-        } elseif (strpos($col, 'födelsedag') !== false || strpos($col, 'birthday') !== false) {
-            $colMap['birthday'] = $idx;
-        } elseif (strpos($col, 'email') !== false || strpos($col, 'e-post') !== false) {
-            $colMap['email'] = $idx;
-        } elseif (strpos($col, 'medlemsnummer') !== false || strpos($col, 'uci') !== false || strpos($col, 'licens') !== false) {
-            $colMap['uci_id'] = $idx;
-        } elseif (strpos($col, 'nationalitet') !== false && strpos($col, '3') !== false) {
-            $colMap['nationality'] = $idx;
+        $colNorm = str_replace([' ', '-', '_'], '', $col);
+        foreach ($columnPatterns as $field => $patterns) {
+            if (!isset($colMap[$field])) {
+                foreach ($patterns as $pattern) {
+                    $patternNorm = str_replace([' ', '-', '_'], '', $pattern);
+                    if ($colNorm === $patternNorm || strpos($colNorm, $patternNorm) !== false || strpos($patternNorm, $colNorm) !== false) {
+                        $colMap[$field] = $idx;
+                        $detectedColumns[$field] = $originalHeader[$idx];
+                        break 2;
+                    }
+                }
+            }
         }
     }
+
+    // Check if user has overridden mappings via POST
+    if (isset($_POST['col_mapping']) && is_array($_POST['col_mapping'])) {
+        foreach ($_POST['col_mapping'] as $field => $idx) {
+            if ($idx !== '' && $idx !== '-1') {
+                $colMap[$field] = (int)$idx;
+            } elseif ($idx === '-1') {
+                unset($colMap[$field]);
+            }
+        }
+    }
+
+    // Store column info for template
+    $columnInfo = [
+        'original_headers' => $originalHeader,
+        'detected' => $detectedColumns,
+        'mapping' => $colMap,
+        'patterns' => $columnPatterns
+    ];
 
     // Cache for lookups
     $clubCache = [];
@@ -326,6 +358,86 @@ include __DIR__ . '/components/unified-layout.php';
         </div>
     </div>
 </div>
+
+<!-- Column Mapping -->
+<?php if (isset($columnInfo)): ?>
+<div class="admin-card mb-lg">
+    <div class="admin-card-header">
+        <h2>
+            <i data-lucide="columns"></i>
+            Kolumnmappning
+            <?php
+            $requiredFields = ['firstname', 'lastname'];
+            $missingRequired = array_diff($requiredFields, array_keys($columnInfo['mapping']));
+            if (!empty($missingRequired)): ?>
+            <span class="badge badge-danger ml-sm">Saknas: <?= implode(', ', $missingRequired) ?></span>
+            <?php endif; ?>
+        </h2>
+    </div>
+    <div class="admin-card-body">
+        <p class="text-sm text-secondary mb-md">
+            Systemet detekterade följande kolumner automatiskt. Om det ser fel ut kan du ändra mappningen nedan.
+        </p>
+
+        <form method="POST" id="columnMappingForm">
+            <?= csrf_field() ?>
+            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: var(--space-md);">
+                <?php
+                $fieldLabels = [
+                    'firstname' => ['label' => 'Förnamn', 'required' => true],
+                    'lastname' => ['label' => 'Efternamn', 'required' => true],
+                    'fullname' => ['label' => 'Fullständigt namn', 'required' => false],
+                    'gender' => ['label' => 'Kön', 'required' => false],
+                    'club' => ['label' => 'Klubb', 'required' => false],
+                    'birth_year' => ['label' => 'Födelseår', 'required' => false],
+                    'birthday' => ['label' => 'Födelsedatum', 'required' => false],
+                    'email' => ['label' => 'E-post', 'required' => false],
+                    'uci_id' => ['label' => 'Licensnummer/UCI-ID', 'required' => false],
+                    'nationality' => ['label' => 'Nationalitet', 'required' => false]
+                ];
+                ?>
+                <?php foreach ($fieldLabels as $field => $info): ?>
+                <div class="form-group">
+                    <label class="label" style="font-size: 0.85rem;">
+                        <?= $info['label'] ?>
+                        <?php if ($info['required']): ?>
+                        <span class="text-danger">*</span>
+                        <?php endif; ?>
+                    </label>
+                    <select name="col_mapping[<?= $field ?>]" class="input" style="font-size: 0.9rem;" onchange="document.getElementById('columnMappingForm').submit()">
+                        <option value="-1">-- Inte mappad --</option>
+                        <?php foreach ($columnInfo['original_headers'] as $idx => $colName): ?>
+                        <option value="<?= $idx ?>"
+                            <?= (isset($columnInfo['mapping'][$field]) && $columnInfo['mapping'][$field] === $idx) ? 'selected' : '' ?>>
+                            <?= h($colName) ?> (kolumn <?= $idx + 1 ?>)
+                        </option>
+                        <?php endforeach; ?>
+                    </select>
+                    <?php if (isset($columnInfo['detected'][$field])): ?>
+                    <small class="text-success" style="display: block; margin-top: 2px;">
+                        <i data-lucide="check" style="width: 12px; height: 12px;"></i>
+                        Auto-detekterad
+                    </small>
+                    <?php endif; ?>
+                </div>
+                <?php endforeach; ?>
+            </div>
+        </form>
+
+        <!-- Show original headers for reference -->
+        <details class="mt-lg">
+            <summary class="text-sm" style="cursor: pointer; color: var(--color-text-secondary);">
+                <i data-lucide="eye"></i> Visa alla kolumner i filen (<?= count($columnInfo['original_headers']) ?> st)
+            </summary>
+            <div class="mt-sm" style="background: var(--color-bg-sunken); padding: var(--space-sm); border-radius: var(--radius-sm);">
+                <?php foreach ($columnInfo['original_headers'] as $idx => $colName): ?>
+                <span class="badge badge-secondary mr-xs mb-xs"><?= $idx + 1 ?>: <?= h($colName) ?></span>
+                <?php endforeach; ?>
+            </div>
+        </details>
+    </div>
+</div>
+<?php endif; ?>
 
 <!-- Clubs Analysis -->
 <?php if (!empty($matchingStats['clubs_list'])): ?>
