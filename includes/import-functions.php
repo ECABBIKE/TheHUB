@@ -116,6 +116,40 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
         }
     }
 
+    // Helper function to generate proper stage name based on column header
+    $generateStageName = function($originalCol, &$counters) {
+        $normalized = mb_strtolower(trim($originalCol), 'UTF-8');
+        $normalized = str_replace([' ', '-', '_'], '', $normalized);
+
+        // Prostage → PS
+        if (preg_match('/^(prostage|prolog|prologue)(\d*)$/', $normalized, $m)) {
+            $num = !empty($m[2]) ? (int)$m[2] : ++$counters['ps'];
+            return 'PS' . $num;
+        }
+
+        // Powerstage → PW
+        if (preg_match('/^(powerstage|power)(\d*)$/', $normalized, $m)) {
+            $num = !empty($m[2]) ? (int)$m[2] : ++$counters['pw'];
+            return 'PW' . $num;
+        }
+
+        // SS/Stage → SS (extract number if present)
+        if (preg_match('/^(ss|stage|sträcka|stracka|etapp|s)(\d+)$/', $normalized, $m)) {
+            return 'SS' . (int)$m[2];
+        }
+
+        // Just a number or unknown format - use SS with sequential number
+        if (preg_match('/^\d+$/', $normalized)) {
+            return 'SS' . (int)$normalized;
+        }
+
+        // Default: keep original but capitalize
+        return strtoupper($originalCol);
+    };
+
+    // Counters for stages without numbers
+    $stageCounters = ['ps' => 0, 'pw' => 0, 'ss' => 0];
+
     // If we found both Club and NetTime, everything between them is stage columns
     if ($clubIndex >= 0 && $netTimeIndex > $clubIndex) {
         for ($i = $clubIndex + 1; $i < $netTimeIndex; $i++) {
@@ -133,12 +167,14 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
                 continue;
             }
 
-            // This is a stage column - map it sequentially
+            // This is a stage column - map it sequentially to ss1, ss2, etc. in DB
+            // But store the proper name (PS1, PW1, SS1) for display
+            $properName = $generateStageName($originalCol, $stageCounters);
             $splitTimeColumns[$i] = [
                 'original' => $originalCol,
                 'mapped' => 'ss' . $splitTimeIndex
             ];
-            $stageNamesMapping[$splitTimeIndex] = $originalCol;
+            $stageNamesMapping[$splitTimeIndex] = $properName;
             $splitTimeIndex++;
         }
     } else {
@@ -158,11 +194,12 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
                            || preg_match('/^(prostage|powerstage|prolog|prologue|prologstage)\d*$/', $normalizedCol);
 
             if ($isSplitTimeCol) {
+                $properName = $generateStageName($originalCol, $stageCounters);
                 $splitTimeColumns[$index] = [
                     'original' => $originalCol,
                     'mapped' => 'ss' . $splitTimeIndex
                 ];
-                $stageNamesMapping[$splitTimeIndex] = $originalCol;
+                $stageNamesMapping[$splitTimeIndex] = $properName;
                 $splitTimeIndex++;
             }
         }
