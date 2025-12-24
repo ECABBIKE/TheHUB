@@ -156,4 +156,45 @@
     font-size:var(--text-xs);
     color:var(--color-text-muted);
   }
+
+  /* Split times in mobile cards */
+  .result-item-splits{
+    flex-wrap:wrap;
+  }
+
+  .result-splits-row{
+    display:flex;
+    flex-wrap:wrap;
+    gap:var(--space-xs);
+    margin-top:var(--space-xs);
+    width:100%;
+  }
+
+  .result-split-item{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    background:var(--color-bg-sunken);
+    padding:var(--space-xs) var(--space-sm);
+    border-radius:var(--radius-sm);
+    min-width:60px;
+  }
+
+  .result-split-item .split-label{
+    font-size:var(--text-xs);
+    color:var(--color-text-muted);
+    font-weight:var(--weight-medium);
+  }
+
+  .result-split-item .split-value{
+    font-family:var(--font-mono);
+    font-size:var(--text-sm);
+    font-weight:var(--weight-medium);
+    color:var(--color-text-primary);
+  }
+
+  .result-split-item .split-rank{
+    font-size:var(--text-xs);
+    color:var(--color-text-tertiary);
+  }
 }
