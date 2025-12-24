@@ -1087,9 +1087,17 @@ document.querySelectorAll('.logo-preview-box').forEach(box => {
     box.addEventListener('mouseenter', () => box.style.borderColor = 'var(--color-accent)');
     box.addEventListener('mouseleave', () => box.style.borderColor = 'var(--color-border)');
 });
+
+// Move modal to body for proper fixed positioning
+document.addEventListener('DOMContentLoaded', function() {
+    const modal = document.getElementById('mediaPickerModal');
+    if (modal) {
+        document.body.appendChild(modal);
+    }
+});
 </script>
 
-<!-- Media Picker Modal -->
+<!-- Media Picker Modal (will be moved to body via JS) -->
 <div class="modal" id="mediaPickerModal">
     <div class="modal-content">
         <div class="modal-header">
