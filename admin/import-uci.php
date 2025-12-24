@@ -21,6 +21,7 @@ $errors = [];
 $updated_riders = [];
 $created_riders = [];
 $skipped_riders = [];
+$uci_conflicts = [];
 $mapped_columns = [];
 
 // Current year for default selection
@@ -70,6 +71,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['rider_file'])) {
                     $updated_riders = $result['updated'];
                     $created_riders = $result['created'];
                     $skipped_riders = $result['skipped'];
+                    $uci_conflicts = $result['conflicts'] ?? [];
                     $mapped_columns = $result['mapped_columns'] ?? [];
 
                     // Update import history
@@ -78,7 +80,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['rider_file'])) {
 
                     if ($stats['updated'] > 0 || $stats['created'] > 0) {
                         $message = "Import klar! {$stats['updated']} uppdaterade, {$stats['created']} nya riders. Klubbtillhörighet satt för {$seasonYear}.";
-                        $messageType = 'success';
+                        if ($stats['conflicts'] > 0) {
+                            $message .= " OBS: {$stats['conflicts']} UCI-ID konflikter kräver manuell hantering.";
+                            $messageType = 'warning';
+                        } else {
+                            $messageType = 'success';
+                        }
                     } else {
                         $message = "Ingen data importerades. Kontrollera filformatet.";
                         $messageType = 'error';
@@ -180,12 +187,14 @@ function importRiderUpdates($filepath, $db, $importId, $seasonYear, $createMissi
         'created' => 0,
         'skipped' => 0,
         'failed' => 0,
-        'clubs_set' => 0
+        'clubs_set' => 0,
+        'conflicts' => 0
     ];
     $errors = [];
     $updated_riders = [];
     $created_riders = [];
     $skipped_riders = [];
+    $conflicts = [];
     $clubCache = [];
     $mappedColumns = [];
 
@@ -373,14 +382,30 @@ function importRiderUpdates($filepath, $db, $importId, $seasonYear, $createMissi
                 $updateData = [];
                 $changes = [];
 
-                // Update UCI ID if provided and rider doesn't have one (or has SWE-ID)
+                // Update UCI ID if provided
+                // Regler:
+                // 1. Om nuvarande är tomt eller SWE-ID → uppdatera till UCI ID
+                // 2. Om nuvarande redan är ett UCI ID → ALDRIG ändra
+                // 3. Om konflikt (olika UCI ID) → logga som varning
                 if (!empty($uciId)) {
-                    $currentLicense = $existing['license_number'] ?? '';
-                    // Only update if current is empty or is a SWE-ID
-                    if (empty($currentLicense) || strpos($currentLicense, 'SWE') === 0) {
+                    $currentLicense = trim($existing['license_number'] ?? '');
+                    $isSweId = empty($currentLicense) || strpos($currentLicense, 'SWE') === 0;
+
+                    if ($isSweId) {
+                        // SWE-ID ska alltid uppdateras till riktigt UCI ID
                         $updateData['license_number'] = $uciId;
-                        $changes[] = "UCI-ID: {$uciId}";
+                        $changes[] = "UCI-ID: {$currentLicense} → {$uciId}";
+                    } elseif ($currentLicense !== $uciId) {
+                        // Konflikt: Deltagaren har redan ett annat UCI ID
+                        $conflicts[] = [
+                            'rider_id' => $existing['id'],
+                            'name' => "{$firstname} {$lastname}",
+                            'current_uci' => $currentLicense,
+                            'import_uci' => $uciId,
+                            'line' => $lineNumber
+                        ];
                     }
+                    // Om currentLicense === uciId → inget att göra, redan korrekt
                 }
 
                 // Update email if provided and rider doesn't have one
@@ -483,12 +508,16 @@ function importRiderUpdates($filepath, $db, $importId, $seasonYear, $createMissi
 
     fclose($handle);
 
+    // Count conflicts
+    $stats['conflicts'] = count($conflicts);
+
     return [
         'stats' => $stats,
         'errors' => $errors,
         'updated' => $updated_riders,
         'created' => $created_riders,
         'skipped' => $skipped_riders,
+        'conflicts' => $conflicts,
         'mapped_columns' => $mappedColumns
     ];
 }
@@ -572,6 +601,47 @@ include __DIR__ . '/components/unified-layout.php';
             <?php endif; ?>
         </ul>
     </details>
+    <?php endif; ?>
+
+    <?php if (!empty($uci_conflicts)): ?>
+    <div class="mt-lg" style="background: rgba(245, 158, 11, 0.1); border: 1px solid var(--color-warning); border-radius: var(--radius-md); padding: var(--space-md);">
+        <h4 class="flex items-center gap-sm mb-md" style="color: var(--color-warning);">
+            <i data-lucide="alert-triangle"></i>
+            UCI-ID Konflikter (<?= count($uci_conflicts) ?>)
+        </h4>
+        <p class="text-sm text-secondary mb-md">
+            Dessa deltagare har redan ett UCI-ID som skiljer sig från filen. Klicka på "Redigera" för att granska manuellt.
+        </p>
+        <div class="table-responsive">
+            <table class="table text-sm">
+                <thead>
+                    <tr>
+                        <th>Rad</th>
+                        <th>Namn</th>
+                        <th>Nuvarande UCI-ID</th>
+                        <th>UCI-ID i fil</th>
+                        <th>Åtgärd</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($uci_conflicts as $conflict): ?>
+                    <tr>
+                        <td><?= $conflict['line'] ?></td>
+                        <td><strong><?= h($conflict['name']) ?></strong></td>
+                        <td><code><?= h($conflict['current_uci']) ?></code></td>
+                        <td><code style="color: var(--color-warning);"><?= h($conflict['import_uci']) ?></code></td>
+                        <td>
+                            <a href="/admin/rider-edit.php?id=<?= $conflict['rider_id'] ?>" class="btn btn--sm btn--secondary" target="_blank">
+                                <i data-lucide="external-link"></i>
+                                Redigera
+                            </a>
+                        </td>
+                    </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+    </div>
     <?php endif; ?>
 
     <?php if (!empty($errors)): ?>
