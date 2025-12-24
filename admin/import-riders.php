@@ -518,19 +518,30 @@ function importRidersFromCSV($filepath, $db) {
   $seenInThisImport[$uniqueKey] = true;
 
   // Check if rider already exists (by license or name+birth_year)
+  // Använder case-insensitive matchning för namn
   $existing = null;
 
-  if ($riderData['license_number']) {
+  // 1. Försök matcha på licensnummer (exakt)
+  if (!empty($riderData['license_number']) && strpos($riderData['license_number'], 'SWE-') !== 0) {
   $existing = $db->getRow(
   "SELECT id FROM riders WHERE license_number = ? LIMIT 1",
    [$riderData['license_number']]
   );
   }
 
+  // 2. Försök matcha på namn + födelseår (case-insensitive)
   if (!$existing && $riderData['birth_year']) {
   $existing = $db->getRow(
-  "SELECT id FROM riders WHERE firstname = ? AND lastname = ? AND birth_year = ? LIMIT 1",
+  "SELECT id FROM riders WHERE LOWER(firstname) = LOWER(?) AND LOWER(lastname) = LOWER(?) AND birth_year = ? LIMIT 1",
    [$riderData['firstname'], $riderData['lastname'], $riderData['birth_year']]
+  );
+  }
+
+  // 3. Försök matcha på namn endast (case-insensitive) om födelseår saknas
+  if (!$existing && !$riderData['birth_year']) {
+  $existing = $db->getRow(
+  "SELECT id FROM riders WHERE LOWER(firstname) = LOWER(?) AND LOWER(lastname) = LOWER(?) LIMIT 1",
+   [$riderData['firstname'], $riderData['lastname']]
   );
   }
 
