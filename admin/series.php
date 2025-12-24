@@ -111,6 +111,7 @@ if (isset($_GET['edit']) && is_numeric($_GET['edit'])) {
 
 // Get filter parameters
 $filterYear = isset($_GET['year']) && is_numeric($_GET['year']) ? intval($_GET['year']) : null;
+$filterBrand = isset($_GET['brand']) && is_numeric($_GET['brand']) ? intval($_GET['brand']) : null;
 
 // Check if year column exists on series table
 $yearColumnExists = false;
@@ -131,6 +132,11 @@ if ($filterYear) {
         $where[] = "YEAR(start_date) = ?";
     }
     $params[] = $filterYear;
+}
+
+if ($filterBrand) {
+    $where[] = "brand_id = ?";
+    $params[] = $filterBrand;
 }
 
 $whereClause = !empty($where) ? 'WHERE ' . implode(' AND ', $where) : '';
@@ -176,7 +182,7 @@ $brandSelect = $brandColumnExists ? ', s.brand_id, sb.name as brand_name' : ', N
 $brandJoin = $brandColumnExists ? 'LEFT JOIN series_brands sb ON s.brand_id = sb.id' : '';
 
 // Rebuild where clause for aliased table
-$whereAliased = str_replace(['year', 'start_date'], ['s.year', 's.start_date'], $whereClause);
+$whereAliased = str_replace(['year', 'start_date', 'brand_id'], ['s.year', 's.start_date', 's.brand_id'], $whereClause);
 
 $sql = "SELECT s.id, s.name, s.type{$formatSelect}{$yearSelect}, s.status, s.start_date, s.end_date, s.logo, s.organizer,
     {$eventsCountSelect} as events_count,
@@ -193,6 +199,12 @@ if ($yearColumnExists) {
     $allYears = $db->getAll("SELECT DISTINCT COALESCE(year, YEAR(start_date)) as year FROM series WHERE year IS NOT NULL OR start_date IS NOT NULL ORDER BY year DESC");
 } else {
     $allYears = $db->getAll("SELECT DISTINCT YEAR(start_date) as year FROM series WHERE start_date IS NOT NULL ORDER BY year DESC");
+}
+
+// Get all brands for filter
+$allBrands = [];
+if ($brandColumnExists) {
+    $allBrands = $db->getAll("SELECT id, name FROM series_brands ORDER BY name ASC");
 }
 
 // Count unique participants in active series
@@ -285,8 +297,21 @@ include __DIR__ . '/components/unified-layout.php';
 <!-- Filter Section -->
 <div class="admin-card">
     <div class="admin-card-body">
-        <form method="GET" action="/admin/series" class="admin-form-row">
-            <div class="admin-form-group" style="margin-bottom: 0;">
+        <form method="GET" action="/admin/series" class="admin-form-row" style="display: flex; gap: var(--space-md); flex-wrap: wrap; align-items: flex-end;">
+            <?php if (!empty($allBrands)): ?>
+            <div class="admin-form-group" style="margin-bottom: 0; min-width: 200px;">
+                <label for="brand-filter" class="admin-form-label">Huvudserie</label>
+                <select id="brand-filter" name="brand" class="admin-form-select" onchange="this.form.submit()">
+                    <option value="">Alla serier</option>
+                    <?php foreach ($allBrands as $brand): ?>
+                        <option value="<?= $brand['id'] ?>" <?= $filterBrand == $brand['id'] ? 'selected' : '' ?>>
+                            <?= htmlspecialchars($brand['name']) ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <?php endif; ?>
+            <div class="admin-form-group" style="margin-bottom: 0; min-width: 120px;">
                 <label for="year-filter" class="admin-form-label">År</label>
                 <select id="year-filter" name="year" class="admin-form-select" onchange="this.form.submit()">
                     <option value="">Alla år</option>
@@ -299,10 +324,24 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </form>
 
-        <?php if ($filterYear): ?>
+        <?php if ($filterYear || $filterBrand): ?>
             <div style="margin-top: var(--space-md); padding-top: var(--space-md); border-top: 1px solid var(--color-border); display: flex; align-items: center; gap: var(--space-sm); flex-wrap: wrap;">
                 <span style="font-size: var(--text-sm); color: var(--color-text-secondary);">Visar:</span>
-                <span class="admin-badge admin-badge-warning"><?= $filterYear ?></span>
+                <?php if ($filterBrand): ?>
+                    <?php
+                    $brandName = '';
+                    foreach ($allBrands as $b) {
+                        if ($b['id'] == $filterBrand) {
+                            $brandName = $b['name'];
+                            break;
+                        }
+                    }
+                    ?>
+                    <span class="admin-badge admin-badge-info"><?= htmlspecialchars($brandName) ?></span>
+                <?php endif; ?>
+                <?php if ($filterYear): ?>
+                    <span class="admin-badge admin-badge-warning"><?= $filterYear ?></span>
+                <?php endif; ?>
                 <a href="/admin/series" class="btn-admin btn-admin-sm btn-admin-secondary">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 14px; height: 14px;"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
                     Visa alla
