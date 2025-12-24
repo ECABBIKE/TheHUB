@@ -13,6 +13,59 @@ $db = getDB();
 $message = '';
 $messageType = 'info';
 
+// File to store ignored duplicate pairs
+$ignoredFile = __DIR__ . '/../uploads/ignored_rider_duplicates.json';
+
+// Load ignored duplicates
+function loadIgnoredRiderDuplicates($file) {
+    if (file_exists($file)) {
+        $data = json_decode(file_get_contents($file), true);
+        return is_array($data) ? $data : [];
+    }
+    return [];
+}
+
+// Save ignored duplicates
+function saveIgnoredRiderDuplicates($file, $data) {
+    $dir = dirname($file);
+    if (!is_dir($dir)) {
+        mkdir($dir, 0755, true);
+    }
+    file_put_contents($file, json_encode($data, JSON_PRETTY_PRINT));
+}
+
+// Generate unique key for a rider pair (sorted so order doesn't matter)
+function getRiderPairKey($id1, $id2) {
+    return min($id1, $id2) . '-' . max($id1, $id2);
+}
+
+$ignoredDuplicates = loadIgnoredRiderDuplicates($ignoredFile);
+
+// Handle ignore action
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ignore_pair'])) {
+    checkCsrf();
+    $pairKey = $_POST['ignore_pair'];
+    if (!in_array($pairKey, $ignoredDuplicates)) {
+        $ignoredDuplicates[] = $pairKey;
+        saveIgnoredRiderDuplicates($ignoredFile, $ignoredDuplicates);
+        $_SESSION['dup_message'] = 'Paret markerat som "inte dubbletter" och kommer inte visas igen';
+        $_SESSION['dup_message_type'] = 'success';
+    }
+    header('Location: /admin/find-duplicates.php');
+    exit;
+}
+
+// Handle reset ignored action
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reset_ignored'])) {
+    checkCsrf();
+    $ignoredDuplicates = [];
+    saveIgnoredRiderDuplicates($ignoredFile, $ignoredDuplicates);
+    $_SESSION['dup_message'] = 'Alla ignorerade par återställda';
+    $_SESSION['dup_message_type'] = 'info';
+    header('Location: /admin/find-duplicates.php');
+    exit;
+}
+
 // Check for message from redirect
 if (isset($_SESSION['dup_message'])) {
  $message = $_SESSION['dup_message'];
@@ -296,8 +349,13 @@ foreach ($duplicateGroups as $group) {
 
  $sameUci = $uci1 && $uci2 && $uci1 === $uci2;
 
+ // Skip if this pair is marked as "not duplicates"
+ $pairKey = getRiderPairKey($r1['id'], $r2['id']);
+ if (in_array($pairKey, $ignoredDuplicates)) continue;
+
  // Always show duplicates with same name (removed the skip condition)
  $potentialDuplicates[] = [
+  'pair_key' => $pairKey,
   'reason' => $sameUci ? 'Samma UCI ID' : 'Exakt samma namn',
   'rider1' => ['id' => $r1['id'], 'name' => $r1['firstname'].' '.$r1['lastname'],
    'birth_year' => $r1['birth_year'], 'license' => $r1['license_number'],
@@ -358,9 +416,12 @@ foreach ($fuzzyGroups as $group) {
                 $r2 = $uniqueRiders[$j];
 
                 // Skip if already in list
-                $pairKey = min($r1['id'], $r2['id']) . '-' . max($r1['id'], $r2['id']);
+                $pairKey = getRiderPairKey($r1['id'], $r2['id']);
                 if (isset($seenPairs[$pairKey])) continue;
                 $seenPairs[$pairKey] = true;
+
+                // Skip if this pair is marked as "not duplicates"
+                if (in_array($pairKey, $ignoredDuplicates)) continue;
 
                 // Skip if different birth year (when both have one)
                 if ($r1['birth_year'] && $r2['birth_year'] && $r1['birth_year'] !== $r2['birth_year']) continue;
@@ -379,6 +440,7 @@ foreach ($fuzzyGroups as $group) {
                 if (!$uci2 && $uci1) $r2Missing[] = 'UCI ID';
 
                 $potentialDuplicates[] = [
+                    'pair_key' => $pairKey,
                     'reason' => 'Liknande namn (' . $r1['firstname'] . '/' . $r2['firstname'] . ')',
                     'rider1' => ['id' => $r1['id'], 'name' => $r1['firstname'].' '.$r1['lastname'],
                         'birth_year' => $r1['birth_year'], 'license' => $r1['license_number'],
@@ -408,6 +470,27 @@ include __DIR__ . '/components/unified-layout.php';
   <div class="alert alert-<?= $messageType ?> mb-lg">
   <i data-lucide="<?= $messageType === 'success' ? 'check-circle' : 'alert-circle' ?>"></i>
   <?= h($message) ?>
+  </div>
+ <?php endif; ?>
+
+ <?php $ignoredCount = count($ignoredDuplicates); ?>
+ <?php if ($ignoredCount > 0): ?>
+  <!-- Ignored pairs info -->
+  <div class="card mb-lg" style="background: var(--color-bg-sunken, #f5f5f5);">
+   <div class="card-body flex items-center justify-between">
+    <div>
+     <strong class="text-secondary"><i data-lucide="eye-off" class="icon-sm"></i> <?= $ignoredCount ?> par dolda</strong>
+     <p class="text-sm text-secondary gs-mb-0">Par markerade som "inte dubbletter"</p>
+    </div>
+    <form method="POST">
+     <?= csrf_field() ?>
+     <button type="submit" name="reset_ignored" value="1" class="btn btn--secondary btn--sm"
+      onclick="return confirm('Återställa alla dolda par?')">
+      <i data-lucide="refresh-cw"></i>
+      Visa alla igen
+     </button>
+    </form>
+   </div>
   </div>
  <?php endif; ?>
 
@@ -499,6 +582,16 @@ include __DIR__ . '/components/unified-layout.php';
     </div>
     </div>
     <?php endforeach; ?>
+   </div>
+   <!-- Not duplicates button -->
+   <div style="padding: 0 1rem 1rem; text-align: right;">
+    <form method="POST" style="display: inline;">
+     <?= csrf_field() ?>
+     <button type="submit" name="ignore_pair" value="<?= h($dup['pair_key']) ?>" class="btn btn--secondary btn--sm">
+      <i data-lucide="eye-off"></i>
+      Inte dubbletter
+     </button>
+    </form>
    </div>
    </div>
    <?php endforeach; ?>
