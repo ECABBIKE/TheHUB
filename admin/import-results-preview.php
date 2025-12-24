@@ -344,6 +344,40 @@ function parseAndAnalyzeCSV($filepath, $db) {
      }
  }
 
+ // Helper function to generate proper stage name based on column header
+ $generateStageName = function($originalCol, &$counters) {
+     $normalized = mb_strtolower(trim($originalCol), 'UTF-8');
+     $normalized = str_replace([' ', '-', '_'], '', $normalized);
+
+     // Prostage → PS
+     if (preg_match('/^(prostage|prolog|prologue)(\d*)$/', $normalized, $m)) {
+         $num = !empty($m[2]) ? (int)$m[2] : ++$counters['ps'];
+         return 'PS' . $num;
+     }
+
+     // Powerstage → PW
+     if (preg_match('/^(powerstage|power)(\d*)$/', $normalized, $m)) {
+         $num = !empty($m[2]) ? (int)$m[2] : ++$counters['pw'];
+         return 'PW' . $num;
+     }
+
+     // SS/Stage → SS (extract number if present)
+     if (preg_match('/^(ss|stage|sträcka|stracka|etapp|s)(\d+)$/', $normalized, $m)) {
+         return 'SS' . (int)$m[2];
+     }
+
+     // Just a number or unknown format - use SS with sequential number
+     if (preg_match('/^\d+$/', $normalized)) {
+         return 'SS' . (int)$normalized;
+     }
+
+     // Default: keep original but capitalize
+     return strtoupper($originalCol);
+ };
+
+ // Counters for stages without numbers
+ $stageCounters = ['ps' => 0, 'pw' => 0, 'ss' => 0];
+
  // Detect stage columns (between Club and NetTime)
  $splitTimeColumns = [];
  $splitTimeIndex = 1;
@@ -360,11 +394,18 @@ function parseAndAnalyzeCSV($filepath, $db) {
              continue;
          }
 
+         // Generate proper stage name (PS1, PW1, SS1, etc.)
+         $properName = $generateStageName($originalCol, $stageCounters);
+
          $splitTimeColumns[$i] = [
              'original' => $originalCol,
-             'mapped' => 'ss' . $splitTimeIndex
+             'mapped' => 'ss' . $splitTimeIndex,
+             'display' => $properName
          ];
-         $stageColumnsDetected[$splitTimeIndex] = $originalCol;
+         $stageColumnsDetected[$splitTimeIndex] = [
+             'original' => $originalCol,
+             'display' => $properName
+         ];
          $splitTimeIndex++;
      }
  }
@@ -624,13 +665,17 @@ include __DIR__ . '/components/unified-layout.php';
   <div class="card-body">
    <p class="text-sm text-secondary mb-md">
    Dessa kolumner hittades mellan "Club" och "NetTime" och kommer att importeras som sträcktider.
-   Namnen bevaras och visas i resultatvyn.
+   Sträcknamnen mappas enligt: Prostage &rarr; PS, Powerstage &rarr; PW, Stage/SS &rarr; SS.
    </p>
    <div class="flex flex-wrap gap-sm">
-   <?php foreach ($matchingStats['stage_columns'] as $index => $stageName): ?>
+   <?php foreach ($matchingStats['stage_columns'] as $index => $stageInfo): ?>
+    <?php
+    $originalName = is_array($stageInfo) ? $stageInfo['original'] : $stageInfo;
+    $displayName = is_array($stageInfo) ? $stageInfo['display'] : $stageInfo;
+    ?>
     <span class="badge badge-primary">
-    <strong><?= h($stageName) ?></strong>
-    <small class="text-xs" style="opacity: 0.7;">&rarr; ss<?= $index ?></small>
+    <small class="text-xs" style="opacity: 0.7;"><?= h($originalName) ?> &rarr;</small>
+    <strong><?= h($displayName) ?></strong>
     </span>
    <?php endforeach; ?>
    </div>
@@ -843,9 +888,12 @@ include __DIR__ . '/components/unified-layout.php';
      ?>
      </th>
     <?php endforeach; ?>
-    <?php foreach ($stageColumns as $index => $stageName): ?>
+    <?php foreach ($stageColumns as $index => $stageInfo): ?>
+     <?php
+     $displayName = is_array($stageInfo) ? $stageInfo['display'] : $stageInfo;
+     ?>
      <th class="text-center" style="min-width: 70px;">
-      <span title="Sparas som ss<?= $index ?>"><?= h($stageName) ?></span>
+      <span title="Sparas som ss<?= $index ?>"><?= h($displayName) ?></span>
      </th>
     <?php endforeach; ?>
     <?php foreach ($endColumns as $col): ?>
