@@ -220,7 +220,7 @@ if (!$club) {
 ?>
 
 <?php
-// Check for club logo
+// Check for club logo - first uploaded file, then URL from database
 $clubLogo = null;
 $clubLogoDir = dirname(__DIR__) . '/uploads/clubs/';
 $clubLogoUrl = '/uploads/clubs/';
@@ -229,6 +229,10 @@ foreach (['jpg', 'jpeg', 'png', 'webp', 'svg'] as $ext) {
         $clubLogo = $clubLogoUrl . $clubId . '.' . $ext . '?v=' . filemtime($clubLogoDir . $clubId . '.' . $ext);
         break;
     }
+}
+// Fallback to logo URL from database
+if (!$clubLogo && !empty($club['logo'])) {
+    $clubLogo = $club['logo'];
 }
 ?>
 
@@ -239,78 +243,133 @@ foreach (['jpg', 'jpeg', 'png', 'webp', 'svg'] as $ext) {
 </section>
 <?php endif; ?>
 
-<!-- Club Hero -->
-<section class="club-hero">
-  <div class="hero-accent-bar"></div>
-  <div class="hero-content">
-    <div class="hero-top">
-      <div class="club-logo-container">
-        <div class="club-logo">
-          <?php if ($clubLogo): ?>
-            <img src="<?= htmlspecialchars($clubLogo) ?>" alt="<?= htmlspecialchars($club['name']) ?>">
-          <?php else: ?>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-              <circle cx="9" cy="7" r="4"/>
-              <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-              <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-            </svg>
-          <?php endif; ?>
-        </div>
-        <?php if ($clubRankingPosition): ?>
-        <div class="ranking-badge">
-          <span class="rank-label">Ranking</span>
-          <span class="rank-number">#<?= $clubRankingPosition ?></span>
-        </div>
-        <?php endif; ?>
-      </div>
-
-      <div class="hero-info">
-        <h1 class="club-name"><?= htmlspecialchars($club['name']) ?></h1>
-        <?php if ($club['city']): ?>
-        <span class="club-location"><?= htmlspecialchars($club['city']) ?></span>
-        <?php endif; ?>
-        <div class="club-badges">
-          <span class="club-badge"><?= $totalMembers ?> medlemmar</span>
-          <?php if ($totalPoints > 0): ?>
-          <span class="club-badge club-badge--accent"><?= number_format($totalPoints) ?> poäng</span>
-          <?php endif; ?>
-        </div>
-      </div>
-    </div>
-
-    <?php if ($club['website'] || $club['email']): ?>
-    <div class="hero-contact">
-      <?php if ($club['website']): ?>
-      <a href="<?= htmlspecialchars($club['website']) ?>" target="_blank" rel="noopener" class="contact-link">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/>
-          <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
-        </svg>
-        <span><?= htmlspecialchars(preg_replace('#^https?://#', '', $club['website'])) ?></span>
-      </a>
-      <?php endif; ?>
-      <?php if ($club['email']): ?>
-      <a href="mailto:<?= htmlspecialchars($club['email']) ?>" class="contact-link">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
-          <polyline points="22,6 12,13 2,6"/>
-        </svg>
-        <span><?= htmlspecialchars($club['email']) ?></span>
-      </a>
-      <?php endif; ?>
-    </div>
-    <?php endif; ?>
-  </div>
-</section>
-
-<!-- Club Achievements (includes all stats) -->
+<!-- Club Header Grid: Hero + Achievements side by side on desktop -->
 <?php if (function_exists('renderClubAchievements')): ?>
 <link rel="stylesheet" href="/assets/css/achievements.css?v=<?= file_exists(dirname(__DIR__) . '/assets/css/achievements.css') ? filemtime(dirname(__DIR__) . '/assets/css/achievements.css') : time() ?>">
-<section class="mb-lg">
-  <?= renderClubAchievements($db, $clubId) ?>
-</section>
 <?php endif; ?>
+
+<div class="club-header-grid">
+  <!-- Club Hero -->
+  <section class="club-hero club-hero--grid">
+    <div class="hero-accent-bar"></div>
+    <div class="hero-content">
+      <div class="hero-top">
+        <div class="club-logo-container">
+          <div class="club-logo">
+            <?php if ($clubLogo): ?>
+              <img src="<?= htmlspecialchars($clubLogo) ?>" alt="<?= htmlspecialchars($club['name']) ?>">
+            <?php else: ?>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                <circle cx="9" cy="7" r="4"/>
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+              </svg>
+            <?php endif; ?>
+          </div>
+          <?php if ($clubRankingPosition): ?>
+          <div class="ranking-badge">
+            <span class="rank-label">Ranking</span>
+            <span class="rank-number">#<?= $clubRankingPosition ?></span>
+          </div>
+          <?php endif; ?>
+        </div>
+
+        <div class="hero-info">
+          <h1 class="club-name"><?= htmlspecialchars($club['name']) ?></h1>
+          <?php if ($club['city']): ?>
+          <span class="club-location"><?= htmlspecialchars($club['city']) ?></span>
+          <?php endif; ?>
+          <div class="club-badges">
+            <span class="club-badge"><?= $totalMembers ?> medlemmar</span>
+            <?php if ($totalPoints > 0): ?>
+            <span class="club-badge club-badge--accent"><?= number_format($totalPoints) ?> poäng</span>
+            <?php endif; ?>
+          </div>
+        </div>
+      </div>
+
+      <?php if ($club['website'] || $club['email']): ?>
+      <div class="hero-contact">
+        <?php if ($club['website']): ?>
+        <a href="<?= htmlspecialchars($club['website']) ?>" target="_blank" rel="noopener" class="contact-link">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/>
+            <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+          </svg>
+          <span><?= htmlspecialchars(preg_replace('#^https?://#', '', $club['website'])) ?></span>
+        </a>
+        <?php endif; ?>
+        <?php if ($club['email']): ?>
+        <a href="mailto:<?= htmlspecialchars($club['email']) ?>" class="contact-link">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+            <polyline points="22,6 12,13 2,6"/>
+          </svg>
+          <span><?= htmlspecialchars($club['email']) ?></span>
+        </a>
+        <?php endif; ?>
+      </div>
+      <?php endif; ?>
+    </div>
+  </section>
+
+  <!-- Club Achievements -->
+  <?php if (function_exists('renderClubAchievements')): ?>
+  <section class="club-achievements-grid">
+    <?= renderClubAchievements($db, $clubId) ?>
+  </section>
+  <?php endif; ?>
+</div>
+
+<style>
+/* Club Header Grid - 50/50 on desktop */
+.club-header-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-lg);
+  margin-bottom: var(--space-lg);
+}
+
+@media (min-width: 1024px) {
+  .club-header-grid {
+    grid-template-columns: 1fr 1fr;
+    align-items: stretch;
+  }
+
+  .club-hero--grid {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .club-hero--grid .hero-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  .club-achievements-grid {
+    height: 100%;
+  }
+
+  .club-achievements-grid .achievement-card {
+    height: 100%;
+    margin-bottom: 0;
+  }
+}
+
+/* Make achievements card fill height */
+.club-achievements-grid .achievement-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.club-achievements-grid .achievement-badges {
+  flex: 1;
+}
+</style>
 
 <!-- Members -->
 <section class="card">
