@@ -64,11 +64,15 @@ if (isset($_GET['template'])) {
  exit;
 }
 
-// Load existing events for dropdown
+// Load existing events for dropdown with series info
 $existingEvents = $db->getAll("
- SELECT id, name, date, location
- FROM events
- ORDER BY date DESC
+ SELECT e.id, e.name, e.date, e.location,
+  GROUP_CONCAT(DISTINCT s.name ORDER BY s.name SEPARATOR ', ') as series_names
+ FROM events e
+ LEFT JOIN series_events se ON e.id = se.event_id
+ LEFT JOIN series s ON se.series_id = s.id
+ GROUP BY e.id
+ ORDER BY e.date DESC
  LIMIT 200
 ");
 
@@ -199,10 +203,9 @@ include __DIR__ . '/components/unified-layout.php';
   <option value="">-- Välj ett event --</option>
   <?php foreach ($existingEvents as $event): ?>
   <option value="<?= $event['id'] ?>">
+   <?php if ($event['series_names']): ?>[<?= h($event['series_names']) ?>] <?php endif; ?>
    <?= h($event['name']) ?> (<?= date('Y-m-d', strtotime($event['date'])) ?>)
-   <?php if ($event['location']): ?>
-   - <?= h($event['location']) ?>
-   <?php endif; ?>
+   <?php if ($event['location']): ?>- <?= h($event['location']) ?><?php endif; ?>
   </option>
   <?php endforeach; ?>
   </select>
