@@ -430,14 +430,17 @@ function parseAndAnalyzeCSV($filepath, $db) {
      }
 
      $mappings = [
-         'firstname' => 'firstname', 'förnamn' => 'firstname', 'fornamn' => 'firstname',
-         'lastname' => 'lastname', 'efternamn' => 'lastname',
+         'firstname' => 'firstname', 'förnamn' => 'firstname', 'fornamn' => 'firstname', 'name' => 'firstname', 'namn' => 'firstname',
+         'lastname' => 'lastname', 'efternamn' => 'lastname', 'surname' => 'lastname',
          'category' => 'category', 'class' => 'category', 'klass' => 'category',
-         'club' => 'club_name', 'klubb' => 'club_name', 'team' => 'club_name',
-         'position' => 'position', 'placering' => 'position', 'placebycategory' => 'position',
-         'time' => 'finish_time', 'tid' => 'finish_time', 'nettime' => 'finish_time',
+         'kategori' => 'category', 'grupp' => 'category', 'startgrupp' => 'category',
+         'startgroup' => 'category', 'racecategory' => 'category', 'tavlingsklass' => 'category',
+         'division' => 'category', 'agegroup' => 'category', 'aldersgrupp' => 'category',
+         'club' => 'club_name', 'klubb' => 'club_name', 'team' => 'club_name', 'forening' => 'club_name', 'förening' => 'club_name',
+         'position' => 'position', 'placering' => 'position', 'placebycategory' => 'position', 'rank' => 'position', 'plats' => 'position', 'place' => 'position',
+         'time' => 'finish_time', 'tid' => 'finish_time', 'nettime' => 'finish_time', 'totaltime' => 'finish_time', 'resultat' => 'finish_time', 'result' => 'finish_time',
          'status' => 'status',
-         'uciid' => 'license_number', 'licens' => 'license_number',
+         'uciid' => 'license_number', 'licens' => 'license_number', 'license' => 'license_number', 'licensnr' => 'license_number', 'licensnumber' => 'license_number',
      ];
 
      $header[] = $mappings[$col] ?? $col;
@@ -802,6 +805,14 @@ include __DIR__ . '/components/unified-layout.php';
     </tr>
     </thead>
     <tbody>
+    <?php if (empty($classAnalysis)): ?>
+     <tr>
+     <td colspan="3" class="text-center text-muted py-lg">
+      <i data-lucide="alert-circle" class="icon-sm"></i>
+      Ingen klasskolumn hittades i CSV-filen. Kontrollera att kolumnnamnet är "Klass", "Class", "Kategori", "Grupp" eller liknande.
+     </td>
+     </tr>
+    <?php endif; ?>
     <?php foreach ($classAnalysis as $classInfo): ?>
      <tr>
      <td>

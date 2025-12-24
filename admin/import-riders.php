@@ -516,11 +516,14 @@ function importRidersFromCSV($filepath, $db, $seasonYear = null) {
   }
 
   // Check for duplicates within this import
-  // Create unique key: firstname_lastname_birthyear OR licensenumber
+  // Create unique key: firstname_lastname_birthyear OR original licensenumber (NOT auto-generated SWE-ID)
   $uniqueKey = '';
-  if ($riderData['license_number']) {
-  $uniqueKey = 'lic_' . strtolower(trim($riderData['license_number']));
+  // Use original license from data (before generateSweId() was called)
+  $originalLicense = !empty($data['licensenumber']) ? trim($data['licensenumber']) : null;
+  if ($originalLicense) {
+  $uniqueKey = 'lic_' . strtolower($originalLicense);
   } else {
+  // Use name + birth_year (this is the key for detecting duplicates without license)
   $uniqueKey = 'name_' . strtolower(trim($riderData['firstname'])) . '_' .
     strtolower(trim($riderData['lastname'])) . '_' .
     ($riderData['birth_year'] ?? '0');

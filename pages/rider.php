@@ -366,10 +366,27 @@ try {
         $socialProfiles = getRiderSocialProfiles($db, $riderId);
     }
 
-    // Get series standings
+    // Get available years for this rider (for series year selector)
+    $availableYears = $db->getAll("
+        SELECT DISTINCT YEAR(e.date) as year
+        FROM results r
+        JOIN events e ON r.event_id = e.id
+        WHERE r.cyclist_id = ? AND r.status = 'finished'
+        ORDER BY year DESC
+    ", [$riderId]);
+    $availableYears = array_column($availableYears, 'year');
+
+    // Get selected year from URL parameter (default to current year)
+    $selectedSeriesYear = isset($_GET['series_year']) ? intval($_GET['series_year']) : (int)date('Y');
+    // Ensure year is valid
+    if (!in_array($selectedSeriesYear, $availableYears) && !empty($availableYears)) {
+        $selectedSeriesYear = $availableYears[0]; // Use most recent year
+    }
+
+    // Get series standings for selected year
     $seriesStandings = [];
     if (function_exists('getRiderSeriesStandings')) {
-        $seriesStandings = getRiderSeriesStandings($db, $riderId);
+        $seriesStandings = getRiderSeriesStandings($db, $riderId, $selectedSeriesYear);
     }
 
     // Get ranking position
@@ -630,10 +647,22 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
         </div>
 
         <!-- SERIES STANDINGS CARD -->
-        <?php if (!empty($seriesStandings)): ?>
+        <?php if (!empty($availableYears)): ?>
         <div class="card series-card">
-            <h3 class="card-section-title"><i data-lucide="trophy"></i> Serieställning</h3>
+            <div class="series-header">
+                <h3 class="card-section-title"><i data-lucide="trophy"></i> Serieställning</h3>
+                <?php if (count($availableYears) > 1): ?>
+                <select id="seriesYearSelect" class="form-select form-select-sm" onchange="window.location.href='?series_year=' + this.value">
+                    <?php foreach ($availableYears as $year): ?>
+                    <option value="<?= $year ?>" <?= $year == $selectedSeriesYear ? 'selected' : '' ?>><?= $year ?></option>
+                    <?php endforeach; ?>
+                </select>
+                <?php else: ?>
+                <span class="year-badge"><?= $selectedSeriesYear ?></span>
+                <?php endif; ?>
+            </div>
 
+            <?php if (!empty($seriesStandings)): ?>
             <!-- Series tabs -->
             <div class="series-tabs">
                 <?php foreach ($seriesStandings as $idx => $standing): ?>
@@ -646,15 +675,15 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
 
             <!-- Series content panels -->
             <?php foreach ($seriesStandings as $idx => $standing):
-                // Get events for this series
+                // Get events for this series (filtered by year)
                 $eventsStmt = $db->prepare("
                     SELECT r.position, r.points, r.status, e.id as event_id, e.name as event_name, e.date as event_date
                     FROM results r
                     JOIN events e ON r.event_id = e.id
-                    WHERE r.cyclist_id = ? AND e.series_id = ? AND r.class_id = ?
+                    WHERE r.cyclist_id = ? AND e.series_id = ? AND r.class_id = ? AND YEAR(e.date) = ?
                     ORDER BY e.date DESC
                 ");
-                $eventsStmt->execute([$riderId, $standing['series_id'], $standing['class_id']]);
+                $eventsStmt->execute([$riderId, $standing['series_id'], $standing['class_id'], $selectedSeriesYear]);
                 $seriesEvents = $eventsStmt->fetchAll(PDO::FETCH_ASSOC);
 
                 // Calculate progress percentage (inverted - lower rank is better)
@@ -735,6 +764,16 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
 
             </div>
             <?php endforeach; ?>
+            <?php else: ?>
+            <!-- No series standings for this year -->
+            <div class="series-empty-state">
+                <i data-lucide="calendar-x" class="icon-xl text-muted"></i>
+                <p class="text-muted">Inga serieresultat för <?= $selectedSeriesYear ?>.</p>
+                <?php if ($selectedSeriesYear != date('Y') && in_array((int)date('Y'), $availableYears)): ?>
+                <a href="?series_year=<?= date('Y') ?>" class="btn btn-ghost btn-sm">Visa aktuellt år</a>
+                <?php endif; ?>
+            </div>
+            <?php endif; ?>
         </div>
         <?php endif; ?>
 
