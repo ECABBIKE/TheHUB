@@ -540,8 +540,8 @@ include __DIR__ . '/components/unified-layout.php';
 
  <!-- Results Table -->
  <?php
- // Sort results by match type: exact first, then partial, then fuzzy, then existing, then not_found
- $sortOrder = ['exact' => 1, 'partial' => 2, 'fuzzy' => 3, 'existing' => 4, 'not_found' => 5];
+ // Sort results by match type: partial first (needs review), then fuzzy, then exact last (no review needed)
+ $sortOrder = ['partial' => 1, 'fuzzy' => 2, 'not_found' => 3, 'existing' => 4, 'exact' => 5];
  $sortedResults = $results;
  usort($sortedResults, function($a, $b) use ($sortOrder) {
    $orderA = $sortOrder[$a['match_type']] ?? 99;
@@ -560,11 +560,11 @@ include __DIR__ . '/components/unified-layout.php';
  }
 
  $groupLabels = [
-   'exact' => ['label' => 'Exakta matchningar', 'icon' => 'check-circle', 'color' => 'success'],
-   'partial' => ['label' => 'Delvisa matchningar', 'icon' => 'minus-circle', 'color' => 'info'],
-   'fuzzy' => ['label' => 'Fuzzy matchningar', 'icon' => 'help-circle', 'color' => 'warning'],
-   'existing' => ['label' => 'Befintliga', 'icon' => 'database', 'color' => 'secondary'],
-   'not_found' => ['label' => 'Ej hittade', 'icon' => 'x-circle', 'color' => 'danger']
+   'partial' => ['label' => 'GRANSKA: Delvisa matchningar', 'icon' => 'alert-triangle', 'color' => 'warning'],
+   'fuzzy' => ['label' => 'GRANSKA: Fuzzy matchningar', 'icon' => 'help-circle', 'color' => 'info'],
+   'not_found' => ['label' => 'Ej hittade', 'icon' => 'x-circle', 'color' => 'danger'],
+   'existing' => ['label' => 'Befintliga (redan ifyllda)', 'icon' => 'database', 'color' => 'secondary'],
+   'exact' => ['label' => 'OK: Exakta matchningar', 'icon' => 'check-circle', 'color' => 'success']
  ];
  ?>
 
@@ -592,7 +592,7 @@ include __DIR__ . '/components/unified-layout.php';
   </thead>
   <tbody>
   <?php
-  $displayOrder = ['exact', 'partial', 'fuzzy', 'existing', 'not_found'];
+  $displayOrder = ['partial', 'fuzzy', 'not_found', 'existing', 'exact'];
   foreach ($displayOrder as $groupType):
     if (!isset($groupedResults[$groupType]) || empty($groupedResults[$groupType])) continue;
     $groupInfo = $groupLabels[$groupType];
