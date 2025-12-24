@@ -367,14 +367,16 @@ try {
     }
 
     // Get available years for this rider (for series year selector)
-    $availableYears = $db->getAll("
+    $yearsStmt = $db->prepare("
         SELECT DISTINCT YEAR(e.date) as year
         FROM results r
         JOIN events e ON r.event_id = e.id
         WHERE r.cyclist_id = ? AND r.status = 'finished'
         ORDER BY year DESC
-    ", [$riderId]);
-    $availableYears = array_column($availableYears, 'year');
+    ");
+    $yearsStmt->execute([$riderId]);
+    $availableYearsData = $yearsStmt->fetchAll(PDO::FETCH_ASSOC);
+    $availableYears = array_column($availableYearsData, 'year');
 
     // Get selected year from URL parameter (default to current year)
     $selectedSeriesYear = isset($_GET['series_year']) ? intval($_GET['series_year']) : (int)date('Y');
