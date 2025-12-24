@@ -598,90 +598,47 @@
     margin-bottom: var(--space-sm);
 }
 
-.series-event-row {
-    display: flex;
-    align-items: center;
-    gap: var(--space-md);
-    padding: var(--space-sm);
-    border-radius: var(--radius-md);
-    transition: background 0.2s;
-    text-decoration: none;
-    color: inherit;
-}
-
-.series-event-row:hover {
-    background: var(--color-bg-surface);
-}
-
-.event-date-col {
+/* Compact events list using result-row styling */
+.series-events-compact {
     display: flex;
     flex-direction: column;
-    align-items: center;
-    min-width: 40px;
+    gap: var(--space-xs);
 }
 
-.event-day {
-    font-size: var(--text-lg);
-    font-weight: var(--weight-bold);
-    color: var(--color-text-primary);
-    line-height: 1;
-}
-
-.event-month {
-    font-size: var(--text-xs);
-    color: var(--color-text-muted);
-    text-transform: uppercase;
-}
-
-.event-info-col {
-    flex: 1;
-}
-
-.event-name {
-    font-size: var(--text-sm);
-    color: var(--color-text-primary);
-}
-
-.event-result-col {
-    display: flex;
-    align-items: center;
+.series-events-compact .result-row {
+    padding: var(--space-xs) var(--space-sm) var(--space-xs) calc(var(--space-xs) + 4px);
     gap: var(--space-sm);
 }
 
-.event-position {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 32px;
-    padding: var(--space-xs) var(--space-sm);
-    border-radius: var(--radius-md);
+.series-events-compact .result-pos {
+    width: 28px;
+    height: 28px;
+    font-size: var(--text-xs);
+}
+
+.series-events-compact .medal-icon-sm {
+    width: 20px;
+    height: 20px;
+}
+
+.series-events-compact .result-date {
+    font-size: var(--text-xs);
+    min-width: 45px;
+}
+
+.series-events-compact .result-name {
+    font-size: var(--text-sm);
+}
+
+.result-points {
     font-size: var(--text-sm);
     font-weight: var(--weight-medium);
-    background: var(--color-bg-surface);
+    color: var(--color-accent);
+    white-space: nowrap;
 }
 
-.event-position.p1 {
-    background: #FFD700;
-    color: white;
-}
-
-.event-position.p2 {
-    background: #C0C0C0;
-    color: white;
-}
-
-.event-position.p3 {
-    background: #CD7F32;
-    color: white;
-}
-
-.event-points {
-    font-size: var(--text-sm);
-    color: var(--color-text-muted);
-}
-
-.event-status {
-    font-size: var(--text-sm);
+.result-status {
+    font-size: var(--text-xs);
     color: var(--color-text-muted);
     font-style: italic;
 }
@@ -1559,35 +1516,45 @@
         margin-bottom: var(--space-xs);
     }
 
-    .series-event-row {
-        padding: var(--space-xs);
-        gap: var(--space-sm);
+    /* Series events compact - keep card styling on mobile */
+    .series-events-compact {
+        gap: 2px;
     }
 
-    .event-date-col {
-        min-width: 32px;
+    .series-events-compact .result-row {
+        padding: var(--space-xs) var(--space-sm) var(--space-xs) calc(var(--space-xs) + 4px);
+        border-radius: var(--radius-sm);
+        border: none;
+        background: var(--color-bg-surface);
     }
 
-    .event-day {
-        font-size: var(--text-base);
+    .series-events-compact .result-row:first-child,
+    .series-events-compact .result-row:last-child {
+        border: none;
     }
 
-    .event-month {
-        font-size: 10px;
+    .series-events-compact .result-pos {
+        width: 24px;
+        height: 24px;
+        font-size: 11px;
     }
 
-    .event-name {
-        font-size: 13px;
+    .series-events-compact .medal-icon-sm {
+        width: 18px;
+        height: 18px;
     }
 
-    .event-position {
-        min-width: 28px;
-        padding: 2px var(--space-xs);
+    .series-events-compact .result-date {
+        font-size: 11px;
+        min-width: 40px;
+    }
+
+    .series-events-compact .result-name {
         font-size: 12px;
     }
 
-    .event-points {
-        font-size: 12px;
+    .series-events-compact .result-points {
+        font-size: 11px;
     }
 
     .series-tab-btn {
