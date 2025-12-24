@@ -824,86 +824,78 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
         <div class="card form-card">
             <h3 class="card-section-title-sm"><i data-lucide="trending-up"></i> Form</h3>
             <?php if ($hasCompetitiveResults && !empty($formResults)):
-                // Räkna snittplacering av senaste 5 tävlingarna
-                $last5 = array_slice($formResults, -5);
-                $positionSum = array_sum(array_column($last5, 'position'));
-                $avgPlacement = count($last5) > 0 ? $positionSum / count($last5) : 0;
+                // Använd max 10 senaste tävlingarna
+                $chartResults = array_slice($formResults, -10);
+                $positions = array_column($chartResults, 'position');
+                $avgPlacement = count($positions) > 0 ? array_sum($positions) / count($positions) : 0;
                 $avgDisplay = number_format($avgPlacement, 1);
+
+                $chartWidth = 320;
+                $chartHeight = 120;
+                $paddingX = 10;
+                $paddingTop = 15;
+                $paddingBottom = 25;
+                $numResults = count($chartResults);
+
+                $maxPos = max($positions);
+                $minPos = min($positions);
+                // Lägg till lite marginal
+                $displayMin = max(1, $minPos - 1);
+                $displayMax = $maxPos + 2;
+                $range = max(1, $displayMax - $displayMin);
+
+                $graphHeight = $chartHeight - $paddingTop - $paddingBottom;
+                $xStep = $numResults > 1 ? ($chartWidth - $paddingX * 2) / ($numResults - 1) : 0;
+
+                // Beräkna punkter för grafen (lägre Y = högre placering = bättre)
+                $points = [];
+                $dataPoints = [];
+                foreach ($chartResults as $idx => $fr) {
+                    $x = $paddingX + ($idx * $xStep);
+                    $y = $paddingTop + (($fr['position'] - $displayMin) / $range) * $graphHeight;
+                    $points[] = "$x,$y";
+                    $dataPoints[] = ['x' => $x, 'y' => $y, 'pos' => $fr['position']];
+                }
+
+                // Genomsnitts-linjens Y-position
+                $avgY = $paddingTop + (($avgPlacement - $displayMin) / $range) * $graphHeight;
+
+                // Skapa smooth kurva med quadratic bezier
+                $pathD = "M " . $dataPoints[0]['x'] . "," . $dataPoints[0]['y'];
+                for ($i = 1; $i < count($dataPoints); $i++) {
+                    $cpX = ($dataPoints[$i-1]['x'] + $dataPoints[$i]['x']) / 2;
+                    $pathD .= " Q " . $cpX . "," . $dataPoints[$i-1]['y'] . " " . $dataPoints[$i]['x'] . "," . $dataPoints[$i]['y'];
+                }
+
+                // Area path (stäng kurvan)
+                $areaPath = $pathD . " L " . end($dataPoints)['x'] . "," . ($chartHeight - $paddingBottom) . " L " . $dataPoints[0]['x'] . "," . ($chartHeight - $paddingBottom) . " Z";
             ?>
-            <div class="form-avg-compact">
-                <span class="form-avg-number"><?= $avgDisplay ?></span>
-                <span class="form-avg-text">snitt</span>
-            </div>
-
-            <!-- Mini Form Graph -->
-            <div class="form-mini-chart">
-                <?php
-                $chartWidth = 280;
-                $chartHeight = 80;
-                $paddingX = 20;
-                $paddingY = 10;
-                $numResults = count($last5);
-
-                if ($numResults > 0) {
-                    $xStep = $numResults > 1 ? ($chartWidth - $paddingX * 2) / ($numResults - 1) : 0;
-                    $positions = array_column($last5, 'position');
-                    $maxPos = max($positions);
-                    $minPos = min($positions);
-                    $range = max(1, $maxPos - $minPos);
-
-                    $points = [];
-                    $circles = [];
-
-                    foreach ($last5 as $idx => $fr) {
-                        $x = $paddingX + ($idx * $xStep);
-                        $y = $paddingY + (($fr['position'] - $minPos) / $range) * ($chartHeight - $paddingY * 2);
-                        $points[] = "$x,$y";
-
-                        $fillColor = $fr['position'] == 1 ? '#FFD700' :
-                                    ($fr['position'] == 2 ? '#C0C0C0' :
-                                    ($fr['position'] == 3 ? '#CD7F32' : 'var(--color-accent)'));
-
-                        $circles[] = [
-                            'x' => $x,
-                            'y' => $y,
-                            'fill' => $fillColor,
-                            'pos' => $fr['position']
-                        ];
-                    }
-                    $polyPoints = implode(' ', $points);
-                ?>
-                <svg viewBox="0 0 <?= $chartWidth ?> <?= $chartHeight ?>" class="form-mini-svg">
+            <div class="form-chart-container">
+                <svg viewBox="0 0 <?= $chartWidth ?> <?= $chartHeight ?>" class="form-area-chart" preserveAspectRatio="none">
                     <defs>
-                        <linearGradient id="formMiniGradient" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stop-color="var(--color-accent)" stop-opacity="0.2"/>
-                            <stop offset="100%" stop-color="var(--color-accent)" stop-opacity="0.01"/>
+                        <linearGradient id="formAreaGradient" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stop-color="#ef4444" stop-opacity="0.3"/>
+                            <stop offset="100%" stop-color="#ef4444" stop-opacity="0.02"/>
                         </linearGradient>
                     </defs>
+                    <!-- Baseline -->
+                    <line x1="<?= $paddingX ?>" y1="<?= $chartHeight - $paddingBottom ?>" x2="<?= $chartWidth - $paddingX ?>" y2="<?= $chartHeight - $paddingBottom ?>" stroke="var(--color-border)" stroke-width="1"/>
+                    <!-- Average line -->
+                    <line x1="<?= $paddingX ?>" y1="<?= $avgY ?>" x2="<?= $chartWidth - $paddingX ?>" y2="<?= $avgY ?>" stroke="#f97316" stroke-width="1" stroke-dasharray="4,3" opacity="0.7"/>
+                    <text x="<?= $chartWidth - $paddingX - 3 ?>" y="<?= $avgY - 4 ?>" font-size="9" fill="#f97316" text-anchor="end" opacity="0.8">snitt</text>
                     <!-- Area fill -->
-                    <polygon points="<?= $polyPoints ?> <?= $paddingX + (($numResults - 1) * $xStep) ?>,<?= $chartHeight - $paddingY ?> <?= $paddingX ?>,<?= $chartHeight - $paddingY ?>" fill="url(#formMiniGradient)"/>
+                    <path d="<?= $areaPath ?>" fill="url(#formAreaGradient)"/>
                     <!-- Trend line -->
-                    <polyline points="<?= $polyPoints ?>" fill="none" stroke="var(--color-accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="<?= $pathD ?>" fill="none" stroke="#ef4444" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
                     <!-- Data points -->
-                    <?php foreach ($circles as $c): ?>
-                    <circle cx="<?= $c['x'] ?>" cy="<?= $c['y'] ?>" r="4" fill="<?= $c['fill'] ?>" stroke="var(--color-bg-card)" stroke-width="1.5"/>
+                    <?php foreach ($dataPoints as $dp): ?>
+                    <circle cx="<?= $dp['x'] ?>" cy="<?= $dp['y'] ?>" r="4" fill="#ef4444" stroke="white" stroke-width="2"/>
                     <?php endforeach; ?>
                 </svg>
-                <?php } ?>
-            </div>
-
-            <!-- Last 5 results as medals -->
-            <div class="form-last-5">
-                <?php foreach ($last5 as $fr): ?>
-                <?php if ($fr['position'] == 1): ?>
-                    <img src="/assets/icons/medal-1st.svg" alt="1:a" class="form-medal-icon">
-                <?php elseif ($fr['position'] == 2): ?>
-                    <img src="/assets/icons/medal-2nd.svg" alt="2:a" class="form-medal-icon">
-                <?php elseif ($fr['position'] == 3): ?>
-                    <img src="/assets/icons/medal-3rd.svg" alt="3:e" class="form-medal-icon">
-                <?php else: ?>
-                    <div class="form-position-badge"><?= $fr['position'] ?></div>
-                <?php endif; ?>
-                <?php endforeach; ?>
+                <div class="form-chart-avg">
+                    <span class="form-avg-value"><?= $avgDisplay ?></span>
+                    <span class="form-avg-label">snittplacering</span>
+                </div>
             </div>
             <?php endif; ?>
         </div>
