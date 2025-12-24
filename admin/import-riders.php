@@ -32,7 +32,46 @@ $errors = [];
 $skippedRows = [];
 $columnMappings = [];
 
-// Handle CSV/Excel upload
+// Handle confirmed import from preview
+if (isset($_GET['do_import']) && isset($_SESSION['import_riders_confirmed']) && $_SESSION['import_riders_confirmed']) {
+    $uploaded = $_SESSION['import_riders_file'] ?? null;
+
+    if ($uploaded && file_exists($uploaded)) {
+        $seasonYear = $_SESSION['import_riders_season'] ?? (int)date('Y');
+        try {
+            $result = importRidersFromCSV($uploaded, $db, $seasonYear);
+
+            $stats = $result['stats'];
+            $errors = $result['errors'];
+            $skippedRows = $result['skipped_rows'] ?? [];
+            $columnMappings = $result['column_mappings'] ?? [];
+
+            if ($stats['success'] > 0 || $stats['updated'] > 0) {
+                $message = "Import klar! {$stats['success']} nya, {$stats['updated']} uppdaterade.";
+                if ($stats['duplicates'] > 0) {
+                    $message .= " {$stats['duplicates']} dubletter borttagna.";
+                }
+                $messageType = 'success';
+            } else {
+                $message = "Ingen data importerades. Kontrollera filformatet.";
+                $messageType = 'error';
+            }
+        } catch (Exception $e) {
+            $message = 'Import misslyckades: ' . $e->getMessage();
+            $messageType = 'error';
+        }
+
+        @unlink($uploaded);
+    }
+
+    // Clean up session
+    unset($_SESSION['import_riders_file']);
+    unset($_SESSION['import_riders_season']);
+    unset($_SESSION['import_riders_create_missing']);
+    unset($_SESSION['import_riders_confirmed']);
+}
+
+// Handle CSV/Excel upload - Go to preview first
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['import_file'])) {
  // Validate CSRF token
  checkCsrf();
@@ -53,45 +92,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['import_file'])) {
   $message = 'Ogiltigt filformat. Tillåtna: CSV, XLSX, XLS';
   $messageType = 'error';
  } else {
-  // Process the file
+  // Save file and redirect to preview
   $uploaded = UPLOADS_PATH . '/' . time() . '_' . basename($file['name']);
 
   if (move_uploaded_file($file['tmp_name'], $uploaded)) {
-  try {
-   // Parse CSV
-   if ($extension === 'csv') {
-   $result = importRidersFromCSV($uploaded, $db);
-   } else {
-   // For Excel files, we'd need PhpSpreadsheet
-   // For now, show message to use CSV
+  if ($extension !== 'csv') {
    $message = 'Excel-filer stöds inte än. Använd CSV-format istället.';
    $messageType = 'warning';
    @unlink($uploaded);
    goto skip_import;
-   }
-
-   $stats = $result['stats'];
-   $errors = $result['errors'];
-   $skippedRows = $result['skipped_rows'] ?? [];
-   $columnMappings = $result['column_mappings'] ?? [];
-
-   if ($stats['success'] > 0 || $stats['updated'] > 0) {
-   $message ="Import klar! {$stats['success']} nya, {$stats['updated']} uppdaterade.";
-   if ($stats['duplicates'] > 0) {
-    $message .=" {$stats['duplicates']} dubletter borttagna.";
-   }
-   $messageType = 'success';
-   } else {
-   $message ="Ingen data importerades. Kontrollera filformatet.";
-   $messageType = 'error';
-   }
-
-  } catch (Exception $e) {
-   $message = 'Import misslyckades: ' . $e->getMessage();
-   $messageType = 'error';
   }
 
-  @unlink($uploaded);
+  // Store in session and redirect to preview
+  $_SESSION['import_riders_file'] = $uploaded;
+  $_SESSION['import_riders_season'] = (int)($_POST['season_year'] ?? date('Y'));
+  $_SESSION['import_riders_create_missing'] = isset($_POST['create_missing']);
+  $_SESSION['import_riders_confirmed'] = false;
+
+  header('Location: /admin/import/riders/preview');
+  exit;
+
   } else {
   $message = 'Kunde inte ladda upp filen';
   $messageType = 'error';
@@ -139,7 +159,14 @@ function ensureUTF8ForImport($filepath) {
 /**
  * Import riders from CSV file
  */
-function importRidersFromCSV($filepath, $db) {
+function importRidersFromCSV($filepath, $db, $seasonYear = null) {
+ // Include club membership functions
+ require_once __DIR__ . '/../includes/club-membership.php';
+
+ // Default to current year if not specified
+ if ($seasonYear === null) {
+  $seasonYear = (int)date('Y');
+ }
  $stats = [
  'total' => 0,
  'success' => 0,
@@ -548,13 +575,19 @@ function importRidersFromCSV($filepath, $db) {
   if ($existing) {
   // Update existing rider
   $db->update('riders', $riderData, 'id = ?', [$existing['id']]);
+  $riderId = $existing['id'];
   $stats['updated']++;
-  error_log("Import: Updated rider ID {$existing['id']} - {$riderData['firstname']} {$riderData['lastname']}");
+  error_log("Import: Updated rider ID {$riderId} - {$riderData['firstname']} {$riderData['lastname']}");
   } else {
   // Insert new rider
-  $newId = $db->insert('riders', $riderData);
+  $riderId = $db->insert('riders', $riderData);
   $stats['success']++;
-  error_log("Import: Inserted new rider ID {$newId} - {$riderData['firstname']} {$riderData['lastname']} (active={$riderData['active']})");
+  error_log("Import: Inserted new rider ID {$riderId} - {$riderData['firstname']} {$riderData['lastname']} (active={$riderData['active']})");
+  }
+
+  // Set club membership for the season year
+  if ($riderId && $riderData['club_id']) {
+  setRiderClubForYear($db, $riderId, $riderData['club_id'], $seasonYear);
   }
 
  } catch (Exception $e) {
@@ -832,9 +865,35 @@ include __DIR__ . '/components/unified-layout.php';
     </small>
    </div>
 
+   <div class="admin-form-group">
+    <label class="admin-form-label">
+    <i data-lucide="calendar"></i>
+    Säsongsår för klubbtillhörighet
+    </label>
+    <?php
+    $currentYear = (int)date('Y');
+    $availableYears = range($currentYear + 1, $currentYear - 5);
+    ?>
+    <select name="season_year" class="admin-form-select">
+    <?php foreach ($availableYears as $year): ?>
+    <option value="<?= $year ?>" <?= $year === $currentYear ? 'selected' : '' ?>><?= $year ?></option>
+    <?php endforeach; ?>
+    </select>
+    <small class="text-secondary text-sm">
+    Klubbtillhörighet sätts för detta år
+    </small>
+   </div>
+
+   <div class="admin-form-group">
+    <label class="flex items-center gap-sm cursor-pointer">
+    <input type="checkbox" name="create_missing" checked>
+    <span>Skapa nya deltagare om de inte finns</span>
+    </label>
+   </div>
+
    <button type="submit" class="btn-admin btn-admin-primary">
-    <i data-lucide="upload"></i>
-    Importera
+    <i data-lucide="eye"></i>
+    Förhandsgranska import
    </button>
    </form>
   </div>
