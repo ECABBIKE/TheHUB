@@ -79,6 +79,28 @@ $theme = hub_get_theme();
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= htmlspecialchars($page_title) ?> - TheHUB Admin</title>
 
+    <!-- Favicon from branding.json -->
+    <?php
+    $faviconUrl = '/assets/favicon.svg';
+    $faviconBrandingFile = __DIR__ . '/../../uploads/branding.json';
+    if (file_exists($faviconBrandingFile)) {
+        $faviconBranding = json_decode(file_get_contents($faviconBrandingFile), true);
+        if (!empty($faviconBranding['logos']['favicon'])) {
+            $faviconUrl = $faviconBranding['logos']['favicon'];
+        }
+    }
+    $faviconExt = strtolower(pathinfo($faviconUrl, PATHINFO_EXTENSION));
+    $faviconMime = match($faviconExt) {
+        'svg' => 'image/svg+xml',
+        'png' => 'image/png',
+        'ico' => 'image/x-icon',
+        default => 'image/png'
+    };
+    ?>
+    <link rel="icon" type="<?= $faviconMime ?>" href="<?= htmlspecialchars($faviconUrl) ?>">
+    <link rel="icon" type="<?= $faviconMime ?>" sizes="32x32" href="<?= htmlspecialchars($faviconUrl) ?>">
+    <link rel="apple-touch-icon" href="<?= htmlspecialchars($faviconUrl) ?>">
+
     <!-- V3 CSS -->
     <link rel="stylesheet" href="<?= hub_asset('css/reset.css') ?>">
     <link rel="stylesheet" href="<?= hub_asset('css/tokens.css') ?>">

@@ -203,7 +203,7 @@ try {
             COALESCE(cls.ranking_type, 'time') as ranking_type
         FROM results res
         INNER JOIN riders r ON res.cyclist_id = r.id
-        LEFT JOIN clubs c ON r.club_id = c.id
+        LEFT JOIN clubs c ON COALESCE(res.club_id, r.club_id) = c.id
         LEFT JOIN classes cls ON res.class_id = cls.id
         WHERE res.event_id = ?
         ORDER BY
@@ -1668,8 +1668,8 @@ function toggleTotalView(enabled) {
 
     if (enabled) {
         // Hide class sections, show total section
-        classSections.forEach(section => section.style.display = 'none');
-        if (totalSection) totalSection.style.display = '';
+        classSections.forEach(section => section.classList.add('hidden'));
+        if (totalSection) totalSection.classList.remove('hidden');
         // Disable class filter when in total view
         if (classFilter) {
             classFilter.disabled = true;
@@ -1677,8 +1677,8 @@ function toggleTotalView(enabled) {
         }
     } else {
         // Show class sections, hide total section
-        classSections.forEach(section => section.style.display = '');
-        if (totalSection) totalSection.style.display = 'none';
+        classSections.forEach(section => section.classList.remove('hidden'));
+        if (totalSection) totalSection.classList.add('hidden');
         // Re-enable class filter
         if (classFilter) {
             classFilter.disabled = false;

@@ -35,6 +35,28 @@ $pageInfo = [
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= htmlspecialchars($page_title ?? 'Admin') ?> - TheHUB Admin</title>
 
+    <!-- Favicon from branding.json -->
+    <?php
+    $faviconUrl = '/assets/favicon.svg';
+    $faviconBrandingFile = __DIR__ . '/../../uploads/branding.json';
+    if (file_exists($faviconBrandingFile)) {
+        $faviconBranding = json_decode(file_get_contents($faviconBrandingFile), true);
+        if (!empty($faviconBranding['logos']['favicon'])) {
+            $faviconUrl = $faviconBranding['logos']['favicon'];
+        }
+    }
+    $faviconExt = strtolower(pathinfo($faviconUrl, PATHINFO_EXTENSION));
+    $faviconMime = match($faviconExt) {
+        'svg' => 'image/svg+xml',
+        'png' => 'image/png',
+        'ico' => 'image/x-icon',
+        default => 'image/png'
+    };
+    ?>
+    <link rel="icon" type="<?= $faviconMime ?>" href="<?= htmlspecialchars($faviconUrl) ?>">
+    <link rel="icon" type="<?= $faviconMime ?>" sizes="32x32" href="<?= htmlspecialchars($faviconUrl) ?>">
+    <link rel="apple-touch-icon" href="<?= htmlspecialchars($faviconUrl) ?>">
+
     <!-- V3 CSS -->
     <link rel="stylesheet" href="<?= hub_asset('css/reset.css') ?>">
     <link rel="stylesheet" href="<?= hub_asset('css/tokens.css') ?>">
@@ -47,6 +69,60 @@ $pageInfo = [
 
     <!-- Admin-specific CSS -->
     <link rel="stylesheet" href="/admin/assets/css/admin.css?v=<?= filemtime(__DIR__ . '/../assets/css/admin.css') ?>">
+
+    <!-- Dynamic Branding CSS (from /uploads/branding.json) -->
+    <?php
+    $brandingFile = __DIR__ . '/../../uploads/branding.json';
+    if (file_exists($brandingFile)) {
+        $brandingData = json_decode(file_get_contents($brandingFile), true);
+        if (is_array($brandingData)) {
+            $cssOutput = '';
+
+            // Process layout settings (content-max-width, sidebar-width, header-height)
+            $layout = $brandingData['layout'] ?? null;
+            if ($layout) {
+                $contentMaxWidth = $layout['content_max_width'] ?? '1400';
+                if ($contentMaxWidth === 'none') {
+                    $cssOutput .= '--content-max-width:none;';
+                } else {
+                    $cssOutput .= '--content-max-width:' . intval($contentMaxWidth) . 'px;';
+                }
+                $sidebarWidth = intval($layout['sidebar_width'] ?? 72);
+                $cssOutput .= '--sidebar-width:' . $sidebarWidth . 'px;';
+                $headerHeight = intval($layout['header_height'] ?? 60);
+                $cssOutput .= '--header-height:' . $headerHeight . 'px;';
+            }
+
+            // Process responsive layout settings
+            $responsive = $brandingData['responsive'] ?? null;
+            if ($responsive) {
+                $desktopPadding = intval($responsive['desktop']['padding'] ?? 32);
+                $desktopRadius = intval($responsive['desktop']['radius'] ?? 12);
+                $cssOutput .= '--container-padding:' . $desktopPadding . 'px;';
+                $cssOutput .= '--radius-sm:' . $desktopRadius . 'px;';
+                $cssOutput .= '--radius-md:' . $desktopRadius . 'px;';
+                $cssOutput .= '--radius-lg:' . $desktopRadius . 'px;';
+            }
+
+            // Process gradient settings
+            $gradient = $brandingData['gradient'] ?? null;
+            if ($gradient && !empty($gradient['enabled'])) {
+                $angle = intval($gradient['angle'] ?? 135);
+                $cssOutput .= '--gradient-angle:' . max(0, min(360, $angle)) . 'deg;';
+                if (!empty($gradient['start']) && preg_match('/^#[0-9A-Fa-f]{6}$/', $gradient['start'])) {
+                    $cssOutput .= '--gradient-start:' . htmlspecialchars($gradient['start'], ENT_QUOTES, 'UTF-8') . ';';
+                }
+                if (!empty($gradient['end']) && preg_match('/^#[0-9A-Fa-f]{6}$/', $gradient['end'])) {
+                    $cssOutput .= '--gradient-end:' . htmlspecialchars($gradient['end'], ENT_QUOTES, 'UTF-8') . ';';
+                }
+            }
+
+            if ($cssOutput || $layout || $gradient) {
+                echo '<style id="admin-branding">:root{' . $cssOutput . '}</style>';
+            }
+        }
+    }
+    ?>
 
     <!-- Prevent icon flash: hide data-lucide elements until JS replaces them -->
     <style>
