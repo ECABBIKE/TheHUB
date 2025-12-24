@@ -1163,13 +1163,25 @@ if (!empty($eventSponsors['content'])): ?>
         <?php foreach ($globalSplitResults as $gIdx => $result):
             $searchData = strtolower($result['firstname'] . ' ' . $result['lastname'] . ' ' . ($result['club_name'] ?? ''));
         ?>
-        <a href="/rider/<?= $result['rider_id'] ?>" class="result-item" data-search="<?= h($searchData) ?>">
+        <a href="/rider/<?= $result['rider_id'] ?>" class="result-item result-item-splits" data-search="<?= h($searchData) ?>">
             <div class="result-place">
                 <?= $gIdx + 1 ?>
             </div>
             <div class="result-info">
                 <div class="result-name"><?= h($result['firstname'] . ' ' . $result['lastname']) ?></div>
                 <div class="result-club"><?= h($result['club_name'] ?? '-') ?> &middot; <?= h($result['original_class'] ?? '') ?></div>
+                <div class="result-splits-row">
+                    <?php foreach ($globalSplits as $ss):
+                        $splitTime = $result['ss' . $ss] ?? '';
+                        $splitRank = $result['global_split_rank_' . $ss] ?? null;
+                    ?>
+                    <div class="result-split-item">
+                        <span class="split-label"><?= $stageNames[$ss] ?? 'SS' . $ss ?></span>
+                        <span class="split-value"><?= !empty($splitTime) ? formatDisplayTime($splitTime) : '-' ?></span>
+                        <?php if ($splitRank): ?><span class="split-rank">(<?= $splitRank ?>)</span><?php endif; ?>
+                    </div>
+                    <?php endforeach; ?>
+                </div>
             </div>
         </a>
         <?php endforeach; ?>
