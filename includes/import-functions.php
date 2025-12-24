@@ -4,6 +4,9 @@
  * Shared between import-results.php and import-results-preview.php
  */
 
+// Include smart club matching
+require_once __DIR__ . '/club-matching.php';
+
 /**
  * Check if a row appears to be a field mapping/description row
  * These rows contain field names like "class", "position", "club_name" instead of actual data
@@ -535,17 +538,20 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
 
             $riderId = $riderCache[$riderName . '|' . $licenseNumber];
 
-            // Find or create club
+            // Find or create club using smart matching
             $clubId = null;
             $clubName = trim($data['club_name'] ?? '');
             if (!empty($clubName)) {
-                if (!isset($clubCache[$clubName])) {
-                    $club = $db->getRow(
-                        "SELECT id FROM clubs WHERE name LIKE ?",
-                        ['%' . $clubName . '%']
-                    );
+                // Normalize the club name for cache key to catch variants
+                $normalizedClubName = normalizeClubName($clubName);
+                $cacheKey = !empty($normalizedClubName) ? $normalizedClubName : $clubName;
+
+                if (!isset($clubCache[$cacheKey])) {
+                    // Use smart matching (handles CK/Ck, OK/Ok variants, etc.)
+                    $club = findClubByName($db, $clubName);
+
                     if (!$club) {
-                        // Create club
+                        // Create club with the original name from CSV
                         $matching_stats['clubs_created']++;
                         $newClubId = $db->insert('clubs', [
                             'name' => $clubName,
@@ -554,12 +560,12 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
                         if ($importId) {
                             trackImportRecord($db, $importId, 'club', $newClubId, 'created');
                         }
-                        $clubCache[$clubName] = $newClubId;
+                        $clubCache[$cacheKey] = $newClubId;
                     } else {
-                        $clubCache[$clubName] = $club['id'];
+                        $clubCache[$cacheKey] = $club['id'];
                     }
                 }
-                $clubId = $clubCache[$clubName];
+                $clubId = $clubCache[$cacheKey];
             }
 
             // Find or create class
