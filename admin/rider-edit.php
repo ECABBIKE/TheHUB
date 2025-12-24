@@ -359,7 +359,7 @@ if (!empty($rider['club_id'])) {
 
 // Get club history per year
 require_once __DIR__ . '/../includes/club-membership.php';
-$clubHistory = getRiderClubHistory($db, $riderId);
+$clubHistory = getRiderClubHistory($db, $id);
 
 // Get years with results (for showing which years are locked)
 $yearsWithResults = $db->getAll("
@@ -369,7 +369,7 @@ $yearsWithResults = $db->getAll("
     WHERE r.cyclist_id = ?
     GROUP BY YEAR(e.date)
     ORDER BY year DESC
-", [$riderId]);
+", [$id]);
 $yearsWithResultsMap = [];
 foreach ($yearsWithResults as $yr) {
     $yearsWithResultsMap[$yr['year']] = $yr['result_count'];
@@ -381,7 +381,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     $updateYear = (int)($_POST['year'] ?? 0);
     $updateClubId = (int)($_POST['club_id'] ?? 0);
 
-    error_log("CLUB HISTORY: Updating year={$updateYear}, club_id={$updateClubId} for rider {$riderId}");
+    error_log("CLUB HISTORY: Updating year={$updateYear}, club_id={$updateClubId} for rider {$id}");
 
     if ($updateYear <= 0) {
         $message = 'Ogiltigt år valt';
@@ -390,12 +390,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         $message = 'Du måste välja en klubb';
         $messageType = 'error';
     } else {
-        $result = setRiderClubForYear($db, $riderId, $updateClubId, $updateYear);
+        $result = setRiderClubForYear($db, $id, $updateClubId, $updateYear);
         if ($result['success']) {
             $message = $result['message'];
             $messageType = 'success';
             // Refresh club history
-            $clubHistory = getRiderClubHistory($db, $riderId);
+            $clubHistory = getRiderClubHistory($db, $id);
             error_log("CLUB HISTORY: Successfully updated");
         } else {
             $message = $result['message'];
