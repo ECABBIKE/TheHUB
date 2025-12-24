@@ -1807,3 +1807,34 @@
         display: none;
     }
 }
+
+/* Simple Results History Format */
+.results-history-simple {
+    display: flex;
+    flex-direction: column;
+}
+
+.result-history-row {
+    display: block;
+    padding: var(--space-sm) var(--space-md);
+    color: var(--color-text-primary);
+    text-decoration: none;
+    font-size: var(--text-base);
+    border-bottom: 1px solid var(--color-border);
+    transition: background var(--transition-fast);
+}
+
+.result-history-row:last-child {
+    border-bottom: none;
+}
+
+.result-history-row:hover {
+    background: var(--color-bg-hover);
+}
+
+@media (max-width: 767px) {
+    .result-history-row {
+        font-size: var(--text-sm);
+        padding: var(--space-sm);
+    }
+}

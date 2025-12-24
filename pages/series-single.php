@@ -488,15 +488,16 @@ if (!$series) {
     <span class="events-dropdown-arrow">▾</span>
   </summary>
   <div class="events-dropdown-content">
-    <?php $eventNum = 1; ?>
-    <?php foreach ($seriesEvents as $event): ?>
-    <a href="/event/<?= $event['id'] ?>" class="event-dropdown-item">
-      <span class="event-item-num">#<?= $eventNum ?></span>
-      <span class="event-item-date"><?= $event['date'] ? date('j M', strtotime($event['date'])) : '-' ?></span>
-      <span class="event-item-name"><?= htmlspecialchars($event['name']) ?></span>
-      <span class="event-item-results"><?= $event['result_count'] ?> resultat</span>
+    <?php foreach ($seriesEvents as $event):
+        $parts = [];
+        if ($event['date']) $parts[] = date('j M', strtotime($event['date']));
+        $parts[] = htmlspecialchars($event['name']);
+        if (!empty($event['location'])) $parts[] = htmlspecialchars($event['location']);
+        $parts[] = $event['result_count'] . ' resultat';
+    ?>
+    <a href="/event/<?= $event['id'] ?>" class="event-simple-row">
+      <?= implode(' - ', $parts) ?>
     </a>
-    <?php $eventNum++; ?>
     <?php endforeach; ?>
   </div>
 </details>
