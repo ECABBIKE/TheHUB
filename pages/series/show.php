@@ -507,6 +507,38 @@ skip_club_standings:
 
     <!-- Individual Standings Section -->
     <div id="individual-standings">
+        <?php
+        // Calculate individual stats
+        $totalIndividualRiders = 0;
+        $totalIndividualPoints = 0;
+        foreach ($standingsByClass as $classData) {
+            $totalIndividualRiders += count($classData['riders']);
+            foreach ($classData['riders'] as $rider) {
+                $totalIndividualPoints += $rider['total_points'];
+            }
+        }
+        ?>
+
+        <!-- Summary Stats Cards -->
+        <div class="stats-grid mb-md">
+            <div class="stat-card">
+                <div class="stat-value"><?= count($classes) ?></div>
+                <div class="stat-label">Klasser</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value"><?= number_format($totalIndividualPoints) ?></div>
+                <div class="stat-label">Totala poang</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value"><?= $totalIndividualRiders ?></div>
+                <div class="stat-label">Deltagare</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value"><?= count($events) ?></div>
+                <div class="stat-label">Events</div>
+            </div>
+        </div>
+
         <!-- Filters -->
         <form method="get" class="filter-bar">
             <div class="filter-group">
