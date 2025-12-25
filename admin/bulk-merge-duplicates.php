@@ -298,6 +298,109 @@ foreach ($rawNameDups as $dup) {
 // Also count non-mergeable (different UCIs = different people with same name)
 $nonMergeableCount = count($rawNameDups) - count($sampleName);
 
+// Find FUZZY duplicates - middle name variations and spelling differences
+// Examples: "Lo Zetterlund" vs "Lo Nyberg Zetterlund", "Johanson" vs "Johansson"
+$fuzzyDuplicates = [];
+
+// Get all riders for fuzzy matching
+$allRiders = $pdo->query("
+    SELECT id, firstname, lastname, license_number,
+           REPLACE(REPLACE(license_number, ' ', ''), '-', '') as uci_digits
+    FROM riders
+    WHERE firstname IS NOT NULL AND firstname != ''
+      AND lastname IS NOT NULL AND lastname != ''
+    ORDER BY lastname, firstname
+")->fetchAll(PDO::FETCH_ASSOC);
+
+// Build lookup by first part of firstname + lastname (for middle name matching)
+$fuzzyGroups = [];
+foreach ($allRiders as $rider) {
+    $firstPart = explode(' ', trim($rider['firstname']))[0];
+    $key = strtoupper($firstPart) . '|' . strtoupper(trim($rider['lastname']));
+    if (!isset($fuzzyGroups[$key])) {
+        $fuzzyGroups[$key] = [];
+    }
+    $fuzzyGroups[$key][] = $rider;
+}
+
+// Find groups with different full names but same first-part + lastname
+$middleNameDups = [];
+foreach ($fuzzyGroups as $key => $riders) {
+    if (count($riders) > 1) {
+        // Check if they have different full firstnames (middle name variation)
+        $uniqueFirstNames = array_unique(array_map(fn($r) => strtoupper(trim($r['firstname'])), $riders));
+        if (count($uniqueFirstNames) > 1) {
+            // Check UCI conflicts
+            $validUcis = array_filter(array_map(fn($r) => $r['uci_digits'], $riders), fn($u) => strlen($u) >= 8);
+            $uniqueUcis = array_unique($validUcis);
+            if (count($uniqueUcis) <= 1) {
+                $middleNameDups[] = [
+                    'key' => $key,
+                    'riders' => $riders,
+                    'names' => implode(' | ', array_map(fn($r) => $r['firstname'] . ' ' . $r['lastname'], $riders)),
+                    'ids' => implode(', ', array_column($riders, 'id')),
+                    'cnt' => count($riders)
+                ];
+            }
+        }
+    }
+}
+
+// Find spelling variations (Soundex/similar sounding names)
+// Group by Soundex of firstname + lastname
+$soundexGroups = [];
+
+// Helper function to normalize Swedish characters for soundex
+$normalizeName = function($name) {
+    // Replace Swedish characters with ASCII equivalents
+    $replacements = [
+        'å' => 'a', 'ä' => 'a', 'ö' => 'o',
+        'Å' => 'A', 'Ä' => 'A', 'Ö' => 'O',
+        'é' => 'e', 'É' => 'E', 'è' => 'e', 'ë' => 'e',
+        'ü' => 'u', 'Ü' => 'U'
+    ];
+    $name = strtr($name, $replacements);
+    // Use transliterator if available, otherwise just return the replaced string
+    if (function_exists('transliterator_transliterate')) {
+        return transliterator_transliterate('Any-Latin; Latin-ASCII', $name);
+    }
+    return $name;
+};
+
+foreach ($allRiders as $rider) {
+    // Create soundex key for firstname + lastname
+    $firstSoundex = soundex($normalizeName($rider['firstname']));
+    $lastSoundex = soundex($normalizeName($rider['lastname']));
+    $key = $firstSoundex . '|' . $lastSoundex;
+    if (!isset($soundexGroups[$key])) {
+        $soundexGroups[$key] = [];
+    }
+    $soundexGroups[$key][] = $rider;
+}
+
+// Find soundex groups with different actual names
+$spellingDups = [];
+foreach ($soundexGroups as $key => $riders) {
+    if (count($riders) > 1) {
+        // Check if they have different actual names
+        $uniqueNames = array_unique(array_map(fn($r) => strtoupper($r['firstname'] . ' ' . $r['lastname']), $riders));
+        if (count($uniqueNames) > 1) {
+            // Check UCI conflicts
+            $validUcis = array_filter(array_map(fn($r) => $r['uci_digits'], $riders), fn($u) => strlen($u) >= 8);
+            $uniqueUcis = array_unique($validUcis);
+            if (count($uniqueUcis) <= 1) {
+                $spellingDups[] = [
+                    'soundex' => $key,
+                    'riders' => $riders,
+                    'names' => implode(' | ', array_map(fn($r) => $r['firstname'] . ' ' . $r['lastname'], $riders)),
+                    'ids' => implode(', ', array_column($riders, 'id')),
+                    'cnt' => count($riders)
+                ];
+            }
+        }
+    }
+}
+
 $page_title = 'Bulk-sammanslagning av dubletter';
 $breadcrumbs = [
     ['label' => 'Verktyg', 'url' => '/admin/tools'],
@@ -336,19 +439,26 @@ include __DIR__ . '/components/unified-layout.php';
         <div class="text-xs text-muted">(<?= $nonMergeableCount ?> med olika UCI hoppas över)</div>
     </div>
     <div class="stat-card">
-        <div class="stat-number"><?= $totalUciExtra + $totalNameExtra ?></div>
-        <div class="stat-label">Totalt att ta bort</div>
+        <div class="stat-number text-info"><?= count($middleNameDups) ?></div>
+        <div class="stat-label">Mellannamn</div>
+        <div class="text-xs text-muted">Manuell granskning</div>
     </div>
     <div class="stat-card">
-        <form method="POST">
-            <?= csrf_field() ?>
-            <button type="submit" name="merge_all" class="btn btn-danger btn-lg w-full"
-                    onclick="return confirm('Slå ihop ALLA dubletter?\n\n<?= $totalUciExtra + $totalNameExtra ?> poster kommer att tas bort.\nResultat flyttas till den bästa profilen.')">
-                <i data-lucide="git-merge"></i>
-                SLÅ IHOP ALLA
-            </button>
-        </form>
+        <div class="stat-number text-secondary"><?= count($spellingDups) ?></div>
+        <div class="stat-label">Stavning</div>
+        <div class="text-xs text-muted">Manuell granskning</div>
     </div>
+</div>
+
+<div class="mb-lg">
+    <form method="POST" class="d-inline">
+        <?= csrf_field() ?>
+        <button type="submit" name="merge_all" class="btn btn-danger"
+                onclick="return confirm('Slå ihop ALLA exakta dubletter?\n\n<?= $totalUciExtra + $totalNameExtra ?> poster kommer att tas bort.\nResultat flyttas till den bästa profilen.\n\nOBS: Mellannamn och stavningsvariationer måste granskas manuellt.')">
+            <i data-lucide="git-merge"></i>
+            Slå ihop exakta dubletter (<?= $totalUciExtra + $totalNameExtra ?> st)
+        </button>
+    </form>
 </div>
 
 <!-- UCI Duplicates -->
@@ -420,6 +530,109 @@ include __DIR__ . '/components/unified-layout.php';
                         <td><span class="badge badge-warning"><?= $dup['cnt'] ?></span></td>
                     </tr>
                     <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+        <?php endif; ?>
+    </div>
+</div>
+
+<!-- Middle Name Duplicates (fuzzy) -->
+<div class="card mb-lg">
+    <div class="card-header">
+        <h3><i data-lucide="user-plus"></i> Mellannamn-variationer (<?= count($middleNameDups) ?> grupper)</h3>
+    </div>
+    <div class="card-body gs-padding-0">
+        <div class="alert alert-info m-md">
+            <i data-lucide="info"></i>
+            Dessa har samma första förnamn och efternamn, men olika mellannamn.
+            Exempel: "Lo Zetterlund" vs "Lo Nyberg Zetterlund"
+        </div>
+        <?php if (empty($middleNameDups)): ?>
+        <div class="alert alert-success m-md">Inga mellannamn-variationer hittade!</div>
+        <?php else: ?>
+        <div class="table-responsive">
+            <table class="table table-sm">
+                <thead>
+                    <tr>
+                        <th>Namn-variationer</th>
+                        <th>IDs</th>
+                        <th>Antal</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach (array_slice($middleNameDups, 0, 30) as $dup): ?>
+                    <tr>
+                        <td><?= h($dup['names']) ?></td>
+                        <td><code><?= h($dup['ids']) ?></code></td>
+                        <td><span class="badge badge-info"><?= $dup['cnt'] ?></span></td>
+                        <td>
+                            <a href="/admin/rider-merge.php?ids=<?= urlencode($dup['ids']) ?>" class="btn btn-sm btn-secondary">
+                                <i data-lucide="git-merge"></i> Granska
+                            </a>
+                        </td>
+                    </tr>
+                    <?php endforeach; ?>
+                    <?php if (count($middleNameDups) > 30): ?>
+                    <tr>
+                        <td colspan="4" class="text-center text-muted">
+                            ... och <?= count($middleNameDups) - 30 ?> till
+                        </td>
+                    </tr>
+                    <?php endif; ?>
+                </tbody>
+            </table>
+        </div>
+        <?php endif; ?>
+    </div>
+</div>
+
+<!-- Spelling Variations (Soundex) -->
+<div class="card mb-lg">
+    <div class="card-header">
+        <h3><i data-lucide="spell-check"></i> Stavnings-variationer (<?= count($spellingDups) ?> grupper)</h3>
+    </div>
+    <div class="card-body gs-padding-0">
+        <div class="alert alert-warning m-md">
+            <i data-lucide="alert-triangle"></i>
+            Dessa har liknande uttal men olika stavning.
+            Exempel: "Johanson" vs "Johansson", "Erikson" vs "Eriksson"
+            <strong>Granska noga innan sammanslagning!</strong>
+        </div>
+        <?php if (empty($spellingDups)): ?>
+        <div class="alert alert-success m-md">Inga stavnings-variationer hittade!</div>
+        <?php else: ?>
+        <div class="table-responsive">
+            <table class="table table-sm">
+                <thead>
+                    <tr>
+                        <th>Namn-variationer</th>
+                        <th>IDs</th>
+                        <th>Antal</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach (array_slice($spellingDups, 0, 30) as $dup): ?>
+                    <tr>
+                        <td><?= h($dup['names']) ?></td>
+                        <td><code><?= h($dup['ids']) ?></code></td>
+                        <td><span class="badge badge-warning"><?= $dup['cnt'] ?></span></td>
+                        <td>
+                            <a href="/admin/rider-merge.php?ids=<?= urlencode($dup['ids']) ?>" class="btn btn-sm btn-secondary">
+                                <i data-lucide="git-merge"></i> Granska
+                            </a>
+                        </td>
+                    </tr>
+                    <?php endforeach; ?>
+                    <?php if (count($spellingDups) > 30): ?>
+                    <tr>
+                        <td colspan="4" class="text-center text-muted">
+                            ... och <?= count($spellingDups) - 30 ?> till
+                        </td>
+                    </tr>
+                    <?php endif; ?>
                 </tbody>
             </table>
         </div>

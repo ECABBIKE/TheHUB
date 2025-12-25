@@ -475,11 +475,29 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
                     $firstName = trim($data['firstname']);
                     $lastName = trim($data['lastname']);
 
-                    // Case-insensitive match using UPPER() (LOWER() doesn't work with this MySQL collation)
+                    // Case-insensitive EXACT match using UPPER() (LOWER() doesn't work with this MySQL collation)
                     $rider = $db->getRow(
                         "SELECT id, license_number FROM riders WHERE UPPER(firstname) = UPPER(?) AND UPPER(lastname) = UPPER(?)",
                         [$firstName, $lastName]
                     );
+
+                    // If exact match fails, try FUZZY matching for middle names
+                    // "Lo Nyberg Zetterlund" should match existing "Lo Zetterlund"
+                    // "Lo Zetterlund" should match existing "Lo Nyberg Zetterlund"
+                    if (!$rider) {
+                        $firstNamePart = explode(' ', $firstName)[0]; // Get first part of firstname
+
+                        $rider = $db->getRow(
+                            "SELECT id, license_number FROM riders
+                             WHERE (UPPER(firstname) LIKE CONCAT(UPPER(?), '%') OR UPPER(firstname) = UPPER(?))
+                             AND UPPER(lastname) = UPPER(?)",
+                            [$firstNamePart, $firstNamePart, $lastName]
+                        );
+
+                        if ($rider) {
+                            error_log("IMPORT: Fuzzy firstname match - '{$firstName} {$lastName}' matched first part '{$firstNamePart}' → rider ID {$rider['id']}");
+                        }
+                    }
 
                     if ($rider) {
                         $matching_stats['riders_found']++;
