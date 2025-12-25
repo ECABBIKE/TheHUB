@@ -426,6 +426,25 @@ include __DIR__ . '/components/unified-layout.php';
         </div>
     </div>
 
+    <!-- Fix SWE-ID Prefix -->
+    <div class="tool-card">
+        <div class="tool-card-header">
+            <div class="tool-icon warning">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>
+            </div>
+            <div>
+                <h4 class="tool-title">Fixa SWE-ID prefix</h4>
+                <p class="tool-description">Lägg till "SWE" på licensnummer som saknar prefix (2500581 → SWE2500581)</p>
+            </div>
+        </div>
+        <div class="tool-actions">
+            <a href="/admin/fix-swe-prefix" class="btn-admin btn-admin-warning flex-1">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-sm"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>
+                Fixa prefix
+            </a>
+        </div>
+    </div>
+
     <!-- Format UCI ID (Manual) -->
     <div class="tool-card">
         <div class="tool-card-header">
