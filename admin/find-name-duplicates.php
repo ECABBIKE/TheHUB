@@ -544,4 +544,115 @@ include __DIR__ . '/components/unified-layout.php';
 </div>
 <?php endif; ?>
 
+<!-- Debug: Search for specific name -->
+<?php
+$searchName = $_GET['search'] ?? '';
+$debugResults = [];
+if ($searchName) {
+    $debugResults = $db->getAll("
+        SELECT id, firstname, lastname, birth_year, nationality, license_number,
+               HEX(firstname) as fn_hex, HEX(lastname) as ln_hex,
+               LENGTH(firstname) as fn_len, LENGTH(lastname) as ln_len,
+               (SELECT COUNT(*) FROM results WHERE cyclist_id = riders.id) as result_count
+        FROM riders
+        WHERE LOWER(firstname) LIKE ? OR LOWER(lastname) LIKE ?
+        ORDER BY lastname, firstname
+    ", ['%' . strtolower($searchName) . '%', '%' . strtolower($searchName) . '%']);
+
+    // Check if any are excluded
+    $excludedWith = [];
+    foreach ($debugResults as $r) {
+        foreach ($debugResults as $r2) {
+            if ($r['id'] < $r2['id']) {
+                $key = $r['id'] . '-' . $r2['id'];
+                if (isset($excludedPairs[$key])) {
+                    $excludedWith[] = "ID {$r['id']} ↔ ID {$r2['id']} är markerade som EJ dubletter";
+                }
+            }
+        }
+    }
+}
+?>
+
+<div class="card mt-lg">
+    <div class="card-header">
+        <h3>Debug: Sök specifikt namn</h3>
+    </div>
+    <div class="card-body">
+        <form method="get" style="display: flex; gap: var(--space-md); align-items: center; margin-bottom: var(--space-md);">
+            <input type="text" name="search" class="form-input" placeholder="Sök namn..." value="<?= h($searchName) ?>" style="width: 300px;">
+            <button type="submit" class="btn btn-primary">Sök</button>
+        </form>
+
+        <?php if ($searchName && !empty($debugResults)): ?>
+        <div class="alert alert-info mb-md">
+            Hittade <?= count($debugResults) ?> träffar för "<?= h($searchName) ?>"
+        </div>
+
+        <?php if (!empty($excludedWith)): ?>
+        <div class="alert alert-warning mb-md">
+            <strong>Exkluderade par:</strong><br>
+            <?= implode('<br>', $excludedWith) ?>
+        </div>
+        <?php endif; ?>
+
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Förnamn</th>
+                        <th>Efternamn</th>
+                        <th>År</th>
+                        <th>Land</th>
+                        <th>Licens</th>
+                        <th>Resultat</th>
+                        <th>FN längd</th>
+                        <th>LN längd</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($debugResults as $r): ?>
+                    <tr>
+                        <td><?= $r['id'] ?></td>
+                        <td><code><?= h($r['firstname']) ?></code></td>
+                        <td><code><?= h($r['lastname']) ?></code></td>
+                        <td><?= $r['birth_year'] ?: '-' ?></td>
+                        <td><?= h($r['nationality']) ?></td>
+                        <td><code><?= h($r['license_number']) ?></code></td>
+                        <td><?= $r['result_count'] ?></td>
+                        <td><?= $r['fn_len'] ?></td>
+                        <td><?= $r['ln_len'] ?></td>
+                    </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+
+        <?php if (count($debugResults) >= 2): ?>
+        <div class="mt-md">
+            <strong>Jämförelse av första två:</strong><br>
+            <?php
+            $r1 = $debugResults[0];
+            $r2 = $debugResults[1];
+            $fn1 = strtolower(trim($r1['firstname']));
+            $fn2 = strtolower(trim($r2['firstname']));
+            $ln1 = strtolower(trim($r1['lastname']));
+            $ln2 = strtolower(trim($r2['lastname']));
+            ?>
+            <code>fn1: "<?= $fn1 ?>" (<?= strlen($fn1) ?> tecken)</code><br>
+            <code>fn2: "<?= $fn2 ?>" (<?= strlen($fn2) ?> tecken)</code><br>
+            <code>Förnamn matchar: <?= $fn1 === $fn2 ? 'JA' : 'NEJ' ?></code><br><br>
+            <code>ln1: "<?= $ln1 ?>" (<?= strlen($ln1) ?> tecken)</code><br>
+            <code>ln2: "<?= $ln2 ?>" (<?= strlen($ln2) ?> tecken)</code><br>
+            <code>Efternamn matchar: <?= $ln1 === $ln2 ? 'JA' : 'NEJ' ?></code>
+        </div>
+        <?php endif; ?>
+
+        <?php elseif ($searchName): ?>
+        <div class="alert alert-warning">Inga träffar för "<?= h($searchName) ?>"</div>
+        <?php endif; ?>
+    </div>
+</div>
+
 <?php include __DIR__ . '/components/unified-layout-footer.php'; ?>
