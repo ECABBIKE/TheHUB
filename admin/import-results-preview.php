@@ -67,14 +67,27 @@ try {
 // Get all existing classes for mapping
 $existingClasses = $db->getAll("SELECT id, name, display_name, sort_order FROM classes WHERE active = 1 ORDER BY sort_order ASC, display_name ASC");
 
+// Class name mappings - common variants to standard names
+$classNameMappings = [
+    'tävling damer' => 'damer elit',
+    'tävling herrar' => 'herrar elit',
+    'tavling damer' => 'damer elit',
+    'tavling herrar' => 'herrar elit',
+];
+
 // Analyze which CSV classes exist and which are new
 $classAnalysis = [];
 foreach ($matchingStats['classes'] as $csvClass) {
  $match = null;
  $csvClassNormalized = strtolower(trim($csvClass));
 
+ // Apply class name mapping if exists
+ $searchName = $classNameMappings[$csvClassNormalized] ?? $csvClassNormalized;
+
  foreach ($existingClasses as $existing) {
- if (strtolower($existing['display_name']) === $csvClassNormalized ||
+ if (strtolower($existing['display_name']) === $searchName ||
+  strtolower($existing['name']) === $searchName ||
+  strtolower($existing['display_name']) === $csvClassNormalized ||
   strtolower($existing['name']) === $csvClassNormalized) {
   $match = $existing;
   break;
@@ -84,7 +97,9 @@ foreach ($matchingStats['classes'] as $csvClass) {
  // Try partial match if no exact match
  if (!$match) {
  foreach ($existingClasses as $existing) {
-  if (strpos(strtolower($existing['display_name']), $csvClassNormalized) !== false ||
+  if (strpos(strtolower($existing['display_name']), $searchName) !== false ||
+  strpos($searchName, strtolower($existing['display_name'])) !== false ||
+  strpos(strtolower($existing['display_name']), $csvClassNormalized) !== false ||
   strpos($csvClassNormalized, strtolower($existing['display_name'])) !== false) {
   $match = $existing;
   break;
@@ -284,7 +299,8 @@ function parseAndAnalyzeCSV($filepath, $db) {
  'clubs_new' => 0,
  'clubs_list' => [],
  'classes' => [],
- 'potential_duplicates' => []
+ 'potential_duplicates' => [],
+ 'debug_rows' => [] // Debug info for first rows
  ];
 
  $riderCache = [];
@@ -501,12 +517,19 @@ function parseAndAnalyzeCSV($filepath, $db) {
  $licenseNumber = trim($rowData['license_number'] ?? '');
  $normalizedLicense = preg_replace('/[^0-9]/', '', $licenseNumber);
 
- // Debug first 3 rows
+ // Debug first 5 rows - collect for display
  static $debugRowCount = 0;
- if ($debugRowCount < 3) {
-  error_log("=== ROW DEBUG {$debugRowCount} ===");
-  error_log("firstname='{$firstName}' lastname='{$lastName}' license='{$licenseNumber}' normalized='{$normalizedLicense}'");
-  $debugRowCount++;
+ $debugInfo = null;
+ if ($debugRowCount < 5) {
+  $debugInfo = [
+   'row' => $debugRowCount + 1,
+   'firstname' => $firstName,
+   'lastname' => $lastName,
+   'license' => $licenseNumber,
+   'matched' => false,
+   'match_method' => 'none',
+   'db_check' => null
+  ];
  }
 
  if (!empty($firstName) && !empty($lastName)) {
@@ -524,8 +547,13 @@ function parseAndAnalyzeCSV($filepath, $db) {
        OR REPLACE(REPLACE(uci_id, ' ', ''), '-', '') = ?",
    [$normalizedLicense, $normalizedLicense]
    );
+   if ($debugInfo && $rider) {
+    $debugInfo['matched'] = true;
+    $debugInfo['match_method'] = 'uci_id';
+    $debugInfo['db_check'] = "Hittad via UCI: {$rider['firstname']} {$rider['lastname']}";
+   }
    // Debug
-   if ($debugRowCount <= 3) {
+   if ($debugRowCount < 5) {
     error_log("UCI SEARCH for '{$normalizedLicense}': " . ($rider ? "FOUND id={$rider['id']}" : "NOT FOUND"));
    }
 
@@ -548,11 +576,14 @@ function parseAndAnalyzeCSV($filepath, $db) {
 
   // Try name match if no license match - use multiple strategies (same as import)
   if (!$rider) {
+   $matchStrategy = 'none';
+
    // Strategy 1: Exact name match
    $rider = $db->getRow(
    "SELECT id, firstname, lastname, license_number, uci_id FROM riders WHERE LOWER(firstname) = LOWER(?) AND LOWER(lastname) = LOWER(?)",
    [$firstName, $lastName]
    );
+   if ($rider) $matchStrategy = 'exact_name';
 
    // Strategy 2: Handle double last names (e.g., "Svensson Lindberg")
    if (!$rider) {
@@ -562,6 +593,7 @@ function parseAndAnalyzeCSV($filepath, $db) {
       AND (LOWER(lastname) LIKE LOWER(?) OR LOWER(?) LIKE CONCAT('%', LOWER(lastname), '%'))",
      [$firstName, '%' . $lastName . '%', $lastName]
     );
+    if ($rider) $matchStrategy = 'double_lastname';
    }
 
    // Strategy 3: If lastname has space, try matching last part only
@@ -573,6 +605,7 @@ function parseAndAnalyzeCSV($filepath, $db) {
       WHERE LOWER(firstname) = LOWER(?) AND LOWER(lastname) = LOWER(?)",
      [$firstName, $lastPart]
     );
+    if ($rider) $matchStrategy = 'lastname_part';
    }
 
    // Strategy 4: Handle middle names - try first part of firstname
@@ -583,6 +616,7 @@ function parseAndAnalyzeCSV($filepath, $db) {
       WHERE LOWER(firstname) = LOWER(?) AND LOWER(lastname) = LOWER(?)",
      [$firstNamePart, $lastName]
     );
+    if ($rider) $matchStrategy = 'firstname_part';
    }
 
    // Strategy 5: Fuzzy firstname match (starts with) + exact lastname
@@ -594,6 +628,25 @@ function parseAndAnalyzeCSV($filepath, $db) {
       AND LOWER(lastname) = LOWER(?)",
      [$firstNamePart . '%', $lastName]
     );
+    if ($rider) $matchStrategy = 'fuzzy_firstname';
+   }
+
+   // Update debug info
+   if ($debugInfo && $rider) {
+    $debugInfo['matched'] = true;
+    $debugInfo['match_method'] = $matchStrategy;
+    $debugInfo['db_check'] = "Hittad ({$matchStrategy}): {$rider['firstname']} {$rider['lastname']}";
+   } elseif ($debugInfo) {
+    // Check what's in DB for this name
+    $dbCheck = $db->getRow(
+     "SELECT id, firstname, lastname FROM riders WHERE LOWER(lastname) = LOWER(?) LIMIT 1",
+     [$lastName]
+    );
+    if ($dbCheck) {
+     $debugInfo['db_check'] = "DB har '{$dbCheck['firstname']} {$dbCheck['lastname']}' men matchade inte";
+    } else {
+     $debugInfo['db_check'] = "Inget efternamn '{$lastName}' finns i DB";
+    }
    }
 
    // Check duplicate status if found
@@ -629,6 +682,12 @@ function parseAndAnalyzeCSV($filepath, $db) {
   } else {
    $stats['riders_new']++;
   }
+  }
+
+  // Save debug info
+  if ($debugInfo) {
+   $stats['debug_rows'][] = $debugInfo;
+   $debugRowCount++;
   }
  }
 
@@ -746,6 +805,48 @@ include __DIR__ . '/components/unified-layout.php';
   <div class="stat-label">Sträckor</div>
   </div>
  </div>
+
+ <!-- Debug: Rider Matching -->
+ <?php if (!empty($matchingStats['debug_rows'])): ?>
+  <div class="card mb-lg">
+  <div class="card-header" style="background: #fef3c7;">
+   <h3 class="text-warning">
+   <i data-lucide="bug"></i>
+   Debug: Matchningsförsök (första 5 rader)
+   </h3>
+  </div>
+  <div class="card-body">
+   <div class="table-responsive">
+   <table class="table table-sm">
+    <thead>
+    <tr>
+     <th>#</th>
+     <th>Förnamn</th>
+     <th>Efternamn</th>
+     <th>Licens</th>
+     <th>Matchad?</th>
+     <th>Metod</th>
+     <th>DB-info</th>
+    </tr>
+    </thead>
+    <tbody>
+    <?php foreach ($matchingStats['debug_rows'] as $dbg): ?>
+     <tr class="<?= $dbg['matched'] ? 'bg-success-light' : 'bg-danger-light' ?>" style="background: <?= $dbg['matched'] ? '#dcfce7' : '#fee2e2' ?>;">
+     <td><?= $dbg['row'] ?></td>
+     <td><code><?= h($dbg['firstname']) ?></code></td>
+     <td><code><?= h($dbg['lastname']) ?></code></td>
+     <td><code><?= h($dbg['license'] ?: '-') ?></code></td>
+     <td><?= $dbg['matched'] ? '<span class="badge badge-success">JA</span>' : '<span class="badge badge-danger">NEJ</span>' ?></td>
+     <td><?= h($dbg['match_method']) ?></td>
+     <td><small><?= h($dbg['db_check'] ?? '-') ?></small></td>
+     </tr>
+    <?php endforeach; ?>
+    </tbody>
+   </table>
+   </div>
+  </div>
+  </div>
+ <?php endif; ?>
 
  <!-- Detected Stage Columns -->
  <?php if (!empty($matchingStats['stage_columns'])): ?>
