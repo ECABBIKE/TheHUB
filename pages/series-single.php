@@ -268,13 +268,42 @@ try {
 
     $totalParticipants = count($ridersInSeries);
 
-    // Calculate club standings with 100%/50% rule
-    // Best rider per club/class/event = 100%, second best = 50%, others = 0%
+    // Get club standings from cache (uses club-points-system.php)
+    // This reads from club_standings_cache table which is populated via admin
     $clubStandings = [];
-    $clubRiderContributions = []; // Track individual rider contributions
+    $clubRiderContributions = []; // For compatibility
 
-    // DEBUG: Check how many riders have clubs
-    if (!empty($seriesEvents)) {
+    // First try to get cached data
+    $useCachedClubStandings = false;
+    try {
+        $clubStandingsRaw = getClubStandings($db, $seriesId);
+        if (!empty($clubStandingsRaw)) {
+            $useCachedClubStandings = true;
+            foreach ($clubStandingsRaw as $club) {
+                $clubStandings[$club['club_id']] = [
+                    'club_id' => $club['club_id'],
+                    'club_name' => $club['club_name'],
+                    'short_name' => $club['short_name'] ?? null,
+                    'city' => $club['city'] ?? null,
+                    'logo' => $club['logo'] ?? null,
+                    'total_points' => $club['total_points'],
+                    'rider_count' => $club['total_participants'],
+                    'scoring_riders' => $club['total_participants'],
+                    'events_count' => $club['events_count'] ?? 0,
+                    'best_event_points' => $club['best_event_points'] ?? 0,
+                    'ranking' => $club['ranking'],
+                    'event_points' => [],
+                    'riders' => []
+                ];
+            }
+        }
+    } catch (Exception $e) {
+        // Cache tables don't exist or query failed - fall back to calculation
+        error_log("CLUB_STANDINGS: Cache query failed: " . $e->getMessage());
+    }
+
+    // Fallback to on-the-fly calculation if no cached data
+    if (!$useCachedClubStandings && !empty($seriesEvents)) {
         $firstEventId = $seriesEvents[0]['id'];
         $debugStmt = $db->prepare("
             SELECT
@@ -301,7 +330,6 @@ try {
         $debugStmt2->execute([$seriesYear, $firstEventId]);
         $seasonCount = $debugStmt2->fetchColumn();
         error_log("CLUB_DEBUG: Riders with season club (year {$seriesYear}): {$seasonCount}");
-    }
 
     foreach ($seriesEvents as $event) {
         $eventId = $event['id'];
@@ -477,8 +505,8 @@ try {
     }
     unset($club);
 
-    // Final debug logging
-    error_log("CLUB_STANDINGS: Final result - " . count($clubStandings) . " clubs with standings");
+        error_log("CLUB_STANDINGS: Fallback calculation done - " . count($clubStandings) . " clubs");
+    } // End of: if (!$useCachedClubStandings && !empty($seriesEvents))
 
 } catch (Exception $e) {
     $error = $e->getMessage();
