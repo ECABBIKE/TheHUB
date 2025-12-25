@@ -53,7 +53,7 @@ try {
                 r.license_number, r.license_type, r.license_year, r.license_valid_until, r.gravity_id, r.active,
                 r.social_instagram, r.social_facebook, r.social_strava, r.social_youtube, r.social_tiktok,
                 r.stats_total_starts, r.stats_total_finished, r.stats_total_wins, r.stats_total_podiums,
-                r.first_season, r.experience_level,
+                r.first_season, r.experience_level, r.profile_image_url,
                 c.id as club_id, c.name as club_name, c.city as club_city
             FROM riders r
             LEFT JOIN clubs c ON r.club_id = c.id
@@ -93,6 +93,7 @@ try {
             $rider['stats_total_podiums'] = 0;
             $rider['first_season'] = null;
             $rider['experience_level'] = 1;
+            $rider['profile_image_url'] = null;
         }
     }
 
@@ -449,16 +450,9 @@ try {
     ];
     $expInfo = $experienceInfo[$experienceLevel] ?? $experienceInfo[1];
 
-    // Check for profile image
-    $profileImage = null;
-    $profileImageDir = dirname(__DIR__) . '/uploads/riders/';
-    $profileImageUrl = '/uploads/riders/';
-    foreach (['jpg', 'jpeg', 'png', 'webp'] as $ext) {
-        if (file_exists($profileImageDir . $riderId . '.' . $ext)) {
-            $profileImage = $profileImageUrl . $riderId . '.' . $ext . '?v=' . filemtime($profileImageDir . $riderId . '.' . $ext);
-            break;
-        }
-    }
+    // Profile image URL or initials fallback
+    $profileImageUrl = $rider['profile_image_url'] ?? null;
+    $initials = strtoupper(substr($rider['firstname'] ?? '', 0, 1) . substr($rider['lastname'] ?? '', 0, 1));
 
     // Check license status
     $hasLicense = !empty($rider['license_type']);
@@ -594,17 +588,13 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
 
         <!-- PROFILE CARD - New Design -->
         <div class="card profile-card-v4">
-            <!-- Large Photo -->
-            <div class="profile-photo-hero">
-                <?php if ($profileImage): ?>
-                    <img src="<?= htmlspecialchars($profileImage) ?>" alt="<?= $fullName ?>">
+            <!-- Large Photo or Initials -->
+            <div class="profile-photo-hero <?= $profileImageUrl ? '' : 'initials-bg' ?>">
+                <?php if ($profileImageUrl): ?>
+                    <img src="<?= htmlspecialchars($profileImageUrl) ?>" alt="<?= $fullName ?>" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                    <div class="profile-initials-fallback" style="display: none;"><?= htmlspecialchars($initials) ?></div>
                 <?php else: ?>
-                    <div class="profile-photo-placeholder">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-                            <circle cx="12" cy="7" r="4"/>
-                        </svg>
-                    </div>
+                    <div class="profile-initials"><?= htmlspecialchars($initials) ?></div>
                 <?php endif; ?>
             </div>
 
