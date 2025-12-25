@@ -268,13 +268,42 @@ try {
 
     $totalParticipants = count($ridersInSeries);
 
-    // Calculate club standings with 100%/50% rule
-    // Best rider per club/class/event = 100%, second best = 50%, others = 0%
+    // Get club standings from cache (uses club-points-system.php)
+    // This reads from club_standings_cache table which is populated via admin
     $clubStandings = [];
-    $clubRiderContributions = []; // Track individual rider contributions
+    $clubRiderContributions = []; // For compatibility
 
-    // DEBUG: Check how many riders have clubs
-    if (!empty($seriesEvents)) {
+    // First try to get cached data
+    $useCachedClubStandings = false;
+    try {
+        $clubStandingsRaw = getClubStandings($db, $seriesId);
+        if (!empty($clubStandingsRaw)) {
+            $useCachedClubStandings = true;
+            foreach ($clubStandingsRaw as $club) {
+                $clubStandings[$club['club_id']] = [
+                    'club_id' => $club['club_id'],
+                    'club_name' => $club['club_name'],
+                    'short_name' => $club['short_name'] ?? null,
+                    'city' => $club['city'] ?? null,
+                    'logo' => $club['logo'] ?? null,
+                    'total_points' => $club['total_points'],
+                    'rider_count' => $club['total_participants'],
+                    'scoring_riders' => $club['total_participants'],
+                    'events_count' => $club['events_count'] ?? 0,
+                    'best_event_points' => $club['best_event_points'] ?? 0,
+                    'ranking' => $club['ranking'],
+                    'event_points' => [],
+                    'riders' => []
+                ];
+            }
+        }
+    } catch (Exception $e) {
+        // Cache tables don't exist or query failed - fall back to calculation
+        error_log("CLUB_STANDINGS: Cache query failed: " . $e->getMessage());
+    }
+
+    // Fallback to on-the-fly calculation if no cached data
+    if (!$useCachedClubStandings && !empty($seriesEvents)) {
         $firstEventId = $seriesEvents[0]['id'];
         $debugStmt = $db->prepare("
             SELECT
@@ -301,7 +330,6 @@ try {
         $debugStmt2->execute([$seriesYear, $firstEventId]);
         $seasonCount = $debugStmt2->fetchColumn();
         error_log("CLUB_DEBUG: Riders with season club (year {$seriesYear}): {$seasonCount}");
-    }
 
     foreach ($seriesEvents as $event) {
         $eventId = $event['id'];
@@ -477,8 +505,8 @@ try {
     }
     unset($club);
 
-    // Final debug logging
-    error_log("CLUB_STANDINGS: Final result - " . count($clubStandings) . " clubs with standings");
+        error_log("CLUB_STANDINGS: Fallback calculation done - " . count($clubStandings) . " clubs");
+    } // End of: if (!$useCachedClubStandings && !empty($seriesEvents))
 
 } catch (Exception $e) {
     $error = $e->getMessage();
@@ -764,9 +792,9 @@ if (!$series) {
             <strong><?= $club['total_points'] ?></strong>
           </td>
           <td class="col-action">
-            <a href="/club-points?club_id=<?= $club['club_id'] ?>&series_id=<?= $seriesId ?>" class="btn-icon" title="Visa detaljer" onclick="event.stopPropagation()">
+            <button type="button" class="btn-icon" title="Visa detaljer" onclick="openClubModal(<?= $club['club_id'] ?>, <?= $seriesId ?>, '<?= htmlspecialchars(addslashes($club['club_name'])) ?>'); event.stopPropagation();">
               <i data-lucide="eye"></i>
-            </a>
+            </button>
           </td>
         </tr>
         <!-- Hidden club riders sub-rows -->
@@ -897,4 +925,143 @@ window.addEventListener('orientationchange', function() {
   setTimeout(updateLandscapeClass, 100);
 });
 
+// Club Detail Modal Functions
+function openClubModal(clubId, seriesId, clubName) {
+  const modal = document.getElementById('club-detail-modal');
+  const iframe = document.getElementById('club-detail-iframe');
+  const title = document.getElementById('club-modal-title');
+
+  title.textContent = clubName + ' - Klubbpoäng';
+  iframe.src = '/club-points?club_id=' + clubId + '&series_id=' + seriesId + '&modal=1';
+  modal.style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+
+  // Re-render lucide icons in modal
+  if (typeof lucide !== 'undefined') {
+    lucide.createIcons();
+  }
+}
+
+function closeClubModal() {
+  const modal = document.getElementById('club-detail-modal');
+  const iframe = document.getElementById('club-detail-iframe');
+
+  modal.style.display = 'none';
+  iframe.src = '';
+  document.body.style.overflow = '';
+}
+
+// Close modal on escape key
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') {
+    const modal = document.getElementById('club-detail-modal');
+    if (modal && modal.style.display !== 'none') {
+      closeClubModal();
+    }
+  }
+});
+
+// Close modal on overlay click
+document.getElementById('club-detail-modal')?.addEventListener('click', function(e) {
+  if (e.target === this) {
+    closeClubModal();
+  }
+});
 </script>
+
+<!-- Club Detail Modal -->
+<div id="club-detail-modal" class="modal-overlay" style="display: none;">
+  <div class="modal-container modal-lg">
+    <div class="modal-header">
+      <h2 id="club-modal-title">Klubbpoäng</h2>
+      <button type="button" class="modal-close" onclick="closeClubModal()">
+        <i data-lucide="x"></i>
+      </button>
+    </div>
+    <div class="modal-body">
+      <iframe id="club-detail-iframe" src="" style="width: 100%; height: 70vh; border: none;"></iframe>
+    </div>
+  </div>
+</div>
+
+<style>
+/* Club Detail Modal Styles */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: var(--space-md);
+}
+
+.modal-container {
+  background: var(--color-bg-card);
+  border-radius: var(--radius-lg);
+  max-width: 900px;
+  width: 100%;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--shadow-xl);
+}
+
+.modal-lg {
+  max-width: 1000px;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-md) var(--space-lg);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.modal-header h2 {
+  margin: 0;
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  padding: var(--space-xs);
+  cursor: pointer;
+  color: var(--color-text-muted);
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-close:hover {
+  background: var(--color-bg-hover);
+  color: var(--color-text-primary);
+}
+
+.modal-body {
+  flex: 1;
+  overflow: auto;
+  padding: 0;
+}
+
+@media (max-width: 767px) {
+  .modal-overlay {
+    padding: 0;
+  }
+
+  .modal-container {
+    max-width: 100%;
+    max-height: 100%;
+    border-radius: 0;
+    height: 100%;
+  }
+}
+</style>

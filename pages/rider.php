@@ -333,11 +333,13 @@ try {
 
     // 3. Ranking history - Get historical positions from snapshots
     $rankingHistory = [];
+    $rankingHistoryFull = []; // Full history for the graph (up to 50 entries)
     if ($rankingFunctionsLoaded) {
         try {
-            // Get ranking snapshots for last 6 months
+            // Get ALL ranking snapshots for the full graph
             $historyStmt = $db->prepare("
                 SELECT
+                    snapshot_date,
                     DATE_FORMAT(snapshot_date, '%Y-%m') as month,
                     DATE_FORMAT(snapshot_date, '%b') as month_short,
                     ranking_position,
@@ -347,16 +349,19 @@ try {
                 ORDER BY snapshot_date ASC
             ");
             $historyStmt->execute([$riderId]);
-            $snapshots = $historyStmt->fetchAll(PDO::FETCH_ASSOC);
+            $allSnapshots = $historyStmt->fetchAll(PDO::FETCH_ASSOC);
 
-            // Group by month (take latest per month)
+            // Store full history for graph (limit to 50 entries for performance)
+            $rankingHistoryFull = array_slice($allSnapshots, -50);
+
+            // Group by month for compact display (take latest per month)
             $byMonth = [];
-            foreach ($snapshots as $snap) {
+            foreach ($allSnapshots as $snap) {
                 $byMonth[$snap['month']] = $snap;
             }
             $rankingHistory = array_values($byMonth);
 
-            // Limit to last 6 entries
+            // Limit to last 6 entries for the compact view
             $rankingHistory = array_slice($rankingHistory, -6);
         } catch (Exception $e) {
             // Ignore errors
@@ -929,6 +934,97 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
             </div>
             <?php endif; ?>
         </div>
+
+        <!-- RANKING HISTORY CARD -->
+        <?php if (!empty($rankingHistoryFull) && count($rankingHistoryFull) >= 2):
+            // Use all available snapshots for the graph (up to 50)
+            $rankChartData = $rankingHistoryFull;
+            $rankPositions = array_column($rankChartData, 'ranking_position');
+            $bestRank = min($rankPositions);
+            $worstRank = max($rankPositions);
+            $currentRank = end($rankPositions);
+
+            $rankChartWidth = 320;
+            $rankChartHeight = 140;
+            $rankPaddingX = 15;
+            $rankPaddingTop = 20;
+            $rankPaddingBottom = 25;
+            $rankNumResults = count($rankChartData);
+
+            // For ranking: lower is better, so invert the Y axis
+            $rankDisplayMin = max(1, $bestRank - 2);
+            $rankDisplayMax = $worstRank + 5;
+            $rankRange = max(1, $rankDisplayMax - $rankDisplayMin);
+
+            $rankGraphHeight = $rankChartHeight - $rankPaddingTop - $rankPaddingBottom;
+            $rankXStep = $rankNumResults > 1 ? ($rankChartWidth - $rankPaddingX * 2) / ($rankNumResults - 1) : 0;
+
+            $rankDataPoints = [];
+            foreach ($rankChartData as $idx => $rh) {
+                $x = $rankPaddingX + ($idx * $rankXStep);
+                // Invert Y so lower rank (better) is at top
+                $y = $rankPaddingTop + (($rh['ranking_position'] - $rankDisplayMin) / $rankRange) * $rankGraphHeight;
+                $rankDataPoints[] = ['x' => $x, 'y' => $y, 'pos' => $rh['ranking_position'], 'date' => $rh['snapshot_date'] ?? ''];
+            }
+
+            // Smooth curve
+            $rankPathD = "M " . $rankDataPoints[0]['x'] . "," . $rankDataPoints[0]['y'];
+            for ($i = 1; $i < count($rankDataPoints); $i++) {
+                $cpX = ($rankDataPoints[$i-1]['x'] + $rankDataPoints[$i]['x']) / 2;
+                $rankPathD .= " Q " . $cpX . "," . $rankDataPoints[$i-1]['y'] . " " . $rankDataPoints[$i]['x'] . "," . $rankDataPoints[$i]['y'];
+            }
+            $rankAreaPath = $rankPathD . " L " . end($rankDataPoints)['x'] . "," . ($rankChartHeight - $rankPaddingBottom) . " L " . $rankDataPoints[0]['x'] . "," . ($rankChartHeight - $rankPaddingBottom) . " Z";
+
+            // Best position line
+            $bestY = $rankPaddingTop + (($bestRank - $rankDisplayMin) / $rankRange) * $rankGraphHeight;
+        ?>
+        <div class="card ranking-history-card">
+            <h3 class="card-section-title-sm"><i data-lucide="trending-up"></i> Rankinghistorik</h3>
+            <div class="ranking-chart-header">
+                <div class="ranking-stat">
+                    <span class="ranking-stat-value ranking-best">#<?= $bestRank ?></span>
+                    <span class="ranking-stat-label">bästa</span>
+                </div>
+                <div class="ranking-stat">
+                    <span class="ranking-stat-value">#<?= $currentRank ?></span>
+                    <span class="ranking-stat-label">nuvarande</span>
+                </div>
+            </div>
+            <div class="ranking-chart-container">
+                <svg viewBox="0 0 <?= $rankChartWidth ?> <?= $rankChartHeight ?>" class="ranking-area-chart">
+                    <defs>
+                        <linearGradient id="rankingAreaGradient" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stop-color="#ef4444" stop-opacity="0.35"/>
+                            <stop offset="100%" stop-color="#ef4444" stop-opacity="0.05"/>
+                        </linearGradient>
+                    </defs>
+                    <!-- Baseline -->
+                    <line x1="<?= $rankPaddingX ?>" y1="<?= $rankChartHeight - $rankPaddingBottom ?>" x2="<?= $rankChartWidth - $rankPaddingX ?>" y2="<?= $rankChartHeight - $rankPaddingBottom ?>" stroke="var(--color-border)" stroke-width="1"/>
+                    <!-- Best rank line -->
+                    <line x1="<?= $rankPaddingX ?>" y1="<?= $bestY ?>" x2="<?= $rankChartWidth - $rankPaddingX ?>" y2="<?= $bestY ?>" stroke="#ef4444" stroke-width="1.5" stroke-dasharray="6,4" opacity="0.6"/>
+                    <!-- Area fill -->
+                    <path d="<?= $rankAreaPath ?>" fill="url(#rankingAreaGradient)"/>
+                    <!-- Trend line -->
+                    <path d="<?= $rankPathD ?>" fill="none" stroke="#ef4444" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    <!-- Data points (show fewer points if many) -->
+                    <?php
+                    $pointInterval = max(1, floor($rankNumResults / 10)); // Show ~10 points max
+                    foreach ($rankDataPoints as $idx => $dp):
+                        $showPoint = ($idx === 0 || $idx === count($rankDataPoints) - 1 || $idx % $pointInterval === 0);
+                        if ($showPoint):
+                    ?>
+                    <circle cx="<?= $dp['x'] ?>" cy="<?= $dp['y'] ?>" r="4" fill="#ef4444" stroke="white" stroke-width="1.5"/>
+                    <?php endif; endforeach; ?>
+                    <!-- First and last labels -->
+                    <text x="<?= $rankDataPoints[0]['x'] ?>" y="<?= $rankChartHeight - $rankPaddingBottom + 12 ?>" font-size="9" fill="var(--color-text-secondary)" text-anchor="start" font-weight="500"><?= date('M y', strtotime($rankDataPoints[0]['date'])) ?></text>
+                    <text x="<?= end($rankDataPoints)['x'] ?>" y="<?= $rankChartHeight - $rankPaddingBottom + 12 ?>" font-size="9" fill="var(--color-text-secondary)" text-anchor="end" font-weight="500"><?= date('M y', strtotime(end($rankDataPoints)['date'])) ?></text>
+                </svg>
+            </div>
+            <div class="ranking-chart-footer">
+                <span class="ranking-snapshots-count"><?= $rankNumResults ?> uppdateringar</span>
+            </div>
+        </div>
+        <?php endif; ?>
 
         <!-- HIGHLIGHTS CARD -->
         <div class="card highlights-card">

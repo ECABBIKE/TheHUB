@@ -853,6 +853,70 @@
     display: block;
 }
 
+/* ============================================================================
+   RANKING HISTORY CARD
+   ============================================================================ */
+.ranking-history-card {
+    background: var(--color-bg-card);
+    border-radius: var(--radius-lg);
+    padding: var(--card-padding);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+}
+
+.ranking-chart-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-md);
+}
+
+.ranking-stat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.ranking-stat-value {
+    font-size: var(--text-xl);
+    font-weight: var(--weight-bold);
+    color: var(--color-text-primary);
+    line-height: 1.2;
+}
+
+.ranking-stat-value.ranking-best {
+    color: #ef4444;
+}
+
+.ranking-stat-label {
+    font-size: var(--text-xs);
+    color: var(--color-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+}
+
+.ranking-chart-container {
+    margin-top: var(--space-xs);
+}
+
+.ranking-area-chart {
+    width: 100%;
+    height: 140px;
+    display: block;
+}
+
+.ranking-chart-footer {
+    display: flex;
+    justify-content: center;
+    margin-top: var(--space-xs);
+}
+
+.ranking-snapshots-count {
+    font-size: var(--text-xs);
+    color: var(--color-text-muted);
+}
+
 /* Legacy form styles (keep for compatibility) */
 .form-avg-compact {
     text-align: center;
@@ -1433,6 +1497,7 @@
     .card,
     .profile-card,
     .form-card,
+    .ranking-history-card,
     .series-card,
     .ranking-card,
     .form-points-card,
