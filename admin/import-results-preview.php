@@ -54,12 +54,7 @@ $matchingStats = [
  'clubs_existing' => 0,
  'clubs_new' => 0,
  'classes' => [],
- 'potential_duplicates' => [],
- // Match type statistics (like UCI search tool)
- 'match_exact' => 0,
- 'match_fuzzy' => 0,
- 'match_partial' => 0,
- 'match_not_found' => 0
+ 'potential_duplicates' => []
 ];
 
 try {
@@ -302,169 +297,6 @@ function isFieldMappingRowPreview($row) {
 }
 
 /**
- * Normalize string for fuzzy matching (handles Swedish characters)
- * Same approach as search-uci-id.php
- */
-function normalizeStringForMatch($str) {
- $str = mb_strtolower(trim($str), 'UTF-8');
- // Replace Swedish characters
- $str = preg_replace('/[åä]/u', 'a', $str);
- $str = preg_replace('/[ö]/u', 'o', $str);
- $str = preg_replace('/[é]/u', 'e', $str);
- $str = preg_replace('/[^a-z0-9]/u', '', $str);
- return $str;
-}
-
-/**
- * Find rider with match type and confidence (like UCI search tool)
- * Returns: ['rider' => $rider, 'match_type' => 'exact'|'fuzzy'|'partial', 'confidence' => int]
- */
-function findRiderForImport($db, $firstName, $lastName, $clubName) {
- $normFirstname = normalizeStringForMatch($firstName);
- $normLastname = normalizeStringForMatch($lastName);
- $normClub = normalizeStringForMatch($clubName);
-
- // Strategy 1: Exact match with club (highest confidence)
- if (!empty($clubName)) {
-  $rider = $db->getRow(
-   "SELECT r.id, r.firstname, r.lastname, r.license_number, r.uci_id, c.name as club_name
-    FROM riders r
-    LEFT JOIN clubs c ON r.club_id = c.id
-    WHERE LOWER(r.firstname) = LOWER(?) AND LOWER(r.lastname) = LOWER(?) AND LOWER(c.name) LIKE LOWER(?)
-    ORDER BY r.license_year DESC LIMIT 1",
-   [$firstName, $lastName, '%' . $clubName . '%']
-  );
-  if ($rider) {
-   return ['rider' => $rider, 'match_type' => 'exact', 'confidence' => 100];
-  }
- }
-
- // Strategy 2: Exact name match (any club)
- $rider = $db->getRow(
-  "SELECT r.id, r.firstname, r.lastname, r.license_number, r.uci_id, c.name as club_name
-   FROM riders r
-   LEFT JOIN clubs c ON r.club_id = c.id
-   WHERE LOWER(r.firstname) = LOWER(?) AND LOWER(r.lastname) = LOWER(?)
-   ORDER BY r.license_year DESC LIMIT 1",
-  [$firstName, $lastName]
- );
- if ($rider) {
-  $confidence = empty($clubName) ? 90 : (stripos($rider['club_name'] ?? '', $clubName) !== false ? 95 : 80);
-  return ['rider' => $rider, 'match_type' => 'exact', 'confidence' => $confidence];
- }
-
- // Strategy 3: Handle double last names
- $rider = $db->getRow(
-  "SELECT r.id, r.firstname, r.lastname, r.license_number, r.uci_id, c.name as club_name
-   FROM riders r
-   LEFT JOIN clubs c ON r.club_id = c.id
-   WHERE LOWER(r.firstname) = LOWER(?)
-   AND (LOWER(r.lastname) LIKE LOWER(?) OR LOWER(?) LIKE CONCAT('%', LOWER(r.lastname), '%'))
-   ORDER BY r.license_year DESC LIMIT 1",
-  [$firstName, '%' . $lastName . '%', $lastName]
- );
- if ($rider) {
-  $confidence = 85;
-  if (!empty($clubName) && stripos($rider['club_name'] ?? '', $clubName) !== false) {
-   $confidence = 90;
-  }
-  return ['rider' => $rider, 'match_type' => 'exact', 'confidence' => $confidence];
- }
-
- // Strategy 4: If lastname has space, try matching last part only
- if (strpos($lastName, ' ') !== false) {
-  $lastnameParts = explode(' ', $lastName);
-  $lastPart = end($lastnameParts);
-  $rider = $db->getRow(
-   "SELECT r.id, r.firstname, r.lastname, r.license_number, r.uci_id, c.name as club_name
-    FROM riders r
-    LEFT JOIN clubs c ON r.club_id = c.id
-    WHERE LOWER(r.firstname) = LOWER(?) AND LOWER(r.lastname) LIKE LOWER(?)
-    ORDER BY r.license_year DESC LIMIT 1",
-   [$firstName, '%' . $lastPart]
-  );
-  if ($rider) {
-   $confidence = 80;
-   if (!empty($clubName) && stripos($rider['club_name'] ?? '', $clubName) !== false) {
-    $confidence = 85;
-   }
-   return ['rider' => $rider, 'match_type' => 'fuzzy', 'confidence' => $confidence];
-  }
- }
-
- // Strategy 5: Handle middle names
- $firstNamePart = explode(' ', $firstName)[0];
- if ($firstNamePart !== $firstName) {
-  $rider = $db->getRow(
-   "SELECT r.id, r.firstname, r.lastname, r.license_number, r.uci_id, c.name as club_name
-    FROM riders r
-    LEFT JOIN clubs c ON r.club_id = c.id
-    WHERE LOWER(r.firstname) = LOWER(?) AND LOWER(r.lastname) = LOWER(?)
-    ORDER BY r.license_year DESC LIMIT 1",
-   [$firstNamePart, $lastName]
-  );
-  if ($rider) {
-   $confidence = 80;
-   if (!empty($clubName) && stripos($rider['club_name'] ?? '', $clubName) !== false) {
-    $confidence = 85;
-   }
-   return ['rider' => $rider, 'match_type' => 'fuzzy', 'confidence' => $confidence];
-  }
- }
-
- // Strategy 6: Fuzzy match using normalized names (Swedish chars → ASCII)
- $riders = $db->getAll(
-  "SELECT r.id, r.firstname, r.lastname, r.license_number, r.uci_id, c.name as club_name
-   FROM riders r
-   LEFT JOIN clubs c ON r.club_id = c.id
-   ORDER BY r.license_year DESC"
- );
-
- $bestMatch = null;
- $bestScore = 0;
-
- foreach ($riders as $rider) {
-  $riderNormFirst = normalizeStringForMatch($rider['firstname']);
-  $riderNormLast = normalizeStringForMatch($rider['lastname']);
-
-  // Full normalized match
-  if ($riderNormFirst === $normFirstname && $riderNormLast === $normLastname) {
-   $score = 85;
-   if (!empty($normClub) && !empty($rider['club_name'])) {
-    $riderNormClub = normalizeStringForMatch($rider['club_name']);
-    if (strpos($riderNormClub, $normClub) !== false || strpos($normClub, $riderNormClub) !== false) {
-     $score = 90;
-    }
-   }
-   if ($score > $bestScore) {
-    $bestScore = $score;
-    $bestMatch = ['rider' => $rider, 'match_type' => 'fuzzy', 'confidence' => $score];
-   }
-  }
-
-  // Partial match (first 3 chars)
-  if (strlen($normFirstname) >= 3 && strlen($normLastname) >= 3) {
-   if (substr($riderNormFirst, 0, 3) === substr($normFirstname, 0, 3) &&
-     substr($riderNormLast, 0, 3) === substr($normLastname, 0, 3)) {
-    $score = 60;
-    if (!empty($normClub) && !empty($rider['club_name'])) {
-     $riderNormClub = normalizeStringForMatch($rider['club_name']);
-     if (strpos($riderNormClub, $normClub) !== false || strpos($normClub, $riderNormClub) !== false) {
-      $score = 70;
-     }
-    }
-    if ($score > $bestScore) {
-     $bestScore = $score;
-     $bestMatch = ['rider' => $rider, 'match_type' => 'partial', 'confidence' => $score];
-    }
-   }
-  }
- }
-
- return $bestMatch; // Returns null if no match found
-}
-
-/**
  * Parse CSV and analyze matching statistics
  */
 function parseAndAnalyzeCSV($filepath, $db) {
@@ -479,12 +311,7 @@ function parseAndAnalyzeCSV($filepath, $db) {
  'clubs_new' => 0,
  'clubs_list' => [],
  'classes' => [],
- 'potential_duplicates' => [],
- // Match type statistics
- 'match_exact' => 0,
- 'match_fuzzy' => 0,
- 'match_partial' => 0,
- 'match_not_found' => 0
+ 'potential_duplicates' => []
  ];
 
  $riderCache = [];
@@ -671,12 +498,7 @@ function parseAndAnalyzeCSV($filepath, $db) {
  // Add detected stage columns to stats
  $stats['stage_columns'] = $stageColumnsDetected;
 
- // DEBUG: Log the headers
- error_log("CSV HEADERS RAW: " . json_encode($rawHeader));
- error_log("CSV HEADERS MAPPED: " . json_encode($header));
-
  // Read all rows
- $rowDebugCount = 0;
  while (($row = fgetcsv($handle, 0, $delimiter)) !== false) {
  if (count($row) < 2) continue;
 
@@ -696,12 +518,6 @@ function parseAndAnalyzeCSV($filepath, $db) {
  $data[] = $rowData;
  $stats['total_rows']++;
 
- // Debug first 3 rows completely
- if ($rowDebugCount < 3) {
-  error_log("CSV ROW {$rowDebugCount} DATA: " . json_encode($rowData, JSON_UNESCAPED_UNICODE));
-  $rowDebugCount++;
- }
-
  // Check rider matching and duplicates
  $firstName = trim($rowData['firstname'] ?? '');
  $lastName = trim($rowData['lastname'] ?? '');
@@ -720,9 +536,7 @@ function parseAndAnalyzeCSV($filepath, $db) {
 
   if (!isset($riderCache[$riderKey])) {
   $rider = null;
-  $matchType = 'not_found';
-  $confidence = 0;
-  $clubNameRow = trim($rowData['club_name'] ?? '');
+  $isDuplicate = false;
 
   // Try normalized license first - check both license_number AND uci_id columns
   if (!empty($normalizedLicense)) {
@@ -733,40 +547,88 @@ function parseAndAnalyzeCSV($filepath, $db) {
    [$normalizedLicense, $normalizedLicense]
    );
 
-   if ($rider) {
-    $matchType = 'exact';
-    $confidence = 100;
-
-    // Check if it's a format duplicate (same UCI but different format)
-    if ($rider['license_number'] !== $licenseNumber && !empty($rider['license_number'])) {
-     $dupKey = $normalizedLicense;
-     if (!isset($duplicateCache[$dupKey])) {
-      $duplicateCache[$dupKey] = true;
-      $stats['potential_duplicates'][] = [
-       'csv_name' => $firstName . ' ' . $lastName,
-       'csv_license' => $licenseNumber,
-       'existing_id' => $rider['id'],
-       'existing_name' => $rider['firstname'] . ' ' . $rider['lastname'],
-       'existing_license' => $rider['license_number'],
-       'type' => 'uci_format'
-      ];
-     }
-    }
+   // Check if it's a format duplicate (same UCI but different format)
+   if ($rider && $rider['license_number'] !== $licenseNumber && !empty($rider['license_number'])) {
+   $dupKey = $normalizedLicense;
+   if (!isset($duplicateCache[$dupKey])) {
+    $duplicateCache[$dupKey] = true;
+    $stats['potential_duplicates'][] = [
+    'csv_name' => $firstName . ' ' . $lastName,
+    'csv_license' => $licenseNumber,
+    'existing_id' => $rider['id'],
+    'existing_name' => $rider['firstname'] . ' ' . $rider['lastname'],
+    'existing_license' => $rider['license_number'],
+    'type' => 'uci_format'
+    ];
+   }
    }
   }
 
-  // Try name-based matching using findRiderForImport (includes fuzzy/partial matching)
+  // Try name match if no license match - use advanced matching strategies
   if (!$rider) {
-   $matchResult = findRiderForImport($db, $firstName, $lastName, $clubNameRow);
+   $clubNameRow = trim($rowData['club_name'] ?? '');
 
-   if ($matchResult) {
-    $rider = $matchResult['rider'];
-    $matchType = $matchResult['match_type'];
-    $confidence = $matchResult['confidence'];
+   // Strategy 1: Exact name match with club (highest confidence)
+   if (!empty($clubNameRow)) {
+    $rider = $db->getRow(
+     "SELECT r.id, r.firstname, r.lastname, r.license_number, r.uci_id FROM riders r
+      LEFT JOIN clubs c ON r.club_id = c.id
+      WHERE LOWER(r.firstname) = LOWER(?)
+      AND LOWER(r.lastname) = LOWER(?)
+      AND LOWER(c.name) LIKE LOWER(?)",
+     [$firstName, $lastName, '%' . $clubNameRow . '%']
+    );
+   }
 
-    // Check UCI-ID conflicts for name matches
+   // Strategy 2: Exact name match (case-insensitive)
+   if (!$rider) {
+    $rider = $db->getRow(
+     "SELECT id, firstname, lastname, license_number, uci_id FROM riders WHERE LOWER(firstname) = LOWER(?) AND LOWER(lastname) = LOWER(?)",
+     [$firstName, $lastName]
+    );
+   }
+
+   // Strategy 3: Handle double last names
+   if (!$rider) {
+    $rider = $db->getRow(
+     "SELECT id, firstname, lastname, license_number, uci_id FROM riders
+      WHERE LOWER(firstname) = LOWER(?)
+      AND (LOWER(lastname) LIKE LOWER(?) OR LOWER(?) LIKE CONCAT('%', LOWER(lastname), '%'))",
+     [$firstName, '%' . $lastName . '%', $lastName]
+    );
+   }
+
+   // Strategy 4: If lastname has space, try matching last part only
+   if (!$rider && strpos($lastName, ' ') !== false) {
+    $lastnameParts = explode(' ', $lastName);
+    $lastPart = end($lastnameParts);
+    $rider = $db->getRow(
+     "SELECT id, firstname, lastname, license_number, uci_id FROM riders
+      WHERE LOWER(firstname) = LOWER(?) AND LOWER(lastname) = LOWER(?)",
+     [$firstName, $lastPart]
+    );
+   }
+
+   // Strategy 5: Handle middle names - try first part of firstname
+   if (!$rider) {
+    $firstNamePart = explode(' ', $firstName)[0];
+    if ($firstNamePart !== $firstName) {
+     $rider = $db->getRow(
+      "SELECT id, firstname, lastname, license_number, uci_id FROM riders
+       WHERE LOWER(firstname) = LOWER(?) AND LOWER(lastname) = LOWER(?)",
+      [$firstNamePart, $lastName]
+     );
+    }
+   }
+
+   // Only suggest duplicate if UCI-IDs don't conflict
+   // Same name + no UCI = possible duplicate
+   // Same name + same UCI = same person (not duplicate warning)
+   // Same name + different UCI = different people (NO duplicate)
+   if ($rider) {
     $existingLicense = preg_replace('/[^0-9]/', '', $rider['license_number'] ?? '');
 
+    // Check if this is a potential duplicate (both have no UCI or one is missing)
     if (empty($normalizedLicense) && empty($existingLicense)) {
      // Both have no UCI - possible duplicate
      $dupKey = strtolower($firstName . '|' . $lastName);
@@ -782,20 +644,19 @@ function parseAndAnalyzeCSV($filepath, $db) {
       ];
      }
     } elseif (!empty($normalizedLicense) && !empty($existingLicense) && $normalizedLicense !== $existingLicense) {
-     // Different UCI-IDs = different people
-     $rider = null;
-     $matchType = 'not_found';
+     // Different UCI-IDs = different people, not a duplicate
+     $rider = null; // Treat as new rider
     }
    }
   }
 
-  $riderCache[$riderKey] = $rider ? ['rider' => $rider, 'match_type' => $matchType, 'confidence' => $confidence] : false;
+  $riderCache[$riderKey] = $rider ? $rider : false;
 
   // Debug match result for first few rows
   static $matchDebugCount = 0;
   if ($matchDebugCount < 5) {
    if ($rider) {
-    error_log("PREVIEW MATCH RESULT: FOUND rider_id={$rider['id']} type={$matchType} conf={$confidence} for '{$firstName}' '{$lastName}'");
+    error_log("PREVIEW MATCH RESULT: FOUND rider_id={$rider['id']} for '{$firstName}' '{$lastName}'");
    } else {
     error_log("PREVIEW MATCH RESULT: NOT FOUND for '{$firstName}' '{$lastName}'");
    }
@@ -805,32 +666,22 @@ function parseAndAnalyzeCSV($filepath, $db) {
   if ($rider) {
    $stats['riders_existing']++;
 
-   // Track match type statistics
-   if ($matchType === 'exact') {
-    $stats['match_exact']++;
-   } elseif ($matchType === 'fuzzy') {
-    $stats['match_fuzzy']++;
-   } elseif ($matchType === 'partial') {
-    $stats['match_partial']++;
-   }
-
    // Check if this rider will get UCI-ID updated
+   // (CSV has license, rider doesn't have one)
    if (!empty($normalizedLicense) && empty($rider['license_number'])) {
     $stats['riders_will_get_uci']++;
+    // Store details for display (limit to first 50)
     if (count($stats['riders_uci_updates']) < 50) {
      $stats['riders_uci_updates'][] = [
       'csv_name' => $firstName . ' ' . $lastName,
       'csv_uci' => $licenseNumber,
       'existing_id' => $rider['id'],
-      'existing_name' => $rider['firstname'] . ' ' . $rider['lastname'],
-      'match_type' => $matchType,
-      'confidence' => $confidence
+      'existing_name' => $rider['firstname'] . ' ' . $rider['lastname']
      ];
     }
    }
   } else {
    $stats['riders_new']++;
-   $stats['match_not_found']++;
   }
   }
  }
@@ -949,44 +800,6 @@ include __DIR__ . '/components/unified-layout.php';
   <div class="stat-label">Sträckor</div>
   </div>
  </div>
-
- <!-- Match Type Stats (like UCI search tool) -->
- <?php if ($matchingStats['riders_existing'] > 0 || $matchingStats['match_not_found'] > 0): ?>
- <div class="card mb-lg">
-  <div class="card-header">
-   <h3 class="text-primary">
-    <i data-lucide="search-check"></i>
-    Matchningsresultat
-   </h3>
-  </div>
-  <div class="card-body">
-   <div class="grid grid-cols-2 gs-md-grid-cols-4 gap-md">
-    <div class="stat-card" style="background: var(--color-success); color: white;">
-     <div class="stat-number" style="color: white;"><?= $matchingStats['match_exact'] ?></div>
-     <div class="stat-label" style="color: rgba(255,255,255,0.9);">Exakt match</div>
-    </div>
-    <div class="stat-card" style="background: var(--color-warning); color: white;">
-     <div class="stat-number" style="color: white;"><?= $matchingStats['match_fuzzy'] ?></div>
-     <div class="stat-label" style="color: rgba(255,255,255,0.9);">Fuzzy match</div>
-    </div>
-    <div class="stat-card" style="background: #17a2b8; color: white;">
-     <div class="stat-number" style="color: white;"><?= $matchingStats['match_partial'] ?></div>
-     <div class="stat-label" style="color: rgba(255,255,255,0.9);">Delvis match</div>
-    </div>
-    <div class="stat-card" style="background: var(--color-danger); color: white;">
-     <div class="stat-number" style="color: white;"><?= $matchingStats['match_not_found'] ?></div>
-     <div class="stat-label" style="color: rgba(255,255,255,0.9);">Ej hittade</div>
-    </div>
-   </div>
-   <?php if ($matchingStats['match_fuzzy'] > 0 || $matchingStats['match_partial'] > 0): ?>
-   <div class="alert alert--info mt-md">
-    <i data-lucide="info"></i>
-    <strong>Info:</strong> Fuzzy- och delvisa matchningar använder normaliserade namn (å,ä,ö → a,o) och kan matcha trots små stavningsskillnader. Granska resultat noggrant.
-   </div>
-   <?php endif; ?>
-  </div>
- </div>
- <?php endif; ?>
 
  <?php if (($matchingStats['riders_will_get_uci'] ?? 0) > 0): ?>
  <div class="alert alert--success mb-lg">
