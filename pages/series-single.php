@@ -278,6 +278,9 @@ try {
 
         // Get all results for this event with series points, grouped by club and class
         // Only include riders with clubs and classes that award points
+        // Check both riders.club_id AND rider_club_seasons for club membership
+        $seriesYear = $series['year'] ?? date('Y');
+
         if ($useSeriesResults) {
             $stmt = $db->prepare("
                 SELECT
@@ -286,22 +289,24 @@ try {
                     sr.points,
                     rd.firstname,
                     rd.lastname,
-                    c.id as club_id,
-                    c.name as club_name,
+                    COALESCE(rd.club_id, rcs.club_id) as club_id,
+                    COALESCE(c.name, c2.name) as club_name,
                     cls.name as class_name,
                     cls.display_name as class_display_name
                 FROM series_results sr
                 JOIN riders rd ON sr.cyclist_id = rd.id
                 LEFT JOIN clubs c ON rd.club_id = c.id
+                LEFT JOIN rider_club_seasons rcs ON rd.id = rcs.rider_id AND rcs.season_year = ?
+                LEFT JOIN clubs c2 ON rcs.club_id = c2.id
                 LEFT JOIN classes cls ON sr.class_id = cls.id
                 WHERE sr.series_id = ? AND sr.event_id = ?
-                AND c.id IS NOT NULL
+                AND COALESCE(rd.club_id, rcs.club_id) IS NOT NULL
                 AND sr.points > 0
                 AND COALESCE(cls.series_eligible, 1) = 1
                 AND COALESCE(cls.awards_points, 1) = 1
-                ORDER BY c.id, sr.class_id, sr.points DESC
+                ORDER BY COALESCE(rd.club_id, rcs.club_id), sr.class_id, sr.points DESC
             ");
-            $stmt->execute([$seriesId, $eventId]);
+            $stmt->execute([$seriesYear, $seriesId, $eventId]);
         } else {
             // Fallback to results table
             $stmt = $db->prepare("
@@ -311,23 +316,25 @@ try {
                     r.points,
                     rd.firstname,
                     rd.lastname,
-                    c.id as club_id,
-                    c.name as club_name,
+                    COALESCE(rd.club_id, rcs.club_id) as club_id,
+                    COALESCE(c.name, c2.name) as club_name,
                     cls.name as class_name,
                     cls.display_name as class_display_name
                 FROM results r
                 JOIN riders rd ON r.cyclist_id = rd.id
                 LEFT JOIN clubs c ON rd.club_id = c.id
+                LEFT JOIN rider_club_seasons rcs ON rd.id = rcs.rider_id AND rcs.season_year = ?
+                LEFT JOIN clubs c2 ON rcs.club_id = c2.id
                 LEFT JOIN classes cls ON r.class_id = cls.id
                 WHERE r.event_id = ?
                 AND r.status = 'finished'
-                AND c.id IS NOT NULL
+                AND COALESCE(rd.club_id, rcs.club_id) IS NOT NULL
                 AND r.points > 0
                 AND COALESCE(cls.series_eligible, 1) = 1
                 AND COALESCE(cls.awards_points, 1) = 1
-                ORDER BY c.id, r.class_id, r.points DESC
+                ORDER BY COALESCE(rd.club_id, rcs.club_id), r.class_id, r.points DESC
             ");
-            $stmt->execute([$eventId]);
+            $stmt->execute([$seriesYear, $eventId]);
         }
         $eventResults = $stmt->fetchAll(PDO::FETCH_ASSOC);
 

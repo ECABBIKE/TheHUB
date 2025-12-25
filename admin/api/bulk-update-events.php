@@ -32,7 +32,7 @@ if (empty($changes)) {
 
 // Valid field values
 $validDisciplines = ['', 'ENDURO', 'DH', 'XC', 'XCO', 'XCM', 'DUAL_SLALOM', 'PUMPTRACK', 'GRAVEL', 'E-MTB'];
-$validEventLevels = ['', 'Nationell (100%)', 'Sportmotion (50%)'];
+$validEventLevels = ['', 'national', 'sportmotion'];
 $validEventFormats = ['', 'Enduro (en tid)', 'Downhill Standard', 'SweCUP Downhill', 'Dual Slalom'];
 
 try {
