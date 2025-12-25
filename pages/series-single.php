@@ -37,7 +37,7 @@ try {
     $series = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if (!$series) {
-        include HUB_V3_ROOT . '/pages/404.php';
+        include __DIR__ . '/404.php';
         return;
     }
 
@@ -434,7 +434,7 @@ try {
 }
 
 if (!$series) {
-    include HUB_V3_ROOT . '/pages/404.php';
+    include __DIR__ . '/404.php';
     return;
 }
 ?>
