@@ -15,6 +15,7 @@ header('Content-Type: application/json');
 header('Cache-Control: no-store');
 
 require_once dirname(__DIR__) . '/config.php';
+require_once dirname(__DIR__) . '/hub-config.php';
 require_once dirname(__DIR__) . '/includes/upload-avatar.php';
 
 $response = ['success' => false, 'error' => null, 'avatar_url' => null];
