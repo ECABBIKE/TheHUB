@@ -5,9 +5,11 @@
  * Öppna: https://thehub.gravityseries.se/test-club-standings.php
  */
 
-// Inkludera config för databasanslutning
-require_once __DIR__ . '/config.php';
-require_once __DIR__ . '/config/database.php';
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+
+// Inkludera hub-config för databasanslutning
+require_once __DIR__ . '/hub-config.php';
 
 $db = hub_db();
 
