@@ -452,16 +452,22 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
             $licenseNumberDigits = preg_replace('/[^0-9]/', '', $licenseNumber);
 
             if (!isset($riderCache[$riderName . '|' . $licenseNumber])) {
-                // Try to find rider by license number first (normalized)
+                // Try to find rider by license number OR uci_id first (normalized)
                 $rider = null;
                 if (!empty($licenseNumberDigits)) {
-                    // Try exact match with normalized number (compare digits only)
+                    // Try match with normalized number in license_number OR uci_id (compare digits only)
                     $rider = $db->getRow(
-                        "SELECT id FROM riders WHERE REPLACE(REPLACE(license_number, ' ', ''), '-', '') = ?",
-                        [$licenseNumberDigits]
+                        "SELECT id, license_number, uci_id FROM riders
+                         WHERE REPLACE(REPLACE(license_number, ' ', ''), '-', '') = ?
+                            OR REPLACE(REPLACE(uci_id, ' ', ''), '-', '') = ?",
+                        [$licenseNumberDigits, $licenseNumberDigits]
                     );
                     if ($rider) {
                         $matching_stats['riders_found']++;
+                        // If matched via uci_id but license_number is empty/different, update it
+                        if (!empty($licenseNumber) && empty($rider['license_number'])) {
+                            $db->update('riders', ['license_number' => $licenseNumber], 'id = ?', [$rider['id']]);
+                        }
                     }
                 }
 
@@ -469,7 +475,7 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
                 if (!$rider) {
                     // First try exact match
                     $rider = $db->getRow(
-                        "SELECT id, license_number FROM riders WHERE LOWER(firstname) = LOWER(?) AND LOWER(lastname) = LOWER(?)",
+                        "SELECT id, license_number, uci_id FROM riders WHERE LOWER(firstname) = LOWER(?) AND LOWER(lastname) = LOWER(?)",
                         [trim($data['firstname']), trim($data['lastname'])]
                     );
 
@@ -481,7 +487,7 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
                         // Try matching with first part of firstname (handle middle names)
                         $firstNamePart = explode(' ', $firstName)[0];
                         $rider = $db->getRow(
-                            "SELECT id, license_number FROM riders
+                            "SELECT id, license_number, uci_id FROM riders
                              WHERE (LOWER(firstname) LIKE LOWER(?) OR LOWER(firstname) = LOWER(?))
                              AND LOWER(lastname) = LOWER(?)",
                             [$firstNamePart . '%', $firstNamePart, $lastName]
@@ -491,12 +497,19 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
                     if ($rider) {
                         $matching_stats['riders_found']++;
 
-                        // If we found by name and import has UCI ID but rider doesn't - update rider
-                        if (!empty($licenseNumber) && empty($rider['license_number'])) {
-                            $db->update('riders', [
-                                'license_number' => $licenseNumber
-                            ], 'id = ?', [$rider['id']]);
-                            $matching_stats['riders_updated_with_uci'] = ($matching_stats['riders_updated_with_uci'] ?? 0) + 1;
+                        // If we found by name and import has UCI ID but rider doesn't have it in either field
+                        if (!empty($licenseNumber)) {
+                            $hasLicense = !empty($rider['license_number']);
+                            $hasUciId = !empty($rider['uci_id']);
+                            $importedDigits = preg_replace('/[^0-9]/', '', $licenseNumber);
+                            $existingLicenseDigits = preg_replace('/[^0-9]/', '', $rider['license_number'] ?? '');
+                            $existingUciDigits = preg_replace('/[^0-9]/', '', $rider['uci_id'] ?? '');
+
+                            // Update license_number if empty and not matching uci_id
+                            if (!$hasLicense && $importedDigits !== $existingUciDigits) {
+                                $db->update('riders', ['license_number' => $licenseNumber], 'id = ?', [$rider['id']]);
+                                $matching_stats['riders_updated_with_uci'] = ($matching_stats['riders_updated_with_uci'] ?? 0) + 1;
+                            }
                         }
                     }
                 }
