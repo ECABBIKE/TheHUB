@@ -685,7 +685,6 @@ skip_club_standings:
                             <tr>
                                 <th style="width: 60px;">Rank</th>
                                 <th>Klubb</th>
-                                <th class="table-col-hide-portrait">Ort</th>
                                 <th class="text-right">Poang</th>
                                 <th class="text-right table-col-hide-portrait">Deltagare</th>
                                 <th class="text-right table-col-hide-portrait">Events</th>
@@ -707,8 +706,7 @@ skip_club_standings:
                                         <?= $clubPos ?>
                                     <?php endif; ?>
                                 </td>
-                                <td><strong><?= htmlspecialchars($club['club_name']) ?></strong></td>
-                                <td class="text-muted table-col-hide-portrait"><?= htmlspecialchars($club['club_city'] ?? '-') ?></td>
+                                <td><a href="/club/<?= $club['club_id'] ?>" class="text-link"><strong><?= htmlspecialchars($club['club_name']) ?></strong></a></td>
                                 <td class="text-right"><strong><?= number_format($club['total_points']) ?></strong></td>
                                 <td class="text-right table-col-hide-portrait"><?= $club['rider_count'] ?></td>
                                 <td class="text-right table-col-hide-portrait"><?= $club['events_with_points'] ?></td>
