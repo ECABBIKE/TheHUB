@@ -486,14 +486,22 @@ try {
     // Prefer avatar_url (from ImgBB), fallback to profile_image_url
     $profileImageUrl = $rider['avatar_url'] ?? $rider['profile_image_url'] ?? null;
 
-    // If no stored image and avatar helper is available, use UI Avatars as fallback
-    if (!$profileImageUrl && function_exists('get_rider_avatar')) {
-        $profileImageUrl = get_rider_avatar($rider, 200);
-    }
-
+    // Calculate initials for fallback
     $initials = function_exists('get_rider_initials')
         ? get_rider_initials($rider)
         : strtoupper(substr($rider['firstname'] ?? '', 0, 1) . substr($rider['lastname'] ?? '', 0, 1));
+
+    // If no stored image, use UI Avatars fallback
+    if (!$profileImageUrl) {
+        if (function_exists('get_rider_avatar')) {
+            $profileImageUrl = get_rider_avatar($rider, 200);
+        } else {
+            // Fallback: Generate UI Avatars URL directly
+            $fullNameForAvatar = trim(($rider['firstname'] ?? '') . ' ' . ($rider['lastname'] ?? ''));
+            if (empty($fullNameForAvatar)) $fullNameForAvatar = 'Rider';
+            $profileImageUrl = 'https://ui-avatars.com/api/?name=' . urlencode($fullNameForAvatar) . '&size=200&background=61CE70&color=ffffff&bold=true&format=svg';
+        }
+    }
 
     // Check license status
     $hasLicense = !empty($rider['license_type']);
