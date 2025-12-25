@@ -390,7 +390,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         $message = 'Du måste välja en klubb';
         $messageType = 'error';
     } else {
-        $result = setRiderClubForYear($db, $id, $updateClubId, $updateYear);
+        // Super admin can force update locked years
+        $force = hasRole('super_admin');
+        $result = setRiderClubForYear($db, $id, $updateClubId, $updateYear, $force);
         if ($result['success']) {
             $message = $result['message'];
             $messageType = 'success';
