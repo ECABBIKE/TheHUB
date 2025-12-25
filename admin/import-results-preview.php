@@ -671,7 +671,12 @@ function parseAndAnalyzeCSV($filepath, $db) {
  // Add detected stage columns to stats
  $stats['stage_columns'] = $stageColumnsDetected;
 
+ // DEBUG: Log the headers
+ error_log("CSV HEADERS RAW: " . json_encode($rawHeader));
+ error_log("CSV HEADERS MAPPED: " . json_encode($header));
+
  // Read all rows
+ $rowDebugCount = 0;
  while (($row = fgetcsv($handle, 0, $delimiter)) !== false) {
  if (count($row) < 2) continue;
 
@@ -690,6 +695,12 @@ function parseAndAnalyzeCSV($filepath, $db) {
  $rowData = array_combine($header, $row);
  $data[] = $rowData;
  $stats['total_rows']++;
+
+ // Debug first 3 rows completely
+ if ($rowDebugCount < 3) {
+  error_log("CSV ROW {$rowDebugCount} DATA: " . json_encode($rowData, JSON_UNESCAPED_UNICODE));
+  $rowDebugCount++;
+ }
 
  // Check rider matching and duplicates
  $firstName = trim($rowData['firstname'] ?? '');
