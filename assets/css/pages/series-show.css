@@ -558,3 +558,72 @@ input.filter-select {
         font-size: var(--text-sm);
     }
 }
+
+/* Club Detail Button */
+.col-action {
+    width: 48px;
+    text-align: center;
+}
+
+.btn-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: var(--radius-full);
+    background: var(--color-bg-surface);
+    border: 1px solid var(--color-border);
+    color: var(--color-text-muted);
+    text-decoration: none;
+    transition: all var(--transition-fast);
+}
+
+.btn-icon:hover {
+    background: var(--color-accent);
+    border-color: var(--color-accent);
+    color: white;
+}
+
+.btn-icon i, .btn-icon svg {
+    width: 16px;
+    height: 16px;
+}
+
+/* Club Result Item - make clickable */
+.club-result-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    padding: var(--space-md);
+    border-bottom: 1px solid var(--color-border-light);
+    text-decoration: none;
+    color: inherit;
+    transition: background var(--transition-fast);
+}
+
+.club-result-item:hover {
+    background: var(--color-bg-hover);
+}
+
+.result-action {
+    color: var(--color-text-muted);
+    margin-left: auto;
+}
+
+.result-action i, .result-action svg {
+    width: 20px;
+    height: 20px;
+}
+
+.club-result-item:hover .result-action {
+    color: var(--color-accent);
+}
+
+/* Hide action column on mobile portrait */
+@media (max-width: 599px) and (orientation: portrait) {
+    .standings-table .col-action,
+    .standings-table th.col-action {
+        display: none;
+    }
+}

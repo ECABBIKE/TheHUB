@@ -686,6 +686,7 @@ if (!$series) {
           <?php $eventNum++; ?>
           <?php endforeach; ?>
           <th class="col-total">Totalt</th>
+          <th class="col-action"></th>
         </tr>
       </thead>
       <tbody>
@@ -713,6 +714,11 @@ if (!$series) {
           <td class="col-total">
             <strong><?= $club['total_points'] ?></strong>
           </td>
+          <td class="col-action">
+            <a href="/club-points?club_id=<?= $club['club_id'] ?>&series_id=<?= $seriesId ?>" class="btn-icon" title="Visa detaljer" onclick="event.stopPropagation()">
+              <i data-lucide="eye"></i>
+            </a>
+          </td>
         </tr>
         <!-- Hidden club riders sub-rows -->
         <?php foreach ($club['riders'] as $rIdx => $clubRider): ?>
@@ -728,6 +734,7 @@ if (!$series) {
           <td class="col-event" class="col-fixed"></td>
           <?php endforeach; ?>
           <td class="col-total text-muted"><?= $clubRider['points'] ?> p</td>
+          <td class="col-action"></td>
         </tr>
         <?php endforeach; ?>
         <?php endforeach; ?>
@@ -739,7 +746,7 @@ if (!$series) {
   <div class="result-list">
     <?php $clubPos = 0; ?>
     <?php foreach ($clubStandings as $club): $clubPos++; ?>
-    <div class="club-result-item">
+    <a href="/club-points?club_id=<?= $club['club_id'] ?>&series_id=<?= $seriesId ?>" class="club-result-item">
       <div class="result-place <?= $clubPos <= 3 ? 'top-3' : '' ?>">
         <?php if ($clubPos == 1): ?>
           <img src="/assets/icons/medal-1st.svg" alt="1:a" class="medal-icon-mobile">
@@ -759,7 +766,10 @@ if (!$series) {
         <div class="points-big"><?= $club['total_points'] ?></div>
         <div class="points-label">poäng</div>
       </div>
-    </div>
+      <div class="result-action">
+        <i data-lucide="eye"></i>
+      </div>
+    </a>
     <!-- Mobile club riders -->
     <div class="club-riders-mobile" data-mobile-club="<?= htmlspecialchars($club['club_name']) ?>">
       <?php foreach (array_slice($club['riders'], 0, 5) as $clubRider): ?>

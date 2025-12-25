@@ -35,20 +35,17 @@ $riderDetails = $detail['rider_details'];
 // Get series info
 $series = $db->getRow("SELECT * FROM series WHERE id = ?", [$seriesId]);
 
-$pageTitle = $club['name'] . ' - Klubbpoäng';
-$pageType = 'admin';
-include __DIR__ . '/../includes/layout-header.php';
+$page_title = $club['name'] . ' - Klubbpoäng';
+include __DIR__ . '/components/unified-layout.php';
 ?>
 
-<main class="main-content">
- <div class="container">
- <!-- Back Button -->
- <div class="mb-lg">
+<!-- Back Button -->
+<div class="mb-lg">
   <a href="/admin/club-points.php?series_id=<?= $seriesId ?>" class="btn btn--secondary btn--sm">
-  <i data-lucide="arrow-left"></i>
-  Tillbaka till ranking
+    <i data-lucide="arrow-left"></i>
+    Tillbaka till ranking
   </a>
- </div>
+</div>
 
  <!-- Header -->
  <div class="flex items-center gap-lg mb-lg">
@@ -248,8 +245,6 @@ include __DIR__ . '/../includes/layout-header.php';
   </table>
   </div>
  </div>
- <?php endif; ?>
- </div>
-</main>
+<?php endif; ?>
 
-<?php include __DIR__ . '/../includes/layout-footer.php'; ?>
+<?php include __DIR__ . '/components/unified-layout-footer.php'; ?>
