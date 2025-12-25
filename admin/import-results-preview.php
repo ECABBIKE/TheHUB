@@ -716,7 +716,7 @@ include __DIR__ . '/components/unified-layout.php';
  </div>
 
  <!-- Stats Cards -->
- <div class="grid grid-cols-2 gs-md-grid-cols-5 gap-lg mb-lg">
+ <div class="grid grid-cols-2 gs-md-grid-cols-4 gap-lg mb-lg">
   <div class="stat-card">
   <i data-lucide="file-text" class="icon-lg text-primary mb-md"></i>
   <div class="stat-number"><?= $matchingStats['total_rows'] ?></div>
@@ -733,16 +733,18 @@ include __DIR__ . '/components/unified-layout.php';
   <div class="stat-label">Nya deltagare</div>
   </div>
   <div class="stat-card">
-  <i data-lucide="id-card" class="icon-lg text-accent mb-md"></i>
-  <div class="stat-number"><?= $matchingStats['riders_will_get_uci'] ?? 0 ?></div>
-  <div class="stat-label">Får UCI-ID</div>
-  </div>
-  <div class="stat-card">
   <i data-lucide="timer" class="icon-lg text-primary mb-md"></i>
   <div class="stat-number"><?= count($matchingStats['stage_columns'] ?? []) ?></div>
   <div class="stat-label">Sträckor</div>
   </div>
  </div>
+
+ <?php if (($matchingStats['riders_will_get_uci'] ?? 0) > 0): ?>
+ <div class="alert alert--success mb-lg">
+  <i data-lucide="id-card"></i>
+  <strong><?= $matchingStats['riders_will_get_uci'] ?> deltagare</strong> kommer få sitt UCI-ID ifyllt automatiskt vid import.
+ </div>
+ <?php endif; ?>
 
  <!-- Detected Stage Columns -->
  <?php if (!empty($matchingStats['stage_columns'])): ?>
