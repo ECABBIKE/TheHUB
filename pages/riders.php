@@ -40,14 +40,20 @@ try {
                 c.gender,
                 c.license_number,
                 c.license_type,
-                cl.name as club_name,
-                cl.id as club_id,
+                COALESCE(cl.name, cl_season.name) as club_name,
+                COALESCE(cl.id, rcs_latest.club_id) as club_id,
                 COUNT(DISTINCT r.id) as total_races,
                 COUNT(CASE WHEN r.position <= 3 THEN 1 END) as podiums,
                 MIN(r.position) as best_position,
                 SUM(COALESCE(r.points, 0)) as total_points
             FROM riders c
             LEFT JOIN clubs cl ON c.club_id = cl.id
+            LEFT JOIN (
+                SELECT rider_id, club_id
+                FROM rider_club_seasons rcs1
+                WHERE season_year = (SELECT MAX(season_year) FROM rider_club_seasons rcs2 WHERE rcs2.rider_id = rcs1.rider_id)
+            ) rcs_latest ON rcs_latest.rider_id = c.id AND c.club_id IS NULL
+            LEFT JOIN clubs cl_season ON rcs_latest.club_id = cl_season.id
             {$joinType} JOIN results r ON c.id = r.cyclist_id
             WHERE c.active = 1
               AND (c.firstname LIKE ? OR c.lastname LIKE ? OR cl.name LIKE ?
@@ -68,14 +74,20 @@ try {
                 c.gender,
                 c.license_number,
                 c.license_type,
-                cl.name as club_name,
-                cl.id as club_id,
+                COALESCE(cl.name, cl_season.name) as club_name,
+                COALESCE(cl.id, rcs_latest.club_id) as club_id,
                 COUNT(DISTINCT r.id) as total_races,
                 COUNT(CASE WHEN r.position <= 3 THEN 1 END) as podiums,
                 MIN(r.position) as best_position,
                 SUM(COALESCE(r.points, 0)) as total_points
             FROM riders c
             LEFT JOIN clubs cl ON c.club_id = cl.id
+            LEFT JOIN (
+                SELECT rider_id, club_id
+                FROM rider_club_seasons rcs1
+                WHERE season_year = (SELECT MAX(season_year) FROM rider_club_seasons rcs2 WHERE rcs2.rider_id = rcs1.rider_id)
+            ) rcs_latest ON rcs_latest.rider_id = c.id AND c.club_id IS NULL
+            LEFT JOIN clubs cl_season ON rcs_latest.club_id = cl_season.id
             {$joinType} JOIN results r ON c.id = r.cyclist_id
             WHERE c.active = 1
             GROUP BY c.id

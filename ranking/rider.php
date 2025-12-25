@@ -25,11 +25,19 @@ if (!$riderId) {
  exit;
 }
 
-// Get rider information
+// Get rider information (with club fallback to rider_club_seasons)
 $rider = $db->getRow("
- SELECT r.*, c.name as club_name, c.id as club_id
+ SELECT r.*,
+        COALESCE(c.name, c_season.name) as club_name,
+        COALESCE(c.id, rcs_latest.club_id) as club_id
  FROM riders r
  LEFT JOIN clubs c ON r.club_id = c.id
+ LEFT JOIN (
+     SELECT rider_id, club_id
+     FROM rider_club_seasons rcs1
+     WHERE season_year = (SELECT MAX(season_year) FROM rider_club_seasons rcs2 WHERE rcs2.rider_id = rcs1.rider_id)
+ ) rcs_latest ON rcs_latest.rider_id = r.id AND r.club_id IS NULL
+ LEFT JOIN clubs c_season ON rcs_latest.club_id = c_season.id
  WHERE r.id = ?
 ", [$riderId]);
 
