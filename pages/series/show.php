@@ -913,22 +913,22 @@ document.addEventListener('keydown', function(e) {
     align-items: center;
     justify-content: center;
     gap: var(--space-sm);
-    padding: var(--space-md);
-    background: var(--color-star);
-    border: 2px solid var(--color-border);
-    border-radius: var(--radius-md);
-    font-size: 1rem;
+    padding: var(--space-sm) var(--space-md);
+    background: white;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    font-size: 0.875rem;
     font-weight: 600;
     color: var(--color-primary);
     cursor: pointer;
     transition: all 0.15s ease;
 }
 .standings-toggle-btn i {
-    width: 20px;
-    height: 20px;
+    width: 18px;
+    height: 18px;
 }
 .standings-toggle-btn:hover {
-    background: var(--color-star-fade);
+    background: #f5f5f5;
     border-color: var(--color-secondary);
 }
 .standings-toggle-btn.active {
@@ -936,22 +936,12 @@ document.addEventListener('keydown', function(e) {
     border-color: var(--color-primary);
     color: white;
 }
-@media (max-width: 599px) {
-    .standings-toggle-btn {
-        padding: var(--space-sm) var(--space-md);
-        font-size: 0.875rem;
-    }
-    .standings-toggle-btn i {
-        width: 18px;
-        height: 18px;
-    }
-}
 
 /* Stats Grid for Club Standings */
 .stats-grid {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
-    gap: var(--space-md);
+    gap: var(--space-sm);
 }
 @media (max-width: 599px) {
     .stats-grid {
@@ -959,19 +949,20 @@ document.addEventListener('keydown', function(e) {
     }
 }
 .stat-card {
-    background: var(--color-star);
+    background: white;
     border: 1px solid var(--color-border);
-    border-radius: var(--radius-md);
-    padding: var(--space-md);
+    border-radius: var(--radius-sm);
+    padding: var(--space-sm) var(--space-md);
     text-align: center;
 }
 .stat-value {
-    font-size: 1.75rem;
+    font-size: 1.25rem;
     font-weight: 700;
     color: var(--color-primary);
+    line-height: 1.2;
 }
 .stat-label {
-    font-size: 0.875rem;
+    font-size: 0.75rem;
     color: var(--color-text);
 }
 
