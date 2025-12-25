@@ -276,6 +276,25 @@ include __DIR__ . '/components/unified-layout.php';
             </a>
         </div>
     </div>
+
+    <!-- Auto-merge UCI Duplicates -->
+    <div class="tool-card">
+        <div class="tool-card-header">
+            <div class="tool-icon danger">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m8 6 4-4 4 4"/><path d="M12 2v10.3a4 4 0 0 1-1.172 2.872L4 22"/><path d="m20 22-5-5"/></svg>
+            </div>
+            <div>
+                <h4 class="tool-title">Auto-merge UCI Dubletter</h4>
+                <p class="tool-description">Automatiskt slå ihop deltagare med samma UCI-ID. Behåller den med flest resultat.</p>
+            </div>
+        </div>
+        <div class="tool-actions">
+            <a href="/admin/auto-merge-duplicates" class="btn-admin btn-admin-danger flex-1">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-sm"><path d="m8 6 4-4 4 4"/><path d="M12 2v10.3"/></svg>
+                Auto-merge UCI
+            </a>
+        </div>
+    </div>
 </div>
 
 <h3 class="section-title">Klubbhantering</h3>
