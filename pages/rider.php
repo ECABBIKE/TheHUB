@@ -586,20 +586,38 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
     <!-- LEFT COLUMN: Ranking, Form, Series -->
     <div class="left-column">
 
-        <!-- RANKING CARD - Dashboard Style (matches Form card) -->
-        <?php if ($rankingPosition):
-            $hasRankingChart = !empty($rankingHistoryFull) && count($rankingHistoryFull) >= 2;
-            if ($hasRankingChart) {
+        <!-- RANKING CARD with integrated graph -->
+        <div class="card ranking-card">
+            <h3 class="card-section-title-sm"><i data-lucide="bar-chart-2"></i> Ranking</h3>
+            <?php if ($rankingPosition):
+                $totalRankedRiders = 100;
+                try {
+                    $countStmt = $db->prepare("SELECT COUNT(DISTINCT rider_id) as cnt FROM ranking_snapshots WHERE discipline = 'GRAVITY'");
+                    $countStmt->execute();
+                    $countResult = $countStmt->fetch(PDO::FETCH_ASSOC);
+                    if ($countResult && $countResult['cnt'] > 0) {
+                        $totalRankedRiders = $countResult['cnt'];
+                    }
+                } catch (Exception $e) {}
+            ?>
+            <div class="ranking-position-huge">#<?= $rankingPosition ?></div>
+            <div class="ranking-points-display">
+                <span class="ranking-points-value"><?= number_format($rankingPoints, 1) ?></span>
+                <span class="ranking-points-label">poäng</span>
+            </div>
+
+            <?php if (!empty($rankingHistoryFull) && count($rankingHistoryFull) >= 2):
+                // Ranking history graph (up to 50 events)
                 $rankChartData = $rankingHistoryFull;
                 $rankPositions = array_column($rankChartData, 'ranking_position');
                 $bestRank = min($rankPositions);
                 $worstRank = max($rankPositions);
 
                 $rankChartWidth = 400;
-                $rankChartHeight = 130;
-                $rankPaddingX = 15;
-                $rankPaddingTop = 20;
-                $rankPaddingBottom = 15;
+                $rankChartHeight = 100;
+                $rankPaddingX = 20;
+                $rankPaddingTop = 15;
+                $rankPaddingBottom = 25;
                 $rankNumResults = count($rankChartData);
 
                 $rankDisplayMin = max(1, $bestRank - 2);
@@ -622,48 +640,31 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
                     $rankPathD .= " Q " . $cpX . "," . $rankDataPoints[$i-1]['y'] . " " . $rankDataPoints[$i]['x'] . "," . $rankDataPoints[$i]['y'];
                 }
                 $rankAreaPath = $rankPathD . " L " . end($rankDataPoints)['x'] . "," . ($rankChartHeight - $rankPaddingBottom) . " L " . $rankDataPoints[0]['x'] . "," . ($rankChartHeight - $rankPaddingBottom) . " Z";
-            }
-        ?>
-        <div class="dashboard-chart-card dashboard-chart-card--red">
-            <div class="dashboard-chart-header">
-                <div class="dashboard-chart-title">Ranking</div>
-                <div class="dashboard-chart-stats">
-                    <div class="dashboard-stat">
-                        <span class="dashboard-stat-value dashboard-stat-value--red">#<?= $rankingPosition ?></span>
-                        <span class="dashboard-stat-label">Position</span>
-                    </div>
-                    <div class="dashboard-stat">
-                        <span class="dashboard-stat-value"><?= number_format($rankingPoints, 0) ?></span>
-                        <span class="dashboard-stat-label">Poäng</span>
-                    </div>
-                </div>
-            </div>
-            <?php if ($hasRankingChart): ?>
-            <div class="dashboard-chart-body">
-                <svg viewBox="0 0 <?= $rankChartWidth ?> <?= $rankChartHeight ?>" preserveAspectRatio="none" class="dashboard-chart-svg">
+            ?>
+            <div class="ranking-graph-container">
+                <svg viewBox="0 0 <?= $rankChartWidth ?> <?= $rankChartHeight ?>" preserveAspectRatio="none" class="ranking-graph-svg">
                     <defs>
                         <linearGradient id="rankingGradient" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stop-color="#ef4444" stop-opacity="0.4"/>
+                            <stop offset="0%" stop-color="#ef4444" stop-opacity="0.35"/>
                             <stop offset="100%" stop-color="#ef4444" stop-opacity="0.05"/>
                         </linearGradient>
                     </defs>
                     <path d="<?= $rankAreaPath ?>" fill="url(#rankingGradient)"/>
-                    <path d="<?= $rankPathD ?>" fill="none" stroke="#ef4444" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="<?= $rankPathD ?>" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                     <?php foreach ($rankDataPoints as $idx => $dp): ?>
-                    <circle cx="<?= $dp['x'] ?>" cy="<?= $dp['y'] ?>" r="4" fill="#ef4444" stroke="white" stroke-width="1.5"/>
-                    <text x="<?= $dp['x'] ?>" y="<?= $dp['y'] - 8 ?>" font-size="9" fill="var(--color-text-secondary)" text-anchor="middle" font-weight="600"><?= $dp['pos'] ?></text>
+                    <circle cx="<?= $dp['x'] ?>" cy="<?= $dp['y'] ?>" r="3" fill="#ef4444" stroke="white" stroke-width="1"/>
+                    <text x="<?= $dp['x'] ?>" y="<?= $dp['y'] - 6 ?>" font-size="7" fill="var(--color-text-secondary)" text-anchor="middle" font-weight="600"><?= $dp['pos'] ?></text>
                     <?php endforeach; ?>
                 </svg>
             </div>
             <?php endif; ?>
-            <div class="dashboard-chart-footer">
-                <button type="button" class="btn-calc-ranking-inline" onclick="openRankingModal()">
-                    <i data-lucide="calculator"></i>
-                    <span>Visa uträkning</span>
-                </button>
-            </div>
+
+            <button type="button" class="btn-calc-ranking" onclick="openRankingModal()">
+                <i data-lucide="calculator"></i>
+                <span>Visa uträkning</span>
+            </button>
+            <?php endif; ?>
         </div>
-        <?php endif; ?>
 
         <!-- FORM CARD - Dashboard Style -->
         <?php if ($hasCompetitiveResults && !empty($formResults)):

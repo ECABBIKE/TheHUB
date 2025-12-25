@@ -6,24 +6,22 @@
 /* Main Layout Grid */
 .rider-profile-layout {
     display: grid;
-    grid-template-columns: 1fr 320px;
-    gap: var(--space-xl);
-    margin-bottom: var(--space-xl);
-    align-items: start;
+    grid-template-columns: 60% 40%;
+    gap: var(--space-lg);
+    margin-bottom: var(--space-lg);
 }
 
 .left-column {
     display: flex;
     flex-direction: column;
-    gap: var(--space-md);
+    gap: var(--space-lg);
 }
 
 .right-column {
     display: flex;
     flex-direction: column;
-    gap: var(--space-md);
-    position: sticky;
-    top: calc(var(--header-height, 60px) + var(--space-md));
+    gap: var(--space-lg);
+    align-content: start;
 }
 
 /* ============================================================================
@@ -36,8 +34,7 @@
     overflow: hidden;
     display: flex;
     flex-direction: column;
-    box-shadow: var(--shadow-md);
-    border: 1px solid var(--color-border);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
 }
 
 .profile-photo-hero {
@@ -54,10 +51,9 @@
     object-position: center top;
 }
 
-/* Initials Avatar - Compact banner style (no photo) */
+/* Initials Avatar */
 .profile-photo-hero.initials-bg {
-    aspect-ratio: 8 / 1;
-    background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 }
 
 .profile-initials,
@@ -67,12 +63,11 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.5rem;
+    font-size: 4rem;
     font-weight: 700;
     color: white;
-    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
-    background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
-    letter-spacing: 0.1em;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 }
 
 .profile-photo-placeholder {
@@ -167,48 +162,28 @@
 }
 
 .social-icon-simple {
-    width: 28px;
-    height: 28px;
+    width: 24px;
+    height: 24px;
     display: flex;
     align-items: center;
     justify-content: center;
     text-decoration: none;
-    transition: transform 0.15s ease, opacity 0.15s ease;
+    transition: transform 0.15s ease;
 }
 
 .social-icon-simple svg {
-    width: 22px;
-    height: 22px;
-    fill: currentColor;
+    width: 20px;
+    height: 20px;
+    fill: #333;
 }
 
 .social-icon-simple:hover {
     transform: scale(1.15);
-    opacity: 0.8;
 }
 
-/* Empty/inactive social icons */
 .social-icon-simple.empty {
-    opacity: 0.2;
+    opacity: 0.25;
     pointer-events: none;
-    color: #999;
-}
-
-/* Active social icons with brand colors */
-.social-icon-simple:not(.empty)[title="Instagram"] {
-    color: #E4405F;
-}
-.social-icon-simple:not(.empty)[title="Strava"] {
-    color: #FC4C02;
-}
-.social-icon-simple:not(.empty)[title="Facebook"] {
-    color: #1877F2;
-}
-.social-icon-simple:not(.empty)[title="YouTube"] {
-    color: #FF0000;
-}
-.social-icon-simple:not(.empty)[title="TikTok"] {
-    color: #000000;
 }
 
 /* Action Buttons - Outline Style */
@@ -1904,22 +1879,15 @@
 @media (max-width: 767px) {
     .rider-profile-layout {
         grid-template-columns: 1fr;
-        gap: var(--space-md);
     }
 
     /* Mobile: Profile card (in right-column) comes FIRST */
     .right-column {
         order: 1;
-        position: static;
     }
 
     .left-column {
         order: 2;
-    }
-
-    /* Compact initials on mobile */
-    .profile-photo-hero.initials-bg {
-        aspect-ratio: 6 / 1;
     }
 
     /* Edge-to-edge design för alla kort på mobil - styrs av --container-padding från branding */
