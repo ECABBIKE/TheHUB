@@ -291,6 +291,10 @@ function isFieldMappingRowPreview($row) {
  */
 function parseAndAnalyzeCSV($filepath, $db) {
  $data = [];
+ // Quick DB sanity check
+ $riderCount = $db->getRow("SELECT COUNT(*) as cnt FROM riders");
+ $sampleRider = $db->getRow("SELECT id, firstname, lastname, license_number FROM riders ORDER BY id DESC LIMIT 1");
+
  $stats = [
  'total_rows' => 0,
  'riders_existing' => 0,
@@ -300,7 +304,9 @@ function parseAndAnalyzeCSV($filepath, $db) {
  'clubs_list' => [],
  'classes' => [],
  'potential_duplicates' => [],
- 'debug_rows' => [] // Debug info for first rows
+ 'debug_rows' => [],
+ 'db_rider_count' => $riderCount['cnt'] ?? 0,
+ 'db_sample_rider' => $sampleRider ? "{$sampleRider['firstname']} {$sampleRider['lastname']} (ID:{$sampleRider['id']})" : 'INGEN'
  ];
 
  $riderCache = [];
@@ -540,24 +546,14 @@ function parseAndAnalyzeCSV($filepath, $db) {
   $isDuplicate = false;
 
   // Try normalized license first - check both license_number AND uci_id columns
-  // Remove ALL non-digits in SQL using REGEXP_REPLACE (MySQL 8+) or multiple REPLACE
+  // Use multiple REPLACE to handle spaces, hyphens, dots (works on all MySQL versions)
   if (!empty($normalizedLicense)) {
    $rider = $db->getRow(
    "SELECT id, firstname, lastname, license_number, uci_id FROM riders
-    WHERE REGEXP_REPLACE(COALESCE(license_number, ''), '[^0-9]', '') = ?
-       OR REGEXP_REPLACE(COALESCE(uci_id, ''), '[^0-9]', '') = ?",
+    WHERE REPLACE(REPLACE(REPLACE(COALESCE(license_number, ''), ' ', ''), '-', ''), '.', '') = ?
+       OR REPLACE(REPLACE(REPLACE(COALESCE(uci_id, ''), ' ', ''), '-', ''), '.', '') = ?",
    [$normalizedLicense, $normalizedLicense]
    );
-
-   // Fallback if REGEXP_REPLACE failed (older MySQL)
-   if (!$rider) {
-    $rider = $db->getRow(
-    "SELECT id, firstname, lastname, license_number, uci_id FROM riders
-     WHERE REPLACE(REPLACE(REPLACE(REPLACE(license_number, ' ', ''), '-', ''), '.', ''), ' ', '') = ?
-        OR REPLACE(REPLACE(REPLACE(REPLACE(uci_id, ' ', ''), '-', ''), '.', ''), ' ', '') = ?",
-    [$normalizedLicense, $normalizedLicense]
-    );
-   }
    if ($debugInfo && $rider) {
     $debugInfo['matched'] = true;
     $debugInfo['match_method'] = 'uci_id';
@@ -840,6 +836,10 @@ include __DIR__ . '/components/unified-layout.php';
    </h3>
   </div>
   <div class="card-body">
+   <div class="alert alert-info mb-md">
+   <strong>DB-status:</strong> <?= $matchingStats['db_rider_count'] ?? '?' ?> riders i databasen.
+   Senaste: <?= h($matchingStats['db_sample_rider'] ?? 'okänd') ?>
+   </div>
    <div class="table-responsive">
    <table class="table table-sm">
     <thead>
