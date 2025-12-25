@@ -500,71 +500,16 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
                     }
                 }
 
-                // Try by name if no license match - use advanced matching strategies
+                // Try by name if no license match - simple matching like preview
                 if (!$rider) {
                     $firstName = trim($data['firstname']);
                     $lastName = trim($data['lastname']);
-                    $clubName = trim($data['club_name'] ?? '');
 
-                    // Strategy 1: Exact name match with club (highest confidence)
-                    // Using UPPER() for case-insensitive matching (LOWER doesn't work with this MySQL)
-                    if (!empty($clubName)) {
-                        $rider = $db->getRow(
-                            "SELECT r.id, r.license_number, r.uci_id FROM riders r
-                             LEFT JOIN clubs c ON r.club_id = c.id
-                             WHERE UPPER(r.firstname) = UPPER(?) AND UPPER(r.lastname) = UPPER(?) AND UPPER(c.name) LIKE UPPER(?)",
-                            [$firstName, $lastName, '%' . $clubName . '%']
-                        );
-                    }
-
-                    // Strategy 2: Exact name match (any club)
-                    if (!$rider) {
-                        $rider = $db->getRow(
-                            "SELECT id, license_number, uci_id FROM riders WHERE UPPER(firstname) = UPPER(?) AND UPPER(lastname) = UPPER(?)",
-                            [$firstName, $lastName]
-                        );
-                    }
-
-                    // Strategy 3: Handle double last names (e.g., "Svensson Lindberg")
-                    if (!$rider) {
-                        $rider = $db->getRow(
-                            "SELECT id, license_number, uci_id FROM riders
-                             WHERE UPPER(firstname) = UPPER(?)
-                             AND (UPPER(lastname) LIKE UPPER(?) OR UPPER(?) LIKE CONCAT('%', UPPER(lastname), '%'))",
-                            [$firstName, '%' . $lastName . '%', $lastName]
-                        );
-                    }
-
-                    // Strategy 4: If lastname has space, try matching last part only
-                    if (!$rider && strpos($lastName, ' ') !== false) {
-                        $lastnameParts = explode(' ', $lastName);
-                        $lastPart = end($lastnameParts);
-                        $rider = $db->getRow(
-                            "SELECT id, license_number, uci_id FROM riders WHERE UPPER(firstname) = UPPER(?) AND UPPER(lastname) = UPPER(?)",
-                            [$firstName, $lastPart]
-                        );
-                    }
-
-                    // Strategy 5: Handle middle names - try first part of firstname
-                    if (!$rider) {
-                        $firstNamePart = explode(' ', $firstName)[0];
-                        if ($firstNamePart !== $firstName) {
-                            $rider = $db->getRow(
-                                "SELECT id, license_number, uci_id FROM riders WHERE UPPER(firstname) = UPPER(?) AND UPPER(lastname) = UPPER(?)",
-                                [$firstNamePart, $lastName]
-                            );
-                        }
-                    }
-
-                    // Strategy 6: Fuzzy firstname match (starts with) + exact lastname
-                    if (!$rider) {
-                        $firstNamePart = explode(' ', $firstName)[0];
-                        $rider = $db->getRow(
-                            "SELECT id, license_number, uci_id FROM riders
-                             WHERE UPPER(firstname) LIKE UPPER(?) AND UPPER(lastname) = UPPER(?)",
-                            [$firstNamePart . '%', $lastName]
-                        );
-                    }
+                    // Simple exact name match (same as preview)
+                    $rider = $db->getRow(
+                        "SELECT id, license_number, uci_id FROM riders WHERE firstname = ? AND lastname = ?",
+                        [$firstName, $lastName]
+                    );
 
                     if ($rider) {
                         $matching_stats['riders_found']++;
