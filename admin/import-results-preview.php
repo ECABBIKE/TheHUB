@@ -653,6 +653,15 @@ function parseAndAnalyzeCSV($filepath, $db) {
    if ($rider) {
     $existingLicense = preg_replace('/[^0-9]/', '', $rider['license_number'] ?? '');
 
+    // Check if one is SWE-ID and other is UCI-ID (same person, different ID types)
+    $csvIsSweId = preg_match('/^SWE\d{7}$/', str_replace([' ', '-'], '', $licenseNumber));
+    $dbIsSweId = preg_match('/^SWE\d{7}$/', str_replace([' ', '-'], '', $rider['license_number'] ?? ''));
+    $csvIsUciId = !$csvIsSweId && strlen($normalizedLicense) >= 9;
+    $dbIsUciId = !$dbIsSweId && strlen($existingLicense) >= 9;
+
+    // Different ID types = same person (SWE vs UCI)
+    $differentIdTypes = ($csvIsSweId && $dbIsUciId) || ($csvIsUciId && $dbIsSweId);
+
     // Check if this is a potential duplicate (both have no UCI or one is missing)
     if (empty($normalizedLicense) && empty($existingLicense)) {
      // Both have no UCI - possible duplicate
@@ -668,10 +677,14 @@ function parseAndAnalyzeCSV($filepath, $db) {
       'type' => 'name_no_uci'
      ];
      }
-    } elseif (!empty($normalizedLicense) && !empty($existingLicense) && $normalizedLicense !== $existingLicense) {
-     // Different UCI-IDs = different people, not a duplicate
+    } elseif (!empty($normalizedLicense) && !empty($existingLicense) && $normalizedLicense !== $existingLicense && !$differentIdTypes) {
+     // Different UCI-IDs of SAME type = different people, not a duplicate
      $rider = null; // Treat as new rider
+     if ($debugInfo) {
+      $debugInfo['db_check'] = "Samma namn men olika UCI-ID (ej match)";
+     }
     }
+    // If differentIdTypes is true, keep the match - same person with SWE-ID vs UCI-ID
    }
   }
 
