@@ -583,229 +583,8 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
 
 <!-- New 2-Column Layout -->
 <div class="rider-profile-layout">
-    <!-- LEFT COLUMN -->
+    <!-- LEFT COLUMN: Ranking, Form, Series -->
     <div class="left-column">
-
-        <!-- PROFILE CARD - New Design -->
-        <div class="card profile-card-v4">
-            <!-- Large Photo or Initials -->
-            <div class="profile-photo-hero <?= $profileImageUrl ? '' : 'initials-bg' ?>">
-                <?php if ($profileImageUrl): ?>
-                    <img src="<?= htmlspecialchars($profileImageUrl) ?>" alt="<?= $fullName ?>" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                    <div class="profile-initials-fallback" style="display: none;"><?= htmlspecialchars($initials) ?></div>
-                <?php else: ?>
-                    <div class="profile-initials"><?= htmlspecialchars($initials) ?></div>
-                <?php endif; ?>
-            </div>
-
-            <!-- Info Section -->
-            <div class="profile-info-centered">
-                <h1 class="profile-name-hero">
-                    <?= $fullName ?>
-                    <?php
-                    $nationality = $rider['nationality'] ?? 'SWE';
-                    $countryCode = strtolower($nationality);
-                    ?>
-                    <img src="https://flagcdn.com/24x18/<?= $countryCode === 'swe' ? 'se' : ($countryCode === 'nor' ? 'no' : ($countryCode === 'den' ? 'dk' : ($countryCode === 'fin' ? 'fi' : $countryCode))) ?>.png"
-                         alt="<?= $nationality ?>"
-                         class="profile-flag"
-                         onerror="this.style.display='none'">
-                </h1>
-                <?php if ($age): ?><span class="profile-subtitle"><?= $age ?> ar</span><?php endif; ?>
-                <?php if ($rider['club_name']): ?>
-                <a href="/club/<?= $rider['club_id'] ?>" class="profile-club-link-hero"><?= htmlspecialchars($rider['club_name']) ?></a>
-                <?php endif; ?>
-                <?php if ($rider['license_number']): ?>
-                <span class="profile-uci-text">UCI: <?= htmlspecialchars($rider['license_number']) ?></span>
-                <?php endif; ?>
-            </div>
-
-            <!-- License Badge -->
-            <div class="profile-license-badge">
-                <span class="license-label">Licens</span>
-                <span class="license-year"><?= $rider['license_year'] ?? date('Y') ?></span>
-            </div>
-
-            <!-- Social Media Icons - Simple gray style -->
-            <div class="profile-social-simple">
-                <a href="<?= $socialProfiles['instagram']['url'] ?? '#' ?>" class="social-icon-simple <?= empty($socialProfiles['instagram']) ? 'empty' : '' ?>" title="Instagram" <?= !empty($socialProfiles['instagram']) ? 'target="_blank"' : '' ?>>
-                    <svg viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
-                </a>
-                <a href="<?= $socialProfiles['strava']['url'] ?? '#' ?>" class="social-icon-simple <?= empty($socialProfiles['strava']) ? 'empty' : '' ?>" title="Strava" <?= !empty($socialProfiles['strava']) ? 'target="_blank"' : '' ?>>
-                    <svg viewBox="0 0 24 24"><path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169"/></svg>
-                </a>
-                <a href="<?= $socialProfiles['facebook']['url'] ?? '#' ?>" class="social-icon-simple <?= empty($socialProfiles['facebook']) ? 'empty' : '' ?>" title="Facebook" <?= !empty($socialProfiles['facebook']) ? 'target="_blank"' : '' ?>>
-                    <svg viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
-                </a>
-                <a href="<?= $socialProfiles['youtube']['url'] ?? '#' ?>" class="social-icon-simple <?= empty($socialProfiles['youtube']) ? 'empty' : '' ?>" title="YouTube" <?= !empty($socialProfiles['youtube']) ? 'target="_blank"' : '' ?>>
-                    <svg viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
-                </a>
-                <a href="<?= $socialProfiles['tiktok']['url'] ?? '#' ?>" class="social-icon-simple <?= empty($socialProfiles['tiktok']) ? 'empty' : '' ?>" title="TikTok" <?= !empty($socialProfiles['tiktok']) ? 'target="_blank"' : '' ?>>
-                    <svg viewBox="0 0 24 24"><path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z"/></svg>
-                </a>
-            </div>
-
-            <!-- Action Buttons -->
-            <div class="profile-actions-row">
-                <button type="button" class="btn-action-outline" onclick="shareProfile(<?= $riderId ?>)">
-                    <i data-lucide="share-2"></i>
-                    <span>Dela</span>
-                </button>
-                <?php if (function_exists('hub_is_admin') && hub_is_admin()): ?>
-                <a href="/admin/rider-edit.php?id=<?= $riderId ?>" class="btn-action-outline">
-                    <i data-lucide="pencil"></i>
-                    <span>Redigera</span>
-                </a>
-                <?php endif; ?>
-            </div>
-        </div>
-
-        <!-- SERIES STANDINGS CARD -->
-        <?php if (!empty($availableYears)): ?>
-        <div class="card series-card">
-            <div class="series-header">
-                <h3 class="card-section-title"><i data-lucide="trophy"></i> Serieställning</h3>
-                <?php if (count($availableYears) > 1): ?>
-                <select id="seriesYearSelect" class="form-select form-select-sm" onchange="window.location.href='?series_year=' + this.value">
-                    <?php foreach ($availableYears as $year): ?>
-                    <option value="<?= $year ?>" <?= $year == $selectedSeriesYear ? 'selected' : '' ?>><?= $year ?></option>
-                    <?php endforeach; ?>
-                </select>
-                <?php else: ?>
-                <span class="year-badge"><?= $selectedSeriesYear ?></span>
-                <?php endif; ?>
-            </div>
-
-            <?php if (!empty($seriesStandings)): ?>
-            <!-- Series tabs -->
-            <div class="series-tabs">
-                <?php foreach ($seriesStandings as $idx => $standing): ?>
-                <button class="series-tab-btn <?= $idx === 0 ? 'active' : '' ?>" data-target="series-<?= $idx ?>">
-                    <span class="series-dot" style="background: <?= htmlspecialchars($standing['series_color'] ?? 'var(--color-accent)') ?>"></span>
-                    <span><?= htmlspecialchars($standing['series_name']) ?></span>
-                </button>
-                <?php endforeach; ?>
-            </div>
-
-            <!-- Series content panels -->
-            <?php foreach ($seriesStandings as $idx => $standing):
-                // Get events for this series (filtered by year)
-                $eventsStmt = $db->prepare("
-                    SELECT r.position, r.points, r.status, e.id as event_id, e.name as event_name, e.date as event_date
-                    FROM results r
-                    JOIN events e ON r.event_id = e.id
-                    WHERE r.cyclist_id = ? AND e.series_id = ? AND r.class_id = ? AND YEAR(e.date) = ?
-                    ORDER BY e.date DESC
-                ");
-                $eventsStmt->execute([$riderId, $standing['series_id'], $standing['class_id'], $selectedSeriesYear]);
-                $seriesEvents = $eventsStmt->fetchAll(PDO::FETCH_ASSOC);
-
-                // Calculate progress percentage (inverted - lower rank is better)
-                $rankPercent = max(5, min(100, 100 - (($standing['ranking'] - 1) / max(1, $standing['total_riders'] - 1)) * 100));
-            ?>
-            <div class="series-panel <?= $idx === 0 ? 'active' : '' ?>" id="series-<?= $idx ?>">
-
-                <!-- Position Header -->
-                <div class="series-position-header">
-                    <div class="series-rank-display">
-                        <span class="series-rank-number">#<?= $standing['ranking'] ?></span>
-                        <span class="series-rank-text">av <?= $standing['total_riders'] ?> i <?= htmlspecialchars($standing['class_name'] ?? 'klassen') ?></span>
-                    </div>
-                    <?php if ($standing['trend'] != 0): ?>
-                    <div class="series-trend <?= $standing['trend'] > 0 ? 'trend-up' : 'trend-down' ?>">
-                        <i data-lucide="<?= $standing['trend'] > 0 ? 'trending-up' : 'trending-down' ?>"></i>
-                        <span><?= $standing['trend'] > 0 ? '+' : '' ?><?= $standing['trend'] ?></span>
-                    </div>
-                    <?php endif; ?>
-                </div>
-
-                <!-- Progress Bar -->
-                <div class="series-progress-bar">
-                    <div class="progress-track">
-                        <div class="progress-fill" style="width: <?= $rankPercent ?>%; background: <?= htmlspecialchars($standing['series_color'] ?? 'var(--color-accent)') ?>"></div>
-                    </div>
-                    <div class="progress-labels">
-                        <span>#<?= $standing['total_riders'] ?></span>
-                        <span>#1</span>
-                    </div>
-                </div>
-
-                <!-- Stats Grid -->
-                <div class="series-stats-grid">
-                    <div class="series-stat-box">
-                        <span class="stat-value"><?= number_format($standing['total_points'], 1) ?></span>
-                        <span class="stat-label">Poäng</span>
-                    </div>
-                    <div class="series-stat-box">
-                        <span class="stat-value"><?= $standing['events_count'] ?></span>
-                        <span class="stat-label">Tävlingar</span>
-                    </div>
-                    <div class="series-stat-box">
-                        <span class="stat-value"><?= $standing['wins'] ?></span>
-                        <span class="stat-label">Vinster</span>
-                    </div>
-                    <div class="series-stat-box">
-                        <span class="stat-value"><?= $standing['podiums'] ?></span>
-                        <span class="stat-label">Pallplatser</span>
-                    </div>
-                </div>
-
-                <!-- Events List -->
-                <?php if (!empty($seriesEvents)): ?>
-                <div class="series-events-list">
-                    <h4 class="series-events-header">Tävlingar</h4>
-                    <div class="series-events-compact">
-                    <?php foreach ($seriesEvents as $event):
-                        $pos = (int)$event['position'];
-                        $seriesColor = $standing['series_color'] ?? 'var(--color-accent)';
-                    ?>
-                    <a href="/calendar/<?= $event['event_id'] ?>" class="result-row" style="--result-accent: <?= htmlspecialchars($seriesColor) ?>">
-                        <span class="result-accent-bar"></span>
-                        <span class="result-pos <?= $pos <= 3 ? 'p' . $pos : '' ?>">
-                            <?php if ($pos === 1): ?>
-                            <svg class="medal-icon-sm" viewBox="0 0 36 36"><circle cx="18" cy="18" r="16" fill="#FFD700" stroke="#DAA520" stroke-width="2"/><text x="18" y="23" font-size="14" font-weight="bold" fill="#fff" text-anchor="middle">1</text></svg>
-                            <?php elseif ($pos === 2): ?>
-                            <svg class="medal-icon-sm" viewBox="0 0 36 36"><circle cx="18" cy="18" r="16" fill="#C0C0C0" stroke="#A9A9A9" stroke-width="2"/><text x="18" y="23" font-size="14" font-weight="bold" fill="#fff" text-anchor="middle">2</text></svg>
-                            <?php elseif ($pos === 3): ?>
-                            <svg class="medal-icon-sm" viewBox="0 0 36 36"><circle cx="18" cy="18" r="16" fill="#CD7F32" stroke="#8B4513" stroke-width="2"/><text x="18" y="23" font-size="14" font-weight="bold" fill="#fff" text-anchor="middle">3</text></svg>
-                            <?php else: ?>
-                            <?= $pos ?>
-                            <?php endif; ?>
-                        </span>
-                        <span class="result-date"><?= date('j M', strtotime($event['event_date'])) ?></span>
-                        <span class="result-details">
-                            <span class="result-name"><?= htmlspecialchars($event['event_name']) ?></span>
-                        </span>
-                        <?php if ($event['status'] === 'finished' && $event['points'] > 0): ?>
-                        <span class="result-points"><?= number_format($event['points'], 1) ?>p</span>
-                        <?php elseif ($event['status'] !== 'finished'): ?>
-                        <span class="result-status"><?= htmlspecialchars($event['status']) ?></span>
-                        <?php endif; ?>
-                    </a>
-                    <?php endforeach; ?>
-                    </div>
-                </div>
-                <?php endif; ?>
-
-            </div>
-            <?php endforeach; ?>
-            <?php else: ?>
-            <!-- No series standings for this year -->
-            <div class="series-empty-state">
-                <i data-lucide="calendar-x" class="icon-xl text-muted"></i>
-                <p class="text-muted">Inga serieresultat för <?= $selectedSeriesYear ?>.</p>
-                <?php if ($selectedSeriesYear != date('Y') && in_array((int)date('Y'), $availableYears)): ?>
-                <a href="?series_year=<?= date('Y') ?>" class="btn btn-ghost btn-sm">Visa aktuellt år</a>
-                <?php endif; ?>
-            </div>
-            <?php endif; ?>
-        </div>
-        <?php endif; ?>
-
-    </div><!-- End left-column -->
-
-    <!-- RIGHT COLUMN -->
-    <div class="right-column">
 
         <!-- RANKING CARD with integrated graph -->
         <div class="card ranking-card">
@@ -962,6 +741,227 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
             </div>
         </div>
         <?php endif; ?>
+
+        <!-- SERIES STANDINGS CARD - Now in left column -->
+        <?php if (!empty($availableYears)): ?>
+        <div class="card series-card">
+            <div class="series-header">
+                <h3 class="card-section-title"><i data-lucide="trophy"></i> Serieställning</h3>
+                <?php if (count($availableYears) > 1): ?>
+                <select id="seriesYearSelect" class="form-select form-select-sm" onchange="window.location.href='?series_year=' + this.value">
+                    <?php foreach ($availableYears as $year): ?>
+                    <option value="<?= $year ?>" <?= $year == $selectedSeriesYear ? 'selected' : '' ?>><?= $year ?></option>
+                    <?php endforeach; ?>
+                </select>
+                <?php else: ?>
+                <span class="year-badge"><?= $selectedSeriesYear ?></span>
+                <?php endif; ?>
+            </div>
+
+            <?php if (!empty($seriesStandings)): ?>
+            <!-- Series tabs -->
+            <div class="series-tabs">
+                <?php foreach ($seriesStandings as $idx => $standing): ?>
+                <button class="series-tab-btn <?= $idx === 0 ? 'active' : '' ?>" data-target="series-<?= $idx ?>">
+                    <span class="series-dot" style="background: <?= htmlspecialchars($standing['series_color'] ?? 'var(--color-accent)') ?>"></span>
+                    <span><?= htmlspecialchars($standing['series_name']) ?></span>
+                </button>
+                <?php endforeach; ?>
+            </div>
+
+            <!-- Series content panels -->
+            <?php foreach ($seriesStandings as $idx => $standing):
+                // Get events for this series (filtered by year)
+                $eventsStmt = $db->prepare("
+                    SELECT r.position, r.points, r.status, e.id as event_id, e.name as event_name, e.date as event_date
+                    FROM results r
+                    JOIN events e ON r.event_id = e.id
+                    WHERE r.cyclist_id = ? AND e.series_id = ? AND r.class_id = ? AND YEAR(e.date) = ?
+                    ORDER BY e.date DESC
+                ");
+                $eventsStmt->execute([$riderId, $standing['series_id'], $standing['class_id'], $selectedSeriesYear]);
+                $seriesEvents = $eventsStmt->fetchAll(PDO::FETCH_ASSOC);
+
+                // Calculate progress percentage (inverted - lower rank is better)
+                $rankPercent = max(5, min(100, 100 - (($standing['ranking'] - 1) / max(1, $standing['total_riders'] - 1)) * 100));
+            ?>
+            <div class="series-panel <?= $idx === 0 ? 'active' : '' ?>" id="series-<?= $idx ?>">
+
+                <!-- Position Header -->
+                <div class="series-position-header">
+                    <div class="series-rank-display">
+                        <span class="series-rank-number">#<?= $standing['ranking'] ?></span>
+                        <span class="series-rank-text">av <?= $standing['total_riders'] ?> i <?= htmlspecialchars($standing['class_name'] ?? 'klassen') ?></span>
+                    </div>
+                    <?php if ($standing['trend'] != 0): ?>
+                    <div class="series-trend <?= $standing['trend'] > 0 ? 'trend-up' : 'trend-down' ?>">
+                        <i data-lucide="<?= $standing['trend'] > 0 ? 'trending-up' : 'trending-down' ?>"></i>
+                        <span><?= $standing['trend'] > 0 ? '+' : '' ?><?= $standing['trend'] ?></span>
+                    </div>
+                    <?php endif; ?>
+                </div>
+
+                <!-- Progress Bar -->
+                <div class="series-progress-bar">
+                    <div class="progress-track">
+                        <div class="progress-fill" style="width: <?= $rankPercent ?>%; background: <?= htmlspecialchars($standing['series_color'] ?? 'var(--color-accent)') ?>"></div>
+                    </div>
+                    <div class="progress-labels">
+                        <span>#<?= $standing['total_riders'] ?></span>
+                        <span>#1</span>
+                    </div>
+                </div>
+
+                <!-- Stats Grid -->
+                <div class="series-stats-grid">
+                    <div class="series-stat-box">
+                        <span class="stat-value"><?= number_format($standing['total_points'], 1) ?></span>
+                        <span class="stat-label">Poäng</span>
+                    </div>
+                    <div class="series-stat-box">
+                        <span class="stat-value"><?= $standing['events_count'] ?></span>
+                        <span class="stat-label">Tävlingar</span>
+                    </div>
+                    <div class="series-stat-box">
+                        <span class="stat-value"><?= $standing['wins'] ?></span>
+                        <span class="stat-label">Vinster</span>
+                    </div>
+                    <div class="series-stat-box">
+                        <span class="stat-value"><?= $standing['podiums'] ?></span>
+                        <span class="stat-label">Pallplatser</span>
+                    </div>
+                </div>
+
+                <!-- Events List -->
+                <?php if (!empty($seriesEvents)): ?>
+                <div class="series-events-list">
+                    <h4 class="series-events-header">Tävlingar</h4>
+                    <div class="series-events-compact">
+                    <?php foreach ($seriesEvents as $event):
+                        $pos = (int)$event['position'];
+                        $seriesColor = $standing['series_color'] ?? 'var(--color-accent)';
+                    ?>
+                    <a href="/calendar/<?= $event['event_id'] ?>" class="result-row" style="--result-accent: <?= htmlspecialchars($seriesColor) ?>">
+                        <span class="result-accent-bar"></span>
+                        <span class="result-pos <?= $pos <= 3 ? 'p' . $pos : '' ?>">
+                            <?php if ($pos === 1): ?>
+                            <svg class="medal-icon-sm" viewBox="0 0 36 36"><circle cx="18" cy="18" r="16" fill="#FFD700" stroke="#DAA520" stroke-width="2"/><text x="18" y="23" font-size="14" font-weight="bold" fill="#fff" text-anchor="middle">1</text></svg>
+                            <?php elseif ($pos === 2): ?>
+                            <svg class="medal-icon-sm" viewBox="0 0 36 36"><circle cx="18" cy="18" r="16" fill="#C0C0C0" stroke="#A9A9A9" stroke-width="2"/><text x="18" y="23" font-size="14" font-weight="bold" fill="#fff" text-anchor="middle">2</text></svg>
+                            <?php elseif ($pos === 3): ?>
+                            <svg class="medal-icon-sm" viewBox="0 0 36 36"><circle cx="18" cy="18" r="16" fill="#CD7F32" stroke="#8B4513" stroke-width="2"/><text x="18" y="23" font-size="14" font-weight="bold" fill="#fff" text-anchor="middle">3</text></svg>
+                            <?php else: ?>
+                            <?= $pos ?>
+                            <?php endif; ?>
+                        </span>
+                        <span class="result-date"><?= date('j M', strtotime($event['event_date'])) ?></span>
+                        <span class="result-details">
+                            <span class="result-name"><?= htmlspecialchars($event['event_name']) ?></span>
+                        </span>
+                        <?php if ($event['status'] === 'finished' && $event['points'] > 0): ?>
+                        <span class="result-points"><?= number_format($event['points'], 1) ?>p</span>
+                        <?php elseif ($event['status'] !== 'finished'): ?>
+                        <span class="result-status"><?= htmlspecialchars($event['status']) ?></span>
+                        <?php endif; ?>
+                    </a>
+                    <?php endforeach; ?>
+                    </div>
+                </div>
+                <?php endif; ?>
+
+            </div>
+            <?php endforeach; ?>
+            <?php else: ?>
+            <!-- No series standings for this year -->
+            <div class="series-empty-state">
+                <i data-lucide="calendar-x" class="icon-xl text-muted"></i>
+                <p class="text-muted">Inga serieresultat för <?= $selectedSeriesYear ?>.</p>
+                <?php if ($selectedSeriesYear != date('Y') && in_array((int)date('Y'), $availableYears)): ?>
+                <a href="?series_year=<?= date('Y') ?>" class="btn btn-ghost btn-sm">Visa aktuellt år</a>
+                <?php endif; ?>
+            </div>
+            <?php endif; ?>
+        </div>
+        <?php endif; ?>
+
+    </div><!-- End left-column -->
+
+    <!-- RIGHT COLUMN: Profile, Highlights, Achievements -->
+    <div class="right-column">
+
+        <!-- PROFILE CARD - Portrait Style -->
+        <div class="card profile-card-v4">
+            <!-- Square Photo or Initials -->
+            <div class="profile-photo-hero <?= $profileImageUrl ? '' : 'initials-bg' ?>">
+                <?php if ($profileImageUrl): ?>
+                    <img src="<?= htmlspecialchars($profileImageUrl) ?>" alt="<?= $fullName ?>" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                    <div class="profile-initials-fallback" style="display: none;"><?= htmlspecialchars($initials) ?></div>
+                <?php else: ?>
+                    <div class="profile-initials"><?= htmlspecialchars($initials) ?></div>
+                <?php endif; ?>
+            </div>
+
+            <!-- Info Section -->
+            <div class="profile-info-centered">
+                <h1 class="profile-name-hero">
+                    <?= $fullName ?>
+                    <?php
+                    $nationality = $rider['nationality'] ?? 'SWE';
+                    $countryCode = strtolower($nationality);
+                    ?>
+                    <img src="https://flagcdn.com/24x18/<?= $countryCode === 'swe' ? 'se' : ($countryCode === 'nor' ? 'no' : ($countryCode === 'den' ? 'dk' : ($countryCode === 'fin' ? 'fi' : $countryCode))) ?>.png"
+                         alt="<?= $nationality ?>"
+                         class="profile-flag"
+                         onerror="this.style.display='none'">
+                </h1>
+                <?php if ($age): ?><span class="profile-subtitle"><?= $age ?> ar</span><?php endif; ?>
+                <?php if ($rider['club_name']): ?>
+                <a href="/club/<?= $rider['club_id'] ?>" class="profile-club-link-hero"><?= htmlspecialchars($rider['club_name']) ?></a>
+                <?php endif; ?>
+                <?php if ($rider['license_number']): ?>
+                <span class="profile-uci-text">UCI: <?= htmlspecialchars($rider['license_number']) ?></span>
+                <?php endif; ?>
+            </div>
+
+            <!-- License Badge -->
+            <div class="profile-license-badge">
+                <span class="license-label">Licens</span>
+                <span class="license-year"><?= $rider['license_year'] ?? date('Y') ?></span>
+            </div>
+
+            <!-- Social Media Icons - Simple gray style -->
+            <div class="profile-social-simple">
+                <a href="<?= $socialProfiles['instagram']['url'] ?? '#' ?>" class="social-icon-simple <?= empty($socialProfiles['instagram']) ? 'empty' : '' ?>" title="Instagram" <?= !empty($socialProfiles['instagram']) ? 'target="_blank"' : '' ?>>
+                    <svg viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
+                </a>
+                <a href="<?= $socialProfiles['strava']['url'] ?? '#' ?>" class="social-icon-simple <?= empty($socialProfiles['strava']) ? 'empty' : '' ?>" title="Strava" <?= !empty($socialProfiles['strava']) ? 'target="_blank"' : '' ?>>
+                    <svg viewBox="0 0 24 24"><path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169"/></svg>
+                </a>
+                <a href="<?= $socialProfiles['facebook']['url'] ?? '#' ?>" class="social-icon-simple <?= empty($socialProfiles['facebook']) ? 'empty' : '' ?>" title="Facebook" <?= !empty($socialProfiles['facebook']) ? 'target="_blank"' : '' ?>>
+                    <svg viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+                </a>
+                <a href="<?= $socialProfiles['youtube']['url'] ?? '#' ?>" class="social-icon-simple <?= empty($socialProfiles['youtube']) ? 'empty' : '' ?>" title="YouTube" <?= !empty($socialProfiles['youtube']) ? 'target="_blank"' : '' ?>>
+                    <svg viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+                </a>
+                <a href="<?= $socialProfiles['tiktok']['url'] ?? '#' ?>" class="social-icon-simple <?= empty($socialProfiles['tiktok']) ? 'empty' : '' ?>" title="TikTok" <?= !empty($socialProfiles['tiktok']) ? 'target="_blank"' : '' ?>>
+                    <svg viewBox="0 0 24 24"><path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z"/></svg>
+                </a>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="profile-actions-row">
+                <button type="button" class="btn-action-outline" onclick="shareProfile(<?= $riderId ?>)">
+                    <i data-lucide="share-2"></i>
+                    <span>Dela</span>
+                </button>
+                <?php if (function_exists('hub_is_admin') && hub_is_admin()): ?>
+                <a href="/admin/rider-edit.php?id=<?= $riderId ?>" class="btn-action-outline">
+                    <i data-lucide="pencil"></i>
+                    <span>Redigera</span>
+                </a>
+                <?php endif; ?>
+            </div>
+        </div>
 
         <!-- HIGHLIGHTS CARD -->
         <div class="card highlights-card">
