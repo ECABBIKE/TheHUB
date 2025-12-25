@@ -52,19 +52,29 @@ try {
         requireAdmin();
     }
 
-    // Get database connection
+    // Get database connection - try multiple methods
     $pdo = null;
-    if (function_exists('hub_db')) {
-        $pdo = hub_db();
-    } elseif (isset($GLOBALS['pdo'])) {
-        $pdo = $GLOBALS['pdo'];
-    } elseif (function_exists('getDB')) {
+
+    // Method 1: getDB() returns Database object with getPdo()
+    if (function_exists('getDB')) {
         $db = getDB();
-        $pdo = $db->getPdo();
+        if ($db && method_exists($db, 'getPdo')) {
+            $pdo = $db->getPdo();
+        }
+    }
+
+    // Method 2: Global $pdo variable
+    if (!$pdo && isset($GLOBALS['pdo'])) {
+        $pdo = $GLOBALS['pdo'];
+    }
+
+    // Method 3: hub_db() function
+    if (!$pdo && function_exists('hub_db')) {
+        $pdo = hub_db();
     }
 
     if (!$pdo) {
-        throw new Exception('Kunde inte ansluta till databasen');
+        throw new Exception('Kunde inte ansluta till databasen. Kontrollera att config.php är korrekt konfigurerad.');
     }
 
     echo "<div class='card'>";
