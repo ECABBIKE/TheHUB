@@ -75,14 +75,30 @@ try {
 // Get all existing classes for mapping
 $existingClasses = $db->getAll("SELECT id, name, display_name, sort_order FROM classes WHERE active = 1 ORDER BY sort_order ASC, display_name ASC");
 
+// Class name mappings (same as in import-functions.php)
+$classNameMappings = [
+ 'tävling damer' => 'Damer Elit',
+ 'tävling herrar' => 'Herrar Elit',
+ 'tavling damer' => 'Damer Elit',
+ 'tavling herrar' => 'Herrar Elit',
+ 'tävling dam' => 'Damer Elit',
+ 'tävling herr' => 'Herrar Elit',
+];
+
 // Analyze which CSV classes exist and which are new
 $classAnalysis = [];
 foreach ($matchingStats['classes'] as $csvClass) {
  $match = null;
  $csvClassNormalized = strtolower(trim($csvClass));
 
+ // First check if we have a predefined mapping
+ $mappedClassName = $classNameMappings[$csvClassNormalized] ?? null;
+ $searchName = $mappedClassName ? strtolower($mappedClassName) : $csvClassNormalized;
+
  foreach ($existingClasses as $existing) {
- if (strtolower($existing['display_name']) === $csvClassNormalized ||
+ if (strtolower($existing['display_name']) === $searchName ||
+  strtolower($existing['name']) === $searchName ||
+  strtolower($existing['display_name']) === $csvClassNormalized ||
   strtolower($existing['name']) === $csvClassNormalized) {
   $match = $existing;
   break;
@@ -102,6 +118,7 @@ foreach ($matchingStats['classes'] as $csvClass) {
 
  $classAnalysis[] = [
  'csv_name' => $csvClass,
+ 'mapped_to' => $mappedClassName,
  'matched' => $match,
  'is_new' => $match === null
  ];
@@ -301,6 +318,28 @@ function parseAndAnalyzeCSV($filepath, $db) {
  $clubCache = [];
  $duplicateCache = [];
 
+ // Read file content and detect/convert encoding
+ $content = file_get_contents($filepath);
+ if ($content === false) {
+  throw new Exception('Kunde inte läsa filen');
+ }
+
+ // Detect encoding and convert to UTF-8
+ $encoding = mb_detect_encoding($content, ['UTF-8', 'ISO-8859-1', 'Windows-1252'], true);
+ if ($encoding && $encoding !== 'UTF-8') {
+  $content = mb_convert_encoding($content, 'UTF-8', $encoding);
+  error_log("PREVIEW: Converted file from {$encoding} to UTF-8");
+ }
+
+ // Remove BOM if present
+ $content = preg_replace('/^\xEF\xBB\xBF/', '', $content);
+
+ // Write back to temp file for fgetcsv
+ $tempFile = tempnam(sys_get_temp_dir(), 'preview_utf8_');
+ file_put_contents($tempFile, $content);
+ $originalFilepath = $filepath;
+ $filepath = $tempFile;
+
  if (($handle = fopen($filepath, 'r')) === false) {
  throw new Exception('Kunde inte öppna filen');
  }
@@ -488,6 +527,13 @@ function parseAndAnalyzeCSV($filepath, $db) {
  if (!empty($firstName) && !empty($lastName)) {
   $riderKey = $firstName . '|' . $lastName . '|' . $normalizedLicense;
 
+  // Debug first few rows
+  static $debugCount = 0;
+  if ($debugCount < 5) {
+   error_log("PREVIEW MATCH DEBUG: firstName='{$firstName}' lastName='{$lastName}' license='{$normalizedLicense}' club='" . trim($rowData['club_name'] ?? '') . "'");
+   $debugCount++;
+  }
+
   if (!isset($riderCache[$riderKey])) {
   $rider = null;
   $isDuplicate = false;
@@ -606,6 +652,17 @@ function parseAndAnalyzeCSV($filepath, $db) {
 
   $riderCache[$riderKey] = $rider ? $rider : false;
 
+  // Debug match result for first few rows
+  static $matchDebugCount = 0;
+  if ($matchDebugCount < 5) {
+   if ($rider) {
+    error_log("PREVIEW MATCH RESULT: FOUND rider_id={$rider['id']} for '{$firstName}' '{$lastName}'");
+   } else {
+    error_log("PREVIEW MATCH RESULT: NOT FOUND for '{$firstName}' '{$lastName}'");
+   }
+   $matchDebugCount++;
+  }
+
   if ($rider) {
    $stats['riders_existing']++;
 
@@ -661,6 +718,11 @@ function parseAndAnalyzeCSV($filepath, $db) {
  }
 
  fclose($handle);
+
+ // Clean up temp file
+ if (isset($tempFile) && file_exists($tempFile)) {
+  @unlink($tempFile);
+ }
 
  // Make clubs list unique
  $stats['clubs_list'] = array_unique($stats['clubs_list']);
