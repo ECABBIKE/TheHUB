@@ -27,10 +27,11 @@ try {
 }
 
 try {
-    // Fetch series details
+    // Fetch series details with brand logo
     $stmt = $db->prepare("
-        SELECT s.*, COUNT(DISTINCT e.id) as event_count
+        SELECT s.*, sb.logo as brand_logo, sb.name as brand_name, COUNT(DISTINCT e.id) as event_count
         FROM series s
+        LEFT JOIN series_brands sb ON s.brand_id = sb.id
         LEFT JOIN events e ON s.id = e.series_id
         WHERE s.id = ?
         GROUP BY s.id
@@ -452,6 +453,9 @@ if (!$series) {
 <section class="info-card mb-md">
   <div class="info-card-stripe"></div>
   <div class="info-card-content">
+    <?php if (!empty($series['brand_logo'])): ?>
+    <img src="<?= htmlspecialchars($series['brand_logo']) ?>" alt="<?= htmlspecialchars($series['brand_name'] ?? '') ?>" class="info-card-logo" style="max-width: 80px; max-height: 80px; object-fit: contain; margin-right: var(--space-md);">
+    <?php endif; ?>
     <div class="info-card-main">
       <h1 class="info-card-title"><?= htmlspecialchars($series['name']) ?></h1>
       <div class="info-card-meta">
