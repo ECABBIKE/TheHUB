@@ -332,36 +332,38 @@ try {
         ];
     }
 
-    // 3. Ranking history - Get historical positions from snapshots (one per month, max 24)
+    // 3. Ranking history - Get historical positions from snapshots
     $rankingHistory = [];
-    $rankingHistoryForGraph = []; // For the graph - one per month, max 24
+    $rankingHistoryFull = []; // Full history for the graph (up to 50 entries)
     if ($rankingFunctionsLoaded) {
         try {
-            // Get one snapshot per month for the last 24 months (latest snapshot each month)
+            // Get ALL ranking snapshots for the full graph
             $historyStmt = $db->prepare("
                 SELECT
-                    rs.snapshot_date,
-                    DATE_FORMAT(rs.snapshot_date, '%Y-%m') as month,
-                    DATE_FORMAT(rs.snapshot_date, '%b %Y') as month_label,
-                    rs.ranking_position,
-                    rs.total_ranking_points,
-                    rs.position_change
-                FROM ranking_snapshots rs
-                INNER JOIN (
-                    SELECT DATE_FORMAT(snapshot_date, '%Y-%m') as month, MAX(snapshot_date) as max_date
-                    FROM ranking_snapshots
-                    WHERE rider_id = ? AND discipline = 'GRAVITY'
-                      AND snapshot_date >= DATE_SUB(CURDATE(), INTERVAL 24 MONTH)
-                    GROUP BY DATE_FORMAT(snapshot_date, '%Y-%m')
-                ) latest ON DATE_FORMAT(rs.snapshot_date, '%Y-%m') = latest.month AND rs.snapshot_date = latest.max_date
-                WHERE rs.rider_id = ? AND rs.discipline = 'GRAVITY'
-                ORDER BY rs.snapshot_date ASC
+                    snapshot_date,
+                    DATE_FORMAT(snapshot_date, '%Y-%m') as month,
+                    DATE_FORMAT(snapshot_date, '%b') as month_short,
+                    ranking_position,
+                    total_ranking_points
+                FROM ranking_snapshots
+                WHERE rider_id = ? AND discipline = 'GRAVITY'
+                ORDER BY snapshot_date ASC
             ");
-            $historyStmt->execute([$riderId, $riderId]);
-            $rankingHistoryForGraph = $historyStmt->fetchAll(PDO::FETCH_ASSOC);
+            $historyStmt->execute([$riderId]);
+            $allSnapshots = $historyStmt->fetchAll(PDO::FETCH_ASSOC);
 
-            // Use same data for compact display (limit to last 6)
-            $rankingHistory = array_slice($rankingHistoryForGraph, -6);
+            // Store full history for graph (limit to 50 entries for performance)
+            $rankingHistoryFull = array_slice($allSnapshots, -50);
+
+            // Group by month for compact display (take latest per month)
+            $byMonth = [];
+            foreach ($allSnapshots as $snap) {
+                $byMonth[$snap['month']] = $snap;
+            }
+            $rankingHistory = array_values($byMonth);
+
+            // Limit to last 6 entries for the compact view
+            $rankingHistory = array_slice($rankingHistory, -6);
         } catch (Exception $e) {
             // Ignore errors
         }
@@ -419,7 +421,6 @@ try {
     $rankingPosition = null;
     $rankingPoints = 0;
     $rankingEvents = [];
-    $rankingEventsByMonth = []; // Grouped by month for modal display
     $parentDb = function_exists('getDB') ? getDB() : null;
     if ($rankingFunctionsLoaded && $parentDb && function_exists('getRiderRankingDetails')) {
         $riderRankingDetails = getRiderRankingDetails($parentDb, $riderId, 'GRAVITY');
@@ -427,29 +428,13 @@ try {
             $rankingPoints = $riderRankingDetails['total_ranking_points'] ?? 0;
             $rankingPosition = $riderRankingDetails['ranking_position'] ?? null;
 
-            // Use events from ranking details - sort by date (newest first)
+            // Use events from ranking details (already has multipliers calculated)
+            // Sort by weighted_points and take top results
             $allEvents = $riderRankingDetails['events'] ?? [];
             usort($allEvents, function($a, $b) {
-                return strtotime($b['event_date'] ?? '2000-01-01') <=> strtotime($a['event_date'] ?? '2000-01-01');
+                return ($b['weighted_points'] ?? 0) <=> ($a['weighted_points'] ?? 0);
             });
-            $rankingEvents = $allEvents;
-
-            // Group events by month for modal display
-            $swedishMonths = ['januari', 'februari', 'mars', 'april', 'maj', 'juni', 'juli', 'augusti', 'september', 'oktober', 'november', 'december'];
-            foreach ($allEvents as $event) {
-                $eventDate = strtotime($event['event_date'] ?? '2000-01-01');
-                $month = date('Y-m', $eventDate);
-                if (!isset($rankingEventsByMonth[$month])) {
-                    $monthNum = (int)date('n', $eventDate) - 1;
-                    $rankingEventsByMonth[$month] = [
-                        'month_label' => ucfirst($swedishMonths[$monthNum]) . ' ' . date('Y', $eventDate),
-                        'events' => [],
-                        'total_points' => 0
-                    ];
-                }
-                $rankingEventsByMonth[$month]['events'][] = $event;
-                $rankingEventsByMonth[$month]['total_points'] += ($event['weighted_points'] ?? 0);
-            }
+            $rankingEvents = array_slice($allEvents, 0, 10); // Top 10 events
         }
     }
 
@@ -598,84 +583,166 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
 
 <!-- New 2-Column Layout -->
 <div class="rider-profile-layout">
-    <!-- LEFT COLUMN -->
+    <!-- LEFT COLUMN: Ranking, Form, Series -->
     <div class="left-column">
 
-        <!-- PROFILE CARD - New Design -->
-        <div class="card profile-card-v4">
-            <!-- Large Photo or Initials -->
-            <div class="profile-photo-hero <?= $profileImageUrl ? '' : 'initials-bg' ?>">
-                <?php if ($profileImageUrl): ?>
-                    <img src="<?= htmlspecialchars($profileImageUrl) ?>" alt="<?= $fullName ?>" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                    <div class="profile-initials-fallback" style="display: none;"><?= htmlspecialchars($initials) ?></div>
-                <?php else: ?>
-                    <div class="profile-initials"><?= htmlspecialchars($initials) ?></div>
-                <?php endif; ?>
+        <!-- RANKING CARD with integrated graph -->
+        <div class="card ranking-card">
+            <h3 class="card-section-title-sm"><i data-lucide="bar-chart-2"></i> Ranking</h3>
+            <?php if ($rankingPosition):
+                $totalRankedRiders = 100;
+                try {
+                    $countStmt = $db->prepare("SELECT COUNT(DISTINCT rider_id) as cnt FROM ranking_snapshots WHERE discipline = 'GRAVITY'");
+                    $countStmt->execute();
+                    $countResult = $countStmt->fetch(PDO::FETCH_ASSOC);
+                    if ($countResult && $countResult['cnt'] > 0) {
+                        $totalRankedRiders = $countResult['cnt'];
+                    }
+                } catch (Exception $e) {}
+            ?>
+            <div class="ranking-position-huge">#<?= $rankingPosition ?></div>
+            <div class="ranking-points-display">
+                <span class="ranking-points-value"><?= number_format($rankingPoints, 1) ?></span>
+                <span class="ranking-points-label">poäng</span>
             </div>
 
-            <!-- Info Section -->
-            <div class="profile-info-centered">
-                <h1 class="profile-name-hero">
-                    <?= $fullName ?>
-                    <?php
-                    $nationality = $rider['nationality'] ?? 'SWE';
-                    $countryCode = strtolower($nationality);
-                    ?>
-                    <img src="https://flagcdn.com/24x18/<?= $countryCode === 'swe' ? 'se' : ($countryCode === 'nor' ? 'no' : ($countryCode === 'den' ? 'dk' : ($countryCode === 'fin' ? 'fi' : $countryCode))) ?>.png"
-                         alt="<?= $nationality ?>"
-                         class="profile-flag"
-                         onerror="this.style.display='none'">
-                </h1>
-                <?php if ($age): ?><span class="profile-subtitle"><?= $age ?> ar</span><?php endif; ?>
-                <?php if ($rider['club_name']): ?>
-                <a href="/club/<?= $rider['club_id'] ?>" class="profile-club-link-hero"><?= htmlspecialchars($rider['club_name']) ?></a>
-                <?php endif; ?>
-                <?php if ($rider['license_number']): ?>
-                <span class="profile-uci-text">UCI: <?= htmlspecialchars($rider['license_number']) ?></span>
-                <?php endif; ?>
-            </div>
+            <?php if (!empty($rankingHistoryFull) && count($rankingHistoryFull) >= 2):
+                // Ranking history graph (up to 50 events)
+                $rankChartData = $rankingHistoryFull;
+                $rankPositions = array_column($rankChartData, 'ranking_position');
+                $bestRank = min($rankPositions);
+                $worstRank = max($rankPositions);
 
-            <!-- License Badge -->
-            <div class="profile-license-badge">
-                <span class="license-label">Licens</span>
-                <span class="license-year"><?= $rider['license_year'] ?? date('Y') ?></span>
-            </div>
+                $rankChartWidth = 400;
+                $rankChartHeight = 100;
+                $rankPaddingX = 20;
+                $rankPaddingTop = 15;
+                $rankPaddingBottom = 25;
+                $rankNumResults = count($rankChartData);
 
-            <!-- Social Media Icons - Simple gray style -->
-            <div class="profile-social-simple">
-                <a href="<?= $socialProfiles['instagram']['url'] ?? '#' ?>" class="social-icon-simple <?= empty($socialProfiles['instagram']) ? 'empty' : '' ?>" title="Instagram" <?= !empty($socialProfiles['instagram']) ? 'target="_blank"' : '' ?>>
-                    <svg viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
-                </a>
-                <a href="<?= $socialProfiles['strava']['url'] ?? '#' ?>" class="social-icon-simple <?= empty($socialProfiles['strava']) ? 'empty' : '' ?>" title="Strava" <?= !empty($socialProfiles['strava']) ? 'target="_blank"' : '' ?>>
-                    <svg viewBox="0 0 24 24"><path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169"/></svg>
-                </a>
-                <a href="<?= $socialProfiles['facebook']['url'] ?? '#' ?>" class="social-icon-simple <?= empty($socialProfiles['facebook']) ? 'empty' : '' ?>" title="Facebook" <?= !empty($socialProfiles['facebook']) ? 'target="_blank"' : '' ?>>
-                    <svg viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
-                </a>
-                <a href="<?= $socialProfiles['youtube']['url'] ?? '#' ?>" class="social-icon-simple <?= empty($socialProfiles['youtube']) ? 'empty' : '' ?>" title="YouTube" <?= !empty($socialProfiles['youtube']) ? 'target="_blank"' : '' ?>>
-                    <svg viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
-                </a>
-                <a href="<?= $socialProfiles['tiktok']['url'] ?? '#' ?>" class="social-icon-simple <?= empty($socialProfiles['tiktok']) ? 'empty' : '' ?>" title="TikTok" <?= !empty($socialProfiles['tiktok']) ? 'target="_blank"' : '' ?>>
-                    <svg viewBox="0 0 24 24"><path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z"/></svg>
-                </a>
-            </div>
+                $rankDisplayMin = max(1, $bestRank - 2);
+                $rankDisplayMax = $worstRank + 5;
+                $rankRange = max(1, $rankDisplayMax - $rankDisplayMin);
 
-            <!-- Action Buttons -->
-            <div class="profile-actions-row">
-                <button type="button" class="btn-action-outline" onclick="shareProfile(<?= $riderId ?>)">
-                    <i data-lucide="share-2"></i>
-                    <span>Dela</span>
-                </button>
-                <?php if (function_exists('hub_is_admin') && hub_is_admin()): ?>
-                <a href="/admin/rider-edit.php?id=<?= $riderId ?>" class="btn-action-outline">
-                    <i data-lucide="pencil"></i>
-                    <span>Redigera</span>
-                </a>
-                <?php endif; ?>
+                $rankGraphHeight = $rankChartHeight - $rankPaddingTop - $rankPaddingBottom;
+                $rankXStep = $rankNumResults > 1 ? ($rankChartWidth - $rankPaddingX * 2) / ($rankNumResults - 1) : 0;
+
+                $rankDataPoints = [];
+                foreach ($rankChartData as $idx => $rh) {
+                    $x = $rankPaddingX + ($idx * $rankXStep);
+                    $y = $rankPaddingTop + (($rh['ranking_position'] - $rankDisplayMin) / $rankRange) * $rankGraphHeight;
+                    $rankDataPoints[] = ['x' => $x, 'y' => $y, 'pos' => $rh['ranking_position']];
+                }
+
+                $rankPathD = "M " . $rankDataPoints[0]['x'] . "," . $rankDataPoints[0]['y'];
+                for ($i = 1; $i < count($rankDataPoints); $i++) {
+                    $cpX = ($rankDataPoints[$i-1]['x'] + $rankDataPoints[$i]['x']) / 2;
+                    $rankPathD .= " Q " . $cpX . "," . $rankDataPoints[$i-1]['y'] . " " . $rankDataPoints[$i]['x'] . "," . $rankDataPoints[$i]['y'];
+                }
+                $rankAreaPath = $rankPathD . " L " . end($rankDataPoints)['x'] . "," . ($rankChartHeight - $rankPaddingBottom) . " L " . $rankDataPoints[0]['x'] . "," . ($rankChartHeight - $rankPaddingBottom) . " Z";
+            ?>
+            <div class="ranking-graph-container">
+                <svg viewBox="0 0 <?= $rankChartWidth ?> <?= $rankChartHeight ?>" preserveAspectRatio="none" class="ranking-graph-svg">
+                    <defs>
+                        <linearGradient id="rankingGradient" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stop-color="#ef4444" stop-opacity="0.35"/>
+                            <stop offset="100%" stop-color="#ef4444" stop-opacity="0.05"/>
+                        </linearGradient>
+                    </defs>
+                    <path d="<?= $rankAreaPath ?>" fill="url(#rankingGradient)"/>
+                    <path d="<?= $rankPathD ?>" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <?php foreach ($rankDataPoints as $idx => $dp): ?>
+                    <circle cx="<?= $dp['x'] ?>" cy="<?= $dp['y'] ?>" r="3" fill="#ef4444" stroke="white" stroke-width="1"/>
+                    <text x="<?= $dp['x'] ?>" y="<?= $dp['y'] - 6 ?>" font-size="7" fill="var(--color-text-secondary)" text-anchor="middle" font-weight="600"><?= $dp['pos'] ?></text>
+                    <?php endforeach; ?>
+                </svg>
             </div>
+            <?php endif; ?>
+
+            <button type="button" class="btn-calc-ranking" onclick="openRankingModal()">
+                <i data-lucide="calculator"></i>
+                <span>Visa uträkning</span>
+            </button>
+            <?php endif; ?>
         </div>
 
-        <!-- SERIES STANDINGS CARD -->
+        <!-- FORM CARD - Dashboard Style -->
+        <?php if ($hasCompetitiveResults && !empty($formResults)):
+            // Använd max 10 senaste tävlingarna
+            $chartResults = array_slice($formResults, -10);
+            $positions = array_column($chartResults, 'position');
+            $bestPos = min($positions);
+            $avgPlacement = count($positions) > 0 ? array_sum($positions) / count($positions) : 0;
+            $avgDisplay = number_format($avgPlacement, 1);
+
+            $chartWidth = 400;
+            $chartHeight = 130;
+            $paddingX = 15;
+            $paddingTop = 20;
+            $paddingBottom = 15;
+            $numResults = count($chartResults);
+
+            $maxPos = max($positions);
+            $minPos = min($positions);
+            $displayMin = max(1, $minPos - 1);
+            $displayMax = $maxPos + 2;
+            $range = max(1, $displayMax - $displayMin);
+
+            $graphHeight = $chartHeight - $paddingTop - $paddingBottom;
+            $xStep = $numResults > 1 ? ($chartWidth - $paddingX * 2) / ($numResults - 1) : 0;
+
+            $dataPoints = [];
+            foreach ($chartResults as $idx => $fr) {
+                $x = $paddingX + ($idx * $xStep);
+                $y = $paddingTop + (($fr['position'] - $displayMin) / $range) * $graphHeight;
+                $dataPoints[] = ['x' => $x, 'y' => $y, 'pos' => $fr['position']];
+            }
+
+            // Smooth kurva
+            $pathD = "M " . $dataPoints[0]['x'] . "," . $dataPoints[0]['y'];
+            for ($i = 1; $i < count($dataPoints); $i++) {
+                $cpX = ($dataPoints[$i-1]['x'] + $dataPoints[$i]['x']) / 2;
+                $pathD .= " Q " . $cpX . "," . $dataPoints[$i-1]['y'] . " " . $dataPoints[$i]['x'] . "," . $dataPoints[$i]['y'];
+            }
+            $areaPath = $pathD . " L " . end($dataPoints)['x'] . "," . ($chartHeight - $paddingBottom) . " L " . $dataPoints[0]['x'] . "," . ($chartHeight - $paddingBottom) . " Z";
+        ?>
+        <div class="dashboard-chart-card dashboard-chart-card--green">
+            <div class="dashboard-chart-header">
+                <div class="dashboard-chart-title">Form</div>
+                <div class="dashboard-chart-stats">
+                    <div class="dashboard-stat">
+                        <span class="dashboard-stat-value dashboard-stat-value--green">#<?= $bestPos ?></span>
+                        <span class="dashboard-stat-label">Bästa</span>
+                    </div>
+                    <div class="dashboard-stat">
+                        <span class="dashboard-stat-value"><?= $avgDisplay ?></span>
+                        <span class="dashboard-stat-label">Snitt</span>
+                    </div>
+                </div>
+            </div>
+            <div class="dashboard-chart-body">
+                <svg viewBox="0 0 <?= $chartWidth ?> <?= $chartHeight ?>" preserveAspectRatio="none" class="dashboard-chart-svg">
+                    <defs>
+                        <linearGradient id="formGradient" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stop-color="#61CE70" stop-opacity="0.4"/>
+                            <stop offset="100%" stop-color="#61CE70" stop-opacity="0.05"/>
+                        </linearGradient>
+                    </defs>
+                    <path d="<?= $areaPath ?>" fill="url(#formGradient)"/>
+                    <path d="<?= $pathD ?>" fill="none" stroke="#61CE70" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    <?php foreach ($dataPoints as $idx => $dp): ?>
+                    <circle cx="<?= $dp['x'] ?>" cy="<?= $dp['y'] ?>" r="4" fill="#61CE70" stroke="white" stroke-width="1.5"/>
+                    <text x="<?= $dp['x'] ?>" y="<?= $dp['y'] - 8 ?>" font-size="9" fill="var(--color-text-secondary)" text-anchor="middle" font-weight="600"><?= $dp['pos'] ?></text>
+                    <?php endforeach; ?>
+                </svg>
+            </div>
+            <div class="dashboard-chart-footer">
+                <span><?= $numResults ?> tävlingar</span>
+            </div>
+        </div>
+        <?php endif; ?>
+
+        <!-- SERIES STANDINGS CARD - Now in left column -->
         <?php if (!empty($availableYears)): ?>
         <div class="card series-card">
             <div class="series-header">
@@ -726,14 +793,10 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
                         <span class="series-rank-number">#<?= $standing['ranking'] ?></span>
                         <span class="series-rank-text">av <?= $standing['total_riders'] ?> i <?= htmlspecialchars($standing['class_name'] ?? 'klassen') ?></span>
                     </div>
-                    <?php
-                    $trendChange = is_array($standing['trend']) ? ($standing['trend']['change'] ?? 0) : $standing['trend'];
-                    $trendDirection = is_array($standing['trend']) ? ($standing['trend']['direction'] ?? 'same') : ($trendChange > 0 ? 'up' : ($trendChange < 0 ? 'down' : 'same'));
-                    if ($trendChange != 0):
-                    ?>
-                    <div class="series-trend <?= $trendDirection === 'up' ? 'trend-up' : 'trend-down' ?>">
-                        <i data-lucide="<?= $trendDirection === 'up' ? 'trending-up' : 'trending-down' ?>"></i>
-                        <span><?= $trendDirection === 'up' ? '+' : '-' ?><?= $trendChange ?></span>
+                    <?php if ($standing['trend'] != 0): ?>
+                    <div class="series-trend <?= $standing['trend'] > 0 ? 'trend-up' : 'trend-down' ?>">
+                        <i data-lucide="<?= $standing['trend'] > 0 ? 'trending-up' : 'trending-down' ?>"></i>
+                        <span><?= $standing['trend'] > 0 ? '+' : '' ?><?= $standing['trend'] ?></span>
                     </div>
                     <?php endif; ?>
                 </div>
@@ -821,240 +884,84 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
         </div>
         <?php endif; ?>
 
-        <!-- HISTORY SECTION (in left column) -->
-        <div class="card history-card">
-            <h3 class="card-section-title"><i data-lucide="history"></i> Resultathistorik</h3>
-            <?php if (empty($results)): ?>
-            <div class="empty-state-small">
-                <i data-lucide="flag"></i>
-                <p>Inga resultat registrerade</p>
-            </div>
-            <?php else: ?>
-            <div class="results-list-compact">
-                <?php
-                $currentYear = null;
-                foreach ($results as $result):
-                    $resultYear = date('Y', strtotime($result['event_date']));
-                    if ($resultYear !== $currentYear):
-                        $currentYear = $resultYear;
-                ?>
-                <div class="year-divider">
-                    <span class="year-label"><?= $currentYear ?></span>
-                    <span class="year-line"></span>
-                </div>
-                <?php endif; ?>
-                <a href="/event/<?= $result['event_id'] ?>" class="result-row" <?php if (!empty($result['series_color'])): ?>style="--result-accent: <?= htmlspecialchars($result['series_color']) ?>;"<?php endif; ?>>
-                    <span class="result-accent-bar"></span>
-                    <?php if ($result['is_motion']): ?>
-                    <span class="result-pos motion">
-                        <i data-lucide="check"></i>
-                    </span>
-                    <?php else: ?>
-                    <span class="result-pos <?= $result['status'] === 'finished' && $result['position'] <= 3 ? 'p' . $result['position'] : '' ?>">
-                        <?php if ($result['status'] !== 'finished'): ?>
-                            <?= strtoupper(substr($result['status'], 0, 3)) ?>
-                        <?php elseif ($result['position'] == 1): ?>
-                            <img src="/assets/icons/medal-1st.svg" alt="1:a" class="medal-icon-sm">
-                        <?php elseif ($result['position'] == 2): ?>
-                            <img src="/assets/icons/medal-2nd.svg" alt="2:a" class="medal-icon-sm">
-                        <?php elseif ($result['position'] == 3): ?>
-                            <img src="/assets/icons/medal-3rd.svg" alt="3:e" class="medal-icon-sm">
-                        <?php else: ?>
-                            #<?= $result['position'] ?>
-                        <?php endif; ?>
-                    </span>
-                    <?php endif; ?>
-                    <span class="result-date"><?= date('j M', strtotime($result['event_date'])) ?></span>
-                    <span class="result-details">
-                        <span class="result-name"><?= htmlspecialchars($result['series_name'] ?? $result['event_name']) ?></span>
-                        <span class="result-meta"><?= htmlspecialchars($result['location'] ?? '') ?><?= !empty($result['location']) && !empty($result['class_name']) ? ' · ' : '' ?><?= htmlspecialchars($result['class_name'] ?? '') ?></span>
-                    </span>
-                </a>
-                <?php endforeach; ?>
-            </div>
-            <?php endif; ?>
-        </div>
-
     </div><!-- End left-column -->
 
-    <!-- RIGHT COLUMN -->
+    <!-- RIGHT COLUMN: Profile, Highlights, Achievements -->
     <div class="right-column">
 
-        <!-- RANKING CARD - Dashboard Style (matching Form card) -->
-        <?php if ($rankingPosition):
-            $totalRankedRiders = 100;
-            try {
-                $countStmt = $db->prepare("SELECT COUNT(DISTINCT rider_id) as cnt FROM ranking_snapshots WHERE discipline = 'GRAVITY'");
-                $countStmt->execute();
-                $countResult = $countStmt->fetch(PDO::FETCH_ASSOC);
-                if ($countResult && $countResult['cnt'] > 0) {
-                    $totalRankedRiders = $countResult['cnt'];
-                }
-            } catch (Exception $e) {}
-
-            // Prepare ranking chart data (one point per month, max 24)
-            $hasRankingChart = !empty($rankingHistoryForGraph) && count($rankingHistoryForGraph) >= 2;
-            if ($hasRankingChart) {
-                $rankChartData = $rankingHistoryForGraph;
-                $rankPositions = array_column($rankChartData, 'ranking_position');
-                $bestRank = min($rankPositions);
-                $currentRank = $rankingPosition;
-
-                $rankChartWidth = 400;
-                $rankChartHeight = 130;
-                $rankPaddingX = 10;
-                $rankPaddingTop = 15;
-                $rankPaddingBottom = 10;
-                $rankNumResults = count($rankChartData);
-
-                $worstRank = max($rankPositions);
-                $rankDisplayMin = max(1, $bestRank - 1);
-                $rankDisplayMax = $worstRank + 2;
-                $rankRange = max(1, $rankDisplayMax - $rankDisplayMin);
-
-                $rankGraphHeight = $rankChartHeight - $rankPaddingTop - $rankPaddingBottom;
-                $rankXStep = $rankNumResults > 1 ? ($rankChartWidth - $rankPaddingX * 2) / ($rankNumResults - 1) : 0;
-
-                $rankDataPoints = [];
-                foreach ($rankChartData as $idx => $rh) {
-                    $x = $rankPaddingX + ($idx * $rankXStep);
-                    $y = $rankPaddingTop + (($rh['ranking_position'] - $rankDisplayMin) / $rankRange) * $rankGraphHeight;
-                    $rankDataPoints[] = ['x' => $x, 'y' => $y, 'pos' => $rh['ranking_position'], 'label' => $rh['month_label'] ?? ''];
-                }
-
-                $rankPathD = "M " . $rankDataPoints[0]['x'] . "," . $rankDataPoints[0]['y'];
-                for ($i = 1; $i < count($rankDataPoints); $i++) {
-                    $cpX = ($rankDataPoints[$i-1]['x'] + $rankDataPoints[$i]['x']) / 2;
-                    $rankPathD .= " Q " . $cpX . "," . $rankDataPoints[$i-1]['y'] . " " . $rankDataPoints[$i]['x'] . "," . $rankDataPoints[$i]['y'];
-                }
-                $rankAreaPath = $rankPathD . " L " . end($rankDataPoints)['x'] . "," . ($rankChartHeight - $rankPaddingBottom) . " L " . $rankDataPoints[0]['x'] . "," . ($rankChartHeight - $rankPaddingBottom) . " Z";
-            }
-        ?>
-        <div class="dashboard-chart-card dashboard-chart-card--red">
-            <div class="dashboard-chart-header">
-                <div class="dashboard-chart-title">Ranking</div>
-                <div class="dashboard-chart-stats">
-                    <div class="dashboard-stat">
-                        <span class="dashboard-stat-value dashboard-stat-value--red">#<?= $rankingPosition ?></span>
-                        <span class="dashboard-stat-label">Position</span>
-                    </div>
-                    <div class="dashboard-stat">
-                        <span class="dashboard-stat-value"><?= number_format($rankingPoints, 1) ?></span>
-                        <span class="dashboard-stat-label">Poäng</span>
-                    </div>
-                </div>
+        <!-- PROFILE CARD - Portrait Style -->
+        <div class="card profile-card-v4">
+            <!-- Square Photo or Initials -->
+            <div class="profile-photo-hero <?= $profileImageUrl ? '' : 'initials-bg' ?>">
+                <?php if ($profileImageUrl): ?>
+                    <img src="<?= htmlspecialchars($profileImageUrl) ?>" alt="<?= $fullName ?>" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                    <div class="profile-initials-fallback" style="display: none;"><?= htmlspecialchars($initials) ?></div>
+                <?php else: ?>
+                    <div class="profile-initials"><?= htmlspecialchars($initials) ?></div>
+                <?php endif; ?>
             </div>
-            <?php if ($hasRankingChart): ?>
-            <div class="dashboard-chart-body">
-                <svg viewBox="0 0 <?= $rankChartWidth ?> <?= $rankChartHeight ?>" preserveAspectRatio="none" class="dashboard-chart-svg">
-                    <defs>
-                        <linearGradient id="rankingGradient" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stop-color="#ef4444" stop-opacity="0.4"/>
-                            <stop offset="100%" stop-color="#ef4444" stop-opacity="0.05"/>
-                        </linearGradient>
-                    </defs>
-                    <path d="<?= $rankAreaPath ?>" fill="url(#rankingGradient)"/>
-                    <path d="<?= $rankPathD ?>" fill="none" stroke="#ef4444" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+
+            <!-- Info Section -->
+            <div class="profile-info-centered">
+                <h1 class="profile-name-hero">
+                    <?= $fullName ?>
                     <?php
-                    $totalPoints = count($rankDataPoints);
-                    $showLabels = $totalPoints <= 12; // Show all labels if 12 or fewer points
-                    foreach ($rankDataPoints as $idx => $dp):
-                        $isFirst = $idx === 0;
-                        $isLast = $idx === $totalPoints - 1;
-                        $showThisLabel = $showLabels || $isFirst || $isLast;
+                    $nationality = $rider['nationality'] ?? 'SWE';
+                    $countryCode = strtolower($nationality);
                     ?>
-                    <circle cx="<?= $dp['x'] ?>" cy="<?= $dp['y'] ?>" r="<?= $showLabels ? 4 : 3 ?>" fill="#ef4444" stroke="white" stroke-width="1.5"/>
-                    <?php if ($showThisLabel): ?>
-                    <text x="<?= $dp['x'] ?>" y="<?= $dp['y'] - 8 ?>" font-size="9" fill="var(--color-text-secondary)" text-anchor="middle" font-weight="600"><?= $dp['pos'] ?></text>
-                    <?php endif; ?>
-                    <?php endforeach; ?>
-                </svg>
+                    <img src="https://flagcdn.com/24x18/<?= $countryCode === 'swe' ? 'se' : ($countryCode === 'nor' ? 'no' : ($countryCode === 'den' ? 'dk' : ($countryCode === 'fin' ? 'fi' : $countryCode))) ?>.png"
+                         alt="<?= $nationality ?>"
+                         class="profile-flag"
+                         onerror="this.style.display='none'">
+                </h1>
+                <?php if ($age): ?><span class="profile-subtitle"><?= $age ?> ar</span><?php endif; ?>
+                <?php if ($rider['club_name']): ?>
+                <a href="/club/<?= $rider['club_id'] ?>" class="profile-club-link-hero"><?= htmlspecialchars($rider['club_name']) ?></a>
+                <?php endif; ?>
+                <?php if ($rider['license_number']): ?>
+                <span class="profile-uci-text">UCI: <?= htmlspecialchars($rider['license_number']) ?></span>
+                <?php endif; ?>
             </div>
-            <?php endif; ?>
-            <div class="dashboard-chart-footer">
-                <button type="button" class="btn-calc-ranking-inline" onclick="openRankingModal()">
-                    <i data-lucide="calculator"></i>
-                    <span>Visa uträkning</span>
+
+            <!-- License Badge -->
+            <div class="profile-license-badge">
+                <span class="license-label">Licens</span>
+                <span class="license-year"><?= $rider['license_year'] ?? date('Y') ?></span>
+            </div>
+
+            <!-- Social Media Icons - Simple gray style -->
+            <div class="profile-social-simple">
+                <a href="<?= $socialProfiles['instagram']['url'] ?? '#' ?>" class="social-icon-simple <?= empty($socialProfiles['instagram']) ? 'empty' : '' ?>" title="Instagram" <?= !empty($socialProfiles['instagram']) ? 'target="_blank"' : '' ?>>
+                    <svg viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
+                </a>
+                <a href="<?= $socialProfiles['strava']['url'] ?? '#' ?>" class="social-icon-simple <?= empty($socialProfiles['strava']) ? 'empty' : '' ?>" title="Strava" <?= !empty($socialProfiles['strava']) ? 'target="_blank"' : '' ?>>
+                    <svg viewBox="0 0 24 24"><path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169"/></svg>
+                </a>
+                <a href="<?= $socialProfiles['facebook']['url'] ?? '#' ?>" class="social-icon-simple <?= empty($socialProfiles['facebook']) ? 'empty' : '' ?>" title="Facebook" <?= !empty($socialProfiles['facebook']) ? 'target="_blank"' : '' ?>>
+                    <svg viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+                </a>
+                <a href="<?= $socialProfiles['youtube']['url'] ?? '#' ?>" class="social-icon-simple <?= empty($socialProfiles['youtube']) ? 'empty' : '' ?>" title="YouTube" <?= !empty($socialProfiles['youtube']) ? 'target="_blank"' : '' ?>>
+                    <svg viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+                </a>
+                <a href="<?= $socialProfiles['tiktok']['url'] ?? '#' ?>" class="social-icon-simple <?= empty($socialProfiles['tiktok']) ? 'empty' : '' ?>" title="TikTok" <?= !empty($socialProfiles['tiktok']) ? 'target="_blank"' : '' ?>>
+                    <svg viewBox="0 0 24 24"><path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z"/></svg>
+                </a>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="profile-actions-row">
+                <button type="button" class="btn-action-outline" onclick="shareProfile(<?= $riderId ?>)">
+                    <i data-lucide="share-2"></i>
+                    <span>Dela</span>
                 </button>
+                <?php if (function_exists('hub_is_admin') && hub_is_admin()): ?>
+                <a href="/admin/rider-edit.php?id=<?= $riderId ?>" class="btn-action-outline">
+                    <i data-lucide="pencil"></i>
+                    <span>Redigera</span>
+                </a>
+                <?php endif; ?>
             </div>
         </div>
-        <?php endif; ?>
-
-        <!-- FORM CARD - Dashboard Style -->
-        <?php if ($hasCompetitiveResults && !empty($formResults)):
-            // Använd max 10 senaste tävlingarna
-            $chartResults = array_slice($formResults, -10);
-            $positions = array_column($chartResults, 'position');
-            $bestPos = min($positions);
-            $avgPlacement = count($positions) > 0 ? array_sum($positions) / count($positions) : 0;
-            $avgDisplay = number_format($avgPlacement, 1);
-
-            $chartWidth = 400;
-            $chartHeight = 130;
-            $paddingX = 15;
-            $paddingTop = 20;
-            $paddingBottom = 15;
-            $numResults = count($chartResults);
-
-            $maxPos = max($positions);
-            $minPos = min($positions);
-            $displayMin = max(1, $minPos - 1);
-            $displayMax = $maxPos + 2;
-            $range = max(1, $displayMax - $displayMin);
-
-            $graphHeight = $chartHeight - $paddingTop - $paddingBottom;
-            $xStep = $numResults > 1 ? ($chartWidth - $paddingX * 2) / ($numResults - 1) : 0;
-
-            $dataPoints = [];
-            foreach ($chartResults as $idx => $fr) {
-                $x = $paddingX + ($idx * $xStep);
-                $y = $paddingTop + (($fr['position'] - $displayMin) / $range) * $graphHeight;
-                $dataPoints[] = ['x' => $x, 'y' => $y, 'pos' => $fr['position']];
-            }
-
-            // Smooth kurva
-            $pathD = "M " . $dataPoints[0]['x'] . "," . $dataPoints[0]['y'];
-            for ($i = 1; $i < count($dataPoints); $i++) {
-                $cpX = ($dataPoints[$i-1]['x'] + $dataPoints[$i]['x']) / 2;
-                $pathD .= " Q " . $cpX . "," . $dataPoints[$i-1]['y'] . " " . $dataPoints[$i]['x'] . "," . $dataPoints[$i]['y'];
-            }
-            $areaPath = $pathD . " L " . end($dataPoints)['x'] . "," . ($chartHeight - $paddingBottom) . " L " . $dataPoints[0]['x'] . "," . ($chartHeight - $paddingBottom) . " Z";
-        ?>
-        <div class="dashboard-chart-card dashboard-chart-card--green">
-            <div class="dashboard-chart-header">
-                <div class="dashboard-chart-title">Form</div>
-                <div class="dashboard-chart-stats">
-                    <div class="dashboard-stat">
-                        <span class="dashboard-stat-value dashboard-stat-value--green">#<?= $bestPos ?></span>
-                        <span class="dashboard-stat-label">Bästa</span>
-                    </div>
-                    <div class="dashboard-stat">
-                        <span class="dashboard-stat-value"><?= $avgDisplay ?></span>
-                        <span class="dashboard-stat-label">Snitt</span>
-                    </div>
-                </div>
-            </div>
-            <div class="dashboard-chart-body">
-                <svg viewBox="0 0 <?= $chartWidth ?> <?= $chartHeight ?>" preserveAspectRatio="none" class="dashboard-chart-svg">
-                    <defs>
-                        <linearGradient id="formGradient" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stop-color="#61CE70" stop-opacity="0.4"/>
-                            <stop offset="100%" stop-color="#61CE70" stop-opacity="0.05"/>
-                        </linearGradient>
-                    </defs>
-                    <path d="<?= $areaPath ?>" fill="url(#formGradient)"/>
-                    <path d="<?= $pathD ?>" fill="none" stroke="#61CE70" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-                    <?php foreach ($dataPoints as $idx => $dp): ?>
-                    <circle cx="<?= $dp['x'] ?>" cy="<?= $dp['y'] ?>" r="4" fill="#61CE70" stroke="white" stroke-width="1.5"/>
-                    <text x="<?= $dp['x'] ?>" y="<?= $dp['y'] - 8 ?>" font-size="9" fill="var(--color-text-secondary)" text-anchor="middle" font-weight="600"><?= $dp['pos'] ?></text>
-                    <?php endforeach; ?>
-                </svg>
-            </div>
-            <div class="dashboard-chart-footer">
-                <span><?= $numResults ?> tävlingar</span>
-            </div>
-        </div>
-        <?php endif; ?>
 
         <!-- HIGHLIGHTS CARD -->
         <div class="card highlights-card">
@@ -1099,6 +1006,59 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
 
 </div><!-- End rider-profile-layout -->
 
+<!-- HISTORY SECTION (FULL WIDTH BELOW) -->
+<div class="card history-card-full">
+    <h3 class="card-section-title"><i data-lucide="history"></i> Resultathistorik</h3>
+    <?php if (empty($results)): ?>
+    <div class="empty-state-small">
+        <i data-lucide="flag"></i>
+        <p>Inga resultat registrerade</p>
+    </div>
+    <?php else: ?>
+    <div class="results-list-compact">
+        <?php
+        $currentYear = null;
+        foreach ($results as $result):
+            $resultYear = date('Y', strtotime($result['event_date']));
+            if ($resultYear !== $currentYear):
+                $currentYear = $resultYear;
+        ?>
+        <div class="year-divider">
+            <span class="year-label"><?= $currentYear ?></span>
+            <span class="year-line"></span>
+        </div>
+        <?php endif; ?>
+        <a href="/event/<?= $result['event_id'] ?>" class="result-row" <?php if (!empty($result['series_color'])): ?>style="--result-accent: <?= htmlspecialchars($result['series_color']) ?>;"<?php endif; ?>>
+            <span class="result-accent-bar"></span>
+            <?php if ($result['is_motion']): ?>
+            <span class="result-pos motion">
+                <i data-lucide="check"></i>
+            </span>
+            <?php else: ?>
+            <span class="result-pos <?= $result['status'] === 'finished' && $result['position'] <= 3 ? 'p' . $result['position'] : '' ?>">
+                <?php if ($result['status'] !== 'finished'): ?>
+                    <?= strtoupper(substr($result['status'], 0, 3)) ?>
+                <?php elseif ($result['position'] == 1): ?>
+                    <img src="/assets/icons/medal-1st.svg" alt="1:a" class="medal-icon-sm">
+                <?php elseif ($result['position'] == 2): ?>
+                    <img src="/assets/icons/medal-2nd.svg" alt="2:a" class="medal-icon-sm">
+                <?php elseif ($result['position'] == 3): ?>
+                    <img src="/assets/icons/medal-3rd.svg" alt="3:e" class="medal-icon-sm">
+                <?php else: ?>
+                    #<?= $result['position'] ?>
+                <?php endif; ?>
+            </span>
+            <?php endif; ?>
+            <span class="result-date"><?= date('j M', strtotime($result['event_date'])) ?></span>
+            <span class="result-details">
+                <span class="result-name"><?= htmlspecialchars($result['series_name'] ?? $result['event_name']) ?></span>
+                <span class="result-meta"><?= htmlspecialchars($result['location'] ?? '') ?><?= !empty($result['location']) && !empty($result['class_name']) ? ' · ' : '' ?><?= htmlspecialchars($result['class_name'] ?? '') ?></span>
+            </span>
+        </a>
+        <?php endforeach; ?>
+    </div>
+    <?php endif; ?>
+</div>
 <script>
 // Series Tab Switching
 document.querySelectorAll('.series-tab').forEach(tab => {
@@ -1271,32 +1231,8 @@ document.addEventListener('DOMContentLoaded', function() {
             </div>
 
             <div class="modal-events-list">
-                <?php if (!empty($rankingEventsByMonth)):
-                    $prevMonthPosition = null;
-                    $monthIndex = 0;
-                    foreach ($rankingEventsByMonth as $monthKey => $monthData):
-                        // Get position change for this month from ranking history
-                        $monthPosition = null;
-                        $positionChange = null;
-                        foreach ($rankingHistoryForGraph as $hist) {
-                            if (($hist['month'] ?? '') === $monthKey) {
-                                $monthPosition = $hist['ranking_position'];
-                                $positionChange = $hist['position_change'] ?? null;
-                                break;
-                            }
-                        }
-                ?>
-                <div class="modal-month-divider">
-                    <span class="modal-month-label"><?= htmlspecialchars($monthData['month_label']) ?></span>
-                    <?php if ($positionChange !== null && $positionChange != 0): ?>
-                    <span class="modal-month-change <?= $positionChange > 0 ? 'positive' : 'negative' ?>">
-                        <?= $positionChange > 0 ? '+' . $positionChange : $positionChange ?> platser
-                    </span>
-                    <?php elseif ($monthPosition !== null): ?>
-                    <span class="modal-month-position">#<?= $monthPosition ?></span>
-                    <?php endif; ?>
-                </div>
-                <?php foreach ($monthData['events'] as $event): ?>
+                <?php if (!empty($rankingEvents)): ?>
+                <?php foreach ($rankingEvents as $event): ?>
                 <div class="modal-event-item">
                     <div class="modal-event-row">
                         <div class="modal-event-info">
@@ -1328,7 +1264,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     </div>
                 </div>
                 <?php endforeach; ?>
-                <?php $monthIndex++; endforeach; ?>
                 <?php else: ?>
                 <div class="modal-empty-state">
                     <i data-lucide="info"></i>

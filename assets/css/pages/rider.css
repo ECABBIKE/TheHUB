@@ -39,8 +39,7 @@
 
 .profile-photo-hero {
     width: 100%;
-    aspect-ratio: 4 / 3;
-    max-height: 240px;
+    aspect-ratio: 1 / 1;
     background: linear-gradient(180deg, #f0f0f0 0%, #e5e5e5 100%);
     overflow: hidden;
 }
@@ -1882,12 +1881,13 @@
         grid-template-columns: 1fr;
     }
 
+    /* Mobile: Profile card (in right-column) comes FIRST */
     .right-column {
-        order: 2;
+        order: 1;
     }
 
     .left-column {
-        order: 1;
+        order: 2;
     }
 
     /* Edge-to-edge design för alla kort på mobil - styrs av --container-padding från branding */
