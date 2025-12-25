@@ -900,6 +900,25 @@ document.addEventListener('keydown', function(e) {
     }
 }
 
+/* Override events-dropdown to match toggle buttons */
+.series-nav-row .events-dropdown {
+    background: white;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    margin-bottom: 0;
+}
+.series-nav-row .events-dropdown-header {
+    padding: var(--space-sm) var(--space-md);
+    font-size: 0.875rem;
+    background: white;
+}
+.series-nav-row .events-dropdown-header:hover {
+    background: #f5f5f5;
+}
+.series-nav-row .events-dropdown[open] {
+    box-shadow: none;
+}
+
 /* Standings Toggle (50/50 buttons within toggle container) */
 .standings-toggle {
     display: grid;
