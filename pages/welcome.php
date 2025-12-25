@@ -138,18 +138,6 @@ $homepageLogo = getBranding('logos.homepage');
             <span class="stat-label">Serier</span>
         </div>
     </div>
-    <?php else: ?>
-    <!-- Login CTA for visitors -->
-    <div class="welcome-login-cta">
-        <div class="welcome-login-cta-content">
-            <?= hub_icon('lock', 'welcome-login-icon') ?>
-            <div>
-                <h3>Logga in för fullständig åtkomst</h3>
-                <p>Se statistik, kommande tävlingar, senaste resultat och hantera din profil.</p>
-            </div>
-        </div>
-        <a href="/login" class="btn btn--primary">Logga in</a>
-    </div>
     <?php endif; ?>
 
     <!-- Navigation Grid -->
