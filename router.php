@@ -168,6 +168,7 @@ function hub_get_current_page(): array {
     $legacyPages = [
         'riders' => ['section' => 'database', 'file' => '/pages/riders.php'],
         'clubs' => ['section' => 'database', 'file' => '/pages/clubs.php'],
+        'club-points' => ['section' => 'series', 'file' => '/pages/club-points.php'],
         'results' => ['section' => 'results', 'file' => '/pages/results.php'],
         'ranking' => ['section' => 'ranking', 'file' => '/pages/ranking.php'],
         'achievements' => ['section' => 'database', 'file' => '/pages/achievements.php']
