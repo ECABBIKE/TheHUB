@@ -745,10 +745,14 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
                         <span class="series-rank-number">#<?= $standing['ranking'] ?></span>
                         <span class="series-rank-text">av <?= $standing['total_riders'] ?> i <?= htmlspecialchars($standing['class_name'] ?? 'klassen') ?></span>
                     </div>
-                    <?php if ($standing['trend'] != 0): ?>
-                    <div class="series-trend <?= $standing['trend'] > 0 ? 'trend-up' : 'trend-down' ?>">
-                        <i data-lucide="<?= $standing['trend'] > 0 ? 'trending-up' : 'trending-down' ?>"></i>
-                        <span><?= $standing['trend'] > 0 ? '+' : '' ?><?= $standing['trend'] ?></span>
+                    <?php
+                    $trendChange = is_array($standing['trend']) ? ($standing['trend']['change'] ?? 0) : $standing['trend'];
+                    $trendDirection = is_array($standing['trend']) ? ($standing['trend']['direction'] ?? 'same') : ($trendChange > 0 ? 'up' : ($trendChange < 0 ? 'down' : 'same'));
+                    if ($trendChange != 0):
+                    ?>
+                    <div class="series-trend <?= $trendDirection === 'up' ? 'trend-up' : 'trend-down' ?>">
+                        <i data-lucide="<?= $trendDirection === 'up' ? 'trending-up' : 'trending-down' ?>"></i>
+                        <span><?= $trendDirection === 'up' ? '+' : '-' ?><?= $trendChange ?></span>
                     </div>
                     <?php endif; ?>
                 </div>
