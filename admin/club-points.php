@@ -15,8 +15,8 @@ $messageType = 'info';
 
 // Check if tables exist
 if (!clubPointsTablesExist($db)) {
- $message = 'Klubbpoängtabeller saknas. Kör migration 021_club_points_system.sql för att skapa dem.';
- $messageType = 'warning';
+    $message = 'Klubbpoängtabeller saknas. <a href="/admin/run-migration.php?file=071_club_points_system.sql">Kör migration 071</a> för att skapa dem.';
+    $messageType = 'warning';
 }
 
 // Get all series for filter
@@ -35,15 +35,33 @@ if (!$selectedSeriesId && !empty($seriesList)) {
 
 // Handle recalculate action
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['recalculate'])) {
- checkCsrf();
+    checkCsrf();
 
- $seriesIdToRecalc = (int)$_POST['series_id'];
- if ($seriesIdToRecalc) {
- $stats = recalculateSeriesClubPoints($db, $seriesIdToRecalc);
- $message ="Omräkning klar! {$stats['events_processed']} events, {$stats['total_clubs']} klubbar, {$stats['total_points']} poäng.";
- $messageType = 'success';
- $selectedSeriesId = $seriesIdToRecalc;
- }
+    $seriesIdToRecalc = (int)$_POST['series_id'];
+    if ($seriesIdToRecalc) {
+        $stats = recalculateSeriesClubPoints($db, $seriesIdToRecalc);
+        $message = "Omräkning klar! {$stats['events_processed']} events, {$stats['total_clubs']} klubbar, {$stats['total_points']} poäng.";
+        $messageType = 'success';
+        $selectedSeriesId = $seriesIdToRecalc;
+    }
+}
+
+// Handle recalculate ALL series
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['recalculate_all'])) {
+    checkCsrf();
+
+    $totalStats = ['series' => 0, 'events' => 0, 'clubs' => 0, 'points' => 0];
+
+    foreach ($seriesList as $series) {
+        $stats = recalculateSeriesClubPoints($db, $series['id']);
+        $totalStats['series']++;
+        $totalStats['events'] += $stats['events_processed'];
+        $totalStats['clubs'] += $stats['total_clubs'];
+        $totalStats['points'] += $stats['total_points'];
+    }
+
+    $message = "ALLA serier omräknade! {$totalStats['series']} serier, {$totalStats['events']} events, {$totalStats['clubs']} klubbar totalt.";
+    $messageType = 'success';
 }
 
 // Get standings for selected series
@@ -97,7 +115,7 @@ include __DIR__ . '/components/unified-layout.php';
 
   <!-- Recalculate Button -->
   <?php if ($selectedSeriesId): ?>
-  <form method="POST" class="gs-mb-0">
+  <form method="POST" class="gs-mb-0" style="display: inline;">
   <?= csrf_field() ?>
   <input type="hidden" name="series_id" value="<?= $selectedSeriesId ?>">
   <button type="submit" name="recalculate" class="btn btn--secondary"
@@ -107,6 +125,16 @@ include __DIR__ . '/components/unified-layout.php';
   </button>
   </form>
   <?php endif; ?>
+
+  <!-- Recalculate ALL Button -->
+  <form method="POST" class="gs-mb-0" style="display: inline; margin-left: 0.5rem;">
+  <?= csrf_field() ?>
+  <button type="submit" name="recalculate_all" class="btn btn--primary"
+  onclick="return confirm('Räkna om klubbpoäng för ALLA serier?\n\nDetta kan ta några sekunder.')">
+  <i data-lucide="refresh-cw"></i>
+  Räkna alla serier
+  </button>
+  </form>
  </div>
  </div>
  </div>
