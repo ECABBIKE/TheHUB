@@ -482,11 +482,13 @@ function parseAndAnalyzeCSV($filepath, $db) {
   $rider = null;
   $isDuplicate = false;
 
-  // Try normalized license first
+  // Try normalized license first - check both license_number AND uci_id columns
   if (!empty($normalizedLicense)) {
    $rider = $db->getRow(
-   "SELECT id, firstname, lastname, license_number FROM riders WHERE REPLACE(REPLACE(license_number, ' ', ''), '-', '') = ?",
-   [$normalizedLicense]
+   "SELECT id, firstname, lastname, license_number, uci_id FROM riders
+    WHERE REPLACE(REPLACE(license_number, ' ', ''), '-', '') = ?
+       OR REPLACE(REPLACE(uci_id, ' ', ''), '-', '') = ?",
+   [$normalizedLicense, $normalizedLicense]
    );
 
    // Check if it's a format duplicate (same UCI but different format)
@@ -506,10 +508,10 @@ function parseAndAnalyzeCSV($filepath, $db) {
    }
   }
 
-  // Try name match if no license match
+  // Try name match if no license match (case-insensitive)
   if (!$rider) {
    $rider = $db->getRow(
-   "SELECT id, firstname, lastname, license_number FROM riders WHERE firstname = ? AND lastname = ?",
+   "SELECT id, firstname, lastname, license_number, uci_id FROM riders WHERE LOWER(firstname) = LOWER(?) AND LOWER(lastname) = LOWER(?)",
    [$firstName, $lastName]
    );
 
