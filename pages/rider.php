@@ -331,39 +331,36 @@ try {
         ];
     }
 
-    // 3. Ranking history - Get historical positions from snapshots
+    // 3. Ranking history - Get historical positions from snapshots (one per month, max 24)
     $rankingHistory = [];
-    $rankingHistoryFull = []; // Full history for the graph (last 24 months)
+    $rankingHistoryForGraph = []; // For the graph - one per month, max 24
     if ($rankingFunctionsLoaded) {
         try {
-            // Get ALL ranking snapshots from last 24 months for the full graph
+            // Get one snapshot per month for the last 24 months (latest snapshot each month)
             $historyStmt = $db->prepare("
                 SELECT
-                    snapshot_date,
-                    DATE_FORMAT(snapshot_date, '%Y-%m') as month,
-                    DATE_FORMAT(snapshot_date, '%b') as month_short,
-                    ranking_position,
-                    total_ranking_points
-                FROM ranking_snapshots
-                WHERE rider_id = ? AND discipline = 'GRAVITY'
-                  AND snapshot_date >= DATE_SUB(CURDATE(), INTERVAL 24 MONTH)
-                ORDER BY snapshot_date ASC
+                    rs.snapshot_date,
+                    DATE_FORMAT(rs.snapshot_date, '%Y-%m') as month,
+                    DATE_FORMAT(rs.snapshot_date, '%b %Y') as month_label,
+                    rs.ranking_position,
+                    rs.total_ranking_points,
+                    rs.position_change
+                FROM ranking_snapshots rs
+                INNER JOIN (
+                    SELECT DATE_FORMAT(snapshot_date, '%Y-%m') as month, MAX(snapshot_date) as max_date
+                    FROM ranking_snapshots
+                    WHERE rider_id = ? AND discipline = 'GRAVITY'
+                      AND snapshot_date >= DATE_SUB(CURDATE(), INTERVAL 24 MONTH)
+                    GROUP BY DATE_FORMAT(snapshot_date, '%Y-%m')
+                ) latest ON DATE_FORMAT(rs.snapshot_date, '%Y-%m') = latest.month AND rs.snapshot_date = latest.max_date
+                WHERE rs.rider_id = ? AND rs.discipline = 'GRAVITY'
+                ORDER BY rs.snapshot_date ASC
             ");
-            $historyStmt->execute([$riderId]);
-            $allSnapshots = $historyStmt->fetchAll(PDO::FETCH_ASSOC);
+            $historyStmt->execute([$riderId, $riderId]);
+            $rankingHistoryForGraph = $historyStmt->fetchAll(PDO::FETCH_ASSOC);
 
-            // Store full history for graph (all snapshots from last 24 months)
-            $rankingHistoryFull = $allSnapshots;
-
-            // Group by month for compact display (take latest per month)
-            $byMonth = [];
-            foreach ($allSnapshots as $snap) {
-                $byMonth[$snap['month']] = $snap;
-            }
-            $rankingHistory = array_values($byMonth);
-
-            // Limit to last 6 entries for the compact view
-            $rankingHistory = array_slice($rankingHistory, -6);
+            // Use same data for compact display (limit to last 6)
+            $rankingHistory = array_slice($rankingHistoryForGraph, -6);
         } catch (Exception $e) {
             // Ignore errors
         }
@@ -421,6 +418,7 @@ try {
     $rankingPosition = null;
     $rankingPoints = 0;
     $rankingEvents = [];
+    $rankingEventsByMonth = []; // Grouped by month for modal display
     $parentDb = function_exists('getDB') ? getDB() : null;
     if ($rankingFunctionsLoaded && $parentDb && function_exists('getRiderRankingDetails')) {
         $riderRankingDetails = getRiderRankingDetails($parentDb, $riderId, 'GRAVITY');
@@ -428,13 +426,29 @@ try {
             $rankingPoints = $riderRankingDetails['total_ranking_points'] ?? 0;
             $rankingPosition = $riderRankingDetails['ranking_position'] ?? null;
 
-            // Use events from ranking details (already has multipliers calculated)
-            // Sort by weighted_points and take top results
+            // Use events from ranking details - sort by date (newest first)
             $allEvents = $riderRankingDetails['events'] ?? [];
             usort($allEvents, function($a, $b) {
-                return ($b['weighted_points'] ?? 0) <=> ($a['weighted_points'] ?? 0);
+                return strtotime($b['event_date'] ?? '2000-01-01') <=> strtotime($a['event_date'] ?? '2000-01-01');
             });
-            $rankingEvents = array_slice($allEvents, 0, 10); // Top 10 events
+            $rankingEvents = $allEvents;
+
+            // Group events by month for modal display
+            $swedishMonths = ['januari', 'februari', 'mars', 'april', 'maj', 'juni', 'juli', 'augusti', 'september', 'oktober', 'november', 'december'];
+            foreach ($allEvents as $event) {
+                $eventDate = strtotime($event['event_date'] ?? '2000-01-01');
+                $month = date('Y-m', $eventDate);
+                if (!isset($rankingEventsByMonth[$month])) {
+                    $monthNum = (int)date('n', $eventDate) - 1;
+                    $rankingEventsByMonth[$month] = [
+                        'month_label' => ucfirst($swedishMonths[$monthNum]) . ' ' . date('Y', $eventDate),
+                        'events' => [],
+                        'total_points' => 0
+                    ];
+                }
+                $rankingEventsByMonth[$month]['events'][] = $event;
+                $rankingEventsByMonth[$month]['total_points'] += ($event['weighted_points'] ?? 0);
+            }
         }
     }
 
@@ -893,19 +907,19 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
                 }
             } catch (Exception $e) {}
 
-            // Prepare ranking chart data
-            $hasRankingChart = !empty($rankingHistoryFull) && count($rankingHistoryFull) >= 2;
+            // Prepare ranking chart data (one point per month, max 24)
+            $hasRankingChart = !empty($rankingHistoryForGraph) && count($rankingHistoryForGraph) >= 2;
             if ($hasRankingChart) {
-                $rankChartData = $rankingHistoryFull;
+                $rankChartData = $rankingHistoryForGraph;
                 $rankPositions = array_column($rankChartData, 'ranking_position');
                 $bestRank = min($rankPositions);
                 $currentRank = $rankingPosition;
 
                 $rankChartWidth = 400;
                 $rankChartHeight = 130;
-                $rankPaddingX = 15;
-                $rankPaddingTop = 20;
-                $rankPaddingBottom = 15;
+                $rankPaddingX = 10;
+                $rankPaddingTop = 15;
+                $rankPaddingBottom = 10;
                 $rankNumResults = count($rankChartData);
 
                 $worstRank = max($rankPositions);
@@ -920,7 +934,7 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
                 foreach ($rankChartData as $idx => $rh) {
                     $x = $rankPaddingX + ($idx * $rankXStep);
                     $y = $rankPaddingTop + (($rh['ranking_position'] - $rankDisplayMin) / $rankRange) * $rankGraphHeight;
-                    $rankDataPoints[] = ['x' => $x, 'y' => $y, 'pos' => $rh['ranking_position']];
+                    $rankDataPoints[] = ['x' => $x, 'y' => $y, 'pos' => $rh['ranking_position'], 'label' => $rh['month_label'] ?? ''];
                 }
 
                 $rankPathD = "M " . $rankDataPoints[0]['x'] . "," . $rankDataPoints[0]['y'];
@@ -956,15 +970,23 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
                     </defs>
                     <path d="<?= $rankAreaPath ?>" fill="url(#rankingGradient)"/>
                     <path d="<?= $rankPathD ?>" fill="none" stroke="#ef4444" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-                    <?php foreach ($rankDataPoints as $idx => $dp): ?>
-                    <circle cx="<?= $dp['x'] ?>" cy="<?= $dp['y'] ?>" r="4" fill="#ef4444" stroke="white" stroke-width="1.5"/>
+                    <?php
+                    $totalPoints = count($rankDataPoints);
+                    $showLabels = $totalPoints <= 12; // Show all labels if 12 or fewer points
+                    foreach ($rankDataPoints as $idx => $dp):
+                        $isFirst = $idx === 0;
+                        $isLast = $idx === $totalPoints - 1;
+                        $showThisLabel = $showLabels || $isFirst || $isLast;
+                    ?>
+                    <circle cx="<?= $dp['x'] ?>" cy="<?= $dp['y'] ?>" r="<?= $showLabels ? 4 : 3 ?>" fill="#ef4444" stroke="white" stroke-width="1.5"/>
+                    <?php if ($showThisLabel): ?>
                     <text x="<?= $dp['x'] ?>" y="<?= $dp['y'] - 8 ?>" font-size="9" fill="var(--color-text-secondary)" text-anchor="middle" font-weight="600"><?= $dp['pos'] ?></text>
+                    <?php endif; ?>
                     <?php endforeach; ?>
                 </svg>
             </div>
             <?php endif; ?>
             <div class="dashboard-chart-footer">
-                <span><?= count($rankingHistoryFull) ?> snapshots</span>
                 <button type="button" class="btn-calc-ranking-inline" onclick="openRankingModal()">
                     <i data-lucide="calculator"></i>
                     <span>Visa uträkning</span>
@@ -1264,8 +1286,32 @@ document.addEventListener('DOMContentLoaded', function() {
             </div>
 
             <div class="modal-events-list">
-                <?php if (!empty($rankingEvents)): ?>
-                <?php foreach ($rankingEvents as $event): ?>
+                <?php if (!empty($rankingEventsByMonth)):
+                    $prevMonthPosition = null;
+                    $monthIndex = 0;
+                    foreach ($rankingEventsByMonth as $monthKey => $monthData):
+                        // Get position change for this month from ranking history
+                        $monthPosition = null;
+                        $positionChange = null;
+                        foreach ($rankingHistoryForGraph as $hist) {
+                            if (($hist['month'] ?? '') === $monthKey) {
+                                $monthPosition = $hist['ranking_position'];
+                                $positionChange = $hist['position_change'] ?? null;
+                                break;
+                            }
+                        }
+                ?>
+                <div class="modal-month-divider">
+                    <span class="modal-month-label"><?= htmlspecialchars($monthData['month_label']) ?></span>
+                    <?php if ($positionChange !== null && $positionChange != 0): ?>
+                    <span class="modal-month-change <?= $positionChange > 0 ? 'positive' : 'negative' ?>">
+                        <?= $positionChange > 0 ? '+' . $positionChange : $positionChange ?> platser
+                    </span>
+                    <?php elseif ($monthPosition !== null): ?>
+                    <span class="modal-month-position">#<?= $monthPosition ?></span>
+                    <?php endif; ?>
+                </div>
+                <?php foreach ($monthData['events'] as $event): ?>
                 <div class="modal-event-item">
                     <div class="modal-event-row">
                         <div class="modal-event-info">
@@ -1297,6 +1343,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     </div>
                 </div>
                 <?php endforeach; ?>
+                <?php $monthIndex++; endforeach; ?>
                 <?php else: ?>
                 <div class="modal-empty-state">
                     <i data-lucide="info"></i>
